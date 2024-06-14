@@ -1851,6 +1851,9 @@ subjects:
 			},
 		}
 
+		compressedData, err := test.BrotliCompressionForManifests(mutatingWebhookConfigurationYAML, clusterRoleBindingTargetYAML)
+		Expect(err).NotTo(HaveOccurred())
+
 		managedResourceSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "managedresource-shoot-core-gardener-resource-manager",
@@ -1858,8 +1861,7 @@ subjects:
 			},
 			Type: corev1.SecretTypeOpaque,
 			Data: map[string][]byte{
-				"mutatingwebhookconfiguration__" + deployNamespace + "__gardener-resource-manager-shoot.yaml": []byte(mutatingWebhookConfigurationYAML),
-				"clusterrolebinding____gardener.cloud_target_resource-manager.yaml":                           []byte(clusterRoleBindingTargetYAML),
+				"data.yaml.br": compressedData,
 			},
 		}
 		utilruntime.Must(kubernetesutils.MakeUnique(managedResourceSecret))

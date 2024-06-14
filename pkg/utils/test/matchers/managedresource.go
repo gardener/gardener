@@ -5,14 +5,19 @@
 package matchers
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"strings"
 
+	"github.com/andybalholm/brotli"
 	"github.com/onsi/gomega/format"
 	"golang.org/x/exp/maps"
 	corev1 "k8s.io/api/core/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -21,14 +26,15 @@ import (
 )
 
 type managedResourceObjectsMatcher struct {
-	ctx                     context.Context
-	cl                      client.Client
-	expectedObjToSerialized map[client.Object]string
-	extraObjectsCheck       bool
+	ctx               context.Context
+	client            client.Client
+	decoder           runtime.Decoder
+	expectedObjects   map[string]client.Object
+	extraObjectsCheck bool
 
 	extraObjects             []string
 	missingObjects           []string
-	mismatchExpectedToActual map[string]string
+	mismatchExpectedToActual map[client.Object]client.Object
 }
 
 func (m *managedResourceObjectsMatcher) FailureMessage(actual any) string {
@@ -51,10 +57,10 @@ func (m *managedResourceObjectsMatcher) createMessage(actual any, addition strin
 	case len(m.mismatchExpectedToActual) > 0:
 		message = fmt.Sprintf("Expected for ManagedResource %s/%s the following object mismatches %s found:\n", managedResource.Namespace, managedResource.Name, addition)
 		for expected, actual := range m.mismatchExpectedToActual {
-			message += format.MessageWithDiff(actual, "to equal", expected)
+			message += format.Message(actual, "to equal", expected)
 		}
 	case len(m.missingObjects) > 0:
-		message = fmt.Sprintf("Expected for ManagedResource %s/%s the following missing elements %s found:\n", managedResource.Namespace, managedResource.Name, addition)
+		message = fmt.Sprintf("Expected for ManagedResource %s/%s the following elements %s absent:\n", managedResource.Namespace, managedResource.Name, addition)
 		for _, missingObject := range m.missingObjects {
 			message += format.IndentString(missingObject, 2)
 		}
@@ -78,8 +84,8 @@ func (m *managedResourceObjectsMatcher) Match(actual any) (bool, error) {
 		return false, fmt.Errorf("expected *resourcesv1alpha1.ManagedResource.  got:\n%s", format.Object(actual, 1))
 	}
 
-	// Retrieve managed resource secrets.
-	var secrets = make([]*corev1.Secret, 0, len(managedResource.Spec.SecretRefs))
+	// Retrieve managed resource secrets and extract objects.
+	availableObjects := make(map[string]client.Object)
 	for _, secretRef := range managedResource.Spec.SecretRefs {
 		secret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -88,48 +94,30 @@ func (m *managedResourceObjectsMatcher) Match(actual any) (bool, error) {
 			},
 		}
 
-		if err := m.cl.Get(m.ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
+		if err := m.client.Get(m.ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
 			return false, fmt.Errorf("error when retrieving managed resource secret: %w", err)
 		}
-		secrets = append(secrets, secret)
-	}
 
-	dataKeyToExpected := make(map[string]string)
-
-	// Compare expected and actual results.
-	for expectedObj, expectedObjSerialized := range m.expectedObjToSerialized {
-		gvk, err := apiutil.GVKForObject(expectedObj, m.cl.Scheme())
-		if err != nil {
-			return false, fmt.Errorf("error when extracting object kind: %w", err)
+		for dataKey, dataValue := range secret.Data {
+			if err := extractObjects(dataKey, dataValue, m.decoder, m.client.Scheme(), availableObjects); err != nil {
+				return false, err
+			}
 		}
-
-		dataKey := fmt.Sprintf(
-			"%s__%s__%s.yaml",
-			strings.ToLower(gvk.Kind),
-			expectedObj.GetNamespace(),
-			strings.ReplaceAll(expectedObj.GetName(), ":", "_"),
-		)
-		if _, ok := dataKeyToExpected[dataKey]; ok {
-			return false, fmt.Errorf("object is already specified for data key %s", dataKey)
-		}
-		dataKeyToExpected[dataKey] = expectedObjSerialized
 	}
-
-	dataKeys := sets.New(maps.Keys(dataKeyToExpected)...)
 
 	// Use early returns for the following checks to not overwhelm Gomega output.
-	m.mismatchExpectedToActual = findMismatchObjects(secrets, dataKeyToExpected)
+	m.mismatchExpectedToActual = findMismatchObjects(availableObjects, m.expectedObjects)
 	if len(m.mismatchExpectedToActual) > 0 {
 		return false, nil
 	}
 
-	m.missingObjects = findMissingObjects(secrets, dataKeyToExpected)
+	m.missingObjects = findMissingObjects(availableObjects, m.expectedObjects)
 	if len(m.missingObjects) > 0 {
 		return false, nil
 	}
 
 	if m.extraObjectsCheck {
-		m.extraObjects = findExtraObjects(secrets, dataKeys)
+		m.extraObjects = findExtraObjects(availableObjects, m.expectedObjects)
 		if len(m.extraObjects) > 0 {
 			return false, nil
 		}
@@ -138,47 +126,60 @@ func (m *managedResourceObjectsMatcher) Match(actual any) (bool, error) {
 	return true, nil
 }
 
-func findMismatchObjects(secrets []*corev1.Secret, keysToExpected map[string]string) map[string]string {
-	mismatches := make(map[string]string)
+func findMismatchObjects(availableObjects map[string]client.Object, expectedObjects map[string]client.Object) map[client.Object]client.Object {
+	mismatches := make(map[client.Object]client.Object)
 
-	for _, secret := range secrets {
-		for dataKey, expected := range keysToExpected {
-			if actual, ok := secret.Data[dataKey]; ok && string(actual) != expected {
-				mismatches[expected] = string(actual)
-			}
+	for expectedObjKey, expectedObj := range expectedObjects {
+		actualObject, ok := availableObjects[expectedObjKey]
+		if ok && !apiequality.Semantic.DeepEqual(actualObject, expectedObj) {
+			mismatches[expectedObj] = actualObject
 		}
 	}
 
 	return mismatches
 }
 
-func findMissingObjects(secrets []*corev1.Secret, keysToExpected map[string]string) []string {
-	var (
-		keysToBeFound  = sets.New(maps.Keys(keysToExpected)...)
-		missingObjects []string
-	)
-
-	for _, secret := range secrets {
-		keysToBeFound = keysToBeFound.Difference(sets.New(maps.Keys(secret.Data)...))
-	}
-
-	for notFoundKey := range keysToBeFound {
-		missingObjects = append(missingObjects, keysToExpected[notFoundKey])
-	}
-
-	return missingObjects
+func findMissingObjects(availableObjects map[string]client.Object, expectedObjects map[string]client.Object) []string {
+	return sets.New(maps.Keys(expectedObjects)...).Difference(sets.New(maps.Keys(availableObjects)...)).UnsortedList()
 }
 
-func findExtraObjects(secrets []*corev1.Secret, keys sets.Set[string]) []string {
-	var extraObjects []string
+func findExtraObjects(availableObjects map[string]client.Object, expectedObjects map[string]client.Object) []string {
+	return sets.New(maps.Keys(availableObjects)...).Difference(sets.New(maps.Keys(expectedObjects)...)).UnsortedList()
+}
 
-	for _, secret := range secrets {
-		extraKeys := sets.New(maps.Keys(secret.Data)...).Difference(keys)
-
-		for extraKey := range extraKeys {
-			extraObjects = append(extraObjects, string(secret.Data[extraKey]))
-		}
+func objectKey(obj client.Object, scheme *runtime.Scheme) string {
+	gvkStr := "unknown"
+	gvk, err := apiutil.GVKForObject(obj, scheme)
+	if err == nil {
+		gvkStr = gvk.String()
 	}
 
-	return extraObjects
+	return fmt.Sprintf("%s__%s__%s", gvkStr, obj.GetNamespace(), obj.GetName())
+}
+
+func extractObjects(objKey string, objValue []byte, decoder runtime.Decoder, scheme *runtime.Scheme, objects map[string]client.Object) error {
+	var data []byte
+	if strings.HasSuffix(objKey, resourcesv1alpha1.BrotliCompressionSuffix) {
+		reader := brotli.NewReader(bytes.NewReader(objValue))
+		var err error
+		data, err = io.ReadAll(reader)
+		if err != nil {
+			return err
+		}
+	} else {
+		data = objValue
+	}
+
+	for _, objSerialized := range strings.Split(string(data), "---\n") {
+		if objSerialized == "" {
+			continue
+		}
+		obj, _, err := decoder.Decode([]byte(objSerialized), nil, nil)
+		if err != nil {
+			return err
+		}
+		objects[objectKey(obj.(client.Object), scheme)] = obj.(client.Object)
+	}
+
+	return nil
 }

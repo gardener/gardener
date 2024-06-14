@@ -7,17 +7,22 @@ package proxy_test
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
+	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -27,7 +32,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/component/kubernetes/proxy"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
-	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -37,7 +41,7 @@ import (
 
 var _ = Describe("KubeProxy", func() {
 	var (
-		ctx = context.TODO()
+		ctx = context.Background()
 
 		namespace      = "some-namespace"
 		kubeconfig     = []byte("some-kubeconfig")
@@ -48,6 +52,8 @@ var _ = Describe("KubeProxy", func() {
 		component Interface
 		values    Values
 
+		consistOf                    func(...client.Object) types.GomegaMatcher
+		contain                      func(...client.Object) types.GomegaMatcher
 		managedResourceCentral       *resourcesv1alpha1.ManagedResource
 		managedResourceSecretCentral *corev1.Secret
 
@@ -245,6 +251,8 @@ var _ = Describe("KubeProxy", func() {
 		}
 		component = New(c, namespace, values)
 
+		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
+		contain = NewManagedResourceContainsObjectsMatcher(c)
 		managedResourceCentral = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "shoot-core-kube-proxy",
@@ -257,68 +265,75 @@ var _ = Describe("KubeProxy", func() {
 
 	Describe("#Deploy", func() {
 		var (
-			serviceAccountYAML = `apiVersion: v1
-automountServiceAccountToken: false
-kind: ServiceAccount
-metadata:
-  creationTimestamp: null
-  name: kube-proxy
-  namespace: kube-system
-`
+			serviceAccount = &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "kube-proxy",
+					Namespace: "kube-system",
+				},
+				AutomountServiceAccountToken: func(b bool) *bool { return &b }(false),
+			}
 
-			clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  creationTimestamp: null
-  name: gardener.cloud:target:node-proxier
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: system:node-proxier
-subjects:
-- kind: ServiceAccount
-  name: kube-proxy
-  namespace: kube-system
-`
+			clusterRoleBinding = &rbacv1.ClusterRoleBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "gardener.cloud:target:node-proxier",
+				},
+				RoleRef: rbacv1.RoleRef{
+					APIGroup: "rbac.authorization.k8s.io",
+					Kind:     "ClusterRole",
+					Name:     "system:node-proxier",
+				},
+				Subjects: []rbacv1.Subject{
+					{
+						Kind:      "ServiceAccount",
+						Name:      "kube-proxy",
+						Namespace: "kube-system",
+					},
+				},
+			}
 
-			serviceYAML = `apiVersion: v1
-kind: Service
-metadata:
-  creationTimestamp: null
-  labels:
-    app: kubernetes
-    role: proxy
-  name: kube-proxy
-  namespace: kube-system
-spec:
-  clusterIP: None
-  ports:
-  - name: metrics
-    port: 10249
-    protocol: TCP
-    targetPort: 0
-  selector:
-    app: kubernetes
-    role: proxy
-  type: ClusterIP
-status:
-  loadBalancer: {}
-`
+			service = &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "kube-proxy",
+					Namespace: "kube-system",
+					Labels: map[string]string{
+						"app":  "kubernetes",
+						"role": "proxy",
+					},
+				},
+				Spec: corev1.ServiceSpec{
+					ClusterIP: "None",
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "metrics",
+							Port:       10249,
+							Protocol:   corev1.ProtocolTCP,
+							TargetPort: intstr.IntOrString{IntVal: 0},
+						},
+					},
+					Selector: map[string]string{
+						"app":  "kubernetes",
+						"role": "proxy",
+					},
+					Type: corev1.ServiceTypeClusterIP,
+				},
+			}
 
 			secretName = "kube-proxy-e3a80e6d"
-			secretYAML = `apiVersion: v1
-data:
-  kubeconfig: ` + utils.EncodeBase64(kubeconfig) + `
-immutable: true
-kind: Secret
-metadata:
-  creationTimestamp: null
-  labels:
-    resources.gardener.cloud/garbage-collectable-reference: "true"
-  name: ` + secretName + `
-  namespace: kube-system
-type: Opaque
-`
+
+			secret = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      secretName,
+					Namespace: "kube-system",
+					Labels: map[string]string{
+						"resources.gardener.cloud/garbage-collectable-reference": "true",
+					},
+				},
+				Data: map[string][]byte{
+					"kubeconfig": kubeconfig,
+				},
+				Immutable: ptr.To(true),
+				Type:      corev1.SecretTypeOpaque,
+			}
 
 			configMapNameFor = func(ipvsEnabled bool) string {
 				if !ipvsEnabled {
@@ -326,457 +341,496 @@ type: Opaque
 				}
 				return "kube-proxy-config-eaba5162"
 			}
-			configMapYAMLFor = func(ipvsEnabled bool) string {
-				out := `apiVersion: v1
-data:
-  config.yaml: |
-    apiVersion: kubeproxy.config.k8s.io/v1alpha1
-    bindAddress: ""
-    bindAddressHardFail: false
-    clientConnection:
-      acceptContentTypes: ""
-      burst: 0
-      contentType: ""
-      kubeconfig: /var/lib/kube-proxy-kubeconfig/kubeconfig
-      qps: 0`
+
+			configMapFor = func(ipvsEnabled bool) *corev1.ConfigMap {
+				out := `apiVersion: kubeproxy.config.k8s.io/v1alpha1
+bindAddress: ""
+bindAddressHardFail: false
+clientConnection:
+  acceptContentTypes: ""
+  burst: 0
+  contentType: ""
+  kubeconfig: /var/lib/kube-proxy-kubeconfig/kubeconfig
+  qps: 0`
 				if ipvsEnabled {
 					out += `
-    clusterCIDR: ""`
+clusterCIDR: ""`
 				} else {
 					out += `
-    clusterCIDR: ` + podNetworkCIDR
+clusterCIDR: ` + podNetworkCIDR
 				}
 				out += `
-    configSyncPeriod: 0s
-    conntrack:
-      maxPerCore: 524288
-      min: null
-      tcpBeLiberal: false
-      tcpCloseWaitTimeout: null
-      tcpEstablishedTimeout: null
-      udpStreamTimeout: 0s
-      udpTimeout: 0s
-    detectLocal:
-      bridgeInterface: ""
-      interfaceNamePrefix: ""
-    detectLocalMode: ""
-    enableProfiling: false
-    featureGates:
-      Bar: false
-      Foo: true
-    healthzBindAddress: ""
-    hostnameOverride: ""
-    iptables:
-      localhostNodePorts: null
-      masqueradeAll: false
-      masqueradeBit: null
-      minSyncPeriod: 0s
-      syncPeriod: 0s
-    ipvs:
-      excludeCIDRs: null
-      minSyncPeriod: 0s
-      scheduler: ""
-      strictARP: false
-      syncPeriod: 0s
-      tcpFinTimeout: 0s
-      tcpTimeout: 0s
-      udpTimeout: 0s
-    kind: KubeProxyConfiguration
-    logging:
-      flushFrequency: 0
-      options:
-        json:
-          infoBufferSize: "0"
-      verbosity: 0
-    metricsBindAddress: 0.0.0.0:10249`
+configSyncPeriod: 0s
+conntrack:
+  maxPerCore: 524288
+  min: null
+  tcpBeLiberal: false
+  tcpCloseWaitTimeout: null
+  tcpEstablishedTimeout: null
+  udpStreamTimeout: 0s
+  udpTimeout: 0s
+detectLocal:
+  bridgeInterface: ""
+  interfaceNamePrefix: ""
+detectLocalMode: ""
+enableProfiling: false
+featureGates:
+  Bar: false
+  Foo: true
+healthzBindAddress: ""
+hostnameOverride: ""
+iptables:
+  localhostNodePorts: null
+  masqueradeAll: false
+  masqueradeBit: null
+  minSyncPeriod: 0s
+  syncPeriod: 0s
+ipvs:
+  excludeCIDRs: null
+  minSyncPeriod: 0s
+  scheduler: ""
+  strictARP: false
+  syncPeriod: 0s
+  tcpFinTimeout: 0s
+  tcpTimeout: 0s
+  udpTimeout: 0s
+kind: KubeProxyConfiguration
+logging:
+  flushFrequency: 0
+  options:
+    json:
+      infoBufferSize: "0"
+  verbosity: 0
+metricsBindAddress: 0.0.0.0:10249`
 				if ipvsEnabled {
 					out += `
-    mode: ipvs`
+mode: ipvs`
 				} else {
 					out += `
-    mode: iptables`
+mode: iptables`
 				}
 				out += `
-    nftables:
-      masqueradeAll: false
-      masqueradeBit: null
-      minSyncPeriod: 0s
-      syncPeriod: 0s
-    nodePortAddresses: null
-    oomScoreAdj: null
-    portRange: ""
-    showHiddenMetricsForVersion: ""
-    winkernel:
-      enableDSR: false
-      forwardHealthCheckVip: false
-      networkName: ""
-      rootHnsEndpointName: ""
-      sourceVip: ""
-immutable: true
-kind: ConfigMap
-metadata:
-  creationTimestamp: null
-  labels:
-    resources.gardener.cloud/garbage-collectable-reference: "true"
-  name: ` + configMapNameFor(ipvsEnabled) + `
-  namespace: kube-system
+nftables:
+  masqueradeAll: false
+  masqueradeBit: null
+  minSyncPeriod: 0s
+  syncPeriod: 0s
+nodePortAddresses: null
+oomScoreAdj: null
+portRange: ""
+showHiddenMetricsForVersion: ""
+winkernel:
+  enableDSR: false
+  forwardHealthCheckVip: false
+  networkName: ""
+  rootHnsEndpointName: ""
+  sourceVip: ""
 `
-				return out
+				return &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{
+							"resources.gardener.cloud/garbage-collectable-reference": "true",
+						},
+						Name:      configMapNameFor(ipvsEnabled),
+						Namespace: "kube-system",
+					},
+					Immutable: ptr.To(true),
+					Data: map[string]string{
+						"config.yaml": out,
+					},
+				}
 			}
 
 			configMapConntrackFixScriptName = "kube-proxy-conntrack-fix-script-ebff3d39"
-			configMapConntrackFixScriptYAML = `apiVersion: v1
-data:
-  conntrack_fix.sh: |
-    #!/bin/sh -e
-    trap "kill -s INT 1" TERM
-    sleep 120 & wait
-    date
-    # conntrack example:
-    # tcp      6 113 SYN_SENT src=21.73.193.93 dst=21.71.0.65 sport=1413 dport=443 \
-    #   [UNREPLIED] src=21.71.0.65 dst=21.73.193.93 sport=443 dport=1413 mark=0 use=1
-    eval "$(
-      conntrack -L -p tcp --state SYN_SENT \
-      | sed 's/=/ /g'                      \
-      | awk '$6 !~ /^10\./ &&
-             $8 !~ /^10\./ &&
-             $6  == $17    &&
-             $8  == $15    &&
-             $10 == $21    &&
-             $12 == $19 {
-               printf "conntrack -D -p tcp -s %s --sport %s -d %s --dport %s;\n",
-                                              $6,        $10,  $8,        $12}'
-    )"
-    while true; do
-      date
-      sleep 3600 & wait
-    done
-immutable: true
-kind: ConfigMap
-metadata:
-  creationTimestamp: null
-  labels:
-    app: kubernetes
-    gardener.cloud/role: system-component
-    origin: gardener
-    resources.gardener.cloud/garbage-collectable-reference: "true"
-    role: proxy
-  name: ` + configMapConntrackFixScriptName + `
-  namespace: kube-system
-`
+
+			configMapConntrackFixScript = &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      configMapConntrackFixScriptName,
+					Namespace: "kube-system",
+					Labels: map[string]string{
+						"app":                 "kubernetes",
+						"gardener.cloud/role": "system-component",
+						"origin":              "gardener",
+						"resources.gardener.cloud/garbage-collectable-reference": "true",
+						"role": "proxy",
+					},
+				},
+				Immutable: ptr.To(true),
+				Data: map[string]string{
+					"conntrack_fix.sh": `#!/bin/sh -e
+trap "kill -s INT 1" TERM
+sleep 120 & wait
+date
+# conntrack example:
+# tcp      6 113 SYN_SENT src=21.73.193.93 dst=21.71.0.65 sport=1413 dport=443 \
+#   [UNREPLIED] src=21.71.0.65 dst=21.73.193.93 sport=443 dport=1413 mark=0 use=1
+eval "$(
+  conntrack -L -p tcp --state SYN_SENT \
+  | sed 's/=/ /g'                      \
+  | awk '$6 !~ /^10\./ &&
+         $8 !~ /^10\./ &&
+         $6  == $17    &&
+         $8  == $15    &&
+         $10 == $21    &&
+         $12 == $19 {
+           printf "conntrack -D -p tcp -s %s --sport %s -d %s --dport %s;\n",
+                                          $6,        $10,  $8,        $12}'
+)"
+while true; do
+  date
+  sleep 3600 & wait
+done
+`,
+				},
+			}
 
 			configMapCleanupScriptName = "kube-proxy-cleanup-script-a4263ada"
-			configMapCleanupScriptYAML = `apiVersion: v1
-data:
-  cleanup.sh: |
-    #!/bin/sh -e
-    OLD_KUBE_PROXY_MODE="$(cat "$1")"
-    if [ -z "${OLD_KUBE_PROXY_MODE}" ] || [ "${OLD_KUBE_PROXY_MODE}" = "${KUBE_PROXY_MODE}" ]; then
-      echo "${KUBE_PROXY_MODE}" >"$1"
-      echo "Nothing to cleanup - the mode didn't change."
-      exit 0
-    fi
+			configMapCleanupScript     = &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      configMapCleanupScriptName,
+					Namespace: "kube-system",
+					Labels: map[string]string{
+						"app":                 "kubernetes",
+						"gardener.cloud/role": "system-component",
+						"origin":              "gardener",
+						"resources.gardener.cloud/garbage-collectable-reference": "true",
+						"role": "proxy",
+					},
+				},
+				Immutable: ptr.To(true),
+				Data: map[string]string{
+					"cleanup.sh": `#!/bin/sh -e
+OLD_KUBE_PROXY_MODE="$(cat "$1")"
+if [ -z "${OLD_KUBE_PROXY_MODE}" ] || [ "${OLD_KUBE_PROXY_MODE}" = "${KUBE_PROXY_MODE}" ]; then
+  echo "${KUBE_PROXY_MODE}" >"$1"
+  echo "Nothing to cleanup - the mode didn't change."
+  exit 0
+fi
 
-    /usr/local/bin/kube-proxy --v=2 --cleanup --config=/var/lib/kube-proxy-config/config.yaml --proxy-mode="${OLD_KUBE_PROXY_MODE}"
-    echo "${KUBE_PROXY_MODE}" >"$1"
-immutable: true
-kind: ConfigMap
-metadata:
-  creationTimestamp: null
-  labels:
-    app: kubernetes
-    gardener.cloud/role: system-component
-    origin: gardener
-    resources.gardener.cloud/garbage-collectable-reference: "true"
-    role: proxy
-  name: ` + configMapCleanupScriptName + `
-  namespace: kube-system
-`
+/usr/local/bin/kube-proxy --v=2 --cleanup --config=/var/lib/kube-proxy-config/config.yaml --proxy-mode="${OLD_KUBE_PROXY_MODE}"
+echo "${KUBE_PROXY_MODE}" >"$1"
+`,
+				},
+			}
 
 			daemonSetNameFor = func(pool WorkerPool) string {
 				return "kube-proxy-" + pool.Name + "-v" + pool.KubernetesVersion.String()
 			}
-			daemonSetYAMLFor = func(pool WorkerPool, ipvsEnabled, vpaEnabled, k8sGreaterEqual129 bool) string {
-				referenceAnnotations := func() string {
-					var annotations []string
-
+			daemonSetFor = func(pool WorkerPool, ipvsEnabled, vpaEnabled, k8sGreaterEqual129 bool) *appsv1.DaemonSet {
+				referenceAnnotations := func() map[string]string {
 					if ipvsEnabled {
-						annotations = []string{
-							references.AnnotationKey(references.KindConfigMap, configMapCleanupScriptName) + `: ` + configMapCleanupScriptName,
-							references.AnnotationKey(references.KindConfigMap, configMapConntrackFixScriptName) + `: ` + configMapConntrackFixScriptName,
-							references.AnnotationKey(references.KindConfigMap, configMapNameFor(ipvsEnabled)) + `: ` + configMapNameFor(ipvsEnabled),
-							references.AnnotationKey(references.KindSecret, secretName) + `: ` + secretName,
-						}
-					} else {
-						annotations = []string{
-							references.AnnotationKey(references.KindConfigMap, configMapNameFor(ipvsEnabled)) + `: ` + configMapNameFor(ipvsEnabled),
-							references.AnnotationKey(references.KindConfigMap, configMapCleanupScriptName) + `: ` + configMapCleanupScriptName,
-							references.AnnotationKey(references.KindConfigMap, configMapConntrackFixScriptName) + `: ` + configMapConntrackFixScriptName,
-							references.AnnotationKey(references.KindSecret, secretName) + `: ` + secretName,
+						return map[string]string{
+							references.AnnotationKey(references.KindConfigMap, configMapCleanupScriptName):      configMapCleanupScriptName,
+							references.AnnotationKey(references.KindConfigMap, configMapConntrackFixScriptName): configMapConntrackFixScriptName,
+							references.AnnotationKey(references.KindConfigMap, configMapNameFor(ipvsEnabled)):   configMapNameFor(ipvsEnabled),
+							references.AnnotationKey(references.KindSecret, secretName):                         secretName,
 						}
 					}
-
-					return strings.Join(annotations, "\n")
+					return map[string]string{
+						references.AnnotationKey(references.KindConfigMap, configMapNameFor(ipvsEnabled)):   configMapNameFor(ipvsEnabled),
+						references.AnnotationKey(references.KindConfigMap, configMapCleanupScriptName):      configMapCleanupScriptName,
+						references.AnnotationKey(references.KindConfigMap, configMapConntrackFixScriptName): configMapConntrackFixScriptName,
+						references.AnnotationKey(references.KindSecret, secretName):                         secretName,
+					}
 				}
 
-				out := `apiVersion: apps/v1
-kind: DaemonSet
-metadata:
-  annotations:
-    ` + utils.Indent(referenceAnnotations(), 4) + `
-  creationTimestamp: null
-  labels:
-    gardener.cloud/role: system-component
-    node.gardener.cloud/critical-component: "true"
-    origin: gardener
-  name: ` + daemonSetNameFor(pool) + `
-  namespace: kube-system
-spec:
-  selector:
-    matchLabels:
-      app: kubernetes
-      pool: ` + pool.Name + `
-      role: proxy
-      version: ` + pool.KubernetesVersion.String() + `
-  template:
-    metadata:
-      annotations:
-        ` + utils.Indent(referenceAnnotations(), 8) + `
-      creationTimestamp: null
-      labels:
-        app: kubernetes
-        gardener.cloud/role: system-component
-        node.gardener.cloud/critical-component: "true"
-        origin: gardener
-        pool: ` + pool.Name + `
-        role: proxy
-        version: ` + pool.KubernetesVersion.String() + `
-    spec:
-      containers:
-      - command:
-        - /usr/local/bin/kube-proxy
-        - --config=/var/lib/kube-proxy-config/config.yaml
-        - --v=2
-        image: ` + pool.Image + `
-        imagePullPolicy: IfNotPresent
-        name: kube-proxy
-        ports:
-        - containerPort: 10249
-          hostPort: 10249
-          name: metrics
-          protocol: TCP
-        resources:`
-
-				if vpaEnabled {
-					out += `
-          limits:
-            memory: 2Gi`
+				kubeProxyMode := func() string {
+					if ipvsEnabled {
+						return "ipvs"
+					}
+					return "iptables"
 				}
 
-				out += `
-          requests:
-            cpu: 20m
-            memory: 64Mi
-        securityContext:`
+				ds := &appsv1.DaemonSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:        daemonSetNameFor(pool),
+						Namespace:   "kube-system",
+						Annotations: referenceAnnotations(),
+						Labels: map[string]string{
+							"gardener.cloud/role":                    "system-component",
+							"node.gardener.cloud/critical-component": "true",
+							"origin":                                 "gardener",
+						},
+					},
+					Spec: appsv1.DaemonSetSpec{
+						Selector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"app":     "kubernetes",
+								"pool":    pool.Name,
+								"role":    "proxy",
+								"version": pool.KubernetesVersion.String(),
+							},
+						},
+						Template: corev1.PodTemplateSpec{
+							ObjectMeta: metav1.ObjectMeta{
+								Annotations: referenceAnnotations(),
+								Labels: map[string]string{
+									"app":                                    "kubernetes",
+									"gardener.cloud/role":                    "system-component",
+									"node.gardener.cloud/critical-component": "true",
+									"origin":                                 "gardener",
+									"pool":                                   pool.Name,
+									"role":                                   "proxy",
+									"version":                                pool.KubernetesVersion.String(),
+								},
+							},
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Command:         []string{"/usr/local/bin/kube-proxy", "--config=/var/lib/kube-proxy-config/config.yaml", "--v=2"},
+										Image:           pool.Image,
+										ImagePullPolicy: corev1.PullIfNotPresent,
+										Name:            "kube-proxy",
+										Ports: []corev1.ContainerPort{
+											{
+												ContainerPort: 10249,
+												HostPort:      10249,
+												Name:          "metrics",
+												Protocol:      corev1.ProtocolTCP,
+											},
+										},
+										Resources: corev1.ResourceRequirements{
+											Requests: map[corev1.ResourceName]resource.Quantity{
+												corev1.ResourceCPU:    resource.MustParse("20m"),
+												corev1.ResourceMemory: resource.MustParse("64Mi"),
+											},
+										},
+										VolumeMounts: []corev1.VolumeMount{
+											{MountPath: "/var/lib/kube-proxy-kubeconfig", Name: "kubeconfig"},
+											{MountPath: "/var/lib/kube-proxy-config", Name: "kube-proxy-config"},
+											{MountPath: "/etc/ssl/certs", Name: "ssl-certs-hosts", ReadOnly: true},
+											{MountPath: "/var/run/dbus/system_bus_socket", Name: "systembussocket"},
+											{MountPath: "/lib/modules", Name: "kernel-modules"},
+										},
+									},
+									{
+										Command:         []string{"/bin/sh", "/script/conntrack_fix.sh"},
+										Image:           imageAlpine,
+										ImagePullPolicy: corev1.PullIfNotPresent,
+										Name:            "conntrack-fix",
+										SecurityContext: &corev1.SecurityContext{
+											Capabilities: &corev1.Capabilities{
+												Add: []corev1.Capability{"NET_ADMIN"},
+											},
+										},
+										VolumeMounts: []corev1.VolumeMount{
+											{MountPath: "/script", Name: "conntrack-fix-script"},
+										},
+									},
+								},
+								HostNetwork: true,
+								InitContainers: []corev1.Container{
+									{
+										Command: []string{"sh", "-c", "/script/cleanup.sh /var/lib/kube-proxy/mode"},
+										Env: []corev1.EnvVar{
+											{Name: "KUBE_PROXY_MODE", Value: kubeProxyMode()},
+										},
+										Image:           pool.Image,
+										ImagePullPolicy: corev1.PullIfNotPresent,
+										Name:            "cleanup",
+										SecurityContext: &corev1.SecurityContext{
+											Privileged: ptr.To(true),
+										},
+										VolumeMounts: []corev1.VolumeMount{
+											{MountPath: "/script", Name: "kube-proxy-cleanup-script"},
+											{MountPath: "/lib/modules", Name: "kernel-modules"},
+											{MountPath: "/var/lib/kube-proxy", Name: "kube-proxy-dir"},
+											{MountPath: "/var/lib/kube-proxy/mode", Name: "kube-proxy-mode"},
+											{MountPath: "/var/lib/kube-proxy-kubeconfig", Name: "kubeconfig"},
+											{MountPath: "/var/lib/kube-proxy-config", Name: "kube-proxy-config"},
+										},
+									},
+								},
+								NodeSelector: map[string]string{
+									"worker.gardener.cloud/kubernetes-version": pool.KubernetesVersion.String(),
+									"worker.gardener.cloud/pool":               pool.Name,
+								},
+								PriorityClassName: "system-node-critical",
+								SecurityContext: &corev1.PodSecurityContext{
+									SeccompProfile: &corev1.SeccompProfile{
+										Type: corev1.SeccompProfileTypeRuntimeDefault,
+									},
+								},
+								ServiceAccountName: "kube-proxy",
+								Tolerations: []corev1.Toleration{
+									{Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoSchedule},
+									{Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoExecute},
+								},
+								Volumes: []corev1.Volume{
+									{
+										Name: "kubeconfig",
+										VolumeSource: corev1.VolumeSource{
+											Secret: &corev1.SecretVolumeSource{
+												SecretName: secretName,
+											},
+										},
+									},
+									{
+										Name: "kube-proxy-config",
+										VolumeSource: corev1.VolumeSource{
+											ConfigMap: &corev1.ConfigMapVolumeSource{
+												LocalObjectReference: corev1.LocalObjectReference{
+													Name: configMapNameFor(ipvsEnabled),
+												},
+											},
+										},
+									},
+									{
+										Name: "ssl-certs-hosts",
+										VolumeSource: corev1.VolumeSource{
+											HostPath: &corev1.HostPathVolumeSource{
+												Path: "/usr/share/ca-certificates",
+											},
+										},
+									},
+									{
+										Name: "systembussocket",
+										VolumeSource: corev1.VolumeSource{
+											HostPath: &corev1.HostPathVolumeSource{
+												Path: "/var/run/dbus/system_bus_socket",
+											},
+										},
+									},
+									{
+										Name: "kernel-modules",
+										VolumeSource: corev1.VolumeSource{
+											HostPath: &corev1.HostPathVolumeSource{
+												Path: "/lib/modules",
+											},
+										},
+									},
+									{
+										Name: "kube-proxy-cleanup-script",
+										VolumeSource: corev1.VolumeSource{
+											ConfigMap: &corev1.ConfigMapVolumeSource{
+												LocalObjectReference: corev1.LocalObjectReference{
+													Name: configMapCleanupScriptName,
+												},
+												DefaultMode: ptr.To[int32](511),
+											},
+										},
+									},
+									{
+										Name: "kube-proxy-dir",
+										VolumeSource: corev1.VolumeSource{
+											HostPath: &corev1.HostPathVolumeSource{
+												Path: "/var/lib/kube-proxy",
+												Type: ptr.To(corev1.HostPathDirectoryOrCreate),
+											},
+										},
+									},
+									{
+										Name: "kube-proxy-mode",
+										VolumeSource: corev1.VolumeSource{
+											HostPath: &corev1.HostPathVolumeSource{
+												Path: "/var/lib/kube-proxy/mode",
+												Type: ptr.To(corev1.HostPathFileOrCreate),
+											},
+										},
+									},
+									{
+										Name: "conntrack-fix-script",
+										VolumeSource: corev1.VolumeSource{
+											ConfigMap: &corev1.ConfigMapVolumeSource{
+												LocalObjectReference: corev1.LocalObjectReference{
+													Name: configMapConntrackFixScriptName,
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+						UpdateStrategy: appsv1.DaemonSetUpdateStrategy{Type: appsv1.RollingUpdateDaemonSetStrategyType},
+					},
+				}
 
 				if k8sGreaterEqual129 {
-					out += `
-          capabilities:
-            add:
-            - NET_ADMIN
-            - SYS_RESOURCE`
-				} else {
-					out += `
-          privileged: true`
-				}
+					ds.Spec.Template.Spec.Containers[0].SecurityContext = &corev1.SecurityContext{
+						Capabilities: &corev1.Capabilities{
+							Add: []corev1.Capability{"NET_ADMIN", "SYS_RESOURCE"},
+						},
+					}
 
-				out += `
-        volumeMounts:
-        - mountPath: /var/lib/kube-proxy-kubeconfig
-          name: kubeconfig
-        - mountPath: /var/lib/kube-proxy-config
-          name: kube-proxy-config
-        - mountPath: /etc/ssl/certs
-          name: ssl-certs-hosts
-          readOnly: true
-        - mountPath: /var/run/dbus/system_bus_socket
-          name: systembussocket
-        - mountPath: /lib/modules
-          name: kernel-modules
-      - command:
-        - /bin/sh
-        - /script/conntrack_fix.sh
-        image: ` + imageAlpine + `
-        imagePullPolicy: IfNotPresent
-        name: conntrack-fix
-        resources: {}
-        securityContext:
-          capabilities:
-            add:
-            - NET_ADMIN
-        volumeMounts:
-        - mountPath: /script
-          name: conntrack-fix-script
-      hostNetwork: true
-      initContainers:
-      - command:
-        - sh
-        - -c
-        - /script/cleanup.sh /var/lib/kube-proxy/mode
-        env:
-        - name: KUBE_PROXY_MODE`
-
-				if ipvsEnabled {
-					out += `
-          value: ipvs`
-				} else {
-					out += `
-          value: iptables`
-				}
-
-				out += `
-        image: ` + pool.Image + `
-        imagePullPolicy: IfNotPresent
-        name: cleanup
-        resources: {}
-        securityContext:
-          privileged: true
-        volumeMounts:
-        - mountPath: /script
-          name: kube-proxy-cleanup-script
-        - mountPath: /lib/modules
-          name: kernel-modules
-        - mountPath: /var/lib/kube-proxy
-          name: kube-proxy-dir
-        - mountPath: /var/lib/kube-proxy/mode
-          name: kube-proxy-mode
-        - mountPath: /var/lib/kube-proxy-kubeconfig
-          name: kubeconfig
-        - mountPath: /var/lib/kube-proxy-config
-          name: kube-proxy-config`
-
-				if k8sGreaterEqual129 {
-					out += `
-      - command:
-        - /usr/local/bin/kube-proxy
-        - --config=/var/lib/kube-proxy-config/config.yaml
-        - --v=2
-        - --init-only
-        image: ` + pool.Image + `
-        imagePullPolicy: IfNotPresent
-        name: kube-proxy-init
-        resources:`
+					ds.Spec.Template.Spec.InitContainers = append(ds.Spec.Template.Spec.InitContainers, corev1.Container{
+						Command:         []string{"/usr/local/bin/kube-proxy", "--config=/var/lib/kube-proxy-config/config.yaml", "--v=2", "--init-only"},
+						Image:           pool.Image,
+						ImagePullPolicy: corev1.PullIfNotPresent,
+						Name:            "kube-proxy-init",
+						Resources: corev1.ResourceRequirements{
+							Requests: map[corev1.ResourceName]resource.Quantity{
+								corev1.ResourceCPU:    resource.MustParse("20m"),
+								corev1.ResourceMemory: resource.MustParse("64Mi"),
+							},
+						},
+						SecurityContext: &corev1.SecurityContext{
+							Privileged: ptr.To(true),
+						},
+						VolumeMounts: []corev1.VolumeMount{
+							{MountPath: "/var/lib/kube-proxy-kubeconfig", Name: "kubeconfig"},
+							{MountPath: "/var/lib/kube-proxy-config", Name: "kube-proxy-config"},
+							{MountPath: "/etc/ssl/certs", Name: "ssl-certs-hosts", ReadOnly: true},
+							{MountPath: "/var/run/dbus/system_bus_socket", Name: "systembussocket"},
+							{MountPath: "/lib/modules", Name: "kernel-modules"},
+						},
+					})
 
 					if vpaEnabled {
-						out += `
-          limits:
-            memory: 256Mi`
+						ds.Spec.Template.Spec.InitContainers[1].Resources.Limits = map[corev1.ResourceName]resource.Quantity{
+							corev1.ResourceMemory: resource.MustParse("256Mi"),
+						}
 					}
-
-					out += `
-          requests:
-            cpu: 20m
-            memory: 64Mi
-        securityContext:
-          privileged: true
-        volumeMounts:
-        - mountPath: /var/lib/kube-proxy-kubeconfig
-          name: kubeconfig
-        - mountPath: /var/lib/kube-proxy-config
-          name: kube-proxy-config
-        - mountPath: /etc/ssl/certs
-          name: ssl-certs-hosts
-          readOnly: true
-        - mountPath: /var/run/dbus/system_bus_socket
-          name: systembussocket
-        - mountPath: /lib/modules
-          name: kernel-modules`
+				} else {
+					ds.Spec.Template.Spec.Containers[0].SecurityContext = &corev1.SecurityContext{
+						Privileged: ptr.To(true),
+					}
 				}
 
-				out += `
-      nodeSelector:
-        worker.gardener.cloud/kubernetes-version: ` + pool.KubernetesVersion.String() + `
-        worker.gardener.cloud/pool: ` + pool.Name + `
-      priorityClassName: system-node-critical
-      securityContext:
-        seccompProfile:
-          type: RuntimeDefault
-      serviceAccountName: kube-proxy
-      tolerations:
-      - effect: NoSchedule
-        operator: Exists
-      - effect: NoExecute
-        operator: Exists
-      volumes:
-      - name: kubeconfig
-        secret:
-          secretName: ` + secretName + `
-      - configMap:
-          name: ` + configMapNameFor(ipvsEnabled) + `
-        name: kube-proxy-config
-      - hostPath:
-          path: /usr/share/ca-certificates
-        name: ssl-certs-hosts
-      - hostPath:
-          path: /var/run/dbus/system_bus_socket
-        name: systembussocket
-      - hostPath:
-          path: /lib/modules
-        name: kernel-modules
-      - configMap:
-          defaultMode: 511
-          name: ` + configMapCleanupScriptName + `
-        name: kube-proxy-cleanup-script
-      - hostPath:
-          path: /var/lib/kube-proxy
-          type: DirectoryOrCreate
-        name: kube-proxy-dir
-      - hostPath:
-          path: /var/lib/kube-proxy/mode
-          type: FileOrCreate
-        name: kube-proxy-mode
-      - configMap:
-          name: ` + configMapConntrackFixScriptName + `
-        name: conntrack-fix-script
-  updateStrategy:
-    type: RollingUpdate
-status:
-  currentNumberScheduled: 0
-  desiredNumberScheduled: 0
-  numberMisscheduled: 0
-  numberReady: 0
-`
-				return out
+				if vpaEnabled {
+					ds.Spec.Template.Spec.Containers[0].Resources.Limits = map[corev1.ResourceName]resource.Quantity{
+						corev1.ResourceMemory: resource.MustParse("2Gi"),
+					}
+				}
+
+				return ds
 			}
 
 			vpaNameFor = func(pool WorkerPool) string {
 				return fmt.Sprintf("kube-proxy-%s-v%d.%d", pool.Name, pool.KubernetesVersion.Major(), pool.KubernetesVersion.Minor())
 			}
-			vpaYAMLFor = func(pool WorkerPool) string {
-				return `apiVersion: autoscaling.k8s.io/v1
-kind: VerticalPodAutoscaler
-metadata:
-  creationTimestamp: null
-  name: ` + vpaNameFor(pool) + `
-  namespace: kube-system
-spec:
-  resourcePolicy:
-    containerPolicies:
-    - containerName: kube-proxy
-      controlledValues: RequestsOnly
-      maxAllowed:
-        cpu: "4"
-        memory: 10G
-    - containerName: conntrack-fix
-      mode: "Off"
-  targetRef:
-    apiVersion: apps/v1
-    kind: DaemonSet
-    name: ` + daemonSetNameFor(pool) + `
-  updatePolicy:
-    updateMode: Auto
-status: {}
-`
+			vpaFor = func(pool WorkerPool) *vpaautoscalingv1.VerticalPodAutoscaler {
+				return &vpaautoscalingv1.VerticalPodAutoscaler{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      vpaNameFor(pool),
+						Namespace: "kube-system",
+					},
+					Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
+						ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+							ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+								{
+									ContainerName:    "kube-proxy",
+									ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+									MaxAllowed: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("4"),
+										corev1.ResourceMemory: resource.MustParse("10G"),
+									},
+								},
+								{
+									ContainerName: "conntrack-fix",
+									Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+								},
+							},
+						},
+						TargetRef: &autoscalingv1.CrossVersionObjectReference{
+							APIVersion: "apps/v1",
+							Kind:       "DaemonSet",
+							Name:       daemonSetNameFor(pool),
+						},
+						UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
+							UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
+						},
+					},
+				}
 			}
 		)
 
@@ -813,6 +867,16 @@ status: {}
 				},
 			}
 
+			Expect(managedResourceCentral).To(consistOf(
+				serviceAccount,
+				clusterRoleBinding,
+				service,
+				secret,
+				configMapFor(values.IPVSEnabled),
+				configMapConntrackFixScript,
+				configMapCleanupScript,
+			))
+
 			managedResourceSecretCentral = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResourceCentral.Spec.SecretRefs[0].Name, Namespace: namespace}}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretCentral), managedResourceSecretCentral)).To(Succeed())
 			Expect(managedResourceSecretCentral.Type).To(Equal(corev1.SecretTypeOpaque))
@@ -822,15 +886,6 @@ status: {}
 				"origin":    "gardener",
 			}))
 			Expect(managedResourceSecretCentral.Immutable).To(Equal(ptr.To(true)))
-			Expect(managedResourceSecretCentral.Data).To(HaveLen(7))
-			Expect(string(managedResourceSecretCentral.Data["serviceaccount__kube-system__kube-proxy.yaml"])).To(Equal(serviceAccountYAML))
-			Expect(string(managedResourceSecretCentral.Data["clusterrolebinding____gardener.cloud_target_node-proxier.yaml"])).To(Equal(clusterRoleBindingYAML))
-			Expect(string(managedResourceSecretCentral.Data["service__kube-system__kube-proxy.yaml"])).To(Equal(serviceYAML))
-			Expect(string(managedResourceSecretCentral.Data["secret__kube-system__"+secretName+".yaml"])).To(Equal(secretYAML))
-			Expect(string(managedResourceSecretCentral.Data["configmap__kube-system__"+configMapNameFor(values.IPVSEnabled)+".yaml"])).To(Equal(configMapYAMLFor(values.IPVSEnabled)))
-			Expect(string(managedResourceSecretCentral.Data["configmap__kube-system__"+configMapConntrackFixScriptName+".yaml"])).To(Equal(configMapConntrackFixScriptYAML))
-			Expect(string(managedResourceSecretCentral.Data["configmap__kube-system__"+configMapCleanupScriptName+".yaml"])).To(Equal(configMapCleanupScriptYAML))
-
 			expectedMr.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: managedResourceSecretCentral.Name}}
 			utilruntime.Must(references.InjectAnnotations(expectedMr))
 			Expect(managedResourceCentral).To(DeepEqual(expectedMr))
@@ -860,21 +915,8 @@ status: {}
 					},
 				}
 
+				Expect(managedResource).To(consistOf(daemonSetFor(pool, values.IPVSEnabled, values.VPAEnabled, versionutils.ConstraintK8sGreaterEqual129.Check(pool.KubernetesVersion))))
 				managedResourceSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResource.Spec.SecretRefs[0].Name, Namespace: namespace}}
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
-				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(1))
-				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
-				Expect(managedResourceSecret.Labels).To(Equal(map[string]string{
-					"resources.gardener.cloud/garbage-collectable-reference": "true",
-					"component":          "kube-proxy",
-					"role":               "pool",
-					"origin":             "gardener",
-					"pool-name":          pool.Name,
-					"kubernetes-version": pool.KubernetesVersion.String(),
-				}))
-
-				Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled, versionutils.ConstraintK8sGreaterEqual129.Check(pool.KubernetesVersion))))
 				expectedPoolMr.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: managedResourceSecret.Name}}
 				utilruntime.Must(references.InjectAnnotations(expectedPoolMr))
 				Expect(managedResource).To(DeepEqual(expectedPoolMr))
@@ -886,6 +928,10 @@ status: {}
 				actualPrometheusRule := &monitoringv1.PrometheusRule{}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(prometheusRule), actualPrometheusRule)).To(Succeed())
 				Expect(actualPrometheusRule).To(DeepEqual(prometheusRule))
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			}
 		})
 
@@ -912,6 +958,7 @@ status: {}
 					KeepObjects:  ptr.To(false),
 				},
 			}
+			Expect(managedResourceCentral).To(contain(configMapFor(values.IPVSEnabled)))
 
 			managedResourceSecretCentral = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
 				Name:      managedResourceCentral.Spec.SecretRefs[0].Name,
@@ -926,8 +973,6 @@ status: {}
 				"component": "kube-proxy",
 				"origin":    "gardener",
 			}))
-			Expect(string(managedResourceSecretCentral.Data["configmap__kube-system__"+configMapNameFor(values.IPVSEnabled)+".yaml"])).To(Equal(configMapYAMLFor(values.IPVSEnabled)))
-
 			expectedMR.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: managedResourceSecretCentral.Name}}
 			utilruntime.Must(references.InjectAnnotations(expectedMR))
 			Expect(managedResourceCentral).To(DeepEqual(expectedMR))
@@ -961,10 +1006,10 @@ status: {}
 					Name:      managedResource.Spec.SecretRefs[0].Name,
 					Namespace: namespace,
 				}}
+				Expect(managedResource).To(consistOf(daemonSetFor(pool, values.IPVSEnabled, values.VPAEnabled, versionutils.ConstraintK8sGreaterEqual129.Check(pool.KubernetesVersion))))
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(1))
 				Expect(managedResourceSecret.Labels).To(Equal(map[string]string{
 					"component":          "kube-proxy",
 					"kubernetes-version": pool.KubernetesVersion.String(),
@@ -974,7 +1019,6 @@ status: {}
 					"role": "pool",
 				}))
 				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
-				Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled, versionutils.ConstraintK8sGreaterEqual129.Check(pool.KubernetesVersion))))
 				poolExpectedMr.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: managedResourceSecret.Name}}
 				utilruntime.Must(references.InjectAnnotations(poolExpectedMr))
 				Expect(managedResource).To(DeepEqual(poolExpectedMr))
@@ -998,19 +1042,7 @@ status: {}
 					Name:      managedResource.Spec.SecretRefs[0].Name,
 					Namespace: namespace,
 				}}
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
-				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(1))
-				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
-				Expect(managedResourceSecret.Labels).To(Equal(map[string]string{
-					"resources.gardener.cloud/garbage-collectable-reference": "true",
-					"component":          "kube-proxy",
-					"role":               "pool",
-					"origin":             "gardener",
-					"pool-name":          pool.Name,
-					"kubernetes-version": pool.KubernetesVersion.String(),
-				}))
-				Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled, versionutils.ConstraintK8sGreaterEqual129.Check(pool.KubernetesVersion))))
+				Expect(managedResource).To(consistOf(daemonSetFor(pool, values.IPVSEnabled, values.VPAEnabled, versionutils.ConstraintK8sGreaterEqual129.Check(pool.KubernetesVersion))))
 
 				expectedMr := &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
@@ -1033,12 +1065,12 @@ status: {}
 				}
 				utilruntime.Must(references.InjectAnnotations(expectedMr))
 
+				Expect(managedResource).To(consistOf(daemonSetFor(pool, values.IPVSEnabled, values.VPAEnabled, versionutils.ConstraintK8sGreaterEqual129.Check(pool.KubernetesVersion))))
+
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
-				Expect(managedResourceSecret.Data).To(HaveLen(1))
-				Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled, versionutils.ConstraintK8sGreaterEqual129.Check(pool.KubernetesVersion))))
 
 				// assertions for resources specific to the major/minor parts only of the Kubernetes version
 				managedResourceForMajorMinorVersionOnly := managedResourceForPoolForMajorMinorVersionOnly(pool)
@@ -1068,14 +1100,12 @@ status: {}
 				}
 				utilruntime.Must(references.InjectAnnotations(expectedMrForMajorMinorVersionOnly))
 				Expect(managedResourceForMajorMinorVersionOnly).To(Equal(expectedMrForMajorMinorVersionOnly))
-
 				managedResourceSecretForMajorMinorVersionOnly.Name = managedResourceForMajorMinorVersionOnly.Spec.SecretRefs[0].Name
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretForMajorMinorVersionOnly), managedResourceSecretForMajorMinorVersionOnly)).To(Succeed())
 				Expect(managedResourceSecretForMajorMinorVersionOnly.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecretForMajorMinorVersionOnly.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecretForMajorMinorVersionOnly.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
-				Expect(managedResourceSecretForMajorMinorVersionOnly.Data).To(HaveLen(1))
-				Expect(string(managedResourceSecretForMajorMinorVersionOnly.Data["verticalpodautoscaler__kube-system__"+vpaNameFor(pool)+".yaml"])).To(Equal(vpaYAMLFor(pool)))
+				Expect(managedResourceForMajorMinorVersionOnly).To(consistOf(vpaFor(pool)))
 				Expect(managedResource).To(DeepEqual(expectedMr))
 			}
 		})

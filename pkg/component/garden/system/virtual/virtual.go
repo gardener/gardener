@@ -634,5 +634,5 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 		}
 	}
 
-	return registry.SerializedObjects(), nil
+	return registry.SerializedObjects()
 }

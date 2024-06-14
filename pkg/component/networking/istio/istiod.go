@@ -188,7 +188,12 @@ func (i *istiod) deployIstiod(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForSeed(ctx, i.client, i.values.Istiod.Namespace, managedResourceIstioSystemName, false, serializeRenderedChartAndRegistry(renderedChart, registry))
+	serializedObjects, err := serializeRenderedChartAndRegistry(renderedChart, registry)
+	if err != nil {
+		return err
+	}
+
+	return managedresources.CreateForSeed(ctx, i.client, i.values.Istiod.Namespace, managedResourceIstioSystemName, false, serializedObjects)
 }
 
 func (i *istiod) Deploy(ctx context.Context) error {
@@ -296,7 +301,12 @@ func (i *istiod) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForSeed(ctx, i.client, i.values.Istiod.Namespace, i.managedResourceIstioIngressName, false, serializeRenderedChartAndRegistry(renderedChart, registry))
+	serializedObjects, err := serializeRenderedChartAndRegistry(renderedChart, registry)
+	if err != nil {
+		return err
+	}
+
+	return managedresources.CreateForSeed(ctx, i.client, i.values.Istiod.Namespace, i.managedResourceIstioIngressName, false, serializedObjects)
 }
 
 func (i *istiod) Destroy(ctx context.Context) error {
@@ -407,12 +417,10 @@ func ManagedResourceNames(istiodEnabled bool, namePrefix string) []string {
 	return names
 }
 
-func serializeRenderedChartAndRegistry(chart *chartrenderer.RenderedChart, registry *managedresources.Registry) map[string][]byte {
-	data := chart.AsSecretData()
-
-	for k, v := range registry.SerializedObjects() {
-		data[k] = v
+func serializeRenderedChartAndRegistry(chart *chartrenderer.RenderedChart, registry *managedresources.Registry) (map[string][]byte, error) {
+	for name, data := range chart.AsSecretData() {
+		registry.AddSerialized(name, data)
 	}
 
-	return data
+	return registry.SerializedObjects()
 }

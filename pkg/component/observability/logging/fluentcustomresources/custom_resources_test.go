@@ -36,7 +36,7 @@ import (
 
 var _ = Describe("Custom Resources", func() {
 	var (
-		ctx = context.TODO()
+		ctx = context.Background()
 
 		namespace = "some-namespace"
 		values    = Values{
@@ -195,14 +195,15 @@ var _ = Describe("Custom Resources", func() {
 			customResourcesManagedResourceSecret.Name = customResourcesManagedResource.Spec.SecretRefs[0].Name
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResourceSecret), customResourcesManagedResourceSecret)).To(Succeed())
 			Expect(customResourcesManagedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(customResourcesManagedResourceSecret.Data).To(HaveLen(5))
 			Expect(customResourcesManagedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(customResourcesManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
-			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterinput____journald-kubelet.yaml"))
-			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterinput____journald-kubelet-monitor.yaml"))
-			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterfilter____gardener-extension.yaml"))
-			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterparser____extensions-parser.yaml"))
-			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusteroutput____journald2.yaml"))
+			manifests, err := test.ExtractManifestsFromManagedResourceData(customResourcesManagedResourceSecret.Data)
+			Expect(err).NotTo(HaveOccurred())
+			test.ExpectKindWithNameAndNamespace(manifests, "ClusterInput", "journald-kubelet", "")
+			test.ExpectKindWithNameAndNamespace(manifests, "ClusterInput", "journald-kubelet-monitor", "")
+			test.ExpectKindWithNameAndNamespace(manifests, "ClusterFilter", "gardener-extension", "")
+			test.ExpectKindWithNameAndNamespace(manifests, "ClusterParser", "extensions-parser", "")
+			test.ExpectKindWithNameAndNamespace(manifests, "ClusterOutput", "journald2", "")
 		})
 	})
 

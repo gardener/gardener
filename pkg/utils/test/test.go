@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/onsi/ginkgo/v2"
@@ -285,4 +286,19 @@ func CEventually(ctx context.Context, actual any) AsyncAssertion {
 		return Eventually(actual)
 	}
 	return Eventually(actual).WithTimeout(time.Until(deadline))
+}
+
+// ExpectKindWithNameAndNamespace expects that kind, name and namespace is present in the given manifests.
+func ExpectKindWithNameAndNamespace(manifests []string, kind, name, namespace string) {
+	var objectFound bool
+
+	for _, manifest := range manifests {
+		if strings.Contains(manifest, "kind: "+kind) && strings.Contains(manifest, "name: "+name) &&
+			(namespace == "" || strings.Contains(manifest, "namespace: "+namespace)) {
+			objectFound = true
+			break
+		}
+	}
+
+	ExpectWithOffset(1, objectFound).To(BeTrue())
 }

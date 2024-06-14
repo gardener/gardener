@@ -127,10 +127,12 @@ rules:
 			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Data).To(HaveLen(1))
-			Expect(string(managedResourceSecret.Data["clusterrole____system_machine-controller-manager-runtime.yaml"])).To(Equal(clusterRoleYAML))
 			Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+
+			manifests, err := test.ExtractManifestsFromManagedResourceData(managedResourceSecret.Data)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(manifests).To(ConsistOf(clusterRoleYAML))
 		})
 	})
 

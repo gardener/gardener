@@ -32,13 +32,15 @@ import (
 
 var _ = Describe("DependencyWatchdog", func() {
 	var (
-		ctx = context.TODO()
+		ctx = context.Background()
 
 		namespace = "some-namespace"
 		image     = "some-image:some-tag"
 
-		c   client.Client
-		dwd component.DeployWaiter
+		c                client.Client
+		dwd              component.DeployWaiter
+		manifests        []string
+		expectedManifest []string
 
 		kubernetesVersion *semver.Version
 	)
@@ -476,20 +478,27 @@ spec:
 					Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 					Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 					Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
-					Expect(managedResourceSecret.Data).To(HaveLen(9))
-					Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_"+dwdName+".yaml"])).To(DeepEqual(clusterRoleYAMLFor(values.Role)))
-					Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_"+dwdName+".yaml"])).To(DeepEqual(clusterRoleBindingYAML))
-					Expect(string(managedResourceSecret.Data["configmap__"+namespace+"__"+configMapName+".yaml"])).To(DeepEqual(configMapYAMLFor(values.Role)))
-					Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__"+dwdName+".yaml"])).To(DeepEqual(deploymentYAMLFor(values.Role)))
-					Expect(string(managedResourceSecret.Data["role__"+namespace+"__gardener.cloud_"+dwdName+".yaml"])).To(DeepEqual(roleYAMLFor(values.Role)))
-					Expect(string(managedResourceSecret.Data["rolebinding__"+namespace+"__gardener.cloud_"+dwdName+".yaml"])).To(DeepEqual(roleBindingYAML))
-					Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__"+dwdName+".yaml"])).To(DeepEqual(serviceAccountYAML))
-					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__"+dwdName+".yaml"])).To(DeepEqual(vpaYAMLFor(values.Role)))
+
+					var err error
+					manifests, err = test.ExtractManifestsFromManagedResourceData(managedResourceSecret.Data)
+					Expect(err).NotTo(HaveOccurred())
+
+					expectedManifest = []string{
+						clusterRoleYAMLFor(values.Role),
+						clusterRoleBindingYAML,
+						configMapYAMLFor(values.Role),
+						deploymentYAMLFor(values.Role),
+						roleYAMLFor(values.Role),
+						roleBindingYAML,
+						serviceAccountYAML,
+						vpaYAMLFor(values.Role),
+					}
 				})
 
 				Context("kubernetes versions < 1.26", func() {
 					It("should successfully deploy all resources for role "+string(values.Role), func() {
-						Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__"+dwdName+".yaml"])).To(DeepEqual(podDisruptionYAMLFor(false)))
+						expectedManifest = append(expectedManifest, podDisruptionYAMLFor(false))
+						Expect(manifests).To(ConsistOf(expectedManifest))
 					})
 				})
 
@@ -499,7 +508,8 @@ spec:
 					})
 
 					It("should successfully deploy all resources for role "+string(values.Role), func() {
-						Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__"+dwdName+".yaml"])).To(DeepEqual(podDisruptionYAMLFor(true)))
+						expectedManifest = append(expectedManifest, podDisruptionYAMLFor(true))
+						Expect(manifests).To(ConsistOf(expectedManifest))
 					})
 				})
 			})
