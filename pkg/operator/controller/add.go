@@ -15,12 +15,14 @@ import (
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controller/networkpolicy"
 	"github.com/gardener/gardener/pkg/controller/service"
 	"github.com/gardener/gardener/pkg/controller/vpaevictionrequirements"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	"github.com/gardener/gardener/pkg/operator/controller/controllerregistrar"
+	operatorextension "github.com/gardener/gardener/pkg/operator/controller/extension"
 	"github.com/gardener/gardener/pkg/operator/controller/garden"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -32,7 +34,19 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 		return err
 	}
 
-	if err := garden.AddToManager(ctx, mgr, cfg, identity); err != nil {
+	gardenClientMap, err := clientmapbuilder.
+		NewGardenClientMapBuilder().
+		WithRuntimeClient(mgr.GetClient()).
+		WithClientConnectionConfig(&cfg.VirtualClientConnection).
+		Build(mgr.GetLogger())
+
+	if err != nil {
+		return fmt.Errorf("failed to build garden ClientMap: %w", err)
+	}
+	if err := garden.AddToManager(ctx, mgr, cfg, identity, gardenClientMap); err != nil {
+		return err
+	}
+	if err := operatorextension.AddToManager(ctx, mgr, cfg, gardenClientMap); err != nil {
 		return err
 	}
 

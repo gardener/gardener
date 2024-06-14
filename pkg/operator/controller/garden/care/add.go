@@ -75,7 +75,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 		Watches(
 			&operatorv1alpha1.Garden{},
 			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(r.GardenPredicate()),
+			builder.WithPredicates(GardenPredicate()),
 		).Build(r)
 	if err != nil {
 		return err
@@ -94,7 +94,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 
 // GardenPredicate is a predicate which returns 'true' for create events, and for update events in case the garden was
 // successfully reconciled.
-func (r *Reconciler) GardenPredicate() predicate.Predicate {
+func GardenPredicate() predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc: func(event.CreateEvent) bool {
 			return true

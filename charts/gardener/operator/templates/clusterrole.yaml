@@ -15,6 +15,8 @@ rules:
   resources:
   - gardens
   - gardens/status
+  - extensions
+  - extensions/status
   verbs:
   - get
   - list

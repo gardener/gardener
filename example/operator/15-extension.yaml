@@ -1,7 +1,7 @@
 apiVersion: operator.gardener.cloud/v1alpha1
 kind: Extension
 metadata:
-  name: local
+  name: provider-local
 #spec:
 #  resources:
 #  - kind: BackupBucket
@@ -26,3 +26,5 @@ metadata:
 #      helm:
 #        ociRepository: {}
 #      policy: OnDemand|Always
+#      podSecurityEnforceValue: baseline|priviledged
+

@@ -127,3 +127,8 @@ type ExtensionStatus struct {
 	// +optional
 	ProviderStatus *runtime.RawExtension `json:"providerStatus,omitempty"`
 }
+
+const (
+	// VirtualClusterConfigReconciled is a constant for a condition type indicating the extension resources in the virtual cluster have reconciled and are available.
+	VirtualClusterConfigReconciled gardencorev1beta1.ConditionType = "VirtualClusterConfigReconciled"
+)
