@@ -5,9 +5,10 @@
 package controller
 
 import (
+	"k8s.io/apimachinery/pkg/util/sets"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
-	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 // ChartRendererFactory creates chartrenderer.Interface to be used by this actuator.

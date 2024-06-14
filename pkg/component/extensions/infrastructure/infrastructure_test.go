@@ -58,7 +58,9 @@ var _ = Describe("#Interface", func() {
 		sshPublicKey   []byte
 		providerConfig *runtime.RawExtension
 		providerStatus *runtime.RawExtension
-		nodesCIDR      *string
+		nodesCIDRs     []string
+		servicesCIDRs  []string
+		podsCIDRs      []string
 		egressCIDRs    []string
 
 		empty, expected *extensionsv1alpha1.Infrastructure
@@ -85,7 +87,9 @@ var _ = Describe("#Interface", func() {
 		sshPublicKey = []byte("secure")
 		providerConfig = &runtime.RawExtension{Raw: []byte(`{"very":"provider-specific"}`)}
 		providerStatus = &runtime.RawExtension{Raw: []byte(`{"very":"provider-specific-status"}`)}
-		nodesCIDR = ptr.To("1.2.3.4/5")
+		nodesCIDRs = []string{"1.2.3.4/5", "2.3.4.5/6"}
+		servicesCIDRs = []string{"5.6.7.8/9", "6.7.8.9/10"}
+		podsCIDRs = []string{"10.11.12.13/14", "11.12.13.14/15"}
 		egressCIDRs = []string{"1.2.3.4/5", "5.6.7.8/9"}
 
 		values = &infrastructure.Values{
@@ -318,7 +322,12 @@ var _ = Describe("#Interface", func() {
 				State:          gardencorev1beta1.LastOperationStateSucceeded,
 				LastUpdateTime: metav1.Time{Time: now.UTC().Add(time.Second)},
 			}
-			expected.Status.NodesCIDR = nodesCIDR
+			expected.Status.NodesCIDR = &nodesCIDRs[0]
+			expected.Status.Networking = &extensionsv1alpha1.InfrastructureStatusNetworking{
+				Nodes:    nodesCIDRs,
+				Services: servicesCIDRs,
+				Pods:     podsCIDRs,
+			}
 			expected.Status.ProviderStatus = providerStatus
 			expected.Status.EgressCIDRs = egressCIDRs
 			Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching infrastructure succeeds")
@@ -328,7 +337,9 @@ var _ = Describe("#Interface", func() {
 
 			By("Verify status")
 			Expect(deployWaiter.ProviderStatus()).To(Equal(providerStatus))
-			Expect(deployWaiter.NodesCIDR()).To(Equal(nodesCIDR))
+			Expect(deployWaiter.NodesCIDRs()).To(Equal(nodesCIDRs))
+			Expect(deployWaiter.ServicesCIDRs()).To(Equal(servicesCIDRs))
+			Expect(deployWaiter.PodsCIDRs()).To(Equal(podsCIDRs))
 			Expect(deployWaiter.EgressCIDRs()).To(Equal(egressCIDRs))
 		})
 
@@ -338,14 +349,22 @@ var _ = Describe("#Interface", func() {
 			expected.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				State: gardencorev1beta1.LastOperationStateSucceeded,
 			}
-			expected.Status.NodesCIDR = nodesCIDR
+			oldNodes := "9.8.7.6/5"
+			expected.Status.NodesCIDR = ptr.To(oldNodes)
+			expected.Status.Networking = &extensionsv1alpha1.InfrastructureStatusNetworking{
+				Nodes:    nodesCIDRs,
+				Services: servicesCIDRs,
+				Pods:     podsCIDRs,
+			}
 			expected.Status.ProviderStatus = providerStatus
 			expected.Status.EgressCIDRs = egressCIDRs
 
 			Expect(c.Create(ctx, expected)).To(Succeed(), "creating infrastructure succeeds")
 			Expect(deployWaiter.Wait(ctx)).To(Succeed())
 			Expect(deployWaiter.ProviderStatus()).To(Equal(providerStatus))
-			Expect(deployWaiter.NodesCIDR()).To(Equal(nodesCIDR))
+			Expect(deployWaiter.NodesCIDRs()).To(Equal(append([]string{oldNodes}, nodesCIDRs...)))
+			Expect(deployWaiter.ServicesCIDRs()).To(Equal(servicesCIDRs))
+			Expect(deployWaiter.PodsCIDRs()).To(Equal(podsCIDRs))
 			Expect(deployWaiter.EgressCIDRs()).To(Equal(egressCIDRs))
 		})
 	})
@@ -524,7 +543,9 @@ var _ = Describe("#Interface", func() {
 
 		It("should retrieve the object and extract the status", func() {
 			Expect(deployWaiter.ProviderStatus()).To(BeNil())
-			Expect(deployWaiter.NodesCIDR()).To(BeNil())
+			Expect(deployWaiter.NodesCIDRs()).To(BeEmpty())
+			Expect(deployWaiter.ServicesCIDRs()).To(BeEmpty())
+			Expect(deployWaiter.PodsCIDRs()).To(BeEmpty())
 
 			var (
 				providerStatus = &runtime.RawExtension{Raw: []byte(`{"some":"status"}`)}
@@ -534,6 +555,11 @@ var _ = Describe("#Interface", func() {
 			infra := empty.DeepCopy()
 			infra.Status.ProviderStatus = providerStatus
 			infra.Status.NodesCIDR = nodesCIDR
+			infra.Status.Networking = &extensionsv1alpha1.InfrastructureStatusNetworking{
+				Nodes:    nodesCIDRs,
+				Services: servicesCIDRs,
+				Pods:     podsCIDRs,
+			}
 			infra.Status.EgressCIDRs = egressCIDRs
 			Expect(c.Create(ctx, infra)).To(Succeed())
 
@@ -544,7 +570,9 @@ var _ = Describe("#Interface", func() {
 			Expect(actual).To(DeepEqual(expected))
 
 			Expect(deployWaiter.ProviderStatus()).To(Equal(providerStatus))
-			Expect(deployWaiter.NodesCIDR()).To(Equal(nodesCIDR))
+			Expect(deployWaiter.NodesCIDRs()).To(Equal(append([]string{*nodesCIDR}, nodesCIDRs...)))
+			Expect(deployWaiter.ServicesCIDRs()).To(Equal(servicesCIDRs))
+			Expect(deployWaiter.PodsCIDRs()).To(Equal(podsCIDRs))
 			Expect(deployWaiter.EgressCIDRs()).To(Equal(egressCIDRs))
 		})
 	})
