@@ -7,6 +7,7 @@ package system
 import (
 	"context"
 	"fmt"
+	"net"
 	"slices"
 	"strings"
 	"time"
@@ -40,6 +41,9 @@ const ManagedResourceName = "shoot-core-system"
 type Interface interface {
 	component.DeployWaiter
 	SetAPIResourceList([]*metav1.APIResourceList)
+	SetPodNetworkCIDRs([]net.IPNet)
+	SetServiceNetworkCIDRs([]net.IPNet)
+	SetNodeNetworkCIDRs([]net.IPNet)
 }
 
 // Values is a set of configuration values for the system resources.
@@ -58,12 +62,14 @@ type Values struct {
 	EncryptedResources []string
 	// Object is the shoot object.
 	Object *gardencorev1beta1.Shoot
-	// PodNetworkCIDR is the CIDR of the pod network.
-	PodNetworkCIDR string
+	// PodNetworkCIDRs are the CIDRs of the pod network.
+	PodNetworkCIDRs []net.IPNet
 	// ProjectName is the name of the project of the cluster.
 	ProjectName string
-	// ServiceNetworkCIDR is the CIDR of the service network.
-	ServiceNetworkCIDR string
+	// ServiceNetworkCIDRs are the CIDRs of the service network.
+	ServiceNetworkCIDRs []net.IPNet
+	// NodeNetworkCIDRs are the CIDRs of the node network.
+	NodeNetworkCIDRs []net.IPNet
 }
 
 // New creates a new instance of DeployWaiter for shoot system resources.
@@ -100,6 +106,18 @@ func (s *shootSystem) Destroy(ctx context.Context) error {
 
 func (s *shootSystem) SetAPIResourceList(list []*metav1.APIResourceList) {
 	s.values.APIResourceList = list
+}
+
+func (s *shootSystem) SetPodNetworkCIDRs(pods []net.IPNet) {
+	s.values.PodNetworkCIDRs = pods
+}
+
+func (s *shootSystem) SetServiceNetworkCIDRs(services []net.IPNet) {
+	s.values.ServiceNetworkCIDRs = services
+}
+
+func (s *shootSystem) SetNodeNetworkCIDRs(nodes []net.IPNet) {
+	s.values.NodeNetworkCIDRs = nodes
 }
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
@@ -400,8 +418,8 @@ func (s *shootSystem) shootInfoData() map[string]string {
 		"provider":          s.values.Object.Spec.Provider.Type,
 		"region":            s.values.Object.Spec.Region,
 		"kubernetesVersion": s.values.Object.Spec.Kubernetes.Version,
-		"podNetwork":        s.values.PodNetworkCIDR,
-		"serviceNetwork":    s.values.ServiceNetworkCIDR,
+		"podNetwork":        s.values.PodNetworkCIDRs[0].String(),
+		"serviceNetwork":    s.values.ServiceNetworkCIDRs[0].String(),
 		"maintenanceBegin":  s.values.Object.Spec.Maintenance.TimeWindow.Begin,
 		"maintenanceEnd":    s.values.Object.Spec.Maintenance.TimeWindow.End,
 	}
@@ -410,9 +428,13 @@ func (s *shootSystem) shootInfoData() map[string]string {
 		data["domain"] = *domain
 	}
 
-	if nodeNetwork := s.values.Object.Spec.Networking.Nodes; nodeNetwork != nil {
-		data["nodeNetwork"] = *nodeNetwork
+	if len(s.values.NodeNetworkCIDRs) > 0 {
+		data["nodeNetwork"] = s.values.NodeNetworkCIDRs[0].String()
 	}
+
+	addNetworkToMap("podNetworks", s.values.PodNetworkCIDRs, data)
+	addNetworkToMap("serviceNetworks", s.values.ServiceNetworkCIDRs, data)
+	addNetworkToMap("nodeNetworks", s.values.NodeNetworkCIDRs, data)
 
 	return data
 }
@@ -494,4 +516,14 @@ func (s *shootSystem) isEncryptedResource(resource, group string) bool {
 	}
 
 	return slices.Contains(s.values.EncryptedResources, resourceName)
+}
+
+func addNetworkToMap(name string, cidrs []net.IPNet, data map[string]string) {
+	networks := ""
+	for _, n := range cidrs {
+		networks += n.String() + ","
+	}
+	if networks != "" {
+		data[name] = strings.TrimSuffix(networks, ",")
+	}
 }

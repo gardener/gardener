@@ -6,6 +6,7 @@ package system_test
 
 import (
 	"context"
+	"net"
 
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
@@ -50,9 +51,9 @@ var _ = Describe("ShootSystem", func() {
 		maintenanceBegin  = "123456+0100"
 		maintenanceEnd    = "134502+0100"
 		domain            = "my-shoot.example.com"
-		podCIDR           = "10.10.0.0/16"
-		serviceCIDR       = "11.11.0.0/16"
-		nodeCIDR          = "12.12.0.0/16"
+		podCIDRs          = []net.IPNet{{IP: net.ParseIP("10.10.0.0"), Mask: net.CIDRMask(16, 32)}, {IP: net.ParseIP("2001:db8:1::"), Mask: net.CIDRMask(64, 128)}}
+		serviceCIDRs      = []net.IPNet{{IP: net.ParseIP("11.11.0.0"), Mask: net.CIDRMask(16, 32)}, {IP: net.ParseIP("2001:db8:2::"), Mask: net.CIDRMask(64, 128)}}
+		nodeCIDRs         = []net.IPNet{{IP: net.ParseIP("12.12.0.0"), Mask: net.CIDRMask(16, 32)}, {IP: net.ParseIP("2001:db8:3::"), Mask: net.CIDRMask(64, 128)}}
 		extension1        = "some-extension"
 		extension2        = "some-other-extension"
 		shootObj          = &gardencorev1beta1.Shoot{
@@ -72,9 +73,6 @@ var _ = Describe("ShootSystem", func() {
 						Begin: maintenanceBegin,
 						End:   maintenanceEnd,
 					},
-				},
-				Networking: &gardencorev1beta1.Networking{
-					Nodes: &nodeCIDR,
 				},
 				Region: region,
 			},
@@ -98,9 +96,10 @@ var _ = Describe("ShootSystem", func() {
 			IsWorkerless:          false,
 			KubernetesVersion:     semver.MustParse(kubernetesVersion),
 			Object:                shootObj,
-			PodNetworkCIDR:        podCIDR,
+			PodNetworkCIDRs:       podCIDRs,
 			ProjectName:           projectName,
-			ServiceNetworkCIDR:    serviceCIDR,
+			ServiceNetworkCIDRs:   serviceCIDRs,
+			NodeNetworkCIDRs:      nodeCIDRs,
 		}
 		component = New(c, namespace, values)
 
@@ -286,12 +285,15 @@ var _ = Describe("ShootSystem", func() {
 					"kubernetesVersion": kubernetesVersion,
 					"maintenanceBegin":  maintenanceBegin,
 					"maintenanceEnd":    maintenanceEnd,
-					"nodeNetwork":       nodeCIDR,
-					"podNetwork":        podCIDR,
+					"nodeNetwork":       nodeCIDRs[0].String(),
+					"nodeNetworks":      nodeCIDRs[0].String() + "," + nodeCIDRs[1].String(),
+					"podNetwork":        podCIDRs[0].String(),
+					"podNetworks":       podCIDRs[0].String() + "," + podCIDRs[1].String(),
 					"projectName":       projectName,
 					"provider":          providerType,
 					"region":            region,
-					"serviceNetwork":    serviceCIDR,
+					"serviceNetwork":    serviceCIDRs[0].String(),
+					"serviceNetworks":   serviceCIDRs[0].String() + "," + serviceCIDRs[1].String(),
 					"shootName":         shootName,
 				},
 			}

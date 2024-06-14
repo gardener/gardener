@@ -94,6 +94,8 @@ type Interface interface {
 	// WorkerPoolNameToOperatingSystemConfigsMap returns a map whose key is a worker pool name and whose value is a structure
 	// containing both the init and the original operating system config data.
 	WorkerPoolNameToOperatingSystemConfigsMap() map[string]*OperatingSystemConfigs
+	// SetClusterDNSAddresses sets the cluster DNS addresses.
+	SetClusterDNSAddresses([]string)
 }
 
 // Values contains the values used to create an OperatingSystemConfig resource.
@@ -124,8 +126,8 @@ type InitValues struct {
 type OriginalValues struct {
 	// CABundle is the bundle of certificate authorities that will be added as root certificates.
 	CABundle *string
-	// ClusterDNSAddress is the address for in-cluster DNS.
-	ClusterDNSAddress string
+	// ClusterDNSAddresses are the addresses for in-cluster DNS.
+	ClusterDNSAddresses []string
 	// ClusterDomain is the Kubernetes cluster domain.
 	ClusterDomain string
 	// Images is a map containing the necessary container images for the systemd units (hyperkube and pause-container).
@@ -704,6 +706,10 @@ func (o *operatingSystemConfig) WorkerPoolNameToOperatingSystemConfigsMap() map[
 	return o.workerPoolNameToOSCs
 }
 
+func (o *operatingSystemConfig) SetClusterDNSAddresses(clusterDNSAddresses []string) {
+	o.values.ClusterDNSAddresses = clusterDNSAddresses
+}
+
 func (o *operatingSystemConfig) newDeployer(version int, osc *extensionsv1alpha1.OperatingSystemConfig, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) (deployer, error) {
 	criName := extensionsv1alpha1.CRINameContainerD
 	if worker.CRI != nil {
@@ -767,7 +773,7 @@ func (o *operatingSystemConfig) newDeployer(version int, osc *extensionsv1alpha1
 		caBundle:                caBundle,
 		clusterCASecretName:     clusterCASecret.Name,
 		clusterCABundle:         clusterCASecret.Data[secretsutils.DataKeyCertificateBundle],
-		clusterDNSAddress:       o.values.ClusterDNSAddress,
+		clusterDNSAddresses:     o.values.ClusterDNSAddresses,
 		clusterDomain:           o.values.ClusterDomain,
 		criName:                 criName,
 		images:                  images,
@@ -831,7 +837,7 @@ type deployer struct {
 	caBundle                *string
 	clusterCASecretName     string
 	clusterCABundle         []byte
-	clusterDNSAddress       string
+	clusterDNSAddresses     []string
 	clusterDomain           string
 	criName                 extensionsv1alpha1.CRIName
 	images                  map[string]*imagevectorutils.Image
@@ -867,7 +873,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 	componentsContext := components.Context{
 		Key:                     d.key,
 		CABundle:                d.caBundle,
-		ClusterDNSAddress:       d.clusterDNSAddress,
+		ClusterDNSAddresses:     d.clusterDNSAddresses,
 		ClusterDomain:           d.clusterDomain,
 		CRIName:                 d.criName,
 		Images:                  d.images,

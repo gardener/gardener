@@ -56,6 +56,7 @@ var _ = Describe("Component", func() {
 				"blub": "bar",
 			}
 			ctx.PreferIPv6 = preferIPv6
+			ctx.ClusterDNSAddresses = []string{"2001::db8:1", "2001::db8:2"}
 
 			cliFlags := CLIFlags(ctx.KubernetesVersion, ctx.NodeLabels, ctx.CRIName, ctx.KubeletCLIFlags, ctx.PreferIPv6)
 			units, files, err := component.Config(ctx)
@@ -122,7 +123,8 @@ cgroupDriver: cgroupfs
 cgroupRoot: /
 cgroupsPerQOS: true
 clusterDNS:
-- ""
+- 2001::db8:1
+- 2001::db8:2
 containerLogMaxSize: 100Mi
 containerRuntimeEndpoint: ""
 cpuCFSQuota: true

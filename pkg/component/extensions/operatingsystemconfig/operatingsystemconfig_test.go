@@ -71,7 +71,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			poolHashesSecret            *corev1.Secret
 			apiServerURL                = "https://url-to-apiserver"
 			caBundle                    = ptr.To("ca-bundle")
-			clusterDNSAddress           = "cluster-dns"
+			clusterDNSAddresses         = []string{"cluster-dns", "backup-cluster-dns"}
 			clusterDomain               = "cluster-domain"
 			images                      = map[string]*imagevector.Image{"gardener-node-agent": {}}
 			evictionHardMemoryAvailable = "100Mi"
@@ -108,7 +108,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				return []extensionsv1alpha1.Unit{
 						{Name: cctx.Key},
 						{Name: *cctx.CABundle},
-						{Name: cctx.ClusterDNSAddress},
+						{Name: strings.Join(cctx.ClusterDNSAddresses, "-")},
 						{Name: cctx.ClusterDomain},
 						{Name: string(cctx.CRIName)},
 					},
@@ -197,12 +197,12 @@ var _ = Describe("OperatingSystemConfig", func() {
 					}},
 				)
 				componentsContext := components.Context{
-					Key:               key,
-					CABundle:          caBundle,
-					ClusterDNSAddress: clusterDNSAddress,
-					ClusterDomain:     clusterDomain,
-					CRIName:           criName,
-					Images:            imagesCopy,
+					Key:                 key,
+					CABundle:            caBundle,
+					ClusterDNSAddresses: clusterDNSAddresses,
+					ClusterDomain:       clusterDomain,
+					CRIName:             criName,
+					Images:              imagesCopy,
 					KubeletConfigParameters: components.ConfigurableKubeletConfigParameters{
 						EvictionHard: map[string]string{
 							"memory.available": evictionHardMemoryAvailable,
@@ -310,14 +310,14 @@ var _ = Describe("OperatingSystemConfig", func() {
 					APIServerURL: apiServerURL,
 				},
 				OriginalValues: OriginalValues{
-					CABundle:          caBundle,
-					ClusterDNSAddress: clusterDNSAddress,
-					ClusterDomain:     clusterDomain,
-					Images:            images,
-					KubeletConfig:     kubeletConfig,
-					MachineTypes:      machineTypes,
-					SSHPublicKeys:     sshPublicKeys,
-					ValitailEnabled:   valitailEnabled,
+					CABundle:            caBundle,
+					ClusterDNSAddresses: clusterDNSAddresses,
+					ClusterDomain:       clusterDomain,
+					Images:              images,
+					KubeletConfig:       kubeletConfig,
+					MachineTypes:        machineTypes,
+					SSHPublicKeys:       sshPublicKeys,
+					ValitailEnabled:     valitailEnabled,
 				},
 			}
 

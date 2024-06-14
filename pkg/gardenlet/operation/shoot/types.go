@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/dnsrecord"
 	"github.com/gardener/gardener/pkg/component/extensions/extension"
 	"github.com/gardener/gardener/pkg/component/extensions/infrastructure"
+	"github.com/gardener/gardener/pkg/component/extensions/network"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/component/extensions/worker"
 	"github.com/gardener/gardener/pkg/component/garden/backupentry"
@@ -147,7 +148,7 @@ type Extensions struct {
 	IngressDNSRecord      dnsrecord.Interface
 	Extension             extension.Interface
 	Infrastructure        infrastructure.Interface
-	Network               component.DeployMigrateWaiter
+	Network               network.Interface
 	OperatingSystemConfig operatingsystemconfig.Interface
 	Worker                worker.Interface
 }
