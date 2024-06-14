@@ -35,7 +35,7 @@ var _ = Describe("Basic Auth Secrets", func() {
 				basicAuth, ok := obj.(*BasicAuth)
 				Expect(ok).To(BeTrue())
 
-				password := strings.TrimPrefix(string(basicAuth.Auth), basicAuthConfiguration.Username+":")
+				password := strings.TrimPrefix(string(basicAuth.SecretData()[DataKeyAuth]), basicAuthConfiguration.Username+":")
 				Expect(bcrypt.CompareHashAndPassword([]byte(password), []byte(basicAuth.Password))).To(Succeed())
 			})
 		})

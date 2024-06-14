@@ -44,7 +44,7 @@ type BasicAuth struct {
 
 	Username string
 	Password string
-	Auth     []byte
+	auth     []byte
 }
 
 // GetName returns the name of the secret.
@@ -69,7 +69,7 @@ func (s *BasicAuthSecretConfig) Generate() (DataInterface, error) {
 
 		Username: s.Username,
 		Password: password,
-		Auth:     auth,
+		auth:     auth,
 	}
 
 	return basicAuth, nil
@@ -81,7 +81,7 @@ func (b *BasicAuth) SecretData() map[string][]byte {
 
 	data[DataKeyUserName] = []byte(b.Username)
 	data[DataKeyPassword] = []byte(b.Password)
-	data[DataKeyAuth] = b.Auth
+	data[DataKeyAuth] = b.auth
 
 	return data
 }
