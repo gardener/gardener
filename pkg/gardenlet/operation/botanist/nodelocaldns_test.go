@@ -22,7 +22,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
-	mockcomponent "github.com/gardener/gardener/pkg/component/mock"
+	mocknodelocaldns "github.com/gardener/gardener/pkg/component/networking/nodelocaldns/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
@@ -63,9 +63,6 @@ var _ = Describe("NodeLocalDNS", func() {
 			kubernetesClient = kubernetesmock.NewMockInterface(ctrl)
 
 			botanist.SeedClientSet = kubernetesClient
-			botanist.Shoot.Networks = &shootpkg.Networks{
-				CoreDNS: net.ParseIP("18.19.20.21"),
-			}
 		})
 
 		It("should successfully create a node-local-dns interface", func() {
@@ -79,7 +76,7 @@ var _ = Describe("NodeLocalDNS", func() {
 
 	Describe("#ReconcileNodeLocalDNS", func() {
 		var (
-			nodelocaldns     *mockcomponent.MockDeployWaiter
+			nodelocaldns     *mocknodelocaldns.MockInterface
 			kubernetesClient *kubernetesmock.MockInterface
 			c                client.Client
 
@@ -88,7 +85,7 @@ var _ = Describe("NodeLocalDNS", func() {
 		)
 
 		BeforeEach(func() {
-			nodelocaldns = mockcomponent.NewMockDeployWaiter(ctrl)
+			nodelocaldns = mocknodelocaldns.NewMockInterface(ctrl)
 			kubernetesClient = kubernetesmock.NewMockInterface(ctrl)
 			c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 
@@ -98,7 +95,13 @@ var _ = Describe("NodeLocalDNS", func() {
 					NodeLocalDNS: nodelocaldns,
 				},
 			}
+			botanist.Shoot.Networks = &shootpkg.Networks{
+				CoreDNS: []net.IP{net.ParseIP("18.19.20.21"), net.ParseIP("2001:db8::10")},
+			}
 			botanist.Shoot.NodeLocalDNSEnabled = true
+
+			nodelocaldns.EXPECT().SetClusterDNS([]string{"__PILLAR__CLUSTER__DNS__"})
+			nodelocaldns.EXPECT().SetDNSServers([]string{botanist.Shoot.Networks.CoreDNS[0].String(), botanist.Shoot.Networks.CoreDNS[1].String()})
 		})
 
 		It("should fail when the deploy function fails", func() {
