@@ -14,6 +14,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/infrastructure"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 )
 
@@ -87,5 +88,10 @@ func (b *Botanist) WaitForInfrastructure(ctx context.Context) error {
 		}
 	}
 
+	networks, err := shoot.ToNetworks(b.Shoot.GetInfo(), b.Shoot.IsWorkerless)
+	if err != nil {
+		return err
+	}
+	b.Shoot.Networks = networks
 	return nil
 }
