@@ -54,12 +54,7 @@ var _ = Describe("VPNSeedServer", func() {
 			kubernetesClient.EXPECT().Version()
 
 			botanist.SeedClientSet = kubernetesClient
-			botanist.Shoot = &shootpkg.Shoot{
-				Networks: &shootpkg.Networks{
-					Services: &net.IPNet{IP: net.IP{10, 0, 0, 1}, Mask: net.CIDRMask(10, 24)},
-					Pods:     &net.IPNet{IP: net.IP{10, 0, 0, 2}, Mask: net.CIDRMask(10, 24)},
-				},
-			}
+			botanist.Shoot = &shootpkg.Shoot{}
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
 					Networking: &gardencorev1beta1.Networking{
@@ -121,8 +116,7 @@ var _ = Describe("VPNSeedServer", func() {
 			ctx     = context.TODO()
 			fakeErr = errors.New("fake err")
 
-			namespaceUID    = types.UID("1234")
-			nodeNetworkCIDR = "10.0.0.0/24"
+			namespaceUID = types.UID("1234")
 		)
 
 		BeforeEach(func() {
@@ -134,14 +128,12 @@ var _ = Describe("VPNSeedServer", func() {
 						VPNSeedServer: vpnSeedServer,
 					},
 				},
-			}
-			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-				Spec: gardencorev1beta1.ShootSpec{
-					Networking: &gardencorev1beta1.Networking{
-						Nodes: &nodeNetworkCIDR,
-					},
+				Networks: &shootpkg.Networks{
+					Services: []net.IPNet{{IP: net.IP{10, 0, 1, 0}, Mask: net.CIDRMask(24, 32)}},
+					Pods:     []net.IPNet{{IP: net.IP{10, 0, 2, 0}, Mask: net.CIDRMask(24, 32)}},
+					Nodes:    []net.IPNet{{IP: net.IP{10, 0, 3, 0}, Mask: net.CIDRMask(24, 32)}},
 				},
-			})
+			}
 			botanist.Config = &config.GardenletConfiguration{
 				SNI: &config.SNI{
 					Ingress: &config.SNIIngress{
@@ -160,7 +152,9 @@ var _ = Describe("VPNSeedServer", func() {
 		})
 
 		BeforeEach(func() {
-			vpnSeedServer.EXPECT().SetNodeNetworkCIDR(&nodeNetworkCIDR)
+			vpnSeedServer.EXPECT().SetNodeNetworkCIDRs(botanist.Shoot.Networks.Nodes)
+			vpnSeedServer.EXPECT().SetServiceNetworkCIDRs(botanist.Shoot.Networks.Services)
+			vpnSeedServer.EXPECT().SetPodNetworkCIDRs(botanist.Shoot.Networks.Pods)
 			vpnSeedServer.EXPECT().SetSeedNamespaceObjectUID(namespaceUID)
 		})
 
