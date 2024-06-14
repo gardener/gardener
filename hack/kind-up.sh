@@ -220,6 +220,40 @@ setup_kind_with_lpp_resize_support() {
   kubectl delete --ignore-not-found=true storageclass local-path
 }
 
+check_shell_dependencies() {
+  errors=()
+
+  if ! sed --version >/dev/null 2>&1; then
+    errors+=("Current sed version does not support --version flag. Please ensure GNU sed is installed.")
+  fi
+
+  if tar --version 2>&1 | grep -q "bsdtar"; then
+    errors+=("BSD tar detected. Please ensure GNU tar is installed.")
+  fi
+
+  if grep --version 2>&1 | grep -q "BSD grep"; then
+    errors+=("BSD grep detected. Please ensure GNU grep is installed.")
+  fi
+
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    if ! date --version >/dev/null 2>&1; then
+      errors+=("Current date version does not support --version flag. Please ensure coreutils are installed.")
+    fi
+
+    if gzip --version 2>&1 | grep -q "Apple"; then
+      errors+=("Apple built-in gzip utility detected. Please ensure GNU gzip is installed.")
+    fi
+  fi
+
+  if [ "${#errors[@]}" -gt 0 ]; then
+    printf 'Error: Required shell dependencies not met. Please refer to https://github.com/gardener/gardener/blob/master/docs/development/local_setup.md#macos-only-install-gnu-core-utilities:\n'
+    printf '    - %s\n' "${errors[@]}"
+    exit 1
+  fi
+}
+
+check_shell_dependencies
+
 parse_flags "$@"
 
 mkdir -m 0755 -p \
