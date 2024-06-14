@@ -151,10 +151,44 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			SkipIf:       o.Shoot.IsWorkerless,
 			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
+		initializeSecretsManagement = g.Add(flow.Task{
+			Name:         "Initializing secrets management",
+			Fn:           flow.TaskFn(botanist.InitializeSecretsManagement).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deployNamespace),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying Kubernetes API server ingress with trusted certificate in the Seed cluster",
+			Fn:           botanist.DeployKubeAPIServerIngress,
+			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
+		})
+		deployReferencedResources = g.Add(flow.Task{
+			Name:         "Deploying referenced resources",
+			Fn:           flow.TaskFn(botanist.DeployReferencedResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deployNamespace),
+		})
+		deployInfrastructure = g.Add(flow.Task{
+			Name:         "Deploying Shoot infrastructure",
+			Fn:           flow.TaskFn(botanist.DeployInfrastructure).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf:       o.Shoot.IsWorkerless,
+			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployCloudProviderSecret, deployReferencedResources),
+		})
+		waitUntilInfrastructureReady = g.Add(flow.Task{
+			Name: "Waiting until shoot infrastructure has been reconciled",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				if !skipReadiness {
+					if err := botanist.WaitForInfrastructure(ctx); err != nil {
+						return err
+					}
+				}
+				return removeTaskAnnotation(ctx, o, generation, v1beta1constants.ShootTaskDeployInfrastructure)
+			}),
+			SkipIf:       o.Shoot.IsWorkerless,
+			Dependencies: flow.NewTaskIDs(deployInfrastructure),
+		})
 		deployKubeAPIServerService = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes API server service in the Seed cluster",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.KubeAPIServerService.Deploy).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deployNamespace, ensureShootClusterIdentity),
+			Dependencies: flow.NewTaskIDs(deployNamespace, ensureShootClusterIdentity).InsertIf(!staticNodesCIDR, waitUntilInfrastructureReady),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes API server service SNI settings in the Seed cluster",
@@ -171,21 +205,6 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Name:         "Ensuring advertised addresses for the Shoot",
 			Fn:           botanist.UpdateAdvertisedAddresses,
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerServiceIsReady),
-		})
-		initializeSecretsManagement = g.Add(flow.Task{
-			Name:         "Initializing secrets management",
-			Fn:           flow.TaskFn(botanist.InitializeSecretsManagement).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deployNamespace),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Deploying Kubernetes API server ingress with trusted certificate in the Seed cluster",
-			Fn:           botanist.DeployKubeAPIServerIngress,
-			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
-		})
-		deployReferencedResources = g.Add(flow.Task{
-			Name:         "Deploying referenced resources",
-			Fn:           flow.TaskFn(botanist.DeployReferencedResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
 		deployInternalDomainDNSRecord = g.Add(flow.Task{
 			Name: "Deploying internal domain DNS record",
@@ -208,25 +227,6 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			}),
 			SkipIf:       o.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerServiceIsReady),
-		})
-		deployInfrastructure = g.Add(flow.Task{
-			Name:         "Deploying Shoot infrastructure",
-			Fn:           flow.TaskFn(botanist.DeployInfrastructure).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       o.Shoot.IsWorkerless,
-			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployCloudProviderSecret, deployReferencedResources),
-		})
-		waitUntilInfrastructureReady = g.Add(flow.Task{
-			Name: "Waiting until shoot infrastructure has been reconciled",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if !skipReadiness {
-					if err := botanist.WaitForInfrastructure(ctx); err != nil {
-						return err
-					}
-				}
-				return removeTaskAnnotation(ctx, o, generation, v1beta1constants.ShootTaskDeployInfrastructure)
-			}),
-			SkipIf:       o.Shoot.IsWorkerless,
-			Dependencies: flow.NewTaskIDs(deployInfrastructure),
 		})
 		deploySourceBackupEntry = g.Add(flow.Task{
 			Name:   "Deploying source backup entry",
