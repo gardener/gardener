@@ -280,10 +280,10 @@ func SelfGenerateTLSServerCertificate(name string, dnsNames []string, ips []net.
 	}
 	caCertificateData := caCertificate.SecretData()
 
-	if err := os.WriteFile(filepath.Join(tempDir, DataKeyCertificateCA), caCertificateData[DataKeyCertificateCA], 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tempDir, DataKeyCertificateCA), caCertificateData[DataKeyCertificateCA], 0600); err != nil {
 		return nil, nil, "", err
 	}
-	if err := os.WriteFile(filepath.Join(tempDir, DataKeyPrivateKeyCA), caCertificateData[DataKeyPrivateKeyCA], 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tempDir, DataKeyPrivateKeyCA), caCertificateData[DataKeyPrivateKeyCA], 0600); err != nil {
 		return nil, nil, "", err
 	}
 
@@ -300,10 +300,10 @@ func SelfGenerateTLSServerCertificate(name string, dnsNames []string, ips []net.
 	}
 	certificateData := certificate.SecretData()
 
-	if err := os.WriteFile(filepath.Join(tempDir, DataKeyCertificate), certificateData[DataKeyCertificate], 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tempDir, DataKeyCertificate), certificateData[DataKeyCertificate], 0600); err != nil {
 		return nil, nil, "", err
 	}
-	if err := os.WriteFile(filepath.Join(tempDir, DataKeyPrivateKey), certificateData[DataKeyPrivateKey], 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tempDir, DataKeyPrivateKey), certificateData[DataKeyPrivateKey], 0600); err != nil {
 		return nil, nil, "", err
 	}
 

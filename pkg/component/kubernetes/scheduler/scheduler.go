@@ -50,7 +50,7 @@ const (
 	BinPackingSchedulerName = "bin-packing-scheduler"
 
 	serviceName         = "kube-scheduler"
-	secretNameServer    = "kube-scheduler-server"
+	secretNameServer    = "kube-scheduler-server" // #nosec G101 -- No credential.
 	managedResourceName = "shoot-core-kube-scheduler"
 
 	containerName   = v1beta1constants.DeploymentNameKubeScheduler

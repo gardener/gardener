@@ -66,10 +66,10 @@ const (
 
 	// SecretNameClient is the name of the secret containing the client certificate and key for the etcd.
 	SecretNameClient       = "etcd-client"
-	secretNamePrefixServer = "etcd-server-"
+	secretNamePrefixServer = "etcd-server-" // #nosec G101 -- No credential.
 
 	// secretNamePrefixPeerServer is the prefix for the secret containing the server certificate and key for the etcd peer network.
-	secretNamePrefixPeerServer = "etcd-peer-server-"
+	secretNamePrefixPeerServer = "etcd-peer-server-" // #nosec G101 -- No credential.
 
 	// LabelAppValue is the value of a label whose key is 'app'.
 	LabelAppValue = "etcd-statefulset"

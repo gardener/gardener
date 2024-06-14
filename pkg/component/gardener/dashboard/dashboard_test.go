@@ -15,6 +15,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	"golang.org/x/crypto/bcrypt"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
@@ -181,7 +182,7 @@ var _ = Describe("GardenerDashboard", func() {
 			Data: map[string][]byte{
 				"password": []byte("________________________________"),
 				"username": []byte("admin"),
-				"auth":     []byte("admin:{SHA}+GNV0g9PMmMEEXnq9rUTzZ3zAN4="),
+				"auth":     []byte("admin:$2y$05$VV/caJeJ0XEza7sc5hHib.uppkej805AYCGAKbSCbZwPz6INJy07G"),
 			},
 		}
 		configMap = func(enableTokenLogin bool, terminal *TerminalValues, oidc *OIDCValues, ingressDomains []string, gitHub *operatorv1alpha1.DashboardGitHub, frontendConfigMapName *string) *corev1.ConfigMap {
@@ -1158,7 +1159,13 @@ assets:
 					actualSessionSecret := &corev1.Secret{}
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(sessionSecret), actualSessionSecret)).To(Succeed())
 					sessionSecret.ResourceVersion = "1"
-					Expect(actualSessionSecret).To(Equal(sessionSecret))
+					Expect(actualSessionSecret.ObjectMeta).To(Equal(sessionSecret.ObjectMeta))
+					Expect(actualSessionSecret.Type).To(Equal(sessionSecret.Type))
+					Expect(actualSessionSecret.Immutable).To(Equal(sessionSecret.Immutable))
+					Expect(actualSessionSecret.Data["username"]).To(Equal(sessionSecret.Data["username"]))
+					Expect(actualSessionSecret.Data["password"]).To(Equal(sessionSecret.Data["password"]))
+					hashedPassword := strings.TrimPrefix(string(actualSessionSecret.Data["auth"]), string(sessionSecret.Data["username"])+":")
+					Expect(bcrypt.CompareHashAndPassword([]byte(hashedPassword), sessionSecret.Data["password"])).To(Succeed())
 				})
 			})
 		})

@@ -204,6 +204,14 @@ format: $(GOIMPORTS) $(GOIMPORTSREVISER)
 	@./hack/format.sh ./charts ./cmd ./extensions ./pkg ./plugin ./test ./hack
 	@cd $(LOGCHECK_DIR); $(abspath $(GOIMPORTS)) -l -w .
 
+.PHONY: sast
+sast: $(GOSEC)
+	@./hack/sast.sh
+
+.PHONY: sast-report
+sast-report: $(GOSEC)
+	@./hack/sast.sh --gosec-report true
+
 .PHONY: test
 test: $(REPORT_COLLECTOR) $(PROMTOOL) $(HELM) logcheck-symlinks
 	@./hack/test.sh ./charts/... ./cmd/... ./extensions/pkg/... ./pkg/... ./plugin/...
@@ -230,10 +238,10 @@ check-vulnerabilities: $(GO_VULN_CHECK)
 	$(GO_VULN_CHECK) ./...
 
 .PHONY: verify
-verify: check format test test-integration
+verify: check format test test-integration sast
 
 .PHONY: verify-extended
-verify-extended: check-generate check format test-cov test-cov-clean test-integration
+verify-extended: check-generate check format test-cov test-cov-clean test-integration sast-report
 
 #####################################################################
 # Rules for local environment                                       #

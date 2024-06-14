@@ -41,7 +41,7 @@ func ReadComponentOverwrite(buf []byte) (ComponentImageVectors, error) {
 
 // ReadComponentOverwriteFile reads an ComponentImageVector from the file with the given name.
 func ReadComponentOverwriteFile(name string) (ComponentImageVectors, error) {
-	buf, err := os.ReadFile(name)
+	buf, err := os.ReadFile(name) // #nosec: G304 -- ImageVectorOverwrite is a feature. In reality files can be read from the Pod's file system only.
 	if err != nil {
 		return nil, err
 	}

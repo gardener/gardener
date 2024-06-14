@@ -156,7 +156,7 @@ func (reporter *GardenerESReporter) storeResults() {
 			return
 		}
 
-		if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+		if err := os.MkdirAll(dir, 0750); err != nil {
 			fmt.Printf("Failed to create report directory %s: %s\n", dir, err.Error())
 			return
 		}

@@ -97,11 +97,11 @@ func writeCertificatesToDisk(certDir string, serverCert, serverKey []byte) error
 		serverCertPath = filepath.Join(certDir, secretsutils.DataKeyCertificate)
 	)
 
-	if err := os.MkdirAll(certDir, 0755); err != nil {
+	if err := os.MkdirAll(certDir, 0750); err != nil {
 		return err
 	}
-	if err := os.WriteFile(serverKeyPath, serverKey, 0666); err != nil {
+	if err := os.WriteFile(serverKeyPath, serverKey, 0600); err != nil {
 		return err
 	}
-	return os.WriteFile(serverCertPath, serverCert, 0666)
+	return os.WriteFile(serverCertPath, serverCert, 0600)
 }

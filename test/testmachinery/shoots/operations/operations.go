@@ -148,7 +148,7 @@ var _ = ginkgo.Describe("Shoot operation testing", func() {
 				return
 			}
 			shootKubeconfigPath := filepath.Join(kubeconfigsPath, "shoot.config")
-			framework.ExpectNoError(os.WriteFile(shootKubeconfigPath, []byte(newKubeconfig), os.ModePerm))
+			framework.ExpectNoError(os.WriteFile(shootKubeconfigPath, []byte(newKubeconfig), 0600))
 		}()
 
 		newClient, err := kubernetes.NewClientFromBytes([]byte(newKubeconfig))

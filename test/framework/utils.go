@@ -109,7 +109,7 @@ func FileExists(kc string) bool {
 
 // ReadObject loads the contents of file and decodes it as an object.
 func ReadObject(file string, into apimachineryRuntime.Object) error {
-	data, err := os.ReadFile(file)
+	data, err := os.ReadFile(file) // #nosec: G304 -- Test only.
 	if err != nil {
 		return err
 	}
@@ -120,7 +120,7 @@ func ReadObject(file string, into apimachineryRuntime.Object) error {
 
 // ParseFileAsProviderConfig parses a file as a ProviderConfig
 func ParseFileAsProviderConfig(filepath string) (*apimachineryRuntime.RawExtension, error) {
-	data, err := os.ReadFile(filepath)
+	data, err := os.ReadFile(filepath) // #nosec: G304 -- Test only.
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +135,7 @@ func ParseFileAsProviderConfig(filepath string) (*apimachineryRuntime.RawExtensi
 
 // ParseFileAsWorkers parses a file as a Worker configuration
 func ParseFileAsWorkers(filepath string) ([]gardencorev1beta1.Worker, error) {
-	data, err := os.ReadFile(filepath)
+	data, err := os.ReadFile(filepath) // #nosec: G304 -- Test only.
 	if err != nil {
 		return nil, err
 	}

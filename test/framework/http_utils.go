@@ -46,7 +46,7 @@ func TestHTTPEndpointWithToken(ctx context.Context, url, token string) error {
 
 func testHTTPEndpointWith(ctx context.Context, url string, mutator func(*http.Request)) error {
 	transport := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // #nosec: G402 -- Test only.
 		Proxy:           http.ProxyFromEnvironment,
 	}
 

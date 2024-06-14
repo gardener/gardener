@@ -6,7 +6,6 @@ package utils
 
 import (
 	"crypto/rsa"
-	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
@@ -15,6 +14,8 @@ import (
 	"errors"
 	"slices"
 	"strconv"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 // EncodeBase64 takes a byte slice and returns the Base64-encoded string.
@@ -105,35 +106,21 @@ func DecodeCertificateRequest(data []byte) (*x509.CertificateRequest, error) {
 	return x509.ParseCertificateRequest(block.Bytes)
 }
 
-// SHA1 takes a byte slice and returns the sha1-hashed byte slice.
-func SHA1(in []byte) []byte {
-	s := sha1.New()
-	_, _ = s.Write(in)
-	return s.Sum(nil)
-}
-
 // SHA256 takes a byte slice and returns the sha256-hashed byte slice.
 func SHA256(in []byte) []byte {
 	h := sha256.Sum256(in)
 	return h[:]
 }
 
-// EncodeSHA1 takes a byte slice and returns the sha1-hashed string (base64-encoded).
-func EncodeSHA1(in []byte) string {
-	return EncodeBase64(SHA1(in))
-}
-
-// CreateSHA1Secret takes a username and a password and returns a sha1-schemed credentials pair as bytes.
-func CreateSHA1Secret(username, password []byte) []byte {
-	credentials := append(username, ":{SHA}"...)
-	credentials = append(credentials, EncodeSHA1(password)...)
-	return credentials
-}
-
-// ComputeSHA1Hex computes the hexadecimal representation of the SHA1 hash of the given input byte
-// slice <in>, converts it to a string and returns it (length of returned string is 40 characters).
-func ComputeSHA1Hex(in []byte) string {
-	return hex.EncodeToString(SHA1(in))
+// CreateBcryptCredentials takes a username and a password and returns a bcrypt-schemed credentials pair as bytes.
+func CreateBcryptCredentials(username, password []byte) ([]byte, error) {
+	bcryptPassword, err := bcrypt.GenerateFromPassword(password, bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+	credentials := append(username, ":"...)
+	credentials = append(credentials, bcryptPassword...)
+	return credentials, nil
 }
 
 // ComputeSHA256Hex computes the hexadecimal representation of the SHA256 hash of the given input byte

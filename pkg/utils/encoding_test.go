@@ -7,18 +7,23 @@ package utils_test
 import (
 	"crypto/x509"
 	"errors"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
+	"golang.org/x/crypto/bcrypt"
 
 	. "github.com/gardener/gardener/pkg/utils"
 )
 
 var _ = Describe("Encoding", func() {
-	Describe("#CreateSHA1Secret", func() {
-		It("should create the expected secret", func() {
-			Expect(CreateSHA1Secret([]byte("username"), []byte("password"))).To(Equal([]byte("username:{SHA}W6ph5Mm5Pz8GgiULbPgzG37mj9g=")))
+	Describe("#CreateBcryptCredentials", func() {
+		It("should create the expected credentials", func() {
+			credentials, err := CreateBcryptCredentials([]byte("username"), []byte("password"))
+			Expect(err).ToNot(HaveOccurred())
+			hashedPassword := strings.TrimPrefix(string(credentials), "username:")
+			Expect(bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte("password"))).To(Succeed())
 		})
 	})
 

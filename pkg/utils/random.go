@@ -43,7 +43,7 @@ func RandomDuration(max time.Duration) time.Duration {
 	if max.Nanoseconds() <= 0 {
 		return time.Duration(0)
 	}
-	return time.Duration(mathrand.N(max.Nanoseconds()))
+	return time.Duration(mathrand.N(max.Nanoseconds())) // #nosec: G404 -- No cryptographic context.
 }
 
 // RandomDurationWithMetaDuration takes a *metav1.Duration and computes a non-negative pseudo-random duration in [0,max).

@@ -134,7 +134,7 @@ func (g *GardenerAPIServer) Start() error {
 
 func (g *GardenerAPIServer) runAPIServerBinary() error {
 	log.V(1).Info("Starting gardener-apiserver", "path", g.Path, "args", g.Args)
-	command := exec.Command(g.Path, g.Args...)
+	command := exec.Command(g.Path, g.Args...) // #nosec: G204 -- Test only.
 	session, err := gexec.Start(command, g.Out, g.Err)
 	if err != nil {
 		return err
@@ -281,7 +281,7 @@ func (g *GardenerAPIServer) waitUntilHealthy(ctx context.Context) error {
 	// setup secure http client
 	certPool := x509.NewCertPool()
 	certPool.AppendCertsFromPEM(g.caCert.CertificatePEM)
-	httpClient := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{RootCAs: certPool}}}
+	httpClient := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{RootCAs: certPool, MinVersion: tls.VersionTLS12}}}
 
 	healthCheckURL := g.listenURL
 	healthCheckURL.Path = g.HealthCheckEndpoint

@@ -59,8 +59,8 @@ const (
 	volumeNameTLSAuth   = "vpn-shoot-tlsauth"
 	volumeNameDevNetTun = "dev-net-tun"
 
-	volumeMountPathSecret    = "/srv/secrets/vpn-client"
-	volumeMountPathSecretTLS = "/srv/secrets/tlsauth"
+	volumeMountPathSecret    = "/srv/secrets/vpn-client" // #nosec G101 -- No credential.
+	volumeMountPathSecretTLS = "/srv/secrets/tlsauth"    // #nosec G101 -- No credential.
 	volumeMountPathDevNetTun = "/dev/net/tun"
 )
 

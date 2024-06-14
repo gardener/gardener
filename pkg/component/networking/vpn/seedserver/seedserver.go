@@ -53,7 +53,7 @@ const (
 	// GatewayPort is the port exposed by the istio ingress gateway
 	GatewayPort = 8132
 	// SecretNameTLSAuth is the name of seed server tlsauth Secret.
-	SecretNameTLSAuth = "vpn-seed-server-tlsauth"
+	SecretNameTLSAuth = "vpn-seed-server-tlsauth" // #nosec G101 -- No credential.
 	deploymentName    = v1beta1constants.DeploymentNameVPNSeedServer
 	// ServiceName is the name of the vpn seed server service running internally on the control plane in seed.
 	ServiceName = deploymentName

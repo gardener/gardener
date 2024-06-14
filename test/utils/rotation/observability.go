@@ -104,7 +104,7 @@ func (v *ObservabilityVerifier) AfterCompleted(_ context.Context) {}
 func accessEndpoint(ctx context.Context, url string, username, password []byte) (*http.Response, error) {
 	httpClient := &http.Client{
 		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // #nosec: G402 -- Test only.
 		},
 	}
 

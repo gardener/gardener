@@ -24,7 +24,7 @@ func PrometheusRule(rule *monitoringv1.PrometheusRule, filenameRulesTest string)
 `), data...)
 
 	filepath := filepath.Join("testdata", rule.Name+".prometheusrule.yaml")
-	ExpectWithOffset(1, os.WriteFile(filepath, data, 0644)).To(Succeed())
+	ExpectWithOffset(1, os.WriteFile(filepath, data, 0600)).To(Succeed())
 	defer func() {
 		ExpectWithOffset(1, os.Remove(filepath)).To(Succeed())
 	}()

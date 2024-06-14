@@ -22,10 +22,10 @@ func MarshalAndWriteConfig(filepath string, config any) error {
 		return fmt.Errorf("unable to parse config: %w", err)
 	}
 
-	if err := os.MkdirAll(path.Dir(filepath), os.ModePerm); err != nil {
+	if err := os.MkdirAll(path.Dir(filepath), 0750); err != nil {
 		return fmt.Errorf("unable to create path %s: %w", path.Dir(filepath), err)
 	}
-	if err := os.WriteFile(filepath, raw, os.ModePerm); err != nil {
+	if err := os.WriteFile(filepath, raw, 0600); err != nil {
 		return fmt.Errorf("unable to write config to %s: %w", filepath, err)
 	}
 

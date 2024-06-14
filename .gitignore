@@ -37,3 +37,6 @@ hack/tools/logcheck/pkg/logcheck/testdata/src/sigs.k8s.io/controller-runtime/pkg
 
 # GitGuardian
 .cache_ggshield
+
+# gosec
+gosec-report.sarif

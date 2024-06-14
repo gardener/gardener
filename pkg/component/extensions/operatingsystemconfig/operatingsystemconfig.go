@@ -54,7 +54,7 @@ const (
 	// of an OperatingSystemConfig resource.
 	DefaultTimeout = 3 * time.Minute
 	// WorkerPoolHashesSecretName is the name of the secret that tracks the OSC key calculation version used for each worker pool.
-	WorkerPoolHashesSecretName = "worker-pools-operatingsystemconfig-hashes"
+	WorkerPoolHashesSecretName = "worker-pools-operatingsystemconfig-hashes" // #nosec G101 -- No credential.
 	// poolHashesDataKey is the key in the data of the WorkerPoolHashesSecretName used to store the calculated hashes.
 	poolHashesDataKey = "pools"
 )

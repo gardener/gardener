@@ -43,7 +43,7 @@ func init() {
 
 const (
 	// SecretWebhookKubeconfigDataKey is a constant for a key in the data of the secret containing a kubeconfig.
-	SecretWebhookKubeconfigDataKey = "kubeconfig.yaml"
+	SecretWebhookKubeconfigDataKey = "kubeconfig.yaml" // #nosec G101 -- No credential.
 
 	configMapAuditPolicyDataKey = "audit-policy.yaml"
 
