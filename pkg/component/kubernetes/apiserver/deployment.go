@@ -451,7 +451,13 @@ func (k *kubeAPIServer) computeKubeAPIServerArgs() []string {
 		out = append(out, fmt.Sprintf("--service-account-max-token-expiration=%s", k.values.ServiceAccount.MaxTokenExpiration.Duration))
 	}
 
-	out = append(out, fmt.Sprintf("--service-cluster-ip-range=%s", k.values.ServiceNetworkCIDR))
+	serviceCIDRs := ""
+	for _, cidr := range k.values.ServiceNetworkCIDRs {
+		serviceCIDRs += cidr.String() + ","
+	}
+	serviceCIDRs = strings.TrimSuffix(serviceCIDRs, ",")
+
+	out = append(out, fmt.Sprintf("--service-cluster-ip-range=%s", serviceCIDRs))
 	out = append(out, fmt.Sprintf("--secure-port=%d", kubeapiserverconstants.Port))
 	out = append(out, fmt.Sprintf("--token-auth-file=%s/%s", volumeMountPathStaticToken, secrets.DataKeyStaticTokenCSV))
 
@@ -750,6 +756,11 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 }
 
 func (k *kubeAPIServer) vpnSeedClientContainer(index int) *corev1.Container {
+	var nodes *string
+	if len(k.values.VPN.NodeNetworkCIDRs) > 0 {
+		nodes = ptr.To(k.values.VPN.NodeNetworkCIDRs[0].String())
+	}
+
 	container := &corev1.Container{
 		Name:            fmt.Sprintf("%s-%d", containerNameVPNSeedClient, index),
 		Image:           k.values.Images.VPNClient,
@@ -761,15 +772,15 @@ func (k *kubeAPIServer) vpnSeedClientContainer(index int) *corev1.Container {
 			},
 			{
 				Name:  "SERVICE_NETWORK",
-				Value: k.values.ServiceNetworkCIDR,
+				Value: k.values.ServiceNetworkCIDRs[0].String(),
 			},
 			{
 				Name:  "POD_NETWORK",
-				Value: k.values.VPN.PodNetworkCIDR,
+				Value: k.values.VPN.PodNetworkCIDRs[0].String(),
 			},
 			{
 				Name:  "NODE_NETWORK",
-				Value: ptr.Deref(k.values.VPN.NodeNetworkCIDR, ""),
+				Value: ptr.Deref(nodes, ""),
 			},
 			{
 				Name:  "VPN_SERVER_INDEX",
@@ -829,6 +840,11 @@ func (k *kubeAPIServer) vpnSeedClientContainer(index int) *corev1.Container {
 }
 
 func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
+	var nodes *string
+	if len(k.values.VPN.NodeNetworkCIDRs) > 0 {
+		nodes = ptr.To(k.values.VPN.NodeNetworkCIDRs[0].String())
+	}
+
 	container := &corev1.Container{
 		Name:            containerNameVPNPathController,
 		Image:           k.values.Images.VPNClient,
@@ -837,15 +853,15 @@ func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
 		Env: []corev1.EnvVar{
 			{
 				Name:  "SERVICE_NETWORK",
-				Value: k.values.ServiceNetworkCIDR,
+				Value: k.values.ServiceNetworkCIDRs[0].String(),
 			},
 			{
 				Name:  "POD_NETWORK",
-				Value: k.values.VPN.PodNetworkCIDR,
+				Value: k.values.VPN.PodNetworkCIDRs[0].String(),
 			},
 			{
 				Name:  "NODE_NETWORK",
-				Value: ptr.Deref(k.values.VPN.NodeNetworkCIDR, ""),
+				Value: ptr.Deref(nodes, ""),
 			},
 			{
 				Name:  "HA_VPN_CLIENTS",

@@ -7,6 +7,7 @@ package garden
 import (
 	"context"
 	"fmt"
+	"net"
 	"strings"
 	"time"
 
@@ -570,6 +571,7 @@ func (r *Reconciler) deployKubeAPIServerFunc(garden *operatorv1alpha1.Garden, ku
 		var (
 			serviceAccountConfig *gardencorev1beta1.ServiceAccountConfig
 			sniConfig            = kubeapiserver.SNIConfig{Enabled: false}
+			services             []net.IPNet
 		)
 
 		if apiServer := garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; apiServer != nil {
@@ -584,6 +586,12 @@ func (r *Reconciler) deployKubeAPIServerFunc(garden *operatorv1alpha1.Garden, ku
 				})
 			}
 		}
+
+		_, cidr, err := net.ParseCIDR(garden.Spec.VirtualCluster.Networking.Services)
+		if err != nil {
+			return fmt.Errorf("failed to parse services CIDR '%s': %w", garden.Spec.VirtualCluster.Networking.Services, err)
+		}
+		services = []net.IPNet{*cidr}
 
 		externalHostname := gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0])
 		return shared.DeployKubeAPIServer(
@@ -602,6 +610,8 @@ func (r *Reconciler) deployKubeAPIServerFunc(garden *operatorv1alpha1.Garden, ku
 			sniConfig,
 			externalHostname,
 			externalHostname,
+			nil,
+			services,
 			nil,
 			shared.NormalizeResources(getKubernetesResourcesForEncryption(garden)),
 			utils.FilterEntriesByFilterFn(shared.NormalizeResources(garden.Status.EncryptedResources), gardenerutils.IsServedByKubeAPIServer),

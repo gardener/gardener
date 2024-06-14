@@ -7,6 +7,7 @@ package apiserver_test
 import (
 	"context"
 	"fmt"
+	"net"
 	"strconv"
 	"strings"
 	"time"
@@ -2199,9 +2200,10 @@ rules:
 						Values: apiserver.Values{
 							RuntimeVersion: runtimeVersion,
 						},
-						IsWorkerless: true,
-						Version:      version,
-						VPN:          VPNConfig{Enabled: true, HighAvailabilityEnabled: true},
+						IsWorkerless:        true,
+						Version:             version,
+						ServiceNetworkCIDRs: []net.IPNet{{IP: net.ParseIP("4.5.6.0"), Mask: net.CIDRMask(24, 32)}},
+						VPN:                 VPNConfig{Enabled: true, HighAvailabilityEnabled: true, PodNetworkCIDRs: []net.IPNet{{IP: net.ParseIP("1.2.3.0"), Mask: net.CIDRMask(24, 32)}}},
 					})
 					deployAndRead()
 
@@ -2284,9 +2286,10 @@ rules:
 						Values: apiserver.Values{
 							RuntimeVersion: runtimeVersion,
 						},
-						IsWorkerless: true,
-						Version:      version,
-						VPN:          VPNConfig{Enabled: true, HighAvailabilityEnabled: true, HighAvailabilityNumberOfSeedServers: 2},
+						IsWorkerless:        true,
+						Version:             version,
+						ServiceNetworkCIDRs: []net.IPNet{{IP: net.ParseIP("4.5.6.0"), Mask: net.CIDRMask(24, 32)}},
+						VPN:                 VPNConfig{Enabled: true, HighAvailabilityEnabled: true, HighAvailabilityNumberOfSeedServers: 2, PodNetworkCIDRs: []net.IPNet{{IP: net.ParseIP("1.2.3.0"), Mask: net.CIDRMask(24, 32)}}},
 					})
 					deployAndRead()
 
@@ -2386,9 +2389,10 @@ rules:
 						Values: apiserver.Values{
 							RuntimeVersion: runtimeVersion,
 						},
-						IsWorkerless: true,
-						Version:      version,
-						VPN:          VPNConfig{Enabled: true, HighAvailabilityEnabled: true},
+						IsWorkerless:        true,
+						Version:             version,
+						ServiceNetworkCIDRs: []net.IPNet{{IP: net.ParseIP("4.5.6.0"), Mask: net.CIDRMask(24, 32)}},
+						VPN:                 VPNConfig{Enabled: true, HighAvailabilityEnabled: true, PodNetworkCIDRs: []net.IPNet{{IP: net.ParseIP("1.2.3.0"), Mask: net.CIDRMask(24, 32)}}},
 					})
 					deployAndRead()
 
@@ -2434,15 +2438,15 @@ rules:
 					Values: apiserver.Values{
 						RuntimeVersion: runtimeVersion,
 					},
-					Images:             Images{VPNClient: "vpn-client-image:really-latest"},
-					ServiceNetworkCIDR: "4.5.6.0/24",
+					Images:              Images{VPNClient: "vpn-client-image:really-latest"},
+					ServiceNetworkCIDRs: []net.IPNet{{IP: net.ParseIP("4.5.6.0"), Mask: net.CIDRMask(24, 32)}},
 					VPN: VPNConfig{
 						Enabled:                              true,
 						HighAvailabilityEnabled:              true,
 						HighAvailabilityNumberOfSeedServers:  2,
 						HighAvailabilityNumberOfShootClients: 3,
-						PodNetworkCIDR:                       "1.2.3.0/24",
-						NodeNetworkCIDR:                      ptr.To("7.8.9.0/24"),
+						PodNetworkCIDRs:                      []net.IPNet{{IP: net.ParseIP("1.2.3.0"), Mask: net.CIDRMask(24, 32)}},
+						NodeNetworkCIDRs:                     []net.IPNet{{IP: net.ParseIP("7.8.9.0"), Mask: net.CIDRMask(24, 32)}},
 					},
 					Version: version,
 				}
@@ -2461,15 +2465,15 @@ rules:
 							},
 							{
 								Name:  "SERVICE_NETWORK",
-								Value: values.ServiceNetworkCIDR,
+								Value: values.ServiceNetworkCIDRs[0].String(),
 							},
 							{
 								Name:  "POD_NETWORK",
-								Value: values.VPN.PodNetworkCIDR,
+								Value: values.VPN.PodNetworkCIDRs[0].String(),
 							},
 							{
 								Name:  "NODE_NETWORK",
-								Value: *values.VPN.NodeNetworkCIDR,
+								Value: values.VPN.NodeNetworkCIDRs[0].String(),
 							},
 							{
 								Name:  "VPN_SERVER_INDEX",
@@ -2576,15 +2580,15 @@ rules:
 					Env: []corev1.EnvVar{
 						{
 							Name:  "SERVICE_NETWORK",
-							Value: values.ServiceNetworkCIDR,
+							Value: values.ServiceNetworkCIDRs[0].String(),
 						},
 						{
 							Name:  "POD_NETWORK",
-							Value: values.VPN.PodNetworkCIDR,
+							Value: values.VPN.PodNetworkCIDRs[0].String(),
 						},
 						{
 							Name:  "NODE_NETWORK",
-							Value: *values.VPN.NodeNetworkCIDR,
+							Value: values.VPN.NodeNetworkCIDRs[0].String(),
 						},
 						{
 							Name:  "HA_VPN_CLIENTS",
@@ -2697,7 +2701,7 @@ rules:
 					serviceAccountIssuer                = "issuer"
 					serviceAccountMaxTokenExpiration    = time.Hour
 					serviceAccountExtendTokenExpiration = false
-					serviceNetworkCIDR                  = "1.2.3.4/5"
+					serviceNetworkCIDRs                 = []net.IPNet{{IP: net.ParseIP("1.2.3.4"), Mask: net.CIDRMask(5, 32)}, {IP: net.ParseIP("2001:db8::"), Mask: net.CIDRMask(64, 128)}}
 				)
 
 				JustBeforeEach(func() {
@@ -2722,9 +2726,9 @@ rules:
 							ExtendTokenExpiration: &serviceAccountExtendTokenExpiration,
 							JWKSURI:               ptr.To("https://foo.bar/jwks"),
 						},
-						ServiceNetworkCIDR: serviceNetworkCIDR,
-						Version:            version,
-						VPN:                VPNConfig{},
+						ServiceNetworkCIDRs: serviceNetworkCIDRs,
+						Version:             version,
+						VPN:                 VPNConfig{},
 					}
 					kapi = New(kubernetesInterface, namespace, sm, values)
 				})
@@ -2775,7 +2779,7 @@ rules:
 						"--requestheader-username-headers=X-Remote-User",
 						"--runtime-config=apps/v1=false,autoscaling/v2=false,batch/v1=false,policy/v1/poddisruptionbudgets=false,storage.k8s.io/v1/csidrivers=false,storage.k8s.io/v1/csinodes=false",
 						"--secure-port=443",
-						"--service-cluster-ip-range="+serviceNetworkCIDR,
+						"--service-cluster-ip-range="+serviceNetworkCIDRs[0].String()+","+serviceNetworkCIDRs[1].String(),
 						"--service-account-issuer="+serviceAccountIssuer,
 						"--service-account-issuer="+acceptedIssuers[0],
 						"--service-account-issuer="+acceptedIssuers[1],
@@ -3068,7 +3072,7 @@ rules:
 				})
 
 				It("should have the kube-apiserver container with the expected spec when VPN and HA is enabled", func() {
-					values.VPN = VPNConfig{Enabled: true, HighAvailabilityEnabled: true}
+					values.VPN = VPNConfig{Enabled: true, HighAvailabilityEnabled: true, PodNetworkCIDRs: []net.IPNet{{IP: net.ParseIP("9.8.7.6"), Mask: net.CIDRMask(24, 32)}}}
 					kapi = New(kubernetesInterface, namespace, sm, values)
 					deployAndRead()
 
@@ -3776,15 +3780,15 @@ rules:
 						Values: apiserver.Values{
 							RuntimeVersion: runtimeVersion,
 						},
-						Images:             Images{VPNClient: "vpn-client-image:really-latest"},
-						ServiceNetworkCIDR: "4.5.6.0/24",
+						Images:              Images{VPNClient: "vpn-client-image:really-latest"},
+						ServiceNetworkCIDRs: []net.IPNet{{IP: net.ParseIP("4.5.6.0"), Mask: net.CIDRMask(24, 32)}},
 						VPN: VPNConfig{
 							Enabled:                              true,
 							HighAvailabilityEnabled:              false,
 							HighAvailabilityNumberOfSeedServers:  2,
 							HighAvailabilityNumberOfShootClients: 3,
-							PodNetworkCIDR:                       "1.2.3.0/24",
-							NodeNetworkCIDR:                      ptr.To("7.8.9.0/24"),
+							PodNetworkCIDRs:                      []net.IPNet{{IP: net.ParseIP("1.2.3.0"), Mask: net.CIDRMask(24, 32)}},
+							NodeNetworkCIDRs:                     []net.IPNet{{IP: net.ParseIP("7.8.9.0"), Mask: net.CIDRMask(24, 32)}},
 						},
 						Version: version,
 					}
@@ -3802,15 +3806,15 @@ rules:
 						Values: apiserver.Values{
 							RuntimeVersion: runtimeVersion,
 						},
-						Images:             Images{VPNClient: "vpn-client-image:really-latest"},
-						ServiceNetworkCIDR: "4.5.6.0/24",
+						Images:              Images{VPNClient: "vpn-client-image:really-latest"},
+						ServiceNetworkCIDRs: []net.IPNet{{IP: net.ParseIP("4.5.6.0"), Mask: net.CIDRMask(24, 32)}},
 						VPN: VPNConfig{
 							Enabled:                              true,
 							HighAvailabilityEnabled:              true,
 							HighAvailabilityNumberOfSeedServers:  2,
 							HighAvailabilityNumberOfShootClients: 3,
-							PodNetworkCIDR:                       "1.2.3.0/24",
-							NodeNetworkCIDR:                      ptr.To("7.8.9.0/24"),
+							PodNetworkCIDRs:                      []net.IPNet{{IP: net.ParseIP("1.2.3.0"), Mask: net.CIDRMask(24, 32)}},
+							NodeNetworkCIDRs:                     []net.IPNet{{IP: net.ParseIP("7.8.9.0"), Mask: net.CIDRMask(24, 32)}},
 						},
 						Version: version,
 					}

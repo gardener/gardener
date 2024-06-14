@@ -54,8 +54,12 @@ type Interface interface {
 	SetExternalHostname(string)
 	// SetExternalServer sets the ExternalServer field in the Values of the deployer.
 	SetExternalServer(string)
-	// SetNodeNetworkCIDR sets the nodesCIDR of the shoot network.
-	SetNodeNetworkCIDR(*string)
+	// SetNodeNetworkCIDRs sets the node CIDRs of the shoot network.
+	SetNodeNetworkCIDRs([]net.IPNet)
+	// SetServiceNetworkCIDRs sets the service CIDRs of the shoot network.
+	SetServiceNetworkCIDRs([]net.IPNet)
+	// SetPodNetworkCIDRs sets the pod CIDRs of the shoot network.
+	SetPodNetworkCIDRs([]net.IPNet)
 	// SetServerCertificateConfig sets the ServerCertificateConfig field in the Values of the deployer.
 	SetServerCertificateConfig(ServerCertificateConfig)
 	// SetServiceAccountConfig sets the ServiceAccount field in the Values of the deployer.
@@ -107,8 +111,8 @@ type Values struct {
 	ServerCertificate ServerCertificateConfig
 	// ServiceAccount contains information for configuring ServiceAccount settings for the kube-apiserver.
 	ServiceAccount ServiceAccountConfig
-	// ServiceNetworkCIDR is the CIDR of the service network.
-	ServiceNetworkCIDR string
+	// ServiceNetworkCIDRs are the CIDRs of the service network.
+	ServiceNetworkCIDRs []net.IPNet
 	// SNI contains information for configuring SNI settings for the kube-apiserver.
 	SNI SNIConfig
 	// StaticTokenKubeconfigEnabled indicates whether static token kubeconfig secret will be created for shoot.
@@ -156,10 +160,10 @@ type Images struct {
 type VPNConfig struct {
 	// Enabled states whether VPN is enabled.
 	Enabled bool
-	// PodNetworkCIDR is the CIDR of the pod network.
-	PodNetworkCIDR string
-	// NodeNetworkCIDR is the CIDR of the node network.
-	NodeNetworkCIDR *string
+	// PodNetworkCIDRs are the CIDRs of the pod network.
+	PodNetworkCIDRs []net.IPNet
+	// NodeNetworkCIDRs are the CIDRs of the node network.
+	NodeNetworkCIDRs []net.IPNet
 	// HighAvailabilityEnabled states if VPN uses HA configuration.
 	HighAvailabilityEnabled bool
 	// HighAvailabilityNumberOfSeedServers is the number of VPN seed servers used for HA
@@ -538,8 +542,16 @@ func (k *kubeAPIServer) SetExternalServer(server string) {
 	k.values.ExternalServer = server
 }
 
-func (k *kubeAPIServer) SetNodeNetworkCIDR(nodes *string) {
-	k.values.VPN.NodeNetworkCIDR = nodes
+func (k *kubeAPIServer) SetNodeNetworkCIDRs(nodes []net.IPNet) {
+	k.values.VPN.NodeNetworkCIDRs = nodes
+}
+
+func (k *kubeAPIServer) SetPodNetworkCIDRs(pods []net.IPNet) {
+	k.values.VPN.PodNetworkCIDRs = pods
+}
+
+func (k *kubeAPIServer) SetServiceNetworkCIDRs(services []net.IPNet) {
+	k.values.ServiceNetworkCIDRs = services
 }
 
 func (k *kubeAPIServer) SetServerCertificateConfig(config ServerCertificateConfig) {

@@ -608,7 +608,6 @@ func (r *Reconciler) newKubeAPIServer(
 		namePrefix,
 		apiServerConfig,
 		defaultAPIServerAutoscalingConfig(garden),
-		garden.Spec.VirtualCluster.Networking.Services,
 		kubeapiserver.VPNConfig{Enabled: false},
 		v1beta1constants.PriorityClassNameGardenSystem500,
 		true,
