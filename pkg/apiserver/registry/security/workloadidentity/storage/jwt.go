@@ -14,7 +14,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	securityapi "github.com/gardener/gardener/pkg/apis/security"
-	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 type privateClaims struct {
@@ -124,7 +124,7 @@ func (r *TokenRequestREST) resolveContextObject(ctxObj *securityapi.ContextObjec
 			}
 		}
 
-		if project, err = admissionutils.ProjectForNamespaceFromLister(coreInterface.Projects().Lister(), shoot.Namespace); err != nil {
+		if project, err = gardenerutils.ProjectForNamespaceFromLister(coreInterface.Projects().Lister(), shoot.Namespace); err != nil {
 			return nil, nil, nil, err
 		}
 

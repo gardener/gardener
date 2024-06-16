@@ -13,14 +13,26 @@ import (
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
+
+type fakeInternalLister struct {
+	gardencorev1beta1listers.ProjectLister
+	projects []*gardencorev1beta1.Project
+	err      error
+}
+
+func (c *fakeInternalLister) List(labels.Selector) ([]*gardencorev1beta1.Project, error) {
+	return c.projects, c.err
+}
 
 var _ = Describe("Project", func() {
 	var (
@@ -55,6 +67,36 @@ var _ = Describe("Project", func() {
 
 	AfterEach(func() {
 		ctrl.Finish()
+	})
+
+	Describe("#ProjectForNamespaceFromLister", func() {
+		var lister *fakeInternalLister
+
+		BeforeEach(func() {
+			lister = &fakeInternalLister{}
+		})
+
+		It("should return an error because listing failed", func() {
+			lister.err = fakeErr
+
+			result, err := ProjectForNamespaceFromLister(lister, namespaceName)
+			Expect(err).To(MatchError(fakeErr))
+			Expect(result).To(BeNil())
+		})
+
+		It("should return the found project", func() {
+			lister.projects = []*gardencorev1beta1.Project{project}
+
+			result, err := ProjectForNamespaceFromLister(lister, namespaceName)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(project))
+		})
+
+		It("should return a 'not found' error", func() {
+			result, err := ProjectForNamespaceFromLister(lister, namespaceName)
+			Expect(err).To(BeNotFoundError())
+			Expect(result).To(BeNil())
+		})
 	})
 
 	Describe("#ProjectForNamespaceFromReader", func() {
