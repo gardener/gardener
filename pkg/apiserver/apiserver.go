@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	kubeinformers "k8s.io/client-go/informers"
+	"k8s.io/client-go/util/keyutil"
 
 	corerest "github.com/gardener/gardener/pkg/apiserver/registry/core/rest"
 	operationsrest "github.com/gardener/gardener/pkg/apiserver/registry/operations/rest"
@@ -32,6 +33,8 @@ type ExtraConfig struct {
 	WorkloadIdentityTokenIssuer        string
 	WorkloadIdentityTokenMinExpiration time.Duration
 	WorkloadIdentityTokenMaxExpiration time.Duration
+	WorkloadIdentitySigningKey         any
+	ClusterIdentity                    string
 }
 
 // Config contains Gardener API server configuration.
@@ -95,6 +98,9 @@ func (c completedConfig) New() (*GardenerServer, error) {
 			WorkloadIdentityTokenIssuer:        c.ExtraConfig.WorkloadIdentityTokenIssuer,
 			WorkloadIdentityTokenMinExpiration: c.ExtraConfig.WorkloadIdentityTokenMinExpiration,
 			WorkloadIdentityTokenMaxExpiration: c.ExtraConfig.WorkloadIdentityTokenMaxExpiration,
+			WorkloadIdentitySigningKey:         c.ExtraConfig.WorkloadIdentitySigningKey,
+			CoreInformerFactory:                c.coreInformerFactory,
+			ClusterIdentity:                    c.ExtraConfig.ClusterIdentity,
 		}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 	)
 
@@ -114,6 +120,7 @@ type ExtraOptions struct {
 	WorkloadIdentityTokenIssuer        string
 	WorkloadIdentityTokenMinExpiration time.Duration
 	WorkloadIdentityTokenMaxExpiration time.Duration
+	WorkloadIdentitySigningKeyFile     string
 
 	LogLevel  string
 	LogFormat string
@@ -156,6 +163,12 @@ func (o *ExtraOptions) Validate() []error {
 		allErrors = append(allErrors, errors.New("--workload-identity-token-max-expiration must be between 10 minutes and 2^32 seconds"))
 	}
 
+	if len(o.WorkloadIdentitySigningKeyFile) != 0 {
+		if _, err := keyutil.PrivateKeyFromFile(o.WorkloadIdentitySigningKeyFile); err != nil {
+			allErrors = append(allErrors, fmt.Errorf("--workload-identity-signing-key-file does not contain valid key, err: %w", err))
+		}
+	}
+
 	if !sets.New(logger.AllLogLevels...).Has(o.LogLevel) {
 		allErrors = append(allErrors, fmt.Errorf("invalid --log-level: %s", o.LogLevel))
 	}
@@ -176,6 +189,7 @@ func (o *ExtraOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.WorkloadIdentityTokenIssuer, "workload-identity-token-issuer", o.WorkloadIdentityTokenIssuer, "The issuer identifier of the workload identity tokens set in the 'iss' claim. If set, it must be a valid URL")
 	fs.DurationVar(&o.WorkloadIdentityTokenMinExpiration, "workload-identity-token-min-expiration", time.Hour, "The minimum validity duration of a workload identity token. If an otherwise valid TokenRequest with a validity duration less than this value is requested, a token will be issued with a validity duration of this value.")
 	fs.DurationVar(&o.WorkloadIdentityTokenMaxExpiration, "workload-identity-token-max-expiration", time.Hour*48, "The maximum validity duration of a workload identity token. If an otherwise valid TokenRequest with a validity duration greater than this value is requested, a token will be issued with a validity duration of this value.")
+	fs.StringVar(&o.WorkloadIdentitySigningKeyFile, "workload-identity-signing-key-file", o.WorkloadIdentitySigningKeyFile, "Path to the file that contains the current private key of the workload identity token issuer. The issuer will sign issued ID tokens with this private key.")
 
 	fs.StringVar(&o.LogLevel, "log-level", "info", "The level/severity for the logs. Must be one of [info,debug,error]")
 	fs.StringVar(&o.LogFormat, "log-format", "json", "The format for the logs. Must be one of [json,text]")
@@ -189,5 +203,13 @@ func (o *ExtraOptions) ApplyTo(c *Config) error {
 	c.ExtraConfig.WorkloadIdentityTokenIssuer = o.WorkloadIdentityTokenIssuer
 	c.ExtraConfig.WorkloadIdentityTokenMinExpiration = o.WorkloadIdentityTokenMinExpiration
 	c.ExtraConfig.WorkloadIdentityTokenMaxExpiration = o.WorkloadIdentityTokenMaxExpiration
+	c.ExtraConfig.ClusterIdentity = o.ClusterIdentity
+
+	signingKey, err := keyutil.PrivateKeyFromFile(o.WorkloadIdentitySigningKeyFile)
+	if err != nil {
+		return err
+	}
+	c.ExtraConfig.WorkloadIdentitySigningKey = signingKey
+
 	return nil
 }
