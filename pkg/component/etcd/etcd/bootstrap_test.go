@@ -290,8 +290,7 @@ var _ = Describe("Etcd", func() {
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
 									{
-										Command: []string{
-											"/etcd-druid",
+										Args: []string{
 											"--enable-leader-election=true",
 											"--ignore-operation-annotation=false",
 											"--disable-etcd-serviceaccount-automount=true",
@@ -331,8 +330,8 @@ var _ = Describe("Etcd", func() {
 
 				// Add feature gate command if useEtcdWrapper is true
 				if useEtcdWrapper {
-					deployment.Spec.Template.Spec.Containers[0].Command = append(
-						deployment.Spec.Template.Spec.Containers[0].Command,
+					deployment.Spec.Template.Spec.Containers[0].Args = append(
+						deployment.Spec.Template.Spec.Containers[0].Args,
 						"--feature-gates=UseEtcdWrapper=true",
 					)
 				}
@@ -374,8 +373,7 @@ var _ = Describe("Etcd", func() {
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{
 								{
-									Command: []string{
-										"/etcd-druid",
+									Args: []string{
 										"--enable-leader-election=true",
 										"--ignore-operation-annotation=false",
 										"--disable-etcd-serviceaccount-automount=true",
