@@ -47,6 +47,7 @@ spec:
           echo delve           && go install github.com/go-delve/delve/cmd/dlv@latest
           echo gron            && go install github.com/tomnomnom/gron@latest
           echo ginkgo          && go install github.com/onsi/ginkgo/v2/ginkgo@latest
+          echo stern           && go install github.com/stern/stern@latest
           echo neat            && krew install neat
           echo node-shell      && krew install node-shell
           bash -c "echo {{p,g}-seed,{gu,p,v}-local--local}.ingress.local.seed.local.gardener.cloud api.{e2e-managedseed.garden,{local,e2e-{hib,hib-wl,unpriv,wake-up,wake-up-wl,migrate,migrate-wl,mgr-hib,rotate,rotate-wl,default,default-wl,force-delete,fd-hib,upd-node,upd-node-wl,upgrade,upgrade-wl,upg-hib,upg-hib-wl}}.local}.{internal,external}.local.gardener.cloud" \
@@ -141,6 +142,7 @@ spec:
           echo
           EOF
           kubectl completion bash > /usr/share/bash-completion/completions/kubectl
+          ~/go/bin/stern --completion=bash > /usr/share/bash-completion/completions/stern
           cat > ~/.bash_profile <<"EOF"
             source /etc/bash/bashrc
             source ~/.bashrc
@@ -354,10 +356,10 @@ spec:
             generate-admin-kubeconf.sh > /tmp/shoot.kubeconfig && watch "k --kubeconfig /tmp/shoot.kubeconfig get pods -A -o wide | awk '{split(\$3, a, \"/\"); if (a[1]!=a[2] || \$4 != \"Running\") {print}}'"
           EOF
           new_window "logs" "gardenlet logs" <<"EOF"
-            while true; do k -n garden logs deployments/gardenlet -f 2>/dev/null; sleep 1; done >> gardenlet.logs
+            stern --color=always -n garden deployments/gardenlet > gardenlet.logs
           EOF
           new_pane "less" <<"EOF"
-            less -NS +F gardenlet.logs
+            less -NSR +F gardenlet.logs
           EOF
           new_window "make generate" "make generate" <<"EOF"
             nice make generate check test test-integration
