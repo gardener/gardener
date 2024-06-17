@@ -511,16 +511,16 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 									}},
 								},
 							},
-							// required for node local dns feature, allows egress traffic to CoreDNS
-							{
-								IPBlock: &networkingv1.IPBlock{
-									CIDR: "10.1.0.10/32",
-								},
-							},
 							// required for node local dns feature, allows egress traffic to node local dns cache
 							{
 								IPBlock: &networkingv1.IPBlock{
 									CIDR: "169.254.20.10/32",
+								},
+							},
+							// required for node local dns feature, allows egress traffic to CoreDNS
+							{
+								IPBlock: &networkingv1.IPBlock{
+									CIDR: "10.1.0.10/32",
 								},
 							},
 						},

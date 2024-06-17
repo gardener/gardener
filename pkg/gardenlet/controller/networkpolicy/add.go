@@ -51,15 +51,20 @@ func AddToManager(
 		return nil // When the seed is the garden cluster at the same time, the gardener-operator runs this controller.
 	}
 
+	var nodes []string
+	if networks.Nodes != nil {
+		nodes = []string{*networks.Nodes}
+	}
+
 	reconciler := &networkpolicy.Reconciler{
 		ConcurrentSyncs:              cfg.ConcurrentSyncs,
 		AdditionalNamespaceSelectors: cfg.AdditionalNamespaceSelectors,
 		Resolver:                     resolver,
 		RuntimeNetworks: networkpolicy.RuntimeNetworkConfig{
 			IPFamilies: networks.IPFamilies,
-			Pods:       networks.Pods,
-			Services:   networks.Services,
-			Nodes:      networks.Nodes,
+			Pods:       []string{networks.Pods},
+			Services:   []string{networks.Services},
+			Nodes:      nodes,
 			BlockCIDRs: networks.BlockCIDRs,
 		},
 	}
