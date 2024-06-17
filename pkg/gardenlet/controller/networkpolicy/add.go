@@ -7,6 +7,7 @@ package networkpolicy
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -137,7 +138,19 @@ func ClusterPredicate() predicate.Predicate {
 				return oldShoot.Spec.Networking == nil || !ptr.Equal(shoot.Spec.Networking.Services, oldShoot.Spec.Networking.Services)
 			}
 
-			return !ptr.Equal(shoot.Spec.Networking.Pods, oldShoot.Spec.Networking.Pods) ||
+			if shoot.Status.Networking != nil && oldShoot.Status.Networking == nil || shoot.Status.Networking == nil && oldShoot.Status.Networking != nil {
+				return true
+			}
+
+			statusNetworkingChanged := false
+			if shoot.Status.Networking != nil {
+				statusNetworkingChanged = !slices.Equal(shoot.Status.Networking.Pods, oldShoot.Status.Networking.Pods) ||
+					!slices.Equal(shoot.Status.Networking.Services, oldShoot.Status.Networking.Services) ||
+					!slices.Equal(shoot.Status.Networking.Nodes, oldShoot.Status.Networking.Nodes)
+			}
+
+			return statusNetworkingChanged ||
+				!ptr.Equal(shoot.Spec.Networking.Pods, oldShoot.Spec.Networking.Pods) ||
 				!ptr.Equal(shoot.Spec.Networking.Services, oldShoot.Spec.Networking.Services) ||
 				!ptr.Equal(shoot.Spec.Networking.Nodes, oldShoot.Spec.Networking.Nodes)
 		},
