@@ -152,6 +152,7 @@ spec:
             export PATH=$PATH:$GOPATH/bin:~/.krew/bin:~/go/src/github.com/gardener/gardener/hack/usage
             export XDG_CONFIG_HOME=~/.config
             export EDITOR=nvim
+            export KUBE_EDITOR=nvim
             export HISTFILESIZE=10000
             export HISTSIZE=10000
             export HISTTIMEFORMAT="%F %T "
