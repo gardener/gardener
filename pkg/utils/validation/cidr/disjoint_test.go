@@ -580,6 +580,65 @@ var _ = Describe("utils", func() {
 		})
 	})
 
+	Describe("#ValidateMultiNetworkDisjointedness", func() {
+		var (
+			seedPodsCIDR     = "10.241.128.0/17"
+			seedServicesCIDR = "10.241.0.0/17"
+			seedNodesCIDR    = "10.240.0.0/16"
+		)
+
+		It("should pass the validation", func() {
+			var (
+				podsCIDRs     = []string{"10.242.128.0/17", "2001:db8:1::/64"}
+				servicesCIDRs = []string{"10.242.0.0/17", "2001:db8:2::/64"}
+				nodesCIDRs    = []string{"10.243.0.0/16", "2001:db8:3::/64"}
+			)
+
+			errorList := ValidateMultiNetworkDisjointedness(
+				field.NewPath(""),
+				nodesCIDRs,
+				podsCIDRs,
+				servicesCIDRs,
+				&seedNodesCIDR,
+				seedPodsCIDR,
+				seedServicesCIDR,
+				false,
+			)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should fail due to disjointedness", func() {
+			var (
+				podsCIDR     = []string{seedPodsCIDR}
+				servicesCIDR = []string{seedServicesCIDR}
+				nodesCIDR    = []string{seedNodesCIDR}
+			)
+
+			errorList := ValidateMultiNetworkDisjointedness(
+				field.NewPath(""),
+				nodesCIDR,
+				podsCIDR,
+				servicesCIDR,
+				&seedNodesCIDR,
+				seedPodsCIDR,
+				seedServicesCIDR,
+				false,
+			)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("[].nodes"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("[].services"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("[].pods"),
+			}))))
+		})
+	})
+
 	Describe("#ValidateShootNetworkDisjointedness IPv4", func() {
 		It("should pass the validation", func() {
 			var (
