@@ -7,13 +7,13 @@ package botanist_test
 import (
 	"context"
 	"errors"
+	"net"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -156,17 +156,9 @@ var _ = Describe("Waiter", func() {
 	})
 
 	Describe("#WaitUntilEndpointsDoNotContainPodIPs", func() {
-		var (
-			shoot    *gardencorev1beta1.Shoot
-			endpoint *corev1.Endpoints
-		)
+		var endpoint *corev1.Endpoints
 
 		BeforeEach(func() {
-			shoot = &gardencorev1beta1.Shoot{
-				Spec: gardencorev1beta1.ShootSpec{
-					Networking: &gardencorev1beta1.Networking{},
-				},
-			}
 			endpoint = &corev1.Endpoints{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default", Name: "basic-endpoint",
@@ -184,30 +176,19 @@ var _ = Describe("Waiter", func() {
 					},
 				},
 			}
+			botanist.Shoot.Networks = &shootpkg.Networks{}
 		})
 
 		It("should return an error when shoot's pod network is empty", func() {
-			botanist.Shoot.SetInfo(shoot)
-
 			err := botanist.WaitUntilEndpointsDoNotContainPodIPs(ctx)
 			Expect(err).To(MatchError("unable to check if there are still Endpoints containing Pod IPs in the shoot cluster. Shoot's Pods network is empty"))
-		})
-
-		It("should return an error when shoot's pod network is invalid", func() {
-			shoot.Spec.Networking.Pods = ptr.To("abc123")
-			botanist.Shoot.SetInfo(shoot)
-
-			err := botanist.WaitUntilEndpointsDoNotContainPodIPs(ctx)
-
-			Expect(err).To(MatchError("unable to check if there are still Endpoints containing Pod IPs in the shoot cluster. Shoots's Pods network could not be parsed: invalid CIDR address: abc123"))
 		})
 
 		It("should return an error when an endpoint is still present", func() {
 			ctxCanceled, cancel := context.WithCancel(ctx)
 			cancel()
 
-			shoot.Spec.Networking.Pods = ptr.To("10.0.0.0/8")
-			botanist.Shoot.SetInfo(shoot)
+			botanist.Shoot.Networks.Pods = []net.IPNet{{IP: net.ParseIP("10.0.0.0"), Mask: net.CIDRMask(8, 32)}}
 
 			Expect(botanist.ShootClientSet.Client().Create(ctx, endpoint)).To(Succeed())
 
@@ -220,8 +201,7 @@ var _ = Describe("Waiter", func() {
 			ctxCanceled, cancel := context.WithCancel(ctx)
 			cancel()
 
-			shoot.Spec.Networking.Pods = ptr.To("10.0.0.0/8")
-			botanist.Shoot.SetInfo(shoot)
+			botanist.Shoot.Networks.Pods = []net.IPNet{{IP: net.ParseIP("10.0.0.0"), Mask: net.CIDRMask(8, 32)}}
 
 			endpoint.Subsets[0].Addresses[0].IP = "128.0.0.1"
 			Expect(botanist.ShootClientSet.Client().Create(ctx, endpoint)).To(Succeed())
@@ -233,8 +213,7 @@ var _ = Describe("Waiter", func() {
 			ctxCanceled, cancel := context.WithCancel(ctx)
 			cancel()
 
-			shoot.Spec.Networking.Pods = ptr.To("10.0.0.0/8")
-			botanist.Shoot.SetInfo(shoot)
+			botanist.Shoot.Networks.Pods = []net.IPNet{{IP: net.ParseIP("10.0.0.0"), Mask: net.CIDRMask(8, 32)}}
 
 			Expect(botanist.WaitUntilEndpointsDoNotContainPodIPs(ctxCanceled)).To(Succeed())
 		})
