@@ -93,17 +93,43 @@
       "matchPackagePatterns": ["quay\\.io\/prometheus-operator\/.+"],
     },
     {
+      // Ask for manual approval to create PRs for minor and major updates of dependencies which most likely
+      // require manual adaptations of the code.
+      "matchDatasources": ["go"],
+      "matchUpdateTypes": ["major", "minor"],
+      "matchPackagePatterns": [
+        "k8s\\.io\/.+",
+        "sigs\\.k8s\\.io\/controller-runtime",
+        "istio\\.io\/.+",
+        "github\\.com\/fluent\/.+"
+      ],
+      "dependencyDashboardApproval": true
+    },
+    {
+      // Ask for manual approval to create PRs for minor and major updates of container images which most likely
+      // require manual adaptations of the code.
+      "matchDatasources": ["docker", "github-releases"],
+      "matchUpdateTypes": ["major", "minor"],
+      "matchFileNames": ["imagevector/**"],
+      "matchPackagePatterns": [
+        "fluent\/.+",
+        "gcr\\.io\/istio-release\/.+",
+      ],
+      "dependencyDashboardApproval": true
+    },
+    {
+      // Ask for manual approval to create PRs for kindest/node image. Minor and major versions are updated when new
+      // versions of Kubernetes are introduced only.
+      "matchDatasources": ["docker"],
+      "matchUpdateTypes": ["major", "minor"],
+      "matchPackagePatterns": ["kindest\/node"],
+      "dependencyDashboardApproval": true
+    },
+    {
       // Only patch level updates for golang-test image. Minor and major versions are updated manually.
       "matchDatasources": ["docker"],
       "matchUpdateTypes": ["major", "minor"],
       "matchFileNames": ["hack\/tools\/image\/variants\\.yaml"],
-      "enabled": false
-    },
-    {
-      // Only patch level updates for kindest/node image. Minor and major versions are updated manually.
-      "matchDatasources": ["docker"],
-      "matchUpdateTypes": ["major", "minor"],
-      "matchPackagePatterns": ["kindest\/node"],
       "enabled": false
     },
     {
@@ -122,26 +148,14 @@
       "enabled": false
     },
     {
-      // Update only patchlevels of major dependencies like kubernetes, controller-runtime and istio.
-      // Minor and major upgrades most likely require manual adaptations of the code.
-      "matchDatasources": ["go"],
-      "matchUpdateTypes": ["major", "minor"],
-      "matchPackagePatterns": [
-        "k8s\\.io\/.+",
-        "sigs\\.k8s\\.io\/controller-runtime",
-        "istio\\.io\/.+"
-      ],
-      "enabled": false
-    },
-    {
-      // Update only patch levels container images of istio and cluster-autoscaler.
-      // Minor and major upgrades most likely require manual adaptations of the code.
+      // Update only patch levels for cluster-autoscaler container images.
+      // There is a different minor version for each Kubernetes version active at the same time. In this scenario,
+      // renovate is able to handle patch updates properly only.
       "matchDatasources": ["docker", "github-releases"],
       "matchUpdateTypes": ["major", "minor"],
       "matchFileNames": ["imagevector/**"],
       "matchPackagePatterns": [
         "gardener\/autoscaler",
-        "gcr\\.io\/istio-release\/.+",
       ],
       "enabled": false
     },
@@ -154,8 +168,7 @@
       ],
       "excludePackagePatterns": [
         "europe-docker\\.pkg\\.dev\/gardener-project\/releases\/3rd\/alpine",
-        "europe-docker\\.pkg\\.dev\/gardener-project\/releases\/3rd\/kubernetesui\/.+",
-        "europe-docker\\.pkg\\.dev\/gardener-project\/releases\/3rd\/kubesphere\/.+"
+        "europe-docker\\.pkg\\.dev\/gardener-project\/releases\/3rd\/kubernetesui\/.+"
       ],
       "enabled": false
     },
@@ -166,7 +179,8 @@
       "excludePackagePatterns": [
         "gardener\/.+",
         "credativ\/.+",
-        "envoyproxy\/.+"
+        "envoyproxy\/.+",
+        "fluent\/.+"
       ],
       "enabled": false
     },
