@@ -46,6 +46,7 @@ config:
     ShootManagedIssuer: true
     NewWorkerPoolHash: true
     NewVPN: true
+    NodeAgentAuthorizer: true
   etcdConfig:
     featureGates:
       UseEtcdWrapper: true
