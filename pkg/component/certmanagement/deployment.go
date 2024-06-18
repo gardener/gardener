@@ -303,16 +303,6 @@ func (d *certManagementDeployment) Deploy(ctx context.Context) error {
 	return managedresources.CreateForSeed(ctx, d.client, v1beta1constants.GardenNamespace, deploymentManagedResourceName, false, resources)
 }
 
-func (d *certManagementDeployment) deleteHelmRelease(ctx context.Context) error {
-	if err := d.client.DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(d.namespace), client.MatchingLabels{
-		"name":  "cert-management",
-		"owner": "helm",
-	}); err != nil {
-		return fmt.Errorf("deleting secrets for old Helm releases failed: %w", err)
-	}
-	return nil
-}
-
 func (d *certManagementDeployment) Destroy(ctx context.Context) error {
 	return managedresources.DeleteForSeed(ctx, d.client, v1beta1constants.GardenNamespace, deploymentManagedResourceName)
 }
