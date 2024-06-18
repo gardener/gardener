@@ -45,11 +45,6 @@ type Values struct {
 	DefaultIssuer operatorv1alpha1.DefaultIssuer
 }
 
-var listOpts = []client.ListOption{
-	client.InNamespace(v1beta1constants.GardenNamespace),
-	client.MatchingLabels{"app.kubernetes.io/name": componentName},
-}
-
 // NewDefaultIssuer creates a new Deployer for the cert-management component.
 func NewDefaultIssuer(
 	cl client.Client,

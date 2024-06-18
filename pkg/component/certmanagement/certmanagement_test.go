@@ -279,7 +279,6 @@ var _ = Describe("CertManagement", func() {
 									corev1.ResourceMemory: resource.MustParse("64Mi"),
 								},
 								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("200m"),
 									corev1.ResourceMemory: resource.MustParse("128Mi"),
 								},
 							},
