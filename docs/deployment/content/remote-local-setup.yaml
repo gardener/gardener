@@ -213,6 +213,7 @@ spec:
             set -g pane-border-status top
             set -g pane-border-format " #{pane_index} #{pane_title} - #{pane_current_command} "
             set -g window-size smallest
+            set -g history-limit 100000
           EOF
           mkdir -p ~/go/src/github.com/gardener
           cd ~/go/src/github.com/gardener
