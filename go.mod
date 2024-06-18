@@ -251,3 +251,5 @@ require (
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.28.0 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 )
+
+replace github.com/gardener/machine-controller-manager v0.53.0 => github.com/oliver-goetz/machine-controller-manager v0.0.0-20240618144436-147e488e6d85
