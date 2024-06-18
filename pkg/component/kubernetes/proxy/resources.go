@@ -7,6 +7,7 @@ package proxy
 import (
 	_ "embed"
 	"fmt"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	appsv1 "k8s.io/api/apps/v1"
@@ -457,8 +458,12 @@ func (k *kubeProxy) getRawComponentConfig() (string, error) {
 		FeatureGates: k.values.FeatureGates,
 	}
 
-	if !k.values.IPVSEnabled && k.values.PodNetworkCIDR != nil {
-		config.ClusterCIDR = *k.values.PodNetworkCIDR
+	if !k.values.IPVSEnabled && len(k.values.PodNetworkCIDRs) > 0 {
+		pods := ""
+		for _, p := range k.values.PodNetworkCIDRs {
+			pods += p.String() + ","
+		}
+		config.ClusterCIDR = strings.TrimSuffix(pods, ",")
 	}
 
 	return NewConfigCodec().Encode(config)
