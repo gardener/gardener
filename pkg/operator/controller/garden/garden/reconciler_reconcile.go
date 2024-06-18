@@ -247,6 +247,11 @@ func (r *Reconciler) reconcile(
 			Fn: func(ctx context.Context) error {
 				c.kubeControllerManager.SetReplicaCount(1)
 				c.kubeControllerManager.SetRuntimeConfig(c.kubeAPIServer.GetValues().RuntimeConfig)
+				_, services, err := net.ParseCIDR(garden.Spec.VirtualCluster.Networking.Services)
+				if err != nil {
+					return fmt.Errorf("cannot parse service network CIDR '%s': %w", garden.Spec.VirtualCluster.Networking.Services, err)
+				}
+				c.kubeControllerManager.SetServiceNetworks([]net.IPNet{*services})
 				return component.OpWait(c.kubeControllerManager).Deploy(ctx)
 			},
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),

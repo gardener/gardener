@@ -7,6 +7,7 @@ package botanist_test
 import (
 	"context"
 	"errors"
+	"net"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
@@ -94,6 +95,10 @@ var _ = Describe("KubeControllerManager", func() {
 					},
 				},
 				SeedNamespace: namespace,
+				Networks: &shootpkg.Networks{
+					Pods:     []net.IPNet{{IP: net.ParseIP("10.0.0.0"), Mask: net.CIDRMask(24, 32)}},
+					Services: []net.IPNet{{IP: net.ParseIP("10.0.1.0"), Mask: net.CIDRMask(24, 32)}},
+				},
 			}
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 		})
@@ -103,6 +108,8 @@ var _ = Describe("KubeControllerManager", func() {
 				kubeControllerManager.EXPECT().Deploy(ctx)
 				kubeAPIServer.EXPECT().GetValues().Return(kubeapiserver.Values{RuntimeConfig: map[string]bool{"foo": true}})
 				kubeControllerManager.EXPECT().SetRuntimeConfig(map[string]bool{"foo": true})
+				kubeControllerManager.EXPECT().SetServiceNetworks(botanist.Shoot.Networks.Services)
+				kubeControllerManager.EXPECT().SetPodNetworks(botanist.Shoot.Networks.Pods)
 			})
 
 			Context("kube-apiserver is already scaled down", func() {
@@ -286,6 +293,8 @@ var _ = Describe("KubeControllerManager", func() {
 			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: "kube-controller-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{}))
 			kubeControllerManager.EXPECT().SetReplicaCount(int32(0))
 			kubeControllerManager.EXPECT().SetRuntimeConfig(map[string]bool{"foo": true})
+			kubeControllerManager.EXPECT().SetServiceNetworks(botanist.Shoot.Networks.Services)
+			kubeControllerManager.EXPECT().SetPodNetworks(botanist.Shoot.Networks.Pods)
 			kubeControllerManager.EXPECT().Deploy(ctx).Return(fakeErr)
 
 			Expect(botanist.DeployKubeControllerManager(ctx)).To(Equal(fakeErr))
