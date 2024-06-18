@@ -8,7 +8,7 @@ spec:
     rules:
     - alert: PrometheusCantScrape
       # Alert only if there are jobs but no samples scraped.
-      expr: scrape_samples_scraped == 0 and on(job) up{job!="etcd-druid"} == 1
+      expr: scrape_samples_scraped == 0 and on(job) up{job!~".*shoot-etcd-druid"} == 1
       for: 1h
       labels:
         service: prometheus
