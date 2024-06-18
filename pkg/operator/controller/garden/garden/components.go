@@ -240,7 +240,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.certManagement, err = r.newCertManagement(garden)
+	c.certManagement, err = r.newCertManagement(garden, applier)
 	if err != nil {
 		return
 	}
@@ -1042,10 +1042,10 @@ func (r *Reconciler) newGardenerScheduler(garden *operatorv1alpha1.Garden, secre
 	return gardenerscheduler.New(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, values), nil
 }
 
-func (r *Reconciler) newCertManagement(garden *operatorv1alpha1.Garden) (component.DeployWaiter, error) {
+func (r *Reconciler) newCertManagement(garden *operatorv1alpha1.Garden, applier kubernetes.Applier) (component.DeployWaiter, error) {
 	config := garden.Spec.RuntimeCluster.CertManagement
 	if config == nil {
-		return certmanagement.NewDestroyer(certmanagement.New(r.RuntimeClientSet.Client(), certmanagement.Values{})), nil
+		return certmanagement.NewDestroyer(certmanagement.New(r.RuntimeClientSet.Client(), applier, certmanagement.Values{})), nil
 	}
 
 	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameCertManagement)
@@ -1056,10 +1056,10 @@ func (r *Reconciler) newCertManagement(garden *operatorv1alpha1.Garden) (compone
 	values := certmanagement.Values{
 		Image:         image.String(),
 		Namespace:     r.GardenNamespace,
-		Deployment:    config.Deployment,
+		DeployConfig:  config.Config,
 		DefaultIssuer: config.DefaultIssuer,
 	}
-	return certmanagement.New(r.RuntimeClientSet.Client(), values), nil
+	return certmanagement.New(r.RuntimeClientSet.Client(), applier, values), nil
 }
 
 func (r *Reconciler) newGardenerDashboard(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, wildcardCertSecretName *string) (gardenerdashboard.Interface, error) {

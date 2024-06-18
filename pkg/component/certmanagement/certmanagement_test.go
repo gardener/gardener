@@ -14,8 +14,11 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
@@ -40,8 +43,9 @@ var _ = Describe("CertManagement", func() {
 		image            = "some-image:some-tag"
 		issuerSecretName = "issuer-secret"
 
-		c      client.Client
-		values Values
+		c       client.Client
+		applier kubernetes.Applier
+		values  Values
 
 		consistOf func(...client.Object) types.GomegaMatcher
 		contain   func(...client.Object) types.GomegaMatcher
@@ -61,7 +65,7 @@ var _ = Describe("CertManagement", func() {
 		issuer *certv1alpha1.Issuer
 
 		newComponent = func(values Values) component.DeployWaiter {
-			return New(c, values)
+			return New(c, applier, values)
 		}
 
 		checkIssuer     func()
@@ -70,6 +74,9 @@ var _ = Describe("CertManagement", func() {
 
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{apiextensionsv1.SchemeGroupVersion})
+		mapper.Add(apiextensionsv1.SchemeGroupVersion.WithKind("CustomResourceDefinition"), meta.RESTScopeRoot)
+		applier = kubernetes.NewApplier(c, mapper)
 		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
 		contain = NewManagedResourceContainsObjectsMatcher(c)
 
@@ -308,11 +315,10 @@ var _ = Describe("CertManagement", func() {
 				Name:            "cert-management-issuers",
 				Namespace:       "garden",
 				ResourceVersion: "1",
-				Labels:          map[string]string{"app.kubernetes.io/name": "cert-management"},
+				Labels:          map[string]string{"gardener.cloud/role": "seed-system-component"},
 			},
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				Class:        ptr.To("seed"),
-				InjectLabels: map[string]string{"app.kubernetes.io/name": "cert-management"},
+				Class: ptr.To("seed"),
 				SecretRefs: []corev1.LocalObjectReference{{
 					Name: managedResourceIssuer.Spec.SecretRefs[0].Name,
 				}},
@@ -329,14 +335,13 @@ var _ = Describe("CertManagement", func() {
 		Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceDeployment), managedResourceDeployment)).To(Succeed())
 		expectedMrDeployment := &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:            DeploymentManagedResourceName,
+				Name:            "cert-management-deployment",
 				Namespace:       "garden",
 				ResourceVersion: "1",
-				Labels:          map[string]string{"app.kubernetes.io/name": "cert-management"},
+				Labels:          map[string]string{"gardener.cloud/role": "seed-system-component"},
 			},
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				Class:        ptr.To("seed"),
-				InjectLabels: map[string]string{"app.kubernetes.io/name": "cert-management"},
+				Class: ptr.To("seed"),
 				SecretRefs: []corev1.LocalObjectReference{{
 					Name: managedResourceDeployment.Spec.SecretRefs[0].Name,
 				}},
@@ -352,14 +357,7 @@ var _ = Describe("CertManagement", func() {
 		Expect(managedResourceDeploymentSecret.Immutable).To(Equal(ptr.To(true)))
 		Expect(managedResourceDeploymentSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
-		crds, err := LoadCustomResourceDefinition()
-		Expect(err).NotTo(HaveOccurred())
-		Expect(crds).To(HaveLen(3))
-		var expectedObjects []client.Object
-		for _, crd := range crds {
-			expectedObjects = append(expectedObjects, crd)
-		}
-		expectedObjects = append(expectedObjects, serviceAccount, clusterRole, clusterRoleBinding, role, roleBinding, deploy)
+		expectedObjects := []client.Object{serviceAccount, clusterRole, clusterRoleBinding, role, roleBinding, deploy}
 		Expect(managedResourceDeployment).To(contain(expectedObjects...))
 	}
 
@@ -384,7 +382,7 @@ var _ = Describe("CertManagement", func() {
 		}
 		managedResourceDeployment = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      DeploymentManagedResourceName,
+				Name:      "cert-management-deployment",
 				Namespace: "garden",
 				Labels: map[string]string{
 					"app.kubernetes.io/name": "cert-management",
@@ -413,6 +411,9 @@ var _ = Describe("CertManagement", func() {
 
 			checkIssuer()
 			checkDeployment(deployment)
+			Expect(c.Get(ctx, client.ObjectKey{Name: "certificaterevocations.cert.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "certificates.cert.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "issuers.cert.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
 		})
 
 		It("should successfully deploy with caCertificates", func() {
@@ -426,7 +427,7 @@ var _ = Describe("CertManagement", func() {
 				},
 			}
 			Expect(c.Create(ctx, secret)).To(Succeed())
-			values.Deployment = &operatorv1alpha1.CertManagementDeployment{CACertificatesSecretRef: &corev1.LocalObjectReference{Name: "ca-certificates"}}
+			values.DeployConfig = &operatorv1alpha1.CertManagementConfig{CACertificatesSecretRef: &corev1.LocalObjectReference{Name: "ca-certificates"}}
 			comp := newComponent(values)
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIssuer), managedResourceIssuer)).To(BeNotFoundError())
@@ -501,6 +502,9 @@ var _ = Describe("CertManagement", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIssuerSecret), managedResourceIssuerSecret)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceDeployment), managedResourceDeployment)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceDeploymentSecret), managedResourceDeploymentSecret)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "certificaterevocations.cert.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "certificates.cert.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "issuers.cert.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
 		})
 	})
 })

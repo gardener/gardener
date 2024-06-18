@@ -173,15 +173,15 @@ type Volume struct {
 // CertManagement configures the cert-management component for issuing TLS certificates
 // from an ACME server.
 type CertManagement struct {
-	// Deployment contains configuration for deploying the cert-controller-manager.
+	// Config contains configuration for deploying the cert-controller-manager.
 	// +optional
-	Deployment *CertManagementDeployment `json:"deployment,omitempty"`
+	Config *CertManagementConfig `json:"config,omitempty"`
 	// DefaultIssuer is the default issuer used for requesting TLS certificates.
 	DefaultIssuer DefaultIssuer `json:"defaultIssuer"`
 }
 
-// CertManagementDeployment contains information for deploying the dns-controller-manager.
-type CertManagementDeployment struct {
+// CertManagementConfig contains information for deploying the cert-controller-manager.
+type CertManagementConfig struct {
 	// CACertificatesSecretRef are additional root certificates to access ACME servers with private TLS certificates.
 	// The certificates are expected at key 'bundle.crt'.
 	// +optional

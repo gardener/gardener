@@ -86,6 +86,24 @@ spec:
                       CertManagement configures the cert-management component for issuing TLS certificates
                       from an ACME server.
                     properties:
+                      config:
+                        description: Config contains configuration for deploying the
+                          cert-controller-manager.
+                        properties:
+                          caCertificatesSecretRef:
+                            description: |-
+                              CACertificatesSecretRef are additional root certificates to access ACME servers with private TLS certificates.
+                              The certificates are expected at key 'bundle.crt'.
+                            properties:
+                              name:
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
+                                type: string
+                            type: object
+                            x-kubernetes-map-type: atomic
+                        type: object
                       defaultIssuer:
                         description: DefaultIssuer is the default issuer used for
                           requesting TLS certificates.
@@ -121,24 +139,6 @@ spec:
                         required:
                         - email
                         - server
-                        type: object
-                      deployment:
-                        description: Deployment contains configuration for deploying
-                          the cert-controller-manager.
-                        properties:
-                          caCertificatesSecretRef:
-                            description: |-
-                              CACertificatesSecretRef are additional root certificates to access ACME servers with private TLS certificates.
-                              The certificates are expected at key 'bundle.crt'.
-                            properties:
-                              name:
-                                description: |-
-                                  Name of the referent.
-                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind, uid?
-                                type: string
-                            type: object
-                            x-kubernetes-map-type: atomic
                         type: object
                     required:
                     - defaultIssuer

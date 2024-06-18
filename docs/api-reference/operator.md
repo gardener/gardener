@@ -290,16 +290,16 @@ from an ACME server.</p>
 <tbody>
 <tr>
 <td>
-<code>deployment</code></br>
+<code>config</code></br>
 <em>
-<a href="#operator.gardener.cloud/v1alpha1.CertManagementDeployment">
-CertManagementDeployment
+<a href="#operator.gardener.cloud/v1alpha1.CertManagementConfig">
+CertManagementConfig
 </a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>Deployment contains configuration for deploying the cert-controller-manager.</p>
+<p>Config contains configuration for deploying the cert-controller-manager.</p>
 </td>
 </tr>
 <tr>
@@ -317,14 +317,14 @@ DefaultIssuer
 </tr>
 </tbody>
 </table>
-<h3 id="operator.gardener.cloud/v1alpha1.CertManagementDeployment">CertManagementDeployment
+<h3 id="operator.gardener.cloud/v1alpha1.CertManagementConfig">CertManagementConfig
 </h3>
 <p>
 (<em>Appears on:</em>
 <a href="#operator.gardener.cloud/v1alpha1.CertManagement">CertManagement</a>)
 </p>
 <p>
-<p>CertManagementDeployment contains information for deploying the dns-controller-manager.</p>
+<p>CertManagementConfig contains information for deploying the cert-controller-manager.</p>
 </p>
 <table>
 <thead>

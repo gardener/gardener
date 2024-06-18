@@ -81,9 +81,9 @@ build:
             - pkg/component/autoscaling/vpa/templates/crd-autoscaling.k8s.io_verticalpodautoscalercheckpoints.yaml
             - pkg/component/autoscaling/vpa/templates/crd-autoscaling.k8s.io_verticalpodautoscalers.yaml
             - pkg/component/certmanagement
-            - pkg/component/certmanagement/assets/cert.gardener.cloud_certificaterevocations.yaml
-            - pkg/component/certmanagement/assets/cert.gardener.cloud_certificates.yaml
-            - pkg/component/certmanagement/assets/cert.gardener.cloud_issuers.yaml
+            - pkg/component/certmanagement/assets/crd-cert.gardener.cloud_certificaterevocations.yaml
+            - pkg/component/certmanagement/assets/crd-cert.gardener.cloud_certificates.yaml
+            - pkg/component/certmanagement/assets/crd-cert.gardener.cloud_issuers.yaml
             - pkg/component/etcd/etcd
             - pkg/component/etcd/etcd/constants
             - pkg/component/etcd/etcd/crds/templates/crd-druid.gardener.cloud_etcdcopybackupstasks.yaml

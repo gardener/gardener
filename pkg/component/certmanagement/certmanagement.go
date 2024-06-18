@@ -36,6 +36,7 @@ const (
 type certManagement struct {
 	values     Values
 	client     client.Client
+	crds       component.Deployer
 	deployment component.DeployWaiter
 }
 
@@ -43,7 +44,7 @@ type certManagement struct {
 type Values struct {
 	Image         string
 	Namespace     string
-	Deployment    *operatorv1alpha1.CertManagementDeployment
+	DeployConfig  *operatorv1alpha1.CertManagementConfig
 	DefaultIssuer operatorv1alpha1.DefaultIssuer
 }
 
@@ -55,11 +56,13 @@ var listOpts = []client.ListOption{
 // New creates a new Deployer for the cert-management component.
 func New(
 	cl client.Client,
+	applier kubernetes.Applier,
 	values Values,
 ) component.DeployWaiter {
 	return &certManagement{
 		values:     values,
 		client:     cl,
+		crds:       NewCRDs(applier),
 		deployment: newCertManagementDeployment(cl, values),
 	}
 }
@@ -67,6 +70,9 @@ func New(
 var _ component.DeployWaiter = &certManagement{}
 
 func (c *certManagement) Deploy(ctx context.Context) error {
+	if err := c.crds.Deploy(ctx); err != nil {
+		return err
+	}
 	if err := c.deployment.Deploy(ctx); err != nil {
 		return err
 	}
@@ -74,16 +80,13 @@ func (c *certManagement) Deploy(ctx context.Context) error {
 }
 
 func (c *certManagement) Destroy(ctx context.Context) error {
-	list := &resourcesv1alpha1.ManagedResourceList{}
-	if err := c.client.List(ctx, list, listOpts...); err != nil {
+	if err := c.deployment.Destroy(ctx); err != nil {
 		return err
 	}
-	for _, item := range list.Items {
-		if err := deleteManagedResource(ctx, c.client, item.Name); err != nil {
-			return err
-		}
+	if err := managedresources.DeleteForSeed(ctx, c.client, v1beta1constants.GardenNamespace, issuersManagedResourceName); err != nil {
+		return err
 	}
-	return nil
+	return c.crds.Destroy(ctx)
 }
 
 func (c *certManagement) Wait(ctx context.Context) error {
@@ -137,7 +140,7 @@ func (c *certManagement) deployDefaultIssuer(ctx context.Context) error {
 		return err
 	}
 
-	if err := createManagedResource(ctx, c.client, issuersManagedResourceName, false, resources); err != nil {
+	if err := managedresources.CreateForSeed(ctx, c.client, v1beta1constants.GardenNamespace, issuersManagedResourceName, false, resources); err != nil {
 		return fmt.Errorf("creating issuers failed: %w", err)
 	}
 

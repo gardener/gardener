@@ -13,14 +13,12 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/yaml"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
@@ -34,8 +32,8 @@ import (
 )
 
 const (
-	// DeploymentManagedResourceName is the name of the managed resource for the resources.
-	DeploymentManagedResourceName = "cert-management-deployment"
+	// deploymentManagedResourceName is the name of the managed resource for the resources.
+	deploymentManagedResourceName = "cert-management-deployment"
 
 	resourceName  = "cert-controller-manager"
 	containerName = "cert-management"
@@ -44,55 +42,24 @@ const (
 	rsaPrivateKeySize = 3072
 )
 
-//go:embed assets/cert.gardener.cloud_certificaterevocations.yaml
-var crdRevocations string
-
-//go:embed assets/cert.gardener.cloud_certificates.yaml
-var crdCertificates string
-
-//go:embed assets/cert.gardener.cloud_issuers.yaml
-var crdIssuers string
-
 // newCertManagementDeployment creates a new instance of DeployWaiter for the CertManagement deployment.
 func newCertManagementDeployment(cl client.Client, values Values) component.DeployWaiter {
 	return &certManagementDeployment{
-		client:     cl,
-		namespace:  values.Namespace,
-		image:      values.Image,
-		deployment: values.Deployment,
+		client:    cl,
+		namespace: values.Namespace,
+		image:     values.Image,
+		config:    values.DeployConfig,
 	}
 }
 
 type certManagementDeployment struct {
-	client     client.Client
-	namespace  string
-	image      string
-	deployment *operatorv1alpha1.CertManagementDeployment
+	client    client.Client
+	namespace string
+	image     string
+	config    *operatorv1alpha1.CertManagementConfig
 }
 
 func (d *certManagementDeployment) Deploy(ctx context.Context) error {
-	if err := d.deploy(ctx); err != nil {
-		return err
-	}
-
-	// MIGRATION-FROM-LSS
-	return d.deleteHelmRelease(ctx)
-}
-
-// LoadCustomResourceDefinition loads cert-management CRDs from embedded files.
-func LoadCustomResourceDefinition() ([]*apiextensionsv1.CustomResourceDefinition, error) {
-	var crds []*apiextensionsv1.CustomResourceDefinition
-	for i, data := range []string{crdIssuers, crdCertificates, crdRevocations} {
-		crd := &apiextensionsv1.CustomResourceDefinition{}
-		if err := yaml.Unmarshal([]byte(data), crd); err != nil {
-			return nil, fmt.Errorf("unmarshalling CRD %d failed: %w", i, err)
-		}
-		crds = append(crds, crd)
-	}
-	return crds, nil
-}
-
-func (d *certManagementDeployment) deploy(ctx context.Context) error {
 	var (
 		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
@@ -282,28 +249,18 @@ func (d *certManagementDeployment) deploy(ctx context.Context) error {
 		}
 	)
 
-	var objects []client.Object
-
-	crds, err := LoadCustomResourceDefinition()
-	if err != nil {
-		return err
-	}
-	for _, crd := range crds {
-		objects = append(objects, crd)
-	}
-
-	objects = append(objects,
+	objects := []client.Object{
 		serviceAccount,
 		clusterRole,
 		clusterRoleBinding,
 		role,
 		roleBinding,
 		deployment,
-	)
+	}
 
-	if d.deployment != nil && d.deployment.CACertificatesSecretRef != nil {
+	if d.config != nil && d.config.CACertificatesSecretRef != nil {
 		caCertSecret := &corev1.Secret{}
-		if err := d.client.Get(ctx, getObjectKeyLocalObjectRef(*d.deployment.CACertificatesSecretRef), caCertSecret); err != nil {
+		if err := d.client.Get(ctx, getObjectKeyLocalObjectRef(*d.config.CACertificatesSecretRef), caCertSecret); err != nil {
 			return err
 		}
 		caCertSecret.ObjectMeta = metav1.ObjectMeta{
@@ -344,7 +301,7 @@ func (d *certManagementDeployment) deploy(ctx context.Context) error {
 		return err
 	}
 
-	return createManagedResource(ctx, d.client, DeploymentManagedResourceName, false, resources)
+	return managedresources.CreateForSeed(ctx, d.client, v1beta1constants.GardenNamespace, deploymentManagedResourceName, false, resources)
 }
 
 func (d *certManagementDeployment) deleteHelmRelease(ctx context.Context) error {
@@ -358,7 +315,7 @@ func (d *certManagementDeployment) deleteHelmRelease(ctx context.Context) error 
 }
 
 func (d *certManagementDeployment) Destroy(ctx context.Context) error {
-	return deleteManagedResource(ctx, d.client, DeploymentManagedResourceName)
+	return managedresources.DeleteForSeed(ctx, d.client, v1beta1constants.GardenNamespace, deploymentManagedResourceName)
 }
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
@@ -369,14 +326,14 @@ func (d *certManagementDeployment) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilHealthy(timeoutCtx, d.client, v1beta1constants.GardenNamespace, DeploymentManagedResourceName)
+	return managedresources.WaitUntilHealthy(timeoutCtx, d.client, v1beta1constants.GardenNamespace, deploymentManagedResourceName)
 }
 
 func (d *certManagementDeployment) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilDeleted(timeoutCtx, d.client, v1beta1constants.GardenNamespace, DeploymentManagedResourceName)
+	return managedresources.WaitUntilDeleted(timeoutCtx, d.client, v1beta1constants.GardenNamespace, deploymentManagedResourceName)
 }
 
 func getDeploymentLabels() map[string]string {
@@ -388,13 +345,4 @@ func getDeploymentLabels() map[string]string {
 
 func getObjectKeyLocalObjectRef(ref corev1.LocalObjectReference) client.ObjectKey {
 	return client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: ref.Name}
-}
-
-func createManagedResource(ctx context.Context, client client.Client, name string, keepObjects bool, data map[string][]byte) error {
-	return managedresources.Create(ctx, client, v1beta1constants.GardenNamespace, name, map[string]string{appName: componentName},
-		true, v1beta1constants.SeedResourceManagerClass, data, &keepObjects, map[string]string{appName: componentName}, nil)
-}
-
-func deleteManagedResource(ctx context.Context, client client.Client, name string) error {
-	return managedresources.Delete(ctx, client, v1beta1constants.GardenNamespace, name, true)
 }
