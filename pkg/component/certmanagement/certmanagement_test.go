@@ -64,8 +64,11 @@ var _ = Describe("CertManagement", func() {
 
 		issuer *certv1alpha1.Issuer
 
-		newComponent = func(values Values) component.DeployWaiter {
-			return New(c, applier, values)
+		newController = func(values Values) component.DeployWaiter {
+			return NewDeployment(c, values)
+		}
+		newDefaultIssuer = func(values Values) component.DeployWaiter {
+			return NewDefaultIssuer(c, values)
 		}
 
 		checkIssuer     func()
@@ -401,22 +404,27 @@ var _ = Describe("CertManagement", func() {
 	})
 
 	Describe("#Deploy", func() {
-		It("should successfully deploy", func() {
-			comp := newComponent(values)
+		It("should successfully deploy default issuer", func() {
+			comp := newDefaultIssuer(values)
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIssuer), managedResourceIssuer)).To(BeNotFoundError())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceDeployment), managedResourceDeployment)).To(BeNotFoundError())
 
 			Expect(comp.Deploy(ctx)).To(Succeed())
 
 			checkIssuer()
-			checkDeployment(deployment)
-			Expect(c.Get(ctx, client.ObjectKey{Name: "certificaterevocations.cert.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKey{Name: "certificates.cert.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKey{Name: "issuers.cert.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
 		})
 
-		It("should successfully deploy with caCertificates", func() {
+		It("should successfully deploy controller", func() {
+			comp := newController(values)
+
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceDeployment), managedResourceDeployment)).To(BeNotFoundError())
+
+			Expect(comp.Deploy(ctx)).To(Succeed())
+
+			checkDeployment(deployment)
+		})
+
+		It("should successfully deploy controller with caCertificates", func() {
 			secret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "ca-certificates",
@@ -428,14 +436,11 @@ var _ = Describe("CertManagement", func() {
 			}
 			Expect(c.Create(ctx, secret)).To(Succeed())
 			values.DeployConfig = &operatorv1alpha1.CertManagementConfig{CACertificatesSecretRef: &corev1.LocalObjectReference{Name: "ca-certificates"}}
-			comp := newComponent(values)
+			comp := newController(values)
 
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIssuer), managedResourceIssuer)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceDeployment), managedResourceDeployment)).To(BeNotFoundError())
 
 			Expect(comp.Deploy(ctx)).To(Succeed())
-
-			checkIssuer()
 
 			deploy := *deployment
 			container := &deploy.Spec.Template.Spec.Containers[0]
@@ -487,12 +492,23 @@ var _ = Describe("CertManagement", func() {
 	})
 
 	Describe("#Destroy", func() {
-		It("should successfully destroy all resources", func() {
-			comp := newComponent(values)
+		It("should successfully destroy all resources of controller", func() {
+			comp := newController(values)
 
 			Expect(c.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "garden"}})).To(Succeed())
 			Expect(c.Create(ctx, managedResourceDeployment)).To(Succeed())
 			Expect(c.Create(ctx, managedResourceDeploymentSecret)).To(Succeed())
+
+			Expect(comp.Destroy(ctx)).To(Succeed())
+
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceDeployment), managedResourceDeployment)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceDeploymentSecret), managedResourceDeploymentSecret)).To(BeNotFoundError())
+		})
+
+		It("should successfully destroy all resources of default issuer", func() {
+			comp := newDefaultIssuer(values)
+
+			Expect(c.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "garden"}})).To(Succeed())
 			Expect(c.Create(ctx, managedResourceIssuer)).To(Succeed())
 			Expect(c.Create(ctx, managedResourceIssuerSecret)).To(Succeed())
 
@@ -500,8 +516,13 @@ var _ = Describe("CertManagement", func() {
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIssuer), managedResourceIssuer)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIssuerSecret), managedResourceIssuerSecret)).To(BeNotFoundError())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceDeployment), managedResourceDeployment)).To(BeNotFoundError())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceDeploymentSecret), managedResourceDeploymentSecret)).To(BeNotFoundError())
+		})
+
+		It("should successfully destroy all resources of CRDs", func() {
+			comp := NewCRDs(applier)
+
+			Expect(comp.Destroy(ctx)).To(Succeed())
+
 			Expect(c.Get(ctx, client.ObjectKey{Name: "certificaterevocations.cert.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKey{Name: "certificates.cert.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKey{Name: "issuers.cert.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())

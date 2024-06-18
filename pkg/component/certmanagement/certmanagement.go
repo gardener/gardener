@@ -15,7 +15,6 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -34,10 +33,8 @@ const (
 )
 
 type certManagement struct {
-	values     Values
-	client     client.Client
-	crds       component.Deployer
-	deployment component.DeployWaiter
+	values Values
+	client client.Client
 }
 
 // Values is a set of configuration values for the cert-management component.
@@ -53,58 +50,32 @@ var listOpts = []client.ListOption{
 	client.MatchingLabels{"app.kubernetes.io/name": componentName},
 }
 
-// New creates a new Deployer for the cert-management component.
-func New(
+// NewDefaultIssuer creates a new Deployer for the cert-management component.
+func NewDefaultIssuer(
 	cl client.Client,
-	applier kubernetes.Applier,
 	values Values,
 ) component.DeployWaiter {
 	return &certManagement{
-		values:     values,
-		client:     cl,
-		crds:       NewCRDs(applier),
-		deployment: newCertManagementDeployment(cl, values),
+		values: values,
+		client: cl,
 	}
 }
 
 var _ component.DeployWaiter = &certManagement{}
 
-func (c *certManagement) Deploy(ctx context.Context) error {
-	if err := c.crds.Deploy(ctx); err != nil {
-		return err
-	}
-	if err := c.deployment.Deploy(ctx); err != nil {
-		return err
-	}
-	return c.deployDefaultIssuer(ctx)
-}
-
 func (c *certManagement) Destroy(ctx context.Context) error {
-	if err := c.deployment.Destroy(ctx); err != nil {
-		return err
-	}
-	if err := managedresources.DeleteForSeed(ctx, c.client, v1beta1constants.GardenNamespace, issuersManagedResourceName); err != nil {
-		return err
-	}
-	return c.crds.Destroy(ctx)
+	return managedresources.DeleteForSeed(ctx, c.client, v1beta1constants.GardenNamespace, issuersManagedResourceName)
 }
 
 func (c *certManagement) Wait(ctx context.Context) error {
-	if err := c.deployment.Wait(ctx); err != nil {
-		return err
-	}
 	return managedresources.WaitUntilHealthy(ctx, c.client, v1beta1constants.GardenNamespace, issuersManagedResourceName)
 }
 
 func (c *certManagement) WaitCleanup(ctx context.Context) error {
-	list := &resourcesv1alpha1.ManagedResourceList{}
-	if err := c.client.List(ctx, list, listOpts...); err != nil {
-		return err
-	}
-	return managedresources.WaitUntilListDeleted(ctx, c.client, list, listOpts...)
+	return managedresources.WaitUntilDeleted(ctx, c.client, v1beta1constants.GardenNamespace, issuersManagedResourceName)
 }
 
-func (c *certManagement) deployDefaultIssuer(ctx context.Context) error {
+func (c *certManagement) Deploy(ctx context.Context) error {
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
 	issuerObj := &certv1alpha1.Issuer{

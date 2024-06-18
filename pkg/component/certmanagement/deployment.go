@@ -42,8 +42,8 @@ const (
 	rsaPrivateKeySize = 3072
 )
 
-// newCertManagementDeployment creates a new instance of DeployWaiter for the CertManagement deployment.
-func newCertManagementDeployment(cl client.Client, values Values) component.DeployWaiter {
+// NewDeployment creates a new instance of DeployWaiter for the CertManagement controller.
+func NewDeployment(cl client.Client, values Values) component.DeployWaiter {
 	return &certManagementDeployment{
 		client:    cl,
 		namespace: values.Namespace,
