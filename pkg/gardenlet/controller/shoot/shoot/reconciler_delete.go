@@ -464,8 +464,10 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Dependencies: flow.NewTaskIDs(syncPointCleanedKubernetesResources, waitUntilWorkerDeleted),
 		})
 		deleteDWDResources = g.Add(flow.Task{
-			Name:         "Deleting DWD managed resource and secrets",
-			Fn:           flow.TaskFn(botanist.Shoot.Components.DependencyWatchdogAccess.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Name: "Deleting DWD managed resource and secrets",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return botanist.Shoot.Components.DependencyWatchdogAccess.Destroy(ctx)
+			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       botanist.Shoot.IsWorkerless,
 			Dependencies: flow.NewTaskIDs(deleteManagedResources),
 		})
