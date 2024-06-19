@@ -64,7 +64,7 @@ type Reconciler struct {
 	RateLimiter ratelimiter.RateLimiter
 }
 
-// Reconcile reconciles the BackupEntry and deploys extensions.gardener.cloud/v1alpha1.BackupEnrry in the seed cluster.
+// Reconcile reconciles the BackupEntry and deploys extensions.gardener.cloud/v1alpha1.BackupEntry in the seed cluster.
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 

@@ -131,7 +131,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		})
 		// TODO(MichaelEischer) Remove after Gardener 1.99 is released.
 		migrateOperatingSystemConfigPoolHashes = g.Add(flow.Task{
-			Name:         "Applying inital rollout migration for operating system config hash calculation",
+			Name:         "Applying initial rollout migration for operating system config hash calculation",
 			Fn:           flow.TaskFn(botanist.MigrateOperatingSystemConfigWorkerPoolHashes).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       o.Shoot.IsWorkerless,
 			Dependencies: flow.NewTaskIDs(deployNamespace),
