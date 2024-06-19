@@ -172,7 +172,7 @@ func cleanupDWDAccess(ctx context.Context, gardenClient client.Client, seedClien
 
 	workerlessShootNamespaces := sets.New[string]()
 	for _, shoot := range shootList.Items {
-		if v1beta1helper.IsWorkerless(&shoot) {
+		if v1beta1helper.IsWorkerless(&shoot) && shoot.DeletionTimestamp == nil {
 			workerlessShootNamespaces.Insert(shoot.Status.TechnicalID)
 		}
 	}
