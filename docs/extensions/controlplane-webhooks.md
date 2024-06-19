@@ -28,6 +28,8 @@ You can install 3 different kinds of controlplane webhooks:
 
 The labels `shoot.gardener.cloud/provider` and `seed.gardener.cloud/provider` are added by Gardener when it creates the Shoot namespace.
 
+To reduce controlplane webhook calls for unrelated changes, the label `provider.extensions.gardener.cloud/mutated-by-controlplane-webhook: true` can be added to targeted resources. The controlplane webhooks can use this label to explicitly specify resources to target using an `ObjectSelector` in the constructor. 
+
 ## Contract Specification
 
 This section specifies the contract that Gardener and webhooks should adhere to in order to ensure smooth interoperability. Note that this contract can't be specified formally and is therefore easy to violate, especially by Gardener. The Gardener team will nevertheless do its best to adhere to this contract in the future and to ensure via additional measures (tests, validations) that it's not unintentionally broken. If it needs to be changed intentionally, this can only happen after proper communication has taken place to ensure that the affected provider webhooks could be adapted to work with the new version of the contract.

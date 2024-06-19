@@ -39,7 +39,6 @@ import (
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	comptest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
-	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
@@ -75,16 +74,6 @@ var _ = Describe("VpnSeedServer", func() {
 	)
 
 	var (
-		deploymentObjectMeta = &metav1.ObjectMeta{
-			Name:      "vpn-seed-server",
-			Namespace: namespace,
-			Labels: map[string]string{
-				v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-				v1beta1constants.LabelApp:   "vpn-seed-server",
-			},
-			ResourceVersion: "1",
-		}
-
 		template = func(nodeNetwork string, highAvailability bool) *corev1.PodTemplateSpec {
 			hostPathCharDev := corev1.HostPathCharDev
 			template := &corev1.PodTemplateSpec{
@@ -402,7 +391,16 @@ var _ = Describe("VpnSeedServer", func() {
 			maxSurge := intstr.FromInt32(100)
 			maxUnavailable := intstr.FromInt32(0)
 			deploy := &appsv1.Deployment{
-				ObjectMeta: *deploymentObjectMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "vpn-seed-server",
+					Namespace: namespace,
+					Labels: map[string]string{
+						v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+						v1beta1constants.LabelApp:   "vpn-seed-server",
+						"provider.extensions.gardener.cloud/mutated-by-controlplane-webhook": "true",
+					},
+					ResourceVersion: "1",
+				},
 				Spec: appsv1.DeploymentSpec{
 					Replicas:             ptr.To(values.Replicas),
 					RevisionHistoryLimit: ptr.To[int32](1),
@@ -419,9 +417,6 @@ var _ = Describe("VpnSeedServer", func() {
 					Template: *template(nodeNetwork, false),
 				},
 			}
-			deploy.Labels = utils.MergeStringMaps(deploy.Labels, map[string]string{
-				v1beta1constants.LabelExtensionWebhookControlplaneSelector: "true",
-			})
 
 			Expect(references.InjectAnnotations(deploy)).To(Succeed())
 			return deploy
@@ -429,7 +424,15 @@ var _ = Describe("VpnSeedServer", func() {
 
 		statefulSet = func(nodeNetwork string) *appsv1.StatefulSet {
 			sts := &appsv1.StatefulSet{
-				ObjectMeta: *deploymentObjectMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "vpn-seed-server",
+					Namespace: namespace,
+					Labels: map[string]string{
+						v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+						v1beta1constants.LabelApp:   "vpn-seed-server",
+					},
+					ResourceVersion: "1",
+				},
 				Spec: appsv1.StatefulSetSpec{
 					PodManagementPolicy:  appsv1.ParallelPodManagement,
 					Replicas:             ptr.To[int32](3),

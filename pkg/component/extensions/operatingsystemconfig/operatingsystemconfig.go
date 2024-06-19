@@ -910,7 +910,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 		metav1.SetMetaDataAnnotation(&d.osc.ObjectMeta, v1beta1constants.GardenerOperation, operation)
 		metav1.SetMetaDataAnnotation(&d.osc.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().Format(time.RFC3339Nano))
 		metav1.SetMetaDataLabel(&d.osc.ObjectMeta, v1beta1constants.LabelWorkerPool, d.worker.Name)
-		metav1.SetMetaDataLabel(&d.osc.ObjectMeta, v1beta1constants.LabelExtensionWebhookControlplaneSelector, "true")
+		metav1.SetMetaDataLabel(&d.osc.ObjectMeta, v1beta1constants.LabelExtensionProviderMutatedByControlplaneWebhook, "true")
 
 		d.osc.Spec.Type = d.worker.Machine.Image.Name
 		d.osc.Spec.ProviderConfig = d.worker.Machine.Image.ProviderConfig

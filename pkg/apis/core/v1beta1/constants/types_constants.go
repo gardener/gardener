@@ -458,6 +458,9 @@ const (
 	// LabelExtensionContainerRuntimeTypePrefix is used to prefix extension label for ContainerRuntime types.
 	LabelExtensionContainerRuntimeTypePrefix = "containerruntime.extensions.gardener.cloud/"
 
+	// LabelExtensionProviderMutatedByControlplaneWebhook is used to specify extension provider controlplane webhook targets
+	LabelExtensionProviderMutatedByControlplaneWebhook = LabelExtensionProviderTypePrefix + "mutated-by-controlplane-webhook"
+
 	// LabelNetworkPolicyToBlockedCIDRs allows Egress from pods labeled with 'networking.gardener.cloud/to-blocked-cidrs=allowed'.
 	LabelNetworkPolicyToBlockedCIDRs = "networking.gardener.cloud/to-blocked-cidrs"
 	// LabelNetworkPolicyToDNS allows Egress from pods labeled with 'networking.gardener.cloud/to-dns=allowed' to DNS running in 'kube-system'.
@@ -553,9 +556,6 @@ const (
 	LabelProxy = "proxy"
 	// LabelExtensionProjectRole is a constant for a label value for extension project roles
 	LabelExtensionProjectRole = "extension-project-role"
-	// LabelExtensionWebhookControlplaneSelector is a constant for a label key for webhook object filter targets
-	//  the value can be true or false
-	LabelExtensionWebhookControlplaneSelector = LabelExtensionPrefix + "webhook-controlplane-selector"
 
 	// LabelShootNamespace is a constant for a label key that indicates a relationship to a shoot in the specified namespace.
 	LabelShootNamespace = "shoot.gardener.cloud/namespace"

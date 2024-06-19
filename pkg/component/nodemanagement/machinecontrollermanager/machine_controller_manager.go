@@ -175,9 +175,9 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, m.client, deployment, func() error {
 		deployment.Labels = utils.MergeStringMaps(deployment.Labels, getLabels(), map[string]string{
-			v1beta1constants.GardenRole:                                v1beta1constants.GardenRoleControlPlane,
-			resourcesv1alpha1.HighAvailabilityConfigType:               resourcesv1alpha1.HighAvailabilityConfigTypeController,
-			v1beta1constants.LabelExtensionWebhookControlplaneSelector: "true",
+			v1beta1constants.GardenRole:                                         v1beta1constants.GardenRoleControlPlane,
+			resourcesv1alpha1.HighAvailabilityConfigType:                        resourcesv1alpha1.HighAvailabilityConfigTypeController,
+			v1beta1constants.LabelExtensionProviderMutatedByControlplaneWebhook: "true",
 		})
 		deployment.Spec.Replicas = &m.values.Replicas
 		deployment.Spec.RevisionHistoryLimit = ptr.To[int32](2)
@@ -266,7 +266,7 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 	}
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, m.client, vpa, func() error {
-		vpa.Labels = map[string]string{v1beta1constants.LabelExtensionWebhookControlplaneSelector: "true"}
+		metav1.SetMetaDataLabel(&vpa.ObjectMeta, v1beta1constants.LabelExtensionProviderMutatedByControlplaneWebhook, "true")
 		vpa.Spec.TargetRef = &autoscalingv1.CrossVersionObjectReference{
 			APIVersion: appsv1.SchemeGroupVersion.String(),
 			Kind:       "Deployment",

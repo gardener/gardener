@@ -630,7 +630,7 @@ func (v *vpnSeedServer) deployDeployment(ctx context.Context, labels map[string]
 		maxSurge := intstr.FromInt32(100)
 		maxUnavailable := intstr.FromInt32(0)
 		deployment.Labels = utils.MergeStringMaps(labels, map[string]string{
-			v1beta1constants.LabelExtensionWebhookControlplaneSelector: "true",
+			v1beta1constants.LabelExtensionProviderMutatedByControlplaneWebhook: "true",
 		})
 		deployment.Spec = appsv1.DeploymentSpec{
 			Replicas:             ptr.To(v.values.Replicas),

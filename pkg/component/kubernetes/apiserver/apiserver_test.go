@@ -40,7 +40,6 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
@@ -2088,8 +2087,8 @@ rules:
 					"gardener.cloud/role": "controlplane",
 					"app":                 "kubernetes",
 					"role":                "apiserver",
-					"high-availability-config.resources.gardener.cloud/type":   "server",
-					v1beta1constants.LabelExtensionWebhookControlplaneSelector: "true",
+					"high-availability-config.resources.gardener.cloud/type":             "server",
+					"provider.extensions.gardener.cloud/mutated-by-controlplane-webhook": "true",
 				}))
 			})
 
@@ -2107,8 +2106,8 @@ rules:
 					"gardener.cloud/role": "controlplane",
 					"app":                 "kubernetes",
 					"role":                "apiserver",
-					"high-availability-config.resources.gardener.cloud/type":   "server",
-					v1beta1constants.LabelExtensionWebhookControlplaneSelector: "true",
+					"high-availability-config.resources.gardener.cloud/type":             "server",
+					"provider.extensions.gardener.cloud/mutated-by-controlplane-webhook": "true",
 				}))
 			})
 

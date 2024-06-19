@@ -209,9 +209,9 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client, deployment, func() error {
 		deployment.Labels = utils.MergeStringMaps(getLabels(), map[string]string{
-			v1beta1constants.GardenRole:                                v1beta1constants.GardenRoleControlPlane,
-			resourcesv1alpha1.HighAvailabilityConfigType:               resourcesv1alpha1.HighAvailabilityConfigTypeController,
-			v1beta1constants.LabelExtensionWebhookControlplaneSelector: "true",
+			v1beta1constants.GardenRole:                                         v1beta1constants.GardenRoleControlPlane,
+			resourcesv1alpha1.HighAvailabilityConfigType:                        resourcesv1alpha1.HighAvailabilityConfigTypeController,
+			v1beta1constants.LabelExtensionProviderMutatedByControlplaneWebhook: "true",
 		})
 		deployment.Spec.Replicas = &k.replicas
 		deployment.Spec.RevisionHistoryLimit = ptr.To[int32](1)

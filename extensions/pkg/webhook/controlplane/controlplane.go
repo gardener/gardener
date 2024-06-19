@@ -44,7 +44,7 @@ type Args struct {
 	Types []extensionswebhook.Type
 	// Mutator is a mutator to be used by the admission handler.
 	Mutator extensionswebhook.Mutator
-	// ObjectSelector is the label query for resources
+	// ObjectSelector is the object selector of the underlying webhook
 	ObjectSelector *metav1.LabelSelector
 }
 

@@ -39,7 +39,7 @@ func AddToManager(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
 			{Obj: &vpaautoscalingv1.VerticalPodAutoscaler{}},
 			{Obj: &extensionsv1alpha1.OperatingSystemConfig{}},
 		},
-		ObjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelExtensionWebhookControlplaneSelector: "true"}},
+		ObjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelExtensionProviderMutatedByControlplaneWebhook: "true"}},
 		Mutator:        genericmutator.NewMutator(mgr, NewEnsurer(logger), oscutils.NewUnitSerializer(), kubelet.NewConfigCodec(fciCodec), fciCodec, logger),
 	})
 }
