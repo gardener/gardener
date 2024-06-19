@@ -339,7 +339,7 @@ func (q *QuotaValidator) findShootsReferQuota(quota gardencorev1beta1.Quota, sho
 						credentialsBindings: sets.Set[string]{},
 					}
 				}
-				bindings[binding.Namespace].secretBindings[binding.Name] = sets.Empty{}
+				bindings[binding.Namespace].secretBindings.Insert(binding.Name)
 			}
 		}
 	}
@@ -353,7 +353,7 @@ func (q *QuotaValidator) findShootsReferQuota(quota gardencorev1beta1.Quota, sho
 						credentialsBindings: sets.Set[string]{},
 					}
 				}
-				bindings[binding.Namespace].credentialsBindings[binding.Name] = sets.Empty{}
+				bindings[binding.Namespace].credentialsBindings.Insert(binding.Name)
 			}
 		}
 	}
