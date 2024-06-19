@@ -140,7 +140,7 @@ func (r *Reconciler) delete(ctx context.Context, credentialsBinding *securityv1a
 			// TODO(dimityrmirchev): this code should eventually handle workload identities as a valid credential ref
 			secret := &corev1.Secret{}
 			if err := r.Client.Get(ctx, client.ObjectKey{Namespace: credentialsBinding.CredentialsRef.Namespace, Name: credentialsBinding.CredentialsRef.Name}, secret); err == nil {
-				// Remove shoot provider label and 'referred by a secret binding' label
+				// Remove shoot provider label and 'referred by a credentials binding' label
 				hasProviderLabel, providerLabel := getProviderLabel(secret.Labels)
 				if hasProviderLabel || metav1.HasLabel(secret.ObjectMeta, v1beta1constants.LabelCredentialsBindingReference) {
 					patch := client.MergeFrom(secret.DeepCopy())
