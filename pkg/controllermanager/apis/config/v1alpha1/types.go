@@ -72,6 +72,9 @@ type ControllerManagerControllerConfiguration struct {
 	// SecretBinding defines the configuration of the SecretBinding controller.
 	// +optional
 	SecretBinding *SecretBindingControllerConfiguration `json:"secretBinding,omitempty"`
+	// CredentialsBinding defines the configuration of the CredentialsBinding controller.
+	// +optional
+	CredentialsBinding *CredentialsBindingControllerConfiguration `json:"credentialsBinding,omitempty"`
 	// Seed defines the configuration of the Seed lifecycle controller.
 	// +optional
 	Seed *SeedControllerConfiguration `json:"seed,omitempty"`
@@ -223,6 +226,15 @@ type QuotaControllerConfiguration struct {
 // SecretBindingControllerConfiguration defines the configuration of the
 // SecretBinding controller.
 type SecretBindingControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	// +optional
+	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+}
+
+// CredentialsBindingControllerConfiguration defines the configuration of the
+// CredentialsBinding controller.
+type CredentialsBindingControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	// +optional

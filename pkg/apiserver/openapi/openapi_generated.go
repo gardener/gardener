@@ -8540,7 +8540,7 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 					},
 					"secretBindingName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret. The credentials inside the provider secret will be used to create the shoot in the respective account. This field is immutable.",
+							Description: "SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret. The credentials inside the provider secret will be used to create the shoot in the respective account. The field is mutually exclusive with CredentialsBindingName. This field is immutable.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -8622,6 +8622,13 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 						SchemaProps: spec.SchemaProps{
 							Description: "CloudProfile contains a reference to a CloudProfile or a NamespacedCloudProfile.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileReference"),
+						},
+					},
+					"credentialsBindingName": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CredentialsBindingName is the name of the a CredentialsBinding that has a reference to the provider credentials. The credentials will be used to create the shoot in the respective account. The field is mutually exclusive with SecretBindingName. This field is immutable.",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 				},

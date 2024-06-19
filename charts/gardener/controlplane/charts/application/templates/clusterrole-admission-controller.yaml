@@ -26,6 +26,14 @@ rules:
   - list
   - watch
 - apiGroups:
+  - security.gardener.cloud
+  resources:
+  - credentialsbindings
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - seedmanagement.gardener.cloud
   resources:
   - gardenlets

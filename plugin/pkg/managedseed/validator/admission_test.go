@@ -24,10 +24,12 @@ import (
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	corefake "github.com/gardener/gardener/pkg/client/core/clientset/versioned/fake"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	securityinformers "github.com/gardener/gardener/pkg/client/security/informers/externalversions"
 	fakeseedmanagement "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/fake"
 	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -36,28 +38,33 @@ import (
 )
 
 const (
-	name        = "foo"
-	namespace   = "garden"
-	domain      = "foo.example.com"
-	provider    = "foo-provider"
-	region      = "foo-region"
-	zone1       = "foo-region-a"
-	zone2       = "foo-region-b"
-	dnsProvider = "dns-provider"
+	name          = "foo"
+	namespace     = "garden"
+	domain        = "foo.example.com"
+	provider      = "foo-provider"
+	region        = "foo-region"
+	zone1         = "foo-region-a"
+	zone2         = "foo-region-b"
+	dnsProvider   = "dns-provider"
+	dnsSecretName = "bar"
 )
 
 var _ = Describe("ManagedSeed", func() {
 	Describe("#Admit", func() {
 		var (
-			managedSeed          *seedmanagement.ManagedSeed
-			shoot                *gardencorev1beta1.Shoot
-			secret               *corev1.Secret
-			seed                 *core.Seed
-			coreInformerFactory  gardencoreinformers.SharedInformerFactory
-			coreClient           *corefake.Clientset
-			seedManagementClient *fakeseedmanagement.Clientset
-			kubeInformerFactory  kubeinformers.SharedInformerFactory
-			admissionHandler     *ManagedSeed
+			managedSeed             *seedmanagement.ManagedSeed
+			shoot                   *gardencorev1beta1.Shoot
+			secret                  *corev1.Secret
+			dnsSecret               *corev1.Secret
+			seed                    *core.Seed
+			credentialsBinding      *securityv1alpha1.CredentialsBinding
+			secretBinding           *gardencorev1beta1.SecretBinding
+			coreInformerFactory     gardencoreinformers.SharedInformerFactory
+			coreClient              *corefake.Clientset
+			seedManagementClient    *fakeseedmanagement.Clientset
+			kubeInformerFactory     kubeinformers.SharedInformerFactory
+			securityInformerFactory securityinformers.SharedInformerFactory
+			admissionHandler        *ManagedSeed
 		)
 
 		BeforeEach(func() {
@@ -118,6 +125,33 @@ var _ = Describe("ManagedSeed", func() {
 				},
 			}
 
+			dnsSecret = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      dnsSecretName,
+					Namespace: namespace,
+				},
+			}
+			credentialsBinding = &securityv1alpha1.CredentialsBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "cb",
+					Namespace: namespace,
+				},
+				CredentialsRef: corev1.ObjectReference{
+					Name:      dnsSecretName,
+					Namespace: namespace,
+				},
+			}
+			secretBinding = &gardencorev1beta1.SecretBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "sb",
+					Namespace: namespace,
+				},
+				SecretRef: corev1.SecretReference{
+					Name:      dnsSecretName,
+					Namespace: namespace,
+				},
+			}
+
 			seed = &core.Seed{
 				Spec: core.SeedSpec{
 					Backup: &core.SeedBackup{
@@ -169,6 +203,9 @@ var _ = Describe("ManagedSeed", func() {
 
 			kubeInformerFactory = kubeinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetKubeInformerFactory(kubeInformerFactory)
+
+			securityInformerFactory = securityinformers.NewSharedInformerFactory(nil, 0)
+			admissionHandler.SetSecurityInformerFactory(securityInformerFactory)
 
 			Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
 		})
@@ -338,6 +375,154 @@ var _ = Describe("ManagedSeed", func() {
 				err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
 				Expect(err).NotTo(HaveOccurred())
 
+				Expect(managedSeed.Spec.Gardenlet).To(Equal(&seedmanagement.GardenletConfig{
+					Config: &gardenletv1alpha1.GardenletConfiguration{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
+							Kind:       "GardenletConfiguration",
+						},
+						SeedConfig: &gardenletv1alpha1.SeedConfig{
+							SeedTemplate: gardencorev1beta1.SeedTemplate{
+								ObjectMeta: seedx.ObjectMeta,
+								Spec:       seedx.Spec,
+							},
+						},
+					},
+				}))
+			})
+
+			It("should create the ManagedSeed and reuse the primary DNS provider from Shoot", func() {
+				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(dnsSecret)).To(Succeed())
+
+				seedx.Spec.DNS.Provider = nil
+				shoot.Spec.DNS.Providers = []gardencorev1beta1.DNSProvider{
+					{
+						Primary:    ptr.To(true),
+						Type:       ptr.To("type"),
+						SecretName: ptr.To(dnsSecretName),
+					},
+				}
+
+				managedSeed.Spec.Gardenlet = &seedmanagement.GardenletConfig{
+					Config: &gardenletv1alpha1.GardenletConfiguration{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
+							Kind:       "GardenletConfiguration",
+						},
+						SeedConfig: &gardenletv1alpha1.SeedConfig{
+							SeedTemplate: gardencorev1beta1.SeedTemplate{
+								Spec: seedx.Spec,
+							},
+						},
+					},
+				}
+
+				err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
+				Expect(err).NotTo(HaveOccurred())
+
+				seedx.Spec.DNS.Provider = &gardencorev1beta1.SeedDNSProvider{
+					Type:      "type",
+					SecretRef: corev1.SecretReference{Name: "bar", Namespace: "garden"},
+				}
+				Expect(managedSeed.Spec.Gardenlet).To(Equal(&seedmanagement.GardenletConfig{
+					Config: &gardenletv1alpha1.GardenletConfiguration{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
+							Kind:       "GardenletConfiguration",
+						},
+						SeedConfig: &gardenletv1alpha1.SeedConfig{
+							SeedTemplate: gardencorev1beta1.SeedTemplate{
+								ObjectMeta: seedx.ObjectMeta,
+								Spec:       seedx.Spec,
+							},
+						},
+					},
+				}))
+			})
+
+			It("should create the ManagedSeed and reuse the DNS secret referenced by the SecretBindingName of Shoot", func() {
+				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(dnsSecret)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(secretBinding)).To(Succeed())
+
+				seedx.Spec.DNS.Provider = nil
+				shoot.Spec.DNS.Providers = []gardencorev1beta1.DNSProvider{
+					{
+						Primary: ptr.To(true),
+						Type:    ptr.To("type"),
+					},
+				}
+				shoot.Spec.SecretBindingName = ptr.To(secretBinding.Name)
+
+				managedSeed.Spec.Gardenlet = &seedmanagement.GardenletConfig{
+					Config: &gardenletv1alpha1.GardenletConfiguration{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
+							Kind:       "GardenletConfiguration",
+						},
+						SeedConfig: &gardenletv1alpha1.SeedConfig{
+							SeedTemplate: gardencorev1beta1.SeedTemplate{
+								Spec: seedx.Spec,
+							},
+						},
+					},
+				}
+
+				err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
+				Expect(err).NotTo(HaveOccurred())
+
+				seedx.Spec.DNS.Provider = &gardencorev1beta1.SeedDNSProvider{
+					Type:      "type",
+					SecretRef: corev1.SecretReference{Name: "bar", Namespace: "garden"},
+				}
+				Expect(managedSeed.Spec.Gardenlet).To(Equal(&seedmanagement.GardenletConfig{
+					Config: &gardenletv1alpha1.GardenletConfiguration{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
+							Kind:       "GardenletConfiguration",
+						},
+						SeedConfig: &gardenletv1alpha1.SeedConfig{
+							SeedTemplate: gardencorev1beta1.SeedTemplate{
+								ObjectMeta: seedx.ObjectMeta,
+								Spec:       seedx.Spec,
+							},
+						},
+					},
+				}))
+			})
+
+			It("should create the ManagedSeed and reuse the DNS secret referenced by the CredentialsBindingName of Shoot", func() {
+				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(dnsSecret)).To(Succeed())
+				Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(credentialsBinding)).To(Succeed())
+				seedx.Spec.DNS.Provider = nil
+				shoot.Spec.DNS.Providers = []gardencorev1beta1.DNSProvider{
+					{
+						Primary: ptr.To(true),
+						Type:    ptr.To("type"),
+					},
+				}
+				shoot.Spec.CredentialsBindingName = ptr.To(credentialsBinding.Name)
+
+				managedSeed.Spec.Gardenlet = &seedmanagement.GardenletConfig{
+					Config: &gardenletv1alpha1.GardenletConfiguration{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
+							Kind:       "GardenletConfiguration",
+						},
+						SeedConfig: &gardenletv1alpha1.SeedConfig{
+							SeedTemplate: gardencorev1beta1.SeedTemplate{
+								Spec: seedx.Spec,
+							},
+						},
+					},
+				}
+
+				err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
+				Expect(err).NotTo(HaveOccurred())
+
+				seedx.Spec.DNS.Provider = &gardencorev1beta1.SeedDNSProvider{
+					Type:      "type",
+					SecretRef: corev1.SecretReference{Name: "bar", Namespace: "garden"},
+				}
 				Expect(managedSeed.Spec.Gardenlet).To(Equal(&seedmanagement.GardenletConfig{
 					Config: &gardenletv1alpha1.GardenletConfiguration{
 						TypeMeta: metav1.TypeMeta{
@@ -711,6 +896,7 @@ var _ = Describe("ManagedSeed", func() {
 			admissionHandler.SetCoreClientSet(&corefake.Clientset{})
 			admissionHandler.SetSeedManagementClientSet(&fakeseedmanagement.Clientset{})
 			admissionHandler.SetKubeInformerFactory(kubeinformers.NewSharedInformerFactory(nil, 0))
+			admissionHandler.SetSecurityInformerFactory(securityinformers.NewSharedInformerFactory(nil, 0))
 
 			err := admissionHandler.ValidateInitialization()
 			Expect(err).ToNot(HaveOccurred())

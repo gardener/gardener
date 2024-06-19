@@ -2892,6 +2892,7 @@ message ShootSpec {
 
   // SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret.
   // The credentials inside the provider secret will be used to create the shoot in the respective account.
+  // The field is mutually exclusive with CredentialsBindingName.
   // This field is immutable.
   // +optional
   optional string secretBindingName = 13;
@@ -2936,6 +2937,12 @@ message ShootSpec {
   // CloudProfile contains a reference to a CloudProfile or a NamespacedCloudProfile.
   // +optional
   optional CloudProfileReference cloudProfile = 22;
+
+  // CredentialsBindingName is the name of the a CredentialsBinding that has a reference to the provider credentials.
+  // The credentials will be used to create the shoot in the respective account. The field is mutually exclusive with SecretBindingName.
+  // This field is immutable.
+  // +optional
+  optional string credentialsBindingName = 23;
 }
 
 // ShootState contains a snapshot of the Shoot's state required to migrate the Shoot's control plane to a new Seed.

@@ -111,7 +111,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 
 		message := fmt.Sprintf("Cannot delete SecretBinding, because the following Shoots are still referencing it: %+v", associatedShoots)
-		r.Recorder.Event(secretBinding, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, message)
+		r.Recorder.Event(secretBinding, corev1.EventTypeWarning, v1beta1constants.EventResourceReferenced, message)
 		return reconcile.Result{}, errors.New(message)
 	}
 

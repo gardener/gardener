@@ -16,11 +16,13 @@ import (
 	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
@@ -41,7 +43,7 @@ func NewBuilder() *Builder {
 		cloudProfileFunc: func(context.Context, string) (*gardencorev1beta1.CloudProfile, error) {
 			return nil, fmt.Errorf("cloudprofile object is required but not set")
 		},
-		shootSecretFunc: func(context.Context, string, string) (*corev1.Secret, error) {
+		shootSecretFunc: func(context.Context, string, string, bool) (*corev1.Secret, error) {
 			return nil, fmt.Errorf("shoot secret object is required but not set")
 		},
 		serviceAccountIssuerHostname: func() (*string, error) {
@@ -110,20 +112,32 @@ func (b *Builder) WithExposureClassObject(exposureClass *gardencorev1beta1.Expos
 
 // WithShootSecret sets the shootSecretFunc attribute at the Builder.
 func (b *Builder) WithShootSecret(secret *corev1.Secret) *Builder {
-	b.shootSecretFunc = func(context.Context, string, string) (*corev1.Secret, error) { return secret, nil }
+	b.shootSecretFunc = func(context.Context, string, string, bool) (*corev1.Secret, error) { return secret, nil }
 	return b
 }
 
 // WithShootSecretFrom sets the shootSecretFunc attribute at the Builder after fetching it from the given reader.
 func (b *Builder) WithShootSecretFrom(c client.Reader) *Builder {
-	b.shootSecretFunc = func(ctx context.Context, namespace, secretBindingName string) (*corev1.Secret, error) {
-		binding := &gardencorev1beta1.SecretBinding{}
-		if err := c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: secretBindingName}, binding); err != nil {
-			return nil, err
+	b.shootSecretFunc = func(ctx context.Context, namespace, bindingName string, fromSecretBinding bool) (*corev1.Secret, error) {
+		var key types.NamespacedName
+		if fromSecretBinding {
+			binding := &gardencorev1beta1.SecretBinding{}
+			if err := c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: bindingName}, binding); err != nil {
+				return nil, err
+			}
+			key = client.ObjectKey{Namespace: binding.SecretRef.Namespace, Name: binding.SecretRef.Name}
+		} else {
+			// TODO(dimityrmirchev): This code should eventually handle
+			// the credentials binding referencing a workload identity
+			binding := &securityv1alpha1.CredentialsBinding{}
+			if err := c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: bindingName}, binding); err != nil {
+				return nil, err
+			}
+			key = client.ObjectKey{Namespace: binding.CredentialsRef.Namespace, Name: binding.CredentialsRef.Name}
 		}
 
 		secret := &corev1.Secret{}
-		if err := c.Get(ctx, client.ObjectKey{Namespace: binding.SecretRef.Namespace, Name: binding.SecretRef.Name}, secret); err != nil {
+		if err := c.Get(ctx, key, secret); err != nil {
 			return nil, err
 		}
 
@@ -188,7 +202,13 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	shoot.ExposureClass = b.exposureClass
 
 	if shootObject.Spec.SecretBindingName != nil {
-		secret, err := b.shootSecretFunc(ctx, shootObject.Namespace, *shootObject.Spec.SecretBindingName)
+		secret, err := b.shootSecretFunc(ctx, shootObject.Namespace, *shootObject.Spec.SecretBindingName, true)
+		if err != nil {
+			return nil, err
+		}
+		shoot.Secret = secret
+	} else if shootObject.Spec.CredentialsBindingName != nil {
+		secret, err := b.shootSecretFunc(ctx, shootObject.Namespace, *shootObject.Spec.CredentialsBindingName, false)
 		if err != nil {
 			return nil, err
 		}

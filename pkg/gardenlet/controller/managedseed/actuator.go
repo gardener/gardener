@@ -26,6 +26,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -554,14 +555,31 @@ func (a *actuator) getBackupSecret(ctx context.Context, spec *gardencorev1beta1.
 }
 
 func (a *actuator) getShootSecret(ctx context.Context, shoot *gardencorev1beta1.Shoot) (*corev1.Secret, error) {
-	shootSecretBinding := &gardencorev1beta1.SecretBinding{}
-	if shoot.Spec.SecretBindingName == nil {
-		return nil, fmt.Errorf("secretbinding name is nil for the Shoot: %s/%s", shoot.Namespace, shoot.Name)
+	if shoot.Spec.SecretBindingName == nil && shoot.Spec.CredentialsBindingName == nil {
+		return nil, fmt.Errorf("both secretBindingName and credentialsBindingName are nil for the Shoot: %s/%s", shoot.Namespace, shoot.Name)
 	}
-	if err := a.gardenClient.Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: *shoot.Spec.SecretBindingName}, shootSecretBinding); err != nil {
+	if shoot.Spec.SecretBindingName != nil {
+		shootSecretBinding := &gardencorev1beta1.SecretBinding{}
+		if err := a.gardenClient.Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: *shoot.Spec.SecretBindingName}, shootSecretBinding); err != nil {
+			return nil, err
+		}
+		return kubernetesutils.GetSecretByReference(ctx, a.gardenClient, &shootSecretBinding.SecretRef)
+	}
+
+	// TODO(dimityrmirchev): This code should eventually handle
+	// credentials binding referencing workload identities
+	shootCredentialsBinding := &securityv1alpha1.CredentialsBinding{}
+	if err := a.gardenClient.Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: *shoot.Spec.CredentialsBindingName}, shootCredentialsBinding); err != nil {
 		return nil, err
 	}
-	return kubernetesutils.GetSecretByReference(ctx, a.gardenClient, &shootSecretBinding.SecretRef)
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      shootCredentialsBinding.CredentialsRef.Name,
+			Namespace: shootCredentialsBinding.CredentialsRef.Namespace,
+		},
+	}
+
+	return secret, a.gardenClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)
 }
 
 func (a *actuator) seedVPADeploymentExists(ctx context.Context, seedClient client.Client, shoot *gardencorev1beta1.Shoot) (bool, error) {

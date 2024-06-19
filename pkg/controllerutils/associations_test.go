@@ -19,6 +19,7 @@ import (
 	"github.com/gardener/gardener/pkg/api/indexer"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/controllerutils"
 )
@@ -34,6 +35,7 @@ var _ = Describe("Associations", func() {
 		shoot                  *gardencorev1beta1.Shoot
 		backupbucket           *gardencorev1beta1.BackupBucket
 		secretBinding          *gardencorev1beta1.SecretBinding
+		credentialsBinding     *securityv1alpha1.CredentialsBinding
 		controllerinstallation *gardencorev1beta1.ControllerInstallation
 	)
 
@@ -55,6 +57,13 @@ var _ = Describe("Associations", func() {
 		secretBinding = &gardencorev1beta1.SecretBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "secretbinding",
+				Namespace: namespace,
+			},
+		}
+
+		credentialsBinding = &securityv1alpha1.CredentialsBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "credentialsbinding",
 				Namespace: namespace,
 			},
 		}
@@ -88,6 +97,10 @@ var _ = Describe("Associations", func() {
 			&gardencorev1beta1.SecretBinding{ObjectMeta: metav1.ObjectMeta{Name: "secretbinding", Namespace: namespace}}, func(s *gardencorev1beta1.Shoot, obj client.Object) {
 				s.Spec.SecretBindingName = ptr.To(obj.GetName())
 			}, BeNil()),
+		Entry("should return shoots associated to credentialsbinding",
+			&securityv1alpha1.CredentialsBinding{ObjectMeta: metav1.ObjectMeta{Name: "credentialsbinding", Namespace: namespace}}, func(s *gardencorev1beta1.Shoot, obj client.Object) {
+				s.Spec.CredentialsBindingName = ptr.To(obj.GetName())
+			}, BeNil()),
 		Entry("should return shoots associated to exposureclass",
 			&gardencorev1beta1.ExposureClass{ObjectMeta: metav1.ObjectMeta{Name: "exposureclass"}}, func(s *gardencorev1beta1.Shoot, obj client.Object) {
 				s.Spec.ExposureClassName = ptr.To(obj.GetName())
@@ -112,6 +125,25 @@ var _ = Describe("Associations", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(secretBindings).To(HaveLen(1))
 			Expect(secretBindings).To(ConsistOf(secretBinding.Namespace + "/" + secretBinding.Name))
+		})
+	})
+
+	Describe("#DetermineCredentialsBindingAssociations", func() {
+		It("should return credentialsBinding associated to quota", func() {
+			quota = &gardencorev1beta1.Quota{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "quota",
+					Namespace: namespace,
+				},
+			}
+
+			credentialsBinding.Quotas = []corev1.ObjectReference{{Name: quota.Name, Namespace: quota.Namespace}}
+			Expect(fakeClient.Create(ctx, credentialsBinding)).To(Succeed())
+
+			credentialsBindings, err := DetermineCredentialsBindingAssociations(ctx, fakeClient, quota)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(credentialsBindings).To(HaveLen(1))
+			Expect(credentialsBindings).To(ConsistOf(credentialsBinding.Namespace + "/" + credentialsBinding.Name))
 		})
 	})
 

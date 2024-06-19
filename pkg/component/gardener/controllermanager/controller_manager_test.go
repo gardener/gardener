@@ -327,12 +327,14 @@ var _ = Describe("GardenerControllerManager", func() {
 
 				managedResourceSecretRuntime.Name = managedResourceRuntime.Spec.SecretRefs[0].Name
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretRuntime), managedResourceSecretRuntime)).To(Succeed())
+				cm := configMap(namespace, values)
+				Expect(cm.Name).To(Equal("gardener-controller-manager-config-960e3f19"))
 				expectedRuntimeObjects = []client.Object{
-					configMap(namespace, values),
+					cm,
 					serviceRuntime,
 					serviceMonitor,
 					vpa,
-					deployment(namespace, "gardener-controller-manager-config-cff08f20", values),
+					deployment(namespace, cm.Name, values),
 				}
 
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceVirtual), managedResourceVirtual)).To(Succeed())
@@ -722,6 +724,9 @@ func configMap(namespace string, testValues Values) *corev1.ConfigMap {
 				Quotas:          testValues.Quotas,
 			},
 			SecretBinding: &controllermanagerv1alpha1.SecretBindingControllerConfiguration{
+				ConcurrentSyncs: ptr.To(20),
+			},
+			CredentialsBinding: &controllermanagerv1alpha1.CredentialsBindingControllerConfiguration{
 				ConcurrentSyncs: ptr.To(20),
 			},
 			Seed: &controllermanagerv1alpha1.SeedControllerConfiguration{

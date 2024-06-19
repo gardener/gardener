@@ -432,6 +432,19 @@ rules:
   - update
   - watch
 - apiGroups:
+  - security.gardener.cloud
+  resources:
+  - credentialsbindings
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
   - settings.gardener.cloud
   resources:
   - openidconnectpresets
@@ -584,6 +597,14 @@ rules:
   - shoots
   - secretbindings
   - quotas
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - security.gardener.cloud
+  resources:
+  - credentialsbindings
   verbs:
   - get
   - list

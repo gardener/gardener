@@ -17,6 +17,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/controller/cloudprofile"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerdeployment"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/credentialsbinding"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/event"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/exposureclass"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
@@ -61,6 +62,12 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Controll
 
 	if err := controllerregistration.AddToManager(ctx, mgr, *cfg); err != nil {
 		return fmt.Errorf("failed adding ControllerRegistration controller: %w", err)
+	}
+
+	if err := (&credentialsbinding.Reconciler{
+		Config: *cfg.Controllers.CredentialsBinding,
+	}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding CredentialsBinding controller: %w", err)
 	}
 
 	if config := cfg.Controllers.Event; config != nil {

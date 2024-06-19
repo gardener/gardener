@@ -648,6 +648,7 @@ build:
             - pkg/controllermanager/controller/controllerregistration/extensionclusterrole
             - pkg/controllermanager/controller/controllerregistration/seed
             - pkg/controllermanager/controller/controllerregistration/seedfinalizer
+            - pkg/controllermanager/controller/credentialsbinding
             - pkg/controllermanager/controller/event
             - pkg/controllermanager/controller/exposureclass
             - pkg/controllermanager/controller/managedseedset

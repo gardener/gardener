@@ -33,6 +33,8 @@ import (
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
+	securityinformers "github.com/gardener/gardener/pkg/client/security/informers/externalversions"
+	securityv1alpha1listers "github.com/gardener/gardener/pkg/client/security/listers/security/v1alpha1"
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -51,12 +53,13 @@ func Register(plugins *admission.Plugins) {
 // ManagedSeed contains listers and admission handler.
 type ManagedSeed struct {
 	*admission.Handler
-	shootLister          gardencorev1beta1listers.ShootLister
-	secretBindingLister  gardencorev1beta1listers.SecretBindingLister
-	secretLister         kubecorev1listers.SecretLister
-	coreClient           gardencoreclientset.Interface
-	seedManagementClient seedmanagementclientset.Interface
-	readyFunc            admission.ReadyFunc
+	shootLister              gardencorev1beta1listers.ShootLister
+	secretBindingLister      gardencorev1beta1listers.SecretBindingLister
+	credentialsBindingLister securityv1alpha1listers.CredentialsBindingLister
+	secretLister             kubecorev1listers.SecretLister
+	coreClient               gardencoreclientset.Interface
+	seedManagementClient     seedmanagementclientset.Interface
+	readyFunc                admission.ReadyFunc
 }
 
 var (
@@ -64,6 +67,7 @@ var (
 	_ = admissioninitializer.WantsCoreClientSet(&ManagedSeed{})
 	_ = admissioninitializer.WantsSeedManagementClientSet(&ManagedSeed{})
 	_ = admissioninitializer.WantsKubeInformerFactory(&ManagedSeed{})
+	_ = admissioninitializer.WantsSecurityInformerFactory(&ManagedSeed{})
 
 	readyFuncs []admission.ReadyFunc
 )
@@ -92,6 +96,14 @@ func (v *ManagedSeed) SetCoreInformerFactory(f gardencoreinformers.SharedInforme
 	readyFuncs = append(readyFuncs, shootInformer.Informer().HasSynced, secretBindingInformer.Informer().HasSynced)
 }
 
+// SetSecurityInformerFactory gets Lister from SharedInformerFactory.
+func (v *ManagedSeed) SetSecurityInformerFactory(f securityinformers.SharedInformerFactory) {
+	credentialsBindingInformer := f.Security().V1alpha1().CredentialsBindings()
+	v.credentialsBindingLister = credentialsBindingInformer.Lister()
+
+	readyFuncs = append(readyFuncs, credentialsBindingInformer.Informer().HasSynced)
+}
+
 // SetKubeInformerFactory gets Lister from SharedInformerFactory.
 func (v *ManagedSeed) SetKubeInformerFactory(f kubeinformers.SharedInformerFactory) {
 	secretInformer := f.Core().V1().Secrets()
@@ -117,6 +129,9 @@ func (v *ManagedSeed) ValidateInitialization() error {
 	}
 	if v.secretBindingLister == nil {
 		return errors.New("missing secret binding lister")
+	}
+	if v.credentialsBindingLister == nil {
+		return errors.New("missing credentials binding lister")
 	}
 	if v.secretLister == nil {
 		return errors.New("missing secret lister")
@@ -459,11 +474,8 @@ func (v *ManagedSeed) getSeedDNSProviderForCustomDomain(shoot *gardencorev1beta1
 	if primaryProvider.SecretName != nil {
 		secretRef.Name = *primaryProvider.SecretName
 		secretRef.Namespace = shoot.Namespace
-	} else {
-		if shoot.Spec.SecretBindingName == nil {
-			return nil, fmt.Errorf("shoot secretbindingName is nil for %s/%s", shoot.Namespace, shoot.Name)
-		}
-		secretBinding, err := v.getSecretBinding(shoot.Namespace, *shoot.Spec.SecretBindingName)
+	} else if shoot.Spec.SecretBindingName != nil {
+		secretBinding, err := v.secretBindingLister.SecretBindings(shoot.Namespace).Get(*shoot.Spec.SecretBindingName)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				return nil, fmt.Errorf("secret binding %s/%s not found", shoot.Namespace, *shoot.Spec.SecretBindingName)
@@ -471,6 +483,21 @@ func (v *ManagedSeed) getSeedDNSProviderForCustomDomain(shoot *gardencorev1beta1
 			return nil, apierrors.NewInternalError(fmt.Errorf("could not get secret binding %s/%s: %v", shoot.Namespace, *shoot.Spec.SecretBindingName, err))
 		}
 		secretRef = secretBinding.SecretRef
+	} else if shoot.Spec.CredentialsBindingName != nil {
+		// TODO(dimityrmirchev): This code should eventually handle references to workload identity
+		credentialsBinding, err := v.credentialsBindingLister.CredentialsBindings(shoot.Namespace).Get(*shoot.Spec.CredentialsBindingName)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				return nil, fmt.Errorf("credentials binding %s/%s not found", shoot.Namespace, *shoot.Spec.CredentialsBindingName)
+			}
+			return nil, apierrors.NewInternalError(fmt.Errorf("could not get secret binding %s/%s: %v", shoot.Namespace, *shoot.Spec.SecretBindingName, err))
+		}
+		secretRef = corev1.SecretReference{
+			Name:      credentialsBinding.CredentialsRef.Name,
+			Namespace: credentialsBinding.CredentialsRef.Namespace,
+		}
+	} else {
+		return nil, fmt.Errorf("cannot initialize a reference to the primary DNS provider secret of shoot %s", kubernetesutils.ObjectName(shoot))
 	}
 
 	return &gardencore.SeedDNSProvider{
@@ -481,7 +508,7 @@ func (v *ManagedSeed) getSeedDNSProviderForCustomDomain(shoot *gardencorev1beta1
 
 func (v *ManagedSeed) getSeedDNSProviderForDefaultDomain(shoot *gardencorev1beta1.Shoot) (*gardencore.SeedDNSProvider, error) {
 	// Get all default domain secrets in the garden namespace
-	defaultDomainSecrets, err := v.getSecrets(v1beta1constants.GardenNamespace, labels.SelectorFromValidatedSet(map[string]string{
+	defaultDomainSecrets, err := v.secretLister.Secrets(v1beta1constants.GardenNamespace).List(labels.SelectorFromValidatedSet(map[string]string{
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleDefaultDomain,
 	}))
 	if err != nil {
@@ -518,12 +545,4 @@ func (v *ManagedSeed) getShoot(ctx context.Context, namespace, name string) (*ga
 	}
 
 	return shoot, err
-}
-
-func (v *ManagedSeed) getSecretBinding(namespace, name string) (*gardencorev1beta1.SecretBinding, error) {
-	return v.secretBindingLister.SecretBindings(namespace).Get(name)
-}
-
-func (v *ManagedSeed) getSecrets(namespace string, selector labels.Selector) ([]*corev1.Secret, error) {
-	return v.secretLister.Secrets(namespace).List(selector)
 }

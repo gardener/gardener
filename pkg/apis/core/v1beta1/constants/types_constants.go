@@ -440,6 +440,8 @@ const (
 
 	// LabelSecretBindingReference is used to identify secrets which are referred by a SecretBinding (not necessarily in the same namespace).
 	LabelSecretBindingReference = "reference.gardener.cloud/secretbinding"
+	// LabelCredentialsBindingReference is used to identify credentials which are referred by a CredentialsBinding (not necessarily in the same namespace).
+	LabelCredentialsBindingReference = "reference.gardener.cloud/credentialsbinding"
 	// LabelPrefixSeedName is the prefix for the label key describing the name of a seed, e.g. seed.gardener.cloud/my-seed=true.
 	LabelPrefixSeedName = "seed.gardener.cloud/"
 

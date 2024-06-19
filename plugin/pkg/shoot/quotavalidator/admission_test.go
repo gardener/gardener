@@ -20,7 +20,9 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	securityinformers "github.com/gardener/gardener/pkg/client/security/informers/externalversions"
 	mocktime "github.com/gardener/gardener/pkg/utils/time/mock"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/quotavalidator"
 )
@@ -30,20 +32,22 @@ var _ = Describe("quotavalidator", func() {
 		var (
 			ctrl *gomock.Controller
 
-			admissionHandler    *QuotaValidator
-			coreInformerFactory gardencoreinformers.SharedInformerFactory
-			timeOps             *mocktime.MockOps
-			shoot               core.Shoot
-			oldShoot            core.Shoot
-			secretBinding       gardencorev1beta1.SecretBinding
-			quotaProject        gardencorev1beta1.Quota
-			quotaSecret         gardencorev1beta1.Quota
-			cloudProfile        gardencorev1beta1.CloudProfile
-			namespace           string = "test"
-			trialNamespace      string = "trial"
-			machineTypeName     string = "n1-standard-2"
-			machineTypeName2    string = "machtype2"
-			volumeTypeName      string = "pd-standard"
+			admissionHandler        *QuotaValidator
+			coreInformerFactory     gardencoreinformers.SharedInformerFactory
+			securityInformerFactory securityinformers.SharedInformerFactory
+			timeOps                 *mocktime.MockOps
+			shoot                   core.Shoot
+			oldShoot                core.Shoot
+			secretBinding           gardencorev1beta1.SecretBinding
+			credentialsBinding      securityv1alpha1.CredentialsBinding
+			quotaProject            gardencorev1beta1.Quota
+			quotaSecret             gardencorev1beta1.Quota
+			cloudProfile            gardencorev1beta1.CloudProfile
+			namespace               string = "test"
+			trialNamespace          string = "trial"
+			machineTypeName         string = "n1-standard-2"
+			machineTypeName2        string = "machtype2"
+			volumeTypeName          string = "pd-standard"
 
 			cloudProfileBase = gardencorev1beta1.CloudProfile{
 				ObjectMeta: metav1.ObjectMeta{
@@ -126,6 +130,22 @@ var _ = Describe("quotavalidator", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: namespace,
 					Name:      "test-binding",
+				},
+				Quotas: []corev1.ObjectReference{
+					{
+						Namespace: trialNamespace,
+						Name:      "project-quota",
+					},
+					{
+						Namespace: trialNamespace,
+						Name:      "secret-quota",
+					},
+				},
+			}
+			credentialsBindingBase = securityv1alpha1.CredentialsBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: namespace,
+					Name:      "test-credentials-binding",
 				},
 				Quotas: []corev1.ObjectReference{
 					{
@@ -247,6 +267,7 @@ var _ = Describe("quotavalidator", func() {
 			shoot = *shootBase.DeepCopy()
 			cloudProfile = *cloudProfileBase.DeepCopy()
 			secretBinding = *secretBindingBase.DeepCopy()
+			credentialsBinding = *credentialsBindingBase.DeepCopy()
 			quotaProject = *quotaProjectBase.DeepCopy()
 			quotaSecret = *quotaSecretBase.DeepCopy()
 
@@ -261,6 +282,10 @@ var _ = Describe("quotavalidator", func() {
 			Expect(coreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quotaProject)).To(Succeed())
 			Expect(coreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quotaSecret)).To(Succeed())
 			Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBindingBase)).To(Succeed())
+
+			securityInformerFactory = securityinformers.NewSharedInformerFactory(nil, 0)
+			admissionHandler.SetSecurityInformerFactory(securityInformerFactory)
+
 		})
 
 		Context("tests for Shoots, which have at least one Quota referenced", func() {
@@ -283,6 +308,21 @@ var _ = Describe("quotavalidator", func() {
 				shoot2 := *versionedShootBase.DeepCopy()
 				shoot2.Name = "test-shoot-2"
 
+				Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot2)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+				err2 := admissionHandler.Validate(context.TODO(), attrs, nil)
+				Expect(err2).To(HaveOccurred())
+			})
+
+			It("should fail because other shoots exhaust quota limits via credentials binding", func() {
+				shoot2 := *versionedShootBase.DeepCopy()
+				shoot2.Name = "test-shoot-2"
+				shoot2.Spec.SecretBindingName = nil
+				shoot2.Spec.CredentialsBindingName = ptr.To(credentialsBinding.Name)
+
+				Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
 				Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot2)).To(Succeed())
 
 				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)

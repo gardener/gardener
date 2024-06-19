@@ -79,6 +79,7 @@ type ShootSpec struct {
 	Region string
 	// SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret.
 	// The credentials inside the provider secret will be used to create the shoot in the respective account.
+	// The field is mutually exclusive with CredentialsBindingName.
 	// This field is immutable.
 	SecretBindingName *string
 	// SeedName is the name of the seed cluster that runs the control plane of the Shoot.
@@ -102,6 +103,10 @@ type ShootSpec struct {
 	SchedulerName *string
 	// CloudProfile is a reference to a CloudProfile or a NamespacedCloudProfile.
 	CloudProfile *CloudProfileReference
+	// CredentialsBindingName is the name of the a CredentialsBinding that has a reference to the provider credentials.
+	// The credentials will be used to create the shoot in the respective account. The field is mutually exclusive with SecretBindingName.
+	// This field is immutable.
+	CredentialsBindingName *string
 }
 
 // GetProviderType gets the type of the provider.

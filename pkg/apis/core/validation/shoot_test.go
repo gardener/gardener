@@ -738,6 +738,19 @@ var _ = Describe("Shoot Validation Tests", func() {
 			}))))
 		})
 
+		It("should forbid adding credentialsBindingName in case of workerless shoot", func() {
+			shoot.Spec.Provider.Workers = nil
+			shoot.Spec.CredentialsBindingName = ptr.To("foo")
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(ContainElements(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Field":  Equal("spec.credentialsBindingName"),
+				"Detail": ContainSubstring("this field should not be set for workerless Shoot clusters"),
+			}))))
+		})
+
 		It("should allow nil secretBindingName in case of workerless shoot", func() {
 			shoot.Spec.Provider.Workers = nil
 			shoot.Spec.Addons = nil
@@ -749,6 +762,46 @@ var _ = Describe("Shoot Validation Tests", func() {
 			errorList := ValidateShoot(shoot)
 
 			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should allow nil credentialsBindingName in case of workerless shoot", func() {
+			shoot.Spec.Provider.Workers = nil
+			shoot.Spec.Addons = nil
+			shoot.Spec.SecretBindingName = nil
+			shoot.Spec.CredentialsBindingName = nil
+			shoot.Spec.Kubernetes.KubeControllerManager = nil
+			shoot.Spec.Networking = nil
+			shoot.Spec.Kubernetes.KubeControllerManager = nil
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should forbid setting both secretBindingName and credentialsBindingName", func() {
+			shoot.Spec.SecretBindingName = ptr.To("foo")
+			shoot.Spec.CredentialsBindingName = ptr.To("foo")
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(ContainElements(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Field":  Equal("spec.secretBindingName"),
+				"Detail": Equal("is incompatible with credentialsBindingName"),
+			}))))
+		})
+
+		It("should forbid not setting at least one of secretBindingName or credentialsBindingName", func() {
+			shoot.Spec.SecretBindingName = nil
+			shoot.Spec.CredentialsBindingName = nil
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(ContainElements(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeRequired),
+				"Field":  Equal("spec.secretBindingName"),
+				"Detail": Equal("must be set when credentialsBindingName is not"),
+			}))))
 		})
 
 		It("should forbid adding invalid/duplicate emails", func() {
@@ -804,7 +857,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 			newShoot := prepareShootForUpdate(shoot)
 			shoot.Spec.CloudProfileName = "another-profile"
 			shoot.Spec.Region = "another-region"
-			shoot.Spec.SecretBindingName = ptr.To("another-reference")
+			// shoot.Spec.SecretBindingName = ptr.To("another-reference")
+			// shoot.Spec.CredentialsBindingName = ptr.To("another-reference")
 			shoot.Spec.Provider.Type = "another-provider"
 
 			errorList := ValidateShootUpdate(newShoot, shoot)
@@ -820,13 +874,61 @@ var _ = Describe("Shoot Validation Tests", func() {
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.secretBindingName"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.provider.type"),
 				})),
 			))
+		})
+
+		It("should forbid updating secretBindingName when not migrating to credentialsBindingName", func() {
+			newShoot := prepareShootForUpdate(shoot)
+			shoot.Spec.SecretBindingName = ptr.To("another-reference")
+
+			errorList := ValidateShootUpdate(newShoot, shoot)
+
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.secretBindingName"),
+				})),
+			))
+		})
+
+		It("should forbid updating credentialsBindingName when not migrating to secretBindingName", func() {
+			shoot.Spec.SecretBindingName = nil
+			shoot.Spec.CredentialsBindingName = ptr.To("foo")
+			newShoot := prepareShootForUpdate(shoot)
+			shoot.Spec.CredentialsBindingName = ptr.To("another-reference")
+
+			errorList := ValidateShootUpdate(newShoot, shoot)
+
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.credentialsBindingName"),
+				})),
+			))
+		})
+
+		It("should allow switching from secretBindingName to credentialsBindingName", func() {
+			newShoot := prepareShootForUpdate(shoot)
+			newShoot.Spec.SecretBindingName = nil
+			newShoot.Spec.CredentialsBindingName = ptr.To("another-reference")
+
+			errorList := ValidateShootUpdate(newShoot, shoot)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should allow switching from credentialsBindingName to secretBindingName", func() {
+			shoot.Spec.SecretBindingName = nil
+			shoot.Spec.CredentialsBindingName = ptr.To("another-reference")
+			newShoot := prepareShootForUpdate(shoot)
+			newShoot.Spec.SecretBindingName = ptr.To("foo")
+			newShoot.Spec.CredentialsBindingName = nil
+
+			errorList := ValidateShootUpdate(newShoot, shoot)
+
+			Expect(errorList).To(BeEmpty())
 		})
 
 		Context("seed selector", func() {

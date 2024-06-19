@@ -5014,6 +5014,11 @@ func (in *ShootSpec) DeepCopyInto(out *ShootSpec) {
 		*out = new(CloudProfileReference)
 		**out = **in
 	}
+	if in.CredentialsBindingName != nil {
+		in, out := &in.CredentialsBindingName, &out.CredentialsBindingName
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 

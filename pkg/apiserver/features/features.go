@@ -17,5 +17,6 @@ func RegisterFeatureGates() {
 		features.MutableShootSpecNetworkingNodes,
 		features.ShootForceDeletion,
 		features.UseNamespacedCloudProfile,
+		features.ShootCredentialsBinding,
 	)))
 }
