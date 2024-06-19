@@ -11,19 +11,26 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
+	"github.com/gardener/gardener/pkg/component/nodemanagement/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
-func (g *garden) runMigrations(ctx context.Context, log logr.Logger, _ cluster.Cluster) error {
+func (g *garden) runMigrations(ctx context.Context, log logr.Logger, gardenCluster cluster.Cluster) error {
 	log.Info("Migrating deprecated failure-domain.beta.kubernetes.io labels to topology.kubernetes.io")
 	if err := migrateDeprecatedTopologyLabels(ctx, log, g.mgr.GetClient(), g.mgr.GetConfig()); err != nil {
 		return err
@@ -33,6 +40,12 @@ func (g *garden) runMigrations(ctx context.Context, log logr.Logger, _ cluster.C
 	if err := createOSCHashMigrationSecret(ctx, g.mgr.GetClient()); err != nil {
 		return err
 	}
+
+	log.Info("Cleaning up DWD access for workerless shoots")
+	if err := cleanupDWDAccess(ctx, gardenCluster.GetClient(), g.mgr.GetClient()); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -148,4 +161,48 @@ func createOSCHashMigrationSecret(ctx context.Context, seedClient client.Client)
 		})
 	}
 	return flow.Parallel(tasks...)(ctx)
+}
+
+// TODO (shafeeqes): Remove this function after gardener v1.99 has been released
+func cleanupDWDAccess(ctx context.Context, gardenClient client.Client, seedClient client.Client) error {
+	shootList := &gardencorev1beta1.ShootList{}
+	if err := gardenClient.List(ctx, shootList); err != nil {
+		return err
+	}
+
+	workerlessShootNamespaces := sets.New[string]()
+	for _, shoot := range shootList.Items {
+		if v1beta1helper.IsWorkerless(&shoot) {
+			workerlessShootNamespaces.Insert(shoot.Status.TechnicalID)
+		}
+	}
+
+	shootNamespaceList := &corev1.NamespaceList{}
+	if err := seedClient.List(ctx, shootNamespaceList, client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}); err != nil {
+		return err
+	}
+
+	var taskFns []flow.TaskFn
+
+	for _, namespace := range shootNamespaceList.Items {
+		if !workerlessShootNamespaces.Has(namespace.Name) {
+			continue
+		}
+
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			if err := kubernetesutils.DeleteObjects(ctx, seedClient,
+				&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: dependencywatchdog.KubeConfigSecretName, Namespace: namespace.Name}},
+			); err != nil {
+				return fmt.Errorf("failed to delete DWD access secret for namespace %q: %w", namespace.Name, err)
+			}
+
+			if err := managedresources.DeleteForShoot(ctx, seedClient, namespace.Name, dependencywatchdog.ManagedResourceName); err != nil {
+				return fmt.Errorf("failed to delete DWD managed resource for namespace %q: %w", namespace.Name, err)
+			}
+
+			return nil
+		})
+	}
+
+	return flow.Parallel(taskFns...)(ctx)
 }
