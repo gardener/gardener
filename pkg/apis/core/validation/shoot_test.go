@@ -857,8 +857,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 			newShoot := prepareShootForUpdate(shoot)
 			shoot.Spec.CloudProfileName = "another-profile"
 			shoot.Spec.Region = "another-region"
-			shoot.Spec.SecretBindingName = ptr.To("another-reference")
-			shoot.Spec.CredentialsBindingName = ptr.To("another-reference")
+			// shoot.Spec.SecretBindingName = ptr.To("another-reference")
+			// shoot.Spec.CredentialsBindingName = ptr.To("another-reference")
 			shoot.Spec.Provider.Type = "another-provider"
 
 			errorList := ValidateShootUpdate(newShoot, shoot)
@@ -874,23 +874,57 @@ var _ = Describe("Shoot Validation Tests", func() {
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.secretBindingName"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.credentialsBindingName"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.provider.type"),
 				})),
 			))
 		})
 
-		It("should allow setting credentialsBindingName if secretBindingName is nil", func() {
+		It("should forbid updating secretBindingName when not migrating to credentialsBindingName", func() {
+			newShoot := prepareShootForUpdate(shoot)
+			shoot.Spec.SecretBindingName = ptr.To("another-reference")
+
+			errorList := ValidateShootUpdate(newShoot, shoot)
+
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.secretBindingName"),
+				})),
+			))
+		})
+
+		It("should forbid updating credentialsBindingName when not migrating to secretBindingName", func() {
+			shoot.Spec.SecretBindingName = nil
+			shoot.Spec.CredentialsBindingName = ptr.To("foo")
+			newShoot := prepareShootForUpdate(shoot)
+			shoot.Spec.CredentialsBindingName = ptr.To("another-reference")
+
+			errorList := ValidateShootUpdate(newShoot, shoot)
+
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.credentialsBindingName"),
+				})),
+			))
+		})
+
+		It("should allow switching from secretBindingName to credentialsBindingName", func() {
 			newShoot := prepareShootForUpdate(shoot)
 			newShoot.Spec.SecretBindingName = nil
 			newShoot.Spec.CredentialsBindingName = ptr.To("another-reference")
+
+			errorList := ValidateShootUpdate(newShoot, shoot)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should allow switching from credentialsBindingName to secretBindingName", func() {
+			shoot.Spec.SecretBindingName = nil
+			shoot.Spec.CredentialsBindingName = ptr.To("another-reference")
+			newShoot := prepareShootForUpdate(shoot)
+			newShoot.Spec.SecretBindingName = ptr.To("foo")
+			newShoot.Spec.CredentialsBindingName = nil
 
 			errorList := ValidateShootUpdate(newShoot, shoot)
 

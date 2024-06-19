@@ -327,9 +327,9 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 	// allow removing the value of SecretBindingName when
 	// old secret binding existed, but new is set to nil
 	// and new credentials binding also exists
-	if !(oldSpec.SecretBindingName != nil &&
-		newSpec.SecretBindingName == nil &&
-		len(ptr.Deref(newSpec.CredentialsBindingName, "")) > 0) {
+	migrationFromSecBindingToCredBinding := oldSpec.SecretBindingName != nil && newSpec.SecretBindingName == nil && len(ptr.Deref(newSpec.CredentialsBindingName, "")) > 0
+	migrationFromCredBindingToSecBinding := oldSpec.CredentialsBindingName != nil && newSpec.CredentialsBindingName == nil && len(ptr.Deref(newSpec.SecretBindingName, "")) > 0
+	if !migrationFromSecBindingToCredBinding && !migrationFromCredBindingToSecBinding {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.SecretBindingName, oldSpec.SecretBindingName, fldPath.Child("secretBindingName"))...)
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.CredentialsBindingName, oldSpec.CredentialsBindingName, fldPath.Child("credentialsBindingName"))...)
 	}
