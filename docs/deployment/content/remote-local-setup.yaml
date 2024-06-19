@@ -34,6 +34,10 @@ spec:
                                && wget -N "https://raw.githubusercontent.com/derailed/k9s/master/skins/kiss.yaml" && cp kiss.yaml ~/.config/k9s/skins \
                                && yq -n '.k9s.ui.skin="kiss"' > /root/.config/k9s/config.yaml
           fi
+          echo gardenlogin     && wget -N "https://github.com/gardener/gardenlogin/releases/download/$(curl -sL https://raw.githubusercontent.com/gardener/gardenlogin/master/LATEST)/gardenlogin_linux_amd64" && mv gardenlogin_linux_amd64 /usr/local/bin/gardenlogin && chmod +x /usr/local/bin/gardenlogin \
+                               && ln -s "$(which gardenlogin)" /usr/local/bin/kubectl-gardenlogin
+          echo gardenctl       && wget -N "https://github.com/gardener/gardenctl-v2/releases/download/$(curl -sL https://raw.githubusercontent.com/gardener/gardenctl-v2/master/LATEST)/gardenctl_v2_linux_amd64" && mv gardenctl_v2_linux_amd64 /usr/local/bin/gardenctl && chmod +x /usr/local/bin/gardenctl \
+                               && ln -s "$(which gardenctl)" /usr/local/bin/g
           echo kind            && wget -N "https://kind.sigs.k8s.io/dl/$(curl -sL https://api.github.com/repos/kubernetes-sigs/kind/releases/latest | jq .tag_name -r)/kind-linux-amd64" && cp kind-linux-amd64 /usr/local/bin/kind && chmod +x /usr/local/bin/kind
           echo kns             && wget -N "https://raw.githubusercontent.com/blendle/kns/master/bin/kns" && cp kns /usr/local/bin/kns && chmod +x /usr/local/bin/kns
           echo krew            && wget -N "https://github.com/kubernetes-sigs/krew/releases/download/$(curl -sL https://api.github.com/repos/kubernetes-sigs/krew/releases/latest | jq .tag_name -r)/krew-linux_amd64.tar.gz" && tar -xzf krew-linux_amd64.tar.gz ./krew-linux_amd64 && mv krew-linux_amd64 /usr/local/bin/krew && krew install krew
@@ -148,6 +152,7 @@ spec:
           fi
           EOF
           kubectl completion bash > /usr/share/bash-completion/completions/kubectl
+          gardenctl completion bash > /usr/share/bash-completion/completions/gardenctl
           ~/go/bin/stern --completion=bash > /usr/share/bash-completion/completions/stern
           cat > ~/.bash_profile <<"EOF"
             source /etc/bash/bashrc
@@ -166,11 +171,14 @@ spec:
             export PROMPT_COMMAND='history -a'
             shopt -s histappend
             source /usr/share/bash-completion/completions/kubectl
+            source /usr/share/bash-completion/completions/gardenctl
             complete -o default -F __start_kubectl k
+            complete -o default -F __start_gardenctl g
             source ~/.kube-ps1.sh
             source /usr/share/git-core/git-prompt.sh
             export PS1='[\w $(printf "$(kube_ps1)")] $(__git_ps1 "(%s)") [$(date +%H:%M)]\$ '
             stty -ixon
+            [ -n "$GCTL_SESSION_ID" ] || [ -n "$TERM_SESSION_ID" ] || export GCTL_SESSION_ID=$(uuidgen)
             cd ~/go/src/github.com/gardener/gardener
             function pr {
               if [ "$#" -ne 1 ]; then
@@ -369,6 +377,11 @@ spec:
           new_pane "less" <<"EOF"
             less -NSR +F gardenlet.logs
           EOF
+          new_window "gardenctl" "gardenctl" <<"EOF"
+            gardenctl config set-garden local --kubeconfig ~/.kube/config
+            eval $(gardenctl kubectl-env bash)
+            g target --garden local --shoot local
+          EOF
           new_window "git" "git" Enter <<"EOF"
             # Use 'pr' or 'pr_base' to checkout the head or base commit of a PR
             git log --oneline -1
@@ -515,6 +528,11 @@ spec:
           new_pane "not ready pods" <<"EOF"
             export KUBECONFIG=$PWD/example/operator/virtual-garden/kubeconfig
             generate-admin-kubeconf.sh > /tmp/shoot.kubeconfig && watch "k --kubeconfig /tmp/shoot.kubeconfig get pods -A -o wide | awk '{split(\$3, a, \"/\"); if (a[1]!=a[2] || \$4 != \"Running\") {print}}'"
+          EOF
+          new_window "gardenctl" "gardenctl" <<"EOF"
+            gardenctl config set-garden local --kubeconfig $PWD/example/operator/virtual-garden/kubeconfig
+            eval $(gardenctl kubectl-env bash)
+            g target --garden local --shoot local
           EOF
           new_window "git" "git" Enter <<"EOF"
             # Use 'pr' or 'pr_base' to checkout the head or base commit of a PR
