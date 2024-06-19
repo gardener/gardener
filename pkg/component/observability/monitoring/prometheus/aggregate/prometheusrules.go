@@ -69,15 +69,14 @@ func CentralPrometheusRules() []*monitoringv1.PrometheusRule {
 						},
 						{
 							Alert: "TooManyEtcdSnapshotCompactionJobsFailing",
-							Expr:  intstr.FromString(`count(increase(etcddruid_compaction_jobs_total{succeeded="false"}[3h]) >= 1) / count(increase(etcddruid_compaction_jobs_total[3h]) >= 1) > 0.1`),
-							For:   ptr.To(monitoringv1.Duration("10m")),
+							Expr:  intstr.FromString(`count(increase(etcddruid_compaction_jobs_total{succeeded="false"}[3h]) >= 1) / count(increase(etcddruid_compaction_jobs_total[3h])) > 0.1`),
 							Labels: map[string]string{
 								"severity":   "warning",
 								"type":       "seed",
 								"visibility": "operator",
 							},
 							Annotations: map[string]string{
-								"description": "Seed {{$labels.seed}} in landscape {{$externalLabels.landscape}} has too many etcd snapshot compaction jobs failing in the past 3 hours.",
+								"description": "Seed {{$externalLabels.seed}} has too many etcd snapshot compaction jobs failing in the past 3 hours.",
 								"summary":     "Too many etcd snapshot compaction jobs are failing in the seed.",
 							},
 						},
