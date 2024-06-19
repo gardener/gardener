@@ -140,6 +140,12 @@ spec:
             )"
           fi
           echo
+          if [ ! -f /tmp/ready ]; then
+            echo -n "Please wait a few more seconds for the initialization of the remote local setup to complete"
+            while [ ! -f /tmp/ready ]; do echo -n .; sleep 1; done
+            echo
+            echo
+          fi
           EOF
           kubectl completion bash > /usr/share/bash-completion/completions/kubectl
           ~/go/bin/stern --completion=bash > /usr/share/bash-completion/completions/stern
