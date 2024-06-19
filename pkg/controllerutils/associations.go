@@ -63,8 +63,8 @@ func DetermineShootsAssociatedTo(ctx context.Context, gardenClient client.Reader
 	return associatedShoots, nil
 }
 
-// DetermineSecretBindingAssociations gets a <bindingLister> to determine the SecretBinding
-// resources which are associated to given Quota <obj>.
+// DetermineSecretBindingAssociations determines the SecretBinding resources
+// which are associated to given Quota <obj>.
 func DetermineSecretBindingAssociations(ctx context.Context, c client.Client, quota *gardencorev1beta1.Quota) ([]string, error) {
 	bindings := &gardencorev1beta1.SecretBindingList{}
 	if err := c.List(ctx, bindings); err != nil {
@@ -82,8 +82,8 @@ func DetermineSecretBindingAssociations(ctx context.Context, c client.Client, qu
 	return associatedBindings, nil
 }
 
-// DetermineCredentialsBindingAssociations gets a <bindingLister> to determine the CredentialsBinding
-// resources which are associated to given Quota <obj>.
+// DetermineCredentialsBindingAssociations determines the CredentialsBinding resources
+// which are associated to given Quota <obj>.
 func DetermineCredentialsBindingAssociations(ctx context.Context, c client.Client, quota *gardencorev1beta1.Quota) ([]string, error) {
 	bindings := &securityv1alpha1.CredentialsBindingList{}
 	if err := c.List(ctx, bindings); err != nil {
