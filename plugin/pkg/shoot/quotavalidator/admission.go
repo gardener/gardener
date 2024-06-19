@@ -16,6 +16,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/utils/ptr"
 
@@ -325,8 +326,8 @@ func (q *QuotaValidator) findShootsReferQuota(quota gardencorev1beta1.Quota, sho
 
 	// Group bindings by namespace and split them by kind
 	type groupedBindings struct {
-		secretBindings      map[string]struct{}
-		credentialsBindings map[string]struct{}
+		secretBindings      sets.Set[string]
+		credentialsBindings sets.Set[string]
 	}
 	bindings := map[string]groupedBindings{}
 	for _, binding := range allSecretBindings {
@@ -334,11 +335,11 @@ func (q *QuotaValidator) findShootsReferQuota(quota gardencorev1beta1.Quota, sho
 			if quota.Name == quotaRef.Name && quota.Namespace == quotaRef.Namespace {
 				if _, ok := bindings[binding.Namespace]; !ok {
 					bindings[binding.Namespace] = groupedBindings{
-						secretBindings:      map[string]struct{}{},
-						credentialsBindings: map[string]struct{}{},
+						secretBindings:      sets.Set[string]{},
+						credentialsBindings: sets.Set[string]{},
 					}
 				}
-				bindings[binding.Namespace].secretBindings[binding.Name] = struct{}{}
+				bindings[binding.Namespace].secretBindings[binding.Name] = sets.Empty{}
 			}
 		}
 	}
@@ -348,11 +349,11 @@ func (q *QuotaValidator) findShootsReferQuota(quota gardencorev1beta1.Quota, sho
 			if quota.Name == quotaRef.Name && quota.Namespace == quotaRef.Namespace {
 				if _, ok := bindings[binding.Namespace]; !ok {
 					bindings[binding.Namespace] = groupedBindings{
-						secretBindings:      map[string]struct{}{},
-						credentialsBindings: map[string]struct{}{},
+						secretBindings:      sets.Set[string]{},
+						credentialsBindings: sets.Set[string]{},
 					}
 				}
-				bindings[binding.Namespace].credentialsBindings[binding.Name] = struct{}{}
+				bindings[binding.Namespace].credentialsBindings[binding.Name] = sets.Empty{}
 			}
 		}
 	}
@@ -367,8 +368,9 @@ func (q *QuotaValidator) findShootsReferQuota(quota gardencorev1beta1.Quota, sho
 			if shoot.Namespace == s.Namespace && shoot.Name == s.Name {
 				continue
 			}
-			_, refsQuotaViaSB := b.secretBindings[ptr.Deref(s.Spec.SecretBindingName, "")]
-			_, refsQuotaViaCB := b.credentialsBindings[ptr.Deref(s.Spec.CredentialsBindingName, "")]
+
+			refsQuotaViaSB := b.secretBindings.Has(ptr.Deref(s.Spec.SecretBindingName, ""))
+			refsQuotaViaCB := b.credentialsBindings.Has(ptr.Deref(s.Spec.CredentialsBindingName, ""))
 			if refsQuotaViaSB || refsQuotaViaCB {
 				coreShoot := &core.Shoot{}
 				if err := gardencorev1beta1.Convert_v1beta1_Shoot_To_core_Shoot(s, coreShoot, nil); err != nil {
