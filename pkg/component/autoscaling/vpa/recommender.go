@@ -205,7 +205,7 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 						"--pod-recommendation-min-cpu-millicores=5",
 						"--pod-recommendation-min-memory-mb=10",
 						fmt.Sprintf("--recommendation-margin-fraction=%f", ptr.Deref(v.values.Recommender.RecommendationMarginFraction, gardencorev1beta1.DefaultRecommendationMarginFraction)),
-						fmt.Sprintf("--recommender-interval=%s", durationDeref(v.values.Recommender.Interval, gardencorev1beta1.DefaultRecommenderInterval).Duration),
+						fmt.Sprintf("--recommender-interval=%s", ptr.Deref(v.values.Recommender.Interval, gardencorev1beta1.DefaultRecommenderInterval).Duration),
 						"--kube-api-qps=100",
 						"--kube-api-burst=120",
 						"--memory-saver=true",

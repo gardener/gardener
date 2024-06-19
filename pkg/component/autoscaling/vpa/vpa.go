@@ -307,10 +307,3 @@ func (v *vpa) injectAPIServerConnectionSpec(deployment *appsv1.Deployment, name 
 		utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, *v.genericTokenKubeconfigSecretName, gardenerutils.SecretNamePrefixShootAccess+deployment.Name))
 	}
 }
-
-func durationDeref(ptr *metav1.Duration, def metav1.Duration) metav1.Duration {
-	if ptr != nil {
-		return *ptr
-	}
-	return def
-}
