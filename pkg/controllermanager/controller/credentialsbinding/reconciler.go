@@ -83,12 +83,19 @@ func (r *Reconciler) reconcile(ctx context.Context, credentialsBinding *security
 		}
 	}
 
-	labelKey := v1beta1constants.LabelShootProviderPrefix + credentialsBinding.Provider.Type
-	if !metav1.HasLabel(secret.ObjectMeta, labelKey) {
+	providerTypeLabelKey := v1beta1constants.LabelShootProviderPrefix + credentialsBinding.Provider.Type
+	hasProviderKeyLabel := metav1.HasLabel(secret.ObjectMeta, providerTypeLabelKey)
+	hasCredentialsBindingRefLabel := metav1.HasLabel(secret.ObjectMeta, v1beta1constants.LabelCredentialsBindingReference)
+	if !hasProviderKeyLabel || !hasCredentialsBindingRefLabel {
 		patch := client.MergeFrom(secret.DeepCopy())
-		metav1.SetMetaDataLabel(&secret.ObjectMeta, labelKey, "true")
+		if !hasProviderKeyLabel {
+			metav1.SetMetaDataLabel(&secret.ObjectMeta, providerTypeLabelKey, "true")
+		}
+		if !hasCredentialsBindingRefLabel {
+			metav1.SetMetaDataLabel(&secret.ObjectMeta, v1beta1constants.LabelCredentialsBindingReference, "true")
+		}
 		if err := r.Client.Patch(ctx, secret, patch); err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to add provider type label to Secret referenced in CredentialsBinding: %w", err)
+			return reconcile.Result{}, fmt.Errorf("failed to add provider type or/and referred labels to Secret referenced in CredentialsBinding: %w", err)
 		}
 	}
 
@@ -105,15 +112,6 @@ func (r *Reconciler) reconcile(ctx context.Context, credentialsBinding *security
 			if err := r.Client.Patch(ctx, quota, patch); err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed to add referred label to the quota referenced in CredentialsBinding, quota: %s , namespace: %s : %w", quota.Name, quota.Namespace, err)
 			}
-		}
-	}
-
-	// Add 'referred by a credentials binding' label
-	if !metav1.HasLabel(secret.ObjectMeta, v1beta1constants.LabelCredentialsBindingReference) {
-		patch := client.MergeFrom(secret.DeepCopy())
-		metav1.SetMetaDataLabel(&secret.ObjectMeta, v1beta1constants.LabelCredentialsBindingReference, "true")
-		if err := r.Client.Patch(ctx, secret, patch); err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to add referred label to Secret referenced in CredentialsBinding: %w", err)
 		}
 	}
 
