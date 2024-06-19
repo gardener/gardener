@@ -59,7 +59,7 @@ func (shootStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 		shoot.Spec.CloudProfile = nil
 	}
 
-	if !utilfeature.DefaultFeatureGate.Enabled(features.AllowCredentialsBinding) {
+	if !utilfeature.DefaultFeatureGate.Enabled(features.ShootCredentialsBinding) {
 		shoot.Spec.CredentialsBindingName = nil
 	}
 }
@@ -79,7 +79,7 @@ func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object
 		newShoot.Spec.CloudProfile = nil
 	}
 
-	if oldShoot.Spec.CredentialsBindingName == nil && !utilfeature.DefaultFeatureGate.Enabled(features.AllowCredentialsBinding) {
+	if oldShoot.Spec.CredentialsBindingName == nil && !utilfeature.DefaultFeatureGate.Enabled(features.ShootCredentialsBinding) {
 		newShoot.Spec.CredentialsBindingName = nil
 	}
 }

@@ -32,7 +32,7 @@ var _ = Describe("CredentialsBinding controller test", func() {
 	)
 
 	BeforeEach(func() {
-		DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.AllowCredentialsBinding, true))
+		DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ShootCredentialsBinding, true))
 		secret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      testID + "-" + utils.ComputeSHA256Hex([]byte(testNamespace.Name + CurrentSpecReport().LeafNodeLocation.String()))[:8],
