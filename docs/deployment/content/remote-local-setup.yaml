@@ -369,12 +369,12 @@ spec:
           new_pane "less" <<"EOF"
             less -NSR +F gardenlet.logs
           EOF
-          new_window "make generate" "make generate" <<"EOF"
-            nice make generate check test test-integration
-          EOF
           new_window "git" "git" Enter <<"EOF"
             # Use 'pr' or 'pr_base' to checkout the head or base commit of a PR
             git log --oneline -1
+          EOF
+          new_window "make generate" "make generate" <<"EOF"
+            nice make generate check test test-integration
           EOF
           new_window "ad-hoc" "ad-hoc" Enter <<"EOF"
             # Use this pane for ad-hoc commands
