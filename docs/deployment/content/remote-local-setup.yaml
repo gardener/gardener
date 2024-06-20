@@ -29,11 +29,6 @@ spec:
                   util-linux vim wget yq
           mkdir -p ~/.cache/wget
           cd ~/.cache/wget
-          if [ ! -f /root/.config/k9s/config.yaml ]; then
-          echo k9s-theme       && mkdir -p ~/.config/k9s/skins \
-                               && wget -N "https://raw.githubusercontent.com/derailed/k9s/master/skins/kiss.yaml" && cp kiss.yaml ~/.config/k9s/skins \
-                               && yq -n '.k9s.ui.skin="kiss"' > /root/.config/k9s/config.yaml
-          fi
           echo gardenlogin     && wget -N "https://github.com/gardener/gardenlogin/releases/download/$(curl -sL https://raw.githubusercontent.com/gardener/gardenlogin/master/LATEST)/gardenlogin_linux_amd64" && mv gardenlogin_linux_amd64 /usr/local/bin/gardenlogin && chmod +x /usr/local/bin/gardenlogin \
                                && ln -s "$(which gardenlogin)" /usr/local/bin/kubectl-gardenlogin
           echo gardenctl       && wget -N "https://github.com/gardener/gardenctl-v2/releases/download/$(curl -sL https://raw.githubusercontent.com/gardener/gardenctl-v2/master/LATEST)/gardenctl_v2_linux_amd64" && mv gardenctl_v2_linux_amd64 /usr/local/bin/gardenctl && chmod +x /usr/local/bin/gardenctl \
@@ -71,6 +66,7 @@ spec:
           cat > ~/greeting.sh <<"EOF"
           [ -n "$TMUX" ] && exit
           export LANG=C.UTF-8
+          export TERM=xterm-256color
           normal='\e[0m'; green='\e[1;32m'; yellow='\e[1;33m'; cyan='\e[1;36m'; n=$normal; g=$green; y=$yellow; c=$cyan
           echo -e "$(
           cat <<GREETING_EOF
@@ -162,6 +158,7 @@ spec:
             source ~/.bashrc
           EOF
           cat > ~/.bashrc <<"EOF"
+            [ -z "$TMUX" ] && export TERM=xterm-256color
             export GOPATH=~/go
             export PATH=$PATH:$GOPATH/bin:~/.krew/bin:~/go/src/github.com/gardener/gardener/hack/usage
             export XDG_CONFIG_HOME=~/.config
