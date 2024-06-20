@@ -117,6 +117,25 @@ var _ = Describe("helper", func() {
 			Expect(GetMachineDeploymentClusterAutoscalerAnnotations(caOptions)).To(Equal(expectedValues))
 		})
 	})
+
+	Describe("#HasContainerdConfiguration", func() {
+		It("should return false when CRI config is nil", func() {
+			Expect(HasContainerdConfiguration(nil)).To(BeFalse())
+		})
+
+		It("should return false when containerd is not configured", func() {
+			Expect(HasContainerdConfiguration(&extensionsv1alpha1.CRIConfig{
+				Name: "cri-o",
+			})).To(BeFalse())
+		})
+
+		It("should return true when containerd is configured", func() {
+			Expect(HasContainerdConfiguration(&extensionsv1alpha1.CRIConfig{
+				Name:       "containerd",
+				Containerd: &extensionsv1alpha1.ContainerdConfig{},
+			})).To(BeTrue())
+		})
+	})
 })
 
 var _ = Describe("filecodec", func() {
