@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -371,6 +372,22 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       v1beta1helper.GetShootServiceAccountKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) != gardencorev1beta1.RotationPreparing,
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, waitUntilGardenerResourceManagerReady, waitUntilKubeAPIServerWithNodeAgentAuthorizerIsReady),
+		})
+		renewNodeAgentKubeconfigInAllNodes = g.Add(flow.Task{
+			Name: "Label nodes to trigger renewal of their gardener-node-agent kubeconfig",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return secretsrotation.RenewAccessSecretsInAllObjectsOfKind(ctx, o.Logger, o.ShootClientSet.Client(), &corev1.Node{}, v1beta1constants.GardenerOperationRenewKubeconfig)
+			}).RetryUntilTimeout(5*time.Second, 30*time.Second),
+			SkipIf:       !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) || v1beta1helper.GetShootCARotationPhase(o.Shoot.GetInfo().Status.Credentials) != gardencorev1beta1.RotationPreparing,
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, waitUntilGardenerResourceManagerReady, waitUntilKubeAPIServerWithNodeAgentAuthorizerIsReady),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Check if all gardener-node-agents have finished the renewal of their kubeconfig",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return secretsrotation.CheckIfAccessSecretsRenewalCompletedInAllObjectsOfKind(ctx, o.ShootClientSet.Client(), &corev1.Node{}, v1beta1constants.GardenerOperationRenewKubeconfig)
+			}).RetryUntilTimeout(5*time.Second, 2*time.Minute),
+			SkipIf:       !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) || v1beta1helper.GetShootCARotationPhase(o.Shoot.GetInfo().Status.Credentials) != gardencorev1beta1.RotationPreparing,
+			Dependencies: flow.NewTaskIDs(renewNodeAgentKubeconfigInAllNodes),
 		})
 		deployControlPlane = g.Add(flow.Task{
 			Name:         "Deploying shoot control plane components",
