@@ -1055,7 +1055,7 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "max by(verb, quantile) (apiserver_latency_seconds:quantile{job=~\"$job\",pod=~\"$pod\", verb=~\"$verb\",quantile=~\"$quantile\",subresource!~\"log|portforward|exec|proxy|attach\"})",
+          "expr": "max by(verb, quantile) (shoot:apiserver_latency_seconds:quantile{job=~\"$job\",pod=~\"$pod\", verb=~\"$verb\",quantile=~\"$quantile\",subresource!~\"log|portforward|exec|proxy|attach\"})",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -3530,7 +3530,7 @@
           "value": "0.99"
         },
         "datasource": null,
-        "definition": "label_values(apiserver_latency_seconds:quantile, quantile)",
+        "definition": "label_values(shoot:apiserver_latency_seconds:quantile, quantile)",
         "description": null,
         "error": null,
         "hide": 0,
@@ -3540,7 +3540,7 @@
         "name": "quantile",
         "options": [],
         "query": {
-          "query": "label_values(apiserver_latency_seconds:quantile, quantile)",
+          "query": "label_values(shoot:apiserver_latency_seconds:quantile, quantile)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
