@@ -38,7 +38,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | VPAForETCD                         | `true`  | `Beta`  | `1.97` |        |
 | VPAAndHPAForAPIServer              | `false` | `Alpha` | `1.95` |        |
 | ShootCredentialsBinding            | `false` | `Alpha` | `1.98` |        |
-| NewWorkerPoolHash                  | `false` | `Alpha` | `1.97` |        |
+| NewWorkerPoolHash                  | `false` | `Alpha` | `1.98` |        |
 
 ## Feature Gates for Graduated or Deprecated Features
 

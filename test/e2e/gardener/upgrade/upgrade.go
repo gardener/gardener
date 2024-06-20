@@ -105,12 +105,12 @@ var _ = Describe("Gardener upgrade Tests for", func() {
 				Expect(seedClient.Delete(ctx, job, client.PropagationPolicy(metav1.DeletePropagationForeground))).To(Succeed())
 			})
 
-			// Verify that after upgrading from Gardener v1.96 a migration operating system config secret
+			// Verify that after upgrading from Gardener v1.97 a migration operating system config secret
 			// exists.
-			// TODO(MichaelEischer): drop this check after v1.97 has been released.
+			// TODO(MichaelEischer): drop this check after v1.98 has been released.
 			It("verify that old shoots use operating system config hash version 1 after gardener upgrade", func() {
-				if !strings.HasPrefix(gardenerPreviousVersion, "v1.96.") || v1beta1helper.IsWorkerless(f.Shoot) {
-					Skip("test only relevant for upgrade from Gardener v1.96 on shoots with workers")
+				if !strings.HasPrefix(gardenerPreviousVersion, "v1.97.") || v1beta1helper.IsWorkerless(f.Shoot) {
+					Skip("test only relevant for upgrade from Gardener v1.97 on shoots with workers")
 				}
 
 				secret := &corev1.Secret{
@@ -258,12 +258,12 @@ var _ = Describe("Gardener upgrade Tests for", func() {
 				Expect(f.WakeUpShoot(ctx, f.Shoot)).To(Succeed())
 			})
 
-			// Verify that after upgrading from Gardener v1.96 an operating system config secret
+			// Verify that after upgrading from Gardener v1.97 an operating system config secret
 			// with version 1 exists.
-			// TODO(MichaelEischer): drop this check after v1.97 has been released.
+			// TODO(MichaelEischer): drop this check after v1.98 has been released.
 			It("verify that old shoots use operating system config hash version 1 after gardener upgrade", func() {
-				if !strings.HasPrefix(gardenerPreviousVersion, "v1.96.") || v1beta1helper.IsWorkerless(f.Shoot) {
-					Skip("test only relevant for upgrade from Gardener v1.96 on shoots with workers")
+				if !strings.HasPrefix(gardenerPreviousVersion, "v1.97.") || v1beta1helper.IsWorkerless(f.Shoot) {
+					Skip("test only relevant for upgrade from Gardener v1.97 on shoots with workers")
 				}
 
 				secret := &corev1.Secret{

@@ -97,7 +97,7 @@ const (
 	// in the `kubelet` configuration are changed. All provider extensions must be upgraded
 	// to support this feature first.
 	// owner: @MichaelEischer
-	// alpha: v1.97.0
+	// alpha: v1.98.0
 	NewWorkerPoolHash featuregate.Feature = "NewWorkerPoolHash"
 )
 
