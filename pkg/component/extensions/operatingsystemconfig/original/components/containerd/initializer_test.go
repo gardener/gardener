@@ -100,7 +100,6 @@ sed -i  "s|$sandbox_image_line|sandbox_image = \"$pause_image\"|g" $FILE
 
 # create and configure registry hosts directory
 CONFIG_PATH=/etc/containerd/certs.d
-mkdir -p "$CONFIG_PATH"
 if ! grep --quiet --fixed-strings '[plugins."io.containerd.grpc.v1.cri".registry]' "$FILE"; then
   echo "CRI registry section not found. Adding CRI registry section with config_path = \"$CONFIG_PATH\" in $FILE."
   cat <<EOF >> $FILE
@@ -119,7 +118,6 @@ fi
 # allow to import custom configuration files
 CUSTOM_CONFIG_DIR=/etc/containerd/conf.d
 CUSTOM_CONFIG_FILES="$CUSTOM_CONFIG_DIR/*.toml"
-mkdir -p $CUSTOM_CONFIG_DIR
 if ! grep -E "^imports" $FILE >/dev/null ; then
   # imports directive not present -> add it to the top
   existing_content="$(cat "$FILE")"
@@ -135,7 +133,6 @@ elif ! grep -F "$CUSTOM_CONFIG_FILES" $FILE >/dev/null ; then
 fi
 
 BIN_PATH=/var/bin/containerruntimes
-mkdir -p $BIN_PATH
 
 ENV_FILE=/etc/systemd/system/containerd.service.d/30-env_config.conf
 if [ ! -f "$ENV_FILE" ]; then

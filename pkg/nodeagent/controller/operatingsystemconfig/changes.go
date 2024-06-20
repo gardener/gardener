@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 )
 
@@ -44,8 +45,9 @@ func extractOSCFromSecret(secret *corev1.Secret) (*extensionsv1alpha1.OperatingS
 }
 
 type operatingSystemConfigChanges struct {
-	units units
-	files files
+	units      units
+	files      files
+	containerd containerd
 }
 
 type units struct {
@@ -66,6 +68,16 @@ type dropIns struct {
 type files struct {
 	changed []extensionsv1alpha1.File
 	deleted []extensionsv1alpha1.File
+}
+
+type containerd struct {
+	configChange bool
+	registries   containerdRegistries
+}
+
+type containerdRegistries struct {
+	current []extensionsv1alpha1.RegistryConfig
+	deleted []extensionsv1alpha1.RegistryConfig
 }
 
 func computeOperatingSystemConfigChanges(fs afero.Afero, newOSC *extensionsv1alpha1.OperatingSystemConfig) (*operatingSystemConfigChanges, error) {
@@ -91,6 +103,11 @@ func computeOperatingSystemConfigChanges(fs afero.Afero, newOSC *extensionsv1alp
 
 		changes.files.changed = newOSCFiles
 		changes.units.changed = unitChanges
+
+		changes.containerd.configChange = true
+		if extensionsv1alpha1helper.HasContainerdConfiguration(newOSC.Spec.CRIConfig) {
+			changes.containerd.registries.current = newOSC.Spec.CRIConfig.Containerd.Registries
+		}
 		return changes, nil
 	}
 
@@ -110,6 +127,22 @@ func computeOperatingSystemConfigChanges(fs afero.Afero, newOSC *extensionsv1alp
 		changes.files,
 	)
 
+	var (
+		newRegistries []extensionsv1alpha1.RegistryConfig
+		oldRegistries []extensionsv1alpha1.RegistryConfig
+	)
+
+	if extensionsv1alpha1helper.HasContainerdConfiguration(newOSC.Spec.CRIConfig) {
+		newRegistries = newOSC.Spec.CRIConfig.Containerd.Registries
+		if !extensionsv1alpha1helper.HasContainerdConfiguration(oldOSC.Spec.CRIConfig) {
+			changes.containerd.configChange = true
+		} else {
+			changes.containerd.configChange = !apiequality.Semantic.DeepEqual(newOSC.Spec.CRIConfig.Containerd, oldOSC.Spec.CRIConfig.Containerd)
+			oldRegistries = oldOSC.Spec.CRIConfig.Containerd.Registries
+		}
+	}
+
+	changes.containerd.registries = computeContainerdRegistryDiffs(newRegistries, oldRegistries)
 	return changes, nil
 }
 
@@ -235,4 +268,21 @@ func mergeUnits(specUnits, statusUnits []extensionsv1alpha1.Unit) []extensionsv1
 
 func collectAllFiles(osc *extensionsv1alpha1.OperatingSystemConfig) []extensionsv1alpha1.File {
 	return append(osc.Spec.Files, osc.Status.ExtensionFiles...)
+}
+
+func computeContainerdRegistryDiffs(newRegistries, oldRegistries []extensionsv1alpha1.RegistryConfig) containerdRegistries {
+	r := containerdRegistries{
+		current: newRegistries,
+	}
+
+	upstreamsInUse := sets.New[string]()
+	for _, registryConfig := range r.current {
+		upstreamsInUse.Insert(registryConfig.Upstream)
+	}
+
+	r.deleted = slices.DeleteFunc(oldRegistries, func(config extensionsv1alpha1.RegistryConfig) bool {
+		return upstreamsInUse.Has(config.Upstream)
+	})
+
+	return r
 }
