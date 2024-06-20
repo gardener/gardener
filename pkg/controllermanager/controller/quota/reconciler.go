@@ -59,8 +59,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			return reconcile.Result{}, err
 		}
 
-		if len(associatedSecretBindings) == 0 {
-			log.Info("No SecretBindings are referencing the Quota, deletion accepted")
+		associatedCredentialsBindings, err := controllerutils.DetermineCredentialsBindingAssociations(ctx, r.Client, quota)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
+		if len(associatedSecretBindings) == 0 && len(associatedCredentialsBindings) == 0 {
+			log.Info("Neither SecretBindings nor CredentialsBindings are referencing the Quota, deletion accepted")
 
 			if controllerutil.ContainsFinalizer(quota, gardencorev1beta1.GardenerName) {
 				log.Info("Removing finalizer")
@@ -72,7 +77,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			return reconcile.Result{}, nil
 		}
 
-		message := fmt.Sprintf("Cannot delete Quota, because the following SecretBindings are still referencing it: %+v", associatedSecretBindings)
+		message := fmt.Sprintf("Cannot delete Quota, because the following resources are still referencing it: SecretBindings - %+v, CredentialsBindings - %+v", associatedSecretBindings, associatedCredentialsBindings)
 		r.Recorder.Event(quota, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, message)
 		return reconcile.Result{}, fmt.Errorf(message)
 	}
