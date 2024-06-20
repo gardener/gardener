@@ -31,13 +31,15 @@ var _ = Describe("RenewGardenAccess", func() {
 
 		gardenClient client.Client
 
-		seeds []gardencorev1beta1.Seed
+		seedType gardencorev1beta1.Seed
+		seeds    []gardencorev1beta1.Seed
 	)
 
 	BeforeEach(func() {
 		ctx = context.TODO()
 		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 
+		seedType = gardencorev1beta1.Seed{}
 		seeds = []gardencorev1beta1.Seed{
 			{ObjectMeta: metav1.ObjectMeta{Name: "seed1"}},
 			{ObjectMeta: metav1.ObjectMeta{Name: "seed2"}},
@@ -54,39 +56,39 @@ var _ = Describe("RenewGardenAccess", func() {
 		return nil
 	}
 
-	Context("#CheckIfGardenSecretsRenewalCompletedInAllSeeds", func() {
+	Context("#CheckIfAccessSecretsRenewalCompletedInAllObjectsOfKind", func() {
 		It("should succeed if no seed is annotated anymore - `renew-garden-access-secrets`", func() {
 			Expect(createSeeds()).To(Succeed())
 
-			Expect(CheckIfGardenSecretsRenewalCompletedInAllSeeds(ctx, gardenClient, renewGardenAccessSecrets)).To(Succeed())
+			Expect(CheckIfAccessSecretsRenewalCompletedInAllObjectsOfKind(ctx, gardenClient, &seedType, renewGardenAccessSecrets)).To(Succeed())
 		})
 
 		It("should succeed if no seed is annotated anymore - `renew-kubeconfig`", func() {
 			Expect(createSeeds()).To(Succeed())
 
-			Expect(CheckIfGardenSecretsRenewalCompletedInAllSeeds(ctx, gardenClient, renewKubeconfig)).To(Succeed())
+			Expect(CheckIfAccessSecretsRenewalCompletedInAllObjectsOfKind(ctx, gardenClient, &seedType, renewKubeconfig)).To(Succeed())
 		})
 
 		It("should succeed if some seeds have a different `gardener.cloud/operation` annotation", func() {
 			seeds[0].SetAnnotations(map[string]string{"gardener.cloud/operation": "reconcile"})
 			Expect(createSeeds()).To(Succeed())
 
-			Expect(CheckIfGardenSecretsRenewalCompletedInAllSeeds(ctx, gardenClient, renewGardenAccessSecrets)).To(Succeed())
+			Expect(CheckIfAccessSecretsRenewalCompletedInAllObjectsOfKind(ctx, gardenClient, &seedType, renewGardenAccessSecrets)).To(Succeed())
 		})
 
 		It("should fail if some seeds are still annotated with `renew-garden-access-secrets`", func() {
 			seeds[1].SetAnnotations(map[string]string{"gardener.cloud/operation": renewGardenAccessSecrets})
 			Expect(createSeeds()).To(Succeed())
 
-			Expect(CheckIfGardenSecretsRenewalCompletedInAllSeeds(ctx, gardenClient, renewGardenAccessSecrets)).To(MatchError(ContainSubstring("renewing secrets for seed \"seed2\" is not yet completed")))
+			Expect(CheckIfAccessSecretsRenewalCompletedInAllObjectsOfKind(ctx, gardenClient, &seedType, renewGardenAccessSecrets)).To(MatchError(ContainSubstring("renewing secrets for Seed \"seed2\" is not yet completed")))
 		})
 	})
 
-	Context("#RenewGardenSecretsInAllSeeds", func() {
+	Context("#RenewAccessSecretsInAllObjectsOfKind", func() {
 		It("should succeed and annotate all seeds - `renew-garden-access-secrets`", func() {
 			Expect(createSeeds()).To(Succeed())
 
-			Expect(RenewGardenSecretsInAllSeeds(ctx, logger, gardenClient, renewGardenAccessSecrets)).To(Succeed())
+			Expect(RenewAccessSecretsInAllObjectsOfKind(ctx, logger, gardenClient, &seedType, renewGardenAccessSecrets)).To(Succeed())
 
 			seedList := gardencorev1beta1.SeedList{}
 			Expect(gardenClient.List(ctx, &seedList)).To(Succeed())
@@ -98,7 +100,7 @@ var _ = Describe("RenewGardenAccess", func() {
 		It("should succeed and annotate all seeds - `renew-kubeconfig`", func() {
 			Expect(createSeeds()).To(Succeed())
 
-			Expect(RenewGardenSecretsInAllSeeds(ctx, logger, gardenClient, renewKubeconfig)).To(Succeed())
+			Expect(RenewAccessSecretsInAllObjectsOfKind(ctx, logger, gardenClient, &seedType, renewKubeconfig)).To(Succeed())
 
 			seedList := gardencorev1beta1.SeedList{}
 			Expect(gardenClient.List(ctx, &seedList)).To(Succeed())
@@ -111,7 +113,7 @@ var _ = Describe("RenewGardenAccess", func() {
 			seeds[0].SetAnnotations(map[string]string{"gardener.cloud/operation": renewGardenAccessSecrets})
 			Expect(createSeeds()).To(Succeed())
 
-			Expect(RenewGardenSecretsInAllSeeds(ctx, logger, gardenClient, renewGardenAccessSecrets)).To(Succeed())
+			Expect(RenewAccessSecretsInAllObjectsOfKind(ctx, logger, gardenClient, &seedType, renewGardenAccessSecrets)).To(Succeed())
 
 			seedList := gardencorev1beta1.SeedList{}
 			Expect(gardenClient.List(ctx, &seedList)).To(Succeed())
@@ -124,7 +126,7 @@ var _ = Describe("RenewGardenAccess", func() {
 			seeds[0].SetAnnotations(map[string]string{"gardener.cloud/operation": "reconcile"})
 			Expect(createSeeds()).To(Succeed())
 
-			Expect(RenewGardenSecretsInAllSeeds(ctx, logger, gardenClient, renewGardenAccessSecrets)).To(MatchError(ContainSubstring("error annotating seed seed1: already annotated with \"gardener.cloud/operation: reconcile\"")))
+			Expect(RenewAccessSecretsInAllObjectsOfKind(ctx, logger, gardenClient, &seedType, renewGardenAccessSecrets)).To(MatchError(ContainSubstring("error annotating Seed seed1: already annotated with \"gardener.cloud/operation: reconcile\"")))
 		})
 	})
 })
