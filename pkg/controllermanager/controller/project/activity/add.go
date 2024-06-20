@@ -77,7 +77,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 		source.Kind(mgr.GetCache(), &gardencorev1beta1.Quota{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapObjectToProject), mapper.UpdateWithNew, c.GetLogger()),
 		r.OnlyNewlyCreatedObjects(),
-		r.NeedsSecretBindingReferenceLabelPredicate(),
+		r.NeedsSecretOrCredentialsBindingReferenceLabelPredicate(),
 	); err != nil {
 		return err
 	}
@@ -86,7 +86,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 		source.Kind(mgr.GetCache(), &corev1.Secret{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapObjectToProject), mapper.UpdateWithNew, c.GetLogger()),
 		r.OnlyNewlyCreatedObjects(),
-		r.NeedsSecretBindingReferenceLabelPredicate(),
+		r.NeedsSecretOrCredentialsBindingReferenceLabelPredicate(),
 	)
 }
 
@@ -105,9 +105,9 @@ func (r *Reconciler) OnlyNewlyCreatedObjects() predicate.Predicate {
 	}
 }
 
-// NeedsSecretBindingReferenceLabelPredicate returns a predicate which only returns true when the objects have the
-// reference.gardener.cloud/secretbinding label.
-func (r *Reconciler) NeedsSecretBindingReferenceLabelPredicate() predicate.Predicate {
+// NeedsSecretOrCredentialsBindingReferenceLabelPredicate returns a predicate which only returns true when the objects have the
+// reference.gardener.cloud/secretbinding or reference.gardener.cloud/credentialsbinding label.
+func (r *Reconciler) NeedsSecretOrCredentialsBindingReferenceLabelPredicate() predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			objMeta, err := meta.Accessor(e.Object)
@@ -115,8 +115,9 @@ func (r *Reconciler) NeedsSecretBindingReferenceLabelPredicate() predicate.Predi
 				return false
 			}
 
-			_, hasLabel := objMeta.GetLabels()[v1beta1constants.LabelSecretBindingReference]
-			return hasLabel
+			_, hasSecretBindingLabel := objMeta.GetLabels()[v1beta1constants.LabelSecretBindingReference]
+			_, hasCredentialsBindingLabel := objMeta.GetLabels()[v1beta1constants.LabelCredentialsBindingReference]
+			return hasSecretBindingLabel || hasCredentialsBindingLabel
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			oldObjMeta, err := meta.Accessor(e.ObjectOld)
@@ -129,10 +130,15 @@ func (r *Reconciler) NeedsSecretBindingReferenceLabelPredicate() predicate.Predi
 				return false
 			}
 
-			_, oldObjHasLabel := oldObjMeta.GetLabels()[v1beta1constants.LabelSecretBindingReference]
-			_, newObjHasLabel := objMeta.GetLabels()[v1beta1constants.LabelSecretBindingReference]
+			_, oldObjHasSecretBindingLabel := oldObjMeta.GetLabels()[v1beta1constants.LabelSecretBindingReference]
+			_, newObjHasSecretBindingLabel := objMeta.GetLabels()[v1beta1constants.LabelSecretBindingReference]
+			_, oldObjHasCredentialsBindingLabel := oldObjMeta.GetLabels()[v1beta1constants.LabelCredentialsBindingReference]
+			_, newObjHasCredentialsBindingLabel := objMeta.GetLabels()[v1beta1constants.LabelCredentialsBindingReference]
 
-			return oldObjHasLabel || newObjHasLabel
+			return oldObjHasSecretBindingLabel ||
+				newObjHasSecretBindingLabel ||
+				oldObjHasCredentialsBindingLabel ||
+				newObjHasCredentialsBindingLabel
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
 			objMeta, err := meta.Accessor(e.Object)
@@ -140,8 +146,9 @@ func (r *Reconciler) NeedsSecretBindingReferenceLabelPredicate() predicate.Predi
 				return false
 			}
 
-			_, hasLabel := objMeta.GetLabels()[v1beta1constants.LabelSecretBindingReference]
-			return hasLabel
+			_, hasSecretBindingLabel := objMeta.GetLabels()[v1beta1constants.LabelSecretBindingReference]
+			_, hasCredentialsBindingLabel := objMeta.GetLabels()[v1beta1constants.LabelCredentialsBindingReference]
+			return hasSecretBindingLabel || hasCredentialsBindingLabel
 		},
 	}
 }
