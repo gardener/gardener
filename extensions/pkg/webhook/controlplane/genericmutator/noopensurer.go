@@ -107,3 +107,8 @@ func (e *NoopEnsurer) EnsureAdditionalProvisionUnits(_ context.Context, _ extens
 func (e *NoopEnsurer) EnsureAdditionalProvisionFiles(_ context.Context, _ extensionscontextwebhook.GardenContext, _, _ *[]extensionsv1alpha1.File) error {
 	return nil
 }
+
+// EnsureCRIConfig ensures the CRI config.
+func (e *NoopEnsurer) EnsureCRIConfig(_ context.Context, _ extensionscontextwebhook.GardenContext, _, _ *extensionsv1alpha1.CRIConfig) error {
+	return nil
+}

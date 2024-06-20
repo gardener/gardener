@@ -103,6 +103,20 @@ func (mr *MockEnsurerMockRecorder) EnsureAdditionalUnits(arg0, arg1, arg2, arg3 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureAdditionalUnits", reflect.TypeOf((*MockEnsurer)(nil).EnsureAdditionalUnits), arg0, arg1, arg2, arg3)
 }
 
+// EnsureCRIConfig mocks base method.
+func (m *MockEnsurer) EnsureCRIConfig(arg0 context.Context, arg1 context0.GardenContext, arg2, arg3 *v1alpha10.CRIConfig) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnsureCRIConfig", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// EnsureCRIConfig indicates an expected call of EnsureCRIConfig.
+func (mr *MockEnsurerMockRecorder) EnsureCRIConfig(arg0, arg1, arg2, arg3 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureCRIConfig", reflect.TypeOf((*MockEnsurer)(nil).EnsureCRIConfig), arg0, arg1, arg2, arg3)
+}
+
 // EnsureClusterAutoscalerDeployment mocks base method.
 func (m *MockEnsurer) EnsureClusterAutoscalerDeployment(arg0 context.Context, arg1 context0.GardenContext, arg2, arg3 *v1.Deployment) error {
 	m.ctrl.T.Helper()
