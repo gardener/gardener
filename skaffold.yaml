@@ -831,7 +831,6 @@ resourceSelector:
     - groupKind: ControllerDeployment.core.gardener.cloud
       image:
         - ".helm.ociRepository.ref"
-        - ".*"
     - groupKind: CloudProfile.core.gardener.cloud
       image: [".*"]
 manifests:
