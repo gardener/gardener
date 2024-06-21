@@ -105,25 +105,6 @@ var _ = Describe("Gardener upgrade Tests for", func() {
 				Expect(seedClient.Delete(ctx, job, client.PropagationPolicy(metav1.DeletePropagationForeground))).To(Succeed())
 			})
 
-			// Verify that after upgrading from Gardener v1.97 a migration operating system config secret
-			// exists.
-			// TODO(MichaelEischer): drop this check after v1.98 has been released.
-			It("verify that old shoots use operating system config hash version 1 after gardener upgrade", func() {
-				if !strings.HasPrefix(gardenerPreviousVersion, "v1.97.") || v1beta1helper.IsWorkerless(f.Shoot) {
-					Skip("test only relevant for upgrade from Gardener v1.97 on shoots with workers")
-				}
-
-				secret := &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      operatingsystemconfig.WorkerPoolHashesSecretName,
-						Namespace: f.ShootFramework.ShootSeedNamespace(),
-					},
-				}
-				Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
-				data := secret.Data["pools"]
-				Expect(data).To(ContainSubstring("migrated: true"))
-			})
-
 			It("should be able to delete a shoot which was created in previous release", func() {
 				Expect(f.Shoot.Status.Gardener.Version).Should(Equal(gardenerPreviousVersion))
 				Expect(f.GardenerFramework.DeleteShootAndWaitForDeletion(ctx, f.Shoot)).To(Succeed())
