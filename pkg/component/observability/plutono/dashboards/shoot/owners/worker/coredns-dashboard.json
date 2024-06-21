@@ -1086,7 +1086,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(coredns_forward_requests_total{pod=~\"$pod\"} - coredns_forward_requests_total{pod=~\"$pod\"} offset $__interval) by (to)",
+          "expr": "sum(coredns_proxy_request_duration_seconds_count{pod=~\"$pod\", proxy_name=\"forward\"} - coredns_proxy_request_duration_seconds_count{pod=~\"$pod\", proxy_name=\"forward\"} offset $__interval) by (to)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -1190,7 +1190,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(coredns_forward_requests_total{pod=~\"$pod\"}[$__rate_interval])) by (to)",
+          "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{pod=~\"$pod\", proxy_name=\"forward\"}[$__rate_interval])) by (to)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -1292,7 +1292,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(coredns_forward_responses_total{pod=~\"$pod\"} - coredns_forward_responses_total{pod=~\"$pod\"} offset $__interval) by (to,rcode)",
+          "expr": "sum(coredns_proxy_request_duration_seconds_count{pod=~\"$pod\", proxy_name=\"forward\"} - coredns_proxy_request_duration_seconds_count{pod=~\"$pod\", proxy_name=\"forward\"} offset $__interval) by (to,rcode)",
           "hide": false,
           "interval": "",
           "legendFormat": "{{rcode}}  ({{to}})",
@@ -1393,7 +1393,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(coredns_forward_responses_total{pod=~\"$pod\"}[$__rate_interval])",
+          "expr": "rate(coredns_proxy_request_duration_seconds_count{pod=~\"$pod\", proxy_name=\"forward\"}[$__rate_interval])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
