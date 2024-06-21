@@ -1048,14 +1048,12 @@ func (r *Reconciler) newGardenerScheduler(garden *operatorv1alpha1.Garden, secre
 }
 
 func (r *Reconciler) certManagementValues(garden *operatorv1alpha1.Garden) certmanagement.Values {
-	var values certmanagement.Values
-	config := garden.Spec.RuntimeCluster.CertManagement
-	if config != nil {
-		values = certmanagement.Values{
-			Namespace:     r.GardenNamespace,
-			DeployConfig:  config.Config,
-			DefaultIssuer: config.DefaultIssuer,
-		}
+	values := certmanagement.Values{
+		Namespace: r.GardenNamespace,
+	}
+	if config := garden.Spec.RuntimeCluster.CertManagement; config != nil {
+		values.DeployConfig = config.Config
+		values.DefaultIssuer = config.DefaultIssuer
 	}
 	return values
 }
@@ -1067,11 +1065,11 @@ func (r *Reconciler) newCertManagementController(garden *operatorv1alpha1.Garden
 		return nil, err
 	}
 	values.Image = image.String()
-	return certmanagement.NewDeployment(r.RuntimeClientSet.Client(), values), nil
+	return certmanagement.NewController(r.RuntimeClientSet.Client(), values), nil
 }
 
 func (r *Reconciler) newCertManagementIssuer(garden *operatorv1alpha1.Garden) component.DeployWaiter {
-	return certmanagement.NewDefaultIssuer(r.RuntimeClientSet.Client(), r.certManagementValues(garden))
+	return certmanagement.NewIssuers(r.RuntimeClientSet.Client(), r.certManagementValues(garden))
 }
 
 func (r *Reconciler) newGardenerDashboard(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, wildcardCertSecretName *string) (gardenerdashboard.Interface, error) {

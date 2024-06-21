@@ -29,7 +29,7 @@ import (
 var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 	var (
 		backupSecret = defaultBackupSecret()
-		garden       = defaultGarden(backupSecret)
+		garden       = defaultGarden(backupSecret, false)
 	)
 
 	It("Create Garden, Rotate Credentials and Delete Garden", Label("credentials-rotation"), func() {

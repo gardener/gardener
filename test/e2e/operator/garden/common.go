@@ -61,10 +61,20 @@ func defaultBackupSecret() *corev1.Secret {
 	}
 }
 
-func defaultGarden(backupSecret *corev1.Secret) *operatorv1alpha1.Garden {
+func defaultGarden(backupSecret *corev1.Secret, withCertManagement bool) *operatorv1alpha1.Garden {
 	randomSuffix, err := utils.GenerateRandomStringFromCharset(5, "0123456789abcdefghijklmnopqrstuvwxyz")
 	Expect(err).NotTo(HaveOccurred())
 	name := "garden-" + randomSuffix
+
+	var certManagement *operatorv1alpha1.CertManagement
+	if withCertManagement {
+		certManagement = &operatorv1alpha1.CertManagement{
+			DefaultIssuer: operatorv1alpha1.DefaultIssuer{
+				Email:  "some.user@some-domain.com",
+				Server: "https://acme-staging-v02.api.letsencrypt.org/directory",
+			},
+		}
+	}
 
 	return &operatorv1alpha1.Garden{
 		ObjectMeta: metav1.ObjectMeta{
@@ -93,6 +103,7 @@ func defaultGarden(backupSecret *corev1.Secret) *operatorv1alpha1.Garden {
 						Enabled: true,
 					},
 				},
+				CertManagement: certManagement,
 			},
 			VirtualCluster: operatorv1alpha1.VirtualCluster{
 				ControlPlane: &operatorv1alpha1.ControlPlane{

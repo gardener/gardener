@@ -25,7 +25,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -65,10 +64,10 @@ var _ = Describe("CertManagement", func() {
 		issuer *certv1alpha1.Issuer
 
 		newController = func(values Values) component.DeployWaiter {
-			return NewDeployment(c, values)
+			return NewController(c, values)
 		}
 		newDefaultIssuer = func(values Values) component.DeployWaiter {
-			return NewDefaultIssuer(c, values)
+			return NewIssuers(c, values)
 		}
 
 		checkIssuer     func()
@@ -84,7 +83,7 @@ var _ = Describe("CertManagement", func() {
 		contain = NewManagedResourceContainsObjectsMatcher(c)
 
 		Expect(c.Create(ctx, &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Name: "issuer-secret", Namespace: "garden"},
+			ObjectMeta: metav1.ObjectMeta{Name: "issuer-secret", Namespace: namespace},
 			Type:       "Opaque",
 			Data:       map[string][]byte{"privateKey": []byte("1234")},
 		})).To(Succeed())
@@ -304,7 +303,7 @@ var _ = Describe("CertManagement", func() {
 				Email:  "test@example.com",
 				PrivateKeySecretRef: &corev1.SecretReference{
 					Name:      "issuer-secret",
-					Namespace: "garden",
+					Namespace: namespace,
 				},
 			},
 		},
@@ -315,7 +314,7 @@ var _ = Describe("CertManagement", func() {
 		expectedMrProvider := &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            "cert-management-issuers",
-				Namespace:       "garden",
+				Namespace:       namespace,
 				ResourceVersion: "1",
 				Labels:          map[string]string{"gardener.cloud/role": "seed-system-component"},
 			},
@@ -337,8 +336,8 @@ var _ = Describe("CertManagement", func() {
 		Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceDeployment), managedResourceDeployment)).To(Succeed())
 		expectedMrDeployment := &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:            "cert-management-deployment",
-				Namespace:       "garden",
+				Name:            "cert-management-controller",
+				Namespace:       namespace,
 				ResourceVersion: "1",
 				Labels:          map[string]string{"gardener.cloud/role": "seed-system-component"},
 			},
@@ -367,7 +366,7 @@ var _ = Describe("CertManagement", func() {
 		managedResourceIssuer = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "cert-management-issuers",
-				Namespace: "garden",
+				Namespace: namespace,
 				Labels: map[string]string{
 					"app.kubernetes.io/name": "cert-management",
 				},
@@ -376,7 +375,7 @@ var _ = Describe("CertManagement", func() {
 		managedResourceIssuerSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "managedresource-" + managedResourceIssuer.Name,
-				Namespace: "garden",
+				Namespace: namespace,
 				Labels: map[string]string{
 					"app.kubernetes.io/name": "cert-management",
 				},
@@ -384,8 +383,8 @@ var _ = Describe("CertManagement", func() {
 		}
 		managedResourceDeployment = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "cert-management-deployment",
-				Namespace: "garden",
+				Name:      "cert-management-controller",
+				Namespace: namespace,
 				Labels: map[string]string{
 					"app.kubernetes.io/name": "cert-management",
 				},
@@ -394,7 +393,7 @@ var _ = Describe("CertManagement", func() {
 		managedResourceDeploymentSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "managedresource-" + managedResourceDeployment.Name,
-				Namespace: "garden",
+				Namespace: namespace,
 				Labels: map[string]string{
 					"app.kubernetes.io/name": "cert-management",
 				},
@@ -427,7 +426,7 @@ var _ = Describe("CertManagement", func() {
 			secret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "ca-certificates",
-					Namespace: v1beta1constants.GardenNamespace,
+					Namespace: namespace,
 				},
 				Data: map[string][]byte{
 					"bundle.crt": []byte("-----BEGIN CERTIFICATE-----\nXXX\n-----END CERTIFICATE-----"),
@@ -494,7 +493,7 @@ var _ = Describe("CertManagement", func() {
 		It("should successfully destroy all resources of controller", func() {
 			comp := newController(values)
 
-			Expect(c.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "garden"}})).To(Succeed())
+			Expect(c.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}})).To(Succeed())
 			Expect(c.Create(ctx, managedResourceDeployment)).To(Succeed())
 			Expect(c.Create(ctx, managedResourceDeploymentSecret)).To(Succeed())
 
@@ -507,7 +506,7 @@ var _ = Describe("CertManagement", func() {
 		It("should successfully destroy all resources of default issuer", func() {
 			comp := newDefaultIssuer(values)
 
-			Expect(c.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "garden"}})).To(Succeed())
+			Expect(c.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}})).To(Succeed())
 			Expect(c.Create(ctx, managedResourceIssuer)).To(Succeed())
 			Expect(c.Create(ctx, managedResourceIssuerSecret)).To(Succeed())
 

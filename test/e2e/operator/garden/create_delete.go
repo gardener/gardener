@@ -35,7 +35,7 @@ import (
 var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 	var (
 		backupSecret = defaultBackupSecret()
-		garden       = defaultGarden(backupSecret)
+		garden       = defaultGarden(backupSecret, true)
 	)
 
 	It("Create, Delete", Label("simple"), func() {
@@ -115,6 +115,8 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 				healthyManagedResource("terminal-virtual"),
 				healthyManagedResource("gardener-metrics-exporter-runtime"),
 				healthyManagedResource("gardener-metrics-exporter-virtual"),
+				healthyManagedResource("cert-management-controller"),
+				healthyManagedResource("cert-management-issuers"),
 			))
 
 			g.Expect(runtimeClient.List(ctx, managedResourceList, client.InNamespace("istio-system"))).To(Succeed())

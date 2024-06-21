@@ -32,8 +32,8 @@ import (
 )
 
 const (
-	// deploymentManagedResourceName is the name of the managed resource for the resources.
-	deploymentManagedResourceName = "cert-management-deployment"
+	// controllerManagedResourceName is the name of the managed resource for the resources.
+	controllerManagedResourceName = "cert-management-controller"
 
 	resourceName  = "cert-controller-manager"
 	containerName = "cert-management"
@@ -42,9 +42,9 @@ const (
 	rsaPrivateKeySize = 3072
 )
 
-// NewDeployment creates a new instance of DeployWaiter for the CertManagement controller.
-func NewDeployment(cl client.Client, values Values) component.DeployWaiter {
-	return &certManagementDeployment{
+// NewController creates a new instance of DeployWaiter for the CertManagement controller.
+func NewController(cl client.Client, values Values) component.DeployWaiter {
+	return &controllerDeployer{
 		client:    cl,
 		namespace: values.Namespace,
 		image:     values.Image,
@@ -52,14 +52,14 @@ func NewDeployment(cl client.Client, values Values) component.DeployWaiter {
 	}
 }
 
-type certManagementDeployment struct {
+type controllerDeployer struct {
 	client    client.Client
 	namespace string
 	image     string
 	config    *operatorv1alpha1.CertManagementConfig
 }
 
-func (d *certManagementDeployment) Deploy(ctx context.Context) error {
+func (d *controllerDeployer) Deploy(ctx context.Context) error {
 	var (
 		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
@@ -259,7 +259,7 @@ func (d *certManagementDeployment) Deploy(ctx context.Context) error {
 
 	if d.config != nil && d.config.CACertificatesSecretRef != nil {
 		caCertSecret := &corev1.Secret{}
-		if err := d.client.Get(ctx, getObjectKeyLocalObjectRef(*d.config.CACertificatesSecretRef), caCertSecret); err != nil {
+		if err := d.client.Get(ctx, client.ObjectKey{Namespace: d.namespace, Name: d.config.CACertificatesSecretRef.Name}, caCertSecret); err != nil {
 			return err
 		}
 		caCertSecret.ObjectMeta = metav1.ObjectMeta{
@@ -300,29 +300,29 @@ func (d *certManagementDeployment) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForSeed(ctx, d.client, v1beta1constants.GardenNamespace, deploymentManagedResourceName, false, resources)
+	return managedresources.CreateForSeed(ctx, d.client, d.namespace, controllerManagedResourceName, false, resources)
 }
 
-func (d *certManagementDeployment) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForSeed(ctx, d.client, v1beta1constants.GardenNamespace, deploymentManagedResourceName)
+func (d *controllerDeployer) Destroy(ctx context.Context) error {
+	return managedresources.DeleteForSeed(ctx, d.client, d.namespace, controllerManagedResourceName)
 }
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
 // or deleted.
 var TimeoutWaitForManagedResource = 2 * time.Minute
 
-func (d *certManagementDeployment) Wait(ctx context.Context) error {
+func (d *controllerDeployer) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilHealthy(timeoutCtx, d.client, v1beta1constants.GardenNamespace, deploymentManagedResourceName)
+	return managedresources.WaitUntilHealthy(timeoutCtx, d.client, d.namespace, controllerManagedResourceName)
 }
 
-func (d *certManagementDeployment) WaitCleanup(ctx context.Context) error {
+func (d *controllerDeployer) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilDeleted(timeoutCtx, d.client, v1beta1constants.GardenNamespace, deploymentManagedResourceName)
+	return managedresources.WaitUntilDeleted(timeoutCtx, d.client, d.namespace, controllerManagedResourceName)
 }
 
 func getDeploymentLabels() map[string]string {
@@ -330,8 +330,4 @@ func getDeploymentLabels() map[string]string {
 		appName:     componentName,
 		appInstance: componentName,
 	}
-}
-
-func getObjectKeyLocalObjectRef(ref corev1.LocalObjectReference) client.ObjectKey {
-	return client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: ref.Name}
 }

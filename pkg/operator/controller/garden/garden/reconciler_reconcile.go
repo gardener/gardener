@@ -499,7 +499,7 @@ func (r *Reconciler) reconcile(
 	if garden.Spec.RuntimeCluster.CertManagement != nil {
 		certManagementCRDs := g.Add(flow.Task{
 			Name:         "Deploying Cert-Management CRDs",
-			Fn:           c.certManagementController.Deploy,
+			Fn:           c.certManagementCRD.Deploy,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{

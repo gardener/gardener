@@ -13,7 +13,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
@@ -32,7 +31,7 @@ const (
 	appInstance = "app.kubernetes.io/instance"
 )
 
-type certManagement struct {
+type issuersDeployer struct {
 	values Values
 	client client.Client
 }
@@ -45,32 +44,32 @@ type Values struct {
 	DefaultIssuer operatorv1alpha1.DefaultIssuer
 }
 
-// NewDefaultIssuer creates a new Deployer for the cert-management component.
-func NewDefaultIssuer(
+// NewIssuers creates a new Deployer for the cert-management component.
+func NewIssuers(
 	cl client.Client,
 	values Values,
 ) component.DeployWaiter {
-	return &certManagement{
+	return &issuersDeployer{
 		values: values,
 		client: cl,
 	}
 }
 
-var _ component.DeployWaiter = &certManagement{}
+var _ component.DeployWaiter = &issuersDeployer{}
 
-func (c *certManagement) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForSeed(ctx, c.client, v1beta1constants.GardenNamespace, issuersManagedResourceName)
+func (c *issuersDeployer) Destroy(ctx context.Context) error {
+	return managedresources.DeleteForSeed(ctx, c.client, c.values.Namespace, issuersManagedResourceName)
 }
 
-func (c *certManagement) Wait(ctx context.Context) error {
-	return managedresources.WaitUntilHealthy(ctx, c.client, v1beta1constants.GardenNamespace, issuersManagedResourceName)
+func (c *issuersDeployer) Wait(ctx context.Context) error {
+	return managedresources.WaitUntilHealthy(ctx, c.client, c.values.Namespace, issuersManagedResourceName)
 }
 
-func (c *certManagement) WaitCleanup(ctx context.Context) error {
-	return managedresources.WaitUntilDeleted(ctx, c.client, v1beta1constants.GardenNamespace, issuersManagedResourceName)
+func (c *issuersDeployer) WaitCleanup(ctx context.Context) error {
+	return managedresources.WaitUntilDeleted(ctx, c.client, c.values.Namespace, issuersManagedResourceName)
 }
 
-func (c *certManagement) Deploy(ctx context.Context) error {
+func (c *issuersDeployer) Deploy(ctx context.Context) error {
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
 	issuerObj := &certv1alpha1.Issuer{
@@ -89,7 +88,7 @@ func (c *certManagement) Deploy(ctx context.Context) error {
 	objects := []client.Object{issuerObj}
 	if c.values.DefaultIssuer.SecretRef != nil {
 		issuerSecret := &corev1.Secret{}
-		if err := c.client.Get(ctx, getObjectKeyLocalObjectRef(*c.values.DefaultIssuer.SecretRef), issuerSecret); err != nil {
+		if err := c.client.Get(ctx, client.ObjectKey{Namespace: c.values.Namespace, Name: c.values.DefaultIssuer.SecretRef.Name}, issuerSecret); err != nil {
 			return fmt.Errorf("cannot read secret for issuer %s: %w", DefaultIssuerName, err)
 		}
 		issuerObj.Spec.ACME.PrivateKeySecretRef = &corev1.SecretReference{
@@ -106,7 +105,7 @@ func (c *certManagement) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := managedresources.CreateForSeed(ctx, c.client, v1beta1constants.GardenNamespace, issuersManagedResourceName, false, resources); err != nil {
+	if err := managedresources.CreateForSeed(ctx, c.client, c.values.Namespace, issuersManagedResourceName, false, resources); err != nil {
 		return fmt.Errorf("creating issuers failed: %w", err)
 	}
 
