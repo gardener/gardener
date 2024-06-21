@@ -20,7 +20,7 @@ import (
 )
 
 // ControllerName is the name of the controller.
-const ControllerName = "kubelet-csr-approver"
+const ControllerName = "csr-approver"
 
 // AddToManager adds Reconciler to the given manager.
 func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster) error {

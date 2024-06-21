@@ -36,10 +36,10 @@ func AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targe
 		return fmt.Errorf("failed creating Kubernetes client: %w", err)
 	}
 
-	if cfg.Controllers.KubeletCSRApprover.Enabled {
+	if cfg.Controllers.CSRApprover.Enabled {
 		if err := (&csrapprover.Reconciler{
 			CertificatesClient: targetClientSet.CertificatesV1().CertificateSigningRequests(),
-			Config:             cfg.Controllers.KubeletCSRApprover,
+			Config:             cfg.Controllers.CSRApprover,
 		}).AddToManager(mgr, sourceCluster, targetCluster); err != nil {
 			return fmt.Errorf("failed adding Kubelet CSR Approver controller: %w", err)
 		}

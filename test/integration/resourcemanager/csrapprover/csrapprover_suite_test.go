@@ -42,7 +42,7 @@ func TestCSRApprover(t *testing.T) {
 }
 
 // testID is used for generating test namespace names and other IDs
-const testID = "kubelet-csr-autoapprove-controller-test"
+const testID = "csr-autoapprove-controller-test"
 
 var (
 	ctx = context.Background()
@@ -135,7 +135,7 @@ var _ = BeforeSuite(func() {
 
 	Expect((&csrapprover.Reconciler{
 		CertificatesClient: kubernetesClient.CertificatesV1().CertificateSigningRequests(),
-		Config: config.KubeletCSRApproverControllerConfig{
+		Config: config.CSRApproverControllerConfig{
 			ConcurrentSyncs:  ptr.To(5),
 			MachineNamespace: testNamespace.Name,
 		},
