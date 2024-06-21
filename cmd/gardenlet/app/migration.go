@@ -13,7 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -171,16 +170,14 @@ func cleanupDWDAccess(ctx context.Context, gardenClient client.Client, seedClien
 		return err
 	}
 
-	workerlessShootNamespaces := sets.New[string]()
-	for _, shoot := range shootList.Items {
-		if v1beta1helper.IsWorkerless(&shoot) && shoot.DeletionTimestamp == nil {
-			workerlessShootNamespaces.Insert(shoot.Status.TechnicalID)
-		}
-	}
-
 	var taskFns []flow.TaskFn
 
-	for _, namespace := range workerlessShootNamespaces.UnsortedList() {
+	for _, shoot := range shootList.Items {
+		if !v1beta1helper.IsWorkerless(&shoot) || shoot.DeletionTimestamp != nil {
+			continue
+		}
+
+		namespace := shoot.Status.TechnicalID
 		taskFns = append(taskFns, func(ctx context.Context) error {
 			if err := kubernetesutils.DeleteObjects(ctx, seedClient,
 				&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: dependencywatchdog.KubeConfigSecretName, Namespace: namespace}},
