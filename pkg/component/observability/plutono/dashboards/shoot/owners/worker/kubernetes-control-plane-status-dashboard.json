@@ -1004,7 +1004,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "max by(verb) (apiserver_latency_seconds:quantile{quantile=\"0.99\"})",
+          "expr": "max by(verb) (shoot:apiserver_latency_seconds:quantile{quantile=\"0.99\"})",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "{{verb}}",
