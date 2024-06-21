@@ -264,7 +264,7 @@ var _ = Describe("handler", func() {
 			}
 			objData, err := runtime.Encode(testEncoder, shootWithLargeStatus)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(shootsv1beta1SizeLimit.CmpInt64(int64(len(objData)))).Should(BeNumerically("==", -1))
+			Expect(shootsv1beta1SizeLimit.CmpInt64(int64(len(objData)))).Should(Equal(-1))
 			return shootWithLargeStatus
 		}
 		test(largeShoot, restrictedUser, true)
