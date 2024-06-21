@@ -25,7 +25,7 @@ reviewers:
 
 ## Summary
 
-Our plan is to extend the gardener core CloudProfile with a new bastion section that will allow us to create a bastion instance with a specific machine image and machine type that will be referenced in that new section.
+Our plan is to extend the gardener core [CloudProfile](https://github.com/gardener/gardener/blob/de64bb6ad2ff2e1a3155b44e0e4a1e565b3206b3/docs/api-reference/core.md#cloudprofile) with a new bastion section that will allow us to create a bastion instance with a specific machine image and machine type that will be referenced in that new section.
 
 ## Motivation
 
