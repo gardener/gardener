@@ -55,6 +55,11 @@ var _ = Describe("Provider", func() {
 				SuccessThreshold:    1,
 				FailureThreshold:    3,
 			},
+			Ports: []corev1.ContainerPort{{
+				Name:          "providermetrics",
+				ContainerPort: 10259,
+				Protocol:      corev1.ProtocolTCP,
+			}},
 			VolumeMounts: []corev1.VolumeMount{{
 				Name:      "kubeconfig",
 				MountPath: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig",

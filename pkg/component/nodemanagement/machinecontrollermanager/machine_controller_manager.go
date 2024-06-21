@@ -150,19 +150,32 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, m.client, service, func() error {
 		service.Labels = utils.MergeStringMaps(service.Labels, getLabels())
 
-		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{
-			Port:     ptr.To(intstr.FromInt32(portMetrics)),
-			Protocol: ptr.To(corev1.ProtocolTCP),
-		}))
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service,
+			networkingv1.NetworkPolicyPort{
+				Port:     ptr.To(intstr.FromInt32(portMetrics)),
+				Protocol: ptr.To(corev1.ProtocolTCP),
+			},
+			networkingv1.NetworkPolicyPort{
+				Port:     ptr.To(intstr.FromInt32(portProviderMetrics)),
+				Protocol: ptr.To(corev1.ProtocolTCP),
+			}),
+		)
 
 		service.Spec.Selector = getLabels()
 		service.Spec.Type = corev1.ServiceTypeClusterIP
 		service.Spec.ClusterIP = corev1.ClusterIPNone
-		desiredPorts := []corev1.ServicePort{{
-			Name:     portNameMetrics,
-			Protocol: corev1.ProtocolTCP,
-			Port:     portMetrics,
-		}}
+		desiredPorts := []corev1.ServicePort{
+			{
+				Name:     portNameMetrics,
+				Protocol: corev1.ProtocolTCP,
+				Port:     portMetrics,
+			},
+			{
+				Name:     portNameProviderMetrics,
+				Protocol: corev1.ProtocolTCP,
+				Port:     portProviderMetrics,
+			},
+		}
 		service.Spec.Ports = kubernetesutils.ReconcileServicePorts(service.Spec.Ports, desiredPorts, corev1.ServiceTypeClusterIP)
 		return nil
 	}); err != nil {
@@ -320,78 +333,105 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 		metav1.SetMetaDataLabel(&serviceMonitor.ObjectMeta, "prometheus", shoot.Label)
 		serviceMonitor.Spec = monitoringv1.ServiceMonitorSpec{
 			Selector: metav1.LabelSelector{MatchLabels: getLabels()},
-			Endpoints: []monitoringv1.Endpoint{{
-				Port: portNameMetrics,
-				RelabelConfigs: []monitoringv1.RelabelConfig{{
-					Action: "labelmap",
-					Regex:  `__meta_kubernetes_service_label_(.+)`,
-				}},
-				MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
-					// Machine Deployment related metrics
-					"mcm_machine_deployment_items_total",
-					"mcm_machine_deployment_info",
-					"mcm_machine_deployment_info_spec_paused",
-					"mcm_machine_deployment_info_spec_replicas",
-					"mcm_machine_deployment_info_spec_min_ready_seconds",
-					"mcm_machine_deployment_info_spec_rolling_update_max_surge",
-					"mcm_machine_deployment_info_spec_rolling_update_max_unavailable",
-					"mcm_machine_deployment_info_spec_revision_history_limit",
-					"mcm_machine_deployment_info_spec_progress_deadline_seconds",
-					"mcm_machine_deployment_info_spec_rollback_to_revision",
-					"mcm_machine_deployment_status_condition",
-					"mcm_machine_deployment_status_available_replicas",
-					"mcm_machine_deployment_status_unavailable_replicas",
-					"mcm_machine_deployment_status_ready_replicas",
-					"mcm_machine_deployment_status_updated_replicas",
-					"mcm_machine_deployment_status_collision_count",
-					"mcm_machine_deployment_status_replicas",
-					"mcm_machine_deployment_failed_machines",
-					// Machine Set related metrics
-					"mcm_machine_set_items_total",
-					"mcm_machine_set_info",
-					"mcm_machine_set_failed_machines",
-					"mcm_machine_set_info_spec_replicas",
-					"mcm_machine_set_info_spec_min_ready_seconds",
-					"mcm_machine_set_status_condition",
-					"mcm_machine_set_status_available_replicas",
-					"mcm_machine_set_status_fully_labelled_replicas",
-					"mcm_machine_set_status_replicas",
-					"mcm_machine_set_status_ready_replicas",
-					// Machine related metrics
-					"mcm_machine_stale_machines_total",
-					"mcm_machine_items_total",
-					"mcm_machine_current_status_phase",
-					"mcm_machine_info",
-					"mcm_machine_status_condition",
-					// Cloud API related metrics
-					"mcm_cloud_api_requests_total",
-					"mcm_cloud_api_requests_failed_total",
-					"mcm_cloud_api_api_request_duration_seconds_bucket",
-					"mcm_cloud_api_api_request_duration_seconds_sum",
-					"mcm_cloud_api_api_request_duration_seconds_count",
-					"mcm_cloud_api_driver_request_duration_seconds_sum",
-					"mcm_cloud_api_driver_request_duration_seconds_count",
-					"mcm_cloud_api_driver_request_duration_seconds_bucket",
-					"mcm_cloud_api_driver_request_failed_total",
-					// misc metrics
-					"mcm_misc_scrape_failure_total",
-					"mcm_machine_controller_frozen",
-					"process_max_fds",
-					"process_open_fds",
-					// workqueue related metrics
-					"mcm_workqueue_adds_total",
-					"mcm_workqueue_depth",
-					"mcm_workqueue_queue_duration_seconds_bucket",
-					"mcm_workqueue_queue_duration_seconds_sum",
-					"mcm_workqueue_queue_duration_seconds_count",
-					"mcm_workqueue_work_duration_seconds_bucket",
-					"mcm_workqueue_work_duration_seconds_sum",
-					"mcm_workqueue_work_duration_seconds_count",
-					"mcm_workqueue_unfinished_work_seconds",
-					"mcm_workqueue_longest_running_processor_seconds",
-					"mcm_workqueue_retries_total",
-				),
-			}},
+			Endpoints: []monitoringv1.Endpoint{
+				{
+					Port: portNameMetrics,
+					RelabelConfigs: []monitoringv1.RelabelConfig{{
+						Action: "labelmap",
+						Regex:  `__meta_kubernetes_service_label_(.+)`,
+					}},
+					MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
+						// Machine Deployment related metrics
+						"mcm_machine_deployment_items_total",
+						"mcm_machine_deployment_info",
+						"mcm_machine_deployment_info_spec_paused",
+						"mcm_machine_deployment_info_spec_replicas",
+						"mcm_machine_deployment_info_spec_min_ready_seconds",
+						"mcm_machine_deployment_info_spec_rolling_update_max_surge",
+						"mcm_machine_deployment_info_spec_rolling_update_max_unavailable",
+						"mcm_machine_deployment_info_spec_revision_history_limit",
+						"mcm_machine_deployment_info_spec_progress_deadline_seconds",
+						"mcm_machine_deployment_info_spec_rollback_to_revision",
+						"mcm_machine_deployment_status_condition",
+						"mcm_machine_deployment_status_available_replicas",
+						"mcm_machine_deployment_status_unavailable_replicas",
+						"mcm_machine_deployment_status_ready_replicas",
+						"mcm_machine_deployment_status_updated_replicas",
+						"mcm_machine_deployment_status_collision_count",
+						"mcm_machine_deployment_status_replicas",
+						"mcm_machine_deployment_failed_machines",
+						// Machine Set related metrics
+						"mcm_machine_set_items_total",
+						"mcm_machine_set_info",
+						"mcm_machine_set_failed_machines",
+						"mcm_machine_set_info_spec_replicas",
+						"mcm_machine_set_info_spec_min_ready_seconds",
+						"mcm_machine_set_status_condition",
+						"mcm_machine_set_status_available_replicas",
+						"mcm_machine_set_status_fully_labelled_replicas",
+						"mcm_machine_set_status_replicas",
+						"mcm_machine_set_status_ready_replicas",
+						// Machine related metrics
+						"mcm_machine_stale_machines_total",
+						// misc metrics
+						"mcm_misc_scrape_failure_total",
+						"process_max_fds",
+						"process_open_fds",
+						// workqueue related metrics
+						"mcm_workqueue_adds_total",
+						"mcm_workqueue_depth",
+						"mcm_workqueue_queue_duration_seconds_bucket",
+						"mcm_workqueue_queue_duration_seconds_sum",
+						"mcm_workqueue_queue_duration_seconds_count",
+						"mcm_workqueue_work_duration_seconds_bucket",
+						"mcm_workqueue_work_duration_seconds_sum",
+						"mcm_workqueue_work_duration_seconds_count",
+						"mcm_workqueue_unfinished_work_seconds",
+						"mcm_workqueue_longest_running_processor_seconds",
+						"mcm_workqueue_retries_total",
+					),
+				},
+				{
+					Port: portNameProviderMetrics,
+					RelabelConfigs: []monitoringv1.RelabelConfig{{
+						Action: "labelmap",
+						Regex:  `__meta_kubernetes_service_label_(.+)`,
+					}},
+					MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
+						// Machine related metrics
+						"mcm_machine_items_total",
+						"mcm_machine_current_status_phase",
+						"mcm_machine_info",
+						"mcm_machine_status_condition",
+						// Cloud API related metrics
+						"mcm_cloud_api_requests_total",
+						"mcm_cloud_api_requests_failed_total",
+						"mcm_cloud_api_api_request_duration_seconds_bucket",
+						"mcm_cloud_api_api_request_duration_seconds_sum",
+						"mcm_cloud_api_api_request_duration_seconds_count",
+						"mcm_cloud_api_driver_request_duration_seconds_sum",
+						"mcm_cloud_api_driver_request_duration_seconds_count",
+						"mcm_cloud_api_driver_request_duration_seconds_bucket",
+						"mcm_cloud_api_driver_request_failed_total",
+						// misc metrics
+						"mcm_machine_controller_frozen",
+						"process_max_fds",
+						"process_open_fds",
+						// workqueue related metrics
+						"mcm_workqueue_adds_total",
+						"mcm_workqueue_depth",
+						"mcm_workqueue_queue_duration_seconds_bucket",
+						"mcm_workqueue_queue_duration_seconds_sum",
+						"mcm_workqueue_queue_duration_seconds_count",
+						"mcm_workqueue_work_duration_seconds_bucket",
+						"mcm_workqueue_work_duration_seconds_sum",
+						"mcm_workqueue_work_duration_seconds_count",
+						"mcm_workqueue_unfinished_work_seconds",
+						"mcm_workqueue_longest_running_processor_seconds",
+						"mcm_workqueue_retries_total",
+					),
+				},
+			},
 		}
 		return nil
 	}); err != nil {

@@ -126,17 +126,24 @@ var _ = Describe("MachineControllerManager", func() {
 					"role": "machine-controller-manager",
 				},
 				Annotations: map[string]string{
-					"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":10258}]`,
+					"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":10258},{"protocol":"TCP","port":10259}]`,
 				},
 			},
 			Spec: corev1.ServiceSpec{
 				Type:      corev1.ServiceTypeClusterIP,
 				ClusterIP: corev1.ClusterIPNone,
-				Ports: []corev1.ServicePort{{
-					Name:     "metrics",
-					Port:     10258,
-					Protocol: corev1.ProtocolTCP,
-				}},
+				Ports: []corev1.ServicePort{
+					{
+						Name:     "metrics",
+						Port:     10258,
+						Protocol: corev1.ProtocolTCP,
+					},
+					{
+						Name:     "providermetrics",
+						Port:     10259,
+						Protocol: corev1.ProtocolTCP,
+					},
+				},
 				Selector: map[string]string{
 					"app":  "kubernetes",
 					"role": "machine-controller-manager",
@@ -333,18 +340,32 @@ var _ = Describe("MachineControllerManager", func() {
 					"app":  "kubernetes",
 					"role": "machine-controller-manager",
 				}},
-				Endpoints: []monitoringv1.Endpoint{{
-					Port: "metrics",
-					RelabelConfigs: []monitoringv1.RelabelConfig{{
-						Action: "labelmap",
-						Regex:  `__meta_kubernetes_service_label_(.+)`,
-					}},
-					MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
-						SourceLabels: []monitoringv1.LabelName{"__name__"},
-						Action:       "keep",
-						Regex:        `^(mcm_machine_deployment_items_total|mcm_machine_deployment_info|mcm_machine_deployment_info_spec_paused|mcm_machine_deployment_info_spec_replicas|mcm_machine_deployment_info_spec_min_ready_seconds|mcm_machine_deployment_info_spec_rolling_update_max_surge|mcm_machine_deployment_info_spec_rolling_update_max_unavailable|mcm_machine_deployment_info_spec_revision_history_limit|mcm_machine_deployment_info_spec_progress_deadline_seconds|mcm_machine_deployment_info_spec_rollback_to_revision|mcm_machine_deployment_status_condition|mcm_machine_deployment_status_available_replicas|mcm_machine_deployment_status_unavailable_replicas|mcm_machine_deployment_status_ready_replicas|mcm_machine_deployment_status_updated_replicas|mcm_machine_deployment_status_collision_count|mcm_machine_deployment_status_replicas|mcm_machine_deployment_failed_machines|mcm_machine_set_items_total|mcm_machine_set_info|mcm_machine_set_failed_machines|mcm_machine_set_info_spec_replicas|mcm_machine_set_info_spec_min_ready_seconds|mcm_machine_set_status_condition|mcm_machine_set_status_available_replicas|mcm_machine_set_status_fully_labelled_replicas|mcm_machine_set_status_replicas|mcm_machine_set_status_ready_replicas|mcm_machine_stale_machines_total|mcm_machine_items_total|mcm_machine_current_status_phase|mcm_machine_info|mcm_machine_status_condition|mcm_cloud_api_requests_total|mcm_cloud_api_requests_failed_total|mcm_cloud_api_api_request_duration_seconds_bucket|mcm_cloud_api_api_request_duration_seconds_sum|mcm_cloud_api_api_request_duration_seconds_count|mcm_cloud_api_driver_request_duration_seconds_sum|mcm_cloud_api_driver_request_duration_seconds_count|mcm_cloud_api_driver_request_duration_seconds_bucket|mcm_cloud_api_driver_request_failed_total|mcm_misc_scrape_failure_total|mcm_machine_controller_frozen|process_max_fds|process_open_fds|mcm_workqueue_adds_total|mcm_workqueue_depth|mcm_workqueue_queue_duration_seconds_bucket|mcm_workqueue_queue_duration_seconds_sum|mcm_workqueue_queue_duration_seconds_count|mcm_workqueue_work_duration_seconds_bucket|mcm_workqueue_work_duration_seconds_sum|mcm_workqueue_work_duration_seconds_count|mcm_workqueue_unfinished_work_seconds|mcm_workqueue_longest_running_processor_seconds|mcm_workqueue_retries_total)$`,
-					}},
-				}},
+				Endpoints: []monitoringv1.Endpoint{
+					{
+						Port: "metrics",
+						RelabelConfigs: []monitoringv1.RelabelConfig{{
+							Action: "labelmap",
+							Regex:  `__meta_kubernetes_service_label_(.+)`,
+						}},
+						MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
+							SourceLabels: []monitoringv1.LabelName{"__name__"},
+							Action:       "keep",
+							Regex:        `^(mcm_machine_deployment_items_total|mcm_machine_deployment_info|mcm_machine_deployment_info_spec_paused|mcm_machine_deployment_info_spec_replicas|mcm_machine_deployment_info_spec_min_ready_seconds|mcm_machine_deployment_info_spec_rolling_update_max_surge|mcm_machine_deployment_info_spec_rolling_update_max_unavailable|mcm_machine_deployment_info_spec_revision_history_limit|mcm_machine_deployment_info_spec_progress_deadline_seconds|mcm_machine_deployment_info_spec_rollback_to_revision|mcm_machine_deployment_status_condition|mcm_machine_deployment_status_available_replicas|mcm_machine_deployment_status_unavailable_replicas|mcm_machine_deployment_status_ready_replicas|mcm_machine_deployment_status_updated_replicas|mcm_machine_deployment_status_collision_count|mcm_machine_deployment_status_replicas|mcm_machine_deployment_failed_machines|mcm_machine_set_items_total|mcm_machine_set_info|mcm_machine_set_failed_machines|mcm_machine_set_info_spec_replicas|mcm_machine_set_info_spec_min_ready_seconds|mcm_machine_set_status_condition|mcm_machine_set_status_available_replicas|mcm_machine_set_status_fully_labelled_replicas|mcm_machine_set_status_replicas|mcm_machine_set_status_ready_replicas|mcm_machine_stale_machines_total|mcm_misc_scrape_failure_total|process_max_fds|process_open_fds|mcm_workqueue_adds_total|mcm_workqueue_depth|mcm_workqueue_queue_duration_seconds_bucket|mcm_workqueue_queue_duration_seconds_sum|mcm_workqueue_queue_duration_seconds_count|mcm_workqueue_work_duration_seconds_bucket|mcm_workqueue_work_duration_seconds_sum|mcm_workqueue_work_duration_seconds_count|mcm_workqueue_unfinished_work_seconds|mcm_workqueue_longest_running_processor_seconds|mcm_workqueue_retries_total)$`,
+						}},
+					},
+					{
+						Port: "providermetrics",
+						RelabelConfigs: []monitoringv1.RelabelConfig{{
+							Action: "labelmap",
+							Regex:  `__meta_kubernetes_service_label_(.+)`,
+						}},
+						MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
+							SourceLabels: []monitoringv1.LabelName{"__name__"},
+							Action:       "keep",
+							Regex:        `^(mcm_machine_items_total|mcm_machine_current_status_phase|mcm_machine_info|mcm_machine_status_condition|mcm_cloud_api_requests_total|mcm_cloud_api_requests_failed_total|mcm_cloud_api_api_request_duration_seconds_bucket|mcm_cloud_api_api_request_duration_seconds_sum|mcm_cloud_api_api_request_duration_seconds_count|mcm_cloud_api_driver_request_duration_seconds_sum|mcm_cloud_api_driver_request_duration_seconds_count|mcm_cloud_api_driver_request_duration_seconds_bucket|mcm_cloud_api_driver_request_failed_total|mcm_machine_controller_frozen|process_max_fds|process_open_fds|mcm_workqueue_adds_total|mcm_workqueue_depth|mcm_workqueue_queue_duration_seconds_bucket|mcm_workqueue_queue_duration_seconds_sum|mcm_workqueue_queue_duration_seconds_count|mcm_workqueue_work_duration_seconds_bucket|mcm_workqueue_work_duration_seconds_sum|mcm_workqueue_work_duration_seconds_count|mcm_workqueue_unfinished_work_seconds|mcm_workqueue_longest_running_processor_seconds|mcm_workqueue_retries_total)$`,
+						}},
+					},
+				},
 			},
 		}
 
