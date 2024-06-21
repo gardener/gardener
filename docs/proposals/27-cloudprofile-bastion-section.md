@@ -32,7 +32,7 @@ Our plan is to extend the gardener core [CloudProfile](https://github.com/garden
 We are working on updating the bastion images used in our controllers.
 Some of these machine images were hardcoded in the controller.
 We were using different image "families" in some providers like `Debian`, and in others `GardenLinux`.
-We had "custom" logic per provider to determine the "latest" image and so on.
+We had "custom" logic per provider to determine the [latest image](https://github.com/gardener/gardener-extension-provider-aws/blob/b5458175c7ec95824b752bd6a3183a83894b7a57/pkg/controller/bastion/options.go#L141) and so on.
 
 Our plan is to extend the gardener core CloudProfile with a new bastion section that will allow us to create a bastion instance with a specific machine image and machine type that will be referenced in that new section.
 
