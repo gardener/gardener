@@ -26,7 +26,6 @@ import (
 	admissioncontrollerconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
 	admissioncontrollerhelper "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/helper"
 	"github.com/gardener/gardener/pkg/admissioncontroller/metrics"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 // metricReasonSizeExceeded is a metric reason value for a reason when an object size was exceeded.
@@ -84,7 +83,7 @@ func (h *Handler) handle(req admission.Request) error {
 		return nil
 	}
 
-	objectSize, err := relevantSizeForLimit(req.Object.Raw, requestedResource)
+	objectSize, err := relevantObjectSize(req.Object.Raw)
 	if err != nil {
 		return err
 	}
@@ -106,19 +105,15 @@ func (h *Handler) handle(req admission.Request) error {
 	return nil
 }
 
-func relevantSizeForLimit(rawObject []byte, gvr *metav1.GroupVersionResource) (int64, error) {
-	shootResource := gardencorev1beta1.Resource("shoots")
-	if gvr.Group == shootResource.Group && gvr.Resource == shootResource.Resource {
-		var shoot gardencorev1beta1.Shoot
-		err := json.Unmarshal(rawObject, &shoot)
-		if err != nil {
-			return 0, err
-		}
-		shoot.Status = gardencorev1beta1.ShootStatus{}
-		marshalled, err := json.Marshal(shoot)
-		return int64(len(marshalled)), err
+func relevantObjectSize(rawObject []byte) (int64, error) {
+	var obj map[string]any
+	err := json.Unmarshal(rawObject, &obj)
+	if err != nil {
+		return 0, err
 	}
-	return int64(len(rawObject)), nil
+	delete(obj, "status")
+	marshalled, err := json.Marshal(obj)
+	return int64(len(marshalled)), err
 }
 
 func serviceAccountMatch(userInfo authenticationv1.UserInfo, subjects []rbacv1.Subject) bool {
