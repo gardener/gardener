@@ -19,12 +19,14 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	admissioncontrollerconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
 	admissioncontrollerhelper "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/helper"
 	"github.com/gardener/gardener/pkg/admissioncontroller/metrics"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 // metricReasonSizeExceeded is a metric reason value for a reason when an object size was exceeded.
@@ -82,7 +84,11 @@ func (h *Handler) handle(req admission.Request) error {
 		return nil
 	}
 
-	if objectSize := len(req.Object.Raw); limit.CmpInt64(int64(objectSize)) == -1 {
+	objectSize, err := relevantSizeForLimit(req.Object.Raw, requestedResource)
+	if err != nil {
+		return err
+	}
+	if limit.CmpInt64(objectSize) == -1 {
 		if h.Config.OperationMode == nil || *h.Config.OperationMode == admissioncontrollerconfig.AdmissionModeBlock {
 			log.Info("Maximum resource size exceeded, rejected request", "requestObjectSize", objectSize, "limit", limit)
 			metrics.RejectedResources.WithLabelValues(
@@ -98,6 +104,21 @@ func (h *Handler) handle(req admission.Request) error {
 	}
 
 	return nil
+}
+
+func relevantSizeForLimit(rawObject []byte, gvr *metav1.GroupVersionResource) (int64, error) {
+	shootResource := gardencorev1beta1.Resource("shoots")
+	if gvr.Group == shootResource.Group && gvr.Resource == shootResource.Resource {
+		var shoot gardencorev1beta1.Shoot
+		err := json.Unmarshal(rawObject, &shoot)
+		if err != nil {
+			return 0, err
+		}
+		shoot.Status = gardencorev1beta1.ShootStatus{}
+		marshalled, err := json.Marshal(shoot)
+		return int64(len(marshalled)), err
+	}
+	return int64(len(rawObject)), nil
 }
 
 func serviceAccountMatch(userInfo authenticationv1.UserInfo, subjects []rbacv1.Subject) bool {

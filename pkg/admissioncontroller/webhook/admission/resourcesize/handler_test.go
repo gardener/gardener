@@ -245,6 +245,31 @@ var _ = Describe("handler", func() {
 		test(shootv1beta1, restrictedUser, true)
 	})
 
+	It("should pass because size is in range for v1beta1 shoot without considering status", func() {
+		largeShoot := func() runtime.Object {
+			shootWithLargeStatus := &gardencorev1beta1.Shoot{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Shoot",
+					APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "garden-my-project",
+					Name:      "my-shoot",
+				},
+				Status: gardencorev1beta1.ShootStatus{
+					LastOperation: &gardencorev1beta1.LastOperation{
+						Description: "This is a very long description that can happen if e.g. each node's error message is appended and a lot of nodes exist.",
+					},
+				},
+			}
+			objData, err := runtime.Encode(testEncoder, shootWithLargeStatus)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(shootsv1beta1SizeLimit.CmpInt64(int64(len(objData)))).Should(BeNumerically("==", -1))
+			return shootWithLargeStatus
+		}
+		test(largeShoot, restrictedUser, true)
+	})
+
 	It("should pass because of unrestricted user", func() {
 		test(shootv1beta1, unrestrictedUser, true)
 	})
