@@ -201,34 +201,34 @@ var _ = Describe("ResourceManager defaulting", func() {
 		})
 	})
 
-	Describe("KubeletCSRApproverControllerConfig defaulting", func() {
-		It("should not default the KubeletCSRApproverControllerConfig because it is disabled", func() {
-			obj.Controllers.KubeletCSRApprover = KubeletCSRApproverControllerConfig{}
+	Describe("CSRApproverControllerConfig defaulting", func() {
+		It("should not default the CSRApproverControllerConfig because it is disabled", func() {
+			obj.Controllers.CSRApprover = CSRApproverControllerConfig{}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
 
-			Expect(obj.Controllers.KubeletCSRApprover.ConcurrentSyncs).To(BeNil())
+			Expect(obj.Controllers.CSRApprover.ConcurrentSyncs).To(BeNil())
 		})
 
-		It("should default the KubeletCSRApproverControllerConfig because it is enabled", func() {
-			obj.Controllers.KubeletCSRApprover = KubeletCSRApproverControllerConfig{
+		It("should default the CSRApproverControllerConfig because it is enabled", func() {
+			obj.Controllers.CSRApprover = CSRApproverControllerConfig{
 				Enabled: true,
 			}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
 
-			Expect(obj.Controllers.KubeletCSRApprover.ConcurrentSyncs).To(PointTo(Equal(1)))
+			Expect(obj.Controllers.CSRApprover.ConcurrentSyncs).To(PointTo(Equal(1)))
 		})
 
-		It("should not overwrite already set values for KubeletCSRApproverControllerConfig", func() {
-			obj.Controllers.KubeletCSRApprover = KubeletCSRApproverControllerConfig{
+		It("should not overwrite already set values for CSRApproverControllerConfig", func() {
+			obj.Controllers.CSRApprover = CSRApproverControllerConfig{
 				Enabled:         true,
 				ConcurrentSyncs: ptr.To(2),
 			}
 
 			SetObjectDefaults_ResourceManagerConfiguration(obj)
 
-			Expect(obj.Controllers.KubeletCSRApprover.ConcurrentSyncs).To(PointTo(Equal(2)))
+			Expect(obj.Controllers.CSRApprover.ConcurrentSyncs).To(PointTo(Equal(2)))
 		})
 	})
 

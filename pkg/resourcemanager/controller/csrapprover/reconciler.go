@@ -33,7 +33,7 @@ type Reconciler struct {
 	SourceClient       client.Client
 	TargetClient       client.Client
 	CertificatesClient certificatesclientv1.CertificateSigningRequestInterface
-	Config             config.KubeletCSRApproverControllerConfig
+	Config             config.CSRApproverControllerConfig
 }
 
 // Reconcile performs the main reconciliation logic.

@@ -91,8 +91,8 @@ func SetDefaults_ResourceManagerControllerConfiguration(obj *ResourceManagerCont
 	}
 }
 
-// SetDefaults_KubeletCSRApproverControllerConfig sets defaults for the KubeletCSRApproverControllerConfig object.
-func SetDefaults_KubeletCSRApproverControllerConfig(obj *KubeletCSRApproverControllerConfig) {
+// SetDefaults_CSRApproverControllerConfig sets defaults for the CSRApproverControllerConfig object.
+func SetDefaults_CSRApproverControllerConfig(obj *CSRApproverControllerConfig) {
 	if obj.Enabled && obj.ConcurrentSyncs == nil {
 		obj.ConcurrentSyncs = ptr.To(1)
 	}
