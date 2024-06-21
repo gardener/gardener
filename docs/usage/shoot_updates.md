@@ -77,25 +77,29 @@ Apart from the above mentioned triggers, a rolling update of the shoot worker no
 The complete list of fields that trigger a rolling update:
 
 * `.spec.kubernetes.version` (except for patch version changes)
-* `.spec.kubernetes.kubelet.kubeReserved` (if feature gate `NewWorkerPoolHash` enabled; unless a worker pool-specific value is set)
-* `.spec.kubernetes.kubelet.evictionHard` (if feature gate `NewWorkerPoolHash` enabled; unless a worker pool-specific value is set)
-* `.spec.kubernetes.kubelet.cpuManagerPolicy` (if feature gate `NewWorkerPoolHash` enabled; unless a worker pool-specific value is set)
 * `.spec.provider.workers[].machine.image.name`
 * `.spec.provider.workers[].machine.image.version`
 * `.spec.provider.workers[].machine.type`
 * `.spec.provider.workers[].volume.type`
 * `.spec.provider.workers[].volume.size`
-* `.spec.provider.workers[].providerConfig`
+* `.spec.provider.workers[].providerConfig` (except if feature gate `NewWorkerPoolHash`)
 * `.spec.provider.workers[].cri.name`
 * `.spec.provider.workers[].kubernetes.version` (except for patch version changes)
-* `.spec.provider.workers[].kubernetes.kubelet.kubeReserved` (if feature gate `NewWorkerPoolHash` enabled)
-* `.spec.provider.workers[].kubernetes.kubelet.evictionHard` (if feature gate `NewWorkerPoolHash` enabled)
-* `.spec.provider.workers[].kubernetes.kubelet.cpuManagerPolicy` (if feature gate `NewWorkerPoolHash` enabled)
 * `.spec.systemComponents.nodeLocalDNS.enabled`
 * `.status.credentials.rotation.certificateAuthorities.lastInitiationTime` (changed by Gardener when a shoot CA rotation is initiated)
 * `.status.credentials.rotation.serviceAccountKey.lastInitiationTime` (changed by Gardener when a shoot service account signing key rotation is initiated)
 
+If feature gate `NewWorkerPoolHash` is enabled:
+
+* `.spec.kubernetes.kubelet.kubeReserved` (unless a worker pool-specific value is set)
+* `.spec.kubernetes.kubelet.evictionHard` (unless a worker pool-specific value is set)
+* `.spec.kubernetes.kubelet.cpuManagerPolicy` (unless a worker pool-specific value is set)
+* `.spec.provider.workers[].kubernetes.kubelet.kubeReserved`
+* `.spec.provider.workers[].kubernetes.kubelet.evictionHard`
+* `.spec.provider.workers[].kubernetes.kubelet.cpuManagerPolicy`
+
 Generally, the provider extension controllers might have additional constraints for changes leading to rolling updates, so please consult the respective documentation as well.
+In particular, if the feature gate `NewWorkerPoolHash` is enabled and a worker pool uses the new hash, then the `providerConfig` as a whole is not included. Instead only fields selected by the provider extension are considered.
 
 ## Related Documentation
 
