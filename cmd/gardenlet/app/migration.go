@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -30,7 +31,7 @@ import (
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
-func (g *garden) runMigrations(ctx context.Context, log logr.Logger, gardenCluster cluster.Cluster) error {
+func (g *garden) runMigrations(ctx context.Context, log logr.Logger, gardenCluster cluster.Cluster, seedName string) error {
 	log.Info("Migrating deprecated failure-domain.beta.kubernetes.io labels to topology.kubernetes.io")
 	if err := migrateDeprecatedTopologyLabels(ctx, log, g.mgr.GetClient(), g.mgr.GetConfig()); err != nil {
 		return err
@@ -42,7 +43,7 @@ func (g *garden) runMigrations(ctx context.Context, log logr.Logger, gardenClust
 	}
 
 	log.Info("Cleaning up DWD access for workerless shoots")
-	if err := cleanupDWDAccess(ctx, gardenCluster.GetClient(), g.mgr.GetClient()); err != nil {
+	if err := cleanupDWDAccess(ctx, gardenCluster.GetClient(), g.mgr.GetClient(), seedName); err != nil {
 		return err
 	}
 
@@ -163,10 +164,10 @@ func createOSCHashMigrationSecret(ctx context.Context, seedClient client.Client)
 	return flow.Parallel(tasks...)(ctx)
 }
 
-// TODO (shafeeqes): Remove this function after gardener v1.99 has been released
-func cleanupDWDAccess(ctx context.Context, gardenClient client.Client, seedClient client.Client) error {
+// TODO (shafeeqes): Remove this function in gardener v1.100
+func cleanupDWDAccess(ctx context.Context, gardenClient client.Client, seedClient client.Client, seedName string) error {
 	shootList := &gardencorev1beta1.ShootList{}
-	if err := gardenClient.List(ctx, shootList); err != nil {
+	if err := gardenClient.List(ctx, shootList, client.MatchingFields{core.ShootSeedName: seedName}); err != nil {
 		return err
 	}
 
@@ -177,27 +178,18 @@ func cleanupDWDAccess(ctx context.Context, gardenClient client.Client, seedClien
 		}
 	}
 
-	shootNamespaceList := &corev1.NamespaceList{}
-	if err := seedClient.List(ctx, shootNamespaceList, client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}); err != nil {
-		return err
-	}
-
 	var taskFns []flow.TaskFn
 
-	for _, namespace := range shootNamespaceList.Items {
-		if !workerlessShootNamespaces.Has(namespace.Name) {
-			continue
-		}
-
+	for _, namespace := range workerlessShootNamespaces.UnsortedList() {
 		taskFns = append(taskFns, func(ctx context.Context) error {
 			if err := kubernetesutils.DeleteObjects(ctx, seedClient,
-				&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: dependencywatchdog.KubeConfigSecretName, Namespace: namespace.Name}},
+				&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: dependencywatchdog.KubeConfigSecretName, Namespace: namespace}},
 			); err != nil {
-				return fmt.Errorf("failed to delete DWD access secret for namespace %q: %w", namespace.Name, err)
+				return fmt.Errorf("failed to delete DWD access secret for namespace %q: %w", namespace, err)
 			}
 
-			if err := managedresources.DeleteForShoot(ctx, seedClient, namespace.Name, dependencywatchdog.ManagedResourceName); err != nil {
-				return fmt.Errorf("failed to delete DWD managed resource for namespace %q: %w", namespace.Name, err)
+			if err := managedresources.DeleteForShoot(ctx, seedClient, namespace, dependencywatchdog.ManagedResourceName); err != nil {
+				return fmt.Errorf("failed to delete DWD managed resource for namespace %q: %w", namespace, err)
 			}
 
 			return nil
