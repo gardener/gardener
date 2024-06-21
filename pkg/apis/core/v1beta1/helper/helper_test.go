@@ -2608,6 +2608,26 @@ var _ = Describe("Helper", func() {
 		Entry("workerKubernetes.version != nil", semver.MustParse("1.2.3"), &gardencorev1beta1.WorkerKubernetes{Version: ptr.To("4.5.6")}, semver.MustParse("4.5.6")),
 	)
 
+	var (
+		sampleShootKubelet = &gardencorev1beta1.KubeletConfig{
+			MaxPods: ptr.To(int32(50)),
+		}
+		sampleWorkerKubelet = &gardencorev1beta1.KubeletConfig{
+			MaxPods: ptr.To(int32(100)),
+		}
+	)
+	DescribeTable("#CalculateEffectiveKubeletConfiguration",
+		func(shootKubelet *gardencorev1beta1.KubeletConfig, workerKubernetes *gardencorev1beta1.WorkerKubernetes, expectedRes *gardencorev1beta1.KubeletConfig) {
+			res := CalculateEffectiveKubeletConfiguration(shootKubelet, workerKubernetes)
+			Expect(res).To(Equal(expectedRes))
+		},
+
+		Entry("all nil", nil, nil, nil),
+		Entry("workerKubernetes = nil", sampleShootKubelet, nil, sampleShootKubelet),
+		Entry("workerKubernetes.kubelet = nil", sampleShootKubelet, &gardencorev1beta1.WorkerKubernetes{}, sampleShootKubelet),
+		Entry("workerKubernetes.kubelet != nil", sampleShootKubelet, &gardencorev1beta1.WorkerKubernetes{Kubelet: sampleWorkerKubelet}, sampleWorkerKubelet),
+	)
+
 	DescribeTable("#GetSecretBindingTypes",
 		func(secretBinding *gardencorev1beta1.SecretBinding, expected []string) {
 			actual := GetSecretBindingTypes(secretBinding)

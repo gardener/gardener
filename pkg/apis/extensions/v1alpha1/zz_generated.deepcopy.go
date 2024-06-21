@@ -1711,6 +1711,11 @@ func (in *WorkerPool) DeepCopyInto(out *WorkerPool) {
 		}
 	}
 	out.MachineImage = in.MachineImage
+	if in.NodeAgentSecretName != nil {
+		in, out := &in.NodeAgentSecretName, &out.NodeAgentSecretName
+		*out = new(string)
+		**out = **in
+	}
 	if in.ProviderConfig != nil {
 		in, out := &in.ProviderConfig, &out.ProviderConfig
 		*out = new(runtime.RawExtension)

@@ -225,6 +225,11 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			}
 		}
 
+		var nodeAgentSecretName *string
+		if oscConfig.Init.IncludeSecretNameInWorkerPool {
+			nodeAgentSecretName = &oscConfig.Init.GardenerNodeAgentSecretName
+		}
+
 		pools = append(pools, extensionsv1alpha1.WorkerPool{
 			Name:           workerPool.Name,
 			Minimum:        workerPool.Minimum,
@@ -239,8 +244,9 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 				Name:    workerPool.Machine.Image.Name,
 				Version: *workerPool.Machine.Image.Version,
 			},
-			NodeTemplate:   nodeTemplate,
-			ProviderConfig: pConfig,
+			NodeTemplate:        nodeTemplate,
+			NodeAgentSecretName: nodeAgentSecretName,
+			ProviderConfig:      pConfig,
 			// TODO(rfranzke): Remove usage of UserData field after v1.100 has been released.
 			UserData:                         userData,
 			UserDataSecretRef:                userDataSecretRef,

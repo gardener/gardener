@@ -7,15 +7,19 @@ package upgrade
 import (
 	"context"
 	"os"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/framework"
 	shootupdatesuite "github.com/gardener/gardener/test/utils/shoots/update"
@@ -216,8 +220,9 @@ var _ = Describe("Gardener upgrade Tests for", func() {
 
 		When("Post-upgrade (Gardener version:'"+gardenerCurrentVersion+"', Git version:'"+gardenerCurrentGitVersion+"')", Ordered, Offset(1), Label("post-upgrade"), func() {
 			var (
-				ctx    context.Context
-				cancel context.CancelFunc
+				ctx        context.Context
+				cancel     context.CancelFunc
+				seedClient client.Client
 			)
 
 			BeforeAll(func() {
@@ -226,11 +231,31 @@ var _ = Describe("Gardener upgrade Tests for", func() {
 				Expect(f.GetShoot(ctx, f.Shoot)).To(Succeed())
 				f.ShootFramework, err = f.NewShootFramework(ctx, f.Shoot)
 				Expect(err).NotTo(HaveOccurred())
+				seedClient = f.ShootFramework.SeedClient.Client()
 			})
 
 			It("should be able to wake up a shoot which was hibernated in previous gardener release", func() {
 				Expect(f.Shoot.Status.Gardener.Version).Should(Equal(gardenerPreviousVersion))
 				Expect(f.WakeUpShoot(ctx, f.Shoot)).To(Succeed())
+			})
+
+			// Verify that after upgrading from Gardener v1.97 an operating system config secret
+			// with version 1 exists.
+			// TODO(MichaelEischer): drop this check after v1.98 has been released.
+			It("verify that old shoots use operating system config hash version 1 after gardener upgrade", func() {
+				if !strings.HasPrefix(gardenerPreviousVersion, "v1.97.") || v1beta1helper.IsWorkerless(f.Shoot) {
+					Skip("test only relevant for upgrade from Gardener v1.97 on shoots with workers")
+				}
+
+				secret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      operatingsystemconfig.WorkerPoolHashesSecretName,
+						Namespace: f.ShootFramework.ShootSeedNamespace(),
+					},
+				}
+				Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+				data := secret.Data["pools"]
+				Expect(data).To(ContainSubstring("currentVersion: 1"))
 			})
 
 			It("should delete a shoot which was created in previous gardener release", func() {

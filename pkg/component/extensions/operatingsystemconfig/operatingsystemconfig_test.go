@@ -19,10 +19,12 @@ import (
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	kubernetesfake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -132,6 +134,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
 						Image: &gardencorev1beta1.ShootMachineImage{
 							Name:           "type1",
+							Version:        ptr.To("12.34"),
 							ProviderConfig: &runtime.RawExtension{Raw: []byte(`{"foo":"bar"}`)},
 						},
 					},
@@ -142,7 +145,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 					Machine: gardencorev1beta1.Machine{
 						Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
 						Image: &gardencorev1beta1.ShootMachineImage{
-							Name: "type2",
+							Name:    "type2",
+							Version: ptr.To("12.34"),
 						},
 					},
 					CRI: &gardencorev1beta1.CRI{
@@ -351,7 +355,16 @@ var _ = Describe("OperatingSystemConfig", func() {
 			ctrl.Finish()
 		})
 
-		calculateKeyForVersionFn := func(oscVersion int, _ *semver.Version, worker *gardencorev1beta1.Worker) (string, error) {
+		calculateKeyForVersionFn := func(
+			oscVersion int,
+			_ *semver.Version,
+			_ *Values,
+			worker *gardencorev1beta1.Worker,
+			_ *gardencorev1beta1.KubeletConfig,
+		) (
+			string,
+			error,
+		) {
 			switch oscVersion {
 			case 1:
 				return worker.Name + "-version1", nil
@@ -398,7 +411,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			It("should successfully use hash version 1 after migration", func() {
 				DeferCleanup(test.WithVars(
 					&OriginalConfigFn, originalConfigFn,
-					&LatestHashVersion, 2,
+					&LatestHashVersion, func() int { return 2 },
 					&CalculateKeyForVersion, calculateKeyForVersionFn,
 				))
 
@@ -475,10 +488,30 @@ var _ = Describe("OperatingSystemConfig", func() {
 `))
 			})
 
+			calculateKeyForVersionFn := func(
+				oscVersion int,
+				_ *semver.Version,
+				_ *Values,
+				worker *gardencorev1beta1.Worker,
+				_ *gardencorev1beta1.KubeletConfig,
+			) (
+				string,
+				error,
+			) {
+				switch oscVersion {
+				case 1:
+					return worker.Name + "-version1", nil
+				case 2:
+					return worker.Name + "-version2", nil
+				default:
+					return "", fmt.Errorf("unsupported osc key version %v", oscVersion)
+				}
+			}
+
 			It("should successfully fill missing hashes and workers in the worker-pools-operatingsystemconfig-hashes secret", func() {
 				DeferCleanup(test.WithVars(
 					&OriginalConfigFn, originalConfigFn,
-					&LatestHashVersion, 2,
+					&LatestHashVersion, func() int { return 2 },
 					&CalculateKeyForVersion, calculateKeyForVersionFn,
 				))
 
@@ -512,7 +545,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			It("should successfully upgrade the hash versions in the worker-pools-operatingsystemconfig-hashes secret", func() {
 				DeferCleanup(test.WithVars(
 					&OriginalConfigFn, originalConfigFn,
-					&LatestHashVersion, 2,
+					&LatestHashVersion, func() int { return 2 },
 					&CalculateKeyForVersion, calculateKeyForVersionFn,
 				))
 
@@ -537,7 +570,13 @@ var _ = Describe("OperatingSystemConfig", func() {
 `))
 			})
 
-			calculateStableKeyForVersionFn := func(oscVersion int, kubernetesVersion *semver.Version, worker *gardencorev1beta1.Worker) (string, error) {
+			calculateStableKeyForVersionFn := func(
+				oscVersion int,
+				kubernetesVersion *semver.Version,
+				_ *Values,
+				worker *gardencorev1beta1.Worker,
+				_ *gardencorev1beta1.KubeletConfig,
+			) (string, error) {
 				switch oscVersion {
 				case 1:
 					return KeyV1(worker.Name, kubernetesVersion, worker.CRI), nil
@@ -551,7 +590,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			It("should successfully keep the current hash versions if nothing changes in the worker-pools-operatingsystemconfig-hashes secret", func() {
 				DeferCleanup(test.WithVars(
 					&OriginalConfigFn, originalConfigFn,
-					&LatestHashVersion, 2,
+					&LatestHashVersion, func() int { return 2 },
 					&CalculateKeyForVersion, calculateStableKeyForVersionFn,
 				))
 
@@ -581,7 +620,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			It("should successfully use hash version 1 after migration", func() {
 				DeferCleanup(test.WithVars(
 					&OriginalConfigFn, originalConfigFn,
-					&LatestHashVersion, 2,
+					&LatestHashVersion, func() int { return 2 },
 					&CalculateKeyForVersion, calculateStableKeyForVersionFn,
 				))
 
@@ -1228,7 +1267,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 		})
 	})
 
-	Describe("#Key", func() {
+	Describe("#KeyV1", func() {
 		var (
 			workerName        = "foo"
 			kubernetesVersion = "1.2.3"
@@ -1249,18 +1288,260 @@ var _ = Describe("OperatingSystemConfig", func() {
 		})
 
 		It("should return the expected key for version 1", func() {
-			key, err := CalculateKeyForVersion(1, semver.MustParse(kubernetesVersion), &gardencorev1beta1.Worker{
-				Name: workerName,
-			})
+			key, err := CalculateKeyForVersion(1, semver.MustParse(kubernetesVersion), nil,
+				&gardencorev1beta1.Worker{
+					Name: workerName,
+					Machine: gardencorev1beta1.Machine{
+						Image: &gardencorev1beta1.ShootMachineImage{
+							Name:    "type1",
+							Version: ptr.To("12.34"),
+						},
+					},
+				}, nil)
 			Expect(err).To(Succeed())
 			Expect(key).To(Equal("gardener-node-agent-" + workerName + "-77ac3"))
 		})
 
 		It("should return an error for unknown versions", func() {
-			for _, version := range []int{0, 2} {
-				_, err := CalculateKeyForVersion(version, semver.MustParse(kubernetesVersion), nil)
+			for _, version := range []int{0, 3} {
+				_, err := CalculateKeyForVersion(version, semver.MustParse(kubernetesVersion), nil, nil, nil)
 				Expect(err).NotTo(Succeed())
 			}
+		})
+	})
+
+	Describe("#KeyV2", func() {
+		var (
+			kubernetesVersion *semver.Version
+			values            *Values
+			p                 *gardencorev1beta1.Worker
+			kubeletConfig     *gardencorev1beta1.KubeletConfig
+
+			hash                        string
+			lastCARotationInitiation    = metav1.Time{Time: time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC)}
+			lastSAKeyRotationInitiation = metav1.Time{Time: time.Date(1, 1, 2, 0, 0, 0, 0, time.UTC)}
+		)
+
+		BeforeEach(func() {
+			volumeType := "fast"
+			p = &gardencorev1beta1.Worker{
+				Name: "test-worker",
+				Machine: gardencorev1beta1.Machine{
+					Type: "foo",
+					Image: &gardencorev1beta1.ShootMachineImage{
+						Name:    "bar",
+						Version: ptr.To("baz"),
+					},
+				},
+				ProviderConfig: &runtime.RawExtension{
+					Raw: []byte("foo"),
+				},
+				Volume: &gardencorev1beta1.Volume{
+					Type:       &volumeType,
+					VolumeSize: "20Gi",
+				},
+			}
+			kubernetesVersion = semver.MustParse("1.2.3")
+			values = &Values{
+				CredentialsRotationStatus: &gardencorev1beta1.ShootCredentialsRotation{
+					CertificateAuthorities: &gardencorev1beta1.CARotation{
+						LastInitiationTime: &lastCARotationInitiation,
+					},
+					ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
+						LastInitiationTime: &lastSAKeyRotationInitiation,
+					},
+				},
+				OriginalValues: OriginalValues{
+					NodeLocalDNSEnabled: false,
+				},
+			}
+			kubeletConfig = &gardencorev1beta1.KubeletConfig{
+				KubeReserved: &gardencorev1beta1.KubeletConfigReserved{
+					CPU:              ptr.To(resource.MustParse("80m")),
+					Memory:           ptr.To(resource.MustParse("1Gi")),
+					PID:              ptr.To(resource.MustParse("10k")),
+					EphemeralStorage: ptr.To(resource.MustParse("20Gi")),
+				},
+				EvictionHard: &gardencorev1beta1.KubeletConfigEviction{
+					MemoryAvailable: ptr.To("100Mi"),
+				},
+				CPUManagerPolicy: nil,
+			}
+
+			var err error
+			hash, err = CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		Context("hash value should not change", func() {
+			AfterEach(func() {
+				actual, err := CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(actual).To(Equal(hash))
+			})
+
+			It("when changing minimum", func() {
+				p.Minimum = 1
+			})
+
+			It("when changing maximum", func() {
+				p.Maximum = 2
+			})
+
+			It("when changing max surge", func() {
+				p.MaxSurge = &intstr.IntOrString{StrVal: "new-val"}
+			})
+
+			It("when changing max unavailable", func() {
+				p.MaxUnavailable = &intstr.IntOrString{StrVal: "new-val"}
+			})
+
+			It("when changing annotations", func() {
+				p.Annotations = map[string]string{"foo": "bar"}
+			})
+
+			It("when changing labels", func() {
+				p.Labels = map[string]string{"foo": "bar"}
+			})
+
+			It("when changing taints", func() {
+				p.Taints = []corev1.Taint{{Key: "foo"}}
+			})
+
+			It("when changing zones", func() {
+				p.Zones = []string{"1"}
+			})
+
+			It("when changing provider config", func() {
+				// must not be interpreted by the operating system config
+				p.ProviderConfig.Raw = nil
+			})
+
+			It("when changing the kubernetes version in the worker object", func() {
+				// must use kubernetesVersion instead
+				p.Kubernetes = &gardencorev1beta1.WorkerKubernetes{
+					Version: ptr.To("12.34.5"),
+				}
+			})
+
+			It("when changing the combined kubernetes patch version", func() {
+				kubernetesVersion = semver.MustParse("1.2.4")
+			})
+		})
+
+		Context("hash value should change", func() {
+			AfterEach(func() {
+				actual, err := CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(actual).NotTo(Equal(hash))
+			})
+
+			It("when changing name", func() {
+				p.Name = "different-name"
+			})
+
+			It("when changing machine type", func() {
+				p.Machine.Type = "small"
+			})
+
+			It("when changing machine image name", func() {
+				p.Machine.Image.Name = "new-image"
+			})
+
+			It("when changing machine image version", func() {
+				p.Machine.Image.Version = ptr.To("new-version")
+			})
+
+			It("when changing volume type", func() {
+				t := "xl"
+				p.Volume.Type = &t
+			})
+
+			It("when changing volume size", func() {
+				p.Volume.VolumeSize = "100Mi"
+			})
+
+			It("when changing the kubernetes major/minor version of the worker pool version", func() {
+				kubernetesVersion = semver.MustParse("1.3.3")
+			})
+
+			It("when changing the CRI configurations", func() {
+				p.CRI = &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD}
+			})
+
+			It("when a shoot CA rotation is triggered", func() {
+				newRotationTime := metav1.Time{Time: lastCARotationInitiation.Add(time.Hour)}
+				values.CredentialsRotationStatus.CertificateAuthorities.LastInitiationTime = &newRotationTime
+			})
+
+			It("when a shoot CA rotation is triggered for the first time (lastInitiationTime was nil)", func() {
+				var err error
+				credentialStatusWithInitiatedRotation := values.CredentialsRotationStatus.CertificateAuthorities.DeepCopy()
+				values.CredentialsRotationStatus.CertificateAuthorities = nil
+				hash, err = CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig)
+				Expect(err).ToNot(HaveOccurred())
+
+				values.CredentialsRotationStatus.CertificateAuthorities = credentialStatusWithInitiatedRotation
+			})
+
+			It("when a shoot service account key rotation is triggered", func() {
+				newRotationTime := metav1.Time{Time: lastSAKeyRotationInitiation.Add(time.Hour)}
+				values.CredentialsRotationStatus.ServiceAccountKey.LastInitiationTime = &newRotationTime
+			})
+
+			It("when a shoot service account key rotation is triggered for the first time (lastInitiationTime was nil)", func() {
+				var err error
+				credentialStatusWithInitiatedRotation := values.CredentialsRotationStatus.ServiceAccountKey.DeepCopy()
+				values.CredentialsRotationStatus.ServiceAccountKey = nil
+				hash, err = CalculateKeyForVersion(2, kubernetesVersion, values, p, kubeletConfig)
+				Expect(err).ToNot(HaveOccurred())
+
+				values.CredentialsRotationStatus.ServiceAccountKey = credentialStatusWithInitiatedRotation
+			})
+
+			It("when enabling node local dns via specification", func() {
+				values.NodeLocalDNSEnabled = true
+			})
+
+			It("when changing kubeReserved CPU", func() {
+				kubeletConfig.KubeReserved.CPU = ptr.To(resource.MustParse("100m"))
+			})
+
+			It("when changing kubeReserved memory", func() {
+				kubeletConfig.KubeReserved.Memory = ptr.To(resource.MustParse("2Gi"))
+			})
+
+			It("when changing kubeReserved PID", func() {
+				kubeletConfig.KubeReserved.PID = ptr.To(resource.MustParse("15k"))
+			})
+
+			It("when changing kubeReserved ephemeral storage", func() {
+				kubeletConfig.KubeReserved.EphemeralStorage = ptr.To(resource.MustParse("42Gi"))
+			})
+
+			It("when changing evictionHard memory threshold", func() {
+				kubeletConfig.EvictionHard.MemoryAvailable = ptr.To("200Mi")
+			})
+
+			It("when changing evictionHard image fs threshold", func() {
+				kubeletConfig.EvictionHard.ImageFSAvailable = ptr.To("200Mi")
+			})
+
+			It("when changing evictionHard image fs inodes threshold", func() {
+				kubeletConfig.EvictionHard.ImageFSInodesFree = ptr.To("1k")
+			})
+
+			It("when changing evictionHard node fs threshold", func() {
+				kubeletConfig.EvictionHard.NodeFSAvailable = ptr.To("200Mi")
+			})
+
+			It("when changing evictionHard node fs inodes threshold", func() {
+				kubeletConfig.EvictionHard.NodeFSInodesFree = ptr.To("1k")
+			})
+
+			It("when changing CPUManagerPolicy", func() {
+				kubeletConfig.CPUManagerPolicy = ptr.To("test")
+			})
 		})
 	})
 })

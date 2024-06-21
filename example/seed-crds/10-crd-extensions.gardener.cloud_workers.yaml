@@ -220,6 +220,11 @@ spec:
                     name:
                       description: Name is the name of this worker pool.
                       type: string
+                    nodeAgentSecretName:
+                      description: |-
+                        NodeAgentSecretName is uniquely identifying selected aspects of the OperatingSystemConfig. If it changes, then the
+                        worker pool must be rolled.
+                      type: string
                     nodeTemplate:
                       description: NodeTemplate contains resource information of the
                         machine which is used by Cluster Autoscaler to generate nodeTemplate

@@ -149,6 +149,18 @@ func (mr *MockInterfaceMockRecorder) SetCABundle(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetCABundle", reflect.TypeOf((*MockInterface)(nil).SetCABundle), arg0)
 }
 
+// SetCredentialsRotationStatus mocks base method.
+func (m *MockInterface) SetCredentialsRotationStatus(arg0 *v1beta1.ShootCredentialsRotation) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetCredentialsRotationStatus", arg0)
+}
+
+// SetCredentialsRotationStatus indicates an expected call of SetCredentialsRotationStatus.
+func (mr *MockInterfaceMockRecorder) SetCredentialsRotationStatus(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetCredentialsRotationStatus", reflect.TypeOf((*MockInterface)(nil).SetCredentialsRotationStatus), arg0)
+}
+
 // SetSSHPublicKeys mocks base method.
 func (m *MockInterface) SetSSHPublicKeys(arg0 []string) {
 	m.ctrl.T.Helper()

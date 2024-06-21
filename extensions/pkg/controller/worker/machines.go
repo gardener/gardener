@@ -93,7 +93,15 @@ func (m MachineDeployments) HasSecret(secretName string) bool {
 }
 
 // WorkerPoolHash returns a hash value for a given worker pool and a given cluster resource.
-func WorkerPoolHash(pool extensionsv1alpha1.WorkerPool, cluster *extensionscontroller.Cluster, additionalData ...string) (string, error) {
+func WorkerPoolHash(pool extensionsv1alpha1.WorkerPool, cluster *extensionscontroller.Cluster, additionalDataV1 []string, additionalDataV2 []string) (string, error) {
+	if pool.NodeAgentSecretName != nil {
+		return WorkerPoolHashV2(*pool.NodeAgentSecretName, additionalDataV2...)
+	}
+	return WorkerPoolHashV1(pool, cluster, additionalDataV1...)
+}
+
+// WorkerPoolHashV1 returns a hash value for a given worker pool and a given cluster resource.
+func WorkerPoolHashV1(pool extensionsv1alpha1.WorkerPool, cluster *extensionscontroller.Cluster, additionalData ...string) (string, error) {
 	kubernetesVersion := cluster.Shoot.Spec.Kubernetes.Version
 	if pool.KubernetesVersion != nil {
 		kubernetesVersion = *pool.KubernetesVersion
@@ -143,6 +151,20 @@ func WorkerPoolHash(pool extensionsv1alpha1.WorkerPool, cluster *extensionscontr
 	if helper.IsNodeLocalDNSEnabled(cluster.Shoot.Spec.SystemComponents) {
 		data = append(data, "node-local-dns")
 	}
+
+	var result string
+	for _, v := range data {
+		result += utils.ComputeSHA256Hex([]byte(v))
+	}
+
+	return utils.ComputeSHA256Hex([]byte(result))[:5], nil
+}
+
+// WorkerPoolHashV2 returns a hash value for a given nodeAgentSecretName and additional data.
+func WorkerPoolHashV2(nodeAgentSecretName string, additionalData ...string) (string, error) {
+	data := []string{nodeAgentSecretName}
+
+	data = append(data, additionalData...)
 
 	var result string
 	for _, v := range data {

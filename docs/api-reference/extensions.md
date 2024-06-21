@@ -4167,6 +4167,19 @@ string
 </tr>
 <tr>
 <td>
+<code>nodeAgentSecretName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>NodeAgentSecretName is uniquely identifying selected aspects of the OperatingSystemConfig. If it changes, then the
+worker pool must be rolled.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>providerConfig</code></br>
 <em>
 <a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">

@@ -44,6 +44,7 @@ config:
     # Seed config. Only when this is set, gardenlet's behavior changes.
     IPv6SingleStack: true
     ShootManagedIssuer: true
+    NewWorkerPoolHash: true
   etcdConfig:
     featureGates:
       UseEtcdWrapper: true

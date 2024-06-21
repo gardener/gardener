@@ -125,6 +125,10 @@ type WorkerPool struct {
 	Minimum int32 `json:"minimum"`
 	// Name is the name of this worker pool.
 	Name string `json:"name"`
+	// NodeAgentSecretName is uniquely identifying selected aspects of the OperatingSystemConfig. If it changes, then the
+	// worker pool must be rolled.
+	// +optional
+	NodeAgentSecretName *string `json:"nodeAgentSecretName,omitempty"`
 	// ProviderConfig is a provider specific configuration for the worker pool.
 	// +kubebuilder:validation:XPreserveUnknownFields
 	// +kubebuilder:pruning:PreserveUnknownFields

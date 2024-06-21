@@ -85,12 +85,20 @@ const (
 	// The feature gate takes precedence over the `HVPA` feature gate when they are both enabled.
 	// owner: @ialidzhikov
 	// alpha: v1.95.0
-	VPAAndHPAForAPIServer = "VPAAndHPAForAPIServer"
+	VPAAndHPAForAPIServer featuregate.Feature = "VPAAndHPAForAPIServer"
 
 	// ShootCredentialsBinding enables the usage of the CredentialsBindingName API in shoot spec.
 	// owner: @vpnachev @dimityrmirchev
 	// alpha: v1.98.0
 	ShootCredentialsBinding featuregate.Feature = "ShootCredentialsBinding"
+
+	// NewWorkerPoolHash enables a new calculation method for the worker pool hash. The new
+	// calculation supports rolling worker pools if `kubeReserved`, `evicitonHard` or `cpuManagerPolicy`
+	// in the `kubelet` configuration are changed. All provider extensions must be upgraded
+	// to support this feature first.
+	// owner: @MichaelEischer
+	// alpha: v1.98.0
+	NewWorkerPoolHash featuregate.Feature = "NewWorkerPoolHash"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -130,6 +138,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	UseNamespacedCloudProfile:       {Default: false, PreRelease: featuregate.Alpha},
 	VPAAndHPAForAPIServer:           {Default: false, PreRelease: featuregate.Alpha},
 	ShootCredentialsBinding:         {Default: false, PreRelease: featuregate.Alpha},
+	NewWorkerPoolHash:               {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.
