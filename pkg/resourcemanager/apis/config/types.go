@@ -90,8 +90,8 @@ type ResourceManagerControllerConfiguration struct {
 	GarbageCollector GarbageCollectorControllerConfig
 	// Health is the configuration for the health controller.
 	Health HealthControllerConfig
-	// KubeletCSRApprover is the configuration for the kubelet-csr-approver controller.
-	KubeletCSRApprover KubeletCSRApproverControllerConfig
+	// CSRApprover is the configuration for the csr-approver controller.
+	CSRApprover CSRApproverControllerConfig
 	// ManagedResource is the configuration for the managed resource controller.
 	ManagedResource ManagedResourceControllerConfig
 	// NetworkPolicy is the configuration for the networkpolicy controller.
@@ -106,8 +106,8 @@ type ResourceManagerControllerConfiguration struct {
 	TokenRequestor TokenRequestorControllerConfig
 }
 
-// KubeletCSRApproverControllerConfig is the configuration for the kubelet-csr-approver controller.
-type KubeletCSRApproverControllerConfig struct {
+// CSRApproverControllerConfig is the configuration for the csr-approver controller.
+type CSRApproverControllerConfig struct {
 	// Enabled defines whether this controller is enabled.
 	Enabled bool
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.

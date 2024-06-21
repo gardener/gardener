@@ -36,7 +36,7 @@ func SetObjectDefaults_ResourceManagerConfiguration(in *ResourceManagerConfigura
 	SetDefaults_ResourceManagerControllerConfiguration(&in.Controllers)
 	SetDefaults_GarbageCollectorControllerConfig(&in.Controllers.GarbageCollector)
 	SetDefaults_HealthControllerConfig(&in.Controllers.Health)
-	SetDefaults_KubeletCSRApproverControllerConfig(&in.Controllers.KubeletCSRApprover)
+	SetDefaults_CSRApproverControllerConfig(&in.Controllers.CSRApprover)
 	SetDefaults_ManagedResourceControllerConfig(&in.Controllers.ManagedResource)
 	SetDefaults_NetworkPolicyControllerConfig(&in.Controllers.NetworkPolicy)
 	SetDefaults_NodeCriticalComponentsControllerConfig(&in.Controllers.NodeCriticalComponents)
