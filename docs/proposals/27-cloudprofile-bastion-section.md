@@ -64,7 +64,8 @@ systemctl start ssh
 ## Proposal
 
 We propose to add a new bastion section to the CloudProfile which specifies the bastion creation parameters.
-For the machine image, we want include a reference to one of the `machineImages` in the CloudProfile. We can then use the CloudProfile upon request, to deref that image to the provider specific reference.
+For the machine image, we want to include a reference to one of the `machineImages` in the CloudProfile. We can then use the CloudProfile upon request, to deref that image to the provider specific reference.
+In addition, we want to define a `machineType` that specifies the bastions VM type.
 Example:
 ```yaml
 apiVersion: core.gardener.cloud/v1beta1
