@@ -598,10 +598,10 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 	}
 
 	if v := r.values.MaxConcurrentCSRApproverWorkers; v != nil {
-		config.Controllers.KubeletCSRApprover.Enabled = true
-		config.Controllers.KubeletCSRApprover.ConcurrentSyncs = v
+		config.Controllers.CSRApprover.Enabled = true
+		config.Controllers.CSRApprover.ConcurrentSyncs = v
 		if r.values.WatchedNamespace != nil {
-			config.Controllers.KubeletCSRApprover.MachineNamespace = *r.values.WatchedNamespace
+			config.Controllers.CSRApprover.MachineNamespace = *r.values.WatchedNamespace
 		}
 	}
 
@@ -2069,7 +2069,7 @@ type Secrets struct {
 
 func disableControllersAndWebhooksForWorkerlessShoot(config *resourcemanagerv1alpha1.ResourceManagerConfiguration) {
 	// disable unneeded controllers
-	config.Controllers.KubeletCSRApprover.Enabled = false
+	config.Controllers.CSRApprover.Enabled = false
 	config.Controllers.NodeCriticalComponents.Enabled = false
 
 	// disable unneeded webhooks

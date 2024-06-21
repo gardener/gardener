@@ -42,7 +42,7 @@ controllers:
   health:
     concurrentSyncs: 5
     syncPeriod: 1m
-  kubeletCSRApprover:
+  csrApprover:
     enabled: true
     concurrentSyncs: 1
     machineNamespace: shoot--foo--bar

@@ -174,13 +174,13 @@ var _ = Describe("Validation", func() {
 
 			Context("kubelet csr approver", func() {
 				It("should return errors because concurrent syncs are <= 0", func() {
-					conf.Controllers.KubeletCSRApprover.Enabled = true
-					conf.Controllers.KubeletCSRApprover.ConcurrentSyncs = ptr.To(0)
+					conf.Controllers.CSRApprover.Enabled = true
+					conf.Controllers.CSRApprover.ConcurrentSyncs = ptr.To(0)
 
 					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeInvalid),
-							"Field": Equal("controllers.kubeletCSRApprover.concurrentSyncs"),
+							"Field": Equal("controllers.csrApprover.concurrentSyncs"),
 						})),
 					))
 				})

@@ -87,13 +87,13 @@ data:
         {{- if .Values.global.config.controllers.health.syncPeriod }}
         syncPeriod: {{ .Values.global.config.controllers.health.syncPeriod }}
         {{- end }}
-      kubeletCSRApprover:
-        enabled: {{ .Values.global.config.controllers.kubeletCSRApprover.enabled }}
-        {{- if .Values.global.config.controllers.kubeletCSRApprover.concurrentSyncs }}
-        concurrentSyncs: {{ .Values.global.config.controllers.kubeletCSRApprover.concurrentSyncs }}
+      csrApprover:
+        enabled: {{ .Values.global.config.controllers.csrApprover.enabled }}
+        {{- if .Values.global.config.controllers.csrApprover.concurrentSyncs }}
+        concurrentSyncs: {{ .Values.global.config.controllers.csrApprover.concurrentSyncs }}
         {{- end }}
-        {{- if .Values.global.config.controllers.kubeletCSRApprover.machineNamespace }}
-        machineNamespace: {{ .Values.global.config.controllers.kubeletCSRApprover.machineNamespace }}
+        {{- if .Values.global.config.controllers.csrApprover.machineNamespace }}
+        machineNamespace: {{ .Values.global.config.controllers.csrApprover.machineNamespace }}
         {{- end }}
       managedResources:
         {{- if .Values.global.config.controllers.managedResources.concurrentSyncs }}
