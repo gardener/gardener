@@ -41,7 +41,7 @@ images:
 - name: gardener-discovery-server
   sourceRepository: github.com/gardener/gardener-discovery-server
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/gardener-discovery-server
-  tag: "v0.1.0" 
+  tag: "v0.1.0"
 
 # Gardener Dashboard components
 - name: gardener-dashboard
@@ -460,8 +460,8 @@ images:
 # Logging
 - name: fluent-operator
   sourceRepository: github.com/fluent/fluent-operator
-  repository: europe-docker.pkg.dev/gardener-project/releases/3rd/kubesphere/fluent-operator
-  tag: "v2.7.0"
+  repository: europe-docker.pkg.dev/gardener-project/releases/3rd/fluent-operator/fluent-operator
+  tag: "v2.9.0"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -476,9 +476,9 @@ images:
     - type: 'githubTeam'
       teamname: 'gardener/logging-maintainers'
 - name: fluent-bit
-  sourceRepository: github.com/fluent/fluent-bit
-  repository: europe-docker.pkg.dev/gardener-project/releases/3rd/kubesphere/fluent-bit
-  tag: "v2.2.2"
+  sourceRepository: github.com/fluent/fluent-operator
+  repository: europe-docker.pkg.dev/gardener-project/releases/3rd/fluent-operator/fluent-bit
+  tag: "v3.0.7"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -497,7 +497,7 @@ images:
     name: fluent-bit-to-vali
   sourceRepository: github.com/gardener/logging
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/fluent-bit-to-vali
-  tag: "v0.55.6"
+  tag: "v0.60.0"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -532,7 +532,7 @@ images:
 - name: vali-curator
   sourceRepository: github.com/gardener/logging
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/vali-curator
-  tag: "v0.55.6"
+  tag: "v0.60.0"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -587,7 +587,7 @@ images:
     name: telegraf-iptables
   sourceRepository: github.com/gardener/logging
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/telegraf-iptables
-  tag: "v0.55.6"
+  tag: "v0.60.0"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -607,7 +607,7 @@ images:
 - name: event-logger
   sourceRepository: github.com/gardener/logging
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/event-logger
-  tag: "v0.55.6"
+  tag: "v0.60.0"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -624,7 +624,7 @@ images:
 - name: tune2fs
   sourceRepository: github.com/gardener/logging
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/tune2fs
-  tag: "v0.55.6"
+  tag: "v0.60.0"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -778,7 +778,7 @@ images:
       version: '9.1.0'
     - name: 'boringssl'
       version: '45cf810'
-    # lua version is unclear. lua runtime is luajit. 
+    # lua version is unclear. lua runtime is luajit.
     # luajit is compatible with lua 5.1 but contains feature of lua 5.2 and 5.3
     # https://luajit.org/extensions.html
     - name: 'lua'

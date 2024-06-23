@@ -10,7 +10,7 @@ require (
 	github.com/containerd/containerd v1.7.18
 	github.com/coreos/go-systemd/v22 v22.5.0
 	github.com/distribution/distribution/v3 v3.0.0-alpha.1
-	github.com/fluent/fluent-operator/v2 v2.8.0
+	github.com/fluent/fluent-operator/v2 v2.9.0
 	github.com/gardener/cert-management v0.15.0
 	github.com/gardener/dependency-watchdog v1.2.3
 	github.com/gardener/etcd-druid v0.22.0
