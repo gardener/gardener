@@ -76,7 +76,7 @@ There are no demo `CloudProfiles` yet. Thus, please copy `CloudProfiles` from an
 make kind-extensions-up
 ```
 
-This command sets up a new KinD cluster named `gardener-local` and stores the kubeconfig in the `./example/gardener-local/kind/extensions/kubeconfig` file.
+This command sets up a new KinD cluster named `gardener-extensions` and stores the kubeconfig in the `./example/gardener-local/kind/extensions/kubeconfig` file.
 
 > It might be helpful to copy this file to `$HOME/.kube/config`, since you will need to target this KinD cluster multiple times.
 Alternatively, make sure to set your `KUBECONFIG` environment variable to `./example/gardener-local/kind/extensions/kubeconfig` for all future steps via `export KUBECONFIG=$PWD/example/gardener-local/kind/extensions/kubeconfig`.
