@@ -24,7 +24,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "prometheus",
-      "description": "Average rate of DNS requests (in packets per second) split by DNS record types, used protocol and DNS zone.\n\nNote: The `dot` zone is the local zone managed by the CoreDNS instance.",
+      "description": "Average rate of DNS requests (in packets per second) split by DNS record types, used protocol and DNS zone.\n\nNote: The `dot` zone is the local zone managed by the NodeLocalDNS instance.",
       "editable": true,
       "error": false,
       "fieldConfig": {
@@ -148,7 +148,7 @@
       "dashes": false,
       "datasource": "prometheus",
       "decimals": 0,
-      "description": "Rate of DNS Requests received by CoreDNS.\n\nNote: The `dot` zone is the local zone managed by the CoreDNS instance.",
+      "description": "Rate of DNS Requests received by NodeLocalDNS.\n\nNote: The `dot` zone is the local zone managed by the NodeLocalDNS instance.",
       "editable": true,
       "error": false,
       "fieldConfig": {
@@ -1083,7 +1083,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Upstream DNS Requests (Per Interval)",
+      "title": "Upstream DNS Requests Per Interval",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1288,7 +1288,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Upstream DNS Forward Responses (Per Interval)",
+      "title": "Upstream DNS Forward Responses Per Interval",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1563,7 +1563,7 @@
         "error": null,
         "hide": 0,
         "includeAll": true,
-        "label": "CoreDNS Pod",
+        "label": "NodeLocalDNS Pod",
         "multi": true,
         "name": "pod",
         "options": [],
