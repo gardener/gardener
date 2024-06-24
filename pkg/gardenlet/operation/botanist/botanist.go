@@ -217,8 +217,10 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	// other components
 	o.Shoot.Components.SourceBackupEntry = b.SourceBackupEntry()
 	o.Shoot.Components.BackupEntry = b.DefaultCoreBackupEntry()
-	o.Shoot.Components.DependencyWatchdogAccess = b.DefaultDependencyWatchdogAccess()
 	o.Shoot.Components.GardenerAccess = b.DefaultGardenerAccess()
+	if !o.Shoot.IsWorkerless {
+		o.Shoot.Components.DependencyWatchdogAccess = b.DefaultDependencyWatchdogAccess()
+	}
 
 	// Addons
 	if !o.Shoot.IsWorkerless {

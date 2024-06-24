@@ -33,8 +33,8 @@ const (
 	DefaultWatchDuration = 5 * time.Minute
 	// KubeConfigSecretName is the name of the kubecfg secret with internal DNS for external access.
 	KubeConfigSecretName = gardenerutils.SecretNamePrefixShootAccess + "dependency-watchdog-probe"
-	// managedResourceName is the name of the managed resource created for DWD.
-	managedResourceName = "shoot-core-dependency-watchdog"
+	// ManagedResourceName is the name of the managed resource created for DWD.
+	ManagedResourceName = "shoot-core-dependency-watchdog"
 )
 
 // NewAccess creates a new instance of the deployer for shoot cluster access for the dependency-watchdog.
@@ -163,11 +163,11 @@ func (d *dependencyWatchdogAccess) createManagedResource(ctx context.Context) er
 		return err
 	}
 
-	return managedresources.CreateForShoot(ctx, d.client, d.namespace, managedResourceName, managedresources.LabelValueGardener, false, resources)
+	return managedresources.CreateForShoot(ctx, d.client, d.namespace, ManagedResourceName, managedresources.LabelValueGardener, false, resources)
 }
 
 func (d *dependencyWatchdogAccess) Destroy(ctx context.Context) error {
-	if err := managedresources.DeleteForShoot(ctx, d.client, d.namespace, managedResourceName); err != nil {
+	if err := managedresources.DeleteForShoot(ctx, d.client, d.namespace, ManagedResourceName); err != nil {
 		return err
 	}
 	return kubernetesutils.DeleteObjects(ctx, d.client,
