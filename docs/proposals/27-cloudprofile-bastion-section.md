@@ -34,6 +34,8 @@ Some of these machine images were hardcoded in the controller.
 We were using different image "families" in some providers like `Debian`, and in others `GardenLinux`.
 We had "custom" logic per provider to determine the [latest image](https://github.com/gardener/gardener-extension-provider-aws/blob/b5458175c7ec95824b752bd6a3183a83894b7a57/pkg/controller/bastion/options.go#L141) and so on.
 
+The process of looking for the first "supported" version is something we agree with.
+However, without such a place for the machine image, we will depend on the implicit order of the MachineImage array.
 Our plan is to extend the gardener core CloudProfile with a new bastion section that will allow us to create a bastion instance with a specific machine image and machine type that will be referenced in that new section.
 
 There are some advantages to this approach compared to the current one:
@@ -44,8 +46,9 @@ There are some advantages to this approach compared to the current one:
 Drawbacks:
 - Bastion is using larger machine types and larger images
 
-The process of looking for the first "supported" version is something we agree with.
-However, without such a place for the machine image, we will depend on the implicit order of the MachineImage array.
+The drawback of using larger machine types stems from the requirement to use machine types that meet the minimum specifications for Kubernetes nodes as dictated by Gardener. 
+Meanwhile, providers often offer smaller machines that would be more suitable for use as bastions.
+This issue could be resolved by utilizing the [usable](https://github.com/gardener/gardener/blob/e80591fa667e763a936d544b806689aba96fd951/pkg/apis/core/v1beta1/types_cloudprofile.go#L159) field in the CloudProfile (set to usable: false for shoot workers) to allocate smaller machines for use as bastions.
 
 ### Goals
 
