@@ -179,7 +179,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by(verb) (rate(apiserver_latency_seconds:quantile{verb=~\"$verbs\"}[$rate]) >= 0)",
+          "expr": "sum by(verb) (rate(shoot:apiserver_latency_seconds:quantile{verb=~\"$verbs\"}[$rate]) >= 0)",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "{{verb}}",

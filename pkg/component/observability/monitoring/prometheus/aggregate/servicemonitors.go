@@ -33,7 +33,7 @@ func CentralServiceMonitors() []*monitoringv1.ServiceMonitor {
 					Params: map[string][]string{
 						"match[]": {
 							`{__name__="shoot:availability"}`,
-							`{__name__=~"shoot:(.+):(.+)"}`,
+							`{__name__=~"shoot:(.+):(.+)",__name__!="shoot:apiserver_latency_seconds:quantile"}`,
 							`{__name__="ALERTS"}`,
 							`{__name__="prometheus_tsdb_lowest_timestamp"}`,
 							`{__name__="prometheus_tsdb_storage_blocks_bytes"}`,
