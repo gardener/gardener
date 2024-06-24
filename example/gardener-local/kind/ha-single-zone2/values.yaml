@@ -4,7 +4,7 @@ gardener:
   seed:
     istio:
       listenAddresses:
-      - 127.0.0.2
+      - 172.18.255.2
 
 registry:
   deployed: false

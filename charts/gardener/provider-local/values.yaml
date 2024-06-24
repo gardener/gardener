@@ -33,9 +33,9 @@ controllers:
   service:
     concurrentSyncs: 5
     hostIP: "127.0.0.1"
-    zone0IP: "127.0.0.10"
-    zone1IP: "127.0.0.11"
-    zone2IP: "127.0.0.12"
+    zone0IP: "172.18.255.10"
+    zone1IP: "172.18.255.11"
+    zone2IP: "172.18.255.12"
   backupbucket:
     localDir: "/dev/local-backupbuckets"
     containerMountPath: "/etc/gardener/local-backupbuckets"

@@ -35,7 +35,7 @@ local_address="127.0.0.1"
 if [[ "${IPFAMILY:-}" == "ipv6" ]]; then
   local_address="::1"
 fi
-local_address_operator="127.0.0.3"
+local_address_operator="172.18.255.3"
 if [[ "${IPFAMILY:-}" == "ipv6" ]]; then
   local_address_operator="::3"
 fi

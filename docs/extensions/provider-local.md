@@ -121,7 +121,7 @@ It makes important LoadBalancer Services (e.g. `istio-ingress/istio-ingressgatew
 
 `istio-ingress/istio-ingressgateway` is set to be exposed on `nodePort` `30433` by this controller.
 
-In case the seed has multiple availability zones (`.spec.provider.zones`) and it uses SNI, the different zone-specific `istio-ingressgateway` loadbalancers are exposed via different IP addresses. Per default, IP addresses `127.0.0.10`, `127.0.0.11`, and `127.0.0.12` are used for the zones `0`, `1`, and `2` respectively.
+In case the seed has multiple availability zones (`.spec.provider.zones`) and it uses SNI, the different zone-specific `istio-ingressgateway` loadbalancers are exposed via different IP addresses. Per default, IP addresses `172.18.255.10`, `172.18.255.11`, and `172.18.255.12` are used for the zones `0`, `1`, and `2` respectively.
 
 #### ETCD Backups
 This controller reconciles the `BackupBucket` and `BackupEntry` of the shoot allowing the `etcd-backup-restore` to create and copy backups using the `local` provider functionality. The backups are stored on the host file system. This is achieved by mounting that directory to the `etcd-backup-restore` container.

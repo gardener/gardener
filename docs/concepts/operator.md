@@ -835,7 +835,7 @@ cat <<EOF | sudo tee -a /etc/hosts
 
 # Manually created to access local Gardener virtual garden cluster.
 # TODO: Remove this again when the virtual garden cluster access is no longer required.
-127.0.0.3 api.virtual-garden.local.gardener.cloud
+172.18.255.3 api.virtual-garden.local.gardener.cloud
 EOF
 ```
 

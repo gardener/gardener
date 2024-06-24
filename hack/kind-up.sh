@@ -260,16 +260,22 @@ mkdir -m 0755 -p \
   "$(dirname "$0")/../dev/local-registry"
 
 if [[ "$MULTI_ZONAL" == "true" ]]; then
-  LOOPBACK_IP_ADDRESSES=(127.0.0.10 127.0.0.11 127.0.0.12)
+  LOOPBACK_IP_ADDRESSES=(172.18.255.10 172.18.255.11 172.18.255.12)
   if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
     LOOPBACK_IP_ADDRESSES+=(::10 ::11 ::12)
   fi
   setup_loopback_device "${LOOPBACK_IP_ADDRESSES[@]}"
 fi
 if [[ "$CLUSTER_NAME" == "gardener-operator-local" ]]; then
-  LOOPBACK_IP_ADDRESSES=(127.0.0.3)
+  LOOPBACK_IP_ADDRESSES=(172.18.255.3)
   if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
     LOOPBACK_IP_ADDRESSES+=(::3)
+  fi
+  setup_loopback_device "${LOOPBACK_IP_ADDRESSES[@]}"
+elif [[ "$CLUSTER_NAME" == "gardener-local2" || "$CLUSTER_NAME" == "gardener-local2-ha-single-zone" ]]; then
+  LOOPBACK_IP_ADDRESSES=(172.18.255.2)
+  if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
+    LOOPBACK_IP_ADDRESSES+=(::2)
   fi
   setup_loopback_device "${LOOPBACK_IP_ADDRESSES[@]}"
 fi

@@ -279,7 +279,7 @@ There are cases where you would want to create a second seed cluster in your loc
 If you are on macOS, add a new IP address on your loopback device which will be necessary for the new KinD cluster that you will create. On macOS, the default loopback device is `lo0`.
 
 ```bash
-sudo ip addr add 127.0.0.2 dev lo0                                     # adding 127.0.0.2 ip to the loopback interface
+sudo ip addr add 172.18.255.2 dev lo0                                  # adding 172.18.255.2 ip to the loopback interface
 ```
 
 Next, setup the second KinD cluster:
@@ -341,7 +341,7 @@ cat <<EOF | sudo tee -a /etc/hosts
 
 # Manually created to access local Gardener virtual garden cluster.
 # TODO: Remove this again when the virtual garden cluster access is no longer required.
-127.0.0.3 api.virtual-garden.local.gardener.cloud
+172.18.255.3 api.virtual-garden.local.gardener.cloud
 EOF
 ```
 
