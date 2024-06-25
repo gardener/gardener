@@ -34,6 +34,8 @@ type Args struct {
 	Mutator extensionswebhook.Mutator
 	// MutatorWithShootClient is a mutator to be used by the admission handler. It needs the shoot client.
 	MutatorWithShootClient extensionswebhook.MutatorWithShootClient
+	// ObjectSelector is the object selector of the underlying webhook.
+	ObjectSelector *metav1.LabelSelector
 	// FailurePolicy is the failure policy for the webhook (defaults to Ignore).
 	FailurePolicy *admissionregistrationv1.FailurePolicyType
 }
@@ -48,6 +50,7 @@ func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 		Path:              WebhookName,
 		Target:            extensionswebhook.TargetShoot,
 		NamespaceSelector: buildSelector(),
+		ObjectSelector:    args.ObjectSelector,
 		FailurePolicy:     args.FailurePolicy,
 	}
 
