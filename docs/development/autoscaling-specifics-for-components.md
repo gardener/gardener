@@ -47,6 +47,8 @@ There are three supported autoscaling modes for the Shoot Kubernetes API server.
    | (50, 100]   | `2500m`, `5200Mi` |
    | (100, inf.) | `3000m`, `5200Mi` |
 
+   The API server's min replicas count is 2, the max replicas count - 3.
+
    The `Baseline` mode is the used autoscaling mode when the `HVPA` and `VPAAndHPAForAPIServer` feature gates are not enabled.
 
 - `HVPA`
@@ -55,6 +57,8 @@ There are three supported autoscaling modes for the Shoot Kubernetes API server.
 
    The initial API server resource requests are `500m` and `1Gi`.
    HVPA's HPA is scaling only on CPU (average utilization 80%). HVPA's VPA max allowed values are `8` CPU and `25G`.
+
+   The API server's min replicas count is 2, the max replicas count - 3.
 
    The `HVPA` mode is the used autoscaling mode when the `HVPA` feature gate is enabled (and the `VPAAndHPAForAPIServer` feature gate is disabled).
 
@@ -67,9 +71,11 @@ There are three supported autoscaling modes for the Shoot Kubernetes API server.
    The initial API server resource requests are `250m` and `500Mi`.
    VPA's max allowed values are `7` CPU and `28G`. HPA's average target usage values are `6` CPU and `24G`.
 
+   The API server's min replicas count is 2, the max replicas count - 6.
+
    The `VPAAndHPA` mode is the used autoscaling mode when the `VPAAndHPAForAPIServer` feature gate is enabled (takes precedence over the `HVPA` feature gate).
 
-The API server's replica count in all scaling modes varies between 2 and 3. The min replicas count of 2 is imposed by the [High Availability of Shoot Control Plane Components](../development/high-availability.md#control-plane-components).
+In all scaling modes the min replicas count of 2 is imposed by the [High Availability of Shoot Control Plane Components](../development/high-availability.md#control-plane-components).
 
 The gardenlet sets the initial API server resource requests only when the Deployment is not found. When the Deployment exists, it is not overwriting the kube-apiserver container resources.
 
@@ -81,7 +87,7 @@ To prevent such disruptive scale-down actions it is possible to disable scale do
 
 There are the following specifics for when disabling scale-down for the Kubernetes API server component:
 - In `Baseline` and `HVPA` modes the HPA's min and max replicas count are set to 4.
-- In `VPAAndHPA` mode if the HPA resource exists and HPA's `spec.minReplicas` is not nil then the min replicas count is `max(spec.minReplicas, status.desiredReplicas)`. When scale-down is disabled, this allows operators to specify a custom value for HPA `spec.minReplicas` and this value not to be reverted by gardenlet. I.e, HPA _does_ scale down to min replicas but not below min replicas. HPA's max replicas count is 4.
+- In `VPAAndHPA` mode if the HPA resource exists and HPA's `spec.minReplicas` is not nil then the min replicas count is `max(spec.minReplicas, status.desiredReplicas)`. When scale-down is disabled, this allows operators to specify a custom value for HPA `spec.minReplicas` and this value not to be reverted by gardenlet. I.e, HPA _does_ scale down to min replicas but not below min replicas. HPA's max replicas count is 6.
 
 > Note: The `alpha.control-plane.scaling.shoot.gardener.cloud/scale-down-disabled` annotation is alpha and can be removed anytime without further notice. Only use it if you know what you do.
 
@@ -94,6 +100,6 @@ The virtual Kubernetes API server's autoscaling is same as the Shoot Kubernetes 
 
 The Gardener API server's autoscaling is the same as the Shoot Kubernetes API server's with the following differences:
 - The initial API server resource requests are `600m` and `512Mi` in all autoscaling modes.
-- The min replicas count is 2. The max replicas count is 4.
+- The min replicas count is 2 for a non-HA virtual cluster and 3 for an HA virtual cluster. The max replicas count is 6.
 - In `HVPA` mode, HVPA's HPA is scaling on both CPU and memory (average utilization 80% for both).
 - In `HVPA` mode, HVPA's VPA max allowed values are `4` CPU and `25G`.

@@ -83,6 +83,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 
 func (b *Botanist) computeKubeAPIServerAutoscalingConfig() apiserver.AutoscalingConfig {
 	var (
+		autoscalingMode           = b.autoscalingMode()
 		useMemoryMetricForHvpaHPA = false
 		scaleDownDisabled         = false
 		defaultReplicas           *int32
@@ -98,14 +99,15 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() apiserver.Autoscaling
 	if v1beta1helper.IsHAControlPlaneConfigured(b.Shoot.GetInfo()) {
 		minReplicas = 3
 	}
-
 	if metav1.HasAnnotation(b.Shoot.GetInfo().ObjectMeta, v1beta1constants.ShootAlphaControlPlaneScaleDownDisabled) {
 		minReplicas = 4
 		maxReplicas = 4
 		scaleDownDisabled = true
 	}
+	if autoscalingMode == apiserver.AutoscalingModeVPAAndHPA {
+		maxReplicas = 6
+	}
 
-	autoscalingMode := b.autoscalingMode()
 	nodeCount := b.Shoot.GetMinNodeCount()
 
 	switch autoscalingMode {
