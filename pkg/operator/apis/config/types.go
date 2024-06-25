@@ -60,8 +60,8 @@ type ControllerConfiguration struct {
 	NetworkPolicy NetworkPolicyControllerConfiguration
 	// VPAEvictionRequirements is the configuration for the VPAEvictionrequirements controller.
 	VPAEvictionRequirements VPAEvictionRequirementsControllerConfiguration
-	// ExtensionVirtualClusterConfig defines the configuration of the GardenExtension controller.
-	ExtensionVirtualClusterConfig ExtensionVirtualClusterConfigControllerConfiguration
+	// ExtensionVirtualCluster defines the configuration of the GardenExtension controller.
+	ExtensionVirtualCluster ExtensionVirtualClusterControllerConfiguration
 }
 
 // GardenCareControllerConfiguration defines the configuration of the GardenCare controller.
@@ -127,8 +127,8 @@ type NodeTolerationConfiguration struct {
 	DefaultUnreachableTolerationSeconds *int64
 }
 
-// ExtensionVirtualClusterConfigControllerConfiguration defines the configuration of the GardenExtension controller.
-type ExtensionVirtualClusterConfigControllerConfiguration struct {
+// ExtensionVirtualClusterControllerConfiguration defines the configuration of the GardenExtension controller.
+type ExtensionVirtualClusterControllerConfiguration struct {
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
 	ConcurrentSyncs *int
 }

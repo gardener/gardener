@@ -63,8 +63,8 @@ type ControllerConfiguration struct {
 	NetworkPolicy NetworkPolicyControllerConfiguration `json:"networkPolicy"`
 	// VPAEvictionRequirements is the configuration for the VPAEvictionrequirements controller.
 	VPAEvictionRequirements VPAEvictionRequirementsControllerConfiguration `json:"vpaEvictionRequirements"`
-	// ExtensionVirtualClusterConfig defines the configuration of the GardenExtension controller.
-	ExtensionVirtualClusterConfig ExtensionVirtualClusterConfigControllerConfiguration `json:"extensionVirtualClusterConfig"`
+	// ExtensionVirtualCluster defines the configuration of the extension virtual cluster controller.
+	ExtensionVirtualCluster ExtensionVirtualClusterControllerConfiguration `json:"extensionVirtualClusterConfig"`
 }
 
 // GardenCareControllerConfiguration defines the configuration of the GardenCare controller.
@@ -149,8 +149,8 @@ const (
 	DefaultLockObjectName = "gardener-operator-leader-election"
 )
 
-// ExtensionVirtualClusterConfigControllerConfiguration defines the configuration of the GardenExtension controller.
-type ExtensionVirtualClusterConfigControllerConfiguration struct {
+// ExtensionVirtualClusterControllerConfiguration defines the configuration of the GardenExtension controller.
+type ExtensionVirtualClusterControllerConfiguration struct {
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 }
