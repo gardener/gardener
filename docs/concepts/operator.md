@@ -373,6 +373,18 @@ spec:
       sendResolved: true
 ```
 
+If you are developing locally and need to test some custom alert routing, you will need to create a secret with the name `alertmanager-garden` and add your routes and receivers in the `alertmanager.yaml` key so that it can be picked up by the prometheus-operator. For example:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: alertmanager-config
+  namespace: garden
+data:
+  alertmanager.yaml: cm91dGU6CiAgcmVjZWl2ZXI6IGRldi1udWxsCiAgZ3JvdXBCeToKICAtIGFsZXJ0bmFtZQogIC0gbGFuZHNjYXBlCiAgcm91dGVzOgogIC0gY29udGludWU6IHRydWUKICAgIGdyb3VwV2FpdDogM20KICAgIGdyb3VwSW50ZXJ2YWw6IDVtCiAgICByZXBlYXRJbnRlcnZhbDogMTJoCiAgICByb3V0ZXM6CiAgICAtIHJlY2VpdmVyOiBvcHMKICAgICAgbWF0Y2hlcnM6CiAgICAgIC0gbmFtZTogc2V2ZXJpdHkKICAgICAgICB2YWx1ZTogd2FybmluZwogICAgICAgIG1hdGNoVHlwZTogPQogICAgICAtIG5hbWU6IHRvcG9sb2d5CiAgICAgICAgdmFsdWU6IGdhcmRlbgo=
+```
+
 ###### Plutono
 
 A [Plutono](https://github.com/credativ/plutono) instance is deployed by `gardener-operator` into the `garden` namespace for visualizing monitoring metrics and logs via dashboards.
