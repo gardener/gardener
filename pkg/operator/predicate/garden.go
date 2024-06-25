@@ -37,3 +37,12 @@ func GardenPredicate() predicate.Predicate {
 		GenericFunc: func(event.GenericEvent) bool { return false },
 	}
 }
+
+func DeletePredicate() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc:  func(event.CreateEvent) bool { return false },
+		UpdateFunc:  func(e event.UpdateEvent) bool { return false },
+		DeleteFunc:  func(event.DeleteEvent) bool { return true },
+		GenericFunc: func(event.GenericEvent) bool { return false },
+	}
+}

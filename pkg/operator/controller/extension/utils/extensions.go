@@ -46,19 +46,14 @@ func init() {
 	}
 }
 
-// Extensions returns a map whose keys are extension names and whose values are their default specs.
-func Extensions() map[string]Extension {
-	return extensions
-}
-
 // ExtensionSpecFor returns the spec for a given extension name. It also returns a bool indicating whether a default
 // spec is known or not.
 func ExtensionSpecFor(name string) (Extension, bool) {
-	spec, ok := Extensions()[name]
+	spec, ok := extensions[name]
 	return spec, ok
 }
 
-// MergeExtensionSpecs takes a name and a spec. If a default spec for the given extension name is known, it merges it
+// MergeExtensionSpecs takes an extension object. If a default spec for the given extension name is known, it merges it
 // with the provided spec. The provided spec always overrides fields in the default spec. If a default spec is not
 // known, then the provided spec will be returned.
 func MergeExtensionSpecs(ext operatorv1alpha1.Extension) (*operatorv1alpha1.Extension, error) {

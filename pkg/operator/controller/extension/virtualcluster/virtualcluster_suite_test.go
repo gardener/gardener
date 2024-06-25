@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestVirtualcluster(t *testing.T) {
+func TestVirtualCluster(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Virtualcluster Suite")
+	RunSpecs(t, "Operator Controller Extension VirtualCluster Suite")
 }

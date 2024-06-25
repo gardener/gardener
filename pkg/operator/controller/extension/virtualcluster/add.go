@@ -75,12 +75,12 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 		Named(ControllerName).
 		For(&operatorv1alpha1.Extension{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: ptr.Deref(r.Config.Controllers.ExtensionVirtualClusterConfig.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: ptr.Deref(r.Config.Controllers.ExtensionVirtualCluster.ConcurrentSyncs, 0),
 		}).
 		Watches(
 			&operatorv1alpha1.Garden{},
 			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapToAllExtensions), mapper.UpdateWithNew, mgr.GetLogger()),
-			builder.WithPredicates(predicate.Or(care.GardenPredicate(), predicate.GenerationChangedPredicate{})),
+			builder.WithPredicates(predicate.Or(operatorpredicate.GardenPredicate(), operatorpredicate.DeletePredicate())),
 		).
 		Complete(r)
 }
@@ -94,18 +94,5 @@ func (r *Reconciler) MapToAllExtensions(ctx context.Context, log logr.Logger, re
 		return nil
 	}
 
-	log.Info("AAAAAAAAAAAAAAAAAAA", "foo", extensionList)
 	return mapper.ObjectListToRequests(extensionList)
 }
-
-// // MapToAllGardens returns reconcile.Request objects for all existing gardens in the system.
-// func (r *Reconciler) MapToAllExtensions(ctx context.Context, log logr.Logger, reader client.Reader, _ client.Object) []reconcile.Request {
-// 	gardenList := &metav1.PartialObjectMetadataList{}
-// 	gardenList.SetGroupVersionKind(operatorv1alpha1.SchemeGroupVersion.WithKind("GardenList"))
-// 	if err := reader.List(ctx, gardenList); err != nil {
-// 		log.Error(err, "Failed to list gardens")
-// 		return nil
-// 	}
-//
-// 	return mapper.ObjectListToRequests(gardenList)
-// }

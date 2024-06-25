@@ -26,7 +26,6 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	reconcilerutil "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	. "github.com/gardener/gardener/pkg/operator/controller/extension/virtualcluster"
@@ -60,7 +59,7 @@ var _ = Describe("Virtual Cluster Reconciler", func() {
 
 		operatorConfig = config.OperatorConfiguration{
 			Controllers: config.ControllerConfiguration{
-				ExtensionVirtualClusterConfig: config.ExtensionVirtualClusterConfigControllerConfiguration{
+				ExtensionVirtualCluster: config.ExtensionVirtualClusterControllerConfiguration{
 					ConcurrentSyncs: ptr.To(1),
 				},
 			},
@@ -85,7 +84,7 @@ var _ = Describe("Virtual Cluster Reconciler", func() {
 						DeploymentSpec: operatorv1alpha1.DeploymentSpec{
 							Helm: &operatorv1alpha1.ExtensionHelm{
 								OCIRepository: &gardencorev1.OCIRepository{
-									Ref: ptr.To("foo"),
+									Ref: ptr.To("removeFinalizers"),
 								},
 							},
 						},
@@ -137,16 +136,7 @@ var _ = Describe("Virtual Cluster Reconciler", func() {
 			})
 		})
 
-		Context("when garden exists but is not ready", func() {
-			It("should requeue", func() {
-				req = reconcile.Request{NamespacedName: client.ObjectKey{Name: extensionName}}
-				_, err := reconciler.Reconcile(ctx, req)
-				Expect(err).NotTo(Succeed())
-				Expect(err).To(BeAssignableToTypeOf(&reconcilerutil.RequeueAfterError{}))
-			})
-		})
-
-		FContext("when garden is ready", func() {
+		Context("when garden is ready", func() {
 			BeforeEach(func() {
 				garden.Status = operatorv1alpha1.GardenStatus{
 					Conditions: []gardencorev1beta1.Condition{
@@ -168,7 +158,7 @@ var _ = Describe("Virtual Cluster Reconciler", func() {
 				Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: extensionName}, sutExt)).To(Succeed())
 				Expect(sutExt.Status.Conditions).To(HaveLen(1))
 				Expect(sutExt.Status.Conditions[0]).To(gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
-					"Type":   Equal(operatorv1alpha1.VirtualClusterConfigReconciled),
+					"Type":   Equal(operatorv1alpha1.VirtualClusterReconciled),
 					"Status": Equal(gardencorev1beta1.ConditionTrue),
 					"Reason": Equal(ConditionReconcileSuccess),
 				},

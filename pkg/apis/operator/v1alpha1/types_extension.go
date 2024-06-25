@@ -129,6 +129,6 @@ type ExtensionStatus struct {
 }
 
 const (
-	// VirtualClusterConfigReconciled is a constant for a condition type indicating the extension resources in the virtual cluster have reconciled and are available.
-	VirtualClusterConfigReconciled gardencorev1beta1.ConditionType = "VirtualClusterConfigReconciled"
+	// VirtualClusterReconciled is a constant for a condition type indicating the extension resources in the virtual cluster have reconciled and are available.
+	VirtualClusterReconciled gardencorev1beta1.ConditionType = "VirtualClusterReconciled"
 )
