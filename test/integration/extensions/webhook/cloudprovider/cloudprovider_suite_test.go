@@ -161,9 +161,8 @@ func addTestWebhookToManager(mgr manager.Manager) error {
 	switchOptions := extensionscmdwebhook.NewSwitchOptions(
 		extensionscmdwebhook.Switch("cloudprovider", func(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
 			return cloudprovider.New(mgr, cloudprovider.Args{
-				Provider:             providerName,
-				Mutator:              cloudprovider.NewMutator(mgr, log, testcloudprovider.NewEnsurer(log)),
-				EnableObjectSelector: true,
+				Provider: providerName,
+				Mutator:  cloudprovider.NewMutator(mgr, log, testcloudprovider.NewEnsurer(log)),
 			})
 		}),
 	)
