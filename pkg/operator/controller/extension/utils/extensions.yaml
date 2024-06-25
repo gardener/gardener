@@ -40,11 +40,10 @@ extensions:
   deployment:
     extension:
       values:
-        foo: bar
         logLevel: debug
       helm:
         ociRepository:
-          ref: europe-docker.pkg.dev/gardener-project/releases/gardener/extensions/provider-local/charts/extension:v0.0.0
+          ref: local-skaffold/gardener-extension-provider-local:latest
 
 # TODO: Add other extensions here following above scheme:
 # https://github.com/gardener/gardener-extension-provider-alicloud
