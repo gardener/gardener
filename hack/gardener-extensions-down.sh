@@ -34,6 +34,11 @@ parse_flags() {
 
 parse_flags "$@"
 
+if ! kubectl config view --kubeconfig "$PATH_SEED_KUBECONFIG" --raw -o jsonpath='{.users[0].user.client-certificate-data}' | base64 --decode | openssl x509 -noout -checkend 10 2>/dev/null ;then 
+  echo "Seed kubeconfig ${PATH_SEED_KUBECONFIG} has expired. Please provide a non-exipired kubeconfig and try again"
+  exit
+fi
+
 # Delete stuff gradually in the right order, otherwise several dependencies will prevent the cleanup from succeeding.
 # Deleting seed will fail as long as there are shoots scheduled on it. This is desired to ensure that there are no orphan infrastructure elements left.
 echo "Deleting $SEED_NAME seed"

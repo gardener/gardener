@@ -132,21 +132,6 @@ relay_domain=
 internal_dns_secret=$(yq -e 'select(document_index == 1) | .metadata.name' "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml)
 dns_provider_type=$(yq -e 'select(document_index == 1) | .metadata.annotations.["dns.gardener.cloud/provider"]' "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml)
 
-CERT_DATA=$(kubectl config view --kubeconfig "$seed_kubeconfig" --raw -o jsonpath='{.users[0].user.client-certificate-data}')
-if [[ -n "$CERT_DATA" ]]; then 
-  echo "Verifying that seed kubeconfig has not expired"
-  EXPIRY_DATE=$(echo "$CERT_DATA" | base64 --decode | openssl x509 -noout -enddate 2>/dev/null | sed -E 's/notAfter=(.+)/\1/')
-  EXPIRY_DATE_TIMESTAMP=$(date -d "$EXPIRY_DATE" +%s)
-  CURRENT_DATE_TIMESTAMP=$(date -u +%s)
-  if [ "$CURRENT_DATE_TIMESTAMP" -ge "$EXPIRY_DATE_TIMESTAMP" ]; then
-    echo "Seed kubeconfig has expired. Please provide a unexpired kubeconfig"
-    exit
-  fi
-else 
-  echo "Could not extract user's client-certificate-data from seed kubeconfig. Skipping check if seed kubeconfig has not expired"
-fi
-
-
 if kubectl get configmaps -n kube-system shoot-info --kubeconfig "$seed_kubeconfig" -o yaml > "$temp_shoot_info"; then
   use_shoot_info="true"
   echo "Getting config from shoot"
