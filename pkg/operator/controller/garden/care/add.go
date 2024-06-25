@@ -15,10 +15,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
@@ -29,6 +27,7 @@ import (
 	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
+	"github.com/gardener/gardener/pkg/operator/predicate"
 )
 
 // ControllerName is the name of this controller.
@@ -75,7 +74,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 		Watches(
 			&operatorv1alpha1.Garden{},
 			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(GardenPredicate()),
+			builder.WithPredicates(predicate.GardenPredicate()),
 		).Build(r)
 	if err != nil {
 		return err
@@ -90,32 +89,6 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 
 	return nil
-}
-
-// GardenPredicate is a predicate which returns 'true' for create events, and for update events in case the garden was
-// successfully reconciled.
-func GardenPredicate() predicate.Predicate {
-	return predicate.Funcs{
-		CreateFunc: func(event.CreateEvent) bool {
-			return true
-		},
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			garden, ok := e.ObjectNew.(*operatorv1alpha1.Garden)
-			if !ok {
-				return false
-			}
-
-			oldGarden, ok := e.ObjectOld.(*operatorv1alpha1.Garden)
-			if !ok {
-				return false
-			}
-
-			// re-evaluate health status right after a reconciliation operation has succeeded
-			return predicateutils.ReconciliationFinishedSuccessfully(oldGarden.Status.LastOperation, garden.Status.LastOperation)
-		},
-		DeleteFunc:  func(event.DeleteEvent) bool { return false },
-		GenericFunc: func(event.GenericEvent) bool { return false },
-	}
 }
 
 // MapManagedResourceToGarden is a mapper.MapFunc for mapping a ManagedResource to the owning Garden.

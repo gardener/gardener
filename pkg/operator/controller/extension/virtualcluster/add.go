@@ -24,11 +24,11 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
-	"github.com/gardener/gardener/pkg/operator/controller/garden/care"
+	operatorpredicate "github.com/gardener/gardener/pkg/operator/predicate"
 )
 
 // ControllerName is the name of this controller.
-const ControllerName = "extension-virtual-cluster"
+const ControllerName = "garden-extension-virtual-cluster"
 
 // AddToManager adds Reconciler to the given manager.
 func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) error {
