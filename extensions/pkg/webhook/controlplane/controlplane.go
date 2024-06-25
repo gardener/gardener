@@ -62,7 +62,7 @@ func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 	logger.Info("Creating webhook", "name", getName(args.Kind))
 
 	// Build namespace selector from the webhook kind and provider
-	namespaceSelector, err := buildSelector(args.Kind, args.Provider)
+	namespaceSelector, err := buildNamespaceSelector(args.Kind, args.Provider)
 	if err != nil {
 		return nil, err
 	}
@@ -90,8 +90,8 @@ func getName(kind string) string {
 	}
 }
 
-// buildSelector creates and returns a LabelSelector for the given webhook kind and provider.
-func buildSelector(kind, provider string) (*metav1.LabelSelector, error) {
+// buildNamespaceSelector creates and returns a LabelSelector for the given webhook kind and provider.
+func buildNamespaceSelector(kind, provider string) (*metav1.LabelSelector, error) {
 	// Determine label selector key from the kind
 	var key string
 

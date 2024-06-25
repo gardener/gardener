@@ -57,12 +57,12 @@ func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 		Target:            extensionswebhook.TargetSeed,
 		Path:              path,
 		Webhook:           &admission.Webhook{Handler: handler, RecoverPanic: true},
-		NamespaceSelector: buildSelector(args.NetworkProvider, args.CloudProvider),
+		NamespaceSelector: buildNamespaceSelector(args.NetworkProvider, args.CloudProvider),
 	}, nil
 }
 
-// buildSelector creates and returns a LabelSelector for the given webhook kind and provider.
-func buildSelector(networkProvider, cloudProvider string) *metav1.LabelSelector {
+// buildNamespaceSelector creates and returns a LabelSelector for the given webhook kind and provider.
+func buildNamespaceSelector(networkProvider, cloudProvider string) *metav1.LabelSelector {
 	// Create and return LabelSelector
 	return &metav1.LabelSelector{
 		MatchExpressions: []metav1.LabelSelectorRequirement{
