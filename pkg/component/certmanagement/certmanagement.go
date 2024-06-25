@@ -42,9 +42,9 @@ const (
 	rsaPrivateKeySize = 3072
 )
 
-// NewController creates a new instance of DeployWaiter for the CertManagement controller.
-func NewController(cl client.Client, values Values) component.DeployWaiter {
-	return &controllerDeployer{
+// New creates a new instance of DeployWaiter for the CertManagement controller.
+func New(cl client.Client, values Values) component.DeployWaiter {
+	return &certmanagement{
 		client:    cl,
 		namespace: values.Namespace,
 		image:     values.Image,
@@ -52,14 +52,14 @@ func NewController(cl client.Client, values Values) component.DeployWaiter {
 	}
 }
 
-type controllerDeployer struct {
+type certmanagement struct {
 	client    client.Client
 	namespace string
 	image     string
 	config    *operatorv1alpha1.CertManagementConfig
 }
 
-func (d *controllerDeployer) Deploy(ctx context.Context) error {
+func (d *certmanagement) Deploy(ctx context.Context) error {
 	var (
 		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
@@ -188,7 +188,7 @@ func (d *controllerDeployer) Deploy(ctx context.Context) error {
 			},
 			Spec: appsv1.DeploymentSpec{
 				Replicas:             ptr.To[int32](1),
-				RevisionHistoryLimit: ptr.To[int32](5),
+				RevisionHistoryLimit: ptr.To[int32](2),
 				Selector:             &metav1.LabelSelector{MatchLabels: getDeploymentLabels()},
 				Strategy:             appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType},
 				Template: corev1.PodTemplateSpec{
@@ -303,7 +303,7 @@ func (d *controllerDeployer) Deploy(ctx context.Context) error {
 	return managedresources.CreateForSeed(ctx, d.client, d.namespace, controllerManagedResourceName, false, resources)
 }
 
-func (d *controllerDeployer) Destroy(ctx context.Context) error {
+func (d *certmanagement) Destroy(ctx context.Context) error {
 	return managedresources.DeleteForSeed(ctx, d.client, d.namespace, controllerManagedResourceName)
 }
 
@@ -311,14 +311,14 @@ func (d *controllerDeployer) Destroy(ctx context.Context) error {
 // or deleted.
 var TimeoutWaitForManagedResource = 2 * time.Minute
 
-func (d *controllerDeployer) Wait(ctx context.Context) error {
+func (d *certmanagement) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
 	return managedresources.WaitUntilHealthy(timeoutCtx, d.client, d.namespace, controllerManagedResourceName)
 }
 
-func (d *controllerDeployer) WaitCleanup(ctx context.Context) error {
+func (d *certmanagement) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 

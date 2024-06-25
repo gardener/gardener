@@ -59,6 +59,50 @@ Refer to the [Topology-Aware Traffic Routing documentation](../operations/topolo
 It is possible to define the minimum size for `PersistentVolumeClaim`s in the runtime cluster created by `gardener-operator` via the `.spec.runtimeCluster.volume.minimumSize` field.
 This can be relevant in case the runtime cluster runs on an infrastructure that does only support disks of at least a certain size.
 
+#### Cert-Management
+
+The operator can deploy the Gardener [cert-management](https://github.com/gardener/cert-management) component optionally.
+A default issuer has to specified and will be deployed, too. Please note that the cert-controller-manager is configured to use `DNSRecords` for ACME DNS challenges on certificate requests. A suitable provider extension must be deployed in this case, e.g. using an operator extension resource.
+The default issuer must be set at `.spec.runtimeCluster.certManagement.defaultIssuer` either specifying an ACME or CA issuer.
+
+If the cert-controller-manager should make requests to any ACME server with a self-signed TLS certificate, CA certificates can be provided using a secret with data field `bundle.crt` referenced with `.spec.runtimeCluster.certManagement.config.caCertificatesSecretRef`.
+
+##### Default Issuer using an ACME server
+
+Please provide at least server and e-mail address. 
+
+```yaml
+spec:
+  runtimeCluster:
+    certManagement:
+      defaultIssuer:
+        ACME:
+          server: https://acme-v02.api.letsencrypt.org/directory
+          email: some.name@my-email-domain.com
+          #secretRef:
+          #  name: defaultIssuerPrivateKey
+          #precheckNameservers:
+          #- 1.2.3.4
+          #- 5.6.7.8
+```
+
+If needed, an existing ACME account can be specified with the `secretRef`. The referenced secret must contain a field `privateKey`. Otherwise, an account is auto-registered if supported by the ACME server.
+If you are using a private DNS server, you may need to set the `precheckNameservers` used to check the propagation of the DNS challenges.
+
+##### Default Issuer using a root or intermediate CA
+
+If you want to use a self-signed root or intermediate CA for signing the certificates, provide a TLS secret containing the CA and reference it with
+
+```yaml
+spec:
+  runtimeCluster:
+    certManagement:
+      defaultIssuer:
+        CA:
+          secretRef:
+            name: my-ca-tls-secret
+```
+
 ### Configuration For Virtual Cluster
 
 #### ETCD Encryption Config

@@ -44,9 +44,11 @@ spec:
   #   minimumSize: 20Gi
   # certManagement:
   #   defaultIssuer:
-  #     email: some.name@my-email-domain.com
-  #     #secretRef: defaultIssuerPrivateKey
-  #     server: https://acme-staging-v02.api.letsencrypt.org/directory
+  #     acme:
+  #       email: some.name@my-email-domain.com
+  #       secretRef: # optional to use a pre-defined ACME account
+  #         name: defaultIssuerPrivateKey
+  #       server: https://acme-staging-v02.api.letsencrypt.org/directory # for productive purposes use e.g. https://acme-v02.api.letsencrypt.org/directory
   virtualCluster:
   # controlPlane:
   #   highAvailability: {}

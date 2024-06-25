@@ -70,8 +70,10 @@ func defaultGarden(backupSecret *corev1.Secret, withCertManagement bool) *operat
 	if withCertManagement {
 		certManagement = &operatorv1alpha1.CertManagement{
 			DefaultIssuer: operatorv1alpha1.DefaultIssuer{
-				Email:  "some.user@some-domain.com",
-				Server: "https://acme-staging-v02.api.letsencrypt.org/directory",
+				ACME: &operatorv1alpha1.ACMEIssuer{
+					Email:  "some.user@some-domain.com",
+					Server: "https://acme-staging-v02.api.letsencrypt.org/directory",
+				},
 			},
 		}
 	}

@@ -748,8 +748,10 @@ var _ = Describe("Garden controller tests", func() {
 		patch := client.MergeFrom(garden.DeepCopy())
 		garden.Spec.RuntimeCluster.CertManagement = &operatorv1alpha1.CertManagement{
 			DefaultIssuer: operatorv1alpha1.DefaultIssuer{
-				Email:  "some.user@some-domain.com",
-				Server: "https://acme-staging-v02.api.letsencrypt.org/directory",
+				ACME: &operatorv1alpha1.ACMEIssuer{
+					Email:  "some.user@some-domain.com",
+					Server: "https://acme-staging-v02.api.letsencrypt.org/directory",
+				},
 			},
 		}
 		Expect(testClient.Patch(ctx, garden, patch)).To(Succeed())

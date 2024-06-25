@@ -77,30 +77,46 @@ func (c *issuersDeployer) Deploy(ctx context.Context) error {
 			Name:      DefaultIssuerName,
 			Namespace: c.values.Namespace,
 		},
-		Spec: certv1alpha1.IssuerSpec{
+	}
+	if c.values.DefaultIssuer.ACME != nil {
+		issuerObj.Spec = certv1alpha1.IssuerSpec{
 			ACME: &certv1alpha1.ACMESpec{
-				AutoRegistration: c.values.DefaultIssuer.SecretRef == nil,
-				Email:            c.values.DefaultIssuer.Email,
-				Server:           c.values.DefaultIssuer.Server,
+				AutoRegistration: c.values.DefaultIssuer.ACME.SecretRef == nil,
+				Email:            c.values.DefaultIssuer.ACME.Email,
+				Server:           c.values.DefaultIssuer.ACME.Server,
 			},
-		},
-	}
-	objects := []client.Object{issuerObj}
-	if c.values.DefaultIssuer.SecretRef != nil {
-		issuerSecret := &corev1.Secret{}
-		if err := c.client.Get(ctx, client.ObjectKey{Namespace: c.values.Namespace, Name: c.values.DefaultIssuer.SecretRef.Name}, issuerSecret); err != nil {
-			return fmt.Errorf("cannot read secret for issuer %s: %w", DefaultIssuerName, err)
 		}
-		issuerObj.Spec.ACME.PrivateKeySecretRef = &corev1.SecretReference{
-			Name:      issuerSecret.Name,
-			Namespace: issuerSecret.Namespace,
+		if c.values.DefaultIssuer.ACME.SecretRef != nil {
+			issuerSecret := &corev1.Secret{}
+			if err := c.client.Get(ctx, client.ObjectKey{Namespace: c.values.Namespace, Name: c.values.DefaultIssuer.ACME.SecretRef.Name}, issuerSecret); err != nil {
+				return fmt.Errorf("cannot read secret for ACME issuer %s: %w", DefaultIssuerName, err)
+			}
+			issuerObj.Spec.ACME.PrivateKeySecretRef = &corev1.SecretReference{
+				Name:      issuerSecret.Name,
+				Namespace: issuerSecret.Namespace,
+			}
 		}
-	}
-	if len(c.values.DefaultIssuer.PrecheckNameservers) > 0 {
-		issuerObj.Spec.ACME.PrecheckNameservers = c.values.DefaultIssuer.PrecheckNameservers
+		if len(c.values.DefaultIssuer.ACME.PrecheckNameservers) > 0 {
+			issuerObj.Spec.ACME.PrecheckNameservers = c.values.DefaultIssuer.ACME.PrecheckNameservers
+		}
+	} else if c.values.DefaultIssuer.CA != nil {
+		caSecret := &corev1.Secret{}
+		if err := c.client.Get(ctx, client.ObjectKey{Namespace: c.values.Namespace, Name: c.values.DefaultIssuer.CA.SecretRef.Name}, caSecret); err != nil {
+			return fmt.Errorf("cannot read secret for CA issuer %s: %w", DefaultIssuerName, err)
+		}
+		issuerObj.Spec = certv1alpha1.IssuerSpec{
+			CA: &certv1alpha1.CASpec{
+				PrivateKeySecretRef: &corev1.SecretReference{
+					Name:      caSecret.Name,
+					Namespace: caSecret.Namespace,
+				},
+			},
+		}
+	} else {
+		return fmt.Errorf("invalid default issuer configuration: either ACME or CA must be set")
 	}
 
-	resources, err := registry.AddAllAndSerialize(objects...)
+	resources, err := registry.AddAllAndSerialize(issuerObj)
 	if err != nil {
 		return err
 	}

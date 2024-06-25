@@ -249,6 +249,12 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.certManagementIssuer = r.newCertManagementIssuer(garden)
+	if garden.Spec.RuntimeCluster.CertManagement == nil {
+		c.certManagementController = component.OpDestroyWithoutWait(c.certManagementController)
+		c.certManagementIssuer = component.OpDestroyWithoutWait(c.certManagementIssuer)
+		// keep cert-management CRDs untouched as they may be deployed by external component
+		c.certManagementCRD = component.NoOp()
+	}
 	c.gardenerDashboard, err = r.newGardenerDashboard(garden, secretsManager, wildcardCertSecretName)
 	if err != nil {
 		return
@@ -1065,7 +1071,7 @@ func (r *Reconciler) newCertManagementController(garden *operatorv1alpha1.Garden
 		return nil, err
 	}
 	values.Image = image.String()
-	return certmanagement.NewController(r.RuntimeClientSet.Client(), values), nil
+	return certmanagement.New(r.RuntimeClientSet.Client(), values), nil
 }
 
 func (r *Reconciler) newCertManagementIssuer(garden *operatorv1alpha1.Garden) component.DeployWaiter {

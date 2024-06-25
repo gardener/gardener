@@ -64,7 +64,7 @@ var _ = Describe("CertManagement", func() {
 		issuer *certv1alpha1.Issuer
 
 		newController = func(values Values) component.DeployWaiter {
-			return NewController(c, values)
+			return New(c, values)
 		}
 		newDefaultIssuer = func(values Values) component.DeployWaiter {
 			return NewIssuers(c, values)
@@ -92,10 +92,12 @@ var _ = Describe("CertManagement", func() {
 			Image:     image,
 			Namespace: namespace,
 			DefaultIssuer: operatorv1alpha1.DefaultIssuer{
-				Email:  "test@example.com",
-				Server: "https://acme-v02.api.letsencrypt.org/directory",
-				SecretRef: &corev1.LocalObjectReference{
-					Name: issuerSecretName,
+				ACME: &operatorv1alpha1.ACMEIssuer{
+					Email:  "test@example.com",
+					Server: "https://acme-v02.api.letsencrypt.org/directory",
+					SecretRef: &corev1.LocalObjectReference{
+						Name: issuerSecretName,
+					},
 				},
 			},
 		}
@@ -225,7 +227,7 @@ var _ = Describe("CertManagement", func() {
 			},
 			Spec: appsv1.DeploymentSpec{
 				Replicas:             ptr.To[int32](1),
-				RevisionHistoryLimit: ptr.To[int32](5),
+				RevisionHistoryLimit: ptr.To[int32](2),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						"app.kubernetes.io/instance": "cert-management",

@@ -10,6 +10,74 @@
 </p>
 Resource Types:
 <ul></ul>
+<h3 id="operator.gardener.cloud/v1alpha1.ACMEIssuer">ACMEIssuer
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.DefaultIssuer">DefaultIssuer</a>)
+</p>
+<p>
+<p>ACMEIssuer specifies an issuer using an ACME server.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>email</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Email is the e-mail for the ACME user.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>server</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Server is the ACME server endpoint.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>secretRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#localobjectreference-v1-core">
+Kubernetes core/v1.LocalObjectReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SecretRef is a reference to a secret containing a private key of the issuer (data key &lsquo;privateKey&rsquo;).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>precheckNameservers</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>PrecheckNameservers overwrites the default precheck nameservers used for checking DNS propagation.
+Format <code>host</code> or <code>host:port</code>, e.g. &ldquo;8.8.8.8&rdquo; same as &ldquo;8.8.8.8:53&rdquo; or &ldquo;google-public-dns-a.google.com:53&rdquo;.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.gardener.cloud/v1alpha1.AdmissionDeploymentSpec">AdmissionDeploymentSpec
 </h3>
 <p>
@@ -266,6 +334,38 @@ Kubernetes core/v1.LocalObjectReference
 <td>
 <p>SecretRef is a reference to a Secret object containing the cloud provider credentials for the object store where
 backups should be stored. It should have enough privileges to manipulate the objects as well as buckets.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.CAIssuer">CAIssuer
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.DefaultIssuer">DefaultIssuer</a>)
+</p>
+<p>
+<p>CAIssuer specifies an issuer using a root or intermediate CA to be used for signing.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>secretRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#localobjectreference-v1-core">
+Kubernetes core/v1.LocalObjectReference
+</a>
+</em>
+</td>
+<td>
+<p>SecretRef is a reference to a TLS secret containing the CA for signing certificates.</p>
 </td>
 </tr>
 </tbody>
@@ -765,51 +865,30 @@ string
 <tbody>
 <tr>
 <td>
-<code>email</code></br>
+<code>acme</code></br>
 <em>
-string
-</em>
-</td>
-<td>
-<p>Email is the e-mail for the ACME user.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>server</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Server is the ACME server endpoint.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>secretRef</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#localobjectreference-v1-core">
-Kubernetes core/v1.LocalObjectReference
+<a href="#operator.gardener.cloud/v1alpha1.ACMEIssuer">
+ACMEIssuer
 </a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>SecretRef is a reference to a secret containing a private key of the issuer (data key &lsquo;privateKey&rsquo;).</p>
+<p>ACME is the ACME protocol specific spec. Either ACME or CA must be specified.</p>
 </td>
 </tr>
 <tr>
 <td>
-<code>precheckNameservers</code></br>
+<code>ca</code></br>
 <em>
-[]string
+<a href="#operator.gardener.cloud/v1alpha1.CAIssuer">
+CAIssuer
+</a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>PrecheckNameservers overwrites the default precheck nameservers used for checking DNS propagation.
-Format <code>host</code> or <code>host:port</code>, e.g. &ldquo;8.8.8.8&rdquo; same as &ldquo;8.8.8.8:53&rdquo; or &ldquo;google-public-dns-a.google.com:53&rdquo;.</p>
+<p>CA is the CA specific spec. Either ACME or CA must be specified.</p>
 </td>
 </tr>
 </tbody>
