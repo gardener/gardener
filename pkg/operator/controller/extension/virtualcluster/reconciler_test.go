@@ -166,7 +166,7 @@ var _ = Describe("Virtual Cluster Reconciler", func() {
 				Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: extensionName}, sutExt)).To(Succeed())
 				Expect(sutExt.Status.Conditions).To(HaveLen(1))
 				Expect(sutExt.Status.Conditions[0]).To(gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
-					"Type":   Equal(operatorv1alpha1.VirtualClusterReconciled),
+					"Type":   Equal(operatorv1alpha1.VirtualClusterExtensionReconciled),
 					"Status": Equal(gardencorev1beta1.ConditionTrue),
 					"Reason": Equal(ConditionReconcileSuccess),
 				}))

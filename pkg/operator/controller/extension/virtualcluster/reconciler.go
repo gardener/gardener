@@ -306,6 +306,6 @@ func (vc VirtualClusterConditions) ConditionTypes() []gardencorev1beta1.Conditio
 // All conditions are retrieved from the given 'status' or newly initialized.
 func NewVirtualClusterConditions(clock clock.Clock, status operatorv1alpha1.ExtensionStatus) VirtualClusterConditions {
 	return VirtualClusterConditions{
-		virtualClusterReconciled: v1beta1helper.GetOrInitConditionWithClock(clock, status.Conditions, operatorv1alpha1.VirtualClusterReconciled),
+		virtualClusterReconciled: v1beta1helper.GetOrInitConditionWithClock(clock, status.Conditions, operatorv1alpha1.VirtualClusterExtensionReconciled),
 	}
 }
