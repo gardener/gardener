@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
@@ -82,7 +83,11 @@ func (h *Handler) handle(req admission.Request) error {
 		return nil
 	}
 
-	if objectSize := len(req.Object.Raw); limit.CmpInt64(int64(objectSize)) == -1 {
+	objectSize, err := relevantObjectSize(req.Object.Raw)
+	if err != nil {
+		return err
+	}
+	if limit.CmpInt64(objectSize) == -1 {
 		if h.Config.OperationMode == nil || *h.Config.OperationMode == admissioncontrollerconfig.AdmissionModeBlock {
 			log.Info("Maximum resource size exceeded, rejected request", "requestObjectSize", objectSize, "limit", limit)
 			metrics.RejectedResources.WithLabelValues(
@@ -98,6 +103,20 @@ func (h *Handler) handle(req admission.Request) error {
 	}
 
 	return nil
+}
+
+func relevantObjectSize(rawObject []byte) (int64, error) {
+	var obj map[string]any
+	err := json.Unmarshal(rawObject, &obj)
+	if err != nil {
+		return 0, err
+	}
+	delete(obj, "status")
+	if obj["metadata"] != nil {
+		delete(obj["metadata"].(map[string]any), "managedFields")
+	}
+	marshalled, err := json.Marshal(obj)
+	return int64(len(marshalled)), err
 }
 
 func serviceAccountMatch(userInfo authenticationv1.UserInfo, subjects []rbacv1.Subject) bool {

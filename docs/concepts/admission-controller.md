@@ -36,6 +36,9 @@ One example is the creation of shoot resources with large annotation values (up 
 
 The Resource Size Validator checks arbitrary incoming admission requests against a configured maximum size for the resource's group-version-kind combination. It denies the request if the object exceeds the quota.
 
+> [!NOTE]
+> The contents of `status` subresources and `metadata.managedFields` are not taken into account for the resource size calculation.
+
 Example for Gardener Admission Controller configuration:
 ```yaml
 server:
