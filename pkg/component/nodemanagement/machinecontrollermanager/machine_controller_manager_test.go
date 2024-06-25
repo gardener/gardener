@@ -175,7 +175,8 @@ var _ = Describe("MachineControllerManager", func() {
 					"app":                 "kubernetes",
 					"role":                "machine-controller-manager",
 					"gardener.cloud/role": "controlplane",
-					"high-availability-config.resources.gardener.cloud/type": "controller",
+					"high-availability-config.resources.gardener.cloud/type":             "controller",
+					"provider.extensions.gardener.cloud/mutated-by-controlplane-webhook": "true",
 				},
 			},
 			Spec: appsv1.DeploymentSpec{
@@ -277,6 +278,9 @@ var _ = Describe("MachineControllerManager", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "machine-controller-manager-vpa",
 				Namespace: namespace,
+				Labels: map[string]string{
+					"provider.extensions.gardener.cloud/mutated-by-controlplane-webhook": "true",
+				},
 			},
 			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 				TargetRef: &autoscalingv1.CrossVersionObjectReference{

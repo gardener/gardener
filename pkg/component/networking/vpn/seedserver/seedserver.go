@@ -629,7 +629,9 @@ func (v *vpnSeedServer) deployDeployment(ctx context.Context, labels map[string]
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, deployment, func() error {
 		maxSurge := intstr.FromInt32(100)
 		maxUnavailable := intstr.FromInt32(0)
-		deployment.Labels = labels
+		deployment.Labels = utils.MergeStringMaps(labels, map[string]string{
+			v1beta1constants.LabelExtensionProviderMutatedByControlplaneWebhook: "true",
+		})
 		deployment.Spec = appsv1.DeploymentSpec{
 			Replicas:             ptr.To(v.values.Replicas),
 			RevisionHistoryLimit: ptr.To[int32](1),

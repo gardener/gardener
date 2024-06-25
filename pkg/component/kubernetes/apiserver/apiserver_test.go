@@ -2087,7 +2087,8 @@ rules:
 					"gardener.cloud/role": "controlplane",
 					"app":                 "kubernetes",
 					"role":                "apiserver",
-					"high-availability-config.resources.gardener.cloud/type": "server",
+					"high-availability-config.resources.gardener.cloud/type":             "server",
+					"provider.extensions.gardener.cloud/mutated-by-controlplane-webhook": "true",
 				}))
 			})
 
@@ -2105,7 +2106,8 @@ rules:
 					"gardener.cloud/role": "controlplane",
 					"app":                 "kubernetes",
 					"role":                "apiserver",
-					"high-availability-config.resources.gardener.cloud/type": "server",
+					"high-availability-config.resources.gardener.cloud/type":             "server",
+					"provider.extensions.gardener.cloud/mutated-by-controlplane-webhook": "true",
 				}))
 			})
 

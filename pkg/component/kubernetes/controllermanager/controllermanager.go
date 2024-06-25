@@ -290,8 +290,9 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient.Client(), deployment, func() error {
 		deployment.Labels = utils.MergeStringMaps(getLabels(), map[string]string{
-			v1beta1constants.GardenRole:                  v1beta1constants.GardenRoleControlPlane,
-			resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
+			v1beta1constants.GardenRole:                                         v1beta1constants.GardenRoleControlPlane,
+			resourcesv1alpha1.HighAvailabilityConfigType:                        resourcesv1alpha1.HighAvailabilityConfigTypeController,
+			v1beta1constants.LabelExtensionProviderMutatedByControlplaneWebhook: "true",
 		})
 		deployment.Spec.Replicas = &k.values.Replicas
 		deployment.Spec.RevisionHistoryLimit = ptr.To[int32](1)
