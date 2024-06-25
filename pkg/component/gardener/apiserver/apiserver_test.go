@@ -336,6 +336,7 @@ var _ = Describe("GardenerAPIServer", func() {
 								"--log-level=" + logLevel,
 								"--log-format=" + logFormat,
 								"--secure-port=8443",
+								"--shoot-admin-kubeconfig-max-expiration=4320h",
 								"--goaway-chance=0.001500",
 								"--workload-identity-token-issuer=" + workloadIdentityIssuer,
 								"--workload-identity-signing-key-file=/etc/gardener-apiserver/workload-identity/signing/key.pem",

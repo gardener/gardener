@@ -315,7 +315,7 @@ var _ = Describe("GardenerControllerManager", func() {
 				managedResourceSecretRuntime.Name = managedResourceRuntime.Spec.SecretRefs[0].Name
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretRuntime), managedResourceSecretRuntime)).To(Succeed())
 				cm := configMap(namespace, values)
-				Expect(cm.Name).To(Equal("gardener-controller-manager-config-960e3f19"))
+				Expect(cm.Name).To(Equal("gardener-controller-manager-config-625036ea"))
 				expectedRuntimeObjects = []client.Object{
 					cm,
 					podDisruptionBudget,
@@ -692,6 +692,8 @@ func configMap(namespace string, testValues Values) *corev1.ConfigMap {
 			Project: &controllermanagerconfigv1alpha1.ProjectControllerConfiguration{
 				ConcurrentSyncs: ptr.To(20),
 				Quotas:          testValues.Quotas,
+				// TODO: replace this hardcoded configuration with proper fields in the Garden API
+				StaleExpirationTimeDays: ptr.To(6000),
 			},
 			SecretBinding: &controllermanagerconfigv1alpha1.SecretBindingControllerConfiguration{
 				ConcurrentSyncs: ptr.To(20),

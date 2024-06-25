@@ -62,6 +62,8 @@ func (g *gardenerControllerManager) configMapControllerManagerConfig() (*corev1.
 			Project: &controllermanagerconfigv1alpha1.ProjectControllerConfiguration{
 				ConcurrentSyncs: ptr.To(20),
 				Quotas:          g.values.Quotas,
+				// TODO: replace this hardcoded configuration with proper fields in the Garden API
+				StaleExpirationTimeDays: ptr.To(6000),
 			},
 			SecretBinding: &controllermanagerconfigv1alpha1.SecretBindingControllerConfiguration{
 				ConcurrentSyncs: ptr.To(20),
