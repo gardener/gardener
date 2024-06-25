@@ -35,6 +35,7 @@ One example is the creation of shoot resources with large annotation values (up 
 [Vertical autoscaling](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler) can help to mitigate such situations, but we cannot expect to scale infinitely, and thus need means to block the attack itself.
 
 The Resource Size Validator checks arbitrary incoming admission requests against a configured maximum size for the resource's group-version-kind combination. It denies the request if the object exceeds the quota.
+The values of the following keys are not taken into account for the resource size calculation: `status`, `metadata.managedFields`
 
 Example for Gardener Admission Controller configuration:
 ```yaml

@@ -112,6 +112,9 @@ func relevantObjectSize(rawObject []byte) (int64, error) {
 		return 0, err
 	}
 	delete(obj, "status")
+	if obj["metadata"] != nil {
+		delete(obj["metadata"].(map[string]any), "managedFields")
+	}
 	marshalled, err := json.Marshal(obj)
 	return int64(len(marshalled)), err
 }

@@ -270,6 +270,29 @@ var _ = Describe("handler", func() {
 		test(largeShoot, restrictedUser, true)
 	})
 
+	It("should pass because size is in range for v1beta1 shoot without considering managed fields", func() {
+		//fieldsV1Content, err := json.(map[string]any{})
+		largeShoot := func() runtime.Object {
+			shootWithLargeStatus := &gardencorev1beta1.Shoot{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Shoot",
+					APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:     "garden-my-project",
+					Name:          "my-shoot",
+					ManagedFields: []metav1.ManagedFieldsEntry{{Manager: "manager", Operation: "Update", FieldsV1: &metav1.FieldsV1{Raw: []byte("{\"testPayload\": \"This is some random large payload to mock some managed fields entries that are to be filtered out for size comparison\"}")}}},
+				},
+			}
+			objData, err := runtime.Encode(testEncoder, shootWithLargeStatus)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(shootsv1beta1SizeLimit.CmpInt64(int64(len(objData)))).Should(Equal(-1))
+			return shootWithLargeStatus
+		}
+		//Expect(largeShoot()).To(BeEmpty())
+		test(largeShoot, restrictedUser, true)
+	})
+
 	It("should pass because of unrestricted user", func() {
 		test(shootv1beta1, unrestrictedUser, true)
 	})
