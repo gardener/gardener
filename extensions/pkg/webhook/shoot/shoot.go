@@ -49,7 +49,7 @@ func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 		Types:             args.Types,
 		Path:              WebhookName,
 		Target:            extensionswebhook.TargetShoot,
-		NamespaceSelector: buildSelector(),
+		NamespaceSelector: buildNamespaceSelector(),
 		ObjectSelector:    args.ObjectSelector,
 		FailurePolicy:     args.FailurePolicy,
 	}
@@ -77,8 +77,8 @@ func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 	return nil, fmt.Errorf("neither mutator nor mutator with shoot client is set")
 }
 
-// buildSelector creates and returns a LabelSelector for the given webhook kind and provider.
-func buildSelector() *metav1.LabelSelector {
+// buildNamespaceSelector creates and returns a LabelSelector for the given webhook kind and provider.
+func buildNamespaceSelector() *metav1.LabelSelector {
 	// Create and return LabelSelector
 	return &metav1.LabelSelector{
 		MatchExpressions: []metav1.LabelSelectorRequirement{

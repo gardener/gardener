@@ -24,9 +24,8 @@ var logger = log.Log.WithName("cloudprovider-webhook")
 
 // Args are the requirements to create a cloudprovider webhook.
 type Args struct {
-	Provider             string
-	Mutator              extensionswebhook.Mutator
-	EnableObjectSelector bool
+	Provider string
+	Mutator  extensionswebhook.Mutator
 }
 
 // New creates a new cloudprovider webhook.
@@ -39,7 +38,12 @@ func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 		return nil, err
 	}
 
-	namespaceSelector := buildSelector(args.Provider)
+	namespaceSelector := buildNamespaceSelector(args.Provider)
+	objectSelector := &metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			v1beta1constants.GardenerPurpose: v1beta1constants.SecretNameCloudProvider,
+		},
+	}
 	logger.Info("Creating webhook")
 
 	webhook := &extensionswebhook.Webhook{
@@ -50,20 +54,13 @@ func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 		Webhook:           &admission.Webhook{Handler: handler, RecoverPanic: true},
 		Path:              WebhookName,
 		NamespaceSelector: namespaceSelector,
-	}
-
-	if args.EnableObjectSelector {
-		webhook.ObjectSelector = &metav1.LabelSelector{
-			MatchLabels: map[string]string{
-				v1beta1constants.GardenerPurpose: v1beta1constants.SecretNameCloudProvider,
-			},
-		}
+		ObjectSelector:    objectSelector,
 	}
 
 	return webhook, nil
 }
 
-func buildSelector(provider string) *metav1.LabelSelector {
+func buildNamespaceSelector(provider string) *metav1.LabelSelector {
 	return &metav1.LabelSelector{
 		MatchExpressions: []metav1.LabelSelectorRequirement{
 			{
