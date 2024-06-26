@@ -425,6 +425,9 @@ func (p *plutono) getDashboardConfigMap(ctx context.Context, suffix string) (*co
 			if !p.values.VPNHighAvailabilityEnabled {
 				ignorePaths.Insert("ha-vpn")
 			}
+			if p.values.VPNHighAvailabilityEnabled {
+				ignorePaths.Insert("envoy-proxy")
+			}
 		}
 
 		additionalDashboards, err := p.getAdditionalDashboards(ctx)
