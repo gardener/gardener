@@ -62,10 +62,10 @@ This can be relevant in case the runtime cluster runs on an infrastructure that 
 #### Cert-Management
 
 The operator can deploy the Gardener [cert-management](https://github.com/gardener/cert-management) component optionally.
-A default issuer has to specified and will be deployed, too. Please note that the cert-controller-manager is configured to use `DNSRecords` for ACME DNS challenges on certificate requests. A suitable provider extension must be deployed in this case, e.g. using an operator extension resource.
+A default issuer has to be specified and will be deployed, too. Please note that the `cert-controller-manager` is configured to use `DNSRecords` for ACME DNS challenges on certificate requests. A suitable provider extension must be deployed in this case, e.g. using an operator extension resource.
 The default issuer must be set at `.spec.runtimeCluster.certManagement.defaultIssuer` either specifying an ACME or CA issuer.
 
-If the cert-controller-manager should make requests to any ACME server with a self-signed TLS certificate, CA certificates can be provided using a secret with data field `bundle.crt` referenced with `.spec.runtimeCluster.certManagement.config.caCertificatesSecretRef`.
+If the `cert-controller-manager` should make requests to any ACME servers running with self-signed TLS certificates, the related CA can be provided using a secret with data field `bundle.crt` referenced with `.spec.runtimeCluster.certManagement.config.caCertificatesSecretRef`.
 
 ##### Default Issuer using an ACME server
 
@@ -79,11 +79,11 @@ spec:
         ACME:
           server: https://acme-v02.api.letsencrypt.org/directory
           email: some.name@my-email-domain.com
-          #secretRef:
-          #  name: defaultIssuerPrivateKey
-          #precheckNameservers:
-          #- 1.2.3.4
-          #- 5.6.7.8
+        # secretRef:
+        #   name: defaultIssuerPrivateKey
+        #  precheckNameservers:
+        #  - 1.2.3.4
+        #  - 5.6.7.8
 ```
 
 If needed, an existing ACME account can be specified with the `secretRef`. The referenced secret must contain a field `privateKey`. Otherwise, an account is auto-registered if supported by the ACME server.
@@ -91,7 +91,7 @@ If you are using a private DNS server, you may need to set the `precheckNameserv
 
 ##### Default Issuer using a root or intermediate CA
 
-If you want to use a self-signed root or intermediate CA for signing the certificates, provide a TLS secret containing the CA and reference it with
+If you want to use a root or intermediate CA for signing the certificates, provide a TLS secret containing the CA and reference it as shown in the example below.
 
 ```yaml
 spec:

@@ -219,7 +219,7 @@ type ACMEIssuer struct {
 // CAIssuer specifies an issuer using a root or intermediate CA to be used for signing.
 type CAIssuer struct {
 	// SecretRef is a reference to a TLS secret containing the CA for signing certificates.
-	SecretRef *corev1.LocalObjectReference `json:"secretRef"`
+	SecretRef corev1.LocalObjectReference `json:"secretRef"`
 }
 
 // VirtualCluster contains configuration for the virtual cluster.
