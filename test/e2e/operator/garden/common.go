@@ -9,7 +9,6 @@ import (
 	"os"
 	"time"
 
-	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -26,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/utils"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	. "github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
