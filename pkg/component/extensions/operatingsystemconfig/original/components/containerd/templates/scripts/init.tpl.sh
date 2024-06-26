@@ -40,12 +40,3 @@ elif ! grep -F "$CUSTOM_CONFIG_FILES" $FILE >/dev/null ; then
 fi
 
 BIN_PATH={{ .binaryPath }}
-
-ENV_FILE=/etc/systemd/system/containerd.service.d/30-env_config.conf
-if [ ! -f "$ENV_FILE" ]; then
-  cat <<EOF | tee $ENV_FILE
-[Service]
-Environment="PATH=$BIN_PATH:$PATH"
-EOF
-  systemctl daemon-reload
-fi
