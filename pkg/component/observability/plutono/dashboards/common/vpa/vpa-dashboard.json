@@ -148,7 +148,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(container_memory_working_set_bytes{namespace=~\"$namespace\",pod=~\"$targetName(.+)\", container=~\"$container\"}) by (pod)",
+          "expr": "sum(container_memory_working_set_bytes{namespace=~\"$namespace\",pod=~\"(?i:$targetKind-)?$targetName(.+)\", container=~\"$container\"}) by (pod)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -307,7 +307,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(kube_pod_container_resource_requests{namespace=~\"$namespace\",resource=\"memory\", unit=\"byte\", pod=~\"$targetName(.+)\",  container=~\"$container\"}) by (pod)",
+          "expr": "sum(kube_pod_container_resource_requests{namespace=~\"$namespace\",resource=\"memory\", unit=\"byte\", pod=~\"(?i:$targetKind-)?$targetName(.+)\",  container=~\"$container\"}) by (pod)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -316,7 +316,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(kube_pod_container_resource_limits{namespace=~\"$namespace\",resource=\"memory\", unit=\"byte\", pod=~\"$targetName(.+)\",  container=~\"$container\"})  by (pod)",
+          "expr": "sum(kube_pod_container_resource_limits{namespace=~\"$namespace\",resource=\"memory\", unit=\"byte\", pod=~\"(?i:$targetKind-)?$targetName(.+)\",  container=~\"$container\"})  by (pod)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -438,7 +438,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=~\"$namespace\",pod=~\"$targetName-(.+)\",container=~\"$container\"}[$__rate_interval])) by (pod)",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=~\"$namespace\",pod=~\"(?i:$targetKind-)?$targetName-(.+)\",container=~\"$container\"}[$__rate_interval])) by (pod)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -596,7 +596,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(kube_pod_container_resource_requests{resource=\"cpu\", unit=\"core\", pod=~\"$targetName(.+)\",  container=~\"$container\"}) by (pod)",
+          "expr": "sum(kube_pod_container_resource_requests{resource=\"cpu\", unit=\"core\", pod=~\"(?i:$targetKind-)?$targetName(.+)\",  container=~\"$container\"}) by (pod)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -605,7 +605,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(kube_pod_container_resource_limits{resource=\"cpu\", unit=\"core\", pod=~\"$targetName(.+)\",  container=~\"$container\"}) by (pod)",
+          "expr": "sum(kube_pod_container_resource_limits{resource=\"cpu\", unit=\"core\", pod=~\"(?i:$targetKind-)?$targetName(.+)\",  container=~\"$container\"}) by (pod)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
