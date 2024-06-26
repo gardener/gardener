@@ -49,8 +49,8 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 					TargetLabel: "job",
 				}},
 				MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
-					// we make the shoot's pods in the shoot's namespace to appear in the kube-system namespace
-					Replacement: ptr.To(metav1.NamespaceSystem),
+					// "shoot-control-plane" references the namespace of the shoot control-plane pods in the seed
+					Replacement: ptr.To("shoot-control-plane"),
 					TargetLabel: "namespace",
 				}},
 			},
