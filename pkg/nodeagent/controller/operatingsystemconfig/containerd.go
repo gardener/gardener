@@ -32,6 +32,10 @@ func (r *Reconciler) ReconcileContainerdConfig(ctx context.Context, log logr.Log
 		return err
 	}
 
+	if err := r.ensureContainerdEnvironment(); err != nil {
+		return err
+	}
+
 	if err := r.ensureContainerdRegistries(ctx, log, containerdChanges.registries.current); err != nil {
 		return err
 	}
@@ -91,6 +95,32 @@ func (r *Reconciler) ensureContainerdDefaultConfig(ctx context.Context) error {
 	}
 
 	return r.FS.WriteFile(configFile, output, 0644)
+}
+
+// ensureContainerdEnvironment sets the environment for the 'containerd' service.
+func (r *Reconciler) ensureContainerdEnvironment() error {
+	var (
+		unitDropin = `[Service]
+Environment="PATH=` + extensionsv1alpha1.ContainerDRuntimeContainersBinFolder + `:` + os.Getenv("PATH") + `"
+`
+	)
+
+	containerdEnvFilePath := path.Join(dropinDir, "30-env_config.conf")
+	exists, err := r.fileExists(containerdEnvFilePath)
+	if err != nil {
+		return err
+	}
+
+	if exists {
+		return nil
+	}
+
+	err = r.FS.WriteFile(containerdEnvFilePath, []byte(unitDropin), 0644)
+	if err != nil {
+		return fmt.Errorf("unable to write unit dropin: %w", err)
+	}
+
+	return nil
 }
 
 // ensureContainerdRegistries configures containerd to use the desired image registries.

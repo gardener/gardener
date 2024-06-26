@@ -6,6 +6,7 @@ package operatingsystemconfig_test
 
 import (
 	"context"
+	"os"
 	"path"
 	"path/filepath"
 	"time"
@@ -364,6 +365,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		test.AssertDirectoryOnDisk(fakeFS, "/etc/containerd/conf.d")
 		test.AssertDirectoryOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d")
 		test.AssertFileOnDisk(fakeFS, "/etc/containerd/config.toml", "", 0644)
+		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d/30-env_config.conf", "[Service]\nEnvironment=\"PATH=/var/bin/containerruntimes:"+os.Getenv("PATH")+"\"\n", 0644)
 		test.AssertFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig1.Upstream+"/hosts.toml", "\n# managed by gardener-node-agent\nserver = \"https://registry.hub.docker.com\"\n\n[host]\n\n  [host.\"https://10.10.10.100:8080\"]\n", 0644)
 		test.AssertFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig2.Upstream+"/hosts.toml", "\n# managed by gardener-node-agent\nserver = \"https://registry.k8s.io\"\n\n[host]\n\n  [host.\"https://10.10.10.101:8080\"]\n", 0644)
 
@@ -492,6 +494,14 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit7.Name, "#unit7", 0600)
 		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit8.Name, "#unit8", 0600)
 		test.AssertNoFileOnDisk(fakeFS, "/etc/systemd/system/"+unit9.Name)
+		test.AssertDirectoryOnDisk(fakeFS, "/var/bin/containerruntimes")
+		test.AssertDirectoryOnDisk(fakeFS, "/etc/containerd/certs.d")
+		test.AssertDirectoryOnDisk(fakeFS, "/etc/containerd/conf.d")
+		test.AssertDirectoryOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d")
+		test.AssertFileOnDisk(fakeFS, "/etc/containerd/config.toml", "", 0644)
+		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d/30-env_config.conf", "[Service]\nEnvironment=\"PATH=/var/bin/containerruntimes:"+os.Getenv("PATH")+"\"\n", 0644)
+		test.AssertFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig1.Upstream+"/hosts.toml", "\n# managed by gardener-node-agent\nserver = \"https://registry.hub.docker.com\"\n\n[host]\n\n  [host.\"https://10.10.10.100:8080\"]\n", 0644)
+		test.AssertFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig2.Upstream+"/hosts.toml", "\n# managed by gardener-node-agent\nserver = \"https://registry.k8s.io\"\n\n[host]\n\n  [host.\"https://10.10.10.101:8080\"]\n", 0644)
 
 		By("Assert that unit actions have been applied")
 		Expect(fakeDBus.Actions).To(ConsistOf(
