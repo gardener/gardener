@@ -1,11 +1,5 @@
 #!/bin/bash
 
-FILE=/etc/containerd/config.toml
-if [ ! -s "$FILE" ]; then
-  mkdir -p $(dirname $FILE)
-  containerd config default > "$FILE"
-fi
-
 # use injected image as sandbox image
 sandbox_image_line="$(grep sandbox_image $FILE | sed -e 's/^[ ]*//')"
 pause_image={{ .pauseContainerImage }}
