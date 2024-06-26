@@ -118,7 +118,12 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			Expect(mgr.Start(mgrContext)).To(Succeed())
 		}()
 
+		revertExec := test.WithVar(&operatingsystemconfig.Exec, func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+			return []byte(""), nil
+		})
+
 		DeferCleanup(func() {
+			revertExec()
 			By("Stop manager")
 			mgrCancel()
 		})
@@ -358,6 +363,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		test.AssertDirectoryOnDisk(fakeFS, "/etc/containerd/certs.d")
 		test.AssertDirectoryOnDisk(fakeFS, "/etc/containerd/conf.d")
 		test.AssertDirectoryOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d")
+		test.AssertFileOnDisk(fakeFS, "/etc/containerd/config.toml", "", 0644)
 		test.AssertFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig1.Upstream+"/hosts.toml", "\n# managed by gardener-node-agent\nserver = \"https://registry.hub.docker.com\"\n\n[host]\n\n  [host.\"https://10.10.10.100:8080\"]\n", 0644)
 		test.AssertFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig2.Upstream+"/hosts.toml", "\n# managed by gardener-node-agent\nserver = \"https://registry.k8s.io\"\n\n[host]\n\n  [host.\"https://10.10.10.101:8080\"]\n", 0644)
 

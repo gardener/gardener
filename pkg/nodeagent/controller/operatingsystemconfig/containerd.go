@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/exec"
 	"path"
 	"time"
 
@@ -24,6 +25,10 @@ import (
 // ReconcileContainerdConfig sets required values of the given containerd configuration.
 func (r *Reconciler) ReconcileContainerdConfig(ctx context.Context, log logr.Logger, containerdChanges containerd) error {
 	if err := r.ensureContainerdConfigDirectories(); err != nil {
+		return err
+	}
+
+	if err := r.ensureContainerdDefaultConfig(ctx); err != nil {
 		return err
 	}
 
@@ -60,6 +65,32 @@ func (r *Reconciler) ensureContainerdConfigDirectories() error {
 	}
 
 	return nil
+}
+
+const configFile = baseDir + "/config.toml"
+
+// Exec is the execution function to invoke outside binaries. Exposed for testing.
+var Exec = func(ctx context.Context, command string, arg ...string) ([]byte, error) {
+	return exec.CommandContext(ctx, command, arg...).Output()
+}
+
+// ensureContainerdDefaultConfig invokes the 'containerd' and saves the resulting default configuration.
+func (r *Reconciler) ensureContainerdDefaultConfig(ctx context.Context) error {
+	exists, err := r.fileExists(configFile)
+	if err != nil {
+		return err
+	}
+
+	if exists {
+		return nil
+	}
+
+	output, err := Exec(ctx, "containerd", "config", "default")
+	if err != nil {
+		return fmt.Errorf("error creating containerd default config: %w", err)
+	}
+
+	return r.FS.WriteFile(configFile, output, 0644)
 }
 
 // ensureContainerdRegistries configures containerd to use the desired image registries.
