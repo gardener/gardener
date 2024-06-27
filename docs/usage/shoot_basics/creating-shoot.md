@@ -1,5 +1,5 @@
 ---
-title: Creating a Shoot cluster
+title: Creating a Shoot Cluster
 weight: 4
 ---
 

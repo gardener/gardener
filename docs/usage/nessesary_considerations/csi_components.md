@@ -1,5 +1,5 @@
 ---
-title: Nessesary labeling for Custom CSI Components
+title: Necessary Labeling for Custom CSI Components
 weight: 2
 ---
 

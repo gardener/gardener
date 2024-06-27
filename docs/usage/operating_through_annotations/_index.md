@@ -1,4 +1,4 @@
 ---
-title: Operating via Shoot annotations
+title: Operating via Shoot Annotations
 weight: 11
 ---

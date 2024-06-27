@@ -1,5 +1,5 @@
 ---
-title: High avaliability best practices
+title: High Avaliability Best Practices
 weight: 17
 ---
 # Implementing High Availability and Tolerating Zone Outages

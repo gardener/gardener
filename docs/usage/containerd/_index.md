@@ -1,4 +1,4 @@
 ---
-title: Containerd Configurations
+title: containerd Configurations
 weight: 8
 ---

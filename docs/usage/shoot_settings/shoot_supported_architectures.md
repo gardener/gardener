@@ -4,7 +4,7 @@ title: Shoot Workers
 description: How to specify a shoot worker group given the respective `CloudProfile` 
 ---
 
-# Configuring a shoot worker group 
+# Configuring a Shoot Worker Group 
 
 Users can create shoot clusters with worker groups having virtual machines of different types and with different images. For a valid shoot object, a machine type and image should be present in the respective `CloudProfile` that support the required specification in the `Shoot` yaml.
 

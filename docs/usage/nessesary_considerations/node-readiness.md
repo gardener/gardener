@@ -17,7 +17,7 @@ However, several proposals have been rejected because the problem can be solved 
 
 Gardener makes sure that workload Pods are only scheduled to `Nodes` where all node-critical components required for running workload Pods are ready. 
 For this, Gardener follows the proposed solution by the Kubernetes community and registers new `Node` objects with the `node.gardener.cloud/critical-components-not-ready` taint (effect `NoSchedule`).
-gardener-resource-manager's [`Node` controller](../../concepts/resource-manager.md#node-controller) reacts on newly created `Node` objects that have this taint.
+`gardener-resource-manager`'s [`Node` controller](../../concepts/resource-manager.md#node-controller) reacts on newly created `Node` objects that have this taint.
 The controller removes the taint once all node-critical Pods are ready (determined by checking the Pods' `Ready` conditions).
 
 The `Node` controller considers all `DaemonSets` and `Pods` with the label `node.gardener.cloud/critical-component=true` as node-critical.

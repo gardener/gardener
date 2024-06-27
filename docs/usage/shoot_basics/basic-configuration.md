@@ -1,5 +1,5 @@
 ---
-title: Basic Shoot configurations
+title: Basic Shoot Configurations
 weight: 6
 ---
 

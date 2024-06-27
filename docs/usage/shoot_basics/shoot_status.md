@@ -1,6 +1,6 @@
 ---
 weight: 8
-description: Shoot conditions, constraints and error codes
+description: Shoot conditions, constraints, and error codes
 ---
 
 # Shoot Status
@@ -9,7 +9,7 @@ This document provides an overview of the [ShootStatus](../../api-reference/core
 
 ## Conditions
 
-The Shoot status consists of a set of conditions. They represent the latest available observations of a Shoots’s current state. A [Condition](../../api-reference/core.md#condition) has the following fields:
+The Shoot status consists of a set of conditions. They represent the latest available observations of a Shoot’s current state. A [Condition](../../api-reference/core.md#condition) has the following fields:
 
 | Field name           | Description                                                                                                        |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------ |
