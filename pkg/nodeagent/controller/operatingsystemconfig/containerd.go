@@ -18,13 +18,18 @@ import (
 	"k8s.io/utils/pointer"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/structuredmap"
 )
 
 // ReconcileContainerdConfig sets required values of the given containerd configuration.
-func (r *Reconciler) ReconcileContainerdConfig(ctx context.Context, log logr.Logger, containerdChanges containerd) error {
+func (r *Reconciler) ReconcileContainerdConfig(ctx context.Context, log logr.Logger, criConfig *extensionsv1alpha1.CRIConfig, containerdChanges containerd) error {
+	if !extensionsv1alpha1helper.HasContainerdConfiguration(criConfig) {
+		return nil
+	}
+
 	if err := r.ensureContainerdConfigDirectories(); err != nil {
 		return err
 	}
