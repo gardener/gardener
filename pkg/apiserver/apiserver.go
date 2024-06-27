@@ -205,11 +205,13 @@ func (o *ExtraOptions) ApplyTo(c *Config) error {
 	c.ExtraConfig.WorkloadIdentityTokenMaxExpiration = o.WorkloadIdentityTokenMaxExpiration
 	c.ExtraConfig.ClusterIdentity = o.ClusterIdentity
 
-	signingKey, err := keyutil.PrivateKeyFromFile(o.WorkloadIdentitySigningKeyFile)
-	if err != nil {
-		return err
+	if len(o.WorkloadIdentitySigningKeyFile) != 0 {
+		signingKey, err := keyutil.PrivateKeyFromFile(o.WorkloadIdentitySigningKeyFile)
+		if err != nil {
+			return err
+		}
+		c.ExtraConfig.WorkloadIdentitySigningKey = signingKey
 	}
-	c.ExtraConfig.WorkloadIdentitySigningKey = signingKey
 
 	return nil
 }
