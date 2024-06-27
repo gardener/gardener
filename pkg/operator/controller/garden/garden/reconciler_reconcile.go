@@ -496,6 +496,22 @@ func (r *Reconciler) reconcile(
 		})
 	)
 
+	certManagementCRDs := g.Add(flow.Task{
+		Name:         "Deploying Cert-Management CRDs",
+		Fn:           c.certManagementCRD.Deploy,
+		Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+	})
+	_ = g.Add(flow.Task{
+		Name:         "Deploying Cert-Management controller",
+		Fn:           c.certManagementController.Deploy,
+		Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, certManagementCRDs),
+	})
+	_ = g.Add(flow.Task{
+		Name:         "Deploying Cert-Management default issuer",
+		Fn:           c.certManagementIssuer.Deploy,
+		Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, certManagementCRDs),
+	})
+
 	gardenCopy := garden.DeepCopy()
 	if err := g.Compile().Run(ctx, flow.Opts{
 		Log:              log,

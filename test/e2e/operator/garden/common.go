@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/utils"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	. "github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -61,10 +62,44 @@ func defaultBackupSecret() *corev1.Secret {
 	}
 }
 
-func defaultGarden(backupSecret *corev1.Secret) *operatorv1alpha1.Garden {
+func defaultRootCASecret() *corev1.Secret {
+	config := &secretsutils.CertificateSecretConfig{
+		Name:       "cert-management-root-ca",
+		CommonName: "cert-management-root-ca",
+		CertType:   secretsutils.CACert,
+	}
+
+	certificate, err := config.GenerateCertificate()
+	Expect(err).NotTo(HaveOccurred())
+
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cert-management-root-ca",
+			Namespace: namespace,
+		},
+		Type: corev1.SecretTypeTLS,
+		Data: map[string][]byte{
+			secretsutils.DataKeyCertificate: certificate.CertificatePEM,
+			secretsutils.DataKeyPrivateKey:  certificate.PrivateKeyPEM,
+		},
+	}
+}
+
+func defaultGarden(backupSecret, certManagementRootCA *corev1.Secret) *operatorv1alpha1.Garden {
 	randomSuffix, err := utils.GenerateRandomStringFromCharset(5, "0123456789abcdefghijklmnopqrstuvwxyz")
 	Expect(err).NotTo(HaveOccurred())
 	name := "garden-" + randomSuffix
+
+	var certManagement *operatorv1alpha1.CertManagement
+	if certManagementRootCA != nil {
+		certManagement = &operatorv1alpha1.CertManagement{
+			DefaultIssuer: operatorv1alpha1.DefaultIssuer{
+				CA: &operatorv1alpha1.CAIssuer{
+					SecretRef: corev1.LocalObjectReference{Name: certManagementRootCA.Name},
+				},
+			},
+		}
+	}
 
 	return &operatorv1alpha1.Garden{
 		ObjectMeta: metav1.ObjectMeta{
@@ -93,6 +128,7 @@ func defaultGarden(backupSecret *corev1.Secret) *operatorv1alpha1.Garden {
 						Enabled: true,
 					},
 				},
+				CertManagement: certManagement,
 			},
 			VirtualCluster: operatorv1alpha1.VirtualCluster{
 				ControlPlane: &operatorv1alpha1.ControlPlane{

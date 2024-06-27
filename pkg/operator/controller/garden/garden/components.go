@@ -42,6 +42,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	"github.com/gardener/gardener/pkg/component/autoscaling/hvpa"
 	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
+	"github.com/gardener/gardener/pkg/component/certmanagement"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	runtimegardensystem "github.com/gardener/gardener/pkg/component/garden/system/runtime"
 	virtualgardensystem "github.com/gardener/gardener/pkg/component/garden/system/virtual"
@@ -116,6 +117,10 @@ type components struct {
 
 	gardenerDiscoveryServer component.DeployWaiter
 
+	certManagementCRD        component.Deployer
+	certManagementController component.DeployWaiter
+	certManagementIssuer     component.DeployWaiter
+
 	gardenerDashboard         gardenerdashboard.Interface
 	terminalControllerManager component.DeployWaiter
 
@@ -161,6 +166,7 @@ func (r *Reconciler) instantiateComponents(
 	c.istioCRD = istio.NewCRD(r.RuntimeClientSet.ChartApplier())
 	c.fluentCRD = fluentoperator.NewCRDs(applier)
 	c.prometheusCRD = prometheusoperator.NewCRDs(applier)
+	c.certManagementCRD = certmanagement.NewCRDs(applier)
 
 	// garden system components
 	c.gardenerResourceManager, err = r.newGardenerResourceManager(garden, secretsManager)
@@ -237,6 +243,17 @@ func (r *Reconciler) instantiateComponents(
 	c.gardenerScheduler, err = r.newGardenerScheduler(garden, secretsManager)
 	if err != nil {
 		return
+	}
+	c.certManagementController, err = r.newCertManagementController(garden)
+	if err != nil {
+		return
+	}
+	c.certManagementIssuer = r.newCertManagementIssuer(garden)
+	if garden.Spec.RuntimeCluster.CertManagement == nil {
+		c.certManagementController = component.OpDestroyWithoutWait(c.certManagementController)
+		c.certManagementIssuer = component.OpDestroyWithoutWait(c.certManagementIssuer)
+		// keep cert-management CRDs untouched as they may be deployed by external component
+		c.certManagementCRD = component.NoOp()
 	}
 	c.gardenerDashboard, err = r.newGardenerDashboard(garden, secretsManager, wildcardCertSecretName)
 	if err != nil {
@@ -1034,6 +1051,31 @@ func (r *Reconciler) newGardenerScheduler(garden *operatorv1alpha1.Garden, secre
 	}
 
 	return gardenerscheduler.New(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, values), nil
+}
+
+func (r *Reconciler) certManagementValues(garden *operatorv1alpha1.Garden) certmanagement.Values {
+	values := certmanagement.Values{
+		Namespace: r.GardenNamespace,
+	}
+	if config := garden.Spec.RuntimeCluster.CertManagement; config != nil {
+		values.DeployConfig = config.Config
+		values.DefaultIssuer = config.DefaultIssuer
+	}
+	return values
+}
+
+func (r *Reconciler) newCertManagementController(garden *operatorv1alpha1.Garden) (component.DeployWaiter, error) {
+	values := r.certManagementValues(garden)
+	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameCertManagement)
+	if err != nil {
+		return nil, err
+	}
+	values.Image = image.String()
+	return certmanagement.New(r.RuntimeClientSet.Client(), values), nil
+}
+
+func (r *Reconciler) newCertManagementIssuer(garden *operatorv1alpha1.Garden) component.DeployWaiter {
+	return certmanagement.NewIssuers(r.RuntimeClientSet.Client(), r.certManagementValues(garden))
 }
 
 func (r *Reconciler) newGardenerDashboard(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, wildcardCertSecretName *string) (gardenerdashboard.Interface, error) {
