@@ -62,7 +62,7 @@ var _ = Describe("Component", func() {
 				Content: extensionsv1alpha1.FileContent{
 					ImageRef: &extensionsv1alpha1.FileContentImageRef{
 						Image:           "gardener-node-agent:v1",
-						FilePathInImage: "/gardener-node-agent",
+						FilePathInImage: "/ko-app/gardener-node-agent",
 					},
 				},
 			})
