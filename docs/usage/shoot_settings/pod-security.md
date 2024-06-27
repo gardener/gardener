@@ -1,6 +1,7 @@
 ---
 title: Admission Configuration for the `PodSecurity` Admission Plugin
 description: Adding custom configuration for the `PodSecurity` plugin in `.spec.kubernetes.kubeAPIServer.admissionPlugins`
+weight: 16
 ---
 ## Admission Configuration for the `PodSecurity` Admission Plugin
 

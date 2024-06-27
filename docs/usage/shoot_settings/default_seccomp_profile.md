@@ -1,6 +1,7 @@
 ---
 title: Default Seccomp Profile
 description: Enable the use of `RuntimeDefault` as the default seccomp profile through `spec.kubernetes.kubelet.seccompDefault`
+weight: 15
 ---
 
 # Default Seccomp Profile and Configuration 
