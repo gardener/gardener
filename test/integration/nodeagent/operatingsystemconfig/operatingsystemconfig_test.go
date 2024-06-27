@@ -277,7 +277,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 				CRIConfig: &extensionsv1alpha1.CRIConfig{
 					Name: "containerd",
 					Containerd: &extensionsv1alpha1.ContainerdConfig{
-						Registries: []extensionsv1alpha1.RegistryConfig{registryConfig1, registryConfig2},
+						Registries:   []extensionsv1alpha1.RegistryConfig{registryConfig1, registryConfig2},
+						SandboxImage: "registry.k8s.io/pause:latest",
 					},
 				},
 			},
@@ -366,7 +367,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		test.AssertDirectoryOnDisk(fakeFS, "/etc/containerd/certs.d")
 		test.AssertDirectoryOnDisk(fakeFS, "/etc/containerd/conf.d")
 		test.AssertDirectoryOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d")
-		test.AssertFileOnDisk(fakeFS, "/etc/containerd/config.toml", "imports = [\"/etc/containerd/conf.d/*.toml\"]\n\n[plugins]\n\n  [plugins.\"io.containerd.grpc.v1.cri\"]\n\n    [plugins.\"io.containerd.grpc.v1.cri\".registry]\n      config_path = \"/etc/containerd/certs.d\"\n", 0644)
+		test.AssertFileOnDisk(fakeFS, "/etc/containerd/config.toml", "imports = [\"/etc/containerd/conf.d/*.toml\"]\n\n[plugins]\n\n  [plugins.\"io.containerd.grpc.v1.cri\"]\n    sandbox_image = \"registry.k8s.io/pause:latest\"\n\n    [plugins.\"io.containerd.grpc.v1.cri\".registry]\n      config_path = \"/etc/containerd/certs.d\"\n", 0644)
 		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d/30-env_config.conf", "[Service]\nEnvironment=\"PATH=/var/bin/containerruntimes:"+os.Getenv("PATH")+"\"\n", 0644)
 		test.AssertFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig1.Upstream+"/hosts.toml", "\n# managed by gardener-node-agent\nserver = \"https://registry.hub.docker.com\"\n\n[host]\n\n  [host.\"https://10.10.10.100:8080\"]\n", 0644)
 		test.AssertFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig2.Upstream+"/hosts.toml", "\n# managed by gardener-node-agent\nserver = \"https://registry.k8s.io\"\n\n[host]\n\n  [host.\"https://10.10.10.101:8080\"]\n", 0644)
@@ -500,7 +501,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		test.AssertDirectoryOnDisk(fakeFS, "/etc/containerd/certs.d")
 		test.AssertDirectoryOnDisk(fakeFS, "/etc/containerd/conf.d")
 		test.AssertDirectoryOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d")
-		test.AssertFileOnDisk(fakeFS, "/etc/containerd/config.toml", "imports = [\"/etc/containerd/conf.d/*.toml\"]\n\n[plugins]\n\n  [plugins.\"io.containerd.grpc.v1.cri\"]\n\n    [plugins.\"io.containerd.grpc.v1.cri\".registry]\n      config_path = \"/etc/containerd/certs.d\"\n", 0644)
+		test.AssertFileOnDisk(fakeFS, "/etc/containerd/config.toml", "imports = [\"/etc/containerd/conf.d/*.toml\"]\n\n[plugins]\n\n  [plugins.\"io.containerd.grpc.v1.cri\"]\n    sandbox_image = \"registry.k8s.io/pause:latest\"\n\n    [plugins.\"io.containerd.grpc.v1.cri\".registry]\n      config_path = \"/etc/containerd/certs.d\"\n", 0644)
 		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d/30-env_config.conf", "[Service]\nEnvironment=\"PATH=/var/bin/containerruntimes:"+os.Getenv("PATH")+"\"\n", 0644)
 		test.AssertFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig1.Upstream+"/hosts.toml", "\n# managed by gardener-node-agent\nserver = \"https://registry.hub.docker.com\"\n\n[host]\n\n  [host.\"https://10.10.10.100:8080\"]\n", 0644)
 		test.AssertFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig2.Upstream+"/hosts.toml", "\n# managed by gardener-node-agent\nserver = \"https://registry.k8s.io\"\n\n[host]\n\n  [host.\"https://10.10.10.101:8080\"]\n", 0644)

@@ -242,6 +242,8 @@ type ContainerdConfig struct {
 	// Registries configures the registry hosts for containerd.
 	// +optional
 	Registries []RegistryConfig `json:"registries,omitempty"`
+	// SandboxImage configures the sandbox image for containerd.
+	SandboxImage string `json:"sandboxImage"`
 }
 
 // RegistryConfig contains registry configuration options.

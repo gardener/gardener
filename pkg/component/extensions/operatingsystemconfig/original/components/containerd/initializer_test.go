@@ -86,10 +86,5 @@ const (
 	pauseContainerImageRepo = "foo.io"
 	pauseContainerImageTag  = "v1.2.3"
 	initScript              = `#!/bin/bash
-
-# use injected image as sandbox image
-sandbox_image_line="$(grep sandbox_image $FILE | sed -e 's/^[ ]*//')"
-pause_image=` + pauseContainerImageRepo + `:` + pauseContainerImageTag + `
-sed -i  "s|$sandbox_image_line|sandbox_image = \"$pause_image\"|g" $FILE
 `
 )

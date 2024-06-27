@@ -125,6 +125,12 @@ spec:
                           - upstream
                           type: object
                         type: array
+                      sandboxImage:
+                        description: SandboxImage configures the sandbox image for
+                          containerd.
+                        type: string
+                    required:
+                    - sandboxImage
                     type: object
                   name:
                     description: Name is a mandatory string containing the name of

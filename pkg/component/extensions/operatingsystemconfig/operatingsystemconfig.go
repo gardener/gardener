@@ -948,6 +948,16 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 			}
 		}
 
+		if d.osc.Spec.CRIConfig != nil &&
+			d.osc.Spec.CRIConfig.Name == extensionsv1alpha1.CRINameContainerD &&
+			d.purpose == extensionsv1alpha1.OperatingSystemConfigPurposeReconcile {
+			d.osc.Spec.CRIConfig.Containerd = &extensionsv1alpha1.ContainerdConfig{}
+
+			if pauseImage := d.images[imagevector.ImageNamePauseContainer]; pauseImage != nil {
+				d.osc.Spec.CRIConfig.Containerd.SandboxImage = pauseImage.String()
+			}
+		}
+
 		return nil
 	})
 	return d.osc, err

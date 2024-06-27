@@ -47,6 +47,7 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 								},
 							},
 						},
+						SandboxImage: "pause",
 					},
 				},
 				Units: []extensionsv1alpha1.Unit{
@@ -412,6 +413,16 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 				"Type":     Equal(field.ErrorTypeNotSupported),
 				"Field":    Equal("spec.criConfig.containerd.registries[0].hosts[0].capabilities[0]"),
 				"BadValue": Equal("foo"),
+			}))))
+		})
+
+		It("should forbid containerd with empty sandbox image", func() {
+			oscCopy := osc.DeepCopy()
+			oscCopy.Spec.CRIConfig.Containerd.SandboxImage = ""
+
+			Expect(ValidateOperatingSystemConfig(oscCopy)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.criConfig.containerd.sandboxImage"),
 			}))))
 		})
 

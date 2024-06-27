@@ -68,12 +68,15 @@ var _ = Describe("OperatingSystemConfig", func() {
 			mockNow *mocktime.MockNow
 			now     time.Time
 
-			poolHashesSecret            *corev1.Secret
-			apiServerURL                = "https://url-to-apiserver"
-			caBundle                    = ptr.To("ca-bundle")
-			clusterDNSAddresses         = []string{"cluster-dns", "backup-cluster-dns"}
-			clusterDomain               = "cluster-domain"
-			images                      = map[string]*imagevector.Image{"gardener-node-agent": {}}
+			poolHashesSecret    *corev1.Secret
+			apiServerURL        = "https://url-to-apiserver"
+			caBundle            = ptr.To("ca-bundle")
+			clusterDNSAddresses = []string{"cluster-dns", "backup-cluster-dns"}
+			clusterDomain       = "cluster-domain"
+			images              = map[string]*imagevector.Image{
+				"gardener-node-agent": {},
+				"pause-container":     {Repository: "registry.k8s.io/pause", Tag: ptr.To("latest")},
+			}
 			evictionHardMemoryAvailable = "100Mi"
 			kubeletConfig               = &gardencorev1beta1.KubeletConfig{
 				EvictionHard: &gardencorev1beta1.KubeletConfigEviction{
@@ -166,13 +169,22 @@ var _ = Describe("OperatingSystemConfig", func() {
 			expected := make([]*extensionsv1alpha1.OperatingSystemConfig, 0, 2*len(workers))
 			for _, worker := range workers {
 				var (
-					criName   = extensionsv1alpha1.CRINameContainerD
-					criConfig *extensionsv1alpha1.CRIConfig
+					criName               = extensionsv1alpha1.CRINameContainerD
+					criConfig             *extensionsv1alpha1.CRIConfig
+					criConfigProvisioning *extensionsv1alpha1.CRIConfig
 				)
 
 				if worker.CRI != nil {
 					criName = extensionsv1alpha1.CRIName(worker.CRI.Name)
-					criConfig = &extensionsv1alpha1.CRIConfig{Name: extensionsv1alpha1.CRIName(worker.CRI.Name)}
+					criConfig = &extensionsv1alpha1.CRIConfig{
+						Name: extensionsv1alpha1.CRIName(worker.CRI.Name),
+						Containerd: &extensionsv1alpha1.ContainerdConfig{
+							SandboxImage: "registry.k8s.io/pause:latest",
+						},
+					}
+					criConfigProvisioning = &extensionsv1alpha1.CRIConfig{
+						Name: extensionsv1alpha1.CRIName(worker.CRI.Name),
+					}
 				}
 
 				k8sVersion := values.KubernetesVersion
@@ -234,8 +246,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 							Type:           worker.Machine.Image.Name,
 							ProviderConfig: worker.Machine.Image.ProviderConfig,
 						},
+						CRIConfig: criConfigProvisioning,
 						Purpose:   extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
-						CRIConfig: criConfig,
 					},
 				}
 

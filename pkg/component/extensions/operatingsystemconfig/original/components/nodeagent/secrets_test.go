@@ -66,6 +66,7 @@ var _ = Describe("Secrets", func() {
 					CRIConfig: &extensionsv1alpha1.CRIConfig{
 						Name: "containerd",
 						Containerd: &extensionsv1alpha1.ContainerdConfig{
+							SandboxImage: "registry.k8s.io/pause:latest",
 							Registries: []extensionsv1alpha1.RegistryConfig{
 								{Upstream: "registry.k8s.io"},
 							},
@@ -108,7 +109,7 @@ var _ = Describe("Secrets", func() {
 					Name:      secretName,
 					Namespace: "kube-system",
 					Annotations: map[string]string{
-						"checksum/data-script": "fd22dc8a704365075e8d837e19428c6a73f2dd098a822036b96963750c489281",
+						"checksum/data-script": "a3efca387130b4a0291595c1608d80cad758ca95f71901f1fc91b0d74847c0ff",
 					},
 					Labels: map[string]string{
 						"gardener.cloud/role":        "operating-system-config",
@@ -124,6 +125,7 @@ spec:
     containerd:
       registries:
       - upstream: registry.k8s.io
+      sandboxImage: registry.k8s.io/pause:latest
     name: containerd
   files:
   - content:
