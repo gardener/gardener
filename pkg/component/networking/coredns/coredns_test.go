@@ -160,8 +160,8 @@ metadata:
 		}
 		configMapCustomYAML = `apiVersion: v1
 data:
-  changeme.override: '# checkout the docs on how to use: https://github.com/gardener/gardener/blob/master/docs/usage/custom-dns-config.md'
-  changeme.server: '# checkout the docs on how to use: https://github.com/gardener/gardener/blob/master/docs/usage/custom-dns-config.md'
+  changeme.override: '# checkout the docs on how to use: https://github.com/gardener/gardener/blob/master/docs/usage/dns/custom-dns-config.md'
+  changeme.server: '# checkout the docs on how to use: https://github.com/gardener/gardener/blob/master/docs/usage/dns/custom-dns-config.md'
 kind: ConfigMap
 metadata:
   annotations:

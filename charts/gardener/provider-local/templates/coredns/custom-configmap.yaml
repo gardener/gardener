@@ -7,5 +7,5 @@ metadata:
   annotations:
     "resources.gardener.cloud/ignore": "true"
 data:
-  changeme.override: "# checkout the docs on how to use: https://github.com/gardener/gardener/blob/master/docs/usage/custom-dns-config.md"
+  changeme.override: "# checkout the docs on how to use: https://github.com/gardener/gardener/blob/master/docs/usage/dns/custom-dns-config.md"
 {{- end -}}
