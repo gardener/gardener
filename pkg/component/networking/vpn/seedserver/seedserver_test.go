@@ -618,7 +618,7 @@ var _ = Describe("VpnSeedServer", func() {
 			}
 
 			if haEnabled {
-				jobName, serviceNameRegexSuffix = "openvpn-server-exporter", "[0-2]"
+				jobName, serviceNameRegexSuffix = "openvpn-server-exporter", "-[0-2]"
 				allowedMetrics = []string{
 					"openvpn_server_client_received_bytes_total",
 					"openvpn_server_client_sent_bytes_total",
