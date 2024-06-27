@@ -2405,6 +2405,17 @@ Kubernetes meta/v1.LabelSelector
 <p>Registries configures the registry hosts for containerd.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>sandboxImage</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>SandboxImage configures the sandbox image for containerd.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="extensions.gardener.cloud/v1alpha1.ControlPlaneSpec">ControlPlaneSpec

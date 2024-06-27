@@ -42,7 +42,7 @@ func (r *Reconciler) ReconcileContainerdConfig(ctx context.Context, log logr.Log
 		return err
 	}
 
-	if err := r.ensureContainerdConfiguration(); err != nil {
+	if err := r.ensureContainerdConfiguration(criConfig); err != nil {
 		return err
 	}
 
@@ -134,7 +134,7 @@ Environment="PATH=` + extensionsv1alpha1.ContainerDRuntimeContainersBinFolder + 
 }
 
 // ensureContainerdConfiguration sets the configuration for containerd.
-func (r *Reconciler) ensureContainerdConfiguration() error {
+func (r *Reconciler) ensureContainerdConfiguration(criConfig *extensionsv1alpha1.CRIConfig) error {
 	config, err := r.FS.ReadFile(configFile)
 	if err != nil {
 		return fmt.Errorf("unable to read containerd config.toml: %w", err)
@@ -186,6 +186,17 @@ func (r *Reconciler) ensureContainerdConfiguration() error {
 				}
 
 				return append(imports, importPath), nil
+			},
+		},
+		{
+			name: "sandbox image",
+			path: structuredmap.Path{"plugins", "io.containerd.grpc.v1.cri", "sandbox_image"},
+			setFn: func(value any) (any, error) {
+				if criConfig == nil || criConfig.Containerd == nil {
+					return value, nil
+				}
+
+				return criConfig.Containerd.SandboxImage, nil
 			},
 		},
 	}

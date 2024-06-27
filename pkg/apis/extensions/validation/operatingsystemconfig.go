@@ -112,6 +112,10 @@ func ValidateContainerdConfig(config *extensionsv1alpha1.ContainerdConfig, purpo
 		return allErrs
 	}
 
+	if len(config.SandboxImage) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("sandboxImage"), "field is required"))
+	}
+
 	allErrs = append(allErrs, ValidateContainerdRegistryConfigs(config.Registries, fldPath.Child("registries"))...)
 
 	return allErrs
