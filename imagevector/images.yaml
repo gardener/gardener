@@ -478,7 +478,7 @@ images:
 - name: fluent-bit
   sourceRepository: github.com/fluent/fluent-bit
   repository: europe-docker.pkg.dev/gardener-project/releases/3rd/kubesphere/fluent-bit
-  tag: "v2.2.2"
+  tag: "v2.2.3"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
