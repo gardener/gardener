@@ -60,19 +60,19 @@ require (
 	helm.sh/helm/v3 v3.14.4
 	istio.io/api v1.22.2
 	istio.io/client-go v1.22.0
-	k8s.io/api v0.30.2
+	k8s.io/api v0.29.6
 	k8s.io/apiextensions-apiserver v0.29.6
-	k8s.io/apimachinery v0.30.2
+	k8s.io/apimachinery v0.29.6
 	k8s.io/apiserver v0.29.6
 	k8s.io/autoscaler/vertical-pod-autoscaler v1.1.2
-	k8s.io/client-go v0.30.2
+	k8s.io/client-go v0.29.6
 	k8s.io/cluster-bootstrap v0.29.6
 	k8s.io/code-generator v0.29.6
 	k8s.io/component-base v0.29.6
 	k8s.io/component-helpers v0.29.6
 	k8s.io/klog/v2 v2.120.1
 	k8s.io/kube-aggregator v0.29.6
-	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340
+	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00
 	k8s.io/kube-proxy v0.29.6
 	k8s.io/kubelet v0.29.6
 	k8s.io/metrics v0.29.6
@@ -250,7 +250,6 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	k8s.io/gengo v0.0.0-20230829151522-9cce18d56c01 // indirect
-	k8s.io/gengo/v2 v2.0.0-20240228010128-51d4e06bde70 // indirect
 	k8s.io/klog v1.0.0 // indirect
 	k8s.io/kms v0.29.6 // indirect
 	oras.land/oras-go v1.2.4 // indirect
