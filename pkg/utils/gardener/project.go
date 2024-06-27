@@ -51,7 +51,7 @@ func ProjectForNamespaceFromLister(projectLister gardencorev1beta1listers.Projec
 		}
 	}
 
-	return nil, apierrors.NewNotFound(gardencore.Resource("Project"), namespaceName)
+	return nil, apierrors.NewNotFound(gardencore.Resource("Project"), "<unknown>")
 }
 
 // ProjectAndNamespaceFromReader returns the Project responsible for a given <namespace>. It reads the namespace and

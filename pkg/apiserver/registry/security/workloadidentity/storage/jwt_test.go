@@ -436,7 +436,7 @@ wQIDAQAB
 			rShoot, rSeed, rProject, err = r.resolveContextObject(contextObject)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(BeNotFoundError())
-			Expect(err.Error()).To(Equal("Project.core.gardener.cloud \"" + namespaceName + "\" not found"))
+			Expect(err.Error()).To(Equal("Project.core.gardener.cloud \"<unknown>\" not found"))
 
 			Expect(rShoot).To(BeNil())
 			Expect(rSeed).To(BeNil())
