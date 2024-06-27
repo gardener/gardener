@@ -1,6 +1,6 @@
 ---
 title: OpenIDConnect Presets
-weight: 10
+weight: 16
 ---
 
 # ClusterOpenIDConnectPreset and OpenIDConnectPreset

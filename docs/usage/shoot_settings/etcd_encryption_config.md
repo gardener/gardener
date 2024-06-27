@@ -1,5 +1,5 @@
 ---
-weight: 12
+weight: 13
 title: ETCD Encryption Config
 description: Specifying resource types for encryption with `spec.kubernetes.kubeAPIServer.encryptionConfig`
 ---
