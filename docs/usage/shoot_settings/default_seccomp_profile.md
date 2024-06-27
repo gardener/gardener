@@ -25,6 +25,6 @@ spec:
       seccompDefault: true
 ```
 
-Please refer to the examples in this [yaml file](../../example/90-shoot.yaml) for more information.
+Please refer to the examples in this [yaml file](../../../example/90-shoot.yaml) for more information.
 
 > **Note:** Please note that this feature is still in Alpha, so you might see instabilities every now and then. 

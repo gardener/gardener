@@ -61,7 +61,7 @@ If you already have a shoot cluster with HA control plane, then the following tr
 
 ## Zone Outage Situation
 
-Implementing highly available software that can tolerate even a zone outage unscathed is no trivial task. You may find our [HA Best Practices](shoot_high_availability_best_practices.md) helpful to get closer to that goal. In this document, we collected many options and settings for you that also Gardener internally uses to provide a highly available service.
+Implementing highly available software that can tolerate even a zone outage unscathed is no trivial task. You may find our [HA Best Practices](../shoot_high_availability_best_practices.md) helpful to get closer to that goal. In this document, we collected many options and settings for you that also Gardener internally uses to provide a highly available service.
 
 During a zone outage, you may be forced to change your cluster setup on short notice in order to compensate for failures and shortages resulting from the outage.
 For instance, if the shoot cluster has worker nodes across three zones where one zone goes down, the computing power from these nodes is also gone during that time.

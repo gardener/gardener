@@ -112,7 +112,7 @@ The virtual garden control plane components are:
 
 If the `.spec.virtualCluster.controlPlane.highAvailability={}` is set then these components will be deployed in a "highly available" mode.
 For ETCD, this means that there will be 3 replicas each.
-This works similar like for `Shoot`s (see [this document](../usage/shoot_high_availability.md)) except for the fact that there is no failure tolerance type configurability.
+This works similar like for `Shoot`s (see [this document](../usage/shoot_settings/shoot_high_availability.md)) except for the fact that there is no failure tolerance type configurability.
 The `gardener-resource-manager`'s [HighAvailabilityConfig webhook](resource-manager.md#high-availability-config) makes sure that all pods with multiple replicas are spread on nodes, and if there are at least two zones in `.spec.runtimeCluster.provider.zones` then they also get spread across availability zones.
 
 > If once set, removing `.spec.virtualCluster.controlPlane.highAvailability` again is not supported.
@@ -517,7 +517,7 @@ For certificate authorities, `gardener-operator` generates one which is automati
 
 **🚨 Hence, it is the responsibility of the (human) operator to regularly perform the credentials rotation.**
 
-Please refer to [this document](../usage/shoot_credentials_rotation.md#gardener-provided-credentials) for more details. As of today, `gardener-operator` only creates the following types of credentials (i.e., some sections of the document don't apply for `Garden`s and can be ignored):
+Please refer to [this document](../usage/operating_through_annotations/shoot_credentials_rotation.md#gardener-provided-credentials) for more details. As of today, `gardener-operator` only creates the following types of credentials (i.e., some sections of the document don't apply for `Garden`s and can be ignored):
 
 - certificate authorities (and related server and client certificates)
 - ETCD encryption key

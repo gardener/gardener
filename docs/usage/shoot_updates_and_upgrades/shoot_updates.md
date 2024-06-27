@@ -1,6 +1,6 @@
 ---
 title: Shoot Updates and Upgrades
-weight: 2
+weight: 3
 ---
 
 # Shoot Updates and Upgrades
@@ -14,13 +14,13 @@ Updates to all aspects of the shoot cluster happen when the gardenlet reconciles
 ### When are Reconciliations Triggered
 
 Generally, when you change the specification of your `Shoot` the reconciliation will start immediately, potentially updating your cluster.
-Please note that you can also confine the reconciliation triggered due to your specification updates to the cluster's maintenance time window. Please find more information in [Confine Specification Changes/Updates Roll Out](shoot_maintenance.md#confine-specification-changesupdates-roll-out).
+Please note that you can also confine the reconciliation triggered due to your specification updates to the cluster's maintenance time window. Please find more information in [Confine Specification Changes/Updates Roll Out](../shoot_settings/shoot_maintenance.md#confine-specification-changesupdates-roll-out).
 
-You can also annotate your shoot with special operation annotations (for more information, see [Trigger Shoot Operations](shoot_operations.md)), which will cause the reconciliation to start due to your actions.
+You can also annotate your shoot with special operation annotations (for more information, see [Trigger Shoot Operations](../operating_through_annotations/shoot_operations.md)), which will cause the reconciliation to start due to your actions.
 
 There is also an automatic reconciliation by Gardener.
 The period, i.e., how often it is performed, depends on the configuration of the Gardener administrators/operators.
-In some Gardener installations the operators might enable "reconciliation in maintenance time window only" (for more information, see [Cluster Reconciliation](shoot_maintenance.md#cluster-reconciliation)), which will result in at least one reconciliation during the time configured in the `Shoot`'s `.spec.maintenance.timeWindow` field.
+In some Gardener installations the operators might enable "reconciliation in maintenance time window only" (for more information, see [Cluster Reconciliation](../shoot_settings/shoot_maintenance.md#cluster-reconciliation)), which will result in at least one reconciliation during the time configured in the `Shoot`'s `.spec.maintenance.timeWindow` field.
 
 ### Which Updates are Applied
 
@@ -108,6 +108,6 @@ In particular, if the feature gate `NewWorkerPoolHash` is enabled and a worker p
 
 ## Related Documentation
 
-* [Shoot Operations](shoot_operations.md)
-* [Shoot Maintenance](shoot_maintenance.md)
-* [Confine Specification Changes/Updates Roll Out To Maintenance Time Window](shoot_maintenance.md#confine-specification-changesupdates-roll-out).
+* [Shoot Operations](../operating_through_annotations/shoot_operations.md)
+* [Shoot Maintenance](../shoot_settings/shoot_maintenance.md)
+* [Confine Specification Changes/Updates Roll Out To Maintenance Time Window](../shoot_settings/shoot_maintenance.md#confine-specification-changesupdates-roll-out).

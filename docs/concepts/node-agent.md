@@ -49,7 +49,7 @@ It renews the `Lease` resource every 10 seconds. This indicates a heartbeat to t
 This controller watches the `Node` object for the machine it runs on.
 The correct `Node` is identified based on the hostname of the machine (`Node`s have the `kubernetes.io/hostname` label).
 Whenever the `worker.gardener.cloud/restart-systemd-services` annotation changes, the controller performs the desired changes by restarting the specified systemd unit files.
-See also [this document](../usage/shoot_operations.md#restart-systemd-services-on-particular-worker-nodes) for more information.
+See also [this document](../usage/operating_through_annotations/shoot_operations.md#restart-systemd-services-on-particular-worker-nodes) for more information.
 After restarting all units, the annotation is removed.
 
 > ℹ️ When the `gardener-node-agent` systemd service itself is requested to be restarted, the annotation is removed first to ensure it does not restart itself indefinitely.

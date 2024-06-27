@@ -1,6 +1,6 @@
 ---
 title: High avaliability best practices
-weight: 11
+weight: 17
 ---
 # Implementing High Availability and Tolerating Zone Outages
 
@@ -20,7 +20,7 @@ Also remember that HA is costly - you need to balance it against the cost of an 
 
 ## Control Plane
 
-The Kubernetes cluster control plane is managed by Gardener (as pods in separate infrastructure clusters to which you have no direct access) and can be set up with no failure tolerance (control plane pods will be recreated best-effort when resources are available) or one of the [failure tolerance types `node` or `zone`](/docs/usage/shoot_high_availability.md).
+The Kubernetes cluster control plane is managed by Gardener (as pods in separate infrastructure clusters to which you have no direct access) and can be set up with no failure tolerance (control plane pods will be recreated best-effort when resources are available) or one of the [failure tolerance types `node` or `zone`](/docs/usage/shoot_settings/shoot_high_availability.md).
 
 Strictly speaking, static workload does not depend on the (high) availability of the control plane, but static workload doesn't rhyme with Cloud and Kubernetes and also means, that when you possibly need it the most, e.g. during a zone outage, critical self-healing or auto-scaling functionality won't be available to you and your workload, if your control plane is down as well. That's why, even though the resource consumption is significantly higher, we generally recommend to use the failure tolerance type `zone` for the control planes of productive clusters, at least in all regions that have 3+ zones. Regions that have only 1 or 2 zones don't support the failure tolerance type `zone` and then your second best option is the failure tolerance type `node`, which means a zone outage can still take down your control plane, but individual node outages won't.
 
@@ -216,7 +216,7 @@ Physical memory is not compressible, but you can overcome this issue to some deg
 - Reduced performance up to page trashing
 - Reduced security as secrets, normally held only in memory, could be swapped out to disk
 
-That said, the various options mentioned above are only remotely related to HA and will not be further explored throughout this document, but just to remind you: if a zone goes down, load patterns will shift, existing pods will probably receive more load and will require more resources (especially because it is often practically impossible to set "proper" resource requests, which drive node allocation - limits are always ignored by the scheduler) or more pods will/must be placed on the existing and/or new nodes and then these settings, which are generally critical (especially if you switch on [bin-packing for Gardener-managed clusters](/docs/usage/shoot_scheduling_profiles.md) as a cost saving measure), will become even more critical during a zone outage.
+That said, the various options mentioned above are only remotely related to HA and will not be further explored throughout this document, but just to remind you: if a zone goes down, load patterns will shift, existing pods will probably receive more load and will require more resources (especially because it is often practically impossible to set "proper" resource requests, which drive node allocation - limits are always ignored by the scheduler) or more pods will/must be placed on the existing and/or new nodes and then these settings, which are generally critical (especially if you switch on [bin-packing for Gardener-managed clusters](/docs/usage/shoot_settings/shoot_scheduling_profiles.md) as a cost saving measure), will become even more critical during a zone outage.
 
 ## Probes
 
@@ -348,7 +348,7 @@ spec:
 
 #### On `spec.controlPlane.highAvailability.failureTolerance.type`
 
-If set, determines the degree of failure tolerance for your control plane. `zone` is preferred, but only available if your control plane resides in a region with 3+ zones. See [above](#control-plane) and the [docs](/docs/usage/shoot_high_availability.md).
+If set, determines the degree of failure tolerance for your control plane. `zone` is preferred, but only available if your control plane resides in a region with 3+ zones. See [above](#control-plane) and the [docs](/docs/usage/shoot_settings/shoot_high_availability.md).
 
 #### On `spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds` and `defaultNotReadyTolerationSeconds`
 
@@ -435,7 +435,7 @@ Especially the last two settings may help you recover faster from cloud provider
 
 #### On `spec.systemComponents.coreDNS.autoscaling`
 
-DNS is critical, in general and also within a Kubernetes cluster. Gardener-managed clusters deploy [CoreDNS](https://coredns.io), a graduated CNCF project. Gardener supports 2 auto-scaling modes for it, `horizontal` (using HPA based on CPU) and `cluster-proportional` (using [cluster proportional autoscaler](https://github.com/kubernetes-sigs/cluster-proportional-autoscaler) that scales the number of pods based on the number of nodes/cores, not to be confused with the cluster autoscaler that scales nodes based on their utilization). Check out the [docs](/docs/usage/dns-autoscaling.md), especially the [trade-offs](/docs/usage/dns-autoscaling.md#trade-offs-of-horizontal-and-cluster-proportional-dns-autoscaling) why you would chose one over the other (`cluster-proportional` gives you more configuration options, if CPU-based horizontal scaling is insufficient to your needs). Consider also Gardener's feature [node-local DNS](/docs/usage/node-local-dns.md) to decouple you further from the DNS pods and stabilize DNS. Again, that's not strictly related to HA, but may become important during a zone outage, when load patterns shift and pods start to initialize/resolve DNS records more frequently in bulk.
+DNS is critical, in general and also within a Kubernetes cluster. Gardener-managed clusters deploy [CoreDNS](https://coredns.io), a graduated CNCF project. Gardener supports 2 auto-scaling modes for it, `horizontal` (using HPA based on CPU) and `cluster-proportional` (using [cluster proportional autoscaler](https://github.com/kubernetes-sigs/cluster-proportional-autoscaler) that scales the number of pods based on the number of nodes/cores, not to be confused with the cluster autoscaler that scales nodes based on their utilization). Check out the [docs](/docs/usage/shoot_settings/dns-autoscaling.md), especially the [trade-offs](/docs/usage/shoot_settings/dns-autoscaling.md#trade-offs-of-horizontal-and-cluster-proportional-dns-autoscaling) why you would chose one over the other (`cluster-proportional` gives you more configuration options, if CPU-based horizontal scaling is insufficient to your needs). Consider also Gardener's feature [node-local DNS](/docs/usage/dns/node-local-dns.md) to decouple you further from the DNS pods and stabilize DNS. Again, that's not strictly related to HA, but may become important during a zone outage, when load patterns shift and pods start to initialize/resolve DNS records more frequently in bulk.
 
 ## More Caveats
 

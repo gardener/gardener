@@ -41,7 +41,7 @@ The corresponding e2e test can be run via:
 ### Implementation Details
 
 The images locally built by `Skaffold` for the Gardener components which are deployed to this shoot cluster are managed by a container registry in the `registry` namespace in the kind cluster.
-`provider-local` configures this registry as mirror for the shoot by mutating the `OperatingSystemConfig` and using the [default contract for extending the `containerd` configuration](../usage/custom-containerd-config.md).
+`provider-local` configures this registry as mirror for the shoot by mutating the `OperatingSystemConfig` and using the [default contract for extending the `containerd` configuration](../usage/containerd/custom-containerd-config.md).
 
 In order to bootstrap a seed cluster, the `gardenlet` deploys `PersistentVolumeClaim`s and `Service`s of type `LoadBalancer`.
 While storage is supported in shoot clusters by using the [`local-path-provisioner`](https://github.com/rancher/local-path-provisioner), load balancers are not supported yet.

@@ -107,7 +107,7 @@ spec:
 
 3. Now the Gardener Scheduler would try to find a `Seed` with those labels.
   - If there are **no** Seeds with matching labels for the seed selector, then the `Shoot` will be unschedulable.
-  - If there are Seeds with matching labels for the seed selector, then the Shoot will be assigned to the best candidate after the scheduling strategy is applied, see [Gardener Scheduler](../concepts/scheduler.md#algorithm-overview).
+  - If there are Seeds with matching labels for the seed selector, then the Shoot will be assigned to the best candidate after the scheduling strategy is applied, see [Gardener Scheduler](../../concepts/scheduler.md#algorithm-overview).
     - If the `Seed` is **not** able to serve the `ExposureClass` handler `abc`, then the Shoot will end up in error state.
     - If the `Seed` is able to serve the `ExposureClass` handler `abc`, then the `Shoot` will be created.
 
