@@ -287,6 +287,10 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			},
 		}
 
+	})
+
+	JustBeforeEach(func() {
+		var err error
 		oscRaw, err = runtime.Encode(codec, operatingSystemConfig)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -299,9 +303,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			},
 			Data: map[string][]byte{"osc.yaml": oscRaw},
 		}
-	})
 
-	BeforeEach(func() {
 		By("Create Secret containing the operating system config")
 		Expect(testClient.Create(ctx, oscSecret)).To(Succeed())
 		DeferCleanup(func() {
@@ -309,7 +311,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		})
 
 		By("Create bootstrap token file")
-		_, err := fakeFS.Create(pathBootstrapTokenFile)
+		_, err = fakeFS.Create(pathBootstrapTokenFile)
 		Expect(err).NotTo(HaveOccurred())
 		DeferCleanup(func() {
 			Expect(fakeFS.Remove(pathBootstrapTokenFile)).To(Or(Succeed(), MatchError(afero.ErrFileNotFound)))
@@ -632,6 +634,35 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 
 		By("Expect that cancel func has been called")
 		Expect(cancelFunc.called).To(BeTrue())
+	})
+
+	Context("when CRI is not containerd", func() {
+		BeforeEach(func() {
+			operatingSystemConfig.Spec.CRIConfig = nil
+		})
+
+		It("should not handle containerd configs", func() {
+			By("Wait for node annotations to be updated")
+			Eventually(func(g Gomega) map[string]string {
+				updatedNode := &corev1.Node{}
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), updatedNode)).To(Succeed())
+				return updatedNode.Annotations
+			}).Should(HaveKeyWithValue("checksum/cloud-config-data", utils.ComputeSHA256Hex(oscRaw)))
+
+			By("Wait for node labels to be updated")
+			Eventually(func(g Gomega) map[string]string {
+				updatedNode := &corev1.Node{}
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), updatedNode)).To(Succeed())
+				return updatedNode.Labels
+			}).Should(HaveKeyWithValue("worker.gardener.cloud/kubernetes-version", kubernetesVersion.String()))
+
+			By("Assert that files and units have been created")
+			test.AssertNoDirectoryOnDisk(fakeFS, "/var/bin/containerruntimes")
+			test.AssertNoDirectoryOnDisk(fakeFS, "/etc/containerd/certs.d")
+			test.AssertNoDirectoryOnDisk(fakeFS, "/etc/containerd/conf.d")
+			test.AssertNoDirectoryOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d")
+			test.AssertNoFileOnDisk(fakeFS, "/etc/containerd/config.toml")
+		})
 	})
 })
 
