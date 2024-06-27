@@ -1,5 +1,5 @@
 ---
-weight: 2
+weight: 13
 description: Project operations, roles and what they allow. Explaining the Four-Eyes-Principle for resource deletion
 ---
 
