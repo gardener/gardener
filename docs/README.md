@@ -33,7 +33,7 @@
 * [Custom `CoreDNS` configuration](usage/dns/custom-dns-config.md)
 * [(Custom) CSI components](usage/nessesary_considerations/csi_components.md)
 * [Default Seccomp Profile](usage/shoot_settings/default_seccomp_profile.md)
-* [DNS Autoscaling](usage/shoot_settings/dns-autoscaling.md)
+* [DNS Autoscaling](usage/dns/dns-autoscaling.md)
 * [DNS Search Path Optimization](usage/dns/dns-search-path-optimization.md)
 * [Endpoints and Ports of a Shoot Control-Plane](usage/control-plane-endpoints-and-ports.md)
 * [ETCD Encryption Config](usage/shoot_settings/etcd_encryption_config.md)

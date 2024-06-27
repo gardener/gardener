@@ -1,5 +1,5 @@
 ---
-weight: 15
+weight: 4
 title: DNS Autoscaling
 ---
 
