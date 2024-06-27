@@ -81,9 +81,9 @@ spec:
           email: some.name@my-email-domain.com
         # secretRef:
         #   name: defaultIssuerPrivateKey
-        #  precheckNameservers:
-        #  - 1.2.3.4
-        #  - 5.6.7.8
+        # precheckNameservers:
+        # - 1.2.3.4
+        # - 5.6.7.8
 ```
 
 If needed, an existing ACME account can be specified with the `secretRef`. The referenced secret must contain a field `privateKey`. Otherwise, an account is auto-registered if supported by the ACME server.
