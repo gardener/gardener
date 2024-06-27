@@ -19,6 +19,7 @@ require (
 	github.com/gardener/hvpa-controller/api v0.15.0
 	github.com/gardener/machine-controller-manager v0.53.1
 	github.com/gardener/terminal-controller-manager v0.33.0
+	github.com/go-jose/go-jose/v4 v4.0.2
 	github.com/go-logr/logr v1.4.1
 	github.com/go-test/deep v1.1.0
 	github.com/gogo/protobuf v1.3.2
@@ -55,7 +56,6 @@ require (
 	gomodules.xyz/jsonpatch/v2 v2.4.0
 	gonum.org/v1/gonum v0.15.0
 	google.golang.org/protobuf v1.34.0
-	gopkg.in/square/go-jose.v2 v2.6.0
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.14.4
 	istio.io/api v1.22.2
@@ -84,8 +84,6 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1
 	sigs.k8s.io/yaml v1.4.0
 )
-
-require k8s.io/kubernetes v1.30.2
 
 require (
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230811130428-ced1acdcaa24 // indirect
