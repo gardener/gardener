@@ -1,0 +1,294 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.14.0
+  name: extensions.operator.gardener.cloud
+spec:
+  group: operator.gardener.cloud
+  names:
+    kind: Extension
+    listKind: ExtensionList
+    plural: extensions
+    shortNames:
+    - ext
+    singular: extension
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - description: creation timestamp
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Extension describes a Gardener extension.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Spec contains the specification of this extension.
+            properties:
+              deployment:
+                description: Deployment contains deployment configuration for an extension
+                  and it's admission controller.
+                properties:
+                  admission:
+                    description: AdmissionDeployment contains the deployment configuration
+                      for an admission controller.
+                    properties:
+                      runtimeCluster:
+                        description: |-
+                          RuntimeCluster is the deployment configuration for the admission in the runtime cluster. The runtime deployment
+                          is responsible for creating the admission controller in the runtime cluster.
+                        properties:
+                          helm:
+                            description: Helm contains the specification for a Helm
+                              deployment.
+                            properties:
+                              ociRepository:
+                                description: OCIRepository defines where to pull the
+                                  chart from.
+                                properties:
+                                  digest:
+                                    description: |-
+                                      Digest of the image to pull, takes precedence over tag.
+                                      The value should be in the format 'sha256:<HASH>'.
+                                    type: string
+                                  ref:
+                                    description: Ref is the full artifact Ref and
+                                      takes precedence over all other fields.
+                                    type: string
+                                  repository:
+                                    description: Repository is a reference to an OCI
+                                      artifact repository.
+                                    type: string
+                                  tag:
+                                    description: Tag is the image tag to pull.
+                                    type: string
+                                type: object
+                            type: object
+                        type: object
+                      values:
+                        description: Values are the deployment values. The values
+                          will be applied to both admission deployments.
+                        x-kubernetes-preserve-unknown-fields: true
+                      virtualCluster:
+                        description: |-
+                          VirtualCluster is the deployment configuration for the admission deployment in the garden cluster. The garden deployment
+                          installs necessary resources in the virtual garden cluster e.g. RBAC that are necessary for the admission controller.
+                        properties:
+                          helm:
+                            description: Helm contains the specification for a Helm
+                              deployment.
+                            properties:
+                              ociRepository:
+                                description: OCIRepository defines where to pull the
+                                  chart from.
+                                properties:
+                                  digest:
+                                    description: |-
+                                      Digest of the image to pull, takes precedence over tag.
+                                      The value should be in the format 'sha256:<HASH>'.
+                                    type: string
+                                  ref:
+                                    description: Ref is the full artifact Ref and
+                                      takes precedence over all other fields.
+                                    type: string
+                                  repository:
+                                    description: Repository is a reference to an OCI
+                                      artifact repository.
+                                    type: string
+                                  tag:
+                                    description: Tag is the image tag to pull.
+                                    type: string
+                                type: object
+                            type: object
+                        type: object
+                    type: object
+                  extension:
+                    description: ExtensionDeployment contains the deployment configuration
+                      an extension.
+                    properties:
+                      helm:
+                        description: Helm contains the specification for a Helm deployment.
+                        properties:
+                          ociRepository:
+                            description: OCIRepository defines where to pull the chart
+                              from.
+                            properties:
+                              digest:
+                                description: |-
+                                  Digest of the image to pull, takes precedence over tag.
+                                  The value should be in the format 'sha256:<HASH>'.
+                                type: string
+                              ref:
+                                description: Ref is the full artifact Ref and takes
+                                  precedence over all other fields.
+                                type: string
+                              repository:
+                                description: Repository is a reference to an OCI artifact
+                                  repository.
+                                type: string
+                              tag:
+                                description: Tag is the image tag to pull.
+                                type: string
+                            type: object
+                        type: object
+                      policy:
+                        description: Policy controls how the controller is deployed.
+                          It defaults to 'OnDemand'.
+                        type: string
+                      runtimeClusterValues:
+                        description: RuntimeClusterValues are the deployment values
+                          for the extension deployment running in the runtime garden
+                          cluster.
+                        x-kubernetes-preserve-unknown-fields: true
+                      values:
+                        description: Values are the deployment values used in the
+                          creation of the ControllerDeployment in the virtual garden
+                          cluster.
+                        x-kubernetes-preserve-unknown-fields: true
+                    type: object
+                type: object
+              resources:
+                description: |-
+                  Resources is a list of combinations of kinds (DNSRecord, Backupbucket, ...) and their actual types
+                  (aws-route53, gcp).
+                items:
+                  description: |-
+                    ControllerResource is a combination of a kind (DNSProvider, Infrastructure, Generic, ...) and the actual type for this
+                    kind (aws-route53, gcp, auditlog, ...).
+                  properties:
+                    globallyEnabled:
+                      description: |-
+                        GloballyEnabled determines if this ControllerResource is required by all Shoot clusters.
+                        This field is defaulted to false when kind is "Extension".
+                      type: boolean
+                    kind:
+                      description: Kind is the resource kind, for example "OperatingSystemConfig".
+                      type: string
+                    lifecycle:
+                      description: |-
+                        Lifecycle defines a strategy that determines when different operations on a ControllerResource should be performed.
+                        This field is defaulted in the following way when kind is "Extension".
+                         Reconcile: "AfterKubeAPIServer"
+                         Delete: "BeforeKubeAPIServer"
+                         Migrate: "BeforeKubeAPIServer"
+                      properties:
+                        delete:
+                          description: Delete defines the strategy during deletion.
+                          type: string
+                        migrate:
+                          description: Migrate defines the strategy during migration.
+                          type: string
+                        reconcile:
+                          description: Reconcile defines the strategy during reconciliation.
+                          type: string
+                      type: object
+                    primary:
+                      description: |-
+                        Primary determines if the controller backed by this ControllerRegistration is responsible for the extension
+                        resource's lifecycle. This field defaults to true. There must be exactly one primary controller for this kind/type
+                        combination. This field is immutable.
+                      type: boolean
+                    reconcileTimeout:
+                      description: |-
+                        ReconcileTimeout defines how long Gardener should wait for the resource reconciliation.
+                        This field is defaulted to 3m0s when kind is "Extension".
+                      type: string
+                    type:
+                      description: Type is the resource type, for example "coreos"
+                        or "ubuntu".
+                      type: string
+                    workerlessSupported:
+                      description: |-
+                        WorkerlessSupported specifies whether this ControllerResource supports Workerless Shoot clusters.
+                        This field is only relevant when kind is "Extension".
+                      type: boolean
+                  required:
+                  - kind
+                  - type
+                  type: object
+                type: array
+            type: object
+          status:
+            description: Status contains the status of this extension.
+            properties:
+              conditions:
+                description: Conditions represents the latest available observations
+                  of an Extension's current state.
+                items:
+                  description: Condition holds the information about the state of
+                    a resource.
+                  properties:
+                    codes:
+                      description: Well-defined error codes in case the condition
+                        reports a problem.
+                      items:
+                        description: ErrorCode is a string alias.
+                        type: string
+                      type: array
+                    lastTransitionTime:
+                      description: Last time the condition transitioned from one status
+                        to another.
+                      format: date-time
+                      type: string
+                    lastUpdateTime:
+                      description: Last time the condition was updated.
+                      format: date-time
+                      type: string
+                    message:
+                      description: A human readable message indicating details about
+                        the transition.
+                      type: string
+                    reason:
+                      description: The reason for the condition's last transition.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: Type of the condition.
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - lastUpdateTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              observedGeneration:
+                description: ObservedGeneration is the most recent generation observed
+                  for this resource.
+                format: int64
+                type: integer
+              providerStatus:
+                description: ProviderStatus contains type-specific status.
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
