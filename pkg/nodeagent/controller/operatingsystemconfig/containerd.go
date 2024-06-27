@@ -20,6 +20,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/retry"
+	"github.com/gardener/gardener/pkg/utils/structuredmap"
 )
 
 // ReconcileContainerdConfig sets required values of the given containerd configuration.
@@ -33,6 +34,10 @@ func (r *Reconciler) ReconcileContainerdConfig(ctx context.Context, log logr.Log
 	}
 
 	if err := r.ensureContainerdEnvironment(); err != nil {
+		return err
+	}
+
+	if err := r.ensureContainerdConfiguration(); err != nil {
 		return err
 	}
 
@@ -121,6 +126,86 @@ Environment="PATH=` + extensionsv1alpha1.ContainerDRuntimeContainersBinFolder + 
 	}
 
 	return nil
+}
+
+// ensureContainerdConfiguration sets the configuration for containerd.
+func (r *Reconciler) ensureContainerdConfiguration() error {
+	config, err := r.FS.ReadFile(configFile)
+	if err != nil {
+		return fmt.Errorf("unable to read containerd config.toml: %w", err)
+	}
+
+	content := map[string]any{}
+
+	err = toml.Unmarshal(config, &content)
+	if err != nil {
+		return fmt.Errorf("unable to decode containerd default config: %w", err)
+	}
+
+	type (
+		patch struct {
+			name  string
+			path  structuredmap.Path
+			setFn structuredmap.SetFn
+		}
+	)
+
+	patches := []patch{
+		{
+			name: "registry config path",
+			path: structuredmap.Path{"plugins", "io.containerd.grpc.v1.cri", "registry", "config_path"},
+			setFn: func(_ any) (any, error) {
+				return certsDir, nil
+			},
+		},
+		{
+			name: "imports paths",
+			path: structuredmap.Path{"imports"},
+			setFn: func(value any) (any, error) {
+				importPath := path.Join(configDir, "*.toml")
+
+				imports, ok := value.([]any)
+				if !ok {
+					return []string{importPath}, nil
+				}
+
+				for _, imp := range imports {
+					path, ok := imp.(string)
+					if !ok {
+						continue
+					}
+
+					if path == importPath {
+						return value, nil
+					}
+				}
+
+				return append(imports, importPath), nil
+			},
+		},
+	}
+
+	for _, p := range patches {
+		content, err = structuredmap.SetMapEntry(content, p.path, p.setFn)
+		if err != nil {
+			return fmt.Errorf("unable setting %q in containerd config.toml: %w", p.name, err)
+		}
+	}
+
+	f, err := r.FS.OpenFile(configFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		return fmt.Errorf("unable to open containerd config.toml: %w", err)
+	}
+	defer func() {
+		err = f.Close()
+	}()
+
+	err = toml.NewEncoder(f).Encode(content)
+	if err != nil {
+		return fmt.Errorf("unable to encode hosts.toml: %w", err)
+	}
+
+	return err
 }
 
 // ensureContainerdRegistries configures containerd to use the desired image registries.
