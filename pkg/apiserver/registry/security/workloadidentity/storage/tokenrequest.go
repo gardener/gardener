@@ -128,8 +128,7 @@ func (r *TokenRequestREST) Create(ctx context.Context, name string, obj runtime.
 		tokenRequest.Namespace = workloadIdentity.Namespace
 	}
 
-	now := time.Now()
-	tokenRequest.CreationTimestamp = metav1.NewTime(now)
+	tokenRequest.CreationTimestamp = metav1.NewTime(time.Now())
 	tokenRequest.ManagedFields = nil
 	tokenRequest.Status = securityapi.TokenRequestStatus{}
 
@@ -137,28 +136,14 @@ func (r *TokenRequestREST) Create(ctx context.Context, name string, obj runtime.
 		return nil, apierrors.NewInvalid(gvk.GroupKind(), "", errs)
 	}
 
-	duration := tokenRequest.Spec.ExpirationSeconds
-	if duration < r.minDuration {
-		duration = r.minDuration
-	} else if duration > r.maxDuration {
-		duration = r.maxDuration
-	}
-
-	exp := now.Add(time.Second * time.Duration(duration))
-
-	shoot, seed, project, err := r.resolveContextObject(tokenRequest.Spec.ContextObject)
-	if err != nil {
-		return nil, err
-	}
-
-	token, err := r.generateToken(workloadIdentity, now, exp, shoot, seed, project)
+	token, exp, err := r.issueToken(tokenRequest, workloadIdentity)
 	if err != nil {
 		return nil, err
 	}
 
 	tokenRequest.Status = securityapi.TokenRequestStatus{
 		Token:               token,
-		ExpirationTimeStamp: metav1.Time{Time: exp},
+		ExpirationTimeStamp: metav1.Time{Time: *exp},
 	}
 
 	var out = &securityv1alpha1.TokenRequest{}
