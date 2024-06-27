@@ -274,6 +274,7 @@ build:
             - pkg/apis/settings/install
             - pkg/apis/settings/v1alpha1
             - pkg/chartrenderer
+            - pkg/client/core/listers/core/v1beta1
             - pkg/client/kubernetes
             - pkg/client/kubernetes/cache
             - pkg/component
@@ -385,6 +386,7 @@ build:
             - pkg/apis/settings/install
             - pkg/apis/settings/v1alpha1
             - pkg/chartrenderer
+            - pkg/client/core/listers/core/v1beta1
             - pkg/client/kubernetes
             - pkg/client/kubernetes/cache
             - pkg/controllerutils
@@ -470,6 +472,7 @@ build:
             - pkg/apis/settings/install
             - pkg/apis/settings/v1alpha1
             - pkg/chartrenderer
+            - pkg/client/core/listers/core/v1beta1
             - pkg/client/kubernetes
             - pkg/client/kubernetes/cache
             - pkg/controllerutils
@@ -662,6 +665,7 @@ build:
             - pkg/apis/settings/install
             - pkg/apis/settings/v1alpha1
             - pkg/chartrenderer
+            - pkg/client/core/listers/core/v1beta1
             - pkg/client/kubernetes
             - pkg/client/kubernetes/cache
             - pkg/component
@@ -959,6 +963,7 @@ build:
             - pkg/apis/settings/install
             - pkg/apis/settings/v1alpha1
             - pkg/chartrenderer
+            - pkg/client/core/listers/core/v1beta1
             - pkg/client/kubernetes
             - pkg/client/kubernetes/cache
             - pkg/client/kubernetes/clientmap
@@ -1298,6 +1303,7 @@ build:
             - pkg/apis/settings/install
             - pkg/apis/settings/v1alpha1
             - pkg/chartrenderer
+            - pkg/client/core/listers/core/v1beta1
             - pkg/client/kubernetes
             - pkg/client/kubernetes/cache
             - pkg/controller/tokenrequestor
@@ -1401,6 +1407,7 @@ build:
             - pkg/apis/settings/install
             - pkg/apis/settings/v1alpha1
             - pkg/chartrenderer
+            - pkg/client/core/listers/core/v1beta1
             - pkg/client/kubernetes
             - pkg/client/kubernetes/cache
             - pkg/component
