@@ -1049,21 +1049,23 @@
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
-        "h": 8,
-        "w": 6,
-        "x": 6,
+        "h": 7,
+        "w": 24,
+        "x": 0,
         "y": 58
       },
       "hiddenSeries": false,
       "id": 33,
       "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
+        "alignAsTable": true,
+        "avg": true,
+        "current": true,
+        "max": true,
         "min": false,
+        "rightSide": true,
         "show": true,
         "total": false,
-        "values": false
+        "values": true
       },
       "lines": true,
       "linewidth": 1,
@@ -1090,7 +1092,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "increase(coredns_kubernetes_dns_programming_duration_seconds_sum{pod=~\"$pod\", service_kind=~\"$service_kind\"}[$__rate_interval])",
+          "expr": "sum(rate(coredns_kubernetes_dns_programming_duration_seconds_sum{pod=~\"$pod\"}[$__rate_interval])) by(service_kind)",
           "interval": "",
           "legendFormat": "{{pod}}",
           "refId": "A"
@@ -1100,7 +1102,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Increase in DNS Programming Seconds",
+      "title": "DNS Programming Cores",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1117,7 +1119,7 @@
       "yaxes": [
         {
           "$$hashKey": "object:557",
-          "format": "s",
+          "format": "cores",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -1161,7 +1163,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 58
+        "y": 65
       },
       "heatmap": {},
       "hideZeroBuckets": true,
@@ -1250,43 +1252,6 @@
         },
         "refresh": 2,
         "regex": "coredns.*",
-        "skipUrlSync": false,
-        "sort": 0,
-        "tagValuesQuery": "",
-        "tags": [],
-        "tagsQuery": "",
-        "type": "query",
-        "useTags": false
-      },
-      {
-        "allValue": null,
-        "current": {
-          "selected": false,
-          "text": "headless_with_selector",
-          "value": "headless_with_selector"
-        },
-        "datasource": null,
-        "definition": "label_values(coredns_kubernetes_dns_programming_duration_seconds_count,service_kind)",
-        "description": null,
-        "error": null,
-        "hide": 2,
-        "includeAll": false,
-        "label": null,
-        "multi": false,
-        "name": "service_kind",
-        "options": [
-          {
-            "selected": true,
-            "text": "headless_with_selector",
-            "value": "headless_with_selector"
-          }
-        ],
-        "query": {
-          "query": "label_values(coredns_kubernetes_dns_programming_duration_seconds_count,service_kind)",
-          "refId": "StandardVariableQuery"
-        },
-        "refresh": 0,
-        "regex": "",
         "skipUrlSync": false,
         "sort": 0,
         "tagValuesQuery": "",
