@@ -173,7 +173,7 @@
         },
         "overrides": []
       },
-      "fill": 1,
+      "fill": 0,
       "fillGradient": 0,
       "gridPos": {
         "h": 7,
@@ -184,13 +184,15 @@
       "hiddenSeries": false,
       "id": 16,
       "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
+        "alignAsTable": true,
+        "avg": true,
+        "current": true,
+        "max": true,
         "min": false,
+        "rightSide": true,
         "show": true,
         "total": false,
-        "values": false
+        "values": true
       },
       "lines": true,
       "linewidth": 1,
@@ -210,8 +212,8 @@
       "steppedLine": false,
       "targets": [
         {
-          "exemplar": true,
-          "expr": "rate(coredns_dns_responses_total{pod=~\"$pod\"}[$__rate_interval])",
+          "exemplar": false,
+          "expr": "sum(rate(coredns_dns_responses_total{pod=~\"$pod\"}[$__rate_interval])) by (rcode)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -223,7 +225,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "DNS Lookup Responses  (Per Second)",
+      "title": "DNS Responses",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -240,7 +242,7 @@
       "yaxes": [
         {
           "$$hashKey": "object:1544",
-          "format": "short",
+          "format": "reqps",
           "label": null,
           "logBase": 1,
           "max": null,
