@@ -481,8 +481,8 @@
       "fillGradient": 0,
       "grid": {},
       "gridPos": {
-        "h": 7,
-        "w": 12,
+        "h": 6,
+        "w": 24,
         "x": 0,
         "y": 23
       },
@@ -583,121 +583,6 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "prometheus",
-      "decimals": 0,
-      "description": "The `cache hits` describes how many DNS requests were answered due to a cached entry.\n\nThe `cache misses` describes how much DNS requests need to be looked up, because the requests entry does not exist in the local cache.\n\n",
-      "editable": true,
-      "error": false,
-      "fieldConfig": {
-        "defaults": {
-          "links": []
-        },
-        "overrides": []
-      },
-      "fill": 1,
-      "fillGradient": 0,
-      "grid": {},
-      "gridPos": {
-        "h": 7,
-        "w": 12,
-        "x": 12,
-        "y": 23
-      },
-      "hiddenSeries": false,
-      "id": 22,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 2,
-      "links": [],
-      "nullPointMode": "connected",
-      "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "7.5.31",
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": true,
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "sum(coredns_cache_hits_total{pod=~\"$pod\"} - coredns_cache_hits_total{pod=~\"$pod\"} offset $__interval)",
-          "format": "time_series",
-          "interval": "",
-          "intervalFactor": 2,
-          "legendFormat": "cache hits",
-          "refId": "A",
-          "step": 40
-        },
-        {
-          "expr": "sum(coredns_cache_misses_total{pod=~\"$pod\"} - coredns_cache_misses_total{pod=~\"$pod\"} offset $__interval)",
-          "format": "time_series",
-          "interval": "",
-          "intervalFactor": 2,
-          "legendFormat": "cache misses",
-          "refId": "B",
-          "step": 40
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Cache Hits and Misses",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "cumulative"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "$$hashKey": "object:504",
-          "decimals": 0,
-          "format": "none",
-          "logBase": 1,
-          "max": null,
-          "min": 0,
-          "show": true
-        },
-        {
-          "$$hashKey": "object:505",
-          "format": "pps",
-          "logBase": 1,
-          "max": null,
-          "min": 0,
-          "show": false
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
       "datasource": null,
       "decimals": 0,
       "description": "Count of cached entries in the cache of the DNS.",
@@ -713,7 +598,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 30
+        "y": 29
       },
       "hiddenSeries": false,
       "id": 2,
@@ -804,7 +689,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 37
+        "y": 36
       },
       "id": 14,
       "panels": [],
@@ -830,7 +715,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 38
+        "y": 37
       },
       "hiddenSeries": false,
       "id": 10,
@@ -935,7 +820,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 38
+        "y": 37
       },
       "hiddenSeries": false,
       "id": 23,
@@ -1039,7 +924,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 45
+        "y": 44
       },
       "hiddenSeries": false,
       "id": 25,
@@ -1140,7 +1025,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 45
+        "y": 44
       },
       "hiddenSeries": false,
       "id": 12,
@@ -1230,7 +1115,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 52
+        "y": 51
       },
       "id": 35,
       "panels": [],
@@ -1262,7 +1147,7 @@
         "h": 8,
         "w": 6,
         "x": 0,
-        "y": 53
+        "y": 52
       },
       "hiddenSeries": false,
       "id": 32,
@@ -1366,7 +1251,7 @@
         "h": 8,
         "w": 6,
         "x": 6,
-        "y": 53
+        "y": 52
       },
       "hiddenSeries": false,
       "id": 33,
@@ -1475,7 +1360,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 53
+        "y": 52
       },
       "heatmap": {},
       "hideZeroBuckets": true,
