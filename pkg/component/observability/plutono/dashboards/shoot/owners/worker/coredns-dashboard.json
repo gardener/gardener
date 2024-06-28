@@ -15,8 +15,6 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 1,
-  "id": 3,
-  "iteration": 1631101541091,
   "links": [],
   "panels": [
     {
@@ -80,7 +78,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.10",
+      "pluginVersion": "7.5.31",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -204,7 +202,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.10",
+      "pluginVersion": "7.5.31",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -323,7 +321,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.10",
+      "pluginVersion": "7.5.31",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -426,7 +424,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.10",
+      "pluginVersion": "7.5.31",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -537,7 +535,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.10",
+      "pluginVersion": "7.5.31",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -730,7 +728,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.10",
+      "pluginVersion": "7.5.31",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -843,7 +841,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.10",
+      "pluginVersion": "7.5.31",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -955,7 +953,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.10",
+      "pluginVersion": "7.5.31",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1075,7 +1073,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.10",
+      "pluginVersion": "7.5.31",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1179,7 +1177,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.10",
+      "pluginVersion": "7.5.31",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1281,7 +1279,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.10",
+      "pluginVersion": "7.5.31",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1382,7 +1380,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.10",
+      "pluginVersion": "7.5.31",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1503,7 +1501,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.10",
+      "pluginVersion": "7.5.31",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1607,7 +1605,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.10",
+      "pluginVersion": "7.5.31",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1861,6 +1859,5 @@
   },
   "timezone": "utc",
   "title": "CoreDNS",
-  "uid": "core-dns",
-  "version": 1
+  "uid": "core-dns"
 }
