@@ -943,21 +943,23 @@
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
-        "h": 8,
-        "w": 6,
+        "h": 6,
+        "w": 24,
         "x": 0,
         "y": 52
       },
       "hiddenSeries": false,
       "id": 32,
       "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
+        "alignAsTable": true,
+        "avg": true,
+        "current": true,
+        "max": true,
         "min": false,
+        "rightSide": true,
         "show": true,
         "total": false,
-        "values": false
+        "values": true
       },
       "lines": true,
       "linewidth": 1,
@@ -983,10 +985,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "exemplar": true,
-          "expr": "rate(coredns_kubernetes_dns_programming_duration_seconds_count{pod=~\"$pod\", service_kind=~\"$service_kind\"}[$__rate_interval])",
+          "exemplar": false,
+          "expr": "sum(rate(coredns_kubernetes_dns_programming_duration_seconds_count{pod=~\"$pod\", service_kind=~\"$service_kind\"}[$__rate_interval])) by (service_kind)",
           "interval": "",
-          "legendFormat": "{{pod}}",
+          "legendFormat": "{{service_kind}}",
           "refId": "A"
         }
       ],
@@ -994,7 +996,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Rate of DNS Programming Events",
+      "title": "DNS Programming Events",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1011,11 +1013,11 @@
       "yaxes": [
         {
           "$$hashKey": "object:557",
-          "format": "hertz",
+          "format": "ops",
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -1050,7 +1052,7 @@
         "h": 8,
         "w": 6,
         "x": 6,
-        "y": 52
+        "y": 58
       },
       "hiddenSeries": false,
       "id": 33,
@@ -1159,7 +1161,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 52
+        "y": 58
       },
       "heatmap": {},
       "hideZeroBuckets": true,
