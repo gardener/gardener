@@ -584,7 +584,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
-      "decimals": 0,
+      "decimals": null,
       "description": "Count of cached entries in the cache of the DNS.",
       "fieldConfig": {
         "defaults": {
@@ -592,7 +592,7 @@
         },
         "overrides": []
       },
-      "fill": 1,
+      "fill": 0,
       "fillGradient": 0,
       "gridPos": {
         "h": 7,
@@ -603,13 +603,15 @@
       "hiddenSeries": false,
       "id": 2,
       "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
+        "alignAsTable": true,
+        "avg": true,
+        "current": true,
+        "max": true,
         "min": false,
-        "show": false,
+        "rightSide": true,
+        "show": true,
         "total": false,
-        "values": false
+        "values": true
       },
       "lines": true,
       "linewidth": 1,
@@ -629,12 +631,12 @@
       "steppedLine": false,
       "targets": [
         {
-          "exemplar": true,
-          "expr": "sum(coredns_cache_entries{pod=~\"$pod\"}) by (type)",
+          "exemplar": false,
+          "expr": "sum(coredns_cache_entries{pod=~\"$pod\"}) by (exported_type, zones)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "cache size: {{ type }}",
+          "legendFormat": "{{exported_type}} {{zones}}",
           "refId": "A"
         }
       ],
@@ -659,12 +661,12 @@
       "yaxes": [
         {
           "$$hashKey": "object:619",
-          "decimals": 0,
+          "decimals": null,
           "format": "short",
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
