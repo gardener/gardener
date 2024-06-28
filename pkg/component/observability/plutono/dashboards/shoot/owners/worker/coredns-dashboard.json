@@ -37,7 +37,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "prometheus",
-      "decimals": 0,
+      "decimals": null,
       "description": "Rate of DNS Requests received by CoreDNS.\n\nNote: The `dot` zone is the local zone managed by the CoreDNS instance.",
       "editable": true,
       "error": false,
@@ -47,8 +47,8 @@
         },
         "overrides": []
       },
-      "fill": 1,
-      "fillGradient": 3,
+      "fill": 0,
+      "fillGradient": 0,
       "grid": {},
       "gridPos": {
         "h": 7,
@@ -72,9 +72,9 @@
         "values": true
       },
       "lines": true,
-      "linewidth": 2,
+      "linewidth": 1,
       "links": [],
-      "nullPointMode": "connected",
+      "nullPointMode": "null",
       "options": {
         "alertThreshold": true
       },
@@ -86,19 +86,20 @@
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
-      "steppedLine": true,
+      "steppedLine": false,
       "targets": [
         {
-          "exemplar": true,
-          "expr": "sum(rate(coredns_dns_requests_total{pod=~\"$pod\"}[$__rate_interval])) by (type)",
+          "exemplar": false,
+          "expr": "sum(rate(coredns_dns_requests_total{pod=~\"$pod\"}[$__rate_interval])) by (exported_type)",
           "format": "time_series",
           "interval": "",
-          "intervalFactor": 2,
-          "legendFormat": "By Record: {{type}}",
+          "intervalFactor": 1,
+          "legendFormat": "By Record: {{exported_type}}",
           "refId": "A",
           "step": 60
         },
         {
+          "exemplar": false,
           "expr": "sum(rate(coredns_dns_requests_total{pod=~\"$pod\"}[$__rate_interval])) by (proto)",
           "format": "time_series",
           "interval": "",
@@ -107,6 +108,7 @@
           "refId": "B"
         },
         {
+          "exemplar": false,
           "expr": "sum(rate(coredns_dns_requests_total{pod=~\"$pod\"}[$__rate_interval])) by (zone)",
           "format": "time_series",
           "interval": "",
@@ -119,7 +121,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "DNS Requests (Packets)",
+      "title": "DNS Requests",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -136,8 +138,8 @@
       "yaxes": [
         {
           "$$hashKey": "object:149",
-          "decimals": 0,
-          "format": "packets",
+          "decimals": null,
+          "format": "reqps",
           "label": "",
           "logBase": 1,
           "max": null,
