@@ -5,14 +5,10 @@
 package containerd
 
 import (
-	"bytes"
 	_ "embed"
-	"text/template"
 
-	"github.com/Masterminds/sprig/v3"
 	"k8s.io/utils/ptr"
 
-	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
@@ -20,26 +16,15 @@ import (
 )
 
 var (
-	tplNameInitializer = "init"
-	//go:embed templates/scripts/init.tpl.sh
-	tplContentInitializer string
-	tplInitializer        *template.Template
+	//go:embed templates/scripts/init.sh
+	contentInitializer []byte
 )
-
-func init() {
-	var err error
-	tplInitializer, err = template.
-		New(tplNameInitializer).
-		Funcs(sprig.TxtFuncMap()).
-		Parse(tplContentInitializer)
-	if err != nil {
-		panic(err)
-	}
-}
 
 type initializer struct{}
 
 // NewInitializer returns a new containerd initializer component.
+// Deprecated: The containerd initializer is deprecated and will be removed in a future version. Please don't change or add content to the init script.
+// TODO(timuthy): Remove Initializer after Gardener v1.114 was released.
 func NewInitializer() *initializer {
 	return &initializer{}
 }
@@ -53,14 +38,6 @@ func (initializer) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []
 		pathScript          = v1beta1constants.OperatingSystemConfigFilePathBinaries + "/init-containerd"
 		unitNameInitializer = "containerd-initializer.service"
 	)
-
-	var script bytes.Buffer
-	if err := tplInitializer.Execute(&script, map[string]any{
-		"binaryPath":          extensionsv1alpha1.ContainerDRuntimeContainersBinFolder,
-		"pauseContainerImage": ctx.Images[imagevector.ImageNamePauseContainer],
-	}); err != nil {
-		return nil, nil, err
-	}
 
 	return []extensionsv1alpha1.Unit{
 			{
@@ -84,18 +61,7 @@ ExecStart=` + pathScript),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",
-						Data:     utils.EncodeBase64(script.Bytes()),
-					},
-				},
-			},
-			{
-				Path:        "/etc/systemd/system/containerd.service.d/10-require-containerd-initializer.conf",
-				Permissions: ptr.To[int32](0644),
-				Content: extensionsv1alpha1.FileContent{
-					Inline: &extensionsv1alpha1.FileContentInline{
-						Data: `[Unit]
-After=` + unitNameInitializer + `
-Requires=` + unitNameInitializer,
+						Data:     utils.EncodeBase64(contentInitializer),
 					},
 				},
 			},

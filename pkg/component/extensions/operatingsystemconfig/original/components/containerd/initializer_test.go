@@ -66,17 +66,6 @@ ExecStart=/opt/bin/init-containerd`),
 						},
 					},
 				},
-				extensionsv1alpha1.File{
-					Path:        "/etc/systemd/system/containerd.service.d/10-require-containerd-initializer.conf",
-					Permissions: ptr.To[int32](0644),
-					Content: extensionsv1alpha1.FileContent{
-						Inline: &extensionsv1alpha1.FileContentInline{
-							Data: `[Unit]
-After=containerd-initializer.service
-Requires=containerd-initializer.service`,
-						},
-					},
-				},
 			))
 		})
 	})
