@@ -33,15 +33,17 @@ func (initializer) Name() string {
 	return "containerd-initializer"
 }
 
-func (initializer) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
-	const (
-		pathScript          = v1beta1constants.OperatingSystemConfigFilePathBinaries + "/init-containerd"
-		unitNameInitializer = "containerd-initializer.service"
-	)
+const (
+	// InitializerScriptPath is the path of the containerd initializer script.
+	InitializerScriptPath = v1beta1constants.OperatingSystemConfigFilePathBinaries + "/init-containerd"
+	// InitializerUnitName is the name of the containerd initializer service.
+	InitializerUnitName = "containerd-initializer.service"
+)
 
+func (initializer) Config(_ components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
 	return []extensionsv1alpha1.Unit{
 			{
-				Name:    unitNameInitializer,
+				Name:    InitializerUnitName,
 				Command: ptr.To(extensionsv1alpha1.CommandStart),
 				Enable:  ptr.To(true),
 				Content: ptr.To(`[Unit]
@@ -51,12 +53,12 @@ WantedBy=multi-user.target
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=` + pathScript),
+ExecStart=` + InitializerScriptPath),
 			},
 		},
 		[]extensionsv1alpha1.File{
 			{
-				Path:        pathScript,
+				Path:        InitializerScriptPath,
 				Permissions: ptr.To[int32](744),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{

@@ -45,9 +45,9 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		hostName = "test-hostname"
 		node     *corev1.Node
 
-		file1, file2, file3, file4, file5, file6, file7                                          extensionsv1alpha1.File
-		gnaUnit, unit1, unit2, unit3, unit4, unit5, unit5DropInsOnly, unit6, unit7, unit8, unit9 extensionsv1alpha1.Unit
-		registryConfig1, registryConfig2                                                         extensionsv1alpha1.RegistryConfig
+		file1, file2, file3, file4, file5, file6, file7, file8                                           extensionsv1alpha1.File
+		gnaUnit, unit1, unit2, unit3, unit4, unit5, unit5DropInsOnly, unit6, unit7, unit8, unit9, unit10 extensionsv1alpha1.Unit
+		registryConfig1, registryConfig2                                                                 extensionsv1alpha1.RegistryConfig
 
 		operatingSystemConfig *extensionsv1alpha1.OperatingSystemConfig
 		oscRaw                []byte
@@ -164,6 +164,11 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "", Data: "file7"}},
 			Permissions: ptr.To[int32](0750),
 		}
+		file8 = extensionsv1alpha1.File{
+			Path:        "/opt/bin/init-containerd",
+			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "", Data: "file8"}},
+			Permissions: ptr.To[int32](0644),
+		}
 
 		gnaUnit = extensionsv1alpha1.Unit{
 			Name:    "gardener-node-agent.service",
@@ -254,6 +259,10 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			}},
 			FilePaths: []string{file7.Path},
 		}
+		unit10 = extensionsv1alpha1.Unit{
+			Name:      "containerd-initializer.service",
+			FilePaths: []string{file8.Path},
+		}
 
 		registryConfig1 = extensionsv1alpha1.RegistryConfig{
 			Upstream: "_default",
@@ -272,8 +281,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 
 		operatingSystemConfig = &extensionsv1alpha1.OperatingSystemConfig{
 			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
-				Files: []extensionsv1alpha1.File{file1, file3, file5},
-				Units: []extensionsv1alpha1.Unit{unit1, unit2, unit5, unit5DropInsOnly, unit6, unit7},
+				Files: []extensionsv1alpha1.File{file1, file3, file5, file8},
+				Units: []extensionsv1alpha1.Unit{unit1, unit2, unit5, unit5DropInsOnly, unit6, unit7, unit10},
 				CRIConfig: &extensionsv1alpha1.CRIConfig{
 					Name: "containerd",
 					Containerd: &extensionsv1alpha1.ContainerdConfig{
@@ -363,6 +372,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit7.Name, "#unit7", 0600)
 		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit8.Name, "#unit8", 0600)
 		test.AssertNoFileOnDisk(fakeFS, "/etc/systemd/system/"+unit9.Name)
+		test.AssertNoFileOnDisk(fakeFS, "/opt/bin/init-containerd")
 		test.AssertDirectoryOnDisk(fakeFS, "/var/bin/containerruntimes")
 		test.AssertDirectoryOnDisk(fakeFS, "/etc/containerd/certs.d")
 		test.AssertDirectoryOnDisk(fakeFS, "/etc/containerd/conf.d")
@@ -447,7 +457,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		unit5.DropIns = unit5.DropIns[1:]
 		unit6.FilePaths = nil
 
-		operatingSystemConfig.Spec.Units = []extensionsv1alpha1.Unit{unit2, unit5, unit6, unit7}
+		operatingSystemConfig.Spec.Units = []extensionsv1alpha1.Unit{unit2, unit5, unit6, unit7, unit10}
 		operatingSystemConfig.Spec.Files[2].Content.Inline.Data = "changeme"
 		operatingSystemConfig.Status.ExtensionUnits = []extensionsv1alpha1.Unit{unit3, unit4, unit8, unit9}
 		operatingSystemConfig.Status.ExtensionFiles = []extensionsv1alpha1.File{file4, file6, file7}
@@ -498,6 +508,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit7.Name, "#unit7", 0600)
 		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit8.Name, "#unit8", 0600)
 		test.AssertNoFileOnDisk(fakeFS, "/etc/systemd/system/"+unit9.Name)
+		test.AssertNoFileOnDisk(fakeFS, "/opt/bin/init-containerd")
 		test.AssertDirectoryOnDisk(fakeFS, "/var/bin/containerruntimes")
 		test.AssertDirectoryOnDisk(fakeFS, "/etc/containerd/certs.d")
 		test.AssertDirectoryOnDisk(fakeFS, "/etc/containerd/conf.d")

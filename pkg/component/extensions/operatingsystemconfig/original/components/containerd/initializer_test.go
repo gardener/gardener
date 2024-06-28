@@ -75,5 +75,7 @@ const (
 	pauseContainerImageRepo = "foo.io"
 	pauseContainerImageTag  = "v1.2.3"
 	initScript              = `#!/bin/bash
+
+# The containerd-initializer is deprecated, functionless and only kept on this node for compatibility reasons.
 `
 )
