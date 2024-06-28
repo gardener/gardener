@@ -37,129 +37,6 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "prometheus",
-      "description": "Average rate of DNS requests (in packets per second) split by DNS record types, used protocol and DNS zone.\n\nNote: The `dot` zone is the local zone managed by the CoreDNS instance.",
-      "editable": true,
-      "error": false,
-      "fieldConfig": {
-        "defaults": {
-          "links": []
-        },
-        "overrides": []
-      },
-      "fill": 1,
-      "fillGradient": 0,
-      "grid": {},
-      "gridPos": {
-        "h": 7,
-        "w": 12,
-        "x": 0,
-        "y": 1
-      },
-      "hiddenSeries": false,
-      "id": 8,
-      "legend": {
-        "alignAsTable": true,
-        "avg": true,
-        "current": true,
-        "max": true,
-        "min": false,
-        "rightSide": true,
-        "show": true,
-        "sort": "current",
-        "sortDesc": true,
-        "total": false,
-        "values": true
-      },
-      "lines": true,
-      "linewidth": 2,
-      "links": [],
-      "nullPointMode": "connected",
-      "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "7.5.31",
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "sum(rate(coredns_dns_request_duration_seconds_count{pod=~\"$pod\"}[$__rate_interval])) by (type)",
-          "format": "time_series",
-          "interval": "",
-          "intervalFactor": 2,
-          "legendFormat": "By Record: {{type}}",
-          "refId": "A",
-          "step": 60
-        },
-        {
-          "expr": "sum(rate(coredns_dns_request_duration_seconds_count{pod=~\"$pod\"}[$__rate_interval])) by (proto)",
-          "format": "time_series",
-          "interval": "",
-          "intervalFactor": 1,
-          "legendFormat": "By Protocol: {{proto}}",
-          "refId": "B"
-        },
-        {
-          "expr": "sum(rate(coredns_dns_request_duration_seconds_count{pod=~\"$pod\"}[$__rate_interval])) by (zone)",
-          "format": "time_series",
-          "interval": "",
-          "intervalFactor": 1,
-          "legendFormat": "By Zone: {{zone}}",
-          "refId": "C"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "DNS Requests (Packets per Second)",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "cumulative"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "$$hashKey": "object:99",
-          "format": "pps",
-          "logBase": 1,
-          "max": null,
-          "min": 0,
-          "show": true
-        },
-        {
-          "$$hashKey": "object:100",
-          "format": "pps",
-          "logBase": 1,
-          "max": null,
-          "min": 0,
-          "show": false
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": "prometheus",
       "decimals": 0,
       "description": "Rate of DNS Requests received by CoreDNS.\n\nNote: The `dot` zone is the local zone managed by the CoreDNS instance.",
       "editable": true,
@@ -175,8 +52,8 @@
       "grid": {},
       "gridPos": {
         "h": 7,
-        "w": 12,
-        "x": 12,
+        "w": 24,
+        "x": 0,
         "y": 1
       },
       "hiddenSeries": false,
