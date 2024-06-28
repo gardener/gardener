@@ -19,6 +19,7 @@ import (
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
+	componentscontainerd "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/containerd"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 )
 
@@ -104,6 +105,10 @@ func computeOperatingSystemConfigChanges(fs afero.Afero, newOSC *extensionsv1alp
 		changes.files.changed = newOSCFiles
 		changes.units.changed = unitChanges
 
+		// On new nodes, the deprecated containerd-initializer service can safely be removed.
+		// TODO(timuthy): Remove this block after Gardener v1.114 was released.
+		removeContainerdInit(changes)
+
 		changes.containerd.configChange = true
 		if extensionsv1alpha1helper.HasContainerdConfiguration(newOSC.Spec.CRIConfig) {
 			changes.containerd.registries.current = newOSC.Spec.CRIConfig.Containerd.Registries
@@ -141,9 +146,23 @@ func computeOperatingSystemConfigChanges(fs afero.Afero, newOSC *extensionsv1alp
 			oldRegistries = oldOSC.Spec.CRIConfig.Containerd.Registries
 		}
 	}
-
 	changes.containerd.registries = computeContainerdRegistryDiffs(newRegistries, oldRegistries)
+
 	return changes, nil
+}
+
+// TODO(timuthy): Remove this block after Gardener v1.114 was released.
+func removeContainerdInit(changes *operatingSystemConfigChanges) {
+	for i, file := range changes.files.changed {
+		if file.Path == componentscontainerd.InitializerScriptPath {
+			changes.files.changed = slices.Delete(changes.files.changed, i, i+1)
+		}
+	}
+	for i, unit := range changes.units.changed {
+		if unit.Name == componentscontainerd.InitializerUnitName {
+			changes.units.changed = slices.Delete(changes.units.changed, i, i+1)
+		}
+	}
 }
 
 func computeUnitDiffs(oldUnits, newUnits []extensionsv1alpha1.Unit, fileDiffs files) units {
