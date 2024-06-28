@@ -809,14 +809,14 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
-      "description": "Average per second rate of responses from upstream DNS split by status code (rcode).",
+      "description": "Average per second rate of responses from upstream DNS split by response code.",
       "fieldConfig": {
         "defaults": {
           "links": []
         },
         "overrides": []
       },
-      "fill": 1,
+      "fill": 0,
       "fillGradient": 0,
       "gridPos": {
         "h": 7,
@@ -827,13 +827,15 @@
       "hiddenSeries": false,
       "id": 12,
       "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
+        "alignAsTable": true,
+        "avg": true,
+        "current": true,
+        "max": true,
         "min": false,
+        "rightSide": true,
         "show": true,
         "total": false,
-        "values": false
+        "values": true
       },
       "lines": true,
       "linewidth": 1,
@@ -853,8 +855,8 @@
       "steppedLine": false,
       "targets": [
         {
-          "exemplar": true,
-          "expr": "rate(coredns_proxy_request_duration_seconds_count{pod=~\"$pod\", proxy_name=\"forward\"}[$__rate_interval])",
+          "exemplar": false,
+          "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{pod=~\"$pod\", proxy_name=\"forward\"}[$__rate_interval])) by (to, rcode)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -883,11 +885,11 @@
       "yaxes": [
         {
           "$$hashKey": "object:51",
-          "format": "short",
+          "format": "reqps",
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
