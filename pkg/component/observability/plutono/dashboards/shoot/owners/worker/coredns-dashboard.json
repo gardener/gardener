@@ -1147,11 +1147,11 @@
         "cardRound": null
       },
       "color": {
-        "cardColor": "#b4ff00",
+        "cardColor": "#37872D",
         "colorScale": "sqrt",
         "colorScheme": "interpolateOranges",
         "exponent": 0.5,
-        "mode": "spectrum"
+        "mode": "opacity"
       },
       "dataFormat": "tsbuckets",
       "datasource": null,
@@ -1161,8 +1161,8 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
+        "w": 24,
+        "x": 0,
         "y": 65
       },
       "heatmap": {},
@@ -1184,9 +1184,10 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "sum by (le) (rate(coredns_kubernetes_dns_programming_duration_seconds_bucket{pod=~\"$pod\", service_kind=~\"$service_kind\"}[$__rate_interval]))",
+          "expr": "sum by (le) (rate(coredns_kubernetes_dns_programming_duration_seconds_bucket{pod=~\"$pod\"}[$__rate_interval]))",
           "format": "heatmap",
           "interval": "",
+          "intervalFactor": 2,
           "legendFormat": "{{le}}",
           "refId": "A"
         }
@@ -1211,7 +1212,7 @@
         "show": true,
         "splitFactor": null
       },
-      "yBucketBound": "upper",
+      "yBucketBound": "auto",
       "yBucketNumber": null,
       "yBucketSize": null
     }
