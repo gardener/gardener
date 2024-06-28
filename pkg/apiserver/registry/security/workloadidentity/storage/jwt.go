@@ -153,6 +153,7 @@ func (r *TokenRequestREST) resolveContextObject(ctxObj *securityapi.ContextObjec
 		if shoot, err = coreInformers.Shoots().Lister().Shoots(*ctxObj.Namespace).Get(ctxObj.Name); err != nil {
 			return nil, nil, nil, err
 		}
+		shootMeta = shoot.GetObjectMeta()
 
 		if shoot.UID != ctxObj.UID {
 			return nil, nil, nil, fmt.Errorf("uid of contextObject (%s) and real world resource(%s) differ", ctxObj.UID, shoot.UID)
@@ -163,11 +164,13 @@ func (r *TokenRequestREST) resolveContextObject(ctxObj *securityapi.ContextObjec
 			if seed, err = coreInformers.Seeds().Lister().Get(seedName); err != nil {
 				return nil, nil, nil, err
 			}
+			seedMeta = seed.GetObjectMeta()
 		}
 
 		if project, err = gardenerutils.ProjectForNamespaceFromLister(coreInformers.Projects().Lister(), shoot.Namespace); err != nil {
 			return nil, nil, nil, err
 		}
+		projectMeta = project.GetObjectMeta()
 
 	case gvk.Group == gardencorev1beta1.SchemeGroupVersion.Group && gvk.Kind == "Seed":
 		if seed, err = coreInformers.Seeds().Lister().Get(ctxObj.Name); err != nil {
@@ -177,21 +180,10 @@ func (r *TokenRequestREST) resolveContextObject(ctxObj *securityapi.ContextObjec
 		if seed.UID != ctxObj.UID {
 			return nil, nil, nil, fmt.Errorf("uid of contextObject (%s) and real world resource(%s) differ", ctxObj.UID, seed.UID)
 		}
+		seedMeta = seed.GetObjectMeta()
 
 	default:
 		return nil, nil, nil, fmt.Errorf("unsupported GVK for context object: %s", gvk.String())
-	}
-
-	if shoot != nil {
-		shootMeta = shoot.GetObjectMeta()
-	}
-
-	if seed != nil {
-		seedMeta = seed.GetObjectMeta()
-	}
-
-	if project != nil {
-		projectMeta = project.GetObjectMeta()
 	}
 
 	return shootMeta, seedMeta, projectMeta, nil
