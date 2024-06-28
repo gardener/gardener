@@ -468,7 +468,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "prometheus",
-      "description": "The `cache hits` describes how many DNS requests were answered due to a cached entry.\n\nThe `cache misses` describes how much DNS requests need to be looked up, because the requests entry does not exist in the local cache.\n\nThe rates are per second averages and displayed in packets per second.",
+      "description": "The `cache hits` describes how many DNS requests were answered due to a cached entry.\n\nThe `cache misses` describes how many DNS requests need to be looked up, because the requests entry does not exist in the local cache.",
       "editable": true,
       "error": false,
       "fieldConfig": {
@@ -477,7 +477,7 @@
         },
         "overrides": []
       },
-      "fill": 1,
+      "fill": 0,
       "fillGradient": 0,
       "grid": {},
       "gridPos": {
@@ -489,18 +489,20 @@
       "hiddenSeries": false,
       "id": 6,
       "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
+        "alignAsTable": true,
+        "avg": true,
+        "current": true,
+        "max": true,
         "min": false,
+        "rightSide": true,
         "show": true,
         "total": false,
-        "values": false
+        "values": true
       },
       "lines": true,
-      "linewidth": 2,
+      "linewidth": 1,
       "links": [],
-      "nullPointMode": "connected",
+      "nullPointMode": "null",
       "options": {
         "alertThreshold": true
       },
@@ -515,19 +517,21 @@
       "steppedLine": false,
       "targets": [
         {
-          "exemplar": true,
-          "expr": "rate(coredns_cache_hits_total{pod=~\"$pod\"}[$__rate_interval])",
+          "exemplar": false,
+          "expr": "sum(rate(coredns_cache_hits_total{pod=~\"$pod\"}[$__rate_interval])) by(exported_type)",
           "format": "time_series",
           "interval": "",
-          "intervalFactor": 2,
-          "legendFormat": "cache hits",
+          "intervalFactor": 1,
+          "legendFormat": "cache hits {{exported_type}}",
           "refId": "A",
           "step": 40
         },
         {
-          "expr": "rate(coredns_cache_misses_total{pod=~\"$pod\"}[$__rate_interval])",
+          "exemplar": false,
+          "expr": "sum(rate(coredns_cache_misses_total{pod=~\"$pod\"}[$__rate_interval]))",
           "format": "time_series",
-          "intervalFactor": 2,
+          "interval": "",
+          "intervalFactor": 1,
           "legendFormat": "cache misses",
           "refId": "B",
           "step": 40
@@ -537,7 +541,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Cache Hits and Misses (Per Second)",
+      "title": "Cache Hits and Misses",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -554,7 +558,7 @@
       "yaxes": [
         {
           "$$hashKey": "object:211",
-          "format": "none",
+          "format": "reqps",
           "logBase": 1,
           "max": null,
           "min": 0,
