@@ -277,7 +277,7 @@ spec:
       annotations:
         summary:  A node was reported not healthy for 5 scrapes in the past 30 minutes.
         description: >-
-          Node {{$labels.node}} in landscape
+          Node {{$labels.node}} in seed {{$labels.seed}} in landscape
           {{$externalLabels.landscape}} was not healthy for five scrapes in the past 30 minutes.
 
     - alert: SeedConditionFailing
