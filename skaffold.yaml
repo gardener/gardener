@@ -841,7 +841,11 @@ manifests:
       - example/provider-local/garden/skaffold
       - example/provider-local/seed-kind/skaffold
 deploy:
-  kubectl: {}
+  kubectl:
+    flags:
+      apply:
+        - --server-side
+        - --force-conflicts
 profiles:
   - name: ipv6
     activation:
