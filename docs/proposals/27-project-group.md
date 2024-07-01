@@ -7,8 +7,6 @@ authors:
 - "@tobschli"
 - "@oliver-goetz"
 reviewers:
-- "@rfranzke"
-- "@ScheererJ"
 ---
 
 # GEP-27: Project Groups to enable Private Seeds
@@ -35,26 +33,26 @@ reviewers:
 
 ## Motivation
 
-Currently, all users of Gardener share all available seeds which each other.
+Due to local legal regulations, two use cases which define location requirements for shoot control planes have become increasingly relevant, demanding a defined system or method.
 
-There are users who are bound to legal obligations in regards to geographic location of control planes.
+In the first use case, control planes need to be scheduled to seeds, which are in certain geographical locations.
 
-Sometimes it is also required that control planes of users are not allowed to share a seed with other third parties. A seed with those requirements will be called a "private seed".
+The second use case has the same requirement as the first, but in addition to that, no other shoot control planes of other user groups are allowed to be scheduled on the same seed. A seed that is exclusively usable by one user group will be called a "private seed" in this context.
 
-At the moment, [such a scenario is enabled](https://gardener.cloud/docs/guides/security-and-compliance/regional-restrictions/) by Gardener operators manually tainting seeds and allowing projects of said users to set tolerations for their shoots.
+Although already technically possible, there is currently no fully defined method for fulfilling these use cases.
 
-A problem arises when such users want not only one, but multiple projects to be restricted to the same private seed(s). This would result in additional work for the Gardener operators to repeatedly set the same settings to the different projects of the user.
+At the moment, [the second use case is enabled](https://gardener.cloud/docs/guides/security-and-compliance/regional-restrictions/) by Gardener operators manually tainting seeds and allowing projects of certain projects to set tolerations for their shoots.
 
-The work of Gardener operators should be decreased by this enhancement. There is still some support required by them, because it should not be allowed for any arbitrary user to "reserve" a seed by themselves. It shall still be the decision of Gardener operators to decide if a user is allowed to have such a private seed.
+While this works for a few projects, this approach does not scale well. Especially when there is more than one project for a user group. They still need to fulfill the same requirements, so all of their projects need to be restricted to the same geographic location or private seed(s). This would result in additional work for Gardener operators to repeatedly set the same settings to the different projects of the user.
 
-To summarize, there are two scenarios which need to be systematically enabled:
+Additionally, it is possible to circumvent the current approach, by setting the `.spec.seedSelector` of a shoot to match a seed outside the required geographical location.
+
+The work of Gardener operators should be decreased by this enhancement. There is still some support required by them, because it should not be allowed for any arbitrary user to "reserve" a seed by themselves. It shall still be the decision of Gardener operators which projects are allowed to have one or more private seeds.
+
+To summarize, there are two scenarios which need to be methodically enabled:
 
 1. Enable the assured scheduling of shoot control planes to specific geographical regions
 2. Let users have the opportunity to have a "private seed" (enabled by Gardener operators)
-
-Both scenarios are currently already technically possible, but require strong involvement of Gardener operators.
-
-Also users can easily ignore those restrictions, by simply setting the `.spec.seedSelector` of a shoot to match a seed without the taint / outside the required geographical location.
 
 In order to enforce something like this, a new resource called [`SeedBinding`s](#seedbinding) will be introduced.
 
@@ -65,13 +63,13 @@ Furthermore, [`ProjectGroup`s](#projectgroup) should decrease the work of Garden
 The overarching goal of this GEP is to lay the foundational work to enable homogeneous sovereign cloud scenarios.
 
 - Enable projects to use some seeds exclusively by using the Taints and Tolerations feature ([`SeedBinding`s](#seedbinding))
-- Enhance projects so that shoot control planes can be restricted to certain geographical regions ([`SeedBinding`s](#seedbinding))
+- Enhance projects so that shoot control planes can be restricted to a subset of seeds ([`SeedBinding`s](#seedbinding)), e.g. cetrain geographical locations
 - Share those, so called, seed bindings to different projects that logically belong together in a concept called [`ProjectGroup`s](#projectgroup)
-- Introduce new role for project group administrators, that are allowed to add projects to a project group
+- Introduce new role for project group administrators, that are allowed to add projects to / remove projects from a project group
 
 ### Non-Goals
 
-- Let users exclusively bind seeds on their own
+- Let users exclusively bind seeds to projects on their own
 
 ## Proposal
 
@@ -88,17 +86,18 @@ metadata:
 spec:
   namespace: gardenprojectgroup-group1
   owner:
-    apiGroup: rbac.authorization.k8s.io
+  members:
+  - apiGroup: rbac.authorization.k8s.io
     kind: User
     name: john.doe@example.com
-  members:
+    role: owner
   - apiGroup: rbac.authorization.k8s.io
     kind: User
     name: alice.doe@example.com
     role: admin
   projects:
-    - Project1
-    - Project2
+  - Project1
+  - Project2
 ```
 
 The main idea behind `ProjectGroup`s is that they, like projects, have their own namespace.
@@ -113,7 +112,7 @@ To let a user in a project know that such an object is being kept in sync with a
 
 This copying feature can become useful for future use cases, for example for sharing infrastructure credentials across different projects, by copying `SecretBinding`s.
 
-It will not be possible to add non-existent project to a project group. This also means that if a project is deleted that is part of a project group, the controller should remove it.
+It will not be possible to add a non-existent project to a project group. This also means that if a project is deleted that is part of a project group, the controller should remove it.
 
 The `.spec.namespace` field in `ProjectGroup` will behave equally as the `Project` `.spec.namespace` field.
 
@@ -121,7 +120,7 @@ The `.spec.namespace` field in `ProjectGroup` will behave equally as the `Projec
 
 Anybody should be able to create a project group.
 
-But adding a project to a project group is a sensitive operation.
+However, adding a project to a project group is a sensitive operation.
 
 If anyone could add any project to their project group, a bad actor could add a project of a third party to their project group and restrict them from using any seed except the ones bound in the bad actors project group.
 
@@ -158,7 +157,7 @@ If a tainting binding is created for a seed that already has a taint, an error w
 
 Seed bindings will only work in project namespaces.
 
-The field `.seedSelector` determines which seeds shall be schedulable. A selecting mechanism, like the one in `Shoot.spec.seedSelector` will be used.
+The field `.seedSelector` determines which seeds shall be selected. This is analogous to `Shoot.spec.seedSelector`.
 
 ##### Permissions
 
