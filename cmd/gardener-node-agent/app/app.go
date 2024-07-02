@@ -6,6 +6,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"net"
@@ -14,6 +15,7 @@ import (
 	"path/filepath"
 	goruntime "runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -36,6 +38,7 @@ import (
 
 	"github.com/gardener/gardener/cmd/gardener-node-agent/app/bootstrappers"
 	"github.com/gardener/gardener/cmd/utils"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -103,6 +106,7 @@ func getBootstrapCommand(opts *options) *cobra.Command {
 
 func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *config.NodeAgentConfiguration) error {
 	log.Info("Feature Gates", "featureGates", features.DefaultFeatureGate)
+	fs := afero.Afero{Fs: afero.NewOsFs()}
 
 	if kubeconfig := os.Getenv("KUBECONFIG"); kubeconfig != "" {
 		cfg.ClientConnection.Kubeconfig = kubeconfig
@@ -114,23 +118,71 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		err        error
 	)
 
+	var mustBootstrap bool
 	if len(cfg.ClientConnection.Kubeconfig) > 0 {
 		restConfig, err = kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.ClientConnection, nil, kubernetes.AuthTokenFile)
 		if err != nil {
 			return fmt.Errorf("failed getting REST config from client connection configuration: %w", err)
 		}
 	} else {
-		var mustFetchAccessToken bool
-		restConfig, mustFetchAccessToken, err = getRESTConfig(log, cfg)
-		if err != nil {
-			return fmt.Errorf("failed getting REST config: %w", err)
+		var migrateKubeconfig bool
+		if features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) {
+			restConfig, mustBootstrap, err = getRESTConfig(log, fs, cfg)
+			if err != nil {
+				log.Info("Failed to get REST config for node-authorizer. Starting migration from access token kubeconfig")
+				migrateKubeconfig = true
+			}
+			if !migrateKubeconfig {
+				log.Info("Deleting obsolete access token file (in case it still exists)")
+				if err := fs.Remove(nodeagentv1alpha1.TokenFilePath); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
+					return fmt.Errorf("failed removing access token file: %w", err)
+				}
+			}
+		} else {
+			var mustFetchAccessToken bool
+			restConfig, mustFetchAccessToken, err = getRESTConfigAccessToken(log, cfg)
+			if err != nil {
+				log.Info("Failed to get REST config for access token. Starting migration from node-authorizer kubeconfig")
+				migrateKubeconfig = true
+			}
+
+			if mustFetchAccessToken && !migrateKubeconfig {
+				log.Info("Fetching access token")
+				if err := fetchAccessToken(ctx, log, restConfig); err != nil {
+					return fmt.Errorf("failed fetching access token: %w", err)
+				}
+			}
 		}
 
-		if mustFetchAccessToken {
-			log.Info("Fetching access token")
-			if err := fetchAccessToken(ctx, log, restConfig); err != nil {
-				return fmt.Errorf("failed fetching access token: %w", err)
+		// TODO(oliver-goetz): Remove migration code when NodeAgentAuthorizer is removed
+		// Migration from access token kubeconfig to node-authorizer kubeconfig or vice versa
+		if migrateKubeconfig {
+			if features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) {
+				var mustFetchAccessToken bool
+				restConfig, mustFetchAccessToken, err = getRESTConfigAccessToken(log, cfg)
+				if err != nil || mustFetchAccessToken {
+					return fmt.Errorf("failed getting REST config - migrating kubeconfig failed: %w", err)
+				}
+			} else {
+				restConfig, mustBootstrap, err = getRESTConfig(log, fs, cfg)
+				if err != nil || mustBootstrap {
+					return fmt.Errorf("failed getting REST config - migrating kubeconfig failed: %w", err)
+				}
+				log.Info("Fetching access token")
+				if err := fetchAccessToken(ctx, log, restConfig); err != nil {
+					return fmt.Errorf("failed fetching access token: %w", err)
+				}
+				var mustFetchAccessToken bool
+				restConfig, mustFetchAccessToken, err = getRESTConfigAccessToken(log, cfg)
+				if err != nil || mustFetchAccessToken {
+					return fmt.Errorf("failed getting REST config - migrating kubeconfig failed: %w", err)
+				}
+				log.Info("Deleting obsolete node-authorizer kubeconfig")
+				if err := fs.Remove(nodeagentv1alpha1.KubeconfigFilePath); err != nil {
+					return fmt.Errorf("failed removing kubeconfig file: %w", err)
+				}
 			}
+			log.Info("Migrating kubeconfig complete")
 		}
 	}
 
@@ -149,10 +201,13 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 	}
 	log.Info("Fetched hostname", "hostname", hostName)
 
-	log.Info("Fetching name of node (if already registered)")
-	nodeName, err := fetchNodeName(ctx, restConfig, hostName)
-	if err != nil {
-		return fmt.Errorf("failed fetching name of node: %w", err)
+	var nodeName string
+	if !mustBootstrap {
+		log.Info("Fetching name of node (if already registered)")
+		nodeName, err = fetchNodeName(ctx, restConfig, hostName)
+		if err != nil {
+			return fmt.Errorf("failed fetching name of node: %w", err)
+		}
 	}
 
 	var (
@@ -205,19 +260,46 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 	}
 
 	log.Info("Creating directory for temporary files", "path", nodeagentv1alpha1.TempDir)
-	fs := afero.Afero{Fs: afero.NewOsFs()}
 	if err := fs.MkdirAll(nodeagentv1alpha1.TempDir, os.ModeDir); err != nil {
 		return fmt.Errorf("unable to create directory for temporary files %q: %w", nodeagentv1alpha1.TempDir, err)
 	}
 
+	bootstrapRunnables := []manager.Runnable{
+		&bootstrappers.KubeletBootstrapKubeconfig{Log: log.WithName("kubelet-bootstrap-kubeconfig-creator"), FS: fs, APIServerConfig: cfg.APIServer},
+	}
+
+	var machineName string
+	if features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) {
+		machineName, err = fetchMachineName(fs)
+		// TODO(oliver-goetz): fetching the machine name from node label is migration code remove this migration code when feature gate NodeAgentAuthorizer is removed.
+		// Fetching the machine name from node label is migration for existing nodes when the feature gate is activated, because there is no file with the machine name yet.
+		if errors.Is(err, afero.ErrFileNotFound) {
+			machineName, err = fetchMachineNameFromNode(ctx, restConfig, fs, nodeName)
+			if err != nil {
+				return err
+			}
+		} else if err != nil {
+			return err
+		}
+		bootstrapRunnables = append(bootstrapRunnables,
+			&bootstrappers.NodeAgentKubeconfig{
+				Log:         log.WithName("nodeagent-kubeconfig-creator"),
+				FS:          fs,
+				Cancel:      cancel,
+				MachineName: machineName,
+				Config:      restConfig,
+			},
+		)
+	}
+
 	log.Info("Adding runnables to manager")
 	if err := mgr.Add(&controllerutils.ControlledRunner{
-		Manager: mgr,
-		BootstrapRunnables: []manager.Runnable{
-			&bootstrappers.KubeletBootstrapKubeconfig{Log: log.WithName("kubelet-bootstrap-kubeconfig-creator"), FS: fs, APIServerConfig: cfg.APIServer},
-		},
+		Manager:            mgr,
+		BootstrapRunnables: bootstrapRunnables,
 		ActualRunnables: []manager.Runnable{
-			manager.RunnableFunc(func(ctx context.Context) error { return controller.AddToManager(ctx, cancel, mgr, cfg, hostName) }),
+			manager.RunnableFunc(func(ctx context.Context) error {
+				return controller.AddToManager(ctx, cancel, mgr, cfg, hostName, machineName)
+			}),
 		},
 	}); err != nil {
 		return fmt.Errorf("failed adding runnables to manager: %w", err)
@@ -227,7 +309,41 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 	return mgr.Start(ctx)
 }
 
-func getRESTConfig(log logr.Logger, cfg *config.NodeAgentConfiguration) (*rest.Config, bool, error) {
+func getRESTConfig(log logr.Logger, fs afero.Afero, cfg *config.NodeAgentConfiguration) (*rest.Config, bool, error) {
+	if kubeconfig, err := fs.ReadFile(nodeagentv1alpha1.KubeconfigFilePath); err == nil {
+		log.Info("Kubeconfig file exists, using it")
+		restConfig, err := kubernetes.RESTConfigFromKubeconfig(kubeconfig)
+		if err != nil {
+			return nil, false, err
+		}
+		return restConfig, false, nil
+	} else if !errors.Is(err, afero.ErrFileNotFound) {
+		return nil, false, err
+	}
+
+	restConfig := &rest.Config{
+		Burst: int(cfg.ClientConnection.Burst),
+		QPS:   cfg.ClientConnection.QPS,
+		ContentConfig: rest.ContentConfig{
+			AcceptContentTypes: cfg.ClientConnection.AcceptContentTypes,
+			ContentType:        cfg.ClientConnection.ContentType,
+		},
+		Host:            cfg.APIServer.Server,
+		TLSClientConfig: rest.TLSClientConfig{CAData: cfg.APIServer.CABundle},
+		BearerTokenFile: nodeagentv1alpha1.BootstrapTokenFilePath,
+	}
+
+	if _, err := fs.Stat(nodeagentv1alpha1.BootstrapTokenFilePath); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
+		return nil, false, fmt.Errorf("failed checking whether bootstrap token file %q exists: %w", nodeagentv1alpha1.BootstrapTokenFilePath, err)
+	} else if err == nil {
+		log.Info("Kubeconfig file does not exist, but bootstrap token file does - using it", "path", nodeagentv1alpha1.BootstrapTokenFilePath)
+		return restConfig, true, nil
+	}
+
+	return nil, false, fmt.Errorf("unable to construct REST config (neither kubeconfig file %q nor bootstrap token file %q exist)", nodeagentv1alpha1.TokenFilePath, nodeagentv1alpha1.BootstrapTokenFilePath)
+}
+
+func getRESTConfigAccessToken(log logr.Logger, cfg *config.NodeAgentConfiguration) (*rest.Config, bool, error) {
 	restConfig := &rest.Config{
 		Burst: int(cfg.ClientConnection.Burst),
 		QPS:   cfg.ClientConnection.QPS,
@@ -286,6 +402,38 @@ func fetchAccessToken(ctx context.Context, log logr.Logger, restConfig *rest.Con
 	log.Info("Token written to disk")
 	restConfig.BearerTokenFile = nodeagentv1alpha1.TokenFilePath
 	return nil
+}
+
+func fetchMachineName(fs afero.Afero) (string, error) {
+	machineNameByte, err := afero.ReadFile(fs, nodeagentv1alpha1.MachineNameFilePath)
+	if err != nil {
+		return "", fmt.Errorf("failed reading machine-name file: %w", err)
+	}
+	return strings.Split(string(machineNameByte), "\n")[0], nil
+}
+
+func fetchMachineNameFromNode(ctx context.Context, restConfig *rest.Config, fs afero.Afero, nodeName string) (string, error) {
+	if nodeName == "" {
+		return "", fmt.Errorf("node name is empty, cannot fetch machine name from node")
+	}
+	c, err := client.New(restConfig, client.Options{})
+	if err != nil {
+		return "", fmt.Errorf("unable to create client: %w", err)
+	}
+	node := &corev1.Node{}
+	if err := c.Get(ctx, client.ObjectKey{Name: nodeName}, node); err != nil {
+		return "", fmt.Errorf("unable to fetch node %q: %w", nodeName, err)
+	}
+	machineName, found := node.Labels[v1beta1constants.LabelMachineName]
+	if !found {
+		return "", fmt.Errorf("unable to get machine name. No %q label on node %q", v1beta1constants.LabelMachineName, node.Name)
+	}
+
+	if err := afero.WriteFile(fs, nodeagentv1alpha1.MachineNameFilePath, []byte(machineName), 0600); err != nil {
+		return "", fmt.Errorf("error writing machine name to file %q: %w", nodeName, err)
+	}
+
+	return machineName, nil
 }
 
 func fetchNodeName(ctx context.Context, restConfig *rest.Config, hostName string) (string, error) {

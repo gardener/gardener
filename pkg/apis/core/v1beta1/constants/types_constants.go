@@ -931,6 +931,8 @@ const (
 	TaintNodeCriticalComponentsNotReady = "node.gardener.cloud/critical-components-not-ready"
 	// LabelNodeCriticalComponent is the label key for marking node-critical component pods.
 	LabelNodeCriticalComponent = "node.gardener.cloud/critical-component"
+	// LabelMachineName defines the labels which contains the name of the machine of a node
+	LabelMachineName = "node.gardener.cloud/machine-name"
 	// AnnotationPrefixWaitForCSINode is the annotation key for csi-driver-node pods, indicating they use the driver
 	// specified in the value.
 	AnnotationPrefixWaitForCSINode = "node.gardener.cloud/wait-for-csi-node-"
@@ -938,6 +940,10 @@ const (
 	// should wait with reconciliation of the operating system config (to prevent too many node-agents from restarting
 	// kubelet or other critical units at the same time).
 	AnnotationNodeAgentReconciliationDelay = "node-agent.gardener.cloud/reconciliation-delay"
+	// NodeAgentsGroup is the identity group for gardenlets when authenticating to the API server.
+	NodeAgentsGroup = "gardener.cloud:node-agents"
+	// NodeAgentUserNamePrefix is the identity username prefix for gardener-node-agent when authenticating to the API server.
+	NodeAgentUserNamePrefix = "gardener.cloud:node-agent:machine:"
 
 	// GardenPurposeMachineClass is a constant for the 'machineclass' value in a label.
 	GardenPurposeMachineClass = "machineclass"

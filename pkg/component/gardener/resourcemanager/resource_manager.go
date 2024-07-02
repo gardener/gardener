@@ -324,6 +324,8 @@ type Values struct {
 	// operating system configs on nodes. When this is provided, the respective controller is enabled in
 	// resource-manager.
 	NodeAgentReconciliationMaxDelay *metav1.Duration
+	// NodeAgentAuthorizerEnabled specifies if node-agent-authorizer webhook should be enabled
+	NodeAgentAuthorizerEnabled bool
 }
 
 // VPAConfig contains information for configuring VerticalPodAutoscaler settings for the gardener-resource-manager deployment.
@@ -571,6 +573,9 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 			ProjectedTokenMount: resourcemanagerv1alpha1.ProjectedTokenMountWebhookConfig{
 				Enabled: true,
 			},
+			NodeAgentAuthorizer: resourcemanagerv1alpha1.NodeAgentAuthorizerWebhookConfig{
+				Enabled: r.values.NodeAgentAuthorizerEnabled,
+			},
 			SeccompProfile: resourcemanagerv1alpha1.SeccompProfileWebhookConfig{
 				Enabled: r.values.DefaultSeccompProfileEnabled,
 			},
@@ -579,6 +584,9 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 
 	if r.values.WatchedNamespace != nil {
 		config.SourceClientConnection.Namespaces = []string{*r.values.WatchedNamespace}
+		if r.values.NodeAgentAuthorizerEnabled {
+			config.Webhooks.NodeAgentAuthorizer.MachineNamespace = *r.values.WatchedNamespace
+		}
 	}
 
 	if r.values.TargetDiffersFromSourceCluster {
@@ -607,10 +615,10 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 	}
 
 	if v := r.values.MaxConcurrentCSRApproverWorkers; v != nil {
-		config.Controllers.KubeletCSRApprover.Enabled = true
-		config.Controllers.KubeletCSRApprover.ConcurrentSyncs = v
+		config.Controllers.CSRApprover.Enabled = true
+		config.Controllers.CSRApprover.ConcurrentSyncs = v
 		if r.values.WatchedNamespace != nil {
-			config.Controllers.KubeletCSRApprover.MachineNamespace = *r.values.WatchedNamespace
+			config.Controllers.CSRApprover.MachineNamespace = *r.values.WatchedNamespace
 		}
 	}
 
@@ -2087,7 +2095,7 @@ type Secrets struct {
 
 func disableControllersAndWebhooksForWorkerlessShoot(config *resourcemanagerv1alpha1.ResourceManagerConfiguration) {
 	// disable unneeded controllers
-	config.Controllers.KubeletCSRApprover.Enabled = false
+	config.Controllers.CSRApprover.Enabled = false
 	config.Controllers.NodeCriticalComponents.Enabled = false
 
 	// disable unneeded webhooks

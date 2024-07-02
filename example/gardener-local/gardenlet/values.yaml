@@ -45,6 +45,7 @@ config:
     IPv6SingleStack: true
     ShootManagedIssuer: true
     NewWorkerPoolHash: true
+    NodeAgentAuthorizer: true
   etcdConfig:
     featureGates:
       UseEtcdWrapper: true

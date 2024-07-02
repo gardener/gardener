@@ -492,6 +492,7 @@ build:
             - pkg/utils/timewindow
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
+            - pkg/utils/webhook/authorizer
             - VERSION
         ldflags:
           - '{{.LD_FLAGS}}'
@@ -704,6 +705,7 @@ build:
             - pkg/controllerutils/predicate
             - pkg/controllerutils/reconciler
             - pkg/extensions
+            - pkg/features
             - pkg/gardenlet/apis/config
             - pkg/gardenlet/apis/config/v1alpha1
             - pkg/healthz
@@ -1252,6 +1254,7 @@ build:
             - pkg/utils/kubernetes
             - pkg/utils/kubernetes/bootstraptoken
             - pkg/utils/kubernetes/client
+            - pkg/utils/kubernetes/csr
             - pkg/utils/kubernetes/health
             - pkg/utils/kubernetes/health/checker
             - pkg/utils/kubernetes/unstructured
@@ -1363,6 +1366,7 @@ build:
             - pkg/resourcemanager/webhook/extensionvalidation
             - pkg/resourcemanager/webhook/highavailabilityconfig
             - pkg/resourcemanager/webhook/kubernetesservicehost
+            - pkg/resourcemanager/webhook/nodeagentauthorizer
             - pkg/resourcemanager/webhook/podschedulername
             - pkg/resourcemanager/webhook/podtopologyspreadconstraints
             - pkg/resourcemanager/webhook/projectedtokenmount
@@ -1386,6 +1390,7 @@ build:
             - pkg/utils/validation/kubernetes/core
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
+            - pkg/utils/webhook/authorizer
             - VERSION
         ldflags:
           - '{{.LD_FLAGS}}'
@@ -1457,6 +1462,7 @@ build:
             - pkg/nodeagent/bootstrap
             - pkg/nodeagent/bootstrap/templates/scripts/format-kubelet-data-volume.tpl.sh
             - pkg/nodeagent/controller
+            - pkg/nodeagent/controller/certificate
             - pkg/nodeagent/controller/healthcheck
             - pkg/nodeagent/controller/hostnamecheck
             - pkg/nodeagent/controller/lease
@@ -1476,6 +1482,7 @@ build:
             - pkg/utils/gardener
             - pkg/utils/imagevector
             - pkg/utils/kubernetes
+            - pkg/utils/kubernetes/csr
             - pkg/utils/kubernetes/health
             - pkg/utils/managedresources
             - pkg/utils/managedresources/builder

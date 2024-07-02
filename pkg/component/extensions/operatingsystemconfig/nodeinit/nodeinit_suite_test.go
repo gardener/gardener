@@ -9,9 +9,12 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/gardener/gardener/pkg/gardenlet/features"
 )
 
 func TestNodeInit(t *testing.T) {
+	features.RegisterFeatureGates()
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Component Extensions OperatingSystemConfig NodeInit Suite")
 }

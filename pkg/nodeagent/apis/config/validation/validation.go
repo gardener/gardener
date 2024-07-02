@@ -13,7 +13,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
-	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/validation/kubernetesversion"
 )
 
@@ -70,9 +69,8 @@ func validateOperatingSystemConfigControllerConfiguration(conf config.OperatingS
 
 func validateTokenControllerConfiguration(conf config.TokenControllerConfig, fldPath *field.Path) field.ErrorList {
 	var (
-		allErrs              = field.ErrorList{}
-		paths                = sets.New[string]()
-		gnaTokenConfigExists bool
+		allErrs = field.ErrorList{}
+		paths   = sets.New[string]()
 	)
 
 	for i, cfg := range conf.SyncConfigs {
@@ -90,14 +88,6 @@ func validateTokenControllerConfiguration(conf config.TokenControllerConfig, fld
 			}
 			paths.Insert(cfg.Path)
 		}
-
-		if cfg.SecretName == nodeagentv1alpha1.AccessSecretName && cfg.Path == nodeagentv1alpha1.TokenFilePath {
-			gnaTokenConfigExists = true
-		}
-	}
-
-	if !gnaTokenConfigExists {
-		allErrs = append(allErrs, field.Required(fldPath.Child("syncConfigs"), "must provide configuration for access token of gardener-node-agent itself"))
 	}
 
 	allErrs = append(allErrs, validateSyncPeriod(conf.SyncPeriod, fldPath)...)
