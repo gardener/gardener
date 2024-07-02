@@ -31,19 +31,27 @@ import (
 
 var _ = Describe("Add", func() {
 	var (
-		c          clock.Clock
-		reconciler *Reconciler
-		secret     *corev1.Secret
+		c                           clock.Clock
+		reconciler                  *Reconciler
+		secretSecretBindingRef      *corev1.Secret
+		secretCredentialsBindingRef *corev1.Secret
 	)
 
 	BeforeEach(func() {
 		c = testing.NewFakeClock(time.Now())
 		reconciler = &Reconciler{Clock: c}
-		secret = &corev1.Secret{
+		secretSecretBindingRef = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				CreationTimestamp: metav1.Time{Time: c.Now().Add(-10 * time.Minute)},
 				Namespace:         "garden-project",
 				Labels:            map[string]string{"reference.gardener.cloud/secretbinding": "true"},
+			},
+		}
+		secretCredentialsBindingRef = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				CreationTimestamp: metav1.Time{Time: c.Now().Add(-10 * time.Minute)},
+				Namespace:         "garden-project",
+				Labels:            map[string]string{"reference.gardener.cloud/credentialsbinding": "true"},
 			},
 		}
 	})
@@ -57,17 +65,17 @@ var _ = Describe("Add", func() {
 
 		Describe("#Create", func() {
 			It("should return true when object is created less than 1h ago", func() {
-				Expect(p.Create(event.CreateEvent{Object: secret})).To(BeTrue())
+				Expect(p.Create(event.CreateEvent{Object: secretSecretBindingRef})).To(BeTrue())
 			})
 
 			It("should return true when object is created exactly 1h ago", func() {
-				secret.CreationTimestamp.Time = c.Now().Add(-time.Hour)
-				Expect(p.Create(event.CreateEvent{Object: secret})).To(BeTrue())
+				secretSecretBindingRef.CreationTimestamp.Time = c.Now().Add(-time.Hour)
+				Expect(p.Create(event.CreateEvent{Object: secretSecretBindingRef})).To(BeTrue())
 			})
 
 			It("should return false when object is created more than 1h ago", func() {
-				secret.CreationTimestamp.Time = c.Now().Add(-2 * time.Hour)
-				Expect(p.Create(event.CreateEvent{Object: secret})).To(BeFalse())
+				secretSecretBindingRef.CreationTimestamp.Time = c.Now().Add(-2 * time.Hour)
+				Expect(p.Create(event.CreateEvent{Object: secretSecretBindingRef})).To(BeFalse())
 			})
 		})
 
@@ -90,59 +98,75 @@ var _ = Describe("Add", func() {
 		})
 	})
 
-	Describe("NeedsSecretBindingReferenceLabelPredicate", func() {
+	Describe("NeedsSecretOrCredentialsBindingReferenceLabelPredicate", func() {
 		var p predicate.Predicate
 
 		BeforeEach(func() {
-			p = reconciler.NeedsSecretBindingReferenceLabelPredicate()
+			p = reconciler.NeedsSecretOrCredentialsBindingReferenceLabelPredicate()
 		})
 
-		Describe("#Create", func() {
-			It("should return true when object has the label", func() {
-				Expect(p.Create(event.CreateEvent{Object: secret})).To(BeTrue())
-			})
+		DescribeTable("#Create",
+			func(getSecret func() *corev1.Secret, matchPredicate bool) {
+				Expect(p.Create(event.CreateEvent{Object: getSecret()})).To(Equal(matchPredicate))
+			},
+			Entry("should return true when object has the secret binding ref label", func() *corev1.Secret { return secretSecretBindingRef }, true),
+			Entry("should return true when object has the credentials binding ref label", func() *corev1.Secret { return secretCredentialsBindingRef }, true),
+			Entry("should return false when object does not have the secret binding ref or credentials binding ref label", func() *corev1.Secret {
+				secretSecretBindingRef.Labels = nil
+				return secretSecretBindingRef
+			}, false),
+		)
 
-			It("should return false when object does not have the label", func() {
-				secret.Labels = nil
-				Expect(p.Create(event.CreateEvent{Object: secret})).To(BeFalse())
-			})
-		})
-
-		Describe("#Update", func() {
-			It("should return true when both objects have the label", func() {
-				Expect(p.Update(event.UpdateEvent{ObjectOld: secret, ObjectNew: secret})).To(BeTrue())
-			})
-
-			It("should return true when only new object has the label", func() {
-				oldSecret := secret.DeepCopy()
+		DescribeTable("#Update",
+			func(getSecrets func() (*corev1.Secret, *corev1.Secret), matchPredicate bool) {
+				oldSecret, newSecret := getSecrets()
+				Expect(p.Update(event.UpdateEvent{ObjectOld: oldSecret, ObjectNew: newSecret})).To(Equal(matchPredicate))
+			},
+			Entry("should return true when both objects have the secret binding label", func() (*corev1.Secret, *corev1.Secret) {
+				return secretSecretBindingRef, secretSecretBindingRef
+			}, true),
+			Entry("should return true when both objects have the credentials binding label", func() (*corev1.Secret, *corev1.Secret) {
+				return secretCredentialsBindingRef, secretCredentialsBindingRef
+			}, true),
+			Entry("should return true when only new object has the secret binding label", func() (*corev1.Secret, *corev1.Secret) {
+				oldSecret := secretSecretBindingRef.DeepCopy()
 				oldSecret.Labels = nil
-				Expect(p.Update(event.UpdateEvent{ObjectOld: oldSecret, ObjectNew: secret})).To(BeTrue())
-			})
-
-			It("should return true when only old object has the label", func() {
-				oldSecret := secret.DeepCopy()
-				secret.Labels = nil
-				Expect(p.Update(event.UpdateEvent{ObjectOld: oldSecret, ObjectNew: secret})).To(BeTrue())
-			})
-
-			It("should return false when neither object has the label", func() {
-				oldSecret := secret.DeepCopy()
+				return oldSecret, secretSecretBindingRef
+			}, true),
+			Entry("should return true when only new object has the credentials binding label", func() (*corev1.Secret, *corev1.Secret) {
+				oldSecret := secretCredentialsBindingRef.DeepCopy()
 				oldSecret.Labels = nil
-				secret.Labels = nil
-				Expect(p.Update(event.UpdateEvent{ObjectOld: oldSecret, ObjectNew: secret})).To(BeFalse())
-			})
-		})
+				return oldSecret, secretCredentialsBindingRef
+			}, true),
+			Entry("should return true when only old object has the secret binding label", func() (*corev1.Secret, *corev1.Secret) {
+				oldSecret := secretSecretBindingRef.DeepCopy()
+				secretSecretBindingRef.Labels = nil
+				return oldSecret, secretSecretBindingRef
+			}, true),
+			Entry("should return true when only old object has the secret credentials label", func() (*corev1.Secret, *corev1.Secret) {
+				oldSecret := secretCredentialsBindingRef.DeepCopy()
+				secretCredentialsBindingRef.Labels = nil
+				return oldSecret, secretCredentialsBindingRef
+			}, true),
+			Entry("should return false when neither object has any of the labels", func() (*corev1.Secret, *corev1.Secret) {
+				oldSecret := secretSecretBindingRef.DeepCopy()
+				oldSecret.Labels = nil
+				secretSecretBindingRef.Labels = nil
+				return oldSecret, secretSecretBindingRef
+			}, false),
+		)
 
-		Describe("#Delete", func() {
-			It("should return true when object has the label", func() {
-				Expect(p.Delete(event.DeleteEvent{Object: secret})).To(BeTrue())
-			})
-
-			It("should return false when object does not have the label", func() {
-				secret.Labels = nil
-				Expect(p.Delete(event.DeleteEvent{Object: secret})).To(BeFalse())
-			})
-		})
+		DescribeTable("#Delete",
+			func(getSecret func() *corev1.Secret, matchPredicate bool) {
+				Expect(p.Delete(event.DeleteEvent{Object: getSecret()})).To(Equal(matchPredicate))
+			},
+			Entry("should return true when object has the secret binding label", func() *corev1.Secret { return secretSecretBindingRef }, true),
+			Entry("should return true when object has the credentials binding label", func() *corev1.Secret { return secretCredentialsBindingRef }, true),
+			Entry("should return false when object does not have any of the labels", func() *corev1.Secret {
+				secretSecretBindingRef.Labels = nil
+				return secretSecretBindingRef
+			}, false),
+		)
 
 		Describe("#Generic", func() {
 			It("should return true", func() {
@@ -175,20 +199,20 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should do nothing if the Project is not found", func() {
-			Expect(reconciler.MapObjectToProject(ctx, log, fakeClient, secret)).To(BeEmpty())
+			Expect(reconciler.MapObjectToProject(ctx, log, fakeClient, secretSecretBindingRef)).To(BeEmpty())
 		})
 
 		It("should do nothing if no related Project can be found", func() {
 			Expect(fakeClient.Create(ctx, project)).To(Succeed())
 
-			Expect(reconciler.MapObjectToProject(ctx, log, fakeClient, secret)).To(BeEmpty())
+			Expect(reconciler.MapObjectToProject(ctx, log, fakeClient, secretSecretBindingRef)).To(BeEmpty())
 		})
 
 		It("should map the object to the Project", func() {
-			project.Spec.Namespace = &secret.Namespace
+			project.Spec.Namespace = &secretSecretBindingRef.Namespace
 			Expect(fakeClient.Create(ctx, project)).To(Succeed())
 
-			Expect(reconciler.MapObjectToProject(ctx, log, fakeClient, secret)).To(ConsistOf(
+			Expect(reconciler.MapObjectToProject(ctx, log, fakeClient, secretSecretBindingRef)).To(ConsistOf(
 				reconcile.Request{NamespacedName: types.NamespacedName{Name: project.Name}},
 			))
 		})

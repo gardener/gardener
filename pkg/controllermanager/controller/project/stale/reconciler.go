@@ -23,6 +23,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -95,6 +96,8 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, project *ga
 		return r.markProjectAsNotStale(ctx, project)
 	}
 
+	// TODO(dimityrmirchev): This code should eventually handle credentials bindings
+	// referencing workload identities
 	for _, check := range []struct {
 		resource  string
 		checkFunc func(context.Context, string) (bool, error)
@@ -149,24 +152,54 @@ func (r *Reconciler) projectInUseDueToBackupEntries(ctx context.Context, namespa
 }
 
 func (r *Reconciler) projectInUseDueToSecrets(ctx context.Context, namespace string) (bool, error) {
-	secretList := &corev1.SecretList{}
-	if err := r.Client.List(
-		ctx,
-		secretList,
-		client.InNamespace(namespace),
-		gardenerutils.UncontrolledSecretSelector,
-		client.MatchingLabels{v1beta1constants.LabelSecretBindingReference: "true"},
-	); err != nil {
+	getSecrets := func(matchKeyLabel string) (*corev1.SecretList, error) {
+		secretList := &corev1.SecretList{}
+		err := r.Client.List(
+			ctx,
+			secretList,
+			client.InNamespace(namespace),
+			gardenerutils.UncontrolledSecretSelector,
+			client.MatchingLabels{matchKeyLabel: "true"},
+		)
+		return secretList, err
+	}
+
+	secretBindingRefSecretList, err := getSecrets(v1beta1constants.LabelSecretBindingReference)
+	if err != nil {
 		return false, err
 	}
 
-	secretNames := computeSecretNames(secretList.Items)
-	if secretNames.Len() == 0 {
+	secretBindingSecretNames := computeSecretNames(secretBindingRefSecretList.Items)
+	if secretBindingSecretNames.Len() > 0 {
+		usedDueToSecretBindings, err := r.relevantSecretBindingsInUse(ctx, func(secretBinding gardencorev1beta1.SecretBinding) bool {
+			return secretBinding.SecretRef.Namespace == namespace && secretBindingSecretNames.Has(secretBinding.SecretRef.Name)
+		})
+		if err != nil {
+			return false, err
+		}
+
+		// exit early if the project is already used because of secrets referenced through secret bindings
+		if usedDueToSecretBindings {
+			return usedDueToSecretBindings, nil
+		}
+	}
+
+	credentialsBindingRefSecretList, err := getSecrets(v1beta1constants.LabelCredentialsBindingReference)
+	if err != nil {
+		return false, err
+	}
+
+	credentialsBindingsSecretNames := computeSecretNames(credentialsBindingRefSecretList.Items)
+	if credentialsBindingsSecretNames.Len() == 0 {
 		return false, nil
 	}
 
-	return r.relevantSecretBindingsInUse(ctx, func(secretBinding gardencorev1beta1.SecretBinding) bool {
-		return secretBinding.SecretRef.Namespace == namespace && secretNames.Has(secretBinding.SecretRef.Name)
+	return r.relevantCredentialsBindingsInUse(ctx, func(credentialsBinding securityv1alpha1.CredentialsBinding) bool {
+		// TODO(dimityrmirchev): This code should eventually handle references to workload identities
+		return credentialsBinding.CredentialsRef.APIVersion == corev1.SchemeGroupVersion.String() &&
+			credentialsBinding.CredentialsRef.Kind == "Secret" &&
+			credentialsBinding.CredentialsRef.Namespace == namespace &&
+			credentialsBindingsSecretNames.Has(credentialsBinding.CredentialsRef.Name)
 	})
 }
 
@@ -183,8 +216,26 @@ func (r *Reconciler) projectInUseDueToQuotas(ctx context.Context, namespace stri
 		return false, nil
 	}
 
-	return r.relevantSecretBindingsInUse(ctx, func(secretBinding gardencorev1beta1.SecretBinding) bool {
+	usedDueToSecretBindings, err := r.relevantSecretBindingsInUse(ctx, func(secretBinding gardencorev1beta1.SecretBinding) bool {
 		for _, quota := range secretBinding.Quotas {
+			if quota.Namespace == namespace && quotaNames.Has(quota.Name) {
+				return true
+			}
+		}
+		return false
+	})
+
+	if err != nil {
+		return false, err
+	}
+
+	// exit early if project is already marked as not stale
+	if usedDueToSecretBindings {
+		return usedDueToSecretBindings, nil
+	}
+
+	return r.relevantCredentialsBindingsInUse(ctx, func(credentialsBinding securityv1alpha1.CredentialsBinding) bool {
+		for _, quota := range credentialsBinding.Quotas {
 			if quota.Namespace == namespace && quotaNames.Has(quota.Name) {
 				return true
 			}
@@ -213,6 +264,28 @@ func (r *Reconciler) relevantSecretBindingsInUse(ctx context.Context, isSecretBi
 	}
 
 	return r.secretBindingInUse(ctx, namespaceToSecretBindingNames)
+}
+
+func (r *Reconciler) relevantCredentialsBindingsInUse(ctx context.Context, isCredentialsBindingRelevantFunc func(securityv1alpha1.CredentialsBinding) bool) (bool, error) {
+	credentialsBindingList := &securityv1alpha1.CredentialsBindingList{}
+	if err := r.Client.List(ctx, credentialsBindingList); err != nil {
+		return false, err
+	}
+
+	namespaceToCredentialsBindingNames := make(map[string]sets.Set[string])
+	for _, credentialsBinding := range credentialsBindingList.Items {
+		if !isCredentialsBindingRelevantFunc(credentialsBinding) {
+			continue
+		}
+
+		if _, ok := namespaceToCredentialsBindingNames[credentialsBinding.Namespace]; !ok {
+			namespaceToCredentialsBindingNames[credentialsBinding.Namespace] = sets.New(credentialsBinding.Name)
+		} else {
+			namespaceToCredentialsBindingNames[credentialsBinding.Namespace].Insert(credentialsBinding.Name)
+		}
+	}
+
+	return r.credentialsBindingInUse(ctx, namespaceToCredentialsBindingNames)
 }
 
 func (r *Reconciler) markProjectAsNotStale(ctx context.Context, project *gardencorev1beta1.Project) error {
@@ -263,6 +336,27 @@ func (r *Reconciler) secretBindingInUse(ctx context.Context, namespaceToSecretBi
 
 		for _, shoot := range shootList.Items {
 			if secretBindingNames.Has(ptr.Deref(shoot.Spec.SecretBindingName, "")) {
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
+}
+
+func (r *Reconciler) credentialsBindingInUse(ctx context.Context, namespaceToCredentialsBindingNames map[string]sets.Set[string]) (bool, error) {
+	if len(namespaceToCredentialsBindingNames) == 0 {
+		return false, nil
+	}
+
+	for namespace, credentialsBindingNames := range namespaceToCredentialsBindingNames {
+		shootList := &gardencorev1beta1.ShootList{}
+		if err := r.Client.List(ctx, shootList, client.InNamespace(namespace)); err != nil {
+			return false, err
+		}
+
+		for _, shoot := range shootList.Items {
+			if credentialsBindingNames.Has(ptr.Deref(shoot.Spec.CredentialsBindingName, "")) {
 				return true, nil
 			}
 		}
