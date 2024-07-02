@@ -1187,6 +1187,20 @@
       "yBucketBound": "auto",
       "yBucketNumber": null,
       "yBucketSize": null
+    },
+    {
+      "collapsed": true,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 73
+      },
+      "id": 38,
+      "panels": [],
+      "title": "NodeLocalDNS Node Cache Error",
+      "type": "row"
     }
   ],
   "refresh": false,
