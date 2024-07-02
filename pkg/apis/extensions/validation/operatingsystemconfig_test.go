@@ -311,18 +311,6 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 			}))))
 		})
 
-		It("should forbid omitting containerd config if cri name is containerd", func() {
-			oscCopy := osc.DeepCopy()
-			oscCopy.Spec.CRIConfig.Name = extensionsv1alpha1.CRINameContainerD
-			oscCopy.Spec.CRIConfig.Containerd = nil
-
-			Expect(ValidateOperatingSystemConfig(oscCopy)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal(field.ErrorTypeRequired),
-				"Field":  Equal("spec.criConfig.containerd"),
-				"Detail": Equal("containerd config is required when CRI is configured"),
-			}))))
-		})
-
 		It("should forbid containerd config with duplicated registry host", func() {
 			oscCopy := osc.DeepCopy()
 			oscCopy.Spec.CRIConfig.Containerd.Registries = append(oscCopy.Spec.CRIConfig.Containerd.Registries, oscCopy.Spec.CRIConfig.Containerd.Registries[0])

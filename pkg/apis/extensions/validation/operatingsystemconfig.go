@@ -88,12 +88,6 @@ func ValidateCriConfig(config *extensionsv1alpha1.CRIConfig, purpose extensionsv
 		return allErrs
 	}
 
-	if config.Containerd == nil &&
-		config.Name == extensionsv1alpha1.CRINameContainerD &&
-		purpose == extensionsv1alpha1.OperatingSystemConfigPurposeReconcile {
-		allErrs = append(allErrs, field.Required(fldPath.Child("containerd"), "containerd config is required when CRI is configured"))
-	}
-
 	allErrs = append(allErrs, ValidateContainerdConfig(config.Containerd, purpose, fldPath.Child("containerd"))...)
 
 	return allErrs
