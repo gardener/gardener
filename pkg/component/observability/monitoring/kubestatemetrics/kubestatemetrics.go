@@ -18,6 +18,7 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	"github.com/gardener/gardener/third_party/gopkg.in/yaml.v2"
 )
 
 const (
@@ -82,6 +83,11 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 		shootAccessSecret                *gardenerutils.AccessSecret
 	)
 
+	customResourceStateConfig, err := yaml.Marshal(NewCustomResourceStateConfig())
+	if err != nil {
+		return err
+	}
+
 	if k.values.ClusterType == component.ClusterTypeShoot {
 		genericTokenKubeconfigSecret, found := k.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
 		if !found {
@@ -102,11 +108,11 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 	}
 
-	return component.DeployResourceConfigs(ctx, k.client, k.namespace, k.values.ClusterType, k.managedResourceName(), map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, registry, k.getResourceConfigs(genericTokenKubeconfigSecretName, shootAccessSecret))
+	return component.DeployResourceConfigs(ctx, k.client, k.namespace, k.values.ClusterType, k.managedResourceName(), map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, registry, k.getResourceConfigs(genericTokenKubeconfigSecretName, shootAccessSecret, string(customResourceStateConfig)))
 }
 
 func (k *kubeStateMetrics) Destroy(ctx context.Context) error {
-	if err := component.DestroyResourceConfigs(ctx, k.client, k.namespace, k.values.ClusterType, k.managedResourceName(), k.getResourceConfigs("", nil)); err != nil {
+	if err := component.DestroyResourceConfigs(ctx, k.client, k.namespace, k.values.ClusterType, k.managedResourceName(), k.getResourceConfigs("", nil, "")); err != nil {
 		return err
 	}
 

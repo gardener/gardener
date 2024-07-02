@@ -63,11 +63,21 @@ var _ = Describe("KubeStateMetrics", func() {
 		vpaUpdateMode       = vpaautoscalingv1.UpdateModeAuto
 		vpaControlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 
-		serviceAccount    *corev1.ServiceAccount
-		secretShootAccess *corev1.Secret
-		vpa               *vpaautoscalingv1.VerticalPodAutoscaler
-		pdbFor            func(bool) *policyv1.PodDisruptionBudget
-		clusterRoleFor    = func(clusterType component.ClusterType) *rbacv1.ClusterRole {
+		serviceAccount               *corev1.ServiceAccount
+		secretShootAccess            *corev1.Secret
+		vpa                          *vpaautoscalingv1.VerticalPodAutoscaler
+		pdbFor                       func(bool) *policyv1.PodDisruptionBudget
+		customResourceStateConfigMap *corev1.ConfigMap = &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "custom-resource-state-config",
+				Namespace: namespace,
+			},
+			Data: map[string]string{
+				"custom-resource-state.yaml": expectedCustomResourceStateConfig(),
+			},
+		}
+
+		clusterRoleFor = func(clusterType component.ClusterType) *rbacv1.ClusterRole {
 			name := "gardener.cloud:monitoring:kube-state-metrics"
 			if clusterType == component.ClusterTypeSeed {
 				name += "-seed"
@@ -107,9 +117,14 @@ var _ = Describe("KubeStateMetrics", func() {
 						Verbs:     []string{"list", "watch"},
 					},
 					{
+						APIGroups: []string{"apiextensions.k8s.io"},
+						Resources: []string{"customresourcedefinitions"},
+						Verbs:     []string{"list", "watch"},
+					},
+					{
 						APIGroups: []string{"autoscaling.k8s.io"},
 						Resources: []string{"verticalpodautoscalers"},
-						Verbs:     []string{"get", "list", "watch"},
+						Verbs:     []string{"list", "watch"},
 					},
 				},
 			}
@@ -230,7 +245,7 @@ var _ = Describe("KubeStateMetrics", func() {
 				args = []string{
 					"--port=8080",
 					"--telemetry-port=8081",
-					"--resources=deployments,pods,statefulsets,nodes,verticalpodautoscalers,horizontalpodautoscalers,persistentvolumeclaims,replicasets,namespaces",
+					"--resources=deployments,pods,statefulsets,nodes,horizontalpodautoscalers,persistentvolumeclaims,replicasets,namespaces",
 					"--metric-labels-allowlist=nodes=[*]",
 					"--metric-annotations-allowlist=namespaces=[shoot.gardener.cloud/uid]",
 					"--metric-allowlist=" +
@@ -279,15 +294,38 @@ var _ = Describe("KubeStateMetrics", func() {
 						"kube_statefulset_status_replicas_current," +
 						"kube_statefulset_status_replicas_ready," +
 						"kube_statefulset_status_replicas_updated," +
-						"kube_verticalpodautoscaler_status_recommendation_containerrecommendations_target," +
-						"kube_verticalpodautoscaler_status_recommendation_containerrecommendations_upperbound," +
-						"kube_verticalpodautoscaler_status_recommendation_containerrecommendations_lowerbound," +
-						"kube_verticalpodautoscaler_spec_resourcepolicy_container_policies_minallowed," +
-						"kube_verticalpodautoscaler_spec_resourcepolicy_container_policies_maxallowed," +
-						"kube_verticalpodautoscaler_spec_updatepolicy_updatemode",
+						"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_cpu," +
+						"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_memory," +
+						"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_upperbound_cpu," +
+						"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_upperbound_memory," +
+						"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_lowerbound_cpu," +
+						"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_lowerbound_memory," +
+						"kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_minallowed_cpu," +
+						"kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_minallowed_memory," +
+						"kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_maxallowed_cpu," +
+						"kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_maxallowed_memory," +
+						"kube_customresource_verticalpodautoscaler_spec_updatepolicy_updatemode",
+					"--custom-resource-state-config-file=/config/custom-resource-state.yaml",
 				}
 				serviceAccountName = "kube-state-metrics"
 			}
+
+			volumes = []corev1.Volume{{
+				Name: "custom-resource-state-config",
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: "custom-resource-state-config",
+						},
+					},
+				},
+			}}
+
+			volumeMounts = []corev1.VolumeMount{{
+				Name:      "custom-resource-state-config",
+				MountPath: "/config",
+				ReadOnly:  true,
+			}}
 
 			if clusterType == component.ClusterTypeShoot {
 				deploymentLabels = map[string]string{
@@ -305,18 +343,19 @@ var _ = Describe("KubeStateMetrics", func() {
 				args = []string{
 					"--port=8080",
 					"--telemetry-port=8081",
-					"--resources=daemonsets,deployments,nodes,pods,statefulsets,verticalpodautoscalers,replicasets",
+					"--resources=daemonsets,deployments,nodes,pods,statefulsets,replicasets",
 					"--namespaces=kube-system",
 					"--kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
 					"--metric-labels-allowlist=nodes=[*]",
+					"--custom-resource-state-config-file=/config/custom-resource-state.yaml",
 				}
 				automountServiceAccountToken = ptr.To(false)
-				volumeMounts = []corev1.VolumeMount{{
+				volumeMounts = append(volumeMounts, corev1.VolumeMount{
 					Name:      "kubeconfig",
 					MountPath: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig",
 					ReadOnly:  true,
-				}}
-				volumes = []corev1.Volume{{
+				})
+				volumes = append(volumes, corev1.Volume{
 					Name: "kubeconfig",
 					VolumeSource: corev1.VolumeSource{
 						Projected: &corev1.ProjectedVolumeSource{
@@ -349,7 +388,7 @@ var _ = Describe("KubeStateMetrics", func() {
 							},
 						},
 					},
-				}}
+				})
 			}
 
 			return &appsv1.Deployment{
@@ -469,7 +508,7 @@ var _ = Describe("KubeStateMetrics", func() {
 					{
 						SourceLabels: []monitoringv1.LabelName{"__name__"},
 						Action:       "keep",
-						Regex:        `^(kube_daemonset_metadata_generation|kube_daemonset_status_current_number_scheduled|kube_daemonset_status_desired_number_scheduled|kube_daemonset_status_number_available|kube_daemonset_status_number_unavailable|kube_daemonset_status_updated_number_scheduled|kube_deployment_metadata_generation|kube_deployment_spec_replicas|kube_deployment_status_observed_generation|kube_deployment_status_replicas|kube_deployment_status_replicas_available|kube_deployment_status_replicas_unavailable|kube_deployment_status_replicas_updated|kube_horizontalpodautoscaler_spec_max_replicas|kube_horizontalpodautoscaler_spec_min_replicas|kube_horizontalpodautoscaler_status_current_replicas|kube_horizontalpodautoscaler_status_desired_replicas|kube_horizontalpodautoscaler_status_condition|kube_namespace_annotations|kube_node_info|kube_node_labels|kube_node_spec_taint|kube_node_spec_unschedulable|kube_node_status_allocatable|kube_node_status_capacity|kube_node_status_condition|kube_persistentvolumeclaim_resource_requests_storage_bytes|kube_pod_container_info|kube_pod_container_resource_limits|kube_pod_container_resource_requests|kube_pod_container_status_restarts_total|kube_pod_info|kube_pod_labels|kube_pod_owner|kube_pod_spec_volumes_persistentvolumeclaims_info|kube_pod_status_phase|kube_pod_status_ready|kube_replicaset_owner|kube_statefulset_metadata_generation|kube_statefulset_replicas|kube_statefulset_status_observed_generation|kube_statefulset_status_replicas|kube_statefulset_status_replicas_current|kube_statefulset_status_replicas_ready|kube_statefulset_status_replicas_updated|kube_verticalpodautoscaler_status_recommendation_containerrecommendations_target|kube_verticalpodautoscaler_status_recommendation_containerrecommendations_upperbound|kube_verticalpodautoscaler_status_recommendation_containerrecommendations_lowerbound|kube_verticalpodautoscaler_spec_resourcepolicy_container_policies_minallowed|kube_verticalpodautoscaler_spec_resourcepolicy_container_policies_maxallowed|kube_verticalpodautoscaler_spec_updatepolicy_updatemode)$`,
+						Regex:        `^(kube_daemonset_metadata_generation|kube_daemonset_status_current_number_scheduled|kube_daemonset_status_desired_number_scheduled|kube_daemonset_status_number_available|kube_daemonset_status_number_unavailable|kube_daemonset_status_updated_number_scheduled|kube_deployment_metadata_generation|kube_deployment_spec_replicas|kube_deployment_status_observed_generation|kube_deployment_status_replicas|kube_deployment_status_replicas_available|kube_deployment_status_replicas_unavailable|kube_deployment_status_replicas_updated|kube_horizontalpodautoscaler_spec_max_replicas|kube_horizontalpodautoscaler_spec_min_replicas|kube_horizontalpodautoscaler_status_current_replicas|kube_horizontalpodautoscaler_status_desired_replicas|kube_horizontalpodautoscaler_status_condition|kube_namespace_annotations|kube_node_info|kube_node_labels|kube_node_spec_taint|kube_node_spec_unschedulable|kube_node_status_allocatable|kube_node_status_capacity|kube_node_status_condition|kube_persistentvolumeclaim_resource_requests_storage_bytes|kube_pod_container_info|kube_pod_container_resource_limits|kube_pod_container_resource_requests|kube_pod_container_status_restarts_total|kube_pod_info|kube_pod_labels|kube_pod_owner|kube_pod_spec_volumes_persistentvolumeclaims_info|kube_pod_status_phase|kube_pod_status_ready|kube_replicaset_owner|kube_statefulset_metadata_generation|kube_statefulset_replicas|kube_statefulset_status_observed_generation|kube_statefulset_status_replicas|kube_statefulset_status_replicas_current|kube_statefulset_status_replicas_ready|kube_statefulset_status_replicas_updated|kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_cpu|kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_memory|kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_upperbound_cpu|kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_upperbound_memory|kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_lowerbound_cpu|kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_lowerbound_memory|kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_minallowed_cpu|kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_minallowed_memory|kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_maxallowed_cpu|kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_maxallowed_memory|kube_customresource_verticalpodautoscaler_spec_updatepolicy_updatemode)$`,
 					},
 				},
 			},
@@ -605,7 +644,7 @@ var _ = Describe("KubeStateMetrics", func() {
 					{
 						SourceLabels: []monitoringv1.LabelName{"__name__"},
 						Action:       "keep",
-						Regex:        `^(kube_daemonset_metadata_generation|kube_daemonset_status_current_number_scheduled|kube_daemonset_status_desired_number_scheduled|kube_daemonset_status_number_available|kube_daemonset_status_number_unavailable|kube_daemonset_status_updated_number_scheduled|kube_deployment_metadata_generation|kube_deployment_spec_replicas|kube_deployment_status_observed_generation|kube_deployment_status_replicas|kube_deployment_status_replicas_available|kube_deployment_status_replicas_unavailable|kube_deployment_status_replicas_updated|kube_node_info|kube_node_labels|kube_node_spec_taint|kube_node_spec_unschedulable|kube_node_status_allocatable|kube_node_status_capacity|kube_node_status_condition|kube_pod_container_info|kube_pod_container_resource_limits|kube_pod_container_resource_requests|kube_pod_container_status_restarts_total|kube_pod_info|kube_pod_labels|kube_pod_status_phase|kube_pod_status_ready|kube_replicaset_owner|kube_replicaset_metadata_generation|kube_replicaset_spec_replicas|kube_replicaset_status_observed_generation|kube_replicaset_status_replicas|kube_replicaset_status_ready_replicas|kube_statefulset_metadata_generation|kube_statefulset_replicas|kube_statefulset_status_observed_generation|kube_statefulset_status_replicas|kube_statefulset_status_replicas_current|kube_statefulset_status_replicas_ready|kube_statefulset_status_replicas_updated|kube_verticalpodautoscaler_status_recommendation_containerrecommendations_target|kube_verticalpodautoscaler_status_recommendation_containerrecommendations_upperbound|kube_verticalpodautoscaler_status_recommendation_containerrecommendations_lowerbound|kube_verticalpodautoscaler_spec_resourcepolicy_container_policies_minallowed|kube_verticalpodautoscaler_spec_resourcepolicy_container_policies_maxallowed|kube_verticalpodautoscaler_spec_updatepolicy_updatemode)$`,
+						Regex:        `^(kube_daemonset_metadata_generation|kube_daemonset_status_current_number_scheduled|kube_daemonset_status_desired_number_scheduled|kube_daemonset_status_number_available|kube_daemonset_status_number_unavailable|kube_daemonset_status_updated_number_scheduled|kube_deployment_metadata_generation|kube_deployment_spec_replicas|kube_deployment_status_observed_generation|kube_deployment_status_replicas|kube_deployment_status_replicas_available|kube_deployment_status_replicas_unavailable|kube_deployment_status_replicas_updated|kube_node_info|kube_node_labels|kube_node_spec_taint|kube_node_spec_unschedulable|kube_node_status_allocatable|kube_node_status_capacity|kube_node_status_condition|kube_pod_container_info|kube_pod_container_resource_limits|kube_pod_container_resource_requests|kube_pod_container_status_restarts_total|kube_pod_info|kube_pod_labels|kube_pod_status_phase|kube_pod_status_ready|kube_replicaset_owner|kube_replicaset_metadata_generation|kube_replicaset_spec_replicas|kube_replicaset_status_observed_generation|kube_replicaset_status_replicas|kube_replicaset_status_ready_replicas|kube_statefulset_metadata_generation|kube_statefulset_replicas|kube_statefulset_status_observed_generation|kube_statefulset_status_replicas|kube_statefulset_status_replicas_current|kube_statefulset_status_replicas_ready|kube_statefulset_status_replicas_updated|kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_cpu|kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_memory|kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_upperbound_cpu|kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_upperbound_memory|kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_lowerbound_cpu|kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_lowerbound_memory|kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_minallowed_cpu|kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_minallowed_memory|kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_maxallowed_cpu|kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_maxallowed_memory|kube_customresource_verticalpodautoscaler_spec_updatepolicy_updatemode)$`,
 					},
 				},
 			},
@@ -865,6 +904,7 @@ var _ = Describe("KubeStateMetrics", func() {
 					scrapeConfigCache,
 					scrapeConfigSeed,
 					scrapeConfigGarden,
+					customResourceStateConfigMap,
 				}
 
 				managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
