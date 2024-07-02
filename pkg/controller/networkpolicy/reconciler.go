@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -57,12 +58,12 @@ type Reconciler struct {
 type RuntimeNetworkConfig struct {
 	// IPFamilies specifies the IP protocol versions used in the runtime cluster.
 	IPFamilies []gardencore.IPFamily
-	// Nodes is the CIDR of the node network.
-	Nodes *string
-	// Pods is the CIDR of the pod network.
-	Pods string
-	// Services is the CIDR of the service network.
-	Services string
+	// Nodes are the CIDRs of the node network.
+	Nodes []string
+	// Pods are the CIDRs of the pod network.
+	Pods []string
+	// Services are the CIDRs of the service network.
+	Services []string
 	// BlockCIDRs is a list of network addresses that should be blocked.
 	BlockCIDRs []string
 }
@@ -74,11 +75,9 @@ func (r RuntimeNetworkConfig) getBlockedNetworkPeers(ipFamily gardencore.IPFamil
 	var peers = append([]string(nil), r.BlockCIDRs...)
 
 	if len(r.IPFamilies) == 1 && r.IPFamilies[0] == ipFamily {
-		peers = append(peers, r.Pods, r.Services)
-
-		if v := r.Nodes; v != nil {
-			peers = append(peers, *v)
-		}
+		peers = append(peers, r.Pods...)
+		peers = append(peers, r.Services...)
+		peers = append(peers, r.Nodes...)
 	}
 
 	return peers
@@ -384,6 +383,27 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToPrivateNetworks(ctx context.Co
 				shootNetworks = append(shootNetworks, *v)
 			}
 
+			if shoot.Status.Networking != nil {
+				existing := sets.New(shootNetworks...)
+				for _, n := range shoot.Status.Networking.Nodes {
+					if !existing.Has(n) {
+						shootNetworks = append(shootNetworks, n)
+					}
+				}
+				existing = sets.New(shootNetworks...)
+				for _, p := range shoot.Status.Networking.Pods {
+					if !existing.Has(p) {
+						shootNetworks = append(shootNetworks, p)
+					}
+				}
+				existing = sets.New(shootNetworks...)
+				for _, s := range shoot.Status.Networking.Services {
+					if !existing.Has(s) {
+						shootNetworks = append(shootNetworks, s)
+					}
+				}
+			}
+
 			if gardencorev1beta1.IsIPv4SingleStack(shoot.Spec.Networking.IPFamilies) {
 				blockedNetworkPeersV4 = append(blockedNetworkPeersV4, shootNetworks...)
 			} else {
@@ -421,18 +441,27 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToPrivateNetworks(ctx context.Co
 }
 
 func (r *Reconciler) reconcileNetworkPolicyAllowToDNS(ctx context.Context, log logr.Logger, networkPolicy *networkingv1.NetworkPolicy) error {
-	_, runtimeServiceCIDR, err := net.ParseCIDR(r.RuntimeNetworks.Services)
-	if err != nil {
-		return err
+	if len(r.RuntimeNetworks.Services) == 0 {
+		return fmt.Errorf("no service range configured")
 	}
 
-	runtimeDNSServerAddress, err := utils.ComputeOffsetIP(runtimeServiceCIDR, 10)
-	if err != nil {
-		return fmt.Errorf("cannot calculate CoreDNS ClusterIP: %w", err)
-	}
-	runtimeDNSServerAddressBitLen, err := netutils.GetBitLen(runtimeDNSServerAddress.String())
-	if err != nil {
-		return fmt.Errorf("cannot get bit len: %w", err)
+	var dnsServerAddressCIDRs []string
+	for _, s := range r.RuntimeNetworks.Services {
+		_, runtimeServiceCIDR, err := net.ParseCIDR(s)
+		if err != nil {
+			return err
+		}
+
+		runtimeDNSServerAddress, err := utils.ComputeOffsetIP(runtimeServiceCIDR, 10)
+		if err != nil {
+			return fmt.Errorf("cannot calculate CoreDNS ClusterIP: %w", err)
+		}
+		runtimeDNSServerAddressBitLen, err := netutils.GetBitLen(runtimeDNSServerAddress.String())
+		if err != nil {
+			return fmt.Errorf("cannot get bit len: %w", err)
+		}
+
+		dnsServerAddressCIDRs = append(dnsServerAddressCIDRs, fmt.Sprintf("%s/%d", runtimeDNSServerAddress, runtimeDNSServerAddressBitLen))
 	}
 
 	return r.reconcileNetworkPolicy(ctx, log, networkPolicy, func(policy *networkingv1.NetworkPolicy) {
@@ -473,12 +502,6 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToDNS(ctx context.Context, log l
 							}},
 						},
 					},
-					// required for node local dns feature, allows egress traffic to CoreDNS
-					{
-						IPBlock: &networkingv1.IPBlock{
-							CIDR: fmt.Sprintf("%s/%d", runtimeDNSServerAddress, runtimeDNSServerAddressBitLen),
-						},
-					},
 					// required for node local dns feature, allows egress traffic to node local dns cache
 					{
 						IPBlock: &networkingv1.IPBlock{
@@ -496,6 +519,15 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToDNS(ctx context.Context, log l
 			}},
 			Ingress:     []networkingv1.NetworkPolicyIngressRule{},
 			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+		}
+
+		for _, dnsServer := range dnsServerAddressCIDRs {
+			// required for node local dns feature, allows egress traffic to CoreDNS
+			policy.Spec.Egress[0].To = append(policy.Spec.Egress[0].To, networkingv1.NetworkPolicyPeer{
+				IPBlock: &networkingv1.IPBlock{
+					CIDR: dnsServer,
+				},
+			})
 		}
 	})
 }

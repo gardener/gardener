@@ -67,7 +67,15 @@ func (b *Botanist) DeployKubeAPIServerSNI(ctx context.Context) error {
 }
 
 func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
-	if b.Shoot.Networks.Services.IP.To4() == nil && net.ParseIP(clusterIP).To4() != nil {
+	isShootIPv6Only := true
+	for _, s := range b.Shoot.Networks.Services {
+		if s.IP.To4() != nil {
+			isShootIPv6Only = false
+			break
+		}
+	}
+
+	if isShootIPv6Only && net.ParseIP(clusterIP).To4() != nil {
 		// "64:ff9b:1::" is a well known prefix for address translation for use
 		// in local networks.
 		b.APIServerClusterIP = "64:ff9b:1::" + clusterIP

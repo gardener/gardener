@@ -7,6 +7,7 @@ package shared
 import (
 	"context"
 	"fmt"
+	"net"
 	"slices"
 
 	"github.com/Masterminds/semver/v3"
@@ -79,7 +80,6 @@ func NewKubeAPIServer(
 	namePrefix string,
 	apiServerConfig *gardencorev1beta1.KubeAPIServerConfig,
 	autoscalingConfig apiserver.AutoscalingConfig,
-	serviceNetworkCIDR string,
 	vpnConfig kubeapiserver.VPNConfig,
 	priorityClassName string,
 	isWorkerless bool,
@@ -180,7 +180,6 @@ func NewKubeAPIServer(
 			PriorityClassName:                   priorityClassName,
 			ResourcesToStoreInETCDEvents:        resourcesToStoreInETCDEvents,
 			RuntimeConfig:                       runtimeConfig,
-			ServiceNetworkCIDR:                  serviceNetworkCIDR,
 			StaticTokenKubeconfigEnabled:        staticTokenKubeconfigEnabled,
 			Version:                             targetVersion,
 			VPN:                                 vpnConfig,
@@ -199,7 +198,9 @@ func DeployKubeAPIServer(
 	sniConfig kubeapiserver.SNIConfig,
 	externalHostname string,
 	externalServer string,
-	nodeNetworkCIDR *string,
+	nodeNetworkCIDRs []net.IPNet,
+	serviceNetworkCIDRs []net.IPNet,
+	podNetworkCIDRs []net.IPNet,
 	resourcesToEncrypt []string,
 	encryptedResources []string,
 	etcdEncryptionKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase,
@@ -245,7 +246,9 @@ func DeployKubeAPIServer(
 	kubeAPIServer.SetSNIConfig(sniConfig)
 	kubeAPIServer.SetExternalHostname(externalHostname)
 	kubeAPIServer.SetExternalServer(externalServer)
-	kubeAPIServer.SetNodeNetworkCIDR(nodeNetworkCIDR)
+	kubeAPIServer.SetNodeNetworkCIDRs(nodeNetworkCIDRs)
+	kubeAPIServer.SetServiceNetworkCIDRs(serviceNetworkCIDRs)
+	kubeAPIServer.SetPodNetworkCIDRs(podNetworkCIDRs)
 
 	etcdEncryptionConfig, err := computeAPIServerETCDEncryptionConfig(
 		ctx,

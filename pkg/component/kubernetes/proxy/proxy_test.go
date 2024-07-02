@@ -7,6 +7,7 @@ package proxy_test
 import (
 	"context"
 	"fmt"
+	"net"
 
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
@@ -43,10 +44,10 @@ var _ = Describe("KubeProxy", func() {
 	var (
 		ctx = context.Background()
 
-		namespace      = "some-namespace"
-		kubeconfig     = []byte("some-kubeconfig")
-		podNetworkCIDR = "4.5.6.7/8"
-		imageAlpine    = "some-alpine:image"
+		namespace       = "some-namespace"
+		kubeconfig      = []byte("some-kubeconfig")
+		podNetworkCIDRs = []net.IPNet{{IP: net.ParseIP("4.5.6.7"), Mask: net.CIDRMask(8, 32)}, {IP: net.ParseIP("2001:db8::"), Mask: net.CIDRMask(64, 128)}}
+		imageAlpine     = "some-alpine:image"
 
 		c         client.Client
 		component Interface
@@ -337,7 +338,7 @@ var _ = Describe("KubeProxy", func() {
 
 			configMapNameFor = func(ipvsEnabled bool) string {
 				if !ipvsEnabled {
-					return "kube-proxy-config-fd4a356e"
+					return "kube-proxy-config-0e676511"
 				}
 				return "kube-proxy-config-eaba5162"
 			}
@@ -357,7 +358,7 @@ clientConnection:
 clusterCIDR: ""`
 				} else {
 					out += `
-clusterCIDR: ` + podNetworkCIDR
+clusterCIDR: ` + podNetworkCIDRs[0].String() + `,` + podNetworkCIDRs[1].String()
 				}
 				out += `
 configSyncPeriod: 0s
@@ -527,8 +528,8 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 						}
 					}
 					return map[string]string{
-						references.AnnotationKey(references.KindConfigMap, configMapNameFor(ipvsEnabled)):   configMapNameFor(ipvsEnabled),
 						references.AnnotationKey(references.KindConfigMap, configMapCleanupScriptName):      configMapCleanupScriptName,
+						references.AnnotationKey(references.KindConfigMap, configMapNameFor(ipvsEnabled)):   configMapNameFor(ipvsEnabled),
 						references.AnnotationKey(references.KindConfigMap, configMapConntrackFixScriptName): configMapConntrackFixScriptName,
 						references.AnnotationKey(references.KindSecret, secretName):                         secretName,
 					}
@@ -937,7 +938,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 
 		It("should successfully deploy the expected config when IPVS is disabled", func() {
 			values.IPVSEnabled = false
-			values.PodNetworkCIDR = &podNetworkCIDR
+			values.PodNetworkCIDRs = podNetworkCIDRs
 			component = New(c, namespace, values)
 
 			Expect(component.Deploy(ctx)).To(Succeed())

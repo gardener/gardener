@@ -32,13 +32,11 @@ import (
 
 var _ = Describe("CoreDNS", func() {
 	var (
-		ctrl            *gomock.Controller
-		botanist        *Botanist
-		nodeNetworkCIDR string
+		ctrl     *gomock.Controller
+		botanist *Botanist
 	)
 
 	BeforeEach(func() {
-		nodeNetworkCIDR = "10.250.0.0/24"
 		ctrl = gomock.NewController(GinkgoT())
 		botanist = &Botanist{Operation: &operation.Operation{}}
 		botanist.Shoot = &shootpkg.Shoot{}
@@ -46,9 +44,6 @@ var _ = Describe("CoreDNS", func() {
 			Spec: gardencorev1beta1.ShootSpec{
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					Version: "1.26.1",
-				},
-				Networking: &gardencorev1beta1.Networking{
-					Nodes: &nodeNetworkCIDR,
 				},
 			},
 		})
@@ -65,10 +60,6 @@ var _ = Describe("CoreDNS", func() {
 			kubernetesClient = kubernetesmock.NewMockInterface(ctrl)
 
 			botanist.SeedClientSet = kubernetesClient
-			botanist.Shoot.Networks = &shootpkg.Networks{
-				CoreDNS: net.ParseIP("18.19.20.21"),
-				Pods:    &net.IPNet{IP: net.ParseIP("22.23.24.25")},
-			}
 			botanist.Garden = &garden.Garden{}
 		})
 
@@ -130,12 +121,20 @@ var _ = Describe("CoreDNS", func() {
 					CoreDNS: coreDNS,
 				},
 			}
+			botanist.Shoot.Networks = &shootpkg.Networks{
+				CoreDNS: []net.IP{net.ParseIP("18.19.20.21"), net.ParseIP("2001:db8::1")},
+				Pods:    []net.IPNet{{IP: net.ParseIP("22.23.24.25")}, {IP: net.ParseIP("2001:db8::2")}},
+				Nodes:   []net.IPNet{{IP: net.ParseIP("26.27.28.29")}, {IP: net.ParseIP("2001:db8::3")}},
+			}
+
+			coreDNS.EXPECT().SetNodeNetworkCIDRs(botanist.Shoot.Networks.Nodes)
+			coreDNS.EXPECT().SetPodNetworkCIDRs(botanist.Shoot.Networks.Pods)
+			coreDNS.EXPECT().SetClusterIPs(botanist.Shoot.Networks.CoreDNS)
 		})
 
 		It("should fail when the deploy function fails", func() {
 			kubernetesClient.EXPECT().Client().Return(c)
 
-			coreDNS.EXPECT().SetNodeNetworkCIDR(&nodeNetworkCIDR)
 			coreDNS.EXPECT().SetPodAnnotations(nil)
 			coreDNS.EXPECT().Deploy(ctx).Return(fakeErr)
 
@@ -145,7 +144,6 @@ var _ = Describe("CoreDNS", func() {
 		It("should successfully deploy (coredns deployment not yet found)", func() {
 			kubernetesClient.EXPECT().Client().Return(c)
 
-			coreDNS.EXPECT().SetNodeNetworkCIDR(&nodeNetworkCIDR)
 			coreDNS.EXPECT().SetPodAnnotations(nil)
 			coreDNS.EXPECT().Deploy(ctx)
 
@@ -162,7 +160,6 @@ var _ = Describe("CoreDNS", func() {
 			shoot.Annotations = map[string]string{"shoot.gardener.cloud/tasks": "restartCoreAddons"}
 			botanist.Shoot.SetInfo(shoot)
 
-			coreDNS.EXPECT().SetNodeNetworkCIDR(&nodeNetworkCIDR)
 			coreDNS.EXPECT().SetPodAnnotations(map[string]string{"gardener.cloud/restarted-at": nowFunc().Format(time.RFC3339)})
 			coreDNS.EXPECT().Deploy(ctx)
 
@@ -187,7 +184,6 @@ var _ = Describe("CoreDNS", func() {
 				},
 			})).To(Succeed())
 
-			coreDNS.EXPECT().SetNodeNetworkCIDR(&nodeNetworkCIDR)
 			coreDNS.EXPECT().SetPodAnnotations(annotations)
 			coreDNS.EXPECT().Deploy(ctx)
 

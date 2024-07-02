@@ -63,9 +63,11 @@ var _ = Describe("KubeAPIServer", func() {
 		internalClusterDomain = "internal.foo.bar.com"
 		externalClusterDomain = "external.foo.bar.com"
 		podNetwork            *net.IPNet
+		podNetworks           []net.IPNet
 		serviceNetwork        *net.IPNet
+		serviceNetworks       []net.IPNet
 		seedVersion           = "1.26.0"
-		apiServerNetwork      = net.ParseIP("10.0.4.1")
+		apiServerNetwork      = []net.IP{net.ParseIP("10.0.4.1")}
 		podNetworkCIDR        = "10.0.1.0/24"
 		serviceNetworkCIDR    = "10.0.2.0/24"
 		nodeNetworkCIDR       = "10.0.3.0/24"
@@ -83,8 +85,10 @@ var _ = Describe("KubeAPIServer", func() {
 		var err error
 		_, podNetwork, err = net.ParseCIDR(podNetworkCIDR)
 		Expect(err).NotTo(HaveOccurred())
+		podNetworks = []net.IPNet{*podNetwork}
 		_, serviceNetwork, err = net.ParseCIDR(serviceNetworkCIDR)
 		Expect(err).NotTo(HaveOccurred())
+		serviceNetworks = []net.IPNet{*serviceNetwork}
 
 		sm = fakesecretsmanager.New(seedClient, seedNamespace)
 
@@ -113,8 +117,8 @@ var _ = Describe("KubeAPIServer", func() {
 					ExternalClusterDomain: &externalClusterDomain,
 					Networks: &shootpkg.Networks{
 						APIServer: apiServerNetwork,
-						Pods:      podNetwork,
-						Services:  serviceNetwork,
+						Pods:      podNetworks,
+						Services:  serviceNetworks,
 					},
 					KubernetesVersion: semver.MustParse("1.26.1"),
 				},
@@ -447,7 +451,9 @@ var _ = Describe("KubeAPIServer", func() {
 					kubeAPIServer.EXPECT().SetETCDEncryptionConfig(gomock.Any())
 					kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
 					kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
-					kubeAPIServer.EXPECT().SetNodeNetworkCIDR(gomock.Any())
+					kubeAPIServer.EXPECT().SetNodeNetworkCIDRs(gomock.Any())
+					kubeAPIServer.EXPECT().SetServiceNetworkCIDRs(gomock.Any())
+					kubeAPIServer.EXPECT().SetPodNetworkCIDRs(gomock.Any())
 					kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
 					kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
 					kubeAPIServer.EXPECT().Deploy(ctx)
@@ -516,7 +522,9 @@ var _ = Describe("KubeAPIServer", func() {
 					kubeAPIServer.EXPECT().SetETCDEncryptionConfig(gomock.Any())
 					kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
 					kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
-					kubeAPIServer.EXPECT().SetNodeNetworkCIDR(gomock.Any())
+					kubeAPIServer.EXPECT().SetNodeNetworkCIDRs(gomock.Any())
+					kubeAPIServer.EXPECT().SetPodNetworkCIDRs(gomock.Any())
+					kubeAPIServer.EXPECT().SetServiceNetworkCIDRs(gomock.Any())
 					kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
 					kubeAPIServer.EXPECT().SetServiceAccountConfig(expectedConfig)
 					kubeAPIServer.EXPECT().Deploy(ctx)
@@ -645,7 +653,9 @@ var _ = Describe("KubeAPIServer", func() {
 			kubeAPIServer.EXPECT().SetETCDEncryptionConfig(gomock.Any())
 			kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
 			kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
-			kubeAPIServer.EXPECT().SetNodeNetworkCIDR(gomock.Any())
+			kubeAPIServer.EXPECT().SetNodeNetworkCIDRs(gomock.Any())
+			kubeAPIServer.EXPECT().SetPodNetworkCIDRs(gomock.Any())
+			kubeAPIServer.EXPECT().SetServiceNetworkCIDRs(gomock.Any())
 			kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
 			kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
 			kubeAPIServer.EXPECT().Deploy(ctx)
@@ -681,7 +691,9 @@ var _ = Describe("KubeAPIServer", func() {
 			kubeAPIServer.EXPECT().SetETCDEncryptionConfig(gomock.Any())
 			kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
 			kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
-			kubeAPIServer.EXPECT().SetNodeNetworkCIDR(gomock.Any())
+			kubeAPIServer.EXPECT().SetNodeNetworkCIDRs(gomock.Any())
+			kubeAPIServer.EXPECT().SetPodNetworkCIDRs(gomock.Any())
+			kubeAPIServer.EXPECT().SetServiceNetworkCIDRs(gomock.Any())
 			kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
 			kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
 			kubeAPIServer.EXPECT().Deploy(ctx)

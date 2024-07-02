@@ -6,6 +6,7 @@ package coredns
 
 import (
 	"context"
+	"net"
 	"regexp"
 	"strconv"
 	"time"
@@ -67,7 +68,9 @@ const (
 type Interface interface {
 	component.DeployWaiter
 	SetPodAnnotations(map[string]string)
-	SetNodeNetworkCIDR(*string)
+	SetNodeNetworkCIDRs([]net.IPNet)
+	SetPodNetworkCIDRs([]net.IPNet)
+	SetClusterIPs([]net.IP)
 }
 
 // Values is a set of configuration values for the coredns component.
@@ -78,16 +81,16 @@ type Values struct {
 	APIServerHost *string
 	// ClusterDomain is the domain used for cluster-wide DNS records handled by CoreDNS.
 	ClusterDomain string
-	// ClusterIP is the IP address which should be used as `.spec.clusterIP` in the Service spec.
-	ClusterIP string
+	// ClusterIPs is the IP address which should be used as `.spec.clusterIP` in the Service spec.
+	ClusterIPs []net.IP
 	// Image is the container image used for CoreDNS.
 	Image string
 	// PodAnnotations is the set of additional annotations to be used for the pods.
 	PodAnnotations map[string]string
-	// PodNetworkCIDR is the CIDR of the pod network.
-	PodNetworkCIDR string
-	// NodeNetworkCIDR is the CIDR of the node network.
-	NodeNetworkCIDR *string
+	// PodNetworkCIDRs are the CIDR of the pod network.
+	PodNetworkCIDRs []net.IPNet
+	// NodeNetworkCIDRs are the CIDR of the node network.
+	NodeNetworkCIDRs []net.IPNet
 	// AutoscalingMode indicates whether cluster proportional autoscaling is enabled.
 	AutoscalingMode gardencorev1beta1.CoreDNSAutoscalingMode
 	// ClusterProportionalAutoscalerImage is the container image used for the cluster proportional autoscaler.
@@ -336,7 +339,7 @@ import custom/*.server
 				},
 			},
 			Spec: corev1.ServiceSpec{
-				ClusterIP: c.values.ClusterIP,
+				ClusterIP: c.values.ClusterIPs[0].String(),
 				Selector:  map[string]string{corednsconstants.LabelKey: corednsconstants.LabelValue},
 				Ports: []corev1.ServicePort{
 					{
@@ -392,7 +395,6 @@ import custom/*.server
 					},
 					From: []networkingv1.NetworkPolicyPeer{
 						{NamespaceSelector: &metav1.LabelSelector{}, PodSelector: &metav1.LabelSelector{}},
-						{IPBlock: &networkingv1.IPBlock{CIDR: c.values.PodNetworkCIDR}},
 					},
 				}},
 				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
@@ -756,10 +758,14 @@ import custom/*.server
 		})
 	}
 
-	if c.values.NodeNetworkCIDR != nil {
+	for _, cidr := range append(c.values.NodeNetworkCIDRs, c.values.PodNetworkCIDRs...) {
 		networkPolicy.Spec.Ingress[0].From = append(networkPolicy.Spec.Ingress[0].From, networkingv1.NetworkPolicyPeer{
-			IPBlock: &networkingv1.IPBlock{CIDR: *c.values.NodeNetworkCIDR},
+			IPBlock: &networkingv1.IPBlock{CIDR: cidr.String()},
 		})
+	}
+
+	for _, ip := range c.values.ClusterIPs {
+		service.Spec.ClusterIPs = append(service.Spec.ClusterIPs, ip.String())
 	}
 
 	if c.values.AutoscalingMode == gardencorev1beta1.CoreDNSAutoscalingModeClusterProportional {
@@ -786,8 +792,16 @@ func (c *coreDNS) SetPodAnnotations(v map[string]string) {
 	c.values.PodAnnotations = v
 }
 
-func (c *coreDNS) SetNodeNetworkCIDR(nodes *string) {
-	c.values.NodeNetworkCIDR = nodes
+func (c *coreDNS) SetNodeNetworkCIDRs(nodes []net.IPNet) {
+	c.values.NodeNetworkCIDRs = nodes
+}
+
+func (c *coreDNS) SetPodNetworkCIDRs(pods []net.IPNet) {
+	c.values.PodNetworkCIDRs = pods
+}
+
+func (c *coreDNS) SetClusterIPs(ips []net.IP) {
+	c.values.ClusterIPs = ips
 }
 
 func (c *coreDNS) emptyScrapeConfig() *monitoringv1alpha1.ScrapeConfig {

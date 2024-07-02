@@ -7,6 +7,7 @@ package seedserver
 import (
 	"context"
 	"fmt"
+	"net"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -88,7 +89,9 @@ const (
 type Interface interface {
 	component.DeployWaiter
 
-	SetNodeNetworkCIDR(nodes *string)
+	SetNodeNetworkCIDRs(nodes []net.IPNet)
+	SetServiceNetworkCIDRs(services []net.IPNet)
+	SetPodNetworkCIDRs(pods []net.IPNet)
 	// SetSeedNamespaceObjectUID sets UID for the namespace
 	SetSeedNamespaceObjectUID(namespaceUID types.UID)
 
@@ -98,12 +101,12 @@ type Interface interface {
 
 // NetworkValues contains the configuration values for the network.
 type NetworkValues struct {
-	// PodCIDR is the CIDR of the pod network.
-	PodCIDR string
-	// ServiceCIDR is the CIDR of the service network.
-	ServiceCIDR string
-	// NodeCIDR is the CIDR of the node network.
-	NodeCIDR string
+	// PodCIDRs are the CIDRs of the pod network.
+	PodCIDRs []net.IPNet
+	// ServiceCIDR are the CIDRs of the service network.
+	ServiceCIDRs []net.IPNet
+	// NodeCIDRs are the CIDRs of the node network.
+	NodeCIDRs []net.IPNet
 	// IPFamilies are the IPFamilies of the shoot
 	IPFamilies []gardencorev1beta1.IPFamily
 }
@@ -259,6 +262,11 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 		ipFamilies = append(ipFamilies, string(v))
 	}
 
+	nodeNetwork := ""
+	if len(v.values.Network.NodeCIDRs) > 0 {
+		nodeNetwork = v.values.Network.NodeCIDRs[0].String()
+	}
+
 	template := &corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: utils.MergeStringMaps(getLabels(), map[string]string{
@@ -298,15 +306,15 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 						},
 						{
 							Name:  "SERVICE_NETWORK",
-							Value: v.values.Network.ServiceCIDR,
+							Value: v.values.Network.ServiceCIDRs[0].String(),
 						},
 						{
 							Name:  "POD_NETWORK",
-							Value: v.values.Network.PodCIDR,
+							Value: v.values.Network.PodCIDRs[0].String(),
 						},
 						{
 							Name:  "NODE_NETWORK",
-							Value: v.values.Network.NodeCIDR,
+							Value: nodeNetwork,
 						},
 						{
 							Name: "LOCAL_NODE_IP",
@@ -918,8 +926,16 @@ func (v *vpnSeedServer) SetSeedNamespaceObjectUID(namespaceUID types.UID) {
 	v.namespaceUID = namespaceUID
 }
 
-func (v *vpnSeedServer) SetNodeNetworkCIDR(nodes *string) {
-	v.values.Network.NodeCIDR = ptr.Deref(nodes, "")
+func (v *vpnSeedServer) SetNodeNetworkCIDRs(nodes []net.IPNet) {
+	v.values.Network.NodeCIDRs = nodes
+}
+
+func (v *vpnSeedServer) SetServiceNetworkCIDRs(services []net.IPNet) {
+	v.values.Network.ServiceCIDRs = services
+}
+
+func (v *vpnSeedServer) SetPodNetworkCIDRs(pods []net.IPNet) {
+	v.values.Network.PodCIDRs = pods
 }
 
 func (v *vpnSeedServer) indexedName(idx *int) string {

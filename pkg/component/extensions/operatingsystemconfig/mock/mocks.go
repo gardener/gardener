@@ -149,6 +149,18 @@ func (mr *MockInterfaceMockRecorder) SetCABundle(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetCABundle", reflect.TypeOf((*MockInterface)(nil).SetCABundle), arg0)
 }
 
+// SetClusterDNSAddresses mocks base method.
+func (m *MockInterface) SetClusterDNSAddresses(arg0 []string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetClusterDNSAddresses", arg0)
+}
+
+// SetClusterDNSAddresses indicates an expected call of SetClusterDNSAddresses.
+func (mr *MockInterfaceMockRecorder) SetClusterDNSAddresses(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetClusterDNSAddresses", reflect.TypeOf((*MockInterface)(nil).SetClusterDNSAddresses), arg0)
+}
+
 // SetCredentialsRotationStatus mocks base method.
 func (m *MockInterface) SetCredentialsRotationStatus(arg0 *v1beta1.ShootCredentialsRotation) {
 	m.ctrl.T.Helper()

@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/dnsrecord"
 	"github.com/gardener/gardener/pkg/component/extensions/extension"
 	"github.com/gardener/gardener/pkg/component/extensions/infrastructure"
+	"github.com/gardener/gardener/pkg/component/extensions/network"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/component/extensions/worker"
 	"github.com/gardener/gardener/pkg/component/garden/backupentry"
@@ -36,6 +37,7 @@ import (
 	kubeproxy "github.com/gardener/gardener/pkg/component/kubernetes/proxy"
 	"github.com/gardener/gardener/pkg/component/networking/apiserverproxy"
 	"github.com/gardener/gardener/pkg/component/networking/coredns"
+	"github.com/gardener/gardener/pkg/component/networking/nodelocaldns"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
@@ -146,7 +148,7 @@ type Extensions struct {
 	IngressDNSRecord      dnsrecord.Interface
 	Extension             extension.Interface
 	Infrastructure        infrastructure.Interface
-	Network               component.DeployMigrateWaiter
+	Network               network.Interface
 	OperatingSystemConfig operatingsystemconfig.Interface
 	Worker                worker.Interface
 }
@@ -160,7 +162,7 @@ type SystemComponents struct {
 	KubeProxy           kubeproxy.Interface
 	MetricsServer       component.DeployWaiter
 	Namespaces          component.DeployWaiter
-	NodeLocalDNS        component.DeployWaiter
+	NodeLocalDNS        nodelocaldns.Interface
 	NodeProblemDetector component.DeployWaiter
 	NodeExporter        component.DeployWaiter
 	Resources           shootsystem.Interface
@@ -175,12 +177,14 @@ type Addons struct {
 
 // Networks contains pre-calculated subnets and IP address for various components.
 type Networks struct {
-	// Pods subnet
-	Pods *net.IPNet
-	// Services subnet
-	Services *net.IPNet
-	// APIServer is the ClusterIP of default/kubernetes Service
-	APIServer net.IP
-	// CoreDNS is the ClusterIP of kube-system/coredns Service
-	CoreDNS net.IP
+	// Pods subnets
+	Pods []net.IPNet
+	// Services subnets
+	Services []net.IPNet
+	// Nodes subnets
+	Nodes []net.IPNet
+	// APIServer are the ClusterIPs of default/kubernetes Service
+	APIServer []net.IP
+	// CoreDNS are the ClusterIPs of kube-system/coredns Service
+	CoreDNS []net.IP
 }

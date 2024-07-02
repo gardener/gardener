@@ -81,6 +81,18 @@ func (mr *MockInterfaceMockRecorder) SetMachineDeployments(arg0 any) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetMachineDeployments", reflect.TypeOf((*MockInterface)(nil).SetMachineDeployments), arg0)
 }
 
+// SetMaxNodesTotal mocks base method.
+func (m *MockInterface) SetMaxNodesTotal(arg0 int64) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetMaxNodesTotal", arg0)
+}
+
+// SetMaxNodesTotal indicates an expected call of SetMaxNodesTotal.
+func (mr *MockInterfaceMockRecorder) SetMaxNodesTotal(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetMaxNodesTotal", reflect.TypeOf((*MockInterface)(nil).SetMaxNodesTotal), arg0)
+}
+
 // SetNamespaceUID mocks base method.
 func (m *MockInterface) SetNamespaceUID(arg0 types.UID) {
 	m.ctrl.T.Helper()

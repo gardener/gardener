@@ -6,6 +6,7 @@ package coredns_test
 
 import (
 	"context"
+	"net"
 	"regexp"
 
 	"github.com/Masterminds/semver/v3"
@@ -41,11 +42,17 @@ var _ = Describe("CoreDNS", func() {
 		managedResourceName = "shoot-core-coredns"
 		namespace           = "some-namespace"
 		clusterDomain       = "foo.bar"
-		clusterIP           = "1.2.3.4"
+		clusterIPs          = []net.IP{net.ParseIP("1.2.3.4"), net.ParseIP("2001:db8:3::10")}
 		image               = "some-image:some-tag"
 		cpaImage            = "cpa-image:cpa-tag"
-		podNetworkCIDR      = "5.6.7.8/9"
-		nodeNetworkCIDR     = "10.11.12.13/14"
+		podNetworkCIDRs     = []net.IPNet{
+			{IP: net.ParseIP("5.6.7.8"), Mask: []byte{255, 255, 255, 0}},
+			{IP: net.ParseIP("2001:db8:2::"), Mask: []byte{255, 255, 255, 255, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0}},
+		}
+		nodeNetworkCIDRs = []net.IPNet{
+			{IP: net.ParseIP("10.11.12.13"), Mask: []byte{255, 255, 0, 0}},
+			{IP: net.ParseIP("2001:db8:1::"), Mask: []byte{255, 255, 255, 255, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0}},
+		}
 
 		c         client.Client
 		values    Values
@@ -181,7 +188,10 @@ metadata:
   name: kube-dns
   namespace: kube-system
 spec:
-  clusterIP: ` + clusterIP + `
+  clusterIP: ` + clusterIPs[0].String() + `
+  clusterIPs:
+  - ` + clusterIPs[0].String() + `
+  - ` + clusterIPs[1].String() + `
   ports:
   - name: dns
     port: 53
@@ -223,9 +233,13 @@ spec:
     - namespaceSelector: {}
       podSelector: {}
     - ipBlock:
-        cidr: ` + podNetworkCIDR + `
+        cidr: ` + nodeNetworkCIDRs[0].String() + `
     - ipBlock:
-        cidr: ` + nodeNetworkCIDR + `
+        cidr: ` + nodeNetworkCIDRs[1].String() + `
+    - ipBlock:
+        cidr: ` + podNetworkCIDRs[0].String() + `
+    - ipBlock:
+        cidr: ` + podNetworkCIDRs[1].String() + `
     ports:
     - port: 9153
       protocol: TCP
@@ -693,10 +707,10 @@ status: {}
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		values = Values{
 			ClusterDomain:     clusterDomain,
-			ClusterIP:         clusterIP,
+			ClusterIPs:        clusterIPs,
 			Image:             image,
-			PodNetworkCIDR:    podNetworkCIDR,
-			NodeNetworkCIDR:   &nodeNetworkCIDR,
+			PodNetworkCIDRs:   podNetworkCIDRs,
+			NodeNetworkCIDRs:  nodeNetworkCIDRs,
 			KubernetesVersion: semver.MustParse("1.25.0"),
 		}
 

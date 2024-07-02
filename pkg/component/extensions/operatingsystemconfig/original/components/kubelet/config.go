@@ -19,7 +19,7 @@ import (
 )
 
 // Config returns a kubelet config based on the provided parameters and for the provided Kubernetes version.
-func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain string, taints []corev1.Taint, params components.ConfigurableKubeletConfigParameters) *kubeletconfigv1beta1.KubeletConfiguration {
+func Config(kubernetesVersion *semver.Version, clusterDNSAddresses []string, clusterDomain string, taints []corev1.Taint, params components.ConfigurableKubeletConfigParameters) *kubeletconfigv1beta1.KubeletConfiguration {
 	setConfigDefaults(&params, kubernetesVersion)
 
 	nodeTaints := append(taints, corev1.Taint{
@@ -50,7 +50,7 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain 
 		CgroupDriver:                     getCgroupDriver(params),
 		CgroupRoot:                       "/",
 		CgroupsPerQOS:                    ptr.To(true),
-		ClusterDNS:                       []string{clusterDNSAddress},
+		ClusterDNS:                       clusterDNSAddresses,
 		ClusterDomain:                    clusterDomain,
 		ContainerLogMaxSize:              *params.ContainerLogMaxSize,
 		ContainerLogMaxFiles:             params.ContainerLogMaxFiles,

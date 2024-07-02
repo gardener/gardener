@@ -35,6 +35,13 @@ const (
 // TimeNow returns the current time. Exposed for testing.
 var TimeNow = time.Now
 
+// Interface is an interface for managing the network CRD deployment.
+type Interface interface {
+	component.DeployMigrateWaiter
+	SetPodCIDRs([]net.IPNet)
+	SetServiceCIDRs([]net.IPNet)
+}
+
 // Values contains the values used to create a Network CRD
 type Values struct {
 	// Namespace is the namespace of the Shoot network in the Seed
@@ -47,10 +54,10 @@ type Values struct {
 	IPFamilies []extensionsv1alpha1.IPFamily
 	// ProviderConfig contains the provider config for the Network extension.
 	ProviderConfig *runtime.RawExtension
-	// PodCIDR is the Shoot's pod CIDR in the Shoot VPC
-	PodCIDR *net.IPNet
-	// ServiceCIDR is the Shoot's service CIDR in the Shoot VPC
-	ServiceCIDR *net.IPNet
+	// PodCIDRs are the Shoot's pod CIDRs in the Shoot VPC
+	PodCIDRs []net.IPNet
+	// ServiceCIDRs are the Shoot's service CIDRs in the Shoot VPC
+	ServiceCIDRs []net.IPNet
 }
 
 // New creates a new instance of DeployWaiter for a Network.
@@ -61,7 +68,7 @@ func New(
 	waitInterval time.Duration,
 	waitSevereThreshold time.Duration,
 	waitTimeout time.Duration,
-) component.DeployMigrateWaiter {
+) Interface {
 	return &network{
 		client:              client,
 		log:                 log,
@@ -176,12 +183,20 @@ func (n *network) deploy(ctx context.Context, operation string) (extensionsv1alp
 				ProviderConfig: n.values.ProviderConfig,
 			},
 			IPFamilies:  n.values.IPFamilies,
-			PodCIDR:     n.values.PodCIDR.String(),
-			ServiceCIDR: n.values.ServiceCIDR.String(),
+			PodCIDR:     n.values.PodCIDRs[0].String(),
+			ServiceCIDR: n.values.ServiceCIDRs[0].String(),
 		}
 
 		return nil
 	})
 
 	return n.network, err
+}
+
+func (n *network) SetPodCIDRs(pods []net.IPNet) {
+	n.values.PodCIDRs = pods
+}
+
+func (n *network) SetServiceCIDRs(services []net.IPNet) {
+	n.values.ServiceCIDRs = services
 }

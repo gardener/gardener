@@ -7,6 +7,7 @@ package nodelocaldns
 import (
 	"context"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -58,6 +59,13 @@ const (
 	configDataKey     = "Corefile"
 )
 
+// Interface contains functions for a NodeLocalDNS deployer.
+type Interface interface {
+	component.DeployWaiter
+	SetClusterDNS([]string)
+	SetDNSServers([]string)
+}
+
 // Values is a set of configuration values for the node-local-dns component.
 type Values struct {
 	// Image is the container image used for node-local-dns.
@@ -66,10 +74,10 @@ type Values struct {
 	VPAEnabled bool
 	// Config is the node local configuration for the shoot spec
 	Config *gardencorev1beta1.NodeLocalDNS
-	// ClusterDNS is the ClusterIP of kube-system/coredns Service
-	ClusterDNS string
-	// DNSServer is the ClusterIP of kube-system/coredns Service
-	DNSServer string
+	// ClusterDNS are the ClusterIPs of kube-system/coredns Service
+	ClusterDNS []string
+	// DNSServer are the ClusterIPs of kube-system/coredns Service
+	DNSServers []string
 	// KubernetesVersion is the Kubernetes version of the Shoot.
 	KubernetesVersion *semver.Version
 }
@@ -79,7 +87,7 @@ func New(
 	client client.Client,
 	namespace string,
 	values Values,
-) component.DeployWaiter {
+) Interface {
 	return &nodeLocalDNS{
 		client:    client,
 		namespace: namespace,
@@ -210,7 +218,7 @@ func (n *nodeLocalDNS) computeResourcesData() (map[string][]byte, error) {
     reload
     loop
     bind ` + n.bindIP() + `
-    forward . ` + n.values.ClusterDNS + ` {
+    forward . ` + strings.Join(n.values.ClusterDNS, " ") + ` {
             ` + n.forceTcpToClusterDNS() + `
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
@@ -222,7 +230,7 @@ in-addr.arpa:53 {
     reload
     loop
     bind ` + n.bindIP() + `
-    forward . ` + n.values.ClusterDNS + ` {
+    forward . ` + strings.Join(n.values.ClusterDNS, " ") + ` {
             ` + n.forceTcpToClusterDNS() + `
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
@@ -233,7 +241,7 @@ ip6.arpa:53 {
     reload
     loop
     bind ` + n.bindIP() + `
-    forward . ` + n.values.ClusterDNS + ` {
+    forward . ` + strings.Join(n.values.ClusterDNS, " ") + ` {
             ` + n.forceTcpToClusterDNS() + `
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
@@ -512,15 +520,15 @@ ip6.arpa:53 {
 }
 
 func (n *nodeLocalDNS) bindIP() string {
-	if n.values.DNSServer != "" {
-		return nodelocaldnsconstants.IPVSAddress + " " + n.values.DNSServer
+	if len(n.values.DNSServers) > 0 {
+		return nodelocaldnsconstants.IPVSAddress + " " + strings.Join(n.values.DNSServers, " ")
 	}
 	return nodelocaldnsconstants.IPVSAddress
 }
 
 func (n *nodeLocalDNS) containerArg() string {
-	if n.values.DNSServer != "" {
-		return nodelocaldnsconstants.IPVSAddress + "," + n.values.DNSServer
+	if len(n.values.DNSServers) > 0 {
+		return nodelocaldnsconstants.IPVSAddress + "," + strings.Join(n.values.DNSServers, ",")
 	}
 	return nodelocaldnsconstants.IPVSAddress
 }
@@ -541,11 +549,19 @@ func (n *nodeLocalDNS) forceTcpToUpstreamDNS() string {
 
 func (n *nodeLocalDNS) upstreamDNSAddress() string {
 	if n.values.Config != nil && ptr.Deref(n.values.Config.DisableForwardToUpstreamDNS, false) {
-		return n.values.ClusterDNS
+		return strings.Join(n.values.ClusterDNS, " ")
 	}
 	return "__PILLAR__UPSTREAM__SERVERS__"
 }
 
 func (n *nodeLocalDNS) emptyScrapeConfig(suffix string) *monitoringv1alpha1.ScrapeConfig {
 	return &monitoringv1alpha1.ScrapeConfig{ObjectMeta: monitoringutils.ConfigObjectMeta("node-local-dns"+suffix, n.namespace, shoot.Label)}
+}
+
+func (n *nodeLocalDNS) SetClusterDNS(dns []string) {
+	n.values.ClusterDNS = dns
+}
+
+func (n *nodeLocalDNS) SetDNSServers(servers []string) {
+	n.values.DNSServers = servers
 }

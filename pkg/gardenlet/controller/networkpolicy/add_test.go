@@ -143,6 +143,52 @@ var _ = Describe("Add", func() {
 			Expect(p.Delete(event.DeleteEvent{Object: cluster})).To(BeFalse())
 			Expect(p.Generic(event.GenericEvent{Object: cluster})).To(BeFalse())
 		})
+
+		It("should return true if status networking is changed for shoot with workers", func() {
+			shoot.Spec.Networking = &gardencorev1beta1.Networking{}
+			shoot.Status.Networking = &gardencorev1beta1.NetworkingStatus{
+				Pods:     []string{"foo"},
+				Services: []string{"bar"},
+				Nodes:    []string{"baz"},
+			}
+			shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{{Name: "test"}}
+			cluster.Spec.Shoot.Raw = encode(shoot)
+			newCluster := cluster.DeepCopy()
+			shoot.Status.Networking = &gardencorev1beta1.NetworkingStatus{
+				Pods:     []string{"bar"},
+				Services: []string{"baz"},
+				Nodes:    []string{"foo"},
+			}
+			newCluster.Spec.Shoot.Raw = encode(shoot)
+
+			Expect(p.Create(event.CreateEvent{Object: cluster})).To(BeFalse())
+			Expect(p.Update(event.UpdateEvent{ObjectNew: newCluster, ObjectOld: cluster})).To(BeTrue())
+			Expect(p.Delete(event.DeleteEvent{Object: cluster})).To(BeFalse())
+			Expect(p.Generic(event.GenericEvent{Object: cluster})).To(BeFalse())
+		})
+
+		It("should return false if status networking is constant for shoot with workers", func() {
+			shoot.Spec.Networking = &gardencorev1beta1.Networking{}
+			shoot.Status.Networking = &gardencorev1beta1.NetworkingStatus{
+				Pods:     []string{"foo", "bar"},
+				Services: []string{"bar", "baz"},
+				Nodes:    []string{"baz", "foo"},
+			}
+			shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{{Name: "test"}}
+			cluster.Spec.Shoot.Raw = encode(shoot)
+			newCluster := cluster.DeepCopy()
+			shoot.Status.Networking = &gardencorev1beta1.NetworkingStatus{
+				Pods:     []string{"foo", "bar"},
+				Services: []string{"bar", "baz"},
+				Nodes:    []string{"baz", "foo"},
+			}
+			newCluster.Spec.Shoot.Raw = encode(shoot)
+
+			Expect(p.Create(event.CreateEvent{Object: cluster})).To(BeFalse())
+			Expect(p.Update(event.UpdateEvent{ObjectNew: newCluster, ObjectOld: cluster})).To(BeFalse())
+			Expect(p.Delete(event.DeleteEvent{Object: cluster})).To(BeFalse())
+			Expect(p.Generic(event.GenericEvent{Object: cluster})).To(BeFalse())
+		})
 	})
 })
 

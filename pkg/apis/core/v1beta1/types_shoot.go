@@ -210,6 +210,9 @@ type ShootStatus struct {
 	// See https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md for more details.
 	// +optional
 	EncryptedResources []string `json:"encryptedResources,omitempty" protobuf:"bytes,18,rep,name=encryptedResources"`
+	// Networking contains information about cluster networking such as CIDRs.
+	// +optional
+	Networking *NetworkingStatus `json:"networking,omitempty" protobuf:"bytes,19,opt,name=networking"`
 }
 
 // LastMaintenance holds information about a maintenance operation on the Shoot.
@@ -223,6 +226,19 @@ type LastMaintenance struct {
 	// FailureReason holds the information about the last maintenance operation failure reason.
 	// +optional
 	FailureReason *string `json:"failureReason,omitempty" protobuf:"bytes,4,opt,name=failureReason"`
+}
+
+// NetworkingStatus contains information about cluster networking such as CIDRs.
+type NetworkingStatus struct {
+	// Pods are the CIDRs of the pod network.
+	// +optional
+	Pods []string `json:"pods,omitempty" protobuf:"bytes,1,rep,name=pods"`
+	// Nodes are the CIDRs of the node network.
+	// +optional
+	Nodes []string `json:"nodes,omitempty" protobuf:"bytes,2,rep,name=nodes"`
+	// Services are the CIDRs of the service network.
+	// +optional
+	Services []string `json:"services,omitempty" protobuf:"bytes,3,rep,name=services"`
 }
 
 // ShootCredentials contains information about the shoot credentials.

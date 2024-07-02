@@ -7,13 +7,14 @@ package botanist_test
 import (
 	"context"
 	"errors"
+	"net"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	mockcomponent "github.com/gardener/gardener/pkg/component/mock"
+	mocknetwork "github.com/gardener/gardener/pkg/component/extensions/network/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
@@ -22,7 +23,7 @@ import (
 var _ = Describe("Network", func() {
 	var (
 		ctrl     *gomock.Controller
-		network  *mockcomponent.MockDeployMigrateWaiter
+		network  *mocknetwork.MockInterface
 		botanist *Botanist
 
 		ctx        = context.TODO()
@@ -32,13 +33,17 @@ var _ = Describe("Network", func() {
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-		network = mockcomponent.NewMockDeployMigrateWaiter(ctrl)
+		network = mocknetwork.NewMockInterface(ctrl)
 		botanist = &Botanist{Operation: &operation.Operation{
 			Shoot: &shootpkg.Shoot{
 				Components: &shootpkg.Components{
 					Extensions: &shootpkg.Extensions{
 						Network: network,
 					},
+				},
+				Networks: &shootpkg.Networks{
+					Pods:     []net.IPNet{{IP: net.ParseIP("10.0.0.0"), Mask: net.CIDRMask(24, 32)}, {IP: net.ParseIP("2001:db8:1::"), Mask: net.CIDRMask(64, 128)}},
+					Services: []net.IPNet{{IP: net.ParseIP("10.0.1.0"), Mask: net.CIDRMask(24, 32)}, {IP: net.ParseIP("2001:db8:2::"), Mask: net.CIDRMask(64, 128)}},
 				},
 			},
 		}}
@@ -51,6 +56,11 @@ var _ = Describe("Network", func() {
 	})
 
 	Describe("#DeployNetwork", func() {
+		BeforeEach(func() {
+			network.EXPECT().SetPodCIDRs(botanist.Shoot.Networks.Pods)
+			network.EXPECT().SetServiceCIDRs(botanist.Shoot.Networks.Services)
+		})
+
 		Context("deploy", func() {
 			It("should deploy successfully", func() {
 				network.EXPECT().Deploy(ctx)

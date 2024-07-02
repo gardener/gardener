@@ -13,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -40,11 +39,10 @@ func (b *Botanist) DefaultKubeProxy() (kubeproxy.Interface, error) {
 		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
 		kubeproxy.Values{
-			IPVSEnabled:    b.Shoot.IPVSEnabled(),
-			FeatureGates:   featureGates,
-			ImageAlpine:    imageAlpine.String(),
-			PodNetworkCIDR: ptr.To(b.Shoot.Networks.Pods.String()),
-			VPAEnabled:     b.Shoot.WantsVerticalPodAutoscaler,
+			IPVSEnabled:  b.Shoot.IPVSEnabled(),
+			FeatureGates: featureGates,
+			ImageAlpine:  imageAlpine.String(),
+			VPAEnabled:   b.Shoot.WantsVerticalPodAutoscaler,
 		},
 	), nil
 }
@@ -75,6 +73,7 @@ func (b *Botanist) DeployKubeProxy(ctx context.Context) error {
 
 	b.Shoot.Components.SystemComponents.KubeProxy.SetKubeconfig(kubeconfig)
 	b.Shoot.Components.SystemComponents.KubeProxy.SetWorkerPools(workerPools)
+	b.Shoot.Components.SystemComponents.KubeProxy.SetPodNetworkCIDRs(b.Shoot.Networks.Pods)
 
 	return b.Shoot.Components.SystemComponents.KubeProxy.Deploy(ctx)
 }

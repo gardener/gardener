@@ -5206,6 +5206,57 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(BeEmpty())
 			})
 		})
+
+		Context("validate shoot networking status", func() {
+			It("should forbid invalid network CIDRs", func() {
+				invalidCIDR := "invalid-cidr"
+
+				newShoot.Status.Networking = &core.NetworkingStatus{
+					Nodes:    []string{invalidCIDR},
+					Pods:     []string{invalidCIDR},
+					Services: []string{invalidCIDR},
+				}
+
+				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("status.networking.nodes[0]"),
+					"Detail": ContainSubstring("invalid CIDR address"),
+				}, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("status.networking.pods[0]"),
+					"Detail": ContainSubstring("invalid CIDR address"),
+				}, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("status.networking.services[0]"),
+					"Detail": ContainSubstring("invalid CIDR address"),
+				}))
+			})
+
+			It("should forbid non canonical CIDRs", func() {
+				newShoot.Status.Networking = &core.NetworkingStatus{
+					Nodes:    []string{"10.250.0.3/16"},
+					Pods:     []string{"100.64.0.5/13"},
+					Services: []string{"100.96.0.4/11"},
+				}
+
+				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
+
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("status.networking.nodes[0]"),
+					"Detail": Equal("must be valid canonical CIDR"),
+				}, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("status.networking.pods[0]"),
+					"Detail": Equal("must be valid canonical CIDR"),
+				}, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("status.networking.services[0]"),
+					"Detail": Equal("must be valid canonical CIDR"),
+				}))
+			})
+		})
 	})
 
 	Describe("#ValidateWorker", func() {

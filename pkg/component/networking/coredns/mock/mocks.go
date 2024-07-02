@@ -11,6 +11,7 @@ package mock
 
 import (
 	context "context"
+	net "net"
 	reflect "reflect"
 
 	gomock "go.uber.org/mock/gomock"
@@ -67,16 +68,28 @@ func (mr *MockInterfaceMockRecorder) Destroy(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockInterface)(nil).Destroy), arg0)
 }
 
-// SetNodeNetworkCIDR mocks base method.
-func (m *MockInterface) SetNodeNetworkCIDR(arg0 *string) {
+// SetClusterIPs mocks base method.
+func (m *MockInterface) SetClusterIPs(arg0 []net.IP) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetNodeNetworkCIDR", arg0)
+	m.ctrl.Call(m, "SetClusterIPs", arg0)
 }
 
-// SetNodeNetworkCIDR indicates an expected call of SetNodeNetworkCIDR.
-func (mr *MockInterfaceMockRecorder) SetNodeNetworkCIDR(arg0 any) *gomock.Call {
+// SetClusterIPs indicates an expected call of SetClusterIPs.
+func (mr *MockInterfaceMockRecorder) SetClusterIPs(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetNodeNetworkCIDR", reflect.TypeOf((*MockInterface)(nil).SetNodeNetworkCIDR), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetClusterIPs", reflect.TypeOf((*MockInterface)(nil).SetClusterIPs), arg0)
+}
+
+// SetNodeNetworkCIDRs mocks base method.
+func (m *MockInterface) SetNodeNetworkCIDRs(arg0 []net.IPNet) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetNodeNetworkCIDRs", arg0)
+}
+
+// SetNodeNetworkCIDRs indicates an expected call of SetNodeNetworkCIDRs.
+func (mr *MockInterfaceMockRecorder) SetNodeNetworkCIDRs(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetNodeNetworkCIDRs", reflect.TypeOf((*MockInterface)(nil).SetNodeNetworkCIDRs), arg0)
 }
 
 // SetPodAnnotations mocks base method.
@@ -89,6 +102,18 @@ func (m *MockInterface) SetPodAnnotations(arg0 map[string]string) {
 func (mr *MockInterfaceMockRecorder) SetPodAnnotations(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetPodAnnotations", reflect.TypeOf((*MockInterface)(nil).SetPodAnnotations), arg0)
+}
+
+// SetPodNetworkCIDRs mocks base method.
+func (m *MockInterface) SetPodNetworkCIDRs(arg0 []net.IPNet) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetPodNetworkCIDRs", arg0)
+}
+
+// SetPodNetworkCIDRs indicates an expected call of SetPodNetworkCIDRs.
+func (mr *MockInterfaceMockRecorder) SetPodNetworkCIDRs(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetPodNetworkCIDRs", reflect.TypeOf((*MockInterface)(nil).SetPodNetworkCIDRs), arg0)
 }
 
 // Wait mocks base method.

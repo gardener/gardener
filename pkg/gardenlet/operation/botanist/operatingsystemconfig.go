@@ -52,14 +52,6 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 	}
 	oscImages[imagevector.ImageNameGardenerNodeAgent].WithOptionalTag(version.Get().GitVersion)
 
-	clusterDNSAddress := b.Shoot.Networks.CoreDNS.String()
-	if b.Shoot.NodeLocalDNSEnabled && b.Shoot.IPVSEnabled() {
-		// If IPVS is enabled then instruct the kubelet to create pods resolving DNS to the `nodelocaldns` network
-		// interface link-local ip address. For more information checkout the usage documentation under
-		// https://kubernetes.io/docs/tasks/administer-cluster/nodelocaldns/.
-		clusterDNSAddress = nodelocaldnsconstants.IPVSAddress
-	}
-
 	valitailEnabled, valiIngressHost := false, ""
 	if b.isShootNodeLoggingEnabled() {
 		valitailEnabled, valiIngressHost = true, b.ComputeValiHost()
@@ -74,7 +66,6 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 			KubernetesVersion: b.Shoot.KubernetesVersion,
 			Workers:           b.Shoot.GetInfo().Spec.Provider.Workers,
 			OriginalValues: operatingsystemconfig.OriginalValues{
-				ClusterDNSAddress:   clusterDNSAddress,
 				ClusterDomain:       gardencorev1beta1.DefaultDomain,
 				Images:              oscImages,
 				KubeletConfig:       b.Shoot.GetInfo().Spec.Kubernetes.Kubelet,
@@ -128,6 +119,18 @@ func (b *Botanist) DeployOperatingSystemConfig(ctx context.Context) error {
 
 		b.Shoot.Components.Extensions.OperatingSystemConfig.SetSSHPublicKeys(publicKeys)
 	}
+
+	var clusterDNSAddresses []string
+	for _, ip := range b.Shoot.Networks.CoreDNS {
+		clusterDNSAddresses = append(clusterDNSAddresses, ip.String())
+	}
+	if b.Shoot.NodeLocalDNSEnabled && b.Shoot.IPVSEnabled() {
+		// If IPVS is enabled then instruct the kubelet to create pods resolving DNS to the `nodelocaldns` network
+		// interface link-local ip address. For more information checkout the usage documentation under
+		// https://kubernetes.io/docs/tasks/administer-cluster/nodelocaldns/.
+		clusterDNSAddresses = []string{nodelocaldnsconstants.IPVSAddress}
+	}
+	b.Shoot.Components.Extensions.OperatingSystemConfig.SetClusterDNSAddresses(clusterDNSAddresses)
 
 	if b.IsRestorePhase() {
 		return b.Shoot.Components.Extensions.OperatingSystemConfig.Restore(ctx, b.Shoot.GetShootState())

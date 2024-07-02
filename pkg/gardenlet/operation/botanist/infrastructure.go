@@ -14,6 +14,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/infrastructure"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 )
 
@@ -61,12 +62,25 @@ func (b *Botanist) WaitForInfrastructure(ctx context.Context) error {
 		return err
 	}
 
-	if nodesCIDR := b.Shoot.Components.Extensions.Infrastructure.NodesCIDR(); nodesCIDR != nil {
+	if nodesCIDRs := b.Shoot.Components.Extensions.Infrastructure.NodesCIDRs(); len(nodesCIDRs) > 0 {
 		if err := b.Shoot.UpdateInfo(ctx, b.GardenClient, true, func(shoot *gardencorev1beta1.Shoot) error {
-			shoot.Spec.Networking.Nodes = nodesCIDR
+			shoot.Spec.Networking.Nodes = &nodesCIDRs[0]
 			return nil
 		}); err != nil {
 			return err
+		}
+
+		if len(b.Shoot.Components.Extensions.Infrastructure.ServicesCIDRs()) > 0 && len(b.Shoot.Components.Extensions.Infrastructure.PodsCIDRs()) > 0 {
+			if err := b.Shoot.UpdateInfoStatus(ctx, b.GardenClient, true, func(shoot *gardencorev1beta1.Shoot) error {
+				shoot.Status.Networking = &gardencorev1beta1.NetworkingStatus{
+					Nodes:    nodesCIDRs,
+					Services: b.Shoot.Components.Extensions.Infrastructure.ServicesCIDRs(),
+					Pods:     b.Shoot.Components.Extensions.Infrastructure.PodsCIDRs(),
+				}
+				return nil
+			}); err != nil {
+				return err
+			}
 		}
 
 		if err := extensions.SyncClusterResourceToSeed(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, b.Shoot.GetInfo(), nil, nil); err != nil {
@@ -74,5 +88,10 @@ func (b *Botanist) WaitForInfrastructure(ctx context.Context) error {
 		}
 	}
 
+	networks, err := shoot.ToNetworks(b.Shoot.GetInfo(), b.Shoot.IsWorkerless)
+	if err != nil {
+		return err
+	}
+	b.Shoot.Networks = networks
 	return nil
 }

@@ -113,18 +113,32 @@ func (mr *MockInterfaceMockRecorder) Migrate(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Migrate", reflect.TypeOf((*MockInterface)(nil).Migrate), arg0)
 }
 
-// NodesCIDR mocks base method.
-func (m *MockInterface) NodesCIDR() *string {
+// NodesCIDRs mocks base method.
+func (m *MockInterface) NodesCIDRs() []string {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NodesCIDR")
-	ret0, _ := ret[0].(*string)
+	ret := m.ctrl.Call(m, "NodesCIDRs")
+	ret0, _ := ret[0].([]string)
 	return ret0
 }
 
-// NodesCIDR indicates an expected call of NodesCIDR.
-func (mr *MockInterfaceMockRecorder) NodesCIDR() *gomock.Call {
+// NodesCIDRs indicates an expected call of NodesCIDRs.
+func (mr *MockInterfaceMockRecorder) NodesCIDRs() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NodesCIDR", reflect.TypeOf((*MockInterface)(nil).NodesCIDR))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NodesCIDRs", reflect.TypeOf((*MockInterface)(nil).NodesCIDRs))
+}
+
+// PodsCIDRs mocks base method.
+func (m *MockInterface) PodsCIDRs() []string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PodsCIDRs")
+	ret0, _ := ret[0].([]string)
+	return ret0
+}
+
+// PodsCIDRs indicates an expected call of PodsCIDRs.
+func (mr *MockInterfaceMockRecorder) PodsCIDRs() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PodsCIDRs", reflect.TypeOf((*MockInterface)(nil).PodsCIDRs))
 }
 
 // ProviderStatus mocks base method.
@@ -153,6 +167,20 @@ func (m *MockInterface) Restore(arg0 context.Context, arg1 *v1beta1.ShootState) 
 func (mr *MockInterfaceMockRecorder) Restore(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Restore", reflect.TypeOf((*MockInterface)(nil).Restore), arg0, arg1)
+}
+
+// ServicesCIDRs mocks base method.
+func (m *MockInterface) ServicesCIDRs() []string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ServicesCIDRs")
+	ret0, _ := ret[0].([]string)
+	return ret0
+}
+
+// ServicesCIDRs indicates an expected call of ServicesCIDRs.
+func (mr *MockInterfaceMockRecorder) ServicesCIDRs() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServicesCIDRs", reflect.TypeOf((*MockInterface)(nil).ServicesCIDRs))
 }
 
 // SetSSHPublicKey mocks base method.

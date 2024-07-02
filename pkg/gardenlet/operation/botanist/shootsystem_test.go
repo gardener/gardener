@@ -7,6 +7,7 @@ package botanist_test
 import (
 	"context"
 	"errors"
+	"net"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -24,8 +25,12 @@ import (
 
 var _ = Describe("ShootSystem", func() {
 	var (
-		ctrl     *gomock.Controller
-		botanist *Botanist
+		ctrl        *gomock.Controller
+		botanist    *Botanist
+		nodeCIDR    = "10.0.0.0/16"
+		serviceCIDR = "2001:db8:1::/64"
+		podCIDR1    = "2001:db8:2::/64"
+		podCIDR2    = "2001:db8:3::/64"
 	)
 
 	BeforeEach(func() {
@@ -69,15 +74,32 @@ var _ = Describe("ShootSystem", func() {
 			fakeKubernetes := test.NewClientSetWithDiscovery(nil, fakeDiscoveryClient)
 			botanist.ShootClientSet = kubernetesfake.NewClientSetBuilder().WithKubernetes(fakeKubernetes).Build()
 
+			_, nodes, err := net.ParseCIDR(nodeCIDR)
+			Expect(err).ToNot(HaveOccurred())
+			_, services, err := net.ParseCIDR(serviceCIDR)
+			Expect(err).ToNot(HaveOccurred())
+			_, pods1, err := net.ParseCIDR(podCIDR1)
+			Expect(err).ToNot(HaveOccurred())
+			_, pods2, err := net.ParseCIDR(podCIDR2)
+			Expect(err).ToNot(HaveOccurred())
+
 			botanist.Shoot = &shootpkg.Shoot{
 				Components: &shootpkg.Components{
 					SystemComponents: &shootpkg.SystemComponents{
 						Resources: shootSystem,
 					},
 				},
+				Networks: &shootpkg.Networks{
+					Nodes:    []net.IPNet{*nodes},
+					Pods:     []net.IPNet{*pods1, *pods2},
+					Services: []net.IPNet{*services},
+				},
 			}
 
 			shootSystem.EXPECT().SetAPIResourceList(apiResourceList)
+			shootSystem.EXPECT().SetNodeNetworkCIDRs(botanist.Shoot.Networks.Nodes)
+			shootSystem.EXPECT().SetServiceNetworkCIDRs(botanist.Shoot.Networks.Services)
+			shootSystem.EXPECT().SetPodNetworkCIDRs(botanist.Shoot.Networks.Pods)
 		})
 
 		It("should discover the API and deploy", func() {

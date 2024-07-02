@@ -501,6 +501,21 @@ func networksAreDisjointed(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta
 		errorMessages = append(errorMessages, e.ErrorBody())
 	}
 
+	if shoot.Status.Networking != nil {
+		for _, e := range cidrvalidation.ValidateMultiNetworkDisjointedness(
+			field.NewPath(""),
+			shoot.Status.Networking.Nodes,
+			shoot.Status.Networking.Pods,
+			shoot.Status.Networking.Services,
+			seed.Spec.Networks.Nodes,
+			seed.Spec.Networks.Pods,
+			seed.Spec.Networks.Services,
+			workerless,
+		) {
+			errorMessages = append(errorMessages, e.ErrorBody())
+		}
+	}
+
 	return len(errorMessages) == 0, fmt.Errorf("invalid networks: %s", errorMessages)
 }
 

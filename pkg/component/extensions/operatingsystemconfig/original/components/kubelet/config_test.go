@@ -23,9 +23,9 @@ import (
 
 var _ = Describe("Config", func() {
 	var (
-		clusterDNSAddress = "foo"
-		clusterDomain     = "bar"
-		params            = components.ConfigurableKubeletConfigParameters{
+		clusterDNSAddresses = []string{"foo", "bar"}
+		clusterDomain       = "bar"
+		params              = components.ConfigurableKubeletConfigParameters{
 			ContainerLogMaxSize:              ptr.To("123Mi"),
 			CpuCFSQuota:                      ptr.To(false),
 			CpuManagerPolicy:                 ptr.To("policy"),
@@ -81,7 +81,7 @@ var _ = Describe("Config", func() {
 			CgroupDriver:                 "cgroupfs",
 			CgroupRoot:                   "/",
 			CgroupsPerQOS:                ptr.To(true),
-			ClusterDNS:                   []string{clusterDNSAddress},
+			ClusterDNS:                   clusterDNSAddresses,
 			ClusterDomain:                clusterDomain,
 			ContainerLogMaxSize:          "100Mi",
 			CPUCFSQuota:                  ptr.To(true),
@@ -178,7 +178,7 @@ var _ = Describe("Config", func() {
 			CgroupRoot:                   "/",
 			CgroupsPerQOS:                ptr.To(true),
 			ClusterDomain:                clusterDomain,
-			ClusterDNS:                   []string{clusterDNSAddress},
+			ClusterDNS:                   clusterDNSAddresses,
 			ContainerLogMaxSize:          "123Mi",
 			CPUCFSQuota:                  params.CpuCFSQuota,
 			CPUManagerPolicy:             *params.CpuManagerPolicy,
@@ -259,19 +259,19 @@ var _ = Describe("Config", func() {
 	)
 
 	DescribeTable("#Config",
-		func(kubernetesVersion string, clusterDNSAddress, clusterDomain string, params components.ConfigurableKubeletConfigParameters, expectedConfig *kubeletconfigv1beta1.KubeletConfiguration, mutateExpectConfigFn func(*kubeletconfigv1beta1.KubeletConfiguration)) {
+		func(kubernetesVersion string, clusterDNSAddresses []string, clusterDomain string, params components.ConfigurableKubeletConfigParameters, expectedConfig *kubeletconfigv1beta1.KubeletConfiguration, mutateExpectConfigFn func(*kubeletconfigv1beta1.KubeletConfiguration)) {
 			expectation := expectedConfig.DeepCopy()
 			if mutateExpectConfigFn != nil {
 				mutateExpectConfigFn(expectation)
 			}
 
-			Expect(kubelet.Config(semver.MustParse(kubernetesVersion), clusterDNSAddress, clusterDomain, taints, params)).To(DeepEqual(expectation))
+			Expect(kubelet.Config(semver.MustParse(kubernetesVersion), clusterDNSAddresses, clusterDomain, taints, params)).To(DeepEqual(expectation))
 		},
 
 		Entry(
 			"kubernetes 1.25 w/o defaults",
 			"1.25.1",
-			clusterDNSAddress,
+			clusterDNSAddresses,
 			clusterDomain,
 			components.ConfigurableKubeletConfigParameters{},
 			kubeletConfigWithDefaults,
@@ -283,7 +283,7 @@ var _ = Describe("Config", func() {
 		Entry(
 			"kubernetes 1.25 w/ defaults",
 			"1.25.1",
-			clusterDNSAddress,
+			clusterDNSAddresses,
 			clusterDomain,
 			params,
 			kubeletConfigWithParams,
@@ -296,7 +296,7 @@ var _ = Describe("Config", func() {
 		Entry(
 			"kubernetes 1.26 w/o defaults",
 			"1.26.1",
-			clusterDNSAddress,
+			clusterDNSAddresses,
 			clusterDomain,
 			components.ConfigurableKubeletConfigParameters{},
 			kubeletConfigWithDefaults,
@@ -310,7 +310,7 @@ var _ = Describe("Config", func() {
 		Entry(
 			"kubernetes 1.26 w/ defaults",
 			"1.26.1",
-			clusterDNSAddress,
+			clusterDNSAddresses,
 			clusterDomain,
 			params,
 			kubeletConfigWithParams,
@@ -323,7 +323,7 @@ var _ = Describe("Config", func() {
 		Entry(
 			"kubernetes 1.27 w/o defaults",
 			"1.27.1",
-			clusterDNSAddress,
+			clusterDNSAddresses,
 			clusterDomain,
 			components.ConfigurableKubeletConfigParameters{},
 			kubeletConfigWithDefaults,
@@ -337,7 +337,7 @@ var _ = Describe("Config", func() {
 		Entry(
 			"kubernetes 1.27 w/ defaults",
 			"1.27.1",
-			clusterDNSAddress,
+			clusterDNSAddresses,
 			clusterDomain,
 			params,
 			kubeletConfigWithParams,
@@ -350,7 +350,7 @@ var _ = Describe("Config", func() {
 		Entry(
 			"kubernetes 1.28 w/o defaults",
 			"1.28.1",
-			clusterDNSAddress,
+			clusterDNSAddresses,
 			clusterDomain,
 			components.ConfigurableKubeletConfigParameters{},
 			kubeletConfigWithDefaults,
@@ -364,7 +364,7 @@ var _ = Describe("Config", func() {
 		Entry(
 			"kubernetes 1.28 w/ defaults",
 			"1.28.1",
-			clusterDNSAddress,
+			clusterDNSAddresses,
 			clusterDomain,
 			params,
 			kubeletConfigWithParams,
@@ -376,7 +376,7 @@ var _ = Describe("Config", func() {
 		Entry(
 			"kubernetes 1.28 w/ KubeletCgroupDriverFromCRI feature gate",
 			"1.28.1",
-			clusterDNSAddress,
+			clusterDNSAddresses,
 			clusterDomain,
 			components.ConfigurableKubeletConfigParameters{FeatureGates: map[string]bool{"KubeletCgroupDriverFromCRI": true}},
 			kubeletConfigWithDefaults,

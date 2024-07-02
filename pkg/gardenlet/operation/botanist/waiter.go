@@ -94,14 +94,9 @@ func (b *Botanist) WaitUntilNoPodRunning(ctx context.Context) error {
 func (b *Botanist) WaitUntilEndpointsDoNotContainPodIPs(ctx context.Context) error {
 	b.Logger.Info("Waiting until there are no Endpoints containing Pod IPs in the shoot cluster")
 
-	val := b.Shoot.GetInfo().Spec.Networking.Pods
-	if val == nil {
+	podNetworks := b.Shoot.Networks.Pods
+	if len(podNetworks) == 0 {
 		return fmt.Errorf("unable to check if there are still Endpoints containing Pod IPs in the shoot cluster. Shoot's Pods network is empty")
-	}
-
-	_, podsNetwork, err := net.ParseCIDR(*val)
-	if err != nil {
-		return fmt.Errorf("unable to check if there are still Endpoints containing Pod IPs in the shoot cluster. Shoots's Pods network could not be parsed: %+v", err)
 	}
 
 	return retry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
@@ -130,10 +125,12 @@ func (b *Botanist) WaitUntilEndpointsDoNotContainPodIPs(ctx context.Context) err
 
 			for _, subset := range endpoint.Subsets {
 				for _, address := range subset.Addresses {
-					if podsNetwork.Contains(net.ParseIP(address.IP)) {
-						b.Logger.Info("Waiting until there are no endpoints containing pod IPs in the shoot cluster (at least one endpoint still exists)", "endpoint", client.ObjectKeyFromObject(&endpoint))
-						return retry.MinorError(fmt.Errorf("waiting until there are no running Pods in the shoot cluster, "+
-							"there is still at least one Endpoint containing pod IPs in the shoot cluster: %q", client.ObjectKeyFromObject(&endpoint).String()))
+					for _, network := range podNetworks {
+						if network.Contains(net.ParseIP(address.IP)) {
+							b.Logger.Info("Waiting until there are no endpoints containing pod IPs in the shoot cluster (at least one endpoint still exists)", "endpoint", client.ObjectKeyFromObject(&endpoint))
+							return retry.MinorError(fmt.Errorf("waiting until there are no running Pods in the shoot cluster, "+
+								"there is still at least one Endpoint containing pod IPs in the shoot cluster: %q", client.ObjectKeyFromObject(&endpoint).String()))
+						}
 					}
 				}
 			}

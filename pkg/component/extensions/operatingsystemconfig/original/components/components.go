@@ -24,7 +24,7 @@ type Component interface {
 type Context struct {
 	Key                     string
 	CABundle                *string
-	ClusterDNSAddress       string
+	ClusterDNSAddresses     []string
 	ClusterDomain           string
 	CRIName                 extensionsv1alpha1.CRIName
 	Images                  map[string]*imagevector.Image

@@ -30,8 +30,6 @@ func (b *Botanist) DefaultShootSystem() shootsystem.Interface {
 		IsWorkerless:          b.Shoot.IsWorkerless,
 		KubernetesVersion:     b.Shoot.KubernetesVersion,
 		Object:                b.Shoot.GetInfo(),
-		PodNetworkCIDR:        b.Shoot.Networks.Pods.String(),
-		ServiceNetworkCIDR:    b.Shoot.Networks.Services.String(),
 		ProjectName:           b.Garden.Project.Name,
 		EncryptedResources:    append(sets.List(gardenerutils.DefaultResourcesForEncryption()), b.Shoot.ResourcesToEncrypt...),
 	}
@@ -55,5 +53,8 @@ func (b *Botanist) DeployShootSystem(ctx context.Context) error {
 	}
 
 	b.Shoot.Components.SystemComponents.Resources.SetAPIResourceList(apiResourceList)
+	b.Shoot.Components.SystemComponents.Resources.SetPodNetworkCIDRs(b.Shoot.Networks.Pods)
+	b.Shoot.Components.SystemComponents.Resources.SetServiceNetworkCIDRs(b.Shoot.Networks.Services)
+	b.Shoot.Components.SystemComponents.Resources.SetNodeNetworkCIDRs(b.Shoot.Networks.Nodes)
 	return b.Shoot.Components.SystemComponents.Resources.Deploy(ctx)
 }

@@ -58,6 +58,8 @@ type Interface interface {
 	SetNamespaceUID(types.UID)
 	// SetMachineDeployments sets the machine deployments.
 	SetMachineDeployments([]extensionsv1alpha1.MachineDeployment)
+	// SetMaxNodesTotal sets the maximum number of nodes that can be created in the cluster.
+	SetMaxNodesTotal(int64)
 }
 
 // New creates a new instance of DeployWaiter for the cluster-autoscaler.
@@ -386,6 +388,10 @@ func (c *clusterAutoscaler) WaitCleanup(_ context.Context) error { return nil }
 func (c *clusterAutoscaler) SetNamespaceUID(uid types.UID)       { c.namespaceUID = uid }
 func (c *clusterAutoscaler) SetMachineDeployments(machineDeployments []extensionsv1alpha1.MachineDeployment) {
 	c.machineDeployments = machineDeployments
+}
+
+func (c *clusterAutoscaler) SetMaxNodesTotal(maxNodesTotal int64) {
+	c.maxNodesTotal = maxNodesTotal
 }
 
 func (c *clusterAutoscaler) emptyClusterRoleBinding() *rbacv1.ClusterRoleBinding {

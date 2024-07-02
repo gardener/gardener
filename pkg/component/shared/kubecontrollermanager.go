@@ -5,7 +5,6 @@
 package shared
 
 import (
-	"net"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -32,8 +31,6 @@ func NewKubeControllerManager(
 	priorityClassName string,
 	isWorkerless bool,
 	isScaleDownDisabled bool,
-	podNetwork *net.IPNet,
-	serviceNetwork *net.IPNet,
 	clusterSigningDuration *time.Duration,
 	controllerWorkers kubecontrollermanager.ControllerWorkers,
 	controllerSyncPeriods kubecontrollermanager.ControllerSyncPeriods,
@@ -61,8 +58,6 @@ func NewKubeControllerManager(
 			NamePrefix:             namePrefix,
 			IsScaleDownDisabled:    isScaleDownDisabled,
 			IsWorkerless:           isWorkerless,
-			PodNetwork:             podNetwork,
-			ServiceNetwork:         serviceNetwork,
 			ClusterSigningDuration: clusterSigningDuration,
 			ControllerWorkers:      controllerWorkers,
 			ControllerSyncPeriods:  controllerSyncPeriods,

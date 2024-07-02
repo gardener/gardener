@@ -11,6 +11,7 @@ package mock
 
 import (
 	context "context"
+	net "net"
 	reflect "reflect"
 
 	proxy "github.com/gardener/gardener/pkg/component/kubernetes/proxy"
@@ -92,6 +93,18 @@ func (m *MockInterface) SetKubeconfig(arg0 []byte) {
 func (mr *MockInterfaceMockRecorder) SetKubeconfig(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetKubeconfig", reflect.TypeOf((*MockInterface)(nil).SetKubeconfig), arg0)
+}
+
+// SetPodNetworkCIDRs mocks base method.
+func (m *MockInterface) SetPodNetworkCIDRs(arg0 []net.IPNet) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetPodNetworkCIDRs", arg0)
+}
+
+// SetPodNetworkCIDRs indicates an expected call of SetPodNetworkCIDRs.
+func (mr *MockInterfaceMockRecorder) SetPodNetworkCIDRs(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetPodNetworkCIDRs", reflect.TypeOf((*MockInterface)(nil).SetPodNetworkCIDRs), arg0)
 }
 
 // SetWorkerPools mocks base method.

@@ -6,7 +6,6 @@ package botanist
 
 import (
 	"context"
-	"net"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -19,12 +18,6 @@ import (
 
 // DefaultKubeControllerManager returns a deployer for the kube-controller-manager.
 func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.Interface, error) {
-	var services, pods *net.IPNet
-	if b.Shoot.Networks != nil {
-		services = b.Shoot.Networks.Services
-		pods = b.Shoot.Networks.Pods
-	}
-
 	return shared.NewKubeControllerManager(
 		b.Logger,
 		b.SeedClientSet,
@@ -37,8 +30,6 @@ func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.Interfa
 		v1beta1constants.PriorityClassNameShootControlPlane300,
 		b.Shoot.IsWorkerless,
 		metav1.HasAnnotation(b.Shoot.GetInfo().ObjectMeta, v1beta1constants.ShootAlphaControlPlaneScaleDownDisabled),
-		pods,
-		services,
 		nil,
 		kubecontrollermanager.ControllerWorkers{},
 		kubecontrollermanager.ControllerSyncPeriods{},
@@ -54,6 +45,8 @@ func (b *Botanist) DeployKubeControllerManager(ctx context.Context) error {
 	}
 	b.Shoot.Components.ControlPlane.KubeControllerManager.SetReplicaCount(replicaCount)
 	b.Shoot.Components.ControlPlane.KubeControllerManager.SetRuntimeConfig(b.Shoot.Components.ControlPlane.KubeAPIServer.GetValues().RuntimeConfig)
+	b.Shoot.Components.ControlPlane.KubeControllerManager.SetServiceNetworks(b.Shoot.Networks.Services)
+	b.Shoot.Components.ControlPlane.KubeControllerManager.SetPodNetworks(b.Shoot.Networks.Pods)
 
 	return b.Shoot.Components.ControlPlane.KubeControllerManager.Deploy(ctx)
 }

@@ -94,7 +94,18 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure 
 		}
 	}
 
-	return nil
+	patch := client.MergeFrom(infrastructure.DeepCopy())
+	infrastructure.Status.Networking = &extensionsv1alpha1.InfrastructureStatusNetworking{}
+	if cluster.Shoot.Spec.Networking.Nodes != nil {
+		infrastructure.Status.Networking.Nodes = []string{*cluster.Shoot.Spec.Networking.Nodes}
+	}
+	if cluster.Shoot.Spec.Networking.Pods != nil {
+		infrastructure.Status.Networking.Pods = []string{*cluster.Shoot.Spec.Networking.Pods}
+	}
+	if cluster.Shoot.Spec.Networking.Services != nil {
+		infrastructure.Status.Networking.Services = []string{*cluster.Shoot.Spec.Networking.Services}
+	}
+	return a.client.Status().Patch(ctx, infrastructure, patch)
 }
 
 func (a *actuator) Delete(ctx context.Context, _ logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, _ *extensionscontroller.Cluster) error {

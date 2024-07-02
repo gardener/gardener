@@ -35,6 +35,7 @@ var _ = Describe("shoot", func() {
 						Networking: &gardencorev1beta1.Networking{
 							Pods:     ptr.To("10.0.0.0/24"),
 							Services: ptr.To("20.0.0.0/24"),
+							Nodes:    ptr.To("30.0.0.0/24"),
 						},
 					},
 				}
@@ -45,32 +46,37 @@ var _ = Describe("shoot", func() {
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(result).To(PointTo(Equal(Networks{
-					Pods: &net.IPNet{
+					Pods: []net.IPNet{{
 						IP:   []byte{10, 0, 0, 0},
 						Mask: []byte{255, 255, 255, 0},
-					},
-					Services: &net.IPNet{
+					}},
+					Services: []net.IPNet{{
 						IP:   []byte{20, 0, 0, 0},
 						Mask: []byte{255, 255, 255, 0},
-					},
-					APIServer: []byte{20, 0, 0, 1},
-					CoreDNS:   []byte{20, 0, 0, 10},
+					}},
+					Nodes: []net.IPNet{{
+						IP:   []byte{30, 0, 0, 0},
+						Mask: []byte{255, 255, 255, 0},
+					}},
+					APIServer: []net.IP{[]byte{20, 0, 0, 1}},
+					CoreDNS:   []net.IP{[]byte{20, 0, 0, 10}},
 				})))
 			})
 
 			It("returns correct network (workerless Shoot)", func() {
 				shoot.Spec.Networking.Pods = nil
+				shoot.Spec.Networking.Nodes = nil
 				result, err := ToNetworks(shoot, true)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(result).To(PointTo(Equal(Networks{
 					Pods: nil,
-					Services: &net.IPNet{
+					Services: []net.IPNet{{
 						IP:   []byte{20, 0, 0, 0},
 						Mask: []byte{255, 255, 255, 0},
-					},
-					APIServer: []byte{20, 0, 0, 1},
-					CoreDNS:   []byte{20, 0, 0, 10},
+					}},
+					APIServer: []net.IP{[]byte{20, 0, 0, 1}},
+					CoreDNS:   []net.IP{[]byte{20, 0, 0, 10}},
 				})))
 			})
 
@@ -81,6 +87,55 @@ var _ = Describe("shoot", func() {
 
 				Expect(err).To(HaveOccurred())
 				Expect(result).To(BeNil())
+			})
+
+			It("returns correct joined networks if shoot status is set", func() {
+				shoot.Status.Networking = &gardencorev1beta1.NetworkingStatus{
+					Pods:     []string{"11.0.0.0/24", "12.0.0.0/24", "10.0.0.0/24"},
+					Services: []string{"20.0.0.0/24", "21.0.0.0/24"},
+					Nodes:    []string{"30.0.0.0/24", "2001:db8::/64"},
+				}
+				result, err := ToNetworks(shoot, false)
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(PointTo(Equal(Networks{
+					Pods: []net.IPNet{
+						{
+							IP:   []byte{10, 0, 0, 0},
+							Mask: []byte{255, 255, 255, 0},
+						},
+						{
+							IP:   []byte{11, 0, 0, 0},
+							Mask: []byte{255, 255, 255, 0},
+						},
+						{
+							IP:   []byte{12, 0, 0, 0},
+							Mask: []byte{255, 255, 255, 0},
+						},
+					},
+					Services: []net.IPNet{
+						{
+							IP:   []byte{20, 0, 0, 0},
+							Mask: []byte{255, 255, 255, 0},
+						},
+						{
+							IP:   []byte{21, 0, 0, 0},
+							Mask: []byte{255, 255, 255, 0},
+						},
+					},
+					Nodes: []net.IPNet{
+						{
+							IP:   []byte{30, 0, 0, 0},
+							Mask: []byte{255, 255, 255, 0},
+						},
+						{
+							IP:   []byte{32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Mask: []byte{255, 255, 255, 255, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0},
+						},
+					},
+					APIServer: []net.IP{[]byte{20, 0, 0, 1}, []byte{21, 0, 0, 1}},
+					CoreDNS:   []net.IP{[]byte{20, 0, 0, 10}, []byte{21, 0, 0, 10}},
+				})))
 			})
 
 			DescribeTable("#ConstructInternalClusterDomain", func(mutateFunc func(s *gardencorev1beta1.Shoot)) {

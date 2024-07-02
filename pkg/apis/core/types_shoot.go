@@ -161,6 +161,8 @@ type ShootStatus struct {
 	// Secrets are encrypted by default and are not part of the list.
 	// See https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md for more details.
 	EncryptedResources []string
+	// Networking contains information about cluster networking such as CIDRs.
+	Networking *NetworkingStatus
 }
 
 // LastMaintenance holds information about a maintenance operation on the Shoot.
@@ -173,6 +175,16 @@ type LastMaintenance struct {
 	State LastOperationState
 	// FailureReason holds the information about the last maintenance operation failure reason.
 	FailureReason *string
+}
+
+// NetworkingStatus contains information about cluster networking such as CIDRs.
+type NetworkingStatus struct {
+	// Pods are the CIDRs of the pod network.
+	Pods []string
+	// Nodes are the CIDRs of the node network.
+	Nodes []string
+	// Services are the CIDRs of the service network.
+	Services []string
 }
 
 // ShootCredentials contains information about the shoot credentials.

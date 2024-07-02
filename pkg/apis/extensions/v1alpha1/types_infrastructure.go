@@ -83,4 +83,20 @@ type InfrastructureStatus struct {
 	// IPs may not be stable in which case the extension controller may opt to not populate this field.
 	// +optional
 	EgressCIDRs []string `json:"egressCIDRs,omitempty"`
+	// Networking is a structure containing information about the node, service and pod network ranges.
+	// +optional
+	Networking *InfrastructureStatusNetworking `json:"networking,omitempty"`
+}
+
+// InfrastructureStatusNetworking is a structure containing information about the node, service and pod network ranges.
+type InfrastructureStatusNetworking struct {
+	// Pods are the CIDRs of the pod network.
+	// +optional
+	Pods []string `json:"pods,omitempty"`
+	// Nodes are the CIDRs of the node network.
+	// +optional
+	Nodes []string `json:"nodes,omitempty"`
+	// Services are the CIDRs of the service network.
+	// +optional
+	Services []string `json:"services,omitempty"`
 }

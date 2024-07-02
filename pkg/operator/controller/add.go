@@ -39,15 +39,20 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 	if err := (&controllerregistrar.Reconciler{
 		Controllers: []controllerregistrar.Controller{
 			{AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, garden *operatorv1alpha1.Garden) error {
+				var nodes []string
+				if garden.Spec.RuntimeCluster.Networking.Nodes != nil {
+					nodes = []string{*garden.Spec.RuntimeCluster.Networking.Nodes}
+				}
+
 				return (&networkpolicy.Reconciler{
 					ConcurrentSyncs:              cfg.Controllers.NetworkPolicy.ConcurrentSyncs,
 					AdditionalNamespaceSelectors: cfg.Controllers.NetworkPolicy.AdditionalNamespaceSelectors,
 					RuntimeNetworks: networkpolicy.RuntimeNetworkConfig{
 						// gardener-operator only supports IPv4 single-stack networking in the runtime cluster for now.
 						IPFamilies: []gardencore.IPFamily{gardencore.IPFamilyIPv4},
-						Nodes:      garden.Spec.RuntimeCluster.Networking.Nodes,
-						Pods:       garden.Spec.RuntimeCluster.Networking.Pods,
-						Services:   garden.Spec.RuntimeCluster.Networking.Services,
+						Nodes:      nodes,
+						Pods:       []string{garden.Spec.RuntimeCluster.Networking.Pods},
+						Services:   []string{garden.Spec.RuntimeCluster.Networking.Services},
 						BlockCIDRs: garden.Spec.RuntimeCluster.Networking.BlockCIDRs,
 					},
 				}).AddToManager(ctx, mgr, mgr)

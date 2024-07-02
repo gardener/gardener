@@ -7,6 +7,7 @@ package botanist_test
 import (
 	"context"
 	"errors"
+	"net"
 
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
@@ -48,7 +49,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 		botanist.Seed = &seedpkg.Seed{
 			KubernetesVersion: semver.MustParse("1.25.0"),
 		}
-		botanist.Shoot = &shootpkg.Shoot{}
+		botanist.Shoot = &shootpkg.Shoot{Networks: &shootpkg.Networks{}}
 		botanist.SeedClientSet = kubernetesClient
 	})
 
@@ -103,10 +104,12 @@ var _ = Describe("ClusterAutoscaler", func() {
 		Context("CA wanted", func() {
 			BeforeEach(func() {
 				botanist.Shoot.WantsClusterAutoscaler = true
+				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 
 				clusterAutoscaler.EXPECT().SetNamespaceUID(namespaceUID)
 				worker.EXPECT().MachineDeployments().Return(machineDeployments)
 				clusterAutoscaler.EXPECT().SetMachineDeployments(machineDeployments)
+				clusterAutoscaler.EXPECT().SetMaxNodesTotal(int64(0))
 			})
 
 			It("should set the secrets, namespace uid, machine deployments, and deploy", func() {
@@ -171,7 +174,31 @@ var _ = Describe("ClusterAutoscaler", func() {
 
 	DescribeTable("#CalculateMaxNodesForShoot",
 		func(shoot *gardencorev1beta1.Shoot, expectedResult *int64) {
-			maxNode, err := CalculateMaxNodesForShoot(shoot)
+			if shoot.Spec.Networking != nil {
+				if shoot.Spec.Networking.Pods != nil {
+					_, pods, err := net.ParseCIDR(*shoot.Spec.Networking.Pods)
+					Expect(err).NotTo(HaveOccurred())
+					botanist.Shoot.Networks.Pods = append(botanist.Shoot.Networks.Pods, *pods)
+				}
+				if shoot.Spec.Networking.Nodes != nil {
+					_, nodes, err := net.ParseCIDR(*shoot.Spec.Networking.Nodes)
+					Expect(err).NotTo(HaveOccurred())
+					botanist.Shoot.Networks.Nodes = append(botanist.Shoot.Networks.Nodes, *nodes)
+				}
+			}
+			if shoot.Status.Networking != nil {
+				for _, p := range shoot.Status.Networking.Pods {
+					_, pods, err := net.ParseCIDR(p)
+					Expect(err).NotTo(HaveOccurred())
+					botanist.Shoot.Networks.Pods = append(botanist.Shoot.Networks.Pods, *pods)
+				}
+				for _, n := range shoot.Status.Networking.Nodes {
+					_, nodes, err := net.ParseCIDR(n)
+					Expect(err).NotTo(HaveOccurred())
+					botanist.Shoot.Networks.Nodes = append(botanist.Shoot.Networks.Nodes, *nodes)
+				}
+			}
+			maxNode, err := botanist.CalculateMaxNodesForShoot(shoot)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(maxNode).To(Equal(expectedResult))
 		},
@@ -261,6 +288,73 @@ var _ = Describe("ClusterAutoscaler", func() {
 				},
 			}},
 			ptr.To[int64](65536),
+		),
+		Entry(
+			"Multiple pods network only",
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeControllerManager: &gardencorev1beta1.KubeControllerManagerConfig{
+							NodeCIDRMaskSize: ptr.To[int32](24),
+						},
+					},
+					Networking: &gardencorev1beta1.Networking{
+						Pods: ptr.To("100.64.0.0/12"),
+					},
+				},
+				Status: gardencorev1beta1.ShootStatus{
+					Networking: &gardencorev1beta1.NetworkingStatus{
+						Pods: []string{"10.0.0.0/24", "10.0.1.0/24"},
+					},
+				},
+			},
+			ptr.To[int64](4098),
+		),
+		Entry(
+			"Pods network is restriction (with multiple networks)",
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeControllerManager: &gardencorev1beta1.KubeControllerManagerConfig{
+							NodeCIDRMaskSize: ptr.To[int32](24),
+						},
+					},
+					Networking: &gardencorev1beta1.Networking{
+						Pods:  ptr.To("100.64.0.0/12"),
+						Nodes: ptr.To("10.250.0.0/16"),
+					},
+				},
+				Status: gardencorev1beta1.ShootStatus{
+					Networking: &gardencorev1beta1.NetworkingStatus{
+						Pods:  []string{"100.80.0.0/12", "100.96.0.0/12"},
+						Nodes: []string{"10.251.0.0/16"},
+					},
+				},
+			},
+			ptr.To[int64](12288),
+		),
+		Entry(
+			"Nodes network is restriction (with mutliple networks)",
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeControllerManager: &gardencorev1beta1.KubeControllerManagerConfig{
+							NodeCIDRMaskSize: ptr.To[int32](24),
+						},
+					},
+					Networking: &gardencorev1beta1.Networking{
+						Pods:  ptr.To("100.64.0.0/11"),
+						Nodes: ptr.To("10.250.0.0/20"),
+					},
+				},
+				Status: gardencorev1beta1.ShootStatus{
+					Networking: &gardencorev1beta1.NetworkingStatus{
+						Pods:  []string{"100.96.0.0/11"},
+						Nodes: []string{"10.251.0.0/20"},
+					},
+				},
+			},
+			ptr.To[int64](8188),
 		),
 	)
 })

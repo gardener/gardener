@@ -97,8 +97,8 @@ var _ = Describe("#Network", func() {
 			Namespace:      networkNs,
 			Type:           networkType,
 			ProviderConfig: nil,
-			PodCIDR:        &podCIDR,
-			ServiceCIDR:    &serviceCIDR,
+			PodCIDRs:       []net.IPNet{podCIDR, serviceCIDR},
+			ServiceCIDRs:   []net.IPNet{serviceCIDR, podCIDR},
 			IPFamilies:     []extensionsv1alpha1.IPFamily{extensionsv1alpha1.IPFamilyIPv4},
 		}
 
@@ -170,8 +170,8 @@ var _ = Describe("#Network", func() {
 					Mask: net.CIDRMask(networkServiceV6Mask, 128),
 				}
 
-				values.PodCIDR = &podCIDR
-				values.ServiceCIDR = &serviceCIDR
+				values.PodCIDRs = []net.IPNet{podCIDR, serviceCIDR}
+				values.ServiceCIDRs = []net.IPNet{serviceCIDR, podCIDR}
 				values.IPFamilies = []extensionsv1alpha1.IPFamily{extensionsv1alpha1.IPFamilyIPv6}
 
 				expected.Spec.PodCIDR = networkPodV6CIDR

@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -44,8 +45,12 @@ type Interface interface {
 	SetSSHPublicKey([]byte)
 	// ProviderStatus returns the generated status of the provider.
 	ProviderStatus() *runtime.RawExtension
-	// NodesCIDR returns the generated nodes CIDR of the provider.
-	NodesCIDR() *string
+	// NodesCIDRs returns the generated nodes CIDRs of the provider.
+	NodesCIDRs() []string
+	// ServicesCIDRs returns the generated services CIDRs of the provider.
+	ServicesCIDRs() []string
+	// PodsCIDRs returns the generated pods CIDRs of the provider.
+	PodsCIDRs() []string
 	// EgressCIDRs returns a list of CIDRs used as source IP by any traffic originating from the shoot's worker nodes.
 	EgressCIDRs() []string
 }
@@ -107,7 +112,9 @@ type infrastructure struct {
 
 	infrastructure *extensionsv1alpha1.Infrastructure
 	providerStatus *runtime.RawExtension
-	nodesCIDR      *string
+	nodesCIDRs     []string
+	servicesCIDRs  []string
+	podsCIDRs      []string
 	egressCIDRs    []string
 }
 
@@ -242,9 +249,19 @@ func (i *infrastructure) ProviderStatus() *runtime.RawExtension {
 	return i.providerStatus
 }
 
-// NodesCIDR returns the generated nodes CIDR of the provider.
-func (i *infrastructure) NodesCIDR() *string {
-	return i.nodesCIDR
+// NodesCIDRs returns the generated nodes CIDRs of the provider.
+func (i *infrastructure) NodesCIDRs() []string {
+	return i.nodesCIDRs
+}
+
+// ServicesCIDRs returns the generated services CIDRs of the provider.
+func (i *infrastructure) ServicesCIDRs() []string {
+	return i.servicesCIDRs
+}
+
+// PodsCIDRs returns the generated pods CIDRs of the provider.
+func (i *infrastructure) PodsCIDRs() []string {
+	return i.podsCIDRs
 }
 
 // EgressCIDRs returns a list of CIDRs used as source IP by any traffic originating from the shoot's worker nodes.
@@ -254,7 +271,22 @@ func (i *infrastructure) EgressCIDRs() []string {
 
 func (i *infrastructure) extractStatus(status extensionsv1alpha1.InfrastructureStatus) {
 	i.providerStatus = status.ProviderStatus
-	i.nodesCIDR = status.NodesCIDR
+	if status.NodesCIDR != nil {
+		nodes := *status.NodesCIDR
+		i.nodesCIDRs = []string{nodes}
+	}
+	if status.Networking != nil {
+		existingNodes := sets.New(i.nodesCIDRs...)
+		for _, n := range status.Networking.Nodes {
+			if !existingNodes.Has(n) {
+				i.nodesCIDRs = append(i.nodesCIDRs, n)
+			}
+		}
+		i.podsCIDRs = make([]string, len(status.Networking.Pods))
+		copy(i.podsCIDRs, status.Networking.Pods)
+		i.servicesCIDRs = make([]string, len(status.Networking.Services))
+		copy(i.servicesCIDRs, status.Networking.Services)
+	}
 	i.egressCIDRs = make([]string, len(status.EgressCIDRs))
 	copy(i.egressCIDRs, status.EgressCIDRs)
 }
