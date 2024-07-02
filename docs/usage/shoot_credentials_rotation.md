@@ -249,7 +249,7 @@ This will trigger a `Shoot` reconciliation and performs stage one.
 After it is completed, the `.status.credentials.rotation.serviceAccountKey.phase` is set to `Prepared`.
 
 Now you must update all API clients outside the cluster using a `ServiceAccount` token (such as the `kubeconfig`s on developer machines) to use a token issued by the new signing key.
-Gardener already generates new static token secrets for all `ServiceAccount`s in the cluster.
+Gardener already generates new secrets for those `ServiceAccount`s in the cluster, whose static token was automatically created by Kubernetes (typically before `v1.22` - [ref](https://github.com/kubernetes/website/blob/ce481bee92c7c1e110eb81207ec3883a975f9587/content/en/docs/reference/access-authn-authz/service-accounts-admin.md?plain=1#L216))
 However, if you need to create it manually, you can check out [this document](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#manually-create-a-service-account-api-token) for instructions.
 
 After updating all API clients, you can complete the rotation by annotating the shoot with the `rotate-serviceaccount-key-complete` operation:
