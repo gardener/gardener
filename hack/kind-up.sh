@@ -267,7 +267,7 @@ if [[ "$MULTI_ZONAL" == "true" ]]; then
   fi
   setup_loopback_device "${LOOPBACK_IP_ADDRESSES[@]}"
 elif [[ "$CLUSTER_NAME" == "gardener-operator-local" ]]; then
-  LOOPBACK_IP_ADDRESSES=(127.0.0.3)
+  LOOPBACK_IP_ADDRESSES=(172.18.255.1)
   if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
     LOOPBACK_IP_ADDRESSES+=(::3)
   fi

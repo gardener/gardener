@@ -29,7 +29,7 @@
   listenAddress: 127.0.0.1
 - containerPort: 31443
   hostPort: 443
-  listenAddress: 127.0.0.3
+  listenAddress: 172.18.255.1
 {{- end -}}
 {{- end -}}
 
