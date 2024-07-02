@@ -90,7 +90,7 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "sum(rate(coredns_dns_requests_total{pod=~\"$pod\"}[$__rate_interval])) by (exported_type)",
+          "expr": "sum(rate(coredns_dns_requests_total{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval])) by (exported_type)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -100,7 +100,7 @@
         },
         {
           "exemplar": false,
-          "expr": "sum(rate(coredns_dns_requests_total{pod=~\"$pod\"}[$__rate_interval])) by (proto)",
+          "expr": "sum(rate(coredns_dns_requests_total{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval])) by (proto)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -109,7 +109,7 @@
         },
         {
           "exemplar": false,
-          "expr": "sum(rate(coredns_dns_requests_total{pod=~\"$pod\"}[$__rate_interval])) by (zone)",
+          "expr": "sum(rate(coredns_dns_requests_total{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval])) by (zone)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -213,7 +213,7 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "sum(rate(coredns_dns_responses_total{pod=~\"$pod\"}[$__rate_interval])) by (rcode)",
+          "expr": "sum(rate(coredns_dns_responses_total{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval])) by (rcode)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -323,7 +323,7 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "histogram_quantile(0.99,sum(rate(coredns_dns_request_duration_seconds_bucket{pod=~\"$pod\"}[$__rate_interval])) by (le, zone))",
+          "expr": "histogram_quantile(0.99,sum(rate(coredns_dns_request_duration_seconds_bucket{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval])) by (le, zone))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -413,7 +413,7 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "sum by (le) (rate(coredns_dns_request_duration_seconds_bucket{pod=~\"$pod\"}[$__rate_interval]))",
+          "expr": "sum by (le) (rate(coredns_dns_request_duration_seconds_bucket{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval]))",
           "format": "heatmap",
           "interval": "",
           "intervalFactor": 2,
@@ -518,7 +518,7 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "sum(rate(coredns_cache_hits_total{pod=~\"$pod\"}[$__rate_interval])) by(exported_type)",
+          "expr": "sum(rate(coredns_cache_hits_total{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval])) by(exported_type)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -528,7 +528,7 @@
         },
         {
           "exemplar": false,
-          "expr": "sum(rate(coredns_cache_misses_total{pod=~\"$pod\"}[$__rate_interval]))",
+          "expr": "sum(rate(coredns_cache_misses_total{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -632,7 +632,7 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "sum(coredns_cache_entries{pod=~\"$pod\"}) by (exported_type, zones)",
+          "expr": "sum(coredns_cache_entries{job=~\"$job\", pod=~\"$pod\"}) by (exported_type, zones)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -751,7 +751,7 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{pod=~\"$pod\", proxy_name=\"forward\"}[$__rate_interval])) by (to)",
+          "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{job=~\"$job\", pod=~\"$pod\", proxy_name=\"forward\"}[$__rate_interval])) by (to)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -856,7 +856,7 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{pod=~\"$pod\", proxy_name=\"forward\"}[$__rate_interval])) by (to, rcode)",
+          "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{job=~\"$job\", pod=~\"$pod\", proxy_name=\"forward\"}[$__rate_interval])) by (to, rcode)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -972,7 +972,7 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "sum(rate(coredns_kubernetes_dns_programming_duration_seconds_count{pod=~\"$pod\"}[$__rate_interval])) by (service_kind)",
+          "expr": "sum(rate(coredns_kubernetes_dns_programming_duration_seconds_count{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval])) by (service_kind)",
           "interval": "",
           "legendFormat": "{{service_kind}}",
           "refId": "A"
@@ -1071,7 +1071,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(coredns_kubernetes_dns_programming_duration_seconds_sum{pod=~\"$pod\"}[$__rate_interval])) by(service_kind)",
+          "expr": "sum(rate(coredns_kubernetes_dns_programming_duration_seconds_sum{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval])) by(service_kind)",
           "interval": "",
           "legendFormat": "{{pod}}",
           "refId": "A"
@@ -1156,7 +1156,7 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "sum by (le) (rate(coredns_kubernetes_dns_programming_duration_seconds_bucket{pod=~\"$pod\"}[$__rate_interval]))",
+          "expr": "sum by (le) (rate(coredns_kubernetes_dns_programming_duration_seconds_bucket{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval]))",
           "format": "heatmap",
           "interval": "",
           "intervalFactor": 2,
