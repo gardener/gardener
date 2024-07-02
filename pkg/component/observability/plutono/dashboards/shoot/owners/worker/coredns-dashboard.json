@@ -919,7 +919,7 @@
       "id": 35,
       "panels": [],
       "repeat": "service_kind",
-      "title": "DNS Programming Latency",
+      "title": "CoreDNS DNS Programming Latency",
       "type": "row"
     },
     {
