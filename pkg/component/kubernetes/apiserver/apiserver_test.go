@@ -2621,7 +2621,7 @@ rules:
 						Name: "vpn-seed-client",
 						VolumeSource: corev1.VolumeSource{
 							Projected: &corev1.ProjectedVolumeSource{
-								DefaultMode: ptr.To[int32](400),
+								DefaultMode: ptr.To[int32](0640),
 								Sources: []corev1.VolumeProjection{
 									{
 										Secret: &corev1.SecretProjection{
