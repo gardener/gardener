@@ -1199,7 +1199,42 @@
   "templating": {
     "list": [
       {
-        "allValue": null,
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": [
+            "node-local-dns"
+          ],
+          "value": [
+            "node-local-dns"
+          ]
+        },
+        "datasource": "prometheus",
+        "definition": "label_values(coredns_build_info, job)",
+        "description": null,
+        "error": null,
+        "hide": 0,
+        "includeAll": true,
+        "label": "Job",
+        "multi": true,
+        "name": "job",
+        "options": [],
+        "query": {
+          "query": "label_values(coredns_build_info, job)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": ".*",
         "current": {
           "selected": true,
           "text": [
@@ -1210,21 +1245,21 @@
           ]
         },
         "datasource": "prometheus",
-        "definition": "label_values(coredns_build_info, pod)",
+        "definition": "label_values(coredns_build_info{job=~\"$job\"}, pod)",
         "description": null,
         "error": null,
         "hide": 0,
         "includeAll": true,
-        "label": "CoreDNS Pod",
+        "label": "Pod",
         "multi": true,
         "name": "pod",
         "options": [],
         "query": {
-          "query": "label_values(coredns_build_info, pod)",
-          "refId": "prometheus-pod-Variable-Query"
+          "query": "label_values(coredns_build_info{job=~\"$job\"}, pod)",
+          "refId": "StandardVariableQuery"
         },
         "refresh": 2,
-        "regex": "coredns.*",
+        "regex": "",
         "skipUrlSync": false,
         "sort": 0,
         "tagValuesQuery": "",
