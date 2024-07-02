@@ -986,7 +986,7 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "sum(rate(coredns_kubernetes_dns_programming_duration_seconds_count{pod=~\"$pod\", service_kind=~\"$service_kind\"}[$__rate_interval])) by (service_kind)",
+          "expr": "sum(rate(coredns_kubernetes_dns_programming_duration_seconds_count{pod=~\"$pod\"}[$__rate_interval])) by (service_kind)",
           "interval": "",
           "legendFormat": "{{service_kind}}",
           "refId": "A"
