@@ -12,7 +12,7 @@ In this case, `gardenlet` needs to be deployed manually, meaning that its [Helm 
 
 ### Kubernetes Cluster that Should Be Registered as a Seed Cluster
 
-- Verify that the cluster has a [supported Kubernetes version](../usage/supported_k8s_versions.md).
+- Verify that the cluster has a [supported Kubernetes version](../usage/shoot_updates_and_upgrades/supported_k8s_versions.md).
 
 - Determine the nodes, pods, and services CIDR of the cluster.
   You need to configure this information in the `Seed` configuration.
@@ -289,7 +289,7 @@ Furthermore, if an annotation is removed from the `seedConfig`, gardenlet does *
 
 ### Optional: Enable HA Mode
 
-You may consider running `gardenlet` with multiple replicas, especially if the seed cluster is configured to host [HA shoot control planes](../usage/shoot_high_availability.md).
+You may consider running `gardenlet` with multiple replicas, especially if the seed cluster is configured to host [HA shoot control planes](../usage/shoot_settings/shoot_high_availability.md).
 Therefore, the following Helm chart values define the degree of high availability you want to achieve for the `gardenlet` deployment.
 
 ```yaml

@@ -69,7 +69,7 @@ The following configuration options are enforced by Gardener API server for the 
 
 1. The vertical pod autoscaler should be enabled from the Shoot specification.
 
-   The vertical pod autoscaler is a prerequisite for a Seed cluster. It is possible to enable the VPA feature for a Seed [(using the Seed spec)](./seed_settings.md#vertical-pod-autoscaler) and for a Shoot [(using the Shoot spec)](../usage/shoot_autoscaling.md#vertical-pod-auto-scaling). In context of `ManagedSeed`s, enabling the VPA in the Seed spec (instead of the Shoot spec) offers less flexibility and increases the network transfer and cost. Due to these reasons, the Gardener API server enforces the vertical pod autoscaler to be enabled from the Shoot specification.
+   The vertical pod autoscaler is a prerequisite for a Seed cluster. It is possible to enable the VPA feature for a Seed [(using the Seed spec)](./seed_settings.md#vertical-pod-autoscaler) and for a Shoot [(using the Shoot spec)](../usage/shoot_settings/shoot_autoscaling.md#vertical-pod-auto-scaling). In context of `ManagedSeed`s, enabling the VPA in the Seed spec (instead of the Shoot spec) offers less flexibility and increases the network transfer and cost. Due to these reasons, the Gardener API server enforces the vertical pod autoscaler to be enabled from the Shoot specification.
 
 1. The nginx-ingress addon should not be enabled for a Shoot referred by a ManagedSeed.
 

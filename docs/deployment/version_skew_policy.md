@@ -109,4 +109,4 @@ Example 2:
 
 ## Supported Kubernetes Versions
 
-Please refer to [Supported Kubernetes Versions](../usage/supported_k8s_versions.md).
+Please refer to [Supported Kubernetes Versions](../usage/shoot_updates_and_upgrades/supported_k8s_versions.md).
