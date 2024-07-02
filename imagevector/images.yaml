@@ -445,7 +445,7 @@ images:
 - name: kubernetes-dashboard-metrics-scraper
   sourceRepository: github.com/kubernetes/dashboard
   repository: europe-docker.pkg.dev/gardener-project/releases/3rd/kubernetesui/metrics-scraper
-  tag: v1.0.7
+  tag: v1.0.9
   labels: *optionalAddonLabels
 
 # Miscellaneous
