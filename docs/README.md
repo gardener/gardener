@@ -113,6 +113,7 @@
 * [GEP-24: Shoot OIDC Issuer](proposals/24-shoot-oidc-issuer.md)
 * [GEP-25: Namespaced Cloud Profiles](proposals/25-namespaced-cloud-profiles.md)
 * [GEP-26: Workload Identity - Trust Based Authentication](proposals/26-workload-identity.md)
+* [GEP-27: Add Optional Bastion Section To CloudProfile](proposals/27-cloudprofile-bastion-section.md)
 
 ## Development
 
