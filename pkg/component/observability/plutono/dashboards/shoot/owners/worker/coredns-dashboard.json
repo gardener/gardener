@@ -919,14 +919,7 @@
       "id": 35,
       "panels": [],
       "repeat": "service_kind",
-      "scopedVars": {
-        "service_kind": {
-          "selected": true,
-          "text": "headless_with_selector",
-          "value": "headless_with_selector"
-        }
-      },
-      "title": "DNS Programming Latency ($service_kind)",
+      "title": "DNS Programming Latency",
       "type": "row"
     },
     {
@@ -972,13 +965,6 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "scopedVars": {
-        "service_kind": {
-          "selected": true,
-          "text": "headless_with_selector",
-          "value": "headless_with_selector"
-        }
-      },
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
@@ -1078,13 +1064,6 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "scopedVars": {
-        "service_kind": {
-          "selected": true,
-          "text": "headless_with_selector",
-          "value": "headless_with_selector"
-        }
-      },
       "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
@@ -1174,13 +1153,6 @@
       },
       "pluginVersion": "7.5.10",
       "reverseYBuckets": false,
-      "scopedVars": {
-        "service_kind": {
-          "selected": true,
-          "text": "headless_with_selector",
-          "value": "headless_with_selector"
-        }
-      },
       "targets": [
         {
           "exemplar": false,
