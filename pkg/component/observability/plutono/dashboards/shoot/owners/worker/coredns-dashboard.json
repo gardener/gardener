@@ -751,7 +751,7 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{job=~\"$job\", pod=~\"$pod\", proxy_name=\"forward\"}[$__rate_interval])) by (to)",
+          "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{job=~\"$job\", pod=~\"$pod\", proxy_name=\"forward\"}[$__rate_interval]) or rate(coredns_forward_requests_total{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval])) by (to)",
           "format": "time_series",
           "hide": false,
           "interval": "",
