@@ -38,7 +38,7 @@
       "dashes": false,
       "datasource": "prometheus",
       "decimals": null,
-      "description": "Rate of DNS Requests received by CoreDNS.\n\nNote: The `dot` zone is the local zone managed by the CoreDNS instance.",
+      "description": "Rate of DNS Requests received by DNS pods.\n\nNote: The `dot` zone is the local zone managed by the DNS instance.",
       "editable": true,
       "error": false,
       "fieldConfig": {
@@ -1411,6 +1411,6 @@
     ]
   },
   "timezone": "utc",
-  "title": "CoreDNS",
-  "uid": "core-dns"
+  "title": "DNS",
+  "uid": "dns"
 }
