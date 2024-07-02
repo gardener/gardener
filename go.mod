@@ -17,6 +17,7 @@ require (
 	github.com/gardener/hvpa-controller/api v0.15.0
 	github.com/gardener/machine-controller-manager v0.53.0
 	github.com/gardener/terminal-controller-manager v0.33.0
+	github.com/go-jose/go-jose/v4 v4.0.2
 	github.com/go-logr/logr v1.4.1
 	github.com/go-test/deep v1.1.0
 	github.com/gogo/protobuf v1.3.2
@@ -140,7 +141,7 @@ require (
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
-	github.com/google/cel-go v0.17.7 // indirect
+	github.com/google/cel-go v0.17.8 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/pprof v0.0.0-20240424215950-a892ee059fd6 // indirect
 	github.com/google/uuid v1.6.0 // indirect
@@ -248,6 +249,6 @@ require (
 	k8s.io/klog v1.0.0 // indirect
 	k8s.io/kms v0.29.6 // indirect
 	oras.land/oras-go v1.2.4 // indirect
-	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.28.0 // indirect
+	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.29.0 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 )

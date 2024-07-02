@@ -38,6 +38,9 @@ spec:
         {{- if (include "gardener-apiserver.hasAdmissionPlugins" .) }}
         checksum/configmap-gardener-apiserver-admission-config: {{ include (print $.Template.BasePath "/apiserver/configmap-admission-config.yaml") . | sha256sum }}
         {{- end }}
+        {{- if .Values.global.apiserver.workloadIdentity.token.signingKey.tls.key }}
+        checksum/secret-gardener-apiserver-workload-identity: {{ include (print $.Template.BasePath "/apiserver/secret-workload-identity.yaml") . | sha256sum }}
+        {{- end }}
         {{- if .Values.global.apiserver.podAnnotations }}
 {{ toYaml .Values.global.apiserver.podAnnotations | indent 8 }}
         {{- end }}
@@ -275,6 +278,9 @@ spec:
         {{- end }}
         - --workload-identity-token-min-expiration={{ .Values.global.apiserver.workloadIdentity.token.minExpiration }}
         - --workload-identity-token-max-expiration={{ .Values.global.apiserver.workloadIdentity.token.maxExpiration }}
+        {{- if or .Values.global.apiserver.workloadIdentity.token.signingKey.tlsSecretName .Values.global.apiserver.workloadIdentity.token.signingKey.tls.key }}
+        - --workload-identity-signing-key-file=/etc/gardener-apiserver/workload-identity/tls/tls.key
+        {{- end }}
         - --log-level={{ .Values.global.apiserver.logLevel | default "info"  }}
         - --log-format={{ .Values.global.apiserver.logFormat | default "json"  }}
         - --v={{ .Values.global.apiserver.logVerbosity | default "2"  }}
@@ -369,6 +375,10 @@ spec:
         {{- if (include "gardener-apiserver.hasWebhookTokens" .) }}
         - name: gardener-apiserver-admission-tokens
           mountPath: /var/run/secrets/admission-tokens
+        {{- end }}
+        {{- if or .Values.global.apiserver.workloadIdentity.token.signingKey.tlsSecretName .Values.global.apiserver.workloadIdentity.token.signingKey.tls.key }}
+        - name: gardener-apiserver-workload-identity
+          mountPath: /etc/gardener-apiserver/workload-identity/tls
         {{- end }}
       {{- if .Values.global.apiserver.etcd.useSidecar }}
       - name: etcd
@@ -490,6 +500,15 @@ spec:
               expirationSeconds: {{ .Values.global.apiserver.admission.mutatingWebhook.token.expirationSeconds }}
               audience: {{ .Values.global.apiserver.admission.mutatingWebhook.token.audience }}
           {{- end }}
+      {{- end }}
+      {{- if .Values.global.apiserver.workloadIdentity.token.signingKey.tlsSecretName }}
+      - name: gardener-apiserver-workload-identity
+        secret:
+          secretName: {{ .Values.global.apiserver.workloadIdentity.token.signingKey.tlsSecretName }}
+      {{- else if .Values.global.apiserver.workloadIdentity.token.signingKey.tls.key  }}
+      - name: gardener-apiserver-workload-identity
+        secret:
+          secretName: gardener-apiserver-workload-identity
       {{- end }}
 {{- if .Values.global.apiserver.etcd.useSidecar }}
 ---

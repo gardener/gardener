@@ -14,6 +14,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/security"
 	"github.com/gardener/gardener/pkg/apiserver/registry/security/workloadidentity"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 )
 
 // REST implements a RESTStorage for WorkloadIdentity.
@@ -28,12 +29,20 @@ type WorkloadIdentityStorage struct {
 }
 
 // NewStorage creates a new WorkloadIdentityStorage object.
-func NewStorage(optsGetter generic.RESTOptionsGetter, issuer string, minExpiration, maxExpiration time.Duration) WorkloadIdentityStorage {
+func NewStorage(
+	optsGetter generic.RESTOptionsGetter,
+	issuer,
+	clusterIdentity string,
+	minExpiration,
+	maxExpiration time.Duration,
+	signingKey any,
+	coreInformerFactory gardencoreinformers.SharedInformerFactory,
+) WorkloadIdentityStorage {
 	workloadIdentityRest := NewREST(optsGetter)
 
 	return WorkloadIdentityStorage{
 		WorkloadIdentity: workloadIdentityRest,
-		TokenRequest:     NewTokenRequestREST(workloadIdentityRest, issuer, minExpiration, maxExpiration),
+		TokenRequest:     NewTokenRequestREST(workloadIdentityRest, issuer, clusterIdentity, minExpiration, maxExpiration, signingKey, coreInformerFactory),
 	}
 }
 
