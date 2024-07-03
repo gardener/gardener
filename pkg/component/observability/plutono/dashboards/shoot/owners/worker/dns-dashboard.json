@@ -51,7 +51,7 @@
       "fillGradient": 0,
       "grid": {},
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 24,
         "x": 0,
         "y": 1
@@ -162,10 +162,10 @@
       "fillGradient": 0,
       "grid": {},
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 24,
         "x": 0,
-        "y": 8
+        "y": 9
       },
       "hiddenSeries": false,
       "id": 42,
@@ -272,10 +272,10 @@
       "fillGradient": 0,
       "grid": {},
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 24,
         "x": 0,
-        "y": 15
+        "y": 17
       },
       "hiddenSeries": false,
       "id": 41,
@@ -378,10 +378,10 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 24,
         "x": 0,
-        "y": 22
+        "y": 25
       },
       "hiddenSeries": false,
       "id": 16,
@@ -486,10 +486,10 @@
       "fillGradient": 0,
       "grid": {},
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 24,
         "x": 0,
-        "y": 29
+        "y": 33
       },
       "hiddenSeries": false,
       "id": 26,
@@ -597,10 +597,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 24,
         "x": 0,
-        "y": 36
+        "y": 41
       },
       "heatmap": {},
       "hideZeroBuckets": true,
@@ -657,7 +657,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 43
+        "y": 49
       },
       "id": 18,
       "panels": [],
@@ -683,10 +683,10 @@
       "fillGradient": 0,
       "grid": {},
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 24,
         "x": 0,
-        "y": 44
+        "y": 50
       },
       "hiddenSeries": false,
       "id": 6,
@@ -797,10 +797,10 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 24,
         "x": 0,
-        "y": 50
+        "y": 58
       },
       "hiddenSeries": false,
       "id": 2,
@@ -893,7 +893,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 57
+        "y": 66
       },
       "id": 14,
       "panels": [],
@@ -916,10 +916,10 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 24,
         "x": 0,
-        "y": 58
+        "y": 67
       },
       "hiddenSeries": false,
       "id": 23,
@@ -1021,10 +1021,10 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 24,
         "x": 0,
-        "y": 65
+        "y": 75
       },
       "hiddenSeries": false,
       "id": 12,
@@ -1116,7 +1116,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 72
+        "y": 83
       },
       "id": 35,
       "panels": [],
@@ -1138,10 +1138,10 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 24,
         "x": 0,
-        "y": 73
+        "y": 84
       },
       "hiddenSeries": false,
       "id": 32,
@@ -1237,10 +1237,10 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 24,
         "x": 0,
-        "y": 79
+        "y": 92
       },
       "hiddenSeries": false,
       "id": 33,
@@ -1345,7 +1345,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 86
+        "y": 100
       },
       "heatmap": {},
       "hideZeroBuckets": true,
@@ -1398,7 +1398,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 94
+        "y": 108
       },
       "id": 38,
       "panels": [],
@@ -1419,10 +1419,10 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 24,
         "x": 0,
-        "y": 95
+        "y": 109
       },
       "hiddenSeries": false,
       "id": 40,
@@ -1518,7 +1518,6 @@
         "allValue": ".*",
         "current": {
           "selected": true,
-          "tags": [],
           "text": [
             "All"
           ],
