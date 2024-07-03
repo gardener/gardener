@@ -1130,7 +1130,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
-      "description": "",
+      "description": "Note that this only captures the headless services with selector. ClusterIP and headless services without selector are not captured.\n\nhttps://github.com/coredns/coredns/pull/3171",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -1229,7 +1229,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
-      "description": "",
+      "description": "Note that this only captures the headless services with selector. ClusterIP and headless services without selector are not captured.\n\nhttps://github.com/coredns/coredns/pull/3171",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -1336,6 +1336,7 @@
       },
       "dataFormat": "tsbuckets",
       "datasource": null,
+      "description": "Note that this only captures the headless services with selector. ClusterIP and headless services without selector are not captured.\n\nhttps://github.com/coredns/coredns/pull/3171",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
