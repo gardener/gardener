@@ -487,7 +487,7 @@
       "grid": {},
       "gridPos": {
         "h": 7,
-        "w": 12,
+        "w": 24,
         "x": 0,
         "y": 29
       },
@@ -529,7 +529,7 @@
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "{{zone}} 99%",
+          "legendFormat": "99% {{zone}}",
           "refId": "A",
           "step": 60
         }
@@ -538,7 +538,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "DNS Requests Latency",
+      "title": "DNS Requests Latency by Zone",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -598,9 +598,9 @@
       },
       "gridPos": {
         "h": 7,
-        "w": 12,
-        "x": 12,
-        "y": 29
+        "w": 24,
+        "x": 0,
+        "y": 36
       },
       "heatmap": {},
       "hideZeroBuckets": true,
@@ -657,7 +657,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 36
+        "y": 43
       },
       "id": 18,
       "panels": [],
@@ -686,7 +686,7 @@
         "h": 6,
         "w": 24,
         "x": 0,
-        "y": 37
+        "y": 44
       },
       "hiddenSeries": false,
       "id": 6,
@@ -800,7 +800,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 43
+        "y": 50
       },
       "hiddenSeries": false,
       "id": 2,
@@ -893,7 +893,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 50
+        "y": 57
       },
       "id": 14,
       "panels": [],
@@ -919,7 +919,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 51
+        "y": 58
       },
       "hiddenSeries": false,
       "id": 23,
@@ -1024,7 +1024,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 58
+        "y": 65
       },
       "hiddenSeries": false,
       "id": 12,
@@ -1116,7 +1116,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 65
+        "y": 72
       },
       "id": 35,
       "panels": [],
@@ -1141,7 +1141,7 @@
         "h": 6,
         "w": 24,
         "x": 0,
-        "y": 66
+        "y": 73
       },
       "hiddenSeries": false,
       "id": 32,
@@ -1240,7 +1240,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 72
+        "y": 79
       },
       "hiddenSeries": false,
       "id": 33,
@@ -1344,7 +1344,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 79
+        "y": 86
       },
       "heatmap": {},
       "hideZeroBuckets": true,
@@ -1397,7 +1397,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 87
+        "y": 94
       },
       "id": 38,
       "panels": [],
@@ -1421,7 +1421,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 88
+        "y": 95
       },
       "hiddenSeries": false,
       "id": 40,
