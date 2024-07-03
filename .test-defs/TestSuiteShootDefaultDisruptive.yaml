@@ -24,4 +24,4 @@ spec:
       -ginkgo.focus="\[DEFAULT\].*\[DISRUPTIVE\]"
       -ginkgo.skip="\[SERIAL\]"
 
-  image: golang:1.22.4
+  image: golang:1.22.5

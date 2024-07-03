@@ -1,5 +1,5 @@
 # builder
-FROM golang:1.22.4 AS builder
+FROM golang:1.22.5 AS builder
 ARG GOPROXY=https://proxy.golang.org,direct
 ENV GOPROXY=$GOPROXY
 WORKDIR /go/src/github.com/gardener/gardener
