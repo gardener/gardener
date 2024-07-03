@@ -1402,7 +1402,7 @@
       },
       "id": 38,
       "panels": [],
-      "title": "NodeLocalDNS Node Cache Error",
+      "title": "Node Local DNS Node Cache Errors",
       "type": "row"
     },
     {
@@ -1411,7 +1411,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
-      "description": "Number of errors occurred during node cache operation",
+      "description": "Number of errors occurred during node cache operation.\n\nThis metric is specific for the Node Local DNS, which is a wrapper around CoreDNS: https://github.com/kubernetes/dns/blob/master/cmd/node-cache/app/metrics.go",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -1457,7 +1457,7 @@
           "exemplar": true,
           "expr": "sum(rate(coredns_nodecache_setup_errors_total{job=~\"$job-errors\", pod=~\"$pod\"}[$__rate_interval])) by (errortype)",
           "interval": "",
-          "legendFormat": "Type: {{errortype}}",
+          "legendFormat": "{{errortype}}",
           "refId": "A"
         }
       ],
@@ -1465,7 +1465,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Node Cache Errors",
+      "title": "Node Cache Errors by Error Type",
       "tooltip": {
         "shared": true,
         "sort": 0,
