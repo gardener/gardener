@@ -1518,11 +1518,12 @@
         "allValue": ".*",
         "current": {
           "selected": true,
+          "tags": [],
           "text": [
-            "node-local-dns"
+            "All"
           ],
           "value": [
-            "node-local-dns"
+            "$__all"
           ]
         },
         "datasource": "prometheus",
