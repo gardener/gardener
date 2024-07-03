@@ -89,11 +89,12 @@ func (e *ensurer) EnsureAdditionalProvisionFiles(_ context.Context, _ extensions
 	}
 
 	for _, mirror := range mirrors {
-		// appendFileIfNotPresent in used instead of appendUniqueFile intentionally to allow enabling and testing the registry-cache extension in local setup.
-		// A file appended by the registry-cache extension is always picked up because:
-		// - if a file is already appended by the registry-cache extension, provider-local won't overwrite it (appendFileIfNotPresent)
-		// - if a file is already appended by provider-local, the registry-cache extension will overwrite it (appendUniqueFile)
-		appendFileIfNotPresent(new, extensionsv1alpha1.File{
+		// provider-local hosts.toml files are added to the OperatingSystemConfig with purpose "provision".
+		// registry-cache extension hosts.toml files are added to the OperatingSystemConfig with purpose "reconcile".
+		// Hence, there is no conflict between provider-local and registry-cache.
+		// hosts.toml files added by the registry-cache extension should always overwrite the provider-local ones
+		// to allow testing the extension in local setup.
+		*new = webhook.EnsureFileWithPath(*new, extensionsv1alpha1.File{
 			Path:        filepath.Join("/etc/containerd/certs.d", mirror.UpstreamHost, "hosts.toml"),
 			Permissions: ptr.To[int32](0644),
 			Content: extensionsv1alpha1.FileContent{
@@ -105,20 +106,4 @@ func (e *ensurer) EnsureAdditionalProvisionFiles(_ context.Context, _ extensions
 	}
 
 	return nil
-}
-
-func appendFileIfNotPresent(files *[]extensionsv1alpha1.File, file extensionsv1alpha1.File) {
-	if !containsFilePath(files, file.Path) {
-		*files = append(*files, file)
-	}
-}
-
-func containsFilePath(files *[]extensionsv1alpha1.File, filePath string) bool {
-	for _, f := range *files {
-		if f.Path == filePath {
-			return true
-		}
-	}
-
-	return false
 }
