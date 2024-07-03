@@ -7,7 +7,7 @@ require (
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/ahmetb/gen-crd-api-reference-docs v0.3.0
 	github.com/andybalholm/brotli v1.1.0
-	github.com/containerd/containerd v1.7.18
+	github.com/containerd/containerd v1.7.19
 	github.com/coreos/go-systemd/v22 v22.5.0
 	github.com/distribution/distribution/v3 v3.0.0-alpha.1
 	github.com/fluent/fluent-operator/v2 v2.8.0
