@@ -94,26 +94,228 @@
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "By Record: {{exported_type}}",
+          "legendFormat": "{{exported_type}}",
           "refId": "A",
           "step": 60
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "DNS Requests by Record",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "cumulative"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:149",
+          "decimals": null,
+          "format": "reqps",
+          "label": "",
+          "logBase": 1,
+          "max": null,
+          "min": 0,
+          "show": true
         },
+        {
+          "$$hashKey": "object:150",
+          "format": "pps",
+          "logBase": 1,
+          "max": null,
+          "min": 0,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "prometheus",
+      "decimals": null,
+      "description": "Rate of DNS Requests received by DNS pods.\n\nNote: The `dot` zone is the local zone managed by the DNS instance.",
+      "editable": true,
+      "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "links": []
+        },
+        "overrides": []
+      },
+      "fill": 0,
+      "fillGradient": 0,
+      "grid": {},
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 8
+      },
+      "hiddenSeries": false,
+      "id": 42,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": true,
+        "max": true,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "sort": "current",
+        "sortDesc": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.5.31",
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
         {
           "exemplar": false,
           "expr": "sum(rate(coredns_dns_requests_total{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval])) by (proto)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "By Protocol: {{proto}}",
+          "legendFormat": "{{proto}}",
           "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "DNS Requests by Protocol",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "cumulative"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:149",
+          "decimals": null,
+          "format": "reqps",
+          "label": "",
+          "logBase": 1,
+          "max": null,
+          "min": 0,
+          "show": true
         },
+        {
+          "$$hashKey": "object:150",
+          "format": "pps",
+          "logBase": 1,
+          "max": null,
+          "min": 0,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "prometheus",
+      "decimals": null,
+      "description": "Rate of DNS Requests received by DNS pods.\n\nNote: The `dot` zone is the local zone managed by the DNS instance.",
+      "editable": true,
+      "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "links": []
+        },
+        "overrides": []
+      },
+      "fill": 0,
+      "fillGradient": 0,
+      "grid": {},
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 15
+      },
+      "hiddenSeries": false,
+      "id": 41,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": true,
+        "max": true,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "sort": "current",
+        "sortDesc": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.5.31",
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
         {
           "exemplar": false,
           "expr": "sum(rate(coredns_dns_requests_total{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval])) by (zone)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "By Zone: {{zone}}",
+          "legendFormat": "{{zone}}",
           "refId": "C"
         }
       ],
@@ -121,7 +323,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "DNS Requests",
+      "title": "DNS Requests by Zone",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -179,7 +381,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 8
+        "y": 22
       },
       "hiddenSeries": false,
       "id": 16,
@@ -287,7 +489,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 15
+        "y": 29
       },
       "hiddenSeries": false,
       "id": 26,
@@ -398,7 +600,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 15
+        "y": 29
       },
       "heatmap": {},
       "hideZeroBuckets": true,
@@ -455,7 +657,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 22
+        "y": 36
       },
       "id": 18,
       "panels": [],
@@ -484,7 +686,7 @@
         "h": 6,
         "w": 24,
         "x": 0,
-        "y": 23
+        "y": 37
       },
       "hiddenSeries": false,
       "id": 6,
@@ -598,7 +800,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 29
+        "y": 43
       },
       "hiddenSeries": false,
       "id": 2,
@@ -691,7 +893,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 36
+        "y": 50
       },
       "id": 14,
       "panels": [],
@@ -717,7 +919,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 37
+        "y": 51
       },
       "hiddenSeries": false,
       "id": 23,
@@ -822,7 +1024,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 44
+        "y": 58
       },
       "hiddenSeries": false,
       "id": 12,
@@ -914,7 +1116,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 51
+        "y": 65
       },
       "id": 35,
       "panels": [],
@@ -939,7 +1141,7 @@
         "h": 6,
         "w": 24,
         "x": 0,
-        "y": 52
+        "y": 66
       },
       "hiddenSeries": false,
       "id": 32,
@@ -1038,7 +1240,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 58
+        "y": 72
       },
       "hiddenSeries": false,
       "id": 33,
@@ -1142,7 +1344,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 65
+        "y": 79
       },
       "heatmap": {},
       "hideZeroBuckets": true,
@@ -1195,7 +1397,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 73
+        "y": 87
       },
       "id": 38,
       "panels": [],
@@ -1219,7 +1421,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 74
+        "y": 88
       },
       "hiddenSeries": false,
       "id": 40,
