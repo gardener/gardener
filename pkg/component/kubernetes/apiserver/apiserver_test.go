@@ -2658,7 +2658,10 @@ rules:
 					corev1.Volume{
 						Name: "vpn-seed-tlsauth",
 						VolumeSource: corev1.VolumeSource{
-							Secret: &corev1.SecretVolumeSource{SecretName: secretNameVPNSeedServerTLSAuth},
+							Secret: &corev1.SecretVolumeSource{
+								SecretName:  secretNameVPNSeedServerTLSAuth,
+								DefaultMode: ptr.To[int32](0640),
+							},
 						},
 					},
 					corev1.Volume{
