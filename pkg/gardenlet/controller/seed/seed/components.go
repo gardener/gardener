@@ -589,7 +589,6 @@ func (r *Reconciler) newPlutono(seed *seedpkg.Seed, secretsManager secretsmanage
 		false,
 		false,
 		false,
-		false,
 		wildcardCertName,
 	)
 }

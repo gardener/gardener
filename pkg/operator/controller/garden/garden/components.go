@@ -902,7 +902,6 @@ func (r *Reconciler) newPlutono(secretsManager secretsmanager.Interface, ingress
 		true,
 		false,
 		false,
-		false,
 		wildcardCertSecretName,
 	)
 }

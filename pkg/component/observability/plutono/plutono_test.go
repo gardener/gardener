@@ -688,10 +688,9 @@ status:
 				testDashboardConfigMap(dashboardsConfigMap, 35, values)
 			})
 
-			Context("w/ include istio, node-local-dns, mcm, ha-vpn, vpa", func() {
+			Context("w/ include istio, mcm, ha-vpn, vpa", func() {
 				BeforeEach(func() {
 					values.IncludeIstioDashboards = true
-					values.NodeLocalDNSEnabled = true
 					values.VPNHighAvailabilityEnabled = true
 					values.VPAEnabled = true
 				})
@@ -714,7 +713,7 @@ status:
 
 					dashboardsConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "plutono-dashboards", Namespace: namespace}}
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardsConfigMap), dashboardsConfigMap)).To(Succeed())
-					testDashboardConfigMap(dashboardsConfigMap, 38, values)
+					testDashboardConfigMap(dashboardsConfigMap, 37, values)
 				})
 			})
 
