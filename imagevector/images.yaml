@@ -434,7 +434,7 @@ images:
 - name: kubernetes-dashboard
   sourceRepository: github.com/kubernetes/dashboard
   repository: europe-docker.pkg.dev/gardener-project/releases/3rd/kubernetesui/dashboard
-  tag: v2.5.1
+  tag: v2.7.0
   labels: &optionalAddonLabels
   - name: cloud.gardener.cnudie/dso/scanning-hints/binary_id/v1
     value:
