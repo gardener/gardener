@@ -659,7 +659,7 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 			Name: volumeNameAPIServerAccess,
 			VolumeSource: corev1.VolumeSource{
 				Projected: &corev1.ProjectedVolumeSource{
-					DefaultMode: ptr.To[int32](420),
+					DefaultMode: ptr.To[int32](0640),
 					Sources: []corev1.VolumeProjection{
 						{
 							ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
@@ -697,7 +697,7 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 			Name: volumeNameVPNSeedClient,
 			VolumeSource: corev1.VolumeSource{
 				Projected: &corev1.ProjectedVolumeSource{
-					DefaultMode: ptr.To[int32](400),
+					DefaultMode: ptr.To[int32](0640),
 					Sources: []corev1.VolumeProjection{
 						{
 							Secret: &corev1.SecretProjection{
@@ -734,7 +734,10 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 		{
 			Name: volumeNameVPNSeedTLSAuth,
 			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{SecretName: secretHAVPNSeedClientSeedTLSAuth.Name},
+				Secret: &corev1.SecretVolumeSource{
+					SecretName:  secretHAVPNSeedClientSeedTLSAuth.Name,
+					DefaultMode: ptr.To[int32](0640),
+				},
 			},
 		},
 		{
