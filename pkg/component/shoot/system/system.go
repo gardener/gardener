@@ -31,6 +31,7 @@ import (
 	corednsconstants "github.com/gardener/gardener/pkg/component/networking/coredns/constants"
 	nodelocaldnsconstants "github.com/gardener/gardener/pkg/component/networking/nodelocaldns/constants"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	netutils "github.com/gardener/gardener/pkg/utils/net"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
@@ -519,11 +520,8 @@ func (s *shootSystem) isEncryptedResource(resource, group string) bool {
 }
 
 func addNetworkToMap(name string, cidrs []net.IPNet, data map[string]string) {
-	networks := ""
-	for _, n := range cidrs {
-		networks += n.String() + ","
-	}
+	networks := netutils.JoinByComma(cidrs)
 	if networks != "" {
-		data[name] = strings.TrimSuffix(networks, ",")
+		data[name] = networks
 	}
 }

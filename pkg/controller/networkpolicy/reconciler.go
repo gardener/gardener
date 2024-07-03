@@ -384,24 +384,11 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToPrivateNetworks(ctx context.Co
 			}
 
 			if shoot.Status.Networking != nil {
-				existing := sets.New(shootNetworks...)
-				for _, n := range shoot.Status.Networking.Nodes {
-					if !existing.Has(n) {
-						shootNetworks = append(shootNetworks, n)
-					}
-				}
-				existing = sets.New(shootNetworks...)
-				for _, p := range shoot.Status.Networking.Pods {
-					if !existing.Has(p) {
-						shootNetworks = append(shootNetworks, p)
-					}
-				}
-				existing = sets.New(shootNetworks...)
-				for _, s := range shoot.Status.Networking.Services {
-					if !existing.Has(s) {
-						shootNetworks = append(shootNetworks, s)
-					}
-				}
+				networks := sets.New(shootNetworks...)
+				networks.Insert(shoot.Status.Networking.Nodes...)
+				networks.Insert(shoot.Status.Networking.Pods...)
+				networks.Insert(shoot.Status.Networking.Services...)
+				shootNetworks = networks.UnsortedList()
 			}
 
 			if gardencorev1beta1.IsIPv4SingleStack(shoot.Spec.Networking.IPFamilies) {

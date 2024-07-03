@@ -7,7 +7,6 @@ package proxy
 import (
 	_ "embed"
 	"fmt"
-	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	appsv1 "k8s.io/api/apps/v1"
@@ -28,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	netutils "github.com/gardener/gardener/pkg/utils/net"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
@@ -459,11 +459,7 @@ func (k *kubeProxy) getRawComponentConfig() (string, error) {
 	}
 
 	if !k.values.IPVSEnabled && len(k.values.PodNetworkCIDRs) > 0 {
-		pods := ""
-		for _, p := range k.values.PodNetworkCIDRs {
-			pods += p.String() + ","
-		}
-		config.ClusterCIDR = strings.TrimSuffix(pods, ",")
+		config.ClusterCIDR = netutils.JoinByComma(k.values.PodNetworkCIDRs)
 	}
 
 	return NewConfigCodec().Encode(config)

@@ -3426,7 +3426,7 @@ InfrastructureStatusNetworking
 </td>
 <td>
 <em>(Optional)</em>
-<p>Networking is a structure containing information about the node, service and pod network ranges.</p>
+<p>Networking contains information about cluster networking such as CIDRs.</p>
 </td>
 </tr>
 </tbody>

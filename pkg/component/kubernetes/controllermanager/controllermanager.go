@@ -43,6 +43,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	netutils "github.com/gardener/gardener/pkg/utils/net"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
@@ -665,16 +666,10 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 			command = append(command, fmt.Sprintf("--node-cidr-mask-size=%d", *k.values.Config.NodeCIDRMaskSize))
 		}
 
-		podNetwork := ""
-		for _, cidr := range k.values.PodNetworks {
-			podNetwork += cidr.String() + ","
-		}
-		podNetwork = strings.TrimSuffix(podNetwork, ",")
-
 		command = append(command,
 			"--allocate-node-cidrs=true",
 			"--attach-detach-reconcile-sync-period=1m0s",
-			"--cluster-cidr="+podNetwork,
+			"--cluster-cidr="+netutils.JoinByComma(k.values.PodNetworks),
 			fmt.Sprintf("--cluster-signing-kubelet-client-cert-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyCertificateCA),
 			fmt.Sprintf("--cluster-signing-kubelet-client-key-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyPrivateKeyCA),
 			fmt.Sprintf("--cluster-signing-kubelet-serving-cert-file=%s/%s", volumeMountPathCAKubelet, secrets.DataKeyCertificateCA),
@@ -783,12 +778,9 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 	)
 
 	if len(k.values.ServiceNetworks) > 0 {
-		serviceNetworks := ""
-		for _, cidr := range k.values.ServiceNetworks {
-			serviceNetworks += cidr.String() + ","
-		}
-		serviceNetworks = strings.TrimSuffix(serviceNetworks, ",")
-		command = append(command, fmt.Sprintf("--service-cluster-ip-range=%s", serviceNetworks))
+		command = append(command,
+			fmt.Sprintf("--service-cluster-ip-range=%s", netutils.JoinByComma(k.values.ServiceNetworks)),
+		)
 	}
 
 	command = append(command,

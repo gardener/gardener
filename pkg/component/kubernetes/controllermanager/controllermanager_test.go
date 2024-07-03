@@ -40,6 +40,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	netutils "github.com/gardener/gardener/pkg/utils/net"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -1036,16 +1037,10 @@ func commandForKubernetesVersion(
 			command = append(command, fmt.Sprintf("--node-cidr-mask-size=%d", *nodeCIDRMaskSize))
 		}
 
-		pods := ""
-		for _, p := range podNetwork {
-			pods += p.String() + ","
-		}
-		pods = strings.TrimSuffix(pods, ",")
-
 		command = append(command,
 			"--allocate-node-cidrs=true",
 			"--attach-detach-reconcile-sync-period=1m0s",
-			fmt.Sprintf("--cluster-cidr=%s", pods),
+			fmt.Sprintf("--cluster-cidr=%s", netutils.JoinByComma(podNetwork)),
 			"--cluster-signing-kubelet-client-cert-file=/srv/kubernetes/ca-client/ca.crt",
 			"--cluster-signing-kubelet-client-key-file=/srv/kubernetes/ca-client/ca.key",
 			"--cluster-signing-kubelet-serving-cert-file=/srv/kubernetes/ca-kubelet/ca.crt",
@@ -1175,13 +1170,8 @@ func commandForKubernetesVersion(
 	)
 
 	if serviceNetwork != nil {
-		services := ""
-		for _, s := range serviceNetwork {
-			services += s.String() + ","
-		}
-		services = strings.TrimSuffix(services, ",")
 		command = append(command,
-			fmt.Sprintf("--service-cluster-ip-range=%s", services),
+			fmt.Sprintf("--service-cluster-ip-range=%s", netutils.JoinByComma(serviceNetwork)),
 		)
 	}
 

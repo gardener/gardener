@@ -5208,6 +5208,17 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		Context("validate shoot networking status", func() {
+			It("should allow valid networking configuration", func() {
+				newShoot.Status.Networking = &core.NetworkingStatus{
+					Nodes:    []string{"10.250.0.0/16"},
+					Pods:     []string{"100.96.0.0/11"},
+					Services: []string{"100.64.0.0/13"},
+				}
+
+				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
+				Expect(errorList).To(BeEmpty())
+			})
+
 			It("should forbid invalid network CIDRs", func() {
 				invalidCIDR := "invalid-cidr"
 

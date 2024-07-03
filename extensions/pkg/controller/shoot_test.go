@@ -49,6 +49,20 @@ var _ = Describe("Shoot", func() {
 				},
 			},
 		}, GetPodNetwork, []string{cidr}),
+		Entry("pod cidr is given + shoot status, but different cidrs", &Cluster{
+			Shoot: &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Networking: &gardencorev1beta1.Networking{
+						Pods: &cidr,
+					},
+				},
+				Status: gardencorev1beta1.ShootStatus{
+					Networking: &gardencorev1beta1.NetworkingStatus{
+						Pods: []string{cidrV6},
+					},
+				},
+			},
+		}, GetPodNetwork, []string{cidr, cidrV6}),
 		Entry("dual-stack pod cidr in shoot status", &Cluster{
 			Shoot: &gardencorev1beta1.Shoot{
 				Status: gardencorev1beta1.ShootStatus{
@@ -81,6 +95,20 @@ var _ = Describe("Shoot", func() {
 				},
 			},
 		}, GetServiceNetwork, []string{cidr}),
+		Entry("service cidr is given + shoot status, but different cidrs", &Cluster{
+			Shoot: &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Networking: &gardencorev1beta1.Networking{
+						Services: &cidr,
+					},
+				},
+				Status: gardencorev1beta1.ShootStatus{
+					Networking: &gardencorev1beta1.NetworkingStatus{
+						Services: []string{cidrV6},
+					},
+				},
+			},
+		}, GetServiceNetwork, []string{cidr, cidrV6}),
 		Entry("dual-stack service cidr in shoot status", &Cluster{
 			Shoot: &gardencorev1beta1.Shoot{
 				Status: gardencorev1beta1.ShootStatus{
