@@ -355,7 +355,33 @@ spec:
                 properties:
                   apikey:
                     description: Your Datadog API key.
-                    type: string
+                    properties:
+                      valueFrom:
+                        description: ValueSource defines how to find a value's key.
+                        properties:
+                          secretKeyRef:
+                            description: Selects a key of a secret in the pod's namespace
+                            properties:
+                              key:
+                                description: The key of the secret to select from.  Must
+                                  be a valid secret key.
+                                type: string
+                              name:
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
+                                type: string
+                              optional:
+                                description: Specify whether the Secret or its key
+                                  must be defined
+                                type: boolean
+                            required:
+                            - key
+                            type: object
+                            x-kubernetes-map-type: atomic
+                        type: object
+                    type: object
                   compress:
                     description: |-
                       Compress  the payload in GZIP format.
@@ -661,6 +687,10 @@ spec:
                         description: Hostname to be used for TLS SNI extension
                         type: string
                     type: object
+                  totalLimitSize:
+                    description: Limit the maximum number of Chunks in the filesystem
+                      for the current output logical destination.
+                    type: string
                   traceError:
                     description: When enabled print the elasticsearch API calls to
                       stdout when elasticsearch returns an error
@@ -831,6 +861,11 @@ spec:
                   sharedKey:
                     description: A key string known by the remote Fluentd used for
                       authorization.
+                    type: string
+                  tag:
+                    description: |-
+                      Overwrite the tag as we transmit. This allows the receiving pipeline start
+                      fresh, or to attribute source.
                     type: string
                   timeAsInteger:
                     description: Set timestamps in integer format, it enable compatibility

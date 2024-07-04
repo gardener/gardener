@@ -171,8 +171,8 @@ github.com/fatih/color v1.16.0/go.mod h1:fL2Sau1YI5c0pdGEVCbKQbLXB6edEj1ZgiY4Nij
 github.com/felixge/httpsnoop v1.0.1/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
 github.com/felixge/httpsnoop v1.0.4 h1:NFTV2Zj1bL4mc9sqWACXbQFVBBg2W3GPvqp8/ESS2Wg=
 github.com/felixge/httpsnoop v1.0.4/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
-github.com/fluent/fluent-operator/v2 v2.8.0 h1:G6TB1Fq6wx+HflXmv2mc7bhj2MiDoT9OfAeq/XkPCgI=
-github.com/fluent/fluent-operator/v2 v2.8.0/go.mod h1:nGKS5Iryq98Jqt+Ixc8YSMmOzM/yNxD8Xwtt76DhmTg=
+github.com/fluent/fluent-operator/v2 v2.9.0 h1:VFGgRPOI+yxnOrTIAL6sgFCtc+quDda12iyVL1lRQag=
+github.com/fluent/fluent-operator/v2 v2.9.0/go.mod h1:Hthhi/3oO26udvro6t5foUx20PZAMn7WGUhSnEWUV9U=
 github.com/foxcpp/go-mockdns v1.0.0 h1:7jBqxd3WDWwi/6WhDvacvH1XsN3rOLXyHM1uhvIx6FI=
 github.com/foxcpp/go-mockdns v1.0.0/go.mod h1:lgRN6+KxQBawyIghpnl5CezHFGS9VLzvtVlwxvzXTQ4=
 github.com/frankban/quicktest v1.14.6 h1:7Xjx+VpznH+oBnejlPUj8oUpdxnVs4f8XU8WnHkI4W8=
