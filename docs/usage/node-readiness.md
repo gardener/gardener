@@ -1,3 +1,7 @@
+---
+title: Marking Node-Critical Components and csi-driver-node Pods
+---
+
 # Readiness of Shoot Worker Nodes
 
 ## Background

@@ -1,3 +1,8 @@
+---
+title: Audit a Kubernetes Cluster
+description: How to define a Custom Audit Policy through a `ConfigMap` and reference it in the shoot spec
+---
+
 # Audit a Kubernetes Cluster
 
 The shoot cluster is a Kubernetes cluster and its `kube-apiserver` handles the audit events. In order to define which audit events must be logged, a proper audit policy file must be passed to the Kubernetes API server. You could find more information about auditing a kubernetes cluster in the [Auditing](https://kubernetes.io/docs/tasks/debug-application-cluster/audit/) topic.

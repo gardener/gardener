@@ -1,3 +1,7 @@
+---
+title: Controlling the Kubernetes Versions for Specific Worker Pools
+---
+
 # Controlling the Kubernetes Versions for Specific Worker Pools
 
 Since Gardener `v1.36`, worker pools can have different Kubernetes versions specified than the control plane.

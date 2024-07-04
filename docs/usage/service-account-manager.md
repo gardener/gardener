@@ -1,3 +1,7 @@
+---
+description: The role that allows a user to create/update/delete ServiceAccounts in the project namespace
+---
+
 # Service Account Manager
 
 ## Overview

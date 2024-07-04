@@ -1,5 +1,5 @@
 ---
-title: CSI Components
+title: Necessary Labeling for Custom CSI Components
 ---
 
 # (Custom) CSI Components

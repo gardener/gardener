@@ -1,3 +1,7 @@
+---
+title: Supported Kubernetes Versions
+---
+
 # Supported Kubernetes Versions
 
 Currently, Gardener supports the following Kubernetes versions:

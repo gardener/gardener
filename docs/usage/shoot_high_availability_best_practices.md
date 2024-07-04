@@ -1,3 +1,7 @@
+---
+title: High Avaliability Best Practices
+---
+
 # Implementing High Availability and Tolerating Zone Outages
 
 Developing highly available workload that can tolerate a zone outage is no trivial task. You will find here various recommendations to get closer to that goal. While many recommendations are general enough, the examples are specific in how to achieve this in a Gardener-managed cluster and where/how to tweak the different control plane components. If you do not use Gardener, it may be still a worthwhile read.
