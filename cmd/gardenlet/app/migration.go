@@ -173,7 +173,7 @@ func cleanupDWDAccess(ctx context.Context, gardenClient client.Client, seedClien
 	var taskFns []flow.TaskFn
 
 	for _, shoot := range shootList.Items {
-		if !v1beta1helper.IsWorkerless(&shoot) || shoot.DeletionTimestamp != nil {
+		if !v1beta1helper.IsWorkerless(&shoot) || shoot.DeletionTimestamp != nil || shoot.Status.TechnicalID == "" {
 			continue
 		}
 
