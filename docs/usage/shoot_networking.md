@@ -1,5 +1,5 @@
 ---
-title: Shoot Networkin Configurations
+title: Shoot Networking Configurations
 description: Configuring Pod Network and maximum number of nodes and pods per node 
 ---
 

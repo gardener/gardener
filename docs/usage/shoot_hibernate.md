@@ -1,6 +1,6 @@
 ---
-title: Shoot Hybernation
-description: What is hybernation? Manual hybernation/wake up and specifying a hybernation schedule
+title: Shoot Hibernation
+description: What is hibernation? Manual hibernation/wake up and specifying a hibernation schedule
 ---
 
 # Hibernate a Cluster
