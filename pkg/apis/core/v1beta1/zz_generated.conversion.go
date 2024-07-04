@@ -2274,9 +2274,9 @@ func Convert_v1beta1_CARotation_To_core_CARotation(in *CARotation, out *core.CAR
 
 func autoConvert_core_CARotation_To_v1beta1_CARotation(in *core.CARotation, out *CARotation, s conversion.Scope) error {
 	out.Phase = CredentialsRotationPhase(in.Phase)
+	out.LastCompletionTime = (*metav1.Time)(unsafe.Pointer(in.LastCompletionTime))
 	out.LastInitiationTime = (*metav1.Time)(unsafe.Pointer(in.LastInitiationTime))
 	out.LastInitiationFinishedTime = (*metav1.Time)(unsafe.Pointer(in.LastInitiationFinishedTime))
-	out.LastCompletionTime = (*metav1.Time)(unsafe.Pointer(in.LastCompletionTime))
 	out.LastCompletionTriggeredTime = (*metav1.Time)(unsafe.Pointer(in.LastCompletionTriggeredTime))
 	return nil
 }
@@ -3097,9 +3097,9 @@ func Convert_v1beta1_ETCDEncryptionKeyRotation_To_core_ETCDEncryptionKeyRotation
 
 func autoConvert_core_ETCDEncryptionKeyRotation_To_v1beta1_ETCDEncryptionKeyRotation(in *core.ETCDEncryptionKeyRotation, out *ETCDEncryptionKeyRotation, s conversion.Scope) error {
 	out.Phase = CredentialsRotationPhase(in.Phase)
+	out.LastCompletionTime = (*metav1.Time)(unsafe.Pointer(in.LastCompletionTime))
 	out.LastInitiationTime = (*metav1.Time)(unsafe.Pointer(in.LastInitiationTime))
 	out.LastInitiationFinishedTime = (*metav1.Time)(unsafe.Pointer(in.LastInitiationFinishedTime))
-	out.LastCompletionTime = (*metav1.Time)(unsafe.Pointer(in.LastCompletionTime))
 	out.LastCompletionTriggeredTime = (*metav1.Time)(unsafe.Pointer(in.LastCompletionTriggeredTime))
 	return nil
 }
@@ -5908,9 +5908,9 @@ func Convert_v1beta1_ServiceAccountKeyRotation_To_core_ServiceAccountKeyRotation
 
 func autoConvert_core_ServiceAccountKeyRotation_To_v1beta1_ServiceAccountKeyRotation(in *core.ServiceAccountKeyRotation, out *ServiceAccountKeyRotation, s conversion.Scope) error {
 	out.Phase = CredentialsRotationPhase(in.Phase)
+	out.LastCompletionTime = (*metav1.Time)(unsafe.Pointer(in.LastCompletionTime))
 	out.LastInitiationTime = (*metav1.Time)(unsafe.Pointer(in.LastInitiationTime))
 	out.LastInitiationFinishedTime = (*metav1.Time)(unsafe.Pointer(in.LastInitiationFinishedTime))
-	out.LastCompletionTime = (*metav1.Time)(unsafe.Pointer(in.LastCompletionTime))
 	out.LastCompletionTriggeredTime = (*metav1.Time)(unsafe.Pointer(in.LastCompletionTriggeredTime))
 	return nil
 }
