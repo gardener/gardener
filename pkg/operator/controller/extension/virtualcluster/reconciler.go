@@ -30,7 +30,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
-	extensionutils "github.com/gardener/gardener/pkg/operator/controller/extension/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -142,12 +141,6 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, gardenClien
 }
 
 func (r *Reconciler) reconcileVirtualClusterResources(ctx context.Context, log logr.Logger, gardenClient client.Client, extension *operatorv1alpha1.Extension) error {
-	// merge extensions with defaults
-	extension, err := extensionutils.MergeExtensionSpecs(*extension)
-	if err != nil {
-		return fmt.Errorf("error merging extension spec: %w", err)
-	}
-
 	// return early if we do not have to make a deployment
 	if extension.Spec.Deployment == nil ||
 		extension.Spec.Deployment.ExtensionDeployment == nil ||

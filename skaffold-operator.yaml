@@ -238,6 +238,8 @@ build:
             - pkg/operator/features
             - pkg/operator/webhook
             - pkg/operator/webhook/defaulting
+            - pkg/operator/webhook/defaulting/garden
+            - pkg/operator/webhook/defaulting/extension
             - pkg/operator/webhook/validation
             - pkg/resourcemanager/apis/config
             - pkg/resourcemanager/apis/config/v1alpha1

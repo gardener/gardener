@@ -11,7 +11,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/json"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
@@ -53,38 +52,37 @@ func ExtensionSpecFor(name string) (Extension, bool) {
 	return spec, ok
 }
 
-// MergeExtensionSpecs takes an extension object. If a default spec for the given extension name is known, it merges it
+// ApplyExtensionSpec takes an extension object. If a default spec for the given extension name is known, it merges it
 // with the provided spec. The provided spec always overrides fields in the default spec. If a default spec is not
-// known, then the provided spec will be returned.
-func MergeExtensionSpecs(ext operatorv1alpha1.Extension) (*operatorv1alpha1.Extension, error) {
+// known, then no change is applied.
+func ApplyExtensionSpec(ext *operatorv1alpha1.Extension) error {
 	defaultSpec, ok := ExtensionSpecFor(ext.Name)
 	if !ok {
-		return ptr.To(ext), nil
+		return nil
 	}
 
 	defaultSpecJSON, err := json.Marshal(defaultSpec.ExtensionSpec)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal default extension spec: %w", err)
+		return fmt.Errorf("failed to marshal default extension spec: %w", err)
 	}
 
 	specJSON, err := json.Marshal(ext.Spec)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal extension spec: %w", err)
+		return fmt.Errorf("failed to marshal extension spec: %w", err)
 	}
 
 	resultJSON, err := strategicpatch.StrategicMergePatch(defaultSpecJSON, specJSON, &operatorv1alpha1.ExtensionSpec{})
 	if err != nil {
-		return nil, fmt.Errorf("failed to merge extension specs: %w", err)
+		return fmt.Errorf("failed to merge extension specs: %w", err)
 	}
 
 	var resultSpec operatorv1alpha1.ExtensionSpec
 	if err := json.Unmarshal(resultJSON, &resultSpec); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal extension spec: %w", err)
+		return fmt.Errorf("failed to unmarshal extension spec: %w", err)
 	}
 
-	result := ext.DeepCopy()
-	result.SetAnnotations(utils.MergeStringMaps(defaultSpec.Annotations, result.Annotations))
-	result.Spec = resultSpec
+	ext.SetAnnotations(utils.MergeStringMaps(defaultSpec.Annotations, ext.Annotations))
+	ext.Spec = resultSpec
 
-	return result, nil
+	return nil
 }

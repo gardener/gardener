@@ -16,15 +16,15 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/operator/webhook/defaulting"
+	"github.com/gardener/gardener/pkg/operator/webhook/defaulting/extension"
+	"github.com/gardener/gardener/pkg/operator/webhook/defaulting/garden"
 	"github.com/gardener/gardener/pkg/operator/webhook/validation"
 )
 
 // AddToManager adds all webhook handlers to the given manager.
 func AddToManager(mgr manager.Manager) error {
-	if err := (&defaulting.Handler{
-		Logger: mgr.GetLogger().WithName("webhook").WithName(defaulting.HandlerName),
-	}).AddToManager(mgr); err != nil {
-		return fmt.Errorf("failed adding %s webhook handler: %w", defaulting.HandlerName, err)
+	if err := defaulting.AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding defaulting webhook handlers: %w", err)
 	}
 
 	if err := (&validation.Handler{
@@ -89,14 +89,35 @@ func GetMutatingWebhookConfiguration(mode, url string) *admissionregistrationv1.
 		},
 		Webhooks: []admissionregistrationv1.MutatingWebhook{
 			{
-				Name:                    "defaulting.operator.gardener.cloud",
-				ClientConfig:            getClientConfig(defaulting.WebhookPath, mode, url),
+				Name:                    "garden.defaulting.operator.gardener.cloud",
+				ClientConfig:            getClientConfig(garden.WebhookPath, mode, url),
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
 				Rules: []admissionregistrationv1.RuleWithOperations{{
 					Rule: admissionregistrationv1.Rule{
 						APIGroups:   []string{operatorv1alpha1.SchemeGroupVersion.Group},
 						APIVersions: []string{operatorv1alpha1.SchemeGroupVersion.Version},
 						Resources:   []string{"gardens"},
+					},
+					Operations: []admissionregistrationv1.OperationType{
+						admissionregistrationv1.Create,
+						admissionregistrationv1.Update,
+						admissionregistrationv1.Delete,
+					},
+				}},
+				SideEffects:    &sideEffects,
+				FailurePolicy:  &failurePolicy,
+				MatchPolicy:    &matchPolicy,
+				TimeoutSeconds: ptr.To[int32](10),
+			},
+			{
+				Name:                    "extension.defaulting.operator.gardener.cloud",
+				ClientConfig:            getClientConfig(extension.WebhookPath, mode, url),
+				AdmissionReviewVersions: []string{"v1", "v1beta1"},
+				Rules: []admissionregistrationv1.RuleWithOperations{{
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{operatorv1alpha1.SchemeGroupVersion.Group},
+						APIVersions: []string{operatorv1alpha1.SchemeGroupVersion.Version},
+						Resources:   []string{"extensions"},
 					},
 					Operations: []admissionregistrationv1.OperationType{
 						admissionregistrationv1.Create,
