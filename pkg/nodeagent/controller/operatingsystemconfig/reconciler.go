@@ -95,7 +95,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	log.Info("Applying containerd configuration")
-	err = r.ReconcileContainerdConfig(ctx, log, osc.Spec.CRIConfig, oscChanges.containerd)
+	err = r.ReconcileContainerdConfig(ctx, osc.Spec.CRIConfig)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed reconciling containerd configuration: %w", err)
 	}
@@ -131,6 +131,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	mustRestartGardenerNodeAgent, err := r.executeUnitCommands(ctx, log, node, oscChanges)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed executing unit commands: %w", err)
+	}
+
+	// Containerd registries must only be registered after the node is almost completely prepared.
+	// Otherwise, failing registry readiness probes hinder the scheduling of cache and mirror pods within the cluster
+	// because there is no node ready to let them run on (esp. relevant during cluster creation).
+	log.Info("Applying containerd registries")
+	if err := r.ReconcileContainerdRegistries(ctx, log, oscChanges.containerd); err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed reconciling containerd registries: %w", err)
 	}
 
 	log.Info("Removing no longer needed files")

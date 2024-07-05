@@ -25,7 +25,7 @@ import (
 )
 
 // ReconcileContainerdConfig sets required values of the given containerd configuration.
-func (r *Reconciler) ReconcileContainerdConfig(ctx context.Context, log logr.Logger, criConfig *extensionsv1alpha1.CRIConfig, containerdChanges containerd) error {
+func (r *Reconciler) ReconcileContainerdConfig(ctx context.Context, criConfig *extensionsv1alpha1.CRIConfig) error {
 	if !extensionsv1alpha1helper.HasContainerdConfiguration(criConfig) {
 		return nil
 	}
@@ -46,15 +46,16 @@ func (r *Reconciler) ReconcileContainerdConfig(ctx context.Context, log logr.Log
 		return fmt.Errorf("failed to ensure containerd config: %w", err)
 	}
 
-	if err := r.ensureContainerdRegistries(ctx, log, containerdChanges.registries.desired); err != nil {
-		return fmt.Errorf("failed to clean up unused containerd registries: %w", err)
-	}
+	return nil
+}
 
-	if err := r.cleanupUnusedContainerdRegistries(log, containerdChanges.registries.deleted); err != nil {
+// ReconcileContainerdRegistries configures desired registries for containerd and cleans up abandoned ones.
+func (r *Reconciler) ReconcileContainerdRegistries(ctx context.Context, log logr.Logger, containerdChanges containerd) error {
+	if err := r.ensureContainerdRegistries(ctx, log, containerdChanges.registries.desired); err != nil {
 		return err
 	}
 
-	return nil
+	return r.cleanupUnusedContainerdRegistries(log, containerdChanges.registries.deleted)
 }
 
 const (
