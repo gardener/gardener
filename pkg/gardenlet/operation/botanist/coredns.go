@@ -32,14 +32,12 @@ func (b *Botanist) DefaultCoreDNS() (coredns.Interface, error) {
 	values := coredns.Values{
 		// resolve conformance test issue (https://github.com/kubernetes/kubernetes/blob/master/test/e2e/network/dns.go#L44)
 		// before changing
-		ClusterDomain:  gardencorev1beta1.DefaultDomain,
-		ClusterIP:      b.Shoot.Networks.CoreDNS.String(),
-		Image:          image.String(),
-		PodNetworkCIDR: b.Shoot.Networks.Pods.String(),
-		// NodeNetworkCIDR is set on deployment to handle dynamice node network CIDRs
+		ClusterDomain:                   gardencorev1beta1.DefaultDomain,
+		Image:                           image.String(),
 		AutoscalingMode:                 gardencorev1beta1.CoreDNSAutoscalingModeHorizontal,
 		SearchPathRewriteCommonSuffixes: getCommonSuffixesForRewriting(b.Shoot.GetInfo().Spec.SystemComponents),
 		KubernetesVersion:               b.Shoot.KubernetesVersion,
+		// Pod/node network CIDRs and cluster IPs are set on deployment to handle dynamic network CIDRs
 	}
 
 	if b.ShootUsesDNS() {
@@ -65,7 +63,9 @@ func (b *Botanist) DeployCoreDNS(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	b.Shoot.Components.SystemComponents.CoreDNS.SetNodeNetworkCIDR(b.Shoot.GetInfo().Spec.Networking.Nodes)
+	b.Shoot.Components.SystemComponents.CoreDNS.SetNodeNetworkCIDRs(b.Shoot.Networks.Nodes)
+	b.Shoot.Components.SystemComponents.CoreDNS.SetPodNetworkCIDRs(b.Shoot.Networks.Pods)
+	b.Shoot.Components.SystemComponents.CoreDNS.SetClusterIPs(b.Shoot.Networks.CoreDNS)
 	b.Shoot.Components.SystemComponents.CoreDNS.SetPodAnnotations(restartedAtAnnotations)
 
 	return b.Shoot.Components.SystemComponents.CoreDNS.Deploy(ctx)

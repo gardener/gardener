@@ -11,6 +11,7 @@ package mock
 
 import (
 	context "context"
+	net "net"
 	reflect "reflect"
 
 	seedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
@@ -83,16 +84,28 @@ func (mr *MockInterfaceMockRecorder) GetValues() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValues", reflect.TypeOf((*MockInterface)(nil).GetValues))
 }
 
-// SetNodeNetworkCIDR mocks base method.
-func (m *MockInterface) SetNodeNetworkCIDR(arg0 *string) {
+// SetNodeNetworkCIDRs mocks base method.
+func (m *MockInterface) SetNodeNetworkCIDRs(arg0 []net.IPNet) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetNodeNetworkCIDR", arg0)
+	m.ctrl.Call(m, "SetNodeNetworkCIDRs", arg0)
 }
 
-// SetNodeNetworkCIDR indicates an expected call of SetNodeNetworkCIDR.
-func (mr *MockInterfaceMockRecorder) SetNodeNetworkCIDR(arg0 any) *gomock.Call {
+// SetNodeNetworkCIDRs indicates an expected call of SetNodeNetworkCIDRs.
+func (mr *MockInterfaceMockRecorder) SetNodeNetworkCIDRs(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetNodeNetworkCIDR", reflect.TypeOf((*MockInterface)(nil).SetNodeNetworkCIDR), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetNodeNetworkCIDRs", reflect.TypeOf((*MockInterface)(nil).SetNodeNetworkCIDRs), arg0)
+}
+
+// SetPodNetworkCIDRs mocks base method.
+func (m *MockInterface) SetPodNetworkCIDRs(arg0 []net.IPNet) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetPodNetworkCIDRs", arg0)
+}
+
+// SetPodNetworkCIDRs indicates an expected call of SetPodNetworkCIDRs.
+func (mr *MockInterfaceMockRecorder) SetPodNetworkCIDRs(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetPodNetworkCIDRs", reflect.TypeOf((*MockInterface)(nil).SetPodNetworkCIDRs), arg0)
 }
 
 // SetSeedNamespaceObjectUID mocks base method.
@@ -105,6 +118,18 @@ func (m *MockInterface) SetSeedNamespaceObjectUID(arg0 types.UID) {
 func (mr *MockInterfaceMockRecorder) SetSeedNamespaceObjectUID(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSeedNamespaceObjectUID", reflect.TypeOf((*MockInterface)(nil).SetSeedNamespaceObjectUID), arg0)
+}
+
+// SetServiceNetworkCIDRs mocks base method.
+func (m *MockInterface) SetServiceNetworkCIDRs(arg0 []net.IPNet) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetServiceNetworkCIDRs", arg0)
+}
+
+// SetServiceNetworkCIDRs indicates an expected call of SetServiceNetworkCIDRs.
+func (mr *MockInterfaceMockRecorder) SetServiceNetworkCIDRs(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetServiceNetworkCIDRs", reflect.TypeOf((*MockInterface)(nil).SetServiceNetworkCIDRs), arg0)
 }
 
 // Wait mocks base method.

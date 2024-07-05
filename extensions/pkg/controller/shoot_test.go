@@ -19,10 +19,11 @@ var _ = Describe("Shoot", func() {
 	lastOperationReconcile := gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeReconcile}
 
 	cidr := "10.250.0.0/19"
+	cidrV6 := "2001:db8::/64"
 
-	DescribeTable("#GetPodNetwork",
-		func(cluster *Cluster, cidr string) {
-			Expect(GetPodNetwork(cluster)).To(Equal(cidr))
+	DescribeTable("#Get*Network",
+		func(cluster *Cluster, functionUnderTest func(*Cluster) []string, cidrs []string) {
+			Expect(functionUnderTest(cluster)).To(Equal(cidrs))
 		},
 
 		Entry("pod cidr is given", &Cluster{
@@ -33,7 +34,90 @@ var _ = Describe("Shoot", func() {
 					},
 				},
 			},
-		}, cidr),
+		}, GetPodNetwork, []string{cidr}),
+		Entry("pod cidr is given + shoot status", &Cluster{
+			Shoot: &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Networking: &gardencorev1beta1.Networking{
+						Pods: &cidr,
+					},
+				},
+				Status: gardencorev1beta1.ShootStatus{
+					Networking: &gardencorev1beta1.NetworkingStatus{
+						Pods: []string{cidr},
+					},
+				},
+			},
+		}, GetPodNetwork, []string{cidr}),
+		Entry("pod cidr is given + shoot status, but different cidrs", &Cluster{
+			Shoot: &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Networking: &gardencorev1beta1.Networking{
+						Pods: &cidr,
+					},
+				},
+				Status: gardencorev1beta1.ShootStatus{
+					Networking: &gardencorev1beta1.NetworkingStatus{
+						Pods: []string{cidrV6},
+					},
+				},
+			},
+		}, GetPodNetwork, []string{cidr, cidrV6}),
+		Entry("dual-stack pod cidr in shoot status", &Cluster{
+			Shoot: &gardencorev1beta1.Shoot{
+				Status: gardencorev1beta1.ShootStatus{
+					Networking: &gardencorev1beta1.NetworkingStatus{
+						Pods: []string{cidr, cidrV6},
+					},
+				},
+			},
+		}, GetPodNetwork, []string{cidr, cidrV6}),
+		Entry("service cidr is given", &Cluster{
+			Shoot: &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Networking: &gardencorev1beta1.Networking{
+						Services: &cidr,
+					},
+				},
+			},
+		}, GetServiceNetwork, []string{cidr}),
+		Entry("service cidr is given + shoot status", &Cluster{
+			Shoot: &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Networking: &gardencorev1beta1.Networking{
+						Services: &cidr,
+					},
+				},
+				Status: gardencorev1beta1.ShootStatus{
+					Networking: &gardencorev1beta1.NetworkingStatus{
+						Services: []string{cidr},
+					},
+				},
+			},
+		}, GetServiceNetwork, []string{cidr}),
+		Entry("service cidr is given + shoot status, but different cidrs", &Cluster{
+			Shoot: &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Networking: &gardencorev1beta1.Networking{
+						Services: &cidr,
+					},
+				},
+				Status: gardencorev1beta1.ShootStatus{
+					Networking: &gardencorev1beta1.NetworkingStatus{
+						Services: []string{cidrV6},
+					},
+				},
+			},
+		}, GetServiceNetwork, []string{cidr, cidrV6}),
+		Entry("dual-stack service cidr in shoot status", &Cluster{
+			Shoot: &gardencorev1beta1.Shoot{
+				Status: gardencorev1beta1.ShootStatus{
+					Networking: &gardencorev1beta1.NetworkingStatus{
+						Services: []string{cidr, cidrV6},
+					},
+				},
+			},
+		}, GetServiceNetwork, []string{cidr, cidrV6}),
 	)
 
 	DescribeTable("#IsHibernationEnabled",

@@ -40,6 +40,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	netutils "github.com/gardener/gardener/pkg/utils/net"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -59,8 +60,12 @@ var _ = Describe("KubeControllerManager", func() {
 		kubeControllerManager Interface
 		values                Values
 
-		_, podCIDR, _            = net.ParseCIDR("100.96.0.0/11")
-		_, serviceCIDR, _        = net.ParseCIDR("100.64.0.0/13")
+		_, podCIDR1, _           = net.ParseCIDR("100.96.0.0/11")
+		_, podCIDR2, _           = net.ParseCIDR("2001:db8::/64")
+		podCIDRs                 = []net.IPNet{*podCIDR1, *podCIDR2}
+		_, serviceCIDR1, _       = net.ParseCIDR("100.64.0.0/13")
+		_, serviceCIDR2, _       = net.ParseCIDR("2001:db8::/64")
+		serviceCIDRs             = []net.IPNet{*serviceCIDR1, *serviceCIDR2}
 		namespace                = "shoot--foo--bar"
 		version                  = "1.27.3"
 		semverVersion, _         = semver.NewVersion(version)
@@ -362,8 +367,8 @@ var _ = Describe("KubeControllerManager", func() {
 										config.NodeMonitorGracePeriod,
 										namespace,
 										isWorkerless,
-										serviceCIDR,
-										podCIDR,
+										serviceCIDRs,
+										podCIDRs,
 										getHorizontalPodAutoscalerConfig(config.HorizontalPodAutoscalerConfig),
 										kubernetesutils.FeatureGatesToCommandLineParameter(config.FeatureGates),
 										clusterSigningDuration,
@@ -527,8 +532,8 @@ namespace: kube-system
 			Config:                &kcmConfig,
 			PriorityClassName:     priorityClassName,
 			IsWorkerless:          isWorkerless,
-			PodNetwork:            podCIDR,
-			ServiceNetwork:        serviceCIDR,
+			PodNetworks:           podCIDRs,
+			ServiceNetworks:       serviceCIDRs,
 			ManagedResourceLabels: map[string]string{"foo": "bar"},
 		}
 		kubeControllerManager = New(
@@ -653,8 +658,8 @@ namespace: kube-system
 					PriorityClassName:      priorityClassName,
 					IsScaleDownDisabled:    isScaleDownDisabled,
 					IsWorkerless:           isWorkerless,
-					PodNetwork:             podCIDR,
-					ServiceNetwork:         serviceCIDR,
+					PodNetworks:            podCIDRs,
+					ServiceNetworks:        serviceCIDRs,
 					ClusterSigningDuration: clusterSigningDuration,
 					ControllerWorkers:      controllerWorkers,
 					ControllerSyncPeriods:  controllerSyncPeriods,
@@ -691,8 +696,8 @@ namespace: kube-system
 					PriorityClassName:      priorityClassName,
 					IsScaleDownDisabled:    isScaleDownDisabled,
 					IsWorkerless:           isWorkerless,
-					PodNetwork:             podCIDR,
-					ServiceNetwork:         serviceCIDR,
+					PodNetworks:            podCIDRs,
+					ServiceNetworks:        serviceCIDRs,
 					ClusterSigningDuration: clusterSigningDuration,
 					ControllerWorkers:      controllerWorkers,
 					ControllerSyncPeriods:  controllerSyncPeriods,
@@ -727,8 +732,8 @@ namespace: kube-system
 					Config:                 config,
 					PriorityClassName:      priorityClassName,
 					IsWorkerless:           workerless,
-					PodNetwork:             podCIDR,
-					ServiceNetwork:         serviceCIDR,
+					PodNetworks:            podCIDRs,
+					ServiceNetworks:        serviceCIDRs,
 					ClusterSigningDuration: clusterSigningDuration,
 					ControllerWorkers:      controllerWorkers,
 					ControllerSyncPeriods:  controllerSyncPeriods,
@@ -833,8 +838,8 @@ namespace: kube-system
 					PriorityClassName:   priorityClassName,
 					IsScaleDownDisabled: false,
 					IsWorkerless:        isWorkerless,
-					PodNetwork:          podCIDR,
-					ServiceNetwork:      serviceCIDR,
+					PodNetworks:         podCIDRs,
+					ServiceNetworks:     serviceCIDRs,
 					NamePrefix:          "virtual-garden-",
 				}
 				kubeControllerManager = New(
@@ -995,7 +1000,7 @@ func commandForKubernetesVersion(
 	nodeMonitorGracePeriod *metav1.Duration,
 	clusterName string,
 	isWorkerless bool,
-	serviceNetwork, podNetwork *net.IPNet,
+	serviceNetwork, podNetwork []net.IPNet,
 	horizontalPodAutoscalerConfig *gardencorev1beta1.HorizontalPodAutoscalerConfig,
 	featureGateFlags string,
 	clusterSigningDuration *time.Duration,
@@ -1035,7 +1040,7 @@ func commandForKubernetesVersion(
 		command = append(command,
 			"--allocate-node-cidrs=true",
 			"--attach-detach-reconcile-sync-period=1m0s",
-			fmt.Sprintf("--cluster-cidr=%s", podNetwork.String()),
+			fmt.Sprintf("--cluster-cidr=%s", netutils.JoinByComma(podNetwork)),
 			"--cluster-signing-kubelet-client-cert-file=/srv/kubernetes/ca-client/ca.crt",
 			"--cluster-signing-kubelet-client-key-file=/srv/kubernetes/ca-client/ca.key",
 			"--cluster-signing-kubelet-serving-cert-file=/srv/kubernetes/ca-kubelet/ca.crt",
@@ -1166,7 +1171,7 @@ func commandForKubernetesVersion(
 
 	if serviceNetwork != nil {
 		command = append(command,
-			fmt.Sprintf("--service-cluster-ip-range=%s", serviceNetwork.String()),
+			fmt.Sprintf("--service-cluster-ip-range=%s", netutils.JoinByComma(serviceNetwork)),
 		)
 	}
 

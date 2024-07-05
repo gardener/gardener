@@ -428,6 +428,8 @@ func ValidateShootStatusUpdate(newStatus, oldStatus core.ShootStatus) field.Erro
 		allErrs = append(allErrs, validateAdvertiseAddresses(newStatus.AdvertisedAddresses, fldPath.Child("advertisedAddresses"))...)
 	}
 
+	allErrs = append(allErrs, validateNetworkingStatus(newStatus.Networking, fldPath.Child("networking"))...)
+
 	return allErrs
 }
 
@@ -955,6 +957,40 @@ func validateNetworking(networking *core.Networking, workerless bool, fldPath *f
 
 		allErrs = append(allErrs, cidr.ValidateParse()...)
 		allErrs = append(allErrs, cidr.ValidateIPFamily(string(primaryIPFamily))...)
+		allErrs = append(allErrs, cidrvalidation.ValidateCIDRIsCanonical(path, cidr.GetCIDR())...)
+	}
+
+	return allErrs
+}
+
+func validateNetworkingStatus(networking *core.NetworkingStatus, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if networking == nil {
+		return allErrs
+	}
+
+	for i, n := range networking.Nodes {
+		path := fldPath.Child("nodes").Index(i)
+		cidr := cidrvalidation.NewCIDR(n, path)
+
+		allErrs = append(allErrs, cidr.ValidateParse()...)
+		allErrs = append(allErrs, cidrvalidation.ValidateCIDRIsCanonical(path, cidr.GetCIDR())...)
+	}
+
+	for i, p := range networking.Pods {
+		path := fldPath.Child("pods").Index(i)
+		cidr := cidrvalidation.NewCIDR(p, path)
+
+		allErrs = append(allErrs, cidr.ValidateParse()...)
+		allErrs = append(allErrs, cidrvalidation.ValidateCIDRIsCanonical(path, cidr.GetCIDR())...)
+	}
+
+	for i, s := range networking.Services {
+		path := fldPath.Child("services").Index(i)
+		cidr := cidrvalidation.NewCIDR(s, path)
+
+		allErrs = append(allErrs, cidr.ValidateParse()...)
 		allErrs = append(allErrs, cidrvalidation.ValidateCIDRIsCanonical(path, cidr.GetCIDR())...)
 	}
 

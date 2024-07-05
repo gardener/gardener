@@ -43,6 +43,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	netutils "github.com/gardener/gardener/pkg/utils/net"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
@@ -86,6 +87,10 @@ type Interface interface {
 	WaitForControllerToBeActive(ctx context.Context) error
 	// SetShootClient sets the shoot client used to deploy resources into the Shoot API server.
 	SetShootClient(c client.Client)
+	// SetServiceNetworks sets the service CIDRs of the shoot network.
+	SetServiceNetworks([]net.IPNet)
+	// SetPodNetworks sets the pod CIDRs of the shoot network.
+	SetPodNetworks([]net.IPNet)
 }
 
 // New creates a new instance of DeployWaiter for the kube-controller-manager.
@@ -134,10 +139,10 @@ type Values struct {
 	IsScaleDownDisabled bool
 	// IsWorkerless specifies whether the cluster has worker nodes.
 	IsWorkerless bool
-	// PodNetwork is the pod CIDR of the target cluster.
-	PodNetwork *net.IPNet
-	// ServiceNetwork is the service CIDR of the target cluster.
-	ServiceNetwork *net.IPNet
+	// PodNetworks are the pod CIDRs of the target cluster.
+	PodNetworks []net.IPNet
+	// ServiceNetworks are the service CIDRs of the target cluster.
+	ServiceNetworks []net.IPNet
 	// ClusterSigningDuration is the value for the `--cluster-signing-duration` flag.
 	ClusterSigningDuration *time.Duration
 	// ControllerWorkers is used for configuring the workers for controllers.
@@ -568,6 +573,14 @@ func (k *kubeControllerManager) SetRuntimeConfig(runtimeConfig map[string]bool) 
 	k.values.RuntimeConfig = runtimeConfig
 }
 
+func (k *kubeControllerManager) SetPodNetworks(pods []net.IPNet) {
+	k.values.PodNetworks = pods
+}
+
+func (k *kubeControllerManager) SetServiceNetworks(services []net.IPNet) {
+	k.values.ServiceNetworks = services
+}
+
 func (k *kubeControllerManager) emptyVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: k.values.NamePrefix + "kube-controller-manager-vpa", Namespace: k.namespace}}
 }
@@ -656,7 +669,7 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		command = append(command,
 			"--allocate-node-cidrs=true",
 			"--attach-detach-reconcile-sync-period=1m0s",
-			"--cluster-cidr="+k.values.PodNetwork.String(),
+			"--cluster-cidr="+netutils.JoinByComma(k.values.PodNetworks),
 			fmt.Sprintf("--cluster-signing-kubelet-client-cert-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyCertificateCA),
 			fmt.Sprintf("--cluster-signing-kubelet-client-key-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyPrivateKeyCA),
 			fmt.Sprintf("--cluster-signing-kubelet-serving-cert-file=%s/%s", volumeMountPathCAKubelet, secrets.DataKeyCertificateCA),
@@ -764,9 +777,9 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		fmt.Sprintf("--secure-port=%d", port),
 	)
 
-	if k.values.ServiceNetwork != nil {
+	if len(k.values.ServiceNetworks) > 0 {
 		command = append(command,
-			fmt.Sprintf("--service-cluster-ip-range=%s", k.values.ServiceNetwork.String()),
+			fmt.Sprintf("--service-cluster-ip-range=%s", netutils.JoinByComma(k.values.ServiceNetworks)),
 		)
 	}
 

@@ -3415,6 +3415,75 @@ be statically defined in the Shoot resource but must be computed dynamically.</p
 IPs may not be stable in which case the extension controller may opt to not populate this field.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>networking</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.InfrastructureStatusNetworking">
+InfrastructureStatusNetworking
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Networking contains information about cluster networking such as CIDRs.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.InfrastructureStatusNetworking">InfrastructureStatusNetworking
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.InfrastructureStatus">InfrastructureStatus</a>)
+</p>
+<p>
+<p>InfrastructureStatusNetworking is a structure containing information about the node, service and pod network ranges.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>pods</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Pods are the CIDRs of the pod network.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>nodes</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Nodes are the CIDRs of the node network.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>services</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Services are the CIDRs of the service network.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="extensions.gardener.cloud/v1alpha1.MachineDeployment">MachineDeployment

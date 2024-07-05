@@ -31,10 +31,8 @@ func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.Interface, error) {
 		ImageAPIServerProxy:      imageAPIServerProxy.String(),
 		ImageVPNSeedServer:       imageVPNSeedServer.String(),
 		Network: vpnseedserver.NetworkValues{
-			PodCIDR:     b.Shoot.Networks.Pods.String(),
-			ServiceCIDR: b.Shoot.Networks.Services.String(),
-			// NodeCIDR is set in DeployVPNServer to handle dynamice node network CIDRs
 			IPFamilies: b.Shoot.GetInfo().Spec.Networking.IPFamilies,
+			// Pod/service/node network CIDRs are set on deployment to handle dynamic network CIDRs
 		},
 		Replicas:                             b.Shoot.GetReplicas(1),
 		HighAvailabilityEnabled:              b.Shoot.VPNHighAvailabilityEnabled,
@@ -61,7 +59,9 @@ func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.Interface, error) {
 
 // DeployVPNServer deploys the vpn-seed-server.
 func (b *Botanist) DeployVPNServer(ctx context.Context) error {
-	b.Shoot.Components.ControlPlane.VPNSeedServer.SetNodeNetworkCIDR(b.Shoot.GetInfo().Spec.Networking.Nodes)
+	b.Shoot.Components.ControlPlane.VPNSeedServer.SetNodeNetworkCIDRs(b.Shoot.Networks.Nodes)
+	b.Shoot.Components.ControlPlane.VPNSeedServer.SetServiceNetworkCIDRs(b.Shoot.Networks.Services)
+	b.Shoot.Components.ControlPlane.VPNSeedServer.SetPodNetworkCIDRs(b.Shoot.Networks.Pods)
 	b.Shoot.Components.ControlPlane.VPNSeedServer.SetSeedNamespaceObjectUID(b.SeedNamespaceObject.UID)
 
 	return b.Shoot.Components.ControlPlane.VPNSeedServer.Deploy(ctx)

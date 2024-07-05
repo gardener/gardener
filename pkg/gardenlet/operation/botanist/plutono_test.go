@@ -76,8 +76,8 @@ var _ = Describe("Plutono", func() {
 				Shoot: &shootpkg.Shoot{
 					SeedNamespace: seedNamespace,
 					Networks: &shootpkg.Networks{
-						Pods:     &net.IPNet{},
-						Services: &net.IPNet{},
+						Pods:     []net.IPNet{},
+						Services: []net.IPNet{},
 					},
 					Components: &shootpkg.Components{
 						ControlPlane: &shootpkg.ControlPlane{

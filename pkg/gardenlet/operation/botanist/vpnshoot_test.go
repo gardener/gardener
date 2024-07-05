@@ -40,8 +40,8 @@ var _ = Describe("VPNShoot", func() {
 			botanist.SeedClientSet = kubernetesClient
 			botanist.Shoot = &shootpkg.Shoot{
 				Networks: &shootpkg.Networks{
-					Pods:     &net.IPNet{IP: []byte("192.168.0.0"), Mask: []byte("16")},
-					Services: &net.IPNet{IP: []byte("10.0.0.0"), Mask: []byte("24")},
+					Pods:     []net.IPNet{{IP: []byte("192.168.0.0"), Mask: []byte("16")}},
+					Services: []net.IPNet{{IP: []byte("10.0.0.0"), Mask: []byte("24")}},
 				},
 			}
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{

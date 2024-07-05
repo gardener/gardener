@@ -766,6 +766,19 @@ func (c *validationContext) validateShootNetworks(a admission.Attributes, worker
 				c.seed.Spec.Networks.Services,
 				workerless,
 			)...)
+
+			if c.shoot.Status.Networking != nil {
+				allErrs = append(allErrs, cidrvalidation.ValidateMultiNetworkDisjointedness(
+					field.NewPath("status", "networking"),
+					c.shoot.Status.Networking.Nodes,
+					c.shoot.Status.Networking.Pods,
+					c.shoot.Status.Networking.Services,
+					c.seed.Spec.Networks.Nodes,
+					c.seed.Spec.Networks.Pods,
+					c.seed.Spec.Networks.Services,
+					workerless,
+				)...)
+			}
 		}
 	}
 

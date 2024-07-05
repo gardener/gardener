@@ -207,6 +207,26 @@ spec:
                 - state
                 - type
                 type: object
+              networking:
+                description: Networking contains information about cluster networking
+                  such as CIDRs.
+                properties:
+                  nodes:
+                    description: Nodes are the CIDRs of the node network.
+                    items:
+                      type: string
+                    type: array
+                  pods:
+                    description: Pods are the CIDRs of the pod network.
+                    items:
+                      type: string
+                    type: array
+                  services:
+                    description: Services are the CIDRs of the service network.
+                    items:
+                      type: string
+                    type: array
+                type: object
               nodesCIDR:
                 description: |-
                   NodesCIDR is the CIDR of the node network that was optionally created by the acting extension controller.

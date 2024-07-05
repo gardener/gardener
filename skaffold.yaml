@@ -756,6 +756,7 @@ build:
             - pkg/utils/kubernetes/unstructured
             - pkg/utils/managedresources
             - pkg/utils/managedresources/builder
+            - pkg/utils/net
             - pkg/utils/retry
             - pkg/utils/secrets
             - pkg/utils/secrets/manager

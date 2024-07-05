@@ -27,10 +27,10 @@ import (
 	mockcontainerruntime "github.com/gardener/gardener/pkg/component/extensions/containerruntime/mock"
 	mockcontrolplane "github.com/gardener/gardener/pkg/component/extensions/controlplane/mock"
 	mockinfrastructure "github.com/gardener/gardener/pkg/component/extensions/infrastructure/mock"
+	mocknetwork "github.com/gardener/gardener/pkg/component/extensions/network/mock"
 	mockoperatingsystemconfig "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/mock"
 	mockworker "github.com/gardener/gardener/pkg/component/extensions/worker/mock"
 	mockbackupentry "github.com/gardener/gardener/pkg/component/garden/backupentry/mock"
-	mockcomponent "github.com/gardener/gardener/pkg/component/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/seed"
@@ -46,7 +46,7 @@ var _ = Describe("migration", func() {
 		controlPlane          *mockcontrolplane.MockInterface
 		controlPlaneExposure  *mockcontrolplane.MockInterface
 		infrastructure        *mockinfrastructure.MockInterface
-		network               *mockcomponent.MockDeployMigrateWaiter
+		network               *mocknetwork.MockInterface
 		operatingSystemConfig *mockoperatingsystemconfig.MockInterface
 		worker                *mockworker.MockInterface
 
@@ -65,7 +65,7 @@ var _ = Describe("migration", func() {
 		controlPlane = mockcontrolplane.NewMockInterface(ctrl)
 		controlPlaneExposure = mockcontrolplane.NewMockInterface(ctrl)
 		infrastructure = mockinfrastructure.NewMockInterface(ctrl)
-		network = mockcomponent.NewMockDeployMigrateWaiter(ctrl)
+		network = mocknetwork.NewMockInterface(ctrl)
 		operatingSystemConfig = mockoperatingsystemconfig.NewMockInterface(ctrl)
 		worker = mockworker.NewMockInterface(ctrl)
 

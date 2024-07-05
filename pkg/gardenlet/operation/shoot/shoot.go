@@ -17,6 +17,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -270,7 +271,7 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	}
 	shoot.WantsClusterAutoscaler = needsClusterAutoscaler
 
-	if shootObject.Spec.Networking != nil {
+	if shoot.IsWorkerless && shootObject.Spec.Networking != nil {
 		networks, err := ToNetworks(shootObject, shoot.IsWorkerless)
 		if err != nil {
 			return nil, err
@@ -519,44 +520,96 @@ func (s *Shoot) IsShootControlPlaneLoggingEnabled(c *config.GardenletConfigurati
 
 // ToNetworks return a network with computed cidrs and ClusterIPs
 // for a Shoot
-func ToNetworks(s *gardencorev1beta1.Shoot, workerless bool) (*Networks, error) {
+func ToNetworks(shoot *gardencorev1beta1.Shoot, workerless bool) (*Networks, error) {
 	var (
-		svc, pods *net.IPNet
-		err       error
+		services, pods, nodes []net.IPNet
+		apiServerIPs, dnsIPs  []net.IP
 	)
 
-	if s.Spec.Networking.Pods != nil {
-		_, pods, err = net.ParseCIDR(*s.Spec.Networking.Pods)
+	if shoot.Spec.Networking.Pods != nil {
+		_, p, err := net.ParseCIDR(*shoot.Spec.Networking.Pods)
 		if err != nil {
-			return nil, fmt.Errorf("cannot parse shoot's network cidr %w", err)
+			return nil, fmt.Errorf("cannot parse shoot's pod cidr %w", err)
 		}
+		pods = append(pods, *p)
 	} else if !workerless {
 		return nil, fmt.Errorf("shoot's pods cidr is empty")
 	}
 
-	if s.Spec.Networking.Services == nil {
+	if shoot.Spec.Networking.Services == nil {
 		return nil, fmt.Errorf("shoot's service cidr is empty")
 	}
 
-	_, svc, err = net.ParseCIDR(*s.Spec.Networking.Services)
+	_, s, err := net.ParseCIDR(*shoot.Spec.Networking.Services)
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse shoot's network cidr %w", err)
 	}
+	services = append(services, *s)
 
-	apiserver, err := utils.ComputeOffsetIP(svc, 1)
-	if err != nil {
-		return nil, fmt.Errorf("cannot calculate default/kubernetes ClusterIP: %w", err)
+	if shoot.Spec.Networking.Nodes != nil {
+		_, n, err := net.ParseCIDR(*shoot.Spec.Networking.Nodes)
+		if err != nil {
+			return nil, fmt.Errorf("cannot parse shoot's node cidr %w", err)
+		}
+		nodes = append(nodes, *n)
+	} else if !workerless {
+		return nil, fmt.Errorf("shoot's node cidr is empty")
 	}
 
-	coreDNS, err := utils.ComputeOffsetIP(svc, 10)
-	if err != nil {
-		return nil, fmt.Errorf("cannot calculate CoreDNS ClusterIP: %w", err)
+	if shoot.Status.Networking != nil {
+		if result, err := copyUniqueCIDRs(shoot.Status.Networking.Pods, pods, "pod"); err != nil {
+			return nil, err
+		} else {
+			pods = result
+		}
+		if result, err := copyUniqueCIDRs(shoot.Status.Networking.Services, services, "service"); err != nil {
+			return nil, err
+		} else {
+			services = result
+		}
+		if result, err := copyUniqueCIDRs(shoot.Status.Networking.Nodes, nodes, "node"); err != nil {
+			return nil, err
+		} else {
+			nodes = result
+		}
+	}
+
+	for _, cidr := range services {
+		apiserver, err := utils.ComputeOffsetIP(&cidr, 1)
+		if err != nil {
+			return nil, fmt.Errorf("cannot calculate default/kubernetes ClusterIP for service network '%s': %w", cidr.String(), err)
+		}
+		apiServerIPs = append(apiServerIPs, apiserver)
+
+		coreDNS, err := utils.ComputeOffsetIP(&cidr, 10)
+		if err != nil {
+			return nil, fmt.Errorf("cannot calculate CoreDNS ClusterIP for service network '%s': %w", cidr.String(), err)
+		}
+		dnsIPs = append(dnsIPs, coreDNS)
 	}
 
 	return &Networks{
-		CoreDNS:   coreDNS,
+		CoreDNS:   dnsIPs,
 		Pods:      pods,
-		Services:  svc,
-		APIServer: apiserver,
+		Services:  services,
+		Nodes:     nodes,
+		APIServer: apiServerIPs,
 	}, nil
+}
+
+func copyUniqueCIDRs(src []string, dst []net.IPNet, networkType string) ([]net.IPNet, error) {
+	existing := sets.New[string]()
+	for _, cidr := range dst {
+		existing.Insert(cidr.String())
+	}
+	for _, s := range src {
+		if !existing.Has(s) {
+			_, cidr, err := net.ParseCIDR(s)
+			if err != nil {
+				return nil, fmt.Errorf("cannot parse shoot's %s cidr '%s': %w", networkType, s, err)
+			}
+			dst = append(dst, *cidr)
+		}
+	}
+	return dst, nil
 }

@@ -126,26 +126,34 @@ var _ = Describe("Infrastructure", func() {
 
 	Describe("#WaitForInfrastructure", func() {
 		var (
-			gardenClient  *mockclient.MockClient
-			seedClient    *mockclient.MockClient
-			seedClientSet *kubernetesmock.MockInterface
+			gardenClient     *mockclient.MockClient
+			mockStatusWriter *mockclient.MockStatusWriter
+			seedClient       *mockclient.MockClient
+			seedClientSet    *kubernetesmock.MockInterface
 
-			namespace = "namespace"
-			name      = "name"
-			nodesCIDR = ptr.To("1.2.3.4/5")
-			shoot     = &gardencorev1beta1.Shoot{
+			namespace     = "namespace"
+			name          = "name"
+			nodesCIDRs    = []string{"1.2.3.4/5"}
+			podsCIDRs     = []string{"2.3.4.5/6"}
+			servicesCIDRs = []string{"3.4.5.6/7"}
+			shoot         = &gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
 				},
 				Spec: gardencorev1beta1.ShootSpec{
-					Networking: &gardencorev1beta1.Networking{},
+					Networking: &gardencorev1beta1.Networking{
+						//Nodes:    ptr.To(nodesCIDRs[0]),
+						Pods:     ptr.To(podsCIDRs[0]),
+						Services: ptr.To(servicesCIDRs[0]),
+					},
 				},
 			}
 		)
 
 		BeforeEach(func() {
 			gardenClient = mockclient.NewMockClient(ctrl)
+			mockStatusWriter = mockclient.NewMockStatusWriter(ctrl)
 			seedClient = mockclient.NewMockClient(ctrl)
 			seedClientSet = kubernetesmock.NewMockInterface(ctrl)
 
@@ -156,21 +164,35 @@ var _ = Describe("Infrastructure", func() {
 
 		It("should successfully wait (w/ provider status, w/ nodes cidr)", func() {
 			infrastructure.EXPECT().Wait(ctx)
-			infrastructure.EXPECT().NodesCIDR().Return(nodesCIDR)
+			infrastructure.EXPECT().NodesCIDRs().Return(nodesCIDRs)
+			infrastructure.EXPECT().PodsCIDRs().Return(podsCIDRs)
+			infrastructure.EXPECT().PodsCIDRs().Return(podsCIDRs)
+			infrastructure.EXPECT().ServicesCIDRs().Return(servicesCIDRs)
+			infrastructure.EXPECT().ServicesCIDRs().Return(servicesCIDRs)
 
 			updatedShoot := shoot.DeepCopy()
-			updatedShoot.Spec.Networking.Nodes = nodesCIDR
+			updatedShoot.Spec.Networking.Nodes = ptr.To(nodesCIDRs[0])
 			test.EXPECTPatch(ctx, gardenClient, updatedShoot, shoot, types.StrategicMergePatchType)
 
 			seedClientSet.EXPECT().Client().Return(seedClient)
 
+			updatedShoot2 := updatedShoot.DeepCopy()
+			updatedShoot2.Status.Networking = &gardencorev1beta1.NetworkingStatus{
+				Nodes:    nodesCIDRs,
+				Pods:     podsCIDRs,
+				Services: servicesCIDRs,
+			}
+			gardenClient.EXPECT().Status().Return(mockStatusWriter)
+			test.EXPECTStatusPatch(ctx, mockStatusWriter, updatedShoot2, updatedShoot, types.StrategicMergePatchType)
+
 			Expect(botanist.WaitForInfrastructure(ctx)).To(Succeed())
-			Expect(botanist.Shoot.GetInfo()).To(Equal(updatedShoot))
+			Expect(botanist.Shoot.GetInfo()).To(Equal(updatedShoot2))
 		})
 
 		It("should successfully wait (w/o provider status, w/o nodes cidr)", func() {
 			infrastructure.EXPECT().Wait(ctx)
-			infrastructure.EXPECT().NodesCIDR()
+			infrastructure.EXPECT().NodesCIDRs()
+			shoot.Spec.Networking.Nodes = ptr.To(nodesCIDRs[0])
 
 			Expect(botanist.WaitForInfrastructure(ctx)).To(Succeed())
 			Expect(botanist.Shoot.GetInfo()).To(Equal(shoot))
@@ -185,10 +207,10 @@ var _ = Describe("Infrastructure", func() {
 
 		It("should return the error during nodes cidr update", func() {
 			infrastructure.EXPECT().Wait(ctx)
-			infrastructure.EXPECT().NodesCIDR().Return(nodesCIDR)
+			infrastructure.EXPECT().NodesCIDRs().Return(nodesCIDRs)
 
 			updatedShoot := shoot.DeepCopy()
-			updatedShoot.Spec.Networking.Nodes = nodesCIDR
+			updatedShoot.Spec.Networking.Nodes = ptr.To(nodesCIDRs[0])
 			test.EXPECTPatch(ctx, gardenClient, updatedShoot, shoot, types.StrategicMergePatchType, fakeErr)
 
 			Expect(botanist.WaitForInfrastructure(ctx)).To(MatchError(fakeErr))

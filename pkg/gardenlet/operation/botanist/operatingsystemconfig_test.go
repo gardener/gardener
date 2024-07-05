@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
@@ -63,6 +64,7 @@ var _ = Describe("operatingsystemconfig", func() {
 		shootDomain       = "shoot.domain.com"
 		kubernetesVersion = "1.2.3"
 		ingressDomain     = "seed-test.ingress.domain.com"
+		coreDNS           = []string{"10.0.0.10", "2001:db8::10"}
 	)
 
 	BeforeEach(func() {
@@ -89,6 +91,9 @@ var _ = Describe("operatingsystemconfig", func() {
 					},
 					InternalClusterDomain: shootDomain,
 					Purpose:               "development",
+					Networks: &shootpkg.Networks{
+						CoreDNS: []net.IP{net.ParseIP(coreDNS[0]), net.ParseIP(coreDNS[1])},
+					},
 				},
 				Seed: &seedpkg.Seed{},
 			},
@@ -124,6 +129,7 @@ var _ = Describe("operatingsystemconfig", func() {
 			BeforeEach(func() {
 				operatingSystemConfig.EXPECT().SetAPIServerURL(fmt.Sprintf("https://api.%s", shootDomain))
 				operatingSystemConfig.EXPECT().SetSSHPublicKeys(gomock.AssignableToTypeOf([]string{}))
+				operatingSystemConfig.EXPECT().SetClusterDNSAddresses(coreDNS)
 			})
 
 			It("should deploy successfully (only CloudProfile CA)", func() {
@@ -162,6 +168,7 @@ var _ = Describe("operatingsystemconfig", func() {
 			BeforeEach(func() {
 				operatingSystemConfig.EXPECT().SetAPIServerURL(fmt.Sprintf("https://api.%s", shootDomain))
 				operatingSystemConfig.EXPECT().SetSSHPublicKeys(gomock.AssignableToTypeOf([]string{}))
+				operatingSystemConfig.EXPECT().SetClusterDNSAddresses(coreDNS)
 
 				shoot := botanist.Shoot.GetInfo()
 				shoot.Status = gardencorev1beta1.ShootStatus{

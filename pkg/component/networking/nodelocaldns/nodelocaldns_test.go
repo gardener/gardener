@@ -65,7 +65,7 @@ var _ = Describe("NodeLocalDNS", func() {
 		prometheusScrape      = true
 		livenessProbePort     = 8099
 		configMapHash         string
-		upstreamDNSAddress    = "__PILLAR__UPSTREAM__SERVERS__"
+		upstreamDNSAddress    = []string{"__PILLAR__UPSTREAM__SERVERS__"}
 		forceTcpToClusterDNS  = "force_tcp"
 		forceTcpToUpstreamDNS = "force_tcp"
 
@@ -266,7 +266,7 @@ data:
         reload
         loop
         bind ` + bindIP(values) + `
-        forward . ` + values.ClusterDNS + ` {
+        forward . ` + strings.Join(values.ClusterDNS, " ") + ` {
                 ` + forceTcpToClusterDNS + `
         }
         prometheus :` + strconv.Itoa(prometheusPort) + `
@@ -278,7 +278,7 @@ data:
         reload
         loop
         bind ` + bindIP(values) + `
-        forward . ` + values.ClusterDNS + ` {
+        forward . ` + strings.Join(values.ClusterDNS, " ") + ` {
                 ` + forceTcpToClusterDNS + `
         }
         prometheus :` + strconv.Itoa(prometheusPort) + `
@@ -289,7 +289,7 @@ data:
         reload
         loop
         bind ` + bindIP(values) + `
-        forward . ` + values.ClusterDNS + ` {
+        forward . ` + strings.Join(values.ClusterDNS, " ") + ` {
                 ` + forceTcpToClusterDNS + `
         }
         prometheus :` + strconv.Itoa(prometheusPort) + `
@@ -300,7 +300,7 @@ data:
         reload
         loop
         bind ` + bindIP(values) + `
-        forward . ` + upstreamDNSAddress + ` {
+        forward . ` + strings.Join(upstreamDNSAddress, " ") + ` {
                 ` + forceTcpToUpstreamDNS + `
         }
         prometheus :` + strconv.Itoa(prometheusPort) + `
@@ -604,8 +604,8 @@ status: {}
 
 		Context("NodeLocalDNS with ipvsEnabled not enabled", func() {
 			BeforeEach(func() {
-				values.ClusterDNS = "__PILLAR__CLUSTER__DNS__"
-				values.DNSServer = "1.2.3.4"
+				values.ClusterDNS = []string{"__PILLAR__CLUSTER__DNS__"}
+				values.DNSServers = []string{"1.2.3.4", "2001:db8::1"}
 			})
 
 			Context("ConfigMap", func() {
@@ -620,7 +620,7 @@ status: {}
     reload
     loop
     bind ` + bindIP(values) + `
-    forward . ` + values.ClusterDNS + ` {
+    forward . ` + strings.Join(values.ClusterDNS, " ") + ` {
             ` + forceTcpToClusterDNS + `
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
@@ -632,7 +632,7 @@ in-addr.arpa:53 {
     reload
     loop
     bind ` + bindIP(values) + `
-    forward . ` + values.ClusterDNS + ` {
+    forward . ` + strings.Join(values.ClusterDNS, " ") + ` {
             ` + forceTcpToClusterDNS + `
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
@@ -643,7 +643,7 @@ ip6.arpa:53 {
     reload
     loop
     bind ` + bindIP(values) + `
-    forward . ` + values.ClusterDNS + ` {
+    forward . ` + strings.Join(values.ClusterDNS, " ") + ` {
             ` + forceTcpToClusterDNS + `
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
@@ -654,7 +654,7 @@ ip6.arpa:53 {
     reload
     loop
     bind ` + bindIP(values) + `
-    forward . ` + upstreamDNSAddress + ` {
+    forward . ` + strings.Join(upstreamDNSAddress, " ") + ` {
             ` + forceTcpToUpstreamDNS + `
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
@@ -873,9 +873,9 @@ ip6.arpa:53 {
 
 		Context("NodeLocalDNS with ipvsEnabled enabled", func() {
 			BeforeEach(func() {
-				values.ClusterDNS = "1.2.3.4"
-				values.DNSServer = ""
-				upstreamDNSAddress = "__PILLAR__UPSTREAM__SERVERS__"
+				values.ClusterDNS = []string{"1.2.3.4", "2001:db8::1"}
+				values.DNSServers = nil
+				upstreamDNSAddress = []string{"__PILLAR__UPSTREAM__SERVERS__"}
 				forceTcpToClusterDNS = "force_tcp"
 				forceTcpToUpstreamDNS = "force_tcp"
 			})
@@ -892,7 +892,7 @@ ip6.arpa:53 {
     reload
     loop
     bind ` + bindIP(values) + `
-    forward . ` + values.ClusterDNS + ` {
+    forward . ` + strings.Join(values.ClusterDNS, " ") + ` {
             ` + forceTcpToClusterDNS + `
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
@@ -904,7 +904,7 @@ in-addr.arpa:53 {
     reload
     loop
     bind ` + bindIP(values) + `
-    forward . ` + values.ClusterDNS + ` {
+    forward . ` + strings.Join(values.ClusterDNS, " ") + ` {
             ` + forceTcpToClusterDNS + `
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
@@ -915,7 +915,7 @@ ip6.arpa:53 {
     reload
     loop
     bind ` + bindIP(values) + `
-    forward . ` + values.ClusterDNS + ` {
+    forward . ` + strings.Join(values.ClusterDNS, " ") + ` {
             ` + forceTcpToClusterDNS + `
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
@@ -926,7 +926,7 @@ ip6.arpa:53 {
     reload
     loop
     bind ` + bindIP(values) + `
-    forward . ` + upstreamDNSAddress + ` {
+    forward . ` + strings.Join(upstreamDNSAddress, " ") + ` {
             ` + forceTcpToUpstreamDNS + `
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
@@ -1236,15 +1236,15 @@ ip6.arpa:53 {
 })
 
 func bindIP(values Values) string {
-	if values.DNSServer != "" {
-		return "169.254.20.10 " + values.DNSServer
+	if len(values.DNSServers) > 0 {
+		return "169.254.20.10 " + strings.Join(values.DNSServers, " ")
 	}
 	return "169.254.20.10"
 }
 
 func containerArg(values Values) string {
-	if values.DNSServer != "" {
-		return "169.254.20.10," + values.DNSServer
+	if len(values.DNSServers) > 0 {
+		return "169.254.20.10," + strings.Join(values.DNSServers, ",")
 	}
 	return "169.254.20.10"
 }

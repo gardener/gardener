@@ -7,6 +7,7 @@ package proxy
 import (
 	"context"
 	"fmt"
+	"net"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -71,6 +72,8 @@ type Interface interface {
 	SetKubeconfig([]byte)
 	// SetWorkerPools sets the WorkerPools field in the Values.
 	SetWorkerPools([]WorkerPool)
+	// SetPodNetworkCIDRs sets the pod CIDRs of the shoot network.
+	SetPodNetworkCIDRs([]net.IPNet)
 }
 
 type kubeProxy struct {
@@ -95,8 +98,8 @@ type Values struct {
 	ImageAlpine string
 	// Kubeconfig is the kubeconfig which should be used to communicate with the kube-apiserver.
 	Kubeconfig []byte
-	// PodNetworkCIDR is the CIDR of the pod network. Only relevant when IPVSEnabled is false.
-	PodNetworkCIDR *string
+	// PodNetworkCIDRs are the CIDRs of the pod network. Only relevant when IPVSEnabled is false.
+	PodNetworkCIDRs []net.IPNet
 	// VPAEnabled states whether VerticalPodAutoscaler is enabled.
 	VPAEnabled bool
 	// WorkerPools is a list of worker pools for which the kube-proxy DaemonSets should be deployed.
@@ -382,5 +385,6 @@ func version(pool WorkerPool, useMajorMinorVersionOnly *bool) string {
 	return pool.KubernetesVersion.String()
 }
 
-func (k *kubeProxy) SetKubeconfig(kubeconfig []byte)   { k.values.Kubeconfig = kubeconfig }
-func (k *kubeProxy) SetWorkerPools(pools []WorkerPool) { k.values.WorkerPools = pools }
+func (k *kubeProxy) SetKubeconfig(kubeconfig []byte)     { k.values.Kubeconfig = kubeconfig }
+func (k *kubeProxy) SetWorkerPools(pools []WorkerPool)   { k.values.WorkerPools = pools }
+func (k *kubeProxy) SetPodNetworkCIDRs(pods []net.IPNet) { k.values.PodNetworkCIDRs = pods }

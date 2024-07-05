@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net"
 	"strings"
 	"time"
 
@@ -625,7 +624,6 @@ func (r *Reconciler) newKubeAPIServer(
 		namePrefix,
 		apiServerConfig,
 		defaultAPIServerAutoscalingConfig(garden),
-		garden.Spec.VirtualCluster.Networking.Services,
 		kubeapiserver.VPNConfig{Enabled: false},
 		v1beta1constants.PriorityClassNameGardenSystem500,
 		true,
@@ -728,11 +726,6 @@ func (r *Reconciler) newKubeControllerManager(
 		certificateSigningDuration = ptr.To(controllerManager.CertificateSigningDuration.Duration)
 	}
 
-	_, services, err := net.ParseCIDR(garden.Spec.VirtualCluster.Networking.Services)
-	if err != nil {
-		return nil, fmt.Errorf("cannot parse service network CIDR: %w", err)
-	}
-
 	return sharedcomponent.NewKubeControllerManager(
 		log,
 		r.RuntimeClientSet,
@@ -745,8 +738,6 @@ func (r *Reconciler) newKubeControllerManager(
 		v1beta1constants.PriorityClassNameGardenSystem300,
 		true,
 		false,
-		nil,
-		services,
 		certificateSigningDuration,
 		kubecontrollermanager.ControllerWorkers{
 			GarbageCollector:    ptr.To(250),

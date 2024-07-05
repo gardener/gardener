@@ -11,6 +11,7 @@ package mock
 
 import (
 	context "context"
+	net "net"
 	reflect "reflect"
 
 	gomock "go.uber.org/mock/gomock"
@@ -68,6 +69,18 @@ func (mr *MockInterfaceMockRecorder) Destroy(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockInterface)(nil).Destroy), arg0)
 }
 
+// SetPodNetworks mocks base method.
+func (m *MockInterface) SetPodNetworks(arg0 []net.IPNet) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetPodNetworks", arg0)
+}
+
+// SetPodNetworks indicates an expected call of SetPodNetworks.
+func (mr *MockInterfaceMockRecorder) SetPodNetworks(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetPodNetworks", reflect.TypeOf((*MockInterface)(nil).SetPodNetworks), arg0)
+}
+
 // SetReplicaCount mocks base method.
 func (m *MockInterface) SetReplicaCount(arg0 int32) {
 	m.ctrl.T.Helper()
@@ -90,6 +103,18 @@ func (m *MockInterface) SetRuntimeConfig(arg0 map[string]bool) {
 func (mr *MockInterfaceMockRecorder) SetRuntimeConfig(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetRuntimeConfig", reflect.TypeOf((*MockInterface)(nil).SetRuntimeConfig), arg0)
+}
+
+// SetServiceNetworks mocks base method.
+func (m *MockInterface) SetServiceNetworks(arg0 []net.IPNet) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetServiceNetworks", arg0)
+}
+
+// SetServiceNetworks indicates an expected call of SetServiceNetworks.
+func (mr *MockInterfaceMockRecorder) SetServiceNetworks(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetServiceNetworks", reflect.TypeOf((*MockInterface)(nil).SetServiceNetworks), arg0)
 }
 
 // SetShootClient mocks base method.

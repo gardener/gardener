@@ -8230,6 +8230,61 @@ Defaults to [&ldquo;IPv4&rdquo;].</p>
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.NetworkingStatus">NetworkingStatus
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ShootStatus">ShootStatus</a>)
+</p>
+<p>
+<p>NetworkingStatus contains information about cluster networking such as CIDRs.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>pods</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Pods are the CIDRs of the pod network.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>nodes</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Nodes are the CIDRs of the node network.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>services</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Services are the CIDRs of the service network.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.NginxIngress">NginxIngress
 </h3>
 <p>
@@ -12101,6 +12156,20 @@ LastMaintenance
 <p>EncryptedResources is the list of resources in the Shoot which are currently encrypted.
 Secrets are encrypted by default and are not part of the list.
 See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md">https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md</a> for more details.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>networking</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.NetworkingStatus">
+NetworkingStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Networking contains information about cluster networking such as CIDRs.</p>
 </td>
 </tr>
 </tbody>

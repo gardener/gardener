@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	netutils "github.com/gardener/gardener/pkg/utils/net"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
@@ -457,8 +458,8 @@ func (k *kubeProxy) getRawComponentConfig() (string, error) {
 		FeatureGates: k.values.FeatureGates,
 	}
 
-	if !k.values.IPVSEnabled && k.values.PodNetworkCIDR != nil {
-		config.ClusterCIDR = *k.values.PodNetworkCIDR
+	if !k.values.IPVSEnabled && len(k.values.PodNetworkCIDRs) > 0 {
+		config.ClusterCIDR = netutils.JoinByComma(k.values.PodNetworkCIDRs)
 	}
 
 	return NewConfigCodec().Encode(config)
