@@ -237,7 +237,7 @@ func (r *Reconciler) delete(ctx context.Context, log logr.Logger, gardenClient c
 func (r *Reconciler) deleteVirtualClusterResources(ctx context.Context, log logr.Logger, gardenClient client.Client, extension *operatorv1alpha1.Extension) error {
 	log.Info("Deleting extension virtual resources", "name", extension.Name)
 	var (
-		ctrlDeploy = &gardencorev1beta1.ControllerDeployment{
+		ctrlDeploy = &gardencorev1.ControllerDeployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: extension.Name,
 			}}

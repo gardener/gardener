@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	. "github.com/gardener/gardener/pkg/operator/controller/extension/virtualcluster"
+	"github.com/gardener/gardener/pkg/utils/test/matchers"
 	"github.com/gardener/gardener/third_party/mock/client-go/tools/record"
 )
 
@@ -129,10 +130,17 @@ var _ = Describe("Virtual Cluster Reconciler", func() {
 			})
 		})
 
-		Context("when garden doesn't exists", func() {
-			It("should stop reconciling and not requeue", func() {
+		Context("when garden is deleted", func() {
+			It("remove finalizers when garden is deleted", func() {
+				extension.Finalizers = append(extension.Finalizers, operatorv1alpha1.FinalizerName)
+				Expect(runtimeClient.Update(ctx, extension)).To(Succeed())
+
 				req = reconcile.Request{NamespacedName: client.ObjectKey{Name: extensionName}}
 				Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{}))
+
+				sutExt := &operatorv1alpha1.Extension{}
+				Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: extensionName}, sutExt)).To(Succeed())
+				Expect(sutExt.Finalizers).To(HaveLen(0))
 			})
 		})
 
@@ -161,8 +169,24 @@ var _ = Describe("Virtual Cluster Reconciler", func() {
 					"Type":   Equal(operatorv1alpha1.VirtualClusterReconciled),
 					"Status": Equal(gardencorev1beta1.ConditionTrue),
 					"Reason": Equal(ConditionReconcileSuccess),
-				},
-				))
+				}))
+
+				var ctrlRegList gardencorev1beta1.ControllerRegistrationList
+				var ctrlDepList gardencorev1.ControllerDeploymentList
+				Expect(virtualClient.List(ctx, &ctrlRegList)).To(Succeed())
+				Expect(virtualClient.List(ctx, &ctrlDepList)).To(Succeed())
+				Expect(ctrlDepList.Items).To(HaveLen(1))
+				Expect(ctrlRegList.Items).To(HaveLen(1))
+
+				Expect(runtimeClient.Delete(ctx, extension)).To(Succeed())
+				req = reconcile.Request{NamespacedName: client.ObjectKey{Name: extensionName}}
+				Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{}))
+
+				Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: extensionName}, sutExt)).To(matchers.BeNotFoundError())
+				Expect(virtualClient.List(ctx, &ctrlRegList)).To(Succeed())
+				Expect(virtualClient.List(ctx, &ctrlDepList)).To(Succeed())
+				Expect(ctrlDepList.Items).To(HaveLen(0))
+				Expect(ctrlRegList.Items).To(HaveLen(0))
 			})
 		})
 	})
