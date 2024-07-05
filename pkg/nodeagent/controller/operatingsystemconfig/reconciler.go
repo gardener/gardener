@@ -421,7 +421,7 @@ func (r *Reconciler) executeUnitCommands(ctx context.Context, log logr.Logger, n
 		})
 	}
 
-	if oscChanges.containerd.configChange && !containerdChanged {
+	if oscChanges.containerd.configFileChange && !containerdChanged {
 		fns = append(fns, func(ctx context.Context) error {
 			return restart(ctx, v1beta1constants.OperatingSystemConfigUnitNameContainerDService)
 		})

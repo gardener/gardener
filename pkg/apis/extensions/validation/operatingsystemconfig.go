@@ -63,7 +63,7 @@ func ValidateOperatingSystemConfigSpec(spec *extensionsv1alpha1.OperatingSystemC
 		}
 	}
 
-	allErrs = append(allErrs, ValidateCriConfig(spec.CRIConfig, spec.Purpose, fldPath.Child("criConfig"))...)
+	allErrs = append(allErrs, ValidateCRIConfig(spec.CRIConfig, spec.Purpose, fldPath.Child("criConfig"))...)
 	allErrs = append(allErrs, ValidateUnits(spec.Units, pathsFromFiles, fldPath.Child("units"))...)
 	allErrs = append(allErrs, ValidateFiles(spec.Files, fldPath.Child("files"))...)
 
@@ -80,8 +80,8 @@ func ValidateOperatingSystemConfigStatus(status *extensionsv1alpha1.OperatingSys
 	return allErrs
 }
 
-// ValidateCriConfig validates the spec of a CRIConfig object.
-func ValidateCriConfig(config *extensionsv1alpha1.CRIConfig, purpose extensionsv1alpha1.OperatingSystemConfigPurpose, fldPath *field.Path) field.ErrorList {
+// ValidateCRIConfig validates the spec of a CRIConfig object.
+func ValidateCRIConfig(config *extensionsv1alpha1.CRIConfig, purpose extensionsv1alpha1.OperatingSystemConfigPurpose, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if config == nil {
@@ -114,6 +114,8 @@ func ValidateContainerdConfig(config *extensionsv1alpha1.ContainerdConfig, purpo
 
 	return allErrs
 }
+
+var availableCapabilities = sets.New(extensionsv1alpha1.PullCapability, extensionsv1alpha1.ResolveCapability, extensionsv1alpha1.PushCapability)
 
 // ValidateContainerdRegistryConfigs validates the spec of a RegistryConfig object.
 func ValidateContainerdRegistryConfigs(registries []extensionsv1alpha1.RegistryConfig, fldPath *field.Path) field.ErrorList {
@@ -150,23 +152,19 @@ func ValidateContainerdRegistryConfigs(registries []extensionsv1alpha1.RegistryC
 		}
 
 		for j, host := range r.Hosts {
-			hostFld := idxPath.Child("hosts").Index(j)
+			fldHost := idxPath.Child("hosts").Index(j)
 
 			if u, err := url.Parse(host.URL); err != nil {
-				allErrs = append(allErrs, field.Required(hostFld.Child("url"), "url must be a valid URL: "+err.Error()+form))
+				allErrs = append(allErrs, field.Required(fldHost.Child("url"), "url must be a valid URL: "+err.Error()+form))
 			} else {
 				if len(u.Host) == 0 {
-					allErrs = append(allErrs, field.Invalid(hostFld.Child("url"), u.Host, "host must be provided"+form))
+					allErrs = append(allErrs, field.Invalid(fldHost.Child("url"), u.Host, "host must be provided"+form))
 				}
 			}
 
 			for k, capability := range host.Capabilities {
-				capFld := hostFld.Child("capabilities").Index(k)
-
-				switch capability {
-				case "push", "pull", "resolve":
-				default:
-					allErrs = append(allErrs, field.NotSupported(capFld, capability, []string{"push", "pull", "resolve"}))
+				if !availableCapabilities.Has(capability) {
+					allErrs = append(allErrs, field.NotSupported(fldHost.Child("capabilities").Index(k), capability, []string{"push", "pull", "resolve"}))
 				}
 			}
 		}

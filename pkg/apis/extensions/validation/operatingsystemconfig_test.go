@@ -42,7 +42,7 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 								Hosts: []extensionsv1alpha1.RegistryHost{
 									{
 										URL:          "https://registry-1.docker.io",
-										Capabilities: []string{"pull", "resolve"},
+										Capabilities: []extensionsv1alpha1.RegistryCapability{"pull", "resolve"},
 									},
 								},
 							},
@@ -391,7 +391,7 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 					Hosts: []extensionsv1alpha1.RegistryHost{
 						{
 							URL:          "http://foo.bar/us",
-							Capabilities: []string{"foo"},
+							Capabilities: []extensionsv1alpha1.RegistryCapability{"foo"},
 						},
 					},
 				},
@@ -400,7 +400,7 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 			Expect(ValidateOperatingSystemConfig(oscCopy)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":     Equal(field.ErrorTypeNotSupported),
 				"Field":    Equal("spec.criConfig.containerd.registries[0].hosts[0].capabilities[0]"),
-				"BadValue": Equal("foo"),
+				"BadValue": Equal(extensionsv1alpha1.RegistryCapability("foo")),
 			}))))
 		})
 

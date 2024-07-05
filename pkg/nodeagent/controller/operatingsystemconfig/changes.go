@@ -72,12 +72,14 @@ type files struct {
 }
 
 type containerd struct {
-	configChange bool
-	registries   containerdRegistries
+	// configFileChange tracks if the config file of containerd will change, so that GNA can restart the unit.
+	configFileChange bool
+	// registries tracks the changes of configured registries.
+	registries containerdRegistries
 }
 
 type containerdRegistries struct {
-	current []extensionsv1alpha1.RegistryConfig
+	desired []extensionsv1alpha1.RegistryConfig
 	deleted []extensionsv1alpha1.RegistryConfig
 }
 
@@ -109,9 +111,9 @@ func computeOperatingSystemConfigChanges(fs afero.Afero, newOSC *extensionsv1alp
 		// TODO(timuthy): Remove this block after Gardener v1.114 was released.
 		removeContainerdInit(changes)
 
-		changes.containerd.configChange = true
+		changes.containerd.configFileChange = true
 		if extensionsv1alpha1helper.HasContainerdConfiguration(newOSC.Spec.CRIConfig) {
-			changes.containerd.registries.current = newOSC.Spec.CRIConfig.Containerd.Registries
+			changes.containerd.registries.desired = newOSC.Spec.CRIConfig.Containerd.Registries
 		}
 		return changes, nil
 	}
@@ -140,9 +142,9 @@ func computeOperatingSystemConfigChanges(fs afero.Afero, newOSC *extensionsv1alp
 	if extensionsv1alpha1helper.HasContainerdConfiguration(newOSC.Spec.CRIConfig) {
 		newRegistries = newOSC.Spec.CRIConfig.Containerd.Registries
 		if !extensionsv1alpha1helper.HasContainerdConfiguration(oldOSC.Spec.CRIConfig) {
-			changes.containerd.configChange = true
+			changes.containerd.configFileChange = true
 		} else {
-			changes.containerd.configChange = !apiequality.Semantic.DeepEqual(newOSC.Spec.CRIConfig.Containerd, oldOSC.Spec.CRIConfig.Containerd)
+			changes.containerd.configFileChange = !apiequality.Semantic.DeepEqual(newOSC.Spec.CRIConfig.Containerd.SandboxImage, oldOSC.Spec.CRIConfig.Containerd.SandboxImage)
 			oldRegistries = oldOSC.Spec.CRIConfig.Containerd.Registries
 		}
 	}
@@ -291,11 +293,11 @@ func collectAllFiles(osc *extensionsv1alpha1.OperatingSystemConfig) []extensions
 
 func computeContainerdRegistryDiffs(newRegistries, oldRegistries []extensionsv1alpha1.RegistryConfig) containerdRegistries {
 	r := containerdRegistries{
-		current: newRegistries,
+		desired: newRegistries,
 	}
 
 	upstreamsInUse := sets.New[string]()
-	for _, registryConfig := range r.current {
+	for _, registryConfig := range r.desired {
 		upstreamsInUse.Insert(registryConfig.Upstream)
 	}
 

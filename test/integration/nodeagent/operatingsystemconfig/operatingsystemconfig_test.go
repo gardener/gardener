@@ -275,7 +275,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			Upstream: "registry.k8s.io",
 			Server:   ptr.To("https://registry.k8s.io"),
 			Hosts: []extensionsv1alpha1.RegistryHost{
-				{URL: "https://10.10.10.101:8080", Capabilities: []string{"pull"}, CACerts: []string{"/var/certs/ca.crt"}},
+				{URL: "https://10.10.10.101:8080", Capabilities: []extensionsv1alpha1.RegistryCapability{"pull"}, CACerts: []string{"/var/certs/ca.crt"}},
 			},
 		}
 
@@ -563,6 +563,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 
 		By("Update Operating System Config")
 		operatingSystemConfig.Spec.CRIConfig.Containerd.Registries = []extensionsv1alpha1.RegistryConfig{registryConfig2}
+		operatingSystemConfig.Spec.CRIConfig.Containerd.SandboxImage = operatingSystemConfig.Spec.CRIConfig.Containerd.SandboxImage + "-test"
 
 		var err error
 		oscRaw, err = runtime.Encode(codec, operatingSystemConfig)

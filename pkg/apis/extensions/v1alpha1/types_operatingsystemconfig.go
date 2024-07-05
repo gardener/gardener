@@ -233,6 +233,7 @@ type CRIConfig struct {
 	// +kubebuilder:validation:Enum="containerd"
 	Name CRIName `json:"name"`
 	// ContainerdConfig is the containerd configuration.
+	// Only to be set for OperatingSystemConfigs with purpose 'reconcile'.
 	// +optional
 	Containerd *ContainerdConfig `json:"containerd,omitempty"`
 }
@@ -259,8 +260,20 @@ type RegistryConfig struct {
 	Hosts []RegistryHost `json:"hosts,omitempty"`
 	// ReadinessProbe determines if host registry endpoints should be probed before they are added to the containerd config.
 	// +optional
-	ReadinessProbe *bool `json:"probeHosts,omitempty"`
+	ReadinessProbe *bool `json:"readinessProbe,omitempty"`
 }
+
+// RegistryCapability specifies an action a client can perform against a registry.
+type RegistryCapability string
+
+const (
+	// PullCapability defines the 'pull' capability.
+	PullCapability RegistryCapability = "pull"
+	// ResolveCapability defines the 'resolve' capability.
+	ResolveCapability RegistryCapability = "resolve"
+	// PushCapability defines the 'push' capability.
+	PushCapability RegistryCapability = "push"
+)
 
 // RegistryHost contains configuration values for a registry host.
 type RegistryHost struct {
@@ -270,7 +283,7 @@ type RegistryHost struct {
 	// capable of performing. Defaults to
 	//  - pull
 	//  - resolve
-	Capabilities []string `json:"capabilities,omitempty"`
+	Capabilities []RegistryCapability `json:"capabilities,omitempty"`
 	// CACerts are paths to public key certificates used for TLS.
 	CACerts []string `json:"caCerts,omitempty"`
 }

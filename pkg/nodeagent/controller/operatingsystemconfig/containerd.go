@@ -15,7 +15,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/pelletier/go-toml"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
@@ -31,23 +31,23 @@ func (r *Reconciler) ReconcileContainerdConfig(ctx context.Context, log logr.Log
 	}
 
 	if err := r.ensureContainerdConfigDirectories(); err != nil {
-		return err
+		return fmt.Errorf("failed to ensure containerd config directories: %w", err)
 	}
 
 	if err := r.ensureContainerdDefaultConfig(ctx); err != nil {
-		return err
+		return fmt.Errorf("failed to ensure containerd default config: %w", err)
 	}
 
 	if err := r.ensureContainerdEnvironment(); err != nil {
-		return err
+		return fmt.Errorf("failed to ensure containerd environment: %w", err)
 	}
 
 	if err := r.ensureContainerdConfiguration(criConfig); err != nil {
-		return err
+		return fmt.Errorf("failed to ensure containerd config: %w", err)
 	}
 
-	if err := r.ensureContainerdRegistries(ctx, log, containerdChanges.registries.current); err != nil {
-		return err
+	if err := r.ensureContainerdRegistries(ctx, log, containerdChanges.registries.desired); err != nil {
+		return fmt.Errorf("failed to clean up unused containerd registries: %w", err)
 	}
 
 	if err := r.cleanupUnusedContainerdRegistries(log, containerdChanges.registries.deleted); err != nil {
@@ -72,9 +72,8 @@ func (r *Reconciler) ensureContainerdConfigDirectories() error {
 		certsDir,
 		dropinDir,
 	} {
-		err := r.FS.MkdirAll(dir, defaultDirPermissions)
-		if err != nil {
-			return fmt.Errorf("unable to ensure containerd config directory %q: %w", dir, err)
+		if err := r.FS.MkdirAll(dir, defaultDirPermissions); err != nil {
+			return fmt.Errorf("failure for directory %q: %w", dir, err)
 		}
 	}
 
@@ -101,7 +100,7 @@ func (r *Reconciler) ensureContainerdDefaultConfig(ctx context.Context) error {
 
 	output, err := Exec(ctx, "containerd", "config", "default")
 	if err != nil {
-		return fmt.Errorf("error creating containerd default config: %w", err)
+		return err
 	}
 
 	return r.FS.WriteFile(configFile, output, 0644)
@@ -142,8 +141,7 @@ func (r *Reconciler) ensureContainerdConfiguration(criConfig *extensionsv1alpha1
 
 	content := map[string]any{}
 
-	err = toml.Unmarshal(config, &content)
-	if err != nil {
+	if err = toml.Unmarshal(config, &content); err != nil {
 		return fmt.Errorf("unable to decode containerd default config: %w", err)
 	}
 
@@ -216,12 +214,7 @@ func (r *Reconciler) ensureContainerdConfiguration(criConfig *extensionsv1alpha1
 		err = f.Close()
 	}()
 
-	err = toml.NewEncoder(f).Encode(content)
-	if err != nil {
-		return fmt.Errorf("unable to encode hosts.toml: %w", err)
-	}
-
-	return err
+	return toml.NewEncoder(f).Encode(content)
 }
 
 // ensureContainerdRegistries configures containerd to use the desired image registries.
@@ -247,7 +240,7 @@ func (r *Reconciler) ensureContainerdRegistries(ctx context.Context, log logr.Lo
 			// Check if registry endpoints are reachable if the config is new.
 			// This is especially required when registries run within the cluster and during bootstrap,
 			// the Kubernetes deployments are not ready yet.
-			if !exists && pointer.BoolDeref(registryConfig.ReadinessProbe, false) {
+			if !exists && ptr.Deref(registryConfig.ReadinessProbe, false) {
 				log.Info("Probing endpoints for image registry", "upstream", registryConfig.Upstream)
 				if err := retry.Until(ctx, 2*time.Second, func(ctx context.Context) (done bool, err error) {
 					for _, registryHosts := range registryConfig.Hosts {
@@ -280,8 +273,8 @@ func (r *Reconciler) ensureContainerdRegistries(ctx context.Context, log logr.Lo
 
 			type (
 				hostConfig struct {
-					Capabilities []string `toml:"capabilities,omitempty"`
-					CaCerts      []string `toml:"ca,omitempty"`
+					Capabilities []extensionsv1alpha1.RegistryCapability `toml:"capabilities,omitempty"`
+					CaCerts      []string                                `toml:"ca,omitempty"`
 				}
 
 				config struct {
@@ -308,12 +301,7 @@ func (r *Reconciler) ensureContainerdRegistries(ctx context.Context, log logr.Lo
 				content.Host[host.URL] = h
 			}
 
-			err = toml.NewEncoder(f).Encode(content)
-			if err != nil {
-				return fmt.Errorf("unable to encode hosts.toml: %w", err)
-			}
-
-			return err
+			return toml.NewEncoder(f).Encode(content)
 		})
 	}
 

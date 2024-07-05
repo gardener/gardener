@@ -88,7 +88,7 @@ func (e *ensurer) EnsureAdditionalProvisionFiles(_ context.Context, _ extensions
 		MirrorHost:     "http://garden.local.gardener.cloud:5001",
 	}
 
-	appendFileIfNotPresent(new, extensionsv1alpha1.File{
+	*new = webhook.EnsureFileWithPath(*new, extensionsv1alpha1.File{
 		Path:        filepath.Join("/etc/containerd/certs.d", localhostMirror.UpstreamHost, "hosts.toml"),
 		Permissions: ptr.To[int32](0644),
 		Content: extensionsv1alpha1.FileContent{
@@ -99,22 +99,6 @@ func (e *ensurer) EnsureAdditionalProvisionFiles(_ context.Context, _ extensions
 	})
 
 	return nil
-}
-
-func appendFileIfNotPresent(files *[]extensionsv1alpha1.File, file extensionsv1alpha1.File) {
-	if !containsFilePath(files, file.Path) {
-		*files = append(*files, file)
-	}
-}
-
-func containsFilePath(files *[]extensionsv1alpha1.File, filePath string) bool {
-	for _, f := range *files {
-		if f.Path == filePath {
-			return true
-		}
-	}
-
-	return false
 }
 
 func (e *ensurer) EnsureCRIConfig(_ context.Context, _ extensionscontextwebhook.GardenContext, new, _ *extensionsv1alpha1.CRIConfig) error {
@@ -154,6 +138,9 @@ func (e *ensurer) EnsureCRIConfig(_ context.Context, _ extensionscontextwebhook.
 			Hosts:    []extensionsv1alpha1.RegistryHost{{URL: "http://garden.local.gardener.cloud:5008"}},
 		},
 	} {
+		// Only add registry when it is not already set in the OSC.
+		// This way, it is not added repeatably and extensions (e.g. registry cache) in the local setup may decide
+		// to configure the same upstreams differently. The configuration of s	uch an extension should have precedence.
 		addRegistryIfNotAvailable(registry, new.Containerd)
 	}
 

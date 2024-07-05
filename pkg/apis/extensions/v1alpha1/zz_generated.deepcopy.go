@@ -1653,7 +1653,7 @@ func (in *RegistryHost) DeepCopyInto(out *RegistryHost) {
 	*out = *in
 	if in.Capabilities != nil {
 		in, out := &in.Capabilities, &out.Capabilities
-		*out = make([]string, len(*in))
+		*out = make([]RegistryCapability, len(*in))
 		copy(*out, *in)
 	}
 	if in.CACerts != nil {

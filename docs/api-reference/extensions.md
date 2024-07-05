@@ -2043,7 +2043,8 @@ ContainerdConfig
 </td>
 <td>
 <em>(Optional)</em>
-<p>ContainerdConfig is the containerd configuration.</p>
+<p>ContainerdConfig is the containerd configuration.
+Only to be set for OperatingSystemConfigs with purpose &lsquo;reconcile&rsquo;.</p>
 </td>
 </tr>
 </tbody>
@@ -3972,6 +3973,15 @@ config spec. It contains a reference to a secret as the result may contain confi
 <p>
 <p>Purpose is a string alias.</p>
 </p>
+<h3 id="extensions.gardener.cloud/v1alpha1.RegistryCapability">RegistryCapability
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.RegistryHost">RegistryHost</a>)
+</p>
+<p>
+<p>RegistryCapability specifies an action a client can perform against a registry.</p>
+</p>
 <h3 id="extensions.gardener.cloud/v1alpha1.RegistryConfig">RegistryConfig
 </h3>
 <p>
@@ -4029,7 +4039,7 @@ It corresponds to the host fields in the <code>hosts.toml</code> file, see <a hr
 </tr>
 <tr>
 <td>
-<code>probeHosts</code></br>
+<code>readinessProbe</code></br>
 <em>
 bool
 </em>
@@ -4073,7 +4083,9 @@ string
 <td>
 <code>capabilities</code></br>
 <em>
-[]string
+<a href="#extensions.gardener.cloud/v1alpha1.RegistryCapability">
+[]RegistryCapability
+</a>
 </em>
 </td>
 <td>

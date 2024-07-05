@@ -10,7 +10,7 @@ This means that basically every operating system is possible to be used, as long
 :warning: Currently, there are a few requirements of pre-installed components that must be present in all OS images:
 
 1. [containerd](https://containerd.io/)
-   1. [containerd client CLI](https://github.com/projectatomic/containerd/blob/master/docs/cli.md/)
+   1. [ctr (client CLI)](https://github.com/projectatomic/containerd/blob/master/docs/cli.md/)
    1. `containerd` must listen on its default socket path: `unix:///run/containerd/containerd.sock`
    1. `containerd` must be configured to work with the default configuration file in: `/etc/containerd/config.toml` (eventually created by Gardener).
 1. [systemd](https://www.freedesktop.org/wiki/Software/systemd/)
@@ -333,7 +333,7 @@ spec:
 ```
 
 To support `containerd`, an OS extension must satisfy the following criteria:
-1. The operating system must have built-in [containerd](https://containerd.io/) and the [Client CLI](https://github.com/projectatomic/containerd/blob/master/docs/cli.md/).
+1. The operating system must have built-in [containerd](https://containerd.io/) and [ctr (client CLI)](https://github.com/projectatomic/containerd/blob/master/docs/cli.md/).
 1. `containerd` must listen on its default socket path: `unix:///run/containerd/containerd.sock`
 1. `containerd` must be configured to work with the default configuration file in: `/etc/containerd/config.toml` (Created by Gardener).
 
