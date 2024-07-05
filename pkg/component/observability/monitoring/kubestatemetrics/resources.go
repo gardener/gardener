@@ -734,5 +734,5 @@ func (k *kubeStateMetrics) nameSuffix() string {
 	if k.values.ClusterType == component.ClusterTypeShoot {
 		return suffix
 	}
-	return suffix + "-seed"
+	return suffix + k.values.NameSuffix
 }

@@ -70,7 +70,7 @@ var _ = Describe("KubeStateMetrics", func() {
 		clusterRoleFor    = func(clusterType component.ClusterType, nameSuffix string) *rbacv1.ClusterRole {
 			name := "gardener.cloud:monitoring:kube-state-metrics"
 			if clusterType == component.ClusterTypeSeed {
-				name += "-seed"
+				name += values.NameSuffix
 			}
 
 			obj := &rbacv1.ClusterRole{
@@ -127,7 +127,7 @@ var _ = Describe("KubeStateMetrics", func() {
 		clusterRoleBindingFor = func(clusterType component.ClusterType, nameSuffix string) *rbacv1.ClusterRoleBinding {
 			name := "gardener.cloud:monitoring:kube-state-metrics"
 			if clusterType == component.ClusterTypeSeed {
-				name += "-seed"
+				name += values.NameSuffix
 			}
 
 			obj := &rbacv1.ClusterRoleBinding{
