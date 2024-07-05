@@ -22,6 +22,7 @@ data:
           {{ .Values.controllers.service.zone0IP }} istio-ingressgateway.istio-ingress--0.svc.cluster.local
           {{ .Values.controllers.service.zone1IP }} istio-ingressgateway.istio-ingress--1.svc.cluster.local
           {{ .Values.controllers.service.zone2IP }} istio-ingressgateway.istio-ingress--2.svc.cluster.local
+          fallthrough
         }
         forward . /etc/resolv.conf {
            max_concurrent 1000
