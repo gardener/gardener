@@ -151,7 +151,7 @@ func (g *gardenerAPIServer) deployment(
 	// Preserve the Deployment resources during the HPA -> VPAAndHPA transition.
 	//
 	// The gardener-apiserver is deployed via ManagedResource. In the general case, GRM preserves the Deployment resources when the resource is being scaled by HVPA.
-	// However, druing the HPA -> VPAAndHPA transition the flow is as follows:
+	// However, during the HPA -> VPAAndHPA transition the flow is as follows:
 	// 1. The HVPA resource is deleted.
 	// 2. The Deployment is updated.
 	// 3. The new HPA and VPA resources are created.
