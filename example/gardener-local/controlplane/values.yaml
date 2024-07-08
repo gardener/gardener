@@ -166,49 +166,48 @@ global:
     workloadIdentity:
       token:
         issuer: https://issuer.gardener.cloud.local
-        signingKey:
-          tls:
-            key: |
-              -----BEGIN PRIVATE KEY-----
-              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
-              +3f9NhbRnPj9uW6HhXct3F4O
-              -----END PRIVATE KEY-----
+        signing:
+          key: |
+            -----BEGIN PRIVATE KEY-----
+            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
+            +3f9NhbRnPj9uW6HhXct3F4O
+            -----END PRIVATE KEY-----
 
   # Gardener admission controller configuration values
   admission:
