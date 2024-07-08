@@ -34,7 +34,10 @@ const (
 
 	// ShootCloudProfileName is the field selector path for finding
 	// the CloudProfile name of a core.gardener.cloud/{v1alpha1,v1beta1} Shoot.
-	ShootCloudProfileName = "spec.cloudProfileName"
+	ShootCloudProfileName = "spec.cloudProfile.Name"
+	// ShootCloudProfileKind is the field selector path for finding
+	// the CloudProfile kind of a core.gardener.cloud/{v1alpha1,v1beta1} Shoot.
+	ShootCloudProfileKind = "spec.cloudProfile.Kind"
 	// ShootSeedName is the field selector path for finding
 	// the Seed cluster of a core.gardener.cloud/{v1alpha1,v1beta1} Shoot.
 	ShootSeedName = "spec.seedName"

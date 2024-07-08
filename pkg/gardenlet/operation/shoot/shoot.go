@@ -41,7 +41,7 @@ func NewBuilder() *Builder {
 		shootObjectFunc: func(context.Context) (*gardencorev1beta1.Shoot, error) {
 			return nil, fmt.Errorf("shoot object is required but not set")
 		},
-		cloudProfileFunc: func(context.Context, string) (*gardencorev1beta1.CloudProfile, error) {
+		cloudProfileFunc: func(context.Context, *gardencorev1beta1.CloudProfileReference, string, *string) (*gardencorev1beta1.CloudProfile, error) {
 			return nil, fmt.Errorf("cloudprofile object is required but not set")
 		},
 		shootSecretFunc: func(context.Context, string, string, bool) (*corev1.Secret, error) {
@@ -73,23 +73,35 @@ func (b *Builder) WithShootObjectFromCluster(seedClient kubernetes.Interface, sh
 
 // WithCloudProfileObject sets the cloudProfileFunc attribute at the Builder.
 func (b *Builder) WithCloudProfileObject(cloudProfileObject *gardencorev1beta1.CloudProfile) *Builder {
-	b.cloudProfileFunc = func(context.Context, string) (*gardencorev1beta1.CloudProfile, error) { return cloudProfileObject, nil }
+	b.cloudProfileFunc = func(context.Context, *gardencorev1beta1.CloudProfileReference, string, *string) (*gardencorev1beta1.CloudProfile, error) {
+		return cloudProfileObject, nil
+	}
 	return b
 }
 
 // WithCloudProfileObjectFrom sets the cloudProfileFunc attribute at the Builder after fetching it from the
 // given reader.
 func (b *Builder) WithCloudProfileObjectFrom(reader client.Reader) *Builder {
-	b.cloudProfileFunc = func(ctx context.Context, name string) (*gardencorev1beta1.CloudProfile, error) {
-		obj := &gardencorev1beta1.CloudProfile{}
-		return obj, reader.Get(ctx, client.ObjectKey{Name: name}, obj)
+	b.cloudProfileFunc = func(ctx context.Context, cloudProfileReference *gardencorev1beta1.CloudProfileReference, namespace string, name *string) (*gardencorev1beta1.CloudProfile, error) {
+		if name != nil {
+			obj := &gardencorev1beta1.CloudProfile{}
+			return obj, reader.Get(ctx, client.ObjectKey{Name: *name}, obj)
+		} else if cloudProfileReference != nil {
+			namespacedCloudProfile := &gardencorev1beta1.NamespacedCloudProfile{}
+			err := reader.Get(ctx, client.ObjectKey{Name: *name, Namespace: namespace}, namespacedCloudProfile)
+			if err != nil {
+				return nil, err
+			}
+			return &gardencorev1beta1.CloudProfile{Spec: namespacedCloudProfile.Status.CloudProfileSpec}, nil
+		}
+		return nil, errors.New("cloudprofile is required but not set by either cloudProfile reference or cloudProfileName")
 	}
 	return b
 }
 
 // WithCloudProfileObjectFromCluster sets the cloudProfileFunc attribute at the Builder.
 func (b *Builder) WithCloudProfileObjectFromCluster(seedClient kubernetes.Interface, shootNamespace string) *Builder {
-	b.cloudProfileFunc = func(ctx context.Context, _ string) (*gardencorev1beta1.CloudProfile, error) {
+	b.cloudProfileFunc = func(ctx context.Context, _ *gardencorev1beta1.CloudProfileReference, _ string, _ *string) (*gardencorev1beta1.CloudProfile, error) {
 		cluster, err := gardenerextensions.GetCluster(ctx, seedClient.Client(), shootNamespace)
 		if err != nil {
 			return nil, err
@@ -195,7 +207,7 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	}
 	shoot.SetInfo(shootObject)
 
-	cloudProfile, err := b.cloudProfileFunc(ctx, shootObject.Spec.CloudProfileName)
+	cloudProfile, err := b.cloudProfileFunc(ctx, shootObject.Spec.CloudProfile, shootObject.Namespace, shootObject.Spec.CloudProfileName)
 	if err != nil {
 		return nil, err
 	}

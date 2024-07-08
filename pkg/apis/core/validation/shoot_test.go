@@ -160,7 +160,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							Addon: addon,
 						},
 					},
-					CloudProfileName:  "aws-profile",
+					CloudProfileName:  ptr.To("aws-profile"),
 					Region:            "eu-west-1",
 					SecretBindingName: ptr.To("my-secret"),
 					Purpose:           &purpose,
@@ -318,7 +318,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("spec.cloudProfileName"),
+					"Field": Equal("spec.cloudProfile.name"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
@@ -686,7 +686,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		It("should forbid unsupported specification (provider independent)", func() {
-			shoot.Spec.CloudProfileName = ""
+			shoot.Spec.CloudProfileName = nil
 			shoot.Spec.Region = ""
 			shoot.Spec.SecretBindingName = ptr.To("")
 			shoot.Spec.SeedName = ptr.To("")
@@ -700,7 +700,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("spec.cloudProfileName"),
+					"Field": Equal("spec.cloudProfile.name"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
@@ -855,7 +855,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		It("should forbid updating some cloud keys", func() {
 			newShoot := prepareShootForUpdate(shoot)
-			shoot.Spec.CloudProfileName = "another-profile"
+			shoot.Spec.CloudProfileName = ptr.To("another-profile")
 			shoot.Spec.Region = "another-region"
 			// shoot.Spec.SecretBindingName = ptr.To("another-reference")
 			// shoot.Spec.CredentialsBindingName = ptr.To("another-reference")
@@ -864,10 +864,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 			errorList := ValidateShootUpdate(newShoot, shoot)
 
 			Expect(errorList).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.cloudProfileName"),
-				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.region"),
@@ -5871,7 +5867,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Name: "",
 				}
 
-				errList := ValidateCloudProfileReference(cloudProfileReference, fldPath)
+				errList := ValidateCloudProfileReference(cloudProfileReference, nil, fldPath)
 
 				Expect(errList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -5892,7 +5888,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Name: "my-profile",
 				}
 
-				errList := ValidateCloudProfileReference(cloudProfileReference, fldPath)
+				errList := ValidateCloudProfileReference(cloudProfileReference, nil, fldPath)
 
 				Expect(errList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -5909,7 +5905,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Name: "my-profile",
 				}
 
-				errList := ValidateCloudProfileReference(cloudProfileReference, fldPath)
+				errList := ValidateCloudProfileReference(cloudProfileReference, nil, fldPath)
 
 				Expect(errList).To(BeEmpty())
 			})
@@ -5920,7 +5916,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Name: "my-profile",
 				}
 
-				errList := ValidateCloudProfileReference(cloudProfileReference, fldPath)
+				errList := ValidateCloudProfileReference(cloudProfileReference, nil, fldPath)
 
 				Expect(errList).To(BeEmpty())
 			})

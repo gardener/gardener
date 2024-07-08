@@ -114,7 +114,7 @@ var (
 		core.ErrorConfigurationProblem,
 	)
 	// ForbiddenShootFinalizersOnCreation is a list of finalizers which are forbidden to be specified on Shoot creation.
-	ForbiddenShootFinalizersOnCreation = sets.New(
+	ForbiddenShootFinalizersOnCreation = sets.New[string](
 		gardencorev1beta1.GardenerName,
 		v1beta1constants.ReferenceProtectionFinalizerName,
 	)
@@ -257,7 +257,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 		workerless = len(spec.Provider.Workers) == 0
 	)
 
-	allErrs = append(allErrs, ValidateCloudProfileReference(spec.CloudProfile, fldPath.Child("cloudProfile"))...)
+	allErrs = append(allErrs, ValidateCloudProfileReference(spec.CloudProfile, spec.CloudProfileName, fldPath.Child("cloudProfile"))...)
 	allErrs = append(allErrs, validateProvider(spec.Provider, spec.Kubernetes, spec.Networking, workerless, fldPath.Child("provider"), inTemplate)...)
 	allErrs = append(allErrs, validateAddons(spec.Addons, spec.Purpose, workerless, fldPath.Child("addons"))...)
 	allErrs = append(allErrs, validateDNS(spec.DNS, fldPath.Child("dns"))...)
@@ -271,9 +271,6 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 
 	if len(spec.Region) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("region"), "must specify a region"))
-	}
-	if len(spec.CloudProfileName) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath.Child("cloudProfileName"), "must specify a cloud profile"))
 	}
 	if workerless {
 		if spec.SecretBindingName != nil {
@@ -323,7 +320,6 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 	}
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Region, oldSpec.Region, fldPath.Child("region"))...)
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.CloudProfileName, oldSpec.CloudProfileName, fldPath.Child("cloudProfileName"))...)
 	// allow removing the value of SecretBindingName when
 	// old secret binding existed, but new is set to nil
 	// and new credentials binding also exists
@@ -1148,13 +1144,16 @@ func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, fldPath *field
 }
 
 // ValidateCloudProfileReference validates the given CloudProfileReference fields.
-func ValidateCloudProfileReference(cloudProfileReference *core.CloudProfileReference, fldPath *field.Path) field.ErrorList {
+func ValidateCloudProfileReference(cloudProfileReference *core.CloudProfileReference, cloudProfileName *string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if cloudProfileReference == nil {
+		if cloudProfileName == nil || len(*cloudProfileName) == 0 {
+			allErrs = append(allErrs, field.Required(fldPath.Child("name"), "must specify a cloud profile either by cloudProfile reference or cloudProfileName"))
+		}
 		return allErrs
 	}
-	cloudProfileReferenceKind := sets.New("CloudProfile", "NamespacedCloudProfile")
+	cloudProfileReferenceKind := sets.New(v1beta1constants.CloudProfileReferenceKindCloudProfile, v1beta1constants.CloudProfileReferenceKindNamespacedCloudProfile)
 	if !cloudProfileReferenceKind.Has(cloudProfileReference.Kind) {
 		allErrs = append(allErrs, field.NotSupported(fldPath.Child("kind"), cloudProfileReference.Kind, sets.List(cloudProfileReferenceKind)))
 	}

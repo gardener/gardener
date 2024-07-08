@@ -28,6 +28,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 )
 
@@ -131,8 +132,8 @@ func (r *Reconciler) determineSeed(
 
 	shootList := v1beta1helper.ConvertShootList(sl.Items)
 
-	cloudProfile := &gardencorev1beta1.CloudProfile{}
-	if err := r.Client.Get(ctx, client.ObjectKey{Name: shoot.Spec.CloudProfileName}, cloudProfile); err != nil {
+	cloudProfile, err := gardenerutils.GetCloudProfile(ctx, r.Client, gardenerutils.BuildCloudProfileReferenceV1Beta1(shoot.Spec.CloudProfileName, shoot.Spec.CloudProfile), shoot.Namespace)
+	if err != nil {
 		return nil, err
 	}
 	regionConfig, err := r.getRegionConfigMap(ctx, log, cloudProfile)
@@ -296,7 +297,13 @@ func applyStrategy(log logr.Logger, shoot *gardencorev1beta1.Shoot, seedList []g
 	}
 
 	if candidates == nil {
-		return nil, fmt.Errorf("no matching seed candidate found for Configuration (Cloud Profile '%s', Region '%s', SeedDeterminationStrategy '%s')", shoot.Spec.CloudProfileName, shoot.Spec.Region, strategy)
+		var cloudProfileName string
+		if shoot.Spec.CloudProfileName != nil {
+			cloudProfileName = *shoot.Spec.CloudProfileName
+		} else if shoot.Spec.CloudProfile != nil {
+			cloudProfileName = shoot.Spec.CloudProfile.Name
+		}
+		return nil, fmt.Errorf("no matching seed candidate found for Configuration (Cloud Profile '%s', Region '%s', SeedDeterminationStrategy '%s')", cloudProfileName, shoot.Spec.Region, strategy)
 	}
 	return candidates, nil
 }

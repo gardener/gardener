@@ -39,7 +39,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 				},
 			},
 			Spec: core.ShootSpec{
-				CloudProfileName: "foo",
+				CloudProfileName: ptr.To("foo"),
 				Kubernetes: core.Kubernetes{
 					Version: "1.18.14",
 				},

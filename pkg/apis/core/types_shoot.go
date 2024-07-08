@@ -54,8 +54,8 @@ type ShootTemplate struct {
 type ShootSpec struct {
 	// Addons contains information about enabled/disabled addons and their configuration.
 	Addons *Addons
-	// CloudProfileName is a name of a CloudProfile object. This field is immutable.
-	CloudProfileName string
+	// CloudProfileName is a name of a CloudProfile object.
+	CloudProfileName *string
 	// DNS contains information about the DNS settings of the Shoot.
 	DNS *DNS
 	// Extensions contain type and provider information for Shoot extensions.

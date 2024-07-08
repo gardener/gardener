@@ -2868,6 +2868,7 @@ message ShootSpec {
   optional Addons addons = 1;
 
   // CloudProfileName is a name of a CloudProfile object. This field is immutable.
+  // +optional
   optional string cloudProfileName = 2;
 
   // DNS contains information about the DNS settings of the Shoot.
@@ -2953,6 +2954,7 @@ message ShootSpec {
   optional string schedulerName = 21;
 
   // CloudProfile contains a reference to a CloudProfile or a NamespacedCloudProfile.
+  // Either this field or the to-be-deprecated field CloudProfileName has to be set.
   // +optional
   optional CloudProfileReference cloudProfile = 22;
 

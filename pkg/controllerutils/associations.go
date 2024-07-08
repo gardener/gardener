@@ -32,7 +32,7 @@ func DetermineShootsAssociatedTo(ctx context.Context, gardenClient client.Reader
 		switch t := obj.(type) {
 		case *gardencorev1beta1.CloudProfile:
 			cloudProfile := obj.(*gardencorev1beta1.CloudProfile)
-			if shoot.Spec.CloudProfileName == cloudProfile.Name {
+			if shoot.Spec.CloudProfileName != nil && *shoot.Spec.CloudProfileName == cloudProfile.Name {
 				associatedShoots = append(associatedShoots, fmt.Sprintf("%s/%s", shoot.Namespace, shoot.Name))
 			}
 		case *gardencorev1beta1.Seed:

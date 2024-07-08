@@ -39,7 +39,7 @@ var _ = Describe("Strategy", func() {
 					Namespace: "my-namespace",
 				},
 				Spec: core.ShootSpec{
-					CloudProfileName: "aws-profile",
+					CloudProfileName: ptr.To("aws-profile"),
 					Region:           "eu-west-1",
 					Kubernetes: core.Kubernetes{
 						Version: "1.25.2",
@@ -58,36 +58,85 @@ var _ = Describe("Strategy", func() {
 	})
 
 	Describe("#PrepareForCreate", func() {
-		Context("cloudProfile field removal", func() {
+		Context("cloudProfile field fallback", func() {
 			var (
-				shoot                 *core.Shoot
-				cloudProfileReference *core.CloudProfileReference
+				shoot *core.Shoot
 			)
 
 			BeforeEach(func() {
 				shoot = &core.Shoot{}
-				cloudProfileReference = &core.CloudProfileReference{
-					Kind: "foo",
+			})
+
+			It("should fill cloudProfile field with fallback if empty", func() {
+				shoot.Spec.CloudProfileName = ptr.To("foo")
+				strategy.PrepareForCreate(context.TODO(), shoot)
+
+				Expect(*shoot.Spec.CloudProfileName).To(Equal("foo"))
+				Expect(shoot.Spec.CloudProfile).To(Equal(&core.CloudProfileReference{
+					Kind: "CloudProfile",
+					Name: "foo",
+				}))
+			})
+
+			It("should fill cloudProfileName field with fallback if empty and CloudProfile is used", func() {
+				shoot.Spec.CloudProfile = &core.CloudProfileReference{
+					Kind: "CloudProfile",
 					Name: "bar",
 				}
-			})
-
-			It("should remove cloudProfile field if NamespacedCloudProfile feature gate is disabled", func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, false))
-
-				shoot.Spec.CloudProfile = cloudProfileReference
 				strategy.PrepareForCreate(context.TODO(), shoot)
 
-				Expect(shoot.Spec.CloudProfile).To(BeNil())
+				Expect(*shoot.Spec.CloudProfileName).To(Equal("bar"))
+				Expect(shoot.Spec.CloudProfile).To(Equal(&core.CloudProfileReference{
+					Kind: "CloudProfile",
+					Name: "bar",
+				}))
 			})
 
-			It("should not remove cloudProfile field if NamespacedCloudProfile feature gate is enabled", func() {
+			It("should override cloudProfileName field on conflicting entry with cloudProfile", func() {
+				shoot.Spec.CloudProfileName = ptr.To("foo")
+				shoot.Spec.CloudProfile = &core.CloudProfileReference{
+					Kind: "CloudProfile",
+					Name: "bar",
+				}
+				strategy.PrepareForCreate(context.TODO(), shoot)
+
+				Expect(*shoot.Spec.CloudProfileName).To(Equal("bar"))
+				Expect(shoot.Spec.CloudProfile).To(Equal(&core.CloudProfileReference{
+					Kind: "CloudProfile",
+					Name: "bar",
+				}))
+			})
+
+			It("should unset cloudProfileName field if NamespacedCloudProfile is referenced and feature gate is enabled", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, true))
-
-				shoot.Spec.CloudProfile = cloudProfileReference
+				shoot.Spec.CloudProfile = &core.CloudProfileReference{
+					Kind: "NamespacedCloudProfile",
+					Name: "bar",
+				}
+				shoot.Spec.CloudProfileName = ptr.To("foo")
 				strategy.PrepareForCreate(context.TODO(), shoot)
 
-				Expect(shoot.Spec.CloudProfile).To(Equal(cloudProfileReference))
+				Expect(shoot.Spec.CloudProfileName).To(BeNil())
+				Expect(shoot.Spec.CloudProfile).To(Equal(&core.CloudProfileReference{
+					Kind: "NamespacedCloudProfile",
+					Name: "bar",
+				}))
+			})
+
+			It("should keep cloudProfileName field if NamespacedCloudProfile is referenced and feature gate is disabled", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, false))
+				shoot.Spec.CloudProfile = &core.CloudProfileReference{
+					Kind: "NamespacedCloudProfile",
+					Name: "bar",
+				}
+				shoot.Spec.CloudProfileName = ptr.To("foo")
+				strategy.PrepareForCreate(context.TODO(), shoot)
+
+				Expect(*shoot.Spec.CloudProfileName).To(Equal("foo"))
+				Expect(shoot.Spec.CloudProfile).To(Equal(&core.CloudProfileReference{
+					Kind: "NamespacedCloudProfile",
+					Name: "bar",
+				}))
 			})
 
 			It("should remove CredentialsBindingName field if ShootCredentialsBinding feature gate is disabled", func() {
@@ -113,46 +162,96 @@ var _ = Describe("Strategy", func() {
 	Describe("#PrepareForUpdate", func() {
 		Context("cloudProfile field removal", func() {
 			var (
-				oldShoot              *core.Shoot
-				newShoot              *core.Shoot
-				cloudProfileReference *core.CloudProfileReference
+				oldShoot *core.Shoot
+				newShoot *core.Shoot
 			)
 
 			BeforeEach(func() {
 				oldShoot = &core.Shoot{}
 				newShoot = oldShoot.DeepCopy()
-				cloudProfileReference = &core.CloudProfileReference{
-					Kind: "foo",
+			})
+
+			It("should restore the last state if both fields are removed", func() {
+				oldShoot.Spec.CloudProfileName = ptr.To("foo")
+				strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+
+				Expect(*newShoot.Spec.CloudProfileName).To(Equal("foo"))
+				Expect(newShoot.Spec.CloudProfile).To(Equal(&core.CloudProfileReference{
+					Kind: "CloudProfile",
+					Name: "foo",
+				}))
+			})
+
+			It("should fill cloudProfile field with fallback if empty", func() {
+				oldShoot.Spec.CloudProfileName = ptr.To("foo")
+				strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+
+				Expect(*newShoot.Spec.CloudProfileName).To(Equal("foo"))
+				Expect(newShoot.Spec.CloudProfile).To(Equal(&core.CloudProfileReference{
+					Kind: "CloudProfile",
+					Name: "foo",
+				}))
+			})
+
+			It("should fill cloudProfileName field with fallback if empty and CloudProfile is used", func() {
+				oldShoot.Spec.CloudProfile = &core.CloudProfileReference{
+					Kind: "CloudProfile",
 					Name: "bar",
 				}
-			})
-
-			It("should remove cloudProfile field if NamespacedCloudProfile feature gate is disabled", func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, false))
-
-				newShoot.Spec.CloudProfile = cloudProfileReference
 				strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
 
-				Expect(newShoot.Spec.CloudProfile).To(BeNil())
+				Expect(*newShoot.Spec.CloudProfileName).To(Equal("bar"))
+				Expect(newShoot.Spec.CloudProfile).To(Equal(&core.CloudProfileReference{
+					Kind: "CloudProfile",
+					Name: "bar",
+				}))
 			})
 
-			It("should not remove cloudProfile field if NamespacedCloudProfile feature gate is enabled", func() {
+			It("should override cloudProfileName field on conflicting entry with cloudProfile", func() {
+				oldShoot.Spec.CloudProfileName = ptr.To("foo")
+				oldShoot.Spec.CloudProfile = &core.CloudProfileReference{
+					Kind: "CloudProfile",
+					Name: "bar",
+				}
+				strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+
+				Expect(*newShoot.Spec.CloudProfileName).To(Equal("bar"))
+				Expect(newShoot.Spec.CloudProfile).To(Equal(&core.CloudProfileReference{
+					Kind: "CloudProfile",
+					Name: "bar",
+				}))
+			})
+
+			It("should unset cloudProfileName field if NamespacedCloudProfile is referenced and feature gate is enabled", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, true))
-
-				newShoot.Spec.CloudProfile = cloudProfileReference
+				oldShoot.Spec.CloudProfile = &core.CloudProfileReference{
+					Kind: "NamespacedCloudProfile",
+					Name: "bar",
+				}
+				oldShoot.Spec.CloudProfileName = ptr.To("foo")
 				strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
 
-				Expect(newShoot.Spec.CloudProfile).To(Equal(cloudProfileReference))
+				Expect(newShoot.Spec.CloudProfileName).To(BeNil())
+				Expect(newShoot.Spec.CloudProfile).To(Equal(&core.CloudProfileReference{
+					Kind: "NamespacedCloudProfile",
+					Name: "bar",
+				}))
 			})
 
-			It("should not remove cloudProfile field if NamespacedCloudProfile feature gate is disabled but the cloudProfile field is present in the old Shoot", func() {
+			It("should keep cloudProfileName field if NamespacedCloudProfile is referenced and feature gate is disabled", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, false))
-
-				oldShoot.Spec.CloudProfile = cloudProfileReference
-				newShoot.Spec.CloudProfile = cloudProfileReference
+				oldShoot.Spec.CloudProfile = &core.CloudProfileReference{
+					Kind: "NamespacedCloudProfile",
+					Name: "bar",
+				}
+				oldShoot.Spec.CloudProfileName = ptr.To("foo")
 				strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
 
-				Expect(newShoot.Spec.CloudProfile).To(Equal(cloudProfileReference))
+				Expect(*newShoot.Spec.CloudProfileName).To(Equal("foo"))
+				Expect(newShoot.Spec.CloudProfile).To(Equal(&core.CloudProfileReference{
+					Kind: "NamespacedCloudProfile",
+					Name: "bar",
+				}))
 			})
 
 			It("should remove CredentialsBindingName field if ShootCredentialsBinding feature gate is disabled", func() {
@@ -626,7 +725,7 @@ func newShoot(seedName string) *core.Shoot {
 			Labels:    map[string]string{"foo": "bar"},
 		},
 		Spec: core.ShootSpec{
-			CloudProfileName: "baz",
+			CloudProfileName: ptr.To("baz"),
 			SeedName:         &seedName,
 		},
 		Status: core.ShootStatus{
