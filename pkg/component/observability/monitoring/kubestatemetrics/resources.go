@@ -251,7 +251,7 @@ func (k *kubeStateMetrics) reconcileDeployment(
 
 		args = append(args,
 			"--resources=deployments,pods,statefulsets,nodes,horizontalpodautoscalers,persistentvolumeclaims,replicasets,namespaces",
-			"--metric-labels-allowlist=nodes=[*]",
+			"--metric-labels-allowlist=nodes=[*],pods=[origin]",
 			"--metric-annotations-allowlist=namespaces=[shoot.gardener.cloud/uid]",
 			"--metric-allowlist="+strings.Join(cachePrometheusAllowedMetrics, ","),
 			"--custom-resource-state-config-file="+customResourceStateConfigFile,
@@ -267,7 +267,7 @@ func (k *kubeStateMetrics) reconcileDeployment(
 			"--resources=daemonsets,deployments,nodes,pods,statefulsets,replicasets",
 			"--namespaces="+metav1.NamespaceSystem,
 			"--kubeconfig="+gardenerutils.PathGenericKubeconfig,
-			"--metric-labels-allowlist=nodes=[*]",
+			"--metric-labels-allowlist=nodes=[*],pods=[origin]",
 			"--custom-resource-state-config-file="+customResourceStateConfigFile,
 		)
 	}
