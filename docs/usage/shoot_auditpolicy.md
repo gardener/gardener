@@ -1,6 +1,6 @@
 ---
 title: Audit a Kubernetes Cluster
-description: How to define a Custom Audit Policy through a `ConfigMap` and reference it in the shoot spec
+description: How to define a custom audit policy through a `ConfigMap` and reference it in the shoot spec
 ---
 
 # Audit a Kubernetes Cluster

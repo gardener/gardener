@@ -1,5 +1,5 @@
 ---
-description: The basics of Horizontal Node and Vertical Pod Auto-Scaling
+description: The basics of horizontal Node and vertical Pod auto-scaling
 ---
 
 # Auto-Scaling in Shoot Clusters

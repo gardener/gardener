@@ -1,5 +1,5 @@
 ---
-title: High Avaliability Best Practices
+title: Implementing High Availability and Tolerating Zone Outages
 ---
 
 # Implementing High Availability and Tolerating Zone Outages

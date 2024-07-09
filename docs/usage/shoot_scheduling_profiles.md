@@ -1,5 +1,5 @@
 ---
-description: Introducing `balanced` and `bin-packing` Scheduling Profiles 
+description: Introducing `balanced` and `bin-packing` scheduling profiles 
 ---
 
 # Shoot Scheduling Profiles

@@ -1,6 +1,6 @@
 ---
 title: Shoot Networking Configurations
-description: Configuring Pod Network and maximum number of nodes and pods per node 
+description: Configuring Pod network. Maximum number of Nodes and Pods per Node.
 ---
 
 # Shoot Networking

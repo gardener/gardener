@@ -1,5 +1,5 @@
 ---
-title: Kubernetes and Operating System Versioning
+title: Shoot Kubernetes and Operating System Versioning in Gardener
 ---
 
 # Shoot Kubernetes and Operating System Versioning in Gardener

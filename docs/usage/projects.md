@@ -1,5 +1,5 @@
 ---
-description: Project operations, roles and what they allow. Explaining the Four-Eyes-Principle for resource deletion
+description: Project operations and roles. Four-Eyes-Principle for resource deletion
 ---
 
 # Projects
