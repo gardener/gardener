@@ -1,5 +1,5 @@
 ---
-description: Defining the maintenance time window, configuring automatic version updates, confine reconcilations only to happen during maintenance, adding an additional maintenance operation and list of special operations during maintenance
+description: Defining the maintenance time window, configuring automatic version updates, confining reconciliations to only happen during maintenance, adding an additional maintenance operation, etc.
 ---
 
 # Shoot Maintenance

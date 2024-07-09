@@ -1,6 +1,6 @@
 ---
 title: Workerless Shoot
-description: `spec.Provider.Workers` being empty defines a Workerless Shoot
+description: What is a Workerless Shoot and how to create one
 ---
 
 # Workerless `Shoot`s
