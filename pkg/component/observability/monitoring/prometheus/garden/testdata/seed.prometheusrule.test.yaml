@@ -16,15 +16,31 @@ tests:
     input_series:
       - series: garden_seed_condition{condition = "ExtensionsReady",
                                       name      = "seed-flapping"}
-        values: 0 0 2 -1 2 0
+        values: 0 0 2 -1 2 0x25
       - series: garden_seed_condition{condition = "ExtensionsReady",
                                       name      = "seed-progressing-for-long"}
-        values: 2 2 0 0 2 2 0 0 0 0 0
+        values: 2 2 0 0 2 2 0x24
+      - series: garden_seed_condition{condition = "GardenletReady",
+                                      name      = "seed-flapping"}
+        values: 0 0 2 -1 2 0 0 0 0 0
+      - series: garden_seed_condition{condition = "GardenletReady",
+                                      name      = "seed-progressing-for-long"}
+        values: 2 2 0 0 2 2 0 0 0 0
+      - series: garden_shoot_condition{condition = "APIServerUnavailable",
+                                       is_seed   = "true",
+                                       operation = "Reconcile",
+                                       name      = "seed-flapping"}
+        values: 0 0 2 -1 2 0 0 0 0 0
+      - series: garden_shoot_condition{condition = "APIServerUnavailable",
+                                       is_seed   = "true",
+                                       operation = "Reconcile",
+                                       name      = "seed-progressing-for-long"}
+        values: 2 2 0 0 2 2 0 0 0 0
     external_labels:
       landscape: landscape-unit-tests
     alert_rule_test:
       - alertname: SeedConditionFailing
-        eval_time: 10m
+        eval_time: 30m
         exp_alerts:
           - exp_labels:
               severity: critical
@@ -38,19 +54,54 @@ tests:
               description: >-
                 The seed cluster seed-flapping in landscape-unit-tests
                 has a failing condition: ExtensionsReady.
+      - alertname: SeedConditionFailing
+        eval_time: 10m
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              topology: seed
+              condition: GardenletReady
+              name: seed-flapping
+              mute_on_weekends: "true"
+            exp_annotations:
+              summary: >-
+                Seed Condition Failing
+              description: >-
+                The seed cluster seed-flapping in landscape-unit-tests
+                has a failing condition: GardenletReady.
+          - exp_labels:
+              severity: critical
+              topology: seed
+              condition: APIServerUnavailable
+              name: seed-flapping
+              mute_on_weekends: "true"
+            exp_annotations:
+              summary: >-
+                Seed Condition Failing
+              description: >-
+                The seed cluster seed-flapping in landscape-unit-tests
+                has a failing condition: APIServerUnavailable.
 
   - name: SeedConditionFailing:MultipleSeeds
     interval: 1m
     input_series:
       - series: garden_shoot_condition{is_seed="true", operation="Reconcile", condition="SystemComponentsHealthy", name="seed-one"}
-        values: "0x10"
+        values: "0x30"
       - series: garden_seed_condition{condition="SeedSystemComponentsHealthy", name="seed-two"}
+        values: "0x30"
+      - series: garden_seed_condition{condition = "GardenletReady",
+                                      name      = "seed-three"}
+        values: "0x10"
+      - series: garden_shoot_condition{condition = "APIServerUnavailable",
+                                       is_seed   = "true",
+                                       operation = "Reconcile",
+                                       name      = "seed-four"}
         values: "0x10"
     external_labels:
       landscape: landscape-unit-tests
     alert_rule_test:
       - alertname: SeedConditionFailing
-        eval_time: 10m
+        eval_time: 30m
         exp_alerts:
           - exp_labels:
               severity: critical
@@ -76,3 +127,30 @@ tests:
               description: >-
                 The seed cluster seed-two in landscape-unit-tests
                 has a failing condition: SeedSystemComponentsHealthy.
+      - alertname: SeedConditionFailing
+        eval_time: 10m
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              topology: seed
+              condition: GardenletReady
+              name: seed-three
+              mute_on_weekends: "true"
+            exp_annotations:
+              summary: >-
+                Seed Condition Failing
+              description: >-
+                The seed cluster seed-three in landscape-unit-tests
+                has a failing condition: GardenletReady.
+          - exp_labels:
+              severity: critical
+              topology: seed
+              condition: APIServerUnavailable
+              name: seed-four
+              mute_on_weekends: "true"
+            exp_annotations:
+              summary: >-
+                Seed Condition Failing
+              description: >-
+                The seed cluster seed-four in landscape-unit-tests
+                has a failing condition: APIServerUnavailable.
