@@ -80,23 +80,29 @@ func (e *ensurer) EnsureKubeletConfiguration(_ context.Context, _ extensionscont
 }
 
 func (e *ensurer) EnsureAdditionalProvisionFiles(_ context.Context, _ extensionscontextwebhook.GardenContext, new, _ *[]extensionsv1alpha1.File) error {
-	// The localhost upstream must be added via the provisioning OSC to pull the GNA dev image.
-	// Further registries are supposed to be added via the `EnsureCRIConfig` function (reconcile OSC).
-	localhostMirror := RegistryMirror{
-		UpstreamHost:   "localhost:5001",
-		UpstreamServer: "http://localhost:5001",
-		MirrorHost:     "http://garden.local.gardener.cloud:5001",
-	}
-
-	*new = webhook.EnsureFileWithPath(*new, extensionsv1alpha1.File{
-		Path:        filepath.Join("/etc/containerd/certs.d", localhostMirror.UpstreamHost, "hosts.toml"),
-		Permissions: ptr.To[int32](0644),
-		Content: extensionsv1alpha1.FileContent{
-			Inline: &extensionsv1alpha1.FileContentInline{
-				Data: localhostMirror.HostsTOML(),
-			},
+	for _, mirror := range []RegistryMirror{
+		// localhost upstream is required for loading the GNA image.
+		{
+			UpstreamHost: "localhost:5001",
+			MirrorHost:   "http://garden.local.gardener.cloud:5001",
 		},
-	})
+		// europe-docker.pkg.dev upstream is required for loading the Hyperkube image.
+		// Further registries are supposed to be added via the `EnsureCRIConfig` function (reconcile OSC).
+		{
+			UpstreamHost: "europe-docker.pkg.dev",
+			MirrorHost:   "http://garden.local.gardener.cloud:5008",
+		},
+	} {
+		*new = webhook.EnsureFileWithPath(*new, extensionsv1alpha1.File{
+			Path:        filepath.Join("/etc/containerd/certs.d", mirror.UpstreamHost, "hosts.toml"),
+			Permissions: ptr.To[int32](0644),
+			Content: extensionsv1alpha1.FileContent{
+				Inline: &extensionsv1alpha1.FileContentInline{
+					Data: mirror.HostsTOML(),
+				},
+			},
+		})
+	}
 
 	return nil
 }
@@ -131,11 +137,6 @@ func (e *ensurer) EnsureCRIConfig(_ context.Context, _ extensionscontextwebhook.
 			Upstream: "quay.io",
 			Server:   ptr.To("https://quay.io"),
 			Hosts:    []extensionsv1alpha1.RegistryHost{{URL: "http://garden.local.gardener.cloud:5007"}},
-		},
-		{
-			Upstream: "europe-docker.pkg.dev",
-			Server:   ptr.To("https://europe-docker.pkg.dev"),
-			Hosts:    []extensionsv1alpha1.RegistryHost{{URL: "http://garden.local.gardener.cloud:5008"}},
 		},
 	} {
 		// Only add registry when it is not already set in the OSC.

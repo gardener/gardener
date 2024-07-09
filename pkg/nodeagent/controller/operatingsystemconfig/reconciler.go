@@ -100,6 +100,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("failed reconciling containerd configuration: %w", err)
 	}
 
+	log.Info("Applying containerd registries")
+	waitForRegistries, err := r.ReconcileContainerdRegistries(ctx, log, oscChanges.containerd)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed reconciling containerd registries: %w", err)
+	}
+
 	log.Info("Applying new or changed files")
 	if err := r.applyChangedFiles(ctx, log, oscChanges.files.changed); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed applying changed files: %w", err)
@@ -133,12 +139,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("failed executing unit commands: %w", err)
 	}
 
-	// Containerd registries must only be registered after the node is almost completely prepared.
-	// Otherwise, failing registry readiness probes hinder the scheduling of cache and mirror pods within the cluster
-	// because there is no node ready to let them run on (esp. relevant during cluster creation).
-	log.Info("Applying containerd registries")
-	if err := r.ReconcileContainerdRegistries(ctx, log, oscChanges.containerd); err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed reconciling containerd registries: %w", err)
+	// After the node is prepared, we can wait for the registries to be configured.
+	// The ones with readiness probes should also succeed here since their cache/mirror pods
+	// can now start as workload in the cluster.
+	log.Info("Waiting for containerd registries to be configured")
+	if err := waitForRegistries(); err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed configuring containerd registries: %w", err)
 	}
 
 	log.Info("Removing no longer needed files")
