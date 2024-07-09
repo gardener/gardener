@@ -140,7 +140,7 @@ var _ = Describe("Virtual Cluster Reconciler", func() {
 
 				sutExt := &operatorv1alpha1.Extension{}
 				Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: extensionName}, sutExt)).To(Succeed())
-				Expect(sutExt.Finalizers).To(HaveLen(0))
+				Expect(sutExt.Finalizers).To(BeEmpty())
 			})
 		})
 
@@ -185,8 +185,8 @@ var _ = Describe("Virtual Cluster Reconciler", func() {
 				Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: extensionName}, sutExt)).To(matchers.BeNotFoundError())
 				Expect(virtualClient.List(ctx, &ctrlRegList)).To(Succeed())
 				Expect(virtualClient.List(ctx, &ctrlDepList)).To(Succeed())
-				Expect(ctrlDepList.Items).To(HaveLen(0))
-				Expect(ctrlRegList.Items).To(HaveLen(0))
+				Expect(ctrlDepList.Items).To(BeEmpty())
+				Expect(ctrlRegList.Items).To(BeEmpty())
 			})
 		})
 	})

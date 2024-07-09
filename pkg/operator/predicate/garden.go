@@ -38,10 +38,11 @@ func GardenPredicate() predicate.Predicate {
 	}
 }
 
+// DeletePredicate is a predicate that is true only in the event of an object deletion.
 func DeletePredicate() predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc:  func(event.CreateEvent) bool { return false },
-		UpdateFunc:  func(e event.UpdateEvent) bool { return false },
+		UpdateFunc:  func(event.UpdateEvent) bool { return false },
 		DeleteFunc:  func(event.DeleteEvent) bool { return true },
 		GenericFunc: func(event.GenericEvent) bool { return false },
 	}

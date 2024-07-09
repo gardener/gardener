@@ -12,7 +12,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
-	v1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -96,7 +95,7 @@ var _ = Describe("Extension controller tests", func() {
 					ExtensionDeployment: &operatorv1alpha1.ExtensionDeploymentSpec{
 						DeploymentSpec: operatorv1alpha1.DeploymentSpec{
 							Helm: &operatorv1alpha1.ExtensionHelm{
-								OCIRepository: &v1.OCIRepository{
+								OCIRepository: &gardencorev1.OCIRepository{
 									Ref: ptr.To("foo"),
 								},
 							},

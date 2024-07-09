@@ -22,7 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/controller/vpaevictionrequirements"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	"github.com/gardener/gardener/pkg/operator/controller/controllerregistrar"
-	operatorextension "github.com/gardener/gardener/pkg/operator/controller/extension"
+	extensioncontroller "github.com/gardener/gardener/pkg/operator/controller/extension"
 	"github.com/gardener/gardener/pkg/operator/controller/garden"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -46,7 +46,7 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 	if err := garden.AddToManager(ctx, mgr, cfg, identity, gardenClientMap); err != nil {
 		return err
 	}
-	if err := operatorextension.AddToManager(ctx, mgr, cfg, gardenClientMap); err != nil {
+	if err := extensioncontroller.AddToManager(ctx, mgr, cfg, gardenClientMap); err != nil {
 		return err
 	}
 

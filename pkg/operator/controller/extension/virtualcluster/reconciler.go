@@ -34,10 +34,15 @@ import (
 )
 
 const (
-	ConditionReconcileFailed  = "ReconcileFailed"
-	ConditionDeleteFailed     = "DeleteFailed"
-	ConditionNoGardenFound    = "NoGardenFound"
+	// ConditionReconcileFailed is the condition type for when the virtual cluster resources fail to be reconciled.
+	ConditionReconcileFailed = "ReconcileFailed"
+	// ConditionDeleteFailed is the condition type for when the virtual cluster resources fail to be deleted.
+	ConditionDeleteFailed = "DeleteFailed"
+	// ConditionNoGardenFound is the condition type for when the virtual cluster does not exist.
+	ConditionNoGardenFound = "NoGardenFound"
+	// ConditionReconcileSuccess is the condition type for when the virtual cluster resources successfully reconcile.
 	ConditionReconcileSuccess = "ReconcileSuccessful"
+	// ConditionDeleteSuccessful is the condition type for when the virtual cluster resources successfully delete.
 	ConditionDeleteSuccessful = "DeleteSuccessful"
 )
 

@@ -13,15 +13,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
-	v1 "github.com/gardener/gardener/pkg/apis/core/v1"
+	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	. "github.com/gardener/gardener/pkg/operator/controller/extension/utils"
-)
-
-var (
-	//go:embed extensions.yaml
-	extensionsYAML string
-	extensions     map[string]Extension
 )
 
 var _ = Describe("ExtensionDefaulter", func() {
@@ -59,17 +53,17 @@ var _ = Describe("ExtensionDefaulter", func() {
 			_, ok := ExtensionSpecFor(operatorExt.Name)
 			Expect(ok).To(BeFalse())
 
-			ext, err := MergeExtensionSpecs(*operatorExt)
+			appliedExt := operatorExt.DeepCopy()
+			err := ApplyExtensionSpec(appliedExt)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(ext).To(Equal(operatorExt))
+			Expect(appliedExt).To(Equal(operatorExt))
 		})
 	})
 	Describe("#WellKnownExtensions", func() {
 		It("should default zero fields", func() {
-			// rename extension to an unknown name
-			ext, err := MergeExtensionSpecs(*operatorExt)
+			err := ApplyExtensionSpec(operatorExt)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(ext.Spec.Deployment.ExtensionDeployment.DeploymentSpec.Helm.OCIRepository.Ref).NotTo(BeNil())
+			Expect(operatorExt.Spec.Deployment.ExtensionDeployment.DeploymentSpec.Helm.OCIRepository.Ref).NotTo(BeNil())
 		})
 		It("should respect populated fields", func() {
 			// validate test conditions
@@ -83,7 +77,7 @@ var _ = Describe("ExtensionDefaulter", func() {
 				ExtensionDeployment: &operatorv1alpha1.ExtensionDeploymentSpec{
 					DeploymentSpec: operatorv1alpha1.DeploymentSpec{
 						Helm: &operatorv1alpha1.ExtensionHelm{
-							OCIRepository: &v1.OCIRepository{
+							OCIRepository: &gardencorev1.OCIRepository{
 								Ref: ptr.To("foo"),
 							},
 						},
@@ -91,9 +85,9 @@ var _ = Describe("ExtensionDefaulter", func() {
 				},
 			}
 			// rename extension to an unknown name
-			ext, err := MergeExtensionSpecs(*operatorExt)
+			err := ApplyExtensionSpec(operatorExt)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(*ext.Spec.Deployment.ExtensionDeployment.DeploymentSpec.Helm.OCIRepository.Ref).To(Equal("foo"))
+			Expect(*operatorExt.Spec.Deployment.ExtensionDeployment.DeploymentSpec.Helm.OCIRepository.Ref).To(Equal("foo"))
 		})
 	})
 })

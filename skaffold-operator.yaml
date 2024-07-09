@@ -235,7 +235,9 @@ build:
             - pkg/operator/controller/extension
             - pkg/operator/controller/extension/virtualcluster
             - pkg/operator/controller/extension/utils
+            - pkg/operator/controller/extension/utils/extensions.yaml
             - pkg/operator/features
+            - pkg/operator/predicate
             - pkg/operator/webhook
             - pkg/operator/webhook/defaulting
             - pkg/operator/webhook/defaulting/garden

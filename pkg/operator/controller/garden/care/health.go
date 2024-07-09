@@ -183,16 +183,6 @@ func (g GardenConditions) ConvertToSlice() []gardencorev1beta1.Condition {
 	}
 }
 
-// // ConvertToMap returns the garden conditions as a map.
-// func (g GardenConditions) ConvertToMap() map[gardencorev1beta1.ConditionType]gardencorev1beta1.Condition {
-// 	return map[gardencorev1beta1.ConditionType]gardencorev1beta1.Condition{
-// 		g.virtualGardenAPIServerAvailable.Type: g.virtualGardenAPIServerAvailable,
-// 		g.runtimeComponentsHealthy.Type:        g.runtimeComponentsHealthy,
-// 		g.virtualComponentsHealthy.Type:        g.virtualComponentsHealthy,
-// 		g.observabilityComponentsHealthy.Type:  g.observabilityComponentsHealthy,
-// 	}
-// }
-//
 // ConditionTypes returns all garden condition types.
 func (g GardenConditions) ConditionTypes() []gardencorev1beta1.ConditionType {
 	return []gardencorev1beta1.ConditionType{

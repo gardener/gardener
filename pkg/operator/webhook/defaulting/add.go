@@ -13,6 +13,7 @@ import (
 	"github.com/gardener/gardener/pkg/operator/webhook/defaulting/garden"
 )
 
+// AddToManager adds the webhook to the manager.
 func AddToManager(mgr manager.Manager) error {
 	if err := (&garden.Handler{
 		Logger: mgr.GetLogger().WithName("webhook").WithName(garden.HandlerName),
