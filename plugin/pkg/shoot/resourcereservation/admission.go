@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/gardener/gardener/plugin/pkg/utils"
 	"io"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -22,6 +21,7 @@ import (
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	plugin "github.com/gardener/gardener/plugin/pkg"
+	"github.com/gardener/gardener/plugin/pkg/utils"
 )
 
 const (

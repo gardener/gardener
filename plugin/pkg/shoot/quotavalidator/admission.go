@@ -93,8 +93,8 @@ func (q *QuotaValidator) SetCoreInformerFactory(f gardencoreinformers.SharedInfo
 	cloudProfileInformer := f.Core().V1beta1().CloudProfiles()
 	q.cloudProfileLister = cloudProfileInformer.Lister()
 
-	namespacedCloudProfileLister := f.Core().V1beta1().NamespacedCloudProfiles()
-	q.namespacedCloudProfileLister = namespacedCloudProfileLister.Lister()
+	namespacedCloudProfileInformer := f.Core().V1beta1().NamespacedCloudProfiles()
+	q.namespacedCloudProfileLister = namespacedCloudProfileInformer.Lister()
 
 	secretBindingInformer := f.Core().V1beta1().SecretBindings()
 	q.secretBindingLister = secretBindingInformer.Lister()
