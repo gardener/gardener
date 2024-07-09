@@ -224,7 +224,7 @@ var _ = Describe("validator", func() {
 					Namespace: namespaceName,
 				},
 				Spec: core.ShootSpec{
-					CloudProfileName:       "profile",
+					CloudProfileName:       ptr.To("profile"),
 					Region:                 "europe",
 					SecretBindingName:      ptr.To("my-secret"),
 					CredentialsBindingName: ptr.To("my-secret"),

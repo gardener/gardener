@@ -13,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/authentication/user"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -91,7 +92,7 @@ var _ = Describe("resourcereservation", func() {
 					Name:      "test-shoot",
 				},
 				Spec: core.ShootSpec{
-					CloudProfileName: "profile",
+					CloudProfileName: ptr.To("profile"),
 					Provider: core.Provider{
 						Workers: workersBase,
 					},

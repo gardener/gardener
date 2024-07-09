@@ -224,7 +224,7 @@ func setShootGeneralSettings(shoot *gardencorev1beta1.Shoot, cfg *ShootCreationC
 	}
 
 	if StringSet(cfg.cloudProfile) {
-		shoot.Spec.CloudProfileName = cfg.cloudProfile
+		shoot.Spec.CloudProfileName = &cfg.cloudProfile
 	}
 
 	if StringSet(cfg.secretBinding) {

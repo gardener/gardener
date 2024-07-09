@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/gardener/gardener/plugin/pkg/utils"
 	"io"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -45,8 +46,9 @@ func Register(plugins *admission.Plugins) {
 // ResourceReservation contains required information to process admission requests.
 type ResourceReservation struct {
 	*admission.Handler
-	cloudProfileLister gardencorev1beta1listers.CloudProfileLister
-	readyFunc          admission.ReadyFunc
+	cloudProfileLister           gardencorev1beta1listers.CloudProfileLister
+	namespacedCloudProfileLister gardencorev1beta1listers.NamespacedCloudProfileLister
+	readyFunc                    admission.ReadyFunc
 
 	useGKEFormula bool
 }
@@ -136,7 +138,7 @@ func (c *ResourceReservation) Admit(_ context.Context, a admission.Attributes, _
 		return nil
 	}
 
-	cloudProfile, err := c.cloudProfileLister.Get(shoot.Spec.CloudProfileName)
+	cloudProfile, err := utils.GetCloudProfile(c.cloudProfileLister, c.namespacedCloudProfileLister, shoot.Spec.CloudProfile, shoot.Spec.CloudProfileName, shoot.Namespace)
 	if err != nil {
 		return apierrors.NewInternalError(fmt.Errorf("could not find referenced cloud profile: %+v", err.Error()))
 	}

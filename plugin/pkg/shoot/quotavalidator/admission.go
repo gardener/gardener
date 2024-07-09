@@ -31,6 +31,7 @@ import (
 	securityv1alpha1listers "github.com/gardener/gardener/pkg/client/security/listers/security/v1alpha1"
 	timeutils "github.com/gardener/gardener/pkg/utils/time"
 	plugin "github.com/gardener/gardener/plugin/pkg"
+	"github.com/gardener/gardener/plugin/pkg/utils"
 )
 
 var (
@@ -53,13 +54,14 @@ func Register(plugins *admission.Plugins) {
 // QuotaValidator contains listers and admission handler.
 type QuotaValidator struct {
 	*admission.Handler
-	shootLister              gardencorev1beta1listers.ShootLister
-	cloudProfileLister       gardencorev1beta1listers.CloudProfileLister
-	secretBindingLister      gardencorev1beta1listers.SecretBindingLister
-	credentialsBindingLister securityv1alpha1listers.CredentialsBindingLister
-	quotaLister              gardencorev1beta1listers.QuotaLister
-	readyFunc                admission.ReadyFunc
-	time                     timeutils.Ops
+	shootLister                  gardencorev1beta1listers.ShootLister
+	cloudProfileLister           gardencorev1beta1listers.CloudProfileLister
+	namespacedCloudProfileLister gardencorev1beta1listers.NamespacedCloudProfileLister
+	secretBindingLister          gardencorev1beta1listers.SecretBindingLister
+	credentialsBindingLister     securityv1alpha1listers.CredentialsBindingLister
+	quotaLister                  gardencorev1beta1listers.QuotaLister
+	readyFunc                    admission.ReadyFunc
+	time                         timeutils.Ops
 }
 
 var (
@@ -91,6 +93,9 @@ func (q *QuotaValidator) SetCoreInformerFactory(f gardencoreinformers.SharedInfo
 	cloudProfileInformer := f.Core().V1beta1().CloudProfiles()
 	q.cloudProfileLister = cloudProfileInformer.Lister()
 
+	namespacedCloudProfileLister := f.Core().V1beta1().NamespacedCloudProfiles()
+	q.namespacedCloudProfileLister = namespacedCloudProfileLister.Lister()
+
 	secretBindingInformer := f.Core().V1beta1().SecretBindings()
 	q.secretBindingLister = secretBindingInformer.Lister()
 
@@ -115,6 +120,9 @@ func (q *QuotaValidator) ValidateInitialization() error {
 	}
 	if q.cloudProfileLister == nil {
 		return errors.New("missing cloudProfile lister")
+	}
+	if q.namespacedCloudProfileLister == nil {
+		return errors.New("missing namespacedCloudProfile lister")
 	}
 	if q.secretBindingLister == nil {
 		return errors.New("missing secretBinding lister")
@@ -397,7 +405,7 @@ func (q *QuotaValidator) determineRequiredResources(allocatedResources corev1.Re
 }
 
 func (q *QuotaValidator) getShootResources(shoot core.Shoot) (corev1.ResourceList, error) {
-	cloudProfile, err := q.cloudProfileLister.Get(shoot.Spec.CloudProfileName)
+	cloudProfile, err := utils.GetCloudProfile(q.cloudProfileLister, q.namespacedCloudProfileLister, shoot.Spec.CloudProfile, shoot.Spec.CloudProfileName, shoot.Namespace)
 	if err != nil {
 		return nil, apierrors.NewInternalError(fmt.Errorf("could not find referenced cloud profile: %+v", err.Error()))
 	}

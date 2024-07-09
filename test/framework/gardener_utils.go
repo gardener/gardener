@@ -6,6 +6,7 @@ package framework
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -533,13 +534,33 @@ func (f *GardenerFramework) MigrateShoot(ctx context.Context, shoot *gardencorev
 	return f.WaitForShootToBeReconciled(ctx, shoot)
 }
 
-// GetCloudProfile returns the cloudprofile from gardener with the give name
-func (f *GardenerFramework) GetCloudProfile(ctx context.Context, name string) (*gardencorev1beta1.CloudProfile, error) {
-	cloudProfile := &gardencorev1beta1.CloudProfile{}
-	if err := f.GardenClient.Client().Get(ctx, client.ObjectKey{Name: name}, cloudProfile); err != nil {
-		return nil, fmt.Errorf("could not get CloudProfile '%s' in Garden cluster: %w", name, err)
+// GetCloudProfile returns the cloudprofile from gardener with the given name or from the cloudprofile reference
+func (f *GardenerFramework) GetCloudProfile(ctx context.Context, cloudProfileRef *gardencorev1beta1.CloudProfileReference, namespace string, name *string) (*gardencorev1beta1.CloudProfile, error) {
+	if name != nil {
+		// First, we use the cloudProfileName for now (migration phase) if given
+		cloudProfile := &gardencorev1beta1.CloudProfile{}
+		if err := f.GardenClient.Client().Get(ctx, client.ObjectKey{Name: *name}, cloudProfile); err != nil {
+			return nil, fmt.Errorf("could not get CloudProfile '%s' in Garden cluster: %w", name, err)
+		}
+		return cloudProfile, nil
+	} else if cloudProfileRef != nil {
+		// Else, we use the cloudProfile reference. This will become the only option once cloudProfileName is deprecated and removed.
+		switch cloudProfileRef.Kind {
+		case v1beta1constants.CloudProfileReferenceKindCloudProfile:
+			cloudProfile := &gardencorev1beta1.CloudProfile{}
+			if err := f.GardenClient.Client().Get(ctx, client.ObjectKey{Name: cloudProfileRef.Name}, cloudProfile); err != nil {
+				return nil, fmt.Errorf("could not get CloudProfile '%s' in Garden cluster: %w", name, err)
+			}
+			return cloudProfile, nil
+		case v1beta1constants.CloudProfileReferenceKindNamespacedCloudProfile:
+			namespacedCloudProfile := &gardencorev1beta1.NamespacedCloudProfile{}
+			if err := f.GardenClient.Client().Get(ctx, client.ObjectKey{Name: cloudProfileRef.Name, Namespace: namespace}, namespacedCloudProfile); err != nil {
+				return nil, fmt.Errorf("could not get NamespacedCloudProfile '%s' in Garden cluster: %w", name, err)
+			}
+			return &gardencorev1beta1.CloudProfile{Spec: namespacedCloudProfile.Status.CloudProfileSpec}, nil
+		}
 	}
-	return cloudProfile, nil
+	return nil, errors.New("cloudprofile is required but not set by either cloudProfile reference or cloudProfileName")
 }
 
 // DumpState greps all necessary logs and state of the cluster if the test failed

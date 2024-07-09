@@ -65,7 +65,7 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 			ControlPlane:      getShootControlPlane(),
 			Region:            "local",
 			SecretBindingName: ptr.To("local"),
-			CloudProfileName:  "local",
+			CloudProfileName:  ptr.To("local"),
 			Kubernetes: gardencorev1beta1.Kubernetes{
 				Version:                     "1.30.0",
 				EnableStaticTokenKubeconfig: ptr.To(false),
@@ -128,7 +128,7 @@ func DefaultWorkerlessShoot(name string) *gardencorev1beta1.Shoot {
 		Spec: gardencorev1beta1.ShootSpec{
 			ControlPlane:     getShootControlPlane(),
 			Region:           "local",
-			CloudProfileName: "local",
+			CloudProfileName: ptr.To("local"),
 			Kubernetes: gardencorev1beta1.Kubernetes{
 				Version:                     "1.30.0",
 				EnableStaticTokenKubeconfig: ptr.To(false),

@@ -63,15 +63,16 @@ func Register(plugins *admission.Plugins) {
 // ValidateShoot contains listers and admission handler.
 type ValidateShoot struct {
 	*admission.Handler
-	authorizer               authorizer.Authorizer
-	secretLister             kubecorev1listers.SecretLister
-	cloudProfileLister       gardencorev1beta1listers.CloudProfileLister
-	seedLister               gardencorev1beta1listers.SeedLister
-	shootLister              gardencorev1beta1listers.ShootLister
-	projectLister            gardencorev1beta1listers.ProjectLister
-	secretBindingLister      gardencorev1beta1listers.SecretBindingLister
-	credentialsBindingLister securityv1alpha1listers.CredentialsBindingLister
-	readyFunc                admission.ReadyFunc
+	authorizer                   authorizer.Authorizer
+	secretLister                 kubecorev1listers.SecretLister
+	cloudProfileLister           gardencorev1beta1listers.CloudProfileLister
+	namespacedCloudProfileLister gardencorev1beta1listers.NamespacedCloudProfileLister
+	seedLister                   gardencorev1beta1listers.SeedLister
+	shootLister                  gardencorev1beta1listers.ShootLister
+	projectLister                gardencorev1beta1listers.ProjectLister
+	secretBindingLister          gardencorev1beta1listers.SecretBindingLister
+	credentialsBindingLister     securityv1alpha1listers.CredentialsBindingLister
+	readyFunc                    admission.ReadyFunc
 }
 
 var (
@@ -112,6 +113,9 @@ func (v *ValidateShoot) SetCoreInformerFactory(f gardencoreinformers.SharedInfor
 	cloudProfileInformer := f.Core().V1beta1().CloudProfiles()
 	v.cloudProfileLister = cloudProfileInformer.Lister()
 
+	namespacedCloudProfileLister := f.Core().V1beta1().NamespacedCloudProfiles()
+	v.namespacedCloudProfileLister = namespacedCloudProfileLister.Lister()
+
 	projectInformer := f.Core().V1beta1().Projects()
 	v.projectLister = projectInformer.Lister()
 
@@ -123,6 +127,7 @@ func (v *ValidateShoot) SetCoreInformerFactory(f gardencoreinformers.SharedInfor
 		seedInformer.Informer().HasSynced,
 		shootInformer.Informer().HasSynced,
 		cloudProfileInformer.Informer().HasSynced,
+		namespacedCloudProfileLister.Informer().HasSynced,
 		projectInformer.Informer().HasSynced,
 		secretBindingInformer.Informer().HasSynced,
 	)
@@ -154,6 +159,9 @@ func (v *ValidateShoot) ValidateInitialization() error {
 	}
 	if v.cloudProfileLister == nil {
 		return errors.New("missing cloudProfile lister")
+	}
+	if v.namespacedCloudProfileLister == nil {
+		return errors.New("missing namespacedCloudProfile lister")
 	}
 	if v.seedLister == nil {
 		return errors.New("missing seed lister")
@@ -241,9 +249,14 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, _ adm
 		}
 	}
 
-	cloudProfile, err := v.cloudProfileLister.Get(shoot.Spec.CloudProfileName)
+	cloudProfile, err := admissionutils.GetCloudProfile(v.cloudProfileLister, v.namespacedCloudProfileLister, shoot.Spec.CloudProfile, shoot.Spec.CloudProfileName, shoot.Namespace)
 	if err != nil {
 		return apierrors.NewInternalError(fmt.Errorf("could not find referenced cloud profile: %+v", err.Error()))
+	}
+
+	err = admissionutils.ValidateCloudProfileChanges(v.cloudProfileLister, v.namespacedCloudProfileLister, shoot.Spec, oldShoot.Spec, shoot.Name)
+	if err != nil {
+		return err
 	}
 
 	var seed *gardencorev1beta1.Seed

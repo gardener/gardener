@@ -47,6 +47,7 @@ func (g *graph) setupShootWatch(ctx context.Context, informer cache.Informer) er
 				!apiequality.Semantic.DeepEqual(oldShoot.Spec.SecretBindingName, newShoot.Spec.SecretBindingName) ||
 				!apiequality.Semantic.DeepEqual(oldShoot.Spec.CredentialsBindingName, newShoot.Spec.CredentialsBindingName) ||
 				!apiequality.Semantic.DeepEqual(oldShoot.Spec.CloudProfileName, newShoot.Spec.CloudProfileName) ||
+				!apiequality.Semantic.DeepEqual(oldShoot.Spec.CloudProfile, newShoot.Spec.CloudProfile) ||
 				v1beta1helper.GetShootAuditPolicyConfigMapName(oldShoot.Spec.Kubernetes.KubeAPIServer) != v1beta1helper.GetShootAuditPolicyConfigMapName(newShoot.Spec.Kubernetes.KubeAPIServer) ||
 				!v1beta1helper.ShootDNSProviderSecretNamesEqual(oldShoot.Spec.DNS, newShoot.Spec.DNS) ||
 				!v1beta1helper.ShootResourceReferencesEqual(oldShoot.Spec.Resources, newShoot.Spec.Resources) ||
@@ -89,9 +90,8 @@ func (g *graph) handleShootCreateOrUpdate(ctx context.Context, shoot *gardencore
 	g.deleteAllOutgoingEdges(VertexTypeShoot, shoot.Namespace, shoot.Name, VertexTypeSeed)
 
 	var (
-		shootVertex        = g.getOrCreateVertex(VertexTypeShoot, shoot.Namespace, shoot.Name)
-		namespaceVertex    = g.getOrCreateVertex(VertexTypeNamespace, "", shoot.Namespace)
-		cloudProfileVertex = g.getOrCreateVertex(VertexTypeCloudProfile, "", shoot.Spec.CloudProfileName)
+		shootVertex     = g.getOrCreateVertex(VertexTypeShoot, shoot.Namespace, shoot.Name)
+		namespaceVertex = g.getOrCreateVertex(VertexTypeNamespace, "", shoot.Namespace)
 	)
 
 	if shoot.Spec.SecretBindingName != nil {
@@ -105,7 +105,11 @@ func (g *graph) handleShootCreateOrUpdate(ctx context.Context, shoot *gardencore
 	}
 
 	g.addEdge(namespaceVertex, shootVertex)
-	g.addEdge(cloudProfileVertex, shootVertex)
+
+	if shoot.Spec.CloudProfileName != nil {
+		cloudProfileVertex := g.getOrCreateVertex(VertexTypeCloudProfile, "", *shoot.Spec.CloudProfileName)
+		g.addEdge(cloudProfileVertex, shootVertex)
+	}
 
 	if shoot.Spec.SeedName != nil {
 		seedVertex := g.getOrCreateVertex(VertexTypeSeed, "", *shoot.Spec.SeedName)

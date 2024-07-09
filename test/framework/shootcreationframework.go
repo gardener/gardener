@@ -463,7 +463,7 @@ func (f *ShootCreationFramework) InitializeShootWithFlags(ctx context.Context) e
 	}
 
 	// set worker settings
-	cloudProfile, err := f.GetCloudProfile(ctx, shootObject.Spec.CloudProfileName)
+	cloudProfile, err := f.GetCloudProfile(ctx, shootObject.Spec.CloudProfile, shootObject.Namespace, shootObject.Spec.CloudProfileName)
 	if err != nil {
 		return err
 	}
