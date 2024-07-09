@@ -35,7 +35,7 @@ parse_flags() {
 parse_flags "$@"
 
 if ! kubectl config view --kubeconfig "$PATH_SEED_KUBECONFIG" --raw -o jsonpath='{.users[0].user.client-certificate-data}' | base64 --decode | openssl x509 -noout -checkend 300 2>/dev/null ;then 
-  echo "Seed kubeconfig ${PATH_SEED_KUBECONFIG} has expired. Please provide a non-exipired kubeconfig and try again"
+  echo "Seed kubeconfig ${PATH_SEED_KUBECONFIG} has expired or will expire soon. Please provide a valid kubeconfig and try again"
   exit
 fi
 
