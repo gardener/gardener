@@ -29,7 +29,6 @@ func (b *Botanist) DefaultPlutono() (plutono.Interface, error) {
 		b.ShootUsesDNS(),
 		b.Shoot.IsWorkerless,
 		false,
-		b.Shoot.NodeLocalDNSEnabled,
 		b.Shoot.VPNHighAvailabilityEnabled,
 		b.Shoot.WantsVerticalPodAutoscaler,
 		nil,

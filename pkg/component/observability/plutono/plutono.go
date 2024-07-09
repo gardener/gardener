@@ -110,8 +110,6 @@ type Values struct {
 	IsWorkerless bool
 	// IsGardenCluster specifies whether the cluster is garden cluster.
 	IsGardenCluster bool
-	// NodeLocalDNSEnabled specifies whether the node-local-dns is enabled for cluster.
-	NodeLocalDNSEnabled bool
 	// PriorityClassName is the name of the priority class.
 	PriorityClassName string
 	// Replicas is the number of pod replicas for the plutono.
@@ -416,9 +414,6 @@ func (p *plutono) getDashboardConfigMap(ctx context.Context, suffix string) (*co
 			ignorePaths.Insert("worker")
 		} else {
 			ignorePaths.Insert("workerless")
-			if !p.values.NodeLocalDNSEnabled {
-				ignorePaths.Insert("dns")
-			}
 			if !p.values.IncludeIstioDashboards {
 				ignorePaths.Insert("istio")
 			}

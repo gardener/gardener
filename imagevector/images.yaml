@@ -395,6 +395,7 @@ images:
     value:
     - type: 'githubTeam'
       teamname: 'gardener/gardener-core-networking-maintainers'
+# TODO(vicwicker): A node-local-dns version that uses coredns 1.11 or higher requires adapting the node-local-dns Plutono dashboards.
 - name: node-local-dns
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/cluster/addons/dns/nodelocaldns
   repository: registry.k8s.io/dns/k8s-dns-node-cache
