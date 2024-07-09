@@ -77,7 +77,7 @@ PROMTOOL_VERSION ?= 2.53.0
 # renovate: datasource=github-releases depName=protocolbuffers/protobuf
 PROTOC_VERSION ?= v27.2
 # renovate: datasource=github-releases depName=GoogleContainerTools/skaffold
-SKAFFOLD_VERSION ?= v2.12.0
+SKAFFOLD_VERSION ?= v2.13.0
 # renovate: datasource=github-releases depName=mikefarah/yq
 YQ_VERSION ?= v4.44.2
 # renovate: datasource=github-releases depName=ironcore-dev/vgopath
