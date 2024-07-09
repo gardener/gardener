@@ -51,7 +51,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/oci"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
-
 	forkedyaml "github.com/gardener/gardener/third_party/gopkg.in/yaml.v2"
 )
 
