@@ -32,7 +32,8 @@ import (
 var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 	var (
 		backupSecret = defaultBackupSecret()
-		garden       = defaultGarden(backupSecret)
+		rootCASecret = defaultRootCASecret()
+		garden       = defaultGarden(backupSecret, rootCASecret)
 		extension    = defaultExtension()
 	)
 
@@ -41,8 +42,9 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 		ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
 		defer cancel()
 
-		Expect(client.IgnoreAlreadyExists(runtimeClient.Create(ctx, backupSecret))).To(Succeed())
-		Expect(client.IgnoreAlreadyExists(runtimeClient.Create(ctx, extension))).To(Succeed())
+		Expect(runtimeClient.Create(ctx, backupSecret)).To(Succeed())
+		Expect(runtimeClient.Create(ctx, rootCASecret)).To(Succeed())
+		Expect(runtimeClient.Create(ctx, extension)).To(Succeed())
 		Expect(runtimeClient.Create(ctx, garden)).To(Succeed())
 		waitForGardenToBeReconciled(ctx, garden)
 
@@ -54,6 +56,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 			Expect(gardenerutils.ConfirmDeletion(ctx, runtimeClient, garden)).To(Succeed())
 			Expect(runtimeClient.Delete(ctx, garden)).To(Succeed())
 			Expect(runtimeClient.Delete(ctx, backupSecret)).To(Succeed())
+			Expect(runtimeClient.Delete(ctx, rootCASecret)).To(Succeed())
 			waitForGardenToBeDeleted(ctx, garden)
 			waitForExtensionToBeDeleted(ctx, extension)
 			cleanupVolumes(ctx)
@@ -103,8 +106,8 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 		Eventually(func(g Gomega) {
 			var ctrlDep gardencorev1beta1.ControllerDeployment
 			var ctrlReg gardencorev1beta1.ControllerRegistration
-			g.Expect(virtualClusterClient.Client().Get(ctx, client.ObjectKey{Name: extensionName}, &ctrlDep)).To(BeNotFoundError())
-			g.Expect(virtualClusterClient.Client().Get(ctx, client.ObjectKey{Name: extensionName}, &ctrlReg)).To(BeNotFoundError())
+			g.Expect(virtualClusterClient.Client().Get(ctx, client.ObjectKey{Name: "provider-local"}, &ctrlDep)).To(BeNotFoundError())
+			g.Expect(virtualClusterClient.Client().Get(ctx, client.ObjectKey{Name: "provider-local"}, &ctrlReg)).To(BeNotFoundError())
 		}).Should(Succeed())
 	})
 })
