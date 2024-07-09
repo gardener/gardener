@@ -23,18 +23,16 @@ import (
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	securityvalidation "github.com/gardener/gardener/pkg/apis/security/validation"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	"github.com/gardener/gardener/pkg/utils/workloadidentity"
 )
 
 // TokenRequestREST implements a RESTStorage for a token request.
 type TokenRequestREST struct {
 	coreInformerFactory gardencoreinformers.SharedInformerFactory
 
-	issuer                 string
 	clusterIdentity        string
-	minDuration            int64
-	maxDuration            int64
 	workloadIdentityGetter getter
-	signingKey             any
+	tokenIssuer            *workloadidentity.TokenIssuer
 }
 
 type getter interface {
@@ -63,9 +61,19 @@ func (r *TokenRequestREST) Destroy() {
 // - referenced context object
 // - gardener installation
 func (r *TokenRequestREST) Create(ctx context.Context, name string, obj runtime.Object, createValidation rest.ValidateObjectFunc, _ *metav1.CreateOptions) (runtime.Object, error) {
-	if len(r.issuer) == 0 {
+	if r.tokenIssuer == nil {
 		return nil, errors.New("workload identity token issuer is not configured and tokens cannot be issued")
 	}
+
+	if len(r.tokenIssuer.GetIssuer()) == 0 {
+		return nil, errors.New("workload identity no value provided for the iss claim")
+	}
+
+	user, ok := genericapirequest.UserFrom(ctx)
+	if !ok {
+		return nil, apierrors.NewBadRequest("no user in context")
+	}
+
 	if createValidation != nil {
 		if err := createValidation(ctx, obj.DeepCopyObject()); err != nil {
 			return nil, err
@@ -136,7 +144,7 @@ func (r *TokenRequestREST) Create(ctx context.Context, name string, obj runtime.
 		return nil, apierrors.NewInvalid(gvk.GroupKind(), "", errs)
 	}
 
-	token, exp, err := r.issueToken(tokenRequest, workloadIdentity)
+	token, exp, err := r.issueToken(user, tokenRequest, workloadIdentity)
 	if err != nil {
 		return nil, err
 	}
@@ -162,21 +170,15 @@ func (r *TokenRequestREST) GroupVersionKind(schema.GroupVersion) schema.GroupVer
 // NewTokenRequestREST returns a new TokenRequestREST for workload identity token.
 func NewTokenRequestREST(
 	storage getter,
-	issuer,
 	clusterIdentity string,
-	minDuration,
-	maxDuration time.Duration,
-	signingKey any,
+	tokenIssuer *workloadidentity.TokenIssuer,
 	coreInformerFactory gardencoreinformers.SharedInformerFactory,
 ) *TokenRequestREST {
 	return &TokenRequestREST{
 		workloadIdentityGetter: storage,
 
-		issuer:              issuer,
 		clusterIdentity:     clusterIdentity,
-		minDuration:         int64(minDuration.Seconds()),
-		maxDuration:         int64(maxDuration.Seconds()),
-		signingKey:          signingKey,
+		tokenIssuer:         tokenIssuer,
 		coreInformerFactory: coreInformerFactory,
 	}
 }

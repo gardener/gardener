@@ -195,6 +195,7 @@ build:
             - pkg/utils/validation/kubernetes/core
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
+            - pkg/utils/workloadidentity
             - plugin/pkg
             - plugin/pkg/bastion/validator
             - plugin/pkg/controllerregistration/resources

@@ -23,6 +23,7 @@ import (
 	settingsrest "github.com/gardener/gardener/pkg/apiserver/registry/settings/rest"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/utils/workloadidentity"
 )
 
 // ExtraConfig contains non-generic Gardener API server configuration.
@@ -82,6 +83,19 @@ func (c completedConfig) New() (*GardenerServer, error) {
 		return nil, err
 	}
 
+	var tokenIssuer *workloadidentity.TokenIssuer
+	if c.ExtraConfig.WorkloadIdentitySigningKey != nil {
+		tokenIssuer, err = workloadidentity.NewTokenIssuer(
+			c.ExtraConfig.WorkloadIdentitySigningKey,
+			c.ExtraConfig.WorkloadIdentityTokenIssuer,
+			int64(c.ExtraConfig.WorkloadIdentityTokenMinExpiration.Seconds()),
+			int64(c.ExtraConfig.WorkloadIdentityTokenMaxExpiration.Seconds()),
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	var (
 		s                = &GardenerServer{GenericAPIServer: genericServer}
 		coreAPIGroupInfo = (corerest.StorageProvider{
@@ -95,12 +109,9 @@ func (c completedConfig) New() (*GardenerServer, error) {
 		settingsAPIGroupInfo       = (settingsrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 		operationsAPIGroupInfo     = (operationsrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 		securityAPIGroupInfo       = (securityrest.StorageProvider{
-			WorkloadIdentityTokenIssuer:        c.ExtraConfig.WorkloadIdentityTokenIssuer,
-			WorkloadIdentityTokenMinExpiration: c.ExtraConfig.WorkloadIdentityTokenMinExpiration,
-			WorkloadIdentityTokenMaxExpiration: c.ExtraConfig.WorkloadIdentityTokenMaxExpiration,
-			WorkloadIdentitySigningKey:         c.ExtraConfig.WorkloadIdentitySigningKey,
-			CoreInformerFactory:                c.coreInformerFactory,
-			ClusterIdentity:                    c.ExtraConfig.ClusterIdentity,
+			TokenIssuer:         tokenIssuer,
+			CoreInformerFactory: c.coreInformerFactory,
+			ClusterIdentity:     c.ExtraConfig.ClusterIdentity,
 		}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 	)
 

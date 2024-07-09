@@ -5,53 +5,40 @@
 package storage
 
 import (
-	"crypto"
-	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
 	"time"
 
-	"github.com/go-jose/go-jose/v4/jwt"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/util/keyutil"
+	"k8s.io/apiserver/pkg/authentication/user"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	securityapi "github.com/gardener/gardener/pkg/apis/security"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	"github.com/gardener/gardener/pkg/utils/workloadidentity"
 )
 
 var (
-	rsaPrivateKey   *rsa.PrivateKey
-	ecdsaPrivateKey *ecdsa.PrivateKey
+	rsaPrivateKey *rsa.PrivateKey
 )
 
 var _ = BeforeSuite(func() {
 	rsaKey, err := rsa.GenerateKey(rand.Reader, 4096)
 	Expect(err).ToNot(HaveOccurred())
 	rsaPrivateKey = rsaKey
-
-	ecdsaKey, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
-	Expect(err).ToNot(HaveOccurred())
-	ecdsaPrivateKey = ecdsaKey
 })
 
-var _ = Describe("#JWT", func() {
-	Context("#getClaims", func() {
+var _ = Describe("#TokenRequest", func() {
+	Context("#getGardenerClaims", func() {
 		var (
-			issuer          = "https://test.local.gardener.cloud"
 			clusterIdentity = "test-local-gardener-cloud"
-			minDuration     = time.Minute * 10
-			maxDuration     = time.Hour * 48
 			r               = TokenRequestREST{
-				issuer:          issuer,
 				clusterIdentity: clusterIdentity,
-				minDuration:     int64(minDuration.Seconds()),
-				maxDuration:     int64(maxDuration.Seconds()),
 			}
 			workloadName      = "identity"
 			workloadNamespace = "garden-local"
@@ -74,11 +61,7 @@ var _ = Describe("#JWT", func() {
 			}
 		)
 
-		BeforeEach(func() {
-			r.signingKey = rsaPrivateKey
-		})
-
-		DescribeTable("#getClaims",
+		DescribeTable("#getGardenerClaims",
 			func(objType, name, namespace, uid string) {
 				Expect(objType).To(BeElementOf("shoot", "seed", "project", "none"))
 
@@ -108,26 +91,7 @@ var _ = Describe("#JWT", func() {
 					Expect(uid).To(BeEmpty())
 				}
 
-				now := time.Now()
-				exp := now.Add(time.Hour)
-
-				expected := jwt.Expected{
-					Issuer:      issuer,
-					Subject:     sub,
-					Time:        now,
-					AnyAudience: jwt.Audience{aud},
-				}
-
-				s, g := r.getClaims(now, exp, workloadIdentity, shoot, seed, project)
-
-				Expect(s).ToNot(BeNil())
-				Expect(s.Issuer).To(Equal(issuer))
-				Expect(s.Subject).To(Equal(sub))
-				Expect(s.Audience).To(BeEquivalentTo([]string{aud}))
-				Expect(s.IssuedAt.Time().Unix()).To(Equal(now.Unix()))
-				Expect(s.NotBefore.Time().Unix()).To(Equal(now.Unix()))
-				Expect(s.Expiry.Time().Unix()).To(Equal(exp.Unix()))
-				Expect(s.Validate(expected)).ToNot(HaveOccurred())
+				g := r.getGardenerClaims(workloadIdentity, shoot, seed, project)
 
 				Expect(g).ToNot(BeNil())
 				Expect(g.Gardener.WorkloadIdentity.Name).To(Equal(workloadName))
@@ -170,111 +134,6 @@ var _ = Describe("#JWT", func() {
 		)
 	})
 
-	Context("#getKeyID", func() {
-		var (
-			pubKey = `-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAySXbkmrd0VD+L24TilvW
-wzwAf/M7SpXgn4FTc2pe5XbOAq2CU+rWAVPLEW8oRtGW9F4uenbugiB0usRA+aYW
-b8JwsEKRoxpaeKzqPg4P+QL5t/aHsu4Vh9dxk7hEYSNaKZpEOhlJHARk4pPvqx5R
-uCKk7csM19Tg2v9ustk6IK5PVieoSmEA55B5iKe6tBAH5IR2Qu2NjvdONcXPGP8Y
-ujOpwVgXG82EJLTtbehyZOUjC801g2vxKyo0rdAx483kUBqDLW/GZfYK5Y+ZV5ty
-Jc7N1Tp94TBXpmsw0KIMz1gjRtbQcDJpntWAcIRhQ9OyEWpfVW+NZoj8wstqU0pB
-wQIDAQAB
------END PUBLIC KEY-----`
-			pubKeyID = "vyA3RTKakSnyzQG6KWl41qjwe-aXFPrjFTdesc3kZLk"
-		)
-
-		It("should correctly calculate key id", func() {
-			keys, err := keyutil.ParsePublicKeysPEM([]byte(pubKey))
-			Expect(err).ToNot(HaveOccurred())
-			Expect(keys).To(HaveLen(1))
-
-			keyID, err := getKeyID(keys[0])
-			Expect(err).ToNot(HaveOccurred())
-			Expect(keyID).ToNot(BeEmpty())
-			Expect(keyID).To(Equal(pubKeyID))
-		})
-
-		It("should provide unique key IDs", func() {
-			k1, err := rsa.GenerateKey(rand.Reader, 2048)
-			Expect(err).ToNot(HaveOccurred())
-
-			k2, err := rsa.GenerateKey(rand.Reader, 2048)
-			Expect(err).ToNot(HaveOccurred())
-
-			Expect(k1.Equal(k2)).To(BeFalse())
-			Expect(k2.Equal(k1)).To(BeFalse())
-
-			id1, err := getKeyID(k1.Public())
-			Expect(err).ToNot(HaveOccurred())
-			Expect(id1).ToNot(BeEmpty())
-			id2, err := getKeyID(k2.Public())
-			Expect(err).ToNot(HaveOccurred())
-			Expect(id2).ToNot(BeEmpty())
-
-			Expect(id1).ToNot(Equal(pubKeyID))
-			Expect(id2).ToNot(Equal(pubKeyID))
-			Expect(id1).ToNot((Equal(id2)))
-		})
-
-		It("should be idempotent", func() {
-			id1, err := getKeyID(rsaPrivateKey.Public())
-			Expect(err).ToNot(HaveOccurred())
-			Expect(id1).ToNot(BeEmpty())
-
-			id2, err := getKeyID(rsaPrivateKey.Public())
-			Expect(err).ToNot(HaveOccurred())
-			Expect(id2).ToNot(BeEmpty())
-
-			Expect(id1).To(Equal(id2))
-		})
-
-		It("should fail to get key ID for unsupported key", func() {
-			type unsupportedKey struct{}
-
-			var _ crypto.PublicKey = unsupportedKey{}
-			u := unsupportedKey{}
-
-			keyID, err := getKeyID(u)
-			Expect(err).To(HaveOccurred())
-			Expect(keyID).To(BeEmpty())
-		})
-	})
-
-	Context("#getSigner", func() {
-		It("should get RSA signer", func() {
-			s, err := getSigner(rsaPrivateKey)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(s).ToNot(BeNil())
-		})
-
-		It("should get ECDSA signer", func() {
-			s, err := getSigner(ecdsaPrivateKey)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(s).ToNot(BeNil())
-		})
-
-		It("should fail for unsupported key", func() {
-			type unsupportedKey struct{}
-			s, err := getSigner(unsupportedKey{})
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("failed to construct signer from key type storage.unsupportedKey"))
-			Expect(s).To(BeNil())
-		})
-
-		It("should fail for nil key", func() {
-			signer, err := getRSASigner(nil)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("rsa: key must not be nil"))
-			Expect(signer).To(BeNil())
-
-			signer, err = getECDSASigner(nil)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("ecdsa: key must not be nil"))
-			Expect(signer).To(BeNil())
-		})
-	})
-
 	Context("#resolveContextObject", func() {
 		var (
 			r             = TokenRequestREST{}
@@ -301,6 +160,17 @@ wQIDAQAB
 					Namespace: &namespaceName,
 				},
 			}
+			seedUser = user.DefaultInfo{
+				Name: v1beta1constants.SeedUserNamePrefix + "foo",
+				Groups: []string{
+					v1beta1constants.SeedsGroup,
+					"foo",
+				},
+			}
+			nonSeedUser = user.DefaultInfo{
+				Name:   "foo",
+				Groups: []string{"foo", "bar"},
+			}
 		)
 
 		BeforeEach(func() {
@@ -316,8 +186,32 @@ wQIDAQAB
 			r.coreInformerFactory = informerFactory
 		})
 
-		It("should successfully resolve when the context object is nil", func() {
-			shoot, seed, project, err := r.resolveContextObject(nil)
+		It("should successfully resolve when the context object is nil and user is seed", func() {
+			shoot, seed, project, err := r.resolveContextObject(&seedUser, nil)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(shoot).To(BeNil())
+			Expect(seed).To(BeNil())
+			Expect(project).To(BeNil())
+		})
+
+		It("should successfully resolve when the context object is nil and user is not seed", func() {
+			shoot, seed, project, err := r.resolveContextObject(&nonSeedUser, nil)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(shoot).To(BeNil())
+			Expect(seed).To(BeNil())
+			Expect(project).To(BeNil())
+		})
+
+		It("should successfully resolve when the context object is not nil and user is not seed", func() {
+			contextObject := &securityapi.ContextObject{
+				APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+				Kind:       "Shoot",
+				Name:       shootName,
+				Namespace:  &namespaceName,
+				UID:        shootUID,
+			}
+
+			shoot, seed, project, err := r.resolveContextObject(&nonSeedUser, contextObject)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(shoot).To(BeNil())
 			Expect(seed).To(BeNil())
@@ -334,7 +228,7 @@ wQIDAQAB
 			}
 
 			By("Resolve context object before the shoot is scheduled to a seed")
-			rShoot, rSeed, rProject, err := r.resolveContextObject(contextObject)
+			rShoot, rSeed, rProject, err := r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(rShoot).ToNot(BeNil())
@@ -355,7 +249,7 @@ wQIDAQAB
 			Expect(err).ToNot(HaveOccurred())
 
 			By("Resolve context object after the shoot is scheduled to a seed")
-			rShoot, rSeed, rProject, err = r.resolveContextObject(contextObject)
+			rShoot, rSeed, rProject, err = r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(rShoot).ToNot(BeNil())
@@ -385,7 +279,7 @@ wQIDAQAB
 			err := r.coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Delete(shoot)
 			Expect(err).ToNot(HaveOccurred())
 
-			rShoot, rSeed, rProject, err := r.resolveContextObject(contextObject)
+			rShoot, rSeed, rProject, err := r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(BeNotFoundError())
 			Expect(err.Error()).To(Equal("shoot.core.gardener.cloud \"test-shoot\" not found"))
@@ -401,7 +295,7 @@ wQIDAQAB
 			uidMismatch := types.UID("18dd0733-3c9e-4587-a8ae-d6fa5daf460c")
 			uidMismatchContext := contextObject.DeepCopy()
 			uidMismatchContext.UID = uidMismatch
-			rShoot, rSeed, rProject, err = r.resolveContextObject(uidMismatchContext)
+			rShoot, rSeed, rProject, err = r.resolveContextObject(&seedUser, uidMismatchContext)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(BeEquivalentTo("uid of contextObject (" + uidMismatch + ") and real world resource(" + shootUID + ") differ"))
 
@@ -418,7 +312,7 @@ wQIDAQAB
 			err = r.coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Delete(seed)
 			Expect(err).ToNot(HaveOccurred())
 
-			rShoot, rSeed, rProject, err = r.resolveContextObject(contextObject)
+			rShoot, rSeed, rProject, err = r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(BeNotFoundError())
 			Expect(err.Error()).To(Equal("seed.core.gardener.cloud \"test-seed\" not found"))
@@ -433,7 +327,7 @@ wQIDAQAB
 			err = r.coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Delete(project)
 			Expect(err).ToNot(HaveOccurred())
 
-			rShoot, rSeed, rProject, err = r.resolveContextObject(contextObject)
+			rShoot, rSeed, rProject, err = r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(BeNotFoundError())
 			Expect(err.Error()).To(Equal("Project.core.gardener.cloud \"<unknown>\" not found"))
@@ -452,7 +346,7 @@ wQIDAQAB
 				UID:        seedUID,
 			}
 
-			rShoot, rSeed, rProject, err := r.resolveContextObject(contextObject)
+			rShoot, rSeed, rProject, err := r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(rShoot).To(BeNil())
@@ -475,7 +369,7 @@ wQIDAQAB
 			err := r.coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Delete(seed)
 			Expect(err).ToNot(HaveOccurred())
 
-			rShoot, rSeed, rProject, err := r.resolveContextObject(contextObject)
+			rShoot, rSeed, rProject, err := r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(BeNotFoundError())
 			Expect(err.Error()).To(Equal("seed.core.gardener.cloud \"test-seed\" not found"))
@@ -491,7 +385,7 @@ wQIDAQAB
 			uidMismatch := types.UID("18dd0733-3c9e-4587-a8ae-d6fa5daf460c")
 			uidMismatchContext := contextObject.DeepCopy()
 			uidMismatchContext.UID = uidMismatch
-			rShoot, rSeed, rProject, err = r.resolveContextObject(uidMismatchContext)
+			rShoot, rSeed, rProject, err = r.resolveContextObject(&seedUser, uidMismatchContext)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(BeEquivalentTo("uid of contextObject (" + uidMismatch + ") and real world resource(" + seedUID + ") differ"))
 
@@ -508,7 +402,7 @@ wQIDAQAB
 				UID:        types.UID("18dd0733-3c9e-4587-a8ae-d6fa5daf460c"),
 			}
 
-			rShoot, rSeed, rProject, err := r.resolveContextObject(contextObject)
+			rShoot, rSeed, rProject, err := r.resolveContextObject(&seedUser, contextObject)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(Equal("unsupported GVK for context object: test/v1alpha1, Kind=Foo"))
 			Expect(rShoot).To(BeNil())
@@ -519,14 +413,10 @@ wQIDAQAB
 
 	Context("#issueToken", func() {
 		var (
-			minDuration = time.Minute * 10
-			maxDuration = time.Hour * 48
-			r           = TokenRequestREST{
-				issuer:          "https://test.local.gardener.cloud",
-				clusterIdentity: "test-local-gardener-cloud",
-				minDuration:     int64(minDuration.Seconds()),
-				maxDuration:     int64(maxDuration.Seconds()),
-			}
+			minDuration       = int64(time.Minute.Seconds() * 10)
+			maxDuration       = int64(time.Hour.Seconds() * 48)
+			issuer            = "https://test.local.gardener.cloud"
+			r                 = TokenRequestREST{}
 			workloadName      = "identity"
 			workloadNamespace = "garden-local"
 			workloadUID       = "ab920696-dd12-4723-9bc1-204cfe9edd40"
@@ -582,8 +472,11 @@ wQIDAQAB
 			err = informerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)
 			Expect(err).ToNot(HaveOccurred())
 
+			tokenIssuer, err := workloadidentity.NewTokenIssuer(rsaPrivateKey, issuer, minDuration, maxDuration)
+			Expect(err).ToNot(HaveOccurred())
+
 			r.coreInformerFactory = informerFactory
-			r.signingKey = rsaPrivateKey
+			r.tokenIssuer = tokenIssuer
 		})
 
 		It("should successfully issue token", func() {
@@ -601,8 +494,12 @@ wQIDAQAB
 						ExpirationSeconds: int64(3600),
 					},
 				}
+				user = user.DefaultInfo{
+					Name:   "foo",
+					Groups: []string{"foo", "bar"},
+				}
 			)
-			token, exp, err := r.issueToken(tokenRequest, workloadIdentity)
+			token, exp, err := r.issueToken(&user, tokenRequest, workloadIdentity)
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(exp).ToNot(BeNil())

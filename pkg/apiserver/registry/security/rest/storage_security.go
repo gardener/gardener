@@ -5,8 +5,6 @@
 package rest
 
 import (
-	"time"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/registry/rest"
@@ -18,16 +16,14 @@ import (
 	credentialsbindingstore "github.com/gardener/gardener/pkg/apiserver/registry/security/credentialsbinding/storage"
 	workloadidentitystore "github.com/gardener/gardener/pkg/apiserver/registry/security/workloadidentity/storage"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	"github.com/gardener/gardener/pkg/utils/workloadidentity"
 )
 
 // StorageProvider is an empty struct.
 type StorageProvider struct {
-	WorkloadIdentityTokenIssuer        string
-	WorkloadIdentityTokenMinExpiration time.Duration
-	WorkloadIdentityTokenMaxExpiration time.Duration
-	WorkloadIdentitySigningKey         any
-	CoreInformerFactory                gardencoreinformers.SharedInformerFactory
-	ClusterIdentity                    string
+	TokenIssuer         *workloadidentity.TokenIssuer
+	CoreInformerFactory gardencoreinformers.SharedInformerFactory
+	ClusterIdentity     string
 }
 
 // NewRESTStorage creates a new API group info object and registers the v1alpha1 Garden storage.
@@ -50,11 +46,8 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 
 	workloadIdentityStorage := workloadidentitystore.NewStorage(
 		restOptionsGetter,
-		p.WorkloadIdentityTokenIssuer,
 		p.ClusterIdentity,
-		p.WorkloadIdentityTokenMinExpiration,
-		p.WorkloadIdentityTokenMaxExpiration,
-		p.WorkloadIdentitySigningKey,
+		p.TokenIssuer,
 		p.CoreInformerFactory,
 	)
 	storage["workloadidentities"] = workloadIdentityStorage.WorkloadIdentity

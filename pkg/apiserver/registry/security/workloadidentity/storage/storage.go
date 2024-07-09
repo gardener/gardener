@@ -5,8 +5,6 @@
 package storage
 
 import (
-	"time"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic"
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
@@ -15,6 +13,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/security"
 	"github.com/gardener/gardener/pkg/apiserver/registry/security/workloadidentity"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	workloadidentityutils "github.com/gardener/gardener/pkg/utils/workloadidentity"
 )
 
 // REST implements a RESTStorage for WorkloadIdentity.
@@ -31,18 +30,15 @@ type WorkloadIdentityStorage struct {
 // NewStorage creates a new WorkloadIdentityStorage object.
 func NewStorage(
 	optsGetter generic.RESTOptionsGetter,
-	issuer,
 	clusterIdentity string,
-	minExpiration,
-	maxExpiration time.Duration,
-	signingKey any,
+	tokenIssuer *workloadidentityutils.TokenIssuer,
 	coreInformerFactory gardencoreinformers.SharedInformerFactory,
 ) WorkloadIdentityStorage {
 	workloadIdentityRest := NewREST(optsGetter)
 
 	return WorkloadIdentityStorage{
 		WorkloadIdentity: workloadIdentityRest,
-		TokenRequest:     NewTokenRequestREST(workloadIdentityRest, issuer, clusterIdentity, minExpiration, maxExpiration, signingKey, coreInformerFactory),
+		TokenRequest:     NewTokenRequestREST(workloadIdentityRest, clusterIdentity, tokenIssuer, coreInformerFactory),
 	}
 }
 
