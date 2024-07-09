@@ -5,10 +5,11 @@
 package controllerinstallation_test
 
 import (
-	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/controllerinstallation"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/controllerinstallation"
 )
 
 var _ = Describe("Ensuring MutateObjects makes deterministic yaml serialization ", func() {
