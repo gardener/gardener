@@ -283,11 +283,33 @@ spec:
       expr: |
         max by (name, condition) (
           last_over_time((
-            garden_seed_condition <= 0
+            garden_seed_condition{condition = "GardenletReady"} <= 0
             or
-            garden_shoot_condition{is_seed   = "true",
+            garden_shoot_condition{condition = "APIServerUnavailable",
+                                   is_seed   = "true",
                                    operation = "Reconcile"} <= 0)[5m:]))
       for: 10m
+      labels:
+        severity: critical
+        topology: seed
+        mute_on_weekends: "true"
+      annotations:
+        summary: >-
+          Seed Condition Failing
+        description: >-
+          The seed cluster {{$labels.name}} in {{$externalLabels.landscape}}
+          has a failing condition: {{$labels.condition}}.
+
+    - alert: SeedConditionFailing
+      expr: |
+        max by (name, condition) (
+          last_over_time((
+            garden_seed_condition{condition != "GardenletReady"} <= 0
+            or
+            garden_shoot_condition{condition != "APIServerUnavailable",
+                                   is_seed    = "true",
+                                   operation  = "Reconcile"} <= 0)[5m:]))
+      for: 30m # avoid alert noise for flapping conditions except for GardenletReady and APIServerUnavailable
       labels:
         severity: critical
         topology: seed
