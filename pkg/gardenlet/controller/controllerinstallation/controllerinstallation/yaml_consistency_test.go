@@ -49,7 +49,7 @@ metadata:
 		secret := map[string][]byte{
 			"keyA": []byte(content),
 		}
-		err := controllerinstallation.MutateObjects(secret, func(obj *unstructured.Unstructured) error {
+		err := controllerinstallation.MutateObjects(secret, func(_ *unstructured.Unstructured) error {
 			return nil
 		})
 		Expect(err).NotTo(HaveOccurred())
