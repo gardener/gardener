@@ -337,7 +337,7 @@ func (r *Reconciler) removeDeletedUnits(ctx context.Context, log logr.Logger, no
 	for _, unit := range units {
 		unitFilePath := path.Join(etcSystemdSystem, unit.Name)
 
-		unitFileExists, err := r.fileExists(unitFilePath)
+		unitFileExists, err := r.FS.Exists(unitFilePath)
 		if err != nil {
 			return fmt.Errorf("unable to check whether unit file %q exists: %w", unitFilePath, err)
 		}
@@ -398,14 +398,4 @@ func (r *Reconciler) executeUnitCommands(ctx context.Context, log logr.Logger, n
 	}
 
 	return mustRestartGardenerNodeAgent, flow.Parallel(fns...)(ctx)
-}
-
-func (r *Reconciler) fileExists(path string) (bool, error) {
-	if _, err := r.FS.Stat(path); err != nil {
-		if errors.Is(err, afero.ErrFileNotFound) {
-			return false, nil
-		}
-		return false, err
-	}
-	return true, nil
 }
