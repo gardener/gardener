@@ -54,6 +54,7 @@ var _ = Describe("PrometheusRules", func() {
 						Params: map[string][]string{
 							"match[]": {
 								`{__name__="garden_shoot_info"}`,
+								`{__name__="garden_seed_info"}`,
 								`{__name__=~"garden_shoot_info:timestamp:this_month"}`,
 								`{__name__=~"metering:(cpu_requests|memory_requests|network|persistent_volume_claims|disk_usage_seconds|memory_usage_seconds).*:this_month"}`,
 								`{__name__="garden_shoot_node_info"}`,
