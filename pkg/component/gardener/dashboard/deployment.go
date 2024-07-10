@@ -28,6 +28,8 @@ import (
 )
 
 const (
+	dataKeySessionSecret = "sessionSecret"
+
 	portNameServer  = "http"
 	portNameMetrics = "metrics"
 
@@ -39,9 +41,16 @@ const (
 	volumeMountPathConfig      = "/etc/gardener-dashboard/config"
 	volumeMountPathLoginConfig = "/app/public/" + dataKeyLoginConfig
 	volumeMountPathAssets      = "/app/public/static/assets"
-	volumeNameConfig           = "gardener-dashboard-config"
-	volumeNameLoginConfig      = "gardener-dashboard-login-config"
-	volumeNameConfigAssets     = "gardener-dashboard-assets"
+	volumeMountPathSession     = "/etc/gardener-dashboard/secrets/session"
+	volumeMountPathOIDC        = "/etc/gardener-dashboard/secrets/oidc"
+	volumeMountPathGithub      = "/etc/gardener-dashboard/secrets/github"
+
+	volumeNameConfig       = "gardener-dashboard-config"
+	volumeNameLoginConfig  = "gardener-dashboard-login-config"
+	volumeNameConfigAssets = "gardener-dashboard-assets"
+	volumeNameSession      = "gardener-dashboard-sessionsecret"
+	volumeNameOIDC         = "gardener-dashboard-oidc"
+	volumeNameGithub       = "gardener-dashboard-github"
 )
 
 func (g *gardenerDashboard) deployment(
@@ -96,15 +105,6 @@ func (g *gardenerDashboard) deployment(
 								"server.js",
 							},
 							Env: []corev1.EnvVar{
-								{
-									Name: "SESSION_SECRET",
-									ValueFrom: &corev1.EnvVarSource{
-										SecretKeyRef: &corev1.SecretKeySelector{
-											LocalObjectReference: corev1.LocalObjectReference{Name: secretNameSession},
-											Key:                  secretsutils.DataKeyPassword,
-										},
-									},
-								},
 								{
 									Name:  "GARDENER_CONFIG",
 									Value: volumeMountPathConfig + "/" + dataKeyConfig,
@@ -182,6 +182,10 @@ func (g *gardenerDashboard) deployment(
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
+									Name:      volumeNameSession,
+									MountPath: volumeMountPathSession,
+								},
+								{
 									Name:      volumeNameConfig,
 									MountPath: volumeMountPathConfig,
 								},
@@ -194,6 +198,19 @@ func (g *gardenerDashboard) deployment(
 						},
 					},
 					Volumes: []corev1.Volume{
+						{
+							Name: volumeNameSession,
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName:  secretNameSession,
+									DefaultMode: ptr.To[int32](0640),
+									Items: []corev1.KeyToPath{{
+										Key:  secretsutils.DataKeyPassword,
+										Path: dataKeySessionSecret,
+									}},
+								},
+							},
+						},
 						{
 							Name: volumeNameConfig,
 							VolumeSource: corev1.VolumeSource{
@@ -225,26 +242,35 @@ func (g *gardenerDashboard) deployment(
 	}
 
 	if g.values.OIDC != nil {
-		if err := g.addChecksumAnnotationAndEnvVarsForSecret(ctx, deployment, g.values.OIDC.SecretRef.Name, []env{
-			{"client_id", "OIDC_CLIENT_ID"},
-			{"client_secret", "OIDC_CLIENT_SECRET"},
-		}); err != nil {
-			return nil, fmt.Errorf("failed adding checksum annotation and env vars for secret %s: %w", g.values.OIDC.SecretRef.Name, err)
-		}
+		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+			Name: volumeNameOIDC,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName:  g.values.OIDC.SecretRef.Name,
+					DefaultMode: ptr.To[int32](0640),
+				},
+			},
+		})
+		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+			Name:      volumeNameOIDC,
+			MountPath: volumeMountPathOIDC,
+		})
 	}
 
 	if g.values.GitHub != nil {
-		if err := g.addChecksumAnnotationAndEnvVarsForSecret(ctx, deployment, g.values.GitHub.SecretRef.Name, []env{
-			{"authentication.token", "GITHUB_AUTHENTICATION_TOKEN"},
-			{"authentication.appId", "GITHUB_AUTHENTICATION_APP_ID"},
-			{"authentication.clientId", "GITHUB_AUTHENTICATION_CLIENT_ID"},
-			{"authentication.clientSecret", "GITHUB_AUTHENTICATION_CLIENT_SECRET"},
-			{"authentication.installationId", "GITHUB_AUTHENTICATION_INSTALLATION_ID"},
-			{"authentication.privateKey", "GITHUB_AUTHENTICATION_PRIVATE_KEY"},
-			{"webhookSecret", "GITHUB_WEBHOOK_SECRET"},
-		}); err != nil {
-			return nil, fmt.Errorf("failed adding checksum annotation and env vars for secret %s: %w", g.values.GitHub.SecretRef.Name, err)
-		}
+		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+			Name: volumeNameGithub,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName:  g.values.GitHub.SecretRef.Name,
+					DefaultMode: ptr.To[int32](0640),
+				},
+			},
+		})
+		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+			Name:      volumeNameGithub,
+			MountPath: volumeMountPathGithub,
+		})
 	}
 
 	if g.values.AssetsConfigMapName != nil {
@@ -268,34 +294,4 @@ func (g *gardenerDashboard) deployment(
 	utilruntime.Must(references.InjectAnnotations(deployment))
 
 	return deployment, nil
-}
-
-type env struct {
-	secretKey string
-	varName   string
-}
-
-func (g *gardenerDashboard) addChecksumAnnotationAndEnvVarsForSecret(ctx context.Context, deployment *appsv1.Deployment, secretName string, envs []env) error {
-	secret := &corev1.Secret{}
-	if err := g.client.Get(ctx, client.ObjectKey{Name: secretName, Namespace: g.namespace}, secret); err != nil {
-		return err
-	}
-
-	metav1.SetMetaDataAnnotation(&deployment.Spec.Template.ObjectMeta, "checksum-secret-"+secretName, utils.ComputeSecretChecksum(secret.Data))
-
-	for _, e := range envs {
-		if _, ok := secret.Data[e.secretKey]; ok {
-			deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
-				Name: e.varName,
-				ValueFrom: &corev1.EnvVarSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{Name: secretName},
-						Key:                  e.secretKey,
-					},
-				},
-			})
-		}
-	}
-
-	return nil
 }
