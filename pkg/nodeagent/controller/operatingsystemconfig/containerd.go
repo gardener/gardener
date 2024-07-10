@@ -26,7 +26,7 @@ import (
 )
 
 // ReconcileContainerdConfig sets required values of the given containerd configuration.
-func (r *Reconciler) ReconcileContainerdConfig(ctx context.Context, criConfig *extensionsv1alpha1.CRIConfig) error {
+func (r *Reconciler) ReconcileContainerdConfig(ctx context.Context, log logr.Logger, criConfig *extensionsv1alpha1.CRIConfig) error {
 	if !extensionsv1alpha1helper.HasContainerdConfiguration(criConfig) {
 		return nil
 	}
@@ -43,7 +43,7 @@ func (r *Reconciler) ReconcileContainerdConfig(ctx context.Context, criConfig *e
 		return fmt.Errorf("failed to ensure containerd environment: %w", err)
 	}
 
-	if err := r.ensureContainerdConfiguration(criConfig); err != nil {
+	if err := r.ensureContainerdConfiguration(log, criConfig); err != nil {
 		return fmt.Errorf("failed to ensure containerd config: %w", err)
 	}
 
@@ -147,7 +147,7 @@ Environment="PATH=` + extensionsv1alpha1.ContainerDRuntimeContainersBinFolder + 
 }
 
 // ensureContainerdConfiguration sets the configuration for containerd.
-func (r *Reconciler) ensureContainerdConfiguration(criConfig *extensionsv1alpha1.CRIConfig) error {
+func (r *Reconciler) ensureContainerdConfiguration(log logr.Logger, criConfig *extensionsv1alpha1.CRIConfig) error {
 	config, err := r.FS.ReadFile(configFile)
 	if err != nil {
 		return fmt.Errorf("unable to read containerd config.toml: %w", err)
@@ -225,7 +225,9 @@ func (r *Reconciler) ensureContainerdConfiguration(criConfig *extensionsv1alpha1
 		return fmt.Errorf("unable to open containerd config.toml: %w", err)
 	}
 	defer func() {
-		err = f.Close()
+		if err := f.Close(); err != nil {
+			log.Error(err, "Failed closing file", "file", f.Name())
+		}
 	}()
 
 	return toml.NewEncoder(f).Encode(content)
@@ -316,7 +318,9 @@ func addRegistryToContainerdFunc(ctx context.Context, log logr.Logger, registryC
 	}
 
 	defer func() {
-		err = f.Close()
+		if err := f.Close(); err != nil {
+			log.Error(err, "Failed closing file", "file", f.Name())
+		}
 	}()
 
 	type (

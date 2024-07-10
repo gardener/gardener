@@ -141,7 +141,7 @@ func (e *ensurer) EnsureCRIConfig(_ context.Context, _ extensionscontextwebhook.
 	} {
 		// Only add registry when it is not already set in the OSC.
 		// This way, it is not added repeatably and extensions (e.g. registry cache) in the local setup may decide
-		// to configure the same upstreams differently. The configuration of s	uch an extension should have precedence.
+		// to configure the same upstreams differently. The configuration of such an extension should have precedence.
 		addRegistryIfNotAvailable(registry, new.Containerd)
 	}
 
