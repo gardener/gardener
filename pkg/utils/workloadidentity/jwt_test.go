@@ -37,11 +37,9 @@ var _ = BeforeSuite(func() {
 	ecdsaKey, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 	Expect(err).ToNot(HaveOccurred())
 	ecdsaPrivateKey = ecdsaKey
-
 })
 
 var _ = Describe("#JWT", func() {
-
 	BeforeEach(func() {
 		now = func() time.Time {
 			return time.Date(2024, time.July, 9, 2, 0, 0, 0, time.UTC)
@@ -57,7 +55,7 @@ var _ = Describe("#JWT", func() {
 	})
 
 	Context("#getKeyID", func() {
-		var (
+		const (
 			pubKey = `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAySXbkmrd0VD+L24TilvW
 wzwAf/M7SpXgn4FTc2pe5XbOAq2CU+rWAVPLEW8oRtGW9F4uenbugiB0usRA+aYW
@@ -170,9 +168,8 @@ wQIDAQAB
 		var (
 			minDurationSeconds int64
 			maxDurationSeconds int64
-
-			t         TokenIssuer
-			audiences []string
+			t                  TokenIssuer
+			audiences          []string
 		)
 
 		type customClaims struct {

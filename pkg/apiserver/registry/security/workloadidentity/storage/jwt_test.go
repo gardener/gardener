@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/authentication/user"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -35,14 +36,21 @@ var _ = BeforeSuite(func() {
 
 var _ = Describe("#TokenRequest", func() {
 	Context("#getGardenerClaims", func() {
-		var (
-			r                 = TokenRequestREST{}
+		const (
 			workloadName      = "identity"
 			workloadNamespace = "garden-local"
 			workloadUID       = "ab920696-dd12-4723-9bc1-204cfe9edd40"
 			sub               = "gardener.cloud:workloadidentity:" + workloadNamespace + ":" + workloadName + ":" + workloadUID
 			aud               = "gardener.cloud"
+		)
 
+		var (
+			r                TokenRequestREST
+			workloadIdentity *securityapi.WorkloadIdentity
+		)
+
+		BeforeEach(func() {
+			r = TokenRequestREST{}
 			workloadIdentity = &securityapi.WorkloadIdentity{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      workloadName,
@@ -56,7 +64,7 @@ var _ = Describe("#TokenRequest", func() {
 					Sub: sub,
 				},
 			}
-		)
+		})
 
 		DescribeTable("#getGardenerClaims",
 			func(objType, name, namespace, uid string) {
@@ -130,8 +138,7 @@ var _ = Describe("#TokenRequest", func() {
 	})
 
 	Context("#resolveContextObject", func() {
-		var (
-			r             = TokenRequestREST{}
+		const (
 			shootName     = "test-shoot"
 			shootUID      = types.UID("9a134d22-dd61-4845-951e-9a20bde1648a")
 			projectName   = "test-project"
@@ -139,7 +146,18 @@ var _ = Describe("#TokenRequest", func() {
 			namespaceName = "garden-" + projectName
 			seedName      = "test-seed"
 			seedUID       = types.UID("aa88fb5a-28ef-4987-8c2d-9f02afafcf09")
+		)
 
+		var (
+			r           TokenRequestREST
+			shoot       *gardencorev1beta1.Shoot
+			seed        *gardencorev1beta1.Seed
+			project     *gardencorev1beta1.Project
+			seedUser    user.DefaultInfo
+			nonSeedUser user.DefaultInfo
+		)
+
+		BeforeEach(func() {
 			shoot = &gardencorev1beta1.Shoot{
 				TypeMeta:   metav1.TypeMeta{APIVersion: gardencorev1beta1.SchemeGroupVersion.String(), Kind: "Shoot"},
 				ObjectMeta: metav1.ObjectMeta{Namespace: namespaceName, Name: shootName, UID: shootUID},
@@ -152,7 +170,7 @@ var _ = Describe("#TokenRequest", func() {
 				TypeMeta:   metav1.TypeMeta{APIVersion: gardencorev1beta1.SchemeGroupVersion.String(), Kind: "Project"},
 				ObjectMeta: metav1.ObjectMeta{Name: projectName, UID: projectUID},
 				Spec: gardencorev1beta1.ProjectSpec{
-					Namespace: &namespaceName,
+					Namespace: ptr.To(namespaceName),
 				},
 			}
 			seedUser = user.DefaultInfo{
@@ -166,9 +184,6 @@ var _ = Describe("#TokenRequest", func() {
 				Name:   "foo",
 				Groups: []string{"foo", "bar"},
 			}
-		)
-
-		BeforeEach(func() {
 			informerFactory := gardencoreinformers.NewSharedInformerFactory(nil, 0)
 
 			err := informerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)
@@ -178,7 +193,9 @@ var _ = Describe("#TokenRequest", func() {
 			err = informerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(project)
 			Expect(err).ToNot(HaveOccurred())
 
-			r.coreInformerFactory = informerFactory
+			r = TokenRequestREST{
+				coreInformerFactory: informerFactory,
+			}
 		})
 
 		It("should successfully resolve when the context object is nil and user is seed", func() {
@@ -202,7 +219,7 @@ var _ = Describe("#TokenRequest", func() {
 				APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 				Kind:       "Shoot",
 				Name:       shootName,
-				Namespace:  &namespaceName,
+				Namespace:  ptr.To(namespaceName),
 				UID:        shootUID,
 			}
 
@@ -218,7 +235,7 @@ var _ = Describe("#TokenRequest", func() {
 				APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 				Kind:       "Shoot",
 				Name:       shootName,
-				Namespace:  &namespaceName,
+				Namespace:  ptr.To(namespaceName),
 				UID:        shootUID,
 			}
 
@@ -239,7 +256,7 @@ var _ = Describe("#TokenRequest", func() {
 
 			By("Schedule the shoot to a seed")
 			shootCopy := shoot.DeepCopy()
-			shootCopy.Spec = gardencorev1beta1.ShootSpec{SeedName: &seedName}
+			shootCopy.Spec = gardencorev1beta1.ShootSpec{SeedName: ptr.To(seedName)}
 			err = r.coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Update(shootCopy)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -266,7 +283,7 @@ var _ = Describe("#TokenRequest", func() {
 				APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 				Kind:       "Shoot",
 				Name:       shootName,
-				Namespace:  &namespaceName,
+				Namespace:  ptr.To(namespaceName),
 				UID:        shootUID,
 			}
 
@@ -300,7 +317,7 @@ var _ = Describe("#TokenRequest", func() {
 
 			By("seed does not exist")
 			shoot.Spec = gardencorev1beta1.ShootSpec{
-				SeedName: &seedName,
+				SeedName: ptr.To(seedName),
 			}
 			err = r.coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Update(shoot)
 			Expect(err).ToNot(HaveOccurred())
@@ -407,16 +424,35 @@ var _ = Describe("#TokenRequest", func() {
 	})
 
 	Context("#issueToken", func() {
-		var (
-			minDuration       = int64(time.Minute.Seconds() * 10)
-			maxDuration       = int64(time.Hour.Seconds() * 48)
+		const (
 			issuer            = "https://test.local.gardener.cloud"
-			r                 = TokenRequestREST{}
 			workloadName      = "identity"
 			workloadNamespace = "garden-local"
 			workloadUID       = "ab920696-dd12-4723-9bc1-204cfe9edd40"
 			sub               = "gardener.cloud:workloadidentity:" + workloadNamespace + ":" + workloadName + ":" + workloadUID
 			aud               = "gardener.cloud"
+			shootName         = "test-shoot"
+			shootUID          = types.UID("9a134d22-dd61-4845-951e-9a20bde1648a")
+			projectName       = "test-project"
+			projectUID        = types.UID("01c9c6fa-2b8b-496f-8edf-e382f4d61905")
+			namespaceName     = "garden-" + projectName
+			seedName          = "test-seed"
+			seedUID           = types.UID("aa88fb5a-28ef-4987-8c2d-9f02afafcf09")
+		)
+
+		var (
+			minDuration      int64
+			maxDuration      int64
+			r                TokenRequestREST
+			workloadIdentity *securityapi.WorkloadIdentity
+			shoot            *gardencorev1beta1.Shoot
+			seed             *gardencorev1beta1.Seed
+			project          *gardencorev1beta1.Project
+		)
+
+		BeforeEach(func() {
+			minDuration = int64(time.Minute.Seconds() * 10)
+			maxDuration = int64(time.Hour.Seconds() * 48)
 
 			workloadIdentity = &securityapi.WorkloadIdentity{
 				ObjectMeta: metav1.ObjectMeta{
@@ -431,15 +467,6 @@ var _ = Describe("#TokenRequest", func() {
 					Sub: sub,
 				},
 			}
-
-			shootName     = "test-shoot"
-			shootUID      = types.UID("9a134d22-dd61-4845-951e-9a20bde1648a")
-			projectName   = "test-project"
-			projectUID    = types.UID("01c9c6fa-2b8b-496f-8edf-e382f4d61905")
-			namespaceName = "garden-" + projectName
-			seedName      = "test-seed"
-			seedUID       = types.UID("aa88fb5a-28ef-4987-8c2d-9f02afafcf09")
-
 			shoot = &gardencorev1beta1.Shoot{
 				TypeMeta:   metav1.TypeMeta{APIVersion: gardencorev1beta1.SchemeGroupVersion.String(), Kind: "Shoot"},
 				ObjectMeta: metav1.ObjectMeta{Namespace: namespaceName, Name: shootName, UID: shootUID},
@@ -452,12 +479,10 @@ var _ = Describe("#TokenRequest", func() {
 				TypeMeta:   metav1.TypeMeta{APIVersion: gardencorev1beta1.SchemeGroupVersion.String(), Kind: "Project"},
 				ObjectMeta: metav1.ObjectMeta{Name: projectName, UID: projectUID},
 				Spec: gardencorev1beta1.ProjectSpec{
-					Namespace: &namespaceName,
+					Namespace: ptr.To(namespaceName),
 				},
 			}
-		)
 
-		BeforeEach(func() {
 			informerFactory := gardencoreinformers.NewSharedInformerFactory(nil, 0)
 
 			err := informerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)
@@ -470,8 +495,10 @@ var _ = Describe("#TokenRequest", func() {
 			tokenIssuer, err := workloadidentity.NewTokenIssuer(rsaPrivateKey, issuer, minDuration, maxDuration)
 			Expect(err).ToNot(HaveOccurred())
 
-			r.coreInformerFactory = informerFactory
-			r.tokenIssuer = tokenIssuer
+			r = TokenRequestREST{
+				coreInformerFactory: informerFactory,
+				tokenIssuer:         tokenIssuer,
+			}
 		})
 
 		It("should successfully issue token", func() {
@@ -483,7 +510,7 @@ var _ = Describe("#TokenRequest", func() {
 							APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 							Kind:       "Shoot",
 							Name:       shootName,
-							Namespace:  &namespaceName,
+							Namespace:  ptr.To(namespaceName),
 							UID:        shootUID,
 						},
 						ExpirationSeconds: int64(3600),
