@@ -23,7 +23,6 @@ import (
 type StorageProvider struct {
 	TokenIssuer         *workloadidentity.TokenIssuer
 	CoreInformerFactory gardencoreinformers.SharedInformerFactory
-	ClusterIdentity     string
 }
 
 // NewRESTStorage creates a new API group info object and registers the v1alpha1 Garden storage.
@@ -46,7 +45,6 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 
 	workloadIdentityStorage := workloadidentitystore.NewStorage(
 		restOptionsGetter,
-		p.ClusterIdentity,
 		p.TokenIssuer,
 		p.CoreInformerFactory,
 	)

@@ -35,7 +35,6 @@ type ExtraConfig struct {
 	WorkloadIdentityTokenMinExpiration time.Duration
 	WorkloadIdentityTokenMaxExpiration time.Duration
 	WorkloadIdentitySigningKey         any
-	ClusterIdentity                    string
 }
 
 // Config contains Gardener API server configuration.
@@ -111,7 +110,6 @@ func (c completedConfig) New() (*GardenerServer, error) {
 		securityAPIGroupInfo       = (securityrest.StorageProvider{
 			TokenIssuer:         tokenIssuer,
 			CoreInformerFactory: c.coreInformerFactory,
-			ClusterIdentity:     c.ExtraConfig.ClusterIdentity,
 		}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 	)
 
@@ -214,7 +212,6 @@ func (o *ExtraOptions) ApplyTo(c *Config) error {
 	c.ExtraConfig.WorkloadIdentityTokenIssuer = o.WorkloadIdentityTokenIssuer
 	c.ExtraConfig.WorkloadIdentityTokenMinExpiration = o.WorkloadIdentityTokenMinExpiration
 	c.ExtraConfig.WorkloadIdentityTokenMaxExpiration = o.WorkloadIdentityTokenMaxExpiration
-	c.ExtraConfig.ClusterIdentity = o.ClusterIdentity
 
 	if len(o.WorkloadIdentitySigningKeyFile) != 0 {
 		signingKey, err := keyutil.PrivateKeyFromFile(o.WorkloadIdentitySigningKeyFile)

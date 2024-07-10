@@ -36,10 +36,7 @@ var _ = BeforeSuite(func() {
 var _ = Describe("#TokenRequest", func() {
 	Context("#getGardenerClaims", func() {
 		var (
-			clusterIdentity = "test-local-gardener-cloud"
-			r               = TokenRequestREST{
-				clusterIdentity: clusterIdentity,
-			}
+			r                 = TokenRequestREST{}
 			workloadName      = "identity"
 			workloadNamespace = "garden-local"
 			workloadUID       = "ab920696-dd12-4723-9bc1-204cfe9edd40"
@@ -97,8 +94,6 @@ var _ = Describe("#TokenRequest", func() {
 				Expect(g.Gardener.WorkloadIdentity.Name).To(Equal(workloadName))
 				Expect(g.Gardener.WorkloadIdentity.Namespace).To(Equal(workloadNamespace))
 				Expect(g.Gardener.WorkloadIdentity.UID).To(Equal(workloadUID))
-				Expect(g.Gardener.Garden).ToNot(BeNil())
-				Expect(g.Gardener.Garden.ID).To(Equal(clusterIdentity))
 
 				if shoot != nil {
 					Expect(g.Gardener.Shoot).ToNot(BeNil())

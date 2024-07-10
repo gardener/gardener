@@ -30,7 +30,6 @@ import (
 type TokenRequestREST struct {
 	coreInformerFactory gardencoreinformers.SharedInformerFactory
 
-	clusterIdentity        string
 	workloadIdentityGetter getter
 	tokenIssuer            *workloadidentity.TokenIssuer
 }
@@ -170,14 +169,12 @@ func (r *TokenRequestREST) GroupVersionKind(schema.GroupVersion) schema.GroupVer
 // NewTokenRequestREST returns a new TokenRequestREST for workload identity token.
 func NewTokenRequestREST(
 	storage getter,
-	clusterIdentity string,
 	tokenIssuer *workloadidentity.TokenIssuer,
 	coreInformerFactory gardencoreinformers.SharedInformerFactory,
 ) *TokenRequestREST {
 	return &TokenRequestREST{
 		workloadIdentityGetter: storage,
 
-		clusterIdentity:     clusterIdentity,
 		tokenIssuer:         tokenIssuer,
 		coreInformerFactory: coreInformerFactory,
 	}

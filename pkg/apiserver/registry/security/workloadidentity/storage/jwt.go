@@ -24,21 +24,16 @@ type gardenerClaims struct {
 }
 
 type gardener struct {
-	WorkloadIdentity ref     `json:"workloadIdentity,omitempty"`
-	Shoot            *ref    `json:"shoot,omitempty"`
-	Project          *ref    `json:"project,omitempty"`
-	Seed             *ref    `json:"seed,omitempty"`
-	Garden           *garden `json:"garden,omitempty"`
+	WorkloadIdentity ref  `json:"workloadIdentity,omitempty"`
+	Shoot            *ref `json:"shoot,omitempty"`
+	Project          *ref `json:"project,omitempty"`
+	Seed             *ref `json:"seed,omitempty"`
 }
 
 type ref struct {
 	Name      string `json:"name,omitempty"`
 	Namespace string `json:"namespace,omitempty"`
 	UID       string `json:"uid,omitempty"`
-}
-
-type garden struct {
-	ID string `json:"id,omitempty"`
 }
 
 // issueToken generates the JSON Web Token based on the provided configurations.
@@ -68,9 +63,6 @@ func (r *TokenRequestREST) getGardenerClaims(workloadIdentity *securityapi.Workl
 				Name:      workloadIdentity.Name,
 				Namespace: workloadIdentity.Namespace,
 				UID:       string(workloadIdentity.UID),
-			},
-			Garden: &garden{
-				ID: r.clusterIdentity,
 			},
 		},
 	}
