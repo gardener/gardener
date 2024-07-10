@@ -198,6 +198,9 @@ Hence, if you want to access the shoot cluster, you have to run the following co
 cat <<EOF | sudo tee -a /etc/hosts
 
 # Begin of Gardener local setup section
+# Garden Cluster domain
+127.0.0.1 garden.local.gardener.cloud
+
 # Shoot API server domains
 127.0.0.1 api.local.local.external.local.gardener.cloud
 127.0.0.1 api.local.local.internal.local.gardener.cloud
