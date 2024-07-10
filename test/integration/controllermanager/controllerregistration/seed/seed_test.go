@@ -34,7 +34,7 @@ var _ = Describe("ControllerRegistration controller test", func() {
 			},
 			Spec: gardencorev1beta1.ShootSpec{
 				SecretBindingName: ptr.To("my-provider-account"),
-				CloudProfileName:  "test-cloudprofile",
+				CloudProfileName:  ptr.To("test-cloudprofile"),
 				Region:            "foo-region",
 				Provider: gardencorev1beta1.Provider{
 					Type: shootProviderType,

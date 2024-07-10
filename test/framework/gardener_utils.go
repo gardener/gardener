@@ -540,7 +540,7 @@ func (f *GardenerFramework) GetCloudProfile(ctx context.Context, cloudProfileRef
 		// First, we use the cloudProfileName for now (migration phase) if given
 		cloudProfile := &gardencorev1beta1.CloudProfile{}
 		if err := f.GardenClient.Client().Get(ctx, client.ObjectKey{Name: *name}, cloudProfile); err != nil {
-			return nil, fmt.Errorf("could not get CloudProfile '%s' in Garden cluster: %w", name, err)
+			return nil, fmt.Errorf("could not get CloudProfile '%s' in Garden cluster: %w", *name, err)
 		}
 		return cloudProfile, nil
 	} else if cloudProfileRef != nil {
@@ -549,13 +549,13 @@ func (f *GardenerFramework) GetCloudProfile(ctx context.Context, cloudProfileRef
 		case v1beta1constants.CloudProfileReferenceKindCloudProfile:
 			cloudProfile := &gardencorev1beta1.CloudProfile{}
 			if err := f.GardenClient.Client().Get(ctx, client.ObjectKey{Name: cloudProfileRef.Name}, cloudProfile); err != nil {
-				return nil, fmt.Errorf("could not get CloudProfile '%s' in Garden cluster: %w", name, err)
+				return nil, fmt.Errorf("could not get CloudProfile '%s' in Garden cluster: %w", cloudProfileRef.Name, err)
 			}
 			return cloudProfile, nil
 		case v1beta1constants.CloudProfileReferenceKindNamespacedCloudProfile:
 			namespacedCloudProfile := &gardencorev1beta1.NamespacedCloudProfile{}
 			if err := f.GardenClient.Client().Get(ctx, client.ObjectKey{Name: cloudProfileRef.Name, Namespace: namespace}, namespacedCloudProfile); err != nil {
-				return nil, fmt.Errorf("could not get NamespacedCloudProfile '%s' in Garden cluster: %w", name, err)
+				return nil, fmt.Errorf("could not get NamespacedCloudProfile '%s' in Garden cluster: %w", cloudProfileRef.Name, err)
 			}
 			return &gardencorev1beta1.CloudProfile{Spec: namespacedCloudProfile.Status.CloudProfileSpec}, nil
 		}

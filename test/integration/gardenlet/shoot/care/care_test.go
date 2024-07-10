@@ -77,7 +77,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 			},
 			Spec: gardencorev1beta1.ShootSpec{
 				SecretBindingName: ptr.To(secretBinding.Name),
-				CloudProfileName:  "cloudprofile1",
+				CloudProfileName:  ptr.To("cloudprofile1"),
 				SeedName:          &seedName,
 				Region:            "europe-central-1",
 				Provider: gardencorev1beta1.Provider{

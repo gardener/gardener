@@ -42,6 +42,7 @@ func GetCloudProfile(ctx context.Context, client pkgclient.Client, cloudProfileR
 	return nil, fmt.Errorf("could not get cloud profile for reference: %+v", cloudProfileReference)
 }
 
+// BuildCloudProfileReference is a type overload to BuildCloudProfileReferenceV1Beta1 and determines the CloudProfile to use depending on the availability of cloudProfileName and cloudProfile
 func BuildCloudProfileReference(cloudProfileName *string, cloudProfile *core.CloudProfileReference) *gardencorev1beta1.CloudProfileReference {
 	var cloudProfileReferenceV1Beta1 *gardencorev1beta1.CloudProfileReference
 	if cloudProfile != nil {
@@ -53,6 +54,7 @@ func BuildCloudProfileReference(cloudProfileName *string, cloudProfile *core.Clo
 	return BuildCloudProfileReferenceV1Beta1(cloudProfileName, cloudProfileReferenceV1Beta1)
 }
 
+// BuildCloudProfileReferenceV1Beta1 determines the CloudProfile to use depending on the availability of cloudProfileName and cloudProfile
 func BuildCloudProfileReferenceV1Beta1(cloudProfileName *string, cloudProfile *gardencorev1beta1.CloudProfileReference) *gardencorev1beta1.CloudProfileReference {
 	if cloudProfileName != nil && len(*cloudProfileName) > 0 {
 		return &gardencorev1beta1.CloudProfileReference{

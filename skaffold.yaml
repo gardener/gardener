@@ -245,8 +245,12 @@ build:
             - cmd/gardener-controller-manager/app
             - cmd/gardener-controller-manager/app/bootstrappers
             - cmd/utils
+            - pkg/api
             - pkg/api/extensions
             - pkg/api/indexer
+            - pkg/apis/authentication
+            - pkg/apis/authentication/install
+            - pkg/apis/authentication/v1alpha1
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1
@@ -358,7 +362,11 @@ build:
             - cmd/gardener-scheduler
             - cmd/gardener-scheduler/app
             - cmd/utils
+            - pkg/api
             - pkg/api/extensions
+            - pkg/apis/authentication
+            - pkg/apis/authentication/install
+            - pkg/apis/authentication/v1alpha1
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1
@@ -442,6 +450,10 @@ build:
             - pkg/admissioncontroller/webhook/admission/seedrestriction
             - pkg/admissioncontroller/webhook/auth/seed
             - pkg/admissioncontroller/webhook/auth/seed/graph
+            - pkg/api
+            - pkg/apis/authentication
+            - pkg/apis/authentication/install
+            - pkg/apis/authentication/v1alpha1
             - pkg/apis/core
             - pkg/apis/core/helper
             - pkg/apis/core/install
@@ -633,8 +645,12 @@ build:
             - extensions/pkg/webhook/shoot
             - imagevector
             - imagevector/images.yaml
+            - pkg/api
             - pkg/api/core
             - pkg/api/extensions
+            - pkg/apis/authentication
+            - pkg/apis/authentication/install
+            - pkg/apis/authentication/v1alpha1
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1
@@ -926,8 +942,12 @@ build:
             - cmd/utils
             - imagevector
             - imagevector/images.yaml
+            - pkg/api
             - pkg/api/extensions
             - pkg/api/indexer
+            - pkg/apis/authentication
+            - pkg/apis/authentication/install
+            - pkg/apis/authentication/v1alpha1
             - pkg/apis/core
             - pkg/apis/core/helper
             - pkg/apis/core/install
@@ -1267,8 +1287,12 @@ build:
             - cmd/gardener-resource-manager/app
             - cmd/gardener-resource-manager/app/bootstrappers
             - cmd/utils
+            - pkg/api
             - pkg/api/extensions
             - pkg/api/indexer
+            - pkg/apis/authentication
+            - pkg/apis/authentication/install
+            - pkg/apis/authentication/v1alpha1
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1
@@ -1373,7 +1397,11 @@ build:
             - cmd/utils
             - imagevector
             - imagevector/images.yaml
+            - pkg/api
             - pkg/api/extensions
+            - pkg/apis/authentication
+            - pkg/apis/authentication/install
+            - pkg/apis/authentication/v1alpha1
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1

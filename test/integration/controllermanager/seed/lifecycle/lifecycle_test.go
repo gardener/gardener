@@ -122,7 +122,7 @@ var _ = Describe("Seed Lifecycle controller tests", func() {
 			},
 			Spec: gardencorev1beta1.ShootSpec{
 				SecretBindingName: ptr.To("my-provider-account"),
-				CloudProfileName:  "cloudprofile1",
+				CloudProfileName:  ptr.To("cloudprofile1"),
 				SeedName:          &seed.Name,
 				Region:            "europe-central-1",
 				Provider: gardencorev1beta1.Provider{

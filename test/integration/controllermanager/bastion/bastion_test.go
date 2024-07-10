@@ -48,7 +48,7 @@ var _ = Describe("Bastion controller tests", func() {
 			ObjectMeta: metav1.ObjectMeta{Namespace: objectKey.Namespace, Name: objectKey.Name},
 			Spec: gardencorev1beta1.ShootSpec{
 				SecretBindingName: ptr.To("my-provider-account"),
-				CloudProfileName:  "test-cloudprofile",
+				CloudProfileName:  ptr.To("test-cloudprofile"),
 				Region:            "foo-region",
 				Provider: gardencorev1beta1.Provider{
 					Type: providerType,

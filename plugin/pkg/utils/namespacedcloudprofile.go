@@ -68,6 +68,7 @@ func ValidateCloudProfileChanges(cloudProfileLister gardencorev1beta1listers.Clo
 	return fmt.Errorf("(Namespaced)CloudProfile root nodes do not match for %s (%s) and %s (%s)", oldCloudProfileReference.Name, oldCloudProfileRoot.Name, newCloudProfileReference.Name, newCloudProfileRoot.Name)
 }
 
+// GetRootCloudProfile determines the root CloudProfile from a CloudProfileReference containing any (Namespaced)CloudProfile
 func GetRootCloudProfile(cloudProfileLister gardencorev1beta1listers.CloudProfileLister, NamespacedCloudProfileLister gardencorev1beta1listers.NamespacedCloudProfileLister, cloudProfile *gardencorev1beta1.CloudProfileReference, namespace string) (*gardencorev1beta1.CloudProfileReference, error) {
 	if cloudProfile == nil {
 		return nil, errors.New("unexpected nil cloudprofile to get root of")
