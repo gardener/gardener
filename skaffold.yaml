@@ -510,6 +510,13 @@ deploy:
               - apply
               - -f
               - example/gardener-local/controlplane/networkpolicy.yaml
+        - host:
+            command:
+              - openssl
+              - genrsa
+              - -out
+              - example/gardener-local/controlplane/workload-identity-signing-key
+              - 4096
       after:
         - host:
             command:
@@ -538,6 +545,8 @@ deploy:
           global.controller.image.tag: '{{.IMAGE_TAG_local_skaffold_gardener_controller_manager}}@{{.IMAGE_DIGEST_local_skaffold_gardener_controller_manager}}'
           global.scheduler.image.repository: '{{.IMAGE_REPO_local_skaffold_gardener_scheduler}}'
           global.scheduler.image.tag: '{{.IMAGE_TAG_local_skaffold_gardener_scheduler}}@{{.IMAGE_DIGEST_local_skaffold_gardener_scheduler}}'
+        setFiles:
+          global.apiserver.workloadIdentity.token.signing.key: example/gardener-local/controlplane/workload-identity-signing-key
         createNamespace: true
         wait: true
 profiles:
