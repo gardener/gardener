@@ -269,6 +269,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			Server:   ptr.To("https://registry.hub.docker.com"),
 			Hosts: []extensionsv1alpha1.RegistryHost{
 				{URL: "https://10.10.10.100:8080"},
+				{URL: "https://10.10.10.200:8080"},
 			},
 		}
 		registryConfig2 = extensionsv1alpha1.RegistryConfig{
@@ -379,8 +380,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		test.AssertDirectoryOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d")
 		test.AssertFileOnDisk(fakeFS, "/etc/containerd/config.toml", "imports = [\"/etc/containerd/conf.d/*.toml\"]\n\n[plugins]\n\n  [plugins.\"io.containerd.grpc.v1.cri\"]\n    sandbox_image = \"registry.k8s.io/pause:latest\"\n\n    [plugins.\"io.containerd.grpc.v1.cri\".registry]\n      config_path = \"/etc/containerd/certs.d\"\n", 0644)
 		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d/30-env_config.conf", "[Service]\nEnvironment=\"PATH=/var/bin/containerruntimes:"+os.Getenv("PATH")+"\"\n", 0644)
-		test.AssertFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig1.Upstream+"/hosts.toml", "\n# managed by gardener-node-agent\nserver = \"https://registry.hub.docker.com\"\n\n[host]\n\n  [host.\"https://10.10.10.100:8080\"]\n", 0644)
-		test.AssertFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig2.Upstream+"/hosts.toml", "\n# managed by gardener-node-agent\nserver = \"https://registry.k8s.io\"\n\n[host]\n\n  [host.\"https://10.10.10.101:8080\"]\n    ca = [\"/var/certs/ca.crt\"]\n    capabilities = [\"pull\"]\n", 0644)
+		test.AssertFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig1.Upstream+"/hosts.toml", "# managed by gardener-node-agent\nserver = \"https://registry.hub.docker.com\"\n\n[host.\"https://10.10.10.100:8080\"]\n  capabilities = [\"pull\",\"resolve\"]\n\n[host.\"https://10.10.10.200:8080\"]\n  capabilities = [\"pull\",\"resolve\"]\n\n", 0644)
+		test.AssertFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig2.Upstream+"/hosts.toml", "# managed by gardener-node-agent\nserver = \"https://registry.k8s.io\"\n\n[host.\"https://10.10.10.101:8080\"]\n  capabilities = [\"pull\"]\n  ca = [\"/var/certs/ca.crt\"]\n\n", 0644)
 
 		By("Assert that unit actions have been applied")
 		Expect(fakeDBus.Actions).To(ConsistOf(
@@ -515,8 +516,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		test.AssertDirectoryOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d")
 		test.AssertFileOnDisk(fakeFS, "/etc/containerd/config.toml", "imports = [\"/etc/containerd/conf.d/*.toml\"]\n\n[plugins]\n\n  [plugins.\"io.containerd.grpc.v1.cri\"]\n    sandbox_image = \"registry.k8s.io/pause:latest\"\n\n    [plugins.\"io.containerd.grpc.v1.cri\".registry]\n      config_path = \"/etc/containerd/certs.d\"\n", 0644)
 		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d/30-env_config.conf", "[Service]\nEnvironment=\"PATH=/var/bin/containerruntimes:"+os.Getenv("PATH")+"\"\n", 0644)
-		test.AssertFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig1.Upstream+"/hosts.toml", "\n# managed by gardener-node-agent\nserver = \"https://registry.hub.docker.com\"\n\n[host]\n\n  [host.\"https://10.10.10.100:8080\"]\n", 0644)
-		test.AssertFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig2.Upstream+"/hosts.toml", "\n# managed by gardener-node-agent\nserver = \"https://registry.k8s.io\"\n\n[host]\n\n  [host.\"https://10.10.10.101:8080\"]\n    ca = [\"/var/certs/ca.crt\"]\n    capabilities = [\"pull\"]\n", 0644)
+		test.AssertFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig1.Upstream+"/hosts.toml", "# managed by gardener-node-agent\nserver = \"https://registry.hub.docker.com\"\n\n[host.\"https://10.10.10.100:8080\"]\n  capabilities = [\"pull\",\"resolve\"]\n\n[host.\"https://10.10.10.200:8080\"]\n  capabilities = [\"pull\",\"resolve\"]\n\n", 0644)
+		test.AssertFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig2.Upstream+"/hosts.toml", "# managed by gardener-node-agent\nserver = \"https://registry.k8s.io\"\n\n[host.\"https://10.10.10.101:8080\"]\n  capabilities = [\"pull\"]\n  ca = [\"/var/certs/ca.crt\"]\n\n", 0644)
 
 		By("Assert that unit actions have been applied")
 		Expect(fakeDBus.Actions).To(ConsistOf(
@@ -595,7 +596,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		test.AssertDirectoryOnDisk(fakeFS, "/etc/containerd/conf.d")
 		test.AssertDirectoryOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d")
 		test.AssertNoFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig1.Upstream+"/hosts.toml")
-		test.AssertFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig2.Upstream+"/hosts.toml", "\n# managed by gardener-node-agent\nserver = \"https://registry.k8s.io\"\n\n[host]\n\n  [host.\"https://10.10.10.101:8080\"]\n    ca = [\"/var/certs/ca.crt\"]\n    capabilities = [\"pull\"]\n", 0644)
+		test.AssertFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig2.Upstream+"/hosts.toml", "# managed by gardener-node-agent\nserver = \"https://registry.k8s.io\"\n\n[host.\"https://10.10.10.101:8080\"]\n  capabilities = [\"pull\"]\n  ca = [\"/var/certs/ca.crt\"]\n\n", 0644)
 
 		By("Assert that unit actions have been applied")
 		Expect(fakeDBus.Actions).To(ConsistOf(

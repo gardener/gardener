@@ -6,13 +6,16 @@ package operatingsystemconfig
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"net/http"
 	"os"
 	"os/exec"
 	"path"
+	"text/template"
 	"time"
 
+	"github.com/Masterminds/sprig/v3"
 	"github.com/go-logr/logr"
 	"github.com/pelletier/go-toml"
 	"github.com/spf13/afero"
@@ -273,6 +276,19 @@ func (r *Reconciler) ensureContainerdRegistries(ctx context.Context, log logr.Lo
 	return errChan
 }
 
+var (
+	//go:embed templates/containerd-hosts.toml.tpl
+	tplContentContainerdHosts string
+	tplContainerdHosts        *template.Template
+)
+
+func init() {
+	tplContainerdHosts = template.Must(template.
+		New(tplContentContainerdHosts).
+		Funcs(sprig.TxtFuncMap()).
+		Parse(tplContentContainerdHosts))
+}
+
 func addRegistryToContainerdFunc(ctx context.Context, log logr.Logger, registryConfig extensionsv1alpha1.RegistryConfig, fs afero.Afero) error {
 	httpClient := http.Client{Timeout: 1 * time.Second}
 
@@ -323,37 +339,33 @@ func addRegistryToContainerdFunc(ctx context.Context, log logr.Logger, registryC
 		}
 	}()
 
-	type (
-		hostConfig struct {
-			Capabilities []extensionsv1alpha1.RegistryCapability `toml:"capabilities,omitempty"`
-			CaCerts      []string                                `toml:"ca,omitempty"`
-		}
-
-		config struct {
-			Server *string               `toml:"server,omitempty" comment:"managed by gardener-node-agent"`
-			Host   map[string]hostConfig `toml:"host,omitempty"`
+	var (
+		values = map[string]any{
+			"server":      ptr.Deref(registryConfig.Server, ""),
+			"hostConfigs": make([]any, 0, len(registryConfig.Hosts)),
 		}
 	)
 
-	content := config{
-		Server: registryConfig.Server,
-		Host:   map[string]hostConfig{},
-	}
-
 	for _, host := range registryConfig.Hosts {
-		h := hostConfig{}
+		hostConfig := map[string]any{
+			"hostURL": host.URL,
+			"capabilities": []extensionsv1alpha1.RegistryCapability{
+				extensionsv1alpha1.PullCapability,
+				extensionsv1alpha1.ResolveCapability,
+			},
+		}
 
 		if len(host.Capabilities) > 0 {
-			h.Capabilities = host.Capabilities
+			hostConfig["capabilities"] = host.Capabilities
 		}
 		if len(host.CACerts) > 0 {
-			h.CaCerts = host.CACerts
+			hostConfig["ca"] = host.CACerts
 		}
 
-		content.Host[host.URL] = h
+		values["hostConfigs"] = append(values["hostConfigs"].([]any), hostConfig)
 	}
 
-	return toml.NewEncoder(f).Encode(content)
+	return tplContainerdHosts.Execute(f, values)
 }
 
 func (r *Reconciler) cleanupUnusedContainerdRegistries(log logr.Logger, registriesToRemove []extensionsv1alpha1.RegistryConfig) error {

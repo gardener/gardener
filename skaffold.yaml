@@ -1463,6 +1463,7 @@ build:
             - pkg/nodeagent/controller/lease
             - pkg/nodeagent/controller/node
             - pkg/nodeagent/controller/operatingsystemconfig
+            - pkg/nodeagent/controller/operatingsystemconfig/templates/containerd-hosts.toml.tpl
             - pkg/nodeagent/controller/token
             - pkg/nodeagent/dbus
             - pkg/nodeagent/features
