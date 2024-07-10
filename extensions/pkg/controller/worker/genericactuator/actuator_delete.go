@@ -35,7 +35,7 @@ func (a *genericActuator) Delete(ctx context.Context, log logr.Logger, worker *e
 
 	workerDelegate, err := a.delegateFactory.WorkerDelegate(ctx, worker, cluster)
 	if err != nil {
-		newError := fmt.Errorf("could not instantiate actuator context: %w", err)
+		newError := fmt.Errorf("could not instantiate actuator: %w", err)
 		if a.errorCodeCheckFunc != nil {
 			return v1beta1helper.NewErrorWithCodes(newError, a.errorCodeCheckFunc(err)...)
 		}
