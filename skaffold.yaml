@@ -593,8 +593,7 @@ build:
           envTemplate:
             template: "{{.GARDENER_VERSION}}"
         - name: sha
-          gitCommit:
-            variant: AbbrevCommitSha
+          inputDigest: {}
   artifacts:
     - image: local-skaffold/gardener-extension-provider-local
       ko:
@@ -773,16 +772,12 @@ build:
       context: pkg/provider-local/node
       docker: {}
     - image: local-skaffold/machine-controller-manager-provider-local
-      # Use a custom builder that executes ko instead of using skaffold's native ko integration.
-      # This allows us to get a hold of the built image ref so that we can inject it into the imageVectorOverwrite.
-      # Alternatives:
-      # - contribute to skaffold that hooks are templated (https://skaffold.dev/docs/environment/templating/) so
-      #   that we can write the patch after building the image with the native ko builder
-      # - use a wrapper chart for provider-local's ControllerDeployment (dropped in https://github.com/gardener/gardener/pull/7757)
-      # - allow setting ref in image vector instead of repository+tag and replace current imageVectorOverwrite string
-      #   chart value with a structure so that it can be patched by skaffold using resourceSelector
-      #   (skaffold cannot split the image ref into separate fields like repository and tag)
-      custom:
+      hooks:
+        after:
+          - command: 
+              - bash 
+              - hack/mcm-provider-local-overwrite.sh
+      ko:
         dependencies:
           paths:
             - cmd/machine-controller-manager-provider-local
@@ -790,32 +785,9 @@ build:
             - pkg/provider-local/machine-provider/api/validation
             - pkg/provider-local/machine-provider/local
             - VERSION
-        buildCommand: |
-          set -e
-
-          # parse image tag that skaffold expects us to build
-          repository=${IMAGE%:*}
-          tag=${IMAGE##*:}
-
-          image="$(KO_DOCKER_REPO=$repository ko build --push=$PUSH_IMAGE --sbom=none --bare --platform=$PLATFORMS -t $tag ./cmd/machine-controller-manager-provider-local)"
-
-          # parse image ref that we just built
-          repository=${image%:*:*}
-          digest=${image##*@}
-
-          cat <<EOF > example/provider-local/garden/base/patch-imagevector-overwrite.yaml
-          apiVersion: core.gardener.cloud/v1
-          kind: ControllerDeployment
-          metadata:
-            name: provider-local
-          helm:
-            values:
-              imageVectorOverwrite: |
-                images:
-                - name: machine-controller-manager-provider-local
-                  repository: ${repository}
-                  tag: ${digest}
-          EOF
+        ldflags:
+          - '{{.LD_FLAGS}}'
+        main: ./cmd/machine-controller-manager-provider-local
     - image: local-skaffold/gardener-extension-provider-local/charts/extension
       custom:
         dependencies:
