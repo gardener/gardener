@@ -1,3 +1,7 @@
+---
+title: Shoot Updates and Upgrades
+---
+
 # Shoot Updates and Upgrades
 
 This document describes what happens during shoot updates (changes incorporated in a newly deployed Gardener version) and during shoot upgrades (changes for version controllable by end-users).

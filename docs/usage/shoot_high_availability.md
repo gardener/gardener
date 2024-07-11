@@ -1,3 +1,7 @@
+---
+description: `node` and `zone` failure tolerance types. Possible mitigations for zone outages
+---
+
 # Highly Available Shoot Control Plane
 
 Shoot resource offers a way to request for a highly available control plane.

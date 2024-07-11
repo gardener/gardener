@@ -1,3 +1,7 @@
+---
+description: The basics of horizontal Node and vertical Pod auto-scaling
+---
+
 # Auto-Scaling in Shoot Clusters
 
 There are two parts that relate to auto-scaling in Kubernetes clusters in general:

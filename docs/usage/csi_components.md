@@ -1,8 +1,8 @@
 ---
-title: CSI Components
+title: Necessary Labeling for Custom CSI Components
 ---
 
-# (Custom) CSI Components
+# Necessary Labeling for Custom CSI Components
 
 Some provider extensions for Gardener are using CSI components to manage persistent volumes in the shoot clusters.
 Additionally, most of the provider extensions are deploying controllers for taking volume snapshots (CSI snapshotter).

@@ -1,3 +1,8 @@
+---
+title: Shoot Cluster Purposes
+description: Available Shoot cluster purposes and the behavioral differences between them
+---
+
 # Shoot Cluster Purpose
 
 The `Shoot` resource contains a `.spec.purpose` field indicating how the shoot is used, whose allowed values are as follows:

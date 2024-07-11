@@ -1,3 +1,8 @@
+---
+title: Shoot Worker Nodes Settings
+description: Configuring SSH Access through '.spec.provider.workersSettings`
+---
+
 # Shoot Worker Nodes Settings
 
 Users can configure settings affecting all worker nodes via `.spec.provider.workersSettings` in the `Shoot` resource.

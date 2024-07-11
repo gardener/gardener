@@ -1,12 +1,9 @@
 ---
-title: Hibernate a Cluster
-level: beginner
-category: Operation
-scope: operator
-tags: ["task"]
-publishdate: 2020-11-19
+title: Shoot Hibernation
+description: What is hibernation? Manual hibernation/wake up and specifying a hibernation schedule
 ---
-# Hibernate a Cluster
+
+# Shoot Hibernation
 
 Clusters are only needed 24 hours a day if they run productive workload. So whenever you do development in a cluster, or just use it for tests or demo purposes, you can save a lot of money if you scale-down your Kubernetes resources whenever you don't need them. However, scaling them down manually can become time-consuming the more resources you have. 
 

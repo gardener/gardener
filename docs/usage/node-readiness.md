@@ -1,3 +1,8 @@
+---
+title: Readiness of Shoot Worker Nodes
+description: Implementation in Gardener for readiness of Shoot worker Nodes. How to mark components as node-critical
+---
+
 # Readiness of Shoot Worker Nodes
 
 ## Background

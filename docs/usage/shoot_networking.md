@@ -1,4 +1,9 @@
-# Shoot Networking
+---
+title: Shoot Networking Configurations
+description: Configuring Pod network. Maximum number of Nodes and Pods per Node
+---
+
+# Shoot Networking Configurations
 
 This document contains network related information for Shoot clusters.
 

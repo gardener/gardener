@@ -1,3 +1,7 @@
+---
+description: Defining the maintenance time window, configuring automatic version updates, confining reconciliations to only happen during maintenance, adding an additional maintenance operation, etc.
+---
+
 # Shoot Maintenance
 
 Shoots configure a maintenance time window in which Gardener performs certain operations that may restart the control plane, roll out the nodes, result in higher network traffic, etc. A summary of what was changed in the last maintenance time window in shoot specification is kept in the shoot status `.status.lastMaintenance` field.

@@ -1,3 +1,7 @@
+---
+description: Introducing `balanced` and `bin-packing` scheduling profiles 
+---
+
 # Shoot Scheduling Profiles
 
 This guide describes the available scheduling profiles and how they can be configured in the Shoot cluster. It also clarifies how a custom scheduling profile can be configured.

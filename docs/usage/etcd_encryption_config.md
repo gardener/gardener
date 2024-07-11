@@ -1,3 +1,8 @@
+---
+title: ETCD Encryption Config
+description: Specifying resource types for encryption with `spec.kubernetes.kubeAPIServer.encryptionConfig`
+---
+
 # ETCD Encryption Config
 
 The `spec.kubernetes.kubeAPIServer.encryptionConfig` field in the Shoot API allows users to customize encryption configurations for the API server. It provides options to specify additional resources for encryption beyond secrets.

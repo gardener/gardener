@@ -1,3 +1,7 @@
+---
+description: Shoot conditions, constraints, and error codes
+---
+
 # Shoot Status
 
 This document provides an overview of the [ShootStatus](../api-reference/core.md#shootstatus).

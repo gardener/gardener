@@ -1,3 +1,7 @@
+---
+description: Project operations and roles. Four-Eyes-Principle for resource deletion
+---
+
 # Projects
 
 The Gardener API server supports a cluster-scoped `Project` resource which is used for data isolation between individual Gardener consumers. For example, each development team has its own project to manage its own shoot clusters. 

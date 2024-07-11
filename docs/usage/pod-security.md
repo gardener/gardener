@@ -1,3 +1,8 @@
+---
+title: Admission Configuration for the `PodSecurity` Admission Plugin
+description: Adding custom configuration for the `PodSecurity` plugin in `.spec.kubernetes.kubeAPIServer.admissionPlugins`
+---
+
 ## Admission Configuration for the `PodSecurity` Admission Plugin
 
 If you wish to add your custom configuration for the `PodSecurity` plugin, you can do so in the Shoot spec under `.spec.kubernetes.kubeAPIServer.admissionPlugins` by adding:
