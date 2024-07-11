@@ -106,7 +106,7 @@ var Exec = func(ctx context.Context, command string, arg ...string) ([]byte, err
 
 // ensureContainerdDefaultConfig invokes the 'containerd' and saves the resulting default configuration.
 func (r *Reconciler) ensureContainerdDefaultConfig(ctx context.Context) error {
-	exists, err := r.fileExists(configFile)
+	exists, err := r.FS.Exists(configFile)
 	if err != nil {
 		return err
 	}
@@ -132,7 +132,7 @@ Environment="PATH=` + extensionsv1alpha1.ContainerDRuntimeContainersBinFolder + 
 	)
 
 	containerdEnvFilePath := path.Join(dropinDir, "30-env_config.conf")
-	exists, err := r.fileExists(containerdEnvFilePath)
+	exists, err := r.FS.Exists(containerdEnvFilePath)
 	if err != nil {
 		return err
 	}
