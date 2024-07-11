@@ -1,5 +1,5 @@
 ---
-title: Workerless Shoot
+title: Workerless `Shoot`s
 description: What is a Workerless Shoot and how to create one
 ---
 

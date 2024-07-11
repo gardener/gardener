@@ -2,7 +2,7 @@
 title: Trigger Shoot Operations Through Annotations
 ---
 
-# Trigger Shoot Operations
+# Trigger Shoot Operations Through Annotations
 
 You can trigger a few explicit operations by annotating the `Shoot` with an operation annotation.
 This might allow you to induct certain behavior without the need to change the `Shoot` specification.

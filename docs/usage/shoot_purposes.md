@@ -1,5 +1,6 @@
 ---
-description: Available Shoot cluster purposes and the behavioral differences between them.
+title: Shoot Cluster Purposes
+description: Available Shoot cluster purposes and the behavioral differences between them
 ---
 
 # Shoot Cluster Purpose
