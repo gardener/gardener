@@ -81,6 +81,9 @@ func (p *prometheus) prometheus(takeOverOldPV bool, cortexConfigMap *corev1.Conf
 				PodMonitorNamespaceSelector:     &metav1.LabelSelector{},
 				ProbeNamespaceSelector:          &metav1.LabelSelector{},
 				ScrapeConfigNamespaceSelector:   &metav1.LabelSelector{},
+				Web: &monitoringv1.PrometheusWebSpec{
+					MaxConnections: ptr.To[int32](1024),
+				},
 			},
 			RuleSelector:          &metav1.LabelSelector{MatchLabels: monitoringutils.Labels(p.values.Name)},
 			RuleNamespaceSelector: &metav1.LabelSelector{},
