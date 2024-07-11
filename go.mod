@@ -1,6 +1,8 @@
 module github.com/gardener/gardener
 
-go 1.22.0
+go 1.22.4
+
+toolchain go1.22.5
 
 require (
 	github.com/Masterminds/semver/v3 v3.2.1
@@ -9,7 +11,7 @@ require (
 	github.com/andybalholm/brotli v1.1.0
 	github.com/containerd/containerd v1.7.19
 	github.com/coreos/go-systemd/v22 v22.5.0
-	github.com/distribution/distribution/v3 v3.0.0-alpha.1
+	github.com/distribution/distribution/v3 v3.0.0-beta.1
 	github.com/fluent/fluent-operator/v2 v2.9.0
 	github.com/gardener/cert-management v0.15.0
 	github.com/gardener/dependency-watchdog v1.2.3
@@ -146,7 +148,7 @@ require (
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/pprof v0.0.0-20240424215950-a892ee059fd6 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/gorilla/handlers v1.5.1 // indirect
+	github.com/gorilla/handlers v1.5.2 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
