@@ -221,8 +221,6 @@ const (
 	// provisioned VM by the gardener-node-agent.
 	OperatingSystemConfigPurposeReconcile OperatingSystemConfigPurpose = "reconcile"
 
-	// OperatingSystemConfigDefaultFilePermission is the default value for a permission of a file.
-	OperatingSystemConfigDefaultFilePermission int32 = 0644
 	// OperatingSystemConfigSecretDataKey is a constant for the key in a secret's `.data` field containing the
 	// results of a computed cloud config.
 	OperatingSystemConfigSecretDataKey = "cloud_config" // #nosec G101 -- No credential.
