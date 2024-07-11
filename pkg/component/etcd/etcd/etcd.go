@@ -40,7 +40,6 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
-	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/cache"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
@@ -695,21 +694,10 @@ func (e *etcd) Deploy(ctx context.Context) error {
 
 	// etcd deployed for shoot cluster
 	if e.values.NamePrefix == "" {
-		// Add scrape config for druid metrics only if the role is 'main'.
-		if e.values.Role == v1beta1constants.ETCDRoleMain {
-			scrapeConfig := e.emptyScrapeConfig()
-			if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, scrapeConfig, func() error {
-				scrapeConfig.Labels = monitoringutils.Labels(e.prometheusLabel())
-				scrapeConfig.Spec = monitoringv1alpha1.ScrapeConfigSpec{
-					HonorTimestamps: ptr.To(false),
-					MetricsPath:     ptr.To("/federate"),
-					Params:          map[string][]string{"match[]": {`{job="` + druidServiceName + `",etcd_namespace="` + e.namespace + `"}`}},
-					StaticConfigs:   []monitoringv1alpha1.StaticConfig{{Targets: []monitoringv1alpha1.Target{"prometheus-" + cache.Label + ".garden.svc"}}},
-				}
-				return nil
-			}); err != nil {
-				return err
-			}
+		// TODO(rickardsjp, chrkl, istvanballok): Remove after v1.102
+		err := kubernetesutils.DeleteObject(ctx, e.client, e.emptyScrapeConfig())
+		if client.IgnoreNotFound(err) != nil {
+			return fmt.Errorf("could not delete etcd scrape config in namespace %v: %w", e.namespace, err)
 		}
 
 		// TODO: The PrometheusRules for the garden cluster case are maintained in a separate file located here:

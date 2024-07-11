@@ -40,6 +40,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 						`{job="cadvisor",namespace="` + namespace + `"}`,
 						`{job="kube-state-metrics",namespace="` + namespace + `"}`,
 						`{__name__=~"metering:.+",namespace="` + namespace + `"}`,
+						`{job="etcd-druid",etcd_namespace="` + namespace + `"}`,
 					},
 				},
 				RelabelConfigs: []monitoringv1.RelabelConfig{{
