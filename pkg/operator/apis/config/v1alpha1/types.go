@@ -149,7 +149,7 @@ const (
 	DefaultLockObjectName = "gardener-operator-leader-election"
 )
 
-// ExtensionVirtualClusterControllerConfiguration defines the configuration of the GardenExtension controller.
+// ExtensionVirtualClusterControllerConfiguration defines the configuration of the extension virtual cluster controller.
 type ExtensionVirtualClusterControllerConfiguration struct {
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`

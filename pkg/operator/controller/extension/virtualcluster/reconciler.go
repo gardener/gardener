@@ -38,7 +38,7 @@ const (
 	ConditionReconcileFailed = "ReconcileFailed"
 	// ConditionDeleteFailed is the condition type for when the virtual cluster resources fail to be deleted.
 	ConditionDeleteFailed = "DeleteFailed"
-	// ConditionNoGardenFound is the condition type for when the virtual cluster does not exist.
+	// ConditionNoGardenFound is the condition type for when no Garden resource exists.
 	ConditionNoGardenFound = "NoGardenFound"
 	// ConditionReconcileSuccess is the condition type for when the virtual cluster resources successfully reconcile.
 	ConditionReconcileSuccess = "ReconcileSuccessful"
@@ -112,7 +112,7 @@ func (r *Reconciler) updateExtensionStatus(ctx context.Context, log logr.Logger,
 	// prevent sending empty patches
 	if data, err := patch.Data(extension); err != nil {
 		return fmt.Errorf("failed getting patch data for Extension %s: %w", extension.Name, err)
-	} else if string(data) == `{}` {
+	} else if string(data) == "{}" {
 		return nil
 	}
 
@@ -157,13 +157,13 @@ func (r *Reconciler) reconcileVirtualClusterResources(ctx context.Context, log l
 		err := fmt.Errorf("failed to reconciler controller deployment: %w", err)
 		return err
 	}
-	r.Recorder.Event(extension, corev1.EventTypeNormal, "Reconciliation", "ControllerDeployment created successfully")
+	r.Recorder.Event(extension, corev1.EventTypeNormal, "Reconciliation", "ControllerDeployment applied successfully")
 
 	if err := r.reconcileControllerRegistration(ctx, gardenClient, extension); err != nil {
 		err := fmt.Errorf("failed to reconciler controller registration: %w", err)
 		return err
 	}
-	r.Recorder.Event(extension, corev1.EventTypeNormal, "Reconciliation", "ControllerRegistration created successfully")
+	r.Recorder.Event(extension, corev1.EventTypeNormal, "Reconciliation", "ControllerRegistration applied successfully")
 	return nil
 }
 
@@ -183,7 +183,7 @@ func (r *Reconciler) reconcileControllerDeployment(ctx context.Context, gardenCl
 	}
 
 	if _, err := controllerutil.CreateOrUpdate(ctx, gardenClient, ctrlDeploy, deployMutateFn); err != nil {
-		return fmt.Errorf("failed to create or update ControllerInstallation: %w", err)
+		return fmt.Errorf("failed to create or update ControllerDeployment: %w", err)
 	}
 	return nil
 }

@@ -158,7 +158,7 @@ var _ = Describe("Virtual Cluster Reconciler", func() {
 				Expect(runtimeClient.Create(ctx, garden)).To(Succeed())
 			})
 
-			It("should create the ctrl-{registration,installation}", func() {
+			It("should create the ctrl-{registration,deployment}", func() {
 				req = reconcile.Request{NamespacedName: client.ObjectKey{Name: extensionName}}
 				Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{}))
 

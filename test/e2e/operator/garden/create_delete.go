@@ -15,8 +15,10 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
@@ -44,9 +46,16 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 		ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
 		defer cancel()
 
+		Expect(client.IgnoreAlreadyExists(runtimeClient.Create(ctx, &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "garden",
+			},
+		}))).To(Succeed())
 		Expect(runtimeClient.Create(ctx, backupSecret)).To(Succeed())
 		Expect(runtimeClient.Create(ctx, rootCASecret)).To(Succeed())
 		Expect(runtimeClient.Create(ctx, garden)).To(Succeed())
+
+		Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: "provider-local"}, &operatorv1alpha1.Extension{})).To(Succeed())
 		waitForGardenToBeReconciled(ctx, garden)
 
 		DeferCleanup(func() {
@@ -147,6 +156,16 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 			g.Expect(virtualClusterClient.Client().List(ctx, &seedmanagementv1alpha1.ManagedSeedList{})).To(Succeed())
 			g.Expect(virtualClusterClient.Client().List(ctx, &settingsv1alpha1.ClusterOpenIDConnectPresetList{})).To(Succeed())
 			g.Expect(virtualClusterClient.Client().List(ctx, &operationsv1alpha1.BastionList{})).To(Succeed())
+		}).Should(Succeed())
+
+		By("Verify virtual cluster extension installations")
+		Eventually(func(g Gomega) {
+			var ctrlRegistrationList gardencorev1beta1.ControllerRegistrationList
+			g.Expect(virtualClusterClient.Client().List(ctx, &ctrlRegistrationList)).To(Succeed())
+			g.Expect(ctrlRegistrationList.Items).To(ContainElement(MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("provider-local")})})))
+			var ctrlDeploymentList gardencorev1.ControllerDeploymentList
+			g.Expect(virtualClusterClient.Client().List(ctx, &ctrlDeploymentList)).To(Succeed())
+			g.Expect(ctrlDeploymentList.Items).To(ContainElement(MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("provider-local")})})))
 		}).Should(Succeed())
 	})
 })
