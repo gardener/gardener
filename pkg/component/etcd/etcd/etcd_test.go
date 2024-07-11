@@ -626,19 +626,6 @@ var _ = Describe("Etcd", func() {
 				},
 			}
 		}
-		scrapeConfig = &monitoringv1alpha1.ScrapeConfig{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "shoot-etcd-druid",
-				Namespace: testNamespace,
-				Labels:    map[string]string{"prometheus": "shoot"},
-			},
-			Spec: monitoringv1alpha1.ScrapeConfigSpec{
-				HonorTimestamps: ptr.To(false),
-				MetricsPath:     ptr.To("/federate"),
-				Params:          map[string][]string{"match[]": {`{job="etcd-druid",etcd_namespace="` + testNamespace + `"}`}},
-				StaticConfigs:   []monitoringv1alpha1.StaticConfig{{Targets: []monitoringv1alpha1.Target{"prometheus-cache.garden.svc"}}},
-			},
-		}
 		prometheusRule = func(prometheusName string, class Class, replicas int32, backupEnabled bool) *monitoringv1.PrometheusRule {
 			jobNameEtcd, jobNameBackupRestore := serviceMonitorJobNames(prometheusName)
 
@@ -982,10 +969,7 @@ var _ = Describe("Etcd", func() {
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 					Expect(obj).To(DeepEqual(serviceMonitor("shoot", "etcd-client")))
 				}),
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-druid"}, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{})),
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-					Expect(obj).To(DeepEqual(scrapeConfig))
-				}),
+				c.EXPECT().Delete(ctx, &monitoringv1alpha1.ScrapeConfig{ObjectMeta: metav1.ObjectMeta{Name: "shoot-etcd-druid", Namespace: testNamespace, Labels: map[string]string{"prometheus": "shoot"}}}),
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 					Expect(obj).To(DeepEqual(prometheusRule("shoot", class, 1, false)))
@@ -1060,10 +1044,7 @@ var _ = Describe("Etcd", func() {
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 					Expect(obj).To(DeepEqual(serviceMonitor("shoot", "etcd-client")))
 				}),
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-druid"}, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{})),
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-					Expect(obj).To(DeepEqual(scrapeConfig))
-				}),
+				c.EXPECT().Delete(ctx, &monitoringv1alpha1.ScrapeConfig{ObjectMeta: metav1.ObjectMeta{Name: "shoot-etcd-druid", Namespace: testNamespace, Labels: map[string]string{"prometheus": "shoot"}}}),
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 					Expect(obj).To(DeepEqual(prometheusRule("shoot", class, existingReplicas, false)))
@@ -1143,10 +1124,7 @@ var _ = Describe("Etcd", func() {
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 					Expect(obj).To(DeepEqual(serviceMonitor("shoot", "etcd-client")))
 				}),
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-druid"}, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{})),
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-					Expect(obj).To(DeepEqual(scrapeConfig))
-				}),
+				c.EXPECT().Delete(ctx, &monitoringv1alpha1.ScrapeConfig{ObjectMeta: metav1.ObjectMeta{Name: "shoot-etcd-druid", Namespace: testNamespace, Labels: map[string]string{"prometheus": "shoot"}}}),
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 					Expect(obj).To(DeepEqual(prometheusRule("shoot", class, existingReplicas, false)))
@@ -1214,10 +1192,7 @@ var _ = Describe("Etcd", func() {
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 					Expect(obj).To(DeepEqual(serviceMonitor("shoot", "etcd-client")))
 				}),
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-druid"}, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{})),
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-					Expect(obj).To(DeepEqual(scrapeConfig))
-				}),
+				c.EXPECT().Delete(ctx, &monitoringv1alpha1.ScrapeConfig{ObjectMeta: metav1.ObjectMeta{Name: "shoot-etcd-druid", Namespace: testNamespace, Labels: map[string]string{"prometheus": "shoot"}}}),
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 					Expect(obj).To(DeepEqual(prometheusRule("shoot", class, 1, false)))
@@ -1284,10 +1259,7 @@ var _ = Describe("Etcd", func() {
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 					Expect(obj).To(DeepEqual(serviceMonitor("shoot", "etcd-client")))
 				}),
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-druid"}, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{})),
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-					Expect(obj).To(DeepEqual(scrapeConfig))
-				}),
+				c.EXPECT().Delete(ctx, &monitoringv1alpha1.ScrapeConfig{ObjectMeta: metav1.ObjectMeta{Name: "shoot-etcd-druid", Namespace: testNamespace, Labels: map[string]string{"prometheus": "shoot"}}}),
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 					Expect(obj).To(DeepEqual(prometheusRule("shoot", class, 1, false)))
@@ -1385,10 +1357,7 @@ var _ = Describe("Etcd", func() {
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 					Expect(obj).To(DeepEqual(serviceMonitor("shoot", "etcd-client")))
 				}),
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-druid"}, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{})),
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-					Expect(obj).To(DeepEqual(scrapeConfig))
-				}),
+				c.EXPECT().Delete(ctx, &monitoringv1alpha1.ScrapeConfig{ObjectMeta: metav1.ObjectMeta{Name: "shoot-etcd-druid", Namespace: testNamespace, Labels: map[string]string{"prometheus": "shoot"}}}),
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 					Expect(obj).To(DeepEqual(prometheusRule("shoot", class, 1, false)))
@@ -1483,10 +1452,7 @@ var _ = Describe("Etcd", func() {
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(serviceMonitor("shoot", "etcd-client")))
 					}),
-					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-druid"}, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-						Expect(obj).To(DeepEqual(scrapeConfig))
-					}),
+					c.EXPECT().Delete(ctx, &monitoringv1alpha1.ScrapeConfig{ObjectMeta: metav1.ObjectMeta{Name: "shoot-etcd-druid", Namespace: testNamespace, Labels: map[string]string{"prometheus": "shoot"}}}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(prometheusRule("shoot", class, 1, false)))
@@ -1554,10 +1520,7 @@ var _ = Describe("Etcd", func() {
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(serviceMonitor("shoot", "etcd-client")))
 					}),
-					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-druid"}, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-						Expect(obj).To(DeepEqual(scrapeConfig))
-					}),
+					c.EXPECT().Delete(ctx, &monitoringv1alpha1.ScrapeConfig{ObjectMeta: metav1.ObjectMeta{Name: "shoot-etcd-druid", Namespace: testNamespace, Labels: map[string]string{"prometheus": "shoot"}}}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(prometheusRule("shoot", class, 1, false)))
@@ -1616,10 +1579,7 @@ var _ = Describe("Etcd", func() {
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(serviceMonitor("shoot", "etcd-client")))
 					}),
-					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-druid"}, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-						Expect(obj).To(DeepEqual(scrapeConfig))
-					}),
+					c.EXPECT().Delete(ctx, &monitoringv1alpha1.ScrapeConfig{ObjectMeta: metav1.ObjectMeta{Name: "shoot-etcd-druid", Namespace: testNamespace, Labels: map[string]string{"prometheus": "shoot"}}}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(prometheusRule("shoot", class, *replicas, true)))
@@ -1686,10 +1646,7 @@ var _ = Describe("Etcd", func() {
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(serviceMonitor("shoot", "etcd-client")))
 					}),
-					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-druid"}, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-						Expect(obj).To(DeepEqual(scrapeConfig))
-					}),
+					c.EXPECT().Delete(ctx, &monitoringv1alpha1.ScrapeConfig{ObjectMeta: metav1.ObjectMeta{Name: "shoot-etcd-druid", Namespace: testNamespace, Labels: map[string]string{"prometheus": "shoot"}}}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(prometheusRule("shoot", class, *replicas, true)))
@@ -1751,10 +1708,7 @@ var _ = Describe("Etcd", func() {
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(serviceMonitor("shoot", clientSecretName)))
 					}),
-					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-druid"}, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-						Expect(obj).To(DeepEqual(scrapeConfig))
-					}),
+					c.EXPECT().Delete(ctx, &monitoringv1alpha1.ScrapeConfig{ObjectMeta: metav1.ObjectMeta{Name: "shoot-etcd-druid", Namespace: testNamespace, Labels: map[string]string{"prometheus": "shoot"}}}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(prometheusRule("shoot", class, *replicas, false)))
@@ -1956,10 +1910,7 @@ var _ = Describe("Etcd", func() {
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(serviceMonitor("shoot", clientSecretName)))
 						}),
-						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-druid"}, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{})),
-						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-							Expect(obj).To(DeepEqual(scrapeConfig))
-						}),
+						c.EXPECT().Delete(ctx, &monitoringv1alpha1.ScrapeConfig{ObjectMeta: metav1.ObjectMeta{Name: "shoot-etcd-druid", Namespace: testNamespace, Labels: map[string]string{"prometheus": "shoot"}}}),
 						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(prometheusRule("shoot", class, 1, false)))
@@ -2009,10 +1960,7 @@ var _ = Describe("Etcd", func() {
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(serviceMonitor("shoot", clientSecretName)))
 						}),
-						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-druid"}, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{})),
-						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-							Expect(obj).To(DeepEqual(scrapeConfig))
-						}),
+						c.EXPECT().Delete(ctx, &monitoringv1alpha1.ScrapeConfig{ObjectMeta: metav1.ObjectMeta{Name: "shoot-etcd-druid", Namespace: testNamespace, Labels: map[string]string{"prometheus": "shoot"}}}),
 						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(prometheusRule("shoot", class, 1, false)))
@@ -2079,10 +2027,7 @@ var _ = Describe("Etcd", func() {
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(serviceMonitor("shoot", "etcd-client")))
 					}),
-					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-druid"}, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1alpha1.ScrapeConfig{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-						Expect(obj).To(DeepEqual(scrapeConfig))
-					}),
+					c.EXPECT().Delete(ctx, &monitoringv1alpha1.ScrapeConfig{ObjectMeta: metav1.ObjectMeta{Name: "shoot-etcd-druid", Namespace: testNamespace, Labels: map[string]string{"prometheus": "shoot"}}}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(prometheusRule("shoot", class, 1, false)))
