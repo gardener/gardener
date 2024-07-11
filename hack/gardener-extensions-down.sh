@@ -35,9 +35,9 @@ parse_flags() {
 parse_flags "$@"
 
 client_certificate_data=$(kubectl config view --kubeconfig "$PATH_SEED_KUBECONFIG" --raw -o jsonpath='{.users[0].user.client-certificate-data}')
-if [[ -n "$client_certificate_data" ]] && ! echo "$client_certificate_data"| base64 --decode | openssl x509 -noout -checkend 300 2>/dev/null ; then
-  echo "Seed kubeconfig ${PATH_SEED_KUBECONFIG} has expired or will expire soon. Please provide a valid kubeconfig and try again"
-  exit
+if [[ -n "$client_certificate_data" ]] && ! echo "$client_certificate_data" | base64 --decode | openssl x509 -noout -checkend 300 2>/dev/null ; then
+  echo "Seed kubeconfig ${PATH_SEED_KUBECONFIG} has expired or will expire in 5min. Please provide a valid kubeconfig and try again!"
+  exit 1
 fi
 
 # Delete stuff gradually in the right order, otherwise several dependencies will prevent the cleanup from succeeding.
