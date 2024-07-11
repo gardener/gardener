@@ -363,15 +363,6 @@ frontend:
 									},
 									Env: []corev1.EnvVar{
 										{
-											Name: "SESSION_SECRET",
-											ValueFrom: &corev1.EnvVarSource{
-												SecretKeyRef: &corev1.SecretKeySelector{
-													LocalObjectReference: corev1.LocalObjectReference{Name: sessionSecret.Name},
-													Key:                  "password",
-												},
-											},
-										},
-										{
 											Name:  "GARDENER_CONFIG",
 											Value: "/etc/gardener-dashboard/config/config.yaml",
 										},
@@ -448,6 +439,10 @@ frontend:
 									},
 									VolumeMounts: []corev1.VolumeMount{
 										{
+											Name:      "gardener-dashboard-sessionsecret",
+											MountPath: "/etc/gardener-dashboard/secrets/session",
+										},
+										{
 											Name:      "gardener-dashboard-config",
 											MountPath: "/etc/gardener-dashboard/config",
 										},
@@ -460,6 +455,19 @@ frontend:
 								},
 							},
 							Volumes: []corev1.Volume{
+								{
+									Name: "gardener-dashboard-sessionsecret",
+									VolumeSource: corev1.VolumeSource{
+										Secret: &corev1.SecretVolumeSource{
+											SecretName:  sessionSecret.Name,
+											DefaultMode: ptr.To[int32](0640),
+											Items: []corev1.KeyToPath{{
+												Key:  "password",
+												Path: "sessionSecret",
+											}},
+										},
+									},
+								},
 								{
 									Name: "gardener-dashboard-config",
 									VolumeSource: corev1.VolumeSource{
@@ -491,53 +499,35 @@ frontend:
 			}
 
 			if oidc != nil {
-				metav1.SetMetaDataAnnotation(&obj.Spec.Template.ObjectMeta, "checksum-secret-"+oidc.SecretRef.Name, "75febc0dca34c373c9e4320cb729d2970731c07111bc6610e4732e55736cf191")
-				obj.Spec.Template.Spec.Containers[0].Env = append(obj.Spec.Template.Spec.Containers[0].Env,
-					corev1.EnvVar{
-						Name: "OIDC_CLIENT_ID",
-						ValueFrom: &corev1.EnvVarSource{
-							SecretKeyRef: &corev1.SecretKeySelector{
-								LocalObjectReference: corev1.LocalObjectReference{Name: oidc.SecretRef.Name},
-								Key:                  "client_id",
-							},
-						},
-					},
-					corev1.EnvVar{
-						Name: "OIDC_CLIENT_SECRET",
-						ValueFrom: &corev1.EnvVarSource{
-							SecretKeyRef: &corev1.SecretKeySelector{
-								LocalObjectReference: corev1.LocalObjectReference{Name: oidc.SecretRef.Name},
-								Key:                  "client_secret",
-							},
-						},
-					},
-				)
-			}
-
-			if gitHub != nil {
-				metav1.SetMetaDataAnnotation(&obj.Spec.Template.ObjectMeta, "checksum-secret-"+gitHub.SecretRef.Name, "db37d21181592000efad06f87a00afba59f9c99b11e119d118be2b929c3387ce")
-				obj.Spec.Template.Spec.Containers[0].Env = append(obj.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
-					Name: "GITHUB_AUTHENTICATION_TOKEN",
-					ValueFrom: &corev1.EnvVarSource{
-						SecretKeyRef: &corev1.SecretKeySelector{
-							LocalObjectReference: corev1.LocalObjectReference{Name: gitHub.SecretRef.Name},
-							Key:                  "authentication.token",
+				obj.Spec.Template.Spec.Volumes = append(obj.Spec.Template.Spec.Volumes, corev1.Volume{
+					Name: "gardener-dashboard-oidc",
+					VolumeSource: corev1.VolumeSource{
+						Secret: &corev1.SecretVolumeSource{
+							SecretName:  oidc.SecretRef.Name,
+							DefaultMode: ptr.To[int32](0640),
 						},
 					},
 				})
+				obj.Spec.Template.Spec.Containers[0].VolumeMounts = append(obj.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+					Name:      "gardener-dashboard-oidc",
+					MountPath: "/etc/gardener-dashboard/secrets/oidc",
+				})
+			}
 
-				if gitHub.PollInterval == nil {
-					metav1.SetMetaDataAnnotation(&obj.Spec.Template.ObjectMeta, "checksum-secret-"+gitHub.SecretRef.Name, "d2b606ed2270efcdfc3b280981262dd0eeba4ae7ad2ac5d69c3d7bdbd2adf8c3")
-					obj.Spec.Template.Spec.Containers[0].Env = append(obj.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
-						Name: "GITHUB_WEBHOOK_SECRET",
-						ValueFrom: &corev1.EnvVarSource{
-							SecretKeyRef: &corev1.SecretKeySelector{
-								LocalObjectReference: corev1.LocalObjectReference{Name: gitHub.SecretRef.Name},
-								Key:                  "webhookSecret",
-							},
+			if gitHub != nil {
+				obj.Spec.Template.Spec.Volumes = append(obj.Spec.Template.Spec.Volumes, corev1.Volume{
+					Name: "gardener-dashboard-github",
+					VolumeSource: corev1.VolumeSource{
+						Secret: &corev1.SecretVolumeSource{
+							SecretName:  gitHub.SecretRef.Name,
+							DefaultMode: ptr.To[int32](0640),
 						},
-					})
-				}
+					},
+				})
+				obj.Spec.Template.Spec.Containers[0].VolumeMounts = append(obj.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+					Name:      "gardener-dashboard-github",
+					MountPath: "/etc/gardener-dashboard/secrets/github",
+				})
 			}
 
 			if assetsConfigMapName != nil {
