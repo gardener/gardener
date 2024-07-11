@@ -274,6 +274,9 @@ honor_labels: true`
 						PodMonitorNamespaceSelector:     &metav1.LabelSelector{},
 						ProbeNamespaceSelector:          &metav1.LabelSelector{},
 						ScrapeConfigNamespaceSelector:   &metav1.LabelSelector{},
+						Web: &monitoringv1.PrometheusWebSpec{
+							MaxConnections: ptr.To[int32](1024),
+						},
 					},
 					RuleSelector:          &metav1.LabelSelector{MatchLabels: map[string]string{"prometheus": name}},
 					RuleNamespaceSelector: &metav1.LabelSelector{},
