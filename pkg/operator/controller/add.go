@@ -22,7 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/controller/vpaevictionrequirements"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	"github.com/gardener/gardener/pkg/operator/controller/controllerregistrar"
-	extensioncontroller "github.com/gardener/gardener/pkg/operator/controller/extension"
+	"github.com/gardener/gardener/pkg/operator/controller/extension"
 	"github.com/gardener/gardener/pkg/operator/controller/garden"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -39,14 +39,15 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 		WithRuntimeClient(mgr.GetClient()).
 		WithClientConnectionConfig(&cfg.VirtualClientConnection).
 		Build(mgr.GetLogger())
-
 	if err != nil {
 		return fmt.Errorf("failed to build garden ClientMap: %w", err)
 	}
+
 	if err := garden.AddToManager(ctx, mgr, cfg, identity, gardenClientMap); err != nil {
 		return err
 	}
-	if err := extensioncontroller.AddToManager(ctx, mgr, cfg, gardenClientMap); err != nil {
+
+	if err := extension.AddToManager(ctx, mgr, cfg, gardenClientMap); err != nil {
 		return err
 	}
 

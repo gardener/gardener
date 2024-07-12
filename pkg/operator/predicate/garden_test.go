@@ -25,11 +25,11 @@ var _ = Describe("Add", func() {
 		garden *operatorv1alpha1.Garden
 	)
 
-	Describe("#GardenPredicate", func() {
+	Describe("#GardenCreatedOrReconciledSuccessfully", func() {
 		var p predicate.Predicate
 
 		BeforeEach(func() {
-			p = operatorpredicate.GardenPredicate()
+			p = operatorpredicate.GardenCreatedOrReconciledSuccessfully()
 			garden = &operatorv1alpha1.Garden{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: gardenName,

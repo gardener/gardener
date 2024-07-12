@@ -12,8 +12,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gstruct"
-	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/record"
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -30,7 +30,6 @@ import (
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	. "github.com/gardener/gardener/pkg/operator/controller/extension/virtualcluster"
 	"github.com/gardener/gardener/pkg/utils/test/matchers"
-	"github.com/gardener/gardener/third_party/mock/client-go/tools/record"
 )
 
 const (
@@ -38,9 +37,8 @@ const (
 	extensionName = "extension"
 )
 
-var _ = Describe("Virtual Cluster Reconciler", func() {
+var _ = Describe("Reconciler", func() {
 	var (
-		ctrl            *gomock.Controller
 		runtimeClient   client.Client
 		virtualClient   client.Client
 		ctx             context.Context
@@ -50,11 +48,10 @@ var _ = Describe("Virtual Cluster Reconciler", func() {
 		garden          *operatorv1alpha1.Garden
 		extension       *operatorv1alpha1.Extension
 		fakeClock       *testclock.FakeClock
-		mockRecorder    *record.MockEventRecorder
+		fakeRecorder    *record.FakeRecorder
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
 		ctx = context.Background()
 		logf.IntoContext(ctx, logr.Discard())
 
@@ -85,7 +82,7 @@ var _ = Describe("Virtual Cluster Reconciler", func() {
 						DeploymentSpec: operatorv1alpha1.DeploymentSpec{
 							Helm: &operatorv1alpha1.ExtensionHelm{
 								OCIRepository: &gardencorev1.OCIRepository{
-									Ref: ptr.To("removeFinalizers"),
+									Ref: ptr.To("removeFinalizer"),
 								},
 							},
 						},
@@ -100,9 +97,7 @@ var _ = Describe("Virtual Cluster Reconciler", func() {
 		gardenClientMap = fakeclientmap.NewClientMapBuilder().WithRuntimeClientForKey(keys.ForGarden(garden), virtualClient).Build()
 
 		fakeClock = testclock.NewFakeClock(time.Now())
-
-		mockRecorder = record.NewMockEventRecorder(ctrl)
-		mockRecorder.EXPECT().Event(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+		fakeRecorder = &record.FakeRecorder{}
 	})
 
 	Describe("#ExtensionVirtualCluster", func() {
@@ -119,7 +114,7 @@ var _ = Describe("Virtual Cluster Reconciler", func() {
 				GardenClientMap: gardenClientMap,
 				RuntimeClient:   runtimeClient,
 				Clock:           fakeClock,
-				Recorder:        mockRecorder,
+				Recorder:        fakeRecorder,
 			}
 		})
 
@@ -158,7 +153,7 @@ var _ = Describe("Virtual Cluster Reconciler", func() {
 				Expect(runtimeClient.Create(ctx, garden)).To(Succeed())
 			})
 
-			It("should create the ctrl-{registration,deployment}", func() {
+			It("should create the controller-{registration,deployment}", func() {
 				req = reconcile.Request{NamespacedName: client.ObjectKey{Name: extensionName}}
 				Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{}))
 
@@ -171,22 +166,24 @@ var _ = Describe("Virtual Cluster Reconciler", func() {
 					"Reason": Equal(ConditionReconcileSuccess),
 				}))
 
-				var ctrlRegList gardencorev1beta1.ControllerRegistrationList
-				var ctrlDepList gardencorev1.ControllerDeploymentList
-				Expect(virtualClient.List(ctx, &ctrlRegList)).To(Succeed())
-				Expect(virtualClient.List(ctx, &ctrlDepList)).To(Succeed())
-				Expect(ctrlDepList.Items).To(HaveLen(1))
-				Expect(ctrlRegList.Items).To(HaveLen(1))
+				var (
+					controllerDeploymentList   gardencorev1.ControllerDeploymentList
+					controllerRegistrationList gardencorev1beta1.ControllerRegistrationList
+				)
+				Expect(virtualClient.List(ctx, &controllerRegistrationList)).To(Succeed())
+				Expect(virtualClient.List(ctx, &controllerDeploymentList)).To(Succeed())
+				Expect(controllerDeploymentList.Items).To(HaveLen(1))
+				Expect(controllerRegistrationList.Items).To(HaveLen(1))
 
 				Expect(runtimeClient.Delete(ctx, extension)).To(Succeed())
 				req = reconcile.Request{NamespacedName: client.ObjectKey{Name: extensionName}}
 				Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{}))
 
 				Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: extensionName}, sutExt)).To(matchers.BeNotFoundError())
-				Expect(virtualClient.List(ctx, &ctrlRegList)).To(Succeed())
-				Expect(virtualClient.List(ctx, &ctrlDepList)).To(Succeed())
-				Expect(ctrlDepList.Items).To(BeEmpty())
-				Expect(ctrlRegList.Items).To(BeEmpty())
+				Expect(virtualClient.List(ctx, &controllerRegistrationList)).To(Succeed())
+				Expect(virtualClient.List(ctx, &controllerDeploymentList)).To(Succeed())
+				Expect(controllerDeploymentList.Items).To(BeEmpty())
+				Expect(controllerRegistrationList.Items).To(BeEmpty())
 			})
 		})
 	})

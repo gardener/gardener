@@ -30,9 +30,7 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-const (
-	namespace = "garden"
-)
+const namespace = "garden"
 
 var (
 	parentCtx     context.Context

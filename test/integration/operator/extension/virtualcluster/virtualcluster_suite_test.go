@@ -47,7 +47,7 @@ import (
 
 func TestVirtualCluster(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Virtualcluster Suite")
+	RunSpecs(t, "Test Integration Operator Extension VirtualCluster Suite")
 }
 
 const testID = "garden-extension-virtualcluster-test"
@@ -56,8 +56,7 @@ var (
 	ctx = context.Background()
 	log logr.Logger
 
-	restConfig *rest.Config
-	// testEnv       *envtest.Environment
+	restConfig    *rest.Config
 	testEnv       *gardenerenvtest.GardenerTestEnvironment
 	testClient    client.Client
 	testClientSet kubernetes.Interface
@@ -93,9 +92,7 @@ var _ = BeforeSuite(func() {
 			},
 			ErrorIfCRDPathMissing: true,
 		},
-		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
-			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,ExtensionValidator,ShootDNS,ShootQuotaValidator,ShootTolerationRestriction,ShootValidator"},
-		},
+		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{},
 	}
 
 	var err error
@@ -171,12 +168,12 @@ var _ = BeforeSuite(func() {
 	)
 	Expect(err).NotTo(HaveOccurred())
 
-	gardenClientMap := fakeclientmap.NewClientMapBuilder().WithClientSetForKey(keys.ForGarden(&operatorv1alpha1.Garden{ObjectMeta: metav1.ObjectMeta{Name: gardenName}}), testClientSet).Build()
+	virtualClusterClientMap := fakeclientmap.NewClientMapBuilder().WithClientSetForKey(keys.ForGarden(&operatorv1alpha1.Garden{ObjectMeta: metav1.ObjectMeta{Name: gardenName}}), testClientSet).Build()
 
 	By("Register controller")
 	Expect(extension.AddToManager(ctx, mgr, &config.OperatorConfiguration{
 		Controllers: config.ControllerConfiguration{},
-	}, gardenClientMap)).To(Succeed())
+	}, virtualClusterClientMap)).To(Succeed())
 
 	By("Register defaulting webhook")
 	Expect(defaultingwebhook.AddToManager(mgr)).To(Succeed())

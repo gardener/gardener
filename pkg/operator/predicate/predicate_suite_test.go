@@ -13,5 +13,5 @@ import (
 
 func TestPredicate(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Predicate Suite")
+	RunSpecs(t, "Operator Predicate Suite")
 }

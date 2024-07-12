@@ -20,22 +20,22 @@ import (
 
 var _ = Describe("ExtensionDefaulter", func() {
 	var (
-		extName     string
-		operatorExt *operatorv1alpha1.Extension
+		extensionName string
+		extension     *operatorv1alpha1.Extension
 	)
+
 	BeforeEach(func() {
-		extName = "provider-local"
-		operatorExt = &operatorv1alpha1.Extension{
+		extensionName = "provider-local"
+		extension = &operatorv1alpha1.Extension{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: extName,
+				Name: extensionName,
 			},
 		}
 	})
 
-	Describe("#NotFound", func() {
+	Describe("#ExtensionSpecFor", func() {
 		It("should return the extension as-is", func() {
-			// rename extension to an unknown name
-			operatorExt = &operatorv1alpha1.Extension{
+			extension = &operatorv1alpha1.Extension{
 				TypeMeta: metav1.TypeMeta{},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "foo",
@@ -50,30 +50,29 @@ var _ = Describe("ExtensionDefaulter", func() {
 					},
 				},
 			}
-			_, ok := ExtensionSpecFor(operatorExt.Name)
+			_, ok := ExtensionSpecFor(extension.Name)
 			Expect(ok).To(BeFalse())
 
-			appliedExt := operatorExt.DeepCopy()
-			err := ApplyExtensionSpec(appliedExt)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(appliedExt).To(Equal(operatorExt))
+			appliedExtension := extension.DeepCopy()
+			Expect(ApplyExtensionSpec(appliedExtension)).NotTo(HaveOccurred())
+			Expect(appliedExtension).To(Equal(extension))
 		})
 	})
-	Describe("#WellKnownExtensions", func() {
+
+	Describe("#ApplyExtensionSpec", func() {
 		It("should default zero fields", func() {
-			err := ApplyExtensionSpec(operatorExt)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(operatorExt.Spec.Deployment.ExtensionDeployment.DeploymentSpec.Helm.OCIRepository.Ref).NotTo(BeNil())
+			Expect(ApplyExtensionSpec(extension)).NotTo(HaveOccurred())
+			Expect(extension.Spec.Deployment.ExtensionDeployment.DeploymentSpec.Helm.OCIRepository.Ref).NotTo(BeNil())
 		})
+
 		It("should respect populated fields", func() {
 			// validate test conditions
-			extFromDefaults, ok := ExtensionSpecFor(operatorExt.Name)
+			extFromDefaults, ok := ExtensionSpecFor(extension.Name)
 			Expect(ok).To(BeTrue())
 			Expect(*extFromDefaults.Deployment.ExtensionDeployment.DeploymentSpec.Helm.OCIRepository.Ref).NotTo(Equal("foo"))
-			Expect(operatorExt.Spec.Deployment).To(BeNil())
+			Expect(extension.Spec.Deployment).To(BeNil())
 
-			// test
-			operatorExt.Spec.Deployment = &operatorv1alpha1.Deployment{
+			extension.Spec.Deployment = &operatorv1alpha1.Deployment{
 				ExtensionDeployment: &operatorv1alpha1.ExtensionDeploymentSpec{
 					DeploymentSpec: operatorv1alpha1.DeploymentSpec{
 						Helm: &operatorv1alpha1.ExtensionHelm{
@@ -84,10 +83,8 @@ var _ = Describe("ExtensionDefaulter", func() {
 					},
 				},
 			}
-			// rename extension to an unknown name
-			err := ApplyExtensionSpec(operatorExt)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(*operatorExt.Spec.Deployment.ExtensionDeployment.DeploymentSpec.Helm.OCIRepository.Ref).To(Equal("foo"))
+			Expect(ApplyExtensionSpec(extension)).NotTo(HaveOccurred())
+			Expect(*extension.Spec.Deployment.ExtensionDeployment.DeploymentSpec.Helm.OCIRepository.Ref).To(Equal("foo"))
 		})
 	})
 })

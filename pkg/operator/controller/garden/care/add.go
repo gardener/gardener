@@ -74,7 +74,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 		Watches(
 			&operatorv1alpha1.Garden{},
 			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(predicate.GardenPredicate()),
+			builder.WithPredicates(predicate.GardenCreatedOrReconciledSuccessfully()),
 		).Build(r)
 	if err != nil {
 		return err

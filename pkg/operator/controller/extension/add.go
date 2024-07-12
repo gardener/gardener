@@ -16,21 +16,17 @@ import (
 	"github.com/gardener/gardener/pkg/operator/controller/extension/virtualcluster"
 )
 
-// AddToManager adds all Garden controllers to the given manager.
+// AddToManager adds all Extension controllers to the given manager.
 func AddToManager(
 	ctx context.Context,
 	mgr manager.Manager,
 	cfg *config.OperatorConfiguration,
 	gardenClientMap clientmap.ClientMap,
 ) error {
-	if gardenClientMap == nil {
-		return fmt.Errorf("gardenClientMap cannot be nil")
-	}
-
 	if err := (&virtualcluster.Reconciler{
 		Config:          *cfg,
-		GardenClientMap: gardenClientMap,
 		GardenNamespace: v1beta1constants.GardenNamespace,
+		GardenClientMap: gardenClientMap,
 	}).AddToManager(ctx, mgr); err != nil {
 		return fmt.Errorf("failed adding Garden controller: %w", err)
 	}

@@ -20,13 +20,13 @@ import (
 
 var _ = Describe("Extension controller tests", func() {
 	var (
-		garden         *operatorv1alpha1.Garden
-		extensionLocal *operatorv1alpha1.Extension
-		extensionFoo   *operatorv1alpha1.Extension
-		ctrlDepLocal   *gardencorev1.ControllerDeployment
-		ctrlRegLocal   *gardencorev1beta1.ControllerRegistration
-		ctrlDepFoo     *gardencorev1.ControllerDeployment
-		ctrlRegFoo     *gardencorev1beta1.ControllerRegistration
+		garden                      *operatorv1alpha1.Garden
+		extensionLocal              *operatorv1alpha1.Extension
+		extensionFoo                *operatorv1alpha1.Extension
+		controllerDeploymentLocal   *gardencorev1.ControllerDeployment
+		controllerRegistrationLocal *gardencorev1beta1.ControllerRegistration
+		controllerDeploymentFoo     *gardencorev1.ControllerDeployment
+		controllerRegistrationFoo   *gardencorev1beta1.ControllerRegistration
 	)
 
 	BeforeEach(func() {
@@ -105,23 +105,23 @@ var _ = Describe("Extension controller tests", func() {
 			},
 		}
 
-		ctrlDepLocal = &gardencorev1.ControllerDeployment{
+		controllerDeploymentLocal = &gardencorev1.ControllerDeployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "provider-local",
 			},
 		}
-		ctrlRegLocal = &gardencorev1beta1.ControllerRegistration{
+		controllerRegistrationLocal = &gardencorev1beta1.ControllerRegistration{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "provider-local",
 			},
 		}
 
-		ctrlDepFoo = &gardencorev1.ControllerDeployment{
+		controllerDeploymentFoo = &gardencorev1.ControllerDeployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "provider-foo",
 			},
 		}
-		ctrlRegFoo = &gardencorev1beta1.ControllerRegistration{
+		controllerRegistrationFoo = &gardencorev1beta1.ControllerRegistration{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "provider-foo",
 			},
@@ -173,14 +173,14 @@ var _ = Describe("Extension controller tests", func() {
 			By("Delete controller-{registration,deployment} for provider-local")
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, extensionLocal))).To(Succeed())
 			Expect(client.IgnoreNotFound(controllerutils.RemoveAllFinalizers(ctx, testClient, extensionFoo))).To(Succeed())
-			Expect(client.IgnoreNotFound(testClient.Delete(ctx, ctrlRegLocal))).To(Succeed())
-			Expect(client.IgnoreNotFound(testClient.Delete(ctx, ctrlDepLocal))).To(Succeed())
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, controllerRegistrationLocal))).To(Succeed())
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, controllerDeploymentLocal))).To(Succeed())
 
 			By("Delete controller-{registration,deployment} for provider-foo")
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, extensionFoo))).To(Succeed())
 			Expect(client.IgnoreNotFound(controllerutils.RemoveAllFinalizers(ctx, testClient, extensionFoo))).To(Succeed())
-			Expect(client.IgnoreNotFound(testClient.Delete(ctx, ctrlRegFoo))).To(Succeed())
-			Expect(client.IgnoreNotFound(testClient.Delete(ctx, ctrlDepFoo))).To(Succeed())
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, controllerRegistrationFoo))).To(Succeed())
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, controllerDeploymentFoo))).To(Succeed())
 		})
 
 		By("Update Garden to ready state")
@@ -211,8 +211,8 @@ var _ = Describe("Extension controller tests", func() {
 			WithReason("ReconcileSuccessful"),
 		))
 
-		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(ctrlRegLocal), ctrlRegLocal)).To(Succeed())
-		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(ctrlDepLocal), ctrlDepLocal)).To(Succeed())
+		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerRegistrationLocal), controllerRegistrationLocal)).To(Succeed())
+		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerDeploymentLocal), controllerDeploymentLocal)).To(Succeed())
 
 		By("Install another extension")
 		Expect(testClient.Create(ctx, extensionFoo)).To(Succeed())
@@ -235,17 +235,17 @@ var _ = Describe("Extension controller tests", func() {
 			WithReason("ReconcileSuccessful"),
 		))
 
-		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(ctrlRegFoo), ctrlRegFoo)).To(Succeed())
-		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(ctrlDepFoo), ctrlDepFoo)).To(Succeed())
+		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerRegistrationFoo), controllerRegistrationFoo)).To(Succeed())
+		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerDeploymentFoo), controllerDeploymentFoo)).To(Succeed())
 
 		By("Delete extension foo")
 		Expect(testClient.Delete(ctx, extensionFoo)).To(Succeed())
 
 		Eventually(func() error {
-			return (testClient.Get(ctx, client.ObjectKeyFromObject(ctrlRegFoo), ctrlRegFoo))
+			return (testClient.Get(ctx, client.ObjectKeyFromObject(controllerRegistrationFoo), controllerRegistrationFoo))
 		}).Should(BeNotFoundError())
 		Eventually(func() error {
-			return (testClient.Get(ctx, client.ObjectKeyFromObject(ctrlDepFoo), ctrlDepFoo))
+			return (testClient.Get(ctx, client.ObjectKeyFromObject(controllerDeploymentFoo), controllerDeploymentFoo))
 		}).Should(BeNotFoundError())
 		Eventually(func() error {
 			return mgrClient.Get(ctx, client.ObjectKeyFromObject(extensionFoo), extensionFoo)

@@ -28,9 +28,8 @@ func (h *Handler) Default(_ context.Context, obj runtime.Object) error {
 	}
 
 	// merge extensions with defaults
-	err := extensionutils.ApplyExtensionSpec(extension)
-	if err != nil {
-		return fmt.Errorf("error merging extension spec: %w", err)
+	if err := extensionutils.ApplyExtensionSpec(extension); err != nil {
+		return fmt.Errorf("error applying extension spec: %w", err)
 	}
 
 	return nil

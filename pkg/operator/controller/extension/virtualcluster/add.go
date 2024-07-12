@@ -21,9 +21,9 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	operatorpredicate "github.com/gardener/gardener/pkg/operator/predicate"
 )
 
@@ -33,18 +33,8 @@ const ControllerName = "garden-extension-virtual-cluster"
 // AddToManager adds Reconciler to the given manager.
 func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) error {
 	if r.RuntimeClient == nil {
-		runtimeClientSet, err := kubernetes.NewWithConfig(
-			kubernetes.WithRESTConfig(mgr.GetConfig()),
-			kubernetes.WithRuntimeAPIReader(mgr.GetAPIReader()),
-			kubernetes.WithRuntimeClient(mgr.GetClient()),
-			kubernetes.WithRuntimeCache(mgr.GetCache()),
-		)
-		if err != nil {
-			return fmt.Errorf("failed creating runtime clientset: %w", err)
-		}
-		r.RuntimeClient = runtimeClientSet.Client()
+		r.RuntimeClient = mgr.GetClient()
 	}
-
 	if r.Clock == nil {
 		r.Clock = clock.RealClock{}
 	}
@@ -54,6 +44,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	if r.GardenNamespace == "" {
 		r.GardenNamespace = v1beta1constants.GardenNamespace
 	}
+
 	if r.GardenClientMap == nil {
 		var err error
 		r.GardenClientMap, err = clientmapbuilder.
@@ -80,7 +71,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 		Watches(
 			&operatorv1alpha1.Garden{},
 			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapToAllExtensions), mapper.UpdateWithNew, mgr.GetLogger()),
-			builder.WithPredicates(predicate.Or(operatorpredicate.GardenPredicate(), operatorpredicate.DeletePredicate())),
+			builder.WithPredicates(predicate.Or(operatorpredicate.GardenCreatedOrReconciledSuccessfully(), predicateutils.ForEventTypes(predicateutils.Delete))),
 		).
 		Complete(r)
 }

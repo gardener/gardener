@@ -110,6 +110,13 @@ type VPAEvictionRequirementsControllerConfiguration struct {
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 }
 
+// ExtensionVirtualClusterControllerConfiguration defines the configuration of the extension virtual cluster controller.
+type ExtensionVirtualClusterControllerConfiguration struct {
+	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
+	// +optional
+	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+}
+
 // ServerConfiguration contains details for the HTTP(S) servers.
 type ServerConfiguration struct {
 	// Webhooks is the configuration for the HTTPS webhook server.
@@ -148,9 +155,3 @@ const (
 	// DefaultLockObjectName is the default lock name for leader election.
 	DefaultLockObjectName = "gardener-operator-leader-election"
 )
-
-// ExtensionVirtualClusterControllerConfiguration defines the configuration of the extension virtual cluster controller.
-type ExtensionVirtualClusterControllerConfiguration struct {
-	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
-}

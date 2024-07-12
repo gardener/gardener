@@ -60,7 +60,7 @@ type ControllerConfiguration struct {
 	NetworkPolicy NetworkPolicyControllerConfiguration
 	// VPAEvictionRequirements is the configuration for the VPAEvictionrequirements controller.
 	VPAEvictionRequirements VPAEvictionRequirementsControllerConfiguration
-	// ExtensionVirtualCluster defines the configuration of the GardenExtension controller.
+	// ExtensionVirtualCluster defines the configuration of the extension virtual cluster controller.
 	ExtensionVirtualCluster ExtensionVirtualClusterControllerConfiguration
 }
 
@@ -99,6 +99,12 @@ type VPAEvictionRequirementsControllerConfiguration struct {
 	ConcurrentSyncs *int
 }
 
+// ExtensionVirtualClusterControllerConfiguration defines the configuration of the extension virtual cluster controller.
+type ExtensionVirtualClusterControllerConfiguration struct {
+	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
+	ConcurrentSyncs *int
+}
+
 // ServerConfiguration contains details for the HTTP(S) servers.
 type ServerConfiguration struct {
 	// Webhooks is the configuration for the HTTPS webhook server.
@@ -125,10 +131,4 @@ type NodeTolerationConfiguration struct {
 	// DefaultUnreachableTolerationSeconds specifies the seconds for the `node.kubernetes.io/unreachable` toleration that
 	// should be added to pods not already tolerating this taint.
 	DefaultUnreachableTolerationSeconds *int64
-}
-
-// ExtensionVirtualClusterControllerConfiguration defines the configuration of the GardenExtension controller.
-type ExtensionVirtualClusterControllerConfiguration struct {
-	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
-	ConcurrentSyncs *int
 }

@@ -26,5 +26,4 @@ metadata:
 #      helm:
 #        ociRepository: {}
 #      policy: OnDemand|Always
-#      podSecurityEnforceValue: baseline|priviledged
 
