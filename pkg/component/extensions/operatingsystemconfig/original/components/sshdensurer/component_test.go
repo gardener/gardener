@@ -134,8 +134,8 @@ if systemctl is-active --quiet sshd.service ; then
     systemctl stop sshd.service
 fi
 
-# Disabling the sshd service does not terminate already established connections
-# Kill all currently established ssh connections
-pkill -x sshd || true
+# Stopping the sshd service does not terminate already established connections
+# Kill all currently established orphaned ssh connections on the host
+pkill -P 1 -x sshd || true
 `
 )
