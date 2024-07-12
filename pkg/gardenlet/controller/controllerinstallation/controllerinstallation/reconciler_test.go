@@ -14,7 +14,7 @@ import (
 
 var _ = Describe("Reconciler", func() {
 	Describe("#mutateObjects", func() {
-		It("serializes yaml with stable key ordering, func() {
+		It("serializes yaml with stable key ordering", func() {
 		content := `
 ---
 apiVersion: v1
