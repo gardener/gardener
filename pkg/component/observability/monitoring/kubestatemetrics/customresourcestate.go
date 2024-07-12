@@ -75,15 +75,16 @@ func newCustomResourceStateMetricsForVPA() customresourcestate.Resource {
 	}
 
 	helpMessages := map[string]string{
-		"target":     "Target %s the VerticalPodAutoscaler recommends for the container.",
-		"upperBound": "Maximum %s the container can use before the VerticalPodAutoscaler updater evicts it.",
-		"lowerBound": "Minimum %s the container can use before the VerticalPodAutoscaler updater evicts it.",
-		"minAllowed": "Minimum %s the VerticalPodAutoscaler can set for containers matching the name.",
-		"maxAllowed": "Maximum %s the VerticalPodAutoscaler can set for containers matching the name.",
+		"target":         "Target %s the VerticalPodAutoscaler recommends for the container.",
+		"uncappedTarget": "Target %s the VerticalPodAutoscaler recommends for the container ignoring bounds.",
+		"upperBound":     "Maximum %s the container can use before the VerticalPodAutoscaler updater evicts it.",
+		"lowerBound":     "Minimum %s the container can use before the VerticalPodAutoscaler updater evicts it.",
+		"minAllowed":     "Minimum %s the VerticalPodAutoscaler can set for containers matching the name.",
+		"maxAllowed":     "Maximum %s the VerticalPodAutoscaler can set for containers matching the name.",
 	}
 
 	for _, res := range []string{"cpu", "memory"} {
-		for _, attr := range []string{"target", "upperBound", "lowerBound"} {
+		for _, attr := range []string{"target", "upperBound", "lowerBound", "uncappedTarget"} {
 			generator := newCustomResourceStateGaugeMetricForVPA(
 				[]string{"status", "recommendation", "containerRecommendations"},
 				[]string{attr, res},
