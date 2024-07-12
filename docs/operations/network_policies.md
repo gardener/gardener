@@ -166,6 +166,35 @@ Note that a `deny-all` policy will not be created by `gardenlet`.
 Shoot owners can create it manually if needed/desired.
 Above listed `NetworkPolicy`s ensure that the traffic for the shoot system components is allowed in case such `deny-all` policies is created.
 
+### Webhook Servers in Shoot Clusters
+
+Shoot components serving webhook handlers must be reached by `kube-apiserver`s of the shoot cluster.
+However, the control plane components, e.g. `kube-apiserver`, run on the seed cluster decoupled by a [VPN connection](../proposals/14-reversed-cluster-vpn.md).
+Therefore, shoot components serving webhook handlers need to allow the VPN endpoints in the shoot cluster as clients to allow `kube-apiserver`s to call them.
+
+For the `kube-system` namespace, the network policy `gardener.cloud--allow-from-seed` fulfils the purpose to allow pods to mark themselves as targets for such calls, allowing corresponding traffic to pass through.
+
+For custom namespaces, operators can use the network policy `gardener.cloud--allow-from-seed` as a template.
+Please note that the label selector may change over time, i.e. with Gardener version updates.
+This is why a simpler variant with a reduced label selector like the example below is recommended:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-from-seed
+  namespace: custom-namespace
+spec:
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          gardener.cloud/purpose: kube-system
+      podSelector:
+        matchLabels:
+          app: vpn-shoot
+```
+
 ## Implications for Gardener Extensions
 
 Gardener extensions sometimes need to deploy additional components into the shoot namespace in the seed cluster hosting the control plane.
