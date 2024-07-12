@@ -35,7 +35,6 @@ GO_TO_PROTOBUF             := $(TOOLS_BIN_DIR)/go-to-protobuf
 HELM                       := $(TOOLS_BIN_DIR)/helm
 IMPORT_BOSS                := $(TOOLS_BIN_DIR)/import-boss
 KIND                       := $(TOOLS_BIN_DIR)/kind
-KO                         := $(TOOLS_BIN_DIR)/ko
 KUBECTL                    := $(TOOLS_BIN_DIR)/kubectl
 KUSTOMIZE                  := $(TOOLS_BIN_DIR)/kustomize
 LOGCHECK                   := $(TOOLS_BIN_DIR)/logcheck.so # plugin binary
@@ -66,8 +65,6 @@ GO_VULN_CHECK_VERSION ?= latest
 HELM_VERSION ?= v3.15.2
 # renovate: datasource=github-releases depName=kubernetes-sigs/kind
 KIND_VERSION ?= v0.23.0
-# renovate: datasource=github-releases depName=ko-build/ko
-KO_VERSION ?= v0.15.4
 # renovate: datasource=github-releases depName=kubernetes/kubernetes
 KUBECTL_VERSION ?= v1.30.2
 # renovate: datasource=github-releases depName=kubernetes-sigs/kustomize
@@ -185,9 +182,6 @@ $(IMPORT_BOSS): $(call tool_version_file,$(IMPORT_BOSS),$(CODE_GENERATOR_VERSION
 $(KIND): $(call tool_version_file,$(KIND),$(KIND_VERSION))
 	curl -L -o $(KIND) https://kind.sigs.k8s.io/dl/$(KIND_VERSION)/kind-$(SYSTEM_NAME)-$(SYSTEM_ARCH)
 	chmod +x $(KIND)
-
-$(KO): $(call tool_version_file,$(KO),$(KO_VERSION))
-	GOBIN=$(abspath $(TOOLS_BIN_DIR)) go install github.com/google/ko@$(KO_VERSION)
 
 $(KUBECTL): $(call tool_version_file,$(KUBECTL),$(KUBECTL_VERSION))
 	curl -Lo $(KUBECTL) https://dl.k8s.io/release/$(KUBECTL_VERSION)/bin/$(SYSTEM_NAME)/$(SYSTEM_ARCH)/kubectl
