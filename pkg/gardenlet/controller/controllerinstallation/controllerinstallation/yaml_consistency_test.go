@@ -12,8 +12,9 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/controllerinstallation"
 )
 
-var _ = Describe("Ensuring MutateObjects makes deterministic yaml serialization ", func() {
-	It("serializes yaml in a deterministic way", func() {
+var _ = Describe("Reconciler", func() {
+	Describe("#mutateObjects", func() {
+		It("serializes yaml with stable key ordering, func() {
 		content := `
 ---
 apiVersion: v1
