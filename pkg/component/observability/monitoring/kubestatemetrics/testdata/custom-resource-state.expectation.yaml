@@ -97,6 +97,30 @@ spec:
         unit: core
       labelsFromPath: {}
       errorLogV: 0
+    - name: verticalpodautoscaler_status_recommendation_containerrecommendations_uncappedtarget_cpu
+      help: Target cpu the VerticalPodAutoscaler recommends for the container ignoring
+        bounds.
+      each:
+        type: Gauge
+        gauge:
+          labelsFromPath:
+            container:
+            - containerName
+          path:
+          - status
+          - recommendation
+          - containerRecommendations
+          valueFrom:
+          - uncappedTarget
+          - cpu
+          labelFromKey: ""
+          nilIsZero: true
+        stateSet: null
+        info: null
+      commonLabels:
+        unit: core
+      labelsFromPath: {}
+      errorLogV: 0
     - name: verticalpodautoscaler_spec_resourcepolicy_containerpolicies_minallowed_cpu
       help: Minimum cpu the VerticalPodAutoscaler can set for containers matching
         the name.
@@ -207,6 +231,30 @@ spec:
           - containerRecommendations
           valueFrom:
           - lowerBound
+          - memory
+          labelFromKey: ""
+          nilIsZero: true
+        stateSet: null
+        info: null
+      commonLabels:
+        unit: byte
+      labelsFromPath: {}
+      errorLogV: 0
+    - name: verticalpodautoscaler_status_recommendation_containerrecommendations_uncappedtarget_memory
+      help: Target memory the VerticalPodAutoscaler recommends for the container ignoring
+        bounds.
+      each:
+        type: Gauge
+        gauge:
+          labelsFromPath:
+            container:
+            - containerName
+          path:
+          - status
+          - recommendation
+          - containerRecommendations
+          valueFrom:
+          - uncappedTarget
           - memory
           labelFromKey: ""
           nilIsZero: true
