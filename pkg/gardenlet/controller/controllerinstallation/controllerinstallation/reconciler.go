@@ -496,7 +496,7 @@ func injectGardenAccessSecrets(secretData map[string][]byte, namespace, genericG
 }
 
 // mutateObject iterates over the given rendered secret data and calls the given mutator for each of them. It marshals
-// the objects back in a deterministic way after mutation and updates the secret data.
+// the objects back (with stable key ordering) after mutation and updates the secret data.
 func mutateObjects(secretData map[string][]byte, mutate func(obj *unstructured.Unstructured) error) error {
 	for key, data := range secretData {
 		buffer := &bytes.Buffer{}
@@ -519,7 +519,7 @@ func mutateObjects(secretData map[string][]byte, mutate func(obj *unstructured.U
 				return err
 			}
 
-			// serialize unstructured back to secret data in a deterministic way
+			// serialize unstructured back to secret data (with stable key ordering)
 			// Note: we have to do this for all objects, not only for mutated ones, as there could be multiple objects in one file
 			objBytes, err := forkedyaml.Marshal(obj.Object)
 			if err != nil {
