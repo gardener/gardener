@@ -15,7 +15,7 @@ import (
 var _ = Describe("Reconciler", func() {
 	Describe("#mutateObjects", func() {
 		It("serializes yaml with stable key ordering", func() {
-		content := `
+			content := `
 ---
 apiVersion: v1
 kind: Secret
@@ -31,7 +31,7 @@ metadata:
 
 ---
 `
-		stableContent := `
+			stableContent := `
 ---
 apiVersion: v1
 kind: Secret
@@ -47,14 +47,14 @@ metadata:
 
 ---
 `
-		secret := map[string][]byte{
-			"keyA": []byte(content),
-		}
-		err := controllerinstallation.MutateObjects(secret, func(_ *unstructured.Unstructured) error {
-			return nil
+			secret := map[string][]byte{
+				"keyA": []byte(content),
+			}
+			err := controllerinstallation.MutateObjects(secret, func(_ *unstructured.Unstructured) error {
+				return nil
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(secret["keyA"])).To(Equal(stableContent))
 		})
-		Expect(err).NotTo(HaveOccurred())
-		Expect(string(secret["keyA"])).To(Equal(stableContent))
 	})
-
 })
