@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apiserver/pkg/authentication/user"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -20,20 +21,20 @@ import (
 )
 
 type gardenerClaims struct {
-	Gardener gardener `json:"gardener.cloud,omitempty"`
+	Gardener gardener `json:"gardener.cloud"`
 }
 
 type gardener struct {
-	WorkloadIdentity ref  `json:"workloadIdentity,omitempty"`
+	WorkloadIdentity ref  `json:"workloadIdentity"`
 	Shoot            *ref `json:"shoot,omitempty"`
 	Project          *ref `json:"project,omitempty"`
 	Seed             *ref `json:"seed,omitempty"`
 }
 
 type ref struct {
-	Name      string `json:"name,omitempty"`
-	Namespace string `json:"namespace,omitempty"`
-	UID       string `json:"uid,omitempty"`
+	Name      string  `json:"name"`
+	Namespace *string `json:"namespace,omitempty"`
+	UID       string  `json:"uid"`
 }
 
 // issueToken generates the JSON Web Token based on the provided configurations.
@@ -61,7 +62,7 @@ func (r *TokenRequestREST) getGardenerClaims(workloadIdentity *securityapi.Workl
 		Gardener: gardener{
 			WorkloadIdentity: ref{
 				Name:      workloadIdentity.Name,
-				Namespace: workloadIdentity.Namespace,
+				Namespace: ptr.To(workloadIdentity.Namespace),
 				UID:       string(workloadIdentity.UID),
 			},
 		},
@@ -70,7 +71,7 @@ func (r *TokenRequestREST) getGardenerClaims(workloadIdentity *securityapi.Workl
 	if shoot != nil {
 		gardenerClaims.Gardener.Shoot = &ref{
 			Name:      shoot.GetName(),
-			Namespace: shoot.GetNamespace(),
+			Namespace: ptr.To(shoot.GetNamespace()),
 			UID:       string(shoot.GetUID()),
 		}
 	}
@@ -111,8 +112,7 @@ func (r *TokenRequestREST) resolveContextObject(user user.Info, ctxObj *security
 		coreInformers                    = r.coreInformerFactory.Core().V1beta1()
 	)
 
-	gvk := schema.FromAPIVersionAndKind(ctxObj.APIVersion, ctxObj.Kind)
-	switch {
+	switch gvk := schema.FromAPIVersionAndKind(ctxObj.APIVersion, ctxObj.Kind); {
 	case gvk.Group == gardencorev1beta1.SchemeGroupVersion.Group && gvk.Kind == "Shoot":
 		if shoot, err = coreInformers.Shoots().Lister().Shoots(*ctxObj.Namespace).Get(ctxObj.Name); err != nil {
 			return nil, nil, nil, err

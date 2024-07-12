@@ -100,13 +100,15 @@ var _ = Describe("#TokenRequest", func() {
 
 				Expect(g).ToNot(BeNil())
 				Expect(g.Gardener.WorkloadIdentity.Name).To(Equal(workloadName))
-				Expect(g.Gardener.WorkloadIdentity.Namespace).To(Equal(workloadNamespace))
+				Expect(g.Gardener.WorkloadIdentity.Namespace).ToNot(BeNil())
+				Expect(*g.Gardener.WorkloadIdentity.Namespace).To(Equal(workloadNamespace))
 				Expect(g.Gardener.WorkloadIdentity.UID).To(Equal(workloadUID))
 
 				if shoot != nil {
 					Expect(g.Gardener.Shoot).ToNot(BeNil())
 					Expect(g.Gardener.Shoot.Name).To(Equal(shoot.GetName()))
-					Expect(g.Gardener.Shoot.Namespace).To(Equal(shoot.GetNamespace()))
+					Expect(g.Gardener.Shoot.Namespace).ToNot(BeNil())
+					Expect(*g.Gardener.Shoot.Namespace).To(Equal(shoot.GetNamespace()))
 					Expect(g.Gardener.Shoot.UID).To(BeEquivalentTo(shoot.GetUID()))
 				} else {
 					Expect(g.Gardener.Shoot).To(BeNil())
@@ -116,7 +118,7 @@ var _ = Describe("#TokenRequest", func() {
 					Expect(g.Gardener.Seed).ToNot(BeNil())
 					Expect(g.Gardener.Seed.Name).To(Equal(seed.GetName()))
 					Expect(g.Gardener.Seed.UID).To(BeEquivalentTo(seed.GetUID()))
-					Expect(g.Gardener.Seed.Namespace).To(BeEmpty())
+					Expect(g.Gardener.Seed.Namespace).To(BeNil())
 				} else {
 					Expect(g.Gardener.Seed).To(BeNil())
 				}
@@ -125,7 +127,7 @@ var _ = Describe("#TokenRequest", func() {
 					Expect(g.Gardener.Project).ToNot(BeNil())
 					Expect(g.Gardener.Project.Name).To(Equal(project.GetName()))
 					Expect(g.Gardener.Project.UID).To(BeEquivalentTo(project.GetUID()))
-					Expect(g.Gardener.Project.Namespace).To(BeEmpty())
+					Expect(g.Gardener.Project.Namespace).To(BeNil())
 				} else {
 					Expect(g.Gardener.Project).To(BeNil())
 				}

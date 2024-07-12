@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestStorage(t *testing.T) {
+func TestWorkloadIdentity(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "WorkloadIdentity Suite")
+	RunSpecs(t, "Utils WorkloadIdentity Suite")
 }

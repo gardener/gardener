@@ -12,4 +12,5 @@ import (
 // via the given lister, iterates over them and tries to identify the Project by looking for the namespace name
 // in the project spec.
 // Deprecated: Use github.com/gardener/gardener/pkg/utils/gardener.ProjectForNamespaceFromLister
+// TODO(vpnachev): Remove this alias after v1.102.0 has been released.
 var ProjectForNamespaceFromLister = gardenerutils.ProjectForNamespaceFromLister

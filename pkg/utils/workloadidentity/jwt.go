@@ -42,14 +42,12 @@ func NewTokenIssuer(signingKey any, issuer string, minDuration, maxDuration int6
 		return nil, fmt.Errorf("failed to get signer: %w", err)
 	}
 
-	t := TokenIssuer{
+	return &TokenIssuer{
 		signer:             signer,
 		issuer:             issuer,
 		minDurationSeconds: minDuration,
 		maxDurationSeconds: maxDuration,
-	}
-
-	return &t, nil
+	}, nil
 }
 
 // GetIssuer returns the issuer value used for the `iss` JWT claim.
