@@ -139,8 +139,11 @@ func (v *vpa) reconcileAdmissionControllerClusterRoleBinding(clusterRoleBinding 
 }
 
 func (v *vpa) reconcileAdmissionControllerService(service *corev1.Service) {
-	topologAwareRoutingEnabled := v.values.AdmissionController.TopologyAwareRoutingEnabled && v.values.ClusterType == component.ClusterTypeShoot
-	gardenerutils.ReconcileTopologyAwareRoutingMetadata(service, topologAwareRoutingEnabled, v.values.RuntimeKubernetesVersion)
+	for label, value := range getAllLabels(admissionController) {
+		metav1.SetMetaDataLabel(&service.ObjectMeta, label, value)
+	}
+	topologyAwareRoutingEnabled := v.values.AdmissionController.TopologyAwareRoutingEnabled && v.values.ClusterType == component.ClusterTypeShoot
+	gardenerutils.ReconcileTopologyAwareRoutingMetadata(service, topologyAwareRoutingEnabled, v.values.RuntimeKubernetesVersion)
 
 	switch v.values.ClusterType {
 	case component.ClusterTypeSeed:
@@ -158,7 +161,6 @@ func (v *vpa) reconcileAdmissionControllerService(service *corev1.Service) {
 			Port:     ptr.To(intstr.FromInt32(admissionControllerMetricsPort)),
 			Protocol: ptr.To(corev1.ProtocolTCP),
 		}))
-		metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
 	}
 
 	service.Spec.Selector = getAppLabel(admissionController)
@@ -176,9 +178,6 @@ func (v *vpa) reconcileAdmissionControllerService(service *corev1.Service) {
 		},
 	}
 	service.Spec.Ports = kubernetesutils.ReconcileServicePorts(service.Spec.Ports, desiredPorts, "")
-	for label, value := range getAllLabels(admissionController) {
-		metav1.SetMetaDataLabel(&service.ObjectMeta, label, value)
-	}
 }
 
 func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployment, serviceAccountName *string) {

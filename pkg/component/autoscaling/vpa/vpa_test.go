@@ -853,7 +853,6 @@ var _ = Describe("VPA", func() {
 			if clusterType == "shoot" {
 				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports", `[{"protocol":"TCP","port":10250}]`)
 				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports", `[{"protocol":"TCP","port":8944}]`)
-				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.resources.gardener.cloud/pod-label-selector-namespace-alias", "all-shoots")
 			}
 
 			if topologyAwareRoutingEnabled {
