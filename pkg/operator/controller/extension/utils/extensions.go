@@ -27,8 +27,10 @@ var (
 type Extension struct {
 	// Name is the name of the extension (without `gardener-extension-` prefix).
 	Name string `json:"name" yaml:"name"`
-	// Annotations are additional annotations that may apply to the extension and control behavior.
+	// Annotations are additional annotations that will be applied to the extension.
 	Annotations map[string]string `json:"annotations" yaml:"annotations"`
+	//  Labels are additional labels that will be applied to the extension.
+	Labels map[string]string `json:"labels" yaml:"labels"`
 	// ExtensionSpec is the specification of the `operator.gardener.cloud/v1alpha1.Extension` object.
 	operatorv1alpha1.ExtensionSpec `json:",inline" yaml:",inline"`
 }
@@ -55,8 +57,8 @@ func ExtensionSpecFor(name string) (Extension, bool) {
 // ApplyExtensionSpec takes an extension object. If a default spec for the given extension name is known, it merges it
 // with the provided spec. The provided spec always overrides fields in the default spec. If a default spec is not
 // known, then no change is applied.
-func ApplyExtensionSpec(ext *operatorv1alpha1.Extension) error {
-	defaultSpec, ok := ExtensionSpecFor(ext.Name)
+func ApplyExtensionSpec(extension *operatorv1alpha1.Extension) error {
+	defaultSpec, ok := ExtensionSpecFor(extension.Name)
 	if !ok {
 		return nil
 	}
@@ -66,7 +68,7 @@ func ApplyExtensionSpec(ext *operatorv1alpha1.Extension) error {
 		return fmt.Errorf("failed to marshal default extension spec: %w", err)
 	}
 
-	specJSON, err := json.Marshal(ext.Spec)
+	specJSON, err := json.Marshal(extension.Spec)
 	if err != nil {
 		return fmt.Errorf("failed to marshal extension spec: %w", err)
 	}
@@ -81,8 +83,9 @@ func ApplyExtensionSpec(ext *operatorv1alpha1.Extension) error {
 		return fmt.Errorf("failed to unmarshal extension spec: %w", err)
 	}
 
-	ext.SetAnnotations(utils.MergeStringMaps(defaultSpec.Annotations, ext.Annotations))
-	ext.Spec = resultSpec
+	extension.SetAnnotations(utils.MergeStringMaps(defaultSpec.Annotations, extension.Annotations))
+	extension.SetLabels(utils.MergeStringMaps(defaultSpec.Labels, extension.Labels))
+	extension.Spec = resultSpec
 
 	return nil
 }
