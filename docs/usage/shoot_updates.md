@@ -69,7 +69,7 @@ The `.spec.provider.workers[]` list exposes two fields that you might configure 
 The same concepts [like in Kubernetes](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#rolling-update-deployment) apply.
 Additionally, you might customize how the machine-controller-manager (abbrev.: MCM; the component instrumenting this rolling update) is behaving. You can configure the following fields in `.spec.provider.worker[].machineControllerManager`:
 
-* `machineDrainTimeout`: Timeout (in duration) used while draining of machine before deletion, beyond which MCM forcefully deletes the machine (default: `10m`).
+* `machineDrainTimeout`: Timeout (in duration) used while draining of machine before deletion, beyond which MCM forcefully deletes the machine (default: `2h`).
 * `machineHealthTimeout`: Timeout (in duration) used while re-joining (in case of temporary health issues) of a machine before it is declared as failed (default: `10m`).
 * `machineCreationTimeout`: Timeout (in duration) used while joining (during creation) of a machine before it is declared as failed (default: `10m`).
 * `maxEvictRetries`: Maximum number of times evicts would be attempted on a pod before it is forcibly deleted during the draining of a machine (default: `10`).
