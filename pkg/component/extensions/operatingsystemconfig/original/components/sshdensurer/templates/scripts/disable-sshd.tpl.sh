@@ -1,9 +1,10 @@
 #!/bin/bash -eu
 set -e
 
-# Disable sshd service if enabled
-if systemctl is-enabled --quiet sshd.service ; then
-    systemctl disable sshd.service
+# Disable and mask sshd service if not masked
+if [ "$(systemctl is-enabled sshd.service)" != "masked" ] ; then
+    systemctl disable sshd.service || true
+    systemctl mask sshd.service
 fi
 
 # Stop sshd service if active

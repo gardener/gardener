@@ -107,8 +107,9 @@ const (
 	enableScript = `#!/bin/bash -eu
 set -e
 
-# Enable sshd service if disabled
+# Unmask and enable sshd service if not enabled
 if ! systemctl is-enabled --quiet sshd.service ; then
+    systemctl unmask sshd.service
     # When sshd.service is disabled on gardenlinux the service is deleted
     # On gardenlinux sshd.service is enabled by enabling ssh.service
     if ! systemctl enable sshd.service ; then
@@ -124,9 +125,10 @@ fi
 	disableScript = `#!/bin/bash -eu
 set -e
 
-# Disable sshd service if enabled
-if systemctl is-enabled --quiet sshd.service ; then
-    systemctl disable sshd.service
+# Disable and mask sshd service if not masked
+if [ "$(systemctl is-enabled sshd.service)" != "masked" ] ; then
+    systemctl disable sshd.service || true
+    systemctl mask sshd.service
 fi
 
 # Stop sshd service if active
