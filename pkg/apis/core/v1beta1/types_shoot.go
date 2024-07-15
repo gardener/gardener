@@ -63,7 +63,8 @@ type ShootSpec struct {
 	// Addons contains information about enabled/disabled addons and their configuration.
 	// +optional
 	Addons *Addons `json:"addons,omitempty" protobuf:"bytes,1,opt,name=addons"`
-	// CloudProfileName is a name of a CloudProfile object. This field is immutable.
+	// CloudProfileName is a name of a CloudProfile object.
+	// This field will be deprecated soon, use `CloudProfile` instead.
 	// +optional
 	CloudProfileName *string `json:"cloudProfileName,omitempty" protobuf:"bytes,2,opt,name=cloudProfileName"`
 	// DNS contains information about the DNS settings of the Shoot.
@@ -130,7 +131,6 @@ type ShootSpec struct {
 	// +optional
 	SchedulerName *string `json:"schedulerName,omitempty" protobuf:"bytes,21,opt,name=schedulerName"`
 	// CloudProfile contains a reference to a CloudProfile or a NamespacedCloudProfile.
-	// Either this field or the to-be-deprecated field CloudProfileName has to be set.
 	// +optional
 	CloudProfile *CloudProfileReference `json:"cloudProfile,omitempty" protobuf:"bytes,22,opt,name=cloudProfile"`
 	// CredentialsBindingName is the name of the a CredentialsBinding that has a reference to the provider credentials.

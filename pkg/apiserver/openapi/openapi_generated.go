@@ -8518,7 +8518,7 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 					},
 					"cloudProfileName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "CloudProfileName is a name of a CloudProfile object. This field is immutable.",
+							Description: "CloudProfileName is a name of a CloudProfile object. This field will be deprecated soon, use `CloudProfile` instead.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -8678,7 +8678,7 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 					},
 					"cloudProfile": {
 						SchemaProps: spec.SchemaProps{
-							Description: "CloudProfile contains a reference to a CloudProfile or a NamespacedCloudProfile. Either this field or the to-be-deprecated field CloudProfileName has to be set.",
+							Description: "CloudProfile contains a reference to a CloudProfile or a NamespacedCloudProfile.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileReference"),
 						},
 					},

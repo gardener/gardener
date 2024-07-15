@@ -114,7 +114,7 @@ var (
 		core.ErrorConfigurationProblem,
 	)
 	// ForbiddenShootFinalizersOnCreation is a list of finalizers which are forbidden to be specified on Shoot creation.
-	ForbiddenShootFinalizersOnCreation = sets.New[string](
+	ForbiddenShootFinalizersOnCreation = sets.New(
 		gardencorev1beta1.GardenerName,
 		v1beta1constants.ReferenceProtectionFinalizerName,
 	)
@@ -1148,7 +1148,7 @@ func ValidateCloudProfileReference(cloudProfileReference *core.CloudProfileRefer
 	allErrs := field.ErrorList{}
 
 	if cloudProfileReference == nil {
-		if cloudProfileName == nil || len(*cloudProfileName) == 0 {
+		if len(ptr.Deref(cloudProfileName, "")) == 0 {
 			allErrs = append(allErrs, field.Required(fldPath.Child("name"), "must specify a cloud profile either by cloudProfile reference or cloudProfileName"))
 		}
 		return allErrs

@@ -1765,7 +1765,8 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>CloudProfileName is a name of a CloudProfile object. This field is immutable.</p>
+<p>CloudProfileName is a name of a CloudProfile object.
+This field will be deprecated soon, use <code>CloudProfile</code> instead.</p>
 </td>
 </tr>
 <tr>
@@ -2039,8 +2040,7 @@ CloudProfileReference
 </td>
 <td>
 <em>(Optional)</em>
-<p>CloudProfile contains a reference to a CloudProfile or a NamespacedCloudProfile.
-Either this field or the to-be-deprecated field CloudProfileName has to be set.</p>
+<p>CloudProfile contains a reference to a CloudProfile or a NamespacedCloudProfile.</p>
 </td>
 </tr>
 <tr>
@@ -11545,7 +11545,8 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>CloudProfileName is a name of a CloudProfile object. This field is immutable.</p>
+<p>CloudProfileName is a name of a CloudProfile object.
+This field will be deprecated soon, use <code>CloudProfile</code> instead.</p>
 </td>
 </tr>
 <tr>
@@ -11819,8 +11820,7 @@ CloudProfileReference
 </td>
 <td>
 <em>(Optional)</em>
-<p>CloudProfile contains a reference to a CloudProfile or a NamespacedCloudProfile.
-Either this field or the to-be-deprecated field CloudProfileName has to be set.</p>
+<p>CloudProfile contains a reference to a CloudProfile or a NamespacedCloudProfile.</p>
 </td>
 </tr>
 <tr>
@@ -12245,7 +12245,8 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>CloudProfileName is a name of a CloudProfile object. This field is immutable.</p>
+<p>CloudProfileName is a name of a CloudProfile object.
+This field will be deprecated soon, use <code>CloudProfile</code> instead.</p>
 </td>
 </tr>
 <tr>
@@ -12519,8 +12520,7 @@ CloudProfileReference
 </td>
 <td>
 <em>(Optional)</em>
-<p>CloudProfile contains a reference to a CloudProfile or a NamespacedCloudProfile.
-Either this field or the to-be-deprecated field CloudProfileName has to be set.</p>
+<p>CloudProfile contains a reference to a CloudProfile or a NamespacedCloudProfile.</p>
 </td>
 </tr>
 <tr>

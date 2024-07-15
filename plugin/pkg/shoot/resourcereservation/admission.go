@@ -78,13 +78,19 @@ func (c *ResourceReservation) SetCoreInformerFactory(f gardencoreinformers.Share
 	cloudProfileInformer := f.Core().V1beta1().CloudProfiles()
 	c.cloudProfileLister = cloudProfileInformer.Lister()
 
-	readyFuncs = append(readyFuncs, cloudProfileInformer.Informer().HasSynced)
+	namespacedCloudProfileInformer := f.Core().V1beta1().NamespacedCloudProfiles()
+	c.namespacedCloudProfileLister = namespacedCloudProfileInformer.Lister()
+
+	readyFuncs = append(readyFuncs, cloudProfileInformer.Informer().HasSynced, namespacedCloudProfileInformer.Informer().HasSynced)
 }
 
 // ValidateInitialization checks whether the plugin was correctly initialized.
 func (c *ResourceReservation) ValidateInitialization() error {
 	if c.cloudProfileLister == nil {
 		return errors.New("missing cloudProfile lister")
+	}
+	if c.namespacedCloudProfileLister == nil {
+		return errors.New("missing namespacedCloudProfile lister")
 	}
 	return nil
 }

@@ -2867,7 +2867,8 @@ message ShootSpec {
   // +optional
   optional Addons addons = 1;
 
-  // CloudProfileName is a name of a CloudProfile object. This field is immutable.
+  // CloudProfileName is a name of a CloudProfile object.
+  // This field will be deprecated soon, use `CloudProfile` instead.
   // +optional
   optional string cloudProfileName = 2;
 
@@ -2954,7 +2955,6 @@ message ShootSpec {
   optional string schedulerName = 21;
 
   // CloudProfile contains a reference to a CloudProfile or a NamespacedCloudProfile.
-  // Either this field or the to-be-deprecated field CloudProfileName has to be set.
   // +optional
   optional CloudProfileReference cloudProfile = 22;
 

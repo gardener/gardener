@@ -508,20 +508,20 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 				wg.Add(len(shootList))
 
 				for _, s := range shootList {
-					if s.DeletionTimestamp != nil || s.Spec.CloudProfileName != nil && len(*s.Spec.CloudProfileName) > 0 && *s.Spec.CloudProfileName != cloudProfile.Name {
+					var cloudProfileName string
+					if s.Spec.CloudProfileName != nil {
+						cloudProfileName = *s.Spec.CloudProfileName
+					} else if s.Spec.CloudProfile != nil {
+						cloudProfileName = s.Spec.CloudProfile.Name
+					}
+
+					if s.DeletionTimestamp != nil || cloudProfile.Name != cloudProfileName {
 						wg.Done()
 						continue
 					}
 
 					go func(shoot *gardencorev1beta1.Shoot) {
 						defer wg.Done()
-
-						var cloudProfileName string
-						if shoot.Spec.CloudProfileName != nil {
-							cloudProfileName = *shoot.Spec.CloudProfileName
-						} else if shoot.Spec.CloudProfile != nil {
-							cloudProfileName = shoot.Spec.CloudProfile.Name
-						}
 
 						if removedKubernetesVersions.Has(shoot.Spec.Kubernetes.Version) {
 							channel <- fmt.Errorf("unable to delete Kubernetes version %q from CloudProfile %q - version is still in use by shoot '%s/%s'", shoot.Spec.Kubernetes.Version, cloudProfileName, shoot.Namespace, shoot.Name)

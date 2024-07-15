@@ -49,7 +49,7 @@ func (shootStrategy) NamespaceScoped() bool {
 	return true
 }
 
-func (s shootStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
+func (shootStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 	newShoot := obj.(*core.Shoot)
 
 	newShoot.Generation = 1
@@ -64,6 +64,8 @@ func (s shootStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 		}
 	}
 
+	// for backwards compatibility (esp. Dashboard), the CloudProfileName field is synced here with the referenced CloudProfile
+	// TODO(LucaBernstein): Remove this block as soon as the CloudProfileName field is deprecated.
 	if newShoot.Spec.CloudProfile != nil && newShoot.Spec.CloudProfile.Kind == v1beta1constants.CloudProfileReferenceKindCloudProfile {
 		newShoot.Spec.CloudProfileName = &newShoot.Spec.CloudProfile.Name
 	}
@@ -91,9 +93,8 @@ func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object
 		newShoot.Generation = oldShoot.Generation + 1
 	}
 
-	if newShoot.Spec.CloudProfile == nil && newShoot.Spec.CloudProfileName == nil {
-		newShoot.Spec.CloudProfile = oldShoot.Spec.CloudProfile
-		newShoot.Spec.CloudProfileName = oldShoot.Spec.CloudProfileName
+	if oldShoot.Spec.CloudProfile == nil && !utilfeature.DefaultFeatureGate.Enabled(features.UseNamespacedCloudProfile) {
+		newShoot.Spec.CloudProfile = nil
 	}
 
 	if newShoot.Spec.CloudProfile == nil && newShoot.Spec.CloudProfileName != nil {
@@ -105,14 +106,16 @@ func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object
 		}
 	}
 
+	// for backwards compatibility (esp. Dashboard), the CloudProfileName field is synced here with the referenced CloudProfile
+	// TODO(LucaBernstein): Remove this block as soon as the CloudProfileName field is deprecated.
 	if newShoot.Spec.CloudProfile != nil && newShoot.Spec.CloudProfile.Kind == v1beta1constants.CloudProfileReferenceKindCloudProfile {
 		newShoot.Spec.CloudProfileName = &newShoot.Spec.CloudProfile.Name
 	}
 
 	// if nscpfl feature gate is enabled and cloudprofile reference is nscpfl, unset cloudProfileName
 	// only required until cloudprofile reference is the source of truth after dependencies have updated their usage
+	// so that the extension can make use of the NamespacedCloudProfile without knowledge of the feature toggle state
 	if utilfeature.DefaultFeatureGate.Enabled(features.UseNamespacedCloudProfile) && newShoot.Spec.CloudProfile.Kind == v1beta1constants.CloudProfileReferenceKindNamespacedCloudProfile {
-		// so that the extension can make use of the NamespacedCloudProfile without knowledge of the feature toggle state
 		newShoot.Spec.CloudProfileName = nil
 	}
 

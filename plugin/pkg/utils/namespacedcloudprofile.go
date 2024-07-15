@@ -69,7 +69,7 @@ func ValidateCloudProfileChanges(cloudProfileLister gardencorev1beta1listers.Clo
 }
 
 // GetRootCloudProfile determines the root CloudProfile from a CloudProfileReference containing any (Namespaced)CloudProfile
-func GetRootCloudProfile(cloudProfileLister gardencorev1beta1listers.CloudProfileLister, NamespacedCloudProfileLister gardencorev1beta1listers.NamespacedCloudProfileLister, cloudProfile *gardencorev1beta1.CloudProfileReference, namespace string) (*gardencorev1beta1.CloudProfileReference, error) {
+func GetRootCloudProfile(cloudProfileLister gardencorev1beta1listers.CloudProfileLister, namespacedCloudProfileLister gardencorev1beta1listers.NamespacedCloudProfileLister, cloudProfile *gardencorev1beta1.CloudProfileReference, namespace string) (*gardencorev1beta1.CloudProfileReference, error) {
 	if cloudProfile == nil {
 		return nil, errors.New("unexpected nil cloudprofile to get root of")
 	}
@@ -77,11 +77,11 @@ func GetRootCloudProfile(cloudProfileLister gardencorev1beta1listers.CloudProfil
 	case constants.CloudProfileReferenceKindCloudProfile:
 		return cloudProfile, nil
 	case constants.CloudProfileReferenceKindNamespacedCloudProfile:
-		cp, err := NamespacedCloudProfileLister.NamespacedCloudProfiles(namespace).Get(cloudProfile.Name)
+		cp, err := namespacedCloudProfileLister.NamespacedCloudProfiles(namespace).Get(cloudProfile.Name)
 		if err != nil {
 			return nil, err
 		}
-		return GetRootCloudProfile(cloudProfileLister, NamespacedCloudProfileLister, &cp.Spec.Parent, namespace)
+		return GetRootCloudProfile(cloudProfileLister, namespacedCloudProfileLister, &cp.Spec.Parent, namespace)
 	}
 	return nil, fmt.Errorf("unexpected cloudprofile kind %s", cloudProfile.Kind)
 }
