@@ -36,7 +36,6 @@ var _ = Describe("ExtensionDefaulter", func() {
 	Describe("#ExtensionSpecFor", func() {
 		It("should return the extension as-is", func() {
 			extension = &operatorv1alpha1.Extension{
-				TypeMeta: metav1.TypeMeta{},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "foo",
 				},
