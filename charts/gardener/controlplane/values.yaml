@@ -285,7 +285,7 @@ global:
         minExpiration: 1h
         maxExpiration: 48h
         signing:
-        # secretName: workload-identity-secret # must contain 'tls.key' key
+        # secretName: workload-identity-secret # must contain 'key.pem' key
           key: |
             -----BEGIN RSA PRIVATE KEY-----
             ...

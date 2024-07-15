@@ -39,7 +39,7 @@ spec:
         checksum/configmap-gardener-apiserver-admission-config: {{ include (print $.Template.BasePath "/apiserver/configmap-admission-config.yaml") . | sha256sum }}
         {{- end }}
         {{- if .Values.global.apiserver.workloadIdentity.token.signing.key }}
-        checksum/secret-gardener-apiserver-workload-identity: {{ include (print $.Template.BasePath "/apiserver/secret-workload-identity.yaml") . | sha256sum }}
+        checksum/secret-gardener-apiserver-workload-identity-signing-key: {{ include (print $.Template.BasePath "/apiserver/secret-workload-identity.yaml") . | sha256sum }}
         {{- end }}
         {{- if .Values.global.apiserver.podAnnotations }}
 {{ toYaml .Values.global.apiserver.podAnnotations | indent 8 }}
@@ -279,7 +279,7 @@ spec:
         - --workload-identity-token-min-expiration={{ .Values.global.apiserver.workloadIdentity.token.minExpiration }}
         - --workload-identity-token-max-expiration={{ .Values.global.apiserver.workloadIdentity.token.maxExpiration }}
         {{- if or .Values.global.apiserver.workloadIdentity.token.signing.secretName .Values.global.apiserver.workloadIdentity.token.signing.key }}
-        - --workload-identity-signing-key-file=/etc/gardener-apiserver/workload-identity/tls/tls.key
+        - --workload-identity-signing-key-file=/etc/gardener-apiserver/workload-identity/signing/key.pem
         {{- end }}
         - --log-level={{ .Values.global.apiserver.logLevel | default "info"  }}
         - --log-format={{ .Values.global.apiserver.logFormat | default "json"  }}
@@ -377,8 +377,8 @@ spec:
           mountPath: /var/run/secrets/admission-tokens
         {{- end }}
         {{- if or .Values.global.apiserver.workloadIdentity.token.signing.secretName .Values.global.apiserver.workloadIdentity.token.signing.key }}
-        - name: gardener-apiserver-workload-identity
-          mountPath: /etc/gardener-apiserver/workload-identity/tls
+        - name: gardener-apiserver-workload-identity-signing-key
+          mountPath: /etc/gardener-apiserver/workload-identity/signing
         {{- end }}
       {{- if .Values.global.apiserver.etcd.useSidecar }}
       - name: etcd
@@ -502,13 +502,13 @@ spec:
           {{- end }}
       {{- end }}
       {{- if .Values.global.apiserver.workloadIdentity.token.signing.secretName }}
-      - name: gardener-apiserver-workload-identity
+      - name: gardener-apiserver-workload-identity-signing-key
         secret:
           secretName: {{ .Values.global.apiserver.workloadIdentity.token.signing.secretName }}
       {{- else if .Values.global.apiserver.workloadIdentity.token.signing.key  }}
-      - name: gardener-apiserver-workload-identity
+      - name: gardener-apiserver-workload-identity-signing-key
         secret:
-          secretName: gardener-apiserver-workload-identity
+          secretName: gardener-apiserver-workload-identity-signing-key
       {{- end }}
 {{- if .Values.global.apiserver.etcd.useSidecar }}
 ---
