@@ -9,7 +9,7 @@ The shoot cluster is a Kubernetes cluster and its `kube-apiserver` handles the a
 
 ## Default Audit Policy
 
-By default, the Gardener will deploy the shoot cluster with audit policy defined in the [kube-apiserver package](../../pkg/component/kubernetes/apiserver/secrets.go).
+By default, the Gardener will deploy the shoot cluster with audit policy defined in the [kube-apiserver package](../../../pkg/component/kubernetes/apiserver/secrets.go).
 
 ## Custom Audit Policy
 
@@ -48,5 +48,5 @@ from the shoot spec.
 
 Gardener is not automatically rolling out changes to the Audit Policy to minimize the amount of Shoot reconciliations in order to prevent cloud provider rate limits, etc.
 Gardener will pick up the changes on the next reconciliation of Shoots referencing the Audit Policy ConfigMap.
-If users want to immediately rollout Audit Policy changes, they can manually trigger a Shoot reconciliation as described in [triggering an immediate reconciliation](shoot_operations.md#immediate-reconciliation).
+If users want to immediately rollout Audit Policy changes, they can manually trigger a Shoot reconciliation as described in [triggering an immediate reconciliation](../operating_through_annotations/shoot_operations.md#immediate-reconciliation).
 This is similar to changes to the cloud provider secret referenced by Shoots.

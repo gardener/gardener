@@ -1,5 +1,6 @@
 ---
 title: Accessing Shoot Clusters
+weight: 5
 ---
 
 # Accessing Shoot Clusters
@@ -8,7 +9,7 @@ After creation of a shoot cluster, end-users require a `kubeconfig` to access it
 
 ## `shoots/adminkubeconfig` Subresource
 
-The [`shoots/adminkubeconfig`](../proposals/16-adminkubeconfig-subresource.md) subresource allows users to dynamically generate temporary `kubeconfig`s that can be used to access shoot cluster with `cluster-admin` privileges. The credentials associated with this `kubeconfig` are client certificates which have a very short validity and must be renewed before they expire (by calling the subresource endpoint again).
+The [`shoots/adminkubeconfig`](../../proposals/16-adminkubeconfig-subresource.md) subresource allows users to dynamically generate temporary `kubeconfig`s that can be used to access shoot cluster with `cluster-admin` privileges. The credentials associated with this `kubeconfig` are client certificates which have a very short validity and must be renewed before they expire (by calling the subresource endpoint again).
 
 The username associated with such `kubeconfig` will be the same which is used for authenticating to the Gardener API. Apart from this advantage, the created `kubeconfig` will not be persisted anywhere.
 
@@ -90,7 +91,7 @@ v1 = client.CoreV1Api(shoot_api_client)
 ## `shoots/viewerkubeconfig` Subresource
 
 The `shoots/viewerkubeconfig` subresource works similar to the [`shoots/adminkubeconfig`](#shootsadminkubeconfig-subresource).
-The difference is that it returns a kubeconfig with read-only access for all APIs except the `core/v1.Secret` API and the resources which are specified in the `spec.kubernetes.kubeAPIServer.encryptionConfig` field in the Shoot (see [this document](./etcd_encryption_config.md)).
+The difference is that it returns a kubeconfig with read-only access for all APIs except the `core/v1.Secret` API and the resources which are specified in the `spec.kubernetes.kubeAPIServer.encryptionConfig` field in the Shoot (see [this document](../shoot_settings/etcd_encryption_config.md)).
 
 In order to request such a `kubeconfig`, you can run follow almost the same code as above - the only difference is that you need to use the `viewerkubeconfig` subresource.
 For example, in bash this looks like this:
@@ -128,7 +129,7 @@ If you want to use the same OIDC configuration for all your shoots by default, t
 `ClusterOpenIDConnectPreset` specified OIDC configuration applies to `Projects` and `Shoots` cluster-wide (hence, only available to Gardener operators) while `OpenIDConnectPreset` is `Project`-scoped.
 Shoots have to "opt-in" for such defaulting by using the `oidc=enable` label.
 
-For further information on `(Cluster)OpenIDConnectPreset`, refer to [ClusterOpenIDConnectPreset and OpenIDConnectPreset](openidconnect-presets.md).
+For further information on `(Cluster)OpenIDConnectPreset`, refer to [ClusterOpenIDConnectPreset and OpenIDConnectPreset](../openidconnect-presets.md).
 
 ## Static Token kubeconfig
 
@@ -149,7 +150,7 @@ spec:
 
 It is **not** the recommended method to access the shoot cluster, as the static token `kubeconfig` has some security flaws associated with it:
 
-- The static token in the `kubeconfig` doesn't have any expiration date. Read [this document](shoot_credentials_rotation.md#kubeconfig) to learn how to rotate the static token.
+- The static token in the `kubeconfig` doesn't have any expiration date. Read [this document](../operating_through_annotations/shoot_credentials_rotation.md#kubeconfig) to learn how to rotate the static token.
 - The static token doesn't have any user identity associated with it. The user in that token will always be `system:cluster-admin`, irrespective of the person accessing the cluster. Hence, it is impossible to audit the events in cluster.
 
 When `enableStaticTokenKubeconfig` field is not explicitly set in the Shoot spec:

@@ -1,5 +1,6 @@
 ---
 title: DNS Search Path Optimization
+weight: 3
 ---
 
 # DNS Search Path Optimization

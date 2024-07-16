@@ -1,5 +1,6 @@
 ---
 title: Cleanup of Shoot Clusters in Deletion
+weight: 3
 ---
 
 # Cleanup of Shoot Clusters in Deletion

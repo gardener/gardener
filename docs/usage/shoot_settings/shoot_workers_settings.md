@@ -1,6 +1,7 @@
 ---
 title: Shoot Worker Nodes Settings
 description: Configuring SSH Access through '.spec.provider.workersSettings`
+weight: 8
 ---
 
 # Shoot Worker Nodes Settings

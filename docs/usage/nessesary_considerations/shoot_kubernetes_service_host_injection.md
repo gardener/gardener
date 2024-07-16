@@ -1,10 +1,11 @@
 ---
 title: KUBERNETES_SERVICE_HOST Environment Variable Injection
+weight: 4
 ---
 
 # `KUBERNETES_SERVICE_HOST` Environment Variable Injection
 
-In each Shoot cluster's `kube-system` namespace a `DaemonSet` called `apiserver-proxy` is deployed. It routes traffic to the upstream Shoot Kube APIServer. See the [APIServer SNI GEP](../proposals/08-shoot-apiserver-via-sni.md) for more details.
+In each Shoot cluster's `kube-system` namespace a `DaemonSet` called `apiserver-proxy` is deployed. It routes traffic to the upstream Shoot Kube APIServer. See the [APIServer SNI GEP](../../proposals/08-shoot-apiserver-via-sni.md) for more details.
 
 To skip this extra network hop, a [mutating webhook](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#mutatingadmissionwebhook) called `apiserver-proxy.networking.gardener.cloud` is deployed next to the API server in the Seed. It adds a `KUBERNETES_SERVICE_HOST` environment variable to each container and init container that do not specify it. See the webhook [repository](https://github.com/gardener/apiserver-proxy/) for more information.
 

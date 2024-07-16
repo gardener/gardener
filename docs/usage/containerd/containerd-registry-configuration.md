@@ -1,5 +1,6 @@
 ---
 title: containerd Registry Configuration
+weight: 2
 ---
 
 # `containerd` Registry Configuration

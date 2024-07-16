@@ -1,3 +1,6 @@
+---
+weight: 11
+---
 # `ServiceAccount` Configurations for Shoot Clusters
 
 The `Shoot` specification allows to configure some of the settings for the handling of `ServiceAccount`s:

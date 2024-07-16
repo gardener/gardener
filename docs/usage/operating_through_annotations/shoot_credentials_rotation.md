@@ -1,3 +1,7 @@
+---
+weight: 2
+---
+
 # Credentials Rotation for Shoot Clusters
 
 There are a lot of different credentials for `Shoot`s to make sure that the various components can communicate with each other and to make sure it is usable and operable.
@@ -11,7 +15,7 @@ This page explains how the varieties of credentials can be rotated so that the c
 End-users must provide credentials such that Gardener and Kubernetes controllers can communicate with the respective cloud provider APIs in order to perform infrastructure operations.
 For example, Gardener uses them to setup and maintain the networks, security groups, subnets, etc., while the [cloud-controller-manager](https://kubernetes.io/docs/concepts/architecture/cloud-controller/) uses them to reconcile load balancers and routes, and the [CSI controller](https://kubernetes-csi.github.io/docs/) uses them to reconcile volumes and disks.
 
-Depending on the cloud provider, the required [data keys of the `Secret` differ](../../example/70-secret-provider.yaml).
+Depending on the cloud provider, the required [data keys of the `Secret` differ](../../../example/70-secret-provider.yaml).
 Please consult the documentation of the respective provider extension documentation to get to know the concrete data keys (e.g., [this document for AWS](https://github.com/gardener/gardener-extension-provider-aws/blob/master/docs/usage/usage.md#provider-secret-data)).
 
 **It is the responsibility of the end-user to regularly rotate those credentials.**
@@ -58,7 +62,7 @@ kubectl -n <shoot-namespace> annotate shoot <shoot-name> gardener.cloud/operatio
 
 ### Kubeconfig
 
-If the `.spec.kubernetes.enableStaticTokenKubeconfig` field is set to `true` (default), then Gardener generates a `kubeconfig` with `cluster-admin` privileges for the `Shoot`s containing credentials for communication with the `kube-apiserver` (see [this document](shoot_access.md#static-token-kubeconfig) for more information).
+If the `.spec.kubernetes.enableStaticTokenKubeconfig` field is set to `true`, then Gardener generates a `kubeconfig` with `cluster-admin` privileges for the `Shoot`s containing credentials for communication with the `kube-apiserver` (see [this document](../shoot_basics/shoot_access.md#static-token-kubeconfig) for more information).
 
 This `Secret` is stored with the name `<shoot-name>.kubeconfig` in the project namespace in the garden cluster and has multiple data keys:
 
@@ -100,7 +104,7 @@ This is the same certificate that is also contained in the `kubeconfig`'s `certi
 All of the certificates are valid for 10 years.
 Since it requires adaptation for the consumers of the `Shoot`, there is no automatic rotation and **it is the responsibility of the end-user to regularly rotate the CA certificates.**
 
-The rotation happens in three stages (see also [GEP-18](../proposals/18-shoot-CA-rotation.md) for the full details):
+The rotation happens in three stages (see also [GEP-18](../../proposals/18-shoot-CA-rotation.md) for the full details):
 
 - In stage one, new CAs are created and added to the bundle (together with the old CAs). Client certificates are re-issued immediately.
 - In stage two, end-users update all cluster API clients that communicate with the control plane.
@@ -192,7 +196,7 @@ There is no automatic rotation and **it is the responsibility of the end-user to
 The rotation happens in three stages:
 
 - In stage one, a new encryption key is created and added to the bundle (together with the old encryption key).
-- In stage two, all `Secret`s in the cluster and resources configured in the `spec.kubernetes.kubeAPIServer.encryptionConfig` of the Shoot (see [ETCD Encryption Config](./etcd_encryption_config.md)) are rewritten by the `kube-apiserver` so that they become encrypted with the new encryption key.
+- In stage two, all `Secret`s in the cluster and resources configured in the `spec.kubernetes.kubeAPIServer.encryptionConfig` of the Shoot (see [ETCD Encryption Config](../shoot_settings/etcd_encryption_config.md)) are rewritten by the `kube-apiserver` so that they become encrypted with the new encryption key.
 - In stage three, the old encryption is dropped from the bundle.
 
 Technically, the `Preparing` phase indicates the stages one and two.

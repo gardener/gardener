@@ -1,5 +1,6 @@
 ---
 description: Introducing `balanced` and `bin-packing` scheduling profiles 
+weight: 12
 ---
 
 # Shoot Scheduling Profiles

@@ -1,5 +1,6 @@
 ---
 title: Custom containerd Configuration
+weight: 1
 ---
 
 # Custom `containerd` Configuration

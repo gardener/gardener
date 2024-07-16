@@ -1,6 +1,7 @@
 ---
 title: Shoot Cluster Purposes
 description: Available Shoot cluster purposes and the behavioral differences between them
+weight: 1
 ---
 
 # Shoot Cluster Purpose
@@ -21,7 +22,7 @@ The following enlists the differences in the way the shoot clusters are set up b
 * `production` shoot clusters get at least two replicas of the `kube-apiserver` for their control planes.
 Auto-scaling scale down of the main ETCD is disabled for such clusters.
 
-There are also differences with respect to how `testing` shoots are scheduled after creation, please consult the [Scheduler documentation](../concepts/scheduler.md).
+There are also differences with respect to how `testing` shoots are scheduled after creation, please consult the [Scheduler documentation](../../concepts/scheduler.md).
 
 ## Future Steps
 
