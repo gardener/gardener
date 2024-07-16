@@ -70,7 +70,7 @@ var _ = Describe("FakeClientMapBuilder", func() {
 		It("should correctly add a runtime client", func() {
 			mockClient := mockclient.NewMockClient(ctrl)
 
-			cm := builder.WithRuntimeClientForKey(key, mockClient).Build()
+			cm := builder.WithRuntimeClientForKey(key, mockClient, nil).Build()
 
 			cs, err := cm.GetClient(ctx, key)
 			Expect(err).NotTo(HaveOccurred())

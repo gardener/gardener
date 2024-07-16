@@ -22,6 +22,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
@@ -138,6 +139,12 @@ func (r *Reconciler) newActuator(shoot *gardencorev1beta1.Shoot) gardenletdeploy
 				return ""
 			}
 			return ptr.Deref(shoot.Spec.DNS.Domain, "")
+		},
+		ApplyGardenletChart: func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]interface{}) error {
+			return targetChartApplier.ApplyFromEmbeddedFS(ctx, charts.ChartGardenlet, charts.ChartPathGardenlet, r.GardenNamespaceShoot, "gardenlet", kubernetes.Values(values))
+		},
+		DeleteGardenletChart: func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]interface{}) error {
+			return targetChartApplier.DeleteFromEmbeddedFS(ctx, charts.ChartGardenlet, charts.ChartPathGardenlet, r.GardenNamespaceShoot, "gardenlet", kubernetes.Values(values))
 		},
 		Clock:                 r.Clock,
 		ValuesHelper:          gardenletdeployer.NewValuesHelper(&r.Config),

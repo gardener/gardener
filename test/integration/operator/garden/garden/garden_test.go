@@ -201,7 +201,7 @@ var _ = Describe("Garden controller tests", func() {
 			},
 		}
 
-		gardenClientMap := fakeclientmap.NewClientMapBuilder().WithRuntimeClientForKey(keys.ForGarden(garden), mgr.GetClient()).Build()
+		gardenClientMap := fakeclientmap.NewClientMapBuilder().WithRuntimeClientForKey(keys.ForGarden(garden), mgr.GetClient(), mgr.GetConfig()).Build()
 
 		Expect((&gardencontroller.Reconciler{
 			Config: config.OperatorConfiguration{

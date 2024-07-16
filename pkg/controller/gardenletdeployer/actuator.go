@@ -22,7 +22,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
-	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -63,6 +62,8 @@ type Actuator struct {
 	CheckIfVPAAlreadyExists func(ctx context.Context) (bool, error)
 	GetInfrastructureSecret func(ctx context.Context) (*corev1.Secret, error)
 	GetTargetDomain         func() string
+	ApplyGardenletChart     func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]interface{}) error
+	DeleteGardenletChart    func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]interface{}) error
 	Clock                   clock.Clock
 	ValuesHelper            ValuesHelper
 	Recorder                record.EventRecorder
@@ -350,7 +351,7 @@ func (a *Actuator) deployGardenlet(
 	}
 
 	// Apply gardenlet chart
-	if err := targetClient.ChartApplier().ApplyFromEmbeddedFS(ctx, charts.ChartGardenlet, charts.ChartPathGardenlet, a.GardenNamespaceTarget, "gardenlet", kubernetes.Values(values)); err != nil {
+	if err := a.ApplyGardenletChart(ctx, targetClient.ChartApplier(), values); err != nil {
 		return err
 	}
 
@@ -394,7 +395,7 @@ func (a *Actuator) deleteGardenlet(
 	}
 
 	// Delete gardenlet chart
-	return targetClient.ChartApplier().DeleteFromEmbeddedFS(ctx, charts.ChartGardenlet, charts.ChartPathGardenlet, a.GardenNamespaceTarget, "gardenlet", kubernetes.Values(values))
+	return a.DeleteGardenletChart(ctx, targetClient.ChartApplier(), values)
 }
 
 func (a *Actuator) getGardenletDeployment(ctx context.Context, targetClient kubernetes.Interface) (*appsv1.Deployment, error) {

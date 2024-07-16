@@ -63,6 +63,7 @@ build:
             - pkg/apis/seedmanagement/encoding
             - pkg/apis/seedmanagement/install
             - pkg/apis/seedmanagement/v1alpha1
+            - pkg/apis/seedmanagement/v1alpha1/helper
             - pkg/apis/settings
             - pkg/apis/settings/install
             - pkg/apis/settings/v1alpha1
@@ -203,6 +204,7 @@ build:
             - pkg/component/observability/plutono/dashboards/seed
             - pkg/component/observability/plutono/dashboards/shoot
             - pkg/component/shared
+            - pkg/controller/gardenletdeployer
             - pkg/controller/networkpolicy
             - pkg/controller/networkpolicy/helper
             - pkg/controller/networkpolicy/hostnameresolver
@@ -219,7 +221,9 @@ build:
             - pkg/extensions
             - pkg/features
             - pkg/gardenlet/apis/config
+            - pkg/gardenlet/apis/config/helper
             - pkg/gardenlet/apis/config/v1alpha1
+            - pkg/gardenlet/bootstrap/util
             - pkg/healthz
             - pkg/logger
             - pkg/operator/apis/config
@@ -233,6 +237,7 @@ build:
             - pkg/operator/controller/garden/care
             - pkg/operator/controller/garden/garden
             - pkg/operator/controller/garden/reference
+            - pkg/operator/controller/gardenlet
             - pkg/operator/features
             - pkg/operator/predicate
             - pkg/operator/webhook
@@ -265,12 +270,14 @@ build:
             - pkg/utils/imagevector
             - pkg/utils/istio
             - pkg/utils/kubernetes
+            - pkg/utils/kubernetes/bootstraptoken
             - pkg/utils/kubernetes/health
             - pkg/utils/kubernetes/health/checker
             - pkg/utils/kubernetes/unstructured
             - pkg/utils/managedresources
             - pkg/utils/managedresources/builder
             - pkg/utils/net
+            - pkg/utils/oci
             - pkg/utils/retry
             - pkg/utils/secrets
             - pkg/utils/secrets/manager

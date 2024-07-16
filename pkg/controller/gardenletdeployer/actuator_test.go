@@ -125,6 +125,12 @@ var _ = Describe("Interface", func() {
 			GetTargetDomain: func() string {
 				return ""
 			},
+			ApplyGardenletChart: func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]interface{}) error {
+				return targetChartApplier.ApplyFromEmbeddedFS(ctx, charts.ChartGardenlet, charts.ChartPathGardenlet, namespace, "gardenlet", kubernetes.Values(values))
+			},
+			DeleteGardenletChart: func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]interface{}) error {
+				return targetChartApplier.DeleteFromEmbeddedFS(ctx, charts.ChartGardenlet, charts.ChartPathGardenlet, namespace, "gardenlet", kubernetes.Values(values))
+			},
 			Clock:                 clock.RealClock{},
 			ValuesHelper:          vh,
 			Recorder:              recorder,
