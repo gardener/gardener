@@ -4,9 +4,7 @@ description: Project operations and roles. Four-Eyes-Principle for resource dele
 
 # Projects
 
-The Gardener API server supports a cluster-scoped `Project` resource which is used for data isolation between individual Gardener consumers. For example, each development team has its own project to manage its own shoot clusters. 
-
-Each `Project` is backed by a Kubernetes `Namespace` that contains the actual related Kubernetes resources, like `Secret`s or `Shoot`s.
+The Gardener API server supports a cluster-scoped `Project` resource that is backed by a Kubernetes `Namespace` containing the related Kubernetes resources, like `Secret`s or `Shoot`s. It is used for data isolation between individual Gardener consumers. For example, each development team has its own project to manage its own shoot clusters. 
 
 **Example resource:**
 
@@ -57,7 +55,7 @@ Each project has one dedicated owner, configured in `.spec.owner` using the `rba
 The owner is the main contact person for Gardener operators.
 Please note that the `.spec.owner` field is deprecated and will be removed in future API versions in favor of the `owner` role, see below.
 
-The list of members (again a list in `.spec.members[]` using the `rbac.authorization.k8s.io/v1.Subject` type) contains all the people that are associated with the project in any way.
+The list of members (`.spec.members[]` using the `rbac.authorization.k8s.io/v1.Subject` type) contains all the people that are associated with the project in any way.
 Each project member must have at least one role (currently described in `.spec.members[].role`, additional roles can be added to `.spec.members[].roles[]`). The following roles exist:
 
 * `admin`: This allows to fully manage resources inside the project (e.g., secrets, shoots, configmaps, and similar). Mind that the `admin` role has read only access to service accounts.

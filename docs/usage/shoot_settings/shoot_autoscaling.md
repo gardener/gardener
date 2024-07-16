@@ -1,5 +1,6 @@
 ---
 description: The basics of horizontal Node and vertical Pod auto-scaling
+weight: 9
 ---
 
 # Auto-Scaling in Shoot Clusters
@@ -22,7 +23,7 @@ Consequently, please refer to the [official documentation](https://github.com/ku
 
 The `Shoot` API allows to configure a few flags of the `cluster-autoscaler`:
 
-There are [general options for `cluster-autoscaler`](../api-reference/core.md#core.gardener.cloud/v1beta1.ClusterAutoscaler), and these values will be used for all worker groups except for those overwriting them. Additionally, there are some [`cluster-autoscaler` flags to be set per worker pool](../api-reference/core.md#core.gardener.cloud/v1beta1.ClusterAutoscalerOptions). They override any general value such as those specified in the general flags above.
+There are [general options for `cluster-autoscaler`](../../api-reference/core.md#core.gardener.cloud/v1beta1.ClusterAutoscaler), and these values will be used for all worker groups except for those overwriting them. Additionally, there are some [`cluster-autoscaler` flags to be set per worker pool](../../api-reference/core.md#core.gardener.cloud/v1beta1.ClusterAutoscalerOptions). They override any general value such as those specified in the general flags above.
 > Only some `cluster-autoscaler` flags can be configured per worker pool, and is limited by NodeGroupAutoscalingOptions of the upstream community Kubernetes repository. This list can be found [here](https://github.com/gardener/autoscaler/blob/machine-controller-manager-provider/cluster-autoscaler/config/autoscaling_options.go#L37-L55).
 
 ## Horizontal Pod Auto-Scaling
@@ -41,7 +42,7 @@ It will also be used for the vertical autoscaling of Gardener's system component
 
 You might want to refer to the [official documentation](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/README.md) for this component to get more information how to use it.
 
-The `Shoot` API allows to configure a few [flags of the `vertical-pod-autoscaler`](../api-reference/core.md#core.gardener.cloud/v1beta1.VerticalPodAutoscaler).
+The `Shoot` API allows to configure a few [flags of the `vertical-pod-autoscaler`](../../api-reference/core.md#core.gardener.cloud/v1beta1.VerticalPodAutoscaler).
 
 ⚠️ Please note that if you disable VPA, the related `CustomResourceDefinition`s (ours and yours) will remain in your shoot cluster (whether someone acts on them or not).
 You can delete these `CustomResourceDefinition`s yourself using `kubectl delete crd` if you want to get rid of them (in case you statically size all resources, which we do not recommend).
