@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -124,9 +126,12 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 	}
 
 	if k.values.ClusterType == component.ClusterTypeSeed {
+		clusterRole := k.clusterRole()
+		serviceAccount := k.serviceAccount()
 		if err := registry2.Add(
-			k.clusterRole(),
-			k.serviceAccount()); err != nil {
+			clusterRole,
+			serviceAccount,
+			k.clusterRoleBinding(clusterRole, serviceAccount)); err != nil {
 			return err
 		}
 	}
@@ -149,7 +154,11 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 
 	if k.values.ClusterType == component.ClusterTypeShoot {
 		registryTarget := managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
-		resourcesTarget, err := registryTarget.AddAllAndSerialize(k.clusterRole())
+		clusterRole := k.clusterRole()
+		resourcesTarget, err := registryTarget.AddAllAndSerialize(
+			clusterRole,
+			k.clusterRoleBinding(clusterRole, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: shootAccessSecret.ServiceAccountName, Namespace: metav1.NamespaceSystem}}),
+		)
 		if err != nil {
 			return err
 		}
