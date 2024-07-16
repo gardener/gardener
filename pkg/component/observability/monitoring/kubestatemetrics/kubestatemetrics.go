@@ -139,6 +139,24 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	if k.values.ClusterType == component.ClusterTypeShoot {
+		registryTarget := managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+		resourcesTarget, err := registryTarget.AddAllAndSerialize()
+		if err != nil {
+			return err
+		}
+
+		return managedresources.CreateForShootWithLabels(ctx,
+			k.client,
+			k.namespace,
+			k.managedResourceName()+"-target",
+			managedresources.LabelValueGardener,
+			false,
+			map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy},
+			resourcesTarget,
+		)
+	}
+
 	return component.DeployResourceConfigs(ctx, k.client, k.namespace, k.values.ClusterType, k.managedResourceName(), map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, registry, k.getResourceConfigs(genericTokenKubeconfigSecretName, shootAccessSecret))
 }
 
