@@ -113,7 +113,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 	workerToKubernetesUpdate := make(map[string]updateResult)
 	workerToMachineImageUpdate := make(map[string]updateResult)
 
-	cloudProfile, err := gardenerutils.GetCloudProfile(ctx, r.Client, gardenerutils.BuildCloudProfileReferenceV1Beta1(shoot.Spec.CloudProfileName, shoot.Spec.CloudProfile), shoot.Namespace)
+	cloudProfile, err := gardenerutils.GetCloudProfile(ctx, r.Client, shoot)
 	if err != nil {
 		return err
 	}

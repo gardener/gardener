@@ -144,7 +144,7 @@ func (c *ResourceReservation) Admit(_ context.Context, a admission.Attributes, _
 		return nil
 	}
 
-	cloudProfile, err := utils.GetCloudProfile(c.cloudProfileLister, c.namespacedCloudProfileLister, shoot.Spec.CloudProfile, shoot.Spec.CloudProfileName, shoot.Namespace)
+	cloudProfile, err := utils.GetCloudProfile(c.cloudProfileLister, c.namespacedCloudProfileLister, shoot)
 	if err != nil {
 		return apierrors.NewInternalError(fmt.Errorf("could not find referenced cloud profile: %+v", err.Error()))
 	}

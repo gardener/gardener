@@ -18,6 +18,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/plugin/pkg/utils"
 )
 
 var swaggerMetadataDescriptions = metav1.ObjectMeta{}.SwaggerDoc()
@@ -76,7 +77,17 @@ func (c *convertor) ConvertToTable(_ context.Context, obj runtime.Object, _ runt
 		)
 
 		cells = append(cells, shoot.Name)
-		cells = append(cells, shoot.Spec.CloudProfileName)
+
+		cloudProfileReference := utils.BuildCloudProfileReference(shoot)
+		switch cloudProfileReference.Kind {
+		case v1beta1constants.CloudProfileReferenceKindCloudProfile:
+			cells = append(cells, cloudProfileReference.Name)
+		case v1beta1constants.CloudProfileReferenceKindNamespacedCloudProfile:
+			cells = append(cells, shoot.Namespace+"/"+cloudProfileReference.Name)
+		default:
+			cells = append(cells, "")
+		}
+
 		cells = append(cells, shoot.Spec.Provider.Type)
 		cells = append(cells, shoot.Spec.Region)
 		if seed := shoot.Spec.SeedName; seed != nil {

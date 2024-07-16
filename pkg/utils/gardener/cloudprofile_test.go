@@ -7,6 +7,7 @@ package gardener_test
 import (
 	"context"
 	"fmt"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
@@ -18,7 +19,7 @@ import (
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
-var _ = Describe("NamespacedCloudProfile", func() {
+var _ = Describe("CloudProfile", func() {
 	Describe("#GetCloudProfile", func() {
 
 		var (
@@ -28,11 +29,14 @@ var _ = Describe("NamespacedCloudProfile", func() {
 			ctx     = context.TODO()
 			fakeErr = fmt.Errorf("fake err")
 
-			namespaceName    = "foo"
-			cloudProfileName = "profile-1"
+			namespaceName              = "foo"
+			cloudProfileName           = "profile-1"
+			namespacedCloudProfileName = "n-profile-1"
 
 			cloudProfile           *gardencorev1beta1.CloudProfile
 			namespacedCloudProfile *gardencorev1beta1.NamespacedCloudProfile
+
+			shoot *gardencorev1beta1.Shoot
 		)
 
 		BeforeEach(func() {
@@ -47,8 +51,21 @@ var _ = Describe("NamespacedCloudProfile", func() {
 
 			namespacedCloudProfile = &gardencorev1beta1.NamespacedCloudProfile{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      cloudProfileName,
+					Name:      namespacedCloudProfileName,
 					Namespace: namespaceName,
+				},
+			}
+
+			shoot = &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: namespaceName,
+				},
+				Spec: gardencorev1beta1.ShootSpec{
+					CloudProfileName: &cloudProfileName,
+					CloudProfile: &gardencorev1beta1.CloudProfileReference{
+						Kind: "NamespacedCloudProfile",
+						Name: namespacedCloudProfileName,
+					},
 				},
 			}
 		})
@@ -57,11 +74,10 @@ var _ = Describe("NamespacedCloudProfile", func() {
 			ctrl.Finish()
 		})
 
-		It("returns an error if neither a CloudProfile nor a NamespacedCloudProfile could be found", func() {
+		It("returns an error if no CloudProfile can be found", func() {
 			c.EXPECT().Get(ctx, pkgclient.ObjectKey{Name: cloudProfileName}, gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).Return(fakeErr)
 
-			res, err := gardenerutils.GetCloudProfile(ctx, c, gardenerutils.BuildCloudProfileReference(&cloudProfileName, nil), namespaceName)
-			Expect(res).To(BeNil())
+			_, err := gardenerutils.GetCloudProfile(ctx, c, shoot)
 			Expect(err).To(MatchError(fakeErr))
 		})
 
@@ -74,12 +90,12 @@ var _ = Describe("NamespacedCloudProfile", func() {
 				return nil
 			})
 
-			res, err := gardenerutils.GetCloudProfile(ctx, c, gardenerutils.BuildCloudProfileReference(&cloudProfileName, nil), namespaceName)
+			res, err := gardenerutils.GetCloudProfile(ctx, c, shoot)
 			Expect(res).To(Equal(cloudProfile))
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("returns the CloudProfile referenced in the CloudProfileName if present, taking precedence over cloudProfile reference", func() {
+		It("returns the CloudProfile from the cloudProfile reference if CloudProfileName is not present", func() {
 			c.EXPECT().Get(ctx,
 				pkgclient.ObjectKey{Name: cloudProfileName},
 				gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{}),
@@ -88,27 +104,27 @@ var _ = Describe("NamespacedCloudProfile", func() {
 				return nil
 			})
 
-			res, err := gardenerutils.GetCloudProfile(ctx, c, gardenerutils.BuildCloudProfileReferenceV1Beta1(&cloudProfileName, &gardencorev1beta1.CloudProfileReference{
-				Kind: "NamespacedCloudProfile",
-				Name: cloudProfileName + "-dont-care",
-			}), namespaceName)
+			shoot.Spec.CloudProfileName = nil
+			shoot.Spec.CloudProfile = &gardencorev1beta1.CloudProfileReference{
+				Kind: "CloudProfile",
+				Name: "profile-1",
+			}
+			res, err := gardenerutils.GetCloudProfile(ctx, c, shoot)
 			Expect(res).To(Equal(cloudProfile))
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("returns NamespacedCloudProfile if present", func() {
 			c.EXPECT().Get(ctx,
-				pkgclient.ObjectKey{Name: cloudProfileName, Namespace: namespaceName},
+				pkgclient.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName},
 				gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}),
 			).DoAndReturn(func(_ context.Context, _ pkgclient.ObjectKey, obj *gardencorev1beta1.NamespacedCloudProfile, _ ...pkgclient.GetOption) error {
 				namespacedCloudProfile.DeepCopyInto(obj)
 				return nil
 			})
 
-			res, err := gardenerutils.GetCloudProfile(ctx, c, gardenerutils.BuildCloudProfileReferenceV1Beta1(nil, &gardencorev1beta1.CloudProfileReference{
-				Kind: "NamespacedCloudProfile",
-				Name: cloudProfileName,
-			}), namespaceName)
+			shoot.Spec.CloudProfileName = nil
+			res, err := gardenerutils.GetCloudProfile(ctx, c, shoot)
 			Expect(res.Spec).To(Equal(namespacedCloudProfile.Status.CloudProfileSpec))
 			Expect(err).NotTo(HaveOccurred())
 		})

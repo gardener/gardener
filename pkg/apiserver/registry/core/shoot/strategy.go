@@ -55,27 +55,7 @@ func (shootStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 	newShoot.Generation = 1
 	newShoot.Status = core.ShootStatus{}
 
-	if newShoot.Spec.CloudProfile == nil && newShoot.Spec.CloudProfileName != nil {
-		// fill empty cloudprofile reference from cloudProfileName by default
-		// strictly speaking not mandatory yet, but will become once CloudProfileName is deprecated and NamespacedCloudProfile feature is enabled by default
-		newShoot.Spec.CloudProfile = &core.CloudProfileReference{
-			Name: *newShoot.Spec.CloudProfileName,
-			Kind: v1beta1constants.CloudProfileReferenceKindCloudProfile,
-		}
-	}
-
-	// for backwards compatibility (esp. Dashboard), the CloudProfileName field is synced here with the referenced CloudProfile
-	// TODO(LucaBernstein): Remove this block as soon as the CloudProfileName field is deprecated.
-	if newShoot.Spec.CloudProfile != nil && newShoot.Spec.CloudProfile.Kind == v1beta1constants.CloudProfileReferenceKindCloudProfile {
-		newShoot.Spec.CloudProfileName = &newShoot.Spec.CloudProfile.Name
-	}
-
-	// if nscpfl feature gate is enabled and cloudprofile reference is nscpfl, unset cloudProfileName
-	// only required until cloudprofile reference is the source of truth after dependencies have updated their usage
-	if utilfeature.DefaultFeatureGate.Enabled(features.UseNamespacedCloudProfile) && newShoot.Spec.CloudProfile.Kind == v1beta1constants.CloudProfileReferenceKindNamespacedCloudProfile {
-		// so that the extension can make use of the NamespacedCloudProfile without knowledge of the feature toggle state
-		newShoot.Spec.CloudProfileName = nil
-	}
+	handleCloudProfileFallback(newShoot)
 
 	if !utilfeature.DefaultFeatureGate.Enabled(features.ShootCredentialsBinding) {
 		newShoot.Spec.CredentialsBindingName = nil
@@ -93,13 +73,17 @@ func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object
 		newShoot.Generation = oldShoot.Generation + 1
 	}
 
-	if oldShoot.Spec.CloudProfile == nil && !utilfeature.DefaultFeatureGate.Enabled(features.UseNamespacedCloudProfile) {
-		newShoot.Spec.CloudProfile = nil
-	}
+	handleCloudProfileFallback(newShoot)
 
+	if oldShoot.Spec.CredentialsBindingName == nil && !utilfeature.DefaultFeatureGate.Enabled(features.ShootCredentialsBinding) {
+		newShoot.Spec.CredentialsBindingName = nil
+	}
+}
+
+func handleCloudProfileFallback(newShoot *core.Shoot) {
+	// fill empty cloudprofile reference from cloudProfileName by default
+	// strictly speaking not mandatory yet, but will become once CloudProfileName is deprecated and NamespacedCloudProfile feature is enabled by default
 	if newShoot.Spec.CloudProfile == nil && newShoot.Spec.CloudProfileName != nil {
-		// fill empty cloudprofile reference from cloudProfileName by default
-		// strictly speaking not mandatory yet, but will become once CloudProfileName is deprecated and NamespacedCloudProfile feature is enabled by default
 		newShoot.Spec.CloudProfile = &core.CloudProfileReference{
 			Name: *newShoot.Spec.CloudProfileName,
 			Kind: v1beta1constants.CloudProfileReferenceKindCloudProfile,
@@ -117,10 +101,6 @@ func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object
 	// so that the extension can make use of the NamespacedCloudProfile without knowledge of the feature toggle state
 	if utilfeature.DefaultFeatureGate.Enabled(features.UseNamespacedCloudProfile) && newShoot.Spec.CloudProfile.Kind == v1beta1constants.CloudProfileReferenceKindNamespacedCloudProfile {
 		newShoot.Spec.CloudProfileName = nil
-	}
-
-	if oldShoot.Spec.CredentialsBindingName == nil && !utilfeature.DefaultFeatureGate.Enabled(features.ShootCredentialsBinding) {
-		newShoot.Spec.CredentialsBindingName = nil
 	}
 }
 
@@ -308,15 +288,15 @@ func ToSelectableFields(shoot *core.Shoot) fields.Set {
 	// amount of allocations needed to create the fields.Set. If you add any
 	// field here or the number of object-meta related fields changes, this should
 	// be adjusted.
-	shootSpecificFieldsSet := make(fields.Set, 6)
+	shootSpecificFieldsSet := make(fields.Set, 7)
 	shootSpecificFieldsSet[core.ShootSeedName] = getSeedName(shoot)
 	shootSpecificFieldsSet[core.ShootStatusSeedName] = getStatusSeedName(shoot)
 	if shoot.Spec.CloudProfileName != nil {
 		shootSpecificFieldsSet[core.ShootCloudProfileName] = *shoot.Spec.CloudProfileName
 	}
 	if shoot.Spec.CloudProfile != nil {
-		shootSpecificFieldsSet[core.ShootCloudProfileName] = shoot.Spec.CloudProfile.Name
-		shootSpecificFieldsSet[core.ShootCloudProfileKind] = shoot.Spec.CloudProfile.Kind
+		shootSpecificFieldsSet[core.ShootCloudProfileRefName] = shoot.Spec.CloudProfile.Name
+		shootSpecificFieldsSet[core.ShootCloudProfileRefKind] = shoot.Spec.CloudProfile.Kind
 	}
 	return generic.AddObjectMetaFieldsSet(shootSpecificFieldsSet, &shoot.ObjectMeta, true)
 }

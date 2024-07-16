@@ -171,19 +171,8 @@ var _ = Describe("Strategy", func() {
 				newShoot = oldShoot.DeepCopy()
 			})
 
-			It("should restore the last state if both fields are removed", func() {
-				oldShoot.Spec.CloudProfileName = ptr.To("foo")
-				strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-
-				Expect(*newShoot.Spec.CloudProfileName).To(Equal("foo"))
-				Expect(newShoot.Spec.CloudProfile).To(Equal(&core.CloudProfileReference{
-					Kind: "CloudProfile",
-					Name: "foo",
-				}))
-			})
-
 			It("should fill cloudProfile field with fallback if empty", func() {
-				oldShoot.Spec.CloudProfileName = ptr.To("foo")
+				newShoot.Spec.CloudProfileName = ptr.To("foo")
 				strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
 
 				Expect(*newShoot.Spec.CloudProfileName).To(Equal("foo"))
@@ -194,7 +183,7 @@ var _ = Describe("Strategy", func() {
 			})
 
 			It("should fill cloudProfileName field with fallback if empty and CloudProfile is used", func() {
-				oldShoot.Spec.CloudProfile = &core.CloudProfileReference{
+				newShoot.Spec.CloudProfile = &core.CloudProfileReference{
 					Kind: "CloudProfile",
 					Name: "bar",
 				}
@@ -208,8 +197,8 @@ var _ = Describe("Strategy", func() {
 			})
 
 			It("should override cloudProfileName field on conflicting entry with cloudProfile", func() {
-				oldShoot.Spec.CloudProfileName = ptr.To("foo")
-				oldShoot.Spec.CloudProfile = &core.CloudProfileReference{
+				newShoot.Spec.CloudProfileName = ptr.To("foo")
+				newShoot.Spec.CloudProfile = &core.CloudProfileReference{
 					Kind: "CloudProfile",
 					Name: "bar",
 				}
@@ -224,11 +213,11 @@ var _ = Describe("Strategy", func() {
 
 			It("should unset cloudProfileName field if NamespacedCloudProfile is referenced and feature gate is enabled", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, true))
-				oldShoot.Spec.CloudProfile = &core.CloudProfileReference{
+				newShoot.Spec.CloudProfile = &core.CloudProfileReference{
 					Kind: "NamespacedCloudProfile",
 					Name: "bar",
 				}
-				oldShoot.Spec.CloudProfileName = ptr.To("foo")
+				newShoot.Spec.CloudProfileName = ptr.To("foo")
 				strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
 
 				Expect(newShoot.Spec.CloudProfileName).To(BeNil())
@@ -240,11 +229,11 @@ var _ = Describe("Strategy", func() {
 
 			It("should keep cloudProfileName field if NamespacedCloudProfile is referenced and feature gate is disabled", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, false))
-				oldShoot.Spec.CloudProfile = &core.CloudProfileReference{
+				newShoot.Spec.CloudProfile = &core.CloudProfileReference{
 					Kind: "NamespacedCloudProfile",
 					Name: "bar",
 				}
-				oldShoot.Spec.CloudProfileName = ptr.To("foo")
+				newShoot.Spec.CloudProfileName = ptr.To("foo")
 				strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
 
 				Expect(*newShoot.Spec.CloudProfileName).To(Equal("foo"))
@@ -671,11 +660,15 @@ var _ = Describe("ToSelectableFields", func() {
 	It("should return correct fields", func() {
 		result := ToSelectableFields(newShoot("foo"))
 
-		Expect(result).To(HaveLen(5))
+		Expect(result).To(HaveLen(7))
 		Expect(result.Has(core.ShootSeedName)).To(BeTrue())
 		Expect(result.Get(core.ShootSeedName)).To(Equal("foo"))
 		Expect(result.Has(core.ShootCloudProfileName)).To(BeTrue())
 		Expect(result.Get(core.ShootCloudProfileName)).To(Equal("baz"))
+		Expect(result.Has(core.ShootCloudProfileRefName)).To(BeTrue())
+		Expect(result.Get(core.ShootCloudProfileRefName)).To(Equal("baz"))
+		Expect(result.Has(core.ShootCloudProfileRefKind)).To(BeTrue())
+		Expect(result.Get(core.ShootCloudProfileRefKind)).To(Equal("CloudProfile"))
 		Expect(result.Has(core.ShootStatusSeedName)).To(BeTrue())
 		Expect(result.Get(core.ShootStatusSeedName)).To(Equal("foo"))
 	})
@@ -727,6 +720,10 @@ func newShoot(seedName string) *core.Shoot {
 		Spec: core.ShootSpec{
 			CloudProfileName: ptr.To("baz"),
 			SeedName:         &seedName,
+			CloudProfile: &core.CloudProfileReference{
+				Kind: "CloudProfile",
+				Name: "baz",
+			},
 		},
 		Status: core.ShootStatus{
 			SeedName: &seedName,

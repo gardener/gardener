@@ -106,8 +106,13 @@ func (g *graph) handleShootCreateOrUpdate(ctx context.Context, shoot *gardencore
 
 	g.addEdge(namespaceVertex, shootVertex)
 
-	if shoot.Spec.CloudProfileName != nil {
-		cloudProfileVertex := g.getOrCreateVertex(VertexTypeCloudProfile, "", *shoot.Spec.CloudProfileName)
+	cloudProfileReference := gardenerutils.BuildCloudProfileReference(shoot)
+	if cloudProfileReference != nil {
+		namespace := ""
+		if cloudProfileReference.Kind == v1beta1constants.CloudProfileReferenceKindNamespacedCloudProfile {
+			namespace = shoot.Namespace
+		}
+		cloudProfileVertex := g.getOrCreateVertex(VertexTypeCloudProfile, namespace, cloudProfileReference.Name)
 		g.addEdge(cloudProfileVertex, shootVertex)
 	}
 

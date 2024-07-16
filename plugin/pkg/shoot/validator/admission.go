@@ -113,8 +113,8 @@ func (v *ValidateShoot) SetCoreInformerFactory(f gardencoreinformers.SharedInfor
 	cloudProfileInformer := f.Core().V1beta1().CloudProfiles()
 	v.cloudProfileLister = cloudProfileInformer.Lister()
 
-	namespacedCloudProfileLister := f.Core().V1beta1().NamespacedCloudProfiles()
-	v.namespacedCloudProfileLister = namespacedCloudProfileLister.Lister()
+	namespacedCloudProfileInformer := f.Core().V1beta1().NamespacedCloudProfiles()
+	v.namespacedCloudProfileLister = namespacedCloudProfileInformer.Lister()
 
 	projectInformer := f.Core().V1beta1().Projects()
 	v.projectLister = projectInformer.Lister()
@@ -127,7 +127,7 @@ func (v *ValidateShoot) SetCoreInformerFactory(f gardencoreinformers.SharedInfor
 		seedInformer.Informer().HasSynced,
 		shootInformer.Informer().HasSynced,
 		cloudProfileInformer.Informer().HasSynced,
-		namespacedCloudProfileLister.Informer().HasSynced,
+		namespacedCloudProfileInformer.Informer().HasSynced,
 		projectInformer.Informer().HasSynced,
 		secretBindingInformer.Informer().HasSynced,
 	)
@@ -249,12 +249,12 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, _ adm
 		}
 	}
 
-	cloudProfile, err := admissionutils.GetCloudProfile(v.cloudProfileLister, v.namespacedCloudProfileLister, shoot.Spec.CloudProfile, shoot.Spec.CloudProfileName, shoot.Namespace)
+	cloudProfile, err := admissionutils.GetCloudProfile(v.cloudProfileLister, v.namespacedCloudProfileLister, shoot)
 	if err != nil {
 		return apierrors.NewInternalError(fmt.Errorf("could not find referenced cloud profile: %+v", err.Error()))
 	}
 
-	err = admissionutils.ValidateCloudProfileChanges(v.cloudProfileLister, v.namespacedCloudProfileLister, shoot.Spec, oldShoot.Spec, shoot.Namespace)
+	err = admissionutils.ValidateCloudProfileChanges(v.cloudProfileLister, v.namespacedCloudProfileLister, shoot, oldShoot)
 	if err != nil {
 		return err
 	}

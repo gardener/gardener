@@ -132,8 +132,8 @@ func (r *ReferenceManager) SetCoreInformerFactory(f gardencoreinformers.SharedIn
 	cloudProfileInformer := f.Core().V1beta1().CloudProfiles()
 	r.cloudProfileLister = cloudProfileInformer.Lister()
 
-	namespacedCloudProfileLister := f.Core().V1beta1().NamespacedCloudProfiles()
-	r.namespacedCloudProfileLister = namespacedCloudProfileLister.Lister()
+	namespacedCloudProfileInformer := f.Core().V1beta1().NamespacedCloudProfiles()
+	r.namespacedCloudProfileLister = namespacedCloudProfileInformer.Lister()
 
 	secretBindingInformer := f.Core().V1beta1().SecretBindings()
 	r.secretBindingLister = secretBindingInformer.Lister()
@@ -155,7 +155,7 @@ func (r *ReferenceManager) SetCoreInformerFactory(f gardencoreinformers.SharedIn
 		shootInformer.Informer().HasSynced,
 		backupBucketInformer.Informer().HasSynced,
 		cloudProfileInformer.Informer().HasSynced,
-		namespacedCloudProfileLister.Informer().HasSynced,
+		namespacedCloudProfileInformer.Informer().HasSynced,
 		secretBindingInformer.Informer().HasSynced,
 		quotaInformer.Informer().HasSynced,
 		projectInformer.Informer().HasSynced,
@@ -720,8 +720,8 @@ func (r *ReferenceManager) ensureBindingReferences(ctx context.Context, attribut
 
 func (r *ReferenceManager) ensureShootReferences(ctx context.Context, attributes admission.Attributes, oldShoot, shoot *core.Shoot) error {
 	if !equality.Semantic.DeepEqual(oldShoot.Spec.CloudProfileName, shoot.Spec.CloudProfileName) {
-		if _, err := utils.GetCloudProfile(r.cloudProfileLister, r.namespacedCloudProfileLister, shoot.Spec.CloudProfile, shoot.Spec.CloudProfileName, shoot.Namespace); err != nil {
-			return fmt.Errorf("could not find referenced (private) cloud profile when ensuring shoot references: %+v", err.Error())
+		if _, err := utils.GetCloudProfile(r.cloudProfileLister, r.namespacedCloudProfileLister, shoot); err != nil {
+			return fmt.Errorf("could not find referenced (namespaced) cloud profile when ensuring shoot references: %+v", err.Error())
 		}
 	}
 

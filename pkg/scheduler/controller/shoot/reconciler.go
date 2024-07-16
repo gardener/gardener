@@ -132,7 +132,7 @@ func (r *Reconciler) determineSeed(
 
 	shootList := v1beta1helper.ConvertShootList(sl.Items)
 
-	cloudProfile, err := gardenerutils.GetCloudProfile(ctx, r.Client, gardenerutils.BuildCloudProfileReferenceV1Beta1(shoot.Spec.CloudProfileName, shoot.Spec.CloudProfile), shoot.Namespace)
+	cloudProfile, err := gardenerutils.GetCloudProfile(ctx, r.Client, shoot)
 	if err != nil {
 		return nil, err
 	}
