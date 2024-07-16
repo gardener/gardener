@@ -40,8 +40,6 @@ import (
 
 func (k *kubeStateMetrics) getResourceConfigs(genericTokenKubeconfigSecretName string, shootAccessSecret *gardenerutils.AccessSecret) component.ResourceConfigs {
 	var (
-		clusterRole                  = k.clusterRole()
-		clusterRoleBinding           = k.emptyClusterRoleBinding()
 		service                      = k.emptyService()
 		deployment                   = k.emptyDeployment()
 		vpa                          = k.emptyVerticalPodAutoscaler()
@@ -64,7 +62,6 @@ func (k *kubeStateMetrics) getResourceConfigs(genericTokenKubeconfigSecretName s
 		serviceAccount := k.serviceAccount()
 
 		configs = append(configs,
-			component.ResourceConfig{Obj: clusterRoleBinding, Class: component.Application, MutateFn: func() { k.reconcileClusterRoleBinding(clusterRoleBinding, clusterRole, serviceAccount) }},
 			component.ResourceConfig{Obj: deployment, Class: component.Runtime, MutateFn: func() { k.reconcileDeployment(deployment, serviceAccount, "", nil) }},
 			component.ResourceConfig{Obj: pdb, Class: component.Runtime, MutateFn: func() { k.reconcilePodDisruptionBudget(pdb, deployment) }},
 		)
@@ -85,9 +82,6 @@ func (k *kubeStateMetrics) getResourceConfigs(genericTokenKubeconfigSecretName s
 
 	if k.values.ClusterType == component.ClusterTypeShoot {
 		configs = append(configs,
-			component.ResourceConfig{Obj: clusterRoleBinding, Class: component.Application, MutateFn: func() {
-				k.reconcileClusterRoleBinding(clusterRoleBinding, clusterRole, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: shootAccessSecret.ServiceAccountName, Namespace: metav1.NamespaceSystem}})
-			}},
 			component.ResourceConfig{Obj: deployment, Class: component.Runtime, MutateFn: func() { k.reconcileDeployment(deployment, nil, genericTokenKubeconfigSecretName, shootAccessSecret) }},
 			component.ResourceConfig{Obj: prometheusRuleShoot, Class: component.Runtime, MutateFn: func() { k.reconcilePrometheusRuleShoot(prometheusRuleShoot) }},
 		)
@@ -161,11 +155,8 @@ func (k *kubeStateMetrics) clusterRole() *rbacv1.ClusterRole {
 	return &clusterRole
 }
 
-func (k *kubeStateMetrics) emptyClusterRoleBinding() *rbacv1.ClusterRoleBinding {
-	return &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:monitoring:" + k.nameSuffix()}}
-}
-
-func (k *kubeStateMetrics) reconcileClusterRoleBinding(clusterRoleBinding *rbacv1.ClusterRoleBinding, clusterRole *rbacv1.ClusterRole, serviceAccount *corev1.ServiceAccount) {
+func (k *kubeStateMetrics) clusterRoleBinding(clusterRole *rbacv1.ClusterRole, serviceAccount *corev1.ServiceAccount) *rbacv1.ClusterRoleBinding {
+	clusterRoleBinding := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:monitoring:" + k.nameSuffix()}}
 	clusterRoleBinding.Labels = k.getLabels()
 	clusterRoleBinding.Annotations = map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"}
 	clusterRoleBinding.RoleRef = rbacv1.RoleRef{
@@ -178,6 +169,8 @@ func (k *kubeStateMetrics) reconcileClusterRoleBinding(clusterRoleBinding *rbacv
 		Name:      serviceAccount.Name,
 		Namespace: serviceAccount.Namespace,
 	}}
+
+	return clusterRoleBinding
 }
 
 func (k *kubeStateMetrics) emptyService() *corev1.Service {
