@@ -159,7 +159,9 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 
 	if k.values.ClusterType == component.ClusterTypeShoot {
 		deployment = k.deployment(nil, genericTokenKubeconfigSecretName, shootAccessSecret)
-		if err := registry2.Add(deployment); err != nil {
+		if err := registry2.Add(
+			deployment,
+			k.prometheusRuleShoot()); err != nil {
 			return err
 		}
 

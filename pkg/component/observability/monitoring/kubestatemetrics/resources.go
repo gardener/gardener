@@ -40,19 +40,12 @@ import (
 
 func (k *kubeStateMetrics) getResourceConfigs(genericTokenKubeconfigSecretName string, shootAccessSecret *gardenerutils.AccessSecret) component.ResourceConfigs {
 	var (
-		prometheusRuleShoot          = k.emptyPrometheusRuleShoot()
 		customResourceStateConfigMap = k.emptyCustomResourceStateConfigMap()
 
 		configs = component.ResourceConfigs{
 			{Obj: customResourceStateConfigMap, Class: component.Runtime, MutateFn: func() { k.reconcileCustomResourceStateConfigMap(customResourceStateConfigMap) }},
 		}
 	)
-
-	if k.values.ClusterType == component.ClusterTypeShoot {
-		configs = append(configs,
-			component.ResourceConfig{Obj: prometheusRuleShoot, Class: component.Runtime, MutateFn: func() { k.reconcilePrometheusRuleShoot(prometheusRuleShoot) }},
-		)
-	}
 
 	return configs
 }
@@ -617,11 +610,8 @@ func (k *kubeStateMetrics) scrapeConfigShoot() *monitoringv1alpha1.ScrapeConfig 
 	return scrapeConfig
 }
 
-func (k *kubeStateMetrics) emptyPrometheusRuleShoot() *monitoringv1.PrometheusRule {
-	return &monitoringv1.PrometheusRule{ObjectMeta: monitoringutils.ConfigObjectMeta("kube-state-metrics"+k.values.NameSuffix, k.namespace, shoot.Label)}
-}
-
-func (k *kubeStateMetrics) reconcilePrometheusRuleShoot(prometheusRule *monitoringv1.PrometheusRule) {
+func (k *kubeStateMetrics) prometheusRuleShoot() *monitoringv1.PrometheusRule {
+	prometheusRule := &monitoringv1.PrometheusRule{ObjectMeta: monitoringutils.ConfigObjectMeta("kube-state-metrics"+k.values.NameSuffix, k.namespace, shoot.Label)}
 	rules := []monitoringv1.Rule{{
 		Alert: "KubeStateMetricsSeedDown",
 		Expr:  intstr.FromString(`absent(count({exported_job="kube-state-metrics"}))`),
@@ -713,6 +703,8 @@ func (k *kubeStateMetrics) reconcilePrometheusRuleShoot(prometheusRule *monitori
 			Rules: rules,
 		}},
 	}
+
+	return prometheusRule
 }
 
 func (k *kubeStateMetrics) getLabels() map[string]string {
