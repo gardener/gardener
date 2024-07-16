@@ -40,9 +40,6 @@ import (
 
 func (k *kubeStateMetrics) getResourceConfigs(genericTokenKubeconfigSecretName string, shootAccessSecret *gardenerutils.AccessSecret) component.ResourceConfigs {
 	var (
-		deployment                   = k.emptyDeployment()
-		vpa                          = k.emptyVerticalPodAutoscaler()
-		pdb                          = k.emptyPodDisruptionBudget()
 		scrapeConfigCache            = k.emptyScrapeConfigCache()
 		scrapeConfigSeed             = k.emptyScrapeConfigSeed()
 		scrapeConfigGarden           = k.emptyScrapeConfigGarden()
@@ -51,19 +48,11 @@ func (k *kubeStateMetrics) getResourceConfigs(genericTokenKubeconfigSecretName s
 		customResourceStateConfigMap = k.emptyCustomResourceStateConfigMap()
 
 		configs = component.ResourceConfigs{
-			{Obj: vpa, Class: component.Runtime, MutateFn: func() { k.reconcileVerticalPodAutoscaler(vpa, deployment) }},
 			{Obj: customResourceStateConfigMap, Class: component.Runtime, MutateFn: func() { k.reconcileCustomResourceStateConfigMap(customResourceStateConfigMap) }},
 		}
 	)
 
 	if k.values.ClusterType == component.ClusterTypeSeed {
-		serviceAccount := k.serviceAccount()
-
-		configs = append(configs,
-			component.ResourceConfig{Obj: deployment, Class: component.Runtime, MutateFn: func() { k.reconcileDeployment(deployment, serviceAccount, "", nil) }},
-			component.ResourceConfig{Obj: pdb, Class: component.Runtime, MutateFn: func() { k.reconcilePodDisruptionBudget(pdb, deployment) }},
-		)
-
 		if k.values.NameSuffix == SuffixSeed {
 			configs = append(configs,
 				component.ResourceConfig{Obj: scrapeConfigCache, Class: component.Runtime, MutateFn: func() { k.reconcileScrapeConfigCache(scrapeConfigCache) }},
@@ -80,7 +69,6 @@ func (k *kubeStateMetrics) getResourceConfigs(genericTokenKubeconfigSecretName s
 
 	if k.values.ClusterType == component.ClusterTypeShoot {
 		configs = append(configs,
-			component.ResourceConfig{Obj: deployment, Class: component.Runtime, MutateFn: func() { k.reconcileDeployment(deployment, nil, genericTokenKubeconfigSecretName, shootAccessSecret) }},
 			component.ResourceConfig{Obj: prometheusRuleShoot, Class: component.Runtime, MutateFn: func() { k.reconcilePrometheusRuleShoot(prometheusRuleShoot) }},
 		)
 
@@ -202,17 +190,13 @@ func (k *kubeStateMetrics) service() *corev1.Service {
 	return service
 }
 
-func (k *kubeStateMetrics) emptyDeployment() *appsv1.Deployment {
-	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-state-metrics" + k.values.NameSuffix, Namespace: k.namespace}}
-}
-
-func (k *kubeStateMetrics) reconcileDeployment(
-	deployment *appsv1.Deployment,
+func (k *kubeStateMetrics) deployment(
 	serviceAccount *corev1.ServiceAccount,
 	genericTokenKubeconfigSecretName string,
 	shootAccessSecret *gardenerutils.AccessSecret,
-) {
+) *appsv1.Deployment {
 	var (
+		deployment     = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-state-metrics" + k.values.NameSuffix, Namespace: k.namespace}}
 		maxUnavailable = intstr.FromInt32(1)
 
 		deploymentLabels = k.getLabels()
@@ -345,14 +329,13 @@ func (k *kubeStateMetrics) reconcileDeployment(
 		deployment.Spec.Template.Spec.AutomountServiceAccountToken = ptr.To(false)
 		utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecretName, shootAccessSecret.Secret.Name))
 	}
+
+	return deployment
 }
 
-func (k *kubeStateMetrics) emptyVerticalPodAutoscaler() *vpaautoscalingv1.VerticalPodAutoscaler {
-	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "kube-state-metrics-vpa" + k.values.NameSuffix, Namespace: k.namespace}}
-}
-
-func (k *kubeStateMetrics) reconcileVerticalPodAutoscaler(vpa *vpaautoscalingv1.VerticalPodAutoscaler, deployment *appsv1.Deployment) {
+func (k *kubeStateMetrics) verticalPodAutoscaler(deployment *appsv1.Deployment) *vpaautoscalingv1.VerticalPodAutoscaler {
 	var (
+		vpa              = &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "kube-state-metrics-vpa" + k.values.NameSuffix, Namespace: k.namespace}}
 		updateMode       = vpaautoscalingv1.UpdateModeAuto
 		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 	)
@@ -376,13 +359,12 @@ func (k *kubeStateMetrics) reconcileVerticalPodAutoscaler(vpa *vpaautoscalingv1.
 			},
 		},
 	}
+
+	return vpa
 }
 
-func (k *kubeStateMetrics) emptyPodDisruptionBudget() *policyv1.PodDisruptionBudget {
-	return &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: "kube-state-metrics-pdb" + k.values.NameSuffix, Namespace: k.namespace}}
-}
-
-func (k *kubeStateMetrics) reconcilePodDisruptionBudget(podDisruptionBudget *policyv1.PodDisruptionBudget, deployment *appsv1.Deployment) {
+func (k *kubeStateMetrics) podDisruptionBudget(deployment *appsv1.Deployment) *policyv1.PodDisruptionBudget {
+	podDisruptionBudget := &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: "kube-state-metrics-pdb" + k.values.NameSuffix, Namespace: k.namespace}}
 	podDisruptionBudget.Labels = k.getLabels()
 	podDisruptionBudget.Spec = policyv1.PodDisruptionBudgetSpec{
 		MaxUnavailable: ptr.To(intstr.FromInt32(1)),
@@ -390,6 +372,7 @@ func (k *kubeStateMetrics) reconcilePodDisruptionBudget(podDisruptionBudget *pol
 	}
 
 	kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, k.values.KubernetesVersion)
+	return podDisruptionBudget
 }
 
 func (k *kubeStateMetrics) standardScrapeConfigSpec() monitoringv1alpha1.ScrapeConfigSpec {

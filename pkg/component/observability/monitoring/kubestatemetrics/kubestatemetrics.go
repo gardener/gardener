@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -90,6 +91,7 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 		genericTokenKubeconfigSecretName string
 		shootAccessSecret                *gardenerutils.AccessSecret
 		registry2                        = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+		deployment                       *appsv1.Deployment
 	)
 
 	// TODO(chrkl): Remove after release v1.103
@@ -128,15 +130,29 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 	if k.values.ClusterType == component.ClusterTypeSeed {
 		clusterRole := k.clusterRole()
 		serviceAccount := k.serviceAccount()
+		deployment = k.deployment(serviceAccount, "", nil)
 		if err := registry2.Add(
 			clusterRole,
 			serviceAccount,
-			k.clusterRoleBinding(clusterRole, serviceAccount)); err != nil {
+			k.clusterRoleBinding(clusterRole, serviceAccount),
+			deployment,
+			k.podDisruptionBudget(deployment)); err != nil {
 			return err
 		}
 	}
 
-	serializedResources, err := registry2.AddAllAndSerialize(k.service())
+	if k.values.ClusterType == component.ClusterTypeShoot {
+		deployment = k.deployment(nil, genericTokenKubeconfigSecretName, shootAccessSecret)
+		if err := registry2.Add(deployment); err != nil {
+			return err
+		}
+	}
+
+	serializedResources, err := registry2.AddAllAndSerialize(
+		k.service(),
+		k.verticalPodAutoscaler(deployment),
+	)
+
 	if err != nil {
 		return err
 	}
