@@ -6,14 +6,12 @@ package virtualcluster_test
 
 import (
 	"context"
-	"net/http"
 	"path/filepath"
 	"testing"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -27,7 +25,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
@@ -39,8 +36,6 @@ import (
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/operator/controller/extension/virtualcluster"
 	"github.com/gardener/gardener/pkg/operator/features"
-	operatorwebhook "github.com/gardener/gardener/pkg/operator/webhook"
-	defaultingwebhook "github.com/gardener/gardener/pkg/operator/webhook/defaulting"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	gardenerenvtest "github.com/gardener/gardener/test/envtest"
 	"github.com/gardener/gardener/test/framework"
@@ -66,7 +61,6 @@ var (
 	testRunID     string
 	testNamespace *corev1.Namespace
 	gardenName    string
-	extensionName = "provider-local"
 )
 
 var _ = BeforeSuite(func() {
@@ -75,15 +69,9 @@ var _ = BeforeSuite(func() {
 
 	features.RegisterFeatureGates()
 
-	wh := operatorwebhook.GetMutatingWebhookConfiguration("service", "")
 	By("Start test environment")
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
 		Environment: &envtest.Environment{
-			WebhookInstallOptions: envtest.WebhookInstallOptions{
-				MutatingWebhooks: []*admissionregistrationv1.MutatingWebhookConfiguration{
-					wh,
-				},
-			},
 			CRDInstallOptions: envtest.CRDInstallOptions{
 				Paths: []string{
 					filepath.Join("..", "..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_gardens.yaml"),
@@ -137,11 +125,6 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	mgr, err := manager.New(restConfig, manager.Options{
-		WebhookServer: webhook.NewServer(webhook.Options{
-			Port:    testEnv.WebhookInstallOptions.LocalServingPort,
-			Host:    testEnv.WebhookInstallOptions.LocalServingHost,
-			CertDir: testEnv.WebhookInstallOptions.LocalServingCertDir,
-		}),
 		Scheme:  scheme,
 		Metrics: metricsserver.Options{BindAddress: "0"},
 		Cache: cache.Options{
@@ -180,13 +163,6 @@ var _ = BeforeSuite(func() {
 		GardenClientMap: gardenClientMap,
 	}).AddToManager(ctx, mgr)).Should(Succeed())
 
-	By("Register defaulting webhook")
-	Expect(defaultingwebhook.AddToManager(mgr)).To(Succeed())
-	DeferCleanup(func() {
-		By("Delete defaulting webhook")
-		Expect(testClient.Delete(ctx, wh)).To(Or(Succeed(), BeNotFoundError()))
-	})
-
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
 
@@ -194,11 +170,6 @@ var _ = BeforeSuite(func() {
 		defer GinkgoRecover()
 		Expect(mgr.Start(mgrContext)).To(Succeed())
 	}()
-
-	Eventually(func() error {
-		checker := mgr.GetWebhookServer().StartedChecker()
-		return checker(&http.Request{})
-	}).Should(BeNil())
 
 	DeferCleanup(func() {
 		By("Stop manager")

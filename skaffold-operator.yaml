@@ -229,8 +229,6 @@ build:
             - pkg/operator/controller
             - pkg/operator/controller/controllerregistrar
             - pkg/operator/controller/extension
-            - pkg/operator/controller/extension/utils
-            - pkg/operator/controller/extension/utils/extensions.yaml
             - pkg/operator/controller/extension/virtualcluster
             - pkg/operator/controller/garden
             - pkg/operator/controller/garden/care
@@ -240,8 +238,6 @@ build:
             - pkg/operator/predicate
             - pkg/operator/webhook
             - pkg/operator/webhook/defaulting
-            - pkg/operator/webhook/defaulting/extension
-            - pkg/operator/webhook/defaulting/garden
             - pkg/operator/webhook/validation
             - pkg/resourcemanager/apis/config
             - pkg/resourcemanager/apis/config/v1alpha1
