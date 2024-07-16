@@ -924,7 +924,7 @@ spec:
 Gardenlet configures kubelet of shoot worker nodes to register the `Node` object with the `node.gardener.cloud/critical-components-not-ready` taint (effect `NoSchedule`).
 This controller watches newly created `Node` objects in the shoot cluster and removes the taint once all node-critical components are scheduled and ready.
 If the controller finds node-critical components that are not scheduled or not ready yet, it checks the `Node` again after the duration configured in `ResourceManagerConfiguration.controllers.node.backoff`
-Please refer to the [feature documentation](../usage/node-readiness.md) or [proposal issue](https://github.com/gardener/gardener/issues/7117) for more details.
+Please refer to the [feature documentation](../usage/nessesary_considerations/node-readiness.md) or [proposal issue](https://github.com/gardener/gardener/issues/7117) for more details.
 
 #### [Node Agent Reconciliation Delay Controller](../../pkg/resourcemanager/controller/node/agentreconciliationdelay)
 

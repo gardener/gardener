@@ -17,7 +17,7 @@ Based on [Skaffold](https://skaffold.dev/), the container images for all require
 When deploying Gardener on your local machine you might face several limitations:
 
 - Your machine doesn't have enough compute resources (see [prerequisites](#prerequisites)) for hosting a second seed cluster or multiple shoot clusters.
-- Testing Gardener's [IPv6 features](../usage/ipv6.md) requires a Linux machine and native IPv6 connectivity to the internet, but you're on macOS or don't have IPv6 connectivity in your office environment or via your home ISP.
+- Testing Gardener's [IPv6 features](../development/ipv6.md) requires a Linux machine and native IPv6 connectivity to the internet, but you're on macOS or don't have IPv6 connectivity in your office environment or via your home ISP.
 
 In these cases, you might want to check out one of the following options that run the setup described in this guide elsewhere for circumventing these limitations:
 
@@ -258,7 +258,7 @@ cat <<EOF | sudo tee -a /etc/hosts
 EOF
 ```
 
-To access the `Shoot`, you can acquire a `kubeconfig` by using the [`shoots/adminkubeconfig` subresource](../usage/shoot_access.md#shootsadminkubeconfig-subresource).
+To access the `Shoot`, you can acquire a `kubeconfig` by using the [`shoots/adminkubeconfig` subresource](../usage/shoot_basics/shoot_access.md#shootsadminkubeconfig-subresource).
 
 For convenience a [helper script](../../hack/usage/generate-admin-kubeconf.sh) is provided in the `hack` directory. By default the script will generate a kubeconfig for a `Shoot` named "local" in the `garden-local` namespace valid for one hour.
 

@@ -14,7 +14,7 @@ Instead, they can and should rely on well-known [`PriorityClasses`](../developme
 ## High Availability of Deployed Components
 
 Extensions might deploy components via `Deployment`s, `StatefulSet`s, etc., as part of the shoot control plane, or the seed or shoot system components.
-In case a seed or shoot cluster is highly available, there are various failure tolerance types. For more information, see [Highly Available Shoot Control Plane](../usage/shoot_high_availability.md).
+In case a seed or shoot cluster is highly available, there are various failure tolerance types. For more information, see [Highly Available Shoot Control Plane](../usage/shoot_settings/shoot_high_availability.md).
 Accordingly, the `replicas`, `topologySpreadConstraints` or `affinity` settings of the deployed components might need to be adapted.
 
 Instead of doing this one-by-one for each and every component, extensions can rely on a mutating webhook provided by Gardener.
