@@ -87,6 +87,7 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 	var (
 		genericTokenKubeconfigSecretName string
 		shootAccessSecret                *gardenerutils.AccessSecret
+		registry2                        = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 	)
 
 	// TODO(chrkl): Remove after release v1.103
@@ -120,6 +121,22 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 	} else {
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+	}
+
+	serializedResources, err := registry2.AddAllAndSerialize()
+	if err != nil {
+		return err
+	}
+
+	if err := managedresources.CreateForSeedWithLabels(ctx,
+		k.client,
+		k.namespace,
+		k.managedResourceName()+"-2",
+		false,
+		map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy},
+		serializedResources,
+	); err != nil {
+		return err
 	}
 
 	return component.DeployResourceConfigs(ctx, k.client, k.namespace, k.values.ClusterType, k.managedResourceName(), map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, registry, k.getResourceConfigs(genericTokenKubeconfigSecretName, shootAccessSecret))
