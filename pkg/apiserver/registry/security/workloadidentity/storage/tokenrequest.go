@@ -64,7 +64,7 @@ func (r *TokenRequestREST) Create(ctx context.Context, name string, obj runtime.
 		return nil, errors.New("workload identity token issuer is not configured and tokens cannot be issued")
 	}
 
-	if len(r.tokenIssuer.GetIssuer()) == 0 {
+	if len(r.tokenIssuer.Issuer()) == 0 {
 		return nil, errors.New("workload identity no value provided for the iss claim")
 	}
 

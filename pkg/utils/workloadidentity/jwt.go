@@ -50,8 +50,8 @@ func NewTokenIssuer(signingKey any, issuer string, minDuration, maxDuration int6
 	}, nil
 }
 
-// GetIssuer returns the issuer value used for the `iss` JWT claim.
-func (t *TokenIssuer) GetIssuer() string {
+// Issuer returns the issuer value used for the `iss` JWT claim.
+func (t *TokenIssuer) Issuer() string {
 	return t.issuer
 }
 

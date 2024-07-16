@@ -46,11 +46,11 @@ var _ = Describe("#JWT", func() {
 		}
 	})
 
-	Context("#GetIssuer", func() {
+	Context("#Issuer", func() {
 		It("should get issuer", func() {
 			t, err := NewTokenIssuer(rsaPrivateKey, issuer, 600, 3600)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(t.GetIssuer()).To(Equal(issuer))
+			Expect(t.Issuer()).To(Equal(issuer))
 		})
 	})
 
