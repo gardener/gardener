@@ -175,6 +175,7 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 	serializedResources, err := registry2.AddAllAndSerialize(
 		k.service(),
 		k.verticalPodAutoscaler(deployment),
+		k.customResourceStateConfigMap(),
 	)
 
 	if err != nil {

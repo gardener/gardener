@@ -40,11 +40,7 @@ import (
 
 func (k *kubeStateMetrics) getResourceConfigs(genericTokenKubeconfigSecretName string, shootAccessSecret *gardenerutils.AccessSecret) component.ResourceConfigs {
 	var (
-		customResourceStateConfigMap = k.emptyCustomResourceStateConfigMap()
-
-		configs = component.ResourceConfigs{
-			{Obj: customResourceStateConfigMap, Class: component.Runtime, MutateFn: func() { k.reconcileCustomResourceStateConfigMap(customResourceStateConfigMap) }},
-		}
+		configs = component.ResourceConfigs{}
 	)
 
 	return configs
@@ -727,14 +723,12 @@ func (k *kubeStateMetrics) nameSuffix() string {
 	return suffix + k.values.NameSuffix
 }
 
-func (k *kubeStateMetrics) emptyCustomResourceStateConfigMap() *corev1.ConfigMap {
-	return &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: customResourceStateConfigMapName, Namespace: k.namespace}}
-}
-
-func (k *kubeStateMetrics) reconcileCustomResourceStateConfigMap(cm *corev1.ConfigMap) {
+func (k *kubeStateMetrics) customResourceStateConfigMap() *corev1.ConfigMap {
 	customResourceStateConfig, err := yaml.Marshal(NewCustomResourceStateConfig())
 	utilruntime.Must(err)
+	cm := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: customResourceStateConfigMapName, Namespace: k.namespace}}
 	cm.Data = map[string]string{
 		customResourceStateConfigMountFile: string(customResourceStateConfig),
 	}
+	return cm
 }
