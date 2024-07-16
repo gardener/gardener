@@ -83,7 +83,7 @@ func (t *TokenIssuer) IssueToken(sub string, aud []string, duration int64, claim
 
 	token, err := builder.Claims(c).Serialize()
 	if err != nil {
-		return "", nil, fmt.Errorf("failed to issue JSON Web token: %w", err)
+		return "", nil, fmt.Errorf("failed to issue JSON Web Token: %w", err)
 	}
 
 	return token, &exp, nil

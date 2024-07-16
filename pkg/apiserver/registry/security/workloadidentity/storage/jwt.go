@@ -51,7 +51,7 @@ func (r *TokenRequestREST) issueToken(user user.Info, tokenRequest *securityapi.
 		r.getGardenerClaims(workloadIdentity, shoot, seed, project),
 	)
 	if err != nil {
-		return "", nil, fmt.Errorf("failed to issue JSON Web token: %w", err)
+		return "", nil, fmt.Errorf("failed to issue JSON Web Token: %w", err)
 	}
 
 	return token, exp, nil
