@@ -90,13 +90,13 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 	var (
 		genericTokenKubeconfigSecretName string
 		shootAccessSecret                *gardenerutils.AccessSecret
-		registry2                        = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+		registry                         = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 		deployment                       *appsv1.Deployment
 	)
 
 	// TODO(chrkl): Remove after release v1.103
 	if k.values.ClusterType == component.ClusterTypeSeed && k.values.NameSuffix != "" {
-		if err := component.DestroyResourceConfigs(ctx, k.client, k.namespace, k.values.ClusterType, managedResourceName, k.getResourceConfigs("", nil)); client.IgnoreNotFound(err) != nil {
+		if err := component.DestroyResourceConfigs(ctx, k.client, k.namespace, k.values.ClusterType, managedResourceName, nil); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 
@@ -118,13 +118,6 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 		if err := shootAccessSecret.Reconcile(ctx, k.client); err != nil {
 			return err
 		}
-	}
-
-	var registry *managedresources.Registry
-	if k.values.ClusterType == component.ClusterTypeSeed {
-		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
-	} else {
-		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 	}
 
 	if k.values.ClusterType == component.ClusterTypeSeed {
@@ -152,27 +145,27 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 			)
 		}
 
-		if err := registry2.Add(resources...); err != nil {
+		if err := registry.Add(resources...); err != nil {
 			return err
 		}
 	}
 
 	if k.values.ClusterType == component.ClusterTypeShoot {
 		deployment = k.deployment(nil, genericTokenKubeconfigSecretName, shootAccessSecret)
-		if err := registry2.Add(
+		if err := registry.Add(
 			deployment,
 			k.prometheusRuleShoot()); err != nil {
 			return err
 		}
 
 		if !k.values.IsWorkerless {
-			if err := registry2.Add(k.scrapeConfigShoot()); err != nil {
+			if err := registry.Add(k.scrapeConfigShoot()); err != nil {
 				return err
 			}
 		}
 	}
 
-	serializedResources, err := registry2.AddAllAndSerialize(
+	serializedResources, err := registry.AddAllAndSerialize(
 		k.service(),
 		k.verticalPodAutoscaler(deployment),
 		k.customResourceStateConfigMap(),
@@ -185,7 +178,7 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 	if err := managedresources.CreateForSeedWithLabels(ctx,
 		k.client,
 		k.namespace,
-		k.managedResourceName()+"-2",
+		k.managedResourceName(),
 		false,
 		map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy},
 		serializedResources,
@@ -215,15 +208,19 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 		)
 	}
 
-	return component.DeployResourceConfigs(ctx, k.client, k.namespace, k.values.ClusterType, k.managedResourceName(), map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, registry, k.getResourceConfigs(genericTokenKubeconfigSecretName, shootAccessSecret))
+	return nil
 }
 
 func (k *kubeStateMetrics) Destroy(ctx context.Context) error {
-	if err := component.DestroyResourceConfigs(ctx, k.client, k.namespace, k.values.ClusterType, k.managedResourceName(), k.getResourceConfigs("", nil)); err != nil {
+	if err := managedresources.DeleteForSeed(ctx, k.client, k.namespace, k.managedResourceName()); err != nil {
 		return err
 	}
 
 	if k.values.ClusterType == component.ClusterTypeShoot {
+		if err := managedresources.DeleteForShoot(ctx, k.client, k.namespace, k.managedResourceName()+"-target"); err != nil {
+			return err
+		}
+
 		return client.IgnoreNotFound(k.client.Delete(ctx, k.newShootAccessSecret().Secret))
 	}
 

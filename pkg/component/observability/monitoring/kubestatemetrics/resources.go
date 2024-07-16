@@ -38,14 +38,6 @@ import (
 	"github.com/gardener/gardener/third_party/gopkg.in/yaml.v2"
 )
 
-func (k *kubeStateMetrics) getResourceConfigs(genericTokenKubeconfigSecretName string, shootAccessSecret *gardenerutils.AccessSecret) component.ResourceConfigs {
-	var (
-		configs = component.ResourceConfigs{}
-	)
-
-	return configs
-}
-
 func (k *kubeStateMetrics) serviceAccount() *corev1.ServiceAccount {
 	serviceAccount := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "kube-state-metrics" + k.values.NameSuffix, Namespace: k.namespace}}
 	serviceAccount.Labels = k.getLabels()
