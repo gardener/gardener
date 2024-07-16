@@ -40,9 +40,6 @@ import (
 
 func (k *kubeStateMetrics) getResourceConfigs(genericTokenKubeconfigSecretName string, shootAccessSecret *gardenerutils.AccessSecret) component.ResourceConfigs {
 	var (
-		scrapeConfigCache            = k.emptyScrapeConfigCache()
-		scrapeConfigSeed             = k.emptyScrapeConfigSeed()
-		scrapeConfigGarden           = k.emptyScrapeConfigGarden()
 		scrapeConfigShoot            = k.emptyScrapeConfigShoot()
 		prometheusRuleShoot          = k.emptyPrometheusRuleShoot()
 		customResourceStateConfigMap = k.emptyCustomResourceStateConfigMap()
@@ -51,21 +48,6 @@ func (k *kubeStateMetrics) getResourceConfigs(genericTokenKubeconfigSecretName s
 			{Obj: customResourceStateConfigMap, Class: component.Runtime, MutateFn: func() { k.reconcileCustomResourceStateConfigMap(customResourceStateConfigMap) }},
 		}
 	)
-
-	if k.values.ClusterType == component.ClusterTypeSeed {
-		if k.values.NameSuffix == SuffixSeed {
-			configs = append(configs,
-				component.ResourceConfig{Obj: scrapeConfigCache, Class: component.Runtime, MutateFn: func() { k.reconcileScrapeConfigCache(scrapeConfigCache) }},
-				component.ResourceConfig{Obj: scrapeConfigSeed, Class: component.Runtime, MutateFn: func() { k.reconcileScrapeConfigSeed(scrapeConfigSeed) }},
-			)
-		}
-
-		if k.values.NameSuffix == SuffixRuntime {
-			configs = append(configs,
-				component.ResourceConfig{Obj: scrapeConfigGarden, Class: component.Runtime, MutateFn: func() { k.reconcileScrapeConfigGarden(scrapeConfigGarden) }},
-			)
-		}
-	}
 
 	if k.values.ClusterType == component.ClusterTypeShoot {
 		configs = append(configs,
@@ -552,20 +534,15 @@ var shootMetricAllowlist = []string{
 	"^kube_customresource_verticalpodautoscaler_spec_updatepolicy_updatemode$",
 }
 
-func (k *kubeStateMetrics) emptyScrapeConfigCache() *monitoringv1alpha1.ScrapeConfig {
-	return &monitoringv1alpha1.ScrapeConfig{ObjectMeta: monitoringutils.ConfigObjectMeta("kube-state-metrics", k.namespace, cache.Label)}
-}
-
-func (k *kubeStateMetrics) reconcileScrapeConfigCache(scrapeConfig *monitoringv1alpha1.ScrapeConfig) {
+func (k *kubeStateMetrics) scrapeConfigCache() *monitoringv1alpha1.ScrapeConfig {
+	scrapeConfig := &monitoringv1alpha1.ScrapeConfig{ObjectMeta: monitoringutils.ConfigObjectMeta("kube-state-metrics", k.namespace, cache.Label)}
 	scrapeConfig.Labels = monitoringutils.Labels(cache.Label)
 	scrapeConfig.Spec = k.standardScrapeConfigSpec()
+	return scrapeConfig
 }
 
-func (k *kubeStateMetrics) emptyScrapeConfigSeed() *monitoringv1alpha1.ScrapeConfig {
-	return &monitoringv1alpha1.ScrapeConfig{ObjectMeta: monitoringutils.ConfigObjectMeta("kube-state-metrics", k.namespace, seed.Label)}
-}
-
-func (k *kubeStateMetrics) reconcileScrapeConfigSeed(scrapeConfig *monitoringv1alpha1.ScrapeConfig) {
+func (k *kubeStateMetrics) scrapeConfigSeed() *monitoringv1alpha1.ScrapeConfig {
+	scrapeConfig := &monitoringv1alpha1.ScrapeConfig{ObjectMeta: monitoringutils.ConfigObjectMeta("kube-state-metrics", k.namespace, seed.Label)}
 	scrapeConfig.Labels = monitoringutils.Labels(seed.Label)
 	scrapeConfig.Spec = monitoringv1alpha1.ScrapeConfigSpec{
 		KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
@@ -597,13 +574,12 @@ func (k *kubeStateMetrics) reconcileScrapeConfigSeed(scrapeConfig *monitoringv1a
 			Action:       "drop",
 		}},
 	}
+
+	return scrapeConfig
 }
 
-func (k *kubeStateMetrics) emptyScrapeConfigGarden() *monitoringv1alpha1.ScrapeConfig {
-	return &monitoringv1alpha1.ScrapeConfig{ObjectMeta: monitoringutils.ConfigObjectMeta("kube-state-metrics", k.namespace, garden.Label)}
-}
-
-func (k *kubeStateMetrics) reconcileScrapeConfigGarden(scrapeConfig *monitoringv1alpha1.ScrapeConfig) {
+func (k *kubeStateMetrics) scrapeConfigGarden() *monitoringv1alpha1.ScrapeConfig {
+	scrapeConfig := &monitoringv1alpha1.ScrapeConfig{ObjectMeta: monitoringutils.ConfigObjectMeta("kube-state-metrics", k.namespace, garden.Label)}
 	scrapeConfig.Labels = monitoringutils.Labels(garden.Label)
 	scrapeConfig.Spec = monitoringv1alpha1.ScrapeConfigSpec{
 		KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
@@ -635,6 +611,8 @@ func (k *kubeStateMetrics) reconcileScrapeConfigGarden(scrapeConfig *monitoringv
 			Action:       "drop",
 		}},
 	}
+
+	return scrapeConfig
 }
 
 func (k *kubeStateMetrics) emptyScrapeConfigShoot() *monitoringv1alpha1.ScrapeConfig {

@@ -131,12 +131,28 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 		clusterRole := k.clusterRole()
 		serviceAccount := k.serviceAccount()
 		deployment = k.deployment(serviceAccount, "", nil)
-		if err := registry2.Add(
+		resources := []client.Object{
 			clusterRole,
 			serviceAccount,
 			k.clusterRoleBinding(clusterRole, serviceAccount),
 			deployment,
-			k.podDisruptionBudget(deployment)); err != nil {
+			k.podDisruptionBudget(deployment),
+		}
+
+		if k.values.NameSuffix == SuffixSeed {
+			resources = append(
+				resources,
+				k.scrapeConfigSeed(),
+				k.scrapeConfigCache(),
+			)
+		} else if k.values.NameSuffix == SuffixRuntime {
+			resources = append(
+				resources,
+				k.scrapeConfigGarden(),
+			)
+		}
+
+		if err := registry2.Add(resources...); err != nil {
 			return err
 		}
 	}
