@@ -17,7 +17,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	securityapi "github.com/gardener/gardener/pkg/apis/security"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 )
 
 type gardenerClaims struct {
@@ -131,7 +131,7 @@ func (r *TokenRequestREST) resolveContextObject(user user.Info, ctxObj *security
 			seedMeta = seed.GetObjectMeta()
 		}
 
-		if project, err = gardenerutils.ProjectForNamespaceFromLister(coreInformers.Projects().Lister(), shoot.Namespace); err != nil {
+		if project, err = admissionutils.ProjectForNamespaceFromLister(coreInformers.Projects().Lister(), shoot.Namespace); err != nil {
 			return nil, nil, nil, err
 		}
 		projectMeta = project.GetObjectMeta()

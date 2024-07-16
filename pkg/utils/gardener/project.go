@@ -9,13 +9,11 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 )
 
 // ProjectNamespacePrefix is the prefix of namespaces representing projects.
@@ -34,24 +32,6 @@ func ProjectForNamespaceFromReader(ctx context.Context, reader client.Reader, na
 	}
 
 	return &projectList.Items[0], nil
-}
-
-// ProjectForNamespaceFromLister returns the Project responsible for a given <namespace>. It lists all Projects
-// via the given lister, iterates over them and tries to identify the Project by looking for the namespace name
-// in the project spec.
-func ProjectForNamespaceFromLister(projectLister gardencorev1beta1listers.ProjectLister, namespaceName string) (*gardencorev1beta1.Project, error) {
-	projectList, err := projectLister.List(labels.Everything())
-	if err != nil {
-		return nil, err
-	}
-
-	for _, project := range projectList {
-		if project.Spec.Namespace != nil && *project.Spec.Namespace == namespaceName {
-			return project, nil
-		}
-	}
-
-	return nil, apierrors.NewNotFound(gardencore.Resource("Project"), "<unknown>")
 }
 
 // ProjectAndNamespaceFromReader returns the Project responsible for a given <namespace>. It reads the namespace and
