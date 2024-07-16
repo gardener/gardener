@@ -19,6 +19,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/controller/gardenletdeployer"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 )
@@ -26,7 +27,7 @@ import (
 // Reconciler reconciles the ManagedSeed.
 type Reconciler struct {
 	GardenClient          client.Client
-	Actuator              Actuator
+	Actuator              gardenletdeployer.Actuator
 	Config                config.GardenletConfiguration
 	Clock                 clock.Clock
 	ShootClientMap        clientmap.ClientMap

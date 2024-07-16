@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package managedseed
+package gardenletdeployer
 
 import (
 	"context"
@@ -32,8 +32,8 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	mockclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/mock"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	mockgardenletdepoyer "github.com/gardener/gardener/pkg/controller/gardenletdeployer/mock"
 	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
-	mockmanagedseed "github.com/gardener/gardener/pkg/gardenlet/controller/managedseed/mock"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -42,11 +42,12 @@ import (
 )
 
 const (
+	name                   = "test"
+	namespace              = "garden"
 	seedName               = "test-seed"
 	secretBindingName      = "test-secret-binding"
 	credentialsBindingName = "test-credentials-binding"
 	secretName             = "test-secret"
-	kubeconfigSecretName   = "test.kubeconfig"
 	backupSecretName       = "test-backup-secret"
 )
 
@@ -59,7 +60,7 @@ var _ = Describe("Actuator", func() {
 		seedClient        *mockclient.MockClient
 		shootClientSet    *kubernetesmock.MockInterface
 		shootClientMap    *mockclientmap.MockClientMap
-		vh                *mockmanagedseed.MockValuesHelper
+		vh                *mockgardenletdepoyer.MockValuesHelper
 		shootClient       *mockclient.MockClient
 		shootChartApplier *kubernetesmock.MockChartApplier
 		recorder          *mockrecord.MockEventRecorder
@@ -97,7 +98,7 @@ var _ = Describe("Actuator", func() {
 		shootClient = mockclient.NewMockClient(ctrl)
 		shootClientSet = kubernetesmock.NewMockInterface(ctrl)
 		shootClientMap = mockclientmap.NewMockClientMap(ctrl)
-		vh = mockmanagedseed.NewMockValuesHelper(ctrl)
+		vh = mockgardenletdepoyer.NewMockValuesHelper(ctrl)
 		shootChartApplier = kubernetesmock.NewMockChartApplier(ctrl)
 		recorder = mockrecord.NewMockEventRecorder(ctrl)
 
@@ -105,7 +106,7 @@ var _ = Describe("Actuator", func() {
 		shootClientSet.EXPECT().ChartApplier().Return(shootChartApplier).AnyTimes()
 
 		log = logr.Discard()
-		actuator = newActuator(&rest.Config{}, gardenAPIReader, gardenClient, seedClient, shootClientMap, clock.RealClock{}, vh, recorder, namespace)
+		actuator = NewActuator(&rest.Config{}, gardenAPIReader, gardenClient, seedClient, shootClientMap, clock.RealClock{}, vh, recorder, namespace)
 
 		ctx = context.TODO()
 

@@ -1147,6 +1147,7 @@ build:
             - pkg/component/shared
             - pkg/component/shoot/namespaces
             - pkg/component/shoot/system
+            - pkg/controller/gardenletdeployer
             - pkg/controller/networkpolicy
             - pkg/controller/networkpolicy/helper
             - pkg/controller/networkpolicy/hostnameresolver

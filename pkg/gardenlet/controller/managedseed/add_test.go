@@ -42,9 +42,6 @@ var _ = Describe("Add", func() {
 		managedSeedShoot       *seedmanagementv1alpha1.Shoot
 		shoot                  *gardencorev1beta1.Shoot
 		seedNameFromSeedConfig string
-
-		name      = "test"
-		namespace = "garden"
 	)
 
 	BeforeEach(func() {

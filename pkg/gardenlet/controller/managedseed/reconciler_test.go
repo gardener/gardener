@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package managedseed
+package managedseed_test
 
 import (
 	"context"
@@ -18,8 +18,9 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	mockgardenletdeployer "github.com/gardener/gardener/pkg/controller/gardenletdeployer/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	mockmanagedseed "github.com/gardener/gardener/pkg/gardenlet/controller/managedseed/mock"
+	. "github.com/gardener/gardener/pkg/gardenlet/controller/managedseed"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
@@ -35,7 +36,7 @@ var _ = Describe("Reconciler", func() {
 	var (
 		ctrl *gomock.Controller
 
-		actuator           *mockmanagedseed.MockActuator
+		actuator           *mockgardenletdeployer.MockActuator
 		gardenClient       *mockclient.MockClient
 		gardenStatusWriter *mockclient.MockStatusWriter
 
@@ -53,7 +54,7 @@ var _ = Describe("Reconciler", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 
-		actuator = mockmanagedseed.NewMockActuator(ctrl)
+		actuator = mockgardenletdeployer.NewMockActuator(ctrl)
 		gardenClient = mockclient.NewMockClient(ctrl)
 		gardenStatusWriter = mockclient.NewMockStatusWriter(ctrl)
 

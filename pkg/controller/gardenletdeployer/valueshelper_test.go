@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package managedseed
+package gardenletdeployer
 
 import (
 	. "github.com/onsi/ginkgo/v2"

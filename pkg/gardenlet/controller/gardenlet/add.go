@@ -19,8 +19,8 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controller/gardenletdeployer"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/managedseed"
 	"github.com/gardener/gardener/pkg/utils/oci"
 )
 
@@ -59,7 +59,7 @@ func (r *Reconciler) AddToManager(
 		}
 	}
 	if r.ValuesHelper == nil {
-		r.ValuesHelper = managedseed.NewValuesHelper(&r.Config)
+		r.ValuesHelper = gardenletdeployer.NewValuesHelper(&r.Config)
 	}
 
 	return builder.

@@ -26,22 +26,14 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	"github.com/gardener/gardener/pkg/controller/gardenletdeployer"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
-const (
-	// ControllerName is the name of this controller.
-	ControllerName = "managedseed"
-
-	// GardenletDefaultKubeconfigSecretName is the default name for the field in the Gardenlet component configuration
-	// .gardenClientConnection.KubeconfigSecret.Name
-	GardenletDefaultKubeconfigSecretName = "gardenlet-kubeconfig" // #nosec G101 -- No credential.
-	// GardenletDefaultKubeconfigBootstrapSecretName is the default name for the field in the Gardenlet component configuration
-	// .gardenClientConnection.BootstrapKubeconfig.Name
-	GardenletDefaultKubeconfigBootstrapSecretName = "gardenlet-kubeconfig-bootstrap" // #nosec G101 -- No credential.
-)
+// ControllerName is the name of this controller.
+const ControllerName = "managedseed"
 
 // AddToManager adds Reconciler to the given manager.
 func (r *Reconciler) AddToManager(
@@ -64,14 +56,14 @@ func (r *Reconciler) AddToManager(
 	}
 
 	if r.Actuator == nil {
-		r.Actuator = newActuator(
+		r.Actuator = gardenletdeployer.NewActuator(
 			gardenCluster.GetConfig(),
 			gardenCluster.GetAPIReader(),
 			gardenCluster.GetClient(),
 			seedCluster.GetClient(),
 			r.ShootClientMap,
 			r.Clock,
-			NewValuesHelper(&r.Config),
+			gardenletdeployer.NewValuesHelper(&r.Config),
 			gardenCluster.GetEventRecorderFor(ControllerName+"-controller"),
 			r.GardenNamespaceShoot,
 		)

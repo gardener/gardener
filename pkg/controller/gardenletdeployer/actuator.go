@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package managedseed
+package gardenletdeployer
 
 import (
 	"context"
@@ -40,6 +40,15 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
+const (
+	// GardenletDefaultKubeconfigSecretName is the default name for the field in the Gardenlet component configuration
+	// .gardenClientConnection.KubeconfigSecret.Name
+	GardenletDefaultKubeconfigSecretName = "gardenlet-kubeconfig" // #nosec G101 -- No credential.
+	// GardenletDefaultKubeconfigBootstrapSecretName is the default name for the field in the Gardenlet component configuration
+	// .gardenClientConnection.BootstrapKubeconfig.Name
+	GardenletDefaultKubeconfigBootstrapSecretName = "gardenlet-kubeconfig-bootstrap" // #nosec G101 -- No credential.
+)
+
 // Actuator acts upon ManagedSeed resources.
 type Actuator interface {
 	// Reconcile reconciles ManagedSeed creation or update.
@@ -61,8 +70,8 @@ type actuator struct {
 	gardenNamespaceShoot string
 }
 
-// newActuator creates a new Actuator with the given clients, ValuesHelper, and logger.
-func newActuator(
+// NewActuator creates a new Actuator with the given clients, ValuesHelper, and logger.
+func NewActuator(
 	gardenConfig *rest.Config,
 	gardenAPIReader client.Reader,
 	gardenClient, seedClient client.Client,
@@ -85,7 +94,7 @@ func newActuator(
 	}
 }
 
-// Reconcile reconciles ManagedSeed creation or update.
+// Reconcile deploys the gardenlet.
 func (a *actuator) Reconcile(
 	ctx context.Context,
 	log logr.Logger,
@@ -178,7 +187,7 @@ func (a *actuator) Reconcile(
 	return status, false, nil
 }
 
-// Delete reconciles ManagedSeed deletion.
+// Delete deletes the gardenlet.
 func (a *actuator) Delete(
 	ctx context.Context,
 	log logr.Logger,
