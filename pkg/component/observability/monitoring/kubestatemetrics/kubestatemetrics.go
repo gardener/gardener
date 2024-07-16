@@ -162,6 +162,12 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 		if err := registry2.Add(deployment); err != nil {
 			return err
 		}
+
+		if !k.values.IsWorkerless {
+			if err := registry2.Add(k.scrapeConfigShoot()); err != nil {
+				return err
+			}
+		}
 	}
 
 	serializedResources, err := registry2.AddAllAndSerialize(

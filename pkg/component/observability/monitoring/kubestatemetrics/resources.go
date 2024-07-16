@@ -40,7 +40,6 @@ import (
 
 func (k *kubeStateMetrics) getResourceConfigs(genericTokenKubeconfigSecretName string, shootAccessSecret *gardenerutils.AccessSecret) component.ResourceConfigs {
 	var (
-		scrapeConfigShoot            = k.emptyScrapeConfigShoot()
 		prometheusRuleShoot          = k.emptyPrometheusRuleShoot()
 		customResourceStateConfigMap = k.emptyCustomResourceStateConfigMap()
 
@@ -53,10 +52,6 @@ func (k *kubeStateMetrics) getResourceConfigs(genericTokenKubeconfigSecretName s
 		configs = append(configs,
 			component.ResourceConfig{Obj: prometheusRuleShoot, Class: component.Runtime, MutateFn: func() { k.reconcilePrometheusRuleShoot(prometheusRuleShoot) }},
 		)
-
-		if !k.values.IsWorkerless {
-			configs = append(configs, component.ResourceConfig{Obj: scrapeConfigShoot, Class: component.Runtime, MutateFn: func() { k.reconcileScrapeConfigShoot(scrapeConfigShoot) }})
-		}
 	}
 
 	return configs
@@ -615,13 +610,11 @@ func (k *kubeStateMetrics) scrapeConfigGarden() *monitoringv1alpha1.ScrapeConfig
 	return scrapeConfig
 }
 
-func (k *kubeStateMetrics) emptyScrapeConfigShoot() *monitoringv1alpha1.ScrapeConfig {
-	return &monitoringv1alpha1.ScrapeConfig{ObjectMeta: monitoringutils.ConfigObjectMeta("kube-state-metrics"+k.values.NameSuffix, k.namespace, shoot.Label)}
-}
-
-func (k *kubeStateMetrics) reconcileScrapeConfigShoot(scrapeConfig *monitoringv1alpha1.ScrapeConfig) {
+func (k *kubeStateMetrics) scrapeConfigShoot() *monitoringv1alpha1.ScrapeConfig {
+	scrapeConfig := &monitoringv1alpha1.ScrapeConfig{ObjectMeta: monitoringutils.ConfigObjectMeta("kube-state-metrics"+k.values.NameSuffix, k.namespace, shoot.Label)}
 	scrapeConfig.Labels = monitoringutils.Labels(shoot.Label)
 	scrapeConfig.Spec = k.standardScrapeConfigSpec()
+	return scrapeConfig
 }
 
 func (k *kubeStateMetrics) emptyPrometheusRuleShoot() *monitoringv1.PrometheusRule {
