@@ -1,5 +1,5 @@
 ---
-description: `node` and `zone` failure tolerance types. Possible mitigations for zone outages
+description: Failure tolerance types `node` and `zone`. Possible mitigations for zone or node outages
 ---
 
 # Highly Available Shoot Control Plane
