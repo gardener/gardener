@@ -6,7 +6,6 @@ package gardenletdeployer
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -15,23 +14,21 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
@@ -49,170 +46,134 @@ const (
 	GardenletDefaultKubeconfigBootstrapSecretName = "gardenlet-kubeconfig-bootstrap" // #nosec G101 -- No credential.
 )
 
-// Interface acts upon ManagedSeed resources.
+// Interface deploys gardenlets into target clusters.
 type Interface interface {
-	// Reconcile reconciles ManagedSeed creation or update.
-	Reconcile(context.Context, logr.Logger, *seedmanagementv1alpha1.ManagedSeed) (*seedmanagementv1alpha1.ManagedSeedStatus, bool, error)
-	// Delete reconciles ManagedSeed deletion.
-	Delete(context.Context, logr.Logger, *seedmanagementv1alpha1.ManagedSeed) (*seedmanagementv1alpha1.ManagedSeedStatus, bool, bool, error)
+	// Reconcile deploys or updates a gardenlet in a target cluster.
+	Reconcile(context.Context, logr.Logger, client.Object, []gardencorev1beta1.Condition, *seedmanagementv1alpha1.GardenletDeployment, *runtime.RawExtension, seedmanagementv1alpha1.Bootstrap, bool) ([]gardencorev1beta1.Condition, error)
+	// Delete deletes a gardenlet from a target cluster.
+	Delete(context.Context, logr.Logger, client.Object, []gardencorev1beta1.Condition, *seedmanagementv1alpha1.GardenletDeployment, *runtime.RawExtension, seedmanagementv1alpha1.Bootstrap, bool) ([]gardencorev1beta1.Condition, bool, bool, error)
 }
 
 // Actuator is a concrete implementation of Interface.
 type Actuator struct {
-	GardenConfig         *rest.Config
-	GardenAPIReader      client.Reader
-	GardenClient         client.Client
-	SeedClient           client.Client
-	ShootClientMap       clientmap.ClientMap
-	Clock                clock.Clock
-	ValuesHelper         ValuesHelper
-	Recorder             record.EventRecorder
-	GardenNamespaceShoot string
+	GardenConfig            *rest.Config
+	GardenAPIReader         client.Reader
+	GardenClient            client.Client
+	GetTargetClientFunc     func(ctx context.Context) (kubernetes.Interface, error)
+	CheckIfVPAAlreadyExists func(ctx context.Context) (bool, error)
+	GetInfrastructureSecret func(ctx context.Context) (*corev1.Secret, error)
+	GetTargetDomain         func() string
+	Clock                   clock.Clock
+	ValuesHelper            ValuesHelper
+	Recorder                record.EventRecorder
+	GardenNamespaceTarget   string
 }
 
-// Reconcile deploys the gardenlet.
+// Reconcile deploys or updates gardenlets.
 func (a *Actuator) Reconcile(
 	ctx context.Context,
 	log logr.Logger,
-	ms *seedmanagementv1alpha1.ManagedSeed,
+	obj client.Object,
+	conditions []gardencorev1beta1.Condition,
+	gardenletDeployment *seedmanagementv1alpha1.GardenletDeployment,
+	rawComponentConfig *runtime.RawExtension,
+	bootstrap seedmanagementv1alpha1.Bootstrap,
+	mergeWithParent bool,
 ) (
-	status *seedmanagementv1alpha1.ManagedSeedStatus,
-	wait bool,
-	err error,
+	[]gardencorev1beta1.Condition,
+	error,
 ) {
-	// Initialize status
-	status = ms.Status.DeepCopy()
-	status.ObservedGeneration = ms.Generation
-
-	defer func() {
-		if err != nil {
-			log.Error(err, "Error during reconciliation")
-			a.Recorder.Eventf(ms, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, err.Error())
-			updateCondition(a.Clock, status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventReconcileError, err.Error())
-		}
-	}()
-
-	// Get shoot
-	shoot := &gardencorev1beta1.Shoot{}
-	if err := a.GardenAPIReader.Get(ctx, client.ObjectKey{Namespace: ms.Namespace, Name: ms.Spec.Shoot.Name}, shoot); err != nil {
-		return status, false, fmt.Errorf("could not get shoot %s/%s: %w", ms.Namespace, ms.Spec.Shoot.Name, err)
-	}
-
-	log = log.WithValues("shootName", shoot.Name)
-
-	// Check if shoot is reconciled and update ShootReconciled condition
-	if !shootReconciled(shoot) {
-		log.Info("Waiting for shoot to be reconciled")
-
-		msg := fmt.Sprintf("Waiting for shoot %q to be reconciled", client.ObjectKeyFromObject(shoot).String())
-		a.Recorder.Event(ms, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, msg)
-		updateCondition(a.Clock, status, seedmanagementv1alpha1.ManagedSeedShootReconciled, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventReconciling, msg)
-
-		return status, true, nil
-	}
-	updateCondition(a.Clock, status, seedmanagementv1alpha1.ManagedSeedShootReconciled, gardencorev1beta1.ConditionTrue, gardencorev1beta1.EventReconciled,
-		fmt.Sprintf("Shoot %q has been reconciled", client.ObjectKeyFromObject(shoot).String()))
-
-	// Get shoot client
-	shootClient, err := a.ShootClientMap.GetClient(ctx, keys.ForShoot(shoot))
+	// Get target client
+	targetClient, err := a.GetTargetClientFunc(ctx)
 	if err != nil {
-		return status, false, fmt.Errorf("could not get shoot client for shoot %s: %w", client.ObjectKeyFromObject(shoot).String(), err)
+		a.Recorder.Eventf(obj, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, err.Error())
+		return updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventReconcileError, err.Error()), fmt.Errorf("could not get target client: %w", err)
 	}
 
 	// Extract seed template and gardenlet config
-	seedTemplate, gardenletConfig, err := helper.ExtractSeedTemplateAndGardenletConfig(ms.Name, helper.GardenletConfigFromManagedSeed(ms.Spec.Gardenlet))
+	seedTemplate, componentConfig, err := helper.ExtractSeedTemplateAndGardenletConfig(obj.GetName(), rawComponentConfig)
 	if err != nil {
-		return status, false, err
+		a.Recorder.Eventf(obj, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, err.Error())
+		return updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventReconcileError, err.Error()), err
 	}
 
 	// Check seed spec
-	if err := a.checkSeedSpec(ctx, &seedTemplate.Spec, shoot); err != nil {
-		return status, false, err
+	if err := a.checkSeedSpec(ctx, &seedTemplate.Spec); err != nil {
+		a.Recorder.Eventf(obj, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, err.Error())
+		return updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventReconcileError, err.Error()), err
 	}
 
-	// Create or update garden namespace in the shoot
-	log.Info("Ensuring garden namespace in shoot")
-	a.Recorder.Eventf(ms, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring garden namespace in shoot %q", client.ObjectKeyFromObject(shoot).String())
-	if err := a.ensureGardenNamespace(ctx, shootClient.Client()); err != nil {
-		return status, false, fmt.Errorf("could not create or update garden namespace in shoot %s: %w", client.ObjectKeyFromObject(shoot).String(), err)
+	// Create or update garden namespace in the target cluster
+	log.Info("Ensuring garden namespace in target cluster")
+	a.Recorder.Eventf(obj, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Ensuring garden namespace in target cluster")
+	if err := a.ensureGardenNamespace(ctx, targetClient.Client()); err != nil {
+		a.Recorder.Eventf(obj, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, err.Error())
+		return updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventReconcileError, err.Error()), fmt.Errorf("could not create or update garden namespace in target cluster: %w", err)
 	}
 
 	// Create or update seed secrets
 	log.Info("Reconciling seed secrets")
-	a.Recorder.Event(ms, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
-	if err := a.reconcileSeedSecrets(ctx, &seedTemplate.Spec, ms, shoot); err != nil {
-		return status, false, fmt.Errorf("could not reconcile seed %s secrets: %w", ms.Name, err)
+	a.Recorder.Event(obj, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
+	if err := a.reconcileSeedSecrets(ctx, obj, &seedTemplate.Spec, gardenletDeployment); err != nil {
+		a.Recorder.Eventf(obj, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, err.Error())
+		return updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventReconcileError, err.Error()), fmt.Errorf("could not reconcile seed %s secrets: %w", obj.GetName(), err)
 	}
 
-	if ms.Spec.Gardenlet != nil {
-		seed, err := GetSeed(ctx, a.GardenClient, ms.Name)
-		if err != nil {
-			return status, false, fmt.Errorf("could not read seed %s: %w", ms.Name, err)
-		}
-
-		// Deploy gardenlet into the shoot, it will register the seed automatically
-		log.Info("Deploying gardenlet into shoot")
-		a.Recorder.Eventf(ms, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into shoot %q", client.ObjectKeyFromObject(shoot).String())
-		if err := a.deployGardenlet(ctx, log, shootClient, ms, seed, gardenletConfig, shoot); err != nil {
-			return status, false, fmt.Errorf("could not deploy gardenlet into shoot %s: %w", client.ObjectKeyFromObject(shoot).String(), err)
-		}
+	seed, err := GetSeed(ctx, a.GardenClient, obj.GetName())
+	if err != nil {
+		a.Recorder.Eventf(obj, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, err.Error())
+		return updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventReconcileError, err.Error()), fmt.Errorf("could not read seed %s: %w", obj.GetName(), err)
 	}
 
-	updateCondition(a.Clock, status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionTrue, gardencorev1beta1.EventReconciled,
-		fmt.Sprintf("Seed %s has been registered", ms.Name))
-	return status, false, nil
+	// Deploy gardenlet into the target cluster, it will register the seed automatically
+	log.Info("Deploying gardenlet into target cluster")
+	a.Recorder.Eventf(obj, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into target cluster")
+	if err := a.deployGardenlet(ctx, log, obj, targetClient, gardenletDeployment, seed, componentConfig, bootstrap, mergeWithParent); err != nil {
+		a.Recorder.Eventf(obj, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, err.Error())
+		return updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventReconcileError, err.Error()), fmt.Errorf("could not deploy gardenlet into target cluster: %w", err)
+	}
+
+	return updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionTrue, gardencorev1beta1.EventReconciled, fmt.Sprintf("Seed %s has been registered", obj.GetName())), nil
 }
 
 // Delete deletes the gardenlet.
 func (a *Actuator) Delete(
 	ctx context.Context,
 	log logr.Logger,
-	ms *seedmanagementv1alpha1.ManagedSeed,
+	obj client.Object,
+	conditions []gardencorev1beta1.Condition,
+	gardenletDeployment *seedmanagementv1alpha1.GardenletDeployment,
+	rawComponentConfig *runtime.RawExtension,
+	bootstrap seedmanagementv1alpha1.Bootstrap,
+	mergeWithParent bool,
 ) (
-	status *seedmanagementv1alpha1.ManagedSeedStatus,
-	wait, removeFinalizer bool,
-	err error,
+	[]gardencorev1beta1.Condition,
+	bool,
+	bool,
+	error,
 ) {
-	// Initialize status
-	status = ms.Status.DeepCopy()
-	status.ObservedGeneration = ms.Generation
-
-	defer func() {
-		if err != nil {
-			log.Error(err, "Error during deletion")
-			a.Recorder.Eventf(ms, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, err.Error())
-			updateCondition(a.Clock, status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleteError, err.Error())
-		}
-	}()
-
 	// Update SeedRegistered condition
-	updateCondition(a.Clock, status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleting,
-		"Unregistering seed "+ms.Name)
+	conditions = updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleting, "Unregistering seed "+obj.GetName())
 
-	// Get shoot
-	shoot := &gardencorev1beta1.Shoot{}
-	if err := a.GardenAPIReader.Get(ctx, client.ObjectKey{Namespace: ms.Namespace, Name: ms.Spec.Shoot.Name}, shoot); err != nil {
-		return status, false, false, fmt.Errorf("could not get shoot %s/%s: %w", ms.Namespace, ms.Spec.Shoot.Name, err)
-	}
-
-	log = log.WithValues("shootName", shoot.Name)
-
-	// Get shoot client
-	shootClient, err := a.ShootClientMap.GetClient(ctx, keys.ForShoot(shoot))
+	// Get target client
+	targetClient, err := a.GetTargetClientFunc(ctx)
 	if err != nil {
-		return status, false, false, fmt.Errorf("could not get shoot client for shoot %s: %w", client.ObjectKeyFromObject(shoot).String(), err)
+		a.Recorder.Eventf(obj, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, err.Error())
+		return updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleteError, err.Error()), false, false, fmt.Errorf("could not get target client: %w", err)
 	}
 
 	// Extract seed template and gardenlet config
-	seedTemplate, gardenletConfig, err := helper.ExtractSeedTemplateAndGardenletConfig(ms.Name, helper.GardenletConfigFromManagedSeed(ms.Spec.Gardenlet))
+	seedTemplate, componentConfig, err := helper.ExtractSeedTemplateAndGardenletConfig(obj.GetName(), rawComponentConfig)
 	if err != nil {
-		return status, false, false, err
+		a.Recorder.Eventf(obj, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, err.Error())
+		return updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleteError, err.Error()), false, false, err
 	}
 
 	// Delete seed if it still exists and is not already deleting
-	seed, err := GetSeed(ctx, a.GardenClient, ms.Name)
+	seed, err := GetSeed(ctx, a.GardenClient, obj.GetName())
 	if err != nil {
-		return status, false, false, fmt.Errorf("could not get seed %s: %w", ms.Name, err)
+		a.Recorder.Eventf(obj, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, err.Error())
+		return updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleteError, err.Error()), false, false, fmt.Errorf("could not get seed %s: %w", obj.GetName(), err)
 	}
 
 	if seed != nil {
@@ -220,115 +181,118 @@ func (a *Actuator) Delete(
 
 		if seed.DeletionTimestamp == nil {
 			log.Info("Deleting seed")
-			a.Recorder.Eventf(ms, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting seed %s", ms.Name)
-			if err := a.deleteSeed(ctx, ms); err != nil {
-				return status, false, false, fmt.Errorf("could not delete seed %s: %w", ms.Name, err)
+			a.Recorder.Eventf(obj, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting seed %s", obj.GetName())
+			if err := a.deleteSeed(ctx, obj); err != nil {
+				a.Recorder.Eventf(obj, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, err.Error())
+				return updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleteError, err.Error()), false, false, fmt.Errorf("could not delete seed %s: %w", obj.GetName(), err)
 			}
 		} else {
 			log.Info("Waiting for seed to be deleted")
-			a.Recorder.Eventf(ms, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Waiting for seed %q to be deleted", ms.Name)
+			a.Recorder.Eventf(obj, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Waiting for seed %q to be deleted", obj.GetName())
 		}
 
-		return status, false, false, nil
+		return updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleting, fmt.Sprintf("Waiting for seed %q to be deleted", obj.GetName())), false, false, nil
 	}
 
-	if ms.Spec.Gardenlet != nil {
-		// Delete gardenlet from the shoot if it still exists and is not already deleting
-		gardenletDeployment, err := a.getGardenletDeployment(ctx, shootClient)
-		if err != nil {
-			return status, false, false, fmt.Errorf("could not get gardenlet deployment in shoot %s: %w", client.ObjectKeyFromObject(shoot).String(), err)
-		}
+	// Delete gardenlet from the target cluster if it still exists and is not already deleting
+	deployment, err := a.getGardenletDeployment(ctx, targetClient)
+	if err != nil {
+		a.Recorder.Eventf(obj, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, err.Error())
+		return updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleteError, err.Error()), false, false, fmt.Errorf("could not get gardenlet deployment from target cluster: %w", err)
+	}
 
-		if gardenletDeployment != nil {
-			if gardenletDeployment.DeletionTimestamp == nil {
-				log.Info("Deleting gardenlet from shoot")
-				a.Recorder.Eventf(ms, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting gardenlet from shoot %q", client.ObjectKeyFromObject(shoot).String())
-				if err := a.deleteGardenlet(ctx, log, shootClient, ms, seed, gardenletConfig, shoot); err != nil {
-					return status, false, false, fmt.Errorf("could delete gardenlet from shoot %s: %w", client.ObjectKeyFromObject(shoot).String(), err)
-				}
-			} else {
-				log.Info("Waiting for gardenlet to be deleted from shoot")
-				a.Recorder.Eventf(ms, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Waiting for gardenlet to be deleted from shoot %q", client.ObjectKeyFromObject(shoot).String())
+	if deployment != nil {
+		if deployment.DeletionTimestamp == nil {
+			log.Info("Deleting gardenlet from target cluster")
+			a.Recorder.Eventf(obj, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting gardenlet from target cluster")
+			if err := a.deleteGardenlet(ctx, log, obj, targetClient, gardenletDeployment, seed, componentConfig, bootstrap, mergeWithParent); err != nil {
+				a.Recorder.Eventf(obj, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, err.Error())
+				return updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleteError, err.Error()), false, false, fmt.Errorf("could delete gardenlet from target cluster: %w", err)
 			}
-
-			return status, true, false, nil
+		} else {
+			log.Info("Waiting for gardenlet to be deleted from target cluster")
+			a.Recorder.Eventf(obj, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Waiting for gardenlet to be deleted from  target cluster")
 		}
+
+		return updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleting, "Waiting for gardenlet to be deleted from  target cluster"), true, false, nil
 	}
 
 	// Delete seed backup secrets if any of them still exists and is not already deleting
-	backupSecret, err := a.getBackupSecret(ctx, &seedTemplate.Spec, ms)
+	backupSecret, err := a.getBackupSecret(ctx, &seedTemplate.Spec, obj)
 	if err != nil {
-		return status, false, false, fmt.Errorf("could not get seed %s secrets: %w", ms.Name, err)
+		a.Recorder.Eventf(obj, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, err.Error())
+		return updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleteError, err.Error()), false, false, fmt.Errorf("could not get seed %s secrets: %w", obj.GetName(), err)
 	}
 
 	if backupSecret != nil {
 		if backupSecret.DeletionTimestamp == nil {
 			log.Info("Deleting seed secrets")
-			a.Recorder.Event(ms, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting seed secrets")
-			if err := a.deleteBackupSecret(ctx, &seedTemplate.Spec, ms); err != nil {
-				return status, false, false, fmt.Errorf("could not delete seed %s secrets: %w", ms.Name, err)
+			a.Recorder.Event(obj, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting seed secrets")
+			if err := a.deleteBackupSecret(ctx, &seedTemplate.Spec, obj); err != nil {
+				a.Recorder.Eventf(obj, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, err.Error())
+				return updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleteError, err.Error()), false, false, fmt.Errorf("could not delete seed %s secrets: %w", obj.GetName(), err)
 			}
 		} else {
 			log.Info("Waiting for seed secrets to be deleted")
-			a.Recorder.Event(ms, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Waiting for seed secrets to be deleted")
+			a.Recorder.Event(obj, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Waiting for seed secrets to be deleted")
 		}
 
-		return status, true, false, nil
+		return updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleting, "Waiting for seed secrets to be deleted"), true, false, nil
 	}
 
-	// Delete garden namespace from the shoot if it still exists and is not already deleting
-	gardenNamespace, err := a.getGardenNamespace(ctx, shootClient)
+	// Delete garden namespace from the target cluster if it still exists and is not already deleting
+	gardenNamespace, err := a.getGardenNamespace(ctx, targetClient)
 	if err != nil {
-		return status, false, false, fmt.Errorf("could not check if garden namespace exists in shoot %s: %w", client.ObjectKeyFromObject(shoot).String(), err)
+		a.Recorder.Eventf(obj, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, err.Error())
+		return updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleteError, err.Error()), false, false, fmt.Errorf("could not check if garden namespace exists in target cluster: %w", err)
 	}
 
 	if gardenNamespace != nil {
 		if gardenNamespace.DeletionTimestamp == nil {
-			log.Info("Deleting garden namespace from shoot")
-			a.Recorder.Eventf(ms, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting garden namespace from shoot %q", client.ObjectKeyFromObject(shoot).String())
-			if err := a.deleteGardenNamespace(ctx, shootClient); err != nil {
-				return status, false, false, fmt.Errorf("could not delete garden namespace from shoot %s: %w", client.ObjectKeyFromObject(shoot).String(), err)
+			log.Info("Deleting garden namespace from target cluster")
+			a.Recorder.Eventf(obj, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting garden namespace from target cluster")
+			if err := a.deleteGardenNamespace(ctx, targetClient); err != nil {
+				a.Recorder.Eventf(obj, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, err.Error())
+				return updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleteError, err.Error()), false, false, fmt.Errorf("could not delete garden namespace from target cluster: %w", err)
 			}
 		} else {
-			log.Info("Waiting for garden namespace to be deleted from shoot")
-			a.Recorder.Eventf(ms, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Waiting for garden namespace to be deleted from shoot %q", client.ObjectKeyFromObject(shoot).String())
+			log.Info("Waiting for garden namespace to be deleted from target cluster")
+			a.Recorder.Eventf(obj, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Waiting for garden namespace to be deleted from target cluster")
 		}
 
-		return status, true, false, nil
+		return updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleting, "Waiting for garden namespace to be deleted from target cluster"), true, false, nil
 	}
 
-	updateCondition(a.Clock, status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleted,
-		fmt.Sprintf("Seed %s has been unregistred", ms.Name))
-	return status, false, true, nil
+	return updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleted, fmt.Sprintf("Seed %s has been unregistered", obj.GetName())), false, true, nil
 }
 
-func (a *Actuator) ensureGardenNamespace(ctx context.Context, shootClient client.Client) error {
+func (a *Actuator) ensureGardenNamespace(ctx context.Context, targetClient client.Client) error {
 	gardenNamespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: a.GardenNamespaceShoot,
+			Name: a.GardenNamespaceTarget,
 		},
 	}
-	if err := shootClient.Get(ctx, client.ObjectKeyFromObject(gardenNamespace), gardenNamespace); err != nil {
+	if err := targetClient.Get(ctx, client.ObjectKeyFromObject(gardenNamespace), gardenNamespace); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return err
 		}
-		return shootClient.Create(ctx, gardenNamespace)
+		return targetClient.Create(ctx, gardenNamespace)
 	}
 	return nil
 }
 
-func (a *Actuator) deleteGardenNamespace(ctx context.Context, shootClient kubernetes.Interface) error {
+func (a *Actuator) deleteGardenNamespace(ctx context.Context, targetClient kubernetes.Interface) error {
 	gardenNamespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: a.GardenNamespaceShoot,
+			Name: a.GardenNamespaceTarget,
 		},
 	}
-	return client.IgnoreNotFound(shootClient.Client().Delete(ctx, gardenNamespace))
+	return client.IgnoreNotFound(targetClient.Client().Delete(ctx, gardenNamespace))
 }
 
-func (a *Actuator) getGardenNamespace(ctx context.Context, shootClient kubernetes.Interface) (*corev1.Namespace, error) {
+func (a *Actuator) getGardenNamespace(ctx context.Context, targetClient kubernetes.Interface) (*corev1.Namespace, error) {
 	ns := &corev1.Namespace{}
-	if err := shootClient.Client().Get(ctx, client.ObjectKey{Name: a.GardenNamespaceShoot}, ns); err != nil {
+	if err := targetClient.Client().Get(ctx, client.ObjectKey{Name: a.GardenNamespaceTarget}, ns); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil, nil
 		}
@@ -337,10 +301,10 @@ func (a *Actuator) getGardenNamespace(ctx context.Context, shootClient kubernete
 	return ns, nil
 }
 
-func (a *Actuator) deleteSeed(ctx context.Context, managedSeed *seedmanagementv1alpha1.ManagedSeed) error {
+func (a *Actuator) deleteSeed(ctx context.Context, obj client.Object) error {
 	seed := &gardencorev1beta1.Seed{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: managedSeed.Name,
+			Name: obj.GetName(),
 		},
 	}
 	return client.IgnoreNotFound(a.GardenClient.Delete(ctx, seed))
@@ -361,40 +325,42 @@ func GetSeed(ctx context.Context, gardenClient client.Client, seedName string) (
 func (a *Actuator) deployGardenlet(
 	ctx context.Context,
 	log logr.Logger,
-	shootClient kubernetes.Interface,
-	managedSeed *seedmanagementv1alpha1.ManagedSeed,
+	obj client.Object,
+	targetClient kubernetes.Interface,
+	gardenletDeployment *seedmanagementv1alpha1.GardenletDeployment,
 	seed *gardencorev1beta1.Seed,
-	gardenletConfig *gardenletv1alpha1.GardenletConfiguration,
-	shoot *gardencorev1beta1.Shoot,
+	componentConfig *gardenletv1alpha1.GardenletConfiguration,
+	bootstrap seedmanagementv1alpha1.Bootstrap,
+	mergeWithParent bool,
 ) error {
 	// Prepare gardenlet chart values
 	values, err := a.prepareGardenletChartValues(
 		ctx,
 		log,
-		shootClient,
-		managedSeed,
+		obj,
+		targetClient.Client(),
+		gardenletDeployment,
 		seed,
-		gardenletConfig,
-		helper.GetBootstrap(managedSeed.Spec.Gardenlet.Bootstrap),
-		ptr.Deref(managedSeed.Spec.Gardenlet.MergeWithParent, false),
-		shoot,
+		componentConfig,
+		bootstrap,
+		mergeWithParent,
 	)
 	if err != nil {
 		return err
 	}
 
 	// Apply gardenlet chart
-	if err := shootClient.ChartApplier().ApplyFromEmbeddedFS(ctx, charts.ChartGardenlet, charts.ChartPathGardenlet, a.GardenNamespaceShoot, "gardenlet", kubernetes.Values(values)); err != nil {
+	if err := targetClient.ChartApplier().ApplyFromEmbeddedFS(ctx, charts.ChartGardenlet, charts.ChartPathGardenlet, a.GardenNamespaceTarget, "gardenlet", kubernetes.Values(values)); err != nil {
 		return err
 	}
 
 	// remove renew-kubeconfig annotation, if it exists
-	if managedSeed.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRenewKubeconfig {
-		patch := client.MergeFrom(managedSeed.DeepCopy())
-		delete(managedSeed.Annotations, v1beta1constants.GardenerOperation)
-		if err := a.GardenClient.Patch(ctx, managedSeed, patch); err != nil {
-			return err
-		}
+	if obj.GetAnnotations()[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRenewKubeconfig {
+		patch := client.MergeFrom(obj.DeepCopyObject().(client.Object))
+		annotations := obj.GetAnnotations()
+		delete(annotations, v1beta1constants.GardenerOperation)
+		obj.SetAnnotations(annotations)
+		return a.GardenClient.Patch(ctx, obj, patch)
 	}
 
 	return nil
@@ -403,35 +369,37 @@ func (a *Actuator) deployGardenlet(
 func (a *Actuator) deleteGardenlet(
 	ctx context.Context,
 	log logr.Logger,
-	shootClient kubernetes.Interface,
-	managedSeed *seedmanagementv1alpha1.ManagedSeed,
+	obj client.Object,
+	targetClient kubernetes.Interface,
+	gardenletDeployment *seedmanagementv1alpha1.GardenletDeployment,
 	seed *gardencorev1beta1.Seed,
-	gardenletConfig *gardenletv1alpha1.GardenletConfiguration,
-	shoot *gardencorev1beta1.Shoot,
+	componentConfig *gardenletv1alpha1.GardenletConfiguration,
+	bootstrap seedmanagementv1alpha1.Bootstrap,
+	mergeWithParent bool,
 ) error {
 	// Prepare gardenlet chart values
 	values, err := a.prepareGardenletChartValues(
 		ctx,
 		log,
-		shootClient,
-		managedSeed,
+		obj,
+		targetClient.Client(),
+		gardenletDeployment,
 		seed,
-		gardenletConfig,
-		helper.GetBootstrap(managedSeed.Spec.Gardenlet.Bootstrap),
-		ptr.Deref(managedSeed.Spec.Gardenlet.MergeWithParent, false),
-		shoot,
+		componentConfig,
+		bootstrap,
+		mergeWithParent,
 	)
 	if err != nil {
 		return err
 	}
 
 	// Delete gardenlet chart
-	return shootClient.ChartApplier().DeleteFromEmbeddedFS(ctx, charts.ChartGardenlet, charts.ChartPathGardenlet, a.GardenNamespaceShoot, "gardenlet", kubernetes.Values(values))
+	return targetClient.ChartApplier().DeleteFromEmbeddedFS(ctx, charts.ChartGardenlet, charts.ChartPathGardenlet, a.GardenNamespaceTarget, "gardenlet", kubernetes.Values(values))
 }
 
-func (a *Actuator) getGardenletDeployment(ctx context.Context, shootClient kubernetes.Interface) (*appsv1.Deployment, error) {
+func (a *Actuator) getGardenletDeployment(ctx context.Context, targetClient kubernetes.Interface) (*appsv1.Deployment, error) {
 	deployment := &appsv1.Deployment{}
-	if err := shootClient.Client().Get(ctx, client.ObjectKey{Namespace: a.GardenNamespaceShoot, Name: v1beta1constants.DeploymentNameGardenlet}, deployment); err != nil {
+	if err := targetClient.Client().Get(ctx, client.ObjectKey{Namespace: a.GardenNamespaceTarget, Name: v1beta1constants.DeploymentNameGardenlet}, deployment); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil, nil
 		}
@@ -440,29 +408,30 @@ func (a *Actuator) getGardenletDeployment(ctx context.Context, shootClient kuber
 	return deployment, nil
 }
 
-func (a *Actuator) checkSeedSpec(ctx context.Context, spec *gardencorev1beta1.SeedSpec, shoot *gardencorev1beta1.Shoot) error {
-	// If VPA is enabled, check if the shoot namespace in the seed contains a vpa-admission-controller deployment
+func (a *Actuator) checkSeedSpec(ctx context.Context, spec *gardencorev1beta1.SeedSpec) error {
+	// If VPA is enabled, check if the runtime namespace in the runtime cluster contains a vpa-admission-controller
+	// deployment.
 	if v1beta1helper.SeedSettingVerticalPodAutoscalerEnabled(spec.Settings) {
-		seedVPAAdmissionControllerExists, err := a.seedVPADeploymentExists(ctx, a.SeedClient, shoot)
+		runtimeVPAAdmissionControllerExists, err := a.CheckIfVPAAlreadyExists(ctx)
 		if err != nil {
 			return err
 		}
-		if seedVPAAdmissionControllerExists {
-			return errors.New("seed VPA is enabled but shoot already has a VPA")
+		if runtimeVPAAdmissionControllerExists {
+			return fmt.Errorf("runtime VPA is enabled but target cluster already has a VPA")
 		}
 	}
 
 	return nil
 }
 
-func (a *Actuator) reconcileSeedSecrets(ctx context.Context, spec *gardencorev1beta1.SeedSpec, managedSeed *seedmanagementv1alpha1.ManagedSeed, shoot *gardencorev1beta1.Shoot) error {
-	// Get shoot secret
-	shootSecret, err := a.getShootSecret(ctx, shoot)
+func (a *Actuator) reconcileSeedSecrets(ctx context.Context, obj client.Object, spec *gardencorev1beta1.SeedSpec, gardenletDeployment *seedmanagementv1alpha1.GardenletDeployment) error {
+	// Get infrastructure secret
+	infrastructureSecret, err := a.GetInfrastructureSecret(ctx)
 	if err != nil {
 		return err
 	}
 
-	// If backup is specified, create or update the backup secret if it doesn't exist or is owned by the managed seed
+	// If backup is specified, create or update the backup secret if it doesn't exist or is owned by the object
 	if spec.Backup != nil {
 		var checksum string
 
@@ -474,17 +443,23 @@ func (a *Actuator) reconcileSeedSecrets(ctx context.Context, spec *gardencorev1b
 			return err
 		}
 
-		// Create or update backup secret if it doesn't exist or is owned by the managed seed
-		if apierrors.IsNotFound(err) || metav1.IsControlledBy(backupSecret, managedSeed) {
+		// Create or update backup secret if it doesn't exist or is owned by the object
+		if apierrors.IsNotFound(err) || metav1.IsControlledBy(backupSecret, obj) {
+			gvk, err := apiutil.GVKForObject(obj, a.GardenClient.Scheme())
+			if err != nil {
+				return fmt.Errorf("could not get GroupVersionKind from object %v: %w", obj, err)
+			}
+
 			secret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Namespace: spec.Backup.SecretRef.Namespace, Name: spec.Backup.SecretRef.Name},
 			}
+
 			if _, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, a.GardenClient, secret, func() error {
 				secret.OwnerReferences = []metav1.OwnerReference{
-					*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
+					*metav1.NewControllerRef(obj, gvk),
 				}
 				secret.Type = corev1.SecretTypeOpaque
-				secret.Data = shootSecret.Data
+				secret.Data = infrastructureSecret.Data
 				return nil
 			}); err != nil {
 				return err
@@ -494,7 +469,10 @@ func (a *Actuator) reconcileSeedSecrets(ctx context.Context, spec *gardencorev1b
 		}
 
 		// Inject backup-secret hash into the pod annotations
-		managedSeed.Spec.Gardenlet.Deployment.PodAnnotations = utils.MergeStringMaps[string](managedSeed.Spec.Gardenlet.Deployment.PodAnnotations, map[string]string{
+		if gardenletDeployment == nil {
+			gardenletDeployment = &seedmanagementv1alpha1.GardenletDeployment{}
+		}
+		gardenletDeployment.PodAnnotations = utils.MergeStringMaps[string](gardenletDeployment.PodAnnotations, map[string]string{
 			"checksum/seed-backup-secret": spec.Backup.SecretRef.Name + "-" + checksum,
 		})
 	}
@@ -502,14 +480,14 @@ func (a *Actuator) reconcileSeedSecrets(ctx context.Context, spec *gardencorev1b
 	return nil
 }
 
-func (a *Actuator) deleteBackupSecret(ctx context.Context, spec *gardencorev1beta1.SeedSpec, managedSeed *seedmanagementv1alpha1.ManagedSeed) error {
-	// If backup is specified, delete the backup secret if it exists and is owned by the managed seed
+func (a *Actuator) deleteBackupSecret(ctx context.Context, spec *gardencorev1beta1.SeedSpec, obj client.Object) error {
+	// If backup is specified, delete the backup secret if it exists and is owned by the object
 	if spec.Backup != nil {
 		backupSecret, err := kubernetesutils.GetSecretByReference(ctx, a.GardenClient, &spec.Backup.SecretRef)
 		if client.IgnoreNotFound(err) != nil {
 			return err
 		}
-		if err == nil && metav1.IsControlledBy(backupSecret, managedSeed) {
+		if err == nil && metav1.IsControlledBy(backupSecret, obj) {
 			if err := kubernetesutils.DeleteSecretByReference(ctx, a.GardenClient, &spec.Backup.SecretRef); err != nil {
 				return err
 			}
@@ -519,19 +497,19 @@ func (a *Actuator) deleteBackupSecret(ctx context.Context, spec *gardencorev1bet
 	return nil
 }
 
-func (a *Actuator) getBackupSecret(ctx context.Context, spec *gardencorev1beta1.SeedSpec, managedSeed *seedmanagementv1alpha1.ManagedSeed) (*corev1.Secret, error) {
+func (a *Actuator) getBackupSecret(ctx context.Context, spec *gardencorev1beta1.SeedSpec, obj client.Object) (*corev1.Secret, error) {
 	var (
 		backupSecret *corev1.Secret
 		err          error
 	)
 
-	// If backup is specified, get the backup secret if it exists and is owned by the managed seed
+	// If backup is specified, get the backup secret if it exists and is owned by the object
 	if spec.Backup != nil {
 		backupSecret, err = kubernetesutils.GetSecretByReference(ctx, a.GardenClient, &spec.Backup.SecretRef)
 		if client.IgnoreNotFound(err) != nil {
 			return nil, err
 		}
-		if backupSecret != nil && !metav1.IsControlledBy(backupSecret, managedSeed) {
+		if backupSecret != nil && !metav1.IsControlledBy(backupSecret, obj) {
 			backupSecret = nil
 		}
 	}
@@ -539,64 +517,29 @@ func (a *Actuator) getBackupSecret(ctx context.Context, spec *gardencorev1beta1.
 	return backupSecret, nil
 }
 
-func (a *Actuator) getShootSecret(ctx context.Context, shoot *gardencorev1beta1.Shoot) (*corev1.Secret, error) {
-	if shoot.Spec.SecretBindingName == nil && shoot.Spec.CredentialsBindingName == nil {
-		return nil, fmt.Errorf("both secretBindingName and credentialsBindingName are nil for the Shoot: %s/%s", shoot.Namespace, shoot.Name)
-	}
-	if shoot.Spec.SecretBindingName != nil {
-		shootSecretBinding := &gardencorev1beta1.SecretBinding{}
-		if err := a.GardenClient.Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: *shoot.Spec.SecretBindingName}, shootSecretBinding); err != nil {
-			return nil, err
-		}
-		return kubernetesutils.GetSecretByReference(ctx, a.GardenClient, &shootSecretBinding.SecretRef)
-	}
-
-	// TODO(dimityrmirchev): This code should eventually handle
-	// credentials binding referencing workload identities
-	shootCredentialsBinding := &securityv1alpha1.CredentialsBinding{}
-	if err := a.GardenClient.Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: *shoot.Spec.CredentialsBindingName}, shootCredentialsBinding); err != nil {
-		return nil, err
-	}
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      shootCredentialsBinding.CredentialsRef.Name,
-			Namespace: shootCredentialsBinding.CredentialsRef.Namespace,
-		},
-	}
-
-	return secret, a.GardenClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)
-}
-
-func (a *Actuator) seedVPADeploymentExists(ctx context.Context, seedClient client.Client, shoot *gardencorev1beta1.Shoot) (bool, error) {
-	if err := seedClient.Get(ctx, client.ObjectKey{Namespace: shoot.Status.TechnicalID, Name: "vpa-admission-controller"}, &appsv1.Deployment{}); err != nil {
-		if apierrors.IsNotFound(err) {
-			return false, nil
-		}
-		return false, err
-	}
-	return true, nil
-}
-
 func (a *Actuator) prepareGardenletChartValues(
 	ctx context.Context,
 	log logr.Logger,
-	shootClient kubernetes.Interface,
-	managedSeed *seedmanagementv1alpha1.ManagedSeed,
+	obj client.Object,
+	targetClient client.Client,
+	gardenletDeployment *seedmanagementv1alpha1.GardenletDeployment,
 	seed *gardencorev1beta1.Seed,
-	gardenletConfig *gardenletv1alpha1.GardenletConfiguration,
+	componentConfig *gardenletv1alpha1.GardenletConfiguration,
 	bootstrap seedmanagementv1alpha1.Bootstrap,
 	mergeWithParent bool,
-	shoot *gardencorev1beta1.Shoot,
-) (map[string]any, error) {
+) (
+	map[string]any,
+	error,
+) {
 	// Merge gardenlet deployment with parent values
-	deployment, err := a.ValuesHelper.MergeGardenletDeployment(managedSeed.Spec.Gardenlet.Deployment, shoot)
+	deployment, err := a.ValuesHelper.MergeGardenletDeployment(gardenletDeployment)
 	if err != nil {
 		return nil, err
 	}
 
 	// Merge gardenlet configuration with parent if specified
 	if mergeWithParent {
-		gardenletConfig, err = a.ValuesHelper.MergeGardenletConfiguration(gardenletConfig)
+		componentConfig, err = a.ValuesHelper.MergeGardenletConfiguration(componentConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -608,15 +551,15 @@ func (a *Actuator) prepareGardenletChartValues(
 		log,
 		a.GardenClient,
 		a.GardenConfig,
-		shootClient.Client(),
+		targetClient,
 		a.Recorder,
-		managedSeed,
+		obj,
 		seed,
 		a.ValuesHelper,
 		bootstrap,
-		ensureGardenletEnvironment(deployment, shoot.Spec.DNS),
-		gardenletConfig,
-		a.GardenNamespaceShoot,
+		ensureGardenletEnvironment(deployment, a.GetTargetDomain()),
+		componentConfig,
+		a.GardenNamespaceTarget,
 	)
 }
 
@@ -687,12 +630,12 @@ func PrepareGardenletChartValues(
 	)
 }
 
-// ensureGardenletEnvironment sets the KUBERNETES_SERVICE_HOST to the API of the ManagedSeed cluster.
-// This is needed so that the deployed gardenlet can properly set the network policies allowing
-// access of control plane components of the hosted shoots to the API server of the (managed) seed.
-func ensureGardenletEnvironment(deployment *seedmanagementv1alpha1.GardenletDeployment, dns *gardencorev1beta1.DNS) *seedmanagementv1alpha1.GardenletDeployment {
+// ensureGardenletEnvironment sets the KUBERNETES_SERVICE_HOST to the provided domain.
+// This may be needed so that the deployed gardenlet can properly set the network policies allowing access of control
+// plane components of the hosted shoots to the API server of the seed.
+func ensureGardenletEnvironment(deployment *seedmanagementv1alpha1.GardenletDeployment, domain string) *seedmanagementv1alpha1.GardenletDeployment {
 	const kubernetesServiceHost = "KUBERNETES_SERVICE_HOST"
-	var shootDomain = ""
+	var serviceHost = ""
 
 	if deployment.Env == nil {
 		deployment.Env = []corev1.EnvVar{}
@@ -704,16 +647,16 @@ func ensureGardenletEnvironment(deployment *seedmanagementv1alpha1.GardenletDepl
 		}
 	}
 
-	if dns != nil && dns.Domain != nil && len(*dns.Domain) != 0 {
-		shootDomain = gardenerutils.GetAPIServerDomain(*dns.Domain)
+	if len(domain) != 0 {
+		serviceHost = gardenerutils.GetAPIServerDomain(domain)
 	}
 
-	if len(shootDomain) != 0 {
+	if len(serviceHost) != 0 {
 		deployment.Env = append(
 			deployment.Env,
 			corev1.EnvVar{
 				Name:  kubernetesServiceHost,
-				Value: shootDomain,
+				Value: serviceHost,
 			},
 		)
 	}
@@ -752,7 +695,7 @@ func prepareGardenClientConnectionWithBootstrap(
 			return "", err
 		}
 	} else if obj.GetAnnotations()[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRenewKubeconfig {
-		// Also remove the kubeconfig if the renew-kubeconfig operation annotation is set on the ManagedSeed resource.
+		// Also remove the kubeconfig if the renew-kubeconfig operation annotation is set on the resource.
 		log.Info("Renewing gardenlet kubeconfig secret due to operation annotation")
 		recorder.Event(obj, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Renewing gardenlet kubeconfig secret due to operation annotation")
 
@@ -812,7 +755,10 @@ func createBootstrapKubeconfig(
 	bootstrap seedmanagementv1alpha1.Bootstrap,
 	address *string,
 	caCert []byte,
-) (string, error) {
+) (
+	string,
+	error,
+) {
 	var (
 		err                 error
 		bootstrapKubeconfig []byte
@@ -866,13 +812,8 @@ func createBootstrapKubeconfig(
 	return string(bootstrapKubeconfig), nil
 }
 
-func shootReconciled(shoot *gardencorev1beta1.Shoot) bool {
-	lastOp := shoot.Status.LastOperation
-	return shoot.Generation == shoot.Status.ObservedGeneration && lastOp != nil && lastOp.State == gardencorev1beta1.LastOperationStateSucceeded
-}
-
-func updateCondition(clock clock.Clock, status *seedmanagementv1alpha1.ManagedSeedStatus, ct gardencorev1beta1.ConditionType, cs gardencorev1beta1.ConditionStatus, reason, message string) {
-	condition := v1beta1helper.GetOrInitConditionWithClock(clock, status.Conditions, ct)
+func updateCondition(clock clock.Clock, conditions []gardencorev1beta1.Condition, cs gardencorev1beta1.ConditionStatus, reason, message string) []gardencorev1beta1.Condition {
+	condition := v1beta1helper.GetOrInitConditionWithClock(clock, conditions, seedmanagementv1alpha1.SeedRegistered)
 	condition = v1beta1helper.UpdatedConditionWithClock(clock, condition, cs, reason, message)
-	status.Conditions = v1beta1helper.MergeConditions(status.Conditions, condition)
+	return v1beta1helper.MergeConditions(conditions, condition)
 }

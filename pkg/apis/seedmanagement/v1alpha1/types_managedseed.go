@@ -174,7 +174,6 @@ type ManagedSeedStatus struct {
 const (
 	// ManagedSeedShootReconciled is a condition type for indicating whether the ManagedSeed's shoot has been reconciled.
 	ManagedSeedShootReconciled gardencorev1beta1.ConditionType = "ShootReconciled"
-	// ManagedSeedSeedRegistered is a condition type for indicating whether the ManagedSeed's seed has been registered,
-	// either directly or by deploying gardenlet into the shoot.
-	ManagedSeedSeedRegistered gardencorev1beta1.ConditionType = "SeedRegistered"
+	// SeedRegistered is a condition type for indicating whether the seed has been registered by gardenlet.
+	SeedRegistered gardencorev1beta1.ConditionType = "SeedRegistered"
 )

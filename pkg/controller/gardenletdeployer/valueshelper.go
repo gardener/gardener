@@ -12,7 +12,6 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/imagevector"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
@@ -26,7 +25,7 @@ import (
 // as well as computing the values to be used when applying the gardenlet chart.
 type ValuesHelper interface {
 	// MergeGardenletDeployment merges the given GardenletDeployment with the values from the parent gardenlet.
-	MergeGardenletDeployment(*seedmanagementv1alpha1.GardenletDeployment, *gardencorev1beta1.Shoot) (*seedmanagementv1alpha1.GardenletDeployment, error)
+	MergeGardenletDeployment(*seedmanagementv1alpha1.GardenletDeployment) (*seedmanagementv1alpha1.GardenletDeployment, error)
 	// MergeGardenletConfiguration merges the given GardenletConfiguration with the parent GardenletConfiguration.
 	MergeGardenletConfiguration(config *gardenletv1alpha1.GardenletConfiguration) (*gardenletv1alpha1.GardenletConfiguration, error)
 	// GetGardenletChartValues computes the values to be used when applying the gardenlet chart.
@@ -46,7 +45,7 @@ func NewValuesHelper(config *config.GardenletConfiguration) ValuesHelper {
 }
 
 // MergeGardenletDeployment merges the given GardenletDeployment with the values from the parent gardenlet.
-func (vp *valuesHelper) MergeGardenletDeployment(deployment *seedmanagementv1alpha1.GardenletDeployment, _ *gardencorev1beta1.Shoot) (*seedmanagementv1alpha1.GardenletDeployment, error) {
+func (vp *valuesHelper) MergeGardenletDeployment(deployment *seedmanagementv1alpha1.GardenletDeployment) (*seedmanagementv1alpha1.GardenletDeployment, error) {
 	// Convert deployment object to values
 	deploymentValues, err := utils.ToValuesMap(deployment)
 	if err != nil {

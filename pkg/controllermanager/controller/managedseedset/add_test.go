@@ -378,7 +378,7 @@ var _ = Describe("Add", func() {
 
 		It("should return true for create, update and delete event when pending replica has ManagedSeedPreparingReason status and ManagedSeed's Seed is registered", func() {
 			newManagedSeed.Status.Conditions = []gardencorev1beta1.Condition{
-				{Type: seedmanagementv1alpha1.ManagedSeedSeedRegistered, Status: gardencorev1beta1.ConditionTrue},
+				{Type: seedmanagementv1alpha1.SeedRegistered, Status: gardencorev1beta1.ConditionTrue},
 			}
 			managedSeedSet.Status.PendingReplica = &seedmanagementv1alpha1.PendingReplica{
 				Name:   newManagedSeed.Name,

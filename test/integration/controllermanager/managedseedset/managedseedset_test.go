@@ -66,7 +66,7 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 			managedSeedList.Items[0].Status = seedmanagementv1alpha1.ManagedSeedStatus{
 				ObservedGeneration: managedSeedList.Items[0].GetGeneration(),
 				Conditions: []gardencorev1beta1.Condition{
-					{Type: seedmanagementv1alpha1.ManagedSeedSeedRegistered, Status: gardencorev1beta1.ConditionTrue},
+					{Type: seedmanagementv1alpha1.SeedRegistered, Status: gardencorev1beta1.ConditionTrue},
 				},
 			}
 			Expect(testClient.Status().Patch(ctx, &managedSeedList.Items[0], patch)).To(Succeed())

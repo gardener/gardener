@@ -2,6 +2,6 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-//go:generate mockgen -destination=mocks.go -package=mock github.com/gardener/gardener/pkg/controller/gardenletdeployer Actuator,ValuesHelper
+//go:generate mockgen -destination=mocks.go -package=mock github.com/gardener/gardener/pkg/controller/gardenletdeployer Interface,ValuesHelper
 
 package mock
