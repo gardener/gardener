@@ -61,10 +61,9 @@ func (k *kubeStateMetrics) getResourceConfigs(genericTokenKubeconfigSecretName s
 	)
 
 	if k.values.ClusterType == component.ClusterTypeSeed {
-		serviceAccount := k.emptyServiceAccount()
+		serviceAccount := k.serviceAccount()
 
 		configs = append(configs,
-			component.ResourceConfig{Obj: serviceAccount, Class: component.Runtime, MutateFn: func() { k.reconcileServiceAccount(serviceAccount) }},
 			component.ResourceConfig{Obj: clusterRoleBinding, Class: component.Application, MutateFn: func() { k.reconcileClusterRoleBinding(clusterRoleBinding, clusterRole, serviceAccount) }},
 			component.ResourceConfig{Obj: deployment, Class: component.Runtime, MutateFn: func() { k.reconcileDeployment(deployment, serviceAccount, "", nil) }},
 			component.ResourceConfig{Obj: pdb, Class: component.Runtime, MutateFn: func() { k.reconcilePodDisruptionBudget(pdb, deployment) }},
@@ -101,13 +100,11 @@ func (k *kubeStateMetrics) getResourceConfigs(genericTokenKubeconfigSecretName s
 	return configs
 }
 
-func (k *kubeStateMetrics) emptyServiceAccount() *corev1.ServiceAccount {
-	return &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "kube-state-metrics" + k.values.NameSuffix, Namespace: k.namespace}}
-}
-
-func (k *kubeStateMetrics) reconcileServiceAccount(serviceAccount *corev1.ServiceAccount) {
+func (k *kubeStateMetrics) serviceAccount() *corev1.ServiceAccount {
+	serviceAccount := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "kube-state-metrics" + k.values.NameSuffix, Namespace: k.namespace}}
 	serviceAccount.Labels = k.getLabels()
 	serviceAccount.AutomountServiceAccountToken = ptr.To(false)
+	return serviceAccount
 }
 
 func (k *kubeStateMetrics) newShootAccessSecret() *gardenerutils.AccessSecret {
