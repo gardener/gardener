@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -128,6 +129,13 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 	}
 
 	if k.values.ClusterType == component.ClusterTypeSeed {
+		var scrapeConfig *monitoringv1alpha1.ScrapeConfig
+		if k.values.NameSuffix == SuffixSeed {
+			scrapeConfig = k.scrapeConfigSeed()
+		} else if k.values.NameSuffix == SuffixRuntime {
+			scrapeConfig = k.scrapeConfigGarden()
+		}
+
 		clusterRole := k.clusterRole()
 		serviceAccount := k.serviceAccount()
 		deployment = k.deployment(serviceAccount, "", nil)
@@ -136,7 +144,9 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 			serviceAccount,
 			k.clusterRoleBinding(clusterRole, serviceAccount),
 			deployment,
-			k.podDisruptionBudget(deployment)); err != nil {
+			k.podDisruptionBudget(deployment),
+			k.scrapeConfigCache(),
+			scrapeConfig); err != nil {
 			return err
 		}
 	}
