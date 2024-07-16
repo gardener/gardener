@@ -501,14 +501,14 @@ spec:
               audience: {{ .Values.global.apiserver.admission.mutatingWebhook.token.audience }}
           {{- end }}
       {{- end }}
-      {{- if .Values.global.apiserver.workloadIdentity.token.signing.secretName }}
+      {{- if .Values.global.apiserver.workloadIdentity.token.signing }}
       - name: gardener-apiserver-workload-identity-signing-key
         secret:
+          {{- if .Values.global.apiserver.workloadIdentity.token.signing.secretName }}
           secretName: {{ .Values.global.apiserver.workloadIdentity.token.signing.secretName }}
-      {{- else if .Values.global.apiserver.workloadIdentity.token.signing.key  }}
-      - name: gardener-apiserver-workload-identity-signing-key
-        secret:
+          {{- else if .Values.global.apiserver.workloadIdentity.token.signing.key  }}
           secretName: gardener-apiserver-workload-identity-signing-key
+          {{- end }}
       {{- end }}
 {{- if .Values.global.apiserver.etcd.useSidecar }}
 ---
