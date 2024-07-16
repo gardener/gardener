@@ -136,7 +136,7 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 		}
 	}
 
-	serializedResources, err := registry2.AddAllAndSerialize()
+	serializedResources, err := registry2.AddAllAndSerialize(k.service())
 	if err != nil {
 		return err
 	}

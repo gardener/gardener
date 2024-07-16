@@ -40,7 +40,6 @@ import (
 
 func (k *kubeStateMetrics) getResourceConfigs(genericTokenKubeconfigSecretName string, shootAccessSecret *gardenerutils.AccessSecret) component.ResourceConfigs {
 	var (
-		service                      = k.emptyService()
 		deployment                   = k.emptyDeployment()
 		vpa                          = k.emptyVerticalPodAutoscaler()
 		pdb                          = k.emptyPodDisruptionBudget()
@@ -52,7 +51,6 @@ func (k *kubeStateMetrics) getResourceConfigs(genericTokenKubeconfigSecretName s
 		customResourceStateConfigMap = k.emptyCustomResourceStateConfigMap()
 
 		configs = component.ResourceConfigs{
-			{Obj: service, Class: component.Runtime, MutateFn: func() { k.reconcileService(service) }},
 			{Obj: vpa, Class: component.Runtime, MutateFn: func() { k.reconcileVerticalPodAutoscaler(vpa, deployment) }},
 			{Obj: customResourceStateConfigMap, Class: component.Runtime, MutateFn: func() { k.reconcileCustomResourceStateConfigMap(customResourceStateConfigMap) }},
 		}
@@ -173,11 +171,8 @@ func (k *kubeStateMetrics) clusterRoleBinding(clusterRole *rbacv1.ClusterRole, s
 	return clusterRoleBinding
 }
 
-func (k *kubeStateMetrics) emptyService() *corev1.Service {
-	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "kube-state-metrics" + k.values.NameSuffix, Namespace: k.namespace}}
-}
-
-func (k *kubeStateMetrics) reconcileService(service *corev1.Service) {
+func (k *kubeStateMetrics) service() *corev1.Service {
+	service := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "kube-state-metrics" + k.values.NameSuffix, Namespace: k.namespace}}
 	service.Labels = k.getLabels()
 
 	metricsPort := networkingv1.NetworkPolicyPort{
@@ -203,6 +198,8 @@ func (k *kubeStateMetrics) reconcileService(service *corev1.Service) {
 			Protocol:   corev1.ProtocolTCP,
 		},
 	}, corev1.ServiceTypeClusterIP)
+
+	return service
 }
 
 func (k *kubeStateMetrics) emptyDeployment() *appsv1.Deployment {
