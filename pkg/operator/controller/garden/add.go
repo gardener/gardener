@@ -33,9 +33,6 @@ func AddToManager(
 		componentImageVectors imagevectorutils.ComponentImageVectors
 		err                   error
 	)
-	if gardenClientMap == nil {
-		return fmt.Errorf("gardenClientMap cannot be nil")
-	}
 
 	if path := os.Getenv(imagevectorutils.ComponentOverrideEnv); path != "" {
 		componentImageVectors, err = imagevectorutils.ReadComponentOverwriteFile(path)

@@ -14,41 +14,37 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
-	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controller/networkpolicy"
 	"github.com/gardener/gardener/pkg/controller/service"
 	"github.com/gardener/gardener/pkg/controller/vpaevictionrequirements"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	"github.com/gardener/gardener/pkg/operator/controller/controllerregistrar"
-	"github.com/gardener/gardener/pkg/operator/controller/extension"
+	"github.com/gardener/gardener/pkg/operator/controller/extension/virtualcluster"
 	"github.com/gardener/gardener/pkg/operator/controller/garden"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // AddToManager adds all controllers to the given manager.
-func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.OperatorConfiguration) error {
+func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.OperatorConfiguration, gardenClientMap clientmap.ClientMap) error {
 	identity, err := gardenerutils.DetermineIdentity()
 	if err != nil {
 		return err
-	}
-
-	gardenClientMap, err := clientmapbuilder.
-		NewGardenClientMapBuilder().
-		WithRuntimeClient(mgr.GetClient()).
-		WithClientConnectionConfig(&cfg.VirtualClientConnection).
-		Build(mgr.GetLogger())
-	if err != nil {
-		return fmt.Errorf("failed to build garden ClientMap: %w", err)
 	}
 
 	if err := garden.AddToManager(ctx, mgr, cfg, identity, gardenClientMap); err != nil {
 		return err
 	}
 
-	if err := extension.AddToManager(ctx, mgr, cfg, gardenClientMap); err != nil {
-		return err
+	if err := (&virtualcluster.Reconciler{
+		Config:          *cfg,
+		GardenNamespace: v1beta1constants.GardenNamespace,
+		GardenClientMap: gardenClientMap,
+	}).AddToManager(ctx, mgr); err != nil {
+		return fmt.Errorf("failed to add Extension virtual cluster controller: %w", err)
 	}
 
 	if err := (&controllerregistrar.Reconciler{

@@ -35,6 +35,7 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/webhook/certificates"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	"github.com/gardener/gardener/pkg/features"
@@ -185,8 +186,21 @@ func run(ctx context.Context, log logr.Logger, cfg *config.OperatorConfiguration
 		return fmt.Errorf("failed adding webhook handlers to manager: %w", err)
 	}
 
+	gardenClientMap, err := clientmapbuilder.
+		NewGardenClientMapBuilder().
+		WithRuntimeClient(mgr.GetClient()).
+		WithClientConnectionConfig(&cfg.VirtualClientConnection).
+		WithGardenNamespace(v1beta1constants.GardenNamespace).
+		Build(mgr.GetLogger())
+	if err != nil {
+		return fmt.Errorf("failed to build garden ClientMap: %w", err)
+	}
+	if err := mgr.Add(gardenClientMap); err != nil {
+		return err
+	}
+
 	log.Info("Adding controllers to manager")
-	if err := controller.AddToManager(ctx, mgr, cfg); err != nil {
+	if err := controller.AddToManager(ctx, mgr, cfg, gardenClientMap); err != nil {
 		return fmt.Errorf("failed adding controllers to manager: %w", err)
 	}
 

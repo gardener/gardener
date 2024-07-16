@@ -29,6 +29,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
@@ -36,7 +37,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
-	"github.com/gardener/gardener/pkg/operator/controller/extension"
+	"github.com/gardener/gardener/pkg/operator/controller/extension/virtualcluster"
 	"github.com/gardener/gardener/pkg/operator/features"
 	operatorwebhook "github.com/gardener/gardener/pkg/operator/webhook"
 	defaultingwebhook "github.com/gardener/gardener/pkg/operator/webhook/defaulting"
@@ -168,12 +169,16 @@ var _ = BeforeSuite(func() {
 	)
 	Expect(err).NotTo(HaveOccurred())
 
-	virtualClusterClientMap := fakeclientmap.NewClientMapBuilder().WithClientSetForKey(keys.ForGarden(&operatorv1alpha1.Garden{ObjectMeta: metav1.ObjectMeta{Name: gardenName}}), testClientSet).Build()
+	gardenClientMap := fakeclientmap.NewClientMapBuilder().WithClientSetForKey(keys.ForGarden(&operatorv1alpha1.Garden{ObjectMeta: metav1.ObjectMeta{Name: gardenName}}), testClientSet).Build()
 
 	By("Register controller")
-	Expect(extension.AddToManager(ctx, mgr, &config.OperatorConfiguration{
-		Controllers: config.ControllerConfiguration{},
-	}, virtualClusterClientMap)).To(Succeed())
+	Expect((&virtualcluster.Reconciler{
+		Config: config.OperatorConfiguration{
+			Controllers: config.ControllerConfiguration{},
+		},
+		GardenNamespace: v1beta1constants.GardenNamespace,
+		GardenClientMap: gardenClientMap,
+	}).AddToManager(ctx, mgr)).Should(Succeed())
 
 	By("Register defaulting webhook")
 	Expect(defaultingwebhook.AddToManager(mgr)).To(Succeed())
