@@ -69,7 +69,9 @@ var _ = Describe("Reconciler", func() {
 			},
 		}
 
-		reconciler = &Reconciler{GardenClient: gardenClient, Actuator: actuator, Config: cfg}
+		reconciler = &Reconciler{GardenClient: gardenClient, Config: cfg}
+		Actuator = actuator
+		DeferCleanup(func() { Actuator = nil })
 
 		ctx = context.TODO()
 		request = reconcile.Request{NamespacedName: client.ObjectKey{Namespace: namespace, Name: name}}

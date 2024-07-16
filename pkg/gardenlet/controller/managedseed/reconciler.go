@@ -10,6 +10,8 @@ import (
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -26,10 +28,13 @@ import (
 
 // Reconciler reconciles the ManagedSeed.
 type Reconciler struct {
+	GardenConfig          *rest.Config
+	GardenAPIReader       client.Reader
 	GardenClient          client.Client
-	Actuator              gardenletdeployer.Actuator
+	SeedClient            client.Client
 	Config                config.GardenletConfiguration
 	Clock                 clock.Clock
+	Recorder              record.EventRecorder
 	ShootClientMap        clientmap.ClientMap
 	GardenNamespaceGarden string
 	GardenNamespaceShoot  string
@@ -51,16 +56,40 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
+	actuator := r.newActuator()
+
 	if ms.DeletionTimestamp != nil {
-		return r.delete(ctx, log, ms)
+		return r.delete(ctx, log, ms, actuator)
 	}
-	return r.reconcile(ctx, log, ms)
+	return r.reconcile(ctx, log, ms, actuator)
+}
+
+// Actuator is exposed for testing.
+var Actuator gardenletdeployer.Interface
+
+func (r *Reconciler) newActuator() gardenletdeployer.Interface {
+	if Actuator != nil {
+		return Actuator
+	}
+
+	return &gardenletdeployer.Actuator{
+		GardenConfig:         r.GardenConfig,
+		GardenAPIReader:      r.GardenAPIReader,
+		GardenClient:         r.GardenClient,
+		SeedClient:           r.SeedClient,
+		ShootClientMap:       r.ShootClientMap,
+		Clock:                r.Clock,
+		ValuesHelper:         gardenletdeployer.NewValuesHelper(&r.Config),
+		Recorder:             r.Recorder,
+		GardenNamespaceShoot: r.GardenNamespaceShoot,
+	}
 }
 
 func (r *Reconciler) reconcile(
 	ctx context.Context,
 	log logr.Logger,
 	ms *seedmanagementv1alpha1.ManagedSeed,
+	actuator gardenletdeployer.Interface,
 ) (
 	result reconcile.Result,
 	err error,
@@ -84,7 +113,7 @@ func (r *Reconciler) reconcile(
 	// Reconcile creation or update
 	log.V(1).Info("Reconciling")
 	var wait bool
-	if status, wait, err = r.Actuator.Reconcile(ctx, log, ms); err != nil {
+	if status, wait, err = actuator.Reconcile(ctx, log, ms); err != nil {
 		return reconcile.Result{}, fmt.Errorf("could not reconcile ManagedSeed %s creation or update: %w", client.ObjectKeyFromObject(ms), err)
 	}
 	log.V(1).Info("Reconciliation finished")
@@ -102,6 +131,7 @@ func (r *Reconciler) delete(
 	ctx context.Context,
 	log logr.Logger,
 	ms *seedmanagementv1alpha1.ManagedSeed,
+	actuator gardenletdeployer.Interface,
 ) (
 	result reconcile.Result,
 	err error,
@@ -126,7 +156,7 @@ func (r *Reconciler) delete(
 
 	// Reconcile deletion
 	log.V(1).Info("Deletion")
-	if status, wait, removeFinalizer, err = r.Actuator.Delete(ctx, log, ms); err != nil {
+	if status, wait, removeFinalizer, err = actuator.Delete(ctx, log, ms); err != nil {
 		return reconcile.Result{}, fmt.Errorf("could not reconcile ManagedSeed %s deletion: %w", client.ObjectKeyFromObject(ms), err)
 	}
 	log.V(1).Info("Deletion finished")

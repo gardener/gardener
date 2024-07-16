@@ -26,7 +26,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	"github.com/gardener/gardener/pkg/controller/gardenletdeployer"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -42,31 +41,29 @@ func (r *Reconciler) AddToManager(
 	gardenCluster cluster.Cluster,
 	seedCluster cluster.Cluster,
 ) error {
+	if r.GardenConfig == nil {
+		r.GardenConfig = gardenCluster.GetConfig()
+	}
+	if r.GardenAPIReader == nil {
+		r.GardenAPIReader = gardenCluster.GetAPIReader()
+	}
 	if r.GardenClient == nil {
 		r.GardenClient = gardenCluster.GetClient()
 	}
+	if r.SeedClient == nil {
+		r.SeedClient = seedCluster.GetClient()
+	}
 	if r.Clock == nil {
 		r.Clock = clock.RealClock{}
+	}
+	if r.Recorder == nil {
+		r.Recorder = gardenCluster.GetEventRecorderFor(ControllerName + "-controller")
 	}
 	if r.GardenNamespaceGarden == "" {
 		r.GardenNamespaceGarden = v1beta1constants.GardenNamespace
 	}
 	if r.GardenNamespaceShoot == "" {
 		r.GardenNamespaceShoot = v1beta1constants.GardenNamespace
-	}
-
-	if r.Actuator == nil {
-		r.Actuator = gardenletdeployer.NewActuator(
-			gardenCluster.GetConfig(),
-			gardenCluster.GetAPIReader(),
-			gardenCluster.GetClient(),
-			seedCluster.GetClient(),
-			r.ShootClientMap,
-			r.Clock,
-			gardenletdeployer.NewValuesHelper(&r.Config),
-			gardenCluster.GetEventRecorderFor(ControllerName+"-controller"),
-			r.GardenNamespaceShoot,
-		)
 	}
 
 	c, err := builder.

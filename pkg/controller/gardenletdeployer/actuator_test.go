@@ -51,7 +51,7 @@ const (
 	backupSecretName       = "test-backup-secret"
 )
 
-var _ = Describe("Actuator", func() {
+var _ = Describe("Interface", func() {
 	var (
 		ctrl *gomock.Controller
 
@@ -66,7 +66,7 @@ var _ = Describe("Actuator", func() {
 		recorder          *mockrecord.MockEventRecorder
 
 		log      logr.Logger
-		actuator Actuator
+		actuator Interface
 
 		ctx context.Context
 
@@ -106,7 +106,17 @@ var _ = Describe("Actuator", func() {
 		shootClientSet.EXPECT().ChartApplier().Return(shootChartApplier).AnyTimes()
 
 		log = logr.Discard()
-		actuator = NewActuator(&rest.Config{}, gardenAPIReader, gardenClient, seedClient, shootClientMap, clock.RealClock{}, vh, recorder, namespace)
+		actuator = &Actuator{
+			GardenConfig:         &rest.Config{},
+			GardenAPIReader:      gardenAPIReader,
+			GardenClient:         gardenClient,
+			SeedClient:           seedClient,
+			ShootClientMap:       shootClientMap,
+			Clock:                clock.RealClock{},
+			ValuesHelper:         vh,
+			Recorder:             recorder,
+			GardenNamespaceShoot: namespace,
+		}
 
 		ctx = context.TODO()
 
