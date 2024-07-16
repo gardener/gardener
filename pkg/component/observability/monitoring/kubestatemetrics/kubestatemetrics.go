@@ -124,7 +124,9 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 	}
 
 	if k.values.ClusterType == component.ClusterTypeSeed {
-		if err := registry2.Add(k.clusterRole()); err != nil {
+		if err := registry2.Add(
+			k.clusterRole(),
+			k.serviceAccount()); err != nil {
 			return err
 		}
 	}
