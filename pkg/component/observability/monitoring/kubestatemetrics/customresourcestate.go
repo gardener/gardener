@@ -12,9 +12,9 @@ import (
 )
 
 const (
-	customResourceStateConfigMountDir  = "/config"
-	customResourceStateConfigMountFile = "custom-resource-state.yaml"
-	customResourceStateConfigMapName   = "custom-resource-state-config"
+	customResourceStateConfigMountDir      = "/config"
+	customResourceStateConfigMountFile     = "custom-resource-state.yaml"
+	customResourceStateConfigMapNamePrefix = "custom-resource-state-config"
 )
 
 func newCustomResourceStateMetricNameForVPA(path, valuePath []string) string {

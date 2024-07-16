@@ -152,6 +152,7 @@ func (k *kubeStateMetrics) deployment(
 	serviceAccount *corev1.ServiceAccount,
 	genericTokenKubeconfigSecretName string,
 	shootAccessSecret *gardenerutils.AccessSecret,
+	customResourceStateConfigMapName string,
 ) *appsv1.Deployment {
 	var (
 		deployment     = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-state-metrics" + k.values.NameSuffix, Namespace: k.namespace}}
@@ -718,9 +719,10 @@ func (k *kubeStateMetrics) nameSuffix() string {
 func (k *kubeStateMetrics) customResourceStateConfigMap() *corev1.ConfigMap {
 	customResourceStateConfig, err := yaml.Marshal(NewCustomResourceStateConfig())
 	utilruntime.Must(err)
-	cm := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: customResourceStateConfigMapName, Namespace: k.namespace}}
+	cm := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: customResourceStateConfigMapNamePrefix, Namespace: k.namespace}}
 	cm.Data = map[string]string{
 		customResourceStateConfigMountFile: string(customResourceStateConfig),
 	}
+	utilruntime.Must(kubernetesutils.MakeUnique(cm))
 	return cm
 }
