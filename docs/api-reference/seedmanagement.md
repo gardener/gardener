@@ -105,6 +105,23 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <p>Config is the GardenletConfiguration used to configure gardenlet.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>kubeconfigSecretRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#localobjectreference-v1-core">
+Kubernetes core/v1.LocalObjectReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KubeconfigSecretRef is a reference to a secret containing a kubeconfig for the cluster to which gardenlet should
+be deployed. This is only used by gardener-operator for a very first gardenlet deployment. After that, gardenlet
+will continuously upgrade itself. If this field is empty, gardener-operator deploys it into its own runtime
+cluster.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -795,6 +812,23 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <td>
 <em>(Optional)</em>
 <p>Config is the GardenletConfiguration used to configure gardenlet.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>kubeconfigSecretRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#localobjectreference-v1-core">
+Kubernetes core/v1.LocalObjectReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KubeconfigSecretRef is a reference to a secret containing a kubeconfig for the cluster to which gardenlet should
+be deployed. This is only used by gardener-operator for a very first gardenlet deployment. After that, gardenlet
+will continuously upgrade itself. If this field is empty, gardener-operator deploys it into its own runtime
+cluster.</p>
 </td>
 </tr>
 </tbody>

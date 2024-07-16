@@ -5,6 +5,7 @@
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
@@ -49,6 +50,12 @@ type GardenletSpec struct {
 	// Config is the GardenletConfiguration used to configure gardenlet.
 	// +optional
 	Config runtime.RawExtension `json:"config,omitempty" protobuf:"bytes,2,opt,name=config"`
+	// KubeconfigSecretRef is a reference to a secret containing a kubeconfig for the cluster to which gardenlet should
+	// be deployed. This is only used by gardener-operator for a very first gardenlet deployment. After that, gardenlet
+	// will continuously upgrade itself. If this field is empty, gardener-operator deploys it into its own runtime
+	// cluster.
+	// +optional
+	KubeconfigSecretRef *corev1.LocalObjectReference `json:"kubeconfigSecretRef,omitempty" protobuf:"bytes,3,opt,name=kubeconfigSecretRef"`
 }
 
 // GardenletSelfDeployment specifies certain gardenlet deployment parameters, such as the number of replicas,

@@ -1,0 +1,42 @@
+---
+apiVersion: seedmanagement.gardener.cloud/v1alpha1
+kind: Gardenlet
+metadata:
+  name: local
+spec:
+  deployment:
+    helm:
+      ociRepository:
+        ref: gardenlet-chart:tag
+#   replicaCount: 2
+#   revisionHistoryLimit: 2
+#   serviceAccountName: gardenlet
+#   image: # usually not needed since image is implicitly defined by above helm chart
+#     repository: gardenlet-image:tag
+#     tag: latest
+#     pullPolicy: IfNotPresent
+#   resources:
+#     requests:
+#       cpu: 100m
+#       memory: 100Mi
+#     limits:
+#       cpu: 2000m
+#       memory: 512Mi
+#   podAnnotations:
+#     foo: bar
+#   podLabels:
+#     foo: bar
+#   additionalVolumes: []
+#   additionalVolumeMounts: []
+#   env: []
+#   vpa: true
+  config:
+    # <See `example/20-componentconfig-gardenlet.yaml` for more details>
+    apiVersion: gardenlet.config.gardener.cloud/v1alpha1
+    kind: GardenletConfiguration
+    seedConfig:
+      spec:
+        # <See `example/50-seed.yaml` for more details>
+# kubeconfigSecretRef:
+#   name: kubeconfig-to-target-cluster
+#   namespace: garden

@@ -480,6 +480,7 @@ func autoConvert_v1alpha1_GardenletSpec_To_seedmanagement_GardenletSpec(in *Gard
 	if err := runtime.Convert_runtime_RawExtension_To_runtime_Object(&in.Config, &out.Config, s); err != nil {
 		return err
 	}
+	// WARNING: in.KubeconfigSecretRef requires manual conversion: does not exist in peer-type
 	return nil
 }
 

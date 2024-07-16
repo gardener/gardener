@@ -7,7 +7,7 @@ spec:
   deployment: # gardenlet deployment parameters
     helm:
       ociRepository:
-        ref: local-skaffold/gardenlet/chart:v0.0.0
+        repository: europe-docker.pkg.dev/gardener-project/releases/charts/gardener/gardenlet
   # image: # here you can overwrite the gardenlet image itself (typically not needed since the OCI URL above implicitly defines the image/version)
   #   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/gardenlet
   #   tag: latest
@@ -37,3 +37,7 @@ spec:
     apiVersion: gardenlet.config.gardener.cloud/v1alpha1
     kind: GardenletConfiguration
     <See `20-componentconfig-gardenlet.yaml` for more details>
+# For the very first deployment of a gardenlet via gardener-operator, you can specify a secret containing a kubeconfig
+# for the target cluster. gardener-operator will then attempt to deploy gardenlet into it.
+# kubeconfigSecretRef:
+#   name: <name-to-secret-containing-kubeconfig>
