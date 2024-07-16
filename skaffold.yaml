@@ -672,7 +672,7 @@ build:
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd/logrotate
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd/templates/scripts/health-monitor.tpl.sh
-            - pkg/component/extensions/operatingsystemconfig/original/components/containerd/templates/scripts/init.tpl.sh
+            - pkg/component/extensions/operatingsystemconfig/original/components/containerd/templates/scripts/init.sh
             - pkg/component/extensions/operatingsystemconfig/original/components/kubelet
             - pkg/component/extensions/operatingsystemconfig/original/components/nodeagent
             - pkg/component/extensions/operatingsystemconfig/original/components/valitail
@@ -1036,7 +1036,7 @@ build:
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd/logrotate
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd/templates/scripts/health-monitor.tpl.sh
-            - pkg/component/extensions/operatingsystemconfig/original/components/containerd/templates/scripts/init.tpl.sh
+            - pkg/component/extensions/operatingsystemconfig/original/components/containerd/templates/scripts/init.sh
             - pkg/component/extensions/operatingsystemconfig/original/components/gardeneruser
             - pkg/component/extensions/operatingsystemconfig/original/components/gardeneruser/templates/scripts/reconcile.tpl.sh
             - pkg/component/extensions/operatingsystemconfig/original/components/journald
@@ -1436,7 +1436,7 @@ build:
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd/logrotate
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd/templates/scripts/health-monitor.tpl.sh
-            - pkg/component/extensions/operatingsystemconfig/original/components/containerd/templates/scripts/init.tpl.sh
+            - pkg/component/extensions/operatingsystemconfig/original/components/containerd/templates/scripts/init.sh
             - pkg/component/extensions/operatingsystemconfig/original/components/kubelet
             - pkg/component/extensions/operatingsystemconfig/original/components/nodeagent
             - pkg/component/extensions/operatingsystemconfig/original/components/valitail
@@ -1463,6 +1463,7 @@ build:
             - pkg/nodeagent/controller/lease
             - pkg/nodeagent/controller/node
             - pkg/nodeagent/controller/operatingsystemconfig
+            - pkg/nodeagent/controller/operatingsystemconfig/templates/containerd-hosts.toml.tpl
             - pkg/nodeagent/controller/token
             - pkg/nodeagent/dbus
             - pkg/nodeagent/features
@@ -1482,6 +1483,7 @@ build:
             - pkg/utils/managedresources/builder
             - pkg/utils/retry
             - pkg/utils/secrets
+            - pkg/utils/structuredmap
             - pkg/utils/timewindow
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version

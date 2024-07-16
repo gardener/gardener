@@ -83,6 +83,9 @@ type Ensurer interface {
 	// EnsureAdditionalProvisionFiles ensures additional systemd files for the 'provision' OSC
 	// "old" might be "nil" and must always be checked.
 	EnsureAdditionalProvisionFiles(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *[]extensionsv1alpha1.File) error
+	// EnsureCRIConfig ensures the CRI config.
+	// "old" might be "nil" and must always be checked.
+	EnsureCRIConfig(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *extensionsv1alpha1.CRIConfig) error
 }
 
 // NewMutator creates a new controlplane mutator.
@@ -308,20 +311,26 @@ func (m *mutator) mutateOperatingSystemConfigReconcile(ctx context.Context, gctx
 	}
 
 	var (
-		oldFiles *[]extensionsv1alpha1.File
-		oldUnits *[]extensionsv1alpha1.Unit
+		oldFiles     *[]extensionsv1alpha1.File
+		oldUnits     *[]extensionsv1alpha1.Unit
+		oldCRIConfig *extensionsv1alpha1.CRIConfig
 	)
 
 	if oldOSC != nil {
 		oldFiles = &oldOSC.Spec.Files
 		oldUnits = &oldOSC.Spec.Units
+		oldCRIConfig = oldOSC.Spec.CRIConfig
 	}
 
 	if err := m.ensurer.EnsureAdditionalFiles(ctx, gctx, &osc.Spec.Files, oldFiles); err != nil {
 		return err
 	}
 
-	return m.ensurer.EnsureAdditionalUnits(ctx, gctx, &osc.Spec.Units, oldUnits)
+	if err := m.ensurer.EnsureAdditionalUnits(ctx, gctx, &osc.Spec.Units, oldUnits); err != nil {
+		return err
+	}
+
+	return m.ensurer.EnsureCRIConfig(ctx, gctx, osc.Spec.CRIConfig, oldCRIConfig)
 }
 
 func (m *mutator) ensureKubeletServiceUnitContent(ctx context.Context, gctx extensionscontextwebhook.GardenContext, kubeletVersion *semver.Version, content, oldContent *string) error {

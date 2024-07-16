@@ -94,6 +94,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, nil
 	}
 
+	log.Info("Applying containerd configuration")
+	if err := r.ReconcileContainerdConfig(ctx, log, osc.Spec.CRIConfig); err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed reconciling containerd configuration: %w", err)
+	}
+
+	log.Info("Applying containerd registries")
+	waitForRegistries, err := r.ReconcileContainerdRegistries(ctx, log, oscChanges.containerd)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed reconciling containerd registries: %w", err)
+	}
+
 	log.Info("Applying new or changed files")
 	if err := r.applyChangedFiles(ctx, log, oscChanges.files.changed); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed applying changed files: %w", err)
@@ -114,10 +125,25 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("failed reloading systemd daemon: %w", err)
 	}
 
+	// The containerd service stops as soon as units were removed that were required to run before (via containerd.service dropin).
+	// We want to start the service here explicitly (again) as a precautious measure.
+	log.Info("Starting containerd", "unitName", v1beta1constants.OperatingSystemConfigUnitNameContainerDService)
+	if err := r.DBus.Start(ctx, r.Recorder, node, v1beta1constants.OperatingSystemConfigUnitNameContainerDService); err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed starting containerd: %w", err)
+	}
+
 	log.Info("Executing unit commands (start/stop)")
-	mustRestartGardenerNodeAgent, err := r.executeUnitCommands(ctx, log, node, oscChanges.units.changed)
+	mustRestartGardenerNodeAgent, err := r.executeUnitCommands(ctx, log, node, oscChanges)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed executing unit commands: %w", err)
+	}
+
+	// After the node is prepared, we can wait for the registries to be configured.
+	// The ones with readiness probes should also succeed here since their cache/mirror pods
+	// can now start as workload in the cluster.
+	log.Info("Waiting for containerd registries to be configured")
+	if err := waitForRegistries(); err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed configuring containerd registries: %w", err)
 	}
 
 	log.Info("Removing no longer needed files")
@@ -366,34 +392,51 @@ func (r *Reconciler) removeDeletedUnits(ctx context.Context, log logr.Logger, no
 	return nil
 }
 
-func (r *Reconciler) executeUnitCommands(ctx context.Context, log logr.Logger, node client.Object, units []changedUnit) (bool, error) {
+func (r *Reconciler) executeUnitCommands(ctx context.Context, log logr.Logger, node client.Object, oscChanges *operatingSystemConfigChanges) (bool, error) {
 	var (
 		mustRestartGardenerNodeAgent bool
 		fns                          []flow.TaskFn
+
+		restart = func(ctx context.Context, unitName string) error {
+			if err := r.DBus.Restart(ctx, r.Recorder, node, unitName); err != nil {
+				return fmt.Errorf("unable to restart unit %q: %w", unitName, err)
+			}
+			log.Info("Successfully restarted unit", "unitName", unitName)
+			return nil
+		}
+
+		stop = func(ctx context.Context, unitName string) error {
+			if err := r.DBus.Stop(ctx, r.Recorder, node, unitName); err != nil {
+				return fmt.Errorf("unable to stop unit %q: %w", unitName, err)
+			}
+			log.Info("Successfully stopped unit", "unitName", unitName)
+			return nil
+		}
 	)
 
-	for _, u := range units {
+	var containerdChanged bool
+	for _, u := range oscChanges.units.changed {
 		unit := u
 
-		if unit.Name == nodeagentv1alpha1.UnitName {
+		switch unit.Name {
+		case nodeagentv1alpha1.UnitName:
 			mustRestartGardenerNodeAgent = true
 			continue
+		case v1beta1constants.OperatingSystemConfigUnitNameContainerDService:
+			containerdChanged = true
 		}
 
 		fns = append(fns, func(ctx context.Context) error {
 			if !ptr.Deref(unit.Enable, true) || (unit.Command != nil && *unit.Command == extensionsv1alpha1.CommandStop) {
-				if err := r.DBus.Stop(ctx, r.Recorder, node, unit.Name); err != nil {
-					return fmt.Errorf("unable to stop unit %q: %w", unit.Name, err)
-				}
-				log.Info("Successfully stopped unit", "unitName", unit.Name)
-			} else {
-				if err := r.DBus.Restart(ctx, r.Recorder, node, unit.Name); err != nil {
-					return fmt.Errorf("unable to restart unit %q: %w", unit.Name, err)
-				}
-				log.Info("Successfully restarted unit", "unitName", unit.Name)
+				return stop(ctx, unit.Name)
 			}
+			return restart(ctx, unit.Name)
+		})
+	}
 
-			return nil
+	if oscChanges.containerd.configFileChange && !containerdChanged {
+		fns = append(fns, func(ctx context.Context) error {
+			return restart(ctx, v1beta1constants.OperatingSystemConfigUnitNameContainerDService)
 		})
 	}
 

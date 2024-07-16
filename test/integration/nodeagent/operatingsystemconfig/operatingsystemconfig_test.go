@@ -6,6 +6,7 @@ package operatingsystemconfig_test
 
 import (
 	"context"
+	"os"
 	"path"
 	"path/filepath"
 	"time"
@@ -44,8 +45,9 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		hostName = "test-hostname"
 		node     *corev1.Node
 
-		file1, file2, file3, file4, file5, file6, file7                                          extensionsv1alpha1.File
-		gnaUnit, unit1, unit2, unit3, unit4, unit5, unit5DropInsOnly, unit6, unit7, unit8, unit9 extensionsv1alpha1.Unit
+		file1, file2, file3, file4, file5, file6, file7, file8                                           extensionsv1alpha1.File
+		gnaUnit, unit1, unit2, unit3, unit4, unit5, unit5DropInsOnly, unit6, unit7, unit8, unit9, unit10 extensionsv1alpha1.Unit
+		registryConfig1, registryConfig2                                                                 extensionsv1alpha1.RegistryConfig
 
 		operatingSystemConfig *extensionsv1alpha1.OperatingSystemConfig
 		oscRaw                []byte
@@ -117,7 +119,12 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			Expect(mgr.Start(mgrContext)).To(Succeed())
 		}()
 
+		revertExec := test.WithVar(&operatingsystemconfig.Exec, func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+			return []byte(""), nil
+		})
+
 		DeferCleanup(func() {
+			revertExec()
 			By("Stop manager")
 			mgrCancel()
 		})
@@ -156,6 +163,11 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			Path:        "/seventh/file",
 			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "", Data: "file7"}},
 			Permissions: ptr.To[int32](0750),
+		}
+		file8 = extensionsv1alpha1.File{
+			Path:        "/opt/bin/init-containerd",
+			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "", Data: "file8"}},
+			Permissions: ptr.To[int32](0644),
 		}
 
 		gnaUnit = extensionsv1alpha1.Unit{
@@ -247,11 +259,38 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			}},
 			FilePaths: []string{file7.Path},
 		}
+		unit10 = extensionsv1alpha1.Unit{
+			Name:      "containerd-initializer.service",
+			FilePaths: []string{file8.Path},
+		}
+
+		registryConfig1 = extensionsv1alpha1.RegistryConfig{
+			Upstream: "_default",
+			Server:   ptr.To("https://registry.hub.docker.com"),
+			Hosts: []extensionsv1alpha1.RegistryHost{
+				{URL: "https://10.10.10.100:8080"},
+				{URL: "https://10.10.10.200:8080"},
+			},
+		}
+		registryConfig2 = extensionsv1alpha1.RegistryConfig{
+			Upstream: "registry.k8s.io",
+			Server:   ptr.To("https://registry.k8s.io"),
+			Hosts: []extensionsv1alpha1.RegistryHost{
+				{URL: "https://10.10.10.101:8080", Capabilities: []extensionsv1alpha1.RegistryCapability{"pull"}, CACerts: []string{"/var/certs/ca.crt"}},
+			},
+		}
 
 		operatingSystemConfig = &extensionsv1alpha1.OperatingSystemConfig{
 			Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
-				Files: []extensionsv1alpha1.File{file1, file3, file5},
-				Units: []extensionsv1alpha1.Unit{unit1, unit2, unit5, unit5DropInsOnly, unit6, unit7},
+				Files: []extensionsv1alpha1.File{file1, file3, file5, file8},
+				Units: []extensionsv1alpha1.Unit{unit1, unit2, unit5, unit5DropInsOnly, unit6, unit7, unit10},
+				CRIConfig: &extensionsv1alpha1.CRIConfig{
+					Name: "containerd",
+					Containerd: &extensionsv1alpha1.ContainerdConfig{
+						Registries:   []extensionsv1alpha1.RegistryConfig{registryConfig1, registryConfig2},
+						SandboxImage: "registry.k8s.io/pause:latest",
+					},
+				},
 			},
 			Status: extensionsv1alpha1.OperatingSystemConfigStatus{
 				ExtensionFiles: []extensionsv1alpha1.File{file2, file4, file6, file7},
@@ -259,6 +298,10 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			},
 		}
 
+	})
+
+	JustBeforeEach(func() {
+		var err error
 		oscRaw, err = runtime.Encode(codec, operatingSystemConfig)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -271,9 +314,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			},
 			Data: map[string][]byte{"osc.yaml": oscRaw},
 		}
-	})
 
-	BeforeEach(func() {
 		By("Create Secret containing the operating system config")
 		Expect(testClient.Create(ctx, oscSecret)).To(Succeed())
 		DeferCleanup(func() {
@@ -281,7 +322,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		})
 
 		By("Create bootstrap token file")
-		_, err := fakeFS.Create(pathBootstrapTokenFile)
+		_, err = fakeFS.Create(pathBootstrapTokenFile)
 		Expect(err).NotTo(HaveOccurred())
 		DeferCleanup(func() {
 			Expect(fakeFS.Remove(pathBootstrapTokenFile)).To(Or(Succeed(), MatchError(afero.ErrFileNotFound)))
@@ -332,9 +373,19 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit7.Name, "#unit7", 0600)
 		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit8.Name, "#unit8", 0600)
 		test.AssertNoFileOnDisk(fakeFS, "/etc/systemd/system/"+unit9.Name)
+		test.AssertNoFileOnDisk(fakeFS, "/opt/bin/init-containerd")
+		test.AssertDirectoryOnDisk(fakeFS, "/var/bin/containerruntimes")
+		test.AssertDirectoryOnDisk(fakeFS, "/etc/containerd/certs.d")
+		test.AssertDirectoryOnDisk(fakeFS, "/etc/containerd/conf.d")
+		test.AssertDirectoryOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d")
+		test.AssertFileOnDisk(fakeFS, "/etc/containerd/config.toml", "imports = [\"/etc/containerd/conf.d/*.toml\"]\n\n[plugins]\n\n  [plugins.\"io.containerd.grpc.v1.cri\"]\n    sandbox_image = \"registry.k8s.io/pause:latest\"\n\n    [plugins.\"io.containerd.grpc.v1.cri\".registry]\n      config_path = \"/etc/containerd/certs.d\"\n", 0644)
+		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d/30-env_config.conf", "[Service]\nEnvironment=\"PATH=/var/bin/containerruntimes:"+os.Getenv("PATH")+"\"\n", 0644)
+		test.AssertFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig1.Upstream+"/hosts.toml", "# managed by gardener-node-agent\nserver = \"https://registry.hub.docker.com\"\n\n[host.\"https://10.10.10.100:8080\"]\n  capabilities = [\"pull\",\"resolve\"]\n\n[host.\"https://10.10.10.200:8080\"]\n  capabilities = [\"pull\",\"resolve\"]\n\n", 0644)
+		test.AssertFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig2.Upstream+"/hosts.toml", "# managed by gardener-node-agent\nserver = \"https://registry.k8s.io\"\n\n[host.\"https://10.10.10.101:8080\"]\n  capabilities = [\"pull\"]\n  ca = [\"/var/certs/ca.crt\"]\n\n", 0644)
 
 		By("Assert that unit actions have been applied")
 		Expect(fakeDBus.Actions).To(ConsistOf(
+			fakedbus.SystemdAction{Action: fakedbus.ActionStart, UnitNames: []string{"containerd.service"}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit1.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionDisable, UnitNames: []string{unit2.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit3.Name}},
@@ -354,6 +405,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit7.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit8.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit9.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{"containerd.service"}},
 		))
 
 		By("Assert that bootstrap files have been deleted")
@@ -384,6 +436,9 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		// manually change permissions of unit and drop-in file (should be restored on next reconciliation)
 		Expect(fakeFS.Chmod("/etc/systemd/system/"+unit2.Name, 0777)).To(Succeed())
 
+		// manually change content of containerd registry content (should be restored on next reconciliation)
+		Expect(fakeFS.WriteFile("/etc/containerd/certs.d/"+registryConfig1.Upstream+"/hosts.toml", []byte("foo"), 0600)).To(Succeed())
+
 		By("Update Operating System Config")
 		// delete unit1
 		// delete file2
@@ -403,7 +458,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		unit5.DropIns = unit5.DropIns[1:]
 		unit6.FilePaths = nil
 
-		operatingSystemConfig.Spec.Units = []extensionsv1alpha1.Unit{unit2, unit5, unit6, unit7}
+		operatingSystemConfig.Spec.Units = []extensionsv1alpha1.Unit{unit2, unit5, unit6, unit7, unit10}
 		operatingSystemConfig.Spec.Files[2].Content.Inline.Data = "changeme"
 		operatingSystemConfig.Status.ExtensionUnits = []extensionsv1alpha1.Unit{unit3, unit4, unit8, unit9}
 		operatingSystemConfig.Status.ExtensionFiles = []extensionsv1alpha1.File{file4, file6, file7}
@@ -454,9 +509,19 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit7.Name, "#unit7", 0600)
 		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit8.Name, "#unit8", 0600)
 		test.AssertNoFileOnDisk(fakeFS, "/etc/systemd/system/"+unit9.Name)
+		test.AssertNoFileOnDisk(fakeFS, "/opt/bin/init-containerd")
+		test.AssertDirectoryOnDisk(fakeFS, "/var/bin/containerruntimes")
+		test.AssertDirectoryOnDisk(fakeFS, "/etc/containerd/certs.d")
+		test.AssertDirectoryOnDisk(fakeFS, "/etc/containerd/conf.d")
+		test.AssertDirectoryOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d")
+		test.AssertFileOnDisk(fakeFS, "/etc/containerd/config.toml", "imports = [\"/etc/containerd/conf.d/*.toml\"]\n\n[plugins]\n\n  [plugins.\"io.containerd.grpc.v1.cri\"]\n    sandbox_image = \"registry.k8s.io/pause:latest\"\n\n    [plugins.\"io.containerd.grpc.v1.cri\".registry]\n      config_path = \"/etc/containerd/certs.d\"\n", 0644)
+		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d/30-env_config.conf", "[Service]\nEnvironment=\"PATH=/var/bin/containerruntimes:"+os.Getenv("PATH")+"\"\n", 0644)
+		test.AssertFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig1.Upstream+"/hosts.toml", "# managed by gardener-node-agent\nserver = \"https://registry.hub.docker.com\"\n\n[host.\"https://10.10.10.100:8080\"]\n  capabilities = [\"pull\",\"resolve\"]\n\n[host.\"https://10.10.10.200:8080\"]\n  capabilities = [\"pull\",\"resolve\"]\n\n", 0644)
+		test.AssertFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig2.Upstream+"/hosts.toml", "# managed by gardener-node-agent\nserver = \"https://registry.k8s.io\"\n\n[host.\"https://10.10.10.101:8080\"]\n  capabilities = [\"pull\"]\n  ca = [\"/var/certs/ca.crt\"]\n\n", 0644)
 
 		By("Assert that unit actions have been applied")
 		Expect(fakeDBus.Actions).To(ConsistOf(
+			fakedbus.SystemdAction{Action: fakedbus.ActionStart, UnitNames: []string{"containerd.service"}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit2.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit5.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit6.Name}},
@@ -474,6 +539,70 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit7.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit8.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit9.Name}},
+		))
+
+		By("Assert that cancel func has not been called")
+		Expect(cancelFunc.called).To(BeFalse())
+	})
+
+	It("should reconcile the configuration when the containerd config changes", func() {
+		By("Wait for node annotations to be updated")
+		Eventually(func(g Gomega) map[string]string {
+			updatedNode := &corev1.Node{}
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), updatedNode)).To(Succeed())
+			return updatedNode.Annotations
+		}).Should(HaveKeyWithValue("checksum/cloud-config-data", utils.ComputeSHA256Hex(oscRaw)))
+
+		By("Wait for node labels to be updated")
+		Eventually(func(g Gomega) map[string]string {
+			updatedNode := &corev1.Node{}
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), updatedNode)).To(Succeed())
+			return updatedNode.Labels
+		}).Should(HaveKeyWithValue("worker.gardener.cloud/kubernetes-version", kubernetesVersion.String()))
+
+		fakeDBus.Actions = nil // reset actions on dbus to not repeat assertions from above for update scenario
+
+		By("Update Operating System Config")
+		operatingSystemConfig.Spec.CRIConfig.Containerd.Registries = []extensionsv1alpha1.RegistryConfig{registryConfig2}
+		operatingSystemConfig.Spec.CRIConfig.Containerd.SandboxImage = operatingSystemConfig.Spec.CRIConfig.Containerd.SandboxImage + "-test"
+
+		var err error
+		oscRaw, err = runtime.Encode(codec, operatingSystemConfig)
+		Expect(err).NotTo(HaveOccurred())
+
+		By("Update Secret containing the operating system config")
+		patch := client.MergeFrom(oscSecret.DeepCopy())
+		oscSecret.Annotations["checksum/data-script"] = utils.ComputeSHA256Hex(oscRaw)
+		oscSecret.Data["osc.yaml"] = oscRaw
+		Expect(testClient.Patch(ctx, oscSecret, patch)).To(Succeed())
+
+		By("Wait for node annotations to be updated")
+		Eventually(func(g Gomega) map[string]string {
+			updatedNode := &corev1.Node{}
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), updatedNode)).To(Succeed())
+			return updatedNode.Annotations
+		}).Should(HaveKeyWithValue("checksum/cloud-config-data", utils.ComputeSHA256Hex(oscRaw)))
+
+		By("Wait for node labels to be updated")
+		Eventually(func(g Gomega) map[string]string {
+			updatedNode := &corev1.Node{}
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), updatedNode)).To(Succeed())
+			return updatedNode.Labels
+		}).Should(HaveKeyWithValue("worker.gardener.cloud/kubernetes-version", kubernetesVersion.String()))
+
+		By("Assert that files and directories have been created")
+		test.AssertDirectoryOnDisk(fakeFS, "/var/bin/containerruntimes")
+		test.AssertDirectoryOnDisk(fakeFS, "/etc/containerd/certs.d")
+		test.AssertDirectoryOnDisk(fakeFS, "/etc/containerd/conf.d")
+		test.AssertDirectoryOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d")
+		test.AssertNoFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig1.Upstream+"/hosts.toml")
+		test.AssertFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig2.Upstream+"/hosts.toml", "# managed by gardener-node-agent\nserver = \"https://registry.k8s.io\"\n\n[host.\"https://10.10.10.101:8080\"]\n  capabilities = [\"pull\"]\n  ca = [\"/var/certs/ca.crt\"]\n\n", 0644)
+
+		By("Assert that unit actions have been applied")
+		Expect(fakeDBus.Actions).To(ConsistOf(
+			fakedbus.SystemdAction{Action: fakedbus.ActionStart, UnitNames: []string{"containerd.service"}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionDaemonReload},
+			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{"containerd.service"}},
 		))
 
 		By("Assert that cancel func has not been called")
@@ -516,12 +645,42 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 
 		By("Assert that unit actions have been applied")
 		Expect(fakeDBus.Actions).To(ConsistOf(
+			fakedbus.SystemdAction{Action: fakedbus.ActionStart, UnitNames: []string{"containerd.service"}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{gnaUnit.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionDaemonReload},
 		))
 
 		By("Expect that cancel func has been called")
 		Expect(cancelFunc.called).To(BeTrue())
+	})
+
+	Context("when CRI is not containerd", func() {
+		BeforeEach(func() {
+			operatingSystemConfig.Spec.CRIConfig = nil
+		})
+
+		It("should not handle containerd configs", func() {
+			By("Wait for node annotations to be updated")
+			Eventually(func(g Gomega) map[string]string {
+				updatedNode := &corev1.Node{}
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), updatedNode)).To(Succeed())
+				return updatedNode.Annotations
+			}).Should(HaveKeyWithValue("checksum/cloud-config-data", utils.ComputeSHA256Hex(oscRaw)))
+
+			By("Wait for node labels to be updated")
+			Eventually(func(g Gomega) map[string]string {
+				updatedNode := &corev1.Node{}
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), updatedNode)).To(Succeed())
+				return updatedNode.Labels
+			}).Should(HaveKeyWithValue("worker.gardener.cloud/kubernetes-version", kubernetesVersion.String()))
+
+			By("Assert that files and units have been created")
+			test.AssertNoDirectoryOnDisk(fakeFS, "/var/bin/containerruntimes")
+			test.AssertNoDirectoryOnDisk(fakeFS, "/etc/containerd/certs.d")
+			test.AssertNoDirectoryOnDisk(fakeFS, "/etc/containerd/conf.d")
+			test.AssertNoDirectoryOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d")
+			test.AssertNoFileOnDisk(fakeFS, "/etc/containerd/config.toml")
+		})
 	})
 })
 

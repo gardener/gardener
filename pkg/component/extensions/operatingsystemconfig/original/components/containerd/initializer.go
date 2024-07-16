@@ -5,14 +5,10 @@
 package containerd
 
 import (
-	"bytes"
 	_ "embed"
-	"text/template"
 
-	"github.com/Masterminds/sprig/v3"
 	"k8s.io/utils/ptr"
 
-	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
@@ -20,26 +16,15 @@ import (
 )
 
 var (
-	tplNameInitializer = "init"
-	//go:embed templates/scripts/init.tpl.sh
-	tplContentInitializer string
-	tplInitializer        *template.Template
+	//go:embed templates/scripts/init.sh
+	contentInitializer []byte
 )
-
-func init() {
-	var err error
-	tplInitializer, err = template.
-		New(tplNameInitializer).
-		Funcs(sprig.TxtFuncMap()).
-		Parse(tplContentInitializer)
-	if err != nil {
-		panic(err)
-	}
-}
 
 type initializer struct{}
 
 // NewInitializer returns a new containerd initializer component.
+// Deprecated: The containerd initializer is deprecated and will be removed in a future version. Please don't change or add content to the init script.
+// TODO(timuthy): Remove Initializer after Gardener v1.114 was released.
 func NewInitializer() *initializer {
 	return &initializer{}
 }
@@ -48,23 +33,17 @@ func (initializer) Name() string {
 	return "containerd-initializer"
 }
 
-func (initializer) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
-	const (
-		pathScript          = v1beta1constants.OperatingSystemConfigFilePathBinaries + "/init-containerd"
-		unitNameInitializer = "containerd-initializer.service"
-	)
+const (
+	// InitializerScriptPath is the path of the containerd initializer script.
+	InitializerScriptPath = v1beta1constants.OperatingSystemConfigFilePathBinaries + "/init-containerd"
+	// InitializerUnitName is the name of the containerd initializer service.
+	InitializerUnitName = "containerd-initializer.service"
+)
 
-	var script bytes.Buffer
-	if err := tplInitializer.Execute(&script, map[string]any{
-		"binaryPath":          extensionsv1alpha1.ContainerDRuntimeContainersBinFolder,
-		"pauseContainerImage": ctx.Images[imagevector.ImageNamePauseContainer],
-	}); err != nil {
-		return nil, nil, err
-	}
-
+func (initializer) Config(_ components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
 	return []extensionsv1alpha1.Unit{
 			{
-				Name:    unitNameInitializer,
+				Name:    InitializerUnitName,
 				Command: ptr.To(extensionsv1alpha1.CommandStart),
 				Enable:  ptr.To(true),
 				Content: ptr.To(`[Unit]
@@ -74,28 +53,17 @@ WantedBy=multi-user.target
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=` + pathScript),
+ExecStart=` + InitializerScriptPath),
 			},
 		},
 		[]extensionsv1alpha1.File{
 			{
-				Path:        pathScript,
+				Path:        InitializerScriptPath,
 				Permissions: ptr.To[int32](744),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",
-						Data:     utils.EncodeBase64(script.Bytes()),
-					},
-				},
-			},
-			{
-				Path:        "/etc/systemd/system/containerd.service.d/10-require-containerd-initializer.conf",
-				Permissions: ptr.To[int32](0644),
-				Content: extensionsv1alpha1.FileContent{
-					Inline: &extensionsv1alpha1.FileContentInline{
-						Data: `[Unit]
-After=` + unitNameInitializer + `
-Requires=` + unitNameInitializer,
+						Data:     utils.EncodeBase64(contentInitializer),
 					},
 				},
 			},

@@ -63,6 +63,15 @@ var _ = Describe("Secrets", func() {
 					Annotations:     map[string]string{"bar": "foo"},
 				},
 				Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
+					CRIConfig: &extensionsv1alpha1.CRIConfig{
+						Name: "containerd",
+						Containerd: &extensionsv1alpha1.ContainerdConfig{
+							SandboxImage: "registry.k8s.io/pause:latest",
+							Registries: []extensionsv1alpha1.RegistryConfig{
+								{Upstream: "registry.k8s.io"},
+							},
+						},
+					},
 					Units: []extensionsv1alpha1.Unit{{
 						Name: "some-unit.service",
 					}},
@@ -100,7 +109,7 @@ var _ = Describe("Secrets", func() {
 					Name:      secretName,
 					Namespace: "kube-system",
 					Annotations: map[string]string{
-						"checksum/data-script": "931abcfaf3fd3152748ec51b8f139a22a48a3ac6d8fff1c56a3aa2e07d2a39f1",
+						"checksum/data-script": "a3efca387130b4a0291595c1608d80cad758ca95f71901f1fc91b0d74847c0ff",
 					},
 					Labels: map[string]string{
 						"gardener.cloud/role":        "operating-system-config",
@@ -112,6 +121,12 @@ kind: OperatingSystemConfig
 metadata:
   creationTimestamp: null
 spec:
+  criConfig:
+    containerd:
+      registries:
+      - upstream: registry.k8s.io
+      sandboxImage: registry.k8s.io/pause:latest
+    name: containerd
   files:
   - content:
       inline:

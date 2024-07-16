@@ -65,10 +65,84 @@ spec:
                 description: CRI config is a structure contains configurations of
                   the CRI library
                 properties:
+                  containerd:
+                    description: |-
+                      ContainerdConfig is the containerd configuration.
+                      Only to be set for OperatingSystemConfigs with purpose 'reconcile'.
+                    properties:
+                      registries:
+                        description: Registries configures the registry hosts for
+                          containerd.
+                        items:
+                          description: RegistryConfig contains registry configuration
+                            options.
+                          properties:
+                            hosts:
+                              description: |-
+                                Hosts are the registry hosts.
+                                It corresponds to the host fields in the `hosts.toml` file, see https://github.com/containerd/containerd/blob/c51463010e0682f76dfdc10edc095e6596e2764b/docs/hosts.md#host-fields-in-the-toml-table-format for more information.
+                              items:
+                                description: RegistryHost contains configuration values
+                                  for a registry host.
+                                properties:
+                                  caCerts:
+                                    description: CACerts are paths to public key certificates
+                                      used for TLS.
+                                    items:
+                                      type: string
+                                    type: array
+                                  capabilities:
+                                    description: |-
+                                      Capabilities determine what operations a host is
+                                      capable of performing. Defaults to
+                                       - pull
+                                       - resolve
+                                    items:
+                                      description: RegistryCapability specifies an
+                                        action a client can perform against a registry.
+                                      type: string
+                                    type: array
+                                  url:
+                                    description: URL is the endpoint address of the
+                                      registry mirror.
+                                    type: string
+                                required:
+                                - url
+                                type: object
+                              type: array
+                            readinessProbe:
+                              description: ReadinessProbe determines if host registry
+                                endpoints should be probed before they are added to
+                                the containerd config.
+                              type: boolean
+                            server:
+                              description: |-
+                                Server is the URL to registry server of this upstream.
+                                It corresponds to the server field in the `hosts.toml` file, see https://github.com/containerd/containerd/blob/c51463010e0682f76dfdc10edc095e6596e2764b/docs/hosts.md#server-field for more information.
+                              type: string
+                            upstream:
+                              description: Upstream is the upstream name of the registry.
+                              type: string
+                          required:
+                          - upstream
+                          type: object
+                        type: array
+                      sandboxImage:
+                        description: SandboxImage configures the sandbox image for
+                          containerd.
+                        type: string
+                    required:
+                    - sandboxImage
+                    type: object
                   name:
                     description: Name is a mandatory string containing the name of
                       the CRI library. Supported values are `containerd`.
+                    enum:
+                    - containerd
                     type: string
+                    x-kubernetes-validations:
+                    - message: Value is immutable
+                      rule: self == oldSelf
                 required:
                 - name
                 type: object

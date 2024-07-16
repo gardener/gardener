@@ -83,3 +83,8 @@ func GetMachineDeploymentClusterAutoscalerAnnotations(caOptions *extensionsv1alp
 
 	return annotations
 }
+
+// HasContainerdConfiguration returns true if containerd is the configured CRI and has a proper configuration.
+func HasContainerdConfiguration(criConfig *extensionsv1alpha1.CRIConfig) bool {
+	return criConfig != nil && criConfig.Name == extensionsv1alpha1.CRINameContainerD && criConfig.Containerd != nil
+}

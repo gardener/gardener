@@ -18,6 +18,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
+	componentscontainerd "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/containerd"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 )
 
@@ -44,8 +46,9 @@ func extractOSCFromSecret(secret *corev1.Secret) (*extensionsv1alpha1.OperatingS
 }
 
 type operatingSystemConfigChanges struct {
-	units units
-	files files
+	units      units
+	files      files
+	containerd containerd
 }
 
 type units struct {
@@ -66,6 +69,18 @@ type dropIns struct {
 type files struct {
 	changed []extensionsv1alpha1.File
 	deleted []extensionsv1alpha1.File
+}
+
+type containerd struct {
+	// configFileChange tracks if the config file of containerd will change, so that GNA can restart the unit.
+	configFileChange bool
+	// registries tracks the changes of configured registries.
+	registries containerdRegistries
+}
+
+type containerdRegistries struct {
+	desired []extensionsv1alpha1.RegistryConfig
+	deleted []extensionsv1alpha1.RegistryConfig
 }
 
 func computeOperatingSystemConfigChanges(fs afero.Afero, newOSC *extensionsv1alpha1.OperatingSystemConfig) (*operatingSystemConfigChanges, error) {
@@ -91,6 +106,15 @@ func computeOperatingSystemConfigChanges(fs afero.Afero, newOSC *extensionsv1alp
 
 		changes.files.changed = newOSCFiles
 		changes.units.changed = unitChanges
+
+		// On new nodes, the deprecated containerd-initializer service can safely be removed.
+		// TODO(timuthy): Remove this block after Gardener v1.114 was released.
+		removeContainerdInit(changes)
+
+		changes.containerd.configFileChange = true
+		if extensionsv1alpha1helper.HasContainerdConfiguration(newOSC.Spec.CRIConfig) {
+			changes.containerd.registries.desired = newOSC.Spec.CRIConfig.Containerd.Registries
+		}
 		return changes, nil
 	}
 
@@ -110,7 +134,37 @@ func computeOperatingSystemConfigChanges(fs afero.Afero, newOSC *extensionsv1alp
 		changes.files,
 	)
 
+	var (
+		newRegistries []extensionsv1alpha1.RegistryConfig
+		oldRegistries []extensionsv1alpha1.RegistryConfig
+	)
+
+	if extensionsv1alpha1helper.HasContainerdConfiguration(newOSC.Spec.CRIConfig) {
+		newRegistries = newOSC.Spec.CRIConfig.Containerd.Registries
+		if !extensionsv1alpha1helper.HasContainerdConfiguration(oldOSC.Spec.CRIConfig) {
+			changes.containerd.configFileChange = true
+		} else {
+			changes.containerd.configFileChange = !apiequality.Semantic.DeepEqual(newOSC.Spec.CRIConfig.Containerd.SandboxImage, oldOSC.Spec.CRIConfig.Containerd.SandboxImage)
+			oldRegistries = oldOSC.Spec.CRIConfig.Containerd.Registries
+		}
+	}
+	changes.containerd.registries = computeContainerdRegistryDiffs(newRegistries, oldRegistries)
+
 	return changes, nil
+}
+
+// TODO(timuthy): Remove this block after Gardener v1.114 was released.
+func removeContainerdInit(changes *operatingSystemConfigChanges) {
+	for i, file := range changes.files.changed {
+		if file.Path == componentscontainerd.InitializerScriptPath {
+			changes.files.changed = slices.Delete(changes.files.changed, i, i+1)
+		}
+	}
+	for i, unit := range changes.units.changed {
+		if unit.Name == componentscontainerd.InitializerUnitName {
+			changes.units.changed = slices.Delete(changes.units.changed, i, i+1)
+		}
+	}
 }
 
 func computeUnitDiffs(oldUnits, newUnits []extensionsv1alpha1.Unit, fileDiffs files) units {
@@ -235,4 +289,21 @@ func mergeUnits(specUnits, statusUnits []extensionsv1alpha1.Unit) []extensionsv1
 
 func collectAllFiles(osc *extensionsv1alpha1.OperatingSystemConfig) []extensionsv1alpha1.File {
 	return append(osc.Spec.Files, osc.Status.ExtensionFiles...)
+}
+
+func computeContainerdRegistryDiffs(newRegistries, oldRegistries []extensionsv1alpha1.RegistryConfig) containerdRegistries {
+	r := containerdRegistries{
+		desired: newRegistries,
+	}
+
+	upstreamsInUse := sets.New[string]()
+	for _, registryConfig := range r.desired {
+		upstreamsInUse.Insert(registryConfig.Upstream)
+	}
+
+	r.deleted = slices.DeleteFunc(oldRegistries, func(config extensionsv1alpha1.RegistryConfig) bool {
+		return upstreamsInUse.Has(config.Upstream)
+	})
+
+	return r
 }
