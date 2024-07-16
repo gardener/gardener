@@ -3208,7 +3208,7 @@ func schema_pkg_apis_core_v1beta1_EncryptionConfig(ref common.ReferenceCallback)
 				Properties: map[string]spec.Schema{
 					"resources": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Resources contains the list of resources that shall be encrypted in addition to secrets. Each item is a Kubernetes resource name in plural (resource or resource.group) that should be encrypted. Note that configuring a custom resource is only supported for versions >= 1.26. Wildcards are not supported for now. See https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md for more details.",
+							Description: "Resources contains the list of resources that shall be encrypted in addition to secrets. Each item is a Kubernetes resource name in plural (resource or resource.group) that should be encrypted. Note that configuring a custom resource is only supported for versions >= 1.26. Wildcards are not supported for now. See https://github.com/gardener/gardener/blob/master/docs/usage/shoot_settings/etcd_encryption_config.md for more details.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -9026,7 +9026,7 @@ func schema_pkg_apis_core_v1beta1_ShootStatus(ref common.ReferenceCallback) comm
 					},
 					"encryptedResources": {
 						SchemaProps: spec.SchemaProps{
-							Description: "EncryptedResources is the list of resources in the Shoot which are currently encrypted. Secrets are encrypted by default and are not part of the list. See https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md for more details.",
+							Description: "EncryptedResources is the list of resources in the Shoot which are currently encrypted. Secrets are encrypted by default and are not part of the list. See https://github.com/gardener/gardener/blob/master/docs/usage/shoot_settings/etcd_encryption_config.md for more details.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
