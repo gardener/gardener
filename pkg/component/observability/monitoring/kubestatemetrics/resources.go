@@ -40,7 +40,7 @@ import (
 
 func (k *kubeStateMetrics) getResourceConfigs(genericTokenKubeconfigSecretName string, shootAccessSecret *gardenerutils.AccessSecret) component.ResourceConfigs {
 	var (
-		clusterRole                  = k.emptyClusterRole()
+		clusterRole                  = k.clusterRole()
 		clusterRoleBinding           = k.emptyClusterRoleBinding()
 		service                      = k.emptyService()
 		deployment                   = k.emptyDeployment()
@@ -54,7 +54,6 @@ func (k *kubeStateMetrics) getResourceConfigs(genericTokenKubeconfigSecretName s
 		customResourceStateConfigMap = k.emptyCustomResourceStateConfigMap()
 
 		configs = component.ResourceConfigs{
-			{Obj: clusterRole, Class: component.Application, MutateFn: func() { k.reconcileClusterRole(clusterRole) }},
 			{Obj: service, Class: component.Runtime, MutateFn: func() { k.reconcileService(service) }},
 			{Obj: vpa, Class: component.Runtime, MutateFn: func() { k.reconcileVerticalPodAutoscaler(vpa, deployment) }},
 			{Obj: customResourceStateConfigMap, Class: component.Runtime, MutateFn: func() { k.reconcileCustomResourceStateConfigMap(customResourceStateConfigMap) }},
@@ -115,11 +114,8 @@ func (k *kubeStateMetrics) newShootAccessSecret() *gardenerutils.AccessSecret {
 	return gardenerutils.NewShootAccessSecret(v1beta1constants.DeploymentNameKubeStateMetrics, k.namespace)
 }
 
-func (k *kubeStateMetrics) emptyClusterRole() *rbacv1.ClusterRole {
-	return &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:monitoring:" + k.nameSuffix()}}
-}
-
-func (k *kubeStateMetrics) reconcileClusterRole(clusterRole *rbacv1.ClusterRole) {
+func (k *kubeStateMetrics) clusterRole() *rbacv1.ClusterRole {
+	clusterRole := rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:monitoring:" + k.nameSuffix()}}
 	clusterRole.Labels = k.getLabels()
 	clusterRole.Rules = []rbacv1.PolicyRule{
 		{
@@ -165,6 +161,7 @@ func (k *kubeStateMetrics) reconcileClusterRole(clusterRole *rbacv1.ClusterRole)
 			Verbs:     []string{"list", "watch"},
 		})
 	}
+	return &clusterRole
 }
 
 func (k *kubeStateMetrics) emptyClusterRoleBinding() *rbacv1.ClusterRoleBinding {
