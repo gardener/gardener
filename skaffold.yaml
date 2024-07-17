@@ -774,8 +774,8 @@ build:
     - image: local-skaffold/machine-controller-manager-provider-local
       hooks:
         after:
-          - command: 
-              - bash 
+          - command:
+              - bash
               - hack/mcm-provider-local-overwrite.sh
       ko:
         dependencies:

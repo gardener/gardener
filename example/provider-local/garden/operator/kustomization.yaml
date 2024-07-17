@@ -3,3 +3,6 @@ kind: Kustomization
 
 resources:
 - extension.yaml
+
+patches:
+  - path: patch-imagevector-overwrite.yaml

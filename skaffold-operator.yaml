@@ -228,7 +228,6 @@ build:
             - pkg/operator/client
             - pkg/operator/controller
             - pkg/operator/controller/controllerregistrar
-            - pkg/operator/controller/extension
             - pkg/operator/controller/extension/virtualcluster
             - pkg/operator/controller/garden
             - pkg/operator/controller/garden/care
@@ -999,7 +998,7 @@ build:
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd/logrotate
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd/templates/scripts/health-monitor.tpl.sh
-            - pkg/component/extensions/operatingsystemconfig/original/components/containerd/templates/scripts/init.tpl.sh
+            - pkg/component/extensions/operatingsystemconfig/original/components/containerd/templates/scripts/init.sh
             - pkg/component/extensions/operatingsystemconfig/original/components/kubelet
             - pkg/component/extensions/operatingsystemconfig/original/components/nodeagent
             - pkg/component/extensions/operatingsystemconfig/original/components/valitail
@@ -1094,8 +1093,28 @@ build:
             - third_party/gopkg.in/yaml.v2
             - VERSION
         ldflags:
-          - "{{.LD_FLAGS}}"
+          - '{{.LD_FLAGS}}'
         main: ./cmd/gardener-extension-provider-local
+    - image: local-skaffold/gardener-extension-provider-local-node
+      context: pkg/provider-local/node
+      docker: {}
+    - image: local-skaffold/machine-controller-manager-provider-local
+      hooks:
+        after:
+          - command:
+              - bash
+              - hack/mcm-provider-local-operator-overwrite.sh
+      ko:
+        dependencies:
+          paths:
+            - cmd/machine-controller-manager-provider-local
+            - pkg/provider-local/machine-provider/api/v1alpha1
+            - pkg/provider-local/machine-provider/api/validation
+            - pkg/provider-local/machine-provider/local
+            - VERSION
+        ldflags:
+          - '{{.LD_FLAGS}}'
+        main: ./cmd/machine-controller-manager-provider-local
     - image: local-skaffold/gardener-extension-provider-local/charts/extension
       custom:
         buildCommand: |

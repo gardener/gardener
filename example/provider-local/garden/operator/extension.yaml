@@ -3,13 +3,13 @@ kind: Extension
 metadata:
   name: provider-local
   annotations:
-    security.gardener.cloud/pod-security-enforce: priviledged
+    security.gardener.cloud/pod-security-enforce: privileged
 spec:
   deployment:
     extension:
       helm:
         ociRepository:
-          ref: local-skaffold/gardener-extension-provider-local:latest
+          ref: local-skaffold/gardener-extension-provider-local/charts/extension:latest
       values:
         logLevel: debug
   resources:
