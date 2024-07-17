@@ -79,6 +79,7 @@ func (g *graph) handleShootCreateOrUpdate(ctx context.Context, shoot *gardencore
 	defer g.lock.Unlock()
 
 	g.deleteAllIncomingEdges(VertexTypeCloudProfile, VertexTypeShoot, shoot.Namespace, shoot.Name)
+	g.deleteAllIncomingEdges(VertexTypeNamespacedCloudProfile, VertexTypeShoot, shoot.Namespace, shoot.Name)
 	g.deleteAllIncomingEdges(VertexTypeExposureClass, VertexTypeShoot, shoot.Namespace, shoot.Name)
 	g.deleteAllIncomingEdges(VertexTypeInternalSecret, VertexTypeShoot, shoot.Namespace, shoot.Name)
 	g.deleteAllIncomingEdges(VertexTypeConfigMap, VertexTypeShoot, shoot.Namespace, shoot.Name)
@@ -108,11 +109,13 @@ func (g *graph) handleShootCreateOrUpdate(ctx context.Context, shoot *gardencore
 
 	cloudProfileReference := gardenerutils.BuildCloudProfileReference(shoot)
 	if cloudProfileReference != nil {
-		namespace := ""
-		if cloudProfileReference.Kind == v1beta1constants.CloudProfileReferenceKindNamespacedCloudProfile {
-			namespace = shoot.Namespace
+		var cloudProfileVertex *vertex
+		switch cloudProfileReference.Kind {
+		case v1beta1constants.CloudProfileReferenceKindCloudProfile:
+			cloudProfileVertex = g.getOrCreateVertex(VertexTypeCloudProfile, "", cloudProfileReference.Name)
+		case v1beta1constants.CloudProfileReferenceKindNamespacedCloudProfile:
+			cloudProfileVertex = g.getOrCreateVertex(VertexTypeNamespacedCloudProfile, shoot.Namespace, cloudProfileReference.Name)
 		}
-		cloudProfileVertex := g.getOrCreateVertex(VertexTypeCloudProfile, namespace, cloudProfileReference.Name)
 		g.addEdge(cloudProfileVertex, shootVertex)
 	}
 

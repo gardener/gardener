@@ -54,6 +54,7 @@ var (
 	bastionResource                   = operationsv1alpha1.Resource("bastions")
 	certificateSigningRequestResource = certificatesv1.Resource("certificatesigningrequests")
 	cloudProfileResource              = gardencorev1beta1.Resource("cloudprofiles")
+	namespacedCloudProfileResource    = gardencorev1beta1.Resource("namespacedcloudprofiles")
 	clusterRoleBindingResource        = rbacv1.Resource("clusterrolebindings")
 	configMapResource                 = corev1.Resource("configmaps")
 	controllerDeploymentResource      = gardencorev1beta1.Resource("controllerdeployments")
@@ -121,6 +122,8 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			)
 		case cloudProfileResource:
 			return a.authorizeRead(requestLog, seedName, graph.VertexTypeCloudProfile, attrs)
+		case namespacedCloudProfileResource:
+			return a.authorizeRead(requestLog, seedName, graph.VertexTypeNamespacedCloudProfile, attrs)
 		case clusterRoleBindingResource:
 			if userType == seedidentity.UserTypeExtension {
 				// We don't use authorizeRead here, as it would also grant list and watch permissions, which gardenlet doesn't
