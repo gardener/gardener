@@ -251,54 +251,57 @@ func (i *istiod) Deploy(ctx context.Context) error {
 	}
 
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
-	if err := registry.Add(&monitoringv1.ServiceMonitor{
-		ObjectMeta: monitoringutils.ConfigObjectMeta("istio-ingressgateway", v1beta1constants.IstioSystemNamespace, aggregate.Label),
-		Spec: monitoringv1.ServiceMonitorSpec{
-			Selector:          metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelApp: "istio-ingressgateway"}},
-			NamespaceSelector: monitoringv1.NamespaceSelector{Any: true},
-			Endpoints: []monitoringv1.Endpoint{{
-				Path: "/stats/prometheus",
-				Port: "tls-tunnel",
-				RelabelConfigs: []monitoringv1.RelabelConfig{{
-					SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_ip"},
-					Action:       "replace",
-					TargetLabel:  "__address__",
-					Regex:        `(.+)`,
-					Replacement:  ptr.To("${1}:15020"),
+	// Only add a ServiceMonitor for the istio-ingressgateway if istio is deployed on a seed.
+	if i.values.NamePrefix == "" {
+		if err := registry.Add(&monitoringv1.ServiceMonitor{
+			ObjectMeta: monitoringutils.ConfigObjectMeta("istio-ingressgateway", v1beta1constants.IstioSystemNamespace, aggregate.Label),
+			Spec: monitoringv1.ServiceMonitorSpec{
+				Selector:          metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelApp: "istio-ingressgateway"}},
+				NamespaceSelector: monitoringv1.NamespaceSelector{Any: true},
+				Endpoints: []monitoringv1.Endpoint{{
+					Path: "/stats/prometheus",
+					Port: "tls-tunnel",
+					RelabelConfigs: []monitoringv1.RelabelConfig{{
+						SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_ip"},
+						Action:       "replace",
+						TargetLabel:  "__address__",
+						Regex:        `(.+)`,
+						Replacement:  ptr.To("${1}:15020"),
+					}},
+					MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
+						"envoy_cluster_upstream_cx_active",
+						"envoy_cluster_upstream_cx_connect_fail",
+						"envoy_cluster_upstream_cx_total",
+						"envoy_cluster_upstream_cx_tx_bytes_total",
+						"envoy_server_hot_restart_epoch",
+						"istio_request_bytes_bucket",
+						"istio_request_bytes_sum",
+						"istio_request_duration_milliseconds_bucket",
+						"istio_request_duration_seconds_bucket",
+						"istio_requests_total",
+						"istio_response_bytes_bucket",
+						"istio_response_bytes_sum",
+						"istio_tcp_connections_closed_total",
+						"istio_tcp_connections_opened_total",
+						"istio_tcp_received_bytes_total",
+						"istio_tcp_sent_bytes_total",
+						"go_goroutines",
+						"go_memstats_alloc_bytes",
+						"go_memstats_heap_alloc_bytes",
+						"go_memstats_heap_inuse_bytes",
+						"go_memstats_heap_sys_bytes",
+						"go_memstats_stack_inuse_bytes",
+						"istio_build",
+						"process_cpu_seconds_total",
+						"process_open_fds",
+						"process_resident_memory_bytes",
+						"process_virtual_memory_bytes",
+					),
 				}},
-				MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
-					"envoy_cluster_upstream_cx_active",
-					"envoy_cluster_upstream_cx_connect_fail",
-					"envoy_cluster_upstream_cx_total",
-					"envoy_cluster_upstream_cx_tx_bytes_total",
-					"envoy_server_hot_restart_epoch",
-					"istio_request_bytes_bucket",
-					"istio_request_bytes_sum",
-					"istio_request_duration_milliseconds_bucket",
-					"istio_request_duration_seconds_bucket",
-					"istio_requests_total",
-					"istio_response_bytes_bucket",
-					"istio_response_bytes_sum",
-					"istio_tcp_connections_closed_total",
-					"istio_tcp_connections_opened_total",
-					"istio_tcp_received_bytes_total",
-					"istio_tcp_sent_bytes_total",
-					"go_goroutines",
-					"go_memstats_alloc_bytes",
-					"go_memstats_heap_alloc_bytes",
-					"go_memstats_heap_inuse_bytes",
-					"go_memstats_heap_sys_bytes",
-					"go_memstats_stack_inuse_bytes",
-					"istio_build",
-					"process_cpu_seconds_total",
-					"process_open_fds",
-					"process_resident_memory_bytes",
-					"process_virtual_memory_bytes",
-				),
-			}},
-		},
-	}); err != nil {
-		return err
+			},
+		}); err != nil {
+			return err
+		}
 	}
 
 	serializedObjects, err := serializeRenderedChartAndRegistry(renderedChart, registry)
