@@ -87,6 +87,13 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 		shootAccessSecret                *gardenerutils.AccessSecret
 	)
 
+	// TODO(chrkl): Remove after release v1.103
+	if k.values.ClusterType == component.ClusterTypeSeed && k.values.NameSuffix != "" {
+		if err := component.DestroyResourceConfigs(ctx, k.client, k.namespace, k.values.ClusterType, managedResourceName, k.getResourceConfigs("", nil)); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+	}
+
 	if k.values.ClusterType == component.ClusterTypeShoot {
 		genericTokenKubeconfigSecret, found := k.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
 		if !found {
