@@ -34,12 +34,11 @@
 * [Default Seccomp Profile](usage/shoot_settings/default_seccomp_profile.md)
 * [DNS Autoscaling](usage/dns/dns-autoscaling.md)
 * [DNS Search Path Optimization](usage/dns/dns-search-path-optimization.md)
-* [Endpoints and Ports of a Shoot Control-Plane](usage/control-plane-endpoints-and-ports.md)
-* [ETCD Encryption Config](usage/etcd_encryption_config.md)
-* [ExposureClasses](usage/exposureclasses.md)
-* [Hibernate a Cluster](usage/shoot_hibernate.md)
+* [ETCD Encryption Config](usage/shoot_settings/etcd_encryption_config.md)
+* [ExposureClasses](usage/nessesary_considerations/exposureclasses.md)
+* [Hibernate a Cluster](usage/shoot_settings/shoot_hibernate.md)
 * [Logging](usage/logging.md)
-* [`NodeLocalDNS` feature](usage/node-local-dns.md)
+* [`NodeLocalDNS` feature](usage/dns/node-local-dns.md)
 * [OpenIDConnect presets](usage/openidconnect-presets.md)
 * [Projects](usage/projects.md)
 * [Service Account Manager](usage/service-account-manager.md)
@@ -132,6 +131,7 @@
 * [High Availability Of Deployed Components](development/high-availability.md)
 * [Checklist For Adding New Components](development/component-checklist.md)
 * [Defaulting Strategy and Developer Guideline](development/defaulting.md)
+* [Endpoints and Ports of a Shoot Control-Plane](development/control-plane-endpoints-and-ports.md)
 
 ## Extensions
 

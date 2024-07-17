@@ -63,8 +63,8 @@ Given that the field just specifies the upper bound, end-users can still use low
 
 Gardener also provides a way to manage the service account issuer of a shoot cluster as well as serving its OIDC discovery documents from a centrally managed server called [Gardener Discovery Server](https://github.com/gardener/gardener-discovery-server). This ability removes the need for changing the `.spec.kubernetes.kubeAPIServer.serviceAccountConfig.issuer` and exposing it separately. The feature has the following prerequisites:
 - The Garden Cluster should have the Gardener Discovery Server deployed and configured.
-  The easiest way to handle this is by using the [gardener-operator](../concepts/operator.md#gardener-discovery-server).
-- The [`ShootManagedIssuer`](../deployment/feature_gates.md#list-of-feature-gates) feature gate should be enabled.
+  The easiest way to handle this is by using the [gardener-operator](../../concepts/operator.md#gardener-discovery-server).
+- The [`ShootManagedIssuer`](../../deployment/feature_gates.md#list-of-feature-gates) feature gate should be enabled.
 
 If uncertain that these prerequisites are met, please contact your Gardener Administrator.
 
