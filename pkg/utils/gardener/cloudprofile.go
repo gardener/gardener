@@ -42,11 +42,14 @@ func BuildCloudProfileReference(shoot *gardencorev1beta1.Shoot) *gardencorev1bet
 	if shoot == nil {
 		return nil
 	}
+	if shoot.Spec.CloudProfile != nil {
+		return shoot.Spec.CloudProfile
+	}
 	if len(ptr.Deref(shoot.Spec.CloudProfileName, "")) > 0 {
 		return &gardencorev1beta1.CloudProfileReference{
 			Name: *shoot.Spec.CloudProfileName,
 			Kind: constants.CloudProfileReferenceKindCloudProfile,
 		}
 	}
-	return shoot.Spec.CloudProfile
+	return nil
 }

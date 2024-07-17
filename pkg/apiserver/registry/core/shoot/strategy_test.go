@@ -123,7 +123,7 @@ var _ = Describe("Strategy", func() {
 				}))
 			})
 
-			It("should keep cloudProfileName field if NamespacedCloudProfile is referenced and feature gate is disabled", func() {
+			It("should keep cloudProfileName field and overwrite the cloudprofile reference if NamespacedCloudProfile is referenced and feature gate is disabled", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, false))
 				shoot.Spec.CloudProfile = &core.CloudProfileReference{
 					Kind: "NamespacedCloudProfile",
@@ -134,8 +134,8 @@ var _ = Describe("Strategy", func() {
 
 				Expect(*shoot.Spec.CloudProfileName).To(Equal("foo"))
 				Expect(shoot.Spec.CloudProfile).To(Equal(&core.CloudProfileReference{
-					Kind: "NamespacedCloudProfile",
-					Name: "bar",
+					Kind: "CloudProfile",
+					Name: "foo",
 				}))
 			})
 
@@ -227,7 +227,7 @@ var _ = Describe("Strategy", func() {
 				}))
 			})
 
-			It("should keep cloudProfileName field if NamespacedCloudProfile is referenced and feature gate is disabled", func() {
+			It("should keep cloudProfileName field and overwrite the cloudprofile reference if NamespacedCloudProfile is referenced and feature gate is disabled", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, false))
 				newShoot.Spec.CloudProfile = &core.CloudProfileReference{
 					Kind: "NamespacedCloudProfile",
@@ -238,8 +238,8 @@ var _ = Describe("Strategy", func() {
 
 				Expect(*newShoot.Spec.CloudProfileName).To(Equal("foo"))
 				Expect(newShoot.Spec.CloudProfile).To(Equal(&core.CloudProfileReference{
-					Kind: "NamespacedCloudProfile",
-					Name: "bar",
+					Kind: "CloudProfile",
+					Name: "foo",
 				}))
 			})
 

@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/api/equality"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/api"
@@ -16,19 +17,26 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	"github.com/gardener/gardener/pkg/features"
 )
 
 // GetCloudProfile determines whether a given CloudProfile (plus namespace) is a valid NamespacedCloudProfile or a CloudProfile and returns the appropriate object
 func GetCloudProfile(cloudProfileLister gardencorev1beta1listers.CloudProfileLister, NamespacedCloudProfileLister gardencorev1beta1listers.NamespacedCloudProfileLister, shoot *core.Shoot) (*gardencorev1beta1.CloudProfile, error) {
 	cloudProfileReference := BuildCloudProfileReference(shoot)
-	if cloudProfileReference.Kind == constants.CloudProfileReferenceKindNamespacedCloudProfile {
+	if cloudProfileReference == nil {
+		return nil, fmt.Errorf("no cloudprofile reference has been provided")
+	}
+	switch cloudProfileReference.Kind {
+	case constants.CloudProfileReferenceKindNamespacedCloudProfile:
 		namespacedCloudProfile, err := NamespacedCloudProfileLister.NamespacedCloudProfiles(shoot.Namespace).Get(cloudProfileReference.Name)
 		if err != nil {
 			return nil, err
 		}
 		return &gardencorev1beta1.CloudProfile{Spec: namespacedCloudProfile.Status.CloudProfileSpec}, nil
+	case constants.CloudProfileReferenceKindCloudProfile:
+		return cloudProfileLister.Get(cloudProfileReference.Name)
 	}
-	return cloudProfileLister.Get(cloudProfileReference.Name)
+	return nil, fmt.Errorf("could not find referenced cloudprofile")
 }
 
 // ValidateCloudProfileChanges validates that the referenced CloudProfile does only change towards a more specific reference
@@ -76,10 +84,20 @@ func getRootCloudProfile(namespacedCloudProfileLister gardencorev1beta1listers.N
 }
 
 // BuildCloudProfileReference determines the CloudProfile of a Shoot to use
-// depending on the availability of cloudProfileName and cloudProfile.
+// depending on the availability of cloudProfile and cloudProfileName.
 func BuildCloudProfileReference(shoot *core.Shoot) *gardencorev1beta1.CloudProfileReference {
 	if shoot == nil {
 		return nil
+	}
+	if shoot.Spec.CloudProfile != nil {
+		cloudProfileV1Beta1 := &gardencorev1beta1.CloudProfileReference{}
+		if err := api.Scheme.Convert(shoot.Spec.CloudProfile, cloudProfileV1Beta1, nil); err != nil {
+			return nil
+		}
+		if len(cloudProfileV1Beta1.Kind) == 0 {
+			cloudProfileV1Beta1.Kind = constants.CloudProfileReferenceKindCloudProfile
+		}
+		return cloudProfileV1Beta1
 	}
 	if len(ptr.Deref(shoot.Spec.CloudProfileName, "")) > 0 {
 		return &gardencorev1beta1.CloudProfileReference{
@@ -87,12 +105,39 @@ func BuildCloudProfileReference(shoot *core.Shoot) *gardencorev1beta1.CloudProfi
 			Kind: constants.CloudProfileReferenceKindCloudProfile,
 		}
 	}
-	if shoot.Spec.CloudProfile == nil {
-		return nil
+	return nil
+}
+
+// SyncCloudProfileFields handles the coexistence of a Shoot Spec's cloudProfileName and cloudProfile
+// by making sure both fields are synced correctly and appropriate fallback cases are handled.
+func SyncCloudProfileFields(newShoot *core.Shoot) {
+	// clear cloudProfile if namespacedCloudProfile is provided but feature toggle is disabled
+	if newShoot.Spec.CloudProfile != nil && newShoot.Spec.CloudProfile.Kind == constants.CloudProfileReferenceKindNamespacedCloudProfile && !utilfeature.DefaultFeatureGate.Enabled(features.UseNamespacedCloudProfile) {
+		newShoot.Spec.CloudProfile = nil
 	}
-	cloudProfileV1Beta1 := &gardencorev1beta1.CloudProfileReference{}
-	if err := api.Scheme.Convert(shoot.Spec.CloudProfile, cloudProfileV1Beta1, nil); err != nil {
-		return nil
+
+	// fill empty cloudProfile field from cloudProfileName, if provided
+	if newShoot.Spec.CloudProfile == nil && newShoot.Spec.CloudProfileName != nil {
+		newShoot.Spec.CloudProfile = &core.CloudProfileReference{
+			Kind: constants.CloudProfileReferenceKindCloudProfile,
+			Name: *newShoot.Spec.CloudProfileName,
+		}
 	}
-	return cloudProfileV1Beta1
+
+	// default empty cloudprofile kind to CloudProfile
+	if newShoot.Spec.CloudProfile != nil && newShoot.Spec.CloudProfile.Kind == "" {
+		newShoot.Spec.CloudProfile.Kind = constants.CloudProfileReferenceKindCloudProfile
+	}
+
+	// fill cloudProfileName from cloudProfile if provided and kind is CloudProfile
+	// for backwards compatibility (esp. Dashboard), the CloudProfileName field is synced here with the referenced CloudProfile
+	// TODO(LucaBernstein): Remove this block as soon as the CloudProfileName field is deprecated.
+	if newShoot.Spec.CloudProfile != nil && newShoot.Spec.CloudProfile.Kind == constants.CloudProfileReferenceKindCloudProfile {
+		newShoot.Spec.CloudProfileName = &newShoot.Spec.CloudProfile.Name
+	}
+
+	// if other than CloudProfile is provided, unset cloudProfileName
+	if newShoot.Spec.CloudProfile != nil && newShoot.Spec.CloudProfile.Kind != constants.CloudProfileReferenceKindCloudProfile {
+		newShoot.Spec.CloudProfileName = nil
+	}
 }

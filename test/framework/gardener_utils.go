@@ -534,17 +534,10 @@ func (f *GardenerFramework) MigrateShoot(ctx context.Context, shoot *gardencorev
 	return f.WaitForShootToBeReconciled(ctx, shoot)
 }
 
-// GetCloudProfile returns the cloudprofile from gardener with the given name or from the cloudprofile reference
+// GetCloudProfile returns the cloudprofile from gardener using the cloudprofile reference, alternatively by cloudProfileName.
 func (f *GardenerFramework) GetCloudProfile(ctx context.Context, cloudProfileRef *gardencorev1beta1.CloudProfileReference, namespace string, name *string) (*gardencorev1beta1.CloudProfile, error) {
-	if name != nil {
-		// First, we use the cloudProfileName for now (migration phase) if given
-		cloudProfile := &gardencorev1beta1.CloudProfile{}
-		if err := f.GardenClient.Client().Get(ctx, client.ObjectKey{Name: *name}, cloudProfile); err != nil {
-			return nil, fmt.Errorf("could not get CloudProfile '%s' in Garden cluster: %w", *name, err)
-		}
-		return cloudProfile, nil
-	} else if cloudProfileRef != nil {
-		// Else, we use the cloudProfile reference. This will become the only option once cloudProfileName is deprecated and removed.
+	// The cloudProfile reference will become the only option once cloudProfileName is deprecated and removed.
+	if cloudProfileRef != nil {
 		switch cloudProfileRef.Kind {
 		case v1beta1constants.CloudProfileReferenceKindCloudProfile:
 			cloudProfile := &gardencorev1beta1.CloudProfile{}
@@ -559,8 +552,15 @@ func (f *GardenerFramework) GetCloudProfile(ctx context.Context, cloudProfileRef
 			}
 			return &gardencorev1beta1.CloudProfile{Spec: namespacedCloudProfile.Status.CloudProfileSpec}, nil
 		}
+	} else if name != nil {
+		// Until cloudProfileName is deprecated, use it as a fallback.
+		cloudProfile := &gardencorev1beta1.CloudProfile{}
+		if err := f.GardenClient.Client().Get(ctx, client.ObjectKey{Name: *name}, cloudProfile); err != nil {
+			return nil, fmt.Errorf("could not get CloudProfile '%s' in Garden cluster: %w", *name, err)
+		}
+		return cloudProfile, nil
 	}
-	return nil, errors.New("cloudprofile is required but not set by either cloudProfile reference or cloudProfileName")
+	return nil, errors.New("cloudprofile is required to be set in shoot spec")
 }
 
 // DumpState greps all necessary logs and state of the cluster if the test failed

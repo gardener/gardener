@@ -254,6 +254,10 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, _ adm
 		return apierrors.NewInternalError(fmt.Errorf("could not find referenced cloud profile: %+v", err.Error()))
 	}
 
+	if a.GetOperation() == admission.Create && len(ptr.Deref(shoot.Spec.CloudProfileName, "")) > 0 && shoot.Spec.CloudProfile != nil {
+		return fmt.Errorf("new shoot can only specify either cloudProfileName or cloudProfile reference")
+	}
+
 	err = admissionutils.ValidateCloudProfileChanges(v.cloudProfileLister, v.namespacedCloudProfileLister, shoot, oldShoot)
 	if err != nil {
 		return err

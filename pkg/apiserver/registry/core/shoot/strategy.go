@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/features"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/plugin/pkg/utils"
 )
 
 type shootStrategy struct {
@@ -55,7 +56,7 @@ func (shootStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 	newShoot.Generation = 1
 	newShoot.Status = core.ShootStatus{}
 
-	handleCloudProfileFallback(newShoot)
+	utils.SyncCloudProfileFields(newShoot)
 
 	if !utilfeature.DefaultFeatureGate.Enabled(features.ShootCredentialsBinding) {
 		newShoot.Spec.CredentialsBindingName = nil
@@ -73,34 +74,10 @@ func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object
 		newShoot.Generation = oldShoot.Generation + 1
 	}
 
-	handleCloudProfileFallback(newShoot)
+	utils.SyncCloudProfileFields(newShoot)
 
 	if oldShoot.Spec.CredentialsBindingName == nil && !utilfeature.DefaultFeatureGate.Enabled(features.ShootCredentialsBinding) {
 		newShoot.Spec.CredentialsBindingName = nil
-	}
-}
-
-func handleCloudProfileFallback(newShoot *core.Shoot) {
-	// fill empty cloudprofile reference from cloudProfileName by default
-	// strictly speaking not mandatory yet, but will become once CloudProfileName is deprecated and NamespacedCloudProfile feature is enabled by default
-	if newShoot.Spec.CloudProfile == nil && newShoot.Spec.CloudProfileName != nil {
-		newShoot.Spec.CloudProfile = &core.CloudProfileReference{
-			Name: *newShoot.Spec.CloudProfileName,
-			Kind: v1beta1constants.CloudProfileReferenceKindCloudProfile,
-		}
-	}
-
-	// for backwards compatibility (esp. Dashboard), the CloudProfileName field is synced here with the referenced CloudProfile
-	// TODO(LucaBernstein): Remove this block as soon as the CloudProfileName field is deprecated.
-	if newShoot.Spec.CloudProfile != nil && newShoot.Spec.CloudProfile.Kind == v1beta1constants.CloudProfileReferenceKindCloudProfile {
-		newShoot.Spec.CloudProfileName = &newShoot.Spec.CloudProfile.Name
-	}
-
-	// if nscpfl feature gate is enabled and cloudprofile reference is nscpfl, unset cloudProfileName
-	// only required until cloudprofile reference is the source of truth after dependencies have updated their usage
-	// so that the extension can make use of the NamespacedCloudProfile without knowledge of the feature toggle state
-	if utilfeature.DefaultFeatureGate.Enabled(features.UseNamespacedCloudProfile) && newShoot.Spec.CloudProfile.Kind == v1beta1constants.CloudProfileReferenceKindNamespacedCloudProfile {
-		newShoot.Spec.CloudProfileName = nil
 	}
 }
 

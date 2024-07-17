@@ -298,10 +298,10 @@ func applyStrategy(log logr.Logger, shoot *gardencorev1beta1.Shoot, seedList []g
 
 	if candidates == nil {
 		var cloudProfileName string
-		if shoot.Spec.CloudProfileName != nil {
-			cloudProfileName = *shoot.Spec.CloudProfileName
-		} else if shoot.Spec.CloudProfile != nil {
+		if shoot.Spec.CloudProfile != nil {
 			cloudProfileName = shoot.Spec.CloudProfile.Name
+		} else if shoot.Spec.CloudProfileName != nil {
+			cloudProfileName = *shoot.Spec.CloudProfileName
 		}
 		return nil, fmt.Errorf("no matching seed candidate found for Configuration (Cloud Profile '%s', Region '%s', SeedDeterminationStrategy '%s')", cloudProfileName, shoot.Spec.Region, strategy)
 	}

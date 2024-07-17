@@ -509,10 +509,10 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 
 				for _, s := range shootList {
 					var cloudProfileName string
-					if s.Spec.CloudProfileName != nil {
-						cloudProfileName = *s.Spec.CloudProfileName
-					} else if s.Spec.CloudProfile != nil {
+					if s.Spec.CloudProfile != nil {
 						cloudProfileName = s.Spec.CloudProfile.Name
+					} else if s.Spec.CloudProfileName != nil {
+						cloudProfileName = *s.Spec.CloudProfileName
 					}
 
 					if s.DeletionTimestamp != nil || cloudProfile.Name != cloudProfileName {

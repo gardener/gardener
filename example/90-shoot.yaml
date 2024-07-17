@@ -5,7 +5,8 @@ metadata:
   namespace: garden-dev
 spec:
   secretBindingName: my-provider-account
-  cloudProfileName: cloudprofile1
+  cloudProfile:
+    name: cloudprofile1
   region: europe-central-1
   purpose: evaluation # {testing,development,production,infrastructure}, "infrastructure" purpose only usable for shoots in garden namespace
 # schedulerName: default-scheduler
