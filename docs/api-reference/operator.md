@@ -1260,6 +1260,22 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerDeploymentPolicy
 <p>Policy controls how the controller is deployed. It defaults to &lsquo;OnDemand&rsquo;.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>seedSelector</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#labelselector-v1-meta">
+Kubernetes meta/v1.LabelSelector
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SeedSelector contains an optional label selector for seeds. Only if the labels match then this controller will be
+considered for a deployment.
+An empty list means that all seeds are selected.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="operator.gardener.cloud/v1alpha1.ExtensionHelm">ExtensionHelm
