@@ -1,5 +1,6 @@
 ---
 title: Implementing High Availability and Tolerating Zone Outages
+weight: 17
 ---
 
 # Implementing High Availability and Tolerating Zone Outages
