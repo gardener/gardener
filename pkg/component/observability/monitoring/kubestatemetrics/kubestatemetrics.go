@@ -198,6 +198,11 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 			return err
 		}
 
+		// TODO(vicwicker): Remove after KSM upgrade to 2.13.
+		if err := managedresources.WaitUntilHealthyAndNotProgressing(ctx, k.client, k.namespace, k.managedResourceName()); err != nil {
+			return err
+		}
+
 		return managedresources.CreateForShootWithLabels(ctx,
 			k.client,
 			k.namespace,
