@@ -5,6 +5,7 @@
 package nodeagentauthorizer
 
 import (
+	"slices"
 	"strings"
 
 	"k8s.io/apiserver/pkg/authentication/user"
@@ -18,7 +19,7 @@ func GetNodeAgentIdentity(u user.Info) (string, bool) {
 		return "", false
 	}
 
-	if !strings.HasPrefix(u.GetName(), v1beta1constants.NodeAgentUserNamePrefix) {
+	if !strings.HasPrefix(u.GetName(), v1beta1constants.NodeAgentUserNamePrefix) || !slices.Contains(u.GetGroups(), v1beta1constants.NodeAgentsGroup) {
 		return "", false
 	}
 
