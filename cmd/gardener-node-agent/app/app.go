@@ -154,7 +154,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 			}
 		}
 
-		// TODO(oliver-goetz): Remove migration code when NodeAgentAuthorizer is removed
+		// TODO(oliver-goetz): Remove migration code when NodeAgentAuthorizer feature gate is removed
 		// Migration from access token kubeconfig to node-authorizer kubeconfig or vice versa
 		if migrateKubeconfig {
 			if features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) {

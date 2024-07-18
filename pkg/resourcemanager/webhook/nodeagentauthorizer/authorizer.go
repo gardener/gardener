@@ -64,10 +64,13 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 		return auth.DecisionNoOpinion, "", nil
 	}
 
-	requestLog := a.logger.WithValues("machine", machineName, "attributes", fmt.Sprintf("%#v", attrs))
+	requestLog := a.logger.WithValues(
+		"user", attrs.GetUser().GetName(), "verb", attrs.GetVerb(),
+		"namespace", attrs.GetNamespace(), "resource", attrs.GetResource(), "subresource", attrs.GetSubresource(),
+	)
 
 	if machineName == "" {
-		requestLog.Info("Unknown machine for user", "user", attrs.GetUser().GetName())
+		requestLog.Info("No machine for user")
 		return auth.DecisionNoOpinion, "", nil
 	}
 
@@ -95,8 +98,7 @@ func (a *authorizer) authorizeCertificateSigningRequest(ctx context.Context, log
 		return auth.DecisionNoOpinion, reason, nil
 	}
 
-	allowedVerbs := []string{"get", "create"}
-	if allowed, reason := a.checkVerb(log, attrs, allowedVerbs...); !allowed {
+	if allowed, reason := a.checkVerb(log, attrs, "get", "create"); !allowed {
 		return auth.DecisionNoOpinion, reason, nil
 	}
 
@@ -110,8 +112,8 @@ func (a *authorizer) authorizeCertificateSigningRequest(ctx context.Context, log
 	}
 
 	if csr.Spec.Username != attrs.GetUser().GetName() {
-		log.Info("Denying authorization because the CSR is for a different user", "user", attrs.GetUser().GetName(), "csrUsername", csr.Spec.Username)
-		return auth.DecisionNoOpinion, "gardener-node-agent is only allowed to create CSRs for its own user", nil
+		log.Info("Denying authorization because the CSR is for a different user", "csrUsername", csr.Spec.Username)
+		return auth.DecisionNoOpinion, "gardener-node-agent is only allowed to get CSRs for its own user", nil
 	}
 
 	return auth.DecisionAllow, "", nil
@@ -122,8 +124,7 @@ func (a *authorizer) authorizeEvent(log logr.Logger, attrs auth.Attributes) (aut
 		return auth.DecisionNoOpinion, reason, nil
 	}
 
-	allowedVerbs := []string{"create"}
-	if allowed, reason := a.checkVerb(log, attrs, allowedVerbs...); !allowed {
+	if allowed, reason := a.checkVerb(log, attrs, "create"); !allowed {
 		return auth.DecisionNoOpinion, reason, nil
 	}
 
@@ -147,7 +148,7 @@ func (a *authorizer) authorizeLease(ctx context.Context, log logr.Logger, machin
 
 	node := machine.Labels[machinev1alpha1.NodeLabelKey]
 	if node == "" {
-		log.Info("Denying authorization for machine to the lease because the machine does not have a \"node\" label", "machine", machineName, "lease", attrs.GetName())
+		log.Info("Denying authorization for machine to the lease because the machine does not have a \"node\" label", "machine", machineName)
 		return auth.DecisionNoOpinion, fmt.Sprintf("expecting \"node\" label on machineName %q", machineName), nil
 	}
 
@@ -183,7 +184,7 @@ func (a *authorizer) authorizeNode(ctx context.Context, log logr.Logger, machine
 
 	if machine.Labels[machinev1alpha1.NodeLabelKey] != attrs.GetName() {
 		log.Info("Denying authorization for node because it belongs to a different machine", "node", attrs.GetName(), "machine", machineName)
-		return auth.DecisionNoOpinion, fmt.Sprintf("node %q belongs does not belong to machine %q", attrs.GetName(), machineName), nil
+		return auth.DecisionNoOpinion, fmt.Sprintf("node %q does not belong to machine %q", attrs.GetName(), machineName), nil
 	}
 
 	return auth.DecisionAllow, "", nil
@@ -207,7 +208,7 @@ func (a *authorizer) authorizeSecret(ctx context.Context, log logr.Logger, machi
 	validSecrets := []string{machine.Spec.NodeTemplateSpec.Labels[v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName], valitailTokenSecretName}
 
 	if !slices.Contains(validSecrets, attrs.GetName()) || attrs.GetNamespace() != metav1.NamespaceSystem {
-		log.Info("Denying authorization because gardener-node-agent is not allowed to access secret", "name", attrs.GetName(), "namespace", attrs.GetNamespace())
+		log.Info("Denying authorization because gardener-node-agent is not allowed to access secret")
 		return auth.DecisionNoOpinion, fmt.Sprintf("gardener-node-agent can only access secrets %v in \"kube-system\" namespace", validSecrets), nil
 	}
 
@@ -225,7 +226,7 @@ func (a *authorizer) checkVerb(log logr.Logger, attrs auth.Attributes, allowedVe
 
 func (a *authorizer) checkSubresource(log logr.Logger, attrs auth.Attributes, allowedSubresources ...string) (bool, string) {
 	if subresource := attrs.GetSubresource(); len(subresource) > 0 && !slices.Contains(allowedSubresources, attrs.GetSubresource()) {
-		log.Info("Denying authorization because subresource is not allowed for this resource type", "allowedSubresources", allowedSubresources)
+		log.Info("Denying authorization because subresource is not allowed for this resource", "allowedSubresources", allowedSubresources)
 		return false, fmt.Sprintf("only the following subresources are allowed for this resource type: %+v", allowedSubresources)
 	}
 
