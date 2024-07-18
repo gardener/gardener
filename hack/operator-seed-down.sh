@@ -29,8 +29,9 @@ parse_flags() {
 parse_flags "$@"
 
 # delete stuff gradually in the right order, otherwise several dependencies will prevent the cleanup from succeeding
-kubectl --kubeconfig "$PATH_GARDEN_KUBECONFIG" delete seed \
-  local \
+kubectl --kubeconfig "$PATH_GARDEN_KUBECONFIG" delete \
+  gardenlet/local \
+  seed/local \
   --ignore-not-found \
   --wait \
   --timeout 5m

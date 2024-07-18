@@ -396,7 +396,7 @@ operator-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 operator-seed-up: $(SKAFFOLD) $(HELM) $(KUBECTL) operator-up
 	$(SKAFFOLD) run -m garden -f=skaffold-operator-garden.yaml
 	$(SKAFFOLD) run -m garden-config -f=skaffold-operator-garden.yaml --kubeconfig=$(VIRTUAL_GARDEN_KUBECONFIG) --status-check=false # deployments don't exist in virtual-garden, see https://skaffold.dev/docs/status-check/
-	$(SKAFFOLD) run -m gardenlet -p operator -f=skaffold.yaml
+	$(SKAFFOLD) run -m gardenlet -p operator -f=skaffold.yaml --kubeconfig=$(VIRTUAL_GARDEN_KUBECONFIG) --status-check=false # deployments don't exist in virtual-garden, see https://skaffold.dev/docs/status-check/
 
 operator-seed-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	./hack/operator-seed-down.sh --path-kind-kubeconfig $(KUBECONFIG) --path-garden-kubeconfig $(VIRTUAL_GARDEN_KUBECONFIG)

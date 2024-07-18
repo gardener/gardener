@@ -1108,7 +1108,7 @@ build:
         after:
           - command:
               - bash
-              - hack/mcm-provider-local-operator-overwrite.sh
+              - hack/generate-kustomize-patch-extension-provider-local.sh
       ko:
         dependencies:
           paths:

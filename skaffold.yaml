@@ -782,11 +782,6 @@ build:
       context: pkg/provider-local/node
       docker: {}
     - image: local-skaffold/machine-controller-manager-provider-local
-      hooks:
-        after:
-          - command:
-              - bash
-              - hack/mcm-provider-local-overwrite.sh
       ko:
         dependencies:
           paths:
@@ -798,6 +793,11 @@ build:
         ldflags:
           - '{{.LD_FLAGS}}'
         main: ./cmd/machine-controller-manager-provider-local
+      hooks:
+        after:
+          - command:
+              - bash
+              - hack/generate-kustomize-patch-controllerdeployment-provider-local.sh
     - image: local-skaffold/gardener-extension-provider-local/charts/extension
       custom:
         dependencies:
@@ -1588,12 +1588,44 @@ profiles:
           config.server.healthProbes.enable: false
   - name: operator
     patches:
+      - op: remove
+        path: /deploy
       - op: add
-        path: /deploy/helm/releases/0/valuesFiles/-
-        value: example/gardener-local/gardenlet/values-operator.yaml
-      - op: replace
-        path: /deploy/helm/hooks/after/0/host/command
+        path: /build/artifacts/0/hooks
         value:
-          - bash
-          - -ec
-          - KUBECONFIG=$VIRTUAL_GARDEN_KUBECONFIG hack/usage/wait-for.sh seed local GardenletReady SeedSystemComponentsHealthy ExtensionsReady
+          after:
+            - command:
+                - bash
+                - hack/generate-kustomize-patch-gardenlet.sh
+                - image
+                - gardenlet
+      - op: add
+        path: /build/artifacts/1/hooks
+        value:
+          after:
+            - command:
+                - bash
+                - hack/generate-kustomize-patch-gardenlet.sh
+                - helm
+      - op: add
+        path: /build/artifacts/2/hooks
+        value:
+          after:
+            - command:
+                - bash
+                - hack/generate-kustomize-patch-gardenlet.sh
+                - image
+                - gardener-resource-manager
+      - op: add
+        path: /build/artifacts/3/hooks
+        value:
+          after:
+            - command:
+                - bash
+                - hack/generate-kustomize-patch-gardenlet.sh
+                - image
+                - gardener-node-agent
+    manifests:
+      kustomize:
+        paths:
+          - example/gardener-local/gardenlet/operator
