@@ -251,7 +251,11 @@ func (i *istiod) Deploy(ctx context.Context) error {
 	}
 
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
-	// Only add a ServiceMonitor for the istio-ingressgateway if istio is deployed on a seed.
+	// Only add a ServiceMonitor for the istio-ingressgateway if istio is deployed on a seed. Otherwise, the resource
+	// ends up in two managed resources, one managed by gardener operator and one managed by gardenlet. This can result
+	// in a race between the corresponding gardener resource managers during seed deletion.
+	// The alternative to use the name prefix to prevent the name clash is not useful as the service monitor covers all
+	// namespaces.
 	if i.values.NamePrefix == "" {
 		if err := registry.Add(&monitoringv1.ServiceMonitor{
 			ObjectMeta: monitoringutils.ConfigObjectMeta("istio-ingressgateway", v1beta1constants.IstioSystemNamespace, aggregate.Label),
