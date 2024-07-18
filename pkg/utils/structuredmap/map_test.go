@@ -36,6 +36,37 @@ var _ = Describe("Structured Map", func() {
 			Expect(got).To(Equal(want))
 		})
 
+		It("should set values when calling multiple times", func() {
+			var (
+				m    = map[string]any{}
+				want = map[string]any{
+					"a": map[string]any{
+						"b": map[string]any{
+							"c": 2,
+							"d": map[string]any{
+								"e": 2,
+							},
+						},
+					},
+				}
+			)
+
+			_, err := SetMapEntry(m, Path{"a", "b", "d"}, func(_ any) (any, error) { return map[string]any{"e": 2}, nil })
+			Expect(err).NotTo(HaveOccurred())
+
+			got, err := SetMapEntry(m, Path{"a", "b"}, func(val any) (any, error) {
+				values, ok := val.(map[string]any)
+				if !ok {
+					values = map[string]any{}
+				}
+				values["c"] = 2
+
+				return values, nil
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).To(Equal(want))
+		})
+
 		It("should populate a nil map", func() {
 			var (
 				m    map[string]any

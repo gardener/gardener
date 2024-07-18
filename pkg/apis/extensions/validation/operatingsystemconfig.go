@@ -5,6 +5,7 @@
 package validation
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"regexp"
@@ -113,6 +114,23 @@ func ValidateContainerdConfig(config *extensionsv1alpha1.ContainerdConfig, purpo
 	}
 
 	allErrs = append(allErrs, ValidateContainerdRegistryConfigs(config.Registries, fldPath.Child("registries"))...)
+
+	for i, p := range config.Plugins {
+		idxPath := fldPath.Child("plugins").Index(i)
+
+		if len(p.Path) == 0 {
+			allErrs = append(allErrs, field.Required(idxPath.Child("path"), "must provider a path"))
+		}
+
+		if p.Values != nil && len(p.Values.Raw) > 0 {
+			values := map[string]any{}
+
+			err := json.Unmarshal(p.Values.Raw, &values)
+			if err != nil {
+				allErrs = append(allErrs, field.Invalid(idxPath.Child("values"), string(p.Values.Raw), "provided values must be given in json format"))
+			}
+		}
+	}
 
 	return allErrs
 }
