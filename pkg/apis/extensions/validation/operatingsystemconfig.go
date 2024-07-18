@@ -5,7 +5,9 @@
 package validation
 
 import (
+	"fmt"
 	"net/url"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -117,6 +119,25 @@ func ValidateContainerdConfig(config *extensionsv1alpha1.ContainerdConfig, purpo
 
 var availableCapabilities = sets.New(extensionsv1alpha1.PullCapability, extensionsv1alpha1.ResolveCapability, extensionsv1alpha1.PushCapability)
 
+var digitsRegex = regexp.MustCompile(`^\d+$`)
+var portRegexp = regexp.MustCompile(`^([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$`)
+
+// validateHostPort check that host and optional port format is `<host>[:<port>]`
+func validateHostPort(hostPort string) []string {
+	var errs []string
+	host := hostPort
+	if index := strings.LastIndexByte(hostPort, ':'); index != -1 {
+		port := hostPort[index+1:]
+		if digitsRegex.MatchString(port) {
+			host = hostPort[:index]
+			if !portRegexp.MatchString(port) {
+				errs = append(errs, fmt.Sprintf("port '%s' is not valid, valid port must be in the range [1, 65535]", port))
+			}
+		}
+	}
+	return append(errs, validation.IsDNS1123Subdomain(host)...)
+}
+
 // ValidateContainerdRegistryConfigs validates the spec of a RegistryConfig object.
 func ValidateContainerdRegistryConfigs(registries []extensionsv1alpha1.RegistryConfig, fldPath *field.Path) field.ErrorList {
 	const form = "; desired format: https://host[:port]"
@@ -133,7 +154,10 @@ func ValidateContainerdRegistryConfigs(registries []extensionsv1alpha1.RegistryC
 		duplicateUpstream.Insert(r.Upstream)
 
 		if r.Upstream != "_default" {
-			allErrs = append(allErrs, validation.IsFullyQualifiedDomainName(idxPath.Child("upstream"), r.Upstream)...)
+			upstreamFld := idxPath.Child("upstream")
+			for _, msg := range validateHostPort(r.Upstream) {
+				allErrs = append(allErrs, field.Invalid(upstreamFld, r.Upstream, msg))
+			}
 		}
 
 		if r.Server != nil {

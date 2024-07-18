@@ -92,11 +92,6 @@ func (e *ensurer) EnsureAdditionalProvisionFiles(_ context.Context, _ extensions
 			UpstreamHost: "europe-docker.pkg.dev",
 			MirrorHost:   "http://garden.local.gardener.cloud:5008",
 		},
-		// Enable containerd to reach registry at garden.local.gardener.cloud:5001 via HTTP.
-		{
-			UpstreamHost: "garden.local.gardener.cloud:5001",
-			MirrorHost:   "http://garden.local.gardener.cloud:5001",
-		},
 	} {
 		*new = webhook.EnsureFileWithPath(*new, extensionsv1alpha1.File{
 			Path:        filepath.Join("/etc/containerd/certs.d", mirror.UpstreamHost, "hosts.toml"),
@@ -142,6 +137,12 @@ func (e *ensurer) EnsureCRIConfig(_ context.Context, _ extensionscontextwebhook.
 			Upstream: "quay.io",
 			Server:   ptr.To("https://quay.io"),
 			Hosts:    []extensionsv1alpha1.RegistryHost{{URL: "http://garden.local.gardener.cloud:5007"}},
+		},
+		// Enable containerd to reach registry at garden.local.gardener.cloud:5001 via HTTP.
+		{
+			Upstream: "garden.local.gardener.cloud:5001",
+			Server:   ptr.To("http://garden.local.gardener.cloud:5001"),
+			Hosts:    []extensionsv1alpha1.RegistryHost{{URL: "http://garden.local.gardener.cloud:5001"}},
 		},
 	} {
 		// Only add registry when it is not already set in the OSC.

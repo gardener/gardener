@@ -337,6 +337,47 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 			}))))
 		})
 
+		It("should forbid containerd config with an upstream that contains a scheme", func() {
+			oscCopy := osc.DeepCopy()
+			oscCopy.Spec.CRIConfig.Containerd.Registries = []extensionsv1alpha1.RegistryConfig{
+				{
+					Upstream: "http://foo.bar",
+				},
+			}
+
+			Expect(ValidateOperatingSystemConfig(oscCopy)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":     Equal(field.ErrorTypeInvalid),
+				"Field":    Equal("spec.criConfig.containerd.registries[0].upstream"),
+				"BadValue": Equal("http://foo.bar"),
+			}))))
+		})
+
+		It("should forbid containerd config with an upstream that contains a path", func() {
+			oscCopy := osc.DeepCopy()
+			oscCopy.Spec.CRIConfig.Containerd.Registries = []extensionsv1alpha1.RegistryConfig{
+				{
+					Upstream: "foo.bar/baz",
+				},
+			}
+
+			Expect(ValidateOperatingSystemConfig(oscCopy)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":     Equal(field.ErrorTypeInvalid),
+				"Field":    Equal("spec.criConfig.containerd.registries[0].upstream"),
+				"BadValue": Equal("foo.bar/baz"),
+			}))))
+		})
+
+		It("should allow containerd config with an upstream that contains a port", func() {
+			oscCopy := osc.DeepCopy()
+			oscCopy.Spec.CRIConfig.Containerd.Registries = []extensionsv1alpha1.RegistryConfig{
+				{
+					Upstream: "foo.bar:5001",
+				},
+			}
+
+			Expect(ValidateOperatingSystemConfig(oscCopy)).To(BeEmpty())
+		})
+
 		It("should allow containerd config with _default upstream name", func() {
 			oscCopy := osc.DeepCopy()
 			oscCopy.Spec.CRIConfig.Containerd.Registries = []extensionsv1alpha1.RegistryConfig{
