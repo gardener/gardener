@@ -26,4 +26,5 @@ metadata:
 #      helm:
 #        ociRepository: {}
 #      policy: OnDemand|Always
+#      seedSelector: {}
 

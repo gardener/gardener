@@ -203,7 +203,8 @@ func (r *Reconciler) reconcileControllerRegistration(ctx context.Context, virtua
 			controllerRegistration.Spec = gardencorev1beta1.ControllerRegistrationSpec{
 				Resources: extension.Spec.Resources,
 				Deployment: &gardencorev1beta1.ControllerRegistrationDeployment{
-					Policy: extension.Spec.Deployment.ExtensionDeployment.Policy,
+					Policy:       extension.Spec.Deployment.ExtensionDeployment.Policy,
+					SeedSelector: extension.Spec.Deployment.ExtensionDeployment.SeedSelector,
 					DeploymentRefs: []gardencorev1beta1.DeploymentRef{
 						{
 							Name: extension.Name,

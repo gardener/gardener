@@ -610,6 +610,11 @@ func (in *ExtensionDeploymentSpec) DeepCopyInto(out *ExtensionDeploymentSpec) {
 		*out = new(v1beta1.ControllerDeploymentPolicy)
 		**out = **in
 	}
+	if in.SeedSelector != nil {
+		in, out := &in.SeedSelector, &out.SeedSelector
+		*out = new(metav1.LabelSelector)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 

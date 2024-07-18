@@ -36,7 +36,6 @@ type ExtensionList struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
-
 	// Items is the list of Extension.
 	Items []Extension `json:"items"`
 }
@@ -70,18 +69,20 @@ type ExtensionDeploymentSpec struct {
 	// DeploymentSpec is the deployment configuration for the extension.
 	// +optional
 	DeploymentSpec `json:",inline"`
-
 	// Values are the deployment values used in the creation of the ControllerDeployment in the virtual garden cluster.
 	// +optional
 	Values *apiextensionsv1.JSON `json:"values,omitempty"`
-
 	// RuntimeClusterValues are the deployment values for the extension deployment running in the runtime garden cluster.
 	// +optional
 	RuntimeClusterValues *apiextensionsv1.JSON `json:"runtimeClusterValues,omitempty"`
-
 	// Policy controls how the controller is deployed. It defaults to 'OnDemand'.
 	// +optional
 	Policy *gardencorev1beta1.ControllerDeploymentPolicy `json:"policy,omitempty"`
+	// SeedSelector contains an optional label selector for seeds. Only if the labels match then this controller will be
+	// considered for a deployment.
+	// An empty list means that all seeds are selected.
+	// +optional
+	SeedSelector *metav1.LabelSelector `json:"seedSelector,omitempty"`
 }
 
 // AdmissionDeploymentSpec contains the deployment specification for the admission controller of an extension.
@@ -94,7 +95,6 @@ type AdmissionDeploymentSpec struct {
 	// installs necessary resources in the virtual garden cluster e.g. RBAC that are necessary for the admission controller.
 	// +optional
 	VirtualCluster *DeploymentSpec `json:"virtualCluster,omitempty"`
-
 	// Values are the deployment values. The values will be applied to both admission deployments.
 	// +optional
 	Values *apiextensionsv1.JSON `json:"values,omitempty"`
