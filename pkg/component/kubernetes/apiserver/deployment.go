@@ -174,6 +174,10 @@ func (k *kubeAPIServer) reconcileDeployment(
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameServiceAccountKey)
 	}
 
+	if err := netutils.CheckDualStackForKubeComponents(k.values.ServiceNetworkCIDRs, "service"); err != nil {
+		return err
+	}
+
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), deployment, func() error {
 		deployment.Labels = utils.MergeStringMaps(GetLabels(), map[string]string{
 			resourcesv1alpha1.HighAvailabilityConfigType:                        resourcesv1alpha1.HighAvailabilityConfigTypeServer,

@@ -459,6 +459,10 @@ func (k *kubeProxy) getRawComponentConfig() (string, error) {
 	}
 
 	if !k.values.IPVSEnabled && len(k.values.PodNetworkCIDRs) > 0 {
+		if err := netutils.CheckDualStackForKubeComponents(k.values.PodNetworkCIDRs, "pod"); err != nil {
+			return "", err
+		}
+
 		config.ClusterCIDR = netutils.JoinByComma(k.values.PodNetworkCIDRs)
 	}
 

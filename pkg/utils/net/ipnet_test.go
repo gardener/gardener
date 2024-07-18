@@ -9,6 +9,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	gomegatypes "github.com/onsi/gomega/types"
 
 	. "github.com/gardener/gardener/pkg/utils/net"
 )
@@ -52,4 +53,29 @@ var _ = DescribeTable("#Join",
 	Entry("should concatenate CIDRs of the given networks with *** as separator",
 		[]string{"10.250.0.0/16", "192.168.0.0/24", "2001:db8:1::/64", "2001:db8:2::/64"}, "***",
 		"10.250.0.0/16***192.168.0.0/24***2001:db8:1::/64***2001:db8:2::/64"),
+)
+
+var _ = DescribeTable("#CheckDualStackForKubeComponents",
+	func(cidrs []string, success bool, matcher gomegatypes.GomegaMatcher) {
+		var networks []net.IPNet
+		for _, cidr := range cidrs {
+			_, ipNet, err := net.ParseCIDR(cidr)
+			Expect(err).ToNot(HaveOccurred())
+			networks = append(networks, *ipNet)
+		}
+		if success {
+			Expect(CheckDualStackForKubeComponents(networks, "network")).To(Succeed())
+		} else {
+			Expect(CheckDualStackForKubeComponents(networks, "network")).To(matcher)
+		}
+	},
+
+	Entry("should succeed with nil list", nil, true, nil),
+	Entry("should succeed with empty list", []string{}, true, nil),
+	Entry("should succeed with single IPv4 entry", []string{"10.0.0.0/8"}, true, nil),
+	Entry("should succeed with single IPv6 entry", []string{"2001:db8::/64"}, true, nil),
+	Entry("should succeed with dual-stack list", []string{"10.0.0.0/8", "2001:db8::/64"}, true, nil),
+	Entry("should fail with three entries", []string{"10.0.0.0/8", "2001:db8::/64", "192.168.0.0/16"}, false, MatchError(ContainSubstring("network CIDRs must not contain more than two elements"))),
+	Entry("should fail with two IPv4 entries", []string{"10.0.0.0/8", "192.168.0.0/16"}, false, MatchError(ContainSubstring("network CIDRs must be of different IP family"))),
+	Entry("should fail with two IPv6 entries", []string{"2001:db8::/64", "2001:db8:1::/64"}, false, MatchError(ContainSubstring("network CIDRs must be of different IP family"))),
 )
