@@ -6,6 +6,7 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -245,6 +246,21 @@ type ContainerdConfig struct {
 	Registries []RegistryConfig `json:"registries,omitempty"`
 	// SandboxImage configures the sandbox image for containerd.
 	SandboxImage string `json:"sandboxImage"`
+	// Plugins configures the plugins section in containerd's config.toml.
+	// +optional
+	Plugins []PluginConfig `json:"plugins,omitempty"`
+}
+
+// PluginConfig contains configuration values for the containerd plugins section.
+type PluginConfig struct {
+	// Path are the elements that construct the path in the plugins section.
+	Path []string `json:"path"`
+	// Values are the values configured at the given path. If defined, it is expected as json format:
+	// - A given json object will be put to the given path.
+	// - An empty json object deletes the entire subtree, including the table entry at the given path.
+	// - An empty value results in only the table entry to be created.
+	// +optional
+	Values *apiextensionsv1.JSON `json:"values,omitempty"`
 }
 
 // RegistryConfig contains registry configuration options.

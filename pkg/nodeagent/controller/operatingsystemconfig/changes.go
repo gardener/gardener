@@ -144,7 +144,13 @@ func computeOperatingSystemConfigChanges(fs afero.Afero, newOSC *extensionsv1alp
 		if !extensionsv1alpha1helper.HasContainerdConfiguration(oldOSC.Spec.CRIConfig) {
 			changes.containerd.configFileChange = true
 		} else {
-			changes.containerd.configFileChange = !apiequality.Semantic.DeepEqual(newOSC.Spec.CRIConfig.Containerd.SandboxImage, oldOSC.Spec.CRIConfig.Containerd.SandboxImage)
+			var (
+				newContainerd = newOSC.Spec.CRIConfig.Containerd
+				oldContainerd = oldOSC.Spec.CRIConfig.Containerd
+			)
+
+			changes.containerd.configFileChange = !apiequality.Semantic.DeepEqual(newContainerd.SandboxImage, oldContainerd.SandboxImage) ||
+				!apiequality.Semantic.DeepEqual(newContainerd.Plugins, oldContainerd.Plugins)
 			oldRegistries = oldOSC.Spec.CRIConfig.Containerd.Registries
 		}
 	}

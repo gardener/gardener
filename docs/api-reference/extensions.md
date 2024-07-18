@@ -2417,6 +2417,20 @@ string
 <p>SandboxImage configures the sandbox image for containerd.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>plugins</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.PluginConfig">
+[]PluginConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Plugins configures the plugins section in containerd&rsquo;s config.toml.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="extensions.gardener.cloud/v1alpha1.ControlPlaneSpec">ControlPlaneSpec
@@ -3983,6 +3997,51 @@ CloudConfig
 <em>(Optional)</em>
 <p>CloudConfig is a structure for containing the generated output for the given operating system
 config spec. It contains a reference to a secret as the result may contain confidential data.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.PluginConfig">PluginConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.ContainerdConfig">ContainerdConfig</a>)
+</p>
+<p>
+<p>PluginConfig contains configuration values for the containerd plugins section.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>path</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<p>Path are the elements that construct the path in the plugins section.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>values</code></br>
+<em>
+k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Values are the values configured at the given path. If defined, it is expected as json format:
+- A given json object will be put to the given path.
+- An empty json object deletes the entire subtree, including the table entry at the given path.
+- An empty value results in only the table entry to be created.</p>
 </td>
 </tr>
 </tbody>

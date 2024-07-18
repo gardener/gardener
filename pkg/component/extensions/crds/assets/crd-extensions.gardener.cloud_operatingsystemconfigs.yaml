@@ -79,6 +79,30 @@ spec:
                       ContainerdConfig is the containerd configuration.
                       Only to be set for OperatingSystemConfigs with purpose 'reconcile'.
                     properties:
+                      plugins:
+                        description: Plugins configures the plugins section in containerd's
+                          config.toml.
+                        items:
+                          description: PluginConfig contains configuration values
+                            for the containerd plugins section.
+                          properties:
+                            path:
+                              description: Path are the elements that construct the
+                                path in the plugins section.
+                              items:
+                                type: string
+                              type: array
+                            values:
+                              description: |-
+                                Values are the values configured at the given path. If defined, it is expected as json format:
+                                - A given json object will be put to the given path.
+                                - An empty json object deletes the entire subtree, including the table entry at the given path.
+                                - An empty value results in only the table entry to be created.
+                              x-kubernetes-preserve-unknown-fields: true
+                          required:
+                          - path
+                          type: object
+                        type: array
                       registries:
                         description: Registries configures the registry hosts for
                           containerd.
