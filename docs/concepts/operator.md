@@ -156,6 +156,8 @@ The `.spec.deployment.admission` defines how an extension's admission controller
 Typically, the admission controllers run in the runtime cluster alongside the virtual cluster deployment. However, to function properly the admission controllers require access and permissions for the virtual garden cluster in order to watch the Gardener API resources like shoots.
 The admission deployment realizes this scenario by allowing the specification of different Helm charts for the runtime and virtual cluster and follows the pattern established by existing Gardener extensions [like provider-aws](https://github.com/gardener/gardener-extension-provider-aws/tree/master/charts/gardener-extension-admission-aws).
 
+As of today, deployment of admission controllers via `.spec.deployment.admission` is not yet supported, but it is currently under active development.
+
 ### Configuration for Extension Resources
 
 The `.spec.resources` field refers to the extension resources as defined by Gardener in the extension contract. These include both well-known types such as `Infrastructure`, `Worker` etc. and [generic resources](https://github.com/gardener/gardener/blob/master/docs/extensions/controllerregistration.md#extension-resource-configurations). The field will be used to populate the respective field in the resulting `ControllerRegistration` in the garden cluster.
@@ -541,7 +543,7 @@ It contains the networking information of the garden runtime cluster which is re
 
 ### [`Extension` Controller](../../pkg/operator/controller/extension)
 
-Gardener relies on extensions to provide various capabilities, such as supporting new cloud providers. This controller automates the management of extensions by managing all the required resources in the runtime and garden cluster.
+Gardener relies on extensions to provide various capabilities, such as supporting cloud providers. This controller automates the management of extensions by managing all the required resources in the runtime and garden cluster.
 As of today, the controller only supports the management of `ControllerDeployment` and `ControllerRegistration` in the garden cluster.
 The Garden controller in the operator reconciles Garden objects with the help of the following reconcilers.
 

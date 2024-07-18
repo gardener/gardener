@@ -60,6 +60,9 @@ type Reconciler struct {
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
+	ctx, cancel := controllerutils.GetMainReconciliationContext(ctx, controllerutils.DefaultReconciliationTimeout)
+	defer cancel()
+
 	extension := &operatorv1alpha1.Extension{}
 	if err := r.RuntimeClient.Get(ctx, request.NamespacedName, extension); err != nil {
 		if apierrors.IsNotFound(err) {
