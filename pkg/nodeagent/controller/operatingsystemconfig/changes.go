@@ -150,7 +150,9 @@ func computeOperatingSystemConfigChanges(fs afero.Afero, newOSC *extensionsv1alp
 			)
 
 			changes.containerd.configFileChange = !apiequality.Semantic.DeepEqual(newContainerd.SandboxImage, oldContainerd.SandboxImage) ||
-				!apiequality.Semantic.DeepEqual(newContainerd.Plugins, oldContainerd.Plugins)
+				!apiequality.Semantic.DeepEqual(newContainerd.Plugins, oldContainerd.Plugins) ||
+				!apiequality.Semantic.DeepEqual(newOSC.Spec.CRIConfig.CgroupDriver, oldOSC.Spec.CRIConfig.CgroupDriver)
+
 			oldRegistries = oldOSC.Spec.CRIConfig.Containerd.Registries
 		}
 	}

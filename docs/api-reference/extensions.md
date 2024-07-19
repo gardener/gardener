@@ -2034,6 +2034,20 @@ CRIName
 </tr>
 <tr>
 <td>
+<code>cgroupDriver</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.CgroupDriverName">
+CgroupDriverName
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CgroupDriver configures the CRI&rsquo;s cgroup driver. Supported values are <code>cgroupfs</code> or <code>systemd</code>.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>containerd</code></br>
 <em>
 <a href="#extensions.gardener.cloud/v1alpha1.ContainerdConfig">
@@ -2057,6 +2071,15 @@ Only to be set for OperatingSystemConfigs with purpose &lsquo;reconcile&rsquo;.<
 </p>
 <p>
 <p>CRIName is a type alias for the CRI name string.</p>
+</p>
+<h3 id="extensions.gardener.cloud/v1alpha1.CgroupDriverName">CgroupDriverName
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.CRIConfig">CRIConfig</a>)
+</p>
+<p>
+<p>CgroupDriverName is a string denoting the CRI cgroup driver.</p>
 </p>
 <h3 id="extensions.gardener.cloud/v1alpha1.CloudConfig">CloudConfig
 </h3>

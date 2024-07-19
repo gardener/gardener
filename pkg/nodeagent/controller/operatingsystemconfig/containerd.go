@@ -179,6 +179,17 @@ func (r *Reconciler) ensureContainerdConfiguration(log logr.Logger, criConfig *e
 
 	patches := []patch{
 		{
+			name: "cgroup driver",
+			path: structuredmap.Path{"plugins", "io.containerd.grpc.v1.cri", "containerd", "runtimes", "runc", "options", "SystemdCgroup"},
+			setFn: func(value any) (any, error) {
+				if criConfig.CgroupDriver == nil {
+					return value, nil
+				}
+
+				return *criConfig.CgroupDriver == extensionsv1alpha1.CgroupDriverSystemd, nil
+			},
+		},
+		{
 			name: "registry config path",
 			path: structuredmap.Path{"plugins", "io.containerd.grpc.v1.cri", "registry", "config_path"},
 			setFn: func(_ any) (any, error) {
@@ -214,7 +225,7 @@ func (r *Reconciler) ensureContainerdConfiguration(log logr.Logger, criConfig *e
 			name: "sandbox image",
 			path: structuredmap.Path{"plugins", "io.containerd.grpc.v1.cri", "sandbox_image"},
 			setFn: func(value any) (any, error) {
-				if criConfig == nil || criConfig.Containerd == nil {
+				if criConfig.Containerd == nil {
 					return value, nil
 				}
 

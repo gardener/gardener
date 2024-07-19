@@ -74,6 +74,10 @@ spec:
                 description: CRI config is a structure contains configurations of
                   the CRI library
                 properties:
+                  cgroupDriver:
+                    description: CgroupDriver configures the CRI's cgroup driver.
+                      Supported values are `cgroupfs` or `systemd`.
+                    type: string
                   containerd:
                     description: |-
                       ContainerdConfig is the containerd configuration.
