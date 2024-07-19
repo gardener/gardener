@@ -29,5 +29,9 @@ manifests:
   rawYaml:
     - example/00-namespace-garden.yaml
     - example/gardener-local/controlplane/domain-secrets.yaml
+    - example/provider-local/garden/base/cloudprofile.yaml
+    - example/provider-local/garden/base/project.yaml
+    - example/provider-local/garden/base/secretbinding.yaml
+    - example/gardener-local/gardenlet/secret-bootstrap-token.yaml
 deploy:
   kubectl: {}
