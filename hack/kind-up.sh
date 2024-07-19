@@ -122,6 +122,7 @@ setup_containerd_registry_mirrors() {
     setup_containerd_registry_mirror $NODE "registry.k8s.io" "https://registry.k8s.io" "http://${REGISTRY_HOSTNAME}:5006"
     setup_containerd_registry_mirror $NODE "quay.io" "https://quay.io" "http://${REGISTRY_HOSTNAME}:5007"
     setup_containerd_registry_mirror $NODE "europe-docker.pkg.dev" "https://europe-docker.pkg.dev" "http://${REGISTRY_HOSTNAME}:5008"
+    setup_containerd_registry_mirror $NODE "garden.local.gardener.cloud:5001" "http://garden.local.gardener.cloud:5001" "http://${REGISTRY_HOSTNAME}:5001"
   done
 }
 
