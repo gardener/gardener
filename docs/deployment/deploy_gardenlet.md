@@ -4,12 +4,15 @@ Gardenlets act as decentralized agents to manage the shoot clusters of a seed cl
 
 ## Procedure
 
-There are two ways of deploying gardenlets:
+After you have deployed the Gardener control plane, you need one or more seed clusters in order to be able to create shoot clusters.
 
-1. Manually install the [Helm chart](../../charts/gardener/gardenlet).
-   After you have deployed the Gardener control plane, you need a dedicated seed cluster (or register the cluster in which the control plane runs).
-   This method is typically needed to get a first seed cluster up (so-called "unmanaged seeds").
-   It may also be needed if you want to register a cluster as seed that resides behind a firewall.
-   For more information, see [Deploy a Gardenlet Manually](deploy_gardenlet_manually.md).
-2. Create `ManagedSeed` resources to make existing shoot clusters getting registered as seeds.
-   For more information, see [Deploy a gardenlet Automatically](deploy_gardenlet_automatically.md).
+You can either register an existing cluster as "seed" (this could also be the cluster in which the control plane runs), or you can create new clusters (typically shoots, i.e., this approach registers at least one first initial seed) and then register them as "seeds".
+
+The following documents describe the scenarios:
+
+1. If you have not registered a seed cluster yet (thus, you need to deploy a first, so-called "unmanaged seed"), your approach depends on how you deployed the Gardener control plane:
+   1. **Via [`gardener-operator`](../concepts/operator.md)**:
+      1. If you want to register the same cluster in which `gardener-operator` runs, or if you want to register another cluster that is reachable (network-wise) for `gardener-operator`, you can follow [Deploy gardenlet via `gardener-operator`](deploy_gardenlet_via_operator.md).
+      2. If you want to register a cluster that is not reachable (network-wise) (e.g., because it runs behind a firewall), you can follow [Deploy a gardenlet Manually](deploy_gardenlet_manually.md). 
+   2. **Via [`gardener/controlplane` Helm chart](../../charts/gardener/controlplane)**: You can follow [Deploy a gardenlet Manually](deploy_gardenlet_manually.md).
+2. If you already have a seed cluster, and you want to deploy further seed clusters (so-called "managed seeds"), you can follow [Deploy a gardenlet Automatically](deploy_gardenlet_automatically.md).

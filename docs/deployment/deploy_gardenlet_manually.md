@@ -36,13 +36,6 @@ In this case, `gardenlet` needs to be deployed manually, meaning that its [Helm 
           <some-optional-provider-specific-config-for-the-ingressController>
   ```
 
-### `kubeconfig` for the Seed Cluster
-
-The `kubeconfig` is required to deploy the gardenlet Helm chart to the seed cluster.
-The gardenlet requires certain privileges to be able to operate.
-These privileges are described in RBAC resources in the gardenlet Helm chart (see [charts/gardener/gardenlet/templates](../../charts/gardener/gardenlet/templates)).
-The Helm chart contains a service account `gardenlet` that the gardenlet deployment uses by default to talk to the Seed API server.
-
 ## Procedure Overview
 
 1. Prepare the garden cluster:
@@ -93,83 +86,6 @@ stringData:
 ```
 
 When you later prepare the gardenlet Helm chart, a `kubeconfig` based on this token is shared with the gardenlet upon deployment.
-
-## Create RBAC Roles for the gardenlet to Allow Bootstrapping in the Garden Cluster
-
-This step is only required if the gardenlet you deploy is the first gardenlet in the Gardener installation.
-Additionally, when using the [control plane chart](../../charts/gardener/controlplane), the following resources are already contained in the Helm chart,  that is, if you use it you can skip these steps as the needed RBAC roles already exist.
-
-The gardenlet uses the configured bootstrap `kubeconfig` in `gardenClientConnection.bootstrapKubeconfig` to request a signed certificate for the user `gardener.cloud:system:seed:<seed-name>` in the group `gardener.cloud:system:seeds`.
-
-Create a `ClusterRole` and `ClusterRoleBinding` that grant full admin permissions to authenticated gardenlets.
-
-Create the following resources in the garden cluster:
-
-```yaml
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: gardener.cloud:system:seeds
-rules:
-  - apiGroups:
-      - '*'
-    resources:
-      - '*'
-    verbs:
-      - '*'
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: gardener.cloud:system:seeds
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: gardener.cloud:system:seeds
-subjects:
-  - kind: Group
-    name: gardener.cloud:system:seeds
-    apiGroup: rbac.authorization.k8s.io
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: gardener.cloud:system:seed-bootstrapper
-rules:
-  - apiGroups:
-      - certificates.k8s.io
-    resources:
-      - certificatesigningrequests
-    verbs:
-      - create
-      - get
-  - apiGroups:
-      - certificates.k8s.io
-    resources:
-      - certificatesigningrequests/seedclient
-    verbs:
-      - create
----
-# A kubelet/gardenlet authenticating using bootstrap tokens is authenticated as a user in the group system:bootstrappers
-# Allows the Gardenlet to create a CSR
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: gardener.cloud:system:seed-bootstrapper
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: gardener.cloud:system:seed-bootstrapper
-subjects:
-  - kind: Group
-    name: system:bootstrappers
-    apiGroup: rbac.authorization.k8s.io
-```
-
-ℹ️ After bootstrapping, the gardenlet has full administrative access to the garden cluster.
-You might be interested to harden this and limit its permissions to only resources related to the seed cluster it is responsible for.
-Please take a look at [Scoped API Access for Gardenlets](gardenlet_api_access.md).
 
 ## Prepare the gardenlet Helm Chart
 
@@ -588,6 +504,7 @@ spec:
           verticalPodAutoscaler:
             enabled: true
 ```
+
 On reconciliation, gardenlet downloads the Helm chart, renders it with the provided values, and then applies it to its own cluster.
 Hence, in order to keep a gardenlet up-to-date, it is enough to update the tag/digest of the OCI repository ref for the Helm chart:
 
