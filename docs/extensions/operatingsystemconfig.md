@@ -323,6 +323,7 @@ spec:
   purpose: reconcile
   cri:
     name: containerd
+#   cgroupDriver: cgroupfs # or systemd
     containerd:
       sandboxImage: registry.k8s.io/pause     
 #     registries:

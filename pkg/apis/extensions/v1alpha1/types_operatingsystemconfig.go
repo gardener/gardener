@@ -227,12 +227,25 @@ const (
 	OperatingSystemConfigSecretDataKey = "cloud_config" // #nosec G101 -- No credential.
 )
 
+// CgroupDriverName is a string denoting the CRI cgroup driver.
+type CgroupDriverName string
+
+const (
+	// CgroupDriverCgroupfs sets the cgroup driver to cgroupfs.
+	CgroupDriverCgroupfs CgroupDriverName = "cgroupfs"
+	// CgroupDriverSystemd sets the cgroup driver to system.
+	CgroupDriverSystemd CgroupDriverName = "systemd"
+)
+
 // CRIConfig contains configurations of the CRI library.
 type CRIConfig struct {
 	// Name is a mandatory string containing the name of the CRI library. Supported values are `containerd`.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +kubebuilder:validation:Enum="containerd"
 	Name CRIName `json:"name"`
+	// CgroupDriver configures the CRI's cgroup driver. Supported values are `cgroupfs` or `systemd`.
+	// +optional
+	CgroupDriver *CgroupDriverName `json:"cgroupDriver,omitempty"`
 	// ContainerdConfig is the containerd configuration.
 	// Only to be set for OperatingSystemConfigs with purpose 'reconcile'.
 	// +optional

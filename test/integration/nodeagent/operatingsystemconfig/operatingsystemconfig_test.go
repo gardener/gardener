@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -46,8 +47,11 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		hostName = "test-hostname"
 		node     *corev1.Node
 
+		containerdConfigFileContent string
+
 		file1, file2, file3, file4, file5, file6, file7, file8                                           extensionsv1alpha1.File
 		gnaUnit, unit1, unit2, unit3, unit4, unit5, unit5DropInsOnly, unit6, unit7, unit8, unit9, unit10 extensionsv1alpha1.Unit
+		cgroupDriver                                                                                     extensionsv1alpha1.CgroupDriverName
 		registryConfig1, registryConfig2                                                                 extensionsv1alpha1.RegistryConfig
 		pluginConfig1, pluginConfig2, pluginConfig3                                                      extensionsv1alpha1.PluginConfig
 
@@ -91,6 +95,36 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 				},
 			},
 		}
+
+		containerdConfigFileContent = `imports = ["/etc/containerd/conf.d/*.toml"]
+
+[plugins]
+
+  [plugins.bar]
+
+  [plugins.foo]
+
+    [plugins.foo.bar]
+      someKey = "someValue"
+
+      [plugins.foo.bar."foo.bar"]
+        someKey = "someValue"
+
+  [plugins."io.containerd.grpc.v1.cri"]
+    sandbox_image = "registry.k8s.io/pause:latest"
+
+    [plugins."io.containerd.grpc.v1.cri".containerd]
+
+      [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]
+
+        [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
+
+          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
+            SystemdCgroup = true
+
+    [plugins."io.containerd.grpc.v1.cri".registry]
+      config_path = "/etc/containerd/certs.d"
+`
 
 		By("Create Node")
 		Expect(testClient.Create(ctx, node)).To(Succeed())
@@ -266,6 +300,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			FilePaths: []string{file8.Path},
 		}
 
+		cgroupDriver = "systemd"
+
 		registryConfig1 = extensionsv1alpha1.RegistryConfig{
 			Upstream: "_default",
 			Server:   ptr.To("https://registry.hub.docker.com"),
@@ -299,7 +335,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 				Files: []extensionsv1alpha1.File{file1, file3, file5, file8},
 				Units: []extensionsv1alpha1.Unit{unit1, unit2, unit5, unit5DropInsOnly, unit6, unit7, unit10},
 				CRIConfig: &extensionsv1alpha1.CRIConfig{
-					Name: "containerd",
+					Name:         "containerd",
+					CgroupDriver: &cgroupDriver,
 					Containerd: &extensionsv1alpha1.ContainerdConfig{
 						Registries:   []extensionsv1alpha1.RegistryConfig{registryConfig1, registryConfig2},
 						SandboxImage: "registry.k8s.io/pause:latest",
@@ -393,7 +430,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		test.AssertDirectoryOnDisk(fakeFS, "/etc/containerd/certs.d")
 		test.AssertDirectoryOnDisk(fakeFS, "/etc/containerd/conf.d")
 		test.AssertDirectoryOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d")
-		test.AssertFileOnDisk(fakeFS, "/etc/containerd/config.toml", "imports = [\"/etc/containerd/conf.d/*.toml\"]\n\n[plugins]\n\n  [plugins.bar]\n\n  [plugins.foo]\n\n    [plugins.foo.bar]\n      someKey = \"someValue\"\n\n      [plugins.foo.bar.\"foo.bar\"]\n        someKey = \"someValue\"\n\n  [plugins.\"io.containerd.grpc.v1.cri\"]\n    sandbox_image = \"registry.k8s.io/pause:latest\"\n\n    [plugins.\"io.containerd.grpc.v1.cri\".registry]\n      config_path = \"/etc/containerd/certs.d\"\n", 0644)
+		test.AssertFileOnDisk(fakeFS, "/etc/containerd/config.toml", containerdConfigFileContent, 0644)
 		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d/30-env_config.conf", "[Service]\nEnvironment=\"PATH=/var/bin/containerruntimes:"+os.Getenv("PATH")+"\"\n", 0644)
 		test.AssertFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig1.Upstream+"/hosts.toml", "# managed by gardener-node-agent\nserver = \"https://registry.hub.docker.com\"\n\n[host.\"https://10.10.10.100:8080\"]\n  capabilities = [\"pull\",\"resolve\"]\n\n[host.\"https://10.10.10.200:8080\"]\n  capabilities = [\"pull\",\"resolve\"]\n\n", 0644)
 		test.AssertFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig2.Upstream+"/hosts.toml", "# managed by gardener-node-agent\nserver = \"https://registry.k8s.io\"\n\n[host.\"https://10.10.10.101:8080\"]\n  capabilities = [\"pull\"]\n  ca = [\"/var/certs/ca.crt\"]\n\n", 0644)
@@ -529,7 +566,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		test.AssertDirectoryOnDisk(fakeFS, "/etc/containerd/certs.d")
 		test.AssertDirectoryOnDisk(fakeFS, "/etc/containerd/conf.d")
 		test.AssertDirectoryOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d")
-		test.AssertFileOnDisk(fakeFS, "/etc/containerd/config.toml", "imports = [\"/etc/containerd/conf.d/*.toml\"]\n\n[plugins]\n\n  [plugins.bar]\n\n  [plugins.foo]\n\n    [plugins.foo.bar]\n      someKey = \"someValue\"\n\n      [plugins.foo.bar.\"foo.bar\"]\n        someKey = \"someValue\"\n\n  [plugins.\"io.containerd.grpc.v1.cri\"]\n    sandbox_image = \"registry.k8s.io/pause:latest\"\n\n    [plugins.\"io.containerd.grpc.v1.cri\".registry]\n      config_path = \"/etc/containerd/certs.d\"\n", 0644)
+		test.AssertFileOnDisk(fakeFS, "/etc/containerd/config.toml", containerdConfigFileContent, 0644)
 		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d/30-env_config.conf", "[Service]\nEnvironment=\"PATH=/var/bin/containerruntimes:"+os.Getenv("PATH")+"\"\n", 0644)
 		test.AssertFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig1.Upstream+"/hosts.toml", "# managed by gardener-node-agent\nserver = \"https://registry.hub.docker.com\"\n\n[host.\"https://10.10.10.100:8080\"]\n  capabilities = [\"pull\",\"resolve\"]\n\n[host.\"https://10.10.10.200:8080\"]\n  capabilities = [\"pull\",\"resolve\"]\n\n", 0644)
 		test.AssertFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig2.Upstream+"/hosts.toml", "# managed by gardener-node-agent\nserver = \"https://registry.k8s.io\"\n\n[host.\"https://10.10.10.101:8080\"]\n  capabilities = [\"pull\"]\n  ca = [\"/var/certs/ca.crt\"]\n\n", 0644)
@@ -642,7 +679,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		fakeDBus.Actions = nil // reset actions on dbus to not repeat assertions from above for update scenario
 
 		By("Checking containerd configuration before change")
-		test.AssertFileOnDisk(fakeFS, "/etc/containerd/config.toml", "imports = [\"/etc/containerd/conf.d/*.toml\"]\n\n[plugins]\n\n  [plugins.bar]\n\n  [plugins.foo]\n\n    [plugins.foo.bar]\n      someKey = \"someValue\"\n\n      [plugins.foo.bar.\"foo.bar\"]\n        someKey = \"someValue\"\n\n  [plugins.\"io.containerd.grpc.v1.cri\"]\n    sandbox_image = \"registry.k8s.io/pause:latest\"\n\n    [plugins.\"io.containerd.grpc.v1.cri\".registry]\n      config_path = \"/etc/containerd/certs.d\"\n", 0644)
+		test.AssertFileOnDisk(fakeFS, "/etc/containerd/config.toml", containerdConfigFileContent, 0644)
 
 		By("Update Operating System Config")
 		operatingSystemConfig.Spec.CRIConfig.Containerd.Plugins = append(operatingSystemConfig.Spec.CRIConfig.Containerd.Plugins, extensionsv1alpha1.PluginConfig{
@@ -675,7 +712,69 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		}).Should(HaveKeyWithValue("worker.gardener.cloud/kubernetes-version", kubernetesVersion.String()))
 
 		By("Assert that containerd config was updated properly")
-		test.AssertFileOnDisk(fakeFS, "/etc/containerd/config.toml", "imports = [\"/etc/containerd/conf.d/*.toml\"]\n\n[plugins]\n\n  [plugins.bar]\n\n  [plugins.\"io.containerd.grpc.v1.cri\"]\n    sandbox_image = \"registry.k8s.io/pause:latest\"\n\n    [plugins.\"io.containerd.grpc.v1.cri\".registry]\n      config_path = \"/etc/containerd/certs.d\"\n", 0644)
+		test.AssertFileOnDisk(fakeFS, "/etc/containerd/config.toml", "imports = [\"/etc/containerd/conf.d/*.toml\"]\n\n[plugins]\n\n  [plugins.bar]\n\n  [plugins.\"io.containerd.grpc.v1.cri\"]\n    sandbox_image = \"registry.k8s.io/pause:latest\"\n\n    [plugins.\"io.containerd.grpc.v1.cri\".containerd]\n\n      [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes]\n\n        [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes.runc]\n\n          [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes.runc.options]\n            SystemdCgroup = true\n\n    [plugins.\"io.containerd.grpc.v1.cri\".registry]\n      config_path = \"/etc/containerd/certs.d\"\n", 0644)
+
+		By("Assert that unit actions have been applied")
+		Expect(fakeDBus.Actions).To(ConsistOf(
+			fakedbus.SystemdAction{Action: fakedbus.ActionStart, UnitNames: []string{"containerd.service"}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionDaemonReload},
+			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{"containerd.service"}},
+		))
+
+		By("Assert that cancel func has not been called")
+		Expect(cancelFunc.called).To(BeFalse())
+	})
+
+	It("should reconcile the configuration when the cgroup driver changes", func() {
+		By("Wait for node annotations to be updated")
+		Eventually(func(g Gomega) map[string]string {
+			updatedNode := &corev1.Node{}
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), updatedNode)).To(Succeed())
+			return updatedNode.Annotations
+		}).Should(HaveKeyWithValue("checksum/cloud-config-data", utils.ComputeSHA256Hex(oscRaw)))
+
+		By("Wait for node labels to be updated")
+		Eventually(func(g Gomega) map[string]string {
+			updatedNode := &corev1.Node{}
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), updatedNode)).To(Succeed())
+			return updatedNode.Labels
+		}).Should(HaveKeyWithValue("worker.gardener.cloud/kubernetes-version", kubernetesVersion.String()))
+
+		fakeDBus.Actions = nil // reset actions on dbus to not repeat assertions from above for update scenario
+
+		By("Checking containerd configuration before change")
+		test.AssertFileOnDisk(fakeFS, "/etc/containerd/config.toml", containerdConfigFileContent, 0644)
+
+		By("Update Operating System Config")
+		operatingSystemConfig.Spec.CRIConfig.CgroupDriver = ptr.To(extensionsv1alpha1.CgroupDriverName("cgroupfs"))
+
+		var err error
+		oscRaw, err = runtime.Encode(codec, operatingSystemConfig)
+		Expect(err).NotTo(HaveOccurred())
+
+		By("Update Secret containing the operating system config")
+		patch := client.MergeFrom(oscSecret.DeepCopy())
+		oscSecret.Annotations["checksum/data-script"] = utils.ComputeSHA256Hex(oscRaw)
+		oscSecret.Data["osc.yaml"] = oscRaw
+		Expect(testClient.Patch(ctx, oscSecret, patch)).To(Succeed())
+
+		By("Wait for node annotations to be updated")
+		Eventually(func(g Gomega) map[string]string {
+			updatedNode := &corev1.Node{}
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), updatedNode)).To(Succeed())
+			return updatedNode.Annotations
+		}).Should(HaveKeyWithValue("checksum/cloud-config-data", utils.ComputeSHA256Hex(oscRaw)))
+
+		By("Wait for node labels to be updated")
+		Eventually(func(g Gomega) map[string]string {
+			updatedNode := &corev1.Node{}
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), updatedNode)).To(Succeed())
+			return updatedNode.Labels
+		}).Should(HaveKeyWithValue("worker.gardener.cloud/kubernetes-version", kubernetesVersion.String()))
+
+		By("Assert that containerd config was updated properly")
+		expectedContainerdContent := strings.ReplaceAll(containerdConfigFileContent, "SystemdCgroup = true", "SystemdCgroup = false")
+		test.AssertFileOnDisk(fakeFS, "/etc/containerd/config.toml", expectedContainerdContent, 0644)
 
 		By("Assert that unit actions have been applied")
 		Expect(fakeDBus.Actions).To(ConsistOf(

@@ -301,6 +301,25 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 			}))))
 		})
 
+		It("should forbid setting an unknown cgroup driver", func() {
+			oscCopy := osc.DeepCopy()
+			oscCopy.Spec.CRIConfig.CgroupDriver = ptr.To(extensionsv1alpha1.CgroupDriverName("unknown"))
+
+			Expect(ValidateOperatingSystemConfig(oscCopy)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("spec.criConfig.cgroupDriver"),
+			}))))
+		})
+
+		It("should allow setting a known cgroup driver", func() {
+			for _, driver := range []extensionsv1alpha1.CgroupDriverName{"cgroupfs", "systemd"} {
+				oscCopy := osc.DeepCopy()
+				oscCopy.Spec.CRIConfig.CgroupDriver = ptr.To(driver)
+
+				Expect(ValidateOperatingSystemConfig(oscCopy)).To(BeEmpty())
+			}
+		})
+
 		It("should allow setting CRI name for provisioning OSC", func() {
 			oscCopy := osc.DeepCopy()
 			oscCopy.Spec.Purpose = extensionsv1alpha1.OperatingSystemConfigPurposeProvision
