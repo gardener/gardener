@@ -248,9 +248,13 @@ func (m *manager) generateBundleSecret(ctx context.Context, config secretsutils.
 }
 
 func (m *manager) isStillValid(secret *corev1.Secret) (bool, error) {
-	validUntilUnix, err := strconv.ParseInt(secret.Labels[LabelKeyValidUntilTime], 10, 64)
+	value := secret.Labels[LabelKeyValidUntilTime]
+	if value == "" {
+		return true, nil
+	}
+	validUntilUnix, err := strconv.ParseInt(value, 10, 64)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("parsing secret label %q failed: %w", LabelKeyValidUntilTime, err)
 	}
 	return m.clock.Now().UTC().Unix() < validUntilUnix, nil
 }
