@@ -106,6 +106,7 @@ rules:
   - backupbuckets
   - backupentries
   - cloudprofiles
+  - namespacedcloudprofiles
   - controllerinstallations
   - quotas
   - projects
@@ -222,6 +223,7 @@ rules:
   - core.gardener.cloud
   resources:
   - cloudprofiles
+  - namespacedcloudprofiles
   - exposureclasses
   - seeds
   verbs:
