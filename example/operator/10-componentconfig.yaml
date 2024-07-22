@@ -61,6 +61,8 @@ controllers:
     # backupLeaderElection:
     #   reelectionPeriod: 5s
     #   etcdConnectionTimeout: 5s
+  gardenletDeployer:
+    concurrentSyncs: 5
   networkPolicy:
     concurrentSyncs: 5
   # additionalNamespaceSelectors:

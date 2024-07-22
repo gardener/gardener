@@ -95,6 +95,12 @@ config.yaml: |
 {{ toYaml .Values.config.controllers.gardenCare.conditionThresholds | indent 6 }}
       {{- end }}
     {{- end }}
+    {{- if .Values.config.controllers.gardenletDeployer }}
+    gardenletDeployer:
+      {{- if .Values.config.controllers.gardenletDeployer.concurrentSyncs }}
+      concurrentSyncs: {{ .Values.config.controllers.networkPolicy.concurrentSyncs }}
+      {{- end }}
+    {{- end }}
     {{- if .Values.config.controllers.networkPolicy }}
     networkPolicy:
       {{- if .Values.config.controllers.networkPolicy.concurrentSyncs }}

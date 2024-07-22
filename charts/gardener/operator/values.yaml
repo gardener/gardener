@@ -86,6 +86,8 @@ config:
         duration: 1m
       - type: ObservabilityComponentsHealthy
         duration: 1m
+    gardenletDeployer:
+      concurrentSyncs: 5
     networkPolicy:
       concurrentSyncs: 5
     # additionalNamespaceSelectors:

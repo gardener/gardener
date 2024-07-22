@@ -41,6 +41,7 @@ func validateControllerConfiguration(conf config.ControllerConfiguration, fldPat
 
 	allErrs = append(allErrs, validateGardenControllerConfiguration(conf.Garden, fldPath.Child("garden"))...)
 	allErrs = append(allErrs, validateGardenCareControllerConfiguration(conf.GardenCare, fldPath.Child("gardenCare"))...)
+	allErrs = append(allErrs, validateGardenletDeployerControllerConfig(conf.GardenletDeployer, fldPath.Child("gardenletDeployer"))...)
 	allErrs = append(allErrs, validateNetworkPolicyControllerConfiguration(conf.NetworkPolicy, fldPath.Child("networkPolicy"))...)
 
 	return allErrs
@@ -59,6 +60,14 @@ func validateGardenCareControllerConfiguration(conf config.GardenCareControllerC
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateSyncPeriod(conf.SyncPeriod, fldPath)...)
+
+	return allErrs
+}
+
+func validateGardenletDeployerControllerConfig(conf config.GardenletDeployerControllerConfig, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, validateConcurrentSyncs(conf.ConcurrentSyncs, fldPath)...)
 
 	return allErrs
 }

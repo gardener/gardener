@@ -59,6 +59,8 @@ type ControllerConfiguration struct {
 	Garden GardenControllerConfig `json:"garden"`
 	// GardenCare is the configuration for the garden care controller
 	GardenCare GardenCareControllerConfiguration `json:"gardenCare"`
+	// GardenletDeployer is the configuration for the gardenlet deployer controller.
+	GardenletDeployer GardenletDeployerControllerConfig `json:"gardenletDeployer"`
 	// NetworkPolicy is the configuration for the NetworkPolicy controller.
 	NetworkPolicy NetworkPolicyControllerConfiguration `json:"networkPolicy"`
 	// VPAEvictionRequirements is the configuration for the VPAEvictionrequirements controller.
@@ -90,6 +92,13 @@ type GardenControllerConfig struct {
 	// backup compaction feature of ETCD backup-restore functionality.
 	// +optional
 	ETCDConfig *gardenletv1alpha1.ETCDConfig `json:"etcdConfig,omitempty"`
+}
+
+// GardenletDeployerControllerConfig is the configuration for the gardenlet deployer controller.
+type GardenletDeployerControllerConfig struct {
+	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
+	// +optional
+	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 }
 
 // NetworkPolicyControllerConfiguration defines the configuration of the NetworkPolicy controller.
