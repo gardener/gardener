@@ -32,6 +32,9 @@ manifests:
     - example/provider-local/garden/base/cloudprofile.yaml
     - example/provider-local/garden/base/project.yaml
     - example/provider-local/garden/base/secretbinding.yaml
+    - example/provider-local/garden/base/secret-backup.yaml
     - example/gardener-local/gardenlet/secret-bootstrap-token.yaml
+    - https://raw.githubusercontent.com/gardener/gardener-extension-networking-cilium/v1.36.0/example/controller-registration.yaml
+    - https://raw.githubusercontent.com/gardener/gardener-extension-networking-calico/v1.40.0/example/controller-registration.yaml
 deploy:
   kubectl: {}
