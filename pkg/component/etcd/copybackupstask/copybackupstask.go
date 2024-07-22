@@ -148,7 +148,7 @@ func waitForConditions(obj client.Object) error {
 		return fmt.Errorf("expected *druidv1alpha1.EtcdCopyBackupsTask but got %T", obj)
 	}
 	if task.DeletionTimestamp != nil {
-		return fmt.Errorf("task %s has a deletion timestamp", kubernetesutils.ObjectName(task))
+		return fmt.Errorf("task %s has a deletion timestamp", client.ObjectKeyFromObject(task))
 	}
 
 	generation := task.Generation

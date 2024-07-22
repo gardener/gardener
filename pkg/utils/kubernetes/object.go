@@ -23,14 +23,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 )
 
-// ObjectName returns the name of the given object in the format <namespace>/<name>
-func ObjectName(obj client.Object) string {
-	if obj.GetNamespace() == "" {
-		return obj.GetName()
-	}
-	return client.ObjectKeyFromObject(obj).String()
-}
-
 // DeleteObjects deletes a list of Kubernetes objects.
 func DeleteObjects(ctx context.Context, c client.Writer, objects ...client.Object) error {
 	for _, obj := range objects {

@@ -21,7 +21,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Reconciler reconciles the ManagedSeed.
@@ -85,7 +84,7 @@ func (r *Reconciler) reconcile(
 	log.V(1).Info("Reconciling")
 	var wait bool
 	if status, wait, err = r.Actuator.Reconcile(ctx, log, ms); err != nil {
-		return reconcile.Result{}, fmt.Errorf("could not reconcile ManagedSeed %s creation or update: %w", kubernetesutils.ObjectName(ms), err)
+		return reconcile.Result{}, fmt.Errorf("could not reconcile ManagedSeed %s creation or update: %w", client.ObjectKeyFromObject(ms), err)
 	}
 	log.V(1).Info("Reconciliation finished")
 
@@ -127,7 +126,7 @@ func (r *Reconciler) delete(
 	// Reconcile deletion
 	log.V(1).Info("Deletion")
 	if status, wait, removeFinalizer, err = r.Actuator.Delete(ctx, log, ms); err != nil {
-		return reconcile.Result{}, fmt.Errorf("could not reconcile ManagedSeed %s deletion: %w", kubernetesutils.ObjectName(ms), err)
+		return reconcile.Result{}, fmt.Errorf("could not reconcile ManagedSeed %s deletion: %w", client.ObjectKeyFromObject(ms), err)
 	}
 	log.V(1).Info("Deletion finished")
 

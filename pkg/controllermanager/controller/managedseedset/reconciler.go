@@ -19,7 +19,6 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Reconciler reconciles the ManagedSeedSet.
@@ -71,7 +70,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, managedSeed
 	// Reconcile creation or update
 	log.V(1).Info("Reconciling creation or update")
 	if status, _, err = r.Actuator.Reconcile(ctx, log, managedSeedSet); err != nil {
-		return reconcile.Result{}, fmt.Errorf("could not reconcile ManagedSeedSet %s creation or update: %w", kubernetesutils.ObjectName(managedSeedSet), err)
+		return reconcile.Result{}, fmt.Errorf("could not reconcile ManagedSeedSet %s creation or update: %w", client.ObjectKeyFromObject(managedSeedSet), err)
 	}
 	log.V(1).Info("Creation or update reconciled")
 
@@ -104,7 +103,7 @@ func (r *Reconciler) delete(ctx context.Context, log logr.Logger, managedSeedSet
 	// Reconcile deletion
 	log.V(1).Info("Reconciling deletion")
 	if status, removeFinalizer, err = r.Actuator.Reconcile(ctx, log, managedSeedSet); err != nil {
-		return reconcile.Result{}, fmt.Errorf("could not reconcile ManagedSeedSet %s deletion: %w", kubernetesutils.ObjectName(managedSeedSet), err)
+		return reconcile.Result{}, fmt.Errorf("could not reconcile ManagedSeedSet %s deletion: %w", client.ObjectKeyFromObject(managedSeedSet), err)
 	}
 	log.V(1).Info("Deletion reconciled")
 

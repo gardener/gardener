@@ -166,7 +166,7 @@ func (r *replica) GetFullName() string {
 	if r.shoot == nil {
 		return ""
 	}
-	return kubernetesutils.ObjectName(r.shoot)
+	return client.ObjectKeyFromObject(r.shoot).String()
 }
 
 // GetObjectKey returns this replica's ObjectKey. This is the namespace/name of the shoot and managed seed of this replica.
