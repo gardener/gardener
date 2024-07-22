@@ -342,8 +342,8 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 								},
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{
-										corev1.ResourceCPU:    resource.MustParse("20m"),
-										corev1.ResourceMemory: resource.MustParse("20Mi"),
+										corev1.ResourceCPU:    resource.MustParse("5m"),
+										corev1.ResourceMemory: resource.MustParse("15Mi"),
 									},
 									Limits: corev1.ResourceList{
 										corev1.ResourceMemory: resource.MustParse("90Mi"),
@@ -372,8 +372,8 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 								},
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{
-										corev1.ResourceCPU:    resource.MustParse("20m"),
-										corev1.ResourceMemory: resource.MustParse("20Mi"),
+										corev1.ResourceCPU:    resource.MustParse("5m"),
+										corev1.ResourceMemory: resource.MustParse("30Mi"),
 									},
 									Limits: corev1.ResourceList{
 										corev1.ResourceMemory: resource.MustParse("1Gi"),
