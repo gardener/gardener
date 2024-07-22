@@ -142,7 +142,7 @@ func DeployZeroDownTimeValidatorJob(ctx context.Context, c client.Client, testNa
 					Containers: []corev1.Container{
 						{
 							Name:  "validator",
-							Image: "alpine/curl",
+							Image: "quay.io/curl/curl",
 							Command: []string{"/bin/sh", "-ec",
 								// To avoid flakiness, consider downtime when curl fails consecutively back-to-back three times.
 								"failed=0; threshold=3; " +
