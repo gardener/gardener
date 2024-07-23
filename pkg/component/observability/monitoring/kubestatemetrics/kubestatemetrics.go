@@ -67,10 +67,6 @@ type kubeStateMetrics struct {
 // Values is a set of configuration values for the kube-state-metrics.
 type Values struct {
 	// ClusterType specifies the type of the cluster to which kube-state-metrics is being deployed.
-	// For seeds, all resources are being deployed as part of a ManagedResource.
-	// For shoots, the kube-state-metrics runs in the shoot namespace in the seed as part of the control plane. Hence,
-	// only the runtime resources (like Deployment, Service, etc.) are being deployed directly (with the client). All
-	// other application-related resources (like RBAC roles, CRD, etc.) are deployed as part of a ManagedResource.
 	ClusterType component.ClusterType
 	// KubernetesVersion is the Kubernetes version of the cluster.
 	KubernetesVersion *semver.Version
