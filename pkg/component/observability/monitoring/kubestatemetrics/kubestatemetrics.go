@@ -139,9 +139,8 @@ func (k *kubeStateMetrics) getResourcesForShootTarget(shootAccessSecret *gardene
 
 func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 	var (
-		genericTokenKubeconfigSecretName string
-		shootAccessSecret                *gardenerutils.AccessSecret
-		registry                         = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+		shootAccessSecret *gardenerutils.AccessSecret
+		registry          = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 	)
 
 	// TODO(chrkl): Remove after release v1.103
@@ -162,22 +161,19 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 		if !found {
 			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
 		}
-		genericTokenKubeconfigSecretName = genericTokenKubeconfigSecret.Name
 
 		shootAccessSecret = k.newShootAccessSecret()
 		if err := shootAccessSecret.Reconcile(ctx, k.client); err != nil {
+			return err
+		}
+
+		if err := registry.Add(k.getResourcesForShoot(genericTokenKubeconfigSecret.Name, shootAccessSecret)...); err != nil {
 			return err
 		}
 	}
 
 	if k.values.ClusterType == component.ClusterTypeSeed {
 		if err := registry.Add(k.getResourcesForSeed()...); err != nil {
-			return err
-		}
-	}
-
-	if k.values.ClusterType == component.ClusterTypeShoot {
-		if err := registry.Add(k.getResourcesForShoot(genericTokenKubeconfigSecretName, shootAccessSecret)...); err != nil {
 			return err
 		}
 	}
