@@ -405,7 +405,7 @@ func (q *QuotaValidator) determineRequiredResources(allocatedResources corev1.Re
 }
 
 func (q *QuotaValidator) getShootResources(shoot core.Shoot) (corev1.ResourceList, error) {
-	cloudProfile, err := utils.GetCloudProfile(q.cloudProfileLister, q.namespacedCloudProfileLister, &shoot)
+	cloudProfileSpec, err := utils.GetCloudProfileSpec(q.cloudProfileLister, q.namespacedCloudProfileLister, &shoot)
 	if err != nil {
 		return nil, apierrors.NewInternalError(fmt.Errorf("could not find referenced cloud profile: %+v", err.Error()))
 	}
@@ -413,9 +413,9 @@ func (q *QuotaValidator) getShootResources(shoot core.Shoot) (corev1.ResourceLis
 	var (
 		countLB      int64 = 1
 		resources          = make(corev1.ResourceList)
-		workers            = getShootWorkerResources(&shoot, cloudProfile)
-		machineTypes       = cloudProfile.Spec.MachineTypes
-		volumeTypes        = cloudProfile.Spec.VolumeTypes
+		workers            = getShootWorkerResources(&shoot, cloudProfileSpec)
+		machineTypes       = cloudProfileSpec.MachineTypes
+		volumeTypes        = cloudProfileSpec.VolumeTypes
 	)
 
 	for _, worker := range workers {
@@ -433,7 +433,7 @@ func (q *QuotaValidator) getShootResources(shoot core.Shoot) (corev1.ResourceLis
 			}
 		}
 		if machineType == nil {
-			return nil, fmt.Errorf("machineType %s not found in CloudProfile %s", worker.Machine.Type, cloudProfile.Name)
+			return nil, fmt.Errorf("machineType %s not found in CloudProfile", worker.Machine.Type)
 		}
 
 		if worker.Volume != nil {
@@ -453,7 +453,7 @@ func (q *QuotaValidator) getShootResources(shoot core.Shoot) (corev1.ResourceLis
 			}
 		}
 		if volumeType == nil {
-			return nil, fmt.Errorf("VolumeType %s not found in CloudProfile %s", worker.Machine.Type, cloudProfile.Name)
+			return nil, fmt.Errorf("VolumeType %s not found in CloudProfile", worker.Machine.Type)
 		}
 
 		// For now we always use the max. amount of resources for quota calculation
@@ -487,14 +487,14 @@ func (q *QuotaValidator) getShootResources(shoot core.Shoot) (corev1.ResourceLis
 	return resources, nil
 }
 
-func getShootWorkerResources(shoot *core.Shoot, cloudProfile *gardencorev1beta1.CloudProfile) []core.Worker {
+func getShootWorkerResources(shoot *core.Shoot, cloudProfile *gardencorev1beta1.CloudProfileSpec) []core.Worker {
 	workers := make([]core.Worker, 0, len(shoot.Spec.Provider.Workers))
 
 	for _, worker := range shoot.Spec.Provider.Workers {
 		workerCopy := worker.DeepCopy()
 
 		if worker.Volume == nil {
-			for _, machineType := range cloudProfile.Spec.MachineTypes {
+			for _, machineType := range cloudProfile.MachineTypes {
 				if worker.Machine.Type == machineType.Name && machineType.Storage != nil && machineType.Storage.StorageSize != nil {
 					workerCopy.Volume = &core.Volume{
 						Type:       &machineType.Storage.Type,

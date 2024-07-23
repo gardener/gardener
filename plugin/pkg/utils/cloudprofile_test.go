@@ -72,7 +72,7 @@ var _ = Describe("CloudProfile", func() {
 	Describe("#GetCloudProfile", func() {
 		It("returns an error if CloudProfile is not found", func() {
 			shoot.Spec.CloudProfileName = &cloudProfileName
-			res, err := admissionutils.GetCloudProfile(cloudProfileLister, namespacedCloudProfileLister, shoot)
+			res, err := admissionutils.GetCloudProfileSpec(cloudProfileLister, namespacedCloudProfileLister, shoot)
 			Expect(res).To(BeNil())
 			Expect(err).To(HaveOccurred())
 		})
@@ -81,8 +81,8 @@ var _ = Describe("CloudProfile", func() {
 			Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(cloudProfile)).To(Succeed())
 
 			shoot.Spec.CloudProfileName = &cloudProfileName
-			res, err := admissionutils.GetCloudProfile(cloudProfileLister, namespacedCloudProfileLister, shoot)
-			Expect(res).To(Equal(cloudProfile))
+			res, err := admissionutils.GetCloudProfileSpec(cloudProfileLister, namespacedCloudProfileLister, shoot)
+			Expect(res).To(Equal(&cloudProfile.Spec))
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -92,8 +92,8 @@ var _ = Describe("CloudProfile", func() {
 			shoot.Spec.CloudProfile = &core.CloudProfileReference{
 				Name: cloudProfileName,
 			}
-			res, err := admissionutils.GetCloudProfile(cloudProfileLister, namespacedCloudProfileLister, shoot)
-			Expect(res).To(Equal(cloudProfile))
+			res, err := admissionutils.GetCloudProfileSpec(cloudProfileLister, namespacedCloudProfileLister, shoot)
+			Expect(res).To(Equal(&cloudProfile.Spec))
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -104,8 +104,8 @@ var _ = Describe("CloudProfile", func() {
 				Kind: "NamespacedCloudProfile",
 				Name: namespacedCloudProfileName,
 			}
-			res, err := admissionutils.GetCloudProfile(cloudProfileLister, namespacedCloudProfileLister, shoot)
-			Expect(res).To(Equal(namespacedCloudProfile.Status.CloudProfileSpec))
+			res, err := admissionutils.GetCloudProfileSpec(cloudProfileLister, namespacedCloudProfileLister, shoot)
+			Expect(res).To(Equal(&namespacedCloudProfile.Status.CloudProfileSpec))
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -113,7 +113,7 @@ var _ = Describe("CloudProfile", func() {
 			Expect(coreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(namespacedCloudProfile)).To(Succeed())
 
 			shoot.Spec.CloudProfileName = &namespacedCloudProfileName
-			res, err := admissionutils.GetCloudProfile(cloudProfileLister, namespacedCloudProfileLister, shoot)
+			res, err := admissionutils.GetCloudProfileSpec(cloudProfileLister, namespacedCloudProfileLister, shoot)
 			Expect(res).To(BeNil())
 			Expect(err).To(HaveOccurred())
 		})

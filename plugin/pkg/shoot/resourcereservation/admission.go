@@ -144,11 +144,11 @@ func (c *ResourceReservation) Admit(_ context.Context, a admission.Attributes, _
 		return nil
 	}
 
-	cloudProfile, err := utils.GetCloudProfile(c.cloudProfileLister, c.namespacedCloudProfileLister, shoot)
+	cloudProfileSpec, err := utils.GetCloudProfileSpec(c.cloudProfileLister, c.namespacedCloudProfileLister, shoot)
 	if err != nil {
 		return apierrors.NewInternalError(fmt.Errorf("could not find referenced cloud profile: %+v", err.Error()))
 	}
-	machineTypeMap := buildMachineTypeMap(cloudProfile)
+	machineTypeMap := buildMachineTypeMap(cloudProfileSpec)
 
 	allErrs := field.ErrorList{}
 	workersPath := field.NewPath("spec", "provider", "workers")
@@ -228,10 +228,10 @@ func injectResourceReservations(worker *core.Worker, machineTypeMap map[string]g
 	return allErrs
 }
 
-func buildMachineTypeMap(cloudProfile *gardencorev1beta1.CloudProfile) map[string]gardencorev1beta1.MachineType {
+func buildMachineTypeMap(cloudProfileSpec *gardencorev1beta1.CloudProfileSpec) map[string]gardencorev1beta1.MachineType {
 	types := map[string]gardencorev1beta1.MachineType{}
 
-	for _, machine := range cloudProfile.Spec.MachineTypes {
+	for _, machine := range cloudProfileSpec.MachineTypes {
 		types[machine.Name] = machine
 	}
 	return types

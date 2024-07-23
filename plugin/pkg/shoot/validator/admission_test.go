@@ -1581,7 +1581,7 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
 						Expect(err).To(HaveOccurred())
-						Expect(err.Error()).To(ContainSubstring("cannot schedule shoot '%s' on seed '%s' because the seed selector of cloud profile '%s' is not matching the labels of the seed", shoot.Name, seed.Name, cloudProfile.Name))
+						Expect(err.Error()).To(ContainSubstring("cannot schedule shoot '%s' on seed '%s' because the cloud profile seed selector is not matching the labels of the seed", shoot.Name, seed.Name))
 					})
 
 					It("should allow shoot creation on seed that matches one of the provider types in the cloud profile's seed selector", func() {
@@ -1622,7 +1622,7 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
 						Expect(err).To(HaveOccurred())
-						Expect(err.Error()).To(ContainSubstring("cannot schedule shoot '%s' on seed '%s' because none of the provider types in the seed selector of cloud profile '%s' is matching the provider type of the seed", shoot.Name, seed.Name, cloudProfile.Name))
+						Expect(err.Error()).To(ContainSubstring("cannot schedule shoot '%s' on seed '%s' because none of the provider types in the cloud profile seed selector is matching the provider type of the seed", shoot.Name, seed.Name))
 					})
 
 					It("should allow updating the seedName to seed that matches the cloud profile's seed selector (w/ shoots/binding subresource)", func() {
@@ -1663,7 +1663,7 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
 						Expect(err).To(HaveOccurred())
-						Expect(err.Error()).To(ContainSubstring("cannot schedule shoot '%s' on seed '%s' because the seed selector of cloud profile '%s' is not matching the labels of the seed", shoot.Name, seed.Name, cloudProfile.Name))
+						Expect(err.Error()).To(ContainSubstring("cannot schedule shoot '%s' on seed '%s' because the cloud profile seed selector is not matching the labels of the seed", shoot.Name, seed.Name))
 					})
 
 					It("should allow updating the seedName to seed that matches one of the provider types in the cloud profile's seed selector (w/ shoots/binding subresource)", func() {
@@ -1704,7 +1704,7 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
 						Expect(err).To(HaveOccurred())
-						Expect(err.Error()).To(ContainSubstring("cannot schedule shoot '%s' on seed '%s' because none of the provider types in the seed selector of cloud profile '%s' is matching the provider type of the seed", shoot.Name, seed.Name, cloudProfile.Name))
+						Expect(err.Error()).To(ContainSubstring("cannot schedule shoot '%s' on seed '%s' because none of the provider types in the cloud profile seed selector is matching the provider type of the seed", shoot.Name, seed.Name))
 					})
 				})
 			})

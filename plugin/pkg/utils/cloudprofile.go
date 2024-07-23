@@ -9,7 +9,6 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/api/equality"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/utils/ptr"
 
@@ -21,8 +20,8 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 )
 
-// GetCloudProfile determines whether the given shoot references a CloudProfile or a NamespacedCloudProfile and returns the appropriate object.
-func GetCloudProfile(cloudProfileLister gardencorev1beta1listers.CloudProfileLister, NamespacedCloudProfileLister gardencorev1beta1listers.NamespacedCloudProfileLister, shoot *core.Shoot) (*gardencorev1beta1.CloudProfile, error) {
+// GetCloudProfileSpec determines whether the given shoot references a CloudProfile or a NamespacedCloudProfile and returns the appropriate CloudProfileSpec.
+func GetCloudProfileSpec(cloudProfileLister gardencorev1beta1listers.CloudProfileLister, NamespacedCloudProfileLister gardencorev1beta1listers.NamespacedCloudProfileLister, shoot *core.Shoot) (*gardencorev1beta1.CloudProfileSpec, error) {
 	cloudProfileReference := BuildCloudProfileReference(shoot)
 	if cloudProfileReference == nil {
 		return nil, fmt.Errorf("no cloudprofile reference has been provided")
@@ -33,14 +32,13 @@ func GetCloudProfile(cloudProfileLister gardencorev1beta1listers.CloudProfileLis
 		if err != nil {
 			return nil, err
 		}
-		return &gardencorev1beta1.CloudProfile{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: shoot.Namespace + "/" + namespacedCloudProfile.Name,
-			},
-			Spec: namespacedCloudProfile.Status.CloudProfileSpec,
-		}, nil
+		return &namespacedCloudProfile.Status.CloudProfileSpec, nil
 	case constants.CloudProfileReferenceKindCloudProfile:
-		return cloudProfileLister.Get(cloudProfileReference.Name)
+		cloudProfile, err := cloudProfileLister.Get(cloudProfileReference.Name)
+		if err != nil {
+			return nil, err
+		}
+		return &cloudProfile.Spec, nil
 	}
 	return nil, fmt.Errorf("could not find referenced cloudprofile")
 }
