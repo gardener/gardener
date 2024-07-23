@@ -718,87 +718,84 @@ var _ = Describe("KubeStateMetrics", func() {
 				},
 			},
 		}
-		prometheusRuleShoot = func(workerless bool) *monitoringv1.PrometheusRule {
-			rules := []monitoringv1.Rule{{
-				Alert: "KubeStateMetricsSeedDown",
-				Expr:  intstr.FromString(`absent(count({exported_job="kube-state-metrics"}))`),
-				For:   ptr.To(monitoringv1.Duration("15m")),
-				Labels: map[string]string{
-					"service":    "kube-state-metrics-seed",
-					"severity":   "critical",
-					"type":       "seed",
-					"visibility": "operator",
+		prometheusRuleShoot = func() *monitoringv1.PrometheusRule {
+			rules := []monitoringv1.Rule{
+				{
+					Alert: "KubeStateMetricsSeedDown",
+					Expr:  intstr.FromString(`absent(count({exported_job="kube-state-metrics"}))`),
+					For:   ptr.To(monitoringv1.Duration("15m")),
+					Labels: map[string]string{
+						"service":    "kube-state-metrics-seed",
+						"severity":   "critical",
+						"type":       "seed",
+						"visibility": "operator",
+					},
+					Annotations: map[string]string{
+						"summary":     "There are no kube-state-metrics metrics for the control plane",
+						"description": "Kube-state-metrics is scraped by the cache prometheus and federated by the control plane prometheus. Something is broken in that process.",
+					},
 				},
-				Annotations: map[string]string{
-					"summary":     "There are no kube-state-metrics metrics for the control plane",
-					"description": "Kube-state-metrics is scraped by the cache prometheus and federated by the control plane prometheus. Something is broken in that process.",
+				{
+					Alert: "KubeStateMetricsShootDown",
+					Expr:  intstr.FromString(`absent(up{job="kube-state-metrics", type="shoot"} == 1)`),
+					For:   ptr.To(monitoringv1.Duration("15m")),
+					Labels: map[string]string{
+						"service":    "kube-state-metrics-shoot",
+						"severity":   "info",
+						"type":       "seed",
+						"visibility": "operator",
+					},
+					Annotations: map[string]string{
+						"summary":     "Kube-state-metrics for shoot cluster metrics is down.",
+						"description": "There are no running kube-state-metric pods for the shoot cluster. No kubernetes resource metrics can be scraped.",
+					},
 				},
-			}}
-
-			if !workerless {
-				rules = append(rules,
-					monitoringv1.Rule{
-						Alert: "KubeStateMetricsShootDown",
-						Expr:  intstr.FromString(`absent(up{job="kube-state-metrics", type="shoot"} == 1)`),
-						For:   ptr.To(monitoringv1.Duration("15m")),
-						Labels: map[string]string{
-							"service":    "kube-state-metrics-shoot",
-							"severity":   "info",
-							"type":       "seed",
-							"visibility": "operator",
-						},
-						Annotations: map[string]string{
-							"summary":     "Kube-state-metrics for shoot cluster metrics is down.",
-							"description": "There are no running kube-state-metric pods for the shoot cluster. No kubernetes resource metrics can be scraped.",
-						},
+				{
+					Alert: "NoWorkerNodes",
+					Expr:  intstr.FromString(`sum(kube_node_spec_unschedulable) == count(kube_node_info) or absent(kube_node_info)`),
+					For:   ptr.To(monitoringv1.Duration("25m")),
+					Labels: map[string]string{
+						"service":    "nodes",
+						"severity":   "blocker",
+						"visibility": "all",
 					},
-					monitoringv1.Rule{
-						Alert: "NoWorkerNodes",
-						Expr:  intstr.FromString(`sum(kube_node_spec_unschedulable) == count(kube_node_info) or absent(kube_node_info)`),
-						For:   ptr.To(monitoringv1.Duration("25m")),
-						Labels: map[string]string{
-							"service":    "nodes",
-							"severity":   "blocker",
-							"visibility": "all",
-						},
-						Annotations: map[string]string{
-							"summary":     "No nodes available. Possibly all workloads down.",
-							"description": "There are no worker nodes in the cluster or all of the worker nodes in the cluster are not schedulable.",
-						},
+					Annotations: map[string]string{
+						"summary":     "No nodes available. Possibly all workloads down.",
+						"description": "There are no worker nodes in the cluster or all of the worker nodes in the cluster are not schedulable.",
 					},
-					monitoringv1.Rule{
-						Record: "shoot:kube_node_status_capacity_cpu_cores:sum",
-						Expr:   intstr.FromString(`sum(kube_node_status_capacity{resource="cpu",unit="core"})`),
-					},
-					monitoringv1.Rule{
-						Record: "shoot:kube_node_status_capacity_memory_bytes:sum",
-						Expr:   intstr.FromString(`sum(kube_node_status_capacity{resource="memory",unit="byte"})`),
-					},
-					monitoringv1.Rule{
-						Record: "shoot:machine_types:sum",
-						Expr:   intstr.FromString(`sum(kube_node_labels) by (label_beta_kubernetes_io_instance_type)`),
-					},
-					monitoringv1.Rule{
-						Record: "shoot:node_operating_system:sum",
-						Expr:   intstr.FromString(`sum(kube_node_info) by (os_image, kernel_version)`),
-					},
-					monitoringv1.Rule{
-						Record: "kube_pod_container_resource_limits_cpu_cores",
-						Expr:   intstr.FromString(`kube_pod_container_resource_limits{resource="cpu", unit="core"}`),
-					},
-					monitoringv1.Rule{
-						Record: "kube_pod_container_resource_requests_cpu_cores",
-						Expr:   intstr.FromString(`kube_pod_container_resource_requests{resource="cpu", unit="core"}`),
-					},
-					monitoringv1.Rule{
-						Record: "kube_pod_container_resource_limits_memory_bytes",
-						Expr:   intstr.FromString(`kube_pod_container_resource_limits{resource="memory", unit="byte"}`),
-					},
-					monitoringv1.Rule{
-						Record: "kube_pod_container_resource_requests_memory_bytes",
-						Expr:   intstr.FromString(`kube_pod_container_resource_requests{resource="memory", unit="byte"}`),
-					},
-				)
+				},
+				{
+					Record: "shoot:kube_node_status_capacity_cpu_cores:sum",
+					Expr:   intstr.FromString(`sum(kube_node_status_capacity{resource="cpu",unit="core"})`),
+				},
+				{
+					Record: "shoot:kube_node_status_capacity_memory_bytes:sum",
+					Expr:   intstr.FromString(`sum(kube_node_status_capacity{resource="memory",unit="byte"})`),
+				},
+				{
+					Record: "shoot:machine_types:sum",
+					Expr:   intstr.FromString(`sum(kube_node_labels) by (label_beta_kubernetes_io_instance_type)`),
+				},
+				{
+					Record: "shoot:node_operating_system:sum",
+					Expr:   intstr.FromString(`sum(kube_node_info) by (os_image, kernel_version)`),
+				},
+				{
+					Record: "kube_pod_container_resource_limits_cpu_cores",
+					Expr:   intstr.FromString(`kube_pod_container_resource_limits{resource="cpu", unit="core"}`),
+				},
+				{
+					Record: "kube_pod_container_resource_requests_cpu_cores",
+					Expr:   intstr.FromString(`kube_pod_container_resource_requests{resource="cpu", unit="core"}`),
+				},
+				{
+					Record: "kube_pod_container_resource_limits_memory_bytes",
+					Expr:   intstr.FromString(`kube_pod_container_resource_limits{resource="memory", unit="byte"}`),
+				},
+				{
+					Record: "kube_pod_container_resource_requests_memory_bytes",
+					Expr:   intstr.FromString(`kube_pod_container_resource_requests{resource="memory", unit="byte"}`),
+				},
 			}
 
 			return &monitoringv1.PrometheusRule{
@@ -1022,7 +1019,6 @@ var _ = Describe("KubeStateMetrics", func() {
 						KubernetesVersion: semver.MustParse("1.25.3"),
 						Image:             image,
 						PriorityClassName: priorityClassName,
-						IsWorkerless:      false,
 						NameSuffix:        "-runtime",
 					})
 				})
@@ -1110,7 +1106,6 @@ var _ = Describe("KubeStateMetrics", func() {
 						KubernetesVersion: semver.MustParse("1.25.3"),
 						Image:             image,
 						PriorityClassName: priorityClassName,
-						IsWorkerless:      false,
 						NameSuffix:        "-seed",
 					})
 				})
@@ -1137,101 +1132,24 @@ var _ = Describe("KubeStateMetrics", func() {
 				ksm = New(c, namespace, sm, values)
 			})
 
-			Context("when shoot is not workerless", func() {
-				BeforeEach(func() {
-					values.IsWorkerless = false
-				})
+			It("should successfully deploy all resources", func() {
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceTarget), managedResourceTarget)).To(BeNotFoundError())
 
-				It("should successfully deploy all resources", func() {
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceTarget), managedResourceTarget)).To(BeNotFoundError())
-
-					// TODO(vicwicker): Remove after KSM upgrade to 2.13.
-					go func() {
-						defer GinkgoRecover()
-						mr := &resourcesv1alpha1.ManagedResource{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      managedResourceName,
-								Namespace: namespace,
-							},
-						}
-						Eventually(func() error {
-							return c.Get(ctx, client.ObjectKeyFromObject(mr), mr)
-						}).Should(Succeed())
-						mr.ObjectMeta.Generation = 1
-						mr.Status = resourcesv1alpha1.ManagedResourceStatus{
-							ObservedGeneration: 1,
-							Conditions: []gardencorev1beta1.Condition{
-								{
-									Type:   resourcesv1alpha1.ResourcesApplied,
-									Status: gardencorev1beta1.ConditionTrue,
-								},
-								{
-									Type:   resourcesv1alpha1.ResourcesHealthy,
-									Status: gardencorev1beta1.ConditionTrue,
-								},
-								{
-									Type:   resourcesv1alpha1.ResourcesProgressing,
-									Status: gardencorev1beta1.ConditionFalse,
-								},
-							},
-						}
-						Expect(c.Update(ctx, mr)).To(Succeed())
-					}()
-
-					Expect(ksm.Deploy(ctx)).To(Succeed())
-
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceTarget), managedResourceTarget)).To(Succeed())
-
-					expectedMrTarget := &resourcesv1alpha1.ManagedResource{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:            managedResourceTargetName,
-							Namespace:       namespace,
-							ResourceVersion: "1",
-							Labels: map[string]string{
-								"origin":                             "gardener",
-								"care.gardener.cloud/condition-type": "ObservabilityComponentsHealthy",
-							},
-						},
-						Spec: resourcesv1alpha1.ManagedResourceSpec{
-							InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-							SecretRefs: []corev1.LocalObjectReference{{
-								Name: managedResourceTarget.Spec.SecretRefs[0].Name,
-							}},
-							KeepObjects: ptr.To(false),
-						},
-					}
-					utilruntime.Must(references.InjectAnnotations(expectedMrTarget))
-					Expect(managedResourceTarget).To(DeepEqual(expectedMrTarget))
-					Expect(managedResourceTarget).To(consistOf(
-						clusterRoleFor(component.ClusterTypeShoot, ""),
-						clusterRoleBindingFor(component.ClusterTypeShoot, ""),
-					))
-
-					expectedMr := &resourcesv1alpha1.ManagedResource{
+				// TODO(vicwicker): Remove after KSM upgrade to 2.13.
+				go func() {
+					defer GinkgoRecover()
+					mr := &resourcesv1alpha1.ManagedResource{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      managedResourceName,
 							Namespace: namespace,
-							Labels: map[string]string{
-								"gardener.cloud/role":                "seed-system-component",
-								"care.gardener.cloud/condition-type": "ObservabilityComponentsHealthy",
-							},
-							ResourceVersion: "1",
-						},
-						Spec: resourcesv1alpha1.ManagedResourceSpec{
-							Class: ptr.To("seed"),
-							SecretRefs: []corev1.LocalObjectReference{{
-								Name: managedResource.Spec.SecretRefs[0].Name,
-							}},
-							KeepObjects: ptr.To(false),
 						},
 					}
-
-					// TODO(vicwicker): Remove after KSM upgrade to 2.13.
-					expectedMr.ObjectMeta.ResourceVersion = "2"
-					expectedMr.ObjectMeta.Generation = 1
-					expectedMr.Status = resourcesv1alpha1.ManagedResourceStatus{
+					Eventually(func() error {
+						return c.Get(ctx, client.ObjectKeyFromObject(mr), mr)
+					}).Should(Succeed())
+					mr.ObjectMeta.Generation = 1
+					mr.Status = resourcesv1alpha1.ManagedResourceStatus{
 						ObservedGeneration: 1,
 						Conditions: []gardencorev1beta1.Condition{
 							{
@@ -1248,172 +1166,104 @@ var _ = Describe("KubeStateMetrics", func() {
 							},
 						},
 					}
+					Expect(c.Update(ctx, mr)).To(Succeed())
+				}()
 
-					utilruntime.Must(references.InjectAnnotations(expectedMr))
-					Expect(managedResource).To(DeepEqual(expectedMr))
-					prometheusRule := prometheusRuleShoot(values.IsWorkerless)
-					Expect(managedResource).To(consistOf(
-						deploymentFor(component.ClusterTypeShoot),
-						prometheusRule,
-						scrapeConfigShoot,
-						serviceFor(component.ClusterTypeShoot),
-						vpaFor(""),
-						customResourceStateConfigMap,
-					))
+				Expect(ksm.Deploy(ctx)).To(Succeed())
 
-					managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
-					Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-					Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
-					Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceTarget), managedResourceTarget)).To(Succeed())
 
-					actualSecretShootAccess := &corev1.Secret{}
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(secretShootAccess), actualSecretShootAccess)).To(Succeed())
-					expectedSecretShootAccess := secretShootAccess.DeepCopy()
-					expectedSecretShootAccess.ResourceVersion = "1"
-					Expect(actualSecretShootAccess).To(Equal(expectedSecretShootAccess))
-
-					componenttest.PrometheusRule(prometheusRule, "testdata/shoot-kube-state-metrics.prometheusrule.test.yaml")
-				})
-			})
-
-			Context("when shoot is workerless", func() {
-				BeforeEach(func() {
-					values.IsWorkerless = true
-				})
-
-				It("should successfully deploy all resources", func() {
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceTarget), managedResourceTarget)).To(BeNotFoundError())
-
-					// TODO(vicwicker): Remove after KSM upgrade to 2.13.
-					go func() {
-						defer GinkgoRecover()
-						mr := &resourcesv1alpha1.ManagedResource{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      managedResourceName,
-								Namespace: namespace,
-							},
-						}
-						Eventually(func() error {
-							return c.Get(ctx, client.ObjectKeyFromObject(mr), mr)
-						}).Should(Succeed())
-						mr.ObjectMeta.Generation = 1
-						mr.Status = resourcesv1alpha1.ManagedResourceStatus{
-							ObservedGeneration: 1,
-							Conditions: []gardencorev1beta1.Condition{
-								{
-									Type:   resourcesv1alpha1.ResourcesApplied,
-									Status: gardencorev1beta1.ConditionTrue,
-								},
-								{
-									Type:   resourcesv1alpha1.ResourcesHealthy,
-									Status: gardencorev1beta1.ConditionTrue,
-								},
-								{
-									Type:   resourcesv1alpha1.ResourcesProgressing,
-									Status: gardencorev1beta1.ConditionFalse,
-								},
-							},
-						}
-						Expect(c.Update(ctx, mr)).To(Succeed())
-					}()
-
-					Expect(ksm.Deploy(ctx)).To(Succeed())
-
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceTarget), managedResourceTarget)).To(Succeed())
-
-					expectedMrTarget := &resourcesv1alpha1.ManagedResource{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:            managedResourceTargetName,
-							Namespace:       namespace,
-							ResourceVersion: "1",
-							Labels: map[string]string{
-								"origin":                             "gardener",
-								"care.gardener.cloud/condition-type": "ObservabilityComponentsHealthy",
-							},
+				expectedMrTarget := &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            managedResourceTargetName,
+						Namespace:       namespace,
+						ResourceVersion: "1",
+						Labels: map[string]string{
+							"origin":                             "gardener",
+							"care.gardener.cloud/condition-type": "ObservabilityComponentsHealthy",
 						},
-						Spec: resourcesv1alpha1.ManagedResourceSpec{
-							InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-							SecretRefs: []corev1.LocalObjectReference{{
-								Name: managedResourceTarget.Spec.SecretRefs[0].Name,
-							}},
-							KeepObjects: ptr.To(false),
+					},
+					Spec: resourcesv1alpha1.ManagedResourceSpec{
+						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+						SecretRefs: []corev1.LocalObjectReference{{
+							Name: managedResourceTarget.Spec.SecretRefs[0].Name,
+						}},
+						KeepObjects: ptr.To(false),
+					},
+				}
+				utilruntime.Must(references.InjectAnnotations(expectedMrTarget))
+				Expect(managedResourceTarget).To(DeepEqual(expectedMrTarget))
+				Expect(managedResourceTarget).To(consistOf(
+					clusterRoleFor(component.ClusterTypeShoot, ""),
+					clusterRoleBindingFor(component.ClusterTypeShoot, ""),
+				))
+
+				expectedMr := &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      managedResourceName,
+						Namespace: namespace,
+						Labels: map[string]string{
+							"gardener.cloud/role":                "seed-system-component",
+							"care.gardener.cloud/condition-type": "ObservabilityComponentsHealthy",
 						},
-					}
-					utilruntime.Must(references.InjectAnnotations(expectedMrTarget))
-					Expect(managedResourceTarget).To(DeepEqual(expectedMrTarget))
-					Expect(managedResourceTarget).To(consistOf(
-						clusterRoleFor(component.ClusterTypeShoot, ""),
-						clusterRoleBindingFor(component.ClusterTypeShoot, ""),
-					))
+						ResourceVersion: "1",
+					},
+					Spec: resourcesv1alpha1.ManagedResourceSpec{
+						Class: ptr.To("seed"),
+						SecretRefs: []corev1.LocalObjectReference{{
+							Name: managedResource.Spec.SecretRefs[0].Name,
+						}},
+						KeepObjects: ptr.To(false),
+					},
+				}
 
-					expectedMr := &resourcesv1alpha1.ManagedResource{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      managedResourceName,
-							Namespace: namespace,
-							Labels: map[string]string{
-								"gardener.cloud/role":                "seed-system-component",
-								"care.gardener.cloud/condition-type": "ObservabilityComponentsHealthy",
-							},
-							ResourceVersion: "1",
+				// TODO(vicwicker): Remove after KSM upgrade to 2.13.
+				expectedMr.ObjectMeta.ResourceVersion = "2"
+				expectedMr.ObjectMeta.Generation = 1
+				expectedMr.Status = resourcesv1alpha1.ManagedResourceStatus{
+					ObservedGeneration: 1,
+					Conditions: []gardencorev1beta1.Condition{
+						{
+							Type:   resourcesv1alpha1.ResourcesApplied,
+							Status: gardencorev1beta1.ConditionTrue,
 						},
-						Spec: resourcesv1alpha1.ManagedResourceSpec{
-							Class: ptr.To("seed"),
-							SecretRefs: []corev1.LocalObjectReference{{
-								Name: managedResource.Spec.SecretRefs[0].Name,
-							}},
-							KeepObjects: ptr.To(false),
+						{
+							Type:   resourcesv1alpha1.ResourcesHealthy,
+							Status: gardencorev1beta1.ConditionTrue,
 						},
-					}
-
-					// TODO(vicwicker): Remove after KSM upgrade to 2.13.
-					expectedMr.ObjectMeta.ResourceVersion = "2"
-					expectedMr.ObjectMeta.Generation = 1
-					expectedMr.Status = resourcesv1alpha1.ManagedResourceStatus{
-						ObservedGeneration: 1,
-						Conditions: []gardencorev1beta1.Condition{
-							{
-								Type:   resourcesv1alpha1.ResourcesApplied,
-								Status: gardencorev1beta1.ConditionTrue,
-							},
-							{
-								Type:   resourcesv1alpha1.ResourcesHealthy,
-								Status: gardencorev1beta1.ConditionTrue,
-							},
-							{
-								Type:   resourcesv1alpha1.ResourcesProgressing,
-								Status: gardencorev1beta1.ConditionFalse,
-							},
+						{
+							Type:   resourcesv1alpha1.ResourcesProgressing,
+							Status: gardencorev1beta1.ConditionFalse,
 						},
-					}
+					},
+				}
 
-					utilruntime.Must(references.InjectAnnotations(expectedMr))
-					Expect(managedResource).To(DeepEqual(expectedMr))
-					prometheusRule := prometheusRuleShoot(values.IsWorkerless)
-					Expect(managedResource).To(consistOf(
-						deploymentFor(component.ClusterTypeShoot),
-						prometheusRule,
-						serviceFor(component.ClusterTypeShoot),
-						vpaFor(""),
-						customResourceStateConfigMap,
-					))
+				utilruntime.Must(references.InjectAnnotations(expectedMr))
+				Expect(managedResource).To(DeepEqual(expectedMr))
+				prometheusRule := prometheusRuleShoot()
+				Expect(managedResource).To(consistOf(
+					deploymentFor(component.ClusterTypeShoot),
+					prometheusRule,
+					scrapeConfigShoot,
+					serviceFor(component.ClusterTypeShoot),
+					vpaFor(""),
+					customResourceStateConfigMap,
+				))
 
-					managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
-					Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-					Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
-					Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+				managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
-					actualSecretShootAccess := &corev1.Secret{}
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(secretShootAccess), actualSecretShootAccess)).To(Succeed())
-					expectedSecretShootAccess := secretShootAccess.DeepCopy()
-					expectedSecretShootAccess.ResourceVersion = "1"
-					Expect(actualSecretShootAccess).To(Equal(expectedSecretShootAccess))
+				actualSecretShootAccess := &corev1.Secret{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(secretShootAccess), actualSecretShootAccess)).To(Succeed())
+				expectedSecretShootAccess := secretShootAccess.DeepCopy()
+				expectedSecretShootAccess.ResourceVersion = "1"
+				Expect(actualSecretShootAccess).To(Equal(expectedSecretShootAccess))
 
-					componenttest.PrometheusRule(prometheusRule, "testdata/shoot-kube-state-metrics.workerless.prometheusrule.test.yaml")
-				})
+				componenttest.PrometheusRule(prometheusRule, "testdata/shoot-kube-state-metrics.prometheusrule.test.yaml")
 			})
 		})
 	})

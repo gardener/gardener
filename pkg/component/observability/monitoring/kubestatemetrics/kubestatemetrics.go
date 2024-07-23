@@ -76,8 +76,6 @@ type Values struct {
 	PriorityClassName string
 	// Replicas is the number of replicas.
 	Replicas int32
-	// IsWorkerless specifies whether the cluster has worker nodes.
-	IsWorkerless bool
 	// NameSuffix is attached to the deployment name and related resources.
 	NameSuffix string
 }
@@ -151,14 +149,9 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 		deployment = k.deployment(nil, genericTokenKubeconfigSecretName, shootAccessSecret, customResourceStateConfigMap.Name)
 		if err := registry.Add(
 			deployment,
-			k.prometheusRuleShoot()); err != nil {
+			k.prometheusRuleShoot(),
+			k.scrapeConfigShoot()); err != nil {
 			return err
-		}
-
-		if !k.values.IsWorkerless {
-			if err := registry.Add(k.scrapeConfigShoot()); err != nil {
-				return err
-			}
 		}
 	}
 

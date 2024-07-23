@@ -601,88 +601,85 @@ func (k *kubeStateMetrics) scrapeConfigShoot() *monitoringv1alpha1.ScrapeConfig 
 
 func (k *kubeStateMetrics) prometheusRuleShoot() *monitoringv1.PrometheusRule {
 	prometheusRule := &monitoringv1.PrometheusRule{ObjectMeta: monitoringutils.ConfigObjectMeta("kube-state-metrics"+k.values.NameSuffix, k.namespace, shoot.Label)}
-	rules := []monitoringv1.Rule{{
-		Alert: "KubeStateMetricsSeedDown",
-		Expr:  intstr.FromString(`absent(count({exported_job="kube-state-metrics"}))`),
-		For:   ptr.To(monitoringv1.Duration("15m")),
-		Labels: map[string]string{
-			"service":    "kube-state-metrics-seed",
-			"severity":   "critical",
-			"type":       "seed",
-			"visibility": "operator",
+	rules := []monitoringv1.Rule{
+		{
+			Alert: "KubeStateMetricsSeedDown",
+			Expr:  intstr.FromString(`absent(count({exported_job="kube-state-metrics"}))`),
+			For:   ptr.To(monitoringv1.Duration("15m")),
+			Labels: map[string]string{
+				"service":    "kube-state-metrics-seed",
+				"severity":   "critical",
+				"type":       "seed",
+				"visibility": "operator",
+			},
+			Annotations: map[string]string{
+				"summary":     "There are no kube-state-metrics metrics for the control plane",
+				"description": "Kube-state-metrics is scraped by the cache prometheus and federated by the control plane prometheus. Something is broken in that process.",
+			},
 		},
-		Annotations: map[string]string{
-			"summary":     "There are no kube-state-metrics metrics for the control plane",
-			"description": "Kube-state-metrics is scraped by the cache prometheus and federated by the control plane prometheus. Something is broken in that process.",
+		{
+			Alert: "KubeStateMetricsShootDown",
+			Expr:  intstr.FromString(`absent(up{job="kube-state-metrics", type="shoot"} == 1)`),
+			For:   ptr.To(monitoringv1.Duration("15m")),
+			Labels: map[string]string{
+				"service":    "kube-state-metrics-shoot",
+				"severity":   "info",
+				"type":       "seed",
+				"visibility": "operator",
+			},
+			Annotations: map[string]string{
+				"summary":     "Kube-state-metrics for shoot cluster metrics is down.",
+				"description": "There are no running kube-state-metric pods for the shoot cluster. No kubernetes resource metrics can be scraped.",
+			},
 		},
-	}}
-
-	if !k.values.IsWorkerless {
-		rules = append(rules,
-			monitoringv1.Rule{
-				Alert: "KubeStateMetricsShootDown",
-				Expr:  intstr.FromString(`absent(up{job="kube-state-metrics", type="shoot"} == 1)`),
-				For:   ptr.To(monitoringv1.Duration("15m")),
-				Labels: map[string]string{
-					"service":    "kube-state-metrics-shoot",
-					"severity":   "info",
-					"type":       "seed",
-					"visibility": "operator",
-				},
-				Annotations: map[string]string{
-					"summary":     "Kube-state-metrics for shoot cluster metrics is down.",
-					"description": "There are no running kube-state-metric pods for the shoot cluster. No kubernetes resource metrics can be scraped.",
-				},
+		{
+			Alert: "NoWorkerNodes",
+			Expr:  intstr.FromString(`sum(kube_node_spec_unschedulable) == count(kube_node_info) or absent(kube_node_info)`),
+			For:   ptr.To(monitoringv1.Duration("25m")), // MCM timeout + grace period to allow self-healing before firing alert
+			Labels: map[string]string{
+				"service":    "nodes",
+				"severity":   "blocker",
+				"visibility": "all",
 			},
-			monitoringv1.Rule{
-				Alert: "NoWorkerNodes",
-				Expr:  intstr.FromString(`sum(kube_node_spec_unschedulable) == count(kube_node_info) or absent(kube_node_info)`),
-				For:   ptr.To(monitoringv1.Duration("25m")), // MCM timeout + grace period to allow self-healing before firing alert
-				Labels: map[string]string{
-					"service":    "nodes",
-					"severity":   "blocker",
-					"visibility": "all",
-				},
-				Annotations: map[string]string{
-					"summary":     "No nodes available. Possibly all workloads down.",
-					"description": "There are no worker nodes in the cluster or all of the worker nodes in the cluster are not schedulable.",
-				},
+			Annotations: map[string]string{
+				"summary":     "No nodes available. Possibly all workloads down.",
+				"description": "There are no worker nodes in the cluster or all of the worker nodes in the cluster are not schedulable.",
 			},
-			monitoringv1.Rule{
-				Record: "shoot:kube_node_status_capacity_cpu_cores:sum",
-				Expr:   intstr.FromString(`sum(kube_node_status_capacity{resource="cpu",unit="core"})`),
-			},
-			monitoringv1.Rule{
-				Record: "shoot:kube_node_status_capacity_memory_bytes:sum",
-				Expr:   intstr.FromString(`sum(kube_node_status_capacity{resource="memory",unit="byte"})`),
-			},
-			monitoringv1.Rule{
-				Record: "shoot:machine_types:sum",
-				Expr:   intstr.FromString(`sum(kube_node_labels) by (label_beta_kubernetes_io_instance_type)`),
-			},
-			monitoringv1.Rule{
-				Record: "shoot:node_operating_system:sum",
-				Expr:   intstr.FromString(`sum(kube_node_info) by (os_image, kernel_version)`),
-			},
-			// Mitigation for extension dashboards.
-			// TODO(istvanballok): Remove in a future version. For more details, see https://github.com/gardener/gardener/pull/6224.
-			monitoringv1.Rule{
-				Record: "kube_pod_container_resource_limits_cpu_cores",
-				Expr:   intstr.FromString(`kube_pod_container_resource_limits{resource="cpu", unit="core"}`),
-			},
-			monitoringv1.Rule{
-				Record: "kube_pod_container_resource_requests_cpu_cores",
-				Expr:   intstr.FromString(`kube_pod_container_resource_requests{resource="cpu", unit="core"}`),
-			},
-			monitoringv1.Rule{
-				Record: "kube_pod_container_resource_limits_memory_bytes",
-				Expr:   intstr.FromString(`kube_pod_container_resource_limits{resource="memory", unit="byte"}`),
-			},
-			monitoringv1.Rule{
-				Record: "kube_pod_container_resource_requests_memory_bytes",
-				Expr:   intstr.FromString(`kube_pod_container_resource_requests{resource="memory", unit="byte"}`),
-			},
-		)
+		},
+		{
+			Record: "shoot:kube_node_status_capacity_cpu_cores:sum",
+			Expr:   intstr.FromString(`sum(kube_node_status_capacity{resource="cpu",unit="core"})`),
+		},
+		{
+			Record: "shoot:kube_node_status_capacity_memory_bytes:sum",
+			Expr:   intstr.FromString(`sum(kube_node_status_capacity{resource="memory",unit="byte"})`),
+		},
+		{
+			Record: "shoot:machine_types:sum",
+			Expr:   intstr.FromString(`sum(kube_node_labels) by (label_beta_kubernetes_io_instance_type)`),
+		},
+		{
+			Record: "shoot:node_operating_system:sum",
+			Expr:   intstr.FromString(`sum(kube_node_info) by (os_image, kernel_version)`),
+		},
+		// Mitigation for extension dashboards.
+		// TODO(istvanballok): Remove in a future version. For more details, see https://github.com/gardener/gardener/pull/6224.
+		{
+			Record: "kube_pod_container_resource_limits_cpu_cores",
+			Expr:   intstr.FromString(`kube_pod_container_resource_limits{resource="cpu", unit="core"}`),
+		},
+		{
+			Record: "kube_pod_container_resource_requests_cpu_cores",
+			Expr:   intstr.FromString(`kube_pod_container_resource_requests{resource="cpu", unit="core"}`),
+		},
+		{
+			Record: "kube_pod_container_resource_limits_memory_bytes",
+			Expr:   intstr.FromString(`kube_pod_container_resource_limits{resource="memory", unit="byte"}`),
+		},
+		{
+			Record: "kube_pod_container_resource_requests_memory_bytes",
+			Expr:   intstr.FromString(`kube_pod_container_resource_requests{resource="memory", unit="byte"}`),
+		},
 	}
 
 	prometheusRule.Labels = monitoringutils.Labels(shoot.Label)
