@@ -180,8 +180,6 @@ See [Dave Cheney's post](https://dave.cheney.net/2015/11/05/lets-talk-about-logg
   {"level":"info","ts":"2021-12-16T08:32:21.059+0100","msg":"Creating Deployment","deployment":{"name": "bar", "namespace": "foo"}}
   ```
 
-  Earlier, we often used `kutil.ObjectName()` for logging object keys, which encodes them into a flat string like `foo/bar`. However, this flat string cannot be processed so easily by logging stacks (or `jq`) like a structured log. Hence, the use of `kutil.ObjectName()` for logging object keys is discouraged. Existing usages should be refactored to use `client.ObjectKeyFromObject()` instead.
-
 - There are cases where you don't have the full object key or the object itself at hand, e.g., if an object references another object (in the same namespace) by name (think `secretRef` or similar). 
   In such a cases, either construct the full object key including the implied namespace or log the object name under a key ending in `Name`, e.g.:
   
