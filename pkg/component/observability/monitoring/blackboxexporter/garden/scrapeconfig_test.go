@@ -71,7 +71,7 @@ var _ = Describe("ScrapeConfig", func() {
 						MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 							SourceLabels: []monitoringv1.LabelName{"__name__"},
 							Action:       "keep",
-							Regex:        `^(probe_success|probe_http_status_code|probe_http_duration_seconds)$`,
+							Regex:        `^(probe_success|probe_http_status_code|probe_http_duration_seconds|probe_ssl_earliest_cert_expiry)$`,
 						}},
 					},
 				},
@@ -129,7 +129,7 @@ var _ = Describe("ScrapeConfig", func() {
 						MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 							SourceLabels: []monitoringv1.LabelName{"__name__"},
 							Action:       "keep",
-							Regex:        `^(probe_success|probe_http_status_code|probe_http_duration_seconds)$`,
+							Regex:        `^(probe_success|probe_http_status_code|probe_http_duration_seconds|probe_ssl_earliest_cert_expiry)$`,
 						}},
 					},
 				},
@@ -179,7 +179,7 @@ var _ = Describe("ScrapeConfig", func() {
 						MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 							SourceLabels: []monitoringv1.LabelName{"__name__"},
 							Action:       "keep",
-							Regex:        `^(probe_success|probe_http_status_code|probe_http_duration_seconds)$`,
+							Regex:        `^(probe_success|probe_http_status_code|probe_http_duration_seconds|probe_ssl_earliest_cert_expiry)$`,
 						}},
 					},
 				},

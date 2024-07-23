@@ -15,7 +15,15 @@ import (
 
 // ScrapeConfig returns the scrape configs related to the blackbox-exporter for the garden use-case.
 func ScrapeConfig(namespace string, kubeAPIServerTargets []monitoringv1alpha1.Target, gardenerDashboardTarget monitoringv1alpha1.Target) []*monitoringv1alpha1.ScrapeConfig {
-	defaultScrapeConfig := func(name, module string, targets []monitoringv1alpha1.Target) *monitoringv1alpha1.ScrapeConfig {
+	defaultKeepMetrics := []string{
+		"probe_success",
+		"probe_http_status_code",
+		"probe_http_duration_seconds",
+	}
+	additionalKeepTLSMetrics := []string{
+		"probe_ssl_earliest_cert_expiry",
+	}
+	genScrapeConfig := func(name, module string, targets []monitoringv1alpha1.Target, metrics []string) *monitoringv1alpha1.ScrapeConfig {
 		return &monitoringv1alpha1.ScrapeConfig{
 			ObjectMeta: monitoringutils.ConfigObjectMeta("blackbox-"+name, namespace, gardenprometheus.Label),
 			Spec: monitoringv1alpha1.ScrapeConfigSpec{
@@ -55,19 +63,21 @@ func ScrapeConfig(namespace string, kubeAPIServerTargets []monitoringv1alpha1.Ta
 						TargetLabel: "job",
 					},
 				},
-				MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
-					"probe_success",
-					"probe_http_status_code",
-					"probe_http_duration_seconds",
-				),
+				MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(metrics...),
 			},
 		}
 	}
+	defaultScrapeConfig := func(name, module string, targets []monitoringv1alpha1.Target) *monitoringv1alpha1.ScrapeConfig {
+		return genScrapeConfig(name, module, targets, defaultKeepMetrics)
+	}
+	tlsScrapeConfig := func(name, module string, targets []monitoringv1alpha1.Target) *monitoringv1alpha1.ScrapeConfig {
+		return genScrapeConfig(name, module, targets, append(defaultKeepMetrics, additionalKeepTLSMetrics...))
+	}
 
 	var (
-		gardenerAPIServerScrapeConfig       = defaultScrapeConfig("gardener-apiserver", httpGardenerAPIServerModuleName, []monitoringv1alpha1.Target{"https://gardener-apiserver.garden.svc/healthz"})
-		kubeAPIServerScrapeConfig           = defaultScrapeConfig("apiserver", httpKubeAPIServerModuleName, kubeAPIServerTargets)
-		gardenerDashboardScrapeConfig       = defaultScrapeConfig("dashboard", httpGardenerDashboardModuleName, []monitoringv1alpha1.Target{gardenerDashboardTarget})
+		gardenerAPIServerScrapeConfig       = tlsScrapeConfig("gardener-apiserver", httpGardenerAPIServerModuleName, []monitoringv1alpha1.Target{"https://gardener-apiserver.garden.svc/healthz"})
+		kubeAPIServerScrapeConfig           = tlsScrapeConfig("apiserver", httpKubeAPIServerModuleName, kubeAPIServerTargets)
+		gardenerDashboardScrapeConfig       = tlsScrapeConfig("dashboard", httpGardenerDashboardModuleName, []monitoringv1alpha1.Target{gardenerDashboardTarget})
 		gardenerDiscoveryServerScrapeConfig = defaultScrapeConfig("discovery-server", httpGardenerDiscoveryServerModuleName, []monitoringv1alpha1.Target{"http://gardener-discovery-server.garden.svc.cluster.local:8081/healthz"})
 	)
 
