@@ -52,6 +52,8 @@ type Reconciler struct {
 	Config          config.OperatorConfiguration
 	Clock           clock.Clock
 	Recorder        record.EventRecorder
+	GardenNamespace string
+	// GardenClientMap is the ClientMap used to communicate with the virtual garden cluster. It should be set by AddToManager function but the field is still public for use in tests.
 	GardenClientMap clientmap.ClientMap
 }
 

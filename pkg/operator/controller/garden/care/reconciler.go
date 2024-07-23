@@ -34,8 +34,9 @@ type Reconciler struct {
 	RuntimeClient   client.Client
 	Config          config.OperatorConfiguration
 	Clock           clock.Clock
-	GardenClientMap clientmap.ClientMap
 	GardenNamespace string
+	// GardenClientMap is the ClientMap used to communicate with the virtual garden cluster. It should be set by AddToManager function but the field is still public for use in tests.
+	GardenClientMap clientmap.ClientMap
 
 	registerManagedResourceWatchFunc func() error
 	managedResourceWatchRegistered   bool

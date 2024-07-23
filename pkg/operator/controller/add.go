@@ -14,7 +14,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
@@ -40,10 +39,8 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 	}
 
 	if err := (&virtualcluster.Reconciler{
-		Config:          *cfg,
-		GardenNamespace: v1beta1constants.GardenNamespace,
-		GardenClientMap: gardenClientMap,
-	}).AddToManager(ctx, mgr); err != nil {
+		Config: *cfg,
+	}).AddToManager(ctx, mgr, gardenClientMap); err != nil {
 		return fmt.Errorf("failed to add Extension virtual cluster controller: %w", err)
 	}
 

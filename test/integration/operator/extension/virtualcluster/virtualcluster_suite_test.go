@@ -160,8 +160,7 @@ var _ = BeforeSuite(func() {
 			Controllers: config.ControllerConfiguration{},
 		},
 		GardenNamespace: v1beta1constants.GardenNamespace,
-		GardenClientMap: gardenClientMap,
-	}).AddToManager(ctx, mgr)).Should(Succeed())
+	}).AddToManager(ctx, mgr, gardenClientMap)).Should(Succeed())
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)

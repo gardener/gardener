@@ -45,16 +45,14 @@ func AddToManager(
 		Config:                *cfg,
 		Identity:              identity,
 		ComponentImageVectors: componentImageVectors,
-		GardenClientMap:       gardenClientMap,
 		GardenNamespace:       v1beta1constants.GardenNamespace,
-	}).AddToManager(mgr); err != nil {
+	}).AddToManager(mgr, gardenClientMap); err != nil {
 		return fmt.Errorf("failed adding Garden controller: %w", err)
 	}
 
 	if err := (&care.Reconciler{
-		Config:          *cfg,
-		GardenClientMap: gardenClientMap,
-	}).AddToManager(ctx, mgr); err != nil {
+		Config: *cfg,
+	}).AddToManager(ctx, mgr, gardenClientMap); err != nil {
 		return fmt.Errorf("failed adding care reconciler: %w", err)
 	}
 
