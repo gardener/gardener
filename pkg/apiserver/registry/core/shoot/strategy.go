@@ -56,7 +56,7 @@ func (shootStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 	newShoot.Generation = 1
 	newShoot.Status = core.ShootStatus{}
 
-	utils.SyncCloudProfileFields(newShoot)
+	utils.SyncCloudProfileFields(nil, newShoot)
 
 	if !utilfeature.DefaultFeatureGate.Enabled(features.ShootCredentialsBinding) {
 		newShoot.Spec.CredentialsBindingName = nil
@@ -74,7 +74,7 @@ func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object
 		newShoot.Generation = oldShoot.Generation + 1
 	}
 
-	utils.SyncCloudProfileFields(newShoot)
+	utils.SyncCloudProfileFields(oldShoot, newShoot)
 
 	if oldShoot.Spec.CredentialsBindingName == nil && !utilfeature.DefaultFeatureGate.Enabled(features.ShootCredentialsBinding) {
 		newShoot.Spec.CredentialsBindingName = nil

@@ -1148,7 +1148,7 @@ func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, fldPath *field
 func ValidateCloudProfileReference(cloudProfileReference, oldCloudProfileReference *core.CloudProfileReference, cloudProfileName, oldCloudProfileName *string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	// TODO(LucaBernstein): For backwards-compatibility, also to tests still specifying only cloudProfileName
+	// TODO(LucaBernstein): For backwards-compatibility, also to test shoots still specifying only cloudProfileName
 	//  to be removed after cloudProfileName is deprecated
 	if cloudProfileReference == nil && cloudProfileName != nil {
 		cloudProfileReference = &core.CloudProfileReference{
@@ -1188,14 +1188,11 @@ func ValidateCloudProfileReference(cloudProfileReference, oldCloudProfileReferen
 
 	// Else, ensure that the name of the (Namespaced)CloudProfile stays the same
 	// Due to the field synchronization in the shoot strategy it is safe to only check in cloudProfileReference
-	var formerCloudProfileName *string = oldCloudProfileName
+	formerCloudProfileName := oldCloudProfileName
 	if oldCloudProfileReference != nil {
 		formerCloudProfileName = &oldCloudProfileReference.Name
 	}
-	if formerCloudProfileName == nil {
-		return allErrs
-	}
-	if *formerCloudProfileName != cloudProfileReference.Name {
+	if formerCloudProfileName != nil && *formerCloudProfileName != cloudProfileReference.Name {
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("name"), "changing the cloudProfile name is not allowed, except for switching from a CloudProfile to a directly descendant NamespacedCloudProfile"))
 	}
 	return allErrs

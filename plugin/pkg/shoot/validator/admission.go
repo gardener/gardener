@@ -258,7 +258,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, _ adm
 		return fmt.Errorf("new shoot can only specify either cloudProfileName or cloudProfile reference")
 	}
 
-	err = admissionutils.ValidateCloudProfileChanges(v.cloudProfileLister, v.namespacedCloudProfileLister, shoot, oldShoot)
+	err = admissionutils.ValidateCloudProfileChanges(v.namespacedCloudProfileLister, shoot, oldShoot)
 	if err != nil {
 		return err
 	}

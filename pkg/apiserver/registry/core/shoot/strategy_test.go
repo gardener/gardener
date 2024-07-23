@@ -243,6 +243,25 @@ var _ = Describe("Strategy", func() {
 				}))
 			})
 
+			It("should keep the NamespacedCloudProfile if it has been enabled before and now the feature gate is disabled", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, false))
+				oldShoot.Spec.CloudProfile = &core.CloudProfileReference{
+					Kind: "NamespacedCloudProfile",
+					Name: "bar",
+				}
+				newShoot.Spec.CloudProfile = &core.CloudProfileReference{
+					Kind: "NamespacedCloudProfile",
+					Name: "bar",
+				}
+				strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+
+				Expect(newShoot.Spec.CloudProfileName).To(BeNil())
+				Expect(newShoot.Spec.CloudProfile).To(Equal(&core.CloudProfileReference{
+					Kind: "NamespacedCloudProfile",
+					Name: "bar",
+				}))
+			})
+
 			It("should remove CredentialsBindingName field if ShootCredentialsBinding feature gate is disabled", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ShootCredentialsBinding, false))
 

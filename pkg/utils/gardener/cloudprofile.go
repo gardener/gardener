@@ -9,34 +9,36 @@ import (
 	"fmt"
 
 	"k8s.io/utils/ptr"
-	pkgclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
-// GetCloudProfile gets determine whether a given CloudProfile name is a NamespacedCloudProfile or a CloudProfile and returns the appropriate object
-func GetCloudProfile(ctx context.Context, client pkgclient.Reader, shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.CloudProfile, error) {
+// GetCloudProfile determines whether the given shoot references a CloudProfile or a NamespacedCloudProfile and returns the appropriate object.
+func GetCloudProfile(ctx context.Context, reader client.Reader, shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.CloudProfile, error) {
 	cloudProfileReference := BuildCloudProfileReference(shoot)
 	if cloudProfileReference == nil {
 		return nil, fmt.Errorf("could not determine cloudprofile from shoot")
 	}
+	var cloudProfile *gardencorev1beta1.CloudProfile
 	switch cloudProfileReference.Kind {
 	case constants.CloudProfileReferenceKindCloudProfile:
-		cloudProfile := &gardencorev1beta1.CloudProfile{}
-		err := client.Get(ctx, pkgclient.ObjectKey{Name: cloudProfileReference.Name}, cloudProfile)
-		return cloudProfile, err
-	case constants.CloudProfileReferenceKindNamespacedCloudProfile:
-		namespacedCloudProfile := &gardencorev1beta1.NamespacedCloudProfile{}
-		if err := client.Get(ctx, pkgclient.ObjectKey{Name: cloudProfileReference.Name, Namespace: shoot.Namespace}, namespacedCloudProfile); err != nil {
+		cloudProfile = &gardencorev1beta1.CloudProfile{}
+		if err := reader.Get(ctx, client.ObjectKey{Name: cloudProfileReference.Name}, cloudProfile); err != nil {
 			return nil, err
 		}
-		return &gardencorev1beta1.CloudProfile{Spec: namespacedCloudProfile.Status.CloudProfileSpec}, nil
+	case constants.CloudProfileReferenceKindNamespacedCloudProfile:
+		namespacedCloudProfile := &gardencorev1beta1.NamespacedCloudProfile{}
+		if err := reader.Get(ctx, client.ObjectKey{Name: cloudProfileReference.Name, Namespace: shoot.Namespace}, namespacedCloudProfile); err != nil {
+			return nil, err
+		}
+		cloudProfile = &gardencorev1beta1.CloudProfile{Spec: namespacedCloudProfile.Status.CloudProfileSpec}
 	}
-	return nil, fmt.Errorf("could not get cloud profile for reference: %+v", cloudProfileReference)
+	return cloudProfile, nil
 }
 
-// BuildCloudProfileReference determines the CloudProfile of a Shoot to use
+// BuildCloudProfileReference determines and returns the CloudProfile reference of the given shoot,
 // depending on the availability of cloudProfileName and cloudProfile.
 func BuildCloudProfileReference(shoot *gardencorev1beta1.Shoot) *gardencorev1beta1.CloudProfileReference {
 	if shoot == nil {

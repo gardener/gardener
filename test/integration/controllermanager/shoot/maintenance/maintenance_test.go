@@ -310,7 +310,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 			ObjectMeta: metav1.ObjectMeta{GenerateName: "test-", Namespace: testNamespace.Name},
 			Spec: gardencorev1beta1.ShootSpec{
 				SecretBindingName: ptr.To("my-provider-account"),
-				CloudProfileName:  &cloudProfile.Name,
+				CloudProfile:      &gardencorev1beta1.CloudProfileReference{Name: cloudProfile.Name},
 				Region:            "foo-region",
 				Provider: gardencorev1beta1.Provider{
 					Type: "foo-provider",

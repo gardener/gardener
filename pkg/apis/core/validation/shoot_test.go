@@ -5865,7 +5865,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				fldPath = field.NewPath("cloudProfile")
 			})
 
-			It("should not allow using no cloudProfile reference (should be filled by sync synced in Shoot strategy)", func() {
+			It("should not allow using no cloudProfile reference", func() {
 				errList := ValidateCloudProfileReference(nil, nil, nil, nil, fldPath)
 
 				Expect(errList).To(ConsistOf(
