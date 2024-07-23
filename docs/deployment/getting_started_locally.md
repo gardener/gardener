@@ -331,10 +331,10 @@ make kind2-down
 make kind-down
 ```
 
-## Alternative way to set up Garden and Seed leveraging `gardener-operator`
+## Alternative Way to Set Up Garden and Seed Leveraging `gardener-operator`
 
 Instead of starting Garden and Seed via `make kind-up gardener-up`, you can also use `gardener-operator` to create your local dev landscape.  
-In this setup virtual garden cluster has its own loadbalancer, so you have to create an own DNS entry in your `/etc/hosts`.
+In this setup, the virtual garden cluster has its own load balancer, so you have to create an own DNS entry in your `/etc/hosts`:
 
 ```shell
 cat <<EOF | sudo tee -a /etc/hosts
@@ -359,6 +359,15 @@ make operator-seed-up
 
 You find the kubeconfig for the KinD cluster at `./example/gardener-local/kind/operator/kubeconfig`.
 The one for the virtual garden is accessible at `./example/operator/virtual-garden/kubeconfig`.
+
+> [!IMPORTANT]
+> When you create non-HA shoot clusters (i.e., `Shoot`s with `.spec.controlPlane.highAvailability.failureTolerance != zone`), then they are not exposed via `127.0.0.1` ([ref](#accessing-the-shoot-cluster)).
+> Instead, you need to find out under which Istio instance they got exposed, and put the corresponding IP address into your `/etc/hosts` file:
+> ```shell
+> # replace <shoot-namespace> with your shoot namespace (e.g., `shoot--foo--bar`):
+> kubectl -n "$(kubectl -n <shoot-namespace> get gateway kube-apiserver -o jsonpath={.spec.selector.istio} | sed 's/.*--/istio-ingress--/')" get svc istio-ingressgateway -o jsonpath={.status.loadBalancer.ingress..ip}
+> ```
+> When the shoot cluster is HA (i.e., `.spec.controlPlane.highAvailability.failureTolerance == zone`), then you can access it via `127.0.0.1`.
 
 Please use this command to tear down your environment:
 

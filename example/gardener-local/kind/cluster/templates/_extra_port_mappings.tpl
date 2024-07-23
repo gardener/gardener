@@ -24,9 +24,6 @@
 
 {{- define "extraPortMappings.gardener.operator.virtualGarden" -}}
 {{- if .Values.gardener.garden.deployed -}}
-- containerPort: 30443
-  hostPort: 443
-  listenAddress: 127.0.0.1
 - containerPort: 31443
   hostPort: 443
   listenAddress: 127.0.0.3

@@ -284,7 +284,7 @@ kind-ha-multi-zone-up kind-ha-multi-zone-down: export CLUSTER_VALUES = $(REPO_RO
 # ADDITIONAL_PARAMETERS
 kind2-up kind2-ha-single-zone-up: export ADDITIONAL_PARAMETERS = --skip-registry
 kind2-down: export ADDITIONAL_PARAMETERS = --keep-backupbuckets-dir
-kind-ha-multi-zone-up: export ADDITIONAL_PARAMETERS = --multi-zonal
+kind-ha-multi-zone-up kind-operator-up: export ADDITIONAL_PARAMETERS = --multi-zonal
 
 kind-up kind2-up kind-ha-single-zone-up kind2-ha-single-zone-up kind-ha-multi-zone-up: $(KIND) $(KUBECTL) $(HELM) $(YQ) $(KUSTOMIZE)
 	./hack/kind-up.sh \
@@ -311,7 +311,8 @@ kind-operator-up: $(KIND) $(KUBECTL) $(HELM) $(YQ) $(KUSTOMIZE)
 		--cluster-name $(CLUSTER_NAME) \
 		--path-kubeconfig $(KIND_KUBECONFIG) \
 		--path-cluster-values $(REPO_ROOT)/example/gardener-local/kind/operator/values.yaml \
-		--with-lpp-resize-support $(DEV_SETUP_WITH_LPP_RESIZE_SUPPORT)
+		--with-lpp-resize-support $(DEV_SETUP_WITH_LPP_RESIZE_SUPPORT) \
+		$(ADDITIONAL_PARAMETERS)
 	mkdir -p $(REPO_ROOT)/dev/local-backupbuckets/gardener-operator
 kind-operator-down: $(KIND)
 	./hack/kind-down.sh \
