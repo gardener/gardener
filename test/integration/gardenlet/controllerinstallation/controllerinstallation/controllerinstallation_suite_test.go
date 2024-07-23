@@ -87,7 +87,10 @@ var _ = BeforeSuite(func() {
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
 		Environment: &envtest.Environment{
 			CRDInstallOptions: envtest.CRDInstallOptions{
-				Paths: []string{filepath.Join("..", "..", "..", "..", "..", "example", "resource-manager", "10-crd-resources.gardener.cloud_managedresources.yaml")},
+				Paths: []string{
+					filepath.Join("..", "..", "..", "..", "..", "example", "resource-manager", "10-crd-resources.gardener.cloud_managedresources.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_gardens.yaml"),
+				},
 			},
 			ErrorIfCRDPathMissing: true,
 		},
@@ -108,6 +111,7 @@ var _ = BeforeSuite(func() {
 
 	testSchemeBuilder := runtime.NewSchemeBuilder(
 		kubernetes.AddGardenSchemeToScheme,
+		kubernetes.AddSeedSchemeToScheme,
 		resourcesv1alpha1.AddToScheme,
 	)
 	testScheme := runtime.NewScheme()

@@ -22,6 +22,7 @@ import (
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
@@ -409,6 +410,59 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
 				return controllerInstallation.Status.Conditions
 			}).Should(ContainCondition(OfType(gardencorev1beta1.ControllerInstallationInstalled), WithStatus(gardencorev1beta1.ConditionTrue)))
+		})
+
+		Context("when seed is garden at the same time", func() {
+			BeforeEach(func() {
+				garden := &operatorv1alpha1.Garden{
+					ObjectMeta: metav1.ObjectMeta{GenerateName: "garden-"},
+					Spec: operatorv1alpha1.GardenSpec{
+						RuntimeCluster: operatorv1alpha1.RuntimeCluster{
+							Networking: operatorv1alpha1.RuntimeNetworking{
+								Pods:     "10.1.0.0/16",
+								Services: "10.2.0.0/16",
+							},
+							Ingress: operatorv1alpha1.Ingress{
+								Domains: []string{"ingress.dev.seed.example.com"},
+								Controller: gardencorev1beta1.IngressController{
+									Kind: "nginx",
+								},
+							},
+						},
+						VirtualCluster: operatorv1alpha1.VirtualCluster{
+							DNS: operatorv1alpha1.DNS{
+								Domains: []string{"virtual-garden.local.gardener.cloud"},
+							},
+							Gardener: operatorv1alpha1.Gardener{
+								ClusterIdentity: "test",
+							},
+							Kubernetes: operatorv1alpha1.Kubernetes{
+								Version: "1.26.3",
+							},
+							Maintenance: operatorv1alpha1.Maintenance{
+								TimeWindow: gardencorev1beta1.MaintenanceTimeWindow{
+									Begin: "220000+0100",
+									End:   "230000+0100",
+								},
+							},
+							Networking: operatorv1alpha1.Networking{
+								Services: "100.64.0.0/13",
+							},
+						},
+					},
+				}
+				Expect(testClient.Create(ctx, garden)).To(Succeed())
+				DeferCleanup(func() { Expect(testClient.Delete(ctx, garden)).To(Succeed()) })
+			})
+
+			It("should properly label the namespace with the network policy label", func() {
+				By("Ensure namespace was created and labeled correctly")
+				Eventually(func(g Gomega) {
+					namespace := &corev1.Namespace{}
+					g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "extension-" + controllerInstallation.Name}, namespace)).To(Succeed())
+					g.Expect(namespace.Labels).To(HaveKeyWithValue("networking.gardener.cloud/access-target-apiserver", "allowed"))
+				}).Should(Succeed())
+			})
 		})
 	})
 })
