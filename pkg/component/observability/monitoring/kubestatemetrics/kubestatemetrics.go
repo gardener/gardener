@@ -111,12 +111,24 @@ func (k *kubeStateMetrics) getResourcesForSeed() []client.Object {
 	return resources
 }
 
+func (k *kubeStateMetrics) getResourcesForShoot(genericTokenKubeconfigSecretName string, shootAccessSecret *gardenerutils.AccessSecret) []client.Object {
+	customResourceStateConfigMap := k.customResourceStateConfigMap()
+	deployment := k.deployment(nil, genericTokenKubeconfigSecretName, shootAccessSecret, customResourceStateConfigMap.Name)
+	return []client.Object{
+		deployment,
+		k.prometheusRuleShoot(),
+		k.scrapeConfigShoot(),
+		k.service(),
+		k.verticalPodAutoscaler(deployment),
+		customResourceStateConfigMap,
+	}
+}
+
 func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 	var (
 		genericTokenKubeconfigSecretName string
 		shootAccessSecret                *gardenerutils.AccessSecret
 		registry                         = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
-		customResourceStateConfigMap     = k.customResourceStateConfigMap()
 	)
 
 	// TODO(chrkl): Remove after release v1.103
@@ -152,15 +164,7 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 	}
 
 	if k.values.ClusterType == component.ClusterTypeShoot {
-		deployment := k.deployment(nil, genericTokenKubeconfigSecretName, shootAccessSecret, customResourceStateConfigMap.Name)
-		if err := registry.Add(
-			deployment,
-			k.prometheusRuleShoot(),
-			k.scrapeConfigShoot(),
-			k.service(),
-			k.verticalPodAutoscaler(deployment),
-			customResourceStateConfigMap,
-		); err != nil {
+		if err := registry.Add(k.getResourcesForShoot(genericTokenKubeconfigSecretName, shootAccessSecret)...); err != nil {
 			return err
 		}
 	}
