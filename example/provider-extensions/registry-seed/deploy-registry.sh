@@ -45,7 +45,6 @@ kubectl --kubeconfig "$kubeconfig" --server-side=true apply -f "$SCRIPT_DIR"/loa
 kubectl create secret generic -n registry registry-htpasswd --from-file="$SCRIPT_DIR"/htpasswd/auth --dry-run=client -o yaml | \
   kubectl --kubeconfig "$kubeconfig" --server-side=true apply  -f -
 kubectl rollout restart statefulsets -n registry -l app=registry --kubeconfig "$kubeconfig"
-# TODO(oliver-goetz): contribute basic authentication support for registry to https://github.com/distribution/distribution and switch back to the official image afterwards
 kubectl --kubeconfig "$kubeconfig" apply -f - << EOF
 apiVersion: v1
 kind: Secret
@@ -108,9 +107,9 @@ stringData:
       ctr snapshot rm seed-registry-cache
     fi
     echo "Pulling registry-cache image"
-    ctr image pull ghcr.io/oliver-goetz/distribution/registry:3.0.0-dev
+    ctr image pull europe-docker.pkg.dev/gardener-project/releases/3rd/registry:3.0.0-beta.1
     echo "Starting registry-cache"
-    ctr run --detach --mount type=bind,src=/var/opt/docker/seed-registry-cache-config.yml,dst=/etc/docker/registry/config.yml,options=rbind:ro --net-host ghcr.io/oliver-goetz/distribution/registry:3.0.0-dev seed-registry-cache
+    ctr run --detach --mount type=bind,src=/var/opt/docker/seed-registry-cache-config.yml,dst=/etc/distribution/config.yml,options=rbind:ro --net-host europe-docker.pkg.dev/gardener-project/releases/3rd/registry:3.0.0-beta.1 seed-registry-cache
   stop-seed-registry-cache.sh: |
     #!/usr/bin/env bash
     echo "stopping seed-registry-cache"
