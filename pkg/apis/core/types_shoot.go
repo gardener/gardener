@@ -896,6 +896,8 @@ type KubeletConfig struct {
 	ImageGCLowThresholdPercent *int32
 	// SerializeImagePulls describes whether the images are pulled one at a time.
 	SerializeImagePulls *bool
+	// MaxParallelImagePulls describes the maximum number of parallel pulls if SerializeImagePulls is false.
+	MaxParallelImagePulls *int32
 	// RegistryPullQPS is the limit of registry pulls per second. The value must not be a negative number.
 	// Setting it to 0 means no limit.
 	RegistryPullQPS *int32

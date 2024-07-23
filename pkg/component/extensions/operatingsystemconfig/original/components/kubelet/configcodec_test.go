@@ -79,6 +79,7 @@ var _ = Describe("ConfigCodec", func() {
 			KubeAPIQPS:                  ptr.To[int32](50),
 			KubeAPIBurst:                50,
 			SerializeImagePulls:         ptr.To(true),
+			MaxParallelImagePulls:       ptr.To[int32](10),
 			EvictionHard: map[string]string{
 				"imagefs.available":  "5%",
 				"imagefs.inodesFree": "5%",

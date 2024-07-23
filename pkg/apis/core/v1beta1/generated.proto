@@ -1335,38 +1335,44 @@ message KubeletConfig {
   // Default: true
   optional bool serializeImagePulls = 18;
 
+  // MaxParallelImagePulls describes the maximum number of parallel pulls if SerializeImagePulls is false.
+  // Default 10
+  // This field is only available for Kubernetes v1.27 or later.
+  // +optional
+  optional int32 maxParallelImagePulls = 19;
+
   // RegistryPullQPS is the limit of registry pulls per second. The value must not be a negative number.
   // Setting it to 0 means no limit.
   // Default: 5
   // +optional
-  optional int32 registryPullQPS = 19;
+  optional int32 registryPullQPS = 20;
 
   // RegistryBurst is the maximum size of bursty pulls, temporarily allows pulls to burst to this number,
   // while still not exceeding registryPullQPS. The value must not be a negative number.
   // Only used if registryPullQPS is greater than 0.
   // Default: 10
   // +optional
-  optional int32 registryBurst = 20;
+  optional int32 registryBurst = 21;
 
   // SeccompDefault enables the use of `RuntimeDefault` as the default seccomp profile for all workloads.
   // This requires the corresponding SeccompDefault feature gate to be enabled as well.
   // This field is only available for Kubernetes v1.25 or later.
   // +optional
-  optional bool seccompDefault = 21;
+  optional bool seccompDefault = 22;
 
   // A quantity defines the maximum size of the container log file before it is rotated. For example: "5Mi" or "256Ki".
   // +optional
   // Default: 100Mi
-  optional k8s.io.apimachinery.pkg.api.resource.Quantity containerLogMaxSize = 22;
+  optional k8s.io.apimachinery.pkg.api.resource.Quantity containerLogMaxSize = 23;
 
   // Maximum number of container log files that can be present for a container.
   // +optional
-  optional int32 containerLogMaxFiles = 23;
+  optional int32 containerLogMaxFiles = 24;
 
   // ProtectKernelDefaults ensures that the kernel tunables are equal to the kubelet defaults.
   // Defaults to true for Kubernetes v1.26 or later.
   // +optional
-  optional bool protectKernelDefaults = 24;
+  optional bool protectKernelDefaults = 25;
 
   // StreamingConnectionIdleTimeout is the maximum time a streaming connection can be idle before the connection is automatically closed.
   // This field cannot be set lower than "30s" or greater than "4h".
@@ -1374,11 +1380,11 @@ message KubeletConfig {
   //  "4h" for Kubernetes < v1.26.
   //  "5m" for Kubernetes >= v1.26.
   // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration streamingConnectionIdleTimeout = 25;
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration streamingConnectionIdleTimeout = 26;
 
   // MemorySwap configures swap memory available to container workloads.
   // +optional
-  optional MemorySwapConfiguration memorySwap = 26;
+  optional MemorySwapConfiguration memorySwap = 27;
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.

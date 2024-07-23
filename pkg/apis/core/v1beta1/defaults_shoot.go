@@ -146,6 +146,9 @@ func SetDefaults_Shoot(obj *Shoot) {
 		if obj.Spec.Kubernetes.Kubelet.SerializeImagePulls == nil {
 			obj.Spec.Kubernetes.Kubelet.SerializeImagePulls = ptr.To(true)
 		}
+		if obj.Spec.Kubernetes.Kubelet.MaxParallelImagePulls == nil {
+			obj.Spec.Kubernetes.Kubelet.MaxParallelImagePulls = ptr.To[int32](10)
+		}
 
 		if obj.Spec.Maintenance.AutoUpdate.MachineImageVersion == nil {
 			obj.Spec.Maintenance.AutoUpdate.MachineImageVersion = ptr.To(true)

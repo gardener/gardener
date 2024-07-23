@@ -2284,6 +2284,11 @@ func (in *KubeletConfig) DeepCopyInto(out *KubeletConfig) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.MaxParallelImagePulls != nil {
+		in, out := &in.MaxParallelImagePulls, &out.MaxParallelImagePulls
+		*out = new(int32)
+		**out = **in
+	}
 	if in.RegistryPullQPS != nil {
 		in, out := &in.RegistryPullQPS, &out.RegistryPullQPS
 		*out = new(int32)
