@@ -10,7 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	api "github.com/gardener/gardener/pkg/provider-local/apis/local"
@@ -37,7 +36,7 @@ func CloudProfileConfigFromCluster(cluster *controller.Cluster) (*api.CloudProfi
 	if cluster != nil && cluster.CloudProfile != nil && cluster.CloudProfile.Spec.ProviderConfig != nil && cluster.CloudProfile.Spec.ProviderConfig.Raw != nil {
 		cloudProfileConfig = &api.CloudProfileConfig{}
 		if _, _, err := decoder.Decode(cluster.CloudProfile.Spec.ProviderConfig.Raw, nil, cloudProfileConfig); err != nil {
-			return nil, fmt.Errorf("could not decode providerConfig of cloudProfile for '%s': %w", client.ObjectKeyFromObject(cluster.CloudProfile), err)
+			return nil, fmt.Errorf("could not decode providerConfig of cloudProfile for '%s': %w", cluster.CloudProfile.Name, err)
 		}
 	}
 	return cloudProfileConfig, nil
