@@ -621,8 +621,8 @@ func getDaemonSet(hash string, advertiseIPAddress string) *appsv1.DaemonSet {
 									corev1.ResourceMemory: resource.MustParse("90Mi"),
 								},
 								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("20m"),
-									corev1.ResourceMemory: resource.MustParse("20Mi"),
+									corev1.ResourceCPU:    resource.MustParse("5m"),
+									corev1.ResourceMemory: resource.MustParse("15Mi"),
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
@@ -673,8 +673,8 @@ func getDaemonSet(hash string, advertiseIPAddress string) *appsv1.DaemonSet {
 									corev1.ResourceMemory: resource.MustParse("1Gi"),
 								},
 								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("20m"),
-									corev1.ResourceMemory: resource.MustParse("20Mi"),
+									corev1.ResourceCPU:    resource.MustParse("5m"),
+									corev1.ResourceMemory: resource.MustParse("30Mi"),
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
