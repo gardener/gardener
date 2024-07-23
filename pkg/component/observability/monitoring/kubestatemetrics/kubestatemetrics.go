@@ -178,7 +178,8 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := managedresources.CreateForSeedWithLabels(ctx,
+	if err := managedresources.CreateForSeedWithLabels(
+		ctx,
 		k.client,
 		k.namespace,
 		k.managedResourceName(),
@@ -201,7 +202,8 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 			return err
 		}
 
-		return managedresources.CreateForShootWithLabels(ctx,
+		return managedresources.CreateForShootWithLabels(
+			ctx,
 			k.client,
 			k.namespace,
 			k.managedResourceName()+"-target",
