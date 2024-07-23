@@ -49,18 +49,6 @@ var _ = Describe("Object", func() {
 		ctrl.Finish()
 	})
 
-	DescribeTable("#ParseObjectName",
-		func(objectName, expectedNamespace, expectedName string) {
-			namespace, name := ParseObjectName(objectName)
-			Expect(namespace).To(Equal(expectedNamespace))
-			Expect(name).To(Equal(expectedName))
-		},
-		Entry("namespaced name", "foo/bar", "foo", "bar"),
-		Entry("non-namespaced name", "foo", "", "foo"),
-		Entry("non-namespaced name with a separator", "/foo", "", "foo"),
-		Entry("empty name", "", "", ""),
-	)
-
 	Describe("#DeleteObjects", func() {
 		It("should fail because an object fails to delete", func() {
 			gomock.InOrder(

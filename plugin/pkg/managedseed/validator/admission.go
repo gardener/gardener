@@ -20,6 +20,7 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 	kubeinformers "k8s.io/client-go/informers"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
@@ -38,7 +39,6 @@ import (
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 )
@@ -210,7 +210,7 @@ func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, _ admis
 
 	// Ensure shoot can be registered as seed
 	if shoot.Spec.DNS == nil || shoot.Spec.DNS.Domain == nil || *shoot.Spec.DNS.Domain == "" {
-		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, fmt.Sprintf("shoot %s does not specify a domain", kubernetesutils.ObjectName(shoot)))))
+		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, fmt.Sprintf("shoot %s does not specify a domain", client.ObjectKeyFromObject(shoot)))))
 	}
 	if v1beta1helper.NginxIngressEnabled(shoot.Spec.Addons) {
 		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, "shoot ingress addon is not supported for managed seeds - use the managed seed ingress controller")))
@@ -228,7 +228,7 @@ func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, _ admis
 		return apierrors.NewInternalError(fmt.Errorf("could not get managed seed for shoot %s/%s: %v", managedSeed.Namespace, managedSeed.Spec.Shoot.Name, err))
 	}
 	if ms != nil && ms.Name != managedSeed.Name {
-		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, fmt.Sprintf("shoot %s already registered as seed by managed seed %s", kubernetesutils.ObjectName(shoot), kubernetesutils.ObjectName(ms)))))
+		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, fmt.Sprintf("shoot %s already registered as seed by managed seed %s", client.ObjectKeyFromObject(shoot), client.ObjectKeyFromObject(ms)))))
 	}
 
 	if managedSeed.Spec.Gardenlet != nil {
@@ -451,7 +451,7 @@ func (v *ManagedSeed) getSeedDNSProvider(shoot *gardencorev1beta1.Shoot) (*garde
 		}
 	}
 	if dnsProvider == nil {
-		return nil, fmt.Errorf("domain of shoot %s is neither a custom domain nor a default domain", kubernetesutils.ObjectName(shoot))
+		return nil, fmt.Errorf("domain of shoot %s is neither a custom domain nor a default domain", client.ObjectKeyFromObject(shoot))
 	}
 	return dnsProvider, nil
 }
@@ -463,7 +463,7 @@ func (v *ManagedSeed) getSeedDNSProviderForCustomDomain(shoot *gardencorev1beta1
 		return nil, nil
 	}
 	if primaryProvider.Type == nil {
-		return nil, fmt.Errorf("primary DNS provider of shoot %s does not have a type", kubernetesutils.ObjectName(shoot))
+		return nil, fmt.Errorf("primary DNS provider of shoot %s does not have a type", client.ObjectKeyFromObject(shoot))
 	}
 	if *primaryProvider.Type == gardencore.DNSUnmanaged {
 		return nil, nil
@@ -497,7 +497,7 @@ func (v *ManagedSeed) getSeedDNSProviderForCustomDomain(shoot *gardencorev1beta1
 			Namespace: credentialsBinding.CredentialsRef.Namespace,
 		}
 	} else {
-		return nil, fmt.Errorf("cannot initialize a reference to the primary DNS provider secret of shoot %s", kubernetesutils.ObjectName(shoot))
+		return nil, fmt.Errorf("cannot initialize a reference to the primary DNS provider secret of shoot %s", client.ObjectKeyFromObject(shoot))
 	}
 
 	return &gardencore.SeedDNSProvider{
