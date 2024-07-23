@@ -1,5 +1,5 @@
 {{- define "extraPortMappings.gardener.controlPlane.etcd" -}}
-{{- if .Values.gardener.controlPlane.deployed -}}
+{{- if and .Values.gardener.controlPlane.deployed .Values.gardener.controlPlane.customEtcdStatefulSet -}}
 - containerPort: 32379
   hostPort: 32379
 {{- end -}}

@@ -1,6 +1,8 @@
 gardener:
   controlPlane:
     deployed: true
+    kindIsGardenCluster: false
+    customEtcdStatefulSet: false
   seed:
     istio:
       # Add one 'global' address and one per zone, see https://github.com/gardener/gardener/pull/6997
