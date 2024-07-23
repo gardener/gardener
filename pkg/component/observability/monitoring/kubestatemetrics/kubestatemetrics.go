@@ -11,7 +11,6 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -86,7 +85,6 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 		genericTokenKubeconfigSecretName string
 		shootAccessSecret                *gardenerutils.AccessSecret
 		registry                         = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
-		deployment                       *appsv1.Deployment
 		customResourceStateConfigMap     = k.customResourceStateConfigMap()
 	)
 
@@ -126,7 +124,7 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 
 		clusterRole := k.clusterRole()
 		serviceAccount := k.serviceAccount()
-		deployment = k.deployment(serviceAccount, "", nil, customResourceStateConfigMap.Name)
+		deployment := k.deployment(serviceAccount, "", nil, customResourceStateConfigMap.Name)
 		if err := registry.Add(
 			clusterRole,
 			serviceAccount,
@@ -134,27 +132,30 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 			deployment,
 			k.podDisruptionBudget(deployment),
 			k.scrapeConfigCache(),
-			scrapeConfig); err != nil {
+			scrapeConfig,
+			k.service(),
+			k.verticalPodAutoscaler(deployment),
+			customResourceStateConfigMap,
+		); err != nil {
 			return err
 		}
 	}
 
 	if k.values.ClusterType == component.ClusterTypeShoot {
-		deployment = k.deployment(nil, genericTokenKubeconfigSecretName, shootAccessSecret, customResourceStateConfigMap.Name)
+		deployment := k.deployment(nil, genericTokenKubeconfigSecretName, shootAccessSecret, customResourceStateConfigMap.Name)
 		if err := registry.Add(
 			deployment,
 			k.prometheusRuleShoot(),
-			k.scrapeConfigShoot()); err != nil {
+			k.scrapeConfigShoot(),
+			k.service(),
+			k.verticalPodAutoscaler(deployment),
+			customResourceStateConfigMap,
+		); err != nil {
 			return err
 		}
 	}
 
-	serializedResources, err := registry.AddAllAndSerialize(
-		k.service(),
-		k.verticalPodAutoscaler(deployment),
-		customResourceStateConfigMap,
-	)
-
+	serializedResources, err := registry.SerializedObjects()
 	if err != nil {
 		return err
 	}
