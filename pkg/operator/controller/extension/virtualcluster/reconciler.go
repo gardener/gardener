@@ -53,7 +53,6 @@ type Reconciler struct {
 	Clock           clock.Clock
 	Recorder        record.EventRecorder
 	GardenClientMap clientmap.ClientMap
-	GardenNamespace string
 }
 
 // Reconcile performs the main reconciliation logic.
@@ -75,15 +74,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	gardenList := &operatorv1alpha1.GardenList{}
 	// We limit one result because we expect only a single Garden object to be there.
 	if err := r.RuntimeClient.List(ctx, gardenList, client.Limit(1)); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error retrieving garden object: %w", err)
+		return reconcile.Result{}, fmt.Errorf("error retrieving Garden object: %w", err)
 	}
 	if len(gardenList.Items) == 0 {
 		// in case a garden resource does not exist or is deleted, update the condition, remove the finalizers and exit early.
-		log.Info("No garden found")
+		log.Info("No Garden found")
 		conditions := NewVirtualClusterConditions(r.Clock, extension.Status)
 		conditions.virtualClusterReconciled = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.virtualClusterReconciled, gardencorev1beta1.ConditionFalse, ConditionNoGardenFound, "no garden found")
 		if err := r.updateExtensionStatus(ctx, log, extension, conditions); err != nil {
-			return reconcile.Result{}, fmt.Errorf("error updating extension status: %w", err)
+			log.Error(err, "Failed to update Extension status")
 		}
 		return reconcile.Result{}, r.removeFinalizer(ctx, log, extension)
 	}
@@ -114,15 +113,14 @@ func (r *Reconciler) updateExtensionStatus(ctx context.Context, log logr.Logger,
 
 	// prevent sending empty patches
 	if data, err := patch.Data(extension); err != nil {
-		return fmt.Errorf("failed getting patch data for Extension %s: %w", extension.Name, err)
+		return fmt.Errorf("failed getting patch data for Extension: %w", err)
 	} else if string(data) == "{}" {
 		return nil
 	}
 
-	log.V(1).Info("Updating extension status currentConditions")
+	log.V(1).Info("Updating Extension status")
 	if err := r.RuntimeClient.Status().Patch(ctx, extension, patch); err != nil {
-		log.Error(err, "Could not update extension status")
-		return err
+		return fmt.Errorf("could not update Extension status: %w", err)
 	}
 
 	return nil
@@ -156,12 +154,12 @@ func (r *Reconciler) reconcileVirtualClusterResources(ctx context.Context, log l
 	}
 
 	if err := r.reconcileControllerDeployment(ctx, virtualClusterClient, extension); err != nil {
-		return fmt.Errorf("failed to reconciler controller deployment: %w", err)
+		return fmt.Errorf("failed to reconcile ControllerDeployment: %w", err)
 	}
 	r.Recorder.Event(extension, corev1.EventTypeNormal, "Reconciliation", "ControllerDeployment applied successfully")
 
 	if err := r.reconcileControllerRegistration(ctx, virtualClusterClient, extension); err != nil {
-		return fmt.Errorf("failed to reconciler controller registration: %w", err)
+		return fmt.Errorf("failed to reconcile ControllerRegistration: %w", err)
 	}
 	r.Recorder.Event(extension, corev1.EventTypeNormal, "Reconciliation", "ControllerRegistration applied successfully")
 	return nil
@@ -174,7 +172,7 @@ func (r *Reconciler) reconcileControllerDeployment(ctx context.Context, virtualC
 		},
 	}
 
-	if _, err := controllerutil.CreateOrPatch(ctx, virtualClusterClient, controllerDeployment,
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, virtualClusterClient, controllerDeployment,
 		func() error {
 			controllerDeployment.Helm = &gardencorev1.HelmControllerDeployment{
 				Values:        extension.Spec.Deployment.ExtensionDeployment.Values,
@@ -182,7 +180,7 @@ func (r *Reconciler) reconcileControllerDeployment(ctx context.Context, virtualC
 			}
 			return nil
 		}); err != nil {
-		return fmt.Errorf("failed to create or update ControllerDeployment: %w", err)
+		return err
 	}
 	return nil
 }
@@ -194,7 +192,7 @@ func (r *Reconciler) reconcileControllerRegistration(ctx context.Context, virtua
 		},
 	}
 
-	if _, err := controllerutil.CreateOrPatch(ctx, virtualClusterClient, controllerRegistration,
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, virtualClusterClient, controllerRegistration,
 		func() error {
 			// handle well known annotations
 			if v, ok := extension.Annotations[v1beta1constants.AnnotationPodSecurityEnforce]; ok {
@@ -217,7 +215,7 @@ func (r *Reconciler) reconcileControllerRegistration(ctx context.Context, virtua
 			}
 			return nil
 		}); err != nil {
-		return fmt.Errorf("failed to create or update ControllerRegistration: %w", err)
+		return err
 	}
 	return nil
 }
@@ -232,7 +230,7 @@ func (r *Reconciler) delete(ctx context.Context, log logr.Logger, virtualCluster
 
 	conditions.virtualClusterReconciled = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.virtualClusterReconciled, gardencorev1beta1.ConditionFalse, ConditionDeleteSuccessful, "successfully deleted virtual cluster resources")
 	if err := r.updateExtensionStatus(ctx, log, extension, conditions); err != nil {
-		return err
+		log.Error(err, "Failed to update extension status")
 	}
 
 	return r.removeFinalizer(ctx, log, extension)
@@ -253,22 +251,22 @@ func (r *Reconciler) deleteVirtualClusterResources(ctx context.Context, log logr
 		}
 	)
 
-	log.Info("Deleting controller deployment and registration for extension")
+	log.Info("Deleting ControllerRegistration and ControllerDeployment")
 	if err := kubernetesutils.DeleteObjects(ctx, virtualClusterClient, controllerDeployment, controllerRegistration); err != nil {
 		return err
 	}
 
-	log.Info("Waiting until controller registration is gone")
+	log.Info("Waiting until ControllerRegistration is gone")
 	if err := kubernetesutils.WaitUntilResourceDeleted(ctx, virtualClusterClient, controllerRegistration, 5*time.Second); err != nil {
 		return err
 	}
-	r.Recorder.Event(extension, corev1.EventTypeNormal, "Deletion", "Successfully deleted controller registration")
+	r.Recorder.Event(extension, corev1.EventTypeNormal, "Deletion", "Successfully deleted ControllerRegistration")
 
-	log.Info("Waiting until controller deployment is gone")
+	log.Info("Waiting until ControllerDeployment is gone")
 	if err := kubernetesutils.WaitUntilResourceDeleted(ctx, virtualClusterClient, controllerDeployment, 5*time.Second); err != nil {
 		return err
 	}
-	r.Recorder.Event(extension, corev1.EventTypeNormal, "Deletion", "Successfully deleted controller deployment")
+	r.Recorder.Event(extension, corev1.EventTypeNormal, "Deletion", "Successfully deleted ControllerDeployment")
 	return nil
 }
 

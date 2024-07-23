@@ -8,24 +8,34 @@ syntax = "proto2";
 
 package github.com.gardener.gardener.pkg.apis.authentication.v1alpha1;
 
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 import "k8s.io/apimachinery/pkg/apis/meta/v1/generated.proto";
 import "k8s.io/apimachinery/pkg/runtime/generated.proto";
 import "k8s.io/apimachinery/pkg/runtime/schema/generated.proto";
 
 // Package-wide variables from generator "generated".
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.stable_marshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.goproto_stringer_all) = false;
+option (gogoproto.stringer_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.goproto_unrecognized_all) = false;
+option (gogoproto.goproto_enum_prefix_all) = false;
+option (gogoproto.goproto_getters_all) = false;
 option go_package = "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1";
 
 // AdminKubeconfigRequest can be used to request a kubeconfig with admin credentials
 // for a Shoot cluster.
 message AdminKubeconfigRequest {
   // Standard object metadata.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1 [(gogoproto.customname) = "ObjectMeta", (gogoproto.nullable) = false];
 
   // Spec is the specification of the AdminKubeconfigRequest.
-  optional AdminKubeconfigRequestSpec spec = 2;
+  optional AdminKubeconfigRequestSpec spec = 2 [(gogoproto.customname) = "Spec", (gogoproto.nullable) = false];
 
   // Status is the status of the AdminKubeconfigRequest.
-  optional AdminKubeconfigRequestStatus status = 3;
+  optional AdminKubeconfigRequestStatus status = 3 [(gogoproto.customname) = "Status", (gogoproto.nullable) = false];
 }
 
 // AdminKubeconfigRequestSpec contains the expiration time of the kubeconfig.
@@ -35,30 +45,30 @@ message AdminKubeconfigRequestSpec {
   // client needs to check the 'expirationTimestamp' field in a response.
   // Defaults to 1 hour.
   // +optional
-  optional int64 expirationSeconds = 1;
+  optional int64 expirationSeconds = 1 [(gogoproto.customname) = "ExpirationSeconds"];
 }
 
 // AdminKubeconfigRequestStatus is the status of the AdminKubeconfigRequest containing
 // the kubeconfig and expiration of the credential.
 message AdminKubeconfigRequestStatus {
   // Kubeconfig contains the kubeconfig with cluster-admin privileges for the shoot cluster.
-  optional bytes kubeconfig = 1;
+  optional bytes kubeconfig = 1 [(gogoproto.customname) = "Kubeconfig"];
 
   // ExpirationTimestamp is the expiration timestamp of the returned credential.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time expirationTimestamp = 2;
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time expirationTimestamp = 2 [(gogoproto.customname) = "ExpirationTimestamp", (gogoproto.nullable) = false];
 }
 
 // ViewerKubeconfigRequest can be used to request a kubeconfig with viewer credentials (excluding Secrets)
 // for a Shoot cluster.
 message ViewerKubeconfigRequest {
   // Standard object metadata.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1 [(gogoproto.customname) = "ObjectMeta", (gogoproto.nullable) = false];
 
   // Spec is the specification of the ViewerKubeconfigRequest.
-  optional ViewerKubeconfigRequestSpec spec = 2;
+  optional ViewerKubeconfigRequestSpec spec = 2 [(gogoproto.customname) = "Spec", (gogoproto.nullable) = false];
 
   // Status is the status of the ViewerKubeconfigRequest.
-  optional ViewerKubeconfigRequestStatus status = 3;
+  optional ViewerKubeconfigRequestStatus status = 3 [(gogoproto.customname) = "Status", (gogoproto.nullable) = false];
 }
 
 // ViewerKubeconfigRequestSpec contains the expiration time of the kubeconfig.
@@ -68,16 +78,16 @@ message ViewerKubeconfigRequestSpec {
   // client needs to check the 'expirationTimestamp' field in a response.
   // Defaults to 1 hour.
   // +optional
-  optional int64 expirationSeconds = 1;
+  optional int64 expirationSeconds = 1 [(gogoproto.customname) = "ExpirationSeconds"];
 }
 
 // ViewerKubeconfigRequestStatus is the status of the ViewerKubeconfigRequest containing
 // the kubeconfig and expiration of the credential.
 message ViewerKubeconfigRequestStatus {
   // Kubeconfig contains the kubeconfig with viewer privileges (excluding Secrets) for the shoot cluster.
-  optional bytes kubeconfig = 1;
+  optional bytes kubeconfig = 1 [(gogoproto.customname) = "Kubeconfig"];
 
   // ExpirationTimestamp is the expiration timestamp of the returned credential.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time expirationTimestamp = 2;
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time expirationTimestamp = 2 [(gogoproto.customname) = "ExpirationTimestamp", (gogoproto.nullable) = false];
 }
 

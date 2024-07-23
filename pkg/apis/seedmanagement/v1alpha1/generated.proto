@@ -10,27 +10,37 @@ package github.com.gardener.gardener.pkg.apis.seedmanagement.v1alpha1;
 
 import "github.com/gardener/gardener/pkg/apis/core/v1/generated.proto";
 import "github.com/gardener/gardener/pkg/apis/core/v1beta1/generated.proto";
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 import "k8s.io/api/core/v1/generated.proto";
 import "k8s.io/apimachinery/pkg/apis/meta/v1/generated.proto";
 import "k8s.io/apimachinery/pkg/runtime/generated.proto";
 import "k8s.io/apimachinery/pkg/runtime/schema/generated.proto";
 
 // Package-wide variables from generator "generated".
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.stable_marshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.goproto_stringer_all) = false;
+option (gogoproto.stringer_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.goproto_unrecognized_all) = false;
+option (gogoproto.goproto_enum_prefix_all) = false;
+option (gogoproto.goproto_getters_all) = false;
 option go_package = "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1";
 
 // Gardenlet represents a Gardenlet configuration for an unmanaged seed.
 message Gardenlet {
   // Standard object metadata.
   // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1 [(gogoproto.customname) = "ObjectMeta", (gogoproto.nullable) = false];
 
   // Specification of the Gardenlet.
   // +optional
-  optional GardenletSpec spec = 2;
+  optional GardenletSpec spec = 2 [(gogoproto.customname) = "Spec", (gogoproto.nullable) = false];
 
   // Most recently observed status of the Gardenlet.
   // +optional
-  optional GardenletStatus status = 3;
+  optional GardenletStatus status = 3 [(gogoproto.customname) = "Status", (gogoproto.nullable) = false];
 }
 
 // GardenletConfig specifies gardenlet deployment parameters and the GardenletConfiguration used to configure gardenlet.
@@ -38,23 +48,23 @@ message GardenletConfig {
   // Deployment specifies certain gardenlet deployment parameters, such as the number of replicas,
   // the image, etc.
   // +optional
-  optional GardenletDeployment deployment = 1;
+  optional GardenletDeployment deployment = 1 [(gogoproto.customname) = "Deployment"];
 
   // Config is the GardenletConfiguration used to configure gardenlet.
   // +optional
-  optional k8s.io.apimachinery.pkg.runtime.RawExtension config = 2;
+  optional k8s.io.apimachinery.pkg.runtime.RawExtension config = 2 [(gogoproto.customname) = "Config", (gogoproto.nullable) = false];
 
   // Bootstrap is the mechanism that should be used for bootstrapping gardenlet connection to the Garden cluster. One of ServiceAccount, BootstrapToken, None.
   // If set to ServiceAccount or BootstrapToken, a service account or a bootstrap token will be created in the garden cluster and used to compute the bootstrap kubeconfig.
   // If set to None, the gardenClientConnection.kubeconfig field will be used to connect to the Garden cluster. Defaults to BootstrapToken.
   // This field is immutable.
   // +optional
-  optional string bootstrap = 3;
+  optional string bootstrap = 3 [(gogoproto.casttype) = "Bootstrap", (gogoproto.customname) = "Bootstrap"];
 
   // MergeWithParent specifies whether the GardenletConfiguration of the parent gardenlet
   // should be merged with the specified GardenletConfiguration. Defaults to true. This field is immutable.
   // +optional
-  optional bool mergeWithParent = 4;
+  optional bool mergeWithParent = 4 [(gogoproto.customname) = "MergeWithParent"];
 }
 
 // GardenletDeployment specifies certain gardenlet deployment parameters, such as the number of replicas,
@@ -62,63 +72,63 @@ message GardenletConfig {
 message GardenletDeployment {
   // ReplicaCount is the number of gardenlet replicas. Defaults to 2.
   // +optional
-  optional int32 replicaCount = 1;
+  optional int32 replicaCount = 1 [(gogoproto.customname) = "ReplicaCount"];
 
   // RevisionHistoryLimit is the number of old gardenlet ReplicaSets to retain to allow rollback. Defaults to 2.
   // +optional
-  optional int32 revisionHistoryLimit = 2;
+  optional int32 revisionHistoryLimit = 2 [(gogoproto.customname) = "RevisionHistoryLimit"];
 
   // ServiceAccountName is the name of the ServiceAccount to use to run gardenlet pods.
   // +optional
-  optional string serviceAccountName = 3;
+  optional string serviceAccountName = 3 [(gogoproto.customname) = "ServiceAccountName"];
 
   // Image is the gardenlet container image.
   // +optional
-  optional Image image = 4;
+  optional Image image = 4 [(gogoproto.customname) = "Image"];
 
   // Resources are the compute resources required by the gardenlet container.
   // +optional
-  optional k8s.io.api.core.v1.ResourceRequirements resources = 5;
+  optional k8s.io.api.core.v1.ResourceRequirements resources = 5 [(gogoproto.customname) = "Resources"];
 
   // PodLabels are the labels on gardenlet pods.
   // +optional
-  map<string, string> podLabels = 6;
+  map<string, string> podLabels = 6 [(gogoproto.customname) = "PodLabels", (gogoproto.nullable) = false];
 
   // PodAnnotations are the annotations on gardenlet pods.
   // +optional
-  map<string, string> podAnnotations = 7;
+  map<string, string> podAnnotations = 7 [(gogoproto.customname) = "PodAnnotations", (gogoproto.nullable) = false];
 
   // AdditionalVolumes is the list of additional volumes that should be mounted by gardenlet containers.
   // +optional
-  repeated k8s.io.api.core.v1.Volume additionalVolumes = 8;
+  repeated k8s.io.api.core.v1.Volume additionalVolumes = 8 [(gogoproto.customname) = "AdditionalVolumes", (gogoproto.nullable) = false];
 
   // AdditionalVolumeMounts is the list of additional pod volumes to mount into the gardenlet container's filesystem.
   // +optional
-  repeated k8s.io.api.core.v1.VolumeMount additionalVolumeMounts = 9;
+  repeated k8s.io.api.core.v1.VolumeMount additionalVolumeMounts = 9 [(gogoproto.customname) = "AdditionalVolumeMounts", (gogoproto.nullable) = false];
 
   // Env is the list of environment variables to set in the gardenlet container.
   // +optional
-  repeated k8s.io.api.core.v1.EnvVar env = 10;
+  repeated k8s.io.api.core.v1.EnvVar env = 10 [(gogoproto.customname) = "Env", (gogoproto.nullable) = false];
 
   // VPA specifies whether to enable VPA for gardenlet. Defaults to true.
   // +optional
-  optional bool vpa = 11;
+  optional bool vpa = 11 [(gogoproto.customname) = "VPA"];
 }
 
 // GardenletHelm is the Helm deployment configuration for gardenlet.
 message GardenletHelm {
   // OCIRepository defines where to pull the chart.
-  optional github.com.gardener.gardener.pkg.apis.core.v1.OCIRepository ociRepository = 1;
+  optional github.com.gardener.gardener.pkg.apis.core.v1.OCIRepository ociRepository = 1 [(gogoproto.customname) = "OCIRepository", (gogoproto.nullable) = false];
 }
 
 // GardenletList is a list of Gardenlet objects.
 message GardenletList {
   // Standard list object metadata.
   // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1 [(gogoproto.customname) = "ListMeta", (gogoproto.nullable) = false];
 
   // Items is the list of Gardenlets.
-  repeated Gardenlet items = 2;
+  repeated Gardenlet items = 2 [(gogoproto.customname) = "Items", (gogoproto.nullable) = false];
 }
 
 // GardenletSelfDeployment specifies certain gardenlet deployment parameters, such as the number of replicas,
@@ -126,30 +136,30 @@ message GardenletList {
 message GardenletSelfDeployment {
   // GardenletDeployment specifies common gardenlet deployment parameters.
   // +optional
-  optional GardenletDeployment gardenletDeployment = 1;
+  optional GardenletDeployment gardenletDeployment = 1 [(gogoproto.customname) = "GardenletDeployment", (gogoproto.nullable) = false];
 
   // Helm is the Helm deployment configuration.
-  optional GardenletHelm helm = 2;
+  optional GardenletHelm helm = 2 [(gogoproto.customname) = "Helm", (gogoproto.nullable) = false];
 
   // ImageVectorOverwrite is the image vector overwrite for the components deployed by this gardenlet.
   // +optional
-  optional string imageVectorOverwrite = 3;
+  optional string imageVectorOverwrite = 3 [(gogoproto.customname) = "ImageVectorOverwrite"];
 
   // ComponentImageVectorOverwrite is the component image vector overwrite for the components deployed by this
   // gardenlet.
   // +optional
-  optional string componentImageVectorOverwrite = 4;
+  optional string componentImageVectorOverwrite = 4 [(gogoproto.customname) = "ComponentImageVectorOverwrite"];
 }
 
 // GardenletSpec specifies gardenlet deployment parameters and the configuration used to configure gardenlet.
 message GardenletSpec {
   // Deployment specifies certain gardenlet deployment parameters, such as the number of replicas,
   // the image, etc.
-  optional GardenletSelfDeployment deployment = 1;
+  optional GardenletSelfDeployment deployment = 1 [(gogoproto.customname) = "Deployment", (gogoproto.nullable) = false];
 
   // Config is the GardenletConfiguration used to configure gardenlet.
   // +optional
-  optional k8s.io.apimachinery.pkg.runtime.RawExtension config = 2;
+  optional k8s.io.apimachinery.pkg.runtime.RawExtension config = 2 [(gogoproto.customname) = "Config", (gogoproto.nullable) = false];
 }
 
 // GardenletStatus is the status of a Gardenlet.
@@ -158,157 +168,157 @@ message GardenletStatus {
   // +patchMergeKey=type
   // +patchStrategy=merge
   // +optional
-  repeated github.com.gardener.gardener.pkg.apis.core.v1beta1.Condition conditions = 1;
+  repeated github.com.gardener.gardener.pkg.apis.core.v1beta1.Condition conditions = 1 [(gogoproto.customname) = "Conditions", (gogoproto.nullable) = false];
 
   // ObservedGeneration is the most recent generation observed for this Gardenlet. It corresponds to the Gardenlet's
   // generation, which is updated on mutation by the API Server.
   // +optional
-  optional int64 observedGeneration = 2;
+  optional int64 observedGeneration = 2 [(gogoproto.customname) = "ObservedGeneration", (gogoproto.nullable) = false];
 }
 
 // Image specifies container image parameters.
 message Image {
   // Repository is the image repository.
   // +optional
-  optional string repository = 1;
+  optional string repository = 1 [(gogoproto.customname) = "Repository"];
 
   // Tag is the image tag.
   // +optional
-  optional string tag = 2;
+  optional string tag = 2 [(gogoproto.customname) = "Tag"];
 
   // PullPolicy is the image pull policy. One of Always, Never, IfNotPresent.
   // Defaults to Always if latest tag is specified, or IfNotPresent otherwise.
   // +optional
-  optional string pullPolicy = 3;
+  optional string pullPolicy = 3 [(gogoproto.casttype) = "k8s.io/api/core/v1.PullPolicy", (gogoproto.customname) = "PullPolicy"];
 }
 
 // ManagedSeed represents a Shoot that is registered as Seed.
 message ManagedSeed {
   // Standard object metadata.
   // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1 [(gogoproto.customname) = "ObjectMeta", (gogoproto.nullable) = false];
 
   // Specification of the ManagedSeed.
   // +optional
-  optional ManagedSeedSpec spec = 2;
+  optional ManagedSeedSpec spec = 2 [(gogoproto.customname) = "Spec", (gogoproto.nullable) = false];
 
   // Most recently observed status of the ManagedSeed.
   // +optional
-  optional ManagedSeedStatus status = 3;
+  optional ManagedSeedStatus status = 3 [(gogoproto.customname) = "Status", (gogoproto.nullable) = false];
 }
 
 // ManagedSeedList is a list of ManagedSeed objects.
 message ManagedSeedList {
   // Standard list object metadata.
   // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1 [(gogoproto.customname) = "ListMeta", (gogoproto.nullable) = false];
 
   // Items is the list of ManagedSeeds.
-  repeated ManagedSeed items = 2;
+  repeated ManagedSeed items = 2 [(gogoproto.customname) = "Items", (gogoproto.nullable) = false];
 }
 
 // ManagedSeedSet represents a set of identical ManagedSeeds.
 message ManagedSeedSet {
   // Standard object metadata.
   // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1 [(gogoproto.customname) = "ObjectMeta", (gogoproto.nullable) = false];
 
   // Spec defines the desired identities of ManagedSeeds and Shoots in this set.
   // +optional
-  optional ManagedSeedSetSpec spec = 2;
+  optional ManagedSeedSetSpec spec = 2 [(gogoproto.customname) = "Spec", (gogoproto.nullable) = false];
 
   // Status is the current status of ManagedSeeds and Shoots in this ManagedSeedSet.
   // +optional
-  optional ManagedSeedSetStatus status = 3;
+  optional ManagedSeedSetStatus status = 3 [(gogoproto.customname) = "Status", (gogoproto.nullable) = false];
 }
 
 // ManagedSeedSetList is a list of ManagedSeed objects.
 message ManagedSeedSetList {
   // Standard list object metadata.
   // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1 [(gogoproto.customname) = "ListMeta", (gogoproto.nullable) = false];
 
   // Items is the list of ManagedSeedSets.
-  repeated ManagedSeedSet items = 2;
+  repeated ManagedSeedSet items = 2 [(gogoproto.customname) = "Items", (gogoproto.nullable) = false];
 }
 
 // ManagedSeedSetSpec is the specification of a ManagedSeedSet.
 message ManagedSeedSetSpec {
   // Replicas is the desired number of replicas of the given Template. Defaults to 1.
   // +optional
-  optional int32 replicas = 1;
+  optional int32 replicas = 1 [(gogoproto.customname) = "Replicas"];
 
   // Selector is a label query over ManagedSeeds and Shoots that should match the replica count.
   // It must match the ManagedSeeds and Shoots template's labels. This field is immutable.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector selector = 2;
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector selector = 2 [(gogoproto.customname) = "Selector", (gogoproto.nullable) = false];
 
   // Template describes the ManagedSeed that will be created if insufficient replicas are detected.
   // Each ManagedSeed created / updated by the ManagedSeedSet will fulfill this template.
-  optional ManagedSeedTemplate template = 3;
+  optional ManagedSeedTemplate template = 3 [(gogoproto.customname) = "Template", (gogoproto.nullable) = false];
 
   // ShootTemplate describes the Shoot that will be created if insufficient replicas are detected for hosting the corresponding ManagedSeed.
   // Each Shoot created / updated by the ManagedSeedSet will fulfill this template.
-  optional github.com.gardener.gardener.pkg.apis.core.v1beta1.ShootTemplate shootTemplate = 4;
+  optional github.com.gardener.gardener.pkg.apis.core.v1beta1.ShootTemplate shootTemplate = 4 [(gogoproto.customname) = "ShootTemplate", (gogoproto.nullable) = false];
 
   // UpdateStrategy specifies the UpdateStrategy that will be
   // employed to update ManagedSeeds / Shoots in the ManagedSeedSet when a revision is made to
   // Template / ShootTemplate.
   // +optional
-  optional UpdateStrategy updateStrategy = 5;
+  optional UpdateStrategy updateStrategy = 5 [(gogoproto.customname) = "UpdateStrategy"];
 
   // RevisionHistoryLimit is the maximum number of revisions that will be maintained
   // in the ManagedSeedSet's revision history. Defaults to 10. This field is immutable.
   // +optional
-  optional int32 revisionHistoryLimit = 6;
+  optional int32 revisionHistoryLimit = 6 [(gogoproto.customname) = "RevisionHistoryLimit"];
 }
 
 // ManagedSeedSetStatus represents the current state of a ManagedSeedSet.
 message ManagedSeedSetStatus {
   // ObservedGeneration is the most recent generation observed for this ManagedSeedSet. It corresponds to the
   // ManagedSeedSet's generation, which is updated on mutation by the API Server.
-  optional int64 observedGeneration = 1;
+  optional int64 observedGeneration = 1 [(gogoproto.customname) = "ObservedGeneration", (gogoproto.nullable) = false];
 
   // Replicas is the number of replicas (ManagedSeeds and their corresponding Shoots) created by the ManagedSeedSet controller.
-  optional int32 replicas = 2;
+  optional int32 replicas = 2 [(gogoproto.customname) = "Replicas", (gogoproto.nullable) = false];
 
   // ReadyReplicas is the number of ManagedSeeds created by the ManagedSeedSet controller that have a Ready Condition.
-  optional int32 readyReplicas = 3;
+  optional int32 readyReplicas = 3 [(gogoproto.customname) = "ReadyReplicas", (gogoproto.nullable) = false];
 
   // NextReplicaNumber is the ordinal number that will be assigned to the next replica of the ManagedSeedSet.
-  optional int32 nextReplicaNumber = 4;
+  optional int32 nextReplicaNumber = 4 [(gogoproto.customname) = "NextReplicaNumber", (gogoproto.nullable) = false];
 
   // CurrentReplicas is the number of ManagedSeeds created by the ManagedSeedSet controller from the ManagedSeedSet version
   // indicated by CurrentRevision.
-  optional int32 currentReplicas = 5;
+  optional int32 currentReplicas = 5 [(gogoproto.customname) = "CurrentReplicas", (gogoproto.nullable) = false];
 
   // UpdatedReplicas is the number of ManagedSeeds created by the ManagedSeedSet controller from the ManagedSeedSet version
   // indicated by UpdateRevision.
-  optional int32 updatedReplicas = 6;
+  optional int32 updatedReplicas = 6 [(gogoproto.customname) = "UpdatedReplicas", (gogoproto.nullable) = false];
 
   // CurrentRevision, if not empty, indicates the version of the ManagedSeedSet used to generate ManagedSeeds with smaller
   // ordinal numbers during updates.
-  optional string currentRevision = 7;
+  optional string currentRevision = 7 [(gogoproto.customname) = "CurrentRevision", (gogoproto.nullable) = false];
 
   // UpdateRevision, if not empty, indicates the version of the ManagedSeedSet used to generate ManagedSeeds with larger
   // ordinal numbers during updates
-  optional string updateRevision = 8;
+  optional string updateRevision = 8 [(gogoproto.customname) = "UpdateRevision", (gogoproto.nullable) = false];
 
   // CollisionCount is the count of hash collisions for the ManagedSeedSet. The ManagedSeedSet controller
   // uses this field as a collision avoidance mechanism when it needs to create the name for the
   // newest ControllerRevision.
   // +optional
-  optional int32 collisionCount = 9;
+  optional int32 collisionCount = 9 [(gogoproto.customname) = "CollisionCount"];
 
   // Conditions represents the latest available observations of a ManagedSeedSet's current state.
   // +patchMergeKey=type
   // +patchStrategy=merge
   // +optional
-  repeated github.com.gardener.gardener.pkg.apis.core.v1beta1.Condition conditions = 10;
+  repeated github.com.gardener.gardener.pkg.apis.core.v1beta1.Condition conditions = 10 [(gogoproto.customname) = "Conditions", (gogoproto.nullable) = false];
 
   // PendingReplica, if not empty, indicates the replica that is currently pending creation, update, or deletion.
   // This replica is in a state that requires the controller to wait for it to change before advancing to the next replica.
   // +optional
-  optional PendingReplica pendingReplica = 11;
+  optional PendingReplica pendingReplica = 11 [(gogoproto.customname) = "PendingReplica"];
 }
 
 // ManagedSeedSpec is the specification of a ManagedSeed.
@@ -316,12 +326,12 @@ message ManagedSeedSpec {
   // Shoot references a Shoot that should be registered as Seed.
   // This field is immutable.
   // +optional
-  optional Shoot shoot = 1;
+  optional Shoot shoot = 1 [(gogoproto.customname) = "Shoot"];
 
   // Gardenlet specifies that the ManagedSeed controller should deploy a gardenlet into the cluster
   // with the given deployment parameters and GardenletConfiguration.
   // +optional
-  optional GardenletConfig gardenlet = 3;
+  optional GardenletConfig gardenlet = 3 [(gogoproto.customname) = "Gardenlet"];
 }
 
 // ManagedSeedStatus is the status of a ManagedSeed.
@@ -330,52 +340,52 @@ message ManagedSeedStatus {
   // +patchMergeKey=type
   // +patchStrategy=merge
   // +optional
-  repeated github.com.gardener.gardener.pkg.apis.core.v1beta1.Condition conditions = 1;
+  repeated github.com.gardener.gardener.pkg.apis.core.v1beta1.Condition conditions = 1 [(gogoproto.customname) = "Conditions", (gogoproto.nullable) = false];
 
   // ObservedGeneration is the most recent generation observed for this ManagedSeed. It corresponds to the
   // ManagedSeed's generation, which is updated on mutation by the API Server.
-  optional int64 observedGeneration = 2;
+  optional int64 observedGeneration = 2 [(gogoproto.customname) = "ObservedGeneration", (gogoproto.nullable) = false];
 }
 
 // ManagedSeedTemplate is a template for creating a ManagedSeed object.
 message ManagedSeedTemplate {
   // Standard object metadata.
   // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1 [(gogoproto.customname) = "ObjectMeta", (gogoproto.nullable) = false];
 
   // Specification of the desired behavior of the ManagedSeed.
   // +optional
-  optional ManagedSeedSpec spec = 2;
+  optional ManagedSeedSpec spec = 2 [(gogoproto.customname) = "Spec", (gogoproto.nullable) = false];
 }
 
 // PendingReplica contains information about a replica that is currently pending creation, update, or deletion.
 message PendingReplica {
   // Name is the replica name.
-  optional string name = 1;
+  optional string name = 1 [(gogoproto.customname) = "Name", (gogoproto.nullable) = false];
 
   // Reason is the reason for the replica to be pending.
-  optional string reason = 2;
+  optional string reason = 2 [(gogoproto.casttype) = "PendingReplicaReason", (gogoproto.customname) = "Reason", (gogoproto.nullable) = false];
 
   // Since is the moment in time since the replica is pending with the specified reason.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time since = 3;
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time since = 3 [(gogoproto.customname) = "Since", (gogoproto.nullable) = false];
 
   // Retries is the number of times the shoot operation (reconcile or delete) has been retried after having failed.
   // Only applicable if Reason is ShootReconciling or ShootDeleting.
   // +optional
-  optional int32 retries = 4;
+  optional int32 retries = 4 [(gogoproto.customname) = "Retries"];
 }
 
 // RollingUpdateStrategy is used to communicate parameters for RollingUpdateStrategyType.
 message RollingUpdateStrategy {
   // Partition indicates the ordinal at which the ManagedSeedSet should be partitioned. Defaults to 0.
   // +optional
-  optional int32 partition = 1;
+  optional int32 partition = 1 [(gogoproto.customname) = "Partition"];
 }
 
 // Shoot identifies the Shoot that should be registered as Seed.
 message Shoot {
   // Name is the name of the Shoot that will be registered as Seed.
-  optional string name = 1;
+  optional string name = 1 [(gogoproto.customname) = "Name", (gogoproto.nullable) = false];
 }
 
 // UpdateStrategy specifies the strategy that the ManagedSeedSet
@@ -384,10 +394,10 @@ message Shoot {
 message UpdateStrategy {
   // Type indicates the type of the UpdateStrategy. Defaults to RollingUpdate.
   // +optional
-  optional string type = 1;
+  optional string type = 1 [(gogoproto.casttype) = "UpdateStrategyType", (gogoproto.customname) = "Type"];
 
   // RollingUpdate is used to communicate parameters when Type is RollingUpdateStrategyType.
   // +optional
-  optional RollingUpdateStrategy rollingUpdate = 2;
+  optional RollingUpdateStrategy rollingUpdate = 2 [(gogoproto.customname) = "RollingUpdate"];
 }
 

@@ -8,66 +8,76 @@ syntax = "proto2";
 
 package github.com.gardener.gardener.pkg.apis.core.v1;
 
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 import "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.proto";
 import "k8s.io/apimachinery/pkg/apis/meta/v1/generated.proto";
 import "k8s.io/apimachinery/pkg/runtime/generated.proto";
 import "k8s.io/apimachinery/pkg/runtime/schema/generated.proto";
 
 // Package-wide variables from generator "generated".
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.stable_marshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.goproto_stringer_all) = false;
+option (gogoproto.stringer_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.goproto_unrecognized_all) = false;
+option (gogoproto.goproto_enum_prefix_all) = false;
+option (gogoproto.goproto_getters_all) = false;
 option go_package = "github.com/gardener/gardener/pkg/apis/core/v1";
 
 // ControllerDeployment contains information about how this controller is deployed.
 message ControllerDeployment {
   // Standard object metadata.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1 [(gogoproto.customname) = "ObjectMeta", (gogoproto.nullable) = false];
 
   // Helm configures that an extension controller is deployed using helm.
   // +optional
-  optional HelmControllerDeployment helm = 2;
+  optional HelmControllerDeployment helm = 2 [(gogoproto.customname) = "Helm"];
 }
 
 // ControllerDeploymentList is a collection of ControllerDeployments.
 message ControllerDeploymentList {
   // Standard list object metadata.
   // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1 [(gogoproto.customname) = "ListMeta", (gogoproto.nullable) = false];
 
   // Items is the list of ControllerDeployments.
-  repeated ControllerDeployment items = 2;
+  repeated ControllerDeployment items = 2 [(gogoproto.customname) = "Items", (gogoproto.nullable) = false];
 }
 
 // HelmControllerDeployment configures how an extension controller is deployed using helm.
 message HelmControllerDeployment {
   // RawChart is the base64-encoded, gzip'ed, tar'ed extension controller chart.
   // +optional
-  optional bytes rawChart = 1;
+  optional bytes rawChart = 1 [(gogoproto.customname) = "RawChart"];
 
   // Values are the chart values.
   // +optional
-  optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON values = 2;
+  optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON values = 2 [(gogoproto.customname) = "Values"];
 
   // OCIRepository defines where to pull the chart.
   // +optional
-  optional OCIRepository ociRepository = 3;
+  optional OCIRepository ociRepository = 3 [(gogoproto.customname) = "OCIRepository"];
 }
 
 // OCIRepository configures where to pull an OCI Artifact, that could contain for example a Helm Chart.
 message OCIRepository {
   // Ref is the full artifact Ref and takes precedence over all other fields.
   // +optional
-  optional string ref = 1;
+  optional string ref = 1 [(gogoproto.customname) = "Ref"];
 
   // Repository is a reference to an OCI artifact repository.
   // +optional
-  optional string repository = 2;
+  optional string repository = 2 [(gogoproto.customname) = "Repository"];
 
   // Tag is the image tag to pull.
   // +optional
-  optional string tag = 3;
+  optional string tag = 3 [(gogoproto.customname) = "Tag"];
 
   // Digest of the image to pull, takes precedence over tag.
   // The value should be in the format 'sha256:<HASH>'.
   // +optional
-  optional string digest = 4;
+  optional string digest = 4 [(gogoproto.customname) = "Digest"];
 }
 

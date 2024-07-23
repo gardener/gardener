@@ -23,7 +23,7 @@ import (
 
 var _ = Describe("Add", func() {
 	var (
-		ctx                    = context.TODO()
+		ctx                    = context.Background()
 		log                    logr.Logger
 		fakeClient             client.Client
 		extension1, extension2 *operatorv1alpha1.Extension
