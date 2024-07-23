@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -85,7 +84,6 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 		genericTokenKubeconfigSecretName string
 		shootAccessSecret                *gardenerutils.AccessSecret
 		registry                         = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
-		deployment                       *appsv1.Deployment
 		customResourceStateConfigMap     = k.customResourceStateConfigMap()
 	)
 
@@ -118,13 +116,16 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 	if k.values.ClusterType == component.ClusterTypeSeed {
 		clusterRole := k.clusterRole()
 		serviceAccount := k.serviceAccount()
-		deployment = k.deployment(serviceAccount, "", nil, customResourceStateConfigMap.Name)
+		deployment := k.deployment(serviceAccount, "", nil, customResourceStateConfigMap.Name)
 		resources := []client.Object{
 			clusterRole,
 			serviceAccount,
 			k.clusterRoleBinding(clusterRole, serviceAccount),
 			deployment,
 			k.podDisruptionBudget(deployment),
+			k.service(),
+			k.verticalPodAutoscaler(deployment),
+			customResourceStateConfigMap,
 		}
 
 		if k.values.NameSuffix == SuffixSeed {
@@ -146,21 +147,20 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 	}
 
 	if k.values.ClusterType == component.ClusterTypeShoot {
-		deployment = k.deployment(nil, genericTokenKubeconfigSecretName, shootAccessSecret, customResourceStateConfigMap.Name)
+		deployment := k.deployment(nil, genericTokenKubeconfigSecretName, shootAccessSecret, customResourceStateConfigMap.Name)
 		if err := registry.Add(
 			deployment,
 			k.prometheusRuleShoot(),
-			k.scrapeConfigShoot()); err != nil {
+			k.scrapeConfigShoot(),
+			k.service(),
+			k.verticalPodAutoscaler(deployment),
+			customResourceStateConfigMap,
+		); err != nil {
 			return err
 		}
 	}
 
-	serializedResources, err := registry.AddAllAndSerialize(
-		k.service(),
-		k.verticalPodAutoscaler(deployment),
-		customResourceStateConfigMap,
-	)
-
+	serializedResources, err := registry.SerializedObjects()
 	if err != nil {
 		return err
 	}
