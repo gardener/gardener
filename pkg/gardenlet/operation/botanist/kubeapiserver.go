@@ -136,6 +136,15 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() apiserver.Autoscaling
 		}
 	}
 
+	var vpaMaxAllowed corev1.ResourceList
+	if b.Config != nil &&
+		b.Config.SeedConfig != nil &&
+		b.Config.SeedConfig.Spec.Settings != nil &&
+		b.Config.SeedConfig.Spec.Settings.VerticalPodAutoscaler != nil &&
+		b.Config.SeedConfig.Spec.Settings.VerticalPodAutoscaler.MaxAllowed != nil {
+		vpaMaxAllowed = b.Config.SeedConfig.Spec.Settings.VerticalPodAutoscaler.MaxAllowed.DeepCopy()
+	}
+
 	return apiserver.AutoscalingConfig{
 		Mode:                      autoscalingMode,
 		APIServerResources:        apiServerResources,
@@ -144,6 +153,7 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() apiserver.Autoscaling
 		MaxReplicas:               maxReplicas,
 		UseMemoryMetricForHvpaHPA: useMemoryMetricForHvpaHPA,
 		ScaleDownDisabled:         scaleDownDisabled,
+		VPAMaxAllowed:             vpaMaxAllowed,
 	}
 }
 

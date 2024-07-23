@@ -23,6 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
@@ -34,6 +35,7 @@ import (
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	mockkubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/mock"
 	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/garden"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
@@ -170,6 +172,31 @@ var _ = Describe("KubeAPIServer", func() {
 
 	Describe("#DefaultKubeAPIServer", func() {
 		Describe("AutoscalingConfig", func() {
+			It("should pass along seed-level MaxAllowed", func() {
+				botanist.Config = &config.GardenletConfiguration{
+					SeedConfig: &config.SeedConfig{
+						SeedTemplate: core.SeedTemplate{
+							Spec: core.SeedSpec{
+								Settings: &core.SeedSettings{
+									VerticalPodAutoscaler: &core.SeedSettingVerticalPodAutoscaler{
+										MaxAllowed: corev1.ResourceList{
+											corev1.ResourceCPU:    resource.MustParse("777m"),
+											corev1.ResourceMemory: resource.MustParse("777M"),
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+				kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(kubeAPIServer.GetValues().Autoscaling.VPAMaxAllowed).To(Equal(corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("777m"),
+					corev1.ResourceMemory: resource.MustParse("777M"),
+				}))
+			})
+
 			DescribeTable("should have the expected autoscaling config",
 				func(prepTest func(), featureGates map[featuregate.Feature]bool, expectedConfig apiserver.AutoscalingConfig) {
 					if prepTest != nil {

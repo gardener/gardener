@@ -10,6 +10,7 @@ import (
 	"strconv"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/ptr"
 
@@ -82,6 +83,15 @@ func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
 		externalLabels = utils.MergeStringMaps(externalLabels, b.Config.Monitoring.Shoot.ExternalLabels)
 	}
 
+	var vpaMaxAllowed corev1.ResourceList
+	if b.Config != nil &&
+		b.Config.SeedConfig != nil &&
+		b.Config.SeedConfig.Spec.Settings != nil &&
+		b.Config.SeedConfig.Spec.Settings.VerticalPodAutoscaler != nil &&
+		b.Config.SeedConfig.Spec.Settings.VerticalPodAutoscaler.MaxAllowed != nil {
+		vpaMaxAllowed = b.Config.SeedConfig.Spec.Settings.VerticalPodAutoscaler.MaxAllowed.DeepCopy()
+	}
+
 	values := prometheus.Values{
 		Name:                "shoot",
 		PriorityClassName:   v1beta1constants.PriorityClassNameShootControlPlane100,
@@ -115,6 +125,7 @@ func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
 			ServiceAccountName: shootprometheus.ServiceAccountName,
 			ScrapesMetrics:     true,
 		},
+		VPAMaxAllowed: &vpaMaxAllowed,
 	}
 
 	if b.Shoot.WantsAlertmanager {

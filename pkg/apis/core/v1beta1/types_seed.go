@@ -341,6 +341,16 @@ type SeedSettingVerticalPodAutoscaler struct {
 	// is enabled by default because Gardener heavily relies on a VPA being deployed. You should only disable this if
 	// your seed cluster already has another, manually/custom managed VPA deployment.
 	Enabled bool `json:"enabled" protobuf:"bytes,1,opt,name=enabled"`
+
+	// MaxAllowed specifies the maximum amount of resources that will be recommended for Gardener components. The value is applied
+	// by setting it in the MaxAllowed field of the component's VPA object. If the VPA has a default value
+	// for MaxAllowed, the smaller of the two values is used. If this field is nil, no change is made to the MaxAllowed
+	// values in component VPAs.
+	//
+	// The effects of the setting are currently limited to the following shoot control plane components:
+	//  etcd, kube-apiserver,prometheus
+	// +optional
+	MaxAllowed corev1.ResourceList `json:"maxAllowed,omitempty" protobuf:"bytes,2,rep,name=maxAllowed,casttype=k8s.io/api/core/v1.ResourceList,castkey=k8s.io/api/core/v1.ResourceName"`
 }
 
 // SeedSettingDependencyWatchdog controls the dependency-watchdog settings for the seed.

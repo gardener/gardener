@@ -496,6 +496,33 @@ var _ = Describe("KubeAPIServer", func() {
 						},
 					},
 				),
+				Entry("autoscaling mode is VPAAndHPA and seed-level MaxAllowed applies",
+					apiserver.AutoscalingConfig{
+						Mode: apiserver.AutoscalingModeVPAAndHPA,
+						VPAMaxAllowed: map[corev1.ResourceName]resource.Quantity{
+							corev1.ResourceCPU:    resource.MustParse("777m"),
+							corev1.ResourceMemory: resource.MustParse("777G"),
+						},
+					},
+					false,
+					nil,
+					nil,
+					ptr.To(vpaautoscalingv1.UpdateModeAuto),
+					[]vpaautoscalingv1.ContainerResourcePolicy{
+						{
+							ContainerName:    "kube-apiserver",
+							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+							MinAllowed: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("20m"),
+								corev1.ResourceMemory: resource.MustParse("200M"),
+							},
+							MaxAllowed: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("777m"),
+								corev1.ResourceMemory: resource.MustParse("28G"),
+							},
+						},
+					},
+				),
 			)
 
 			Context("autoscaling mode is baseline", func() {
