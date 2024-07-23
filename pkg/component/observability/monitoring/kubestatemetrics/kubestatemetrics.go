@@ -79,6 +79,38 @@ type Values struct {
 	NameSuffix string
 }
 
+func (k *kubeStateMetrics) getResourcesForSeed() []client.Object {
+	customResourceStateConfigMap := k.customResourceStateConfigMap()
+	clusterRole := k.clusterRole()
+	serviceAccount := k.serviceAccount()
+	deployment := k.deployment(serviceAccount, "", nil, customResourceStateConfigMap.Name)
+	resources := []client.Object{
+		clusterRole,
+		serviceAccount,
+		k.clusterRoleBinding(clusterRole, serviceAccount),
+		deployment,
+		k.podDisruptionBudget(deployment),
+		k.service(),
+		k.verticalPodAutoscaler(deployment),
+		customResourceStateConfigMap,
+	}
+
+	if k.values.NameSuffix == SuffixSeed {
+		resources = append(
+			resources,
+			k.scrapeConfigSeed(),
+			k.scrapeConfigCache(),
+		)
+	} else if k.values.NameSuffix == SuffixRuntime {
+		resources = append(
+			resources,
+			k.scrapeConfigGarden(),
+		)
+	}
+
+	return resources
+}
+
 func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 	var (
 		genericTokenKubeconfigSecretName string
@@ -114,34 +146,7 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 	}
 
 	if k.values.ClusterType == component.ClusterTypeSeed {
-		clusterRole := k.clusterRole()
-		serviceAccount := k.serviceAccount()
-		deployment := k.deployment(serviceAccount, "", nil, customResourceStateConfigMap.Name)
-		resources := []client.Object{
-			clusterRole,
-			serviceAccount,
-			k.clusterRoleBinding(clusterRole, serviceAccount),
-			deployment,
-			k.podDisruptionBudget(deployment),
-			k.service(),
-			k.verticalPodAutoscaler(deployment),
-			customResourceStateConfigMap,
-		}
-
-		if k.values.NameSuffix == SuffixSeed {
-			resources = append(
-				resources,
-				k.scrapeConfigSeed(),
-				k.scrapeConfigCache(),
-			)
-		} else if k.values.NameSuffix == SuffixRuntime {
-			resources = append(
-				resources,
-				k.scrapeConfigGarden(),
-			)
-		}
-
-		if err := registry.Add(resources...); err != nil {
+		if err := registry.Add(k.getResourcesForSeed()...); err != nil {
 			return err
 		}
 	}
