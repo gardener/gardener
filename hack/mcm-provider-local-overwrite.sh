@@ -7,7 +7,7 @@ set -e
 repository=$(echo $SKAFFOLD_IMAGE | rev | cut -d':' -f 2- | rev)
 tag=$(echo $SKAFFOLD_IMAGE | rev | cut -d':' -f 1 | rev)
 
-cat <<EOF > example/provider-local/garden/base/patch-imagevector-overwrite.yaml
+cat <<EOF > example/provider-local/garden/local/patch-imagevector-overwrite.yaml
 apiVersion: core.gardener.cloud/v1
 kind: ControllerDeployment
 metadata:

@@ -1095,9 +1095,6 @@ build:
         ldflags:
           - '{{.LD_FLAGS}}'
         main: ./cmd/gardener-extension-provider-local
-    - image: local-skaffold/gardener-extension-provider-local-node
-      context: pkg/provider-local/node
-      docker: {}
     - image: local-skaffold/machine-controller-manager-provider-local
       hooks:
         after:

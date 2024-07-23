@@ -25,16 +25,23 @@ apiVersion: skaffold/v4beta7
 kind: Config
 metadata:
   name: garden-config
+build:
+  artifacts:
+    - image: local-skaffold/gardener-extension-provider-local-node
+      context: pkg/provider-local/node
+      docker: {}
 manifests:
   rawYaml:
     - example/00-namespace-garden.yaml
     - example/gardener-local/controlplane/domain-secrets.yaml
-    - example/provider-local/garden/base/cloudprofile.yaml
-    - example/provider-local/garden/base/project.yaml
-    - example/provider-local/garden/base/secretbinding.yaml
-    - example/provider-local/garden/base/secret-backup.yaml
     - example/gardener-local/gardenlet/secret-bootstrap-token.yaml
-    - https://raw.githubusercontent.com/gardener/gardener-extension-networking-cilium/v1.36.0/example/controller-registration.yaml
-    - https://raw.githubusercontent.com/gardener/gardener-extension-networking-calico/v1.40.0/example/controller-registration.yaml
+  kustomize:
+    paths:
+      - example/provider-local/garden/skaffold-operator
+      - example/provider-local/seed-operator/skaffold
+resourceSelector:
+  allow:
+    - groupKind: CloudProfile.core.gardener.cloud
+      image: [".*"]
 deploy:
   kubectl: {}
