@@ -55,7 +55,12 @@ func podForMachine(machine *machinev1alpha1.Machine) *corev1.Pod {
 	}
 }
 
-func userDataSecretForMachine(machine *machinev1alpha1.Machine) *corev1.Secret {
+func userDataSecretForMachine(machine *machinev1alpha1.Machine, machineClass *machinev1alpha1.MachineClass) *corev1.Secret {
+	namespace := machine.Namespace
+	// machine.Namespace may be empty due to machine controller manager omitting namespace
+	if namespace == "" {
+		namespace = machineClass.Namespace
+	}
 	return &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: corev1.SchemeGroupVersion.String(),
@@ -63,7 +68,7 @@ func userDataSecretForMachine(machine *machinev1alpha1.Machine) *corev1.Secret {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      podName(machine.Name) + "-userdata",
-			Namespace: machine.Namespace,
+			Namespace: namespace,
 		},
 	}
 }
