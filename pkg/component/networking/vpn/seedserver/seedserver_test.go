@@ -75,7 +75,7 @@ var _ = Describe("VpnSeedServer", func() {
 	)
 
 	var (
-		template = func(nodeNetwork string, highAvailability, disableRewrite bool) *corev1.PodTemplateSpec {
+		template = func(nodeNetworks []net.IPNet, highAvailability, disableRewrite bool) *corev1.PodTemplateSpec {
 			hostPathCharDev := corev1.HostPathCharDev
 			nodes := ""
 			if len(nodeNetworks) > 0 {
@@ -442,7 +442,7 @@ var _ = Describe("VpnSeedServer", func() {
 						},
 						Type: appsv1.RollingUpdateDeploymentStrategyType,
 					},
-					Template: *template(nodeNetwork, false, false),
+					Template: *template(nodeNetworks, false, false),
 				},
 			}
 
@@ -450,7 +450,7 @@ var _ = Describe("VpnSeedServer", func() {
 			return deploy
 		}
 
-		statefulSet = func(nodeNetwork string, disableRewrite bool) *appsv1.StatefulSet {
+		statefulSet = func(nodeNetworks []net.IPNet, disableRewrite bool) *appsv1.StatefulSet {
 			sts := &appsv1.StatefulSet{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "vpn-seed-server",
@@ -471,7 +471,7 @@ var _ = Describe("VpnSeedServer", func() {
 					UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
 						Type: appsv1.RollingUpdateStatefulSetStrategyType,
 					},
-					Template: *template(nodeNetwork, true, disableRewrite),
+					Template: *template(nodeNetworks, true, disableRewrite),
 				},
 			}
 
@@ -791,7 +791,7 @@ var _ = Describe("VpnSeedServer", func() {
 	Describe("#Deploy", func() {
 		Context("secret information available", func() {
 			JustBeforeEach(func() {
-				statefulSet := statefulSet(values.Network.NodeCIDR, false)
+				statefulSet := statefulSet(values.Network.NodeCIDRs, false)
 				statefulSet.ResourceVersion = ""
 				Expect(c.Create(ctx, statefulSet)).To(Succeed())
 
@@ -954,7 +954,7 @@ var _ = Describe("VpnSeedServer", func() {
 				Expect(actualScrapeConfig).To(DeepEqual(expectedScrapeConfig))
 
 				actualStatefulSet := &appsv1.StatefulSet{}
-				expectedStatefulSet := statefulSet(values.Network.NodeCIDR, false)
+				expectedStatefulSet := statefulSet(values.Network.NodeCIDRs, false)
 				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedStatefulSet.Namespace, Name: expectedStatefulSet.Name}, actualStatefulSet)).To(Succeed())
 				Expect(actualStatefulSet).To(DeepEqual(expectedStatefulSet))
 
@@ -988,7 +988,7 @@ var _ = Describe("VpnSeedServer", func() {
 
 		Context("High availability (w/o node network) - disable VPN rewrite", func() {
 			BeforeEach(func() {
-				values.Network.NodeCIDR = ""
+				values.Network.NodeCIDRs = nil
 				values.Replicas = 3
 				values.HighAvailabilityEnabled = true
 				values.HighAvailabilityNumberOfSeedServers = 3
@@ -997,7 +997,7 @@ var _ = Describe("VpnSeedServer", func() {
 			})
 
 			JustBeforeEach(func() {
-				deployment := deployment(values.Network.NodeCIDR)
+				deployment := deployment(values.Network.NodeCIDRs)
 				deployment.ResourceVersion = ""
 				Expect(c.Create(ctx, deployment)).To(Succeed())
 
@@ -1042,7 +1042,7 @@ var _ = Describe("VpnSeedServer", func() {
 				Expect(actualVpa).To(DeepEqual(expectedVpa))
 
 				actualStatefulSet := &appsv1.StatefulSet{}
-				expectedStatefulSet := statefulSet(values.Network.NodeCIDR, true)
+				expectedStatefulSet := statefulSet(values.Network.NodeCIDRs, true)
 				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedStatefulSet.Namespace, Name: expectedStatefulSet.Name}, actualStatefulSet)).To(Succeed())
 				Expect(actualStatefulSet).To(DeepEqual(expectedStatefulSet))
 
@@ -1077,7 +1077,7 @@ var _ = Describe("VpnSeedServer", func() {
 
 	Describe("#Destroy", func() {
 		JustBeforeEach(func() {
-			statefulSet := statefulSet(values.Network.NodeCIDR, false)
+			statefulSet := statefulSet(values.Network.NodeCIDRs, false)
 			statefulSet.ResourceVersion = ""
 			Expect(c.Create(ctx, statefulSet)).To(Succeed())
 

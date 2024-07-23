@@ -409,12 +409,8 @@ var _ = Describe("VPNShoot", func() {
 
 			containerFor = func(clients int, index *int, vpaEnabled, disableRewrite, highAvailable bool) *corev1.Container {
 				var (
-					limits = corev1.ResourceList{
-						corev1.ResourceMemory: resource.MustParse("120Mi"),
-					}
-
-					env []corev1.EnvVar
-
+					limits       corev1.ResourceList
+					env          []corev1.EnvVar
 					volumeMounts []corev1.VolumeMount
 				)
 
