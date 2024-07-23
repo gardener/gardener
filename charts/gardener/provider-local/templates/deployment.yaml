@@ -34,6 +34,7 @@ spec:
         networking.gardener.cloud/to-kind-network: allowed
         networking.resources.gardener.cloud/to-all-istio-ingresses-istio-ingressgateway-tcp-9443: allowed
         networking.resources.gardener.cloud/to-all-shoots-kube-apiserver-tcp-443: allowed
+        networking.resources.gardener.cloud/to-garden-virtual-garden-kube-apiserver-tcp-443: allowed
         {{- if .Values.podLabels }}
 {{ toYaml .Values.podLabels | indent 8 }}
         {{- end }}
