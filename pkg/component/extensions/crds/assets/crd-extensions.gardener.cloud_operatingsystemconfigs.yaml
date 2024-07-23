@@ -217,7 +217,7 @@ spec:
                     permissions:
                       description: |-
                         Permissions describes with which permissions the file should get written to the file system.
-                        Should be defaulted to octal 0644.
+                        If no permissions are set, the operating system's defaults are used.
                       format: int32
                       type: integer
                   required:
@@ -431,7 +431,7 @@ spec:
                     permissions:
                       description: |-
                         Permissions describes with which permissions the file should get written to the file system.
-                        Should be defaulted to octal 0644.
+                        If no permissions are set, the operating system's defaults are used.
                       format: int32
                       type: integer
                   required:
