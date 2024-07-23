@@ -12,7 +12,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/gardener/gardener/test/e2e/gardener"
+	"github.com/gardener/gardener/test/e2e"
 	_ "github.com/gardener/gardener/test/e2e/gardener/managedseed"
 	_ "github.com/gardener/gardener/test/e2e/gardener/project"
 	_ "github.com/gardener/gardener/test/e2e/gardener/seed"
@@ -28,8 +28,8 @@ func TestMain(m *testing.M) {
 }
 
 func TestE2E(t *testing.T) {
-	if os.Getenv("SHOOT_FAILURE_TOLERANCE_TYPE") == "zone" {
-		gardener.SetupDNSForMultiZoneTest()
+	if os.Getenv("USE_PROVIDER_LOCAL_COREDNS_SERVER") == "true" {
+		e2e.UseProviderLocalCoreDNSServer()
 	}
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Test E2E Gardener Suite")

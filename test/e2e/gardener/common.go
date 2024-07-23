@@ -5,10 +5,7 @@
 package gardener
 
 import (
-	"context"
-	"net"
 	"os"
-	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -154,20 +151,4 @@ func DefaultWorkerlessShoot(name string) *gardencorev1beta1.Shoot {
 	}
 
 	return shoot
-}
-
-// SetupDNSForMultiZoneTest sets the golang DefaultResolver to the CoreDNS server, which is port forwarded to the host 127.0.0.1:5353.
-// Test uses the in-cluster CoreDNS for name resolution and can therefore resolve the API endpoint.
-func SetupDNSForMultiZoneTest() {
-	net.DefaultResolver = &net.Resolver{
-		PreferGo: true,
-		Dial: func(ctx context.Context, _, _ string) (net.Conn, error) {
-			dialer := net.Dialer{
-				Timeout: time.Duration(5) * time.Second,
-			}
-			// We use tcp to distinguish easily in-cluster requests (done via udp) and requests from
-			// the tests (using tcp). The result for cluster api names differ depending on the source.
-			return dialer.DialContext(ctx, "tcp", "127.0.0.1:5353")
-		},
-	}
 }
