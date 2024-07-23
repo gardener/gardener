@@ -124,6 +124,19 @@ func (k *kubeStateMetrics) getResourcesForShoot(genericTokenKubeconfigSecretName
 	}
 }
 
+func (k *kubeStateMetrics) getResourcesForShootTarget(shootAccessSecret *gardenerutils.AccessSecret) []client.Object {
+	clusterRole := k.clusterRole()
+	return []client.Object{
+		clusterRole,
+		k.clusterRoleBinding(clusterRole, &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      shootAccessSecret.ServiceAccountName,
+				Namespace: metav1.NamespaceSystem,
+			},
+		}),
+	}
+}
+
 func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 	var (
 		genericTokenKubeconfigSecretName string
@@ -187,11 +200,7 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 
 	if k.values.ClusterType == component.ClusterTypeShoot {
 		registryTarget := managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
-		clusterRole := k.clusterRole()
-		resourcesTarget, err := registryTarget.AddAllAndSerialize(
-			clusterRole,
-			k.clusterRoleBinding(clusterRole, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: shootAccessSecret.ServiceAccountName, Namespace: metav1.NamespaceSystem}}),
-		)
+		resourcesTarget, err := registryTarget.AddAllAndSerialize(k.getResourcesForShootTarget(shootAccessSecret)...)
 		if err != nil {
 			return err
 		}
