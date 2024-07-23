@@ -33,7 +33,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/yaml"
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -52,6 +51,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/oci"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
+	forkedyaml "github.com/gardener/gardener/third_party/gopkg.in/yaml.v2"
 )
 
 const finalizerName = "core.gardener.cloud/controllerinstallation"
@@ -496,7 +496,7 @@ func injectGardenAccessSecrets(secretData map[string][]byte, namespace, genericG
 }
 
 // mutateObject iterates over the given rendered secret data and calls the given mutator for each of them. It marshals
-// the objects back after mutation and updates the secret data.
+// the objects back (with stable key ordering) after mutation and updates the secret data.
 func mutateObjects(secretData map[string][]byte, mutate func(obj *unstructured.Unstructured) error) error {
 	for key, data := range secretData {
 		buffer := &bytes.Buffer{}
@@ -519,9 +519,9 @@ func mutateObjects(secretData map[string][]byte, mutate func(obj *unstructured.U
 				return err
 			}
 
-			// serialize unstructured back to secret data
+			// serialize unstructured back to secret data (with stable key ordering)
 			// Note: we have to do this for all objects, not only for mutated ones, as there could be multiple objects in one file
-			objBytes, err := yaml.Marshal(obj)
+			objBytes, err := forkedyaml.Marshal(obj.Object)
 			if err != nil {
 				return err
 			}
