@@ -124,6 +124,33 @@ var _ = Describe("CredentialsBindingControl", func() {
 				HaveKeyWithValue("provider.shoot.gardener.cloud/some-provider", "true"),
 			))
 		})
+
+		It("should only remove the credentialsbinding ref label from the secret when secret is labeled with secretbinding reference", func() {
+			Expect(fakeClient.Delete(ctx, secret)).To(Succeed())
+			secret = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secret",
+					Namespace: "namespace",
+					Labels:    map[string]string{"reference.gardener.cloud/secretbinding": "true"},
+				},
+			}
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+
+			_, err := reconciler.Reconcile(ctx, request)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeClient.Delete(ctx, credentialsBinding)).To(Succeed())
+
+			_, err = reconciler.Reconcile(ctx, request)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+			Expect(secret.ObjectMeta.Labels).To(Equal(map[string]string{
+				"provider.shoot.gardener.cloud/some-provider": "true",
+				"reference.gardener.cloud/secretbinding":      "true",
+			}))
+			Expect(secret.ObjectMeta.Finalizers).To(ConsistOf("gardener.cloud/gardener"))
+		})
 	})
 
 	Describe("CredentialsBinding label for Quotas", func() {

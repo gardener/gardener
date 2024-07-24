@@ -145,14 +145,21 @@ func (r *Reconciler) delete(ctx context.Context, credentialsBinding *securityv1a
 				if hasProviderLabel || metav1.HasLabel(secret.ObjectMeta, v1beta1constants.LabelCredentialsBindingReference) {
 					patch := client.MergeFrom(secret.DeepCopy())
 					delete(secret.ObjectMeta.Labels, v1beta1constants.LabelCredentialsBindingReference)
-					delete(secret.ObjectMeta.Labels, providerLabel)
+
+					// The secret can be still referenced by a secretbinding so
+					// only remove the provider label if there is no secretbinding reference label
+					if !metav1.HasLabel(secret.ObjectMeta, v1beta1constants.LabelSecretBindingReference) {
+						delete(secret.ObjectMeta.Labels, providerLabel)
+					}
+
 					if err := r.Client.Patch(ctx, secret, patch); err != nil {
 						return fmt.Errorf("failed to remove referred label from Secret: %w", err)
 					}
 				}
 
 				// Remove finalizer from referenced secret
-				if controllerutil.ContainsFinalizer(secret, gardencorev1beta1.ExternalGardenerName) {
+				// only if the secret does not have a secretbinding reference label
+				if controllerutil.ContainsFinalizer(secret, gardencorev1beta1.ExternalGardenerName) && !metav1.HasLabel(secret.ObjectMeta, v1beta1constants.LabelSecretBindingReference) {
 					log.Info("Removing finalizer from secret", "secret", client.ObjectKeyFromObject(secret))
 					if err := controllerutils.RemoveFinalizers(ctx, r.Client, secret, gardencorev1beta1.ExternalGardenerName); err != nil {
 						return fmt.Errorf("failed to remove finalizer from secret: %w", err)
