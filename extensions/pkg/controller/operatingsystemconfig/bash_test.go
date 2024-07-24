@@ -110,6 +110,7 @@ var _ = Describe("Bash", func() {
 						},
 						TransmitUnencoded: ptr.To(true),
 					},
+					Permissions: ptr.To(int32(0777)),
 				},
 			}
 
@@ -136,7 +137,8 @@ mkdir -p "` + folder4 + `"
 
 cat << EOF > "` + file4 + `"
 transmit-unencoded
-EOF`))
+EOF
+chmod "0777" "` + file4 + `"`))
 
 			By("Ensure that the bash script can be executed and performs the desired operations")
 			tempDir, err := os.MkdirTemp("", "tempdir")
@@ -154,6 +156,7 @@ EOF`))
 				tempDir+file3,
 				tempDir+file4,
 			)
+			checkFilePermissions(tempDir+file4, 0777)
 		})
 	})
 
@@ -228,6 +231,11 @@ func runScriptAndCheckFiles(script string, filePaths ...string) {
 		fileInfo, err := os.Stat(filePath)
 		ExpectWithOffset(1, err).NotTo(HaveOccurred(), "file at path "+filePath)
 		ExpectWithOffset(1, fileInfo.Mode().IsRegular()).To(BeTrue(), "file at path "+filePath)
-		ExpectWithOffset(1, fileInfo.Mode().Perm()).To(Equal(fs.FileMode(0644)), "file at path "+filePath)
 	}
+}
+
+func checkFilePermissions(path string, permissions int32) {
+	fileInfo, err := os.Stat(path)
+	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "file at path "+path)
+	ExpectWithOffset(1, fileInfo.Mode().Perm()).To(Equal(fs.FileMode(permissions)), "file at path "+path)
 }

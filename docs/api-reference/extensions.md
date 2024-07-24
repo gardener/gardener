@@ -3114,7 +3114,7 @@ int32
 <td>
 <em>(Optional)</em>
 <p>Permissions describes with which permissions the file should get written to the file system.
-Should be defaulted to octal 0644.</p>
+If no permissions are set, the operating system&rsquo;s defaults are used.</p>
 </td>
 </tr>
 <tr>
