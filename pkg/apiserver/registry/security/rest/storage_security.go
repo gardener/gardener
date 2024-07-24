@@ -21,7 +21,7 @@ import (
 
 // StorageProvider is an empty struct.
 type StorageProvider struct {
-	TokenIssuer         *workloadidentity.TokenIssuer
+	TokenIssuer         workloadidentity.TokenIssuer
 	CoreInformerFactory gardencoreinformers.SharedInformerFactory
 }
 

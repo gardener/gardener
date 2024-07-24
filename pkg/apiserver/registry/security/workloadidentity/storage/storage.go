@@ -30,7 +30,7 @@ type WorkloadIdentityStorage struct {
 // NewStorage creates a new WorkloadIdentityStorage object.
 func NewStorage(
 	optsGetter generic.RESTOptionsGetter,
-	tokenIssuer *workloadidentityutils.TokenIssuer,
+	tokenIssuer workloadidentityutils.TokenIssuer,
 	coreInformerFactory gardencoreinformers.SharedInformerFactory,
 ) WorkloadIdentityStorage {
 	workloadIdentityRest := NewREST(optsGetter)

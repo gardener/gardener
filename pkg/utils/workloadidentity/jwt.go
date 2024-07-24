@@ -12,7 +12,9 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
+	"errors"
 	"fmt"
+	"net/url"
 	"time"
 
 	"github.com/go-jose/go-jose/v4"
@@ -27,22 +29,44 @@ var (
 	now = time.Now
 )
 
-// TokenIssuer is JSON Web Token issuer.
-type TokenIssuer struct {
+// TokenIssuer is an interface for JSON Web Token issuers.
+type TokenIssuer interface {
+	// IssueToken generates JSON Web Token based on the provided subject, audiences, duration and claims.
+	// It returns the token and its expiration time if successfully generated
+	IssueToken(sub string, aud []string, duration int64, claims ...any) (string, *time.Time, error)
+}
+
+// tokenIssuer is JSON Web Token issuer implementing the TokenIssuer interface.
+type tokenIssuer struct {
 	signer             jose.Signer
 	issuer             string
 	minDurationSeconds int64
 	maxDurationSeconds int64
 }
 
-// NewTokenIssuer creates new TokenIssuer.
-func NewTokenIssuer(signingKey any, issuer string, minDuration, maxDuration int64) (*TokenIssuer, error) {
+var _ TokenIssuer = &tokenIssuer{}
+
+// NewTokenIssuer creates new JSON Web Token issuer.
+func NewTokenIssuer(signingKey any, issuer string, minDuration, maxDuration int64) (*tokenIssuer, error) {
 	signer, err := getSigner(signingKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get signer: %w", err)
 	}
 
-	return &TokenIssuer{
+	if issuer == "" {
+		return nil, errors.New("issuer cannot be empty string")
+	}
+
+	issuerURL, err := url.Parse(issuer)
+	if err != nil {
+		return nil, fmt.Errorf("issuer is not a valid URL, err: %w", err)
+	}
+
+	if issuerURL.Scheme != "https" {
+		return nil, fmt.Errorf("issuer must be using https scheme")
+	}
+
+	return &tokenIssuer{
 		signer:             signer,
 		issuer:             issuer,
 		minDurationSeconds: minDuration,
@@ -50,13 +74,8 @@ func NewTokenIssuer(signingKey any, issuer string, minDuration, maxDuration int6
 	}, nil
 }
 
-// Issuer returns the issuer value used for the `iss` JWT claim.
-func (t *TokenIssuer) Issuer() string {
-	return t.issuer
-}
-
 // IssueToken issue JSON Web tokens with the configured claims signed by the signer.
-func (t *TokenIssuer) IssueToken(sub string, aud []string, duration int64, claims ...any) (string, *time.Time, error) {
+func (t *tokenIssuer) IssueToken(sub string, aud []string, duration int64, claims ...any) (string, *time.Time, error) {
 	builder := jwt.Signed(t.signer)
 
 	for _, c := range claims {

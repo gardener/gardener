@@ -31,7 +31,7 @@ type TokenRequestREST struct {
 	coreInformerFactory gardencoreinformers.SharedInformerFactory
 
 	workloadIdentityGetter getter
-	tokenIssuer            *workloadidentity.TokenIssuer
+	tokenIssuer            workloadidentity.TokenIssuer
 }
 
 type getter interface {
@@ -61,11 +61,7 @@ func (r *TokenRequestREST) Destroy() {
 // - gardener installation
 func (r *TokenRequestREST) Create(ctx context.Context, name string, obj runtime.Object, createValidation rest.ValidateObjectFunc, _ *metav1.CreateOptions) (runtime.Object, error) {
 	if r.tokenIssuer == nil {
-		return nil, errors.New("workload identity token issuer is not configured and tokens cannot be issued")
-	}
-
-	if len(r.tokenIssuer.Issuer()) == 0 {
-		return nil, errors.New("workload identity no value provided for the iss claim")
+		return nil, errors.New("TokenIssuer is not set, workload identity tokens cannot be issued")
 	}
 
 	user, ok := genericapirequest.UserFrom(ctx)
@@ -169,7 +165,7 @@ func (r *TokenRequestREST) GroupVersionKind(schema.GroupVersion) schema.GroupVer
 // NewTokenRequestREST returns a new TokenRequestREST for workload identity token.
 func NewTokenRequestREST(
 	storage getter,
-	tokenIssuer *workloadidentity.TokenIssuer,
+	tokenIssuer workloadidentity.TokenIssuer,
 	coreInformerFactory gardencoreinformers.SharedInformerFactory,
 ) *TokenRequestREST {
 	return &TokenRequestREST{

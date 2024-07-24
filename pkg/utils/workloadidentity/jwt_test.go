@@ -46,14 +46,6 @@ var _ = Describe("#JWT", func() {
 		}
 	})
 
-	Context("#Issuer", func() {
-		It("should get issuer", func() {
-			t, err := NewTokenIssuer(rsaPrivateKey, issuer, 600, 3600)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(t.Issuer()).To(Equal(issuer))
-		})
-	})
-
 	Context("#getKeyID", func() {
 		const (
 			pubKey = `-----BEGIN PUBLIC KEY-----
@@ -159,6 +151,47 @@ wQIDAQAB
 		})
 	})
 
+	Context("#newTokenIssuer", func() {
+		const (
+			minDuration int64 = 600
+			maxDuration int64 = 87600
+		)
+
+		It("should fail to create token issuer due to erroneous signing key", func() {
+			t, err := NewTokenIssuer("", issuer, minDuration, maxDuration)
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError(ContainSubstring("failed to get signer")))
+			Expect(t).To(BeNil())
+		})
+
+		It("should fail to create token issuer due to empty issuer url", func() {
+			t, err := NewTokenIssuer(rsaPrivateKey, "", minDuration, maxDuration)
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError("issuer cannot be empty string"))
+			Expect(t).To(BeNil())
+		})
+
+		It("should fail to create token issuer when the issuer url is not valid url", func() {
+			t, err := NewTokenIssuer(rsaPrivateKey, "://test.local.gardener.cloud", minDuration, maxDuration)
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError(ContainSubstring("issuer is not a valid URL")))
+			Expect(t).To(BeNil())
+		})
+
+		It("should fail to create token issuer due to non https scheme issuer url", func() {
+			t, err := NewTokenIssuer(rsaPrivateKey, "http://test.local.gardener.cloud", minDuration, maxDuration)
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError("issuer must be using https scheme"))
+			Expect(t).To(BeNil())
+		})
+
+		It("should  successfully create token issuer", func() {
+			t, err := NewTokenIssuer(rsaPrivateKey, issuer, minDuration, maxDuration)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(t).ToNot(BeNil())
+		})
+	})
+
 	Context("#issueToken", func() {
 		const (
 			sub = "subject"
@@ -185,7 +218,7 @@ wQIDAQAB
 			tokenIssuer, err := NewTokenIssuer(rsaPrivateKey, issuer, minDurationSeconds, maxDurationSeconds)
 			Expect(err).ToNot(HaveOccurred())
 
-			t = *tokenIssuer
+			t = tokenIssuer
 			audiences = []string{aud}
 		})
 

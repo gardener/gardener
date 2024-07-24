@@ -82,7 +82,7 @@ func (c completedConfig) New() (*GardenerServer, error) {
 		return nil, err
 	}
 
-	var tokenIssuer *workloadidentity.TokenIssuer
+	var tokenIssuer workloadidentity.TokenIssuer
 	if c.ExtraConfig.WorkloadIdentitySigningKey != nil {
 		tokenIssuer, err = workloadidentity.NewTokenIssuer(
 			c.ExtraConfig.WorkloadIdentitySigningKey,
