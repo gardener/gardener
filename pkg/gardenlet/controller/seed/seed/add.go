@@ -64,12 +64,13 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 			MaxConcurrentReconciles: 1,
 		}).
 		WatchesRawSource(
-			source.Kind(gardenCluster.GetCache(), &gardencorev1beta1.Seed{}),
-			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(
-				predicateutils.HasName(r.Config.SeedConfig.Name),
-				predicate.GenerationChangedPredicate{},
-			),
+			source.Kind(gardenCluster.GetCache(),
+				&gardencorev1beta1.Seed{},
+				&handler.EnqueueRequestForObject{},
+				builder.WithPredicates(
+					predicateutils.HasName(r.Config.SeedConfig.Name),
+					predicate.GenerationChangedPredicate{},
+				)),
 		).
 		Build(r)
 	if err != nil {

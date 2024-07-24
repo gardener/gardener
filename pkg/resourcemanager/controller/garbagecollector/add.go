@@ -37,6 +37,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 1,
 		}).
-		WatchesRawSource(controllerutils.EnqueueOnce, nil).
+		WatchesRawSource(controllerutils.EnqueueOnce).
 		Complete(r)
 }

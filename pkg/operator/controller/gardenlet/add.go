@@ -71,14 +71,14 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, virt
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
 		}).
 		WatchesRawSource(
-			source.Kind(virtualCluster.GetCache(), &seedmanagementv1alpha1.Gardenlet{}),
-			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(
-				predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
-				&predicate.GenerationChangedPredicate{},
-				r.OperatorResponsiblePredicate(ctx),
-			),
-		).
+			source.Kind(virtualCluster.GetCache(), &seedmanagementv1alpha1.Gardenlet{},
+				&handler.EnqueueRequestForObject{},
+				builder.WithPredicates(
+					predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
+					&predicate.GenerationChangedPredicate{},
+					r.OperatorResponsiblePredicate(ctx),
+				),
+			)).
 		Complete(r)
 }
 

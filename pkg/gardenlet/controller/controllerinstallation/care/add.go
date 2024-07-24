@@ -57,9 +57,10 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 			RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), r.Config.SyncPeriod.Duration),
 		}).
 		WatchesRawSource(
-			source.Kind(gardenCluster.GetCache(), &gardencorev1beta1.ControllerInstallation{}),
-			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create)),
+			source.Kind(gardenCluster.GetCache(),
+				&gardencorev1beta1.ControllerInstallation{},
+				&handler.EnqueueRequestForObject{},
+				builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create))),
 		).
 		Build(r)
 	if err != nil {
@@ -67,10 +68,11 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 	}
 
 	return c.Watch(
-		source.Kind(seedCluster.GetCache(), &resourcesv1alpha1.ManagedResource{}),
-		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapManagedResourceToControllerInstallation), mapper.UpdateWithNew, c.GetLogger()),
-		r.IsExtensionDeployment(),
-		predicateutils.ManagedResourceConditionsChanged(),
+		source.Kind(seedCluster.GetCache(),
+			&resourcesv1alpha1.ManagedResource{},
+			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapManagedResourceToControllerInstallation), mapper.UpdateWithNew, c.GetLogger()),
+			r.IsExtensionDeployment(),
+			predicateutils.ManagedResourceConditionsChanged()),
 	)
 }
 

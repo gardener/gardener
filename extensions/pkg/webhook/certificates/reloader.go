@@ -93,7 +93,7 @@ func (r *reloader) AddToManager(ctx context.Context, mgr manager.Manager, source
 		return err
 	}
 
-	if err = ctrl.Watch(controllerutils.EnqueueOnce, nil); err != nil {
+	if err = ctrl.Watch(controllerutils.EnqueueOnce); err != nil {
 		return err
 	}
 

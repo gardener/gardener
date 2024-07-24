@@ -39,9 +39,10 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 		Named(ControllerName).
 		WithOptions(controller.Options{MaxConcurrentReconciles: *r.Config.ConcurrentSyncs}).
 		WatchesRawSource(
-			source.Kind(gardenCluster.GetCache(), &gardencorev1beta1.Shoot{}),
-			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(r.SeedNameChangedPredicate()),
+			source.Kind(gardenCluster.GetCache(),
+				&gardencorev1beta1.Shoot{},
+				&handler.EnqueueRequestForObject{},
+				builder.WithPredicates(r.SeedNameChangedPredicate())),
 		).
 		Complete(r)
 }

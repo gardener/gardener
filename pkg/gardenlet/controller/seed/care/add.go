@@ -53,21 +53,23 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 			RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), r.Config.SyncPeriod.Duration),
 		}).
 		WatchesRawSource(
-			source.Kind(gardenCluster.GetCache(), &gardencorev1beta1.Seed{}),
-			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(
-				predicateutils.HasName(r.SeedName),
-				r.SeedPredicate()),
-		).Build(r)
+			source.Kind(gardenCluster.GetCache(),
+				&gardencorev1beta1.Seed{},
+				&handler.EnqueueRequestForObject{},
+				builder.WithPredicates(
+					predicateutils.HasName(r.SeedName),
+					r.SeedPredicate()),
+			)).Build(r)
 	if err != nil {
 		return err
 	}
 
 	return c.Watch(
-		source.Kind(seedCluster.GetCache(), &resourcesv1alpha1.ManagedResource{}),
-		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapManagedResourceToSeed), mapper.UpdateWithNew, c.GetLogger()),
-		r.IsSystemComponent(),
-		predicateutils.ManagedResourceConditionsChanged(),
+		source.Kind(seedCluster.GetCache(),
+			&resourcesv1alpha1.ManagedResource{},
+			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapManagedResourceToSeed), mapper.UpdateWithNew, c.GetLogger()),
+			r.IsSystemComponent(),
+			predicateutils.ManagedResourceConditionsChanged()),
 	)
 }
 

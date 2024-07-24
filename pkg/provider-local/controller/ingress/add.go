@@ -41,13 +41,17 @@ func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddO
 		return err
 	}
 
-	return ctrl.Watch(source.Kind(mgr.GetCache(), &networkingv1.Ingress{}), &handler.EnqueueRequestForObject{}, predicate.NewPredicateFuncs(func(object client.Object) bool {
-		namespace := &corev1.Namespace{}
-		if err := mgr.GetClient().Get(ctx, client.ObjectKey{Name: object.GetNamespace()}, namespace); err != nil {
-			ctrl.GetLogger().Error(err, "Unable to fetch namespace")
-		}
-		return namespace.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleShoot
-	}))
+	predicates := []predicate.Predicate{
+		predicate.NewPredicateFuncs(func(object client.Object) bool {
+			namespace := &corev1.Namespace{}
+			if err := mgr.GetClient().Get(ctx, client.ObjectKey{Name: object.GetNamespace()}, namespace); err != nil {
+				ctrl.GetLogger().Error(err, "Unable to fetch namespace")
+			}
+			return namespace.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleShoot
+		}),
+	}
+
+	return ctrl.Watch(source.Kind(mgr.GetCache(), &networkingv1.Ingress{}, &handler.EnqueueRequestForObject{}, predicates...))
 }
 
 // AddToManager adds a controller with the default Options.

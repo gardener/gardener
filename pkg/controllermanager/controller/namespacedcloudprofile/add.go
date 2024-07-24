@@ -47,8 +47,9 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 
 	return c.Watch(
-		source.Kind(mgr.GetCache(), &gardencorev1beta1.CloudProfile{}),
-		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapCloudProfileToNamespacedCloudProfile), mapper.UpdateWithNew, c.GetLogger()),
+		source.Kind(mgr.GetCache(),
+			&gardencorev1beta1.CloudProfile{},
+			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapCloudProfileToNamespacedCloudProfile), mapper.UpdateWithNew, c.GetLogger())),
 	)
 }
 

@@ -57,12 +57,13 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WatchesRawSource(
-			source.Kind(mgr.GetCache(), &corev1.Secret{}),
-			r.EnqueueWithJitterDelay(ctx, mgr.GetLogger().WithValues("controller", ControllerName).WithName("reconciliation-delayer")),
-			builder.WithPredicates(
-				r.SecretPredicate(),
-				predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
-			),
+			source.Kind(mgr.GetCache(),
+				&corev1.Secret{},
+				r.EnqueueWithJitterDelay(ctx, mgr.GetLogger().WithValues("controller", ControllerName).WithName("reconciliation-delayer")),
+				builder.WithPredicates(
+					r.SecretPredicate(),
+					predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
+				)),
 		).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
 		Complete(r)

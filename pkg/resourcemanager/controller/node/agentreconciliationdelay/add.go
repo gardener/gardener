@@ -30,9 +30,10 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 		Named(ControllerName).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
 		WatchesRawSource(
-			source.Kind(targetCluster.GetCache(), &corev1.Node{}),
-			controllerutils.EnqueueAnonymously,
-			builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Delete)),
+			source.Kind(targetCluster.GetCache(),
+				&corev1.Node{},
+				controllerutils.EnqueueAnonymously,
+				builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Delete))),
 		).
 		Complete(r)
 }

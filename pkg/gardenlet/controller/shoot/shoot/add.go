@@ -55,9 +55,10 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 	}
 
 	return c.Watch(
-		source.Kind(gardenCluster.GetCache(), &gardencorev1beta1.Shoot{}),
-		r.EventHandler(c.GetLogger()),
-		&predicate.GenerationChangedPredicate{},
+		source.Kind(gardenCluster.GetCache(),
+			&gardencorev1beta1.Shoot{},
+			r.EventHandler(c.GetLogger()),
+			&predicate.GenerationChangedPredicate{}),
 	)
 }
 

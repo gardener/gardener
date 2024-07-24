@@ -93,11 +93,11 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 		// mapping function would never be executed. Hence, the extension kind would never be part of the
 		// `KindToRequiredTypes` map. Hence, the reconciler would not be able to decide whether the
 		// ControllerInstallation is required.
-		if err = c.Watch(controllerutils.HandleOnce, eventHandler); err != nil {
+		if err = c.Watch(&controllerutils.HandleOnce[client.Object, reconcile.Request]{Handler: eventHandler}); err != nil {
 			return err
 		}
 
-		if err := c.Watch(source.Kind(seedCluster.GetCache(), extension.object), eventHandler, extensions.ObjectPredicate()); err != nil {
+		if err := c.Watch(source.Kind(seedCluster.GetCache(), extension.object, eventHandler, extensions.ObjectPredicate())); err != nil {
 			return err
 		}
 	}

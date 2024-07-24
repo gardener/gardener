@@ -78,10 +78,11 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 
 	return c.Watch(
-		source.Kind(mgr.GetCache(), &gardencorev1beta1.Seed{}),
-		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapSeedToManagedSeedSet), mapper.UpdateWithNew, c.GetLogger()),
-		r.SeedPredicate(ctx),
-	)
+		source.Kind(mgr.GetCache(),
+			&gardencorev1beta1.Seed{},
+			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapSeedToManagedSeedSet), mapper.UpdateWithNew, c.GetLogger()),
+			r.SeedPredicate(ctx),
+		))
 }
 
 // ShootPredicate returns the predicate for Shoot events.

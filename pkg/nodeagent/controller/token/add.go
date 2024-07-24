@@ -13,9 +13,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
@@ -42,13 +40,12 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WatchesRawSource(
-			source.Func(func(_ context.Context, _ handler.EventHandler, q workqueue.RateLimitingInterface, _ ...predicate.Predicate) error {
+			source.Func(func(_ context.Context, q workqueue.RateLimitingInterface) error {
 				for _, config := range r.Config.SyncConfigs {
 					q.Add(reconcile.Request{NamespacedName: types.NamespacedName{Name: config.SecretName, Namespace: metav1.NamespaceSystem}})
 				}
 				return nil
 			}),
-			&handler.EnqueueRequestForObject{},
 		).
 		WithOptions(controller.Options{MaxConcurrentReconciles: len(r.Config.SyncConfigs)}).
 		Complete(r)

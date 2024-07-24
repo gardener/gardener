@@ -73,12 +73,13 @@ func (r *Reconciler) AddToManager(
 			MaxConcurrentReconciles: ptr.Deref(r.Config.Controllers.ManagedSeed.ConcurrentSyncs, 0),
 		}).
 		WatchesRawSource(
-			source.Kind(gardenCluster.GetCache(), &seedmanagementv1alpha1.ManagedSeed{}),
-			r.EnqueueWithJitterDelay(),
-			builder.WithPredicates(
-				r.ManagedSeedPredicate(ctx, r.Config.SeedConfig.SeedTemplate.Name),
-				&predicate.GenerationChangedPredicate{},
-			),
+			source.Kind(gardenCluster.GetCache(),
+				&seedmanagementv1alpha1.ManagedSeed{},
+				r.EnqueueWithJitterDelay(),
+				builder.WithPredicates(
+					r.ManagedSeedPredicate(ctx, r.Config.SeedConfig.SeedTemplate.Name),
+					&predicate.GenerationChangedPredicate{},
+				)),
 		).
 		Build(r)
 	if err != nil {
@@ -86,9 +87,10 @@ func (r *Reconciler) AddToManager(
 	}
 
 	return c.Watch(
-		source.Kind(gardenCluster.GetCache(), &gardencorev1beta1.Seed{}),
-		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapSeedToManagedSeed), mapper.UpdateWithNew, c.GetLogger()),
-		r.SeedOfManagedSeedPredicate(ctx, r.Config.SeedConfig.SeedTemplate.Name),
+		source.Kind(gardenCluster.GetCache(),
+			&gardencorev1beta1.Seed{},
+			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapSeedToManagedSeed), mapper.UpdateWithNew, c.GetLogger()),
+			r.SeedOfManagedSeedPredicate(ctx, r.Config.SeedConfig.SeedTemplate.Name)),
 	)
 }
 

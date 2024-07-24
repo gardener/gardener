@@ -43,12 +43,13 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 			RateLimiter:             workqueue.NewItemExponentialFailureRateLimiter(time.Millisecond, 2*time.Second),
 		}).
 		WatchesRawSource(
-			source.Kind(gardenCluster.GetCache(), &gardencorev1beta1.Seed{}),
-			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(
-				predicateutils.HasName(r.SeedName),
-				predicateutils.ForEventTypes(predicateutils.Create),
-			),
+			source.Kind(gardenCluster.GetCache(),
+				&gardencorev1beta1.Seed{},
+				&handler.EnqueueRequestForObject{},
+				builder.WithPredicates(
+					predicateutils.HasName(r.SeedName),
+					predicateutils.ForEventTypes(predicateutils.Create),
+				)),
 		).
 		Complete(r)
 }

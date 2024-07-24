@@ -76,7 +76,7 @@ func add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
 	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
 	predicates = append(predicates, extensionspredicate.HasClass(args.ExtensionClass))
 
-	if err := ctrl.Watch(source.Kind(mgr.GetCache(), &extensionsv1alpha1.Infrastructure{}), &handler.EnqueueRequestForObject{}, predicates...); err != nil {
+	if err := ctrl.Watch(source.Kind(mgr.GetCache(), &extensionsv1alpha1.Infrastructure{}, &handler.EnqueueRequestForObject{}, predicates...)); err != nil {
 		return err
 	}
 
@@ -84,8 +84,9 @@ func add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
 	// is already present & the extension CRD is already deleting
 	if args.IgnoreOperationAnnotation {
 		if err := ctrl.Watch(
-			source.Kind(mgr.GetCache(), &extensionsv1alpha1.Cluster{}),
-			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), ClusterToInfrastructureMapper(mgr, predicates), mapper.UpdateWithNew, ctrl.GetLogger()),
+			source.Kind(mgr.GetCache(),
+				&extensionsv1alpha1.Cluster{},
+				mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), ClusterToInfrastructureMapper(mgr, predicates), mapper.UpdateWithNew, ctrl.GetLogger())),
 		); err != nil {
 			return err
 		}

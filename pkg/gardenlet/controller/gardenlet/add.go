@@ -71,9 +71,10 @@ func (r *Reconciler) AddToManager(
 			MaxConcurrentReconciles: 1,
 		}).
 		WatchesRawSource(
-			source.Kind(gardenCluster.GetCache(), &seedmanagementv1alpha1.Gardenlet{}),
-			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(predicate.GenerationChangedPredicate{}, predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update)),
+			source.Kind(gardenCluster.GetCache(),
+				&seedmanagementv1alpha1.Gardenlet{},
+				&handler.EnqueueRequestForObject{},
+				builder.WithPredicates(predicate.GenerationChangedPredicate{}, predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update))),
 		).
 		Complete(r)
 }

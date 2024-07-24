@@ -72,9 +72,10 @@ func AddToManager(
 
 	reconciler.WatchRegisterers = append(reconciler.WatchRegisterers, func(c controller.Controller) error {
 		return c.Watch(
-			source.Kind(seedCluster.GetCache(), &extensionsv1alpha1.Cluster{}),
-			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(reconciler.MapObjectToName), mapper.UpdateWithNew, mgr.GetLogger()),
-			ClusterPredicate(),
+			source.Kind(seedCluster.GetCache(),
+				&extensionsv1alpha1.Cluster{},
+				mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(reconciler.MapObjectToName), mapper.UpdateWithNew, mgr.GetLogger()),
+				ClusterPredicate()),
 		)
 	})
 
