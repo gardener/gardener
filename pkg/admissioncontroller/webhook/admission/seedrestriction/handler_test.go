@@ -53,7 +53,7 @@ var _ = Describe("handler", func() {
 
 		ctrl      *gomock.Controller
 		mockCache *mockcache.MockCache
-		decoder   *admission.Decoder
+		decoder   admission.Decoder
 
 		log     logr.Logger
 		handler admission.Handler

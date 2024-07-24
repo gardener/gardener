@@ -45,7 +45,7 @@ type Handler struct {
 	Logger       logr.Logger
 	TargetClient client.Reader
 	Config       config.HighAvailabilityConfigWebhookConfig
-	Decoder      *admission.Decoder
+	Decoder      admission.Decoder
 }
 
 // Handle defaults the high availability settings of the provided resource.

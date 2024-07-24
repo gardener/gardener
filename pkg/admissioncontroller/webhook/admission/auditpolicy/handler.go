@@ -66,7 +66,7 @@ type Handler struct {
 	Logger    logr.Logger
 	APIReader client.Reader
 	Client    client.Reader
-	Decoder   *admission.Decoder
+	Decoder   admission.Decoder
 }
 
 // Handle validates audit policies.

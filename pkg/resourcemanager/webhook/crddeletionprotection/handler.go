@@ -35,7 +35,7 @@ var ObjectSelector = map[string]string{gardenerutils.DeletionProtected: "true"}
 type Handler struct {
 	Logger       logr.Logger
 	SourceReader client.Reader
-	Decoder      *admission.Decoder
+	Decoder      admission.Decoder
 }
 
 // Handle validates the DELETE request.
