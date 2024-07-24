@@ -177,7 +177,7 @@ $(HELM): $(call tool_version_file,$(HELM),$(HELM_VERSION))
 	curl -sSfL https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | HELM_INSTALL_DIR=$(TOOLS_BIN_DIR) USE_SUDO=false bash -s -- --version $(HELM_VERSION)
 
 $(IMPORT_BOSS): $(call tool_version_file,$(IMPORT_BOSS),$(CODE_GENERATOR_VERSION))
-	go build -o $(IMPORT_BOSS) k8s.io/code-generator/cmd/import-boss
+	go build -o $(IMPORT_BOSS) k8s.io/kubernetes/cmd/import-boss
 
 $(KIND): $(call tool_version_file,$(KIND),$(KIND_VERSION))
 	curl -L -o $(KIND) https://kind.sigs.k8s.io/dl/$(KIND_VERSION)/kind-$(SYSTEM_NAME)-$(SYSTEM_ARCH)
