@@ -37,7 +37,7 @@ func (d *localDriver) CreateMachine(ctx context.Context, req *driver.CreateMachi
 		return nil, err
 	}
 
-	userDataSecret := userDataSecretForMachine(req.Machine)
+	userDataSecret := userDataSecretForMachine(req.Machine, req.MachineClass)
 	userDataSecret.Data = map[string][]byte{"userdata": req.Secret.Data["userData"]}
 
 	if err := controllerutil.SetControllerReference(req.Machine, userDataSecret, d.client.Scheme()); err != nil {
