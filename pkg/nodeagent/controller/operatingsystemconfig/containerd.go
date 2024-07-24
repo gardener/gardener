@@ -60,9 +60,12 @@ func (r *Reconciler) ReconcileContainerdRegistries(ctx context.Context, log logr
 	errChan := r.ensureContainerdRegistries(ctx, log, containerdChanges.registries.desired)
 
 	select {
-	// Check for early errors, to return immediately.
 	case err := <-errChan:
-		return nil, err
+		// Return immediately if a result was already sent to the err channel.
+		// Note: err can still be nil here, thus the cleanup function call must be returned.
+		return func() error {
+			return r.cleanupUnusedContainerdRegistries(log, containerdChanges.registries.deleted)
+		}, err
 	default:
 		return func() error {
 			log.Info("Waiting for registries with readiness probes to finish")
