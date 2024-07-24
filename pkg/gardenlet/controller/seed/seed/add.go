@@ -11,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -64,7 +65,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 			MaxConcurrentReconciles: 1,
 		}).
 		WatchesRawSource(
-			source.Kind(gardenCluster.GetCache(),
+			source.Kind[client.Object](gardenCluster.GetCache(),
 				&gardencorev1beta1.Seed{},
 				&handler.EnqueueRequestForObject{},
 				builder.WithPredicates(

@@ -52,7 +52,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 
 	return c.Watch(
-		source.Kind(mgr.GetCache(), &gardencorev1beta1.Shoot{}),
+		source.Kind[client.Object](mgr.GetCache(), &gardencorev1beta1.Shoot{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapShootToBastions), mapper.UpdateWithNew, c.GetLogger()),
 		r.ShootPredicate(),
 	)

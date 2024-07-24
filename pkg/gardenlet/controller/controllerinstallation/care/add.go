@@ -57,7 +57,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 			RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), r.Config.SyncPeriod.Duration),
 		}).
 		WatchesRawSource(
-			source.Kind(gardenCluster.GetCache(),
+			source.Kind[client.Object](gardenCluster.GetCache(),
 				&gardencorev1beta1.ControllerInstallation{},
 				&handler.EnqueueRequestForObject{},
 				builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create))),
@@ -68,7 +68,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 	}
 
 	return c.Watch(
-		source.Kind(seedCluster.GetCache(),
+		source.Kind[client.Object](seedCluster.GetCache(),
 			&resourcesv1alpha1.ManagedResource{},
 			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapManagedResourceToControllerInstallation), mapper.UpdateWithNew, c.GetLogger()),
 			r.IsExtensionDeployment(),

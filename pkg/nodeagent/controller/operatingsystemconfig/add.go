@@ -57,7 +57,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WatchesRawSource(
-			source.Kind(mgr.GetCache(),
+			source.Kind[client.Object](mgr.GetCache(),
 				&corev1.Secret{},
 				r.EnqueueWithJitterDelay(ctx, mgr.GetLogger().WithValues("controller", ControllerName).WithName("reconciliation-delayer")),
 				builder.WithPredicates(

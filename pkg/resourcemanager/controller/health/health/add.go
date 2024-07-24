@@ -98,7 +98,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 		c.GetLogger().Info("Adding new watch for GroupVersionKind", "groupVersionKind", gvk, "metadataOnly", metadataOnly)
 
 		if err := c.Watch(
-			source.Kind(targetCluster.GetCache(), obj,
+			source.Kind[client.Object](targetCluster.GetCache(), obj,
 				mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
 				utils.HealthStatusChanged(c.GetLogger())),
 		); err != nil {

@@ -54,7 +54,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 			MaxConcurrentReconciles: ptr.Deref(r.Config.Controllers.ControllerInstallation.ConcurrentSyncs, 0),
 		}).
 		WatchesRawSource(
-			source.Kind(gardenCluster.GetCache(),
+			source.Kind[client.Object](gardenCluster.GetCache(),
 				&gardencorev1beta1.ControllerInstallation{},
 				&handler.EnqueueRequestForObject{},
 				builder.WithPredicates(

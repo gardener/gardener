@@ -92,7 +92,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 		}
 
 		if err := c.Watch(
-			source.Kind(targetCluster.GetCache(), obj,
+			source.Kind[client.Object](targetCluster.GetCache(), obj,
 				mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
 				r.ProgressingStatusChanged(ctx)),
 		); err != nil {
@@ -106,7 +106,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 			pod.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Pod"))
 
 			if err := c.Watch(
-				source.Kind(targetCluster.GetCache(), pod,
+				source.Kind[client.Object](targetCluster.GetCache(), pod,
 					mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), r.MapPodToDeploymentToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
 					predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Delete)),
 			); err != nil {

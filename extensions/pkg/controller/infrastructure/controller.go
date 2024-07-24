@@ -7,6 +7,7 @@ package infrastructure
 import (
 	"context"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -76,7 +77,7 @@ func add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
 	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
 	predicates = append(predicates, extensionspredicate.HasClass(args.ExtensionClass))
 
-	if err := ctrl.Watch(source.Kind(mgr.GetCache(), &extensionsv1alpha1.Infrastructure{}, &handler.EnqueueRequestForObject{}, predicates...)); err != nil {
+	if err := ctrl.Watch(source.Kind[client.Object](mgr.GetCache(), &extensionsv1alpha1.Infrastructure{}, &handler.EnqueueRequestForObject{}, predicates...)); err != nil {
 		return err
 	}
 
@@ -84,7 +85,7 @@ func add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
 	// is already present & the extension CRD is already deleting
 	if args.IgnoreOperationAnnotation {
 		if err := ctrl.Watch(
-			source.Kind(mgr.GetCache(),
+			source.Kind[client.Object](mgr.GetCache(),
 				&extensionsv1alpha1.Cluster{},
 				mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), ClusterToInfrastructureMapper(mgr, predicates), mapper.UpdateWithNew, ctrl.GetLogger())),
 		); err != nil {

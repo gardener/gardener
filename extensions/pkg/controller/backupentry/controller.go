@@ -9,6 +9,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -71,7 +72,7 @@ func add(ctx context.Context, mgr manager.Manager, args AddArgs, predicates []pr
 
 	if args.IgnoreOperationAnnotation {
 		if err := ctrl.Watch(
-			source.Kind(mgr.GetCache(),
+			source.Kind[client.Object](mgr.GetCache(),
 				&corev1.Namespace{},
 				mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), NamespaceToBackupEntryMapper(predicates), mapper.UpdateWithNew, ctrl.GetLogger())),
 		); err != nil {
@@ -79,7 +80,7 @@ func add(ctx context.Context, mgr manager.Manager, args AddArgs, predicates []pr
 		}
 
 		if err := ctrl.Watch(
-			source.Kind(mgr.GetCache(), &metav1.PartialObjectMetadata{
+			source.Kind[client.Object](mgr.GetCache(), &metav1.PartialObjectMetadata{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "Secret",
 					APIVersion: "v1",
@@ -91,5 +92,5 @@ func add(ctx context.Context, mgr manager.Manager, args AddArgs, predicates []pr
 		}
 	}
 
-	return ctrl.Watch(source.Kind(mgr.GetCache(), &extensionsv1alpha1.BackupEntry{}, &handler.EnqueueRequestForObject{}, predicates...))
+	return ctrl.Watch(source.Kind[client.Object](mgr.GetCache(), &extensionsv1alpha1.BackupEntry{}, &handler.EnqueueRequestForObject{}, predicates...))
 }

@@ -72,7 +72,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, runt
 			MaxConcurrentReconciles: ptr.Deref(r.ConcurrentSyncs, 0),
 		}).
 		WatchesRawSource(
-			source.Kind(runtimeCluster.GetCache(),
+			source.Kind[client.Object](runtimeCluster.GetCache(),
 				&corev1.Namespace{},
 				&handler.EnqueueRequestForObject{},
 				builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update))),
@@ -83,7 +83,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, runt
 	}
 
 	if err := c.Watch(
-		source.Kind(runtimeCluster.GetCache(),
+		source.Kind[client.Object](runtimeCluster.GetCache(),
 			&corev1.Endpoints{},
 			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapToNamespaces), mapper.UpdateWithNew, c.GetLogger()),
 			r.IsKubernetesEndpoint()),
@@ -92,7 +92,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, runt
 	}
 
 	if err := c.Watch(
-		source.Kind(runtimeCluster.GetCache(),
+		source.Kind[client.Object](runtimeCluster.GetCache(),
 			&networkingv1.NetworkPolicy{},
 			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapObjectToNamespace), mapper.UpdateWithNew, c.GetLogger()),
 			r.NetworkPolicyPredicate()),

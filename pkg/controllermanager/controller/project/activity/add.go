@@ -56,7 +56,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(),
+		source.Kind[client.Object](mgr.GetCache(),
 			&gardencorev1beta1.Shoot{},
 			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapObjectToProject), mapper.UpdateWithNew, c.GetLogger()),
 			r.OnlyNewlyCreatedObjects(),
@@ -66,7 +66,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(),
+		source.Kind[client.Object](mgr.GetCache(),
 			&gardencorev1beta1.BackupEntry{},
 			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapObjectToProject), mapper.UpdateWithNew, c.GetLogger()),
 			r.OnlyNewlyCreatedObjects(),
@@ -76,7 +76,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(),
+		source.Kind[client.Object](mgr.GetCache(),
 			&gardencorev1beta1.Quota{},
 			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapObjectToProject), mapper.UpdateWithNew, c.GetLogger()),
 			r.OnlyNewlyCreatedObjects(),
@@ -86,7 +86,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 
 	return c.Watch(
-		source.Kind(mgr.GetCache(),
+		source.Kind[client.Object](mgr.GetCache(),
 			&corev1.Secret{},
 			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapObjectToProject), mapper.UpdateWithNew, c.GetLogger()),
 			r.OnlyNewlyCreatedObjects(),

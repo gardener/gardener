@@ -53,7 +53,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(),
+		source.Kind[client.Object](mgr.GetCache(),
 			&gardencorev1beta1.ControllerRegistration{},
 			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapToAllSeeds), mapper.UpdateWithNew, c.GetLogger()),
 			predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
@@ -62,7 +62,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(),
+		source.Kind[client.Object](mgr.GetCache(),
 			&gardencorev1beta1.BackupBucket{},
 			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapBackupBucketToSeed), mapper.UpdateWithNew, c.GetLogger()),
 			r.BackupBucketPredicate(),
@@ -71,7 +71,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(),
+		source.Kind[client.Object](mgr.GetCache(),
 			&gardencorev1beta1.BackupEntry{},
 			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapBackupEntryToSeed), mapper.UpdateWithNew, c.GetLogger()),
 			r.BackupEntryPredicate(),
@@ -80,7 +80,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(),
+		source.Kind[client.Object](mgr.GetCache(),
 			&gardencorev1beta1.ControllerInstallation{},
 			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapControllerInstallationToSeed), mapper.UpdateWithNew, c.GetLogger()),
 			r.ControllerInstallationPredicate(),
@@ -89,7 +89,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(),
+		source.Kind[client.Object](mgr.GetCache(),
 			&gardencorev1.ControllerDeployment{},
 			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapControllerDeploymentToAllSeeds), mapper.UpdateWithNew, c.GetLogger()),
 			predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
@@ -98,7 +98,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 
 	return c.Watch(
-		source.Kind(mgr.GetCache(),
+		source.Kind[client.Object](mgr.GetCache(),
 			&gardencorev1beta1.Shoot{},
 			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapShootToSeed), mapper.UpdateWithNew, c.GetLogger()),
 			r.ShootPredicate(),

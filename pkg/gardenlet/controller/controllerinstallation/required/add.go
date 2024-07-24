@@ -28,7 +28,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
-	"github.com/gardener/gardener/pkg/extensions"
 )
 
 // ControllerName is the name of this controller.
@@ -97,7 +96,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 			return err
 		}
 
-		if err := c.Watch(source.Kind(seedCluster.GetCache(), extension.object, eventHandler, extensions.ObjectPredicate())); err != nil {
+		if err := c.Watch(source.Kind[client.Object](seedCluster.GetCache(), extension.object, eventHandler, extensions.ObjectPredicate())); err != nil {
 			return err
 		}
 	}

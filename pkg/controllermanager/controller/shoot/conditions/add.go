@@ -50,7 +50,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 
 	return c.Watch(
-		source.Kind(mgr.GetCache(),
+		source.Kind[client.Object](mgr.GetCache(),
 			&gardencorev1beta1.Seed{},
 			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapSeedToShoot), mapper.UpdateWithNew, c.GetLogger()),
 			r.SeedPredicate(),

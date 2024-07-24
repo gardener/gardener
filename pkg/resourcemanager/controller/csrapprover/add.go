@@ -38,7 +38,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
 		}).
 		WatchesRawSource(
-			source.Kind(targetCluster.GetCache(),
+			source.Kind[client.Object](targetCluster.GetCache(),
 				&certificatesv1.CertificateSigningRequest{},
 				&handler.EnqueueRequestForObject{},
 				builder.WithPredicates(

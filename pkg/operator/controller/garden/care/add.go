@@ -71,7 +71,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 
 	r.registerManagedResourceWatchFunc = func() error {
 		return c.Watch(
-			source.Kind(mgr.GetCache(),
+			source.Kind[client.Object](mgr.GetCache(),
 				&resourcesv1alpha1.ManagedResource{},
 				mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapManagedResourceToGarden), mapper.UpdateWithNew, c.GetLogger()),
 				predicateutils.ManagedResourceConditionsChanged()),

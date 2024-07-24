@@ -7,6 +7,7 @@ package dnsrecord
 import (
 	"context"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -74,7 +75,7 @@ func Add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
 
 	if args.IgnoreOperationAnnotation {
 		if err := ctrl.Watch(
-			source.Kind(mgr.GetCache(),
+			source.Kind[client.Object](mgr.GetCache(),
 				&extensionsv1alpha1.Cluster{},
 				mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), ClusterToDNSRecordMapper(mgr, predicates), mapper.UpdateWithNew, ctrl.GetLogger())),
 		); err != nil {
@@ -82,5 +83,5 @@ func Add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
 		}
 	}
 
-	return ctrl.Watch(source.Kind(mgr.GetCache(), &extensionsv1alpha1.DNSRecord{}, &handler.EnqueueRequestForObject{}, predicates...))
+	return ctrl.Watch(source.Kind[client.Object](mgr.GetCache(), &extensionsv1alpha1.DNSRecord{}, &handler.EnqueueRequestForObject{}, predicates...))
 }

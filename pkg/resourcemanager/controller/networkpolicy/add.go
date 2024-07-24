@@ -57,7 +57,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, targ
 			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
 		}).
 		WatchesRawSource(
-			source.Kind(targetCluster.GetCache(),
+			source.Kind[client.Object](targetCluster.GetCache(),
 				&corev1.Service{},
 				&handler.EnqueueRequestForObject{},
 				builder.WithPredicates(r.ServicePredicate()),
@@ -79,7 +79,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, targ
 	}
 
 	if err := c.Watch(
-		source.Kind(targetCluster.GetCache(),
+		source.Kind[client.Object](targetCluster.GetCache(),
 			networkPolicy,
 			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapNetworkPolicyToService), mapper.UpdateWithNew, c.GetLogger()),
 			networkPolicyPredicate,
@@ -89,7 +89,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, targ
 
 	if r.Config.IngressControllerSelector != nil {
 		if err := c.Watch(
-			source.Kind(targetCluster.GetCache(),
+			source.Kind[client.Object](targetCluster.GetCache(),
 				&networkingv1.Ingress{},
 				mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapIngressToServices), mapper.UpdateWithNew, c.GetLogger()),
 				r.IngressPredicate(),
@@ -102,7 +102,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, targ
 	namespace.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Namespace"))
 
 	return c.Watch(
-		source.Kind(targetCluster.GetCache(),
+		source.Kind[client.Object](targetCluster.GetCache(),
 			namespace,
 			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapToAllServices), mapper.UpdateWithNew, c.GetLogger()),
 		))
