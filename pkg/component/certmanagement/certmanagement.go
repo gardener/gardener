@@ -153,9 +153,9 @@ func (d *certmanagement) Deploy(ctx context.Context) error {
 					Verbs:         []string{"get", "watch", "update"},
 				},
 				{
-					APIGroups: []string{"dns.gardener.cloud"},
-					Resources: []string{"dnsentries"},
-					Verbs:     []string{"get", "list", "update", "watch", "create", "delete"},
+					APIGroups: []string{"extensions.gardener.cloud"},
+					Resources: []string{"dnsrecords"},
+					Verbs:     []string{"get", "list", "update", "watch", "create", "delete", "patch"},
 				},
 			},
 		}
