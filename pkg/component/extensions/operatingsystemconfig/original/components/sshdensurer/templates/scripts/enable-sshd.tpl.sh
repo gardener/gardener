@@ -1,8 +1,9 @@
 #!/bin/bash -eu
 set -e
 
-# Enable sshd service if disabled
+# Unmask and enable sshd service if not enabled
 if ! systemctl is-enabled --quiet sshd.service ; then
+    systemctl unmask sshd.service
     # When sshd.service is disabled on gardenlinux the service is deleted
     # On gardenlinux sshd.service is enabled by enabling ssh.service
     if ! systemctl enable sshd.service ; then
