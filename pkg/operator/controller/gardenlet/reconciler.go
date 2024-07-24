@@ -61,7 +61,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	if !r.seedDoesNotExist(ctx, gardenlet) {
-		return reconcile.Result{}, nil
+		return reconcile.Result{}, r.cleanupKubeconfigSecret(ctx, log, gardenlet)
 	}
 
 	// Deletion is not implemented - once gardenlet got deployed by gardener-operator, it doesn't care about it ever
@@ -138,17 +138,8 @@ func (r *Reconciler) reconcile(
 	}
 
 	log.Info("Reconciliation finished")
-	if gardenlet.Spec.KubeconfigSecretRef != nil {
-		log.Info("Deleting kubeconfig secret and removing reference in spec")
-		if err := kubernetesutils.DeleteObject(ctx, r.VirtualClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: gardenlet.Spec.KubeconfigSecretRef.Name, Namespace: gardenlet.Namespace}}); err != nil {
-			return fmt.Errorf("could not delete kubeconfig secret: %w", err)
-		}
-
-		patch := client.MergeFrom(gardenlet.DeepCopy())
-		gardenlet.Spec.KubeconfigSecretRef = nil
-		if err := r.VirtualClient.Patch(ctx, gardenlet, patch); err != nil {
-			return fmt.Errorf("could not remove kubeconfig secret ref: %w", err)
-		}
+	if err := r.cleanupKubeconfigSecret(ctx, log, gardenlet); err != nil {
+		return err
 	}
 
 	return r.updateStatus(ctx, gardenlet, status)
@@ -161,4 +152,23 @@ func (r *Reconciler) updateStatus(ctx context.Context, gardenlet *seedmanagement
 	patch := client.StrategicMergeFrom(gardenlet.DeepCopy())
 	gardenlet.Status = *status
 	return r.VirtualClient.Status().Patch(ctx, gardenlet, patch)
+}
+
+func (r *Reconciler) cleanupKubeconfigSecret(ctx context.Context, log logr.Logger, gardenlet *seedmanagementv1alpha1.Gardenlet) error {
+	if gardenlet.Spec.KubeconfigSecretRef == nil {
+		return nil
+	}
+
+	log.Info("Deleting kubeconfig secret and removing reference in spec")
+	if err := kubernetesutils.DeleteObject(ctx, r.VirtualClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: gardenlet.Spec.KubeconfigSecretRef.Name, Namespace: gardenlet.Namespace}}); err != nil {
+		return fmt.Errorf("could not delete kubeconfig secret: %w", err)
+	}
+
+	patch := client.MergeFrom(gardenlet.DeepCopy())
+	gardenlet.Spec.KubeconfigSecretRef = nil
+	if err := r.VirtualClient.Patch(ctx, gardenlet, patch); err != nil {
+		return fmt.Errorf("could not remove kubeconfig secret ref: %w", err)
+	}
+
+	return nil
 }

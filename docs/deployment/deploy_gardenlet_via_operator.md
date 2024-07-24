@@ -13,7 +13,7 @@ If you have used the [`gardener/controlplane` Helm chart](../../charts/gardener/
 ## Deployment of gardenlets
 
 Using this method, `gardener-operator` is only taking care of the very first deployment of gardenlet.
-Once running, the gardenlet leverage the [self upgrade](deploy_gardenlet_manually.md#self-upgrades) strategy in order to keep themselves up-to-date.
+Once running, the gardenlet leverages the [self upgrade](deploy_gardenlet_manually.md#self-upgrades) strategy in order to keep itself up-to-date.
 Concretely, `gardener-operator` only acts when there is no respective `Seed` resource yet.
 
 In order to request a gardenlet deployment, create following resource in the (virtual) garden cluster:
@@ -100,11 +100,11 @@ spec:
 ```
 
 This causes `gardener-operator` to deploy gardenlet to the same cluster where it is running.
-Once it came up, gardenlet will create a `Seed` resource with the same name and uses the `Gardenlet` resource for self-upgrades (see [this document](deploy_gardenlet_manually.md#self-upgrades)).
+Once it comes up, gardenlet will create a `Seed` resource with the same name and uses the `Gardenlet` resource for self-upgrades (see [this document](deploy_gardenlet_manually.md#self-upgrades)).
 
 ### Remote Clusters
 
-If you want it to deploy gardenlet into some other cluster, create a kubeconfig `Secret` and reference it in the `Gardenlet` resource:
+If you want `gardener-operator` to deploy gardenlet into some other cluster, create a kubeconfig `Secret` and reference it in the `Gardenlet` resource:
 
 ```yaml
 apiVersion: v1

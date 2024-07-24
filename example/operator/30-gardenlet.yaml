@@ -20,7 +20,6 @@ spec:
 #       cpu: 100m
 #       memory: 100Mi
 #     limits:
-#       cpu: 2000m
 #       memory: 512Mi
 #   podAnnotations:
 #     foo: bar
