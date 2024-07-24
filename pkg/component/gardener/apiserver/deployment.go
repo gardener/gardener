@@ -170,9 +170,10 @@ func (g *gardenerAPIServer) deployment(
 }
 
 func injectWorkloadIdentitySettings(deployment *appsv1.Deployment, secret *corev1.Secret) {
-	var (
-		mountPath = "/etc/gardener-apiserver/workload-identity/signing"
-		fileName  = "key.pem"
+	const (
+		mountPath  = "/etc/gardener-apiserver/workload-identity/signing"
+		fileName   = "key.pem"
+		volumeName = "gardener-apiserver-workload-identity"
 	)
 
 	deployment.Spec.Template.Spec.Containers[0].Args = append(
@@ -183,7 +184,7 @@ func injectWorkloadIdentitySettings(deployment *appsv1.Deployment, secret *corev
 	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(
 		deployment.Spec.Template.Spec.Containers[0].VolumeMounts,
 		corev1.VolumeMount{
-			Name:      "gardener-apiserver-workload-identity",
+			Name:      volumeName,
 			MountPath: mountPath,
 		},
 	)
@@ -191,7 +192,7 @@ func injectWorkloadIdentitySettings(deployment *appsv1.Deployment, secret *corev
 	deployment.Spec.Template.Spec.Volumes = append(
 		deployment.Spec.Template.Spec.Volumes,
 		corev1.Volume{
-			Name: "gardener-apiserver-workload-identity",
+			Name: volumeName,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName: secret.Name,
