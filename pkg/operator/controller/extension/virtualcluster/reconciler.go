@@ -45,7 +45,7 @@ const (
 	ConditionReconcileSuccess = "ReconcileSuccessful"
 	// ConditionDeleteSuccessful is the condition type for when the virtual cluster resources successfully delete.
 	ConditionDeleteSuccessful = "DeleteSuccessful"
-	// requeueGardenResourceNotReady is the time after which an extension will be requeued, if the Garden resource was not ready during its reconcilation.
+	// requeueGardenResourceNotReady is the time after which an extension will be requeued, if the Garden resource was not ready during its reconciliation.
 	requeueGardenResourceNotReady = 10 * time.Second
 )
 
