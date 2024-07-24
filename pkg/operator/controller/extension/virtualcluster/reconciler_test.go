@@ -26,6 +26,7 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	. "github.com/gardener/gardener/pkg/operator/controller/extension/virtualcluster"
@@ -125,7 +126,7 @@ var _ = Describe("Reconciler", func() {
 			})
 		})
 
-		Context("when garden is deleted", func() {
+		Context("reconcile based on garden state", func() {
 			It("remove finalizers when garden is deleted", func() {
 				extension.Finalizers = append(extension.Finalizers, operatorv1alpha1.FinalizerName)
 				Expect(runtimeClient.Update(ctx, extension)).To(Succeed())
@@ -133,34 +134,42 @@ var _ = Describe("Reconciler", func() {
 				req = reconcile.Request{NamespacedName: client.ObjectKey{Name: extensionName}}
 				Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{}))
 
-				sutExt := &operatorv1alpha1.Extension{}
-				Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: extensionName}, sutExt)).To(Succeed())
-				Expect(sutExt.Finalizers).To(BeEmpty())
+				extension := &operatorv1alpha1.Extension{}
+				Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: extensionName}, extension)).To(Succeed())
+				Expect(extension.Finalizers).To(BeEmpty())
 			})
-		})
 
-		Context("when garden is ready", func() {
-			BeforeEach(func() {
+			It("should requeue if gardener is not ready", func() {
 				garden.Status = operatorv1alpha1.GardenStatus{
-					Conditions: []gardencorev1beta1.Condition{
-						{
-							Type:               operatorv1alpha1.VirtualGardenAPIServerAvailable,
-							Status:             gardencorev1beta1.ConditionTrue,
-							LastTransitionTime: metav1.Time{Time: fakeClock.Now()},
-						},
+					LastOperation: &gardencorev1beta1.LastOperation{
+						State: gardencorev1beta1.LastOperationStateProcessing,
+						Type:  gardencorev1beta1.LastOperationTypeReconcile,
 					},
 				}
 				Expect(runtimeClient.Create(ctx, garden)).To(Succeed())
+
+				res, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: client.ObjectKey{Name: extensionName}})
+				Expect(res).To(Equal(reconcile.Result{}))
+				Expect(err).To(HaveOccurred())
+				Expect(err).To(BeAssignableToTypeOf(&reconcilerutils.RequeueAfterError{}))
 			})
 
-			It("should create the controller-{registration,deployment}", func() {
+			It("should create the controller-{registration,deployment} if garden is ready", func() {
+				garden.Status = operatorv1alpha1.GardenStatus{
+					LastOperation: &gardencorev1beta1.LastOperation{
+						State: gardencorev1beta1.LastOperationStateSucceeded,
+						Type:  gardencorev1beta1.LastOperationTypeReconcile,
+					},
+				}
+				Expect(runtimeClient.Create(ctx, garden)).To(Succeed())
+
 				req = reconcile.Request{NamespacedName: client.ObjectKey{Name: extensionName}}
 				Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{}))
 
-				sutExt := &operatorv1alpha1.Extension{}
-				Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: extensionName}, sutExt)).To(Succeed())
-				Expect(sutExt.Status.Conditions).To(HaveLen(1))
-				Expect(sutExt.Status.Conditions[0]).To(gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
+				extension := &operatorv1alpha1.Extension{}
+				Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: extensionName}, extension)).To(Succeed())
+				Expect(extension.Status.Conditions).To(HaveLen(1))
+				Expect(extension.Status.Conditions[0]).To(gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
 					"Type":   Equal(operatorv1alpha1.VirtualClusterExtensionReconciled),
 					"Status": Equal(gardencorev1beta1.ConditionTrue),
 					"Reason": Equal(ConditionReconcileSuccess),
@@ -179,7 +188,7 @@ var _ = Describe("Reconciler", func() {
 				req = reconcile.Request{NamespacedName: client.ObjectKey{Name: extensionName}}
 				Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{}))
 
-				Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: extensionName}, sutExt)).To(matchers.BeNotFoundError())
+				Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: extensionName}, extension)).To(matchers.BeNotFoundError())
 				Expect(virtualClient.List(ctx, &controllerRegistrationList)).To(Succeed())
 				Expect(virtualClient.List(ctx, &controllerDeploymentList)).To(Succeed())
 				Expect(controllerDeploymentList.Items).To(BeEmpty())
