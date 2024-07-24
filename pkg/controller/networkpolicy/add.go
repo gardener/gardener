@@ -65,6 +65,10 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, runt
 		r.additionalNamespaceLabelSelectors = append(r.additionalNamespaceLabelSelectors, selector)
 	}
 
+	predicates := []predicate.Predicate{
+		predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
+	}
+
 	c, err := builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
@@ -75,7 +79,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, runt
 			source.Kind[client.Object](runtimeCluster.GetCache(),
 				&corev1.Namespace{},
 				&handler.EnqueueRequestForObject{},
-				builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update))),
+				predicates...),
 		).
 		Build(r)
 	if err != nil {

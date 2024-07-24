@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -36,6 +37,11 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 		r.LeaseNamespace = gardencorev1beta1.GardenerSeedLeaseNamespace
 	}
 
+	predicates := []predicate.Predicate{
+		predicateutils.HasName(r.SeedName),
+		predicateutils.ForEventTypes(predicateutils.Create),
+	}
+
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
@@ -47,10 +53,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 			source.Kind[client.Object](gardenCluster.GetCache(),
 				&gardencorev1beta1.Seed{},
 				&handler.EnqueueRequestForObject{},
-				builder.WithPredicates(
-					predicateutils.HasName(r.SeedName),
-					predicateutils.ForEventTypes(predicateutils.Create),
-				)),
+				predicates...),
 		).
 		Complete(r)
 }

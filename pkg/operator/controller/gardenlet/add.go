@@ -64,6 +64,12 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, virt
 		}
 	}
 
+	predicates := []predicate.Predicate{
+		predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
+		&predicate.GenerationChangedPredicate{},
+		r.OperatorResponsiblePredicate(ctx),
+	}
+
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
@@ -73,11 +79,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, virt
 		WatchesRawSource(
 			source.Kind[client.Object](virtualCluster.GetCache(), &seedmanagementv1alpha1.Gardenlet{},
 				&handler.EnqueueRequestForObject{},
-				builder.WithPredicates(
-					predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
-					&predicate.GenerationChangedPredicate{},
-					r.OperatorResponsiblePredicate(ctx),
-				),
+				predicates...,
 			)).
 		Complete(r)
 }

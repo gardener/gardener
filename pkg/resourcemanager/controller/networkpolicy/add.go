@@ -50,6 +50,8 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, targ
 		r.selectors = append(r.selectors, selector)
 	}
 
+	predicates := []predicate.Predicate{r.ServicePredicate()}
+
 	c, err := builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
@@ -60,7 +62,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, targ
 			source.Kind[client.Object](targetCluster.GetCache(),
 				&corev1.Service{},
 				&handler.EnqueueRequestForObject{},
-				builder.WithPredicates(r.ServicePredicate()),
+				predicates...,
 			)).
 		Build(r)
 	if err != nil {

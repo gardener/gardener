@@ -52,6 +52,11 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 		r.GardenNamespace = v1beta1constants.GardenNamespace
 	}
 
+	predicates := []predicate.Predicate{
+		&predicate.GenerationChangedPredicate{},
+		predicateutils.SeedNamePredicate(r.SeedName, gardenerutils.GetBackupEntrySeedNames),
+	}
+
 	c, err := builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
@@ -63,10 +68,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 			source.Kind[client.Object](gardenCluster.GetCache(),
 				&gardencorev1beta1.BackupEntry{},
 				&handler.EnqueueRequestForObject{},
-				builder.WithPredicates(
-					&predicate.GenerationChangedPredicate{},
-					predicateutils.SeedNamePredicate(r.SeedName, gardenerutils.GetBackupEntrySeedNames),
-				)),
+				predicates...),
 		).
 		Build(r)
 	if err != nil {

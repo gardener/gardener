@@ -63,6 +63,11 @@ func (r *Reconciler) AddToManager(
 		r.ValuesHelper = gardenletdeployer.NewValuesHelper(&r.Config)
 	}
 
+	predicates := []predicate.Predicate{
+		predicate.GenerationChangedPredicate{},
+		predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
+	}
+
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
@@ -75,7 +80,7 @@ func (r *Reconciler) AddToManager(
 			source.Kind[client.Object](gardenCluster.GetCache(),
 				&seedmanagementv1alpha1.Gardenlet{},
 				&handler.EnqueueRequestForObject{},
-				builder.WithPredicates(predicate.GenerationChangedPredicate{}, predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update))),
+				predicates...),
 		).
 		Complete(r)
 }

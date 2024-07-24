@@ -32,6 +32,10 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 		r.Recorder = targetCluster.GetEventRecorderFor(ControllerName + "-controller")
 	}
 
+	predicates := []predicate.Predicate{
+		r.NodePredicate(),
+	}
+
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
@@ -42,7 +46,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 			source.Kind[client.Object](targetCluster.GetCache(),
 				&corev1.Node{},
 				&handler.EnqueueRequestForObject{},
-				builder.WithPredicates(r.NodePredicate())),
+				predicates...),
 		).
 		Complete(r)
 }
