@@ -26,7 +26,6 @@
 ## Usage
 
 * [Audit a Kubernetes cluster](usage/shoot_auditpolicy.md)
-* [Auto-Scaling for shoot clusters](usage/shoot_autoscaling.md)
 * [Cleanup of Shoot clusters in deletion](usage/shoot_cleanup.md)
 * [`containerd` Registry Configuration](usage/containerd-registry-configuration.md)
 * [Custom `containerd` configuration](usage/custom-containerd-config.md)
@@ -58,8 +57,10 @@
 * [Shoot Status](usage/shoot_status.md)
 * [Shoot Info `ConfigMap`](usage/shoot_info_configmap.md)
 * [Shoot Updates and Upgrades](usage/shoot_updates.md)
-* [Shoot HA Control Plane](usage/shoot_high_availability.md)
-* [Shoot HA Best Practices](usage/shoot_high_availability_best_practices.md)
+* [Shoot Auto-Scaling Configuration](usage/shoot_autoscaling.md)
+* [Shoot Pod Auto-Scaling Best Practices](usage/shoot_pod_autoscaling_best_practices.md)
+* [Shoot High-Availability Control Plane](usage/shoot_high_availability.md)
+* [Shoot High-Availability Best Practices](usage/shoot_high_availability_best_practices.md)
 * [Shoot Workers Settings](usage/shoot_workers_settings.md)
 * [Accessing Shoot Clusters](usage/shoot_access.md)
 * [Supported Kubernetes versions](usage/supported_k8s_versions.md)

@@ -154,18 +154,18 @@ This document provides a checklist for them that you can walk through.
 
 1. **Provide resource requirements** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/metricsserver/metrics_server.go#L345-L353))
 
-   All components should have [resource requirements](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#requests-and-limits).
-   Generally, they should always request CPU and memory, while only memory shall be limited (no CPU limits!).
+   All components should define reasonable (initial) [CPU and memory `requests`](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-requests-and-limits-of-pod-and-container) and avoid limits (especially CPU limits) unless you know the healthy range for your component (almost impossible with most components today), but no more than the node allocatable remainder (after daemonset pods) of the largest eligible machine type. [Scheduling only takes `requests` into account](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#how-pods-with-resource-requests-are-scheduled)!
 
 2. **Define a `VerticalPodAutoscaler`** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/metricsserver/metrics_server.go#L416-L444))
 
-   We typically perform vertical auto-scaling via the VPA managed by the [Kubernetes community](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler).
-   Each component should have a respective `VerticalPodAutoscaler` with "min allowed" resources, "auto update mode", and "requests only"-mode.
-   VPA is always enabled in garden or seed clusters, while it is optional for shoot clusters.
+   We typically (need to) perform vertical auto-scaling for containers that have a significant usage (>50m/100M) and a significant usage spread over time (>2x) by defining a [`VerticalPodAutoscaler`](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/README.md#intro) with `updatePolicy.updateMode` [`Auto`](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/README.md#quick-start), `containerPolicies[].controlledValues` [`RequestsOnly`](https://github.com/kubernetes/autoscaler/blob/6da986f4ccefd2c2632e184f22cce30390dfb7d6/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1/types.go#L244-L245), reasonable `minAllowed` configuration and no `maxAllowed` configuration (will be taken care of in Gardener environments for you/capped at the largest eligible machine type).
 
 3. **Define a `HorizontalPodAutoscaler` if needed** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/coredns/coredns.go#L671-L726))
 
-   If your component is capable of scaling horizontally, you should consider defining a [`HorizontalPodAutoscaler`](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/).
+   If your component is capable of scaling horizontally, you should consider defining a [`HorizontalPodAutoscaler`](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale).
+
+> [!NOTE]
+> For more information and concrete configuration hints, please see our [best practices guide for pod auto scaling](../usage/shoot_pod_autoscaling_best_practices.md) and especially the [summary](../usage/shoot_pod_autoscaling_best_practices.md#summary) and [recommendations](../usage/shoot_pod_autoscaling_best_practices.md#recommendations-in-a-box) sections.
 
 ## Observability / Operations Productivity
 
