@@ -95,14 +95,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	garden := &gardenList.Items[0]
 	// check Garden's last operation status. If the last operation is a successful reconciliation, we can proceed to install the extensions to the virtual garden cluster.
 	switch lastOperation := garden.Status.LastOperation; {
-	case lastOperation == nil:
-		fallthrough
-	case lastOperation.Type == gardencorev1beta1.LastOperationTypeReconcile && lastOperation.State != gardencorev1beta1.LastOperationStateSucceeded:
+	case lastOperation == nil || (lastOperation.Type == gardencorev1beta1.LastOperationTypeReconcile && lastOperation.State != gardencorev1beta1.LastOperationStateSucceeded):
 		return reconcile.Result{}, &reconciler.RequeueAfterError{
 			RequeueAfter: requeueGardenResourceNotReady,
 		}
 	case lastOperation.Type == gardencorev1beta1.LastOperationTypeDelete:
-		// if the last operation is a delete, then no nothing. Once the Garden resource is deleted, we will reconcile and remove the finalizers from the Extension.
+		// if the last operation is a delete, then do nothing. Once the Garden resource is deleted, we will reconcile and remove the finalizers from the Extension.
 		return reconcile.Result{}, nil
 	}
 
@@ -190,17 +188,15 @@ func (r *Reconciler) reconcileControllerDeployment(ctx context.Context, virtualC
 		},
 	}
 
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, virtualClusterClient, controllerDeployment,
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, virtualClusterClient, controllerDeployment,
 		func() error {
 			controllerDeployment.Helm = &gardencorev1.HelmControllerDeployment{
 				Values:        extension.Spec.Deployment.ExtensionDeployment.Values,
 				OCIRepository: extension.Spec.Deployment.ExtensionDeployment.Helm.OCIRepository,
 			}
 			return nil
-		}); err != nil {
-		return err
-	}
-	return nil
+		})
+	return err
 }
 
 func (r *Reconciler) reconcileControllerRegistration(ctx context.Context, virtualClusterClient client.Client, extension *operatorv1alpha1.Extension) error {
@@ -210,7 +206,7 @@ func (r *Reconciler) reconcileControllerRegistration(ctx context.Context, virtua
 		},
 	}
 
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, virtualClusterClient, controllerRegistration,
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, virtualClusterClient, controllerRegistration,
 		func() error {
 			// handle well known annotations
 			if v, ok := extension.Annotations[v1beta1constants.AnnotationPodSecurityEnforce]; ok {
@@ -232,10 +228,8 @@ func (r *Reconciler) reconcileControllerRegistration(ctx context.Context, virtua
 				},
 			}
 			return nil
-		}); err != nil {
-		return err
-	}
-	return nil
+		})
+	return err
 }
 
 func (r *Reconciler) delete(ctx context.Context, log logr.Logger, virtualClusterClient client.Client, extension *operatorv1alpha1.Extension) error {

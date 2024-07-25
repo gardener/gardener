@@ -124,14 +124,15 @@ The `spec.virtualCluster.kubernetes.kubeAPIServer.encryptionConfig` field in the
 A Gardener installation relies on extension controllers to provide support for new cloud providers or to add new capabilities. 
 You can find out more about Gardener's extensions and how they can be used [here](../extensions/extension.md#contract-extension-resource).
 
-The `Extension` resource is intended to automate the installation and management of extensions in a Gardener landscape. It contains configuration for the following scenarios:
+The `Extension` resource is intended to automate the installation and management of extensions in a Gardener landscape.
+It contains configuration for the following scenarios:
 
 - The deployment of `ControllerRegistration` and `ControllerDeployment` resources in the (virtual) garden cluster.
-- The deployment of admission controllers in the runtime cluster.
+- The deployment of [admission controllers](https://github.com/gardener/gardener/blob/master/docs/extensions/admission.md) in the runtime cluster.
 
-In the near future, the `Extension` will be used by the `gardener-operator` to automate the management of the etcd secrets and DNS records required by the garden cluster. 
+In the near future, the `Extension` will be used by the `gardener-operator` to automate the management of the backup bucket for ETCD and DNS records required by the garden cluster.
 To do that, `gardener-operator` will leverage extensions that support `DNSRecord` and `BackupBucket` resources.
-As of today, the support for managed `DNSRecords` and `BackupBuckets` in the `gardener-operator` is still being build. 
+As of today, the support for managed `DNSRecords` and `BackupBuckets` in the `gardener-operator` is still being built.
 However, the `Extension`'s specification already reflects the target picture.
 
 Please find an exemplary `Extension` resource [here](../../example/operator/15-extension.yaml).
@@ -158,10 +159,10 @@ This configuration allows for precise control over various extension parameters,
 
 #### Configuration for Admission Deployment
 
-The `.spec.deployment.admission` defines how an extension's admission controller may be deployed by the `gardener-operator`. The deployment of an admission controller is optional and may be omitted.
-Typically, the admission controllers run in the runtime cluster alongside the virtual cluster deployment. However, to function properly, the admission controllers require access and permissions for the virtual garden cluster in order to watch the Gardener API resources like `Shoot`s.
-The admission deployment realizes this scenario by allowing the specification of different Helm charts for the runtime and virtual cluster and follows the pattern established by existing Gardener extensions [like provider-aws](https://github.com/gardener/gardener-extension-provider-aws/tree/master/charts/gardener-extension-admission-aws).
-
+The `.spec.deployment.admission` defines how an extension's admission controller may be deployed by the `gardener-operator`.
+The deployment of an admission controller is optional and may be omitted.
+Typically, the admission controllers run in the runtime cluster alongside the virtual cluster deployment.
+However, to function properly, the admission controllers require access and permissions for the virtual garden cluster in order to watch the Gardener API resources like `Shoot`s.
 As of today, deployment of admission controllers via `.spec.deployment.admission` is not yet supported, but it is currently under active development.
 
 ### Configuration for Extension Resources

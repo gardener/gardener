@@ -41,7 +41,7 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 	if err := (&virtualcluster.Reconciler{
 		Config: *cfg,
 	}).AddToManager(ctx, mgr, gardenClientMap); err != nil {
-		return fmt.Errorf("failed to add Extension virtual cluster controller: %w", err)
+		return fmt.Errorf("failed adding Extension virtual cluster controller: %w", err)
 	}
 
 	if err := (&controllerregistrar.Reconciler{
