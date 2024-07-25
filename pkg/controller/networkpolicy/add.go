@@ -111,8 +111,8 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, runt
 	}
 
 	return c.Watch(
-		&source.Channel{Source: r.ResolverUpdate},
-		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapToNamespaces), mapper.UpdateWithNew, c.GetLogger()),
+		source.Channel(r.ResolverUpdate,
+			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapToNamespaces), mapper.UpdateWithNew, c.GetLogger())),
 	)
 }
 
