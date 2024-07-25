@@ -870,7 +870,7 @@ func (r *Reconciler) newNginxIngressController(garden *operatorv1alpha1.Garden, 
 }
 
 func (r *Reconciler) newGardenerMetricsExporter(secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
-	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameGardenerMetricsExporter)
+	image, err := imagevector.Containers().FindImage(imagevector.ImageNameGardenerMetricsExporter)
 	if err != nil {
 		return nil, err
 	}
@@ -966,7 +966,7 @@ func (r *Reconciler) newGardenerAPIServer(ctx context.Context, garden *operatorv
 }
 
 func (r *Reconciler) newGardenerAdmissionController(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, enableSeedRestriction bool) (component.DeployWaiter, error) {
-	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameGardenerAdmissionController)
+	image, err := imagevector.Containers().FindImage(imagevector.ImageNameGardenerAdmissionController)
 	if err != nil {
 		return nil, err
 	}
@@ -991,7 +991,7 @@ func (r *Reconciler) newGardenerAdmissionController(garden *operatorv1alpha1.Gar
 }
 
 func (r *Reconciler) newGardenerControllerManager(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
-	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameGardenerControllerManager)
+	image, err := imagevector.Containers().FindImage(imagevector.ImageNameGardenerControllerManager)
 	if err != nil {
 		return nil, err
 	}
@@ -1021,7 +1021,7 @@ func (r *Reconciler) newGardenerControllerManager(garden *operatorv1alpha1.Garde
 }
 
 func (r *Reconciler) newGardenerScheduler(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
-	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameGardenerScheduler)
+	image, err := imagevector.Containers().FindImage(imagevector.ImageNameGardenerScheduler)
 	if err != nil {
 		return nil, err
 	}
@@ -1056,7 +1056,7 @@ func (r *Reconciler) certManagementValues(garden *operatorv1alpha1.Garden) certm
 
 func (r *Reconciler) newCertManagementController(garden *operatorv1alpha1.Garden) (component.DeployWaiter, error) {
 	values := r.certManagementValues(garden)
-	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameCertManagement)
+	image, err := imagevector.Containers().FindImage(imagevector.ImageNameCertManagement)
 	if err != nil {
 		return nil, err
 	}
@@ -1069,7 +1069,7 @@ func (r *Reconciler) newCertManagementIssuer(garden *operatorv1alpha1.Garden) co
 }
 
 func (r *Reconciler) newGardenerDashboard(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, wildcardCertSecretName *string) (gardenerdashboard.Interface, error) {
-	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameGardenerDashboard)
+	image, err := imagevector.Containers().FindImage(imagevector.ImageNameGardenerDashboard)
 	if err != nil {
 		return nil, err
 	}
@@ -1125,7 +1125,7 @@ func (r *Reconciler) newGardenerDashboard(garden *operatorv1alpha1.Garden, secre
 }
 
 func (r *Reconciler) newTerminalControllerManager(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
-	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameTerminalControllerManager)
+	image, err := imagevector.Containers().FindImage(imagevector.ImageNameTerminalControllerManager)
 	if err != nil {
 		return nil, err
 	}
@@ -1266,7 +1266,7 @@ func (r *Reconciler) newPrometheusGarden(log logr.Logger, garden *operatorv1alph
 }
 
 func (r *Reconciler) newPrometheusLongTerm(log logr.Logger, garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, ingressDomain string, wildcardCertSecretName *string) (prometheus.Interface, error) {
-	imageCortex, err := imagevector.ImageVector().FindImage(imagevector.ImageNameCortex)
+	imageCortex, err := imagevector.Containers().FindImage(imagevector.ImageNameCortex)
 	if err != nil {
 		return nil, err
 	}
@@ -1349,7 +1349,7 @@ func (r *Reconciler) newGardenerDiscoveryServer(
 	domain string,
 	wildcardCertSecretName *string,
 ) (component.DeployWaiter, error) {
-	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameGardenerDiscoveryServer)
+	image, err := imagevector.Containers().FindImage(imagevector.ImageNameGardenerDiscoveryServer)
 	if err != nil {
 		return nil, err
 	}

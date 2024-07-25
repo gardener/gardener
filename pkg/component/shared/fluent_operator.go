@@ -22,7 +22,7 @@ func NewFluentOperator(
 	deployer component.DeployWaiter,
 	err error,
 ) {
-	operatorImage, err := imagevector.ImageVector().FindImage(imagevector.ImageNameFluentOperator)
+	operatorImage, err := imagevector.Containers().FindImage(imagevector.ImageNameFluentOperator)
 	if err != nil {
 		return nil, err
 	}

@@ -35,11 +35,11 @@ func NewNginxIngress(
 	component.DeployWaiter,
 	error,
 ) {
-	imageController, err := imagevector.ImageVector().FindImage(imagevector.ImageNameNginxIngressController, imagevectorutils.TargetVersion(kubernetesVersion.String()))
+	imageController, err := imagevector.Containers().FindImage(imagevector.ImageNameNginxIngressController, imagevectorutils.TargetVersion(kubernetesVersion.String()))
 	if err != nil {
 		return nil, err
 	}
-	imageDefaultBackend, err := imagevector.ImageVector().FindImage(imagevector.ImageNameIngressDefaultBackend, imagevectorutils.TargetVersion(kubernetesVersion.String()))
+	imageDefaultBackend, err := imagevector.Containers().FindImage(imagevector.ImageNameIngressDefaultBackend, imagevectorutils.TargetVersion(kubernetesVersion.String()))
 	if err != nil {
 		return nil, err
 	}

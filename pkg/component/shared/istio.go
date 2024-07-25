@@ -28,8 +28,8 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
-// ImageVector is an alias for imagevector.ImageVector(). Exposed for testing.
-var ImageVector = imagevector.ImageVector()
+// ImageVector is an alias for imagevector.Containers(). Exposed for testing.
+var ImageVector = imagevector.Containers()
 
 // NewIstio returns a deployer for Istio.
 func NewIstio(

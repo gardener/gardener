@@ -21,12 +21,12 @@ func NewPrometheusOperator(
 	deployer component.DeployWaiter,
 	err error,
 ) {
-	operatorImage, err := imagevector.ImageVector().FindImage(imagevector.ImageNamePrometheusOperator)
+	operatorImage, err := imagevector.Containers().FindImage(imagevector.ImageNamePrometheusOperator)
 	if err != nil {
 		return nil, err
 	}
 
-	reloaderImage, err := imagevector.ImageVector().FindImage(imagevector.ImageNameConfigmapReloader)
+	reloaderImage, err := imagevector.Containers().FindImage(imagevector.ImageNameConfigmapReloader)
 	if err != nil {
 		return nil, err
 	}

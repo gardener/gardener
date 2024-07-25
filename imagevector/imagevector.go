@@ -15,21 +15,20 @@ import (
 
 var (
 	//go:embed containers.yaml
-	imagesYAML  string
-	imageVector imagevector.ImageVector
+	containersYAML        string
+	containersImageVector imagevector.ImageVector
 )
 
 func init() {
 	var err error
 
-	imageVector, err = imagevector.Read([]byte(imagesYAML))
+	containersImageVector, err = imagevector.Read([]byte(containersYAML))
 	runtime.Must(err)
-
-	imageVector, err = imagevector.WithEnvOverride(imageVector)
+	containersImageVector, err = imagevector.WithEnvOverride(containersImageVector)
 	runtime.Must(err)
 }
 
-// ImageVector is the image vector that contains all the needed images.
-func ImageVector() imagevector.ImageVector {
-	return imageVector
+// Containers is the image vector that contains all the needed container images.
+func Containers() imagevector.ImageVector {
+	return containersImageVector
 }

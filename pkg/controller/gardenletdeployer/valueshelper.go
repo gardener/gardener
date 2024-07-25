@@ -275,7 +275,7 @@ func (vp *valuesHelper) getGardenletConfigurationValues(config *gardenletv1alpha
 }
 
 func getParentGardenletDeployment() (*seedmanagementv1alpha1.GardenletDeployment, error) {
-	gardenletImage, err := imagevector.ImageVector().FindImage(imagevector.ImageNameGardenlet)
+	gardenletImage, err := imagevector.Containers().FindImage(imagevector.ImageNameGardenlet)
 	if err != nil {
 		return nil, err
 	}

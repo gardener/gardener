@@ -15,7 +15,7 @@ import (
 
 // NewBlackboxExporter creates a new blackbox-exporter deployer.
 func NewBlackboxExporter(c client.Client, secretsManager secretsmanager.Interface, namespace string, values blackboxexporter.Values) (component.DeployWaiter, error) {
-	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameBlackboxExporter)
+	image, err := imagevector.Containers().FindImage(imagevector.ImageNameBlackboxExporter)
 	if err != nil {
 		return nil, err
 	}

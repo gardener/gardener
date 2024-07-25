@@ -15,12 +15,12 @@ import (
 
 // DefaultAPIServerProxy returns a deployer for the apiserver-proxy.
 func (b *Botanist) DefaultAPIServerProxy() (apiserverproxy.Interface, error) {
-	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameApiserverProxy, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
+	image, err := imagevector.Containers().FindImage(imagevector.ImageNameApiserverProxy, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}
 
-	sidecarImage, err := imagevector.ImageVector().FindImage(imagevector.ImageNameApiserverProxySidecar, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
+	sidecarImage, err := imagevector.Containers().FindImage(imagevector.ImageNameApiserverProxySidecar, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}
