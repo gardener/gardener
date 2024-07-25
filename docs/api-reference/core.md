@@ -6264,6 +6264,20 @@ Default: true</p>
 </tr>
 <tr>
 <td>
+<code>maxParallelImagePullss</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MaxParallelImagePulls describes the maximum number of parallel pulls if SerializeImagePulls is false.
+Default 10
+This field is only available for Kubernetes v1.27 or later.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>registryPullQPS</code></br>
 <em>
 int32

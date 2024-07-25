@@ -27,6 +27,7 @@
   kind: KubeletConfiguration
   maxPods: 500
   serializeImagePulls: false
+  maxParallelImagePulls: 10
   registryPullQPS: 10
   registryBurst: 20
   serverTLSBootstrap: true

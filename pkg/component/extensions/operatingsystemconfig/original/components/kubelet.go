@@ -39,6 +39,7 @@ type ConfigurableKubeletConfigParameters struct {
 	ImageGCLowThresholdPercent       *int32
 	SeccompDefault                   *bool
 	SerializeImagePulls              *bool
+	MaxParallelImagePulls            *int32
 	StreamingConnectionIdleTimeout   *metav1.Duration
 	RegistryPullQPS                  *int32
 	RegistryBurst                    *int32
@@ -82,6 +83,7 @@ func KubeletConfigParametersFromCoreV1beta1KubeletConfig(kubeletConfig *gardenco
 		out.ImageGCLowThresholdPercent = kubeletConfig.ImageGCLowThresholdPercent
 		out.SeccompDefault = kubeletConfig.SeccompDefault
 		out.SerializeImagePulls = kubeletConfig.SerializeImagePulls
+		out.MaxParallelImagePulls = kubeletConfig.MaxParallelImagePulls
 		out.RegistryPullQPS = kubeletConfig.RegistryPullQPS
 		out.RegistryBurst = kubeletConfig.RegistryBurst
 		out.FeatureGates = kubeletConfig.FeatureGates

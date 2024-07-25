@@ -1158,43 +1158,48 @@ type KubeletConfig struct {
 	// +optional
 	// Default: true
 	SerializeImagePulls *bool `json:"serializeImagePulls,omitempty" protobuf:"varint,18,opt,name=serializeImagePulls"`
+	// MaxParallelImagePulls describes the maximum number of parallel pulls if SerializeImagePulls is false.
+	// Default 10
+	// This field is only available for Kubernetes v1.27 or later.
+	// +optional
+	MaxParallelImagePulls *int32 `json:"maxParallelImagePullss,omitempty" protobuf:"varint,19,opt,name=maxParallelImagePulls"`
 	// RegistryPullQPS is the limit of registry pulls per second. The value must not be a negative number.
 	// Setting it to 0 means no limit.
 	// Default: 5
 	// +optional
-	RegistryPullQPS *int32 `json:"registryPullQPS,omitempty" protobuf:"varint,19,opt,name=registryPullQPS"`
+	RegistryPullQPS *int32 `json:"registryPullQPS,omitempty" protobuf:"varint,20,opt,name=registryPullQPS"`
 	// RegistryBurst is the maximum size of bursty pulls, temporarily allows pulls to burst to this number,
 	// while still not exceeding registryPullQPS. The value must not be a negative number.
 	// Only used if registryPullQPS is greater than 0.
 	// Default: 10
 	// +optional
-	RegistryBurst *int32 `json:"registryBurst,omitempty" protobuf:"varint,20,opt,name=registryBurst"`
+	RegistryBurst *int32 `json:"registryBurst,omitempty" protobuf:"varint,21,opt,name=registryBurst"`
 	// SeccompDefault enables the use of `RuntimeDefault` as the default seccomp profile for all workloads.
 	// This requires the corresponding SeccompDefault feature gate to be enabled as well.
 	// This field is only available for Kubernetes v1.25 or later.
 	// +optional
-	SeccompDefault *bool `json:"seccompDefault,omitempty" protobuf:"varint,21,opt,name=seccompDefault"`
+	SeccompDefault *bool `json:"seccompDefault,omitempty" protobuf:"varint,22,opt,name=seccompDefault"`
 	// A quantity defines the maximum size of the container log file before it is rotated. For example: "5Mi" or "256Ki".
 	// +optional
 	// Default: 100Mi
-	ContainerLogMaxSize *resource.Quantity `json:"containerLogMaxSize,omitempty" protobuf:"bytes,22,opt,name=containerLogMaxSize"`
+	ContainerLogMaxSize *resource.Quantity `json:"containerLogMaxSize,omitempty" protobuf:"bytes,23,opt,name=containerLogMaxSize"`
 	// Maximum number of container log files that can be present for a container.
 	// +optional
-	ContainerLogMaxFiles *int32 `json:"containerLogMaxFiles,omitempty" protobuf:"bytes,23,opt,name=containerLogMaxFiles"`
+	ContainerLogMaxFiles *int32 `json:"containerLogMaxFiles,omitempty" protobuf:"bytes,24,opt,name=containerLogMaxFiles"`
 	// ProtectKernelDefaults ensures that the kernel tunables are equal to the kubelet defaults.
 	// Defaults to true for Kubernetes v1.26 or later.
 	// +optional
-	ProtectKernelDefaults *bool `json:"protectKernelDefaults,omitempty" protobuf:"varint,24,opt,name=protectKernelDefaults"`
+	ProtectKernelDefaults *bool `json:"protectKernelDefaults,omitempty" protobuf:"varint,25,opt,name=protectKernelDefaults"`
 	// StreamingConnectionIdleTimeout is the maximum time a streaming connection can be idle before the connection is automatically closed.
 	// This field cannot be set lower than "30s" or greater than "4h".
 	// Default:
 	//  "4h" for Kubernetes < v1.26.
 	//  "5m" for Kubernetes >= v1.26.
 	// +optional
-	StreamingConnectionIdleTimeout *metav1.Duration `json:"streamingConnectionIdleTimeout,omitempty" protobuf:"bytes,25,opt,name=streamingConnectionIdleTimeout"`
+	StreamingConnectionIdleTimeout *metav1.Duration `json:"streamingConnectionIdleTimeout,omitempty" protobuf:"bytes,26,opt,name=streamingConnectionIdleTimeout"`
 	// MemorySwap configures swap memory available to container workloads.
 	// +optional
-	MemorySwap *MemorySwapConfiguration `json:"memorySwap,omitempty" protobuf:"bytes,26,opt,name=memorySwap"`
+	MemorySwap *MemorySwapConfiguration `json:"memorySwap,omitempty" protobuf:"bytes,27,opt,name=memorySwap"`
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.

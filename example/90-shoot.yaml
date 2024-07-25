@@ -89,7 +89,8 @@ spec:
     #     imageGCLowThresholdPercent: 40
     #     protectKernelDefaults: true
     #     seccompDefault: true
-    #     serializeImagePulls: true
+    #     serializeImagePulls: false
+    #     maxParallelImagePulls: 2
     #     streamingConnectionIdleTimeout: 5m
     #     registryPullQPS: 5
     #     registryBurst: 10
@@ -245,7 +246,8 @@ spec:
   #   imageGCLowThresholdPercent: 40
   #   protectKernelDefaults: true
   #   seccompDefault: true
-  #   serializeImagePulls: true
+  #     serializeImagePulls: false
+  #     maxParallelImagePulls: 2
   #   streamingConnectionIdleTimeout: 5m
   #   registryPullQPS: 5
   #   registryBurst: 10

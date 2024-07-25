@@ -4404,6 +4404,13 @@ func schema_pkg_apis_core_v1beta1_KubeletConfig(ref common.ReferenceCallback) co
 							Format:      "",
 						},
 					},
+					"maxParallelImagePullss": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxParallelImagePulls describes the maximum number of parallel pulls if SerializeImagePulls is false. Default 10 This field is only available for Kubernetes v1.27 or later.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
 					"registryPullQPS": {
 						SchemaProps: spec.SchemaProps{
 							Description: "RegistryPullQPS is the limit of registry pulls per second. The value must not be a negative number. Setting it to 0 means no limit. Default: 5",

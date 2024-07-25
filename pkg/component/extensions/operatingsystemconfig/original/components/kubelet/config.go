@@ -91,6 +91,7 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddresses []string, clu
 		RuntimeRequestTimeout:            metav1.Duration{Duration: 2 * time.Minute},
 		SeccompDefault:                   params.SeccompDefault,
 		SerializeImagePulls:              params.SerializeImagePulls,
+		MaxParallelImagePulls:            params.MaxParallelImagePulls,
 		ServerTLSBootstrap:               true,
 		StreamingConnectionIdleTimeout:   *params.StreamingConnectionIdleTimeout,
 		RegisterWithTaints:               nodeTaints,
@@ -230,6 +231,10 @@ func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters, kubern
 
 	if c.SerializeImagePulls == nil {
 		c.SerializeImagePulls = ptr.To(true)
+	}
+
+	if c.MaxParallelImagePulls == nil {
+		c.MaxParallelImagePulls = ptr.To[int32](10)
 	}
 
 	if c.KubeReserved == nil {

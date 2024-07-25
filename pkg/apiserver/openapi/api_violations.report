@@ -248,6 +248,7 @@ API rule violation: list_type_missing,k8s.io/apimachinery/pkg/runtime,RawExtensi
 API rule violation: list_type_missing,k8s.io/apimachinery/pkg/runtime,Unknown,Raw
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,DataVolume,VolumeSize
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,KubeControllerManagerConfig,HorizontalPodAutoscalerConfig
+API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,KubeletConfig,MaxParallelImagePulls
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,KubeletConfig,PodPIDsLimit
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,MachineTypeStorage,StorageSize
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,ResourceWatchCacheSize,CacheSize
