@@ -21,4 +21,4 @@ Apache 2 license (https://git.k8s.io/kubernetes/LICENSE).
 
 ## Container Images
 
-The list of container images and versions deployed by the Gardener can be found [here](imagevector/images.yaml).
+The list of container images and versions deployed by the Gardener can be found [here](imagevector/containers.yaml).

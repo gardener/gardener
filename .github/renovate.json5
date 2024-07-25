@@ -42,16 +42,16 @@
       "datasourceTemplate": "docker"
     },
     {
-      // Generic detection of container images in images.yaml via container registry.
+      // Generic detection of container images in containers.yaml via container registry.
       "customType": "regex",
-      "fileMatch": ["^imagevector\/images.yaml$"],
+      "fileMatch": ["^imagevector\/containers.yaml$"],
       "matchStrings": ["\\s+repository:\\s+(?<depName>.*?)\\n\\s+tag:\\s+[\"]?(?<currentValue>.*?)[\"]?\\n"],
       "datasourceTemplate": "docker"
     },
     {
-      // Generic detection of container images in images.yaml via github releases.
+      // Generic detection of container images in containers.yaml via github releases.
       "customType": "regex",
-      "fileMatch": ["^imagevector\/images.yaml$"],
+      "fileMatch": ["^imagevector\/containers.yaml$"],
       "matchStrings": ["\\s+sourceRepository:\\s+github.com\/(?<depName>.*?)\\n\\s+repository:\\s+.*\\n\\s+tag:\\s+[\"]?(?<currentValue>.*?)[\"]?\\n"],
       "datasourceTemplate": "github-releases"
     },

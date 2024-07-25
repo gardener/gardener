@@ -1,7 +1,7 @@
 # Image Vector
 
 The Gardener components are deploying several different container images into the garden, seed, and the shoot clusters.
-The image repositories and tags are defined in a [central image vector file](../../imagevector/images.yaml).
+The image repositories and tags are defined in a [central image vector file](../../imagevector/containers.yaml).
 Obviously, the image versions defined there must fit together with the deployment manifests (e.g., some command-line flags do only exist in certain versions).
 
 ## Example

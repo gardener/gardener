@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	//go:embed images.yaml
+	//go:embed containers.yaml
 	imagesYAML  string
 	imageVector imagevector.ImageVector
 )
