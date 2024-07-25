@@ -17,15 +17,22 @@ type ImageSource struct {
 	TargetVersion  *string  `json:"targetVersion,omitempty" yaml:"targetVersion,omitempty"`
 	Architectures  []string `json:"architectures,omitempty" yaml:"architectures,omitempty"`
 
-	Repository string  `json:"repository" yaml:"repository"`
+	// Either Ref or Repository must be provided. If Repository is used, Tag can either be a digest only
+	// (e.g., `sha256:073...`), or tag+digest combined (e.g., `v1.2.3@sha256:073...`).
+	Ref        *string `json:"ref,omitempty" yaml:"ref,omitempty"`
+	Repository *string `json:"repository" yaml:"repository"`
 	Tag        *string `json:"tag,omitempty" yaml:"tag,omitempty"`
-	Version    *string `json:"version,omitempty" yaml:"version,omitempty"`
+
+	// Version is a human-readable version of the image (helpful in case the ref/tag does not specify it because only a
+	// digest is used).
+	Version *string `json:"version,omitempty" yaml:"version,omitempty"`
 }
 
 // Image is a concrete, pullable image with a nonempty tag.
 type Image struct {
 	Name       string
-	Repository string
+	Ref        *string
+	Repository *string
 	Tag        *string
 	Version    *string
 }

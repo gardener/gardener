@@ -68,6 +68,11 @@ func ReadGlobalImageVectorWithEnvOverride(filePath string) (ImageVector, error) 
 // If the tag of the override is non-empty, it immediately returns the override.
 // Otherwise, the override is copied, gets the tag of the old source and is returned.
 func mergeImageSources(old, override *ImageSource) *ImageSource {
+	repository := override.Repository
+	if repository == nil {
+		repository = old.Repository
+	}
+
 	tag := override.Tag
 	if tag == nil {
 		tag = old.Tag
@@ -79,6 +84,14 @@ func mergeImageSources(old, override *ImageSource) *ImageSource {
 	}
 	if version == nil && tag != nil {
 		version = old.Tag
+	}
+
+	ref := override.Ref
+	if ref == nil && override.Repository == nil {
+		ref = old.Ref
+	}
+	if ref != nil {
+		repository, tag = nil, nil
 	}
 
 	runtimeVersion := override.RuntimeVersion
@@ -101,7 +114,8 @@ func mergeImageSources(old, override *ImageSource) *ImageSource {
 		RuntimeVersion: runtimeVersion,
 		TargetVersion:  targetVersion,
 		Architectures:  architectures,
-		Repository:     override.Repository,
+		Ref:            ref,
+		Repository:     repository,
 		Tag:            tag,
 		Version:        version,
 	}
@@ -255,7 +269,7 @@ func checkVersionConstraint(constraint, version *string) (score int, ok bool, er
 }
 
 func checkArchitectureConstraint(source []string, desired *string) (score int, ok bool) {
-	// if image doesn't have a architecture tag it is considered as multi arch image
+	// if image doesn't have an architecture tag it is considered as multi arch image
 	// and if worker pool machine doesn't have architecture tag it is by default considered amd64 machine.
 	var sourceArch, desiredArch = []string{v1beta1constants.ArchitectureAMD64, v1beta1constants.ArchitectureARM64}, v1beta1constants.ArchitectureAMD64
 
@@ -359,9 +373,17 @@ func FindImages(v ImageVector, names []string, opts ...FindOptionFunc) (map[stri
 	return images, nil
 }
 
-// ToImage applies the given <targetK8sVersion> to the source to produce an output image.
+// ToImage applies the given <targetK8sVersion> to the source to produce an output image. This only works when the image
+// is not specified via 'Ref' and when 'Tag' is not set.
 // If the tag of an image source is empty, it will use the given <targetVersion> as tag.
 func (i *ImageSource) ToImage(targetVersion *string) *Image {
+	if i.Ref != nil {
+		return &Image{
+			Name: i.Name,
+			Ref:  i.Ref,
+		}
+	}
+
 	tag := i.Tag
 	if tag == nil && targetVersion != nil {
 		version := fmt.Sprintf("v%s", strings.TrimLeft(*targetVersion, "v"))
@@ -381,18 +403,26 @@ func (i *ImageSource) ToImage(targetVersion *string) *Image {
 	}
 }
 
-// WithOptionalTag will set the 'Tag' field of the 'Image' to <tag> in case it is nil. If 'Tag' is already set, nothing
-// happens.
+// WithOptionalTag will set the 'Tag' field of the 'Image' to <tag> in case it is nil and no <ref> is specified for the
+// image. If 'Tag' is already set, nothing happens.
 func (i *Image) WithOptionalTag(tag string) {
-	if i.Tag == nil {
+	if i.Ref == nil && i.Tag == nil {
 		i.Tag = &tag
 	}
 }
 
 // String returns the string representation of the image.
 func (i *Image) String() string {
+	if i.Ref != nil {
+		return *i.Ref
+	}
+
+	if i.Repository == nil {
+		return ""
+	}
+
 	if i.Tag == nil {
-		return i.Repository
+		return *i.Repository
 	}
 
 	delimiter := ":"
@@ -400,7 +430,7 @@ func (i *Image) String() string {
 		delimiter = "@"
 	}
 
-	return i.Repository + delimiter + *i.Tag
+	return *i.Repository + delimiter + *i.Tag
 }
 
 // ImageMapToValues transforms the given image name to image mapping into chart Values.

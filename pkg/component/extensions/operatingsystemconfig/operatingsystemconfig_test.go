@@ -75,7 +75,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			clusterDomain       = "cluster-domain"
 			images              = map[string]*imagevector.Image{
 				"gardener-node-agent": {},
-				"pause-container":     {Repository: "registry.k8s.io/pause", Tag: ptr.To("latest")},
+				"pause-container":     {Repository: ptr.To("registry.k8s.io/pause"), Tag: ptr.To("latest")},
 			}
 			evictionHardMemoryAvailable = "100Mi"
 			kubeletConfig               = &gardencorev1beta1.KubeletConfig{
@@ -198,7 +198,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				for imageName, image := range images {
 					imagesCopy[imageName] = image
 				}
-				imagesCopy["hyperkube"] = &imagevector.Image{Repository: "europe-docker.pkg.dev/gardener-project/releases/hyperkube", Tag: ptr.To("v" + k8sVersion.String())}
+				imagesCopy["hyperkube"] = &imagevector.Image{Repository: ptr.To("europe-docker.pkg.dev/gardener-project/releases/hyperkube"), Tag: ptr.To("v" + k8sVersion.String())}
 
 				initUnits, initFiles, _ := initConfigFn(
 					worker,
