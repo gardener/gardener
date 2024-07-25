@@ -92,9 +92,6 @@ var _ = Describe("Shoot container runtime testing", func() {
 		rootPodExecutor := framework.NewRootPodExecutor(f.Logger, f.ShootClient, &nodeList.Items[0].Name, "kube-system")
 
 		// check the configuration on the host
-		initializerServiceCommand := fmt.Sprintf("systemctl is-active %s", "containerd-initializer")
-		executeCommand(ctx, rootPodExecutor, initializerServiceCommand, "active")
-
 		containerdServiceCommand := fmt.Sprintf("systemctl is-active %s", "containerd")
 		executeCommand(ctx, rootPodExecutor, containerdServiceCommand, "active")
 
