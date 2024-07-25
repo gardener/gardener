@@ -28,5 +28,5 @@ func ProjectForNamespaceFromLister(projectLister gardencorev1beta1listers.Projec
 		}
 	}
 
-	return nil, apierrors.NewNotFound(core.Resource("Project"), namespaceName)
+	return nil, apierrors.NewNotFound(core.Resource("Project"), "<unknown>")
 }

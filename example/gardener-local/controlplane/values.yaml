@@ -166,6 +166,7 @@ global:
     workloadIdentity:
       token:
         issuer: https://issuer.gardener.cloud.local
+        signing: {}
 
   # Gardener admission controller configuration values
   admission:

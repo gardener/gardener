@@ -405,9 +405,6 @@ A sample payload of a token will look like:
             "name": "<seed-name>",
             "uid": "<seed-uid>",
         },
-        "garden": {
-            "id": "<garden-cluster-identity>",
-        },
     }
 }
 ```

@@ -284,6 +284,12 @@ global:
         # issuer: https://issuer.gardener.cloud
         minExpiration: 1h
         maxExpiration: 48h
+        signing: {}
+ #        secretName: gardener-apiserver-workload-identity-signing-key # must contain 'key.pem' key
+ #        key: |
+ #          -----BEGIN RSA PRIVATE KEY-----
+ #          ...
+ #          -----END RSA PRIVATE KEY-----
   # Gardener admission controller configuration values
   admission:
     enabled: true

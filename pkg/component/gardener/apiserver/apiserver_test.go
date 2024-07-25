@@ -518,6 +518,7 @@ var _ = Describe("GardenerAPIServer", func() {
 						"reference.resources.gardener.cloud/secret-02452d55":    "gardener-apiserver-etcd-encryption-configuration-944a649a",
 						"reference.resources.gardener.cloud/secret-3696832b":    "gardener-apiserver",
 						"reference.resources.gardener.cloud/secret-e01f5645":    "ca-etcd",
+						"reference.resources.gardener.cloud/secret-14294f8f":    "gardener-apiserver-workload-identity-signing-key-f70e59e4",
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
@@ -557,6 +558,7 @@ var _ = Describe("GardenerAPIServer", func() {
 								"reference.resources.gardener.cloud/secret-02452d55":    "gardener-apiserver-etcd-encryption-configuration-944a649a",
 								"reference.resources.gardener.cloud/secret-3696832b":    "gardener-apiserver",
 								"reference.resources.gardener.cloud/secret-e01f5645":    "ca-etcd",
+								"reference.resources.gardener.cloud/secret-14294f8f":    "gardener-apiserver-workload-identity-signing-key-f70e59e4",
 							},
 						},
 						Spec: corev1.PodSpec{
@@ -582,6 +584,7 @@ var _ = Describe("GardenerAPIServer", func() {
 									"--log-format=" + logFormat,
 									"--secure-port=8443",
 									"--workload-identity-token-issuer=" + workloadIdentityIssuer,
+									"--workload-identity-signing-key-file=/etc/gardener-apiserver/workload-identity/signing/key.pem",
 									"--http2-max-streams-per-connection=1000",
 									"--etcd-cafile=/srv/kubernetes/etcd/ca/bundle.crt",
 									"--etcd-certfile=/srv/kubernetes/etcd/client/tls.crt",
@@ -636,6 +639,10 @@ var _ = Describe("GardenerAPIServer", func() {
 								},
 								VolumeMounts: []corev1.VolumeMount{
 									{
+										Name:      "gardener-apiserver-workload-identity",
+										MountPath: "/etc/gardener-apiserver/workload-identity/signing",
+									},
+									{
 										Name:      "ca-etcd",
 										MountPath: "/srv/kubernetes/etcd/ca",
 									},
@@ -667,6 +674,20 @@ var _ = Describe("GardenerAPIServer", func() {
 								},
 							}},
 							Volumes: []corev1.Volume{
+								{
+									Name: "gardener-apiserver-workload-identity",
+									VolumeSource: corev1.VolumeSource{
+										Secret: &corev1.SecretVolumeSource{
+											SecretName: "gardener-apiserver-workload-identity-signing-key-f70e59e4",
+											Items: []corev1.KeyToPath{
+												{
+													Key:  "id_rsa",
+													Path: "key.pem",
+												},
+											},
+										},
+									},
+								},
 								{
 									Name: "ca-etcd",
 									VolumeSource: corev1.VolumeSource{

@@ -22,6 +22,7 @@ import (
 const (
 	secretAuditWebhookKubeconfigNamePrefix = "gardener-apiserver-audit-webhook-kubeconfig"
 	secretAdmissionKubeconfigsNamePrefix   = "gardener-apiserver-admission-kubeconfigs"
+	secretWorkloadIdentityNamePrefix       = "gardener-apiserver-workload-identity-signing-key"
 )
 
 func (g *gardenerAPIServer) emptySecret(name string) *corev1.Secret {
@@ -52,4 +53,16 @@ func (g *gardenerAPIServer) reconcileSecretServer(ctx context.Context) (*corev1.
 		CertType:                    secretsutils.ServerCert,
 		SkipPublishingCACertificate: true,
 	}, secretsmanager.SignedByCA(operatorv1alpha1.SecretNameCAGardener), secretsmanager.Rotate(secretsmanager.InPlace))
+}
+
+func (g *gardenerAPIServer) reconcileWorkloadIdentityKey(ctx context.Context) (*corev1.Secret, error) {
+	options := []secretsmanager.GenerateOption{
+		secretsmanager.Persist(),
+		secretsmanager.Rotate(secretsmanager.KeepOld), // TODO(vpnachev): Implement rotation triggers in Garden resource. Revise rotation strategy, if needed.
+	}
+
+	return g.secretsManager.Generate(ctx, &secretsutils.RSASecretConfig{
+		Name: secretWorkloadIdentityNamePrefix,
+		Bits: 4096,
+	}, options...)
 }

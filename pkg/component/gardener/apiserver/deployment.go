@@ -22,6 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 const (
@@ -39,6 +40,7 @@ func (g *gardenerAPIServer) deployment(
 	secretAdmissionKubeconfigs *corev1.Secret,
 	secretETCDEncryptionConfiguration *corev1.Secret,
 	secretAuditWebhookKubeconfig *corev1.Secret,
+	secretWorkloadIdentitySigningKey *corev1.Secret,
 	secretVirtualGardenAccess *gardenerutils.AccessSecret,
 	configMapAuditPolicy *corev1.ConfigMap,
 	configMapAdmissionConfigs *corev1.ConfigMap,
@@ -140,6 +142,7 @@ func (g *gardenerAPIServer) deployment(
 		},
 	}
 
+	injectWorkloadIdentitySettings(deployment, secretWorkloadIdentitySigningKey)
 	apiserver.InjectDefaultSettings(deployment, "virtual-garden-", g.values.Values, secretCAETCD, secretETCDClient, secretServer)
 	apiserver.InjectAuditSettings(deployment, configMapAuditPolicy, secretAuditWebhookKubeconfig, g.values.Audit)
 	apiserver.InjectAdmissionSettings(deployment, configMapAdmissionConfigs, secretAdmissionKubeconfigs, g.values.Values)
@@ -164,4 +167,43 @@ func (g *gardenerAPIServer) deployment(
 	}
 
 	return deployment
+}
+
+func injectWorkloadIdentitySettings(deployment *appsv1.Deployment, secret *corev1.Secret) {
+	const (
+		mountPath  = "/etc/gardener-apiserver/workload-identity/signing"
+		fileName   = "key.pem"
+		volumeName = "gardener-apiserver-workload-identity"
+	)
+
+	deployment.Spec.Template.Spec.Containers[0].Args = append(
+		deployment.Spec.Template.Spec.Containers[0].Args,
+		fmt.Sprintf("--workload-identity-signing-key-file=%s/%s", mountPath, fileName),
+	)
+
+	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+		deployment.Spec.Template.Spec.Containers[0].VolumeMounts,
+		corev1.VolumeMount{
+			Name:      volumeName,
+			MountPath: mountPath,
+		},
+	)
+
+	deployment.Spec.Template.Spec.Volumes = append(
+		deployment.Spec.Template.Spec.Volumes,
+		corev1.Volume{
+			Name: volumeName,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: secret.Name,
+					Items: []corev1.KeyToPath{
+						{
+							Key:  secretsutils.DataKeyRSAPrivateKey,
+							Path: fileName,
+						},
+					},
+				},
+			},
+		},
+	)
 }

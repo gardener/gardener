@@ -38,6 +38,9 @@ spec:
         {{- if (include "gardener-apiserver.hasAdmissionPlugins" .) }}
         checksum/configmap-gardener-apiserver-admission-config: {{ include (print $.Template.BasePath "/apiserver/configmap-admission-config.yaml") . | sha256sum }}
         {{- end }}
+        {{- if .Values.global.apiserver.workloadIdentity.token.signing.key }}
+        checksum/secret-gardener-apiserver-workload-identity-signing-key: {{ include (print $.Template.BasePath "/apiserver/secret-workload-identity.yaml") . | sha256sum }}
+        {{- end }}
         {{- if .Values.global.apiserver.podAnnotations }}
 {{ toYaml .Values.global.apiserver.podAnnotations | indent 8 }}
         {{- end }}
@@ -275,6 +278,9 @@ spec:
         {{- end }}
         - --workload-identity-token-min-expiration={{ .Values.global.apiserver.workloadIdentity.token.minExpiration }}
         - --workload-identity-token-max-expiration={{ .Values.global.apiserver.workloadIdentity.token.maxExpiration }}
+        {{- if or .Values.global.apiserver.workloadIdentity.token.signing.secretName .Values.global.apiserver.workloadIdentity.token.signing.key }}
+        - --workload-identity-signing-key-file=/etc/gardener-apiserver/workload-identity/signing/key.pem
+        {{- end }}
         - --log-level={{ .Values.global.apiserver.logLevel | default "info"  }}
         - --log-format={{ .Values.global.apiserver.logFormat | default "json"  }}
         - --v={{ .Values.global.apiserver.logVerbosity | default "2"  }}
@@ -369,6 +375,10 @@ spec:
         {{- if (include "gardener-apiserver.hasWebhookTokens" .) }}
         - name: gardener-apiserver-admission-tokens
           mountPath: /var/run/secrets/admission-tokens
+        {{- end }}
+        {{- if or .Values.global.apiserver.workloadIdentity.token.signing.secretName .Values.global.apiserver.workloadIdentity.token.signing.key }}
+        - name: gardener-apiserver-workload-identity-signing-key
+          mountPath: /etc/gardener-apiserver/workload-identity/signing
         {{- end }}
       {{- if .Values.global.apiserver.etcd.useSidecar }}
       - name: etcd
@@ -489,6 +499,15 @@ spec:
               path: mutating-webhook-token
               expirationSeconds: {{ .Values.global.apiserver.admission.mutatingWebhook.token.expirationSeconds }}
               audience: {{ .Values.global.apiserver.admission.mutatingWebhook.token.audience }}
+          {{- end }}
+      {{- end }}
+      {{- if .Values.global.apiserver.workloadIdentity.token.signing }}
+      - name: gardener-apiserver-workload-identity-signing-key
+        secret:
+          {{- if .Values.global.apiserver.workloadIdentity.token.signing.secretName }}
+          secretName: {{ .Values.global.apiserver.workloadIdentity.token.signing.secretName }}
+          {{- else if .Values.global.apiserver.workloadIdentity.token.signing.key  }}
+          secretName: gardener-apiserver-workload-identity-signing-key
           {{- end }}
       {{- end }}
 {{- if .Values.global.apiserver.etcd.useSidecar }}

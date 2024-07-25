@@ -103,6 +103,11 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	secretWorkloadIdentityKey, err := g.reconcileWorkloadIdentityKey(ctx)
+	if err != nil {
+		return err
+	}
+
 	if err := secretVirtualGardenAccess.Reconcile(ctx, g.client); err != nil {
 		return err
 	}
@@ -151,7 +156,7 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 		g.horizontalPodAutoscaler(),
 		g.verticalPodAutoscaler(),
 		g.hvpa(),
-		g.deployment(secretCAETCD, secretETCDClient, secretGenericTokenKubeconfig, secretServer, secretAdmissionKubeconfigs, secretETCDEncryptionConfiguration, secretAuditWebhookKubeconfig, secretVirtualGardenAccess, configMapAuditPolicy, configMapAdmissionConfigs),
+		g.deployment(secretCAETCD, secretETCDClient, secretGenericTokenKubeconfig, secretServer, secretAdmissionKubeconfigs, secretETCDEncryptionConfiguration, secretAuditWebhookKubeconfig, secretWorkloadIdentityKey, secretVirtualGardenAccess, configMapAuditPolicy, configMapAdmissionConfigs),
 		g.serviceMonitor(),
 	)
 	if err != nil {
