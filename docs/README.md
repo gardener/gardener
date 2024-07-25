@@ -80,7 +80,7 @@
 * [`extensions.gardener.cloud` API Group](api-reference/extensions.md)
 * [`operations.gardener.cloud` API Group](api-reference/operations.md)
 * [`resources.gardener.cloud` API Group](api-reference/resources.md)
-* [`security.gardener.cloid` API Group](api-reference/security.md)
+* [`security.gardener.cloud` API Group](api-reference/security.md)
 * [`seedmanagement.gardener.cloud` API Group](api-reference/seedmanagement.md)
 * [`settings.gardener.cloud` API Group](api-reference/settings.md)
 
