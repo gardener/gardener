@@ -2,13 +2,12 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package care_test
+package virtualcluster_test
 
 import (
 	"context"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -16,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
@@ -33,24 +34,26 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
-	"github.com/gardener/gardener/pkg/operator/controller/garden/care"
+	"github.com/gardener/gardener/pkg/operator/controller/extension/virtualcluster"
 	"github.com/gardener/gardener/pkg/operator/features"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	gardenerenvtest "github.com/gardener/gardener/test/envtest"
+	"github.com/gardener/gardener/test/framework"
 )
 
-func TestGarden(t *testing.T) {
+func TestVirtualCluster(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Test Integration Operator Garden Care Suite")
+	RunSpecs(t, "Test Integration Operator Extension VirtualCluster Suite")
 }
 
-const testID = "garden-care-controller-test"
+const testID = "garden-extension-virtualcluster-test"
 
 var (
 	ctx = context.Background()
 	log logr.Logger
 
 	restConfig    *rest.Config
-	testEnv       *envtest.Environment
+	testEnv       *gardenerenvtest.GardenerTestEnvironment
 	testClient    client.Client
 	testClientSet kubernetes.Interface
 	mgrClient     client.Client
@@ -67,15 +70,18 @@ var _ = BeforeSuite(func() {
 	features.RegisterFeatureGates()
 
 	By("Start test environment")
-	testEnv = &envtest.Environment{
-		CRDInstallOptions: envtest.CRDInstallOptions{
-			Paths: []string{
-				filepath.Join("..", "..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_gardens.yaml"),
-				filepath.Join("..", "..", "..", "..", "..", "example", "resource-manager", "10-crd-resources.gardener.cloud_managedresources.yaml"),
-				filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-druid.gardener.cloud_etcds.yaml"),
+	testEnv = &gardenerenvtest.GardenerTestEnvironment{
+		Environment: &envtest.Environment{
+			CRDInstallOptions: envtest.CRDInstallOptions{
+				Paths: []string{
+					filepath.Join("..", "..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_gardens.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_extensions.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "example", "resource-manager", "10-crd-resources.gardener.cloud_managedresources.yaml"),
+				},
 			},
+			ErrorIfCRDPathMissing: true,
 		},
-		ErrorIfCRDPathMissing: true,
+		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{},
 	}
 
 	var err error
@@ -89,7 +95,11 @@ var _ = BeforeSuite(func() {
 	})
 
 	By("Create test client")
-	testClient, err = client.New(restConfig, client.Options{Scheme: operatorclient.RuntimeScheme})
+	scheme := runtime.NewScheme()
+	framework.Must(operatorclient.AddRuntimeSchemeToScheme(scheme))
+	framework.Must(operatorclient.AddVirtualSchemeToScheme(scheme))
+
+	testClient, err = client.New(restConfig, client.Options{Scheme: scheme})
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Create test Namespaces")
@@ -103,18 +113,9 @@ var _ = BeforeSuite(func() {
 	gardenName = testNamespace.Name
 	testRunID = testNamespace.Name
 
-	istioSystemNamespace := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "istio-system",
-		},
-	}
-	Expect(testClient.Create(ctx, istioSystemNamespace)).To(Succeed())
-	log.Info("Created istio-system namespace for test")
-
 	DeferCleanup(func() {
 		By("Delete test Namespaces")
 		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
-		Expect(testClient.Delete(ctx, istioSystemNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
 	By("Setup manager")
@@ -124,7 +125,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	mgr, err := manager.New(restConfig, manager.Options{
-		Scheme:  operatorclient.RuntimeScheme,
+		Scheme:  scheme,
 		Metrics: metricsserver.Options{BindAddress: "0"},
 		Cache: cache.Options{
 			Mapper: mapper,
@@ -132,9 +133,13 @@ var _ = BeforeSuite(func() {
 				&operatorv1alpha1.Garden{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 				},
+				&operatorv1alpha1.Extension{}: {
+					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
+				},
 			},
 		},
 	})
+
 	Expect(err).NotTo(HaveOccurred())
 	mgrClient = mgr.GetClient()
 
@@ -150,16 +155,12 @@ var _ = BeforeSuite(func() {
 	gardenClientMap := fakeclientmap.NewClientMapBuilder().WithClientSetForKey(keys.ForGarden(&operatorv1alpha1.Garden{ObjectMeta: metav1.ObjectMeta{Name: gardenName}}), testClientSet).Build()
 
 	By("Register controller")
-	Expect((&care.Reconciler{
+	Expect((&virtualcluster.Reconciler{
 		Config: config.OperatorConfiguration{
-			Controllers: config.ControllerConfiguration{
-				GardenCare: config.GardenCareControllerConfiguration{
-					SyncPeriod: &metav1.Duration{Duration: 500 * time.Millisecond},
-				},
-			},
+			Controllers: config.ControllerConfiguration{},
 		},
-		GardenNamespace: testNamespace.Name,
-	}).AddToManager(ctx, mgr, gardenClientMap)).To(Succeed())
+		GardenNamespace: v1beta1constants.GardenNamespace,
+	}).AddToManager(ctx, mgr, gardenClientMap)).Should(Succeed())
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)

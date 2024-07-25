@@ -784,8 +784,8 @@ build:
     - image: local-skaffold/machine-controller-manager-provider-local
       hooks:
         after:
-          - command: 
-              - bash 
+          - command:
+              - bash
               - hack/mcm-provider-local-overwrite.sh
       ko:
         dependencies:
@@ -858,12 +858,6 @@ profiles:
         paths:
           - example/provider-local/garden/skaffold
           - example/provider-local/seed-kind-ha-multi-zone/skaffold
-  - name: operator
-    manifests:
-      kustomize:
-        paths:
-          - example/provider-local/garden/skaffold
-          - example/provider-local/seed-operator/skaffold
 ---
 apiVersion: skaffold/v4beta7
 kind: Config

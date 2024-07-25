@@ -17,6 +17,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
@@ -47,6 +48,8 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 		Expect(runtimeClient.Create(ctx, backupSecret)).To(Succeed())
 		Expect(runtimeClient.Create(ctx, rootCASecret)).To(Succeed())
 		Expect(runtimeClient.Create(ctx, garden)).To(Succeed())
+
+		Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: "provider-local"}, &operatorv1alpha1.Extension{})).To(Succeed())
 		waitForGardenToBeReconciled(ctx, garden)
 
 		DeferCleanup(func() {
@@ -147,6 +150,16 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 			g.Expect(virtualClusterClient.Client().List(ctx, &seedmanagementv1alpha1.ManagedSeedList{})).To(Succeed())
 			g.Expect(virtualClusterClient.Client().List(ctx, &settingsv1alpha1.ClusterOpenIDConnectPresetList{})).To(Succeed())
 			g.Expect(virtualClusterClient.Client().List(ctx, &operationsv1alpha1.BastionList{})).To(Succeed())
+		}).Should(Succeed())
+
+		By("Verify virtual cluster extension installations")
+		Eventually(func(g Gomega) {
+			controllerRegistrationList := &gardencorev1beta1.ControllerRegistrationList{}
+			g.Expect(virtualClusterClient.Client().List(ctx, controllerRegistrationList)).To(Succeed())
+			g.Expect(controllerRegistrationList.Items).To(ContainElement(MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("provider-local")})})))
+			controllerDeploymentList := &gardencorev1.ControllerDeploymentList{}
+			g.Expect(virtualClusterClient.Client().List(ctx, controllerDeploymentList)).To(Succeed())
+			g.Expect(controllerDeploymentList.Items).To(ContainElement(MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("provider-local")})})))
 		}).Should(Succeed())
 	})
 })

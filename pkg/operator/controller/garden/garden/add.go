@@ -19,14 +19,14 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 )
 
 // ControllerName is the name of this controller.
 const ControllerName = "garden"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(mgr manager.Manager) error {
+func (r *Reconciler) AddToManager(mgr manager.Manager, gardenClientMap clientmap.ClientMap) error {
 	var err error
 
 	if r.RuntimeClientSet == nil {
@@ -59,21 +59,10 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	if r.GardenNamespace == "" {
 		r.GardenNamespace = v1beta1constants.GardenNamespace
 	}
-	if r.GardenClientMap == nil {
-		var err error
-		r.GardenClientMap, err = clientmapbuilder.
-			NewGardenClientMapBuilder().
-			WithRuntimeClient(mgr.GetClient()).
-			WithClientConnectionConfig(&r.Config.VirtualClientConnection).
-			WithGardenNamespace(r.GardenNamespace).
-			Build(mgr.GetLogger())
-		if err != nil {
-			return fmt.Errorf("failed to build garden ClientMap: %w", err)
-		}
-		if err := mgr.Add(r.GardenClientMap); err != nil {
-			return err
-		}
+	if gardenClientMap == nil {
+		return fmt.Errorf("gardenClientMap must not be nil")
 	}
+	r.GardenClientMap = gardenClientMap
 
 	return builder.
 		ControllerManagedBy(mgr).

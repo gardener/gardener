@@ -15,10 +15,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
@@ -26,16 +24,17 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
+	"github.com/gardener/gardener/pkg/operator/predicate"
 )
 
 // ControllerName is the name of this controller.
 const ControllerName = "garden-care"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) error {
+func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gardenClientMap clientmap.ClientMap) error {
 	if r.RuntimeClient == nil {
 		r.RuntimeClient = mgr.GetClient()
 	}
@@ -45,21 +44,10 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	if r.GardenNamespace == "" {
 		r.GardenNamespace = v1beta1constants.GardenNamespace
 	}
-	if r.GardenClientMap == nil {
-		var err error
-		r.GardenClientMap, err = clientmapbuilder.
-			NewGardenClientMapBuilder().
-			WithRuntimeClient(mgr.GetClient()).
-			WithClientConnectionConfig(&r.Config.VirtualClientConnection).
-			WithGardenNamespace(r.GardenNamespace).
-			Build(mgr.GetLogger())
-		if err != nil {
-			return fmt.Errorf("failed to build garden ClientMap: %w", err)
-		}
-		if err := mgr.Add(r.GardenClientMap); err != nil {
-			return err
-		}
+	if gardenClientMap == nil {
+		return fmt.Errorf("gardenClientMap must not be nil")
 	}
+	r.GardenClientMap = gardenClientMap
 
 	c, err := builder.
 		ControllerManagedBy(mgr).
@@ -75,7 +63,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 		Watches(
 			&operatorv1alpha1.Garden{},
 			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(r.GardenPredicate()),
+			builder.WithPredicates(predicate.GardenCreatedOrReconciledSuccessfully()),
 		).Build(r)
 	if err != nil {
 		return err
@@ -90,32 +78,6 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 
 	return nil
-}
-
-// GardenPredicate is a predicate which returns 'true' for create events, and for update events in case the garden was
-// successfully reconciled.
-func (r *Reconciler) GardenPredicate() predicate.Predicate {
-	return predicate.Funcs{
-		CreateFunc: func(event.CreateEvent) bool {
-			return true
-		},
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			garden, ok := e.ObjectNew.(*operatorv1alpha1.Garden)
-			if !ok {
-				return false
-			}
-
-			oldGarden, ok := e.ObjectOld.(*operatorv1alpha1.Garden)
-			if !ok {
-				return false
-			}
-
-			// re-evaluate health status right after a reconciliation operation has succeeded
-			return predicateutils.ReconciliationFinishedSuccessfully(oldGarden.Status.LastOperation, garden.Status.LastOperation)
-		},
-		DeleteFunc:  func(event.DeleteEvent) bool { return false },
-		GenericFunc: func(event.GenericEvent) bool { return false },
-	}
 }
 
 // MapManagedResourceToGarden is a mapper.MapFunc for mapping a ManagedResource to the owning Garden.

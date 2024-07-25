@@ -25,9 +25,23 @@ apiVersion: skaffold/v4beta7
 kind: Config
 metadata:
   name: garden-config
+build:
+  artifacts:
+    - image: local-skaffold/gardener-extension-provider-local-node
+      context: pkg/provider-local/node
+      docker: {}
 manifests:
   rawYaml:
     - example/00-namespace-garden.yaml
     - example/gardener-local/controlplane/domain-secrets.yaml
+    - example/gardener-local/gardenlet/secret-bootstrap-token.yaml
+  kustomize:
+    paths:
+      - example/provider-local/garden/skaffold-operator
+      - example/provider-local/seed-operator/skaffold
+resourceSelector:
+  allow:
+    - groupKind: CloudProfile.core.gardener.cloud
+      image: [".*"]
 deploy:
   kubectl: {}

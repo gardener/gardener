@@ -46,8 +46,9 @@ type Reconciler struct {
 	Recorder              record.EventRecorder
 	Identity              *gardencorev1beta1.Gardener
 	ComponentImageVectors imagevector.ComponentImageVectors
-	GardenClientMap       clientmap.ClientMap
 	GardenNamespace       string
+	// GardenClientMap is the ClientMap used to communicate with the virtual garden cluster. It should be set by AddToManager function but the field is still public for use in tests.
+	GardenClientMap clientmap.ClientMap
 }
 
 // Reconcile performs the main reconciliation logic.

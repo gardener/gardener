@@ -225,9 +225,8 @@ var _ = Describe("Garden controller tests", func() {
 				},
 			},
 			Identity:        &gardencorev1beta1.Gardener{Name: "test-gardener"},
-			GardenClientMap: gardenClientMap,
 			GardenNamespace: testNamespace.Name,
-		}).AddToManager(mgr)).To(Succeed())
+		}).AddToManager(mgr, gardenClientMap)).To(Succeed())
 
 		By("Start manager")
 		mgrContext, mgrCancel := context.WithCancel(ctx)

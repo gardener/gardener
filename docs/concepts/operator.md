@@ -119,9 +119,61 @@ The `spec.virtualCluster.kubernetes.kubeAPIServer.encryptionConfig` field in the
 
 > ℹ️ Note that configuring encryption for a custom resource for the `kube-apiserver` is only supported for Kubernetes versions >= 1.26.
 
+## `Extension` Resource
+
+A Gardener installation relies on extension controllers to provide support for new cloud providers or to add new capabilities. 
+You can find out more about Gardener's extensions and how they can be used [here](../extensions/extension.md#contract-extension-resource).
+
+The `Extension` resource is intended to automate the installation and management of extensions in a Gardener landscape.
+It contains configuration for the following scenarios:
+
+- The deployment of `ControllerRegistration` and `ControllerDeployment` resources in the (virtual) garden cluster.
+- The deployment of [admission controllers](../extensions/admission.md) in the runtime cluster.
+
+In the near future, the `Extension` will be used by the `gardener-operator` to automate the management of the backup bucket for ETCD and DNS records required by the garden cluster.
+To do that, `gardener-operator` will leverage extensions that support `DNSRecord` and `BackupBucket` resources.
+As of today, the support for managed `DNSRecords` and `BackupBuckets` in the `gardener-operator` is still being built.
+However, the `Extension`'s specification already reflects the target picture.
+
+Please find an exemplary `Extension` resource [here](../../example/operator/15-extension.yaml).
+
+### Extension Deployment
+
+The `.spec.deployment` specifies how an extension can be installed for a Gardener landscape and consists of the following parts:
+
+- `.spec.deployment.extension` contains the deployment specification of an extension controller.
+- `.spec.deployment.admission` contains the deployment specification of an admission controller.
+
+Each one is described in more details below.
+
+#### Configuration for Extension Deployment
+
+`.spec.deployment.extension` contains configuration for the registration of an extension controller in the garden cluster. 
+`gardener-operator` follows the same principles described by [this document](../extensions/controllerregistration.md#registering-extension-controllers):
+- `.spec.deployment.extension.helm` and `.spec.deployment.extension.values` are used when creating the `ControllerDeployment` in the garden cluster.
+- `.spec.deployment.extension.policy` and `.spec.deployment.extension.seedSelector` define the extension's installation policy as per the [`ControllerDeployment's` respective fields](../extensions/controllerregistration.md#deployment-configuration-options)
+
+The extension controller can also be deployed in the runtime cluster to manage resources required by the `Garden` resource. 
+Since the environment in the runtime cluster may differ from that of a `Seed`, the extension is installed in the runtime cluster with a distinct set of Helm chart values specified in `.spec.deployment.extension.runtimeValues`. 
+This configuration allows for precise control over various extension parameters, such as requested resources, [priority classes](../development/priority-classes.md), and more.
+
+#### Configuration for Admission Deployment
+
+The `.spec.deployment.admission` defines how an extension's admission controller may be deployed by the `gardener-operator`.
+The deployment of an admission controller is optional and may be omitted.
+Typically, the admission controllers run in the runtime cluster alongside the virtual cluster deployment.
+However, to function properly, the admission controllers require access and permissions for the virtual garden cluster in order to watch the Gardener API resources like `Shoot`s.
+As of today, deployment of admission controllers via `.spec.deployment.admission` is not yet supported, but it is currently under active development.
+
+### Configuration for Extension Resources
+
+The `.spec.resources` field refers to the extension resources as defined by Gardener in the `extensions.gardener.cloud/v1alpha1` API. 
+These include both well-known types such as `Infrastructure`, `Worker` etc. and [generic resources](https://github.com/gardener/gardener/blob/master/docs/extensions/controllerregistration.md#extension-resource-configurations). 
+The field will be used to populate the respective field in the resulting `ControllerRegistration` in the garden cluster.
+
 ## Controllers
 
-As of today, the `gardener-operator` only has two controllers which are now described in more detail.
+The `gardener-operator` controllers are now described in more detail.
 
 ### [`Garden` Controller](../../pkg/operator/controller/garden)
 
@@ -497,6 +549,13 @@ Currently, this applies to two controllers:
 
 The registration happens as soon as the `Garden` resource is created.
 It contains the networking information of the garden runtime cluster which is required configuration for the `NetworkPolicy` controller.
+
+### [`Extension` Controller](../../pkg/operator/controller/extension)
+
+Gardener relies on extensions to provide various capabilities, such as supporting cloud providers. 
+This controller automates the management of extensions by managing all necessary resources in the runtime and virtual garden clusters.
+
+Currently, this controller only supports the reconciliation of `ControllerDeployment` and `ControllerRegistration` resources in the virtual garden cluster.
 
 ## Webhooks
 

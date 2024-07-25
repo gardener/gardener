@@ -15,25 +15,33 @@ import (
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controller/networkpolicy"
 	"github.com/gardener/gardener/pkg/controller/service"
 	"github.com/gardener/gardener/pkg/controller/vpaevictionrequirements"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	"github.com/gardener/gardener/pkg/operator/controller/controllerregistrar"
+	"github.com/gardener/gardener/pkg/operator/controller/extension/virtualcluster"
 	"github.com/gardener/gardener/pkg/operator/controller/garden"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // AddToManager adds all controllers to the given manager.
-func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.OperatorConfiguration) error {
+func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.OperatorConfiguration, gardenClientMap clientmap.ClientMap) error {
 	identity, err := gardenerutils.DetermineIdentity()
 	if err != nil {
 		return err
 	}
 
-	if err := garden.AddToManager(ctx, mgr, cfg, identity); err != nil {
+	if err := garden.AddToManager(ctx, mgr, cfg, identity, gardenClientMap); err != nil {
 		return err
+	}
+
+	if err := (&virtualcluster.Reconciler{
+		Config: *cfg,
+	}).AddToManager(ctx, mgr, gardenClientMap); err != nil {
+		return fmt.Errorf("failed adding Extension virtual cluster controller: %w", err)
 	}
 
 	if err := (&controllerregistrar.Reconciler{
