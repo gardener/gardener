@@ -23,7 +23,7 @@ Finally, the `gardener-node-agent` runs a systemd service watching on secret res
 
 This section describes how the `gardener-node-agent` is initially installed onto the worker node.
 
-In the beginning, there is a very small bash script called [`gardener-node-init.sh`](../../pkg/component/extensions/operatingsystemconfig/original/components/containerd/templates/scripts/init.tpl.sh), which will be copied to `/var/lib/gardener-node-agent/init.sh` on the node with cloud-init data.
+In the beginning, there is a very small bash script called [`gardener-node-init.sh`](../../pkg/component/extensions/operatingsystemconfig/nodeinit/templates/scripts/init.tpl.sh), which will be copied to `/var/lib/gardener-node-agent/init.sh` on the node with cloud-init data.
 This script's sole purpose is downloading and starting the `gardener-node-agent`.
 The binary artifact is extracted from an [OCI artifact](https://github.com/opencontainers/image-spec/blob/main/manifest.md) and lives at `/opt/bin/gardener-node-agent`.
 
