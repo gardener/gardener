@@ -128,7 +128,7 @@ The `Extension` resource is intended to automate the installation and management
 It contains configuration for the following scenarios:
 
 - The deployment of `ControllerRegistration` and `ControllerDeployment` resources in the (virtual) garden cluster.
-- The deployment of [admission controllers](https://github.com/gardener/gardener/blob/master/docs/extensions/admission.md) in the runtime cluster.
+- The deployment of [admission controllers](../extensions/admission.md) in the runtime cluster.
 
 In the near future, the `Extension` will be used by the `gardener-operator` to automate the management of the backup bucket for ETCD and DNS records required by the garden cluster.
 To do that, `gardener-operator` will leverage extensions that support `DNSRecord` and `BackupBucket` resources.
