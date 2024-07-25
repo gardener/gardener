@@ -169,7 +169,10 @@ func (r *Reconciler) projectInUseDueToSecrets(ctx context.Context, namespace str
 		return false, err
 	}
 
-	secretBindingSecretNames := computeSecretNames(secretBindingRefSecretList.Items)
+	secretBindingSecretNames := sets.New[string]()
+	for _, secret := range secretBindingRefSecretList.Items {
+		secretBindingSecretNames.Insert(secret.Name)
+	}
 	if secretBindingSecretNames.Len() > 0 {
 		usedDueToSecretBindings, err := r.relevantSecretBindingsInUse(ctx, func(secretBinding gardencorev1beta1.SecretBinding) bool {
 			return secretBinding.SecretRef.Namespace == namespace && secretBindingSecretNames.Has(secretBinding.SecretRef.Name)
@@ -189,7 +192,10 @@ func (r *Reconciler) projectInUseDueToSecrets(ctx context.Context, namespace str
 		return false, err
 	}
 
-	credentialsBindingsSecretNames := computeSecretNames(credentialsBindingRefSecretList.Items)
+	credentialsBindingsSecretNames := sets.New[string]()
+	for _, secret := range credentialsBindingRefSecretList.Items {
+		credentialsBindingsSecretNames.Insert(secret.Name)
+	}
 	if credentialsBindingsSecretNames.Len() == 0 {
 		return false, nil
 	}
@@ -363,33 +369,6 @@ func (r *Reconciler) credentialsBindingInUse(ctx context.Context, namespaceToCre
 	}
 
 	return false, nil
-}
-
-// computeSecretNames determines the names of Secrets that are of type Opaque and don't have owner references to a
-// Shoot.
-func computeSecretNames(secretList []corev1.Secret) sets.Set[string] {
-	names := sets.New[string]()
-
-	for _, secret := range secretList {
-		if secret.Type != corev1.SecretTypeOpaque {
-			continue
-		}
-
-		hasOwnerRef := false
-		for _, ownerRef := range secret.OwnerReferences {
-			if ownerRef.APIVersion == gardencorev1beta1.SchemeGroupVersion.String() && ownerRef.Kind == "Shoot" {
-				hasOwnerRef = true
-				break
-			}
-		}
-		if hasOwnerRef {
-			continue
-		}
-
-		names.Insert(secret.Name)
-	}
-
-	return names
 }
 
 // computeQuotaNames determines the names of Quotas from the given slice.
