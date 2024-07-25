@@ -16,7 +16,8 @@ metadata:
   name: local
   namespace: garden-local
 spec:
-  cloudProfileName: local
+  cloudProfile:
+    name: local
   region: local
   provider:
     type: local

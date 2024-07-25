@@ -6196,7 +6196,7 @@ func Convert_core_ShootSSHKeypairRotation_To_v1beta1_ShootSSHKeypairRotation(in 
 
 func autoConvert_v1beta1_ShootSpec_To_core_ShootSpec(in *ShootSpec, out *core.ShootSpec, s conversion.Scope) error {
 	out.Addons = (*core.Addons)(unsafe.Pointer(in.Addons))
-	out.CloudProfileName = in.CloudProfileName
+	out.CloudProfileName = (*string)(unsafe.Pointer(in.CloudProfileName))
 	out.DNS = (*core.DNS)(unsafe.Pointer(in.DNS))
 	out.Extensions = *(*[]core.Extension)(unsafe.Pointer(&in.Extensions))
 	out.Hibernation = (*core.Hibernation)(unsafe.Pointer(in.Hibernation))
@@ -6232,7 +6232,7 @@ func Convert_v1beta1_ShootSpec_To_core_ShootSpec(in *ShootSpec, out *core.ShootS
 
 func autoConvert_core_ShootSpec_To_v1beta1_ShootSpec(in *core.ShootSpec, out *ShootSpec, s conversion.Scope) error {
 	out.Addons = (*Addons)(unsafe.Pointer(in.Addons))
-	out.CloudProfileName = in.CloudProfileName
+	out.CloudProfileName = (*string)(unsafe.Pointer(in.CloudProfileName))
 	out.DNS = (*DNS)(unsafe.Pointer(in.DNS))
 	out.Extensions = *(*[]Extension)(unsafe.Pointer(&in.Extensions))
 	out.Hibernation = (*Hibernation)(unsafe.Pointer(in.Hibernation))

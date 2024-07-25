@@ -50,6 +50,7 @@ var _ = Describe("validator", func() {
 			coreInformerFactory     gardencoreinformers.SharedInformerFactory
 			securityInformerFactory securityinformers.SharedInformerFactory
 			cloudProfile            gardencorev1beta1.CloudProfile
+			namespacedCloudProfile  gardencorev1beta1.NamespacedCloudProfile
 			seed                    gardencorev1beta1.Seed
 			secretBinding           gardencorev1beta1.SecretBinding
 			credentialsBinding      securityv1alpha1.CredentialsBinding
@@ -186,6 +187,19 @@ var _ = Describe("validator", func() {
 					},
 				},
 			}
+			namespacedCloudProfileBase = gardencorev1beta1.NamespacedCloudProfile{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "namespacedprofile",
+					Namespace: namespaceName,
+				},
+				Spec: gardencorev1beta1.NamespacedCloudProfileSpec{Parent: gardencorev1beta1.CloudProfileReference{
+					Kind: "CloudProfile",
+					Name: cloudProfileBase.Name,
+				}},
+				Status: gardencorev1beta1.NamespacedCloudProfileStatus{
+					CloudProfileSpec: cloudProfileBase.Spec,
+				},
+			}
 			seedBase = gardencorev1beta1.Seed{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: seedName,
@@ -224,7 +238,7 @@ var _ = Describe("validator", func() {
 					Namespace: namespaceName,
 				},
 				Spec: core.ShootSpec{
-					CloudProfileName:       "profile",
+					CloudProfileName:       ptr.To("profile"),
 					Region:                 "europe",
 					SecretBindingName:      ptr.To("my-secret"),
 					CredentialsBindingName: ptr.To("my-secret"),
@@ -300,6 +314,7 @@ var _ = Describe("validator", func() {
 
 			project = projectBase
 			cloudProfile = *cloudProfileBase.DeepCopy()
+			namespacedCloudProfile = *namespacedCloudProfileBase.DeepCopy()
 			seed = seedBase
 			secretBinding = secretBindingBase
 			credentialsBinding = credentialsBindingBase
@@ -820,6 +835,152 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Admit(ctx, attrs, nil)
 
 				Expect(err).To(BeInternalServerError())
+			})
+
+			Context("CloudProfile reference and CloudProfileName", func() {
+				BeforeEach(func() {
+					shoot.Spec.SeedName = nil
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(&namespacedCloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
+					shoot.Spec.CloudProfile = nil
+					shoot.Spec.CloudProfileName = nil
+				})
+
+				It("should fail when both cloudProfileName and cloudProfile are provided for a new shoot", func() {
+					shoot.Spec.CloudProfileName = ptr.To("profile")
+					shoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "CloudProfile",
+						Name: "profile",
+					}
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).To(MatchError(ContainSubstring("either cloudProfileName or cloudProfile reference")))
+				})
+
+				It("should pass on update for a unchanged CloudProfile reference with CloudProfileName set accordingly", func() {
+					shoot.Spec.CloudProfileName = ptr.To("profile")
+					shoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "CloudProfile",
+						Name: "profile",
+					}
+					oldShoot := shoot.DeepCopy()
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).ToNot(HaveOccurred())
+				})
+
+				It("should pass for a given CloudProfile by CloudProfileName", func() {
+					shoot.Spec.CloudProfileName = ptr.To("profile")
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).ToNot(HaveOccurred())
+				})
+
+				It("should pass for a given CloudProfile by CloudProfile reference", func() {
+					shoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "CloudProfile",
+						Name: "profile",
+					}
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).ToNot(HaveOccurred())
+				})
+
+				It("should pass for a given NamespacedCloudProfile", func() {
+					shoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "NamespacedCloudProfile",
+						Name: "namespacedprofile",
+					}
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).ToNot(HaveOccurred())
+				})
+
+				It("should pass validation on a change from a CloudProfile to a NamespacedCloudProfile", func() {
+					oldShoot := shoot.DeepCopy()
+					oldShoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "CloudProfile",
+						Name: "profile",
+					}
+					shoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "NamespacedCloudProfile",
+						Name: "namespacedprofile",
+					}
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).ToNot(HaveOccurred())
+				})
+
+				It("should pass validation on a change from a CloudProfileName to a NamespacedCloudProfile", func() {
+					oldShoot := shoot.DeepCopy()
+					oldShoot.Spec.CloudProfileName = ptr.To("profile")
+					shoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "NamespacedCloudProfile",
+						Name: "namespacedprofile",
+					}
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).ToNot(HaveOccurred())
+				})
+
+				It("should fail validation on a change from a CloudProfile to a NamespacedCloudProfile with forbidden parent", func() {
+					anotherCloudProfile := *cloudProfileBase.DeepCopy()
+					anotherCloudProfile.Name = "another-root-profile"
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&anotherCloudProfile)).To(Succeed())
+
+					anotherNamespacedCloudProfile := *namespacedCloudProfileBase.DeepCopy()
+					anotherNamespacedCloudProfile.Name = "another-namespacedprofile"
+					anotherNamespacedCloudProfile.Spec.Parent.Name = "another-root-profile"
+					Expect(coreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(&anotherNamespacedCloudProfile)).To(Succeed())
+
+					oldShoot := shoot.DeepCopy()
+					oldShoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "CloudProfile",
+						Name: "profile",
+					}
+					shoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "NamespacedCloudProfile",
+						Name: "another-namespacedprofile",
+					}
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).To(MatchError(ContainSubstring("a Seed's CloudProfile may only be changed to a descendant NamespacedCloudProfile")))
+				})
+
+				It("should fail validation on a change from a CloudProfileName to a NamespacedCloudProfile with forbidden parent", func() {
+					anotherCloudProfile := *cloudProfileBase.DeepCopy()
+					anotherCloudProfile.Name = "another-root-profile"
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&anotherCloudProfile)).To(Succeed())
+
+					anotherNamespacedCloudProfile := *namespacedCloudProfileBase.DeepCopy()
+					anotherNamespacedCloudProfile.Name = "another-namespacedprofile"
+					anotherNamespacedCloudProfile.Spec.Parent.Name = "another-root-profile"
+					Expect(coreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(&anotherNamespacedCloudProfile)).To(Succeed())
+
+					oldShoot := shoot.DeepCopy()
+					oldShoot.Spec.CloudProfileName = ptr.To("profile")
+					shoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "NamespacedCloudProfile",
+						Name: "another-namespacedprofile",
+					}
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).To(MatchError(ContainSubstring("a Seed's CloudProfile may only be changed to a descendant NamespacedCloudProfile")))
+				})
 			})
 
 			It("should reject because the referenced seed was not found", func() {
@@ -1455,7 +1616,7 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
 						Expect(err).To(HaveOccurred())
-						Expect(err.Error()).To(ContainSubstring("cannot schedule shoot '%s' on seed '%s' because the seed selector of cloud profile '%s' is not matching the labels of the seed", shoot.Name, seed.Name, cloudProfile.Name))
+						Expect(err.Error()).To(ContainSubstring("cannot schedule shoot '%s' on seed '%s' because the cloud profile seed selector is not matching the labels of the seed", shoot.Name, seed.Name))
 					})
 
 					It("should allow shoot creation on seed that matches one of the provider types in the cloud profile's seed selector", func() {
@@ -1496,7 +1657,7 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
 						Expect(err).To(HaveOccurred())
-						Expect(err.Error()).To(ContainSubstring("cannot schedule shoot '%s' on seed '%s' because none of the provider types in the seed selector of cloud profile '%s' is matching the provider type of the seed", shoot.Name, seed.Name, cloudProfile.Name))
+						Expect(err.Error()).To(ContainSubstring("cannot schedule shoot '%s' on seed '%s' because none of the provider types in the cloud profile seed selector is matching the provider type of the seed", shoot.Name, seed.Name))
 					})
 
 					It("should allow updating the seedName to seed that matches the cloud profile's seed selector (w/ shoots/binding subresource)", func() {
@@ -1537,7 +1698,7 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
 						Expect(err).To(HaveOccurred())
-						Expect(err.Error()).To(ContainSubstring("cannot schedule shoot '%s' on seed '%s' because the seed selector of cloud profile '%s' is not matching the labels of the seed", shoot.Name, seed.Name, cloudProfile.Name))
+						Expect(err.Error()).To(ContainSubstring("cannot schedule shoot '%s' on seed '%s' because the cloud profile seed selector is not matching the labels of the seed", shoot.Name, seed.Name))
 					})
 
 					It("should allow updating the seedName to seed that matches one of the provider types in the cloud profile's seed selector (w/ shoots/binding subresource)", func() {
@@ -1578,7 +1739,7 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
 						Expect(err).To(HaveOccurred())
-						Expect(err.Error()).To(ContainSubstring("cannot schedule shoot '%s' on seed '%s' because none of the provider types in the seed selector of cloud profile '%s' is matching the provider type of the seed", shoot.Name, seed.Name, cloudProfile.Name))
+						Expect(err.Error()).To(ContainSubstring("cannot schedule shoot '%s' on seed '%s' because none of the provider types in the cloud profile seed selector is matching the provider type of the seed", shoot.Name, seed.Name))
 					})
 				})
 			})

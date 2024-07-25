@@ -42,6 +42,7 @@ rules:
   resources:
   - seeds
   - cloudprofiles
+  - namespacedcloudprofiles
   verbs:
   - get
   - list

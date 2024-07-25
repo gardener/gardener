@@ -63,15 +63,16 @@ func Register(plugins *admission.Plugins) {
 // ValidateShoot contains listers and admission handler.
 type ValidateShoot struct {
 	*admission.Handler
-	authorizer               authorizer.Authorizer
-	secretLister             kubecorev1listers.SecretLister
-	cloudProfileLister       gardencorev1beta1listers.CloudProfileLister
-	seedLister               gardencorev1beta1listers.SeedLister
-	shootLister              gardencorev1beta1listers.ShootLister
-	projectLister            gardencorev1beta1listers.ProjectLister
-	secretBindingLister      gardencorev1beta1listers.SecretBindingLister
-	credentialsBindingLister securityv1alpha1listers.CredentialsBindingLister
-	readyFunc                admission.ReadyFunc
+	authorizer                   authorizer.Authorizer
+	secretLister                 kubecorev1listers.SecretLister
+	cloudProfileLister           gardencorev1beta1listers.CloudProfileLister
+	namespacedCloudProfileLister gardencorev1beta1listers.NamespacedCloudProfileLister
+	seedLister                   gardencorev1beta1listers.SeedLister
+	shootLister                  gardencorev1beta1listers.ShootLister
+	projectLister                gardencorev1beta1listers.ProjectLister
+	secretBindingLister          gardencorev1beta1listers.SecretBindingLister
+	credentialsBindingLister     securityv1alpha1listers.CredentialsBindingLister
+	readyFunc                    admission.ReadyFunc
 }
 
 var (
@@ -112,6 +113,9 @@ func (v *ValidateShoot) SetCoreInformerFactory(f gardencoreinformers.SharedInfor
 	cloudProfileInformer := f.Core().V1beta1().CloudProfiles()
 	v.cloudProfileLister = cloudProfileInformer.Lister()
 
+	namespacedCloudProfileInformer := f.Core().V1beta1().NamespacedCloudProfiles()
+	v.namespacedCloudProfileLister = namespacedCloudProfileInformer.Lister()
+
 	projectInformer := f.Core().V1beta1().Projects()
 	v.projectLister = projectInformer.Lister()
 
@@ -123,6 +127,7 @@ func (v *ValidateShoot) SetCoreInformerFactory(f gardencoreinformers.SharedInfor
 		seedInformer.Informer().HasSynced,
 		shootInformer.Informer().HasSynced,
 		cloudProfileInformer.Informer().HasSynced,
+		namespacedCloudProfileInformer.Informer().HasSynced,
 		projectInformer.Informer().HasSynced,
 		secretBindingInformer.Informer().HasSynced,
 	)
@@ -154,6 +159,9 @@ func (v *ValidateShoot) ValidateInitialization() error {
 	}
 	if v.cloudProfileLister == nil {
 		return errors.New("missing cloudProfile lister")
+	}
+	if v.namespacedCloudProfileLister == nil {
+		return errors.New("missing namespacedCloudProfile lister")
 	}
 	if v.seedLister == nil {
 		return errors.New("missing seed lister")
@@ -241,9 +249,18 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, _ adm
 		}
 	}
 
-	cloudProfile, err := v.cloudProfileLister.Get(shoot.Spec.CloudProfileName)
+	cloudProfileSpec, err := admissionutils.GetCloudProfileSpec(v.cloudProfileLister, v.namespacedCloudProfileLister, shoot)
 	if err != nil {
 		return apierrors.NewInternalError(fmt.Errorf("could not find referenced cloud profile: %+v", err.Error()))
+	}
+
+	if a.GetOperation() == admission.Create && len(ptr.Deref(shoot.Spec.CloudProfileName, "")) > 0 && shoot.Spec.CloudProfile != nil {
+		return fmt.Errorf("new shoot can only specify either cloudProfileName or cloudProfile reference")
+	}
+
+	err = admissionutils.ValidateCloudProfileChanges(v.namespacedCloudProfileLister, shoot, oldShoot)
+	if err != nil {
+		return err
 	}
 
 	var seed *gardencorev1beta1.Seed
@@ -277,7 +294,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, _ adm
 
 	// begin of validation code
 	validationContext := &validationContext{
-		cloudProfile:       cloudProfile,
+		cloudProfileSpec:   cloudProfileSpec,
 		project:            project,
 		seed:               seed,
 		secretBinding:      secretBinding,
@@ -328,7 +345,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, _ adm
 }
 
 type validationContext struct {
-	cloudProfile       *gardencorev1beta1.CloudProfile
+	cloudProfileSpec   *gardencorev1beta1.CloudProfileSpec
 	project            *gardencorev1beta1.Project
 	seed               *gardencorev1beta1.Seed
 	secretBinding      *gardencorev1beta1.SecretBinding
@@ -444,18 +461,18 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 			}
 		}
 
-		if seedSelector := c.cloudProfile.Spec.SeedSelector; seedSelector != nil {
+		if seedSelector := c.cloudProfileSpec.SeedSelector; seedSelector != nil {
 			selector, err := metav1.LabelSelectorAsSelector(&seedSelector.LabelSelector)
 			if err != nil {
 				return apierrors.NewInternalError(fmt.Errorf("label selector conversion failed: %v for seedSelector: %w", seedSelector.LabelSelector, err))
 			}
 			if !selector.Matches(labels.Set(c.seed.Labels)) {
-				return admission.NewForbidden(a, fmt.Errorf("cannot schedule shoot '%s' on seed '%s' because the seed selector of cloud profile '%s' is not matching the labels of the seed", c.shoot.Name, c.seed.Name, c.cloudProfile.Name))
+				return admission.NewForbidden(a, fmt.Errorf("cannot schedule shoot '%s' on seed '%s' because the cloud profile seed selector is not matching the labels of the seed", c.shoot.Name, c.seed.Name))
 			}
 
 			if seedSelector.ProviderTypes != nil {
 				if !sets.New(seedSelector.ProviderTypes...).HasAny(c.seed.Spec.Provider.Type, "*") {
-					return admission.NewForbidden(a, fmt.Errorf("cannot schedule shoot '%s' on seed '%s' because none of the provider types in the seed selector of cloud profile '%s' is matching the provider type of the seed", c.shoot.Name, c.seed.Name, c.cloudProfile.Name))
+					return admission.NewForbidden(a, fmt.Errorf("cannot schedule shoot '%s' on seed '%s' because none of the provider types in the cloud profile seed selector is matching the provider type of the seed", c.shoot.Name, c.seed.Name))
 				}
 			}
 		}
@@ -618,7 +635,7 @@ func (c *validationContext) ensureMachineImages() field.ErrorList {
 		for idx, worker := range c.shoot.Spec.Provider.Workers {
 			fldPath := field.NewPath("spec", "provider", "workers").Index(idx)
 
-			image, err := ensureMachineImage(c.oldShoot.Spec.Provider.Workers, worker, c.cloudProfile.Spec.MachineImages, fldPath)
+			image, err := ensureMachineImage(c.oldShoot.Spec.Provider.Workers, worker, c.cloudProfileSpec.MachineImages, fldPath)
 			if err != nil {
 				allErrs = append(allErrs, err)
 				continue
@@ -795,7 +812,7 @@ func (c *validationContext) validateKubernetes(a admission.Attributes) field.Err
 		return nil
 	}
 
-	defaultVersion, errList := defaultKubernetesVersion(c.cloudProfile.Spec.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, path.Child("version"))
+	defaultVersion, errList := defaultKubernetesVersion(c.cloudProfileSpec.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, path.Child("version"))
 	if len(errList) > 0 {
 		allErrs = append(allErrs, errList...)
 	}
@@ -804,7 +821,7 @@ func (c *validationContext) validateKubernetes(a admission.Attributes) field.Err
 		c.shoot.Spec.Kubernetes.Version = *defaultVersion
 	} else {
 		// We assume that the 'defaultVersion' is already calculated correctly, so only run validation if the version was not defaulted.
-		allErrs = append(allErrs, validateKubernetesVersionConstraints(a, c.cloudProfile.Spec.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version, false, path.Child("version"))...)
+		allErrs = append(allErrs, validateKubernetesVersionConstraints(a, c.cloudProfileSpec.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version, false, path.Child("version"))...)
 	}
 
 	if c.shoot.DeletionTimestamp == nil {
@@ -865,8 +882,8 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 		return nil
 	}
 
-	if c.shoot.Spec.Provider.Type != c.cloudProfile.Spec.Type {
-		allErrs = append(allErrs, field.Invalid(path.Child("type"), c.shoot.Spec.Provider.Type, fmt.Sprintf("provider type in shoot must equal provider type of referenced CloudProfile: %q", c.cloudProfile.Spec.Type)))
+	if c.shoot.Spec.Provider.Type != c.cloudProfileSpec.Type {
+		allErrs = append(allErrs, field.Invalid(path.Child("type"), c.shoot.Spec.Provider.Type, fmt.Sprintf("provider type in shoot must equal provider type of referenced CloudProfile: %q", c.cloudProfileSpec.Type)))
 		// exit early, all other validation errors will be misleading
 		return allErrs
 	}
@@ -912,7 +929,7 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 			allErrs = append(allErrs, field.NotSupported(idxPath.Child("machine", "architecture"), *worker.Machine.Architecture, v1beta1constants.ValidArchitectures))
 		} else {
 			var (
-				isMachinePresentInCloudprofile, architectureSupported, availableInAllZones, isUsableMachine, supportedMachineTypes = validateMachineTypes(c.cloudProfile.Spec.MachineTypes, worker.Machine, oldWorker.Machine, c.cloudProfile.Spec.Regions, c.shoot.Spec.Region, worker.Zones)
+				isMachinePresentInCloudprofile, architectureSupported, availableInAllZones, isUsableMachine, supportedMachineTypes = validateMachineTypes(c.cloudProfileSpec.MachineTypes, worker.Machine, oldWorker.Machine, c.cloudProfileSpec.Regions, c.shoot.Spec.Region, worker.Zones)
 				detail                                                                                                             = fmt.Sprintf("machine type %q ", worker.Machine.Type)
 			)
 
@@ -931,7 +948,7 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "type"), worker.Machine.Type, fmt.Sprintf("%ssupported types are %+v", detail, supportedMachineTypes)))
 			}
 
-			isMachineImagePresentInCloudprofile, architectureSupported, activeMachineImageVersion, validMachineImageVersions := validateMachineImagesConstraints(a, c.cloudProfile.Spec.MachineImages, isNewWorkerPool, worker.Machine, oldWorker.Machine)
+			isMachineImagePresentInCloudprofile, architectureSupported, activeMachineImageVersion, validMachineImageVersions := validateMachineImagesConstraints(a, c.cloudProfileSpec.MachineImages, isNewWorkerPool, worker.Machine, oldWorker.Machine)
 			if !isMachineImagePresentInCloudprofile {
 				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "image"), worker.Machine.Image, fmt.Sprintf("machine image version is not supported, supported machine image versions are: %+v", validMachineImageVersions)))
 			} else if !architectureSupported || !activeMachineImageVersion {
@@ -944,7 +961,7 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 				}
 				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "image"), worker.Machine.Image, fmt.Sprintf("%ssupported machine image versions are: %+v", detail, validMachineImageVersions)))
 			} else {
-				allErrs = append(allErrs, validateContainerRuntimeConstraints(c.cloudProfile.Spec.MachineImages, worker, oldWorker, idxPath.Child("cri"))...)
+				allErrs = append(allErrs, validateContainerRuntimeConstraints(c.cloudProfileSpec.MachineImages, worker, oldWorker, idxPath.Child("cri"))...)
 
 				kubeletVersion, err := helper.CalculateEffectiveKubernetesVersion(controlPlaneVersion, worker.Kubernetes)
 				if err != nil {
@@ -952,12 +969,12 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 					// exit early, all other validation errors will be misleading
 					return allErrs
 				}
-				if err := validateKubeletVersionConstraint(c.cloudProfile.Spec.MachineImages, worker, kubeletVersion, idxPath); err != nil {
+				if err := validateKubeletVersionConstraint(c.cloudProfileSpec.MachineImages, worker, kubeletVersion, idxPath); err != nil {
 					allErrs = append(allErrs, err)
 				}
 			}
 		}
-		isVolumePresentInCloudprofile, availableInAllZones, isUsableVolume, supportedVolumeTypes := validateVolumeTypes(c.cloudProfile.Spec.VolumeTypes, worker.Volume, oldWorker.Volume, c.cloudProfile.Spec.Regions, c.shoot.Spec.Region, worker.Zones)
+		isVolumePresentInCloudprofile, availableInAllZones, isUsableVolume, supportedVolumeTypes := validateVolumeTypes(c.cloudProfileSpec.VolumeTypes, worker.Volume, oldWorker.Volume, c.cloudProfileSpec.Regions, c.shoot.Spec.Region, worker.Zones)
 		if !isVolumePresentInCloudprofile {
 			allErrs = append(allErrs, field.NotSupported(idxPath.Child("volume", "type"), ptr.Deref(worker.Volume.Type, ""), supportedVolumeTypes))
 		} else if !availableInAllZones || !isUsableVolume {
@@ -970,14 +987,14 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 			}
 			allErrs = append(allErrs, field.Invalid(idxPath.Child("volume", "type"), *worker.Volume.Type, fmt.Sprintf("%ssupported types are %+v", detail, supportedVolumeTypes)))
 		}
-		if ok, minSize := validateVolumeSize(c.cloudProfile.Spec.VolumeTypes, c.cloudProfile.Spec.MachineTypes, worker.Machine.Type, worker.Volume); !ok {
+		if ok, minSize := validateVolumeSize(c.cloudProfileSpec.VolumeTypes, c.cloudProfileSpec.MachineTypes, worker.Machine.Type, worker.Volume); !ok {
 			allErrs = append(allErrs, field.Invalid(idxPath.Child("volume", "size"), worker.Volume.VolumeSize, fmt.Sprintf("size must be >= %s", minSize)))
 		}
 		if worker.Kubernetes != nil {
 			if worker.Kubernetes.Kubelet != nil {
 				kubeletConfig = worker.Kubernetes.Kubelet
 			}
-			allErrs = append(allErrs, validateKubeletConfig(idxPath.Child("kubernetes").Child("kubelet"), c.cloudProfile.Spec.MachineTypes, worker.Machine.Type, kubeletConfig)...)
+			allErrs = append(allErrs, validateKubeletConfig(idxPath.Child("kubernetes").Child("kubelet"), c.cloudProfileSpec.MachineTypes, worker.Machine.Type, kubeletConfig)...)
 
 			if worker.Kubernetes.Version != nil {
 				oldWorkerKubernetesVersion := c.oldShoot.Spec.Kubernetes.Version
@@ -985,7 +1002,7 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 					oldWorkerKubernetesVersion = *oldWorker.Kubernetes.Version
 				}
 
-				defaultVersion, errList := defaultKubernetesVersion(c.cloudProfile.Spec.Kubernetes.Versions, *worker.Kubernetes.Version, idxPath.Child("kubernetes", "version"))
+				defaultVersion, errList := defaultKubernetesVersion(c.cloudProfileSpec.Kubernetes.Versions, *worker.Kubernetes.Version, idxPath.Child("kubernetes", "version"))
 				if len(errList) > 0 {
 					allErrs = append(allErrs, errList...)
 				}
@@ -994,12 +1011,12 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 					worker.Kubernetes.Version = defaultVersion
 				} else {
 					// We assume that the 'defaultVersion' is already calculated correctly, so only run validation if the version was not defaulted.
-					allErrs = append(allErrs, validateKubernetesVersionConstraints(a, c.cloudProfile.Spec.Kubernetes.Versions, *worker.Kubernetes.Version, oldWorkerKubernetesVersion, isNewWorkerPool, idxPath.Child("kubernetes", "version"))...)
+					allErrs = append(allErrs, validateKubernetesVersionConstraints(a, c.cloudProfileSpec.Kubernetes.Versions, *worker.Kubernetes.Version, oldWorkerKubernetesVersion, isNewWorkerPool, idxPath.Child("kubernetes", "version"))...)
 				}
 			}
 		}
 
-		allErrs = append(allErrs, validateZones(c.cloudProfile.Spec.Regions, c.shoot.Spec.Region, c.oldShoot.Spec.Region, worker, oldWorker, idxPath)...)
+		allErrs = append(allErrs, validateZones(c.cloudProfileSpec.Regions, c.shoot.Spec.Region, c.oldShoot.Spec.Region, worker, oldWorker, idxPath)...)
 	}
 
 	return allErrs
@@ -1417,7 +1434,7 @@ func (c *validationContext) validateRegion() field.ErrorList {
 		return nil
 	}
 
-	for _, r := range c.cloudProfile.Spec.Regions {
+	for _, r := range c.cloudProfileSpec.Regions {
 		validValues = append(validValues, r.Name)
 		if r.Name == region {
 			return nil

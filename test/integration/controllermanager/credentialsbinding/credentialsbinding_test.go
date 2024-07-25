@@ -82,7 +82,7 @@ var _ = Describe("CredentialsBinding controller test", func() {
 				Namespace:    testNamespace.Name,
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				CloudProfileName:       "test-cloudprofile",
+				CloudProfileName:       ptr.To("test-cloudprofile"),
 				CredentialsBindingName: ptr.To(credentialsBinding.Name),
 				Region:                 "foo-region",
 				Provider: gardencorev1beta1.Provider{

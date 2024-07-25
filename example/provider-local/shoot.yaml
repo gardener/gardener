@@ -7,7 +7,8 @@ metadata:
     shoot.gardener.cloud/cloud-config-execution-max-delay-seconds: "0"
     authentication.gardener.cloud/issuer: "managed"
 spec:
-  cloudProfileName: local
+  cloudProfile:
+    name: local
   secretBindingName: local # dummy, doesn't contain any credentials
   region: local
   networking:

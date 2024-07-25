@@ -44,7 +44,7 @@ var _ = Describe("validator", func() {
 					Namespace: namespaceName,
 				},
 				Spec: gardencorev1beta1.ShootSpec{
-					CloudProfileName:  "profile",
+					CloudProfileName:  ptr.To("profile"),
 					Region:            "europe",
 					SecretBindingName: ptr.To("my-secret"),
 					SeedName:          &seedName,

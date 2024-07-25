@@ -31,6 +31,7 @@ import (
 	securityv1alpha1listers "github.com/gardener/gardener/pkg/client/security/listers/security/v1alpha1"
 	timeutils "github.com/gardener/gardener/pkg/utils/time"
 	plugin "github.com/gardener/gardener/plugin/pkg"
+	"github.com/gardener/gardener/plugin/pkg/utils"
 )
 
 var (
@@ -53,13 +54,14 @@ func Register(plugins *admission.Plugins) {
 // QuotaValidator contains listers and admission handler.
 type QuotaValidator struct {
 	*admission.Handler
-	shootLister              gardencorev1beta1listers.ShootLister
-	cloudProfileLister       gardencorev1beta1listers.CloudProfileLister
-	secretBindingLister      gardencorev1beta1listers.SecretBindingLister
-	credentialsBindingLister securityv1alpha1listers.CredentialsBindingLister
-	quotaLister              gardencorev1beta1listers.QuotaLister
-	readyFunc                admission.ReadyFunc
-	time                     timeutils.Ops
+	shootLister                  gardencorev1beta1listers.ShootLister
+	cloudProfileLister           gardencorev1beta1listers.CloudProfileLister
+	namespacedCloudProfileLister gardencorev1beta1listers.NamespacedCloudProfileLister
+	secretBindingLister          gardencorev1beta1listers.SecretBindingLister
+	credentialsBindingLister     securityv1alpha1listers.CredentialsBindingLister
+	quotaLister                  gardencorev1beta1listers.QuotaLister
+	readyFunc                    admission.ReadyFunc
+	time                         timeutils.Ops
 }
 
 var (
@@ -91,6 +93,9 @@ func (q *QuotaValidator) SetCoreInformerFactory(f gardencoreinformers.SharedInfo
 	cloudProfileInformer := f.Core().V1beta1().CloudProfiles()
 	q.cloudProfileLister = cloudProfileInformer.Lister()
 
+	namespacedCloudProfileInformer := f.Core().V1beta1().NamespacedCloudProfiles()
+	q.namespacedCloudProfileLister = namespacedCloudProfileInformer.Lister()
+
 	secretBindingInformer := f.Core().V1beta1().SecretBindings()
 	q.secretBindingLister = secretBindingInformer.Lister()
 
@@ -115,6 +120,9 @@ func (q *QuotaValidator) ValidateInitialization() error {
 	}
 	if q.cloudProfileLister == nil {
 		return errors.New("missing cloudProfile lister")
+	}
+	if q.namespacedCloudProfileLister == nil {
+		return errors.New("missing namespacedCloudProfile lister")
 	}
 	if q.secretBindingLister == nil {
 		return errors.New("missing secretBinding lister")
@@ -397,7 +405,7 @@ func (q *QuotaValidator) determineRequiredResources(allocatedResources corev1.Re
 }
 
 func (q *QuotaValidator) getShootResources(shoot core.Shoot) (corev1.ResourceList, error) {
-	cloudProfile, err := q.cloudProfileLister.Get(shoot.Spec.CloudProfileName)
+	cloudProfileSpec, err := utils.GetCloudProfileSpec(q.cloudProfileLister, q.namespacedCloudProfileLister, &shoot)
 	if err != nil {
 		return nil, apierrors.NewInternalError(fmt.Errorf("could not find referenced cloud profile: %+v", err.Error()))
 	}
@@ -405,9 +413,9 @@ func (q *QuotaValidator) getShootResources(shoot core.Shoot) (corev1.ResourceLis
 	var (
 		countLB      int64 = 1
 		resources          = make(corev1.ResourceList)
-		workers            = getShootWorkerResources(&shoot, cloudProfile)
-		machineTypes       = cloudProfile.Spec.MachineTypes
-		volumeTypes        = cloudProfile.Spec.VolumeTypes
+		workers            = getShootWorkerResources(&shoot, cloudProfileSpec)
+		machineTypes       = cloudProfileSpec.MachineTypes
+		volumeTypes        = cloudProfileSpec.VolumeTypes
 	)
 
 	for _, worker := range workers {
@@ -425,7 +433,7 @@ func (q *QuotaValidator) getShootResources(shoot core.Shoot) (corev1.ResourceLis
 			}
 		}
 		if machineType == nil {
-			return nil, fmt.Errorf("machineType %s not found in CloudProfile %s", worker.Machine.Type, cloudProfile.Name)
+			return nil, fmt.Errorf("machineType %s not found in CloudProfile", worker.Machine.Type)
 		}
 
 		if worker.Volume != nil {
@@ -445,7 +453,7 @@ func (q *QuotaValidator) getShootResources(shoot core.Shoot) (corev1.ResourceLis
 			}
 		}
 		if volumeType == nil {
-			return nil, fmt.Errorf("VolumeType %s not found in CloudProfile %s", worker.Machine.Type, cloudProfile.Name)
+			return nil, fmt.Errorf("VolumeType %s not found in CloudProfile", worker.Machine.Type)
 		}
 
 		// For now we always use the max. amount of resources for quota calculation
@@ -479,14 +487,14 @@ func (q *QuotaValidator) getShootResources(shoot core.Shoot) (corev1.ResourceLis
 	return resources, nil
 }
 
-func getShootWorkerResources(shoot *core.Shoot, cloudProfile *gardencorev1beta1.CloudProfile) []core.Worker {
+func getShootWorkerResources(shoot *core.Shoot, cloudProfile *gardencorev1beta1.CloudProfileSpec) []core.Worker {
 	workers := make([]core.Worker, 0, len(shoot.Spec.Provider.Workers))
 
 	for _, worker := range shoot.Spec.Provider.Workers {
 		workerCopy := worker.DeepCopy()
 
 		if worker.Volume == nil {
-			for _, machineType := range cloudProfile.Spec.MachineTypes {
+			for _, machineType := range cloudProfile.MachineTypes {
 				if worker.Machine.Type == machineType.Name && machineType.Storage != nil && machineType.Storage.StorageSize != nil {
 					workerCopy.Volume = &core.Volume{
 						Type:       &machineType.Storage.Type,

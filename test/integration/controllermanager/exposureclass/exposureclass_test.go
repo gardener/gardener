@@ -47,7 +47,7 @@ var _ = Describe("ExposureClass controller test", func() {
 			},
 			Spec: gardencorev1beta1.ShootSpec{
 				ExposureClassName: ptr.To(exposureClass.Name),
-				CloudProfileName:  "test-cloudprofile",
+				CloudProfileName:  ptr.To("test-cloudprofile"),
 				SecretBindingName: ptr.To("my-provider-account"),
 				Region:            "foo-region",
 				Provider: gardencorev1beta1.Provider{

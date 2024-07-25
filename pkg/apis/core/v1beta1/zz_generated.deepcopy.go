@@ -4959,6 +4959,11 @@ func (in *ShootSpec) DeepCopyInto(out *ShootSpec) {
 		*out = new(Addons)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.CloudProfileName != nil {
+		in, out := &in.CloudProfileName, &out.CloudProfileName
+		*out = new(string)
+		**out = **in
+	}
 	if in.DNS != nil {
 		in, out := &in.DNS, &out.DNS
 		*out = new(DNS)

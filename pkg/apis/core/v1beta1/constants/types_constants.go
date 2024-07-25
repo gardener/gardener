@@ -837,6 +837,11 @@ const (
 	// AdvertisedAddressServiceAccountIssuer is a constant that represents the name of the address
 	// that is used as a service account issuer for the kube-apiserver.
 	AdvertisedAddressServiceAccountIssuer = "service-account-issuer"
+
+	// CloudProfileReferenceKindCloudProfile is a constant for the CloudProfile kind reference.
+	CloudProfileReferenceKindCloudProfile = "CloudProfile"
+	// CloudProfileReferenceKindNamespacedCloudProfile is a constant for the NamespacedCloudProfile kind reference.
+	CloudProfileReferenceKindNamespacedCloudProfile = "NamespacedCloudProfile"
 )
 
 var (

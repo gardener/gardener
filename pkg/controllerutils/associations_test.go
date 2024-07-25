@@ -85,9 +85,14 @@ var _ = Describe("Associations", func() {
 			}
 		},
 
-		Entry("should return shoots associated to cloudprofile",
+		Entry("should return shoots associated to cloudprofile by cloudprofilename",
 			&gardencorev1beta1.CloudProfile{ObjectMeta: metav1.ObjectMeta{Name: "cloudprofile"}}, func(s *gardencorev1beta1.Shoot, obj client.Object) {
-				s.Spec.CloudProfileName = obj.GetName()
+				s.Spec.CloudProfileName = ptr.To(obj.GetName())
+			}, BeNil()),
+		Entry("should return shoots associated to cloudprofile by cloudprofile reference",
+			&gardencorev1beta1.CloudProfile{ObjectMeta: metav1.ObjectMeta{Name: "cloudprofile"}}, func(s *gardencorev1beta1.Shoot, obj client.Object) {
+				s.Spec.CloudProfileName = nil
+				s.Spec.CloudProfile = &gardencorev1beta1.CloudProfileReference{Kind: "CloudProfile", Name: obj.GetName()}
 			}, BeNil()),
 		Entry("should return shoots associated to seed",
 			&gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: "seed"}}, func(s *gardencorev1beta1.Shoot, obj client.Object) {

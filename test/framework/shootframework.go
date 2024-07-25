@@ -153,9 +153,9 @@ func (f *ShootFramework) AddShoot(ctx context.Context, shootName, shootNamespace
 		return fmt.Errorf("could not get shoot: %w", err)
 	}
 
-	f.CloudProfile, err = f.GardenerFramework.GetCloudProfile(ctx, shoot.Spec.CloudProfileName)
+	f.CloudProfile, err = f.GardenerFramework.GetCloudProfile(ctx, shoot.Spec.CloudProfile, shoot.Namespace, shoot.Spec.CloudProfileName)
 	if err != nil {
-		return fmt.Errorf("unable to get cloudprofile %s: %w", shoot.Spec.CloudProfileName, err)
+		return fmt.Errorf("unable to get cloudprofile: %w", err)
 	}
 
 	f.Project, err = f.GetShootProject(ctx, shootNamespace)
@@ -260,11 +260,30 @@ func (f *ShootFramework) UpdateShoot(ctx context.Context, update func(shoot *gar
 
 // GetCloudProfile returns the cloudprofile of the shoot
 func (f *ShootFramework) GetCloudProfile(ctx context.Context) (*gardencorev1beta1.CloudProfile, error) {
-	cloudProfile := &gardencorev1beta1.CloudProfile{}
-	if err := f.GardenClient.Client().Get(ctx, client.ObjectKey{Name: f.Shoot.Spec.CloudProfileName}, cloudProfile); err != nil {
-		return nil, fmt.Errorf("could not get Seed's CloudProvider in Garden cluster: %w", err)
+	if f.Shoot.Spec.CloudProfile != nil {
+		cloudProfileName := f.Shoot.Spec.CloudProfile.Name
+		switch f.Shoot.Spec.CloudProfile.Kind {
+		case v1beta1constants.CloudProfileReferenceKindCloudProfile:
+			cloudProfile := &gardencorev1beta1.CloudProfile{}
+			if err := f.GardenClient.Client().Get(ctx, client.ObjectKey{Name: cloudProfileName}, cloudProfile); err != nil {
+				return nil, fmt.Errorf("could not get CloudProfile '%s' in Garden cluster: %w", cloudProfileName, err)
+			}
+			return cloudProfile, nil
+		case v1beta1constants.CloudProfileReferenceKindNamespacedCloudProfile:
+			namespacedCloudProfile := &gardencorev1beta1.NamespacedCloudProfile{}
+			if err := f.GardenClient.Client().Get(ctx, client.ObjectKey{Name: cloudProfileName, Namespace: f.Namespace}, namespacedCloudProfile); err != nil {
+				return nil, fmt.Errorf("could not get NamespacedCloudProfile '%s' in Garden cluster: %w", cloudProfileName, err)
+			}
+			return &gardencorev1beta1.CloudProfile{Spec: namespacedCloudProfile.Status.CloudProfileSpec}, nil
+		}
+	} else if f.Shoot.Spec.CloudProfileName != nil {
+		cloudProfile := &gardencorev1beta1.CloudProfile{}
+		if err := f.GardenClient.Client().Get(ctx, client.ObjectKey{Name: *f.Shoot.Spec.CloudProfileName}, cloudProfile); err != nil {
+			return nil, fmt.Errorf("could not get Seed's CloudProvider in Garden cluster: %w", err)
+		}
+		return cloudProfile, nil
 	}
-	return cloudProfile, nil
+	return nil, errors.New("cloudprofile is required to be set in shoot spec")
 }
 
 // WaitForShootCondition waits for the shoot to contain the specified condition

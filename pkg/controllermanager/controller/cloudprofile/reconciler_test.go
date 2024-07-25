@@ -133,7 +133,7 @@ var _ = Describe("Reconciler", func() {
 					{
 						ObjectMeta: metav1.ObjectMeta{Name: "test-shoot", Namespace: "test-namespace"},
 						Spec: gardencorev1beta1.ShootSpec{
-							CloudProfileName: cloudProfileName,
+							CloudProfileName: &cloudProfileName,
 						},
 					},
 				}}).DeepCopyInto(obj)

@@ -15,6 +15,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 )
 
@@ -32,12 +33,15 @@ func DetermineShootsAssociatedTo(ctx context.Context, gardenClient client.Reader
 		switch t := obj.(type) {
 		case *gardencorev1beta1.CloudProfile:
 			cloudProfile := obj.(*gardencorev1beta1.CloudProfile)
-			if shoot.Spec.CloudProfileName == cloudProfile.Name {
+			if ptr.Deref(shoot.Spec.CloudProfileName, "") == cloudProfile.Name ||
+				(shoot.Spec.CloudProfile != nil &&
+					shoot.Spec.CloudProfile.Kind == constants.CloudProfileReferenceKindCloudProfile &&
+					shoot.Spec.CloudProfile.Name == cloudProfile.Name) {
 				associatedShoots = append(associatedShoots, fmt.Sprintf("%s/%s", shoot.Namespace, shoot.Name))
 			}
 		case *gardencorev1beta1.Seed:
 			seed := obj.(*gardencorev1beta1.Seed)
-			if shoot.Spec.SeedName != nil && *shoot.Spec.SeedName == seed.Name {
+			if ptr.Deref(shoot.Spec.SeedName, "") == seed.Name {
 				associatedShoots = append(associatedShoots, fmt.Sprintf("%s/%s", shoot.Namespace, shoot.Name))
 			}
 		case *gardencorev1beta1.SecretBinding:
@@ -52,7 +56,7 @@ func DetermineShootsAssociatedTo(ctx context.Context, gardenClient client.Reader
 			}
 		case *gardencorev1beta1.ExposureClass:
 			exposureClass := obj.(*gardencorev1beta1.ExposureClass)
-			if shoot.Spec.ExposureClassName != nil && *shoot.Spec.ExposureClassName == exposureClass.Name {
+			if ptr.Deref(shoot.Spec.ExposureClassName, "") == exposureClass.Name {
 				associatedShoots = append(associatedShoots, fmt.Sprintf("%s/%s", shoot.Namespace, shoot.Name))
 			}
 		default:

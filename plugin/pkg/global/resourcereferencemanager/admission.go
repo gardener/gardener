@@ -62,25 +62,26 @@ func Register(plugins *admission.Plugins) {
 // ReferenceManager contains listers and admission handler.
 type ReferenceManager struct {
 	*admission.Handler
-	gardenCoreClient           versioned.Interface
-	kubeClient                 kubernetes.Interface
-	dynamicClient              dynamic.Interface
-	authorizer                 authorizer.Authorizer
-	secretLister               kubecorev1listers.SecretLister
-	configMapLister            kubecorev1listers.ConfigMapLister
-	backupBucketLister         gardencorev1beta1listers.BackupBucketLister
-	cloudProfileLister         gardencorev1beta1listers.CloudProfileLister
-	seedLister                 gardencorev1beta1listers.SeedLister
-	shootLister                gardencorev1beta1listers.ShootLister
-	secretBindingLister        gardencorev1beta1listers.SecretBindingLister
-	credentialsBindingLister   securityv1alpha1listers.CredentialsBindingLister
-	projectLister              gardencorev1beta1listers.ProjectLister
-	quotaLister                gardencorev1beta1listers.QuotaLister
-	controllerDeploymentLister gardencorev1beta1listers.ControllerDeploymentLister
-	exposureClassLister        gardencorev1beta1listers.ExposureClassLister
-	managedSeedLister          seedmanagementv1alpha1listers.ManagedSeedLister
-	gardenletLister            seedmanagementv1alpha1listers.GardenletLister
-	readyFunc                  admission.ReadyFunc
+	gardenCoreClient             versioned.Interface
+	kubeClient                   kubernetes.Interface
+	dynamicClient                dynamic.Interface
+	authorizer                   authorizer.Authorizer
+	secretLister                 kubecorev1listers.SecretLister
+	configMapLister              kubecorev1listers.ConfigMapLister
+	backupBucketLister           gardencorev1beta1listers.BackupBucketLister
+	cloudProfileLister           gardencorev1beta1listers.CloudProfileLister
+	namespacedCloudProfileLister gardencorev1beta1listers.NamespacedCloudProfileLister
+	seedLister                   gardencorev1beta1listers.SeedLister
+	shootLister                  gardencorev1beta1listers.ShootLister
+	secretBindingLister          gardencorev1beta1listers.SecretBindingLister
+	credentialsBindingLister     securityv1alpha1listers.CredentialsBindingLister
+	projectLister                gardencorev1beta1listers.ProjectLister
+	quotaLister                  gardencorev1beta1listers.QuotaLister
+	controllerDeploymentLister   gardencorev1beta1listers.ControllerDeploymentLister
+	exposureClassLister          gardencorev1beta1listers.ExposureClassLister
+	managedSeedLister            seedmanagementv1alpha1listers.ManagedSeedLister
+	gardenletLister              seedmanagementv1alpha1listers.GardenletLister
+	readyFunc                    admission.ReadyFunc
 }
 
 var (
@@ -131,6 +132,9 @@ func (r *ReferenceManager) SetCoreInformerFactory(f gardencoreinformers.SharedIn
 	cloudProfileInformer := f.Core().V1beta1().CloudProfiles()
 	r.cloudProfileLister = cloudProfileInformer.Lister()
 
+	namespacedCloudProfileInformer := f.Core().V1beta1().NamespacedCloudProfiles()
+	r.namespacedCloudProfileLister = namespacedCloudProfileInformer.Lister()
+
 	secretBindingInformer := f.Core().V1beta1().SecretBindings()
 	r.secretBindingLister = secretBindingInformer.Lister()
 
@@ -151,6 +155,7 @@ func (r *ReferenceManager) SetCoreInformerFactory(f gardencoreinformers.SharedIn
 		shootInformer.Informer().HasSynced,
 		backupBucketInformer.Informer().HasSynced,
 		cloudProfileInformer.Informer().HasSynced,
+		namespacedCloudProfileInformer.Informer().HasSynced,
 		secretBindingInformer.Informer().HasSynced,
 		quotaInformer.Informer().HasSynced,
 		projectInformer.Informer().HasSynced,
@@ -219,6 +224,9 @@ func (r *ReferenceManager) ValidateInitialization() error {
 	}
 	if r.cloudProfileLister == nil {
 		return errors.New("missing cloud profile lister")
+	}
+	if r.namespacedCloudProfileLister == nil {
+		return errors.New("missing namespaced cloud profile lister")
 	}
 	if r.seedLister == nil {
 		return errors.New("missing seed lister")
@@ -500,7 +508,14 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 				wg.Add(len(shootList))
 
 				for _, s := range shootList {
-					if s.Spec.CloudProfileName != cloudProfile.Name || s.DeletionTimestamp != nil {
+					var cloudProfileName string
+					if s.Spec.CloudProfile != nil && s.Spec.CloudProfile.Kind == v1beta1constants.CloudProfileReferenceKindCloudProfile {
+						cloudProfileName = s.Spec.CloudProfile.Name
+					} else if s.Spec.CloudProfileName != nil {
+						cloudProfileName = *s.Spec.CloudProfileName
+					}
+
+					if s.DeletionTimestamp != nil || cloudProfile.Name != cloudProfileName {
 						wg.Done()
 						continue
 					}
@@ -509,7 +524,7 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 						defer wg.Done()
 
 						if removedKubernetesVersions.Has(shoot.Spec.Kubernetes.Version) {
-							channel <- fmt.Errorf("unable to delete Kubernetes version %q from CloudProfile %q - version is still in use by shoot '%s/%s'", shoot.Spec.Kubernetes.Version, shoot.Spec.CloudProfileName, shoot.Namespace, shoot.Name)
+							channel <- fmt.Errorf("unable to delete Kubernetes version %q from CloudProfile %q - version is still in use by shoot '%s/%s'", shoot.Spec.Kubernetes.Version, cloudProfileName, shoot.Namespace, shoot.Name)
 						}
 						for _, worker := range shoot.Spec.Provider.Workers {
 							if worker.Machine.Image == nil {
@@ -521,7 +536,7 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 							}
 
 							if removedMachineImageVersions[worker.Machine.Image.Name].Has(*worker.Machine.Image.Version) {
-								channel <- fmt.Errorf("unable to delete Machine image version '%s/%s' from CloudProfile %q - version is still in use by shoot '%s/%s' by worker %q", worker.Machine.Image.Name, *worker.Machine.Image.Version, shoot.Spec.CloudProfileName, shoot.Namespace, shoot.Name, worker.Name)
+								channel <- fmt.Errorf("unable to delete Machine image version '%s/%s' from CloudProfile %q - version is still in use by shoot '%s/%s' by worker %q", worker.Machine.Image.Name, *worker.Machine.Image.Version, cloudProfileName, shoot.Namespace, shoot.Name, worker.Name)
 							}
 						}
 					}(s)
@@ -705,8 +720,8 @@ func (r *ReferenceManager) ensureBindingReferences(ctx context.Context, attribut
 
 func (r *ReferenceManager) ensureShootReferences(ctx context.Context, attributes admission.Attributes, oldShoot, shoot *core.Shoot) error {
 	if !equality.Semantic.DeepEqual(oldShoot.Spec.CloudProfileName, shoot.Spec.CloudProfileName) {
-		if _, err := r.cloudProfileLister.Get(shoot.Spec.CloudProfileName); err != nil {
-			return err
+		if _, err := utils.GetCloudProfileSpec(r.cloudProfileLister, r.namespacedCloudProfileLister, shoot); err != nil {
+			return fmt.Errorf("could not find cloudProfileSpec from the shoot cloudProfile reference: %s", err.Error())
 		}
 	}
 

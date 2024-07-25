@@ -667,7 +667,7 @@ func createShoot(cloudProfile, region string, schedulerName, dnsDomain *string, 
 		},
 		Spec: gardencorev1beta1.ShootSpec{
 			ControlPlane:     controlPlane,
-			CloudProfileName: cloudProfile,
+			CloudProfileName: &cloudProfile,
 			Region:           region,
 			Provider: gardencorev1beta1.Provider{
 				Type: "provider-type",

@@ -18,6 +18,8 @@ const (
 	VertexTypeCertificateSigningRequest
 	// VertexTypeCloudProfile is a constant for a 'CloudProfile' vertex.
 	VertexTypeCloudProfile
+	// VertexTypeNamespacedCloudProfile is a constant for a 'NamespacedCloudProfile' vertex.
+	VertexTypeNamespacedCloudProfile
 	// VertexTypeClusterRoleBinding is a constant for a 'ClusterRoleBinding' vertex.
 	VertexTypeClusterRoleBinding
 	// VertexTypeConfigMap is a constant for a 'ConfigMap' vertex.
@@ -64,6 +66,7 @@ var vertexTypes = map[VertexType]string{
 	VertexTypeBastion:                   "Bastion",
 	VertexTypeCertificateSigningRequest: "CertificateSigningRequest",
 	VertexTypeCloudProfile:              "CloudProfile",
+	VertexTypeNamespacedCloudProfile:    "NamespacedCloudProfile",
 	VertexTypeClusterRoleBinding:        "ClusterRoleBinding",
 	VertexTypeConfigMap:                 "ConfigMap",
 	VertexTypeControllerDeployment:      "ControllerDeployment",

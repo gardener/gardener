@@ -99,7 +99,7 @@ var _ = Describe("Project Stale controller tests", func() {
 				},
 				Spec: gardencorev1beta1.ShootSpec{
 					SecretBindingName: ptr.To("mysecretbinding"),
-					CloudProfileName:  "cloudprofile1",
+					CloudProfileName:  ptr.To("cloudprofile1"),
 					Region:            "europe-central-1",
 					Provider: gardencorev1beta1.Provider{
 						Type: "foo-provider",

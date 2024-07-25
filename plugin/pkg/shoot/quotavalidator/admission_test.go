@@ -207,7 +207,7 @@ var _ = Describe("quotavalidator", func() {
 					Name:      "test-shoot",
 				},
 				Spec: core.ShootSpec{
-					CloudProfileName:  "profile",
+					CloudProfileName:  ptr.To("profile"),
 					SecretBindingName: ptr.To("test-binding"),
 					Provider: core.Provider{
 						Workers: workersBase,
@@ -231,7 +231,7 @@ var _ = Describe("quotavalidator", func() {
 					Name:      "test-shoot",
 				},
 				Spec: gardencorev1beta1.ShootSpec{
-					CloudProfileName:  "profile",
+					CloudProfileName:  ptr.To("profile"),
 					SecretBindingName: ptr.To("test-binding"),
 					Provider: gardencorev1beta1.Provider{
 						Workers: []gardencorev1beta1.Worker{

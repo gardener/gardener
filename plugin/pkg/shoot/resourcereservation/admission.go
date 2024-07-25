@@ -21,6 +21,7 @@ import (
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	plugin "github.com/gardener/gardener/plugin/pkg"
+	"github.com/gardener/gardener/plugin/pkg/utils"
 )
 
 const (
@@ -45,8 +46,9 @@ func Register(plugins *admission.Plugins) {
 // ResourceReservation contains required information to process admission requests.
 type ResourceReservation struct {
 	*admission.Handler
-	cloudProfileLister gardencorev1beta1listers.CloudProfileLister
-	readyFunc          admission.ReadyFunc
+	cloudProfileLister           gardencorev1beta1listers.CloudProfileLister
+	namespacedCloudProfileLister gardencorev1beta1listers.NamespacedCloudProfileLister
+	readyFunc                    admission.ReadyFunc
 
 	useGKEFormula bool
 }
@@ -76,13 +78,19 @@ func (c *ResourceReservation) SetCoreInformerFactory(f gardencoreinformers.Share
 	cloudProfileInformer := f.Core().V1beta1().CloudProfiles()
 	c.cloudProfileLister = cloudProfileInformer.Lister()
 
-	readyFuncs = append(readyFuncs, cloudProfileInformer.Informer().HasSynced)
+	namespacedCloudProfileInformer := f.Core().V1beta1().NamespacedCloudProfiles()
+	c.namespacedCloudProfileLister = namespacedCloudProfileInformer.Lister()
+
+	readyFuncs = append(readyFuncs, cloudProfileInformer.Informer().HasSynced, namespacedCloudProfileInformer.Informer().HasSynced)
 }
 
 // ValidateInitialization checks whether the plugin was correctly initialized.
 func (c *ResourceReservation) ValidateInitialization() error {
 	if c.cloudProfileLister == nil {
 		return errors.New("missing cloudProfile lister")
+	}
+	if c.namespacedCloudProfileLister == nil {
+		return errors.New("missing namespacedCloudProfile lister")
 	}
 	return nil
 }
@@ -136,11 +144,11 @@ func (c *ResourceReservation) Admit(_ context.Context, a admission.Attributes, _
 		return nil
 	}
 
-	cloudProfile, err := c.cloudProfileLister.Get(shoot.Spec.CloudProfileName)
+	cloudProfileSpec, err := utils.GetCloudProfileSpec(c.cloudProfileLister, c.namespacedCloudProfileLister, shoot)
 	if err != nil {
 		return apierrors.NewInternalError(fmt.Errorf("could not find referenced cloud profile: %+v", err.Error()))
 	}
-	machineTypeMap := buildMachineTypeMap(cloudProfile)
+	machineTypeMap := buildMachineTypeMap(cloudProfileSpec)
 
 	allErrs := field.ErrorList{}
 	workersPath := field.NewPath("spec", "provider", "workers")
@@ -220,10 +228,10 @@ func injectResourceReservations(worker *core.Worker, machineTypeMap map[string]g
 	return allErrs
 }
 
-func buildMachineTypeMap(cloudProfile *gardencorev1beta1.CloudProfile) map[string]gardencorev1beta1.MachineType {
+func buildMachineTypeMap(cloudProfileSpec *gardencorev1beta1.CloudProfileSpec) map[string]gardencorev1beta1.MachineType {
 	types := map[string]gardencorev1beta1.MachineType{}
 
-	for _, machine := range cloudProfile.Spec.MachineTypes {
+	for _, machine := range cloudProfileSpec.MachineTypes {
 		types[machine.Name] = machine
 	}
 	return types

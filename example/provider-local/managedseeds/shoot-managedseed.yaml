@@ -6,7 +6,8 @@ metadata:
   annotations:
     shoot.gardener.cloud/cloud-config-execution-max-delay-seconds: "0"
 spec:
-  cloudProfileName: local
+  cloudProfile:
+    name: local
   secretBindingName: local
   region: local
   networking:

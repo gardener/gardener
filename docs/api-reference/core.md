@@ -1764,7 +1764,9 @@ string
 </em>
 </td>
 <td>
-<p>CloudProfileName is a name of a CloudProfile object. This field is immutable.</p>
+<em>(Optional)</em>
+<p>CloudProfileName is a name of a CloudProfile object.
+This field will be deprecated soon, use <code>CloudProfile</code> instead.</p>
 </td>
 </tr>
 <tr>
@@ -11542,7 +11544,9 @@ string
 </em>
 </td>
 <td>
-<p>CloudProfileName is a name of a CloudProfile object. This field is immutable.</p>
+<em>(Optional)</em>
+<p>CloudProfileName is a name of a CloudProfile object.
+This field will be deprecated soon, use <code>CloudProfile</code> instead.</p>
 </td>
 </tr>
 <tr>
@@ -12240,7 +12244,9 @@ string
 </em>
 </td>
 <td>
-<p>CloudProfileName is a name of a CloudProfile object. This field is immutable.</p>
+<em>(Optional)</em>
+<p>CloudProfileName is a name of a CloudProfile object.
+This field will be deprecated soon, use <code>CloudProfile</code> instead.</p>
 </td>
 </tr>
 <tr>

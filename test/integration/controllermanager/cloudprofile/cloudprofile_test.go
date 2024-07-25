@@ -90,7 +90,7 @@ var _ = Describe("CloudProfile controller tests", func() {
 
 		if shoot != nil {
 			By("Create Shoot")
-			shoot.Spec.CloudProfileName = cloudProfile.Name
+			shoot.Spec.CloudProfileName = &cloudProfile.Name
 			Expect(testClient.Create(ctx, shoot)).To(Succeed())
 			log.Info("Created shoot for test", "shoot", client.ObjectKeyFromObject(shoot))
 

@@ -84,7 +84,7 @@ var _ = Describe("Scheduler_Control", func() {
 				Namespace: "my-namespace",
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				CloudProfileName: cloudProfileName,
+				CloudProfileName: &cloudProfileName,
 				Region:           region,
 				Provider: gardencorev1beta1.Provider{
 					Type: providerType,
@@ -506,7 +506,7 @@ var _ = Describe("Scheduler_Control", func() {
 			// shoot
 			testShoot := shoot
 			testShoot.Spec.Region = "eu-de-2"
-			testShoot.Spec.CloudProfileName = "cloudprofile2"
+			testShoot.Spec.CloudProfileName = ptr.To("cloudprofile2")
 			testShoot.Spec.Provider.Type = "some-type"
 
 			Expect(fakeGardenClient.Create(ctx, newCloudProfile)).To(Succeed())
@@ -552,7 +552,7 @@ var _ = Describe("Scheduler_Control", func() {
 			// shoot
 			testShoot := shoot.DeepCopy()
 			testShoot.Spec.Region = "eu-de-2"
-			testShoot.Spec.CloudProfileName = "cloudprofile2"
+			testShoot.Spec.CloudProfileName = ptr.To("cloudprofile2")
 			testShoot.Spec.Provider.Type = "some-type"
 			testShoot.Spec.SeedSelector = &gardencorev1beta1.SeedSelector{
 				LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{"my-preferred": "seed"}},
@@ -758,7 +758,7 @@ var _ = Describe("Scheduler_Control", func() {
 		})
 
 		It("should fail because it cannot find a seed cluster due to invalid profile", func() {
-			shoot.Spec.CloudProfileName = "another-profile"
+			shoot.Spec.CloudProfileName = ptr.To("another-profile")
 
 			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
@@ -839,7 +839,7 @@ var _ = Describe("Scheduler_Control", func() {
 			// shoot
 			testShoot := shoot
 			testShoot.Spec.Region = "eu-de-2xzxzzx"
-			testShoot.Spec.CloudProfileName = "cloudprofile2"
+			testShoot.Spec.CloudProfileName = ptr.To("cloudprofile2")
 			testShoot.Spec.Provider.Type = "some-type"
 
 			candidates, err := applyStrategy(log, testShoot, []gardencorev1beta1.Seed{newSeedEnvironment2, oldSeedEnvironment1, otherSeedEnvironment2}, schedulerConfiguration.Schedulers.Shoot.Strategy, nil)
@@ -868,7 +868,7 @@ var _ = Describe("Scheduler_Control", func() {
 			// shoot
 			testShoot := shoot
 			testShoot.Spec.Region = "eu-de-20"
-			testShoot.Spec.CloudProfileName = "cloudprofile2"
+			testShoot.Spec.CloudProfileName = ptr.To("cloudprofile2")
 			testShoot.Spec.Provider.Type = "some-type"
 
 			candidates, err := applyStrategy(log, testShoot, []gardencorev1beta1.Seed{newSeedEnvironment2, oldSeedEnvironment1, otherSeedEnvironment2}, schedulerConfiguration.Schedulers.Shoot.Strategy, nil)

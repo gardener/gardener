@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/features"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/plugin/pkg/utils"
 )
 
 type shootStrategy struct {
@@ -50,17 +51,15 @@ func (shootStrategy) NamespaceScoped() bool {
 }
 
 func (shootStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
-	shoot := obj.(*core.Shoot)
+	newShoot := obj.(*core.Shoot)
 
-	shoot.Generation = 1
-	shoot.Status = core.ShootStatus{}
+	newShoot.Generation = 1
+	newShoot.Status = core.ShootStatus{}
 
-	if !utilfeature.DefaultFeatureGate.Enabled(features.UseNamespacedCloudProfile) {
-		shoot.Spec.CloudProfile = nil
-	}
+	utils.SyncCloudProfileFields(nil, newShoot)
 
 	if !utilfeature.DefaultFeatureGate.Enabled(features.ShootCredentialsBinding) {
-		shoot.Spec.CredentialsBindingName = nil
+		newShoot.Spec.CredentialsBindingName = nil
 	}
 }
 
@@ -75,9 +74,7 @@ func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object
 		newShoot.Generation = oldShoot.Generation + 1
 	}
 
-	if oldShoot.Spec.CloudProfile == nil && !utilfeature.DefaultFeatureGate.Enabled(features.UseNamespacedCloudProfile) {
-		newShoot.Spec.CloudProfile = nil
-	}
+	utils.SyncCloudProfileFields(oldShoot, newShoot)
 
 	if oldShoot.Spec.CredentialsBindingName == nil && !utilfeature.DefaultFeatureGate.Enabled(features.ShootCredentialsBinding) {
 		newShoot.Spec.CredentialsBindingName = nil
@@ -268,10 +265,16 @@ func ToSelectableFields(shoot *core.Shoot) fields.Set {
 	// amount of allocations needed to create the fields.Set. If you add any
 	// field here or the number of object-meta related fields changes, this should
 	// be adjusted.
-	shootSpecificFieldsSet := make(fields.Set, 5)
+	shootSpecificFieldsSet := make(fields.Set, 7)
 	shootSpecificFieldsSet[core.ShootSeedName] = getSeedName(shoot)
 	shootSpecificFieldsSet[core.ShootStatusSeedName] = getStatusSeedName(shoot)
-	shootSpecificFieldsSet[core.ShootCloudProfileName] = shoot.Spec.CloudProfileName
+	if shoot.Spec.CloudProfileName != nil {
+		shootSpecificFieldsSet[core.ShootCloudProfileName] = *shoot.Spec.CloudProfileName
+	}
+	if shoot.Spec.CloudProfile != nil {
+		shootSpecificFieldsSet[core.ShootCloudProfileRefName] = shoot.Spec.CloudProfile.Name
+		shootSpecificFieldsSet[core.ShootCloudProfileRefKind] = shoot.Spec.CloudProfile.Kind
+	}
 	return generic.AddObjectMetaFieldsSet(shootSpecificFieldsSet, &shoot.ObjectMeta, true)
 }
 

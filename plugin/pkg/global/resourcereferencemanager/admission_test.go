@@ -231,7 +231,7 @@ var _ = Describe("resourcereferencemanager", func() {
 					Finalizers: finalizers,
 				},
 				Spec: core.ShootSpec{
-					CloudProfileName:       cloudProfileName,
+					CloudProfileName:       &cloudProfileName,
 					SeedName:               &seedName,
 					SecretBindingName:      ptr.To(bindingName),
 					CredentialsBindingName: ptr.To(credentialsBindingName),
@@ -808,7 +808,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
 
 				oldShoot := coreShoot.DeepCopy()
-				oldShoot.Spec.CloudProfileName = ""
+				oldShoot.Spec.CloudProfileName = ptr.To("")
 
 				attrs := admission.NewAttributesRecord(&coreShoot, oldShoot, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
@@ -1473,7 +1473,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			shootOne := shoot.DeepCopy()
 			shootOne.Name = "shoot-One"
 			shootOne.Spec.Provider.Type = "aws"
-			shootOne.Spec.CloudProfileName = "aws-profile"
+			shootOne.Spec.CloudProfileName = ptr.To("aws-profile")
 			shootOne.Spec.Kubernetes.Version = "1.24.2"
 
 			shootTwo := shootOne.DeepCopy()
@@ -1598,7 +1598,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			shootOne := shoot.DeepCopy()
 			shootOne.Name = "shoot-One"
 			shootOne.Spec.Provider.Type = "aws"
-			shootOne.Spec.CloudProfileName = "aws-profile"
+			shootOne.Spec.CloudProfileName = ptr.To("aws-profile")
 			shootOne.Spec.Provider.Workers = []gardencorev1beta1.Worker{
 				{
 					Name: "coreos-worker",

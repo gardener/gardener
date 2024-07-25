@@ -174,7 +174,7 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 				},
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				CloudProfileName: "foo",
+				CloudProfileName: ptr.To("foo"),
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					Version: "1.25.1",
 				},

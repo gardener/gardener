@@ -34,7 +34,7 @@ var _ = Describe("ShootValidator tests", func() {
 				Namespace:    testNamespace.Name,
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				CloudProfileName:  cloudProfile.Name,
+				CloudProfileName:  &cloudProfile.Name,
 				SecretBindingName: ptr.To(testSecretBinding.Name),
 				Region:            "region",
 				Provider: gardencorev1beta1.Provider{

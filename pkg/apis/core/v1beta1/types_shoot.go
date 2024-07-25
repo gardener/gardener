@@ -63,8 +63,10 @@ type ShootSpec struct {
 	// Addons contains information about enabled/disabled addons and their configuration.
 	// +optional
 	Addons *Addons `json:"addons,omitempty" protobuf:"bytes,1,opt,name=addons"`
-	// CloudProfileName is a name of a CloudProfile object. This field is immutable.
-	CloudProfileName string `json:"cloudProfileName" protobuf:"bytes,2,opt,name=cloudProfileName"`
+	// CloudProfileName is a name of a CloudProfile object.
+	// This field will be deprecated soon, use `CloudProfile` instead.
+	// +optional
+	CloudProfileName *string `json:"cloudProfileName,omitempty" protobuf:"bytes,2,opt,name=cloudProfileName"`
 	// DNS contains information about the DNS settings of the Shoot.
 	// +optional
 	DNS *DNS `json:"dns,omitempty" protobuf:"bytes,3,opt,name=dns"`
