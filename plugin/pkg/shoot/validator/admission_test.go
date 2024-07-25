@@ -851,7 +851,7 @@ var _ = Describe("validator", func() {
 					shoot.Spec.CloudProfileName = nil
 				})
 
-				It("should reject because for a new Shoot both cloudProfileName and cloudProfile are provided", func() {
+				It("should fail when both cloudProfileName and cloudProfile are provided for a new shoot", func() {
 					shoot.Spec.CloudProfileName = ptr.To("profile")
 					shoot.Spec.CloudProfile = &core.CloudProfileReference{
 						Kind: "CloudProfile",
@@ -922,6 +922,19 @@ var _ = Describe("validator", func() {
 					Expect(err).ToNot(HaveOccurred())
 				})
 
+				It("should pass validation on a change from a CloudProfileName to a NamespacedCloudProfile", func() {
+					oldShoot := shoot.DeepCopy()
+					oldShoot.Spec.CloudProfileName = ptr.To("profile")
+					shoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "NamespacedCloudProfile",
+						Name: "namespacedprofile",
+					}
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).ToNot(HaveOccurred())
+				})
+
 				It("should fail validation on a change from a CloudProfile to a NamespacedCloudProfile with forbidden parent", func() {
 					anotherCloudProfile := *cloudProfileBase.DeepCopy()
 					anotherCloudProfile.Name = "another-root-profile"
@@ -937,6 +950,28 @@ var _ = Describe("validator", func() {
 						Kind: "CloudProfile",
 						Name: "profile",
 					}
+					shoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "NamespacedCloudProfile",
+						Name: "another-namespacedprofile",
+					}
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).To(MatchError(ContainSubstring("a Seed's CloudProfile may only be changed to a descendant NamespacedCloudProfile")))
+				})
+
+				It("should fail validation on a change from a CloudProfileName to a NamespacedCloudProfile with forbidden parent", func() {
+					anotherCloudProfile := *cloudProfileBase.DeepCopy()
+					anotherCloudProfile.Name = "another-root-profile"
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&anotherCloudProfile)).To(Succeed())
+
+					anotherNamespacedCloudProfile := *namespacedCloudProfileBase.DeepCopy()
+					anotherNamespacedCloudProfile.Name = "another-namespacedprofile"
+					anotherNamespacedCloudProfile.Spec.Parent.Name = "another-root-profile"
+					Expect(coreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(&anotherNamespacedCloudProfile)).To(Succeed())
+
+					oldShoot := shoot.DeepCopy()
+					oldShoot.Spec.CloudProfileName = ptr.To("profile")
 					shoot.Spec.CloudProfile = &core.CloudProfileReference{
 						Kind: "NamespacedCloudProfile",
 						Name: "another-namespacedprofile",

@@ -97,7 +97,7 @@ var _ = Describe("CloudProfile", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("returns NamespacedCloudProfile if present and applies the namespaced name for loggers using it", func() {
+		It("returns NamespacedCloudProfile if present", func() {
 			Expect(coreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(namespacedCloudProfile)).To(Succeed())
 
 			shoot.Spec.CloudProfile = &core.CloudProfileReference{
