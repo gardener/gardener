@@ -753,7 +753,7 @@ func (o *operatingSystemConfig) newDeployer(version int, osc *extensionsv1alpha1
 		images[imageName] = image
 	}
 
-	images[imagevector.ImageNameHyperkube], err = imagevector.Containers().FindImage(imagevector.ImageNameHyperkube, imagevectorutils.RuntimeVersion(kubernetesVersion.String()), imagevectorutils.TargetVersion(kubernetesVersion.String()))
+	images[imagevector.ContainerImageNameHyperkube], err = imagevector.Containers().FindImage(imagevector.ContainerImageNameHyperkube, imagevectorutils.RuntimeVersion(kubernetesVersion.String()), imagevectorutils.TargetVersion(kubernetesVersion.String()))
 	if err != nil {
 		return deployer{}, fmt.Errorf("failed finding hyperkube image for version %s: %w", kubernetesVersion.String(), err)
 	}
@@ -897,7 +897,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 	case extensionsv1alpha1.OperatingSystemConfigPurposeProvision:
 		units, files, err = InitConfigFn(
 			d.worker,
-			d.images[imagevector.ImageNameGardenerNodeAgent].String(),
+			d.images[imagevector.ContainerImageNameGardenerNodeAgent].String(),
 			nodeagent.ComponentConfig(d.key, d.kubernetesVersion, d.apiServerURL, d.clusterCABundle, nil),
 		)
 		if err != nil {
@@ -953,7 +953,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 			d.purpose == extensionsv1alpha1.OperatingSystemConfigPurposeReconcile {
 			d.osc.Spec.CRIConfig.Containerd = &extensionsv1alpha1.ContainerdConfig{}
 
-			if pauseImage := d.images[imagevector.ImageNamePauseContainer]; pauseImage != nil {
+			if pauseImage := d.images[imagevector.ContainerImageNamePauseContainer]; pauseImage != nil {
 				d.osc.Spec.CRIConfig.Containerd.SandboxImage = pauseImage.String()
 			}
 		}

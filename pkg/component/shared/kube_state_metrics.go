@@ -24,7 +24,7 @@ func NewKubeStateMetrics(
 	component.DeployWaiter,
 	error,
 ) {
-	image, err := imagevector.Containers().FindImage(imagevector.ImageNameKubeStateMetrics, imagevectorutils.TargetVersion(runtimeVersion.String()))
+	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameKubeStateMetrics, imagevectorutils.TargetVersion(runtimeVersion.String()))
 	if err != nil {
 		return nil, err
 	}

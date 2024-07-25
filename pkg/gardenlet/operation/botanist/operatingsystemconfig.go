@@ -36,7 +36,7 @@ const SecretLabelKeyManagedResource = "managed-resource"
 
 // DefaultOperatingSystemConfig creates the default deployer for the OperatingSystemConfig custom resource.
 func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interface, error) {
-	oscImages, err := imagevectorutils.FindImages(imagevector.Containers(), []string{imagevector.ImageNamePauseContainer, imagevector.ImageNameValitail}, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
+	oscImages, err := imagevectorutils.FindImages(imagevector.Containers(), []string{imagevector.ContainerImageNamePauseContainer, imagevector.ContainerImageNameValitail}, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}
@@ -46,11 +46,11 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 	// is not set. This is true for gardener-node-agent because gardenlet always deploys it with its own version (ref
 	// WithOptionalTag call a few lines below).
 	// See also: https://github.com/gardener/gardener/issues/9577
-	oscImages[imagevector.ImageNameGardenerNodeAgent], err = imagevector.Containers().FindImage(imagevector.ImageNameGardenerNodeAgent)
+	oscImages[imagevector.ContainerImageNameGardenerNodeAgent], err = imagevector.Containers().FindImage(imagevector.ContainerImageNameGardenerNodeAgent)
 	if err != nil {
-		return nil, fmt.Errorf("failed finding image %q: %w", imagevector.ImageNameGardenerNodeAgent, err)
+		return nil, fmt.Errorf("failed finding image %q: %w", imagevector.ContainerImageNameGardenerNodeAgent, err)
 	}
-	oscImages[imagevector.ImageNameGardenerNodeAgent].WithOptionalTag(version.Get().GitVersion)
+	oscImages[imagevector.ContainerImageNameGardenerNodeAgent].WithOptionalTag(version.Get().GitVersion)
 
 	valitailEnabled, valiIngressHost := false, ""
 	if b.isShootNodeLoggingEnabled() {

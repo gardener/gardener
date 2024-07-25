@@ -59,7 +59,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 			Permissions: ptr.To[int32](0755),
 			Content: extensionsv1alpha1.FileContent{
 				ImageRef: &extensionsv1alpha1.FileContentImageRef{
-					Image:           ctx.Images[imagevector.ImageNameValitail].String(),
+					Image:           ctx.Images[imagevector.ContainerImageNameValitail].String(),
 					FilePathInImage: "/usr/bin/valitail",
 				},
 			},

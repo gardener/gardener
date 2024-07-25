@@ -58,7 +58,7 @@ func NewRuntimeGardenerResourceManager(
 	component.DeployWaiter,
 	error,
 ) {
-	image, err := imagevector.Containers().FindImage(imagevector.ImageNameGardenerResourceManager)
+	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameGardenerResourceManager)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +129,7 @@ func NewTargetGardenerResourceManager(
 	resourcemanager.Interface,
 	error,
 ) {
-	image, err := imagevector.Containers().FindImage(imagevector.ImageNameGardenerResourceManager)
+	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameGardenerResourceManager)
 	if err != nil {
 		return nil, err
 	}

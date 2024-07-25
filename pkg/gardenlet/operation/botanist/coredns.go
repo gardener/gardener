@@ -24,7 +24,7 @@ import (
 
 // DefaultCoreDNS returns a deployer for the CoreDNS.
 func (b *Botanist) DefaultCoreDNS() (coredns.Interface, error) {
-	image, err := imagevector.Containers().FindImage(imagevector.ImageNameCoredns, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
+	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameCoredns, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +45,7 @@ func (b *Botanist) DefaultCoreDNS() (coredns.Interface, error) {
 	}
 
 	if v1beta1helper.IsCoreDNSAutoscalingModeUsed(b.Shoot.GetInfo().Spec.SystemComponents, gardencorev1beta1.CoreDNSAutoscalingModeClusterProportional) {
-		image, err = imagevector.Containers().FindImage(imagevector.ImageNameClusterProportionalAutoscaler, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
+		image, err = imagevector.Containers().FindImage(imagevector.ContainerImageNameClusterProportionalAutoscaler, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 		if err != nil {
 			return nil, err
 		}

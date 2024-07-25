@@ -13,7 +13,7 @@ import (
 
 // DefaultKubeScheduler returns a deployer for the kube-scheduler.
 func (b *Botanist) DefaultKubeScheduler() (component.DeployWaiter, error) {
-	image, err := imagevector.Containers().FindImage(imagevector.ImageNameKubeScheduler, imagevectorutils.RuntimeVersion(b.SeedVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
+	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameKubeScheduler, imagevectorutils.RuntimeVersion(b.SeedVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}

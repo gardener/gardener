@@ -15,7 +15,7 @@ import (
 
 // DefaultMetricsServer returns a deployer for the metrics-server.
 func (b *Botanist) DefaultMetricsServer() (component.DeployWaiter, error) {
-	image, err := imagevector.Containers().FindImage(imagevector.ImageNameMetricsServer, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
+	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameMetricsServer, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}

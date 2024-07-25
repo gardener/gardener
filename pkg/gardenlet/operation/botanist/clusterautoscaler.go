@@ -23,7 +23,7 @@ import (
 
 // DefaultClusterAutoscaler returns a deployer for the cluster-autoscaler.
 func (b *Botanist) DefaultClusterAutoscaler() (clusterautoscaler.Interface, error) {
-	image, err := imagevector.Containers().FindImage(imagevector.ImageNameClusterAutoscaler, imagevectorutils.RuntimeVersion(b.SeedVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
+	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameClusterAutoscaler, imagevectorutils.RuntimeVersion(b.SeedVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}

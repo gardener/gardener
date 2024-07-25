@@ -18,17 +18,17 @@ import (
 
 // DefaultVerticalPodAutoscaler returns a deployer for the Kubernetes Vertical Pod Autoscaler.
 func (b *Botanist) DefaultVerticalPodAutoscaler() (vpa.Interface, error) {
-	imageAdmissionController, err := imagevector.Containers().FindImage(imagevector.ImageNameVpaAdmissionController, imagevectorutils.RuntimeVersion(b.SeedVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
+	imageAdmissionController, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameVpaAdmissionController, imagevectorutils.RuntimeVersion(b.SeedVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}
 
-	imageRecommender, err := imagevector.Containers().FindImage(imagevector.ImageNameVpaRecommender, imagevectorutils.RuntimeVersion(b.SeedVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
+	imageRecommender, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameVpaRecommender, imagevectorutils.RuntimeVersion(b.SeedVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}
 
-	imageUpdater, err := imagevector.Containers().FindImage(imagevector.ImageNameVpaUpdater, imagevectorutils.RuntimeVersion(b.SeedVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
+	imageUpdater, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameVpaUpdater, imagevectorutils.RuntimeVersion(b.SeedVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}

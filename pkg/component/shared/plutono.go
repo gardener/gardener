@@ -28,12 +28,12 @@ func NewPlutono(
 	plutono.Interface,
 	error,
 ) {
-	plutonoImage, err := imagevector.Containers().FindImage(imagevector.ImageNamePlutono)
+	plutonoImage, err := imagevector.Containers().FindImage(imagevector.ContainerImageNamePlutono)
 	if err != nil {
 		return nil, err
 	}
 
-	dashboardRefresherImage, err := imagevector.Containers().FindImage(imagevector.ImageNamePlutonoDashboardRefresher)
+	dashboardRefresherImage, err := imagevector.Containers().FindImage(imagevector.ContainerImageNamePlutonoDashboardRefresher)
 	if err != nil {
 		return nil, err
 	}

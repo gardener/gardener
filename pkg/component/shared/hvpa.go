@@ -24,7 +24,7 @@ func NewHVPA(
 	deployer component.DeployWaiter,
 	err error,
 ) {
-	image, err := imagevector.Containers().FindImage(imagevector.ImageNameHvpaController)
+	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameHvpaController)
 	if err != nil {
 		return nil, err
 	}

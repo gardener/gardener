@@ -42,7 +42,7 @@ type ensurer struct {
 
 // EnsureMachineControllerManagerDeployment ensures that the machine-controller-manager deployment conforms to the provider requirements.
 func (e *ensurer) EnsureMachineControllerManagerDeployment(_ context.Context, _ extensionscontextwebhook.GardenContext, newObj, _ *appsv1.Deployment) error {
-	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameMachineControllerManagerProviderLocal)
+	image, err := imagevector.ImageVector().FindImage(imagevector.ContainerImageNameMachineControllerManagerProviderLocal)
 	if err != nil {
 		return err
 	}

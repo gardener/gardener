@@ -29,27 +29,27 @@ func NewVali(
 	component.Deployer,
 	error,
 ) {
-	valiImage, err := imagevector.Containers().FindImage(imagevector.ImageNameVali)
+	valiImage, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameVali)
 	if err != nil {
 		return nil, err
 	}
 
-	curatorImage, err := imagevector.Containers().FindImage(imagevector.ImageNameValiCurator)
+	curatorImage, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameValiCurator)
 	if err != nil {
 		return nil, err
 	}
 
-	tune2fsImage, err := imagevector.Containers().FindImage(imagevector.ImageNameTune2fs)
+	tune2fsImage, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameTune2fs)
 	if err != nil {
 		return nil, err
 	}
 
-	kubeRBACProxyImage, err := imagevector.Containers().FindImage(imagevector.ImageNameKubeRbacProxy)
+	kubeRBACProxyImage, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameKubeRbacProxy)
 	if err != nil {
 		return nil, err
 	}
 
-	telegrafImage, err := imagevector.Containers().FindImage(imagevector.ImageNameTelegraf)
+	telegrafImage, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameTelegraf)
 	if err != nil {
 		return nil, err
 	}

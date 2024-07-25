@@ -81,8 +81,8 @@ var (
 			{
 				Name: "local-path-provisioner",
 				Images: []string{
-					localimagevector.ImageNameLocalPathProvisioner,
-					localimagevector.ImageNameLocalPathHelper,
+					localimagevector.ContainerImageNameLocalPathProvisioner,
+					localimagevector.ContainerImageNameLocalPathHelper,
 				},
 			},
 		},

@@ -23,12 +23,12 @@ func NewFluentBit(
 	deployer component.DeployWaiter,
 	err error,
 ) {
-	fluentBitImage, err := imagevector.Containers().FindImage(imagevector.ImageNameFluentBit)
+	fluentBitImage, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameFluentBit)
 	if err != nil {
 		return nil, err
 	}
 
-	fluentBitInitImage, err := imagevector.Containers().FindImage(imagevector.ImageNameFluentBitPluginInstaller)
+	fluentBitInitImage, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameFluentBitPluginInstaller)
 	if err != nil {
 		return nil, err
 	}

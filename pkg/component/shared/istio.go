@@ -60,12 +60,12 @@ func NewIstio(
 		maxReplicas *int
 	)
 
-	istiodImage, err := ImageVector.FindImage(imagevector.ImageNameIstioIstiod)
+	istiodImage, err := ImageVector.FindImage(imagevector.ContainerImageNameIstioIstiod)
 	if err != nil {
 		return nil, err
 	}
 
-	igwImage, err := ImageVector.FindImage(imagevector.ImageNameIstioProxy)
+	igwImage, err := ImageVector.FindImage(imagevector.ContainerImageNameIstioProxy)
 	if err != nil {
 		return nil, err
 	}

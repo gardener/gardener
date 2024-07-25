@@ -15,7 +15,7 @@ import (
 
 // NewAlertmanager creates a new alertmanager deployer.
 func NewAlertmanager(log logr.Logger, c client.Client, namespace string, values alertmanager.Values) (alertmanager.Interface, error) {
-	imageAlertmanager, err := imagevector.Containers().FindImage(imagevector.ImageNameAlertmanager)
+	imageAlertmanager, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameAlertmanager)
 	if err != nil {
 		return nil, err
 	}
