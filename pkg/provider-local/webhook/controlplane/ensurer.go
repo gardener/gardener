@@ -81,8 +81,6 @@ func (e *ensurer) EnsureAdditionalProvisionFiles(_ context.Context, _ extensions
 	mirrors := []RegistryMirror{
 		{UpstreamHost: "localhost:5001", UpstreamServer: "http://localhost:5001", MirrorHost: "http://garden.local.gardener.cloud:5001"},
 		{UpstreamHost: "gcr.io", UpstreamServer: "https://gcr.io", MirrorHost: "http://garden.local.gardener.cloud:5003"},
-		{UpstreamHost: "eu.gcr.io", UpstreamServer: "https://eu.gcr.io", MirrorHost: "http://garden.local.gardener.cloud:5004"},
-		{UpstreamHost: "ghcr.io", UpstreamServer: "https://ghcr.io", MirrorHost: "http://garden.local.gardener.cloud:5005"},
 		{UpstreamHost: "registry.k8s.io", UpstreamServer: "https://registry.k8s.io", MirrorHost: "http://garden.local.gardener.cloud:5006"},
 		{UpstreamHost: "quay.io", UpstreamServer: "https://quay.io", MirrorHost: "http://garden.local.gardener.cloud:5007"},
 		{UpstreamHost: "europe-docker.pkg.dev", UpstreamServer: "https://europe-docker.pkg.dev", MirrorHost: "http://garden.local.gardener.cloud:5008"},
