@@ -58,7 +58,7 @@ if [[ "$TYPE" == "operator" ]] || [[ "$TYPE" == "operator-seed" ]]; then
 
   if [[ "$TYPE" == "operator-seed" ]]; then
     # /etc/hosts must have been updated before garden can be created (otherwise, we could put this command to the
-    # hack/ci-e2e-kind-operator-seed.sh script.
+    # hack/ci-e2e-kind-operator-seed.sh script).
     echo "> Deploying Garden and Soil"
     make operator-seed-up
   fi
