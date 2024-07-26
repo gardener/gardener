@@ -13,4 +13,9 @@ const (
 	// SecretNameCAGardener is a constant for the name of a Kubernetes secret object that contains the CA
 	// certificate of the Gardener control plane.
 	SecretNameCAGardener = "ca-gardener"
+
+	// LabelKeyGardenletAutoUpdates is a key for a label on seedmanagement.gardener.cloud/v1alpha1.Gardenlet resources.
+	// If set to true, gardener-operator will automatically update the `.spec.deployment.helm.ociRepository.ref` field
+	// to its own version after a successful operator.gardener.cloud/v1alpha1.Garden reconciliation.
+	LabelKeyGardenletAutoUpdates = "operator.gardener.cloud/auto-update-helm-chart-ref"
 )
