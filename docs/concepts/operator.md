@@ -568,6 +568,16 @@ On `Gardenlet` reconciliation, the controller deploys the `gardenlet` to the clu
 
 On `Gardenlet` deletion, nothing happens: `gardenlet`s must always be deleted manually (by deleting the `Seed` and, once gone, then the `gardenlet` `Deployment`).
 
+> [!NOTE]
+> This controller only takes care of the very first `gardenlet` deployment (since it only reacts when there is no `Seed` resource yet).
+> After the `gardenlet` is running, it uses the [self-upgrade mechanism](../deployment/deploy_gardenlet_manually.md#self-upgrades) by watching the `seedmanagement.gardener.cloud/v1alpha1.Gardenlet` (see [this](gardenlet.md#gardenlet-controller) for more details.)
+>
+> After a successful [`Garden` reconciliation](#main-reconciler), `gardener-operator` also updates the `.spec.deployment.helm.ociRepository.ref` to its own version in all `Gardenlet` resources labeled with `operator.gardener.cloud/auto-update-helm-chart-ref=true`.
+> `gardenlet`s then updates themselves.
+>
+> ⚠️ If you prefer to manage the `Gardenlet` resources via GitOps, Flux, or similar tools, then you should better manage the `.spec.deployment.helm.ociRepository.ref` field yourself and not label the resources as mentioned above (to prevent `gardener-operator` from interfering with your desired state).
+> Make sure to apply your `Gardenlet` resources (potentially containing a new version) after the `Garden` resource was successfully reconciled (i.e., after Gardener control plane was successfully rolled out, see [this](../deployment/version_skew_policy.md#supported-component-upgrade-order) for more information.)
+
 ## Webhooks
 
 As of today, the `gardener-operator` only has one webhook handler which is now described in more detail.
