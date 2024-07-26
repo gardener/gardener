@@ -122,6 +122,20 @@ By setting the `.spec.settings.verticalPodAutoscaler.enabled=false`, you can dis
 
 ⚠️ In any case, there must be a VPA available for your seed cluster. Using a seed without VPA is not supported.
 
+### VPA Pitfall: Excessive Resource Requests Making Pod Unschedulable
+VPA is unaware of node capacity, and can increase the resource requests of a pod beyond the capacity of any single node.
+Such pod is likely to become permanently unschedulable. That problem can be partly mitigated by using the
+`VerticalPodAutoscaler.Spec.ResourcePolicy.ContainerPolicies[].MaxAllowed` field to constrain pod resource requests to
+the level of nodes' allocatable resources. The downside is that a pod constrained in such fashion would be using more
+resources than it has requested, and can starve for resources and/or negatively impact neighbour pods with which it is
+sharing a node.
+
+As an alternative, in scenarios where MaxAllowed is not set, it is important to maintain a worker pool which can
+accommodate the highest level of resources that VPA would actually request for the pods it controls.
+
+Finally, the optimal strategy typically is to both ensure large enough worker pools, and, as an insurance,
+use MaxAllowed aligned with the allocatable resources of the largest worker.
+
 ## Topology-Aware Traffic Routing
 
 Refer to the [Topology-Aware Traffic Routing documentation](./topology_aware_routing.md) as this document contains the documentation for the topology-aware routing Seed setting.

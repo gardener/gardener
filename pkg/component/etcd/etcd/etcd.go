@@ -214,10 +214,6 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		minAllowed          = corev1.ResourceList{
 			corev1.ResourceMemory: resource.MustParse("200M"),
 		}
-		maxAllowed = corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse("4"),
-			corev1.ResourceMemory: resource.MustParse("28G"),
-		}
 	)
 
 	if e.values.Class == ClassImportant {
@@ -424,7 +420,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		if err := kubernetesutils.DeleteObjects(ctx, e.client, hvpa); err != nil {
 			return err
 		}
-		if err := e.reconcileVerticalPodAutoscaler(ctx, vpa, minAllowed, maxAllowed); err != nil {
+		if err := e.reconcileVerticalPodAutoscaler(ctx, vpa, minAllowed); err != nil {
 			return err
 		}
 	} else if e.values.HVPAEnabled {
@@ -537,7 +533,6 @@ func (e *etcd) Deploy(ctx context.Context) error {
 								{
 									ContainerName:    containerNameEtcd,
 									MinAllowed:       minAllowed,
-									MaxAllowed:       maxAllowed,
 									ControlledValues: &controlledValues,
 								},
 								{
@@ -951,7 +946,7 @@ func (e *etcd) emptyVerticalPodAutoscaler() *vpaautoscalingv1.VerticalPodAutosca
 	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: e.etcd.Name, Namespace: e.namespace}}
 }
 
-func (e *etcd) reconcileVerticalPodAutoscaler(ctx context.Context, vpa *vpaautoscalingv1.VerticalPodAutoscaler, minAllowed, maxAllowed corev1.ResourceList) error {
+func (e *etcd) reconcileVerticalPodAutoscaler(ctx context.Context, vpa *vpaautoscalingv1.VerticalPodAutoscaler, minAllowed corev1.ResourceList) error {
 	vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
 	containerPolicyOff := vpaautoscalingv1.ContainerScalingModeOff
 	containerPolicyAuto := vpaautoscalingv1.ContainerScalingModeAuto
@@ -989,7 +984,6 @@ func (e *etcd) reconcileVerticalPodAutoscaler(ctx context.Context, vpa *vpaautos
 					{
 						ContainerName:    containerNameEtcd,
 						MinAllowed:       minAllowed,
-						MaxAllowed:       maxAllowed,
 						ControlledValues: &controlledValues,
 						Mode:             &containerPolicyAuto,
 					},

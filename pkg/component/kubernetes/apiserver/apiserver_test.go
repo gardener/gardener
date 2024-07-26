@@ -435,10 +435,6 @@ var _ = Describe("KubeAPIServer", func() {
 								corev1.ResourceCPU:    resource.MustParse("20m"),
 								corev1.ResourceMemory: resource.MustParse("200M"),
 							},
-							MaxAllowed: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("7"),
-								corev1.ResourceMemory: resource.MustParse("28G"),
-							},
 						},
 					},
 				),
@@ -455,10 +451,6 @@ var _ = Describe("KubeAPIServer", func() {
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("20m"),
 								corev1.ResourceMemory: resource.MustParse("200M"),
-							},
-							MaxAllowed: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("7"),
-								corev1.ResourceMemory: resource.MustParse("28G"),
 							},
 						},
 						{
@@ -488,10 +480,6 @@ var _ = Describe("KubeAPIServer", func() {
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("20m"),
 								corev1.ResourceMemory: resource.MustParse("200M"),
-							},
-							MaxAllowed: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("7"),
-								corev1.ResourceMemory: resource.MustParse("28G"),
 							},
 						},
 					},
@@ -573,10 +561,6 @@ var _ = Describe("KubeAPIServer", func() {
 						ContainerName: "kube-apiserver",
 						MinAllowed: corev1.ResourceList{
 							"memory": resource.MustParse("200M"),
-						},
-						MaxAllowed: corev1.ResourceList{
-							"cpu":    resource.MustParse("8"),
-							"memory": resource.MustParse("25G"),
 						},
 						ControlledValues: &controlledValues,
 					},

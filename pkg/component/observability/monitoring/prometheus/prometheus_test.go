@@ -338,10 +338,6 @@ honor_labels: true`
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceMemory: resource.MustParse("1000M"),
 							},
-							MaxAllowed: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("4"),
-								corev1.ResourceMemory: resource.MustParse("28G"),
-							},
 							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 						},
 						{

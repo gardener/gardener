@@ -42,10 +42,6 @@ func (p *prometheus) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
 						MinAllowed: ptr.Deref(p.values.VPAMinAllowed, corev1.ResourceList{
 							corev1.ResourceMemory: resource.MustParse("1000M"),
 						}),
-						MaxAllowed: ptr.Deref(p.values.VPAMaxAllowed, corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("4"),
-							corev1.ResourceMemory: resource.MustParse("28G"),
-						}),
 						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 					},
 					{
