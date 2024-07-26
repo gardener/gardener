@@ -826,7 +826,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
-      "description": "Shows the number of nodes having issues for more than 5 mins in the cluster over a period of 30 mins.",
+      "description": "Shows the number of nodes having issues for more than 5 mins in the cluster.",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -868,9 +868,9 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "count_over_time((sum by (node) (kube_node_spec_taint{effect=\"NoSchedule\", key!=\"deployment.machine.sapcloud.io/prefer-no-schedule\", key!=\"ToBeDeletedByClusterAutoscaler\", key!=\"node.gardener.cloud/critical-components-not-ready\"}))[30m:]) > 5",
+          "expr": "count_over_time(kube_node_spec_taint{effect=\"NoSchedule\", key=~\"node.kubernetes.io/.*\", node=~\".*$worker_group.*\"}[5m]) >= 5",
           "interval": "",
-          "legendFormat": "",
+          "legendFormat": "{{node}} - {{key}}",
           "refId": "A"
         }
       ],
