@@ -456,7 +456,7 @@ images:
 - name: alpine-conntrack
   sourceRepository: github.com/gardener/alpine-conntrack
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/alpine-conntrack
-  tag: "3.20.1"
+  tag: "3.20.2"
 
 # Logging
 - name: fluent-operator
