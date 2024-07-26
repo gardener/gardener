@@ -13,7 +13,7 @@ gardener:
     deployed: true
     istio:
       listenAddresses:
-      - 127.0.0.1
+      - 172.18.255.1
   repositoryRoot: "."
   garden:
     deployed: false

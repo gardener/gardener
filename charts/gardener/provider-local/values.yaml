@@ -32,7 +32,7 @@ controllers:
     concurrentSyncs: 5
   service:
     concurrentSyncs: 5
-    hostIP: "127.0.0.1"
+    hostIP: "172.18.255.1"
     zone0IP: "172.18.255.10"
     zone1IP: "172.18.255.11"
     zone2IP: "172.18.255.12"

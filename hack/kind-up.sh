@@ -97,7 +97,7 @@ setup_loopback_device() {
   LOOPBACK_DEVICE=$(ip address | grep LOOPBACK | sed "s/^[0-9]\+: //g" | awk '{print $1}' | sed "s/:$//g")
   echo "Checking loopback device ${LOOPBACK_DEVICE}..."
   for address in "${LOOPBACK_IP_ADDRESSES[@]}"; do
-    if ip address show dev ${LOOPBACK_DEVICE} | grep -q $address; then
+    if ip address show dev ${LOOPBACK_DEVICE} | grep -q $address/; then
       echo "IP address $address already assigned to ${LOOPBACK_DEVICE}."
     else
       echo "Adding IP address $address to ${LOOPBACK_DEVICE}..."
@@ -259,26 +259,29 @@ mkdir -m 0755 -p \
   "$(dirname "$0")/../dev/local-backupbuckets" \
   "$(dirname "$0")/../dev/local-registry"
 
+LOOPBACK_IP_ADDRESSES=(172.18.255.1)
+if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
+  LOOPBACK_IP_ADDRESSES+=(::1)
+fi
+
 if [[ "$MULTI_ZONAL" == "true" ]]; then
-  LOOPBACK_IP_ADDRESSES=(172.18.255.10 172.18.255.11 172.18.255.12)
+  LOOPBACK_IP_ADDRESSES+=(172.18.255.10 172.18.255.11 172.18.255.12)
   if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
     LOOPBACK_IP_ADDRESSES+=(::10 ::11 ::12)
   fi
-  setup_loopback_device "${LOOPBACK_IP_ADDRESSES[@]}"
 fi
 if [[ "$CLUSTER_NAME" == "gardener-operator-local" ]]; then
-  LOOPBACK_IP_ADDRESSES=(172.18.255.3)
+  LOOPBACK_IP_ADDRESSES+=(172.18.255.3)
   if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
     LOOPBACK_IP_ADDRESSES+=(::3)
   fi
-  setup_loopback_device "${LOOPBACK_IP_ADDRESSES[@]}"
 elif [[ "$CLUSTER_NAME" == "gardener-local2" || "$CLUSTER_NAME" == "gardener-local2-ha-single-zone" ]]; then
-  LOOPBACK_IP_ADDRESSES=(172.18.255.2)
+  LOOPBACK_IP_ADDRESSES+=(172.18.255.2)
   if [[ "$IPFAMILY" == "ipv6" ]] || [[ "$IPFAMILY" == "dual" ]]; then
     LOOPBACK_IP_ADDRESSES+=(::2)
   fi
-  setup_loopback_device "${LOOPBACK_IP_ADDRESSES[@]}"
 fi
+setup_loopback_device "${LOOPBACK_IP_ADDRESSES[@]}"
 
 setup_kind_network
 

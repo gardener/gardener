@@ -21,7 +21,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, predicates ...predicate.P
 		r.Client = mgr.GetClient()
 	}
 	if r.HostIP == "" {
-		r.HostIP = "127.0.0.1"
+		r.HostIP = "172.18.255.1"
 	}
 
 	return builder.
