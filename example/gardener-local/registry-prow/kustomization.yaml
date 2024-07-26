@@ -16,22 +16,6 @@ patches:
   - patch: |
       - op: replace
         path: /spec/template/spec/containers/0/env/0/value
-        value: http://registry-eu-gcr-io.kube-system.svc.cluster.local:5000
-    target:
-      group: apps
-      kind: Deployment
-      name: registry-gcr-eu
-  - patch: |
-      - op: replace
-        path: /spec/template/spec/containers/0/env/0/value
-        value: http://registry-ghcr-io.kube-system.svc.cluster.local:5000
-    target:
-      group: apps
-      kind: Deployment
-      name: registry-ghcr
-  - patch: |
-      - op: replace
-        path: /spec/template/spec/containers/0/env/0/value
         value: http://registry-registry-k8s-io.kube-system.svc.cluster.local:5000
     target:
       group: apps
