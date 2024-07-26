@@ -18,27 +18,28 @@ The following tables are a summary of the feature gates that you can set on diff
 
 ## Feature Gates for Alpha or Beta Features
 
-| Feature                            | Default | Stage   | Since  | Until  |
-|------------------------------------|---------|---------|--------|--------|
-| HVPA                               | `false` | `Alpha` | `0.31` |        |
-| HVPAForShootedSeed                 | `false` | `Alpha` | `0.32` |        |
-| DefaultSeccompProfile              | `false` | `Alpha` | `1.54` |        |
-| CoreDNSQueryRewriting              | `false` | `Alpha` | `1.55` | `1.95` |
-| CoreDNSQueryRewriting              | `true`  | `Beta`  | `1.96` |        |
-| CoreDNSQueryRewriting              | `true`  | `GA`    | `1.97` |        |
-| IPv6SingleStack                    | `false` | `Alpha` | `1.63` |        |
-| MutableShootSpecNetworkingNodes    | `false` | `Alpha` | `1.64` | `1.95` |
-| MutableShootSpecNetworkingNodes    | `true`  | `Beta`  | `1.96` |        |
-| MutableShootSpecNetworkingNodes    | `true`  | `GA`    | `1.97` |        |
-| ShootForceDeletion                 | `false` | `Alpha` | `1.81` | `1.90` |
-| ShootForceDeletion                 | `true`  | `Beta`  | `1.91` |        |
-| UseNamespacedCloudProfile          | `false` | `Alpha` | `1.92` |        |
-| ShootManagedIssuer                 | `false` | `Alpha` | `1.93` |        |
-| VPAForETCD                         | `false` | `Alpha` | `1.94` | `1.96` |
-| VPAForETCD                         | `true`  | `Beta`  | `1.97` |        |
-| VPAAndHPAForAPIServer              | `false` | `Alpha` | `1.95` |        |
-| ShootCredentialsBinding            | `false` | `Alpha` | `1.98` |        |
-| NewWorkerPoolHash                  | `false` | `Alpha` | `1.98` |        |
+| Feature                         | Default | Stage   | Since   | Until   |
+|---------------------------------|---------|---------|---------|---------|
+| HVPA                            | `false` | `Alpha` | `0.31`  |         |
+| HVPAForShootedSeed              | `false` | `Alpha` | `0.32`  |         |
+| DefaultSeccompProfile           | `false` | `Alpha` | `1.54`  |         |
+| CoreDNSQueryRewriting           | `false` | `Alpha` | `1.55`  | `1.95`  |
+| CoreDNSQueryRewriting           | `true`  | `Beta`  | `1.96`  |         |
+| CoreDNSQueryRewriting           | `true`  | `GA`    | `1.97`  |         |
+| IPv6SingleStack                 | `false` | `Alpha` | `1.63`  |         |
+| MutableShootSpecNetworkingNodes | `false` | `Alpha` | `1.64`  | `1.95`  |
+| MutableShootSpecNetworkingNodes | `true`  | `Beta`  | `1.96`  |         |
+| MutableShootSpecNetworkingNodes | `true`  | `GA`    | `1.97`  |         |
+| ShootForceDeletion              | `false` | `Alpha` | `1.81`  | `1.90`  |
+| ShootForceDeletion              | `true`  | `Beta`  | `1.91`  |         |
+| UseNamespacedCloudProfile       | `false` | `Alpha` | `1.92`  |         |
+| ShootManagedIssuer              | `false` | `Alpha` | `1.93`  |         |
+| VPAForETCD                      | `false` | `Alpha` | `1.94`  | `1.96`  |
+| VPAForETCD                      | `true`  | `Beta`  | `1.97`  |         |
+| VPAAndHPAForAPIServer           | `false` | `Alpha` | `1.95`  | `1.100` |
+| VPAAndHPAForAPIServer           | `true`  | `Beta`  | `1.101` |         |
+| ShootCredentialsBinding         | `false` | `Alpha` | `1.98`  |         |
+| NewWorkerPoolHash               | `false` | `Alpha` | `1.98`  |         |
 
 ## Feature Gates for Graduated or Deprecated Features
 
