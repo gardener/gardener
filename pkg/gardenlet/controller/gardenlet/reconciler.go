@@ -24,10 +24,10 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controller/gardenletdeployer"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/managedseed"
 	"github.com/gardener/gardener/pkg/utils/oci"
 )
 
@@ -41,7 +41,7 @@ type Reconciler struct {
 	Clock            clock.Clock
 	GardenNamespace  string
 	HelmRegistry     oci.Interface
-	ValuesHelper     managedseed.ValuesHelper
+	ValuesHelper     gardenletdeployer.ValuesHelper
 }
 
 // Reconcile performs the main reconciliation logic.
@@ -74,7 +74,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error extracting gardenlet configuration: %w", err)
 	}
 
-	seed, err := managedseed.GetSeed(ctx, r.GardenClient, gardenlet.Name)
+	seed, err := gardenletdeployer.GetSeed(ctx, r.GardenClient, gardenlet.Name)
 	if err != nil {
 		r.Recorder.Eventf(gardenlet, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, err.Error())
 		updateCondition(r.Clock, status, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventReconcileError, err.Error())
@@ -148,7 +148,7 @@ func (r *Reconciler) prepareGardenletChartValues(
 	map[string]interface{},
 	error,
 ) {
-	values, err := managedseed.PrepareGardenletChartValues(
+	values, err := gardenletdeployer.PrepareGardenletChartValues(
 		ctx,
 		log,
 		r.GardenClient,

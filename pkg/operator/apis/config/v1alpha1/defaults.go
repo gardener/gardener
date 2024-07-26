@@ -98,3 +98,10 @@ func SetDefaults_GardenCareControllerConfiguration(obj *GardenCareControllerConf
 		obj.SyncPeriod = &metav1.Duration{Duration: time.Minute}
 	}
 }
+
+// SetDefaults_GardenletDeployerControllerConfig sets defaults for the GardenletDeployerControllerConfig object.
+func SetDefaults_GardenletDeployerControllerConfig(obj *GardenletDeployerControllerConfig) {
+	if obj.ConcurrentSyncs == nil {
+		obj.ConcurrentSyncs = ptr.To(1)
+	}
+}

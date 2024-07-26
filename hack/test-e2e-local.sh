@@ -55,6 +55,13 @@ if [[ "$TYPE" == "operator" ]] || [[ "$TYPE" == "operator-seed" ]]; then
       exit 1
     fi
   fi
+
+  if [[ "$TYPE" == "operator-seed" ]]; then
+    # /etc/hosts must have been updated before garden can be created (otherwise, we could put this command to the
+    # hack/ci-e2e-kind-operator-seed.sh script).
+    echo "> Deploying Garden and Soil"
+    make operator-seed-up
+  fi
 # If we are not running the gardener-operator tests then we have to make the shoot domains accessible.
 else
   seed_name="local"
@@ -104,7 +111,6 @@ else
     done
     printf "\n$local_address gu-local--e2e-rotate.ingress.$seed_name.seed.local.gardener.cloud\n" >>/etc/hosts
     printf "\n$local_address gu-local--e2e-rotate-wl.ingress.$seed_name.seed.local.gardener.cloud\n" >>/etc/hosts
-    printf "\n$local_address api.e2e-managedseed.garden.external.local.gardener.cloud\n$local_address api.e2e-managedseed.garden.internal.local.gardener.cloud\n" >>/etc/hosts
   else
     missing_entries=()
 
@@ -129,21 +135,6 @@ else
       exit 1
     fi
   fi
-fi
-
-# If we are running the gardener-operator-seed tests then we have to make e2e-managedseed apiserver domain accessible and finally create the garden.
-if [[ "$TYPE" == "operator-seed" ]]; then
-  if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
-    printf "\n$local_address api.e2e-managedseed.garden.external.local.gardener.cloud\n$local_address api.e2e-managedseed.garden.internal.local.gardener.cloud\n" >>/etc/hosts
-  else
-    if ! grep -q -x "$local_address api.e2e-managedseed.garden.external.local.gardener.cloud" /etc/hosts; then
-      printf "Hostname for the e2e-managedseed kube-apiserver is missing in /etc/hosts. To access the e2e-managedseed kube-apiserver and run e2e tests, you need to extend your /etc/hosts file.\nPlease refer to https://github.com/gardener/gardener/blob/master/docs/deployment/getting_started_locally.md#accessing-the-shoot-cluster\n\n"
-      exit 1
-    fi
-  fi
-  # /etc/hosts must be updated before garden can be created
-  echo "> Deploying Garden and Soil"
-  make operator-seed-up
 fi
 
 GO111MODULE=on ginkgo run --timeout=1h $ginkgo_flags --v --show-node-events "$@"

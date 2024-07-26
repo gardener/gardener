@@ -29,4 +29,5 @@ func SetObjectDefaults_OperatorConfiguration(in *OperatorConfiguration) {
 	SetDefaults_ServerConfiguration(&in.Server)
 	SetDefaults_GardenControllerConfig(&in.Controllers.Garden)
 	SetDefaults_GardenCareControllerConfiguration(&in.Controllers.GardenCare)
+	SetDefaults_GardenletDeployerControllerConfig(&in.Controllers.GardenletDeployer)
 }

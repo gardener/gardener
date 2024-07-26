@@ -5,6 +5,7 @@
 package fake
 
 import (
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -39,8 +40,8 @@ func (b *ClientMapBuilder) WithClientSetForKey(key clientmap.ClientSetKey, cs ku
 
 // WithRuntimeClientForKey adds a ClientSet containing only the given controller-runtime Client for the given key
 // to the map of ClientSets, that should be contained in the ClientMap.
-func (b *ClientMapBuilder) WithRuntimeClientForKey(key clientmap.ClientSetKey, c client.Client) *ClientMapBuilder {
-	b.clientSets[key] = fake.NewClientSetBuilder().WithClient(c).Build()
+func (b *ClientMapBuilder) WithRuntimeClientForKey(key clientmap.ClientSetKey, c client.Client, config *rest.Config) *ClientMapBuilder {
+	b.clientSets[key] = fake.NewClientSetBuilder().WithClient(c).WithRESTConfig(config).Build()
 	return b
 }
 

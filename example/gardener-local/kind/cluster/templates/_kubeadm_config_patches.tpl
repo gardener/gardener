@@ -9,7 +9,7 @@
       - gardener-apiserver.relay.svc.cluster.local
 {{- end }}
     extraArgs:
-{{- if not .Values.gardener.controlPlane.deployed }}
+{{- if or (not .Values.gardener.controlPlane.deployed) (not .Values.gardener.controlPlane.kindIsGardenCluster) }}
       authorization-mode: RBAC,Node
 {{- else }}
       authorization-mode: RBAC,Node

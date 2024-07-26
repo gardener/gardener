@@ -231,6 +231,18 @@ rules:
   - patch
   - update
   - delete
+- apiGroups:
+  - scheduling.k8s.io
+  resources:
+  - priorityclasses
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - watch
+  - patch
+  - update
 # TODO(rfranzke): Remove this rule as soon as the Prometheus and Alertmanager migration code is getting deleted.
 - apiGroups:
   - ""

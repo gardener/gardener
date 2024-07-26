@@ -1,5 +1,5 @@
 {{- define "extraMounts.gardener.controlPlane" -}}
-{{- if .Values.gardener.controlPlane.deployed }}
+{{- if and .Values.gardener.controlPlane.deployed .Values.gardener.controlPlane.kindIsGardenCluster }}
 - hostPath: {{.Values.gardener.repositoryRoot}}/example/gardener-local/controlplane
   containerPath: /etc/gardener/controlplane
   readOnly: true

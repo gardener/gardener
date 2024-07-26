@@ -31,17 +31,8 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
-const (
-	// ControllerName is the name of this controller.
-	ControllerName = "managedseed"
-
-	// GardenletDefaultKubeconfigSecretName is the default name for the field in the Gardenlet component configuration
-	// .gardenClientConnection.KubeconfigSecret.Name
-	GardenletDefaultKubeconfigSecretName = "gardenlet-kubeconfig" // #nosec G101 -- No credential.
-	// GardenletDefaultKubeconfigBootstrapSecretName is the default name for the field in the Gardenlet component configuration
-	// .gardenClientConnection.BootstrapKubeconfig.Name
-	GardenletDefaultKubeconfigBootstrapSecretName = "gardenlet-kubeconfig-bootstrap" // #nosec G101 -- No credential.
-)
+// ControllerName is the name of this controller.
+const ControllerName = "managedseed"
 
 // AddToManager adds Reconciler to the given manager.
 func (r *Reconciler) AddToManager(
@@ -50,31 +41,29 @@ func (r *Reconciler) AddToManager(
 	gardenCluster cluster.Cluster,
 	seedCluster cluster.Cluster,
 ) error {
+	if r.GardenConfig == nil {
+		r.GardenConfig = gardenCluster.GetConfig()
+	}
+	if r.GardenAPIReader == nil {
+		r.GardenAPIReader = gardenCluster.GetAPIReader()
+	}
 	if r.GardenClient == nil {
 		r.GardenClient = gardenCluster.GetClient()
 	}
+	if r.SeedClient == nil {
+		r.SeedClient = seedCluster.GetClient()
+	}
 	if r.Clock == nil {
 		r.Clock = clock.RealClock{}
+	}
+	if r.Recorder == nil {
+		r.Recorder = gardenCluster.GetEventRecorderFor(ControllerName + "-controller")
 	}
 	if r.GardenNamespaceGarden == "" {
 		r.GardenNamespaceGarden = v1beta1constants.GardenNamespace
 	}
 	if r.GardenNamespaceShoot == "" {
 		r.GardenNamespaceShoot = v1beta1constants.GardenNamespace
-	}
-
-	if r.Actuator == nil {
-		r.Actuator = newActuator(
-			gardenCluster.GetConfig(),
-			gardenCluster.GetAPIReader(),
-			gardenCluster.GetClient(),
-			seedCluster.GetClient(),
-			r.ShootClientMap,
-			r.Clock,
-			NewValuesHelper(&r.Config),
-			gardenCluster.GetEventRecorderFor(ControllerName+"-controller"),
-			r.GardenNamespaceShoot,
-		)
 	}
 
 	c, err := builder.

@@ -550,12 +550,23 @@ Currently, this applies to two controllers:
 The registration happens as soon as the `Garden` resource is created.
 It contains the networking information of the garden runtime cluster which is required configuration for the `NetworkPolicy` controller.
 
+
 ### [`Extension` Controller](../../pkg/operator/controller/extension)
 
 Gardener relies on extensions to provide various capabilities, such as supporting cloud providers. 
 This controller automates the management of extensions by managing all necessary resources in the runtime and virtual garden clusters.
 
 Currently, this controller only supports the reconciliation of `ControllerDeployment` and `ControllerRegistration` resources in the virtual garden cluster.
+
+### [`Gardenlet` Controller](../../pkg/operator/controller/gardenlet)
+
+The `Gardenlet` controller reconciles a `seedmanagement.gardener.cloud/v1alpha1.Gardenlet` resource in case there is no `Seed` yet with the same name.
+This is used to allow easy deployments of `gardenlet`s into unmanaged seed clusters.
+For a general overview, see [this document](../deployment/deploy_gardenlet.md).
+
+On `Gardenlet` reconciliation, the controller deploys the `gardenlet` to the cluster (either its own, or the one provided via the `.spec.kubeconfigSecretRef`) after downloading the Helm chart specified in `.spec.deployment.helm.ociRepository` and rendering it with the provided values/configuration.
+
+On `Gardenlet` deletion, nothing happens: `gardenlet`s must always be deleted manually (by deleting the `Seed` and, once gone, then the `gardenlet` `Deployment`).
 
 ## Webhooks
 
@@ -839,7 +850,8 @@ Note that this kubeconfig uses a token that has validity of `12h` only, hence it
 
 ### Creating Seeds and Shoots
 
-You can also create Seeds and Shoots from your local development setup. Please see [here](../deployment/getting_started_locally.md#alternative-way-to-set-up-garden-and-seed-leveraging-gardener-operator) for details.
+You can also create Seeds and Shoots from your local development setup.
+Please see [here](../deployment/getting_started_locally.md#alternative-way-to-set-up-garden-and-seed-leveraging-gardener-operator) for details.
 
 ### Deleting the `Garden`
 

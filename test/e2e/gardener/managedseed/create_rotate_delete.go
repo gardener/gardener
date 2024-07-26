@@ -227,8 +227,8 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 				return err
 			}
 
-			var conditionMessage = fmt.Sprintf("%q condition missing", seedmanagementv1alpha1.ManagedSeedSeedRegistered)
-			if condition := helper.GetCondition(managedSeed.Status.Conditions, seedmanagementv1alpha1.ManagedSeedSeedRegistered); condition != nil {
+			var conditionMessage = fmt.Sprintf("%q condition missing", seedmanagementv1alpha1.SeedRegistered)
+			if condition := helper.GetCondition(managedSeed.Status.Conditions, seedmanagementv1alpha1.SeedRegistered); condition != nil {
 				conditionMessage = condition.Message
 			}
 

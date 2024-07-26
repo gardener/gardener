@@ -15,7 +15,7 @@ import (
 var (
 	managedSeedConditionTypes = []gardencorev1beta1.ConditionType{
 		seedmanagementv1alpha1.ManagedSeedShootReconciled,
-		seedmanagementv1alpha1.ManagedSeedSeedRegistered,
+		seedmanagementv1alpha1.SeedRegistered,
 	}
 )
 

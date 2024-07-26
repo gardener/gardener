@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package managedseed
+package gardenletdeployer
 
 import (
 	. "github.com/onsi/ginkgo/v2"
@@ -14,7 +14,6 @@ import (
 	"k8s.io/utils/ptr"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -38,7 +37,6 @@ var _ = Describe("ValuesHelper", func() {
 
 		deployment      *seedmanagementv1alpha1.GardenletDeployment
 		gardenletConfig *gardenletv1alpha1.GardenletConfiguration
-		shoot           *gardencorev1beta1.Shoot
 
 		mergedDeployment      *seedmanagementv1alpha1.GardenletDeployment
 		mergedGardenletConfig func(bool) *gardenletv1alpha1.GardenletConfiguration
@@ -127,17 +125,6 @@ var _ = Describe("ValuesHelper", func() {
 			},
 			FeatureGates: map[string]bool{
 				"FooFeature": false,
-			},
-		}
-		shoot = &gardencorev1beta1.Shoot{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: namespace,
-			},
-			Status: gardencorev1beta1.ShootStatus{
-				Gardener: gardencorev1beta1.Gardener{
-					Version: "1.19.0",
-				},
 			},
 		}
 
@@ -305,7 +292,7 @@ var _ = Describe("ValuesHelper", func() {
 
 	Describe("#MergeGardenletDeployment", func() {
 		It("should merge the deployment with the values from the parent gardenlet", func() {
-			result, err := vh.MergeGardenletDeployment(deployment, shoot)
+			result, err := vh.MergeGardenletDeployment(deployment)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal(mergedDeployment))
 		})

@@ -10818,12 +10818,18 @@ func schema_pkg_apis_seedmanagement_v1alpha1_GardenletSpec(ref common.ReferenceC
 							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
+					"kubeconfigSecretRef": {
+						SchemaProps: spec.SchemaProps{
+							Description: "KubeconfigSecretRef is a reference to a secret containing a kubeconfig for the cluster to which gardenlet should be deployed. This is only used by gardener-operator for a very first gardenlet deployment. After that, gardenlet will continuously upgrade itself. If this field is empty, gardener-operator deploys it into its own runtime cluster.",
+							Ref:         ref("k8s.io/api/core/v1.LocalObjectReference"),
+						},
+					},
 				},
 				Required: []string{"deployment"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletSelfDeployment", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
+			"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletSelfDeployment", "k8s.io/api/core/v1.LocalObjectReference", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 

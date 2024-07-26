@@ -42,6 +42,9 @@ var _ = Describe("#ValidateOperatorConfiguration", func() {
 				GardenCare: config.GardenCareControllerConfiguration{
 					SyncPeriod: &metav1.Duration{Duration: time.Minute},
 				},
+				GardenletDeployer: config.GardenletDeployerControllerConfig{
+					ConcurrentSyncs: ptr.To(5),
+				},
 				NetworkPolicy: config.NetworkPolicyControllerConfiguration{
 					ConcurrentSyncs: ptr.To(5),
 				},

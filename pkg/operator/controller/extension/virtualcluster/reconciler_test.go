@@ -95,7 +95,7 @@ var _ = Describe("Reconciler", func() {
 		virtualClient = fakeclient.NewClientBuilder().WithScheme(operatorclient.VirtualScheme).Build()
 		runtimeClient = fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).
 			WithStatusSubresource(&operatorv1alpha1.Extension{}, &operatorv1alpha1.Extension{}).Build()
-		gardenClientMap = fakeclientmap.NewClientMapBuilder().WithRuntimeClientForKey(keys.ForGarden(garden), virtualClient).Build()
+		gardenClientMap = fakeclientmap.NewClientMapBuilder().WithRuntimeClientForKey(keys.ForGarden(garden), virtualClient, nil).Build()
 
 		fakeClock = testclock.NewFakeClock(time.Now())
 		fakeRecorder = &record.FakeRecorder{}

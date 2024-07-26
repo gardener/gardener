@@ -5,6 +5,8 @@ gardener:
     deployed: false
   controlPlane:
     deployed: true
+    kindIsGardenCluster: true
+    customEtcdStatefulSet: true
   nginxIngress:
     deployed: true
   seed:

@@ -243,6 +243,11 @@ func (in *GardenletSpec) DeepCopyInto(out *GardenletSpec) {
 	if in.Config != nil {
 		out.Config = in.Config.DeepCopyObject()
 	}
+	if in.KubeconfigSecretRef != nil {
+		in, out := &in.KubeconfigSecretRef, &out.KubeconfigSecretRef
+		*out = new(v1.LocalObjectReference)
+		**out = **in
+	}
 	return
 }
 

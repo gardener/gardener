@@ -5,6 +5,7 @@
 package seedmanagement
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
@@ -43,6 +44,11 @@ type GardenletSpec struct {
 	Deployment GardenletSelfDeployment
 	// Config is the GardenletConfiguration used to configure gardenlet.
 	Config runtime.Object
+	// KubeconfigSecretRef is a reference to a secret containing a kubeconfig for the cluster to which gardenlet should
+	// be deployed. This is only used by gardener-operator for a very first gardenlet deployment. After that, gardenlet
+	// will continuously upgrade itself. If this field is empty, gardener-operator deploys it into its own runtime
+	// cluster.
+	KubeconfigSecretRef *corev1.LocalObjectReference
 }
 
 // GardenletSelfDeployment specifies certain gardenlet deployment parameters, such as the number of replicas,

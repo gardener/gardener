@@ -1,8 +1,16 @@
 gardener:
   controlPlane:
-    deployed: false
+    deployed: true
+    kindIsGardenCluster: false
+    customEtcdStatefulSet: false
   seed:
-    deployed: false
+    istio:
+      # Add one 'global' address and one per zone, see https://github.com/gardener/gardener/pull/6997
+      listenAddresses:
+      - 127.0.0.1
+      - 127.0.0.10
+      - 127.0.0.11
+      - 127.0.0.12
   nginxIngress:
     deployed: true
   garden:

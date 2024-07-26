@@ -308,7 +308,7 @@ func shootDeleteFailed(shoot *gardencorev1beta1.Shoot) bool {
 }
 
 func managedSeedRegistered(managedSeed *seedmanagementv1alpha1.ManagedSeed) bool {
-	conditionSeedRegistered := v1beta1helper.GetCondition(managedSeed.Status.Conditions, seedmanagementv1alpha1.ManagedSeedSeedRegistered)
+	conditionSeedRegistered := v1beta1helper.GetCondition(managedSeed.Status.Conditions, seedmanagementv1alpha1.SeedRegistered)
 	return managedSeed.Generation == managedSeed.Status.ObservedGeneration && managedSeed.DeletionTimestamp == nil &&
 		conditionSeedRegistered != nil && conditionSeedRegistered.Status == gardencorev1beta1.ConditionTrue
 }
