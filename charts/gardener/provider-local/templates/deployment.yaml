@@ -87,7 +87,7 @@ spec:
               fieldPath: metadata.namespace
         {{- if .Values.imageVectorOverwrite }}
         - name: IMAGEVECTOR_OVERWRITE
-          value: /charts_overwrite/images_overwrite.yaml
+          value: /imagevector_overwrite/images_overwrite.yaml
         {{- end }}
         livenessProbe:
           httpGet:
@@ -112,7 +112,7 @@ spec:
         volumeMounts:
         {{- if .Values.imageVectorOverwrite }}
         - name: imagevector-overwrite
-          mountPath: /charts_overwrite/
+          mountPath: /imagevector_overwrite/
           readOnly: true
         {{- end }}
         - name: backup-path

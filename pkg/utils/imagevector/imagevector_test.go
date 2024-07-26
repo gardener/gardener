@@ -347,11 +347,11 @@ images:
 				defer cleanup()
 				defer test.WithEnvVar(OverrideEnv, file.Name())()
 
-				Expect(WithEnvOverride(vector)).To(Equal(ImageVector{image1Src1, image2Src1}))
+				Expect(WithEnvOverride(vector, "IMAGEVECTOR_OVERWRITE")).To(Equal(ImageVector{image1Src1, image2Src1}))
 			})
 
 			It("should keep the vector as-is if the env variable is not set", func() {
-				Expect(WithEnvOverride(image1Src1Vector)).To(Equal(image1Src1Vector))
+				Expect(WithEnvOverride(image1Src1Vector, "IMAGEVECTOR_OVERWRITE")).To(Equal(image1Src1Vector))
 			})
 		})
 

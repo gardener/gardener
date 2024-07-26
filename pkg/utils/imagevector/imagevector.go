@@ -20,8 +20,10 @@ import (
 )
 
 const (
-	// OverrideEnv is the name of the image vector override environment variable.
+	// OverrideEnv is the name of the containers image vector override environment variable.
 	OverrideEnv = "IMAGEVECTOR_OVERWRITE"
+	// OverrideChartsEnv is the name of the charts image vector override environment variable.
+	OverrideChartsEnv = "IMAGEVECTOR_CHARTS_OVERWRITE"
 	// SHA256TagPrefix is the prefix in an image tag for sha256 tags.
 	SHA256TagPrefix = "sha256:"
 )
@@ -51,16 +53,6 @@ func ReadFile(name string) (ImageVector, error) {
 	}
 
 	return Read(buf)
-}
-
-// ReadGlobalImageVectorWithEnvOverride reads the global image vector and applies the env override. Exposed for testing.
-func ReadGlobalImageVectorWithEnvOverride(filePath string) (ImageVector, error) {
-	imageVector, err := ReadFile(filePath)
-	if err != nil {
-		return nil, err
-	}
-
-	return WithEnvOverride(imageVector)
 }
 
 // mergeImageSources merges the two given ImageSources.
@@ -180,11 +172,11 @@ func Merge(vectors ...ImageVector) ImageVector {
 	return out
 }
 
-// WithEnvOverride checks if an environment variable with the key IMAGEVECTOR_OVERWRITE is set.
+// WithEnvOverride checks if an environment variable with the provided key is set.
 // If yes, it reads the ImageVector at the value of the variable and merges it with the given one.
 // Otherwise, it returns the unmodified ImageVector.
-func WithEnvOverride(vector ImageVector) (ImageVector, error) {
-	overwritePath := os.Getenv(OverrideEnv)
+func WithEnvOverride(vector ImageVector, env string) (ImageVector, error) {
+	overwritePath := os.Getenv(env)
 	if len(overwritePath) == 0 {
 		return vector, nil
 	}

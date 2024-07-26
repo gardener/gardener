@@ -63,7 +63,7 @@ const (
 	metricsPort     = 8080
 
 	druidConfigMapImageVectorOverwriteDataKey          = "images_overwrite.yaml"
-	druidDeploymentVolumeMountPathImageVectorOverwrite = "/charts_overwrite"
+	druidDeploymentVolumeMountPathImageVectorOverwrite = "/imagevector_overwrite"
 	druidDeploymentVolumeNameImageVectorOverwrite      = "imagevector-overwrite"
 )
 

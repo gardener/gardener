@@ -6,6 +6,9 @@ reference.resources.gardener.cloud/configmap-{{ include "operator.imagevector-ov
 {{- if .Values.componentImageVectorOverwrites }}
 reference.resources.gardener.cloud/configmap-{{ include "operator.imagevector-overwrite-components.name" . | sha256sum | trunc 8 }}: {{ include "operator.imagevector-overwrite-components.name" . }}
 {{- end }}
+{{- if .Values.chartsImageVectorOverwrite }}
+reference.resources.gardener.cloud/configmap-{{ include "operator.imagevector-overwrite-charts.name" . | sha256sum | trunc 8 }}: {{ include "operator.imagevector-overwrite-charts.name" . }}
+{{- end }}
 {{- if .Values.config.runtimeClientConnection.kubeconfig }}
 reference.resources.gardener.cloud/secret-{{ include "operator.kubeconfig.name" . | sha256sum | trunc 8 }}: {{ include "operator.kubeconfig.name" . }}
 {{- end }}
@@ -76,15 +79,19 @@ spec:
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         args:
         - --config=/etc/gardener-operator/config/config.yaml
-        {{- if or .Values.env .Values.imageVectorOverwrite .Values.componentImageVectorOverwrites }}
+        {{- if or .Values.env .Values.imageVectorOverwrite .Values.componentImageVectorOverwrites .Values.chartsImageVectorOverwrite }}
         env:
         {{- if .Values.imageVectorOverwrite }}
         - name: IMAGEVECTOR_OVERWRITE
-          value: /charts_overwrite/images_overwrite.yaml
+          value: /imagevector_overwrite/images_overwrite.yaml
         {{- end }}
         {{- if .Values.componentImageVectorOverwrites }}
         - name: IMAGEVECTOR_OVERWRITE_COMPONENTS
-          value: /charts_overwrite_components/components.yaml
+          value: /imagevector_overwrite_components/components.yaml
+        {{- end }}
+        {{- if .Values.chartsImageVectorOverwrite }}
+        - name: IMAGEVECTOR_CHARTS_OVERWRITE
+          value: /imagevector_overwrite_charts/images_overwrite.yaml
         {{- end }}
         {{- range $index, $value := .Values.env }}
         {{- if not (empty $value) }}
@@ -130,12 +137,17 @@ spec:
         {{- end }}
         {{- if .Values.imageVectorOverwrite }}
         - name: imagevector-overwrite
-          mountPath: /charts_overwrite
+          mountPath: /imagevector_overwrite
           readOnly: true
         {{- end }}
         {{- if .Values.componentImageVectorOverwrites }}
         - name: imagevector-overwrite-components
-          mountPath: /charts_overwrite_components
+          mountPath: /imagevector_overwrite_components
+          readOnly: true
+        {{- end }}
+        {{- if .Values.chartsImageVectorOverwrite }}
+        - name: imagevector-overwrite-charts
+          mountPath: /imagevector_overwrite_charts
           readOnly: true
         {{- end }}
         - name: gardener-operator-config
@@ -195,6 +207,11 @@ spec:
       - name: imagevector-overwrite-components
         configMap:
           name: {{ include "operator.imagevector-overwrite-components.name" . }}
+      {{- end }}
+      {{- if .Values.chartsImageVectorOverwrite }}
+      - name: imagevector-overwrite-charts
+        configMap:
+          name: {{ include "operator.imagevector-overwrite-charts.name" . }}
       {{- end }}
       - name: gardener-operator-config
         configMap:

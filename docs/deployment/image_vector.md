@@ -116,10 +116,10 @@ spec:
       - name: gardenlet
         env:
         - name: IMAGEVECTOR_OVERWRITE
-          value: /charts-overwrite/images_overwrite.yaml
+          value: /imagevector-overwrite/images_overwrite.yaml
         volumeMounts:
         - name: gardenlet-images-overwrite
-          mountPath: /charts-overwrite
+          mountPath: /imagevector-overwrite
         # ...
       volumes:
       - name: gardenlet-images-overwrite
@@ -149,3 +149,9 @@ components:
 
 Gardener will, if supported by the directly deployed component (`etcd-druid` in this example), inject the given `imageVectorOverwrite` into the `Deployment` manifest.
 The respective component is responsible for using the overwritten images instead of its defaults.
+
+## Helm Chart Image Vector
+
+Some Gardener components might also deploy https://helm.sh/docs/helm/helm_package/ which are pulled from an OCI repository.
+The concepts are the very same as for the container images.
+The only difference is that the environment variable for overwriting this chart image vector is called `IMAGEVECTOR_CHARTS_OVERWRITE`.

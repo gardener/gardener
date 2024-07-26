@@ -3,6 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //go:generate ../hack/generate-imagename-constants.sh
+//go:generate ../hack/generate-imagename-constants.sh imagevector charts.yaml Chart
+
 package imagevector
 
 import (
@@ -17,6 +19,10 @@ var (
 	//go:embed containers.yaml
 	containersYAML        string
 	containersImageVector imagevector.ImageVector
+
+	//go:embed charts.yaml
+	chartsYAML        string
+	chartsImageVector imagevector.ImageVector
 )
 
 func init() {
@@ -24,11 +30,21 @@ func init() {
 
 	containersImageVector, err = imagevector.Read([]byte(containersYAML))
 	runtime.Must(err)
-	containersImageVector, err = imagevector.WithEnvOverride(containersImageVector)
+	containersImageVector, err = imagevector.WithEnvOverride(containersImageVector, imagevector.OverrideEnv)
+	runtime.Must(err)
+
+	chartsImageVector, err = imagevector.Read([]byte(chartsYAML))
+	runtime.Must(err)
+	chartsImageVector, err = imagevector.WithEnvOverride(chartsImageVector, imagevector.OverrideChartsEnv)
 	runtime.Must(err)
 }
 
 // Containers is the image vector that contains all the needed container images.
 func Containers() imagevector.ImageVector {
 	return containersImageVector
+}
+
+// Charts is the image vector that contains all the needed Helm chart images.
+func Charts() imagevector.ImageVector {
+	return chartsImageVector
 }

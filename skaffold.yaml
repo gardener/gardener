@@ -642,6 +642,7 @@ build:
             - extensions/pkg/webhook/controlplane/genericmutator
             - extensions/pkg/webhook/shoot
             - imagevector
+            - imagevector/charts.yaml
             - imagevector/containers.yaml
             - pkg/api/core
             - pkg/api/extensions
@@ -929,6 +930,7 @@ build:
             - cmd/gardenlet/app/bootstrappers
             - cmd/utils
             - imagevector
+            - imagevector/charts.yaml
             - imagevector/containers.yaml
             - pkg/api/extensions
             - pkg/api/indexer
@@ -1377,6 +1379,7 @@ build:
             - cmd/gardener-node-agent/app/bootstrappers
             - cmd/utils
             - imagevector
+            - imagevector/charts.yaml
             - imagevector/containers.yaml
             - pkg/api/extensions
             - pkg/apis/core
