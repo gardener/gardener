@@ -185,6 +185,13 @@
       "enabled": false
     },
     {
+      // Ignore local-skaffold packages because they are virtual packages for local setup only.
+      "matchPackagePatterns": [
+        "local-skaffold\/.+"
+      ],
+      "enabled": false
+    },
+    {
       // Ignore dependency updates from k8s.io/kube-openapi because it depends on k8s.io/apiserver.
       "matchDatasources": ["go"],
       "matchPackagePatterns": ["k8s\\.io\/kube-openapi"],
