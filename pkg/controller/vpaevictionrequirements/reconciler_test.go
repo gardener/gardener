@@ -144,6 +144,24 @@ var _ = Describe("Reconciler", func() {
 				Expect(vpa.Spec.UpdatePolicy.EvictionRequirements).To(BeEmpty())
 			})
 		})
+
+		When("the maintenance window ends exactly at this second", func() {
+			BeforeEach(func() {
+				maintenanceWindowBegin = fakeClock.Now().Add(-2 * time.Hour).Format("150405-0700")
+				maintenanceWindowEnd = fakeClock.Now().Format("150405-0700")
+				metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, constants.AnnotationShootMaintenanceWindow, maintenanceWindowBegin+","+maintenanceWindowEnd)
+				vpa.Spec.UpdatePolicy.EvictionRequirements = upscaleOnlyRequirement
+			})
+
+			It("should add the EvictionRequirement and requeue for the beginning of the next maintenance window", func() {
+				result, err := reconciler.Reconcile(ctx, request)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.RequeueAfter).To(Equal(22 * time.Hour))
+
+				Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(vpa), vpa)).To(Succeed())
+				Expect(vpa.Spec.UpdatePolicy.EvictionRequirements).To(ConsistOf(upscaleOnlyRequirement))
+			})
+		})
 	})
 
 	Context("the VPA is annotated with downscale-never", func() {
