@@ -210,6 +210,13 @@
       "enabled": false
     },
     {
+      // Enable specific paths which have been disabled by the previous rule.
+      "matchFileNames": [
+          "pkg/provider-local/node/*"
+      ],
+      "enabled": true
+    },
+    {
       // Add PR footer with release notes for docker releases.
       "matchDatasources": ["docker"],
       "matchFileNames": ["imagevector/**"],
