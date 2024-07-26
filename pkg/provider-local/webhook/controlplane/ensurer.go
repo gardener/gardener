@@ -119,16 +119,6 @@ func (e *ensurer) EnsureCRIConfig(_ context.Context, _ extensionscontextwebhook.
 			Hosts:    []extensionsv1alpha1.RegistryHost{{URL: "http://garden.local.gardener.cloud:5003"}},
 		},
 		{
-			Upstream: "eu.gcr.io",
-			Server:   ptr.To("https://eu.gcr.io"),
-			Hosts:    []extensionsv1alpha1.RegistryHost{{URL: "http://garden.local.gardener.cloud:5004"}},
-		},
-		{
-			Upstream: "ghcr.io",
-			Server:   ptr.To("https://ghcr.io"),
-			Hosts:    []extensionsv1alpha1.RegistryHost{{URL: "http://garden.local.gardener.cloud:5005"}},
-		},
-		{
 			Upstream: "registry.k8s.io",
 			Server:   ptr.To("https://registry.k8s.io"),
 			Hosts:    []extensionsv1alpha1.RegistryHost{{URL: "http://garden.local.gardener.cloud:5006"}},

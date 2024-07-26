@@ -7,8 +7,6 @@ namespace: registry
 resources:
 - namespace.yaml
 - gcr
-- gcr-eu
-- ghcr
 - k8s
 - localhost
 - quay
