@@ -98,7 +98,7 @@ config.yaml: |
     {{- if .Values.config.controllers.gardenletDeployer }}
     gardenletDeployer:
       {{- if .Values.config.controllers.gardenletDeployer.concurrentSyncs }}
-      concurrentSyncs: {{ .Values.config.controllers.networkPolicy.concurrentSyncs }}
+      concurrentSyncs: {{ .Values.config.controllers.gardenletDeployer.concurrentSyncs }}
       {{- end }}
     {{- end }}
     {{- if .Values.config.controllers.networkPolicy }}

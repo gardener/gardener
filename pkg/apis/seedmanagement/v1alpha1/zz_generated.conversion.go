@@ -480,7 +480,7 @@ func autoConvert_v1alpha1_GardenletSpec_To_seedmanagement_GardenletSpec(in *Gard
 	if err := runtime.Convert_runtime_RawExtension_To_runtime_Object(&in.Config, &out.Config, s); err != nil {
 		return err
 	}
-	// WARNING: in.KubeconfigSecretRef requires manual conversion: does not exist in peer-type
+	out.KubeconfigSecretRef = (*corev1.LocalObjectReference)(unsafe.Pointer(in.KubeconfigSecretRef))
 	return nil
 }
 
@@ -491,6 +491,7 @@ func autoConvert_seedmanagement_GardenletSpec_To_v1alpha1_GardenletSpec(in *seed
 	if err := runtime.Convert_runtime_Object_To_runtime_RawExtension(&in.Config, &out.Config, s); err != nil {
 		return err
 	}
+	out.KubeconfigSecretRef = (*corev1.LocalObjectReference)(unsafe.Pointer(in.KubeconfigSecretRef))
 	return nil
 }
 
