@@ -13,6 +13,7 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -39,6 +40,8 @@ var (
 	testEnv    *envtest.Environment
 	testClient client.Client
 	mgrClient  client.Client
+
+	scheme *runtime.Scheme
 )
 
 var _ = BeforeSuite(func() {
@@ -57,6 +60,7 @@ var _ = BeforeSuite(func() {
 			Paths: []string{
 				filepath.Join("..", "..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_gardens.yaml"),
 				filepath.Join("testdata", "crd-seeds.yaml"),
+				filepath.Join("testdata", "crd-gardenlets.yaml"),
 			},
 		},
 		ErrorIfCRDPathMissing: true,
@@ -73,6 +77,10 @@ var _ = BeforeSuite(func() {
 	})
 
 	By("Create test client")
-	testClient, err = client.New(restConfig, client.Options{Scheme: operatorclient.RuntimeScheme})
+	scheme = runtime.NewScheme()
+	Expect(operatorclient.AddRuntimeSchemeToScheme(scheme)).To(Succeed())
+	Expect(operatorclient.AddVirtualSchemeToScheme(scheme)).To(Succeed())
+
+	testClient, err = client.New(restConfig, client.Options{Scheme: scheme})
 	Expect(err).NotTo(HaveOccurred())
 })
