@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -93,7 +94,9 @@ func (r *Reconciler) reconcileVPAForDownscaleInMaintenanceOnly(ctx context.Conte
 		return reconcile.Result{}, nil
 	}
 
-	if isNowInMaintenanceTimeWindow := maintenanceTimeWindow.Contains(r.Clock.Now()); isNowInMaintenanceTimeWindow {
+	// Only allow downscaling if there is more than 5 minutes remaining in the maintenance window, to avoid evictions
+	// outside the maintenance window and race conditions with requeuing
+	if isNowInMaintenanceTimeWindow := maintenanceTimeWindow.Contains(r.Clock.Now().Add(5 * time.Minute)); isNowInMaintenanceTimeWindow {
 		log.Info("Shoot is inside maintenance window, removing the EvictionRequirement to allow downscaling", "maintenanceWindow", maintenanceTimeWindow)
 
 		if _, err := controllerutil.CreateOrUpdate(ctx, r.SeedClient, vpa, func() error {
