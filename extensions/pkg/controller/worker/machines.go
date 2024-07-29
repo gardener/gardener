@@ -251,19 +251,15 @@ func ErrorMachineImageNotFound(name, version string, opt ...string) error {
 
 // FetchUserData fetches the user data for a worker pool.
 func FetchUserData(ctx context.Context, c client.Client, namespace string, pool extensionsv1alpha1.WorkerPool) ([]byte, error) {
-	if pool.UserDataSecretRef != nil {
-		secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: pool.UserDataSecretRef.Name, Namespace: namespace}}
-		if err := c.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
-			return nil, fmt.Errorf("failed fetching user data secret %s referenced in worker pool %s: %w", pool.UserDataSecretRef.Name, pool.Name, err)
-		}
-
-		userData, ok := secret.Data[pool.UserDataSecretRef.Key]
-		if !ok || len(userData) == 0 {
-			return nil, fmt.Errorf("user data secret %s for worker pool %s has no %s field or it's empty", pool.UserDataSecretRef.Name, pool.Name, pool.UserDataSecretRef.Key)
-		}
-
-		return userData, nil
+	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: pool.UserDataSecretRef.Name, Namespace: namespace}}
+	if err := c.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
+		return nil, fmt.Errorf("failed fetching user data secret %s referenced in worker pool %s: %w", pool.UserDataSecretRef.Name, pool.Name, err)
 	}
 
-	return pool.UserData, nil
+	userData, ok := secret.Data[pool.UserDataSecretRef.Key]
+	if !ok || len(userData) == 0 {
+		return nil, fmt.Errorf("user data secret %s for worker pool %s has no %s field or it's empty", pool.UserDataSecretRef.Name, pool.Name, pool.UserDataSecretRef.Key)
+	}
+
+	return userData, nil
 }

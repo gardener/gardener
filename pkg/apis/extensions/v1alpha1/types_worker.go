@@ -134,18 +134,9 @@ type WorkerPool struct {
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +optional
 	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty"`
-	// UserData is a base64-encoded string that contains the data that is sent to the provider's APIs
-	// when a new machine/VM that is part of this worker pool shall be spawned.
-	// Either this or UserDataSecretRef must be provided.
-	// Deprecated: This field will be removed in future release.
-	// TODO(rfranzke): Remove this field after v1.100 has been released.
-	// +optional
-	UserData []byte `json:"userData,omitempty"`
 	// UserDataSecretRef references a Secret and a data key containing the data that is sent to the provider's APIs when
 	// a new machine/VM that is part of this worker pool shall be spawned.
-	// Either this or UserData must be provided.
-	// +optional
-	UserDataSecretRef *corev1.SecretKeySelector `json:"userDataSecretRef,omitempty"`
+	UserDataSecretRef corev1.SecretKeySelector `json:"userDataSecretRef"`
 	// Volume contains information about the root disks that should be used for this worker pool.
 	// +optional
 	Volume *Volume `json:"volume,omitempty"`

@@ -83,10 +83,6 @@ func ValidateWorkerPools(pools []extensionsv1alpha1.WorkerPool, fldPath *field.P
 			allErrs = append(allErrs, field.Required(idxPath.Child("name"), "field is required"))
 		}
 
-		if pool.UserData == nil && pool.UserDataSecretRef == nil {
-			allErrs = append(allErrs, field.Required(idxPath.Child("userData"), "either userData or userDataSecretRef must be provided"))
-		}
-
 		if pool.NodeTemplate != nil {
 			for resourceName, value := range pool.NodeTemplate.Capacity {
 				allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue(string(resourceName), value, idxPath.Child("nodeTemplate", "capacity", string(resourceName)))...)
