@@ -43,12 +43,6 @@ func (_ *localDriver) InitializeMachine(context.Context, *driver.InitializeMachi
 }
 
 func podForMachine(machine *machinev1alpha1.Machine, machineClass *machinev1alpha1.MachineClass) *corev1.Pod {
-	// TODO(scheererj): Remove the empty namespace mitigation after https://github.com/gardener/machine-controller-manager/pull/932 has been adopted
-	namespace := machine.Namespace
-	// machine.Namespace may be empty due to machine controller manager omitting namespace
-	if namespace == "" {
-		namespace = machineClass.Namespace
-	}
 	return &corev1.Pod{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: corev1.SchemeGroupVersion.String(),
@@ -56,18 +50,12 @@ func podForMachine(machine *machinev1alpha1.Machine, machineClass *machinev1alph
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      podName(machine.Name),
-			Namespace: namespace,
+			Namespace: getNamespaceForMachine(machine, machineClass),
 		},
 	}
 }
 
 func userDataSecretForMachine(machine *machinev1alpha1.Machine, machineClass *machinev1alpha1.MachineClass) *corev1.Secret {
-	// TODO(scheererj): Remove the empty namespace mitigation after https://github.com/gardener/machine-controller-manager/pull/932 has been adopted
-	namespace := machine.Namespace
-	// machine.Namespace may be empty due to machine controller manager omitting namespace
-	if namespace == "" {
-		namespace = machineClass.Namespace
-	}
 	return &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: corev1.SchemeGroupVersion.String(),
@@ -75,11 +63,20 @@ func userDataSecretForMachine(machine *machinev1alpha1.Machine, machineClass *ma
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      podName(machine.Name) + "-userdata",
-			Namespace: namespace,
+			Namespace: getNamespaceForMachine(machine, machineClass),
 		},
 	}
 }
 
 func podName(machineName string) string {
 	return "machine-" + machineName
+}
+
+// TODO(scheererj): Remove the empty namespace mitigation after https://github.com/gardener/machine-controller-manager/pull/932 has been adopted
+func getNamespaceForMachine(machine *machinev1alpha1.Machine, machineClass *machinev1alpha1.MachineClass) string {
+	// machine.Namespace may be empty due to machine controller manager omitting namespace
+	if machine.Namespace != "" {
+		return machine.Namespace
+	}
+	return machineClass.Namespace
 }
