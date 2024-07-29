@@ -834,6 +834,93 @@ var _ = Describe("KubeStateMetrics", func() {
 	})
 
 	Describe("#Deploy", func() {
+		Context("cluster type garden-runtime", func() {
+			var expectedObjects []client.Object
+
+			BeforeEach(func() {
+				values = Values{
+					NameSuffix: "-runtime",
+				}
+				ksm = New(c, namespace, nil, Values{
+					ClusterType:       component.ClusterTypeSeed,
+					KubernetesVersion: semver.MustParse("1.26.3"),
+					Image:             image,
+					PriorityClassName: priorityClassName,
+					NameSuffix:        "-runtime",
+				})
+				managedResourceName = "kube-state-metrics-runtime"
+			})
+
+			JustBeforeEach(func() {
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
+
+				Expect(ksm.Deploy(ctx)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+				expectedMr := &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      managedResourceName,
+						Namespace: namespace,
+						Labels: map[string]string{
+							"gardener.cloud/role":                "seed-system-component",
+							"care.gardener.cloud/condition-type": "ObservabilityComponentsHealthy",
+						},
+						ResourceVersion: "1",
+					},
+					Spec: resourcesv1alpha1.ManagedResourceSpec{
+						Class: ptr.To("seed"),
+						SecretRefs: []corev1.LocalObjectReference{{
+							Name: managedResource.Spec.SecretRefs[0].Name,
+						}},
+						KeepObjects: ptr.To(false),
+					},
+				}
+				utilruntime.Must(references.InjectAnnotations(expectedMr))
+				Expect(managedResource).To(DeepEqual(expectedMr))
+				expectedObjects = []client.Object{
+					serviceAccountFor("-runtime"),
+					clusterRoleFor(component.ClusterTypeSeed, "-runtime"),
+					clusterRoleBindingFor(component.ClusterTypeSeed, "-runtime"),
+					serviceFor(component.ClusterTypeSeed),
+					deploymentFor(component.ClusterTypeSeed),
+					vpaFor("-runtime"),
+					scrapeConfigCacheFor("-runtime"),
+					scrapeConfigGarden,
+				}
+
+				managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+			})
+
+			Context("Kubernetes versions >= 1.26", func() {
+				It("should successfully deploy all resources", func() {
+					expectedObjects = append(expectedObjects, pdbFor(true, "-runtime"))
+					Expect(managedResource).To(consistOf(expectedObjects...))
+				})
+			})
+
+			Context("Kubernetes versions < 1.26", func() {
+				BeforeEach(func() {
+					ksm = New(c, namespace, nil, Values{
+						ClusterType:       component.ClusterTypeSeed,
+						KubernetesVersion: semver.MustParse("1.25.3"),
+						Image:             image,
+						PriorityClassName: priorityClassName,
+						IsWorkerless:      false,
+						NameSuffix:        "-runtime",
+					})
+				})
+
+				It("should successfully deploy all resources", func() {
+					expectedObjects = append(expectedObjects, pdbFor(false, "-runtime"))
+					Expect(managedResource).To(consistOf(expectedObjects...))
+				})
+			})
+		})
+
 		Context("cluster type seed", func() {
 			var expectedObjects []client.Object
 
