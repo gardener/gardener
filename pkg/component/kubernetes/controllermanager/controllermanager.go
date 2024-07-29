@@ -293,6 +293,13 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	if err := netutils.CheckDualStackForKubeComponents(k.values.PodNetworks, "pod"); err != nil {
+		return err
+	}
+	if err := netutils.CheckDualStackForKubeComponents(k.values.ServiceNetworks, "service"); err != nil {
+		return err
+	}
+
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient.Client(), deployment, func() error {
 		deployment.Labels = utils.MergeStringMaps(getLabels(), map[string]string{
 			v1beta1constants.GardenRole:                                         v1beta1constants.GardenRoleControlPlane,
