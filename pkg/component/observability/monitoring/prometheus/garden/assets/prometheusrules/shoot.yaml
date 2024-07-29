@@ -31,7 +31,7 @@ spec:
         summary: >-
           Over 10% of productive shoots are unavailable on the 
           {{$externalLabels.landscape}} landscape.
-        description: >
+        description: >-
           Over 10% of the shoots have the condition APIServerAvailable false.
           (
           {{`count(
@@ -75,7 +75,7 @@ spec:
         summary: >-
           Over 10% of productive {{$labels.iaas}} shoots are unavailable on the 
           {{$externalLabels.landscape}} landscape.
-        description: >
+        description: >-
           Over 10% of {{$labels.iaas}} shoots have the condition
           APIServerAvailable == 0.
           (
@@ -108,6 +108,6 @@ spec:
         topology: seed
       annotations:
         summary: Node filesystem has less than 5% inodes left.
-        description: >
+        description: >-
           The seed cluster: {{$labels.project}}/{{$labels.name}} has a filesystem mounted at {{ $labels.mountpoint }}
           on node {{ $labels.node }} that has only {{ printf "%.2f" $value }}% available inodes left.
