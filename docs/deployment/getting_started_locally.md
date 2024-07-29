@@ -210,48 +210,50 @@ cat <<EOF | sudo tee -a /etc/hosts
 127.0.0.1 v-local--local.ingress.local.seed.local.gardener.cloud
 
 # E2e tests
-127.0.0.1 api.e2e-managedseed.garden.external.local.gardener.cloud
-127.0.0.1 api.e2e-managedseed.garden.internal.local.gardener.cloud
-127.0.0.1 api.e2e-hib.local.external.local.gardener.cloud
-127.0.0.1 api.e2e-hib.local.internal.local.gardener.cloud
-127.0.0.1 api.e2e-hib-wl.local.external.local.gardener.cloud
-127.0.0.1 api.e2e-hib-wl.local.internal.local.gardener.cloud
-127.0.0.1 api.e2e-unpriv.local.external.local.gardener.cloud
-127.0.0.1 api.e2e-unpriv.local.internal.local.gardener.cloud
-127.0.0.1 api.e2e-wake-up.local.external.local.gardener.cloud
-127.0.0.1 api.e2e-wake-up.local.internal.local.gardener.cloud
-127.0.0.1 api.e2e-wake-up-wl.local.external.local.gardener.cloud
-127.0.0.1 api.e2e-wake-up-wl.local.internal.local.gardener.cloud
-127.0.0.1 api.e2e-migrate.local.external.local.gardener.cloud
-127.0.0.1 api.e2e-migrate.local.internal.local.gardener.cloud
-127.0.0.1 api.e2e-migrate-wl.local.external.local.gardener.cloud
-127.0.0.1 api.e2e-migrate-wl.local.internal.local.gardener.cloud
-127.0.0.1 api.e2e-mgr-hib.local.external.local.gardener.cloud
-127.0.0.1 api.e2e-mgr-hib.local.internal.local.gardener.cloud
-127.0.0.1 api.e2e-rotate.local.external.local.gardener.cloud
-127.0.0.1 api.e2e-rotate.local.internal.local.gardener.cloud
-127.0.0.1 api.e2e-rotate-wl.local.external.local.gardener.cloud
-127.0.0.1 api.e2e-rotate-wl.local.internal.local.gardener.cloud
-127.0.0.1 api.e2e-default.local.external.local.gardener.cloud
-127.0.0.1 api.e2e-default.local.internal.local.gardener.cloud
-127.0.0.1 api.e2e-default-wl.local.external.local.gardener.cloud
-127.0.0.1 api.e2e-default-wl.local.internal.local.gardener.cloud
-127.0.0.1 api.e2e-force-delete.local.external.local.gardener.cloud
-127.0.0.1 api.e2e-force-delete.local.internal.local.gardener.cloud
-127.0.0.1 api.e2e-fd-hib.local.external.local.gardener.cloud
-127.0.0.1 api.e2e-fd-hib.local.internal.local.gardener.cloud
-127.0.0.1 api.e2e-upd-node.local.external.local.gardener.cloud
-127.0.0.1 api.e2e-upd-node.local.internal.local.gardener.cloud
-127.0.0.1 api.e2e-upd-node-wl.local.external.local.gardener.cloud
-127.0.0.1 api.e2e-upd-node-wl.local.internal.local.gardener.cloud
-127.0.0.1 api.e2e-upgrade.local.external.local.gardener.cloud
-127.0.0.1 api.e2e-upgrade.local.internal.local.gardener.cloud
-127.0.0.1 api.e2e-upgrade-wl.local.external.local.gardener.cloud
-127.0.0.1 api.e2e-upgrade-wl.local.internal.local.gardener.cloud
-127.0.0.1 api.e2e-upg-hib.local.external.local.gardener.cloud
-127.0.0.1 api.e2e-upg-hib.local.internal.local.gardener.cloud
-127.0.0.1 api.e2e-upg-hib-wl.local.external.local.gardener.cloud
-127.0.0.1 api.e2e-upg-hib-wl.local.internal.local.gardener.cloud
+172.18.255.1 api.e2e-managedseed.garden.external.local.gardener.cloud
+172.18.255.1 api.e2e-managedseed.garden.internal.local.gardener.cloud
+172.18.255.1 api.e2e-hib.local.external.local.gardener.cloud
+172.18.255.1 api.e2e-hib.local.internal.local.gardener.cloud
+172.18.255.1 api.e2e-hib-wl.local.external.local.gardener.cloud
+172.18.255.1 api.e2e-hib-wl.local.internal.local.gardener.cloud
+172.18.255.1 api.e2e-unpriv.local.external.local.gardener.cloud
+172.18.255.1 api.e2e-unpriv.local.internal.local.gardener.cloud
+172.18.255.1 api.e2e-wake-up.local.external.local.gardener.cloud
+172.18.255.1 api.e2e-wake-up.local.internal.local.gardener.cloud
+172.18.255.1 api.e2e-wake-up-wl.local.external.local.gardener.cloud
+172.18.255.1 api.e2e-wake-up-wl.local.internal.local.gardener.cloud
+172.18.255.1 api.e2e-migrate.local.external.local.gardener.cloud
+172.18.255.1 api.e2e-migrate.local.internal.local.gardener.cloud
+172.18.255.1 api.e2e-migrate-wl.local.external.local.gardener.cloud
+172.18.255.1 api.e2e-migrate-wl.local.internal.local.gardener.cloud
+172.18.255.1 api.e2e-mgr-hib.local.external.local.gardener.cloud
+172.18.255.1 api.e2e-mgr-hib.local.internal.local.gardener.cloud
+172.18.255.1 api.e2e-rotate.local.external.local.gardener.cloud
+172.18.255.1 api.e2e-rotate.local.internal.local.gardener.cloud
+172.18.255.1 api.e2e-rotate-wl.local.external.local.gardener.cloud
+172.18.255.1 api.e2e-rotate-wl.local.internal.local.gardener.cloud
+172.18.255.1 api.e2e-default.local.external.local.gardener.cloud
+172.18.255.1 api.e2e-default.local.internal.local.gardener.cloud
+172.18.255.1 api.e2e-default-wl.local.external.local.gardener.cloud
+172.18.255.1 api.e2e-default-wl.local.internal.local.gardener.cloud
+172.18.255.1 api.e2e-force-delete.local.external.local.gardener.cloud
+172.18.255.1 api.e2e-force-delete.local.internal.local.gardener.cloud
+172.18.255.1 api.e2e-fd-hib.local.external.local.gardener.cloud
+172.18.255.1 api.e2e-fd-hib.local.internal.local.gardener.cloud
+172.18.255.1 api.e2e-upd-node.local.external.local.gardener.cloud
+172.18.255.1 api.e2e-upd-node.local.internal.local.gardener.cloud
+172.18.255.1 api.e2e-upd-node-wl.local.external.local.gardener.cloud
+172.18.255.1 api.e2e-upd-node-wl.local.internal.local.gardener.cloud
+172.18.255.1 api.e2e-upgrade.local.external.local.gardener.cloud
+172.18.255.1 api.e2e-upgrade.local.internal.local.gardener.cloud
+172.18.255.1 api.e2e-upgrade-wl.local.external.local.gardener.cloud
+172.18.255.1 api.e2e-upgrade-wl.local.internal.local.gardener.cloud
+172.18.255.1 api.e2e-upg-hib.local.external.local.gardener.cloud
+172.18.255.1 api.e2e-upg-hib.local.internal.local.gardener.cloud
+172.18.255.1 api.e2e-upg-hib-wl.local.external.local.gardener.cloud
+172.18.255.1 api.e2e-upg-hib-wl.local.internal.local.gardener.cloud
+172.18.255.1 gu-local--e2e-rotate.ingress.local.seed.local.gardener.cloud
+172.18.255.1 gu-local--e2e-rotate-wl.ingress.local.seed.local.gardener.cloud
 # End of Gardener local setup section
 EOF
 ```
@@ -361,13 +363,13 @@ You find the kubeconfig for the KinD cluster at `./example/gardener-local/kind/o
 The one for the virtual garden is accessible at `./example/operator/virtual-garden/kubeconfig`.
 
 > [!IMPORTANT]
-> When you create non-HA shoot clusters (i.e., `Shoot`s with `.spec.controlPlane.highAvailability.failureTolerance != zone`), then they are not exposed via `127.0.0.1` ([ref](#accessing-the-shoot-cluster)).
+> When you create non-HA shoot clusters (i.e., `Shoot`s with `.spec.controlPlane.highAvailability.failureTolerance != zone`), then they are not exposed via `172.18.255.1` ([ref](#accessing-the-shoot-cluster)).
 > Instead, you need to find out under which Istio instance they got exposed, and put the corresponding IP address into your `/etc/hosts` file:
 > ```shell
 > # replace <shoot-namespace> with your shoot namespace (e.g., `shoot--foo--bar`):
 > kubectl -n "$(kubectl -n <shoot-namespace> get gateway kube-apiserver -o jsonpath={.spec.selector.istio} | sed 's/.*--/istio-ingress--/')" get svc istio-ingressgateway -o jsonpath={.status.loadBalancer.ingress..ip}
 > ```
-> When the shoot cluster is HA (i.e., `.spec.controlPlane.highAvailability.failureTolerance == zone`), then you can access it via `127.0.0.1`.
+> When the shoot cluster is HA (i.e., `.spec.controlPlane.highAvailability.failureTolerance == zone`), then you can access it via `172.18.255.1`.
 
 Please use this command to tear down your environment:
 
