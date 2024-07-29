@@ -898,6 +898,13 @@ func clusterRole() *rbacv1.ClusterRole {
 				},
 				Verbs: []string{"get", "list", "watch"},
 			},
+			{
+				APIGroups: []string{"security.gardener.cloud"},
+				Resources: []string{
+					"credentialsbindings",
+				},
+				Verbs: []string{"get", "list", "watch"},
+			},
 		},
 	}
 }

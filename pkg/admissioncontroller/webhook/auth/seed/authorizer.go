@@ -26,6 +26,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -75,6 +76,7 @@ var (
 	serviceAccountResource            = corev1.Resource("serviceaccounts")
 	shootResource                     = gardencorev1beta1.Resource("shoots")
 	shootStateResource                = gardencorev1beta1.Resource("shootstates")
+	credentialsBindingResource        = securityv1alpha1.Resource("credentialsbindings")
 )
 
 // TODO: Revisit all `DecisionNoOpinion` later. Today we cannot deny the request for backwards compatibility
@@ -182,6 +184,8 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			return a.authorizeRead(requestLog, seedName, graph.VertexTypeProject, attrs)
 		case secretBindingResource:
 			return a.authorizeRead(requestLog, seedName, graph.VertexTypeSecretBinding, attrs)
+		case credentialsBindingResource:
+			return a.authorizeRead(requestLog, seedName, graph.VertexTypeCredentialsBinding, attrs)
 		case secretResource:
 			return a.authorizeSecret(requestLog, seedName, attrs)
 		case seedResource:

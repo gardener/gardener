@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -150,7 +151,7 @@ var _ = Describe("Project Stale controller tests", func() {
 			})
 		})
 
-		It("project in use by a Secret", func() {
+		It("project in use by a Secret through SecretBinding", func() {
 			secret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					GenerateName: "test-",
@@ -185,6 +186,46 @@ var _ = Describe("Project Stale controller tests", func() {
 			Expect(testClient.Create(ctx, secretBinding)).To(Succeed())
 			DeferCleanup(func() {
 				Expect(testClient.Delete(ctx, secretBinding)).To(Succeed())
+			})
+		})
+
+		It("project in use by a Secret through CredentialsBinding", func() {
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName: "test-",
+					Namespace:    testNamespace.Name,
+					Labels: map[string]string{
+						testID: testRunID,
+						"reference.gardener.cloud/credentialsbinding": "true",
+					},
+				},
+			}
+
+			Expect(testClient.Create(ctx, secret)).To(Succeed())
+			DeferCleanup(func() {
+				Expect(testClient.Delete(ctx, secret)).To(Succeed())
+			})
+
+			credentialsBinding := &securityv1alpha1.CredentialsBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName: "test-",
+					Namespace:    testNamespace.Name,
+					Labels:       map[string]string{testID: testRunID},
+				},
+				CredentialsRef: corev1.ObjectReference{
+					APIVersion: "v1",
+					Kind:       "Secret",
+					Name:       secret.Name,
+					Namespace:  secret.Namespace,
+				},
+				Provider: securityv1alpha1.CredentialsBindingProvider{
+					Type: "provider",
+				},
+			}
+
+			Expect(testClient.Create(ctx, credentialsBinding)).To(Succeed())
+			DeferCleanup(func() {
+				Expect(testClient.Delete(ctx, credentialsBinding)).To(Succeed())
 			})
 		})
 

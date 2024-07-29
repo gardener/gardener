@@ -18,6 +18,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -47,17 +48,24 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	var (
-		secretBinding   = &gardencorev1beta1.SecretBinding{}
-		clusterLifeTime *int32
+		secretBinding      = &gardencorev1beta1.SecretBinding{}
+		credentialsBinding = &securityv1alpha1.CredentialsBinding{}
+		clusterLifeTime    *int32
 	)
 
 	if shoot.Spec.SecretBindingName != nil {
 		if err := r.Client.Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: *shoot.Spec.SecretBindingName}, secretBinding); err != nil {
 			return reconcile.Result{}, err
 		}
+	} else if shoot.Spec.CredentialsBindingName != nil {
+		// SecretBindingName and CredentialsBindingName are mutually exclusive
+		if err := r.Client.Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: *shoot.Spec.CredentialsBindingName}, credentialsBinding); err != nil {
+			return reconcile.Result{}, err
+		}
 	}
 
-	for _, quotaRef := range secretBinding.Quotas {
+	quotas := append(secretBinding.Quotas, credentialsBinding.Quotas...)
+	for _, quotaRef := range quotas {
 		quota := &gardencorev1beta1.Quota{}
 		if err := r.Client.Get(ctx, client.ObjectKey{Namespace: quotaRef.Namespace, Name: quotaRef.Name}, quota); err != nil {
 			return reconcile.Result{}, err

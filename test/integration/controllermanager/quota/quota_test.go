@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -23,9 +24,10 @@ var _ = Describe("Quota controller tests", func() {
 		resourceName string
 		objectKey    client.ObjectKey
 
-		secret        *corev1.Secret
-		quota         *gardencorev1beta1.Quota
-		secretBinding *gardencorev1beta1.SecretBinding
+		secret             *corev1.Secret
+		quota              *gardencorev1beta1.Quota
+		secretBinding      *gardencorev1beta1.SecretBinding
+		credentialsBinding *securityv1alpha1.CredentialsBinding
 	)
 
 	BeforeEach(func() {
@@ -63,6 +65,26 @@ var _ = Describe("Quota controller tests", func() {
 				},
 			},
 		}
+
+		credentialsBinding = &securityv1alpha1.CredentialsBinding{
+			ObjectMeta: metav1.ObjectMeta{Namespace: objectKey.Namespace, Name: objectKey.Name},
+			Provider: securityv1alpha1.CredentialsBindingProvider{
+				Type: providerType,
+			},
+			CredentialsRef: corev1.ObjectReference{
+				APIVersion: "v1",
+				Kind:       "Secret",
+				Name:       resourceName,
+				Namespace:  testNamespace.Name,
+			},
+			Quotas: []corev1.ObjectReference{
+				{
+					Name:      resourceName,
+					Namespace: testNamespace.Name,
+				},
+			},
+		}
+
 	})
 
 	JustBeforeEach(func() {
@@ -106,11 +128,32 @@ var _ = Describe("Quota controller tests", func() {
 				Expect(testClient.Delete(ctx, secretBinding)).To(Or(Succeed(), BeNotFoundError()))
 			})
 		}
+
+		if credentialsBinding != nil {
+			By("Create CredentialsBinding")
+			Expect(testClient.Create(ctx, credentialsBinding)).To(Succeed())
+			log.Info("Created CredentialsBinding for test", "credentialsbinding", client.ObjectKeyFromObject(credentialsBinding))
+
+			By("Wait until manager has observed CredentialsBinding")
+			// Use the manager's cache to ensure it has observed the CredentialsBinding.
+			// Otherwise, the controller might clean up the Quota too early because it thinks all referencing
+			// CredentialsBinding are gone. Similar to https://github.com/gardener/gardener/issues/6486 and
+			// https://github.com/gardener/gardener/issues/6607.
+			Eventually(func() error {
+				return mgrClient.Get(ctx, client.ObjectKeyFromObject(credentialsBinding), &securityv1alpha1.CredentialsBinding{})
+			}).Should(Succeed())
+
+			DeferCleanup(func() {
+				By("Delete CredentialsBinding")
+				Expect(testClient.Delete(ctx, credentialsBinding)).To(Or(Succeed(), BeNotFoundError()))
+			})
+		}
 	})
 
-	Context("no SecretBinding referencing Quota", func() {
+	Context("no SecretBinding & CredentialsBinding referencing Quota", func() {
 		BeforeEach(func() {
 			secretBinding = nil
+			credentialsBinding = nil
 		})
 
 		It("should add the finalizer and release it on deletion", func() {
@@ -131,6 +174,10 @@ var _ = Describe("Quota controller tests", func() {
 	})
 
 	Context("SecretBinding referencing Quota", func() {
+		BeforeEach(func() {
+			credentialsBinding = nil
+		})
+
 		JustBeforeEach(func() {
 			By("Ensure finalizer got added")
 			Eventually(func(g Gomega) {
@@ -152,6 +199,40 @@ var _ = Describe("Quota controller tests", func() {
 		It("should add the finalizer and release it on deletion after SecretBinding got deleted", func() {
 			By("Delete SecretBinding")
 			Expect(testClient.Delete(ctx, secretBinding)).To(Succeed())
+
+			By("Ensure Quota is released")
+			Eventually(func() error {
+				return testClient.Get(ctx, objectKey, quota)
+			}).Should(BeNotFoundError())
+		})
+	})
+
+	Context("CredentialsBinding referencing Quota", func() {
+		BeforeEach(func() {
+			secretBinding = nil
+		})
+
+		JustBeforeEach(func() {
+			By("Ensure finalizer got added")
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, objectKey, quota)).To(Succeed())
+				g.Expect(quota.Finalizers).To(ConsistOf("gardener"))
+			}).Should(Succeed())
+
+			By("Delete Quota")
+			Expect(testClient.Delete(ctx, quota)).To(Succeed())
+		})
+
+		It("should add finalizer and not release it on deletion since there is still referencing CredentialsBinding", func() {
+			By("Ensure Quota is not released")
+			Consistently(func() error {
+				return testClient.Get(ctx, objectKey, quota)
+			}).Should(Succeed())
+		})
+
+		It("should add the finalizer and release it on deletion after CredentialsBinding got deleted", func() {
+			By("Delete CredentialsBinding")
+			Expect(testClient.Delete(ctx, credentialsBinding)).To(Succeed())
 
 			By("Ensure Quota is released")
 			Eventually(func() error {

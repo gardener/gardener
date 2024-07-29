@@ -51,6 +51,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/operations"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
@@ -281,6 +282,7 @@ func (g *garden) Start(ctx context.Context) error {
 					&gardencorev1beta1.Project{}:                kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &gardencorev1beta1.Project{}),
 					&gardencorev1beta1.SecretBinding{}:          kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &gardencorev1beta1.SecretBinding{}),
 					&gardencorev1beta1.ShootState{}:             kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &gardencorev1beta1.ShootState{}),
+					&securityv1alpha1.CredentialsBinding{}:      kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &securityv1alpha1.CredentialsBinding{}),
 				},
 				kubernetes.GardenScheme,
 			)(config, opts)

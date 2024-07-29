@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -30,9 +31,10 @@ var _ = Describe("Reconciler", func() {
 		fakeClient client.Client
 		reconciler reconcile.Reconciler
 
-		quotaName     string
-		quota         *gardencorev1beta1.Quota
-		secretBinding *gardencorev1beta1.SecretBinding
+		quotaName          string
+		quota              *gardencorev1beta1.Quota
+		secretBinding      *gardencorev1beta1.SecretBinding
+		credentialsBinding *securityv1alpha1.CredentialsBinding
 	)
 
 	BeforeEach(func() {
@@ -48,6 +50,15 @@ var _ = Describe("Reconciler", func() {
 
 		secretBinding = &gardencorev1beta1.SecretBinding{
 			ObjectMeta: metav1.ObjectMeta{Name: "test-secretbinding", Namespace: "test-namespace"},
+			Quotas: []corev1.ObjectReference{
+				{
+					Name: quotaName,
+				},
+			},
+		}
+
+		credentialsBinding = &securityv1alpha1.CredentialsBinding{
+			ObjectMeta: metav1.ObjectMeta{Name: "test-credentialsbinding", Namespace: "test-namespace"},
 			Quotas: []corev1.ObjectReference{
 				{
 					Name: quotaName,
@@ -88,6 +99,7 @@ var _ = Describe("Reconciler", func() {
 
 		It("should do nothing because finalizer is not present", func() {
 			Expect(fakeClient.Create(ctx, secretBinding)).To(Succeed())
+			Expect(fakeClient.Create(ctx, credentialsBinding)).To(Succeed())
 			patch := client.MergeFrom(quota.DeepCopy())
 			quota.Finalizers = nil
 			Expect(fakeClient.Patch(ctx, quota, patch)).To(Succeed())
@@ -105,7 +117,15 @@ var _ = Describe("Reconciler", func() {
 			Expect(err).To(MatchError(ContainSubstring("Cannot delete Quota")))
 		})
 
-		It("should remove the finalizer because no SecretBinding is referencing the Quota", func() {
+		It("should return an error because CredentialsBinding referencing Quota exists", func() {
+			Expect(fakeClient.Create(ctx, credentialsBinding)).To(Succeed())
+
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: quotaName}})
+			Expect(result).To(Equal(reconcile.Result{}))
+			Expect(err).To(MatchError(ContainSubstring("Cannot delete Quota")))
+		})
+
+		It("should remove the finalizer because no SecretBinding or CredentialsBinding are referencing the Quota", func() {
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: quotaName}})
 			Expect(result).To(Equal(reconcile.Result{}))
 			Expect(err).NotTo(HaveOccurred())

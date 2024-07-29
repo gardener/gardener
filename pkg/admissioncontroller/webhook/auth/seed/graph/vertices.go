@@ -84,6 +84,7 @@ var vertexTypes = map[VertexType]string{
 	VertexTypeServiceAccount:            "ServiceAccount",
 	VertexTypeShoot:                     "Shoot",
 	VertexTypeShootState:                "ShootState",
+	VertexTypeCredentialsBinding:        "CredentialsBinding",
 }
 
 type vertex struct {

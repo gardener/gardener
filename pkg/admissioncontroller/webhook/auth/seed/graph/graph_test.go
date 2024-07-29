@@ -31,6 +31,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
@@ -51,6 +52,7 @@ var _ = Describe("graph", func() {
 		fakeInformerBackupEntry               *controllertest.FakeInformer
 		fakeInformerBastion                   *controllertest.FakeInformer
 		fakeInformerSecretBinding             *controllertest.FakeInformer
+		fakeInformerCredentialsBinding        *controllertest.FakeInformer
 		fakeInformerControllerInstallation    *controllertest.FakeInformer
 		fakeInformerManagedSeed               *controllertest.FakeInformer
 		fakeInformerGardenlet                 *controllertest.FakeInformer
@@ -100,6 +102,9 @@ var _ = Describe("graph", func() {
 
 		controllerInstallation1 *gardencorev1beta1.ControllerInstallation
 
+		credentialsBinding1   *securityv1alpha1.CredentialsBinding
+		credentialsBindingRef = corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Namespace: "foobar", Name: "bazfoo"}
+
 		seedConfig1 *gardenletv1alpha1.SeedConfig
 		seedConfig2 *gardenletv1alpha1.SeedConfig
 
@@ -132,6 +137,7 @@ var _ = Describe("graph", func() {
 		fakeInformerBackupEntry = &controllertest.FakeInformer{}
 		fakeInformerBastion = &controllertest.FakeInformer{}
 		fakeInformerSecretBinding = &controllertest.FakeInformer{}
+		fakeInformerCredentialsBinding = &controllertest.FakeInformer{}
 		fakeInformerControllerInstallation = &controllertest.FakeInformer{}
 		fakeInformerManagedSeed = &controllertest.FakeInformer{}
 		fakeInformerGardenlet = &controllertest.FakeInformer{}
@@ -149,6 +155,7 @@ var _ = Describe("graph", func() {
 				operationsv1alpha1.SchemeGroupVersion.WithKind("Bastion"):               fakeInformerBastion,
 				gardencorev1beta1.SchemeGroupVersion.WithKind("SecretBinding"):          fakeInformerSecretBinding,
 				gardencorev1beta1.SchemeGroupVersion.WithKind("ControllerInstallation"): fakeInformerControllerInstallation,
+				securityv1alpha1.SchemeGroupVersion.WithKind("CredentialsBinding"):      fakeInformerCredentialsBinding,
 				seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed"):       fakeInformerManagedSeed,
 				seedmanagementv1alpha1.SchemeGroupVersion.WithKind("Gardenlet"):         fakeInformerGardenlet,
 				certificatesv1.SchemeGroupVersion.WithKind("CertificateSigningRequest"): fakeInformerCertificateSigningRequest,
@@ -276,6 +283,11 @@ var _ = Describe("graph", func() {
 				RegistrationRef: corev1.ObjectReference{Name: "controllerregistration1"},
 				SeedRef:         corev1.ObjectReference{Name: seed1.Name},
 			},
+		}
+
+		credentialsBinding1 = &securityv1alpha1.CredentialsBinding{
+			ObjectMeta:     metav1.ObjectMeta{Name: "credentialsBinding1", Namespace: "cb1namespace"},
+			CredentialsRef: credentialsBindingRef,
 		}
 
 		seedConfig1 = &gardenletv1alpha1.SeedConfig{
@@ -1034,6 +1046,37 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.graph.Nodes().Len()).To(BeZero())
 		Expect(graph.graph.Edges().Len()).To(BeZero())
 		Expect(graph.HasPathFrom(VertexTypeSecret, secretBinding1.SecretRef.Namespace, secretBinding1.SecretRef.Name, VertexTypeSecretBinding, secretBinding1.Namespace, secretBinding1.Name)).To(BeFalse())
+	})
+
+	It("should behave as expected for securityv1alpha1.CredentialsBinding", func() {
+		By("Add")
+		fakeInformerCredentialsBinding.Add(credentialsBinding1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(2))
+		Expect(graph.graph.Edges().Len()).To(Equal(1))
+		Expect(graph.HasPathFrom(VertexTypeSecret, credentialsBinding1.CredentialsRef.Namespace, credentialsBinding1.CredentialsRef.Name, VertexTypeCredentialsBinding, credentialsBinding1.Namespace, credentialsBinding1.Name)).To(BeTrue())
+
+		By("Update (irrelevant change)")
+		credentialsBinding1Copy := credentialsBinding1.DeepCopy()
+		credentialsBinding1.Quotas = []corev1.ObjectReference{{}, {}, {}}
+		fakeInformerCredentialsBinding.Update(credentialsBinding1Copy, credentialsBinding1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(2))
+		Expect(graph.graph.Edges().Len()).To(Equal(1))
+		Expect(graph.HasPathFrom(VertexTypeSecret, credentialsBinding1.CredentialsRef.Namespace, credentialsBinding1.CredentialsRef.Name, VertexTypeCredentialsBinding, credentialsBinding1.Namespace, credentialsBinding1.Name)).To(BeTrue())
+
+		By("Update (credentialsref)")
+		credentialsBinding1Copy = credentialsBinding1.DeepCopy()
+		credentialsBinding1.CredentialsRef = corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Namespace: "new-cb-secret-namespace", Name: "new-cb-secret-name"}
+		fakeInformerCredentialsBinding.Update(credentialsBinding1Copy, credentialsBinding1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(2))
+		Expect(graph.graph.Edges().Len()).To(Equal(1))
+		Expect(graph.HasPathFrom(VertexTypeSecret, credentialsBinding1Copy.CredentialsRef.Namespace, credentialsBinding1Copy.CredentialsRef.Name, VertexTypeCredentialsBinding, credentialsBinding1.Namespace, credentialsBinding1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, credentialsBinding1.CredentialsRef.Namespace, credentialsBinding1.CredentialsRef.Name, VertexTypeCredentialsBinding, credentialsBinding1.Namespace, credentialsBinding1.Name)).To(BeTrue())
+
+		By("Delete")
+		fakeInformerCredentialsBinding.Delete(credentialsBinding1)
+		Expect(graph.graph.Nodes().Len()).To(BeZero())
+		Expect(graph.graph.Edges().Len()).To(BeZero())
+		Expect(graph.HasPathFrom(VertexTypeSecret, credentialsBinding1.CredentialsRef.Namespace, credentialsBinding1.CredentialsRef.Name, VertexTypeCredentialsBinding, credentialsBinding1.Namespace, credentialsBinding1.Name)).To(BeFalse())
 	})
 
 	It("should behave as expected for gardencorev1beta1.ControllerInstallation", func() {

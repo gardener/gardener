@@ -23,6 +23,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/apis/security"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
@@ -135,6 +136,16 @@ func (e *ExtensionLabels) Admit(_ context.Context, a admission.Attributes, _ adm
 
 		removeLabels(&secretBinding.ObjectMeta)
 		addMetaDataLabelsSecretBinding(secretBinding)
+
+	case security.Kind("CredentialsBinding"):
+		credentialsBinding, ok := a.GetObject().(*security.CredentialsBinding)
+		if !ok {
+			return apierrors.NewBadRequest("could not convert resource into CredentialsBinding object")
+		}
+
+		removeLabels(&credentialsBinding.ObjectMeta)
+		providerType := credentialsBinding.Provider.Type
+		metav1.SetMetaDataLabel(&credentialsBinding.ObjectMeta, v1beta1constants.LabelExtensionProviderTypePrefix+providerType, "true")
 
 	case core.Kind("Shoot"):
 		shoot, ok := a.GetObject().(*core.Shoot)

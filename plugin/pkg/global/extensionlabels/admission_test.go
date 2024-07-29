@@ -17,6 +17,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/apis/security"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	. "github.com/gardener/gardener/plugin/pkg/global/extensionlabels"
 )
@@ -142,6 +143,42 @@ var _ = Describe("ExtensionLabels tests", func() {
 			}
 
 			Expect(newSecretBinding.ObjectMeta.Labels).To(Equal(expectedLabels))
+		})
+	})
+
+	Context("CredentialsBinding", func() {
+		const (
+			providerType1 = "provider-type-1"
+			providerType2 = "provider-type-2"
+		)
+
+		It("should add the correct label on creation", func() {
+			credentialsBinding := &security.CredentialsBinding{ObjectMeta: metav1.ObjectMeta{Name: "test-cb"}, Provider: security.CredentialsBindingProvider{Type: providerType1}}
+			attrs := admission.NewAttributesRecord(credentialsBinding, nil, security.Kind("CredentialsBinding").WithVersion("version"), "", credentialsBinding.Name, security.Resource("CredentialsBinding").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+			err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(credentialsBinding.ObjectMeta.Labels).To(Equal(map[string]string{
+				"provider.extensions.gardener.cloud/" + providerType1: "true",
+			}))
+		})
+
+		It("should add the correct label on update", func() {
+			credentialsBinding := &security.CredentialsBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-cb",
+				},
+			}
+			newCredentialsBinding := credentialsBinding.DeepCopy()
+			newCredentialsBinding.Provider = security.CredentialsBindingProvider{Type: providerType2}
+
+			attrs := admission.NewAttributesRecord(newCredentialsBinding, credentialsBinding, security.Kind("CredentialsBinding").WithVersion("version"), "", credentialsBinding.Name, security.Resource("CredentialsBinding").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+			err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(newCredentialsBinding.ObjectMeta.Labels).To(Equal(map[string]string{
+				"provider.extensions.gardener.cloud/" + providerType2: "true",
+			}))
 		})
 	})
 
