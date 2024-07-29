@@ -1211,6 +1211,33 @@ func ValidateVerticalPodAutoscaler(autoScaler core.VerticalPodAutoscaler, fldPat
 	if interval := autoScaler.RecommenderInterval; interval != nil && interval.Duration < 0 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("recommenderInterval"), *interval, "can not be negative"))
 	}
+	if percentile := autoScaler.TargetCPUPercentile; percentile != nil {
+		allErrs = append(allErrs, validatePercentile(*percentile, fldPath.Child("targetCPUPercentile"))...)
+	}
+	if percentile := autoScaler.RecommendationLowerBoundCPUPercentile; percentile != nil {
+		allErrs = append(allErrs, validatePercentile(*percentile, fldPath.Child("recommendationLowerBoundCPUPercentile"))...)
+	}
+	if percentile := autoScaler.RecommendationUpperBoundCPUPercentile; percentile != nil {
+		allErrs = append(allErrs, validatePercentile(*percentile, fldPath.Child("recommendationUpperBoundCPUPercentile"))...)
+	}
+	if percentile := autoScaler.TargetMemoryPercentile; percentile != nil {
+		allErrs = append(allErrs, validatePercentile(*percentile, fldPath.Child("targetMemoryPercentile"))...)
+	}
+	if percentile := autoScaler.RecommendationLowerBoundMemoryPercentile; percentile != nil {
+		allErrs = append(allErrs, validatePercentile(*percentile, fldPath.Child("recommendationLowerBoundMemoryPercentile"))...)
+	}
+	if percentile := autoScaler.RecommendationUpperBoundMemoryPercentile; percentile != nil {
+		allErrs = append(allErrs, validatePercentile(*percentile, fldPath.Child("recommendationUpperBoundMemoryPercentile"))...)
+	}
+
+	return allErrs
+}
+
+func validatePercentile(percentile float64, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if percentile < 0.0 || percentile > 1.0 {
+		allErrs = append(allErrs, field.Invalid(fldPath, percentile, "percentile value must be in the range [0, 1]"))
+	}
 
 	return allErrs
 }
