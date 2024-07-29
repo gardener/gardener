@@ -68,7 +68,7 @@ func (d *localDriver) applyPod(
 	*corev1.Pod,
 	error,
 ) {
-	pod := podForMachine(req.Machine)
+	pod := podForMachine(req.Machine, req.MachineClass)
 	pod.Annotations = map[string]string{}
 
 	if providerSpec.IPPoolNameV4 != "" {

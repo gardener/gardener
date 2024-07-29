@@ -26,7 +26,7 @@ func (d *localDriver) GetMachineStatus(ctx context.Context, req *driver.GetMachi
 	klog.V(3).Infof("Machine status request has been received for %q", req.Machine.Name)
 	defer klog.V(3).Infof("Machine status request has been processed for %q", req.Machine.Name)
 
-	pod := podForMachine(req.Machine)
+	pod := podForMachine(req.Machine, req.MachineClass)
 	if err := d.client.Get(ctx, client.ObjectKeyFromObject(pod), pod); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil, status.Error(codes.NotFound, err.Error())
