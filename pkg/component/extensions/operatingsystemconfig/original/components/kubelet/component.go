@@ -6,6 +6,7 @@ package kubelet
 
 import (
 	_ "embed"
+	"strconv"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -37,6 +38,13 @@ const (
 	PathKubeletConfig = v1beta1constants.OperatingSystemConfigFilePathKubeletConfig
 	// PathKubeletDirectory is the path for the kubelet's directory.
 	PathKubeletDirectory = "/var/lib/kubelet"
+
+	// http2ReadIdleTimeout is the timeout after which kubelet will send a ping frame
+	// frame if no frame is received on the connection.
+	http2ReadIdleTimeSeconds = 20
+	// http2PingTimeSeconds is the timeout after which the connection will be closed
+	// if a response to Ping is not received.
+	http2PingTimeSeconds = 10
 
 	pathVolumePluginDirectory = "/var/lib/kubelet/volumeplugins"
 )
@@ -103,6 +111,12 @@ WantedBy=multi-user.target
 [Service]
 Restart=always
 RestartSec=5
+` +
+			// The default for HTTP2_READ_IDLE_TIMEOUT_SECONDS is 30 and for HTTP2_PING_TIMEOUT_SECONDS 15.
+			// This results in issues if the tcp connection to kube-apiserver is silently dropped,
+			// as node-monitor-grace-period is only 40s.
+			// HTTP2_READ_IDLE_TIMEOUT_SECONDS + HTTP2_PING_TIMEOUT_SECONDS should be less than node-monitor-grace-period.
+			`Environment="HTTP2_READ_IDLE_TIMEOUT_SECONDS=` + strconv.Itoa(http2ReadIdleTimeSeconds) + `" "HTTP2_PING_TIMEOUT_SECONDS=` + strconv.Itoa(http2PingTimeSeconds) + `"
 EnvironmentFile=/etc/environment
 EnvironmentFile=-/var/lib/kubelet/extra_args
 ExecStart=` + v1beta1constants.OperatingSystemConfigFilePathBinaries + `/kubelet \

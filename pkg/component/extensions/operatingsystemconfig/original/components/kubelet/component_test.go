@@ -230,6 +230,7 @@ WantedBy=multi-user.target
 [Service]
 Restart=always
 RestartSec=5
+Environment="HTTP2_READ_IDLE_TIMEOUT_SECONDS=20" "HTTP2_PING_TIMEOUT_SECONDS=10"
 EnvironmentFile=/etc/environment
 EnvironmentFile=-/var/lib/kubelet/extra_args` + kubeletStartPre + `
 ExecStart=/opt/bin/kubelet \
