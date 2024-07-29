@@ -85,6 +85,7 @@ const (
 	// The feature gate takes precedence over the `HVPA` feature gate when they are both enabled.
 	// owner: @ialidzhikov
 	// alpha: v1.95.0
+	// beta: v1.101.0
 	VPAAndHPAForAPIServer featuregate.Feature = "VPAAndHPAForAPIServer"
 
 	// ShootCredentialsBinding enables the usage of the CredentialsBindingName API in shoot spec.
@@ -137,7 +138,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	ShootManagedIssuer:              {Default: false, PreRelease: featuregate.Alpha},
 	ShootForceDeletion:              {Default: true, PreRelease: featuregate.Beta},
 	UseNamespacedCloudProfile:       {Default: false, PreRelease: featuregate.Alpha},
-	VPAAndHPAForAPIServer:           {Default: false, PreRelease: featuregate.Alpha},
+	VPAAndHPAForAPIServer:           {Default: true, PreRelease: featuregate.Beta},
 	ShootCredentialsBinding:         {Default: false, PreRelease: featuregate.Alpha},
 	NewWorkerPoolHash:               {Default: false, PreRelease: featuregate.Alpha},
 }
