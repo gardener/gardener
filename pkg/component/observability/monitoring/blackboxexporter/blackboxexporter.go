@@ -215,8 +215,6 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 				Name:      "blackbox-exporter",
 				Namespace: b.runtimeNamespace(),
 				Labels:    utils.MergeStringMaps(getLabels(), map[string]string{resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer}),
-				// TODO(rfranzke): Remove this annotation after v1.100 got released.
-				Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
 			},
 			Spec: appsv1.DeploymentSpec{
 				Replicas:             &b.values.Replicas,

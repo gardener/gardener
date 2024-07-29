@@ -1093,7 +1093,6 @@ build:
             - pkg/component/observability/logging/vali/templates/telegraf-start.sh.tpl
             - pkg/component/observability/logging/vali/templates/vali-config.yaml
             - pkg/component/observability/logging/vali/templates/vali-init.sh
-            - pkg/component/observability/monitoring
             - pkg/component/observability/monitoring/alertmanager
             - pkg/component/observability/monitoring/blackboxexporter
             - pkg/component/observability/monitoring/blackboxexporter/shoot/cluster

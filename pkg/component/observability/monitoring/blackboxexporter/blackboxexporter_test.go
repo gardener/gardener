@@ -162,7 +162,6 @@ kind: Deployment
 metadata:
   annotations:
     ` + references.AnnotationKey(references.KindConfigMap, configMapName) + `: ` + configMapName + `
-    resources.gardener.cloud/delete-on-invalid-update: "true"
   creationTimestamp: null
   labels:
     app: blackbox-exporter

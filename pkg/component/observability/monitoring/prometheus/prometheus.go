@@ -18,7 +18,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
-func (p *prometheus) prometheus(takeOverOldPV bool, cortexConfigMap *corev1.ConfigMap) *monitoringv1.Prometheus {
+func (p *prometheus) prometheus(cortexConfigMap *corev1.ConfigMap) *monitoringv1.Prometheus {
 	obj := &monitoringv1.Prometheus{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      p.values.Name,
@@ -152,29 +152,6 @@ func (p *prometheus) prometheus(takeOverOldPV bool, cortexConfigMap *corev1.Conf
 		}
 
 		obj.Spec.RemoteWrite = append(obj.Spec.RemoteWrite, spec)
-	}
-
-	if takeOverOldPV {
-		var (
-			mountPath = "/prometheus"
-			subPath   = ptr.Deref(p.values.DataMigration.OldSubPath, "prometheus-")
-			oldDBPath = mountPath + `/` + subPath
-			newDBPath = mountPath + `/prometheus-db`
-			arg       = `if [[ -d ` + oldDBPath + ` ]]; then mv ` + oldDBPath + ` ` + newDBPath + ` && echo "rename done"; else echo "rename already done"; fi`
-		)
-
-		if subPath == "/" {
-			arg = `if [[ -d ` + mountPath + `/wal ]]; then rm -rf ` + newDBPath + `; mkdir -p ` + newDBPath + `; find ` + mountPath + ` -mindepth 1 -maxdepth 1 ! -name prometheus-db -exec mv {} ` + newDBPath + ` \; && echo "rename done"; else echo "rename already done"; fi`
-		}
-
-		obj.Spec.InitContainers = append(obj.Spec.InitContainers, corev1.Container{
-			Name:            "take-over-old-pv",
-			Image:           p.values.DataMigration.ImageAlpine,
-			ImagePullPolicy: corev1.PullIfNotPresent,
-			VolumeMounts:    []corev1.VolumeMount{{Name: "prometheus-db", MountPath: mountPath}},
-			Command:         []string{"/bin/sh", "-c"},
-			Args:            []string{arg},
-		})
 	}
 
 	if p.values.Cortex != nil {

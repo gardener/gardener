@@ -10,21 +10,11 @@ import (
 	"strconv"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/observability/monitoring"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
 	shootprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
@@ -125,9 +115,6 @@ func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
 			ServiceAccountName: shootprometheus.ServiceAccountName,
 			ScrapesMetrics:     true,
 		},
-		DataMigration: monitoring.DataMigration{
-			StatefulSetName: "prometheus",
-		},
 	}
 
 	if b.Shoot.WantsAlertmanager {
@@ -149,24 +136,6 @@ func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
 	}
 
 	return sharedcomponent.NewPrometheus(b.Logger, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, values)
-}
-
-// MigratePrometheus migrate the shoot Prometheus to prometheus-operator.
-// TODO(rfranzke): Remove this function after v1.97 has been released.
-func (b *Botanist) MigratePrometheus(ctx context.Context) error {
-	oldStatefulSet := &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "prometheus", Namespace: b.Shoot.SeedNamespace}}
-	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(oldStatefulSet), oldStatefulSet); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
-		return fmt.Errorf("failed reading old Prometheus StatefulSet %s: %w", client.ObjectKeyFromObject(oldStatefulSet), err)
-	}
-
-	if err := b.DeployPrometheus(ctx); err != nil {
-		return err
-	}
-
-	return b.ReconcileBlackboxExporterControlPlane(ctx)
 }
 
 // DeployPrometheus reconciles the shoot Prometheus.
@@ -194,26 +163,7 @@ func (b *Botanist) DeployPrometheus(ctx context.Context) error {
 	}
 	b.Shoot.Components.ControlPlane.Prometheus.SetCentralScrapeConfigs(shootprometheus.CentralScrapeConfigs(b.Shoot.SeedNamespace, caSecret.Name, b.Shoot.IsWorkerless))
 
-	if err := b.Shoot.Components.ControlPlane.Prometheus.Deploy(ctx); err != nil {
-		return err
-	}
-
-	// TODO(rfranzke): Remove this after v1.97 has been released.
-	return kubernetesutils.DeleteObjects(ctx, b.SeedClientSet.Client(),
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "blackbox-exporter-config-prometheus", Namespace: b.Shoot.SeedNamespace}},
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-config", Namespace: b.Shoot.SeedNamespace}},
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-rules", Namespace: b.Shoot.SeedNamespace}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "shoot-access-prometheus", Namespace: b.Shoot.SeedNamespace}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-remote-am-tls", Namespace: b.Shoot.SeedNamespace}},
-		&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "prometheus", Namespace: b.Shoot.SeedNamespace}},
-		&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "prometheus", Namespace: b.Shoot.SeedNamespace}},
-		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-web", Namespace: b.Shoot.SeedNamespace}},
-		&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "prometheus", Namespace: b.Shoot.SeedNamespace}},
-		&vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-vpa", Namespace: b.Shoot.SeedNamespace}},
-		&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-" + b.Shoot.SeedNamespace, Namespace: b.Shoot.SeedNamespace}},
-		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-db-prometheus-0", Namespace: b.Shoot.SeedNamespace}},
-		&resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "shoot-core-prometheus", Namespace: b.Shoot.SeedNamespace}},
-	)
+	return b.Shoot.Components.ControlPlane.Prometheus.Deploy(ctx)
 }
 
 // DestroyPrometheus destroys the shoot Prometheus.
