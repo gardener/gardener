@@ -231,8 +231,6 @@ func (r *Reconciler) networkPolicyConfigs() []networkPolicyConfig {
 				labels.NewSelector().Add(utils.MustNewRequirement(v1beta1constants.LabelExposureClassHandlerName, selection.Exists)),
 			}, r.additionalNamespaceLabelSelectors...),
 		},
-		// TODO(rfranzke): Remove this after v1.98 has been released.
-		{name: "allow-to-shoot-networks"},
 	}
 
 	return configs
