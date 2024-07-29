@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -121,13 +120,11 @@ var _ = Describe("KubeControllerManager", func() {
 
 		genericTokenKubeconfigSecretName = "generic-token-kubeconfig"
 		vpaName                          = "kube-controller-manager-vpa"
-		// TODO(andrerun): Remove this after v1.97 has been released.
-		hvpaName                  = "kube-controller-manager"
-		pdbName                   = "kube-controller-manager"
-		secretName                = "shoot-access-kube-controller-manager"
-		serviceName               = "kube-controller-manager"
-		managedResourceName       = "shoot-core-kube-controller-manager"
-		managedResourceSecretName = "managedresource-shoot-core-kube-controller-manager"
+		pdbName                          = "kube-controller-manager"
+		secretName                       = "shoot-access-kube-controller-manager"
+		serviceName                      = "kube-controller-manager"
+		managedResourceName              = "shoot-core-kube-controller-manager"
+		managedResourceSecretName        = "managedresource-shoot-core-kube-controller-manager"
 
 		secret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -617,11 +614,9 @@ namespace: kube-system
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(actualService), actualService)).To(Succeed())
 			Expect(actualService).To(DeepEqual(service))
 
-			actualHVPA := &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: hvpaName, Namespace: namespace}}
 			actualVPA := &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: vpaName, Namespace: namespace}}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(actualVPA), actualVPA)).To(Succeed())
 			Expect(actualVPA).To(DeepEqual(vpaFor(isScaleDownDisabled)))
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(actualHVPA), actualHVPA)).To(BeNotFoundError())
 
 			actualPDB := &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: pdbName, Namespace: namespace}}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(actualPDB), actualPDB)).To(Succeed())
@@ -882,7 +877,6 @@ namespace: kube-system
 		It("should successfully destroy all resources", func() {
 			mr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace}}
 			vpa := &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: vpaName, Namespace: namespace}}
-			hvpa := &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: hvpaName, Namespace: namespace}}
 			service := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: serviceName, Namespace: namespace}}
 			serviceMonitor := &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: "shoot-kube-controller-manager", Namespace: namespace}}
 			prometheusRule := &monitoringv1.PrometheusRule{ObjectMeta: metav1.ObjectMeta{Name: "shoot-kube-controller-manager", Namespace: namespace}}
@@ -892,7 +886,6 @@ namespace: kube-system
 
 			Expect(c.Create(ctx, mr)).To(Succeed())
 			Expect(c.Create(ctx, vpa)).To(Succeed())
-			Expect(c.Create(ctx, hvpa)).To(Succeed())
 			Expect(c.Create(ctx, service)).To(Succeed())
 			Expect(c.Create(ctx, serviceMonitor)).To(Succeed())
 			Expect(c.Create(ctx, prometheusRule)).To(Succeed())
@@ -912,7 +905,6 @@ namespace: kube-system
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(vpa), vpa)).To(BeNotFoundError())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(service), service)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceMonitor), serviceMonitor)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(prometheusRule), prometheusRule)).To(BeNotFoundError())
