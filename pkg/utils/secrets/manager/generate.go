@@ -206,7 +206,13 @@ func (m *manager) generateBundleSecret(ctx context.Context, config secretsutils.
 		if c.SigningCA == nil {
 			certs := [][]byte{secrets.current.obj.Data[secretsutils.DataKeyCertificateCA]}
 			if secrets.old != nil {
-				certs = append(certs, secrets.old.obj.Data[secretsutils.DataKeyCertificateCA])
+				valid, err := m.isStillValid(secrets.old.obj)
+				if err != nil {
+					return fmt.Errorf("failed validating old secret: %w", err)
+				}
+				if valid {
+					certs = append(certs, secrets.old.obj.Data[secretsutils.DataKeyCertificateCA])
+				}
 			}
 
 			bundleConfig = &secretsutils.CertificateBundleSecretConfig{
@@ -239,6 +245,18 @@ func (m *manager) generateBundleSecret(ctx context.Context, config secretsutils.
 	}
 
 	return m.addToStore(config.GetName(), secret, bundle)
+}
+
+func (m *manager) isStillValid(secret *corev1.Secret) (bool, error) {
+	value := secret.Labels[LabelKeyValidUntilTime]
+	if value == "" {
+		return true, nil
+	}
+	validUntilUnix, err := strconv.ParseInt(value, 10, 64)
+	if err != nil {
+		return false, fmt.Errorf("parsing label %q of secret %s failed: %w", LabelKeyValidUntilTime, client.ObjectKeyFromObject(secret), err)
+	}
+	return m.clock.Now().UTC().Unix() < validUntilUnix, nil
 }
 
 func (m *manager) maintainLifetimeLabels(

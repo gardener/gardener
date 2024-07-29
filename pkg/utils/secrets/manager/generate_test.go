@@ -7,6 +7,7 @@ package manager
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strconv"
 	"time"
 
@@ -528,6 +529,36 @@ var _ = Describe("Generate", func() {
 						"bundle-for":       name,
 					})).To(Succeed())
 					Expect(secretList.Items).To(HaveLen(2))
+
+					By("after validity of first CA")
+					fakeClock.Step(*validity + 1*time.Hour - renewed)
+					mgr, err = New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, Config{CASecretAutoRotation: true})
+					Expect(err).NotTo(HaveOccurred())
+					m = mgr.(*manager)
+					config.CommonName = lastCommonName
+					newSecret2, err := m.Generate(ctx, config, options...)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(newSecret2.Name).NotTo(Equal(newSecret.Name))
+
+					By("Find created bundle secret")
+					secretList = &corev1.SecretList{}
+					Expect(fakeClient.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
+						"managed-by":       "secrets-manager",
+						"manager-identity": "test",
+						"bundle-for":       name,
+					})).To(Succeed())
+					Expect(secretList.Items).To(HaveLen(3))
+					sort.Slice(secretList.Items, func(i, j int) bool {
+						timeI, err := strconv.Atoi(secretList.Items[i].Labels[LabelKeyIssuedAtTime])
+						Expect(err).NotTo(HaveOccurred())
+						timeJ, err := strconv.Atoi(secretList.Items[j].Labels[LabelKeyIssuedAtTime])
+						Expect(err).NotTo(HaveOccurred())
+						return timeI < timeJ
+					})
+					By("Check removal of invalid CA")
+					Expect(len(secretList.Items[0].Data["bundle.crt"])).To(BeNumerically("<", 1500), "expected bundle one CA")
+					Expect(len(secretList.Items[1].Data["bundle.crt"])).To(BeNumerically(">", 1500), "expected bundle with two CAs")
+					Expect(len(secretList.Items[2].Data["bundle.crt"])).To(BeNumerically("<", 1500), "expected bundle with new CA only")
 				},
 
 				Entry("default 80% of 100d (=80d)", ptr.To(100*24*time.Hour), 0, 79*24*time.Hour, 81*24*time.Hour),

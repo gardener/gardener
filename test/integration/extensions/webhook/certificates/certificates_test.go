@@ -543,7 +543,7 @@ var _ = Describe("Certificates tests", func() {
 				}).Should(And(
 					Not(BeEmpty()),
 					Not(BeEquivalentTo(caBundle1)),
-					ContainSubstring(string(caBundle1)),
+					Not(ContainSubstring(string(caBundle1))),
 				))
 
 				Eventually(func(g Gomega) {
