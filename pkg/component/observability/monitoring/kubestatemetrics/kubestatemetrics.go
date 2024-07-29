@@ -32,6 +32,9 @@ const (
 
 	port            = 8080
 	portNameMetrics = "metrics"
+
+	SuffixSeed    = "-seed"
+	SuffixRuntime = "-runtime"
 )
 
 // New creates a new instance of DeployWaiter for the kube-state-metrics.
@@ -74,6 +77,8 @@ type Values struct {
 	Replicas int32
 	// IsWorkerless specifies whether the cluster has worker nodes.
 	IsWorkerless bool
+	// NameSuffix is attached to the deployment name and related resources.
+	NameSuffix string
 }
 
 func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
@@ -137,7 +142,7 @@ func (k *kubeStateMetrics) WaitCleanup(ctx context.Context) error {
 
 func (k *kubeStateMetrics) managedResourceName() string {
 	if k.values.ClusterType == component.ClusterTypeSeed {
-		return managedResourceName
+		return managedResourceName + k.values.NameSuffix
 	}
-	return managedResourceNameShoot
+	return managedResourceNameShoot + k.values.NameSuffix
 }

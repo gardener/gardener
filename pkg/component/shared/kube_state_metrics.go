@@ -20,6 +20,7 @@ func NewKubeStateMetrics(
 	gardenNamespaceName string,
 	runtimeVersion *semver.Version,
 	priorityClassName string,
+	nameSuffix string,
 ) (
 	component.DeployWaiter,
 	error,
@@ -35,5 +36,6 @@ func NewKubeStateMetrics(
 		Image:             image.String(),
 		PriorityClassName: priorityClassName,
 		Replicas:          2,
+		NameSuffix:        nameSuffix,
 	}), nil
 }
