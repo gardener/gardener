@@ -41,12 +41,10 @@ images:
   tag: "3.5"
   architectures:
   - amd64
-  - arm64
 - name: pause-container
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
   ref: registry.k8s.io/pause:3.5
   architectures:
-  - amd64
   - arm64
 - name: pause-container
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
