@@ -274,6 +274,7 @@ mkdir -p /home/gardener/.ssh
 echo "%s" > /home/gardener/.ssh/authorized_keys
 chown gardener:gardener /home/gardener/.ssh/authorized_keys
 echo "gardener ALL=(ALL) NOPASSWD:ALL" >/etc/sudoers.d/99-gardener-user
+systemctl start ssh
 `, bastion.Spec.SSHPublicKey)
 
 	return []byte(userData)
