@@ -723,8 +723,18 @@ const (
 	DefaultEvictionTolerance = 0.5
 	// DefaultRecommendationMarginFraction is the default value for the RecommendationMarginFraction field in the VPA configuration.
 	DefaultRecommendationMarginFraction = 0.15
-	// DefaultTargetCPUPercentile is the default value for the TargetCPUPercentile field in the VPA configuration
+	// DefaultTargetCPUPercentile is the default value for the TargetCPUPercentile field in the VPA configuration.
 	DefaultTargetCPUPercentile = 0.9
+	// DefaultRecommendationLowerBoundCPUPercentile is the default value for the RecommendationLowerBoundCPUPercentile field in the VPA configuration.
+	DefaultRecommendationLowerBoundCPUPercentile = 0.5
+	// DefaultRecommendationUpperBoundCPUPercentile is the default value for the RecommendationUpperBoundCPUPercentile field in the VPA configuration.
+	DefaultRecommendationUpperBoundCPUPercentile = 0.95
+	// DefaultTargetMemoryPercentile is the default value for the TargetMemoryPercentile field in the VPA configuration.
+	DefaultTargetMemoryPercentile = 0.9
+	// DefaultRecommendationLowerBoundMemoryPercentile is the default value for the RecommendationLowerBoundMemoryPercentile field in the VPA configuration.
+	DefaultRecommendationLowerBoundMemoryPercentile = 0.5
+	// DefaultRecommendationUpperBoundMemoryPercentile is the default value for the RecommendationUpperBoundMemoryPercentile field in the VPA configuration.
+	DefaultRecommendationUpperBoundMemoryPercentile = 0.95
 )
 
 var (
