@@ -20,7 +20,7 @@ type ImageSource struct {
 	// Either Ref or Repository must be provided. If Repository is used, Tag can either be a digest only
 	// (e.g., `sha256:073...`), or tag+digest combined (e.g., `v1.2.3@sha256:073...`).
 	Ref        *string `json:"ref,omitempty" yaml:"ref,omitempty"`
-	Repository *string `json:"repository" yaml:"repository"`
+	Repository *string `json:"repository,omitempty" yaml:"repository,omitempty"`
 	Tag        *string `json:"tag,omitempty" yaml:"tag,omitempty"`
 
 	// Version is a human-readable version of the image (helpful in case the ref/tag does not specify it because only a

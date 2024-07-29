@@ -281,7 +281,7 @@ metadata:
   name: ` + gardenletNameWithAutoUpdate + `
   namespace: ` + testNamespace.Name + `
   labels:
-    operator.gardener.cloud/auto-update-helm-chart-ref: "true"
+    operator.gardener.cloud/auto-update-gardenlet-helm-chart-ref: "true"
 spec:
   deployment:
     helm:

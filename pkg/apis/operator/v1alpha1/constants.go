@@ -17,5 +17,5 @@ const (
 	// LabelKeyGardenletAutoUpdates is a key for a label on seedmanagement.gardener.cloud/v1alpha1.Gardenlet resources.
 	// If set to true, gardener-operator will automatically update the `.spec.deployment.helm.ociRepository.ref` field
 	// to its own version after a successful operator.gardener.cloud/v1alpha1.Garden reconciliation.
-	LabelKeyGardenletAutoUpdates = "operator.gardener.cloud/auto-update-helm-chart-ref"
+	LabelKeyGardenletAutoUpdates = "operator.gardener.cloud/auto-update-gardenlet-helm-chart-ref"
 )

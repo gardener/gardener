@@ -572,7 +572,7 @@ On `Gardenlet` deletion, nothing happens: `gardenlet`s must always be deleted ma
 > This controller only takes care of the very first `gardenlet` deployment (since it only reacts when there is no `Seed` resource yet).
 > After the `gardenlet` is running, it uses the [self-upgrade mechanism](../deployment/deploy_gardenlet_manually.md#self-upgrades) by watching the `seedmanagement.gardener.cloud/v1alpha1.Gardenlet` (see [this](gardenlet.md#gardenlet-controller) for more details.)
 >
-> After a successful [`Garden` reconciliation](#main-reconciler), `gardener-operator` also updates the `.spec.deployment.helm.ociRepository.ref` to its own version in all `Gardenlet` resources labeled with `operator.gardener.cloud/auto-update-helm-chart-ref=true`.
+> After a successful [`Garden` reconciliation](#main-reconciler), `gardener-operator` also updates the `.spec.deployment.helm.ociRepository.ref` to its own version in all `Gardenlet` resources labeled with `operator.gardener.cloud/auto-update-gardenlet-helm-chart-ref=true`.
 > `gardenlet`s then updates themselves.
 >
 > ⚠️ If you prefer to manage the `Gardenlet` resources via GitOps, Flux, or similar tools, then you should better manage the `.spec.deployment.helm.ociRepository.ref` field yourself and not label the resources as mentioned above (to prevent `gardener-operator` from interfering with your desired state).

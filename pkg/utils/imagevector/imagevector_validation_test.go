@@ -17,18 +17,18 @@ import (
 
 var _ = Describe("validation", func() {
 	var (
-		imageVector           func(string, *string, *string, string, string, string) ImageVector
+		imageVector           func(string, *string, *string, *string, string, string) ImageVector
 		componentImageVectors func(string, ImageVector) ComponentImageVectors
 	)
 
 	BeforeEach(func() {
-		imageVector = func(name string, ref, repository *string, tag, runtimeVersion, targetVersion string) ImageVector {
+		imageVector = func(name string, ref, repository, tag *string, runtimeVersion, targetVersion string) ImageVector {
 			return ImageVector{
 				{
 					Name:           name,
 					Ref:            ref,
 					Repository:     repository,
-					Tag:            ptr.To(tag),
+					Tag:            tag,
 					RuntimeVersion: ptr.To(runtimeVersion),
 					TargetVersion:  ptr.To(targetVersion),
 				},
@@ -53,13 +53,13 @@ var _ = Describe("validation", func() {
 
 	Describe("#ValidateImageVector", func() {
 		It("should allow valid image vectors", func() {
-			errorList := ValidateImageVector(imageVector("test-image1", nil, ptr.To("test-repo"), "test-tag", ">= 1.6, < 1.8", ">= 1.8"), field.NewPath("images"))
+			errorList := ValidateImageVector(imageVector("test-image1", nil, ptr.To("test-repo"), ptr.To("test-tag"), ">= 1.6, < 1.8", ">= 1.8"), field.NewPath("images"))
 
 			Expect(errorList).To(BeEmpty())
 		})
 
 		It("should forbid invalid image vectors", func() {
-			errorList := ValidateImageVector(imageVector("", nil, nil, "", "", "!@#"), field.NewPath("images"))
+			errorList := ValidateImageVector(imageVector("", nil, nil, ptr.To(""), "", "!@#"), field.NewPath("images"))
 
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
@@ -85,8 +85,26 @@ var _ = Describe("validation", func() {
 			))
 		})
 
+		It("should forbid empty ref", func() {
+			Expect(ValidateImageVector(imageVector("foo", ptr.To(""), nil, nil, ">= 1.6", "< 1.8"), field.NewPath("images"))).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("images[0].ref"),
+				})),
+			))
+		})
+
+		It("should forbid empty repository", func() {
+			Expect(ValidateImageVector(imageVector("foo", nil, ptr.To(""), nil, ">= 1.6", "< 1.8"), field.NewPath("images"))).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("images[0].repository"),
+				})),
+			))
+		})
+
 		It("should forbid specifying repository/tag when ref is set", func() {
-			Expect(ValidateImageVector(imageVector("foo", ptr.To("ref"), ptr.To("repo"), "tag", ">= 1.6", "< 1.8"), field.NewPath("images"))).To(ConsistOf(
+			Expect(ValidateImageVector(imageVector("foo", ptr.To("ref"), ptr.To("repo"), ptr.To("tag"), ">= 1.6", "< 1.8"), field.NewPath("images"))).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal("images[0].repository"),
@@ -101,7 +119,7 @@ var _ = Describe("validation", func() {
 
 	Describe("#ValidateComponentImageVectors", func() {
 		It("should allow valid component image vectors", func() {
-			errorList := ValidateComponentImageVectors(componentImageVectors("test-component1", imageVector("test-image1", nil, ptr.To("test-repo"), "test-tag", ">= 1.6, < 1.8", ">= 1.8")), field.NewPath("components"))
+			errorList := ValidateComponentImageVectors(componentImageVectors("test-component1", imageVector("test-image1", nil, ptr.To("test-repo"), ptr.To("test-tag"), ">= 1.6, < 1.8", ">= 1.8")), field.NewPath("components"))
 
 			Expect(errorList).To(BeEmpty())
 		})

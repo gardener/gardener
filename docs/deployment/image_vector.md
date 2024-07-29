@@ -15,13 +15,14 @@ images:
   targetVersion: "1.20.x"
   architectures:
   - amd64
+  - arm64
 - name: pause-container
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
   ref: registry.k8s.io/pause:3.5
   targetVersion: ">= 1.21"
   architectures:
+  - amd64
   - arm64
-...
 ```
 
 That means that Gardener will use the `pause-container` with tag `3.4` for all clusters with Kubernetes version `1.20.x`, and the image with ref `registry.k8s.io/pause:3.5` for all clusters with Kubernetes `>= 1.21`.
@@ -40,10 +41,6 @@ images:
   tag: "3.5"
   architectures:
   - amd64
-- name: pause-container
-  sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
-  ref: registry.k8s.io/pause:3.5
-  architectures:
   - arm64
 - name: pause-container
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
@@ -51,7 +48,12 @@ images:
   architectures:
   - amd64
   - arm64
-...
+- name: pause-container
+  sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
+  ref: registry.k8s.io/pause:3.5
+  architectures:
+  - amd64
+  - arm64
 ```
 
 `architectures` is an optional field of image. It is a list of strings specifying CPU architecture of machines on which this image can be used. The valid options for the architectures field are as follows:
@@ -81,7 +83,6 @@ images:
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
   ref: my-custom-image-registry/pause:3.5
   version: ">= 1.21"
-...
 ```
 
 > [!IMPORTANT]
@@ -110,7 +111,6 @@ metadata:
   namespace: garden
 spec:
   template:
-    # ...
     spec:
       containers:
       - name: gardenlet
@@ -120,12 +120,10 @@ spec:
         volumeMounts:
         - name: gardenlet-images-overwrite
           mountPath: /imagevector-overwrite
-        # ...
       volumes:
       - name: gardenlet-images-overwrite
         configMap:
           name: gardenlet-images-overwrite
-  # ...
 ```
 
 ## Image Vectors for Dependent Components
@@ -144,7 +142,6 @@ components:
     - name: etcd
       tag: v1.2.3
       repository: etcd/etcd
-...
 ``` 
 
 Gardener will, if supported by the directly deployed component (`etcd-druid` in this example), inject the given `imageVectorOverwrite` into the `Deployment` manifest.
@@ -152,6 +149,6 @@ The respective component is responsible for using the overwritten images instead
 
 ## Helm Chart Image Vector
 
-Some Gardener components might also deploy https://helm.sh/docs/helm/helm_package/ which are pulled from an OCI repository.
+Some Gardener components might also deploy [packaged Helm charts](https://helm.sh/docs/helm/helm_package/) which are pulled from an OCI repository.
 The concepts are the very same as for the container images.
 The only difference is that the environment variable for overwriting this chart image vector is called `IMAGEVECTOR_CHARTS_OVERWRITE`.

@@ -47,6 +47,9 @@ func validateImageSource(imageSource *ImageSource, fldPath *field.Path) field.Er
 	}
 
 	if imageSource.Ref != nil {
+		if *imageSource.Ref == "" {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("ref"), *imageSource.Ref, "ref must not be empty if specified"))
+		}
 		if imageSource.Repository != nil {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("repository"), "cannot specify repository when ref is set"))
 		}
@@ -55,6 +58,9 @@ func validateImageSource(imageSource *ImageSource, fldPath *field.Path) field.Er
 		}
 	} else {
 		// Ensure tag is non-empty if specified
+		if imageSource.Repository != nil && *imageSource.Repository == "" {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("repository"), *imageSource.Repository, "repository must not be empty if specified"))
+		}
 		if imageSource.Tag != nil && *imageSource.Tag == "" {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("tag"), *imageSource.Tag, "image tag must not be empty if specified"))
 		}
