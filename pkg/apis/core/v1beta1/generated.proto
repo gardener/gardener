@@ -3198,6 +3198,32 @@ message VerticalPodAutoscaler {
   // (default: 0.9)
   // +optional
   optional double targetCPUPercentile = 9;
+
+  // RecommendationLowerBoundCPUPercentile is the usage percentile that will be used for the lower bound on CPU recommendation.
+  // (default: 0.5)
+  // +optional
+  optional double recommendationLowerBoundCPUPercentile = 10;
+
+  // RecommendationUpperBoundCPUPercentile is the usage percentile that will be used for the upper bound on CPU recommendation.
+  // (default: 0.95)
+  // +optional
+  optional double recommendationUpperBoundCPUPercentile = 11;
+
+  // TargetMemoryPercentile is the usage percentile that will be used as a base for memory target recommendation.
+  // Doesn't affect memory lower bound nor memory upper bound.
+  // (default: 0.9)
+  // +optional
+  optional double targetMemoryPercentile = 12;
+
+  // RecommendationLowerBoundMemoryPercentile is the usage percentile that will be used for the lower bound on memory recommendation.
+  // (default: 0.5)
+  // +optional
+  optional double recommendationLowerBoundMemoryPercentile = 13;
+
+  // RecommendationUpperBoundMemoryPercentile is the usage percentile that will be used for the upper bound on memory recommendation.
+  // (default: 0.95)
+  // +optional
+  optional double recommendationUpperBoundMemoryPercentile = 14;
 }
 
 // Volume contains information about the volume type, size, and encryption.

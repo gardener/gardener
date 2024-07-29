@@ -691,6 +691,27 @@ type VerticalPodAutoscaler struct {
 	// (default: 0.9)
 	// +optional
 	TargetCPUPercentile *float64 `json:"targetCPUPercentile,omitempty" protobuf:"fixed64,9,opt,name=targetCPUPercentile"`
+	// RecommendationLowerBoundCPUPercentile is the usage percentile that will be used for the lower bound on CPU recommendation.
+	// (default: 0.5)
+	// +optional
+	RecommendationLowerBoundCPUPercentile *float64 `json:"recommendationLowerBoundCPUPercentile,omitempty" protobuf:"fixed64,10,opt,name=recommendationLowerBoundCPUPercentile"`
+	// RecommendationUpperBoundCPUPercentile is the usage percentile that will be used for the upper bound on CPU recommendation.
+	// (default: 0.95)
+	// +optional
+	RecommendationUpperBoundCPUPercentile *float64 `json:"recommendationUpperBoundCPUPercentile,omitempty" protobuf:"fixed64,11,opt,name=recommendationUpperBoundCPUPercentile"`
+	// TargetMemoryPercentile is the usage percentile that will be used as a base for memory target recommendation.
+	// Doesn't affect memory lower bound nor memory upper bound.
+	// (default: 0.9)
+	// +optional
+	TargetMemoryPercentile *float64 `json:"targetMemoryPercentile,omitempty" protobuf:"fixed64,12,opt,name=targetMemoryPercentile"`
+	// RecommendationLowerBoundMemoryPercentile is the usage percentile that will be used for the lower bound on memory recommendation.
+	// (default: 0.5)
+	// +optional
+	RecommendationLowerBoundMemoryPercentile *float64 `json:"recommendationLowerBoundMemoryPercentile,omitempty" protobuf:"fixed64,13,opt,name=recommendationLowerBoundMemoryPercentile"`
+	// RecommendationUpperBoundMemoryPercentile is the usage percentile that will be used for the upper bound on memory recommendation.
+	// (default: 0.95)
+	// +optional
+	RecommendationUpperBoundMemoryPercentile *float64 `json:"recommendationUpperBoundMemoryPercentile,omitempty" protobuf:"fixed64,14,opt,name=recommendationUpperBoundMemoryPercentile"`
 }
 
 const (
