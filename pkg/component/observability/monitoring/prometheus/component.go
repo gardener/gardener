@@ -49,10 +49,6 @@ type Interface interface {
 	SetIngressWildcardCertSecret(*corev1.Secret)
 	// SetCentralScrapeConfigs sets the central scrape configs.
 	SetCentralScrapeConfigs([]*monitoringv1alpha1.ScrapeConfig)
-	// SetAdditionalScrapeConfigs sets the additional scrape configs.
-	SetAdditionalScrapeConfigs([]string)
-	// SetAdditionalResources sets the additional resources.
-	SetAdditionalResources(...client.Object)
 	// SetNamespaceUID sets the namespace UID.
 	SetNamespaceUID(name types.UID)
 }
@@ -244,11 +240,6 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		cortexConfigMap = p.cortexConfigMap()
 	}
 
-	prometheusObj, err := p.prometheus(takeOverExistingPV, cortexConfigMap)
-	if err != nil {
-		return err
-	}
-
 	resources, err := registry.AddAllAndSerialize(
 		p.serviceAccount(),
 		p.service(),
@@ -257,7 +248,7 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		p.secretAdditionalAlertmanagerConfigs(),
 		p.secretRemoteWriteBasicAuth(),
 		cortexConfigMap,
-		prometheusObj,
+		p.prometheus(takeOverExistingPV, cortexConfigMap),
 		p.vpa(),
 		p.podDisruptionBudget(),
 		ingress,
@@ -349,14 +340,6 @@ func (p *prometheus) SetIngressWildcardCertSecret(secret *corev1.Secret) {
 
 func (p *prometheus) SetCentralScrapeConfigs(configs []*monitoringv1alpha1.ScrapeConfig) {
 	p.values.CentralConfigs.ScrapeConfigs = configs
-}
-
-func (p *prometheus) SetAdditionalScrapeConfigs(configs []string) {
-	p.values.CentralConfigs.AdditionalScrapeConfigs = configs
-}
-
-func (p *prometheus) SetAdditionalResources(resources ...client.Object) {
-	p.values.AdditionalResources = resources
 }
 
 func (p *prometheus) SetNamespaceUID(uid types.UID) {
