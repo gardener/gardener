@@ -5436,6 +5436,31 @@ func (in *VerticalPodAutoscaler) DeepCopyInto(out *VerticalPodAutoscaler) {
 		*out = new(float64)
 		**out = **in
 	}
+	if in.RecommendationLowerBoundCPUPercentile != nil {
+		in, out := &in.RecommendationLowerBoundCPUPercentile, &out.RecommendationLowerBoundCPUPercentile
+		*out = new(float64)
+		**out = **in
+	}
+	if in.RecommendationUpperBoundCPUPercentile != nil {
+		in, out := &in.RecommendationUpperBoundCPUPercentile, &out.RecommendationUpperBoundCPUPercentile
+		*out = new(float64)
+		**out = **in
+	}
+	if in.TargetMemoryPercentile != nil {
+		in, out := &in.TargetMemoryPercentile, &out.TargetMemoryPercentile
+		*out = new(float64)
+		**out = **in
+	}
+	if in.RecommendationLowerBoundMemoryPercentile != nil {
+		in, out := &in.RecommendationLowerBoundMemoryPercentile, &out.RecommendationLowerBoundMemoryPercentile
+		*out = new(float64)
+		**out = **in
+	}
+	if in.RecommendationUpperBoundMemoryPercentile != nil {
+		in, out := &in.RecommendationUpperBoundMemoryPercentile, &out.RecommendationUpperBoundMemoryPercentile
+		*out = new(float64)
+		**out = **in
+	}
 	return
 }
 
