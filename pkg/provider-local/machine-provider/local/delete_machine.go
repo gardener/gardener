@@ -34,7 +34,7 @@ func (d *localDriver) DeleteMachine(ctx context.Context, req *driver.DeleteMachi
 		return nil, status.Error(codes.Unknown, fmt.Sprintf("error deleting user data secret: %s", err.Error()))
 	}
 
-	pod := podForMachine(req.Machine)
+	pod := podForMachine(req.Machine, req.MachineClass)
 	if err := d.client.Delete(ctx, pod); err != nil {
 		if !apierrors.IsNotFound(err) {
 			// Unknown leads to short retry in machine controller
