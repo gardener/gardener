@@ -31,11 +31,11 @@ if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
   fi
 fi
 
-local_address="127.0.0.1"
+local_address="172.18.255.1"
 if [[ "${IPFAMILY:-}" == "ipv6" ]]; then
   local_address="::1"
 fi
-local_address_operator="127.0.0.3"
+local_address_operator="172.18.255.3"
 if [[ "${IPFAMILY:-}" == "ipv6" ]]; then
   local_address_operator="::3"
 fi
@@ -97,6 +97,11 @@ else
     e2e-upg-hib-wl.local
   )
 
+  ingress_names=(
+    gu-local--e2e-rotate
+    gu-local--e2e-rotate-wl
+  )
+
   if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
     for shoot in "${shoot_names[@]}" ; do
       if [[ "${SHOOT_FAILURE_TOLERANCE_TYPE:-}" == "zone" && ("$shoot" == "e2e-upg-ha.local" || "$shoot" == "e2e-upg-ha-wl.local") ]]; then
@@ -109,8 +114,9 @@ else
       fi
       printf "\n$local_address api.%s.external.local.gardener.cloud\n$local_address api.%s.internal.local.gardener.cloud\n" $shoot $shoot >>/etc/hosts
     done
-    printf "\n$local_address gu-local--e2e-rotate.ingress.$seed_name.seed.local.gardener.cloud\n" >>/etc/hosts
-    printf "\n$local_address gu-local--e2e-rotate-wl.ingress.$seed_name.seed.local.gardener.cloud\n" >>/etc/hosts
+    for ingress in "${ingress_names[@]}" ; do
+      printf "\n$local_address %s.ingress.$seed_name.seed.local.gardener.cloud\n" $ingress >>/etc/hosts
+    done
   else
     missing_entries=()
 
@@ -124,6 +130,11 @@ else
           missing_entries+=("$local_address api.$shoot.$ip.local.gardener.cloud")
         fi
       done
+    done
+    for ingress in "${ingress_names[@]}" ; do
+        if ! grep -q -x "$local_address $ingress.ingress.$seed_name.seed.local.gardener.cloud" /etc/hosts; then
+          missing_entries+=("$local_address $ingress.ingress.$seed_name.seed.local.gardener.cloud")
+        fi
     done
 
     if [ ${#missing_entries[@]} -gt 0 ]; then

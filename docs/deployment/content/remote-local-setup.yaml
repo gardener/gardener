@@ -51,7 +51,7 @@ spec:
           echo node-shell      && krew install node-shell
           bash -c "echo {{p,g}-seed,{gu,p,v}-local--local}.ingress.local.seed.local.gardener.cloud api.{e2e-managedseed.garden,{local,e2e-{hib,hib-wl,unpriv,wake-up,wake-up-wl,migrate,migrate-wl,mgr-hib,rotate,rotate-wl,default,default-wl,force-delete,fd-hib,upd-node,upd-node-wl,upgrade,upgrade-wl,upg-hib,upg-hib-wl}}.local}.{internal,external}.local.gardener.cloud" \
             | sed 's/ /\n/g' | sed 's/^/127.0.0.1 /' | sort >> /etc/hosts
-          echo "127.0.0.3 api.virtual-garden.local.gardener.cloud" >> /etc/hosts
+          echo "172.18.255.3 api.virtual-garden.local.gardener.cloud" >> /etc/hosts
 
           # Resolve e.g. gu-local--e2e-rotate{-wl}.ingress.$seed_name. ... to 127.0.0.1 for the e2e tests:
           echo '

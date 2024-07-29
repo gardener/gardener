@@ -12,7 +12,7 @@
 {{- if $.Values.gardener.controlPlane.deployed }}
   hostPort: 443
 {{- else }}
-  # TODO (plkokanov): when using skaffold to deploy, 127.0.0.2 is not used as listenAddress (unlike the local
+  # TODO (plkokanov): when using skaffold to deploy, 172.18.255.2 is not used as listenAddress (unlike the local
   #  deployment) because secondary IPs cannot be easily added to inside the `prow` containers. Additionally, there is no
   #  way currently to swap the dns record of the shoot's `kube-apiserver` once it is migrated to this seed.
   hostPort: 9443
@@ -26,7 +26,7 @@
 {{- if .Values.gardener.garden.deployed -}}
 - containerPort: 31443
   hostPort: 443
-  listenAddress: 127.0.0.3
+  listenAddress: 172.18.255.3
 {{- end -}}
 {{- end -}}
 
