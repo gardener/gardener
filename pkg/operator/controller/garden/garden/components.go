@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/kubestatemetrics"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -758,6 +759,7 @@ func (r *Reconciler) newKubeStateMetrics() (component.DeployWaiter, error) {
 		r.GardenNamespace,
 		r.RuntimeVersion,
 		v1beta1constants.PriorityClassNameGardenSystem100,
+		kubestatemetrics.SuffixRuntime,
 	)
 }
 

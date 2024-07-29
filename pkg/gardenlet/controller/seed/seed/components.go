@@ -12,6 +12,7 @@ import (
 	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
 	proberapi "github.com/gardener/dependency-watchdog/api/prober"
 	weederapi "github.com/gardener/dependency-watchdog/api/weeder"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/kubestatemetrics"
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -796,6 +797,7 @@ func (r *Reconciler) newKubeStateMetrics() (component.DeployWaiter, error) {
 		r.GardenNamespace,
 		r.SeedVersion,
 		v1beta1constants.PriorityClassNameSeedSystem600,
+		kubestatemetrics.SuffixSeed,
 	)
 }
 
