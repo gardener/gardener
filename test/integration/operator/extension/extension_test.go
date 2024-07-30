@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package virtualcluster_test
+package extension_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"

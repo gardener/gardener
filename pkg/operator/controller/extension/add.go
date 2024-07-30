@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package virtualcluster
+package extension
 
 import (
 	"context"
@@ -28,7 +28,7 @@ import (
 )
 
 // ControllerName is the name of this controller.
-const ControllerName = "extension-virtual-cluster"
+const ControllerName = "extension"
 
 // AddToManager adds Reconciler to the given manager.
 func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gardenClientMap clientmap.ClientMap) error {
@@ -55,7 +55,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 		Named(ControllerName).
 		For(&operatorv1alpha1.Extension{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: ptr.Deref(r.Config.Controllers.ExtensionVirtualCluster.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: ptr.Deref(r.Config.Controllers.Extension.ConcurrentSyncs, 0),
 		}).
 		Watches(
 			&operatorv1alpha1.Garden{},
