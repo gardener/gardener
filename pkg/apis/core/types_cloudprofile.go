@@ -59,6 +59,8 @@ type CloudProfileSpec struct {
 	Type string
 	// VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.
 	VolumeTypes []VolumeType
+	// Bastion contains machine and image properties
+	Bastion *Bastion
 }
 
 // GetProviderType gets the type of the provider.
@@ -183,6 +185,26 @@ type VolumeType struct {
 	Usable *bool
 	// MinSize is the minimal supported storage size.
 	MinSize *resource.Quantity
+}
+
+// Bastion contains machine and image properties
+type Bastion struct {
+	MachineImage BastionMachineImage
+	MachineType  BastionMachineType
+}
+
+// BastionMachineImage contains the bastions machine image properties
+type BastionMachineImage struct {
+	// Name of the image
+	Name string
+	// Version of the image
+	Version string
+}
+
+// BastionMachineType contains the bastions machine type properties
+type BastionMachineType struct {
+	// Name of the machine type
+	Name string
 }
 
 const (
