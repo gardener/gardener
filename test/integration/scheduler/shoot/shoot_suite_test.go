@@ -115,7 +115,7 @@ var _ = BeforeSuite(func() {
 		Expect(client.IgnoreNotFound(testClient.Delete(ctx, project))).To(Succeed())
 	})
 
-	By("Create SecretBinding")
+	By("Create Secret")
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "test-",
@@ -130,6 +130,7 @@ var _ = BeforeSuite(func() {
 		Expect(client.IgnoreNotFound(testClient.Delete(ctx, secret))).To(Succeed())
 	})
 
+	By("Create SecretBinding")
 	testSecretBinding = &gardencorev1beta1.SecretBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "test-",

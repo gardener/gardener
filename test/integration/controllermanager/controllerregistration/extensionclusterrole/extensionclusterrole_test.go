@@ -57,8 +57,13 @@ var _ = Describe("ExtensionClusterRole controller tests", func() {
 
 		By("Create Seed Namespace 1 and ServiceAccounts")
 		Expect(testClient.Create(ctx, seedNamespace1)).To(Succeed())
+		log.Info("Created Namespace for test", "namespace", client.ObjectKeyFromObject(seedNamespace1))
+
 		Expect(testClient.Create(ctx, serviceAccount1SeedNamespace1)).To(Succeed())
+		log.Info("Created ServiceAccount for test", "serviceAccount", client.ObjectKeyFromObject(serviceAccount1SeedNamespace1))
+
 		Expect(testClient.Create(ctx, serviceAccount2SeedNamespace1)).To(Succeed())
+		log.Info("Created ServiceAccount for test", "serviceAccount", client.ObjectKeyFromObject(serviceAccount2SeedNamespace1))
 
 		DeferCleanup(func() {
 			By("Delete ServiceAccounts and Seed Namespace 1")
@@ -94,8 +99,13 @@ var _ = Describe("ExtensionClusterRole controller tests", func() {
 
 		By("Create Seed Namespace 2 and ServiceAccounts")
 		Expect(testClient.Create(ctx, seedNamespace2)).To(Succeed())
+		log.Info("Created Namespace for test", "namespace", client.ObjectKeyFromObject(seedNamespace2))
+
 		Expect(testClient.Create(ctx, serviceAccount1SeedNamespace2)).To(Succeed())
+		log.Info("Created ServiceAccount for test", "serviceAccount", client.ObjectKeyFromObject(serviceAccount1SeedNamespace2))
+
 		Expect(testClient.Create(ctx, serviceAccount2SeedNamespace2)).To(Succeed())
+		log.Info("Created ServiceAccount for test", "serviceAccount", client.ObjectKeyFromObject(serviceAccount2SeedNamespace2))
 
 		DeferCleanup(func() {
 			By("Delete ServiceAccounts and Seed Namespace 2")
@@ -124,7 +134,10 @@ var _ = Describe("ExtensionClusterRole controller tests", func() {
 
 		By("Create non-Seed Namespace and ServiceAccount")
 		Expect(testClient.Create(ctx, nonSeedNamespace)).To(Succeed())
+		log.Info("Created Namespace for test", "namespace", client.ObjectKeyFromObject(nonSeedNamespace))
+
 		Expect(testClient.Create(ctx, serviceAccount1NonSeedNamespace)).To(Succeed())
+		log.Info("Created ServiceAccount for test", "serviceAccount", client.ObjectKeyFromObject(serviceAccount1NonSeedNamespace))
 
 		DeferCleanup(func() {
 			By("Delete ServiceAccount and non-Seed Namespace")
@@ -156,6 +169,14 @@ var _ = Describe("ExtensionClusterRole controller tests", func() {
 
 		By("Create ClusterRole")
 		Expect(testClient.Create(ctx, clusterRole)).To(Succeed())
+		log.Info("Created ClusterRole for test", "clusterRole", client.ObjectKeyFromObject(clusterRole))
+
+		By("Wait until manager has observed clusterRole")
+		Eventually(func() error {
+			return mgrClient.Get(ctx, client.ObjectKeyFromObject(clusterRole), &rbacv1.ClusterRole{})
+		}).Should(Succeed())
+
+		clusterRoleBinding = &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRole.Name}}
 
 		DeferCleanup(func() {
 			By("Delete ClusterRole")
@@ -164,11 +185,7 @@ var _ = Describe("ExtensionClusterRole controller tests", func() {
 			Eventually(func() error {
 				return testClient.Get(ctx, client.ObjectKeyFromObject(clusterRole), &rbacv1.ClusterRole{})
 			}).Should(BeNotFoundError())
-		})
 
-		clusterRoleBinding = &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRole.Name}}
-
-		DeferCleanup(func() {
 			By("Delete ClusterRoleBinding")
 			Expect(testClient.Delete(ctx, clusterRoleBinding)).To(Succeed())
 
@@ -227,6 +244,13 @@ var _ = Describe("ExtensionClusterRole controller tests", func() {
 
 			By("Create ServiceAccount")
 			Expect(testClient.Create(ctx, serviceAccount3SeedNamespace1)).To(Succeed())
+			log.Info("Created ServiceAccount for test", "serviceAccount", client.ObjectKeyFromObject(serviceAccount3SeedNamespace1))
+
+			By("Wait until manager has observed serviceAccount")
+			Eventually(func() error {
+				return mgrClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount3SeedNamespace1), &corev1.ServiceAccount{})
+			}).Should(Succeed())
+
 			DeferCleanup(func() {
 				By("Delete ServiceAccount")
 				Expect(testClient.Delete(ctx, serviceAccount3SeedNamespace1)).To(Succeed())
@@ -286,6 +310,11 @@ var _ = Describe("ExtensionClusterRole controller tests", func() {
 
 	When("the label selector is changed", func() {
 		It("should adjust the subjects", func() {
+			// Wait till the clusterRoleBinding is created for the first time since we are calling Get for this object in Consistently right after creating the ServiceAccount
+			Eventually(func() error {
+				return testClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), clusterRoleBinding)
+			}).Should(Succeed())
+
 			serviceAccount3SeedNamespace2 := &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "hb23b",
@@ -296,6 +325,13 @@ var _ = Describe("ExtensionClusterRole controller tests", func() {
 
 			By("Create ServiceAccount")
 			Expect(testClient.Create(ctx, serviceAccount3SeedNamespace2)).To(Succeed())
+			log.Info("Created ServiceAccount for test", "serviceAccount", client.ObjectKeyFromObject(serviceAccount3SeedNamespace2))
+
+			By("Wait until manager has observed serviceAccount")
+			Eventually(func() error {
+				return mgrClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount3SeedNamespace2), &corev1.ServiceAccount{})
+			}).Should(Succeed())
+
 			DeferCleanup(func() {
 				By("Delete ServiceAccount")
 				Expect(testClient.Delete(ctx, serviceAccount3SeedNamespace2)).To(Succeed())
