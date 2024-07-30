@@ -88,8 +88,9 @@ var _ = Describe("validation", func() {
 		It("should forbid empty ref", func() {
 			Expect(ValidateImageVector(imageVector("foo", ptr.To(""), nil, nil, ">= 1.6", "< 1.8"), field.NewPath("images"))).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("images[0].ref"),
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("images[0].ref"),
+					"Detail": Equal("ref must not be empty if specified"),
 				})),
 			))
 		})
@@ -97,8 +98,9 @@ var _ = Describe("validation", func() {
 		It("should forbid empty repository", func() {
 			Expect(ValidateImageVector(imageVector("foo", nil, ptr.To(""), nil, ">= 1.6", "< 1.8"), field.NewPath("images"))).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("images[0].repository"),
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("images[0].repository"),
+					"Detail": Equal("repository must not be empty if specified"),
 				})),
 			))
 		})
@@ -106,12 +108,14 @@ var _ = Describe("validation", func() {
 		It("should forbid specifying repository/tag when ref is set", func() {
 			Expect(ValidateImageVector(imageVector("foo", ptr.To("ref"), ptr.To("repo"), ptr.To("tag"), ">= 1.6", "< 1.8"), field.NewPath("images"))).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("images[0].repository"),
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("images[0].repository"),
+					"Detail": Equal("cannot specify repository when ref is set"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("images[0].tag"),
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("images[0].tag"),
+					"Detail": Equal("cannot specify tag when ref is set"),
 				})),
 			))
 		})

@@ -23,7 +23,7 @@ const (
 	// OverrideEnv is the name of the containers image vector override environment variable.
 	OverrideEnv = "IMAGEVECTOR_OVERWRITE"
 	// OverrideChartsEnv is the name of the charts image vector override environment variable.
-	OverrideChartsEnv = "IMAGEVECTOR_CHARTS_OVERWRITE"
+	OverrideChartsEnv = "IMAGEVECTOR_OVERWRITE_CHARTS"
 	// SHA256TagPrefix is the prefix in an image tag for sha256 tags.
 	SHA256TagPrefix = "sha256:"
 )

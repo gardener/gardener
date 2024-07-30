@@ -90,7 +90,7 @@ spec:
           value: /imagevector_overwrite_components/components.yaml
         {{- end }}
         {{- if .Values.chartsImageVectorOverwrite }}
-        - name: IMAGEVECTOR_CHARTS_OVERWRITE
+        - name: IMAGEVECTOR_OVERWRITE_CHARTS
           value: /imagevector_overwrite_charts/images_overwrite.yaml
         {{- end }}
         {{- range $index, $value := .Values.env }}

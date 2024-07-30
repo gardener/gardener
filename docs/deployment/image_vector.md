@@ -149,4 +149,4 @@ The respective component is responsible for using the overwritten images instead
 
 Some Gardener components might also deploy [packaged Helm charts](https://helm.sh/docs/helm/helm_package/) which are pulled from an OCI repository.
 The concepts are the very same as for the container images.
-The only difference is that the environment variable for overwriting this chart image vector is called `IMAGEVECTOR_CHARTS_OVERWRITE`.
+The only difference is that the environment variable for overwriting this chart image vector is called `IMAGEVECTOR_OVERWRITE_CHARTS`.
