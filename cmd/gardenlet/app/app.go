@@ -283,6 +283,7 @@ func (g *garden) Start(ctx context.Context) error {
 					&gardencorev1beta1.SecretBinding{}:          kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &gardencorev1beta1.SecretBinding{}),
 					&gardencorev1beta1.ShootState{}:             kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &gardencorev1beta1.ShootState{}),
 					&securityv1alpha1.CredentialsBinding{}:      kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &securityv1alpha1.CredentialsBinding{}),
+					&securityv1alpha1.WorkloadIdentity{}:        kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &securityv1alpha1.WorkloadIdentity{}),
 				},
 				kubernetes.GardenScheme,
 			)(config, opts)
