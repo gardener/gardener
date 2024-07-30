@@ -21,12 +21,15 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/component-base/version"
 	podsecurityadmissionapi "k8s.io/pod-security-admission/api"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/gardener/gardener/imagevector"
+	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
@@ -532,6 +535,10 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{Requeue: true}, nil
 	}
 
+	if err := r.updateHelmChartRefForGardenlets(ctx, log, virtualClusterClient); err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed updating the Helm chart references in Gardenlet resources: %w", err)
+	}
+
 	return reconcile.Result{}, secretsManager.Cleanup(ctx)
 }
 
@@ -774,6 +781,35 @@ func (r *Reconciler) deployLongTermPrometheus(ctx context.Context, secretsManage
 	}
 	prometheus.SetIngressAuthSecret(credentialsSecret)
 	return prometheus.Deploy(ctx)
+}
+
+func (r *Reconciler) updateHelmChartRefForGardenlets(ctx context.Context, log logr.Logger, virtualClusterClient client.Client) error {
+	gardenletChartImage, err := imagevector.Charts().FindImage(imagevector.ChartImageNameGardenlet)
+	if err != nil {
+		return err
+	}
+	gardenletChartImage.WithOptionalTag(version.Get().GitVersion)
+
+	gardenletList := &seedmanagementv1alpha1.GardenletList{}
+	if err := virtualClusterClient.List(ctx, gardenletList, client.MatchingLabels{operatorv1alpha1.LabelKeyGardenletAutoUpdates: "true"}); err != nil {
+		return fmt.Errorf("failed listing Gardenlets with label %s: %w", operatorv1alpha1.LabelKeyGardenletAutoUpdates, err)
+	}
+
+	for _, gardenlet := range gardenletList.Items {
+		if ptr.Deref(gardenlet.Spec.Deployment.Helm.OCIRepository.Ref, "") == gardenletChartImage.String() {
+			continue
+		}
+
+		log.Info("Updating Helm chart reference of Gardenlet resource", "gardenlet", client.ObjectKeyFromObject(&gardenlet), "ref", gardenletChartImage.String())
+
+		patch := client.MergeFrom(gardenlet.DeepCopy())
+		gardenlet.Spec.Deployment.Helm.OCIRepository = gardencorev1.OCIRepository{Ref: ptr.To(gardenletChartImage.String())}
+		if err := virtualClusterClient.Patch(ctx, &gardenlet, patch); err != nil {
+			return fmt.Errorf("failed updating Helm chart reference of Gardenlet resource: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func getKubernetesResourcesForEncryption(garden *operatorv1alpha1.Garden) []string {

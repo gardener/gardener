@@ -9,6 +9,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/utils/chart"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -26,11 +27,11 @@ var _ = Describe("Chart", func() {
 				values map[string]any
 				img1   = &imagevector.ImageSource{
 					Name:       "img1",
-					Repository: "repo1",
+					Repository: ptr.To("repo1"),
 				}
 				img2 = &imagevector.ImageSource{
 					Name:       "img2",
-					Repository: "repo2",
+					Repository: ptr.To("repo2"),
 				}
 				v = imagevector.ImageVector{img1, img2}
 			)

@@ -25,7 +25,7 @@ var _ = Describe("Initializer", func() {
 			images = map[string]*imagevector.Image{
 				"pause-container": {
 					Name:       "pause-container",
-					Repository: pauseContainerImageRepo,
+					Repository: ptr.To(pauseContainerImageRepo),
 					Tag:        ptr.To(pauseContainerImageTag),
 				},
 			}

@@ -427,7 +427,7 @@ func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, isGardenC
 }
 
 func (r *Reconciler) newDependencyWatchdogs(seedSettings *gardencorev1beta1.SeedSettings) (dwdWeeder component.DeployWaiter, dwdProber component.DeployWaiter, err error) {
-	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameDependencyWatchdog, imagevectorutils.RuntimeVersion(r.SeedVersion.String()), imagevectorutils.TargetVersion(r.SeedVersion.String()))
+	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameDependencyWatchdog, imagevectorutils.RuntimeVersion(r.SeedVersion.String()), imagevectorutils.TargetVersion(r.SeedVersion.String()))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -498,7 +498,7 @@ func (r *Reconciler) newDependencyWatchdogs(seedSettings *gardencorev1beta1.Seed
 }
 
 func (r *Reconciler) newVPNAuthzServer() (component.DeployWaiter, error) {
-	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameExtAuthzServer, imagevectorutils.RuntimeVersion(r.SeedVersion.String()), imagevectorutils.TargetVersion(r.SeedVersion.String()))
+	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameExtAuthzServer, imagevectorutils.RuntimeVersion(r.SeedVersion.String()), imagevectorutils.TargetVersion(r.SeedVersion.String()))
 	if err != nil {
 		return nil, err
 	}
@@ -512,7 +512,7 @@ func (r *Reconciler) newVPNAuthzServer() (component.DeployWaiter, error) {
 }
 
 func (r *Reconciler) newSystem(seed *gardencorev1beta1.Seed) (component.DeployWaiter, error) {
-	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNamePauseContainer)
+	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNamePauseContainer)
 	if err != nil {
 		return nil, err
 	}

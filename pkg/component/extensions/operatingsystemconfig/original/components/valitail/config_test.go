@@ -27,7 +27,7 @@ var _ = Describe("Valitail", func() {
 			valitailImageTag   = "v0.1.0"
 			valitailImage      = &imagevector.Image{
 				Name:       valitailImageName,
-				Repository: valitailRepository,
+				Repository: &valitailRepository,
 				Tag:        &valitailImageTag,
 			}
 			valiIngress = "ingress.vali.testClusterDomain"

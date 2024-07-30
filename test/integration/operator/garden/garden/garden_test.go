@@ -30,9 +30,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
+	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
@@ -48,7 +51,6 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
-	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	gardencontroller "github.com/gardener/gardener/pkg/operator/controller/garden/garden"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -65,6 +67,10 @@ var _ = Describe("Garden controller tests", func() {
 		garden                         *operatorv1alpha1.Garden
 		testRunID                      string
 		testNamespace                  *corev1.Namespace
+
+		gardenletNameWithAutoUpdate    = "gardenlet-auto-update"
+		gardenletNameWithoutAutoUpdate = "gardenlet-no-auto-update"
+		noAutoUpdateRef                = "do-not-update-me"
 	)
 
 	BeforeEach(func() {
@@ -112,10 +118,6 @@ var _ = Describe("Garden controller tests", func() {
 		Expect(err).NotTo(HaveOccurred())
 		mapper, err := apiutil.NewDynamicRESTMapper(restConfig, httpClient)
 		Expect(err).NotTo(HaveOccurred())
-
-		scheme := runtime.NewScheme()
-		Expect(operatorclient.AddRuntimeSchemeToScheme(scheme)).To(Succeed())
-		Expect(operatorclient.AddVirtualSchemeToScheme(scheme)).To(Succeed())
 
 		mgr, err := manager.New(restConfig, manager.Options{
 			Scheme:  scheme,
@@ -270,6 +272,51 @@ var _ = Describe("Garden controller tests", func() {
 			Eventually(func() error {
 				return mgrClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)
 			}).Should(BeNotFoundError())
+		})
+
+		By("Create Gardenlets")
+		gardenletWithAutoUpdate, err := kubernetes.NewManifestReader([]byte(`apiVersion: seedmanagement.gardener.cloud/v1alpha1
+kind: Gardenlet
+metadata:
+  name: ` + gardenletNameWithAutoUpdate + `
+  namespace: ` + testNamespace.Name + `
+  labels:
+    operator.gardener.cloud/auto-update-gardenlet-helm-chart-ref: "true"
+spec:
+  deployment:
+    helm:
+      ociRepository:
+        repository: please-update
+        tag: me
+`)).Read()
+		Expect(err).NotTo(HaveOccurred())
+
+		gardenletWithoutAutoUpdate, err := kubernetes.NewManifestReader([]byte(`apiVersion: seedmanagement.gardener.cloud/v1alpha1
+kind: Gardenlet
+metadata:
+  name: ` + gardenletNameWithoutAutoUpdate + `
+  namespace: ` + testNamespace.Name + `
+spec:
+  deployment:
+    helm:
+      ociRepository:
+        ref: ` + noAutoUpdateRef + `
+`)).Read()
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(testClient.Create(ctx, gardenletWithAutoUpdate)).To(Succeed())
+		Expect(testClient.Create(ctx, gardenletWithoutAutoUpdate)).To(Succeed())
+
+		DeferCleanup(func() {
+			By("Delete Gardenlets")
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, gardenletWithAutoUpdate))).To(Succeed())
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, gardenletWithoutAutoUpdate))).To(Succeed())
+
+			By("Ensure Gardenlets are gone")
+			Eventually(func(g Gomega) {
+				g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(gardenletWithAutoUpdate), gardenletWithAutoUpdate)).To(BeNotFoundError())
+				g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(gardenletWithoutAutoUpdate), gardenletWithoutAutoUpdate)).To(BeNotFoundError())
+			}).Should(Succeed())
 		})
 	})
 
@@ -742,6 +789,19 @@ var _ = Describe("Garden controller tests", func() {
 			}
 			return garden.Status.LastOperation.State
 		}).Should(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+
+		By("Ensure relevant Gardenlet resources get auto-updated")
+		Eventually(func(g Gomega) gardencorev1.OCIRepository {
+			gardenlet := &seedmanagementv1alpha1.Gardenlet{ObjectMeta: metav1.ObjectMeta{Name: gardenletNameWithAutoUpdate, Namespace: testNamespace.Name}}
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(gardenlet), gardenlet)).To(Succeed())
+			return gardenlet.Spec.Deployment.Helm.OCIRepository
+		}).Should(Equal(gardencorev1.OCIRepository{Ref: ptr.To("europe-docker.pkg.dev/gardener-project/releases/charts/gardener/gardenlet:v0.0.0-master+$Format:%H$")}))
+
+		Consistently(func(g Gomega) gardencorev1.OCIRepository {
+			gardenlet := &seedmanagementv1alpha1.Gardenlet{ObjectMeta: metav1.ObjectMeta{Name: gardenletNameWithoutAutoUpdate, Namespace: testNamespace.Name}}
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(gardenlet), gardenlet)).To(Succeed())
+			return gardenlet.Spec.Deployment.Helm.OCIRepository
+		}).Should(Equal(gardencorev1.OCIRepository{Ref: &noAutoUpdateRef}))
 
 		By("Deploy cert-management")
 		patch := client.MergeFrom(garden.DeepCopy())

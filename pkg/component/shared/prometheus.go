@@ -15,7 +15,7 @@ import (
 
 // NewPrometheus creates a new prometheus deployer.
 func NewPrometheus(log logr.Logger, c client.Client, namespace string, values prometheus.Values) (prometheus.Interface, error) {
-	imagePrometheus, err := imagevector.ImageVector().FindImage(imagevector.ImageNamePrometheus)
+	imagePrometheus, err := imagevector.Containers().FindImage(imagevector.ContainerImageNamePrometheus)
 	if err != nil {
 		return nil, err
 	}
@@ -25,7 +25,7 @@ func NewPrometheus(log logr.Logger, c client.Client, namespace string, values pr
 
 	// TODO(rfranzke): Remove this block after v1.97 has been released.
 	{
-		imageAlpine, err := imagevector.ImageVector().FindImage(imagevector.ImageNameAlpine)
+		imageAlpine, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameAlpine)
 		if err != nil {
 			return nil, err
 		}

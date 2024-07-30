@@ -14,6 +14,7 @@ function camelCase {
 
 package_name="${1:-imagevector}"
 images_yaml="${2:-images.yaml}"
+constant_prefix="${3:-}"
 
 out="
 $(cat "$(dirname $0)/LICENSE_BOILERPLATE.txt" | sed "s/YEAR/$(date +%Y)/g")
@@ -29,8 +30,8 @@ for image_name in $(yq -r '[.images[].name] | sort | unique | .[]' $images_yaml)
 
   out="
 $out
-	// ImageName$variable_name is a constant for an image in the image vector with name '$image_name'.
-	ImageName$variable_name = \"$image_name\""
+	// ${constant_prefix}ImageName${variable_name} is a constant for an image in the image vector with name '$image_name'.
+	${constant_prefix}ImageName${variable_name} = \"$image_name\""
 done
 
 out="
@@ -38,5 +39,6 @@ $out
 )
 "
 
-echo "$out" > "images.go"
-goimports -l -w "images.go"
+out_file="${images_yaml%.yaml}.go"
+echo "$out" > "$out_file"
+goimports -l -w "$out_file"

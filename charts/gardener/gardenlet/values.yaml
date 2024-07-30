@@ -18,9 +18,9 @@ additionalVolumeMounts: []
 env: []
 vpa: false
 # imageVectorOverwrite: |
-#  Please find documentation in docs/deployment/image_vector.md
+#  Please find documentation in /docs/deployment/image_vector.md#overwriting-image-vector
 # componentImageVectorOverwrites: |
-#  Please find documentation in docs/deployment/image_vector.md
+#  Please find documentation in /docs/deployment/image_vector.md#image-vectors-for-dependent-components
 config:
   gardenClientConnection:
   # acceptContentTypes: application/json

@@ -388,7 +388,7 @@ var _ = Describe("Etcd", func() {
 									Env: []corev1.EnvVar{
 										{
 											Name:  "IMAGEVECTOR_OVERWRITE",
-											Value: "/charts_overwrite/images_overwrite.yaml",
+											Value: "/imagevector_overwrite/images_overwrite.yaml",
 										},
 									},
 									Image:           etcdDruidImage,
@@ -410,7 +410,7 @@ var _ = Describe("Etcd", func() {
 									},
 									VolumeMounts: []corev1.VolumeMount{
 										{
-											MountPath: "/charts_overwrite",
+											MountPath: "/imagevector_overwrite",
 											Name:      "imagevector-overwrite",
 											ReadOnly:  true,
 										},

@@ -42,7 +42,7 @@ func NewGardenerAPIServer(
 	gardenerapiserver.Interface,
 	error,
 ) {
-	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameGardenerApiserver)
+	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameGardenerApiserver)
 	if err != nil {
 		return nil, err
 	}

@@ -50,8 +50,8 @@ func createIstio(testValues istioTestValues) istio.Interface {
 	DeferCleanup(test.WithVars(
 		&ImageVector,
 		imagevectorutils.ImageVector{
-			{Name: "istio-istiod", Repository: testValues.istiodImageName},
-			{Name: "istio-proxy", Repository: testValues.ingressImageName},
+			{Name: "istio-istiod", Repository: &testValues.istiodImageName},
+			{Name: "istio-proxy", Repository: &testValues.ingressImageName},
 		},
 	))
 

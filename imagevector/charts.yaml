@@ -1,0 +1,6 @@
+# List of all Helm chart images which are deployed by the Gardener.
+images:
+# Gardener components
+- name: gardenlet
+  sourceRepository: github.com/gardener/gardener
+  repository: europe-docker.pkg.dev/gardener-project/releases/charts/gardener/gardenlet

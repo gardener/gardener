@@ -275,7 +275,7 @@ func (vp *valuesHelper) getGardenletConfigurationValues(config *gardenletv1alpha
 }
 
 func getParentGardenletDeployment() (*seedmanagementv1alpha1.GardenletDeployment, error) {
-	gardenletImage, err := imagevector.ImageVector().FindImage(imagevector.ImageNameGardenlet)
+	gardenletImage, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameGardenlet)
 	if err != nil {
 		return nil, err
 	}
@@ -283,7 +283,7 @@ func getParentGardenletDeployment() (*seedmanagementv1alpha1.GardenletDeployment
 
 	return &seedmanagementv1alpha1.GardenletDeployment{
 		Image: &seedmanagementv1alpha1.Image{
-			Repository: &gardenletImage.Repository,
+			Repository: gardenletImage.Repository,
 			Tag:        gardenletImage.Tag,
 		},
 	}, nil

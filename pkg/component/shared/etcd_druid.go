@@ -27,7 +27,7 @@ func NewEtcdDruid(
 	component.DeployWaiter,
 	error,
 ) {
-	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameEtcdDruid, imagevectorutils.RuntimeVersion(runtimeVersion.String()), imagevectorutils.TargetVersion(runtimeVersion.String()))
+	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameEtcdDruid, imagevectorutils.RuntimeVersion(runtimeVersion.String()), imagevectorutils.TargetVersion(runtimeVersion.String()))
 	if err != nil {
 		return nil, err
 	}

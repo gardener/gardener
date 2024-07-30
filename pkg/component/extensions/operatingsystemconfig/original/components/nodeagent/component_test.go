@@ -51,7 +51,7 @@ var _ = Describe("Component", func() {
 				KubernetesVersion: kubernetesVersion,
 				APIServerURL:      apiServerURL,
 				CABundle:          ptr.To(string(caBundle)),
-				Images:            map[string]*imagevectorutils.Image{"gardener-node-agent": {Repository: "gardener-node-agent", Tag: ptr.To("v1")}},
+				Images:            map[string]*imagevectorutils.Image{"gardener-node-agent": {Repository: ptr.To("gardener-node-agent"), Tag: ptr.To("v1")}},
 			})
 
 			expectedFiles = append(expectedFiles, extensionsv1alpha1.File{

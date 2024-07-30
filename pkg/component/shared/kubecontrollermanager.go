@@ -39,7 +39,7 @@ func NewKubeControllerManager(
 	kubecontrollermanager.Interface,
 	error,
 ) {
-	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameKubeControllerManager, imagevectorutils.RuntimeVersion(runtimeVersion.String()), imagevectorutils.TargetVersion(targetVersion.String()))
+	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameKubeControllerManager, imagevectorutils.RuntimeVersion(runtimeVersion.String()), imagevectorutils.TargetVersion(targetVersion.String()))
 	if err != nil {
 		return nil, err
 	}

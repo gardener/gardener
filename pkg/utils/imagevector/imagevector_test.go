@@ -45,13 +45,13 @@ var _ = Describe("imagevector", func() {
 			k8s1142TargetVersion           = TargetVersion(k8s1142)
 
 			tag1, tag2, tag3, tag4, tag5, tag6, tag7 string
-			repo1, repo2, repo3, repo4               string
+			repo1, repo2, repo3, repo4               *string
 
 			greaterEquals16Smaller18, greaterEquals18, equals117 string
 
-			image1Name                                                             string
-			image1Src1, image1Src2, image1Src3, image1Src4, image1Src5, image1Src6 *ImageSource
-			image1Src1Arm64, image1Src5Arm64, image1Src5Wildcard                   *ImageSource
+			image1Name                                                                                     string
+			image1Src1, image1Src2, image1Src3, image1Src4, image1Src5, image1Src6, image1Src7, image1Src8 *ImageSource
+			image1Src1Arm64, image1Src5Arm64, image1Src5Wildcard                                           *ImageSource
 
 			image2Name string
 			image2Src1 *ImageSource
@@ -80,10 +80,10 @@ var _ = Describe("imagevector", func() {
 			tag6 = "tag6"
 			tag7 = "tag7"
 
-			repo1 = "repo1"
-			repo2 = "repo2"
-			repo3 = "repo3"
-			repo3 = "repo4"
+			repo1 = ptr.To("repo1")
+			repo2 = ptr.To("repo2")
+			repo3 = ptr.To("repo3")
+			repo3 = ptr.To("repo4")
 
 			greaterEquals16Smaller18 = ">= 1.6, < 1.8"
 			greaterEquals18 = ">= 1.8"
@@ -149,6 +149,18 @@ var _ = Describe("imagevector", func() {
 			image1Src6 = &ImageSource{
 				Name:           image1Name,
 				Repository:     repo1,
+				RuntimeVersion: &greaterEquals16Smaller18,
+			}
+			image1Src7 = &ImageSource{
+				Name:           image1Name,
+				Ref:            ptr.To(*repo1 + ":" + tag2),
+				Version:        &tag2,
+				RuntimeVersion: &greaterEquals16Smaller18,
+			}
+			image1Src8 = &ImageSource{
+				Name:           image1Name,
+				Ref:            ptr.To(*repo1 + ":" + tag3),
+				Version:        &tag3,
 				RuntimeVersion: &greaterEquals16Smaller18,
 			}
 
@@ -272,7 +284,7 @@ var _ = Describe("imagevector", func() {
 			"runtimeVersion": "%s"
 		}
 	]
-}`, image1Src1.Name, image1Src1.Repository, *image1Src1.Tag, *image1Src1.Tag, *image1Src1.RuntimeVersion)
+}`, image1Src1.Name, *image1Src1.Repository, *image1Src1.Tag, *image1Src1.Tag, *image1Src1.RuntimeVersion)
 
 			image1Src1VectorYAML = fmt.Sprintf(`
 images:
@@ -280,7 +292,7 @@ images:
     repository: "%s"
     tag: "%s"
     version: "%s"
-    runtimeVersion: "%s"`, image1Src1.Name, image1Src1.Repository, *image1Src1.Tag, *image1Src1.Tag, *image1Src1.RuntimeVersion)
+    runtimeVersion: "%s"`, image1Src1.Name, *image1Src1.Repository, *image1Src1.Tag, *image1Src1.Tag, *image1Src1.RuntimeVersion)
 		}
 		resetValues()
 		BeforeEach(resetValues)
@@ -319,6 +331,9 @@ images:
 			Entry("one override, one addition", ImageVector{image1Src1, image2Src1}, ImageVector{image1Src3, image3Src1}, ImageVector{image1Src3, image2Src1, image3Src1}),
 			Entry("tag is kept", ImageVector{image1Src1}, ImageVector{image1Src6}, ImageVector{image1Src1}),
 			Entry("tag override", ImageVector{image1Src1}, ImageVector{image1Src4}, ImageVector{image1Src4}),
+			Entry("ref override", ImageVector{image1Src7}, ImageVector{image1Src8}, ImageVector{image1Src8}),
+			Entry("ref overrides repo+tag", ImageVector{image1Src1}, ImageVector{image1Src7}, ImageVector{image1Src7}),
+			Entry("repo+tag override ref", ImageVector{image1Src7}, ImageVector{image1Src1}, ImageVector{image1Src1}),
 		)
 
 		Describe("#WithEnvOverride", func() {
@@ -332,11 +347,11 @@ images:
 				defer cleanup()
 				defer test.WithEnvVar(OverrideEnv, file.Name())()
 
-				Expect(WithEnvOverride(vector)).To(Equal(ImageVector{image1Src1, image2Src1}))
+				Expect(WithEnvOverride(vector, "IMAGEVECTOR_OVERWRITE")).To(Equal(ImageVector{image1Src1, image2Src1}))
 			})
 
 			It("should keep the vector as-is if the env variable is not set", func() {
-				Expect(WithEnvOverride(image1Src1Vector)).To(Equal(image1Src1Vector))
+				Expect(WithEnvOverride(image1Src1Vector, "IMAGEVECTOR_OVERWRITE")).To(Equal(image1Src1Vector))
 			})
 		})
 
@@ -601,40 +616,57 @@ images:
 
 	Describe("> Image", func() {
 		Describe("#WithOptionalTag", func() {
-			It("should do nothing because tag is already set", func() {
-				image := Image{Repository: "some-repo", Tag: ptr.To("some-tag")}
+			It("should do nothing because ref is set", func() {
+				image := Image{Ref: ptr.To("ref")}
 				image.WithOptionalTag("foo")
 
-				Expect(image.Repository).To(Equal("some-repo"))
+				Expect(image.Repository).To(BeNil())
+				Expect(image.Tag).To(BeNil())
+			})
+
+			It("should do nothing because tag is already set", func() {
+				image := Image{Repository: ptr.To("some-repo"), Tag: ptr.To("some-tag")}
+				image.WithOptionalTag("foo")
+
+				Expect(image.Repository).To(PointTo(Equal("some-repo")))
 				Expect(image.Tag).To(PointTo(Equal("some-tag")))
 			})
 
 			It("should use the optional tag", func() {
-				image := Image{Repository: "some-repo"}
+				image := Image{Repository: ptr.To("some-repo")}
 				image.WithOptionalTag("foo")
 
-				Expect(image.Repository).To(Equal("some-repo"))
+				Expect(image.Repository).To(PointTo(Equal("some-repo")))
 				Expect(image.Tag).To(PointTo(Equal("foo")))
 			})
 		})
 
 		Describe("#String", func() {
+			var repo = ptr.To("my-repo")
+
+			It("should return the string representation of the image (w/ ref)", func() {
+				ref := ptr.To("some-ref")
+
+				image := Image{
+					Name: "my-image",
+					Ref:  ref,
+				}
+
+				Expect(image.String()).To(Equal(*ref))
+			})
+
 			It("should return the string representation of the image (w/o normal tag)", func() {
-				repo := "my-repo"
 
 				image := Image{
 					Name:       "my-image",
 					Repository: repo,
 				}
 
-				Expect(image.String()).To(Equal(repo))
+				Expect(image.String()).To(Equal(*repo))
 			})
 
 			It("should return the string representation of the image (w/ normal tag)", func() {
-				var (
-					repo = "my-repo"
-					tag  = "1.2.3"
-				)
+				tag := "1.2.3"
 
 				image := Image{
 					Name:       "my-image",
@@ -642,14 +674,11 @@ images:
 					Tag:        &tag,
 				}
 
-				Expect(image.String()).To(Equal(fmt.Sprintf("%s:%s", repo, tag)))
+				Expect(image.String()).To(Equal(fmt.Sprintf("%s:%s", *repo, tag)))
 			})
 
 			It("should return the string representation of the image (w/ sha256 tag)", func() {
-				var (
-					repo = "my-repo"
-					tag  = "sha256:fooooooo0oooobar"
-				)
+				tag := "sha256:fooooooo0oooobar"
 
 				image := Image{
 					Name:       "my-image",
@@ -657,25 +686,42 @@ images:
 					Tag:        &tag,
 				}
 
-				Expect(image.String()).To(Equal(repo + "@" + tag))
+				Expect(image.String()).To(Equal(*repo + "@" + tag))
 			})
 		})
 	})
 
 	Describe("> ImageSource", func() {
 		Describe("#ToImage", func() {
-			It("should return an image with the same tag", func() {
-				var (
-					name       = "foo"
-					repository = "repo"
-					tag        = "v1"
+			var (
+				name       = "foo"
+				repository = ptr.To("repo")
+				tag        = "v1"
+			)
 
+			It("should return an image with the ref without doing anything", func() {
+				var (
+					ref    = ptr.To("ref")
 					source = ImageSource{
-						Name:       name,
-						Repository: repository,
-						Tag:        &tag,
+						Name: name,
+						Ref:  ref,
 					}
 				)
+
+				image := source.ToImage(ptr.To("1.8.0"))
+
+				Expect(image).To(Equal(&Image{
+					Name: name,
+					Ref:  ref,
+				}))
+			})
+
+			It("should return an image with the same tag", func() {
+				source := ImageSource{
+					Name:       name,
+					Repository: repository,
+					Tag:        &tag,
+				}
 
 				image := source.ToImage(ptr.To("1.8.0"))
 
@@ -689,9 +735,7 @@ images:
 
 			It("should return an image with the given version as tag", func() {
 				var (
-					name       = "foo"
-					repository = "repo"
-					version    = "1.8.0"
+					version = "1.8.0"
 
 					source = ImageSource{
 						Name:       name,
@@ -716,12 +760,12 @@ images:
 			var (
 				image1Key        = "foo"
 				image1Name       = "baz"
-				image1Repository = "baz"
+				image1Repository = ptr.To("baz")
 				image1Tag        = "barbaz"
 
 				image2Key        = "bar"
 				image2Name       = "baz"
-				image2Repository = "foo"
+				image2Repository = ptr.To("foo")
 
 				imageMap = map[string]*Image{
 					image1Key: {
@@ -738,7 +782,7 @@ images:
 
 			Expect(ImageMapToValues(imageMap)).To(Equal(map[string]any{
 				image1Key: image1Name + ":" + image1Tag,
-				image2Key: image2Repository,
+				image2Key: *image2Repository,
 			}))
 		})
 	})

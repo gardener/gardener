@@ -29,7 +29,8 @@ build:
             - extensions/pkg/webhook/certificates
             - extensions/pkg/webhook/shoot
             - imagevector
-            - imagevector/images.yaml
+            - imagevector/charts.yaml
+            - imagevector/containers.yaml
             - pkg/admissioncontroller/apis/config
             - pkg/admissioncontroller/apis/config/v1alpha1
             - pkg/admissioncontroller/apis/config/validation
@@ -967,7 +968,8 @@ build:
             - extensions/pkg/webhook/controlplane/genericmutator
             - extensions/pkg/webhook/shoot
             - imagevector
-            - imagevector/images.yaml
+            - imagevector/charts.yaml
+            - imagevector/containers.yaml
             - pkg/api/core
             - pkg/api/extensions
             - pkg/apis/core

@@ -15,7 +15,7 @@ import (
 
 // DefaultNodeExporter returns a deployer for the NodeExporter.
 func (b *Botanist) DefaultNodeExporter() (component.DeployWaiter, error) {
-	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameNodeExporter, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
+	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameNodeExporter, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}

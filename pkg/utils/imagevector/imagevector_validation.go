@@ -42,13 +42,28 @@ func validateImageSource(imageSource *ImageSource, fldPath *field.Path) field.Er
 	if imageSource.Name == "" {
 		allErrs = append(allErrs, field.Required(fldPath.Child("name"), "image name is required"))
 	}
-	if imageSource.Repository == "" {
-		allErrs = append(allErrs, field.Required(fldPath.Child("repository"), "image repository is required"))
+	if imageSource.Ref == nil && imageSource.Repository == nil {
+		allErrs = append(allErrs, field.Required(fldPath.Child("ref/repository"), "either image ref or repository+tag is required"))
 	}
 
-	// Ensure tag is non-empty if specified
-	if imageSource.Tag != nil && *imageSource.Tag == "" {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("tag"), *imageSource.Tag, "image tag must not be empty if specified"))
+	if imageSource.Ref != nil {
+		if *imageSource.Ref == "" {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("ref"), *imageSource.Ref, "ref must not be empty if specified"))
+		}
+		if imageSource.Repository != nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("repository"), "cannot specify repository when ref is set"))
+		}
+		if imageSource.Tag != nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("tag"), "cannot specify tag when ref is set"))
+		}
+	} else {
+		// Ensure tag is non-empty if specified
+		if imageSource.Repository != nil && *imageSource.Repository == "" {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("repository"), *imageSource.Repository, "repository must not be empty if specified"))
+		}
+		if imageSource.Tag != nil && *imageSource.Tag == "" {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("tag"), *imageSource.Tag, "image tag must not be empty if specified"))
+		}
 	}
 
 	// Ensure runtimeVersion and targetVersion are valid semver constraints if specified

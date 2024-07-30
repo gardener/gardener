@@ -94,11 +94,11 @@ spec:
         env:
         {{- if .Values.imageVectorOverwrite }}
         - name: IMAGEVECTOR_OVERWRITE
-          value: /charts_overwrite/images_overwrite.yaml
+          value: /imagevector_overwrite/images_overwrite.yaml
         {{- end }}
         {{- if .Values.componentImageVectorOverwrites }}
         - name: IMAGEVECTOR_OVERWRITE_COMPONENTS
-          value: /charts_overwrite_components/components.yaml
+          value: /imagevector_overwrite_components/components.yaml
         {{- end }}
         {{- range $index, $value := .Values.env }}
         {{- if not (empty $value) }}
@@ -149,12 +149,12 @@ spec:
         {{- end }}
         {{- if .Values.imageVectorOverwrite }}
         - name: gardenlet-imagevector-overwrite
-          mountPath: /charts_overwrite
+          mountPath: /imagevector_overwrite
           readOnly: true
         {{- end }}
         {{- if .Values.componentImageVectorOverwrites }}
         - name: gardenlet-imagevector-overwrite-components
-          mountPath: /charts_overwrite_components
+          mountPath: /imagevector_overwrite_components
           readOnly: true
         {{- end }}
         - name: gardenlet-config

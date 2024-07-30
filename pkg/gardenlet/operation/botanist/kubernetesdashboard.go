@@ -17,12 +17,12 @@ import (
 
 // DefaultKubernetesDashboard returns a deployer for kubernetes-dashboard.
 func (b *Botanist) DefaultKubernetesDashboard() (kubernetesdashboard.Interface, error) {
-	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameKubernetesDashboard, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
+	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameKubernetesDashboard, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}
 
-	scraperImage, err := imagevector.ImageVector().FindImage(imagevector.ImageNameKubernetesDashboardMetricsScraper, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
+	scraperImage, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameKubernetesDashboardMetricsScraper, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}

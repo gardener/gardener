@@ -34,17 +34,17 @@ func NewVerticalPodAutoscaler(
 	component.DeployWaiter,
 	error,
 ) {
-	imageAdmissionController, err := imagevector.ImageVector().FindImage(imagevector.ImageNameVpaAdmissionController, imagevectorutils.TargetVersion(runtimeVersion.String()))
+	imageAdmissionController, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameVpaAdmissionController, imagevectorutils.TargetVersion(runtimeVersion.String()))
 	if err != nil {
 		return nil, err
 	}
 
-	imageRecommender, err := imagevector.ImageVector().FindImage(imagevector.ImageNameVpaRecommender, imagevectorutils.TargetVersion(runtimeVersion.String()))
+	imageRecommender, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameVpaRecommender, imagevectorutils.TargetVersion(runtimeVersion.String()))
 	if err != nil {
 		return nil, err
 	}
 
-	imageUpdater, err := imagevector.ImageVector().FindImage(imagevector.ImageNameVpaUpdater, imagevectorutils.TargetVersion(runtimeVersion.String()))
+	imageUpdater, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameVpaUpdater, imagevectorutils.TargetVersion(runtimeVersion.String()))
 	if err != nil {
 		return nil, err
 	}

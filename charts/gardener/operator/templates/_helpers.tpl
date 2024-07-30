@@ -32,6 +32,15 @@ components.yaml: |
 gardener-operator-imagevector-overwrite-components-{{ include "operator.imagevector-overwrite-components.data" . | sha256sum | trunc 8 }}
 {{- end -}}
 
+{{- define "operator.imagevector-overwrite-charts.data" -}}
+images_overwrite.yaml: |
+{{ .Values.chartsImageVectorOverwrite | indent 2 }}
+{{- end -}}
+
+{{- define "operator.imagevector-overwrite-charts.name" -}}
+gardener-operator-imagevector-overwrite-charts-{{ include "operator.imagevector-overwrite-charts.data" . | sha256sum | trunc 8 }}
+{{- end -}}
+
 {{- define "operator.config.data" -}}
 config.yaml: |
   ---

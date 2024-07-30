@@ -13,9 +13,9 @@ spec:
   #   tag: latest
   #   pullPolicy: IfNotPresent
   # imageVectorOverwrite: | # here you can overwrite the image repos + tags of the components deployed by gardenlet, e.g. etcd-druid, machine-controller-manager, kube-apiserver, etc.
-  #   Please find documentation in docs/deployment/image_vector.md
+  #   Please find documentation in /docs/deployment/image_vector.md#overwriting-image-vector
   # componentImageVectorOverwrites: |
-  #   Please find documentation in docs/deployment/image_vector.md
+  #   Please find documentation in /docs/deployment/image_vector.md#image-vectors-for-dependent-components
     replicaCount: 2
     revisionHistoryLimit: 2
     resources:

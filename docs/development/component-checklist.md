@@ -56,7 +56,7 @@ This document provides a checklist for them that you can walk through.
 
 1. **Do not hard-code container image references** ([example 1](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/charts/images.yaml#L130-L133), [example 2](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/metricsserver.go#L28-L31), [example 3](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/metricsserver/metrics_server.go#L82-L83))
 
-   We define all image references centrally in the [`imagevector/images.yaml`](../../imagevector/images.yaml) file.
+   We define all image references centrally in the [`imagevector/containers.yaml`](../../imagevector/containers.yaml) file.
    Hence, the image references must not be hard-coded in the pod template spec but read from this so-called [image vector](../deployment/image_vector.md) instead.
 
 2. **Do not use container images from registries that don't support IPv6** (example: [image vector](https://github.com/gardener/gardener/blob/6f4e64fe9494cafb5c5da9a2c0a491a5690161b6/charts/images.yaml#L619-L622), [prow configuration](https://github.com/gardener/ci-infra/blob/92782bedd92815639abf4dc14b2c484f77c6e57d/config/images/images.yaml#L37-L40))

@@ -81,7 +81,7 @@ func VerifyNodeCriticalComponentsBootstrapping(ctx context.Context, f *framework
 
 	By("Update ManagedResources for shoot with working node-critical component")
 	// Use a container image that is already cached
-	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNamePauseContainer)
+	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNamePauseContainer)
 	ExpectWithOffset(1, err).To(Succeed())
 	createOrUpdateNodeCriticalManagedResource(ctx, seedClient, shootClient, technicalID, nodeCriticalDaemonSetName, image.String(), false)
 	createOrUpdateNodeCriticalManagedResource(ctx, seedClient, shootClient, technicalID, csiNodeDaemonSetName, image.String(), true)

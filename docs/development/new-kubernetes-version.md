@@ -138,7 +138,7 @@ The required steps are as follows:
 > As you are already on it, it is great if you also bump the `k8s.io/*` dependencies for the last three minor releases as well.
 In this case, you need to checkout the `release-vX.{Y-{1,2,3}}` branches and only perform the last three steps ([example branch](https://github.com/gardener/cloud-provider-gcp/commits/release-v1.20), [example commit](https://github.com/gardener/cloud-provider-gcp/commit/372aa43fbacdeb76b3da9f6fad6cfd924d916227)).
 
-Now you need to update the new releases in the `charts/images.yaml` of the respective provider extension so that they are used (see this [example commit](https://github.com/gardener/gardener-extension-provider-aws/pull/480/commits/76256de933d5a508aba26a8f589dd1a39026142e) for reference).
+Now you need to update the new releases in the `imagevector/images.yaml` of the respective provider extension so that they are used (see this [example commit](https://github.com/gardener/gardener-extension-provider-aws/pull/942/commits/7e5c0d95ff95d65459d13ae7f79a030049322c71) for reference).
 
 #### Filing the Pull Request
 

@@ -69,7 +69,7 @@ func (b *Botanist) isShootEventLoggerEnabled() bool {
 
 // DefaultEventLogger returns a deployer for the shoot-event-logger.
 func (b *Botanist) DefaultEventLogger() (component.Deployer, error) {
-	imageEventLogger, err := imagevector.ImageVector().FindImage(imagevector.ImageNameEventLogger, imagevectorutils.RuntimeVersion(b.SeedVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
+	imageEventLogger, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameEventLogger, imagevectorutils.RuntimeVersion(b.SeedVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}

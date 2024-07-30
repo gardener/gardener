@@ -17,9 +17,11 @@ additionalVolumeMounts: []
 hostAliases: []
 env: []
 # imageVectorOverwrite: |
-#  Please find documentation in docs/deployment/image_vector.md
+#  Please find documentation in /docs/deployment/image_vector.md#overwriting-image-vector
 # componentImageVectorOverwrites: |
-#  Please find documentation in docs/deployment/image_vector.md
+#  Please find documentation in /docs/deployment/image_vector.md#image-vectors-for-dependent-components
+# chartsImageVectorOverwrite: |
+#  Please find documentation in /docs/deployment/image_vector.md#helm-chart-image-vector
 # nodeToleration:
 #   defaultNotReadyTolerationSeconds: 60
 #   defaultUnreachableTolerationSeconds: 60

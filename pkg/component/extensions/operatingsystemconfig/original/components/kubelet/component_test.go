@@ -42,12 +42,12 @@ var _ = Describe("Component", func() {
 			ctx.Images = map[string]*imagevector.Image{
 				"hyperkube": {
 					Name:       "pause-container",
-					Repository: hyperkubeImageRepo,
+					Repository: ptr.To(hyperkubeImageRepo),
 					Tag:        ptr.To(hyperkubeImageTag),
 				},
 				"pause-container": {
 					Name:       "pause-container",
-					Repository: pauseContainerImageRepo,
+					Repository: ptr.To(pauseContainerImageRepo),
 					Tag:        ptr.To(pauseContainerImageTag),
 				},
 			}
