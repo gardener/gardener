@@ -466,32 +466,6 @@ func (r *Reconciler) updateConditionsForDeletion(ctx context.Context, mr *resour
 	return updateConditions(ctx, r.SourceClient, mr, conditionResourcesHealthy, conditionResourcesProgressing)
 }
 
-func preserveAnnotation(kind string, apiVersion string, current *unstructured.Unstructured, desired *unstructured.Unstructured, annotationKey string, path ...string) error {
-	if current.GetKind() != kind || current.GetAPIVersion() != apiVersion {
-		return nil
-	}
-	currentAnnotations, found, err := unstructured.NestedStringMap(current.Object, path...)
-	if err == nil && !found {
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("failed getting %s from %s/%s %s : %w", strings.Join(path, "."), apiVersion, kind, current.GetName(), err)
-	}
-	value, ok := currentAnnotations[annotationKey]
-	if !ok {
-		return nil
-	}
-	desiredAnnotations, found, err := unstructured.NestedStringMap(desired.Object, path...)
-	if !found {
-		desiredAnnotations = map[string]string{}
-	}
-	if err != nil {
-		return fmt.Errorf("failed getting %s from %s/%s %s : %w", strings.Join(path, "."), apiVersion, kind, desired.GetName(), err)
-	}
-	err = unstructured.SetNestedField(desired.Object, mergeLabels(map[string]string{annotationKey: value}, desiredAnnotations), path...)
-	return fmt.Errorf("failed setting annotation %s at %s for %s/%s %s: %w", annotationKey, strings.Join(path, "."), apiVersion, kind, desired.GetName(), err)
-}
-
 func (r *Reconciler) applyNewResources(ctx context.Context, log logr.Logger, origin string, newResourcesObjects []object, labelsToInject map[string]string, equivalences Equivalences) error {
 	newResourcesObjects = sortByKind(newResourcesObjects)
 
@@ -531,16 +505,6 @@ func (r *Reconciler) applyNewResources(ctx context.Context, log logr.Logger, ori
 
 			if err := injectLabels(obj.obj, labelsToInject); err != nil {
 				return fmt.Errorf("error injecting labels into object %q: %s", resource, err)
-			}
-			// ref https://kubernetes.io/docs/reference/labels-annotations-taints/#kubectl-k8s-io-restart-at
-			if err := preserveAnnotation("Deployment", "apps/v1", current, obj.obj, "kubectl.kubernetes.io/restartedAt", "spec", "template", "metadata", "annotations"); err != nil {
-				return fmt.Errorf("could not preserve annotation : %w", err)
-			}
-			if err := preserveAnnotation("DaemonSet", "apps/v1", current, obj.obj, "kubectl.kubernetes.io/restartedAt", "spec", "template", "metadata", "annotations"); err != nil {
-				return fmt.Errorf("could not preserve annotation : %w", err)
-			}
-			if err := preserveAnnotation("StatefulSet", "apps/v1", current, obj.obj, "kubectl.kubernetes.io/restartedAt", "spec", "template", "metadata", "annotations"); err != nil {
-				return fmt.Errorf("could not preserve annotation : %w", err)
 			}
 
 			return merge(origin, obj.obj, current, obj.forceOverwriteLabels, obj.oldInformation.Labels, obj.forceOverwriteAnnotations, obj.oldInformation.Annotations, scaledHorizontally, scaledVertically)
