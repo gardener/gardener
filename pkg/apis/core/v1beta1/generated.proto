@@ -250,6 +250,28 @@ message BackupEntryStatus {
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time migrationStartTime = 5;
 }
 
+// Bastion contains the bastions creation info
+message Bastion {
+  optional BastionMachineImage machineImage = 1;
+
+  optional BastionMachineType machineType = 2;
+}
+
+// BastionMachineImage contains machine and image properties
+message BastionMachineImage {
+  // Name of the machine image
+  optional string name = 1;
+
+  // Version of the machine image
+  optional string version = 2;
+}
+
+// BastionMachineType contains the bastions machine type properties
+message BastionMachineType {
+  // Name of the machine type
+  optional string name = 1;
+}
+
 // CARotation contains information about the certificate authority credential rotation.
 message CARotation {
   // Phase describes the phase of the certificate authority credential rotation.
@@ -360,6 +382,10 @@ message CloudProfileSpec {
   // +patchStrategy=merge
   // +optional
   repeated VolumeType volumeTypes = 9;
+
+  // Bastion contains the machine and image properties
+  // +optional
+  optional Bastion bastion = 10;
 }
 
 // ClusterAutoscaler contains the configuration flags for the Kubernetes cluster autoscaler.
