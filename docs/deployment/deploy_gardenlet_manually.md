@@ -442,7 +442,6 @@ spec:
       shootState:
         concurrentSyncs: 0
     featureGates:
-      CoreDNSQueryRewriting: true
       DefaultSeccompProfile: true
       HVPA: true
       HVPAForShootedSeed: true
