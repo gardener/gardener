@@ -510,7 +510,7 @@ deploy:
         - host:
             command:
               - bash
-              - hack/generate-kustomize-patch-workload-identity-signing-key.sh
+              - hack/generate-workload-identity-signing-key.sh
       after:
         - host:
             command:
