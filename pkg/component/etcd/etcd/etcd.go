@@ -221,7 +221,9 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	)
 
 	if e.values.Class == ClassImportant {
-		annotations = map[string]string{"cluster-autoscaler.kubernetes.io/safe-to-evict": "false"}
+		if !e.values.HighAvailabilityEnabled {
+			annotations = map[string]string{"cluster-autoscaler.kubernetes.io/safe-to-evict": "false"}
+		}
 		metrics = druidv1alpha1.Extensive
 		volumeClaimTemplate = e.values.Role + "-" + strings.TrimSuffix(e.etcd.Name, "-"+e.values.Role)
 		minAllowed = corev1.ResourceList{

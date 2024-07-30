@@ -267,7 +267,9 @@ var _ = Describe("Etcd", func() {
 			}
 
 			if class == ClassImportant {
-				obj.Spec.Annotations = map[string]string{"cluster-autoscaler.kubernetes.io/safe-to-evict": "false"}
+				if replicas == 1 {
+					obj.Spec.Annotations = map[string]string{"cluster-autoscaler.kubernetes.io/safe-to-evict": "false"}
+				}
 				obj.Spec.Etcd.Metrics = &metricsExtensive
 				obj.Spec.VolumeClaimTemplate = ptr.To(testRole + "-etcd")
 			}
