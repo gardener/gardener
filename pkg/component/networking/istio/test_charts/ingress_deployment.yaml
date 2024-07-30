@@ -74,10 +74,10 @@ spec:
             timeoutSeconds: 1
           resources:
             requests:
-              cpu: 250m
-              memory: 1Gi
+              cpu: 300m
+              memory: 600Mi
             limits:
-              memory: 8Gi
+              memory: 4800Mi
           env:
           - name: JWT_POLICY
             value: third-party-jwt

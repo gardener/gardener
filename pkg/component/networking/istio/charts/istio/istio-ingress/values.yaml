@@ -24,7 +24,7 @@ ingressVersion: "1.21.5"
 #externalTrafficPolicy: Cluster
 replicas: 2
 minReplicas: 2
-maxReplicas: 5
+maxReplicas: 9
 enforceSpreadAcrossHosts: false
 
 # Istio Ingress Configuration Resources

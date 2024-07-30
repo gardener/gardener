@@ -78,7 +78,7 @@ func NewIstio(
 		// The default configuration without availability zones has 5 as the maximum amount of
 		// replicas, which apparently works in all known Gardener scenarios. Reducing it to less
 		// per zone gives some room for autoscaling while it is assumed to never reach the maximum.
-		maxReplicas = ptr.To(len(zones) * 4)
+		maxReplicas = ptr.To(len(zones) * 6)
 	}
 
 	policyLabels := commonIstioIngressNetworkPolicyLabels(vpnEnabled)

@@ -85,7 +85,7 @@ func checkIstio(istioDeploy istio.Interface, testValues istioTestValues) {
 
 	if zoneSize := len(testValues.zones); zoneSize > 1 {
 		minReplicas = ptr.To(zoneSize * 2)
-		maxReplicas = ptr.To(zoneSize * 4)
+		maxReplicas = ptr.To(zoneSize * 6)
 	}
 
 	networkPolicyLabels := map[string]string{
