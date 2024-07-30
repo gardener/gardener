@@ -43,6 +43,7 @@ var (
 	restConfig *rest.Config
 	testEnv    *gardenerenvtest.GardenerTestEnvironment
 	testClient client.Client
+	mgrClient  client.Reader
 
 	testRunID = "test-" + gardenerutils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 )
@@ -87,6 +88,7 @@ var _ = BeforeSuite(func() {
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
+	mgrClient = mgr.GetClient()
 
 	By("Register controller")
 	Expect((&extensionclusterrole.Reconciler{}).AddToManager(ctx, mgr)).To(Succeed())
