@@ -23,9 +23,6 @@ The following tables are a summary of the feature gates that you can set on diff
 | HVPA                            | `false` | `Alpha` | `0.31`  |         |
 | HVPAForShootedSeed              | `false` | `Alpha` | `0.32`  |         |
 | DefaultSeccompProfile           | `false` | `Alpha` | `1.54`  |         |
-| CoreDNSQueryRewriting           | `false` | `Alpha` | `1.55`  | `1.95`  |
-| CoreDNSQueryRewriting           | `true`  | `Beta`  | `1.96`  |         |
-| CoreDNSQueryRewriting           | `true`  | `GA`    | `1.97`  |         |
 | IPv6SingleStack                 | `false` | `Alpha` | `1.63`  |         |
 | MutableShootSpecNetworkingNodes | `false` | `Alpha` | `1.64`  | `1.95`  |
 | MutableShootSpecNetworkingNodes | `true`  | `Beta`  | `1.96`  |         |
@@ -43,125 +40,129 @@ The following tables are a summary of the feature gates that you can set on diff
 
 ## Feature Gates for Graduated or Deprecated Features
 
-| Feature                                      | Default | Stage        | Since  | Until  |
-|----------------------------------------------|---------|--------------|--------|--------|
-| NodeLocalDNS                                 | `false` | `Alpha`      | `1.7`  |        |
-| NodeLocalDNS                                 |         | `Removed`    | `1.26` |        |
-| KonnectivityTunnel                           | `false` | `Alpha`      | `1.6`  |        |
-| KonnectivityTunnel                           |         | `Removed`    | `1.27` |        |
-| MountHostCADirectories                       | `false` | `Alpha`      | `1.11` | `1.25` |
-| MountHostCADirectories                       | `true`  | `Beta`       | `1.26` | `1.27` |
-| MountHostCADirectories                       | `true`  | `GA`         | `1.27` |        |
-| MountHostCADirectories                       |         | `Removed`    | `1.30` |        |
-| DisallowKubeconfigRotationForShootInDeletion | `false` | `Alpha`      | `1.28` | `1.31` |
-| DisallowKubeconfigRotationForShootInDeletion | `true`  | `Beta`       | `1.32` | `1.35` |
-| DisallowKubeconfigRotationForShootInDeletion | `true`  | `GA`         | `1.36` |        |
-| DisallowKubeconfigRotationForShootInDeletion |         | `Removed`    | `1.38` |        |
-| Logging                                      | `false` | `Alpha`      | `0.13` | `1.40` |
-| Logging                                      |         | `Removed`    | `1.41` |        |
-| AdminKubeconfigRequest                       | `false` | `Alpha`      | `1.24` | `1.38` |
-| AdminKubeconfigRequest                       | `true`  | `Beta`       | `1.39` | `1.41` |
-| AdminKubeconfigRequest                       | `true`  | `GA`         | `1.42` | `1.49` |
-| AdminKubeconfigRequest                       |         | `Removed`    | `1.50` |        |
-| UseDNSRecords                                | `false` | `Alpha`      | `1.27` | `1.38` |
-| UseDNSRecords                                | `true`  | `Beta`       | `1.39` | `1.43` |
-| UseDNSRecords                                | `true`  | `GA`         | `1.44` | `1.49` |
-| UseDNSRecords                                |         | `Removed`    | `1.50` |        |
-| CachedRuntimeClients                         | `false` | `Alpha`      | `1.7`  | `1.33` |
-| CachedRuntimeClients                         | `true`  | `Beta`       | `1.34` | `1.44` |
-| CachedRuntimeClients                         | `true`  | `GA`         | `1.45` | `1.49` |
-| CachedRuntimeClients                         |         | `Removed`    | `1.50` |        |
-| DenyInvalidExtensionResources                | `false` | `Alpha`      | `1.31` | `1.41` |
-| DenyInvalidExtensionResources                | `true`  | `Beta`       | `1.42` | `1.44` |
-| DenyInvalidExtensionResources                | `true`  | `GA`         | `1.45` | `1.49` |
-| DenyInvalidExtensionResources                |         | `Removed`    | `1.50` |        |
-| RotateSSHKeypairOnMaintenance                | `false` | `Alpha`      | `1.28` | `1.44` |
-| RotateSSHKeypairOnMaintenance                | `true`  | `Beta`       | `1.45` | `1.47` |
-| RotateSSHKeypairOnMaintenance (deprecated)   | `false` | `Beta`       | `1.48` | `1.50` |
-| RotateSSHKeypairOnMaintenance (deprecated)   |         | `Removed`    | `1.51` |        |
-| ShootMaxTokenExpirationOverwrite             | `false` | `Alpha`      | `1.43` | `1.44` |
-| ShootMaxTokenExpirationOverwrite             | `true`  | `Beta`       | `1.45` | `1.47` |
-| ShootMaxTokenExpirationOverwrite             | `true`  | `GA`         | `1.48` | `1.50` |
-| ShootMaxTokenExpirationOverwrite             |         | `Removed`    | `1.51` |        |
-| ShootMaxTokenExpirationValidation            | `false` | `Alpha`      | `1.43` | `1.45` |
-| ShootMaxTokenExpirationValidation            | `true`  | `Beta`       | `1.46` | `1.47` |
-| ShootMaxTokenExpirationValidation            | `true`  | `GA`         | `1.48` | `1.50` |
-| ShootMaxTokenExpirationValidation            |         | `Removed`    | `1.51` |        |
-| WorkerPoolKubernetesVersion                  | `false` | `Alpha`      | `1.35` | `1.45` |
-| WorkerPoolKubernetesVersion                  | `true`  | `Beta`       | `1.46` | `1.49` |
-| WorkerPoolKubernetesVersion                  | `true`  | `GA`         | `1.50` | `1.51` |
-| WorkerPoolKubernetesVersion                  |         | `Removed`    | `1.52` |        |
-| DisableDNSProviderManagement                 | `false` | `Alpha`      | `1.41` | `1.49` |
-| DisableDNSProviderManagement                 | `true`  | `Beta`       | `1.50` | `1.51` |
-| DisableDNSProviderManagement                 | `true`  | `GA`         | `1.52` | `1.59` |
-| DisableDNSProviderManagement                 |         | `Removed`    | `1.60` |        |
-| SecretBindingProviderValidation              | `false` | `Alpha`      | `1.38` | `1.50` |
-| SecretBindingProviderValidation              | `true`  | `Beta`       | `1.51` | `1.52` |
-| SecretBindingProviderValidation              | `true`  | `GA`         | `1.53` | `1.54` |
-| SecretBindingProviderValidation              |         | `Removed`    | `1.55` |        |
-| SeedKubeScheduler                            | `false` | `Alpha`      | `1.15` | `1.54` |
-| SeedKubeScheduler                            | `false` | `Deprecated` | `1.55` | `1.60` |
-| SeedKubeScheduler                            |         | `Removed`    | `1.61` |        |
-| ShootCARotation                              | `false` | `Alpha`      | `1.42` | `1.50` |
-| ShootCARotation                              | `true`  | `Beta`       | `1.51` | `1.56` |
-| ShootCARotation                              | `true`  | `GA`         | `1.57` | `1.59` |
-| ShootCARotation                              |         | `Removed`    | `1.60` |        |
-| ShootSARotation                              | `false` | `Alpha`      | `1.48` | `1.50` |
-| ShootSARotation                              | `true`  | `Beta`       | `1.51` | `1.56` |
-| ShootSARotation                              | `true`  | `GA`         | `1.57` | `1.59` |
-| ShootSARotation                              |         | `Removed`    | `1.60` |        |
-| ReversedVPN                                  | `false` | `Alpha`      | `1.22` | `1.41` |
-| ReversedVPN                                  | `true`  | `Beta`       | `1.42` | `1.62` |
-| ReversedVPN                                  | `true`  | `GA`         | `1.63` | `1.69` |
-| ReversedVPN                                  |         | `Removed`    | `1.70` |        |
-| ForceRestore                                 |         | `Removed`    | `1.66` |        |
-| SeedChange                                   | `false` | `Alpha`      | `1.12` | `1.52` |
-| SeedChange                                   | `true`  | `Beta`       | `1.53` | `1.68` |
-| SeedChange                                   | `true`  | `GA`         | `1.69` | `1.72` |
-| SeedChange                                   |         | `Removed`    | `1.73` |        |
-| CopyEtcdBackupsDuringControlPlaneMigration   | `false` | `Alpha`      | `1.37` | `1.52` |
-| CopyEtcdBackupsDuringControlPlaneMigration   | `true`  | `Beta`       | `1.53` | `1.68` |
-| CopyEtcdBackupsDuringControlPlaneMigration   | `true`  | `GA`         | `1.69` | `1.72` |
-| CopyEtcdBackupsDuringControlPlaneMigration   |         | `Removed`    | `1.73` |        |
-| ManagedIstio                                 | `false` | `Alpha`      | `1.5`  | `1.18` |
-| ManagedIstio                                 | `true`  | `Beta`       | `1.19` |        |
-| ManagedIstio                                 | `true`  | `Deprecated` | `1.48` | `1.69` |
-| ManagedIstio                                 |         | `Removed`    | `1.70` |        |
-| APIServerSNI                                 | `false` | `Alpha`      | `1.7`  | `1.18` |
-| APIServerSNI                                 | `true`  | `Beta`       | `1.19` |        |
-| APIServerSNI                                 | `true`  | `Deprecated` | `1.48` | `1.72` |
-| APIServerSNI                                 |         | `Removed`    | `1.73` |        |
-| HAControlPlanes                              | `false` | `Alpha`      | `1.49` | `1.70` |
-| HAControlPlanes                              | `true`  | `Beta`       | `1.71` | `1.72` |
-| HAControlPlanes                              | `true`  | `GA`         | `1.73` | `1.73` |
-| HAControlPlanes                              |         | `Removed`    | `1.74` |        |
-| FullNetworkPoliciesInRuntimeCluster          | `false` | `Alpha`      | `1.66` | `1.70` |
-| FullNetworkPoliciesInRuntimeCluster          | `true`  | `Beta`       | `1.71` | `1.72` |
-| FullNetworkPoliciesInRuntimeCluster          | `true`  | `GA`         | `1.73` | `1.73` |
-| FullNetworkPoliciesInRuntimeCluster          |         | `Removed`    | `1.74` |        |
-| DisableScalingClassesForShoots               | `false` | `Alpha`      | `1.73` | `1.78` |
-| DisableScalingClassesForShoots               | `true`  | `Beta`       | `1.79` | `1.80` |
-| DisableScalingClassesForShoots               | `true`  | `GA`         | `1.81` | `1.81` |
-| DisableScalingClassesForShoots               |         | `Removed`    | `1.82` |        |
-| ContainerdRegistryHostsDir                   | `false` | `Alpha`      | `1.77` | `1.85` |
-| ContainerdRegistryHostsDir                   | `true`  | `Beta`       | `1.86` | `1.86` |
-| ContainerdRegistryHostsDir                   | `true`  | `GA`         | `1.87` | `1.87` |
-| ContainerdRegistryHostsDir                   |         | `Removed`    | `1.88` |        |
-| WorkerlessShoots                             | `false` | `Alpha`      | `1.70` | `1.78` |
-| WorkerlessShoots                             | `true`  | `Beta`       | `1.79` | `1.85` |
-| WorkerlessShoots                             | `true`  | `GA`         | `1.86` |        |
-| WorkerlessShoots                             |         | `Removed`    | `1.88` |        |
-| MachineControllerManagerDeployment           | `false` | `Alpha`      | `1.73` |        |
-| MachineControllerManagerDeployment           | `true`  | `Beta`       | `1.81` | `1.81` |
-| MachineControllerManagerDeployment           | `true`  | `GA`         | `1.82` | `1.91` |
-| MachineControllerManagerDeployment           |         | `Removed`    | `1.92` |        |
-| APIServerFastRollout                         | `true`  | `Beta`       | `1.82` | `1.89` |
-| APIServerFastRollout                         | `true`  | `GA`         | `1.90` | `1.91` |
-| APIServerFastRollout                         |         | `Removed`    | `1.92` |        |
-| UseGardenerNodeAgent                         | `false` | `Alpha`      | `1.82` | `1.88` |
-| UseGardenerNodeAgent                         | `true`  | `Beta`       | `1.89` |        |
-| UseGardenerNodeAgent                         | `true`  | `GA`         | `1.90` | `1.91` |
-| UseGardenerNodeAgent                         |         | `Removed`    | `1.92` |        |
+| Feature                                      | Default | Stage        | Since   | Until   |
+|----------------------------------------------|---------|--------------|---------|---------|
+| NodeLocalDNS                                 | `false` | `Alpha`      | `1.7`   |         |
+| NodeLocalDNS                                 |         | `Removed`    | `1.26`  |         |
+| KonnectivityTunnel                           | `false` | `Alpha`      | `1.6`   |         |
+| KonnectivityTunnel                           |         | `Removed`    | `1.27`  |         |
+| MountHostCADirectories                       | `false` | `Alpha`      | `1.11`  | `1.25`  |
+| MountHostCADirectories                       | `true`  | `Beta`       | `1.26`  | `1.27`  |
+| MountHostCADirectories                       | `true`  | `GA`         | `1.27`  |         |
+| MountHostCADirectories                       |         | `Removed`    | `1.30`  |         |
+| DisallowKubeconfigRotationForShootInDeletion | `false` | `Alpha`      | `1.28`  | `1.31`  |
+| DisallowKubeconfigRotationForShootInDeletion | `true`  | `Beta`       | `1.32`  | `1.35`  |
+| DisallowKubeconfigRotationForShootInDeletion | `true`  | `GA`         | `1.36`  |         |
+| DisallowKubeconfigRotationForShootInDeletion |         | `Removed`    | `1.38`  |         |
+| Logging                                      | `false` | `Alpha`      | `0.13`  | `1.40`  |
+| Logging                                      |         | `Removed`    | `1.41`  |         |
+| AdminKubeconfigRequest                       | `false` | `Alpha`      | `1.24`  | `1.38`  |
+| AdminKubeconfigRequest                       | `true`  | `Beta`       | `1.39`  | `1.41`  |
+| AdminKubeconfigRequest                       | `true`  | `GA`         | `1.42`  | `1.49`  |
+| AdminKubeconfigRequest                       |         | `Removed`    | `1.50`  |         |
+| UseDNSRecords                                | `false` | `Alpha`      | `1.27`  | `1.38`  |
+| UseDNSRecords                                | `true`  | `Beta`       | `1.39`  | `1.43`  |
+| UseDNSRecords                                | `true`  | `GA`         | `1.44`  | `1.49`  |
+| UseDNSRecords                                |         | `Removed`    | `1.50`  |         |
+| CachedRuntimeClients                         | `false` | `Alpha`      | `1.7`   | `1.33`  |
+| CachedRuntimeClients                         | `true`  | `Beta`       | `1.34`  | `1.44`  |
+| CachedRuntimeClients                         | `true`  | `GA`         | `1.45`  | `1.49`  |
+| CachedRuntimeClients                         |         | `Removed`    | `1.50`  |         |
+| DenyInvalidExtensionResources                | `false` | `Alpha`      | `1.31`  | `1.41`  |
+| DenyInvalidExtensionResources                | `true`  | `Beta`       | `1.42`  | `1.44`  |
+| DenyInvalidExtensionResources                | `true`  | `GA`         | `1.45`  | `1.49`  |
+| DenyInvalidExtensionResources                |         | `Removed`    | `1.50`  |         |
+| RotateSSHKeypairOnMaintenance                | `false` | `Alpha`      | `1.28`  | `1.44`  |
+| RotateSSHKeypairOnMaintenance                | `true`  | `Beta`       | `1.45`  | `1.47`  |
+| RotateSSHKeypairOnMaintenance (deprecated)   | `false` | `Beta`       | `1.48`  | `1.50`  |
+| RotateSSHKeypairOnMaintenance (deprecated)   |         | `Removed`    | `1.51`  |         |
+| ShootMaxTokenExpirationOverwrite             | `false` | `Alpha`      | `1.43`  | `1.44`  |
+| ShootMaxTokenExpirationOverwrite             | `true`  | `Beta`       | `1.45`  | `1.47`  |
+| ShootMaxTokenExpirationOverwrite             | `true`  | `GA`         | `1.48`  | `1.50`  |
+| ShootMaxTokenExpirationOverwrite             |         | `Removed`    | `1.51`  |         |
+| ShootMaxTokenExpirationValidation            | `false` | `Alpha`      | `1.43`  | `1.45`  |
+| ShootMaxTokenExpirationValidation            | `true`  | `Beta`       | `1.46`  | `1.47`  |
+| ShootMaxTokenExpirationValidation            | `true`  | `GA`         | `1.48`  | `1.50`  |
+| ShootMaxTokenExpirationValidation            |         | `Removed`    | `1.51`  |         |
+| WorkerPoolKubernetesVersion                  | `false` | `Alpha`      | `1.35`  | `1.45`  |
+| WorkerPoolKubernetesVersion                  | `true`  | `Beta`       | `1.46`  | `1.49`  |
+| WorkerPoolKubernetesVersion                  | `true`  | `GA`         | `1.50`  | `1.51`  |
+| WorkerPoolKubernetesVersion                  |         | `Removed`    | `1.52`  |         |
+| DisableDNSProviderManagement                 | `false` | `Alpha`      | `1.41`  | `1.49`  |
+| DisableDNSProviderManagement                 | `true`  | `Beta`       | `1.50`  | `1.51`  |
+| DisableDNSProviderManagement                 | `true`  | `GA`         | `1.52`  | `1.59`  |
+| DisableDNSProviderManagement                 |         | `Removed`    | `1.60`  |         |
+| SecretBindingProviderValidation              | `false` | `Alpha`      | `1.38`  | `1.50`  |
+| SecretBindingProviderValidation              | `true`  | `Beta`       | `1.51`  | `1.52`  |
+| SecretBindingProviderValidation              | `true`  | `GA`         | `1.53`  | `1.54`  |
+| SecretBindingProviderValidation              |         | `Removed`    | `1.55`  |         |
+| SeedKubeScheduler                            | `false` | `Alpha`      | `1.15`  | `1.54`  |
+| SeedKubeScheduler                            | `false` | `Deprecated` | `1.55`  | `1.60`  |
+| SeedKubeScheduler                            |         | `Removed`    | `1.61`  |         |
+| ShootCARotation                              | `false` | `Alpha`      | `1.42`  | `1.50`  |
+| ShootCARotation                              | `true`  | `Beta`       | `1.51`  | `1.56`  |
+| ShootCARotation                              | `true`  | `GA`         | `1.57`  | `1.59`  |
+| ShootCARotation                              |         | `Removed`    | `1.60`  |         |
+| ShootSARotation                              | `false` | `Alpha`      | `1.48`  | `1.50`  |
+| ShootSARotation                              | `true`  | `Beta`       | `1.51`  | `1.56`  |
+| ShootSARotation                              | `true`  | `GA`         | `1.57`  | `1.59`  |
+| ShootSARotation                              |         | `Removed`    | `1.60`  |         |
+| ReversedVPN                                  | `false` | `Alpha`      | `1.22`  | `1.41`  |
+| ReversedVPN                                  | `true`  | `Beta`       | `1.42`  | `1.62`  |
+| ReversedVPN                                  | `true`  | `GA`         | `1.63`  | `1.69`  |
+| ReversedVPN                                  |         | `Removed`    | `1.70`  |         |
+| ForceRestore                                 |         | `Removed`    | `1.66`  |         |
+| SeedChange                                   | `false` | `Alpha`      | `1.12`  | `1.52`  |
+| SeedChange                                   | `true`  | `Beta`       | `1.53`  | `1.68`  |
+| SeedChange                                   | `true`  | `GA`         | `1.69`  | `1.72`  |
+| SeedChange                                   |         | `Removed`    | `1.73`  |         |
+| CopyEtcdBackupsDuringControlPlaneMigration   | `false` | `Alpha`      | `1.37`  | `1.52`  |
+| CopyEtcdBackupsDuringControlPlaneMigration   | `true`  | `Beta`       | `1.53`  | `1.68`  |
+| CopyEtcdBackupsDuringControlPlaneMigration   | `true`  | `GA`         | `1.69`  | `1.72`  |
+| CopyEtcdBackupsDuringControlPlaneMigration   |         | `Removed`    | `1.73`  |         |
+| ManagedIstio                                 | `false` | `Alpha`      | `1.5`   | `1.18`  |
+| ManagedIstio                                 | `true`  | `Beta`       | `1.19`  |         |
+| ManagedIstio                                 | `true`  | `Deprecated` | `1.48`  | `1.69`  |
+| ManagedIstio                                 |         | `Removed`    | `1.70`  |         |
+| APIServerSNI                                 | `false` | `Alpha`      | `1.7`   | `1.18`  |
+| APIServerSNI                                 | `true`  | `Beta`       | `1.19`  |         |
+| APIServerSNI                                 | `true`  | `Deprecated` | `1.48`  | `1.72`  |
+| APIServerSNI                                 |         | `Removed`    | `1.73`  |         |
+| HAControlPlanes                              | `false` | `Alpha`      | `1.49`  | `1.70`  |
+| HAControlPlanes                              | `true`  | `Beta`       | `1.71`  | `1.72`  |
+| HAControlPlanes                              | `true`  | `GA`         | `1.73`  | `1.73`  |
+| HAControlPlanes                              |         | `Removed`    | `1.74`  |         |
+| FullNetworkPoliciesInRuntimeCluster          | `false` | `Alpha`      | `1.66`  | `1.70`  |
+| FullNetworkPoliciesInRuntimeCluster          | `true`  | `Beta`       | `1.71`  | `1.72`  |
+| FullNetworkPoliciesInRuntimeCluster          | `true`  | `GA`         | `1.73`  | `1.73`  |
+| FullNetworkPoliciesInRuntimeCluster          |         | `Removed`    | `1.74`  |         |
+| DisableScalingClassesForShoots               | `false` | `Alpha`      | `1.73`  | `1.78`  |
+| DisableScalingClassesForShoots               | `true`  | `Beta`       | `1.79`  | `1.80`  |
+| DisableScalingClassesForShoots               | `true`  | `GA`         | `1.81`  | `1.81`  |
+| DisableScalingClassesForShoots               |         | `Removed`    | `1.82`  |         |
+| ContainerdRegistryHostsDir                   | `false` | `Alpha`      | `1.77`  | `1.85`  |
+| ContainerdRegistryHostsDir                   | `true`  | `Beta`       | `1.86`  | `1.86`  |
+| ContainerdRegistryHostsDir                   | `true`  | `GA`         | `1.87`  | `1.87`  |
+| ContainerdRegistryHostsDir                   |         | `Removed`    | `1.88`  |         |
+| WorkerlessShoots                             | `false` | `Alpha`      | `1.70`  | `1.78`  |
+| WorkerlessShoots                             | `true`  | `Beta`       | `1.79`  | `1.85`  |
+| WorkerlessShoots                             | `true`  | `GA`         | `1.86`  |         |
+| WorkerlessShoots                             |         | `Removed`    | `1.88`  |         |
+| MachineControllerManagerDeployment           | `false` | `Alpha`      | `1.73`  |         |
+| MachineControllerManagerDeployment           | `true`  | `Beta`       | `1.81`  | `1.81`  |
+| MachineControllerManagerDeployment           | `true`  | `GA`         | `1.82`  | `1.91`  |
+| MachineControllerManagerDeployment           |         | `Removed`    | `1.92`  |         |
+| APIServerFastRollout                         | `true`  | `Beta`       | `1.82`  | `1.89`  |
+| APIServerFastRollout                         | `true`  | `GA`         | `1.90`  | `1.91`  |
+| APIServerFastRollout                         |         | `Removed`    | `1.92`  |         |
+| UseGardenerNodeAgent                         | `false` | `Alpha`      | `1.82`  | `1.88`  |
+| UseGardenerNodeAgent                         | `true`  | `Beta`       | `1.89`  |         |
+| UseGardenerNodeAgent                         | `true`  | `GA`         | `1.90`  | `1.91`  |
+| UseGardenerNodeAgent                         |         | `Removed`    | `1.92`  |         |
+| CoreDNSQueryRewriting                        | `false` | `Alpha`      | `1.55`  | `1.95`  |
+| CoreDNSQueryRewriting                        | `true`  | `Beta`       | `1.96`  | `1.96`  |
+| CoreDNSQueryRewriting                        | `true`  | `GA`         | `1.97`  | `1.100` |
+| CoreDNSQueryRewriting                        |         | `Removed`    | `1.101` |         |
 
 ## Using a Feature
 
@@ -204,7 +205,6 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 | HVPA                            | `gardenlet`, `gardener-operator`  | Enables simultaneous horizontal and vertical scaling in garden or seed clusters.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | HVPAForShootedSeed              | `gardenlet`                       | Enables simultaneous horizontal and vertical scaling in managed seed (aka "shooted seed") clusters.                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | DefaultSeccompProfile           | `gardenlet`, `gardener-operator`  | Enables the defaulting of the seccomp profile for Gardener managed workload in the garden or seed to `RuntimeDefault`.                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| CoreDNSQueryRewriting           | `gardenlet`                       | Enables automatic DNS query rewriting in shoot cluster's CoreDNS to shortcut name resolution of fully qualified in-cluster and out-of-cluster names, which follow a user-defined pattern. Details can be found in [DNS Search Path Optimization](../usage/dns-search-path-optimization.md).                                                                                                                                                                                                                                                                           |
 | IPv6SingleStack                 | `gardener-apiserver`, `gardenlet` | Allows creating seed and shoot clusters with [IPv6 single-stack networking](../usage/ipv6.md) enabled in their spec ([GEP-21](../proposals/21-ipv6-singlestack-local.md)). If enabled in gardenlet, the default behavior is unchanged, but setting `ipFamilies=[IPv6]` in the `seedConfig` is allowed. Only if the `ipFamilies` setting is changed, gardenlet behaves differently.                                                                                                                                                                                    |
 | MutableShootSpecNetworkingNodes | `gardener-apiserver`              | Allows updating the field `spec.networking.nodes`. The validity of the values has to be checked in the provider extensions. Only enable this feature gate when your system runs provider extensions which have implemented the validation.                                                                                                                                                                                                                                                                                                                            |
 | ShootForceDeletion              | `gardener-apiserver`              | Allows forceful deletion of Shoots by annotating them with the `confirmation.gardener.cloud/force-deletion` annotation.                                                                                                                                                                                                                                                                                                                                                                                                                                               |
