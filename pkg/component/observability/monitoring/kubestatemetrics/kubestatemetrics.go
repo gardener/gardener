@@ -33,7 +33,9 @@ const (
 	port            = 8080
 	portNameMetrics = "metrics"
 
-	SuffixSeed    = "-seed"
+	// SuffixSeed is the suffix for seed kube-state-metrics resources.
+	SuffixSeed = "-seed"
+	// SuffixRuntime is the suffix for garden-runtime kube-state-metrics resources.
 	SuffixRuntime = "-runtime"
 )
 
