@@ -16,4 +16,4 @@ The load balancer of the Istio ingress-gateway service exposes the following TCP
 * **8443** for requests to the shoot API Server via `api-server-proxy`, dispatched based on the proxy protocol target, which is the IP address of `kubernetes.default.svc.cluster.local` in the shoot.
 * **8132** to establish the reversed VPN connection. It's dispatched according to an HTTP header value.
 
-For detailed information you can check [Control Plane Endpoints and Ports](../development/control-plane-endpoints-and-ports.md)
+For detailed information, you can check [Control Plane Endpoints and Ports](../development/control-plane-endpoints-and-ports.md).

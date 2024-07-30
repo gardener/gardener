@@ -5,7 +5,7 @@ weight: 15
 
 # Default Seccomp Profile and Configuration 
 
-This is a short guide describing how to enable the defaulting of seccomp profiles for shoot clusters. Running pods in `Unconfined` (seccomp disabled) mode is undesirable since this is the least restrictive profile. Also, mind that any privileged container will always run as `Unconfined`. More information about seccomp can be found in this [Kubernetes tutorial](https://kubernetes.io/docs/tutorials/security/seccomp/).
+This is a short guide describing how to enable the defaulting of seccomp profiles for shoot clusters. Running pods in `Unconfined` (seccomp disabled) mode is undesirable since this is the least restrictive profile. Also, mind that any privileged container will always run as `Unconfined`. More information about seccomp can be found in [Restrict a Container's Syscalls with seccomp](https://kubernetes.io/docs/tutorials/security/seccomp/).
 
 ## Setting the Seccomp Profile to RuntimeDefault for Shoot Clusters
 
