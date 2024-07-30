@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package virtualcluster
+package extension
 
 import (
 	"context"
@@ -11,9 +11,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -21,16 +19,13 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 const (
@@ -83,7 +78,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	if len(gardenList.Items) == 0 {
 		// in case a garden resource does not exist or is deleted, update the condition, remove the finalizers and exit early.
 		log.Info("No Garden found")
-		conditions := NewVirtualClusterConditions(r.Clock, extension.Status)
+		conditions := NewConditions(r.Clock, extension.Status)
 		conditions.virtualClusterReconciled = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.virtualClusterReconciled, gardencorev1beta1.ConditionFalse, ConditionNoGardenFound, "no garden found")
 		if err := r.updateExtensionStatus(ctx, log, extension, conditions); err != nil {
 			log.Error(err, "Failed to update Extension status")
@@ -113,8 +108,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	return reconcile.Result{}, r.reconcile(ctx, log, virtualClusterClientSet.Client(), extension)
 }
 
-func (r *Reconciler) updateExtensionStatus(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension, updatedConditions VirtualClusterConditions) error {
-	currentConditions := NewVirtualClusterConditions(r.Clock, extension.Status)
+func (r *Reconciler) updateExtensionStatus(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension, updatedConditions Conditions) error {
+	currentConditions := NewConditions(r.Clock, extension.Status)
 	if extension.Generation == extension.Status.ObservedGeneration && !v1beta1helper.ConditionsNeedUpdate(currentConditions.ConvertToSlice(), updatedConditions.ConvertToSlice()) {
 		return nil
 	}
@@ -141,7 +136,7 @@ func (r *Reconciler) updateExtensionStatus(ctx context.Context, log logr.Logger,
 }
 
 func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, virtualClusterClient client.Client, extension *operatorv1alpha1.Extension) error {
-	conditions := NewVirtualClusterConditions(r.Clock, extension.Status)
+	conditions := NewConditions(r.Clock, extension.Status)
 	if !controllerutil.ContainsFinalizer(extension, operatorv1alpha1.FinalizerName) {
 		log.Info("Adding finalizer")
 		if err := controllerutils.AddFinalizers(ctx, r.RuntimeClient, extension, operatorv1alpha1.FinalizerName); err != nil {
@@ -159,79 +154,8 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, virtualClus
 	return r.updateExtensionStatus(ctx, log, extension, conditions)
 }
 
-func (r *Reconciler) reconcileVirtualClusterResources(ctx context.Context, log logr.Logger, virtualClusterClient client.Client, extension *operatorv1alpha1.Extension) error {
-	// return early if we do not have to make a deployment
-	if extension.Spec.Deployment == nil ||
-		extension.Spec.Deployment.ExtensionDeployment == nil ||
-		extension.Spec.Deployment.ExtensionDeployment.Helm == nil {
-		return r.deleteVirtualClusterResources(ctx, log, virtualClusterClient, extension)
-	}
-
-	if err := r.reconcileControllerDeployment(ctx, virtualClusterClient, extension); err != nil {
-		return fmt.Errorf("failed to reconcile ControllerDeployment: %w", err)
-	}
-	r.Recorder.Event(extension, corev1.EventTypeNormal, "Reconciliation", "ControllerDeployment applied successfully")
-
-	if err := r.reconcileControllerRegistration(ctx, virtualClusterClient, extension); err != nil {
-		return fmt.Errorf("failed to reconcile ControllerRegistration: %w", err)
-	}
-	r.Recorder.Event(extension, corev1.EventTypeNormal, "Reconciliation", "ControllerRegistration applied successfully")
-	return nil
-}
-
-func (r *Reconciler) reconcileControllerDeployment(ctx context.Context, virtualClusterClient client.Client, extension *operatorv1alpha1.Extension) error {
-	controllerDeployment := &gardencorev1.ControllerDeployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: extension.Name,
-		},
-	}
-
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, virtualClusterClient, controllerDeployment,
-		func() error {
-			controllerDeployment.Helm = &gardencorev1.HelmControllerDeployment{
-				Values:        extension.Spec.Deployment.ExtensionDeployment.Values,
-				OCIRepository: extension.Spec.Deployment.ExtensionDeployment.Helm.OCIRepository,
-			}
-			return nil
-		})
-	return err
-}
-
-func (r *Reconciler) reconcileControllerRegistration(ctx context.Context, virtualClusterClient client.Client, extension *operatorv1alpha1.Extension) error {
-	controllerRegistration := &gardencorev1beta1.ControllerRegistration{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: extension.Name,
-		},
-	}
-
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, virtualClusterClient, controllerRegistration,
-		func() error {
-			// handle well known annotations
-			if v, ok := extension.Annotations[v1beta1constants.AnnotationPodSecurityEnforce]; ok {
-				metav1.SetMetaDataAnnotation(&controllerRegistration.ObjectMeta, v1beta1constants.AnnotationPodSecurityEnforce, v)
-			} else {
-				delete(controllerRegistration.Annotations, v1beta1constants.AnnotationPodSecurityEnforce)
-			}
-
-			controllerRegistration.Spec = gardencorev1beta1.ControllerRegistrationSpec{
-				Resources: extension.Spec.Resources,
-				Deployment: &gardencorev1beta1.ControllerRegistrationDeployment{
-					Policy:       extension.Spec.Deployment.ExtensionDeployment.Policy,
-					SeedSelector: extension.Spec.Deployment.ExtensionDeployment.SeedSelector,
-					DeploymentRefs: []gardencorev1beta1.DeploymentRef{
-						{
-							Name: extension.Name,
-						},
-					},
-				},
-			}
-			return nil
-		})
-	return err
-}
-
 func (r *Reconciler) delete(ctx context.Context, log logr.Logger, virtualClusterClient client.Client, extension *operatorv1alpha1.Extension) error {
-	conditions := NewVirtualClusterConditions(r.Clock, extension.Status)
+	conditions := NewConditions(r.Clock, extension.Status)
 
 	if err := r.deleteVirtualClusterResources(ctx, log, virtualClusterClient, extension); err != nil {
 		conditions.virtualClusterReconciled = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.virtualClusterReconciled, gardencorev1beta1.ConditionFalse, ConditionDeleteFailed, err.Error())
@@ -246,40 +170,6 @@ func (r *Reconciler) delete(ctx context.Context, log logr.Logger, virtualCluster
 	return r.removeFinalizer(ctx, log, extension)
 }
 
-func (r *Reconciler) deleteVirtualClusterResources(ctx context.Context, log logr.Logger, virtualClusterClient client.Client, extension *operatorv1alpha1.Extension) error {
-	log.Info("Deleting extension virtual resources")
-	var (
-		controllerDeployment = &gardencorev1.ControllerDeployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: extension.Name,
-			}}
-
-		controllerRegistration = &gardencorev1beta1.ControllerRegistration{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: extension.Name,
-			},
-		}
-	)
-
-	log.Info("Deleting ControllerRegistration and ControllerDeployment")
-	if err := kubernetesutils.DeleteObjects(ctx, virtualClusterClient, controllerDeployment, controllerRegistration); err != nil {
-		return err
-	}
-
-	log.Info("Waiting until ControllerRegistration is gone")
-	if err := kubernetesutils.WaitUntilResourceDeleted(ctx, virtualClusterClient, controllerRegistration, 5*time.Second); err != nil {
-		return err
-	}
-	r.Recorder.Event(extension, corev1.EventTypeNormal, "Deletion", "Successfully deleted ControllerRegistration")
-
-	log.Info("Waiting until ControllerDeployment is gone")
-	if err := kubernetesutils.WaitUntilResourceDeleted(ctx, virtualClusterClient, controllerDeployment, 5*time.Second); err != nil {
-		return err
-	}
-	r.Recorder.Event(extension, corev1.EventTypeNormal, "Deletion", "Successfully deleted ControllerDeployment")
-	return nil
-}
-
 func (r *Reconciler) removeFinalizer(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension) error {
 	log.Info("Removing finalizer")
 	if err := controllerutils.RemoveFinalizers(ctx, r.RuntimeClient, extension, operatorv1alpha1.FinalizerName); err != nil {
@@ -288,29 +178,29 @@ func (r *Reconciler) removeFinalizer(ctx context.Context, log logr.Logger, exten
 	return nil
 }
 
-// VirtualClusterConditions contains all conditions of the extension status subresource.
-type VirtualClusterConditions struct {
+// Conditions contains all conditions of the extension status subresource.
+type Conditions struct {
 	virtualClusterReconciled gardencorev1beta1.Condition
 }
 
 // ConvertToSlice returns the garden conditions as a slice.
-func (vc VirtualClusterConditions) ConvertToSlice() []gardencorev1beta1.Condition {
+func (c Conditions) ConvertToSlice() []gardencorev1beta1.Condition {
 	return []gardencorev1beta1.Condition{
-		vc.virtualClusterReconciled,
+		c.virtualClusterReconciled,
 	}
 }
 
 // ConditionTypes returns all garden condition types.
-func (vc VirtualClusterConditions) ConditionTypes() []gardencorev1beta1.ConditionType {
+func (c Conditions) ConditionTypes() []gardencorev1beta1.ConditionType {
 	return []gardencorev1beta1.ConditionType{
-		vc.virtualClusterReconciled.Type,
+		c.virtualClusterReconciled.Type,
 	}
 }
 
-// NewVirtualClusterConditions returns a new instance of VirtualClusterConditions.
+// NewConditions returns a new instance of Conditions.
 // All conditions are retrieved from the given 'status' or newly initialized.
-func NewVirtualClusterConditions(clock clock.Clock, status operatorv1alpha1.ExtensionStatus) VirtualClusterConditions {
-	return VirtualClusterConditions{
+func NewConditions(clock clock.Clock, status operatorv1alpha1.ExtensionStatus) Conditions {
+	return Conditions{
 		virtualClusterReconciled: v1beta1helper.GetOrInitConditionWithClock(clock, status.Conditions, operatorv1alpha1.VirtualClusterExtensionReconciled),
 	}
 }

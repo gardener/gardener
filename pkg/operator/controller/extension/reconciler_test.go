@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package virtualcluster_test
+package extension_test
 
 import (
 	"context"
@@ -28,7 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
-	. "github.com/gardener/gardener/pkg/operator/controller/extension/virtualcluster"
+	. "github.com/gardener/gardener/pkg/operator/controller/extension"
 	"github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -57,7 +57,7 @@ var _ = Describe("Reconciler", func() {
 
 		operatorConfig = config.OperatorConfiguration{
 			Controllers: config.ControllerConfiguration{
-				ExtensionVirtualCluster: config.ExtensionVirtualClusterControllerConfiguration{
+				Extension: config.ExtensionControllerConfiguration{
 					ConcurrentSyncs: ptr.To(1),
 				},
 			},
@@ -99,7 +99,7 @@ var _ = Describe("Reconciler", func() {
 		fakeRecorder = &record.FakeRecorder{}
 	})
 
-	Describe("#ExtensionVirtualCluster", func() {
+	Describe("#Extension", func() {
 		var req reconcile.Request
 
 		BeforeEach(func() {

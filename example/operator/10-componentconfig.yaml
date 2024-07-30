@@ -70,6 +70,8 @@ controllers:
   #     foo: bar
   vpaEvictionRequirements:
     concurrentSyncs: 5
+  extension:
+    concurrentSyncs: 5
 nodeToleration:
   defaultNotReadyTolerationSeconds: 60
   defaultUnreachableTolerationSeconds: 60
