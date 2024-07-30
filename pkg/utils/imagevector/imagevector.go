@@ -371,8 +371,9 @@ func FindImages(v ImageVector, names []string, opts ...FindOptionFunc) (map[stri
 func (i *ImageSource) ToImage(targetVersion *string) *Image {
 	if i.Ref != nil {
 		return &Image{
-			Name: i.Name,
-			Ref:  i.Ref,
+			Name:    i.Name,
+			Ref:     i.Ref,
+			Version: i.Version,
 		}
 	}
 
