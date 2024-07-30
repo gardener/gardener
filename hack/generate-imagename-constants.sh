@@ -13,8 +13,8 @@ function camelCase {
 }
 
 package_name="${1:-imagevector}"
-images_yaml="${2:-containers.yaml}"
-constant_prefix="${3:-Container}"
+images_yaml="${2:-images.yaml}"
+constant_prefix="${3:-}"
 
 out="
 $(cat "$(dirname $0)/LICENSE_BOILERPLATE.txt" | sed "s/YEAR/$(date +%Y)/g")

@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-//go:generate ../../../hack/generate-imagename-constants.sh imagevector images.yaml
+//go:generate ../../../hack/generate-imagename-constants.sh
 package imagevector
 
 import (
