@@ -62,6 +62,8 @@ func (b *Botanist) WaitForInfrastructure(ctx context.Context) error {
 		return err
 	}
 
+	networkingStatus := &gardencorev1beta1.NetworkingStatus{}
+
 	if nodesCIDRs := b.Shoot.Components.Extensions.Infrastructure.NodesCIDRs(); len(nodesCIDRs) > 0 {
 		if err := b.Shoot.UpdateInfo(ctx, b.GardenClient, true, func(shoot *gardencorev1beta1.Shoot) error {
 			shoot.Spec.Networking.Nodes = &nodesCIDRs[0]
@@ -70,22 +72,28 @@ func (b *Botanist) WaitForInfrastructure(ctx context.Context) error {
 			return err
 		}
 
-		if len(b.Shoot.Components.Extensions.Infrastructure.ServicesCIDRs()) > 0 && len(b.Shoot.Components.Extensions.Infrastructure.PodsCIDRs()) > 0 {
-			if err := b.Shoot.UpdateInfoStatus(ctx, b.GardenClient, true, func(shoot *gardencorev1beta1.Shoot) error {
-				shoot.Status.Networking = &gardencorev1beta1.NetworkingStatus{
-					Nodes:    nodesCIDRs,
-					Services: b.Shoot.Components.Extensions.Infrastructure.ServicesCIDRs(),
-					Pods:     b.Shoot.Components.Extensions.Infrastructure.PodsCIDRs(),
-				}
-				return nil
-			}); err != nil {
-				return err
-			}
-		}
+		networkingStatus.Nodes = nodesCIDRs
+	}
 
-		if err := extensions.SyncClusterResourceToSeed(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, b.Shoot.GetInfo(), nil, nil); err != nil {
-			return err
-		}
+	if servicesCIDRs := b.Shoot.Components.Extensions.Infrastructure.ServicesCIDRs(); len(servicesCIDRs) > 0 {
+		networkingStatus.Services = servicesCIDRs
+	}
+	if podsCIDRs := b.Shoot.Components.Extensions.Infrastructure.PodsCIDRs(); len(podsCIDRs) > 0 {
+		networkingStatus.Pods = podsCIDRs
+	}
+	if egressCIDRs := b.Shoot.Components.Extensions.Infrastructure.EgressCIDRs(); len(egressCIDRs) > 0 {
+		networkingStatus.Egress = egressCIDRs
+	}
+
+	if err := b.Shoot.UpdateInfoStatus(ctx, b.GardenClient, true, func(shoot *gardencorev1beta1.Shoot) error {
+		shoot.Status.Networking = networkingStatus
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	if err := extensions.SyncClusterResourceToSeed(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, b.Shoot.GetInfo(), nil, nil); err != nil {
+		return err
 	}
 
 	networks, err := shoot.ToNetworks(b.Shoot.GetInfo(), b.Shoot.IsWorkerless)
