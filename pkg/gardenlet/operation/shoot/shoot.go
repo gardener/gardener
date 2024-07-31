@@ -44,8 +44,8 @@ func NewBuilder() *Builder {
 		cloudProfileFunc: func(context.Context, *gardencorev1beta1.Shoot) (*gardencorev1beta1.CloudProfile, error) {
 			return nil, fmt.Errorf("cloudprofile object is required but not set")
 		},
-		shootSecretFunc: func(context.Context, string, string, bool) (*corev1.Secret, error) {
-			return nil, fmt.Errorf("shoot secret object is required but not set")
+		shootCredentialsFunc: func(context.Context, string, string, bool) (client.Object, error) {
+			return nil, fmt.Errorf("shoot credentials object is required but not set")
 		},
 		serviceAccountIssuerHostname: func() (*string, error) {
 			return nil, fmt.Errorf("service account issuer hostname is required but not set")
@@ -112,15 +112,24 @@ func (b *Builder) WithExposureClassObject(exposureClass *gardencorev1beta1.Expos
 	return b
 }
 
-// WithShootSecret sets the shootSecretFunc attribute at the Builder.
-func (b *Builder) WithShootSecret(secret *corev1.Secret) *Builder {
-	b.shootSecretFunc = func(context.Context, string, string, bool) (*corev1.Secret, error) { return secret, nil }
+// WithShootCredentials sets the shootCredentialsFunc attribute at the Builder.
+// If the credentials are not of type [*corev1.Secret] or [*securityv1alpha1.WorkloadIdentity]
+// the function will panic.
+func (b *Builder) WithShootCredentials(credentials client.Object) *Builder {
+	_, isSecret := credentials.(*corev1.Secret)
+	_, isWorkloadIdentity := credentials.(*securityv1alpha1.WorkloadIdentity)
+
+	if !isSecret && !isWorkloadIdentity {
+		panic("credentials must be of type [*corev1.Secret] or [*securityv1alpha1.WorkloadIdentity]")
+	}
+
+	b.shootCredentialsFunc = func(context.Context, string, string, bool) (client.Object, error) { return credentials, nil }
 	return b
 }
 
-// WithShootSecretFrom sets the shootSecretFunc attribute at the Builder after fetching it from the given reader.
-func (b *Builder) WithShootSecretFrom(c client.Reader) *Builder {
-	b.shootSecretFunc = func(ctx context.Context, namespace, bindingName string, fromSecretBinding bool) (*corev1.Secret, error) {
+// WithShootCredentialsFrom sets the shootCredentialsFunc attribute at the Builder after fetching it from the given reader.
+func (b *Builder) WithShootCredentialsFrom(c client.Reader) *Builder {
+	b.shootCredentialsFunc = func(ctx context.Context, namespace, bindingName string, fromSecretBinding bool) (client.Object, error) {
 		var key types.NamespacedName
 		if fromSecretBinding {
 			binding := &gardencorev1beta1.SecretBinding{}
@@ -129,13 +138,20 @@ func (b *Builder) WithShootSecretFrom(c client.Reader) *Builder {
 			}
 			key = client.ObjectKey{Namespace: binding.SecretRef.Namespace, Name: binding.SecretRef.Name}
 		} else {
-			// TODO(dimityrmirchev): This code should eventually handle
-			// the credentials binding referencing a workload identity
 			binding := &securityv1alpha1.CredentialsBinding{}
 			if err := c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: bindingName}, binding); err != nil {
 				return nil, err
 			}
 			key = client.ObjectKey{Namespace: binding.CredentialsRef.Namespace, Name: binding.CredentialsRef.Name}
+
+			wiGVK := securityv1alpha1.SchemeGroupVersion.WithKind("WorkloadIdentity")
+			if wiGVK == binding.CredentialsRef.GroupVersionKind() {
+				workloadIdentity := &securityv1alpha1.WorkloadIdentity{}
+				if err := c.Get(ctx, key, workloadIdentity); err != nil {
+					return nil, err
+				}
+				return workloadIdentity, nil
+			}
 		}
 
 		secret := &corev1.Secret{}
@@ -204,17 +220,17 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	shoot.ExposureClass = b.exposureClass
 
 	if shootObject.Spec.SecretBindingName != nil {
-		secret, err := b.shootSecretFunc(ctx, shootObject.Namespace, *shootObject.Spec.SecretBindingName, true)
+		credentials, err := b.shootCredentialsFunc(ctx, shootObject.Namespace, *shootObject.Spec.SecretBindingName, true)
 		if err != nil {
 			return nil, err
 		}
-		shoot.Secret = secret
+		shoot.Credentials = credentials
 	} else if shootObject.Spec.CredentialsBindingName != nil {
-		secret, err := b.shootSecretFunc(ctx, shootObject.Namespace, *shootObject.Spec.CredentialsBindingName, false)
+		credentials, err := b.shootCredentialsFunc(ctx, shootObject.Namespace, *shootObject.Spec.CredentialsBindingName, false)
 		if err != nil {
 			return nil, err
 		}
-		shoot.Secret = secret
+		shoot.Credentials = credentials
 	}
 
 	shoot.HibernationEnabled = v1beta1helper.HibernationIsEnabled(shootObject)
@@ -238,7 +254,7 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	shoot.ServiceAccountIssuerHostname = serviceAccountIssuerHostname
 
 	// Determine information about external domain for shoot cluster.
-	externalDomain, err := gardenerutils.ConstructExternalDomain(ctx, c, shootObject, shoot.Secret, b.defaultDomains)
+	externalDomain, err := gardenerutils.ConstructExternalDomain(ctx, c, shootObject, shoot.Credentials, b.defaultDomains)
 	if err != nil {
 		return nil, err
 	}

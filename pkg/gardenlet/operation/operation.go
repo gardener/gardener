@@ -150,7 +150,7 @@ func (b *Builder) WithShootFromCluster(gardenClient client.Client, seedClientSet
 			NewBuilder().
 			WithShootObjectFromCluster(seedClientSet, shootNamespace).
 			WithCloudProfileObjectFromCluster(seedClientSet, shootNamespace).
-			WithShootSecretFrom(gardenClient).
+			WithShootCredentialsFrom(gardenClient).
 			WithSeedObject(seedObj.GetInfo()).
 			WithProjectName(gardenObj.Project.Name).
 			WithInternalDomain(gardenObj.InternalDomain).

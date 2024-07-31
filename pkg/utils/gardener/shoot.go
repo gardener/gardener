@@ -33,6 +33,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -584,7 +585,8 @@ func ConstructExternalClusterDomain(shoot *gardencorev1beta1.Shoot) *string {
 
 // ConstructExternalDomain constructs an object containing all relevant information of the external domain that
 // shall be used for a shoot cluster - based on the configuration of the Garden cluster and the shoot itself.
-func ConstructExternalDomain(ctx context.Context, c client.Reader, shoot *gardencorev1beta1.Shoot, shootSecret *corev1.Secret, defaultDomains []*Domain) (*Domain, error) {
+// Shoot credentials should be of type [*corev1.Secret] or [*securityv1alpha1.WorkloadIdentity].
+func ConstructExternalDomain(ctx context.Context, c client.Reader, shoot *gardencorev1beta1.Shoot, shootCredentials client.Object, defaultDomains []*Domain) (*Domain, error) {
 	externalClusterDomain := ConstructExternalClusterDomain(shoot)
 	if externalClusterDomain == nil {
 		return nil, nil
@@ -610,10 +612,18 @@ func ConstructExternalDomain(ctx context.Context, c client.Reader, shoot *garden
 			}
 			externalDomain.SecretData = secret.Data
 		} else {
-			if shootSecret == nil {
+			if shootCredentials == nil {
 				return nil, fmt.Errorf("default domain is not present, secret for primary dns provider is required")
 			}
-			externalDomain.SecretData = shootSecret.Data
+			switch creds := shootCredentials.(type) {
+			case *corev1.Secret:
+				externalDomain.SecretData = creds.Data
+			case *securityv1alpha1.WorkloadIdentity:
+				// TODO(dimityrmirchev): This code should eventually handle shoot credentials being of type WorkloadIdentity
+				return nil, fmt.Errorf("shoot credentials of type workload identity cannot be used as domain secret")
+			default:
+				return nil, fmt.Errorf("unexpected shoot credentials type")
+			}
 		}
 		if primaryProvider.Type != nil {
 			externalDomain.Provider = *primaryProvider.Type
