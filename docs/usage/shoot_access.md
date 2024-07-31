@@ -12,11 +12,12 @@ The [`shoots/adminkubeconfig`](../proposals/16-adminkubeconfig-subresource.md) s
 
 The username associated with such `kubeconfig` will be the same which is used for authenticating to the Gardener API. Apart from this advantage, the created `kubeconfig` will not be persisted anywhere.
 
-In order to request such a `kubeconfig`, you can run the following commands:
+In order to request such a `kubeconfig`, you can run the following commands (targeting the garden cluster):
 
 ```bash
 export NAMESPACE=garden-my-namespace
 export SHOOT_NAME=my-shoot
+export KUBECONFIG=<kubeconfig for garden cluster>  # can be set using "gardenctl target --garden <landscape>"
 kubectl create \
     -f <(printf '{"spec":{"expirationSeconds":600}}') \
     --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME}/adminkubeconfig | \
