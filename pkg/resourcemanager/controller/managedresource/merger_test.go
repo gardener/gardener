@@ -300,19 +300,13 @@ var _ = Describe("merger", func() {
 			newDeployment = old.DeepCopy()
 		})
 
-		It("should preserve kubectl.kubernetes.io/restartedAt pod template annotation if present", func() {
+		It("should preserve kubectl.kubernetes.io/restartedAt annotation in pod template", func() {
 			old.Spec.Template.Annotations = map[string]string{"kubectl.kubernetes.io/restartedAt": "foo"}
 
-			newPreserveResources := newDeployment.DeepCopy()
-			newDontPreserveResources := newDeployment.DeepCopy()
 			expected := old.DeepCopy()
 
-			Expect(mergeDeployment(s, old, newPreserveResources, false, true)).NotTo(HaveOccurred(), "merge should be successful")
-			Expect(newPreserveResources).To(Equal(expected))
-
-			Expect(mergeDeployment(s, old, newDontPreserveResources, false, false)).NotTo(HaveOccurred(), "merge should be successful")
-			Expect(newDontPreserveResources).To(Equal(expected))
-
+			Expect(mergeDeployment(s, old, newDeployment, false, true)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(newDeployment).To(Equal(expected))
 		})
 
 		It("should not overwrite old .spec.replicas if the new one is nil", func() {
@@ -486,19 +480,13 @@ var _ = Describe("merger", func() {
 			newStatefulSet = old.DeepCopy()
 		})
 
-		It("should preserve kubectl.kubernetes.io/restartedAt pod template annotation if present", func() {
+		It("should preserve kubectl.kubernetes.io/restartedAt annotation in pod template annotation", func() {
 			old.Spec.Template.Annotations = map[string]string{"kubectl.kubernetes.io/restartedAt": "foo"}
 
-			newPreserveResources := newStatefulSet.DeepCopy()
-			newDontPreserveResources := newStatefulSet.DeepCopy()
 			expected := old.DeepCopy()
 
-			Expect(mergeStatefulSet(s, old, newPreserveResources, false, true)).NotTo(HaveOccurred(), "merge should be successful")
-			Expect(newPreserveResources).To(Equal(expected))
-
-			Expect(mergeStatefulSet(s, old, newDontPreserveResources, false, false)).NotTo(HaveOccurred(), "merge should be successful")
-			Expect(newDontPreserveResources).To(Equal(expected))
-
+			Expect(mergeStatefulSet(s, old, newStatefulSet, false, false)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(newStatefulSet).To(Equal(expected))
 		})
 
 		It("should not overwrite old .spec.replicas if the new one is nil", func() {
@@ -604,19 +592,13 @@ var _ = Describe("merger", func() {
 			newDaemonSet = old.DeepCopy()
 		})
 
-		It("should preserve kubectl.kubernetes.io/restartedAt pod template annotation if present", func() {
+		It("should preserve kubectl.kubernetes.io/restartedAt annotation in pod template", func() {
 			old.Spec.Template.Annotations = map[string]string{"kubectl.kubernetes.io/restartedAt": "foo"}
 
-			newPreserveResources := newDaemonSet.DeepCopy()
-			newDontPreserveResources := newDaemonSet.DeepCopy()
 			expected := old.DeepCopy()
 
-			Expect(mergeDaemonSet(s, old, newPreserveResources, true)).NotTo(HaveOccurred(), "merge should be successful")
-			Expect(newPreserveResources).To(Equal(expected))
-
-			Expect(mergeDaemonSet(s, old, newDontPreserveResources, false)).NotTo(HaveOccurred(), "merge should be successful")
-			Expect(newDontPreserveResources).To(Equal(expected))
-
+			Expect(mergeDaemonSet(s, old, newDaemonSet, true)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(newDaemonSet).To(Equal(expected))
 		})
 
 		It("should overwrite old .spec.containers[*].resources if preserveResources is false", func() {

@@ -146,10 +146,16 @@ func mergeDeployment(scheme *runtime.Scheme, oldObj, newObj runtime.Object, pres
 	return scheme.Convert(newDeployment, newObj, nil)
 }
 
+const restartedAtAnnotation = "kubectl.kubernetes.io/restartedAt"
+
 func mergePodTemplate(oldPod, newPod *corev1.PodTemplateSpec, preserveResources bool) {
-	// ref https://kubernetes.io/docs/reference/labels-annotations-taints/#kubectl-k8s-io-restart-at
-	if metav1.HasAnnotation(oldPod.ObjectMeta, "kubectl.kubernetes.io/restartedAt") {
-		metav1.SetMetaDataAnnotation(&newPod.ObjectMeta, "kubectl.kubernetes.io/restartedAt", oldPod.Annotations["kubectl.kubernetes.io/restartedAt"])
+	// Do not overwrite the "kubectl.kubernetes.io/restartedAt" annotation as it is used by
+	// the "kubectl rollout restart <RESOURCE>" command to trigger rollouts.
+	// Otherwise, the resource-manager would revert this annotation set by the kubectl command and
+	// this would revert the triggered rollout.
+	// Ref https://kubernetes.io/docs/reference/labels-annotations-taints/#kubectl-k8s-io-restart-at
+	if metav1.HasAnnotation(oldPod.ObjectMeta, restartedAtAnnotation) {
+		metav1.SetMetaDataAnnotation(&newPod.ObjectMeta, restartedAtAnnotation, oldPod.Annotations[restartedAtAnnotation])
 	}
 
 	if preserveResources {
