@@ -16,8 +16,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-// TypedCreateOrUpdate is like controllerutil.CreateOrUpdate. Initially if the object does not exist it gets created, otherwise it updates obj variable with the current state from the
-// API server. As next step the given mutate func gets applied. Finally the object gets created or updated. In contrast to
+// TypedCreateOrUpdate is like controllerutil.CreateOrUpdate, it retrieves the current state of the object from the
+// API server, applies the given mutate func and creates or updates it afterwards. In contrast to
 // controllerutil.CreateOrUpdate it tries to create a new typed object of obj's kind (using the provided scheme)
 // to make typed Get requests in order to leverage the client's cache.
 func TypedCreateOrUpdate(ctx context.Context, c client.Client, scheme *runtime.Scheme, obj *unstructured.Unstructured, alwaysUpdate bool, mutate func() error) (controllerutil.OperationResult, error) {
