@@ -119,6 +119,23 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				}).Should(Succeed())
 			}
 
+			By("Verify reported CIDRs")
+			Eventually(func(g Gomega) {
+				g.Expect(f.GardenClient.Client().Get(ctx, client.ObjectKeyFromObject(f.Shoot), f.Shoot)).To(Succeed())
+
+				networking := ptr.Deref(f.Shoot.Status.Networking, gardencorev1beta1.NetworkingStatus{})
+				if nodes := f.Shoot.Spec.Networking.Nodes; nodes != nil {
+					g.Expect(networking.Nodes).To(ConsistOf(*nodes))
+					g.Expect(networking.Egress).To(ConsistOf(*nodes))
+				}
+				if services := f.Shoot.Spec.Networking.Services; services != nil {
+					g.Expect(networking.Services).To(ConsistOf(*services))
+				}
+				if pods := f.Shoot.Spec.Networking.Pods; pods != nil {
+					g.Expect(networking.Pods).To(ConsistOf(*pods))
+				}
+			}).Should(Succeed())
+
 			By("Update Shoot")
 			ctx, cancel = context.WithTimeout(parentCtx, 20*time.Minute)
 			defer cancel()
