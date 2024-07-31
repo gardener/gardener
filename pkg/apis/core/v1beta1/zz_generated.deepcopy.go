@@ -3273,6 +3273,11 @@ func (in *NetworkingStatus) DeepCopyInto(out *NetworkingStatus) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.Egress != nil {
+		in, out := &in.Egress, &out.Egress
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 
