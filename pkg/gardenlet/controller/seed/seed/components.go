@@ -52,6 +52,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentcustomresources"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/metricsserver"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/nodeexporter"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
@@ -735,6 +736,7 @@ func (r *Reconciler) newKubeStateMetrics() (component.DeployWaiter, error) {
 		r.GardenNamespace,
 		r.SeedVersion,
 		v1beta1constants.PriorityClassNameSeedSystem600,
+		kubestatemetrics.SuffixSeed,
 	)
 }
 

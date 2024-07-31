@@ -32,6 +32,11 @@ const (
 
 	port            = 8080
 	portNameMetrics = "metrics"
+
+	// SuffixSeed is the suffix for seed kube-state-metrics resources.
+	SuffixSeed = "-seed"
+	// SuffixRuntime is the suffix for garden-runtime kube-state-metrics resources.
+	SuffixRuntime = "-runtime"
 )
 
 // New creates a new instance of DeployWaiter for the kube-state-metrics.
@@ -74,6 +79,8 @@ type Values struct {
 	Replicas int32
 	// IsWorkerless specifies whether the cluster has worker nodes.
 	IsWorkerless bool
+	// NameSuffix is attached to the deployment name and related resources.
+	NameSuffix string
 }
 
 func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
@@ -81,6 +88,13 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 		genericTokenKubeconfigSecretName string
 		shootAccessSecret                *gardenerutils.AccessSecret
 	)
+
+	// TODO(chrkl): Remove after release v1.103
+	if k.values.ClusterType == component.ClusterTypeSeed && k.values.NameSuffix != "" {
+		if err := component.DestroyResourceConfigs(ctx, k.client, k.namespace, k.values.ClusterType, managedResourceName, k.getResourceConfigs("", nil)); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+	}
 
 	if k.values.ClusterType == component.ClusterTypeShoot {
 		genericTokenKubeconfigSecret, found := k.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
@@ -137,7 +151,7 @@ func (k *kubeStateMetrics) WaitCleanup(ctx context.Context) error {
 
 func (k *kubeStateMetrics) managedResourceName() string {
 	if k.values.ClusterType == component.ClusterTypeSeed {
-		return managedResourceName
+		return managedResourceName + k.values.NameSuffix
 	}
-	return managedResourceNameShoot
+	return managedResourceNameShoot + k.values.NameSuffix
 }

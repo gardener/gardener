@@ -66,6 +66,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter"
 	gardenblackboxexporter "github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter/garden"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/gardenermetricsexporter"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
 	gardenprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 	longtermprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/longterm"
@@ -758,6 +759,7 @@ func (r *Reconciler) newKubeStateMetrics() (component.DeployWaiter, error) {
 		r.GardenNamespace,
 		r.RuntimeVersion,
 		v1beta1constants.PriorityClassNameGardenSystem100,
+		kubestatemetrics.SuffixRuntime,
 	)
 }
 
