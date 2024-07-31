@@ -43,13 +43,6 @@ const (
 	// alpha: v1.63.0
 	IPv6SingleStack featuregate.Feature = "IPv6SingleStack"
 
-	// MutableShootSpecNetworkingNodes allows updating the field `spec.networking.nodes`.
-	// owner: @axel7born @ScheererJ @DockToFuture @kon-angelo
-	// alpha: v1.64.0
-	// beta: v1.96.0
-	// GA: v1.97.0
-	MutableShootSpecNetworkingNodes featuregate.Feature = "MutableShootSpecNetworkingNodes"
-
 	// ShootForceDeletion allows force deletion of Shoots.
 	// See https://github.com/gardener/gardener/blob/master/docs/usage/shoot_operations.md#shoot-force-deletion for more details.
 	// owner: @acumino @ary1992 @shafeeqes
@@ -120,18 +113,17 @@ var DefaultFeatureGate = utilfeature.DefaultMutableFeatureGate
 
 // AllFeatureGates is the list of all feature gates.
 var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
-	HVPA:                            {Default: false, PreRelease: featuregate.Alpha},
-	HVPAForShootedSeed:              {Default: false, PreRelease: featuregate.Alpha},
-	VPAForETCD:                      {Default: true, PreRelease: featuregate.Beta},
-	DefaultSeccompProfile:           {Default: false, PreRelease: featuregate.Alpha},
-	IPv6SingleStack:                 {Default: false, PreRelease: featuregate.Alpha},
-	MutableShootSpecNetworkingNodes: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
-	ShootManagedIssuer:              {Default: false, PreRelease: featuregate.Alpha},
-	ShootForceDeletion:              {Default: true, PreRelease: featuregate.Beta},
-	UseNamespacedCloudProfile:       {Default: false, PreRelease: featuregate.Alpha},
-	VPAAndHPAForAPIServer:           {Default: true, PreRelease: featuregate.Beta},
-	ShootCredentialsBinding:         {Default: false, PreRelease: featuregate.Alpha},
-	NewWorkerPoolHash:               {Default: false, PreRelease: featuregate.Alpha},
+	HVPA:                      {Default: false, PreRelease: featuregate.Alpha},
+	HVPAForShootedSeed:        {Default: false, PreRelease: featuregate.Alpha},
+	VPAForETCD:                {Default: true, PreRelease: featuregate.Beta},
+	DefaultSeccompProfile:     {Default: false, PreRelease: featuregate.Alpha},
+	IPv6SingleStack:           {Default: false, PreRelease: featuregate.Alpha},
+	ShootManagedIssuer:        {Default: false, PreRelease: featuregate.Alpha},
+	ShootForceDeletion:        {Default: true, PreRelease: featuregate.Beta},
+	UseNamespacedCloudProfile: {Default: false, PreRelease: featuregate.Alpha},
+	VPAAndHPAForAPIServer:     {Default: true, PreRelease: featuregate.Beta},
+	ShootCredentialsBinding:   {Default: false, PreRelease: featuregate.Alpha},
+	NewWorkerPoolHash:         {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.
