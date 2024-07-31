@@ -96,14 +96,19 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure 
 
 	patch := client.MergeFrom(infrastructure.DeepCopy())
 	infrastructure.Status.Networking = &extensionsv1alpha1.InfrastructureStatusNetworking{}
-	if cluster.Shoot.Spec.Networking.Nodes != nil {
-		infrastructure.Status.Networking.Nodes = []string{*cluster.Shoot.Spec.Networking.Nodes}
+	if nodes := cluster.Shoot.Spec.Networking.Nodes; nodes != nil {
+		infrastructure.Status.Networking.Nodes = []string{*nodes}
+		// The egress CIDRs of local nodes are hard to define and depends on the traffic destination.
+		// Traffic to the seed cluster will have nodes IPs as source IPs (i.e., the machine pod IPs).
+		// Traffic to other containers in the kind network or the outside world will be NATed.
+		// For now, we only report the nodes CIDR here to test the feature that propagates it back to the shoot status.
+		infrastructure.Status.EgressCIDRs = []string{*nodes}
 	}
-	if cluster.Shoot.Spec.Networking.Pods != nil {
-		infrastructure.Status.Networking.Pods = []string{*cluster.Shoot.Spec.Networking.Pods}
+	if pods := cluster.Shoot.Spec.Networking.Pods; pods != nil {
+		infrastructure.Status.Networking.Pods = []string{*pods}
 	}
-	if cluster.Shoot.Spec.Networking.Services != nil {
-		infrastructure.Status.Networking.Services = []string{*cluster.Shoot.Spec.Networking.Services}
+	if services := cluster.Shoot.Spec.Networking.Services; services != nil {
+		infrastructure.Status.Networking.Services = []string{*services}
 	}
 	return a.client.Status().Patch(ctx, infrastructure, patch)
 }
