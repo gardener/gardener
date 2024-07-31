@@ -14,6 +14,15 @@ spec:
 # seedSelector:
 #   matchLabels:
 #     foo: bar
+# Optional bastion section defining bastions machine type and image properties.
+# If not provided these properties depend on the implicit ordering of the CloudProfile.
+# Because in this case the provider extension will search for the first found supported image and usable machine type.
+# bastion:
+#   machineImage:
+#     name: gardenlinux
+#     version: 1443.3.0
+#   machineType:
+#     name: n1-standard-2
   kubernetes:
     versions:
     - version: 1.28.1
