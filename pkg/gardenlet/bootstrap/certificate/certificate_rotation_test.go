@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/csr"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
@@ -137,7 +138,7 @@ var _ = Describe("Certificates", func() {
 		})
 
 		It("should not return an error", func() {
-			defer test.WithVar(&DigestedName, func(any, *pkix.Name, []certificatesv1.KeyUsage) (string, error) {
+			defer test.WithVar(&csr.DigestedName, func(any, *pkix.Name, []certificatesv1.KeyUsage, string) (string, error) {
 				return approvedCSR.Name, nil
 			})()
 
@@ -168,7 +169,7 @@ var _ = Describe("Certificates", func() {
 		})
 
 		It("should return an error - CSR is denied", func() {
-			defer test.WithVar(&DigestedName, func(any, *pkix.Name, []certificatesv1.KeyUsage) (string, error) {
+			defer test.WithVar(&csr.DigestedName, func(any, *pkix.Name, []certificatesv1.KeyUsage, string) (string, error) {
 				return deniedCSR.Name, nil
 			})()
 
@@ -183,7 +184,7 @@ var _ = Describe("Certificates", func() {
 		})
 
 		It("should return an error - CSR is failed", func() {
-			defer test.WithVar(&DigestedName, func(any, *pkix.Name, []certificatesv1.KeyUsage) (string, error) {
+			defer test.WithVar(&csr.DigestedName, func(any, *pkix.Name, []certificatesv1.KeyUsage, string) (string, error) {
 				return failedCSR.Name, nil
 			})()
 
@@ -198,7 +199,7 @@ var _ = Describe("Certificates", func() {
 		})
 
 		It("should return an error - the CN of the x509 cert to be rotated is not set", func() {
-			defer test.WithVar(&DigestedName, func(any, *pkix.Name, []certificatesv1.KeyUsage) (string, error) {
+			defer test.WithVar(&csr.DigestedName, func(any, *pkix.Name, []certificatesv1.KeyUsage, string) (string, error) {
 				return deniedCSR.Name, nil
 			})()
 

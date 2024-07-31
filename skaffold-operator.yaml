@@ -373,6 +373,7 @@ build:
             - pkg/resourcemanager/webhook/extensionvalidation
             - pkg/resourcemanager/webhook/highavailabilityconfig
             - pkg/resourcemanager/webhook/kubernetesservicehost
+            - pkg/resourcemanager/webhook/nodeagentauthorizer
             - pkg/resourcemanager/webhook/podschedulername
             - pkg/resourcemanager/webhook/podtopologyspreadconstraints
             - pkg/resourcemanager/webhook/projectedtokenmount
@@ -396,6 +397,7 @@ build:
             - pkg/utils/validation/kubernetes/core
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
+            - pkg/utils/webhook/authorizer
             - VERSION
         ldflags:
           - '{{.LD_FLAGS}}'
@@ -863,6 +865,7 @@ build:
             - pkg/utils/timewindow
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
+            - pkg/utils/webhook/authorizer
             - VERSION
         ldflags:
           - '{{.LD_FLAGS}}'
@@ -1040,6 +1043,7 @@ build:
             - pkg/controllerutils/predicate
             - pkg/controllerutils/reconciler
             - pkg/extensions
+            - pkg/features
             - pkg/gardenlet/apis/config
             - pkg/gardenlet/apis/config/v1alpha1
             - pkg/healthz
