@@ -36,6 +36,7 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	internalclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned/fake"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	securityclientset "github.com/gardener/gardener/pkg/client/security/clientset/versioned/fake"
 	gardensecurityinformers "github.com/gardener/gardener/pkg/client/security/informers/externalversions"
 	seedmanagementinformers "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -63,6 +64,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			gardenCoreClient              *internalclientset.Clientset
 			gardenCoreInformerFactory     gardencoreinformers.SharedInformerFactory
 			seedManagementInformerFactory seedmanagementinformers.SharedInformerFactory
+			gardenSecurityClient          *securityclientset.Clientset
 			gardenSecurityInformerFactory gardensecurityinformers.SharedInformerFactory
 			fakeAuthorizer                fakeAuthorizerType
 			scheme                        *runtime.Scheme
@@ -79,6 +81,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			credentialsBindingName     = "credentials-binding-1"
 			quotaName                  = "quota-1"
 			secretName                 = "secret-1"
+			workloadIdentityName       = "workloadIdentity-1"
 			configMapName              = "config-map-1"
 			controllerDeploymentName   = "controller-deployment-1"
 			controllerRegistrationName = "controller-reg-1"
@@ -94,6 +97,13 @@ var _ = Describe("resourcereferencemanager", func() {
 			secret = corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       secretName,
+					Namespace:  namespace,
+					Finalizers: finalizers,
+				},
+			}
+			workloadIdentity = securityv1alpha1.WorkloadIdentity{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       workloadIdentityName,
 					Namespace:  namespace,
 					Finalizers: finalizers,
 				},
@@ -184,15 +194,16 @@ var _ = Describe("resourcereferencemanager", func() {
 					},
 				},
 			}
-			securityCredentialsBinding = security.CredentialsBinding{
+			securityCredentialsBindingRefSecret = security.CredentialsBinding{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       credentialsBindingName,
 					Namespace:  namespace,
 					Finalizers: finalizers,
 				},
 				CredentialsRef: corev1.ObjectReference{
-					Name:      secretName,
-					Namespace: namespace,
+					APIVersion: corev1.SchemeGroupVersion.String(),
+					Name:       secretName,
+					Namespace:  namespace,
 				},
 				Quotas: []corev1.ObjectReference{
 					{
@@ -201,15 +212,35 @@ var _ = Describe("resourcereferencemanager", func() {
 					},
 				},
 			}
-			credentialsBinding = securityv1alpha1.CredentialsBinding{
+			credentialsBindingRefSecret = securityv1alpha1.CredentialsBinding{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       credentialsBindingName,
 					Namespace:  namespace,
 					Finalizers: finalizers,
 				},
 				CredentialsRef: corev1.ObjectReference{
-					Name:      secretName,
-					Namespace: namespace,
+					APIVersion: corev1.SchemeGroupVersion.String(),
+					Name:       secretName,
+					Namespace:  namespace,
+				},
+				Quotas: []corev1.ObjectReference{
+					{
+						Name:      quotaName,
+						Namespace: namespace,
+					},
+				},
+			}
+			securityCredentialsBindingRefWorkloadIdentity = security.CredentialsBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       credentialsBindingName,
+					Namespace:  namespace,
+					Finalizers: finalizers,
+				},
+				CredentialsRef: corev1.ObjectReference{
+					Kind:       "WorkloadIdentity",
+					APIVersion: securityv1alpha1.SchemeGroupVersion.String(),
+					Name:       workloadIdentityName,
+					Namespace:  namespace,
 				},
 				Quotas: []corev1.ObjectReference{
 					{
@@ -334,6 +365,21 @@ var _ = Describe("resourcereferencemanager", func() {
 					},
 				},
 			}
+
+			discoveryGardenSecurityClientResources = []*metav1.APIResourceList{
+				{
+					GroupVersion: "v1alpha1",
+					APIResources: []metav1.APIResource{
+						{
+							Name:       "workloadidentities",
+							Namespaced: false,
+							Group:      "security.gardener.cloud",
+							Version:    "v1alpha1",
+							Kind:       "WorkloadIdentity",
+						},
+					},
+				},
+			}
 		)
 
 		BeforeEach(func() {
@@ -346,6 +392,10 @@ var _ = Describe("resourcereferencemanager", func() {
 			kubeClient = fake.NewSimpleClientset()
 			kubeClient.Fake = testing.Fake{Resources: discoveryClientResources}
 			admissionHandler.SetKubeClientset(kubeClient)
+
+			gardenSecurityClient = securityclientset.NewSimpleClientset()
+			gardenSecurityClient.Fake = testing.Fake{Resources: discoveryGardenSecurityClientResources}
+			admissionHandler.SetSecurityClientSet(gardenSecurityClient)
 
 			gardenCoreClient = internalclientset.NewSimpleClientset()
 			gardenCoreClient.Fake = testing.Fake{Resources: discoveryGardenClientResources}
@@ -368,7 +418,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			dynamicClient = dynamicfake.NewSimpleDynamicClient(scheme, &secret)
 			admissionHandler.SetDynamicClient(dynamicClient)
 
-			MissingSecretWait = 0
+			MissingResourceWait = 0
 
 			coreProject = projectBase
 			coreShoot = shootBase
@@ -587,13 +637,13 @@ var _ = Describe("resourcereferencemanager", func() {
 			})
 		})
 
-		Context("tests for CredentialsBinding objects", func() {
+		Context("tests for CredentialsBinding objects referencing Secret", func() {
 			It("should accept because all referenced objects have been found (secret found in cache)", func() {
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
 
 				user := &user.DefaultInfo{Name: allowedUser}
-				attrs := admission.NewAttributesRecord(&securityCredentialsBinding, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBinding.Namespace, securityCredentialsBinding.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefSecret, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefSecret.Namespace, securityCredentialsBindingRefSecret.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -612,7 +662,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				})
 
 				user := &user.DefaultInfo{Name: allowedUser}
-				attrs := admission.NewAttributesRecord(&securityCredentialsBinding, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBinding.Namespace, securityCredentialsBinding.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefSecret, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefSecret.Namespace, securityCredentialsBindingRefSecret.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -626,7 +676,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				})
 
 				user := &user.DefaultInfo{Name: allowedUser}
-				attrs := admission.NewAttributesRecord(&securityCredentialsBinding, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBinding.Namespace, securityCredentialsBinding.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefSecret, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefSecret.Namespace, securityCredentialsBindingRefSecret.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -638,7 +688,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
 
 				user := &user.DefaultInfo{Name: "disallowed-user"}
-				attrs := admission.NewAttributesRecord(&securityCredentialsBinding, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBinding.Namespace, securityCredentialsBinding.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefSecret, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefSecret.Namespace, securityCredentialsBindingRefSecret.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -649,7 +699,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
 
 				user := &user.DefaultInfo{Name: allowedUser}
-				attrs := admission.NewAttributesRecord(&securityCredentialsBinding, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBinding.Namespace, securityCredentialsBinding.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefSecret, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefSecret.Namespace, securityCredentialsBindingRefSecret.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -661,7 +711,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
 
 				user := &user.DefaultInfo{Name: "disallowed-user"}
-				attrs := admission.NewAttributesRecord(&securityCredentialsBinding, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBinding.Namespace, securityCredentialsBinding.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefSecret, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefSecret.Namespace, securityCredentialsBindingRefSecret.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -687,16 +737,16 @@ var _ = Describe("resourcereferencemanager", func() {
 					Name:      quotaName2,
 					Namespace: namespace,
 				}
-				quotaRefList := securityCredentialsBinding.Quotas
+				quotaRefList := securityCredentialsBindingRefSecret.Quotas
 				quotaRefList = append(quotaRefList, quota2Ref)
-				securityCredentialsBinding.Quotas = quotaRefList
+				securityCredentialsBindingRefSecret.Quotas = quotaRefList
 
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota2)).To(Succeed())
 
 				user := &user.DefaultInfo{Name: allowedUser}
-				attrs := admission.NewAttributesRecord(&securityCredentialsBinding, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBinding.Namespace, securityCredentialsBinding.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefSecret, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefSecret.Namespace, securityCredentialsBindingRefSecret.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -722,16 +772,168 @@ var _ = Describe("resourcereferencemanager", func() {
 					Name:      quotaName2,
 					Namespace: namespace,
 				}
-				quotaRefList := securityCredentialsBinding.Quotas
+				quotaRefList := securityCredentialsBindingRefSecret.Quotas
 				quotaRefList = append(quotaRefList, quota2Ref)
-				securityCredentialsBinding.Quotas = quotaRefList
+				securityCredentialsBindingRefSecret.Quotas = quotaRefList
 
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota2)).To(Succeed())
 
 				user := &user.DefaultInfo{Name: allowedUser}
-				attrs := admission.NewAttributesRecord(&securityCredentialsBinding, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBinding.Namespace, securityCredentialsBinding.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefSecret, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefSecret.Namespace, securityCredentialsBindingRefSecret.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+			})
+		})
+
+		Context("tests for CredentialsBinding objects referencing WorkloadIdentity", func() {
+			It("should accept because all referenced objects have been found (workloadidentity found in cache)", func() {
+				Expect(gardenSecurityInformerFactory.Security().V1alpha1().WorkloadIdentities().Informer().GetStore().Add(&workloadIdentity)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
+
+				user := &user.DefaultInfo{Name: allowedUser}
+				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefWorkloadIdentity, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefWorkloadIdentity.Namespace, securityCredentialsBindingRefWorkloadIdentity.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should accept because all referenced objects have been found (workloadidentity looked up live)", func() {
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
+				gardenSecurityClient.AddReactor("get", "workloadidentities", func(_ testing.Action) (bool, runtime.Object, error) {
+					return true, &securityv1alpha1.WorkloadIdentity{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: workloadIdentity.Namespace,
+							Name:      workloadIdentity.Name,
+						},
+					}, nil
+				})
+
+				user := &user.DefaultInfo{Name: allowedUser}
+				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefWorkloadIdentity, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefWorkloadIdentity.Namespace, securityCredentialsBindingRefWorkloadIdentity.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should reject because the referenced workload identity does not exist", func() {
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
+				gardenSecurityClient.AddReactor("get", "workloadidentities", func(_ testing.Action) (bool, runtime.Object, error) {
+					return true, nil, errors.New("nope, out of luck")
+				})
+
+				user := &user.DefaultInfo{Name: allowedUser}
+				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefWorkloadIdentity, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefWorkloadIdentity.Namespace, securityCredentialsBindingRefWorkloadIdentity.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should reject because the user is not allowed to read the referenced workload identity", func() {
+				Expect(gardenSecurityInformerFactory.Security().V1alpha1().WorkloadIdentities().Informer().GetStore().Add(&workloadIdentity)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
+
+				user := &user.DefaultInfo{Name: "disallowed-user"}
+				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefWorkloadIdentity, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefWorkloadIdentity.Namespace, securityCredentialsBindingRefWorkloadIdentity.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should reject because one of the referenced quotas does not exist", func() {
+				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
+
+				user := &user.DefaultInfo{Name: allowedUser}
+				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefWorkloadIdentity, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefWorkloadIdentity.Namespace, securityCredentialsBindingRefWorkloadIdentity.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should reject because the user is not allowed to read the referenced quota", func() {
+				Expect(gardenSecurityInformerFactory.Security().V1alpha1().WorkloadIdentities().Informer().GetStore().Add(&workloadIdentity)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
+
+				user := &user.DefaultInfo{Name: "disallowed-user"}
+				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefWorkloadIdentity, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefWorkloadIdentity.Namespace, securityCredentialsBindingRefWorkloadIdentity.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should pass because exact one quota per scope is referenced", func() {
+				quotaName2 := "quota-2"
+				quota2 := gardencorev1beta1.Quota{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      quotaName2,
+						Namespace: namespace,
+					},
+					Spec: gardencorev1beta1.QuotaSpec{
+						Scope: corev1.ObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+						},
+					},
+				}
+
+				quota2Ref := corev1.ObjectReference{
+					Name:      quotaName2,
+					Namespace: namespace,
+				}
+				quotaRefList := securityCredentialsBindingRefWorkloadIdentity.Quotas
+				quotaRefList = append(quotaRefList, quota2Ref)
+				securityCredentialsBindingRefWorkloadIdentity.Quotas = quotaRefList
+
+				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota2)).To(Succeed())
+
+				user := &user.DefaultInfo{Name: allowedUser}
+				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefWorkloadIdentity, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefWorkloadIdentity.Namespace, securityCredentialsBindingRefWorkloadIdentity.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should reject because more than one quota of the same scope is referenced", func() {
+				quotaName2 := "quota-2"
+				quota2 := gardencorev1beta1.Quota{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      quotaName2,
+						Namespace: namespace,
+					},
+					Spec: gardencorev1beta1.QuotaSpec{
+						Scope: corev1.ObjectReference{
+							APIVersion: "core.gardener.cloud/v1beta1",
+							Kind:       "Project",
+						},
+					},
+				}
+
+				quota2Ref := corev1.ObjectReference{
+					Name:      quotaName2,
+					Namespace: namespace,
+				}
+				quotaRefList := securityCredentialsBindingRefWorkloadIdentity.Quotas
+				quotaRefList = append(quotaRefList, quota2Ref)
+				securityCredentialsBindingRefWorkloadIdentity.Quotas = quotaRefList
+
+				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota2)).To(Succeed())
+
+				user := &user.DefaultInfo{Name: allowedUser}
+				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefWorkloadIdentity, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefWorkloadIdentity.Namespace, securityCredentialsBindingRefWorkloadIdentity.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
@@ -744,7 +946,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-				Expect(gardenSecurityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+				Expect(gardenSecurityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBindingRefSecret)).To(Succeed())
 				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
 
 				user := &user.DefaultInfo{Name: allowedUser}
@@ -762,7 +964,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-				Expect(gardenSecurityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+				Expect(gardenSecurityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBindingRefSecret)).To(Succeed())
 				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
 
 				user := &user.DefaultInfo{Name: allowedUser}
@@ -792,7 +994,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			It("should reject because the referenced cloud profile does not exist (create)", func() {
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-				Expect(gardenSecurityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+				Expect(gardenSecurityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBindingRefSecret)).To(Succeed())
 				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
 
 				attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
@@ -918,7 +1120,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-				Expect(gardenSecurityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+				Expect(gardenSecurityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBindingRefSecret)).To(Succeed())
 				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
 
 				user := &user.DefaultInfo{Name: "disallowed-user"}
@@ -978,7 +1180,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-				Expect(gardenSecurityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+				Expect(gardenSecurityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBindingRefSecret)).To(Succeed())
 				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
 
 				user := &user.DefaultInfo{Name: allowedUser}
@@ -993,7 +1195,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-				Expect(gardenSecurityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+				Expect(gardenSecurityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBindingRefSecret)).To(Succeed())
 				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
 
 				coreShoot.Spec.DNS = &core.DNS{
@@ -1073,7 +1275,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-				Expect(gardenSecurityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+				Expect(gardenSecurityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBindingRefSecret)).To(Succeed())
 				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
 
 				coreShoot.Spec.DNS = &core.DNS{
@@ -2019,6 +2221,10 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			gardenSecurityInformerFactory := gardensecurityinformers.NewSharedInformerFactory(nil, 0)
 			rm.SetSecurityInformerFactory(gardenSecurityInformerFactory)
+
+			securityGardenClient := &securityclientset.Clientset{}
+			rm.SetSecurityClientSet(securityGardenClient)
+
 			Expect(rm.ValidateInitialization()).To(Succeed())
 		})
 	})

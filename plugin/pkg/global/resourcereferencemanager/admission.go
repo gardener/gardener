@@ -38,12 +38,14 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/security"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	"github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
+	versionedsecurity "github.com/gardener/gardener/pkg/client/security/clientset/versioned"
 	gardensecurityinformers "github.com/gardener/gardener/pkg/client/security/informers/externalversions"
 	securityv1alpha1listers "github.com/gardener/gardener/pkg/client/security/listers/security/v1alpha1"
 	seedmanagementinformers "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions"
@@ -63,6 +65,7 @@ func Register(plugins *admission.Plugins) {
 type ReferenceManager struct {
 	*admission.Handler
 	gardenCoreClient             versioned.Interface
+	gardenSecurityClient         versionedsecurity.Interface
 	kubeClient                   kubernetes.Interface
 	dynamicClient                dynamic.Interface
 	authorizer                   authorizer.Authorizer
@@ -75,6 +78,7 @@ type ReferenceManager struct {
 	shootLister                  gardencorev1beta1listers.ShootLister
 	secretBindingLister          gardencorev1beta1listers.SecretBindingLister
 	credentialsBindingLister     securityv1alpha1listers.CredentialsBindingLister
+	workloadIdentityLister       securityv1alpha1listers.WorkloadIdentityLister
 	projectLister                gardencorev1beta1listers.ProjectLister
 	quotaLister                  gardencorev1beta1listers.QuotaLister
 	controllerDeploymentLister   gardencorev1beta1listers.ControllerDeploymentLister
@@ -86,18 +90,20 @@ type ReferenceManager struct {
 
 var (
 	_ = admissioninitializer.WantsCoreInformerFactory(&ReferenceManager{})
+	_ = admissioninitializer.WantsSecurityInformerFactory(&ReferenceManager{})
 	_ = admissioninitializer.WantsSeedManagementInformerFactory(&ReferenceManager{})
 	_ = admissioninitializer.WantsKubeInformerFactory(&ReferenceManager{})
 	_ = admissioninitializer.WantsCoreClientSet(&ReferenceManager{})
+	_ = admissioninitializer.WantsSecurityClientSet(&ReferenceManager{})
 	_ = admissioninitializer.WantsKubeClientset(&ReferenceManager{})
 	_ = admissioninitializer.WantsDynamicClient(&ReferenceManager{})
 	_ = admissioninitializer.WantsAuthorizer(&ReferenceManager{})
 
 	readyFuncs []admission.ReadyFunc
 
-	// MissingSecretWait is the time how long to wait for a missing secret before re-checking the cache
+	// MissingResourceWait is the time how long to wait for a missing resource before re-checking the cache
 	// (and then doing a live lookup).
-	MissingSecretWait = 50 * time.Millisecond
+	MissingResourceWait = 50 * time.Millisecond
 )
 
 // New creates a new ReferenceManager admission plugin.
@@ -188,14 +194,25 @@ func (r *ReferenceManager) SetKubeInformerFactory(f kubeinformers.SharedInformer
 // SetSecurityInformerFactory gets Lister from SharedInformerFactory.
 func (r *ReferenceManager) SetSecurityInformerFactory(f gardensecurityinformers.SharedInformerFactory) {
 	credentialsBindingInformer := f.Security().V1alpha1().CredentialsBindings()
+	workloadIdentityInformer := f.Security().V1alpha1().WorkloadIdentities()
 	r.credentialsBindingLister = credentialsBindingInformer.Lister()
+	r.workloadIdentityLister = workloadIdentityInformer.Lister()
 
-	readyFuncs = append(readyFuncs, credentialsBindingInformer.Informer().HasSynced)
+	readyFuncs = append(
+		readyFuncs,
+		credentialsBindingInformer.Informer().HasSynced,
+		workloadIdentityInformer.Informer().HasSynced,
+	)
 }
 
 // SetCoreClientSet sets the Gardener client.
 func (r *ReferenceManager) SetCoreClientSet(c versioned.Interface) {
 	r.gardenCoreClient = c
+}
+
+// SetSecurityClientSet sets the Gardener client.
+func (r *ReferenceManager) SetSecurityClientSet(c versionedsecurity.Interface) {
+	r.gardenSecurityClient = c
 }
 
 // SetKubeClientset sets the Kubernetes client.
@@ -240,6 +257,9 @@ func (r *ReferenceManager) ValidateInitialization() error {
 	if r.credentialsBindingLister == nil {
 		return errors.New("missing credentials binding lister")
 	}
+	if r.workloadIdentityLister == nil {
+		return errors.New("missing workload identities lister")
+	}
 	if r.quotaLister == nil {
 		return errors.New("missing quota lister")
 	}
@@ -251,6 +271,9 @@ func (r *ReferenceManager) ValidateInitialization() error {
 	}
 	if r.gardenCoreClient == nil {
 		return errors.New("missing gardener core client")
+	}
+	if r.gardenSecurityClient == nil {
+		return errors.New("missing gardener security client")
 	}
 	if r.managedSeedLister == nil {
 		return errors.New("missing managed seed lister")
@@ -628,9 +651,13 @@ func (r *ReferenceManager) ensureProjectNamespace(project *core.Project) error {
 
 func (r *ReferenceManager) ensureBindingReferences(ctx context.Context, attributes admission.Attributes, binding runtime.Object) error {
 	var (
-		quotas          []corev1.ObjectReference
-		secretNamespace string
-		secretName      string
+		quotas                []corev1.ObjectReference
+		credentialsAPIGroup   string
+		credentialsAPIVersion string
+		credentialsResource   string
+		credentialsNamespace  string
+		credentialsName       string
+		credentialsKind       string
 	)
 	switch attributes.GetKind().GroupKind() {
 	case core.Kind("SecretBinding"):
@@ -639,39 +666,64 @@ func (r *ReferenceManager) ensureBindingReferences(ctx context.Context, attribut
 			return errors.New("failed to convert binding to SecretBinding")
 		}
 		quotas = b.Quotas
-		secretNamespace = b.SecretRef.Namespace
-		secretName = b.SecretRef.Name
+		credentialsAPIGroup = corev1.SchemeGroupVersion.Group
+		credentialsAPIVersion = corev1.SchemeGroupVersion.Version
+		credentialsResource = "secrets"
+		credentialsNamespace = b.SecretRef.Namespace
+		credentialsName = b.SecretRef.Name
+		credentialsKind = "Secret"
 	case security.Kind("CredentialsBinding"):
-		// TODO(dimityrmirchev): This code should eventually handle
-		// references to Workload Identity
 		b, ok := binding.(*security.CredentialsBinding)
 		if !ok {
 			return errors.New("failed to convert binding to CredentialsBinding")
 		}
 		quotas = b.Quotas
-		secretNamespace = b.CredentialsRef.Namespace
-		secretName = b.CredentialsRef.Name
+		if b.CredentialsRef.APIVersion == corev1.SchemeGroupVersion.String() {
+			credentialsAPIGroup = corev1.SchemeGroupVersion.Group
+			credentialsAPIVersion = corev1.SchemeGroupVersion.Version
+			credentialsResource = "secrets"
+			credentialsKind = "Secret"
+		} else if b.CredentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() {
+			credentialsAPIGroup = securityv1alpha1.SchemeGroupVersion.Group
+			credentialsAPIVersion = securityv1alpha1.SchemeGroupVersion.Version
+			credentialsResource = "workloadidentities"
+			credentialsKind = "WorkloadIdentity"
+		} else {
+			return errors.New("unknown credentials ref: CredentialsBinding is referencing neither a Secret nor a WorkloadIdentity")
+		}
+		credentialsNamespace = b.CredentialsRef.Namespace
+		credentialsName = b.CredentialsRef.Name
 	default:
 		return fmt.Errorf("%s is neither of kind SecretBinding nor CredentialsBinding", attributes.GetKind().GroupKind())
 	}
 	readAttributes := authorizer.AttributesRecord{
 		User:            attributes.GetUserInfo(),
 		Verb:            "get",
-		APIGroup:        "",
-		APIVersion:      "v1",
-		Resource:        "secrets",
-		Namespace:       secretNamespace,
-		Name:            secretName,
+		APIGroup:        credentialsAPIGroup,
+		APIVersion:      credentialsAPIVersion,
+		Resource:        credentialsResource,
+		Namespace:       credentialsNamespace,
+		Name:            credentialsName,
 		ResourceRequest: true,
 	}
 	if decision, _, _ := r.authorizer.Authorize(ctx, readAttributes); decision != authorizer.DecisionAllow {
-		return fmt.Errorf("%s cannot reference a secret you are not allowed to read", binding.GetObjectKind().GroupVersionKind().Kind)
+		return fmt.Errorf("%s cannot reference a %s you are not allowed to read", credentialsKind, binding.GetObjectKind().GroupVersionKind().Kind)
 	}
 
-	if err := r.lookupSecret(ctx, secretNamespace, secretName); err != nil {
-		return err
+	switch credentialsKind {
+	case "Secret":
+		if err := r.lookupSecret(ctx, credentialsNamespace, credentialsName); err != nil {
+			return err
+		}
+	case "WorkloadIdentity":
+		if err := r.lookupWorkloadIdentity(ctx, credentialsNamespace, credentialsName); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("unknown credentials kind: %s", credentialsKind)
 	}
 
+	// TODO(dimityrmirchev): Extend quota scope to allow workload identities
 	var (
 		secretQuotaCount  int
 		projectQuotaCount int
@@ -877,7 +929,7 @@ func (r *ReferenceManager) validateBackupBucketDeletion(ctx context.Context, a a
 type getFn func(context.Context, string, string) (runtime.Object, error)
 
 func lookupResource(ctx context.Context, namespace, name string, get getFn, fallbackGet getFn) error {
-	// First try to detect the secret in the cache.
+	// First try to detect the resource in the cache.
 	var err error
 
 	_, err = get(ctx, namespace, name)
@@ -888,10 +940,10 @@ func lookupResource(ctx context.Context, namespace, name string, get getFn, fall
 		return err
 	}
 
-	// Second try to detect the secret in the cache after the first try failed.
-	// Give the cache time to observe the secret before rejecting a create.
-	// This helps when creating a secret and immediately creating a secretbinding referencing it.
-	time.Sleep(MissingSecretWait)
+	// Second try to detect the resource in the cache after the first try failed.
+	// Give the cache time to observe the resource before rejecting a create.
+	// This helps when creating a resource and immediately creating a binding referencing it.
+	time.Sleep(MissingResourceWait)
 	_, err = get(ctx, namespace, name)
 
 	switch {
@@ -909,6 +961,18 @@ func lookupResource(ctx context.Context, namespace, name string, get getFn, fall
 	}
 
 	return nil
+}
+
+func (r *ReferenceManager) lookupWorkloadIdentity(ctx context.Context, namespace, name string) error {
+	workloadIdentityFromLister := func(_ context.Context, namespace, name string) (runtime.Object, error) {
+		return r.workloadIdentityLister.WorkloadIdentities(namespace).Get(name)
+	}
+
+	workloadIdentityFromClient := func(ctx context.Context, namespace, name string) (runtime.Object, error) {
+		return r.gardenSecurityClient.SecurityV1alpha1().WorkloadIdentities(namespace).Get(ctx, name, kubernetesclient.DefaultGetOptions())
+	}
+
+	return lookupResource(ctx, namespace, name, workloadIdentityFromLister, workloadIdentityFromClient)
 }
 
 func (r *ReferenceManager) lookupSecret(ctx context.Context, namespace, name string) error {
