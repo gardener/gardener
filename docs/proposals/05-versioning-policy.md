@@ -1,6 +1,6 @@
 # Gardener Versioning Policy
 
-Please refer to [this document](../usage/shoot_versions.md) for the documentation of the implementation of this GEP.
+Please refer to [this document](../usage/shoot_updates_and_upgrades/shoot_versions.md) for the documentation of the implementation of this GEP.
 
 ## Goal
 

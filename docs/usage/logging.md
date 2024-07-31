@@ -1,3 +1,7 @@
+---
+weight: 18
+---
+
 # Logging Stack
 
 ## Motivation

@@ -209,7 +209,7 @@ type ShootStatus struct {
 	LastMaintenance *LastMaintenance `json:"lastMaintenance,omitempty" protobuf:"bytes,17,opt,name=lastMaintenance"`
 	// EncryptedResources is the list of resources in the Shoot which are currently encrypted.
 	// Secrets are encrypted by default and are not part of the list.
-	// See https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md for more details.
+	// See https://github.com/gardener/gardener/blob/master/docs/usage/shoot_settings/etcd_encryption_config.md for more details.
 	// +optional
 	EncryptedResources []string `json:"encryptedResources,omitempty" protobuf:"bytes,18,rep,name=encryptedResources"`
 	// Networking contains information about cluster networking such as CIDRs.
@@ -823,7 +823,7 @@ type EncryptionConfig struct {
 	// Each item is a Kubernetes resource name in plural (resource or resource.group) that should be encrypted.
 	// Note that configuring a custom resource is only supported for versions >= 1.26.
 	// Wildcards are not supported for now.
-	// See https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md for more details.
+	// See https://github.com/gardener/gardener/blob/master/docs/usage/shoot_settings/etcd_encryption_config.md for more details.
 	Resources []string `json:"resources" protobuf:"bytes,1,rep,name=resources"`
 }
 

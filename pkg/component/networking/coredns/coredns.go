@@ -322,8 +322,8 @@ import custom/*.server
 				Annotations: map[string]string{resourcesv1alpha1.Ignore: "true"},
 			},
 			Data: map[string]string{
-				"changeme.server":   "# checkout the docs on how to use: https://github.com/gardener/gardener/blob/master/docs/usage/custom-dns-config.md",
-				"changeme.override": "# checkout the docs on how to use: https://github.com/gardener/gardener/blob/master/docs/usage/custom-dns-config.md",
+				"changeme.server":   "# checkout the docs on how to use: https://github.com/gardener/gardener/blob/master/docs/usage/dns/custom-dns-config.md",
+				"changeme.override": "# checkout the docs on how to use: https://github.com/gardener/gardener/blob/master/docs/usage/dns/custom-dns-config.md",
 			},
 		}
 

@@ -51,7 +51,7 @@ const (
 	MutableShootSpecNetworkingNodes featuregate.Feature = "MutableShootSpecNetworkingNodes"
 
 	// ShootForceDeletion allows force deletion of Shoots.
-	// See https://github.com/gardener/gardener/blob/master/docs/usage/shoot_operations.md#shoot-force-deletion for more details.
+	// See https://github.com/gardener/gardener/blob/master/docs/usage/operating_through_annotations/shoot_operations.md#shoot-force-deletion for more details.
 	// owner: @acumino @ary1992 @shafeeqes
 	// alpha: v1.81.0
 	// beta: v1.91.0

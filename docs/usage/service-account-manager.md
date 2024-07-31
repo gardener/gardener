@@ -1,5 +1,6 @@
 ---
 description: The role that allows a user to manage ServiceAccounts in the project namespace
+weight: 14
 ---
 
 # Service Account Manager
