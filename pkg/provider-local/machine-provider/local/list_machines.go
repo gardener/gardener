@@ -33,7 +33,7 @@ func (d *localDriver) ListMachines(ctx context.Context, req *driver.ListMachines
 
 	machineList := make(map[string]string, len(podList.Items))
 	for _, pod := range podList.Items {
-		machineList[pod.Name] = pod.Name
+		machineList[pod.Name] = machineName(pod.Name)
 	}
 
 	return &driver.ListMachinesResponse{MachineList: machineList}, nil

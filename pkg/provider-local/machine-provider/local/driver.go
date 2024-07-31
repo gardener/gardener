@@ -6,6 +6,7 @@ package local
 
 import (
 	"context"
+	"strings"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/driver"
@@ -21,6 +22,7 @@ const (
 	labelKeyApp       = "app"
 	labelKeyProvider  = "machine-provider"
 	labelValueMachine = "machine"
+	machinePrefix     = "machine-"
 )
 
 // NewDriver returns an empty AWSDriver object
@@ -69,7 +71,11 @@ func userDataSecretForMachine(machine *machinev1alpha1.Machine, machineClass *ma
 }
 
 func podName(machineName string) string {
-	return "machine-" + machineName
+	return machinePrefix + machineName
+}
+
+func machineName(podName string) string {
+	return strings.TrimPrefix(podName, machinePrefix)
 }
 
 // TODO(scheererj): Remove the empty namespace mitigation after https://github.com/gardener/machine-controller-manager/pull/932 has been adopted
