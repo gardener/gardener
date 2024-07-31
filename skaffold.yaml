@@ -509,11 +509,8 @@ deploy:
               - example/gardener-local/controlplane/networkpolicy.yaml
         - host:
             command:
-              - openssl
-              - genrsa
-              - -out
-              - example/gardener-local/controlplane/workload-identity-signing-key
-              - 4096
+              - bash
+              - hack/generate-workload-identity-signing-key.sh
       after:
         - host:
             command:
