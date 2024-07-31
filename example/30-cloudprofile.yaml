@@ -15,8 +15,8 @@ spec:
 #   matchLabels:
 #     foo: bar
 # Optional bastion section defining bastions machine type and image properties.
-# If not provided these properties depend on the implicit ordering of the CloudProfile.
-# Because in this case the provider extension will search for the first found supported image and usable machine type.
+# If not provided, these properties depend on the implicit ordering of the CloudProfile.
+# In this case, the provider extension will use the first found supported image, and the first usable machine type.
 # bastion:
 #   machineImage:
 #     name: gardenlinux
