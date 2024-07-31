@@ -138,13 +138,6 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Fn:           flow.TaskFn(botanist.EnsureShootClusterIdentity).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
-		// TODO(MichaelEischer) Remove after Gardener 1.99 is released.
-		migrateOperatingSystemConfigPoolHashes = g.Add(flow.Task{
-			Name:         "Applying initial rollout migration for operating system config hash calculation",
-			Fn:           flow.TaskFn(botanist.MigrateOperatingSystemConfigWorkerPoolHashes).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       o.Shoot.IsWorkerless,
-			Dependencies: flow.NewTaskIDs(deployNamespace),
-		})
 		deployCloudProviderSecret = g.Add(flow.Task{
 			Name:         "Deploying cloud provider account secret",
 			Fn:           flow.TaskFn(botanist.DeployCloudProviderSecret).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -558,7 +551,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Name:         "Deploying operating system specific configuration for shoot workers",
 			Fn:           flow.TaskFn(botanist.DeployOperatingSystemConfig).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       o.Shoot.IsWorkerless,
-			Dependencies: flow.NewTaskIDs(migrateOperatingSystemConfigPoolHashes, deployReferencedResources, waitUntilInfrastructureReady, waitUntilControlPlaneReady, deleteBastions, waitUntilExtensionResourcesAfterKAPIReady),
+			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilInfrastructureReady, waitUntilControlPlaneReady, deleteBastions, waitUntilExtensionResourcesAfterKAPIReady),
 		})
 		waitUntilOperatingSystemConfigReady = g.Add(flow.Task{
 			Name: "Waiting until operating system configurations for worker nodes have been reconciled",
@@ -831,21 +824,15 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Fn:           flow.TaskFn(botanist.DeployAlertManager).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilTunnelConnectionExists, waitUntilWorkerReady).InsertIf(!staticNodesCIDR, waitUntilInfrastructureReady),
 		})
-		// TODO(rfranzke): Remove the migratePrometheus task after v1.97 has been released.
-		migratePrometheus = g.Add(flow.Task{
-			Name:         "Migrating Shoot Prometheus to prometheus-operator",
-			Fn:           flow.TaskFn(botanist.MigratePrometheus).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
-		})
 		deployPrometheus = g.Add(flow.Task{
 			Name:         "Reconciling Shoot Prometheus",
 			Fn:           flow.TaskFn(botanist.DeployPrometheus).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilTunnelConnectionExists, waitUntilWorkerReady, migratePrometheus).InsertIf(!staticNodesCIDR, waitUntilInfrastructureReady),
+			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilTunnelConnectionExists, waitUntilWorkerReady).InsertIf(!staticNodesCIDR, waitUntilInfrastructureReady),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying control plane blackbox-exporter",
 			Fn:           flow.TaskFn(botanist.ReconcileBlackboxExporterControlPlane).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilTunnelConnectionExists, waitUntilWorkerReady, migratePrometheus).InsertIf(!staticNodesCIDR, waitUntilInfrastructureReady),
+			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilTunnelConnectionExists, waitUntilWorkerReady).InsertIf(!staticNodesCIDR, waitUntilInfrastructureReady),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Reconciling kube-state-metrics for Shoot in Seed for the monitoring stack",

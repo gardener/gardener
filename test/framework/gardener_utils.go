@@ -11,7 +11,6 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -21,7 +20,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/test/utils/access"
@@ -206,7 +204,7 @@ func (f *GardenerFramework) DeleteShootAndWaitForDeletion(ctx context.Context, s
 }
 
 // ForceDeleteShootAndWaitForDeletion forcefully deletes the test shoot and waits until it cannot be found anymore.
-func (f *GardenerFramework) ForceDeleteShootAndWaitForDeletion(ctx context.Context, shoot *gardencorev1beta1.Shoot, seedClient client.Client) (rErr error) {
+func (f *GardenerFramework) ForceDeleteShootAndWaitForDeletion(ctx context.Context, shoot *gardencorev1beta1.Shoot) (rErr error) {
 	log := f.Logger.WithValues("shoot", client.ObjectKeyFromObject(shoot))
 
 	if err := f.AnnotateShoot(ctx, shoot, map[string]string{v1beta1constants.ShootIgnore: "true"}); err != nil {
@@ -215,16 +213,6 @@ func (f *GardenerFramework) ForceDeleteShootAndWaitForDeletion(ctx context.Conte
 
 	if err := f.DeleteShoot(ctx, shoot); err != nil {
 		return err
-	}
-
-	// TODO(rfranzke): Remove this after v1.97 has been released.
-	{
-		if err := kubernetesutils.DeleteObjects(ctx, seedClient,
-			&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "prometheus", Namespace: shoot.Status.TechnicalID}},
-			&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-shoot", Namespace: shoot.Status.TechnicalID}},
-		); err != nil {
-			return fmt.Errorf("error deleting Prometheus ingress: %w", err)
-		}
 	}
 
 	patch := client.MergeFrom(shoot.DeepCopy())

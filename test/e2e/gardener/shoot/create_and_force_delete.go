@@ -34,7 +34,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			By("Wait for Shoot to be force-deleted")
 			ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
 			defer cancel()
-			Expect(f.ForceDeleteShootAndWaitForDeletion(ctx, f.Shoot, f.ShootFramework.SeedClient.Client())).To(Succeed())
+			Expect(f.ForceDeleteShootAndWaitForDeletion(ctx, f.Shoot)).To(Succeed())
 		})
 	}
 

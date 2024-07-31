@@ -20,8 +20,6 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -247,7 +245,7 @@ func (p *plutono) computeResourcesData(ctx context.Context, plutonoAdminUserSecr
 		suffix = "-garden"
 	}
 
-	dashboardConfigMap, err := p.getDashboardConfigMap(ctx, suffix)
+	dashboardConfigMap, err := p.getDashboardConfigMap(suffix)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -370,7 +368,7 @@ datasources:
 	return datasource
 }
 
-func (p *plutono) getDashboardConfigMap(ctx context.Context, suffix string) (*corev1.ConfigMap, error) {
+func (p *plutono) getDashboardConfigMap(suffix string) (*corev1.ConfigMap, error) {
 	var (
 		requiredDashboards map[string]embed.FS
 		ignorePaths        = sets.Set[string]{}
@@ -387,14 +385,6 @@ func (p *plutono) getDashboardConfigMap(ctx context.Context, suffix string) (*co
 
 	if p.values.IsGardenCluster {
 		requiredDashboards = map[string]embed.FS{gardenDashboardsPath: gardenDashboards, gardenAndShootDashboardsPath: gardenAndShootDashboards}
-
-		additionalDashboards, err := p.getAdditionalDashboards(ctx)
-		if err != nil {
-			return nil, err
-		}
-		if additionalDashboards != nil {
-			dashboards = additionalDashboards
-		}
 	} else if p.values.ClusterType == component.ClusterTypeSeed {
 		requiredDashboards = map[string]embed.FS{seedDashboardsPath: seedDashboards, commonDashboardsPath: commonDashboards}
 		if !p.values.IncludeIstioDashboards {
@@ -422,14 +412,6 @@ func (p *plutono) getDashboardConfigMap(ctx context.Context, suffix string) (*co
 			} else {
 				ignorePaths.Insert("ha-vpn")
 			}
-		}
-
-		additionalDashboards, err := p.getAdditionalDashboards(ctx)
-		if err != nil {
-			return nil, err
-		}
-		if additionalDashboards != nil {
-			dashboards = additionalDashboards
 		}
 	}
 
@@ -887,38 +869,4 @@ func (p *plutono) getPodLabels() map[string]string {
 	}
 
 	return labels
-}
-
-// TODO(rfranzke): This function and method of fetching extension dashboards is deprecated. Remove it after v1.100 has been released.
-func (p *plutono) getAdditionalDashboards(ctx context.Context) (map[string]string, error) {
-	// Fetch additional monitoring configuration
-	existingConfigMaps := &corev1.ConfigMapList{}
-	if err := p.client.List(ctx, existingConfigMaps,
-		client.InNamespace(p.namespace),
-		client.MatchingLabelsSelector{Selector: client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(utils.MustNewRequirement(v1beta1constants.LabelExtensionConfiguration, selection.Equals, v1beta1constants.LabelMonitoring))}},
-	); err != nil {
-		return nil, err
-	}
-
-	// Need stable order before passing the dashboards to Plutono config to avoid unnecessary changes
-	kubernetesutils.ByName().Sort(existingConfigMaps)
-
-	// Read monitoring configurations
-	additionalDashboards := strings.Builder{}
-	for _, cm := range existingConfigMaps.Items {
-		for _, key := range []string{v1beta1constants.PlutonoConfigMapOperatorDashboard, v1beta1constants.PlutonoConfigMapUserDashboard} {
-			if dashboard, ok := cm.Data[key]; ok && dashboard != "" {
-				additionalDashboards.WriteString(fmt.Sprintln(strings.ReplaceAll(strings.ReplaceAll(dashboard, "Grafana", "Plutono"), "loki", "vali")))
-			}
-		}
-	}
-
-	dashboards := map[string]string{}
-	if additionalDashboards.Len() > 0 {
-		if err := yaml.Unmarshal([]byte(additionalDashboards.String()), &dashboards); err != nil {
-			return nil, err
-		}
-	}
-
-	return dashboards, nil
 }

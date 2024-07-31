@@ -75,10 +75,6 @@ var TimeNow = time.Now
 // Interface is an interface for managing OperatingSystemConfigs.
 type Interface interface {
 	component.DeployMigrateWaiter
-	// MigrateWorkerPoolHashes turns a migration WorkerPoolHashesSecretName into the final
-	// secret.
-	// TODO(MichaelEischer) Remove after Gardener 1.99 is released.
-	MigrateWorkerPoolHashes(context.Context) error
 	// DeleteStaleResources deletes unused OperatingSystemConfig resources from the shoot namespace in the seed.
 	DeleteStaleResources(context.Context) error
 	// WaitCleanupStaleResources waits until all unused OperatingSystemConfig resources are cleaned up.
@@ -208,9 +204,6 @@ type OperatingSystemConfigs struct {
 type Data struct {
 	// Object is the plain OperatingSystemConfig object.
 	Object *extensionsv1alpha1.OperatingSystemConfig
-	// Content is the actual cloud-config user data.
-	// TODO(rfranzke): Remove this Content field after v1.100 is released.
-	Content string
 	// IncludeSecretNameInWorkerPool states whether a extensionsv1alpha1.WorkerPool must include the GardenerNodeAgentSecretName
 	IncludeSecretNameInWorkerPool bool
 	// GardenerNodeAgentSecretName is the name of the secret storing the gardener node agent configuration in the shoot cluster.
@@ -244,7 +237,7 @@ func (o *operatingSystemConfig) reconcile(ctx context.Context, reconcileFn func(
 		return err
 	}
 
-	if err := o.updateHashVersioningSecret(ctx, false); err != nil {
+	if err := o.updateHashVersioningSecret(ctx); err != nil {
 		return err
 	}
 
@@ -263,15 +256,8 @@ func (o *operatingSystemConfig) reconcile(ctx context.Context, reconcileFn func(
 	return flow.Parallel(fns...)(ctx)
 }
 
-// MigrateWorkerPoolHashes turns a migration WorkerPoolHashesSecretName into the final
-// secret.
-func (o *operatingSystemConfig) MigrateWorkerPoolHashes(ctx context.Context) error {
-	return o.updateHashVersioningSecret(ctx, true)
-}
-
 type poolHash struct {
-	Pools    []poolHashEntry `yaml:"pools"`
-	Migrated *bool           `yaml:"migrated,omitempty"`
+	Pools []poolHashEntry `yaml:"pools"`
 }
 
 type poolHashEntry struct {
@@ -280,13 +266,13 @@ type poolHashEntry struct {
 	HashVersionToOSCKey map[int]string `yaml:"hashVersionToOSCKey"`
 }
 
-func decodePoolHashes(secret *corev1.Secret) (map[string]poolHashEntry, bool, error) {
+func decodePoolHashes(secret *corev1.Secret) (map[string]poolHashEntry, error) {
 	var pools poolHash
 
 	versions := secret.Data[poolHashesDataKey]
 	if len(versions) > 0 {
 		if err := yaml.NewDecoder(bytes.NewReader(versions)).Decode(&pools); err != nil {
-			return nil, false, err
+			return nil, err
 		}
 	}
 
@@ -295,7 +281,7 @@ func decodePoolHashes(secret *corev1.Secret) (map[string]poolHashEntry, bool, er
 		workerPoolNameToHashEntry[entry.Name] = entry
 	}
 
-	return workerPoolNameToHashEntry, ptr.Deref(pools.Migrated, false), nil
+	return workerPoolNameToHashEntry, nil
 }
 
 func encodePoolHashes(pools *poolHash, secret *corev1.Secret) error {
@@ -312,26 +298,15 @@ func encodePoolHashes(pools *poolHash, secret *corev1.Secret) error {
 	return nil
 }
 
-// TODO(MichaelEischer) Remove migrateOnly parameter once version 1.99 is released
-func (o *operatingSystemConfig) updateHashVersioningSecret(ctx context.Context, migrateOnly bool) error {
+func (o *operatingSystemConfig) updateHashVersioningSecret(ctx context.Context) error {
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Namespace: o.values.Namespace, Name: WorkerPoolHashesSecretName},
 	}
-	if migrateOnly {
-		// do not create the secret if it does not exist yet.
-		if err := o.client.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
-			return client.IgnoreNotFound(err)
-		}
-	}
 
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, o.client, secret, func() error {
-		workerPoolNameToHashEntry, migrated, err := decodePoolHashes(secret)
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, o.client, secret, func() error {
+		workerPoolNameToHashEntry, err := decodePoolHashes(secret)
 		if err != nil {
 			return err
-		}
-
-		if migrateOnly && !migrated {
-			return nil
 		}
 
 		var pools poolHash
@@ -343,11 +318,7 @@ func (o *operatingSystemConfig) updateHashVersioningSecret(ctx context.Context, 
 			workerHash, ok := workerPoolNameToHashEntry[worker.Name]
 			if !ok {
 				workerHash.Name = worker.Name
-				if migrated {
-					workerHash.CurrentVersion = 1
-				} else {
-					workerHash.CurrentVersion = LatestHashVersion()
-				}
+				workerHash.CurrentVersion = LatestHashVersion()
 			}
 
 			// check if hashes still match
@@ -397,12 +368,11 @@ func (o *operatingSystemConfig) updateHashVersioningSecret(ctx context.Context, 
 		metav1.SetMetaDataLabel(&secret.ObjectMeta, secretsmanager.LabelKeyPersist, "true")
 		secret.Type = corev1.SecretTypeOpaque
 		return nil
-	})
-	if err != nil {
+	}); err != nil {
 		return err
 	}
 
-	workerPoolNameToHashEntry, _, err := decodePoolHashes(secret)
+	workerPoolNameToHashEntry, err := decodePoolHashes(secret)
 	if err != nil {
 		return err
 	}
@@ -426,27 +396,6 @@ func (o *operatingSystemConfig) hashVersion(workerPoolName string) (int, error) 
 		return version, nil
 	}
 	return 0, fmt.Errorf("no version available for %v", workerPoolName)
-}
-
-// CreateMigrationSecret creates a pool-hash secret for initially deploying the
-// pool hash secret into a shoot (namespace).
-func CreateMigrationSecret(namespace string) (*corev1.Secret, error) {
-	pools := poolHash{
-		Migrated: ptr.To(true),
-	}
-
-	var buf bytes.Buffer
-	if err := yaml.NewEncoder(&buf).Encode(&pools); err != nil {
-		return nil, err
-	}
-
-	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: WorkerPoolHashesSecretName},
-		Type:       corev1.SecretTypeOpaque,
-		Data: map[string][]byte{
-			poolHashesDataKey: buf.Bytes(),
-		},
-	}, nil
 }
 
 // Wait waits until the OperatingSystemConfig CRD is ready (deployed or restored). It also reads the produced secret
@@ -479,7 +428,6 @@ func (o *operatingSystemConfig) Wait(ctx context.Context) error {
 
 				data := Data{
 					Object:                        osc,
-					Content:                       string(secret.Data[extensionsv1alpha1.OperatingSystemConfigSecretDataKey]),
 					IncludeSecretNameInWorkerPool: hashVersion > 1,
 					GardenerNodeAgentSecretName:   oscKey,
 					SecretName:                    &secret.Name,

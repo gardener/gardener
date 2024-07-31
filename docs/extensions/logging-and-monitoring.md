@@ -319,78 +319,6 @@ data:
   my-custom-dashboard.json: <dashboard-JSON-document>
 ```
 
-#### Legacy Method of Providing Observability Configuration
-
-> [!CAUTION]
-> The following documentation refers to the previous/legacy method of providing observability configuration.
-> This way is deprecated and will be removed after Gardener v1.100 has been released.
-> Consult [this section](#plutono-dashboards) for information about how to provide the dashboards.
-
-Before deploying the shoot-specific Prometheus instance, Gardener will read all `ConfigMap`s in the shoot namespace, which are labeled with `extensions.gardener.cloud/configuration=monitoring`.
-Such `ConfigMap`s may contain four fields in their `data`:
-
-* (DEPRECATED) `scrape_config`: This field contains Prometheus scrape configuration for the component(s) and metrics that shall be scraped.
-* (DEPRECATED) `alerting_rules`: This field contains Alertmanager rules for alerts that shall be raised.
-* (DEPRECATED) `dashboard_operators`: This field contains a Plutono dashboard in JSON. Note that the former field name was kept for backwards compatibility but the dashboard is going to be shown both for Gardener operators and for shoot owners because the monitoring stack no longer distinguishes the two roles.
-* (DEPRECATED) `dashboard_users`: This field contains a Plutono dashboard in JSON. Note that the former field name was kept for backwards compatibility but the dashboard is going to be shown both for Gardener operators and for shoot owners because the monitoring stack no longer distinguishes the two roles.
-
-**Example:** A `ControlPlane` controller deploying a `cloud-controller-manager` into the shoot namespace wants to integrate monitoring configuration for scraping metrics, alerting rules, dashboards, and logging configuration for exposing logs to the end users.
-
-```yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: extension-controlplane-monitoring-ccm
-  namespace: shoot--project--name
-  labels:
-    extensions.gardener.cloud/configuration: monitoring
-data:
-  scrape_config: |
-    - job_name: cloud-controller-manager
-      scheme: https
-      tls_config:
-        insecure_skip_verify: true
-      authorization:
-        type: Bearer
-        credentials_file: /var/run/secrets/gardener.cloud/shoot/token/token
-      honor_labels: false
-      kubernetes_sd_configs:
-      - role: endpoints
-        namespaces:
-          names: [shoot--project--name]
-      relabel_configs:
-      - source_labels:
-        - __meta_kubernetes_service_name
-        - __meta_kubernetes_endpoint_port_name
-        action: keep
-        regex: cloud-controller-manager;metrics
-      # common metrics
-      - action: labelmap
-        regex: __meta_kubernetes_service_label_(.+)
-      - source_labels: [ __meta_kubernetes_pod_name ]
-        target_label: pod
-      metric_relabel_configs:
-      - process_max_fds
-      - process_open_fds
-
-  alerting_rules: |
-    cloud-controller-manager.rules.yaml: |
-      groups:
-      - name: cloud-controller-manager.rules
-        rules:
-        - alert: CloudControllerManagerDown
-          expr: absent(up{job="cloud-controller-manager"} == 1)
-          for: 15m
-          labels:
-            service: cloud-controller-manager
-            severity: critical
-            type: seed
-            visibility: all
-          annotations:
-            description: All infrastructure specific operations cannot be completed (e.g. creating load balancers or persistent volumes).
-            summary: Cloud controller manager is down.
-```
-
 ## Logging
 
 In Kubernetes clusters, container logs are non-persistent and do not survive stopped and destroyed containers. Gardener addresses this problem for the components hosted in a seed cluster by introducing its own managed logging solution. It is integrated with the Gardener monitoring stack to have all troubleshooting context in one place.
@@ -405,6 +333,7 @@ Gardener logging consists of components in three roles - log collectors and forw
 Logs can be produced from various sources, such as containers or systemd, and in different formats. The fluent-bit design supports configurable [data pipeline](https://docs.fluentbit.io/manual/concepts/data-pipeline) to address that problem. Gardener provides such [configuration](../../pkg/component/kubernetes/apiserver/logging.go) for logs produced by all its core managed components as `ClusterFilters` and `ClusterParsers` . Extensions can contribute their own, specific configurations as fluent-operator custom resources too. See for example the [logging configuration](https://github.com/gardener/gardener-extension-provider-aws/blob/master/charts/gardener-extension-provider-aws/templates/clusterfilters-logging.yaml) for the Gardener AWS provider extension.
 
 ### Fluent-bit Log Parsers and Filters
+
 To integrate with Gardener logging, extensions can and *should* specify how fluent-bit will handle the logs produced by the managed components that they contribute to Gardener. Normally, that would require to configure a *parser* for the specific logging format, if none of the available is applicable, and a *filter* defining how to apply it. For a complete reference for the configuration options, refer to fluent-bit's [documentation](https://docs.fluentbit.io/manual/).
 
 To contribute its own configuration to the fluent-bit agents data pipelines, an extension must deploy a `fluent-operator` custom resource labeled with `fluentbit.gardener/type: seed` in the seed cluster.

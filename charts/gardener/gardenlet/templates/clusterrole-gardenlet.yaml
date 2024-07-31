@@ -29,7 +29,6 @@ rules:
   - get
   - list
   - watch
-  - patch # TODO(rfranzke): Remove this as soon as the Prometheus and Alertmanager migration code is getting deleted.
 - apiGroups:
   - ""
   resources:
@@ -85,14 +84,12 @@ rules:
   - watch
   - patch
   - update
-  - create # TODO(rfranzke): Remove this as soon as the Prometheus migration code is getting deleted.
 - apiGroups:
   - ""
   resources:
   - persistentvolumeclaims
   resourceNames:
   - vali-vali-0
-  - prometheus-db-prometheus-0 # TODO(rfranzke): Remove this as soon as the Prometheus migration code is getting deleted.
   verbs:
   - delete
 - apiGroups:

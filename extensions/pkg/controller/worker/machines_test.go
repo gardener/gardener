@@ -168,12 +168,8 @@ var _ = Describe("Machines", func() {
 				p.Name = "different-name"
 			})
 
-			It("when changing user-data", func() {
-				p.UserData = []byte("new-data")
-			})
-
 			It("when changing user-data secret ref", func() {
-				p.UserDataSecretRef = &corev1.SecretKeySelector{}
+				p.UserDataSecretRef = corev1.SecretKeySelector{Key: "foo"}
 			})
 
 			It("when changing zones", func() {
@@ -428,6 +424,10 @@ var _ = Describe("Machines", func() {
 			namespace = "some-namespace"
 			pool      extensionsv1alpha1.WorkerPool
 			userData  = []byte("some-user-data")
+
+			secretName = "some-secret-name"
+			key        = "the-key"
+			secret     *corev1.Secret
 		)
 
 		BeforeEach(func() {
@@ -435,64 +435,44 @@ var _ = Describe("Machines", func() {
 			fakeClient = fakeclient.NewClientBuilder().Build()
 		})
 
-		When("user data secret reference is used", func() {
-			var (
-				secretName = "some-secret-name"
-				key        = "the-key"
-				secret     *corev1.Secret
-			)
-
-			BeforeEach(func() {
-				pool.UserDataSecretRef = &corev1.SecretKeySelector{
-					LocalObjectReference: corev1.LocalObjectReference{Name: secretName},
-					Key:                  key,
-				}
-				secret = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: namespace}}
-			})
-
-			It("should fail because the referenced secret is not found", func() {
-				result, err := FetchUserData(ctx, fakeClient, namespace, pool)
-				Expect(err).To(MatchError(ContainSubstring("failed fetching user data secret")))
-				Expect(result).To(BeNil())
-			})
-
-			It("should fail because the referenced secret does not contain key", func() {
-				Expect(fakeClient.Create(ctx, secret)).To(Succeed())
-
-				result, err := FetchUserData(ctx, fakeClient, namespace, pool)
-				Expect(err).To(MatchError(ContainSubstring("field or it's empty")))
-				Expect(result).To(BeNil())
-			})
-
-			It("should fail because the referenced secret's key is empty", func() {
-				secret.Data = map[string][]byte{key: nil}
-				Expect(fakeClient.Create(ctx, secret)).To(Succeed())
-
-				result, err := FetchUserData(ctx, fakeClient, namespace, pool)
-				Expect(err).To(MatchError(ContainSubstring("field or it's empty")))
-				Expect(result).To(BeNil())
-			})
-
-			It("should return the user data because the referenced secret's key is set", func() {
-				secret.Data = map[string][]byte{key: userData}
-				Expect(fakeClient.Create(ctx, secret)).To(Succeed())
-
-				result, err := FetchUserData(ctx, fakeClient, namespace, pool)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(result).To(Equal(userData))
-			})
+		BeforeEach(func() {
+			pool.UserDataSecretRef = corev1.SecretKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{Name: secretName},
+				Key:                  key,
+			}
+			secret = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: namespace}}
 		})
 
-		When("user data is inlined", func() {
-			BeforeEach(func() {
-				pool.UserData = userData
-			})
+		It("should fail because the referenced secret is not found", func() {
+			result, err := FetchUserData(ctx, fakeClient, namespace, pool)
+			Expect(err).To(MatchError(ContainSubstring("failed fetching user data secret")))
+			Expect(result).To(BeNil())
+		})
 
-			It("should return the inlined user data", func() {
-				result, err := FetchUserData(ctx, fakeClient, namespace, pool)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(result).To(Equal(userData))
-			})
+		It("should fail because the referenced secret does not contain key", func() {
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+
+			result, err := FetchUserData(ctx, fakeClient, namespace, pool)
+			Expect(err).To(MatchError(ContainSubstring("field or it's empty")))
+			Expect(result).To(BeNil())
+		})
+
+		It("should fail because the referenced secret's key is empty", func() {
+			secret.Data = map[string][]byte{key: nil}
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+
+			result, err := FetchUserData(ctx, fakeClient, namespace, pool)
+			Expect(err).To(MatchError(ContainSubstring("field or it's empty")))
+			Expect(result).To(BeNil())
+		})
+
+		It("should return the user data because the referenced secret's key is set", func() {
+			secret.Data = map[string][]byte{key: userData}
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+
+			result, err := FetchUserData(ctx, fakeClient, namespace, pool)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(userData))
 		})
 	})
 })

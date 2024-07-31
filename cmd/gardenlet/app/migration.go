@@ -11,13 +11,10 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
@@ -25,11 +22,6 @@ import (
 func (g *garden) runMigrations(ctx context.Context, log logr.Logger) error {
 	log.Info("Migrating deprecated failure-domain.beta.kubernetes.io labels to topology.kubernetes.io")
 	if err := migrateDeprecatedTopologyLabels(ctx, log, g.mgr.GetClient(), g.mgr.GetConfig()); err != nil {
-		return err
-	}
-
-	log.Info("Creating operating system config hash migration secret")
-	if err := createOSCHashMigrationSecret(ctx, g.mgr.GetClient()); err != nil {
 		return err
 	}
 
@@ -113,39 +105,4 @@ func migrateDeprecatedTopologyLabels(ctx context.Context, log logr.Logger, seedC
 	}
 
 	return flow.Parallel(taskFns...)(ctx)
-}
-
-// TODO(MichaelEischer): Remove this function after v1.99 has been released
-func createOSCHashMigrationSecret(ctx context.Context, seedClient client.Client) error {
-	namespaceList := &corev1.NamespaceList{}
-	if err := seedClient.List(ctx, namespaceList, client.MatchingLabels(map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot})); err != nil {
-		return err
-	}
-
-	var tasks []flow.TaskFn
-	for _, ns := range namespaceList.Items {
-		if ns.DeletionTimestamp != nil || ns.Status.Phase == corev1.NamespaceTerminating {
-			continue
-		}
-		tasks = append(tasks, func(ctx context.Context) error {
-			if err := seedClient.Get(ctx, types.NamespacedName{Namespace: ns.Name, Name: operatingsystemconfig.WorkerPoolHashesSecretName}, &corev1.Secret{}); err == nil {
-				// nothing to do if secret already exists
-				return nil
-			} else if client.IgnoreNotFound(err) != nil {
-				return fmt.Errorf("could not query worker-pools-operatingsystemconfig-hashes secret in namespace %v: %w", ns.Name, err)
-			}
-
-			secret, err := operatingsystemconfig.CreateMigrationSecret(ns.Name)
-			if err != nil {
-				return fmt.Errorf("failed to serialize worker-pools-operatingsystemconfig-hashes secret for namespace %v: %w", ns.Name, err)
-			}
-
-			if err := seedClient.Create(ctx, secret); client.IgnoreAlreadyExists(err) != nil {
-				return fmt.Errorf("could not create worker-pools-operatingsystemconfig-hashes secret in namespace %v: %w", ns.Name, err)
-			}
-
-			return nil
-		})
-	}
-	return flow.Parallel(tasks...)(ctx)
 }

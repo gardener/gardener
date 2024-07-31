@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -20,7 +19,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -252,11 +250,6 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		command              = k.computeCommand(port)
 	)
 
-	resourceRequirements, err := k.computeResourceRequirements(ctx)
-	if err != nil {
-		return err
-	}
-
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient.Client(), service, func() error {
 		service.Labels = getLabels()
 
@@ -356,7 +349,12 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 								Protocol:      corev1.ProtocolTCP,
 							},
 						},
-						Resources: resourceRequirements,
+						Resources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("100m"),
+								corev1.ResourceMemory: resource.MustParse("128Mi"),
+							},
+						},
 						VolumeMounts: []corev1.VolumeMount{
 							{
 								Name:      volumeNameCA,
@@ -451,11 +449,6 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 
 		return nil
 	}); err != nil {
-		return err
-	}
-
-	// TODO(andrerun): Remove this after v1.97 has been released.
-	if err := kubernetesutils.DeleteObject(ctx, k.seedClient.Client(), k.emptyHVPA()); err != nil {
 		return err
 	}
 
@@ -564,7 +557,6 @@ func (k *kubeControllerManager) Destroy(ctx context.Context) error {
 	return kubernetesutils.DeleteObjects(ctx, k.seedClient.Client(),
 		k.emptyManagedResource(),
 		k.emptyVPA(),
-		k.emptyHVPA(),
 		k.emptyService(),
 		k.emptyPodDisruptionBudget(),
 		k.emptyDeployment(),
@@ -590,10 +582,6 @@ func (k *kubeControllerManager) SetServiceNetworks(services []net.IPNet) {
 
 func (k *kubeControllerManager) emptyVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: k.values.NamePrefix + "kube-controller-manager-vpa", Namespace: k.namespace}}
-}
-
-func (k *kubeControllerManager) emptyHVPA() *hvpav1alpha1.Hvpa {
-	return &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: k.values.NamePrefix + v1beta1constants.DeploymentNameKubeControllerManager, Namespace: k.namespace}}
 }
 
 func (k *kubeControllerManager) emptyService() *corev1.Service {
@@ -830,33 +818,6 @@ func (k *kubeControllerManager) getHorizontalPodAutoscalerConfig() gardencorev1b
 		}
 	}
 	return horizontalPodAutoscalerConfig
-}
-
-// TODO(andrerun): Remove this after v1.97 has been released.
-// After the transitory period, we'll no longer need the reconciliation carrying-over the request value.
-// At that time, just set the fixed static request value (100m/128Mi, see below).
-func (k *kubeControllerManager) computeResourceRequirements(ctx context.Context) (corev1.ResourceRequirements, error) {
-	defaultResources := corev1.ResourceRequirements{
-		Requests: corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse("100m"),
-			corev1.ResourceMemory: resource.MustParse("128Mi"),
-		},
-	}
-
-	existingDeployment := k.emptyDeployment()
-	if err := k.seedClient.Client().Get(ctx, client.ObjectKeyFromObject(existingDeployment), existingDeployment); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return corev1.ResourceRequirements{}, err
-		}
-		return defaultResources, nil // Deployment was not found, hence, use the default resources
-	}
-
-	if len(existingDeployment.Spec.Template.Spec.Containers) > 0 {
-		// Copy requests only, effectively removing limits
-		return corev1.ResourceRequirements{Requests: existingDeployment.Spec.Template.Spec.Containers[0].Resources.Requests}, nil
-	}
-
-	return defaultResources, nil
 }
 
 func getTrimmedAPI(api string) string {

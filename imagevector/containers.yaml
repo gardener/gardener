@@ -450,9 +450,6 @@ images:
   labels: *optionalAddonLabels
 
 # Miscellaneous
-- name: alpine
-  repository: europe-docker.pkg.dev/gardener-project/releases/3rd/alpine
-  tag: "3.20.2"
 - name: alpine-conntrack
   sourceRepository: github.com/gardener/alpine-conntrack
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/alpine-conntrack

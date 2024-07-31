@@ -6,8 +6,6 @@ package plutono_test
 
 import (
 	"context"
-	"os"
-	"path/filepath"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -21,7 +19,6 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/yaml"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -57,7 +54,6 @@ var _ = Describe("Plutono", func() {
 
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
-		extensionConfigMap    *corev1.ConfigMap
 	)
 
 	BeforeEach(func() {
@@ -86,14 +82,6 @@ var _ = Describe("Plutono", func() {
 		By("Create secrets managed outside of this function for which secretsmanager.Get() will be called")
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "observability-ingress", Namespace: namespace}})).To(Succeed())
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "observability-ingress-users", Namespace: namespace}})).To(Succeed())
-
-		// extensions dashboard
-		filePath := filepath.Join("testdata", "configmap.yaml")
-		cm, err := os.ReadFile(filePath)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(yaml.Unmarshal(cm, &extensionConfigMap)).To(Succeed())
-		extensionConfigMap.ObjectMeta.ResourceVersion = ""
-		Expect(c.Create(ctx, extensionConfigMap)).To(Succeed())
 	})
 
 	Describe("#Deploy", func() {
@@ -656,7 +644,7 @@ status:
 
 					dashboardsConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "plutono-dashboards-garden", Namespace: namespace}}
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardsConfigMap), dashboardsConfigMap)).To(Succeed())
-					testDashboardConfigMap(dashboardsConfigMap, 24, values)
+					testDashboardConfigMap(dashboardsConfigMap, 22, values)
 				})
 			})
 		})
@@ -685,7 +673,7 @@ status:
 
 				dashboardsConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "plutono-dashboards", Namespace: namespace}}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardsConfigMap), dashboardsConfigMap)).To(Succeed())
-				testDashboardConfigMap(dashboardsConfigMap, 35, values)
+				testDashboardConfigMap(dashboardsConfigMap, 33, values)
 			})
 
 			Context("w/ include istio, mcm, ha-vpn, vpa", func() {
@@ -713,7 +701,7 @@ status:
 
 					dashboardsConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "plutono-dashboards", Namespace: namespace}}
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardsConfigMap), dashboardsConfigMap)).To(Succeed())
-					testDashboardConfigMap(dashboardsConfigMap, 37, values)
+					testDashboardConfigMap(dashboardsConfigMap, 35, values)
 				})
 			})
 
@@ -740,7 +728,7 @@ status:
 
 					dashboardsConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "plutono-dashboards", Namespace: namespace}}
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardsConfigMap), dashboardsConfigMap)).To(Succeed())
-					testDashboardConfigMap(dashboardsConfigMap, 27, values)
+					testDashboardConfigMap(dashboardsConfigMap, 25, values)
 				})
 			})
 		})

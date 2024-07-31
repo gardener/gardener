@@ -173,7 +173,7 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 			{
 				APIGroups: []string{""},
 				Resources: []string{"endpoints", "persistentvolumes"},
-				Verbs:     []string{"get", "list", "watch", "patch"},
+				Verbs:     []string{"get", "list", "watch"},
 			},
 			{
 				APIGroups: []string{""},
@@ -203,12 +203,12 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 			{
 				APIGroups: []string{""},
 				Resources: []string{"persistentvolumeclaims"},
-				Verbs:     []string{"get", "list", "watch", "patch", "update", "create"},
+				Verbs:     []string{"get", "list", "watch", "patch", "update"},
 			},
 			{
 				APIGroups:     []string{""},
 				Resources:     []string{"persistentvolumeclaims"},
-				ResourceNames: []string{"vali-vali-0", "prometheus-db-prometheus-0"},
+				ResourceNames: []string{"vali-vali-0"},
 				Verbs:         []string{"delete"},
 			},
 			{

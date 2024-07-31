@@ -22,7 +22,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/observability/monitoring"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -49,10 +48,6 @@ type Interface interface {
 	SetIngressWildcardCertSecret(*corev1.Secret)
 	// SetCentralScrapeConfigs sets the central scrape configs.
 	SetCentralScrapeConfigs([]*monitoringv1alpha1.ScrapeConfig)
-	// SetAdditionalScrapeConfigs sets the additional scrape configs.
-	SetAdditionalScrapeConfigs([]string)
-	// SetAdditionalResources sets the additional resources.
-	SetAdditionalResources(...client.Object)
 	// SetNamespaceUID sets the namespace UID.
 	SetNamespaceUID(name types.UID)
 }
@@ -109,9 +104,6 @@ type Values struct {
 	TargetCluster *TargetClusterValues
 	// AdditionalAlertRelabelConfigs contains additional alert relabel configurations.
 	AdditionalAlertRelabelConfigs []monitoringv1.RelabelConfig
-	// DataMigration is a struct for migrating data from existing disks.
-	// TODO(rfranzke): Remove this after v1.97 has been released.
-	DataMigration monitoring.DataMigration
 	// RestrictToNamespace controls whether the Prometheus instance should only scrape its targets in its own namespace.
 	RestrictToNamespace bool
 }
@@ -215,16 +207,7 @@ type prometheus struct {
 }
 
 func (p *prometheus) Deploy(ctx context.Context) error {
-	var (
-		log      = p.log.WithName("prometheus-deployer").WithValues("name", p.values.Name)
-		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
-	)
-
-	// TODO(rfranzke): Remove this migration code after all Prometheis have been migrated.
-	takeOverExistingPV, pvs, oldPVCs, err := p.values.DataMigration.ExistingPVTakeOverPrerequisites(ctx, log)
-	if err != nil {
-		return err
-	}
+	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
 	if err := p.addCentralConfigsToRegistry(registry); err != nil {
 		return err
@@ -244,11 +227,6 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		cortexConfigMap = p.cortexConfigMap()
 	}
 
-	prometheusObj, err := p.prometheus(takeOverExistingPV, cortexConfigMap)
-	if err != nil {
-		return err
-	}
-
 	resources, err := registry.AddAllAndSerialize(
 		p.serviceAccount(),
 		p.service(),
@@ -257,21 +235,13 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		p.secretAdditionalAlertmanagerConfigs(),
 		p.secretRemoteWriteBasicAuth(),
 		cortexConfigMap,
-		prometheusObj,
+		p.prometheus(cortexConfigMap),
 		p.vpa(),
 		p.podDisruptionBudget(),
 		ingress,
 	)
 	if err != nil {
 		return err
-	}
-
-	if takeOverExistingPV {
-		if err := p.values.DataMigration.PrepareExistingPVTakeOver(ctx, log, pvs, oldPVCs); err != nil {
-			return err
-		}
-
-		log.Info("Deploy new Prometheus (with init container for renaming the data directory)")
 	}
 
 	if err := managedresources.CreateForSeedWithLabels(ctx, p.client, p.namespace, p.name(), false, map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, resources); err != nil {
@@ -296,15 +266,6 @@ func (p *prometheus) Deploy(ctx context.Context) error {
 		if err := managedresources.DeleteForShoot(ctx, p.client, p.namespace, p.name()+"-target"); err != nil {
 			return err
 		}
-	}
-
-	if takeOverExistingPV {
-		if err := p.values.DataMigration.FinalizeExistingPVTakeOver(ctx, log, pvs); err != nil {
-			return err
-		}
-
-		log.Info("Deploy new Prometheus again (to remove the migration init container)")
-		return p.Deploy(ctx)
 	}
 
 	return nil
@@ -349,14 +310,6 @@ func (p *prometheus) SetIngressWildcardCertSecret(secret *corev1.Secret) {
 
 func (p *prometheus) SetCentralScrapeConfigs(configs []*monitoringv1alpha1.ScrapeConfig) {
 	p.values.CentralConfigs.ScrapeConfigs = configs
-}
-
-func (p *prometheus) SetAdditionalScrapeConfigs(configs []string) {
-	p.values.CentralConfigs.AdditionalScrapeConfigs = configs
-}
-
-func (p *prometheus) SetAdditionalResources(resources ...client.Object) {
-	p.values.AdditionalResources = resources
 }
 
 func (p *prometheus) SetNamespaceUID(uid types.UID) {
