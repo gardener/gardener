@@ -58,8 +58,10 @@ var _ = Describe("CredentialsBindingControl", func() {
 					Namespace: credentialsBindingNamespace,
 				},
 				CredentialsRef: corev1.ObjectReference{
-					Namespace: secret.Namespace,
-					Name:      secret.Name,
+					Kind:       "Secret",
+					APIVersion: corev1.SchemeGroupVersion.String(),
+					Namespace:  secret.Namespace,
+					Name:       secret.Name,
 				},
 				Provider: securityv1alpha1.CredentialsBindingProvider{
 					Type: "some-provider",
@@ -104,8 +106,10 @@ var _ = Describe("CredentialsBindingControl", func() {
 					Namespace: "some-namespace",
 				},
 				CredentialsRef: corev1.ObjectReference{
-					Namespace: secret.Namespace,
-					Name:      secret.Name,
+					Kind:       "Secret",
+					APIVersion: corev1.SchemeGroupVersion.String(),
+					Namespace:  secret.Namespace,
+					Name:       secret.Name,
 				},
 			}
 			Expect(fakeClient.Create(ctx, credentialsBinding2)).To(Succeed())
@@ -150,6 +154,104 @@ var _ = Describe("CredentialsBindingControl", func() {
 				"reference.gardener.cloud/secretbinding":      "true",
 			}))
 			Expect(secret.ObjectMeta.Finalizers).To(ConsistOf("gardener.cloud/gardener"))
+		})
+	})
+
+	Describe("CredentialsBinding and Provider label for WorkloadIdentity", func() {
+		var (
+			reconciler *credentialsbinding.Reconciler
+			request    reconcile.Request
+
+			credentialsBindingNamespace = "foo"
+			credentialsBindingName      = "bar"
+
+			workloadIdentity   *securityv1alpha1.WorkloadIdentity
+			credentialsBinding *securityv1alpha1.CredentialsBinding
+		)
+
+		BeforeEach(func() {
+			workloadIdentity = &securityv1alpha1.WorkloadIdentity{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "wi",
+					Namespace: "namespace",
+				},
+			}
+
+			credentialsBinding = &securityv1alpha1.CredentialsBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      credentialsBindingName,
+					Namespace: credentialsBindingNamespace,
+				},
+				CredentialsRef: corev1.ObjectReference{
+					Kind:       "WorkloadIdentity",
+					APIVersion: securityv1alpha1.SchemeGroupVersion.String(),
+					Namespace:  workloadIdentity.Namespace,
+					Name:       workloadIdentity.Name,
+				},
+				Provider: securityv1alpha1.CredentialsBindingProvider{
+					Type: "some-provider",
+				},
+			}
+
+			Expect(fakeClient.Create(ctx, workloadIdentity)).To(Succeed())
+			Expect(fakeClient.Create(ctx, credentialsBinding)).To(Succeed())
+
+			reconciler = &credentialsbinding.Reconciler{Client: fakeClient}
+			request = reconcile.Request{NamespacedName: types.NamespacedName{Namespace: credentialsBindingNamespace, Name: credentialsBindingName}}
+		})
+
+		It("should add the credentialsbinding referred label to the workload identity referred by the credentialsbinding", func() {
+			_, err := reconciler.Reconcile(ctx, request)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(workloadIdentity), workloadIdentity)).To(Succeed())
+			Expect(workloadIdentity.ObjectMeta.Labels).To(And(
+				HaveKeyWithValue("reference.gardener.cloud/credentialsbinding", "true"),
+				HaveKeyWithValue("provider.shoot.gardener.cloud/some-provider", "true"),
+			))
+		})
+
+		It("should remove both the labels from the workloadIdentity when there are no other credentialsbindings referring it", func() {
+			_, err := reconciler.Reconcile(ctx, request)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeClient.Delete(ctx, credentialsBinding)).To(Succeed())
+
+			_, err = reconciler.Reconcile(ctx, request)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(workloadIdentity), workloadIdentity)).To(Succeed())
+			Expect(workloadIdentity.ObjectMeta.Labels).To(BeEmpty())
+		})
+
+		It("should not remove any of the label from the workload identity when there are other credentialsbindings referring it", func() {
+			credentialsBinding2 := &securityv1alpha1.CredentialsBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "credentialsbinding-2",
+					Namespace: "some-namespace",
+				},
+				CredentialsRef: corev1.ObjectReference{
+					Kind:       "WorkloadIdentity",
+					APIVersion: securityv1alpha1.SchemeGroupVersion.String(),
+					Namespace:  workloadIdentity.Namespace,
+					Name:       workloadIdentity.Name,
+				},
+			}
+			Expect(fakeClient.Create(ctx, credentialsBinding2)).To(Succeed())
+
+			_, err := reconciler.Reconcile(ctx, request)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeClient.Delete(ctx, credentialsBinding)).To(Succeed())
+
+			_, err = reconciler.Reconcile(ctx, request)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(workloadIdentity), workloadIdentity)).To(Succeed())
+			Expect(workloadIdentity.ObjectMeta.Labels).To(And(
+				HaveKeyWithValue("reference.gardener.cloud/credentialsbinding", "true"),
+				HaveKeyWithValue("provider.shoot.gardener.cloud/some-provider", "true"),
+			))
 		})
 	})
 
@@ -209,8 +311,10 @@ var _ = Describe("CredentialsBindingControl", func() {
 					},
 				},
 				CredentialsRef: corev1.ObjectReference{
-					Name:      secret.Name,
-					Namespace: secret.Namespace,
+					Kind:       "Secret",
+					APIVersion: corev1.SchemeGroupVersion.String(),
+					Name:       secret.Name,
+					Namespace:  secret.Namespace,
 				},
 			}
 
@@ -227,8 +331,10 @@ var _ = Describe("CredentialsBindingControl", func() {
 					},
 				},
 				CredentialsRef: corev1.ObjectReference{
-					Name:      secret.Name,
-					Namespace: secret.Namespace,
+					Kind:       "Secret",
+					APIVersion: corev1.SchemeGroupVersion.String(),
+					Name:       secret.Name,
+					Namespace:  secret.Namespace,
 				},
 			}
 
