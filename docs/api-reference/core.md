@@ -8418,6 +8418,20 @@ Defaults to [&ldquo;IPv4&rdquo;].</p>
 <p>Services are the CIDRs of the service network.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>egress</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Egress are the CIDRs used by the shoot as the source IP for egress traffic as reported by the used Infrastructure
+extension controller. For certain environments the egress IPs may not be stable in which case the extension
+controller may opt to not populate this field.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.NginxIngress">NginxIngress
