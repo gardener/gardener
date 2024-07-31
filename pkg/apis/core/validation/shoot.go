@@ -994,6 +994,14 @@ func validateNetworkingStatus(networking *core.NetworkingStatus, fldPath *field.
 		allErrs = append(allErrs, cidrvalidation.ValidateCIDRIsCanonical(path, cidr.GetCIDR())...)
 	}
 
+	for i, s := range networking.Egress {
+		path := fldPath.Child("egress").Index(i)
+		cidr := cidrvalidation.NewCIDR(s, path)
+
+		allErrs = append(allErrs, cidr.ValidateParse()...)
+		allErrs = append(allErrs, cidrvalidation.ValidateCIDRIsCanonical(path, cidr.GetCIDR())...)
+	}
+
 	return allErrs
 }
 
