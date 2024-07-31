@@ -2943,6 +2943,7 @@ BastionMachineImage
 </em>
 </td>
 <td>
+<p>MachineImage contains the bastions machine image properties</p>
 </td>
 </tr>
 <tr>
@@ -2955,6 +2956,7 @@ BastionMachineType
 </em>
 </td>
 <td>
+<p>MachineType contains the bastions machine type properties</p>
 </td>
 </tr>
 </tbody>
@@ -2966,7 +2968,7 @@ BastionMachineType
 <a href="#core.gardener.cloud/v1beta1.Bastion">Bastion</a>)
 </p>
 <p>
-<p>BastionMachineImage contains machine and image properties</p>
+<p>BastionMachineImage contains the bastions machine image properties</p>
 </p>
 <table>
 <thead>

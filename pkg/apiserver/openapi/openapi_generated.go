@@ -1672,14 +1672,16 @@ func schema_pkg_apis_core_v1beta1_Bastion(ref common.ReferenceCallback) common.O
 				Properties: map[string]spec.Schema{
 					"machineImage": {
 						SchemaProps: spec.SchemaProps{
-							Default: map[string]interface{}{},
-							Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.BastionMachineImage"),
+							Description: "MachineImage contains the bastions machine image properties",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.BastionMachineImage"),
 						},
 					},
 					"machineType": {
 						SchemaProps: spec.SchemaProps{
-							Default: map[string]interface{}{},
-							Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.BastionMachineType"),
+							Description: "MachineType contains the bastions machine type properties",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.BastionMachineType"),
 						},
 					},
 				},
@@ -1695,7 +1697,7 @@ func schema_pkg_apis_core_v1beta1_BastionMachineImage(ref common.ReferenceCallba
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "BastionMachineImage contains machine and image properties",
+				Description: "BastionMachineImage contains the bastions machine image properties",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"name": {

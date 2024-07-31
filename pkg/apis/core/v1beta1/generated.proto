@@ -252,12 +252,14 @@ message BackupEntryStatus {
 
 // Bastion contains the bastions creation info
 message Bastion {
+  // MachineImage contains the bastions machine image properties
   optional BastionMachineImage machineImage = 1;
 
+  // MachineType contains the bastions machine type properties
   optional BastionMachineType machineType = 2;
 }
 
-// BastionMachineImage contains machine and image properties
+// BastionMachineImage contains the bastions machine image properties
 message BastionMachineImage {
   // Name of the machine image
   optional string name = 1;
