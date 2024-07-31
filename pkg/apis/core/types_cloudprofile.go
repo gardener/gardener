@@ -187,17 +187,19 @@ type VolumeType struct {
 	MinSize *resource.Quantity
 }
 
-// Bastion contains machine and image properties
+// Bastion contains the bastions creation info
 type Bastion struct {
+	// MachineImage contains the bastions machine image properties
 	MachineImage BastionMachineImage
-	MachineType  BastionMachineType
+	// MachineType contains the bastions machine type properties
+	MachineType BastionMachineType
 }
 
 // BastionMachineImage contains the bastions machine image properties
 type BastionMachineImage struct {
-	// Name of the image
+	// Name of the machine image
 	Name string
-	// Version of the image
+	// Version of the machine image
 	Version string
 }
 

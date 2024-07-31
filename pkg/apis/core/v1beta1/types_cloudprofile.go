@@ -224,11 +224,13 @@ type VolumeType struct {
 
 // Bastion contains the bastions creation info
 type Bastion struct {
+	// MachineImage contains the bastions machine image properties
 	MachineImage BastionMachineImage `json:"machineImage" protobuf:"bytes,1,name=machineImage"`
-	MachineType  BastionMachineType  `json:"machineType" protobuf:"bytes,2,name=machineType"`
+	// MachineType contains the bastions machine type properties
+	MachineType BastionMachineType `json:"machineType" protobuf:"bytes,2,name=machineType"`
 }
 
-// BastionMachineImage contains machine and image properties
+// BastionMachineImage contains the bastions machine image properties
 type BastionMachineImage struct {
 	// Name of the machine image
 	Name string `json:"name" protobuf:"bytes,1,name=name"`
