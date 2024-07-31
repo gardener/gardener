@@ -9,8 +9,6 @@ package imagevector
 const (
 	// ContainerImageNameAlertmanager is a constant for an image in the image vector with name 'alertmanager'.
 	ContainerImageNameAlertmanager = "alertmanager"
-	// ContainerImageNameAlpine is a constant for an image in the image vector with name 'alpine'.
-	ContainerImageNameAlpine = "alpine"
 	// ContainerImageNameAlpineConntrack is a constant for an image in the image vector with name 'alpine-conntrack'.
 	ContainerImageNameAlpineConntrack = "alpine-conntrack"
 	// ContainerImageNameApiserverProxy is a constant for an image in the image vector with name 'apiserver-proxy'.
