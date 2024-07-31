@@ -100,7 +100,7 @@ func (r *Reconciler) reconcile(ctx context.Context, credentialsBinding *security
 	kind := credential.GetObjectKind().GroupVersionKind().Kind
 
 	if !controllerutil.ContainsFinalizer(credential, gardencorev1beta1.ExternalGardenerName) {
-		log.Info("Adding finalizer", kind, client.ObjectKeyFromObject(credential))
+		log.Info("Adding finalizer", kind, client.ObjectKeyFromObject(credential)) //nolint:logcheck
 		if err := controllerutils.AddFinalizers(ctx, r.Client, credential, gardencorev1beta1.ExternalGardenerName); err != nil {
 			return fmt.Errorf("could not add finalizer to %s: %w", kind, err)
 		}
@@ -197,7 +197,7 @@ func (r *Reconciler) delete(ctx context.Context, credentialsBinding *securityv1a
 
 			// Remove finalizer from referenced secret
 			if controllerutil.ContainsFinalizer(credential, gardencorev1beta1.ExternalGardenerName) && !hasSecretBindingRefLabel {
-				log.Info("Removing finalizer", kind, client.ObjectKeyFromObject(credential))
+				log.Info("Removing finalizer", kind, client.ObjectKeyFromObject(credential)) //nolint:logcheck
 				if err := controllerutils.RemoveFinalizers(ctx, r.Client, credential, gardencorev1beta1.ExternalGardenerName); err != nil {
 					return fmt.Errorf("failed to remove finalizer from %s: %w", kind, err)
 				}
