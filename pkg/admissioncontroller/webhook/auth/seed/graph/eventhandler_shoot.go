@@ -142,6 +142,14 @@ func (g *graph) handleShootCreateOrUpdate(ctx context.Context, shoot *gardencore
 		g.addEdge(configMapVertex, shootVertex)
 	}
 
+	if shoot.Spec.Kubernetes.KubeAPIServer != nil &&
+		shoot.Spec.Kubernetes.KubeAPIServer.Authentication != nil &&
+		shoot.Spec.Kubernetes.KubeAPIServer.Authentication.Structured != nil &&
+		len(shoot.Spec.Kubernetes.KubeAPIServer.Authentication.Structured.ConfigMapName) != 0 {
+		configMapVertex := g.getOrCreateVertex(VertexTypeConfigMap, shoot.Namespace, shoot.Spec.Kubernetes.KubeAPIServer.Authentication.Structured.ConfigMapName)
+		g.addEdge(configMapVertex, shootVertex)
+	}
+
 	if shoot.Spec.DNS != nil {
 		for _, provider := range shoot.Spec.DNS.Providers {
 			if provider.SecretName != nil {
