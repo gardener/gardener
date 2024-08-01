@@ -2187,6 +2187,33 @@ rules:
 						Data:      configMapAuthConfig.Data,
 					}))
 				})
+				It("should not deploy the configmap resource when feature gate is disabled", func() {
+					var (
+						authenticationConfig = "some-auth-config"
+						version              = semver.MustParse("1.30.0")
+					)
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+							FeatureGates: map[string]bool{
+								"StructuredAuthenticationConfiguration": false,
+							},
+						},
+						AuthenticationConfiguration: ptr.To(authenticationConfig),
+						Version:                     version,
+					})
+
+					configMapAuthConfig = &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{Name: "authentication-config", Namespace: namespace},
+						Data:       map[string]string{"config.yaml": authenticationConfig},
+					}
+					Expect(kubernetesutils.MakeUnique(configMapAuthConfig)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthConfig), configMapAuthConfig)).To(BeNotFoundError())
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthConfig), configMapAuthConfig)).To(BeNotFoundError())
+				})
 				It("should successfully deploy the configmap resource from oidc settings", func() {
 					var (
 						oidc = &gardencorev1beta1.OIDCConfig{
