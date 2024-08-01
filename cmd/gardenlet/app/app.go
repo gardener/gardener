@@ -309,8 +309,8 @@ func (g *garden) Start(ctx context.Context) error {
 				Client: cachedClient,
 				Reader: uncachedClient,
 				KindToNamespaces: map[string]sets.Set[string]{
-					"Secret":         sets.New[string](seedNamespace),
-					"ServiceAccount": sets.New[string](seedNamespace),
+					"Secret":         sets.New(seedNamespace),
+					"ServiceAccount": sets.New(seedNamespace),
 				},
 			}, nil
 		}

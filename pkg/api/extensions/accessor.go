@@ -103,6 +103,11 @@ func (u unstructuredSpecAccessor) GetExtensionType() string {
 	return nestedString(u.UnstructuredContent(), "spec", "type")
 }
 
+// GetExtensionClass implements Spec.
+func (u unstructuredSpecAccessor) GetExtensionClass() *extensionsv1alpha1.ExtensionClass {
+	return (*extensionsv1alpha1.ExtensionClass)(nestedStringReference(u.UnstructuredContent(), "spec", "class"))
+}
+
 // GetExtensionPurpose implements Spec.
 func (u unstructuredSpecAccessor) GetExtensionPurpose() *string {
 	return nestedStringReference(u.UnstructuredContent(), "spec", "purpose")

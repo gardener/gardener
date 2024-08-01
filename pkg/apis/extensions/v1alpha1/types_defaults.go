@@ -14,6 +14,10 @@ import (
 type DefaultSpec struct {
 	// Type contains the instance of the resource's kind.
 	Type string `json:"type"`
+	// Class holds the extension class used to control the responsibility for multiple provider extensions.
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +optional
+	Class *ExtensionClass `json:"class,omitempty"`
 	// ProviderConfig is the provider specific configuration.
 	// +kubebuilder:validation:XPreserveUnknownFields
 	// +kubebuilder:pruning:PreserveUnknownFields
@@ -21,19 +25,32 @@ type DefaultSpec struct {
 	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty"`
 }
 
+// ExtensionClass is a string alias for an extension class.
+type ExtensionClass string
+
+const (
+	// ExtensionClassShoot is the extension class responsible for shoot clusters.
+	ExtensionClassShoot ExtensionClass = "shoot"
+	// ExtensionClassGarden is the extension class responsible for the garden cluster.
+	ExtensionClassGarden ExtensionClass = "garden"
+)
+
 // GetExtensionType implements Spec.
 func (d *DefaultSpec) GetExtensionType() string {
 	return d.Type
 }
 
-// GetExtensionPurpose implements Spec.
-func (d *DefaultSpec) GetExtensionPurpose() *string {
-	return nil
-}
+// GetExtensionClass implements Spec.
+func (d *DefaultSpec) GetExtensionClass() *ExtensionClass { return d.Class }
 
 // GetProviderConfig implements Spec.
 func (d *DefaultSpec) GetProviderConfig() *runtime.RawExtension {
 	return d.ProviderConfig
+}
+
+// GetExtensionPurpose implements Spec.
+func (d *DefaultSpec) GetExtensionPurpose() *string {
+	return nil
 }
 
 // DefaultStatus contains common status fields for every extension resource.

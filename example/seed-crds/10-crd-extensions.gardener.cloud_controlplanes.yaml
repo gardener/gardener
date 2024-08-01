@@ -60,6 +60,13 @@ spec:
               Specification of the ControlPlane.
               If the object's deletion timestamp is set, this field is immutable.
             properties:
+              class:
+                description: Class holds the extension class used to control the responsibility
+                  for multiple provider extensions.
+                type: string
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
               infrastructureProviderStatus:
                 description: |-
                   InfrastructureProviderStatus contains the provider status that has

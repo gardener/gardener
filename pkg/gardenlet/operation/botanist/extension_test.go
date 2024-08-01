@@ -179,6 +179,7 @@ var _ = Describe("Extensions", func() {
 									"DefaultSpec": MatchAllFields(Fields{
 										"Type":           Equal(fooExtensionType),
 										"ProviderConfig": PointTo(Equal(providerConfig)),
+										"Class":          BeNil(),
 									}),
 								}),
 							}),
@@ -209,6 +210,7 @@ var _ = Describe("Extensions", func() {
 									"DefaultSpec": MatchAllFields(Fields{
 										"Type":           Equal(barExtensionType),
 										"ProviderConfig": BeNil(),
+										"Class":          BeNil(),
 									}),
 								}),
 							}),
@@ -241,6 +243,7 @@ var _ = Describe("Extensions", func() {
 										"DefaultSpec": MatchAllFields(Fields{
 											"Type":           Equal(fooExtensionType),
 											"ProviderConfig": PointTo(Equal(providerConfig)),
+											"Class":          BeNil(),
 										}),
 									}),
 								}),
@@ -278,6 +281,7 @@ var _ = Describe("Extensions", func() {
 									"DefaultSpec": MatchAllFields(Fields{
 										"Type":           Equal(barExtensionType),
 										"ProviderConfig": PointTo(Equal(providerConfig)),
+										"Class":          BeNil(),
 									}),
 								}),
 							}),
@@ -300,7 +304,8 @@ var _ = Describe("Extensions", func() {
 						"Extension": MatchFields(IgnoreExtras, Fields{
 							"Spec": MatchFields(IgnoreExtras, Fields{
 								"DefaultSpec": MatchFields(IgnoreExtras, Fields{
-									"Type": Equal(barExtensionType),
+									"Type":  Equal(barExtensionType),
+									"Class": BeNil(),
 								}),
 							}),
 						}),

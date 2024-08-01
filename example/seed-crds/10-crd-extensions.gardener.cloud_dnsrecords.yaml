@@ -62,6 +62,13 @@ spec:
               Specification of the DNSRecord.
               If the object's deletion timestamp is set, this field is immutable.
             properties:
+              class:
+                description: Class holds the extension class used to control the responsibility
+                  for multiple provider extensions.
+                type: string
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
               name:
                 description: Name is the fully qualified domain name, e.g. "api.<shoot
                   domain>". This field is immutable.
