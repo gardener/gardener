@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 16,
+  "id": 25,
   "links": [],
   "panels": [
     {
@@ -34,72 +34,59 @@
     },
     {
       "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": false,
-      "colors": [
-        "rgba(245, 54, 54, 0.9)",
-        "rgba(237, 129, 40, 0.89)",
-        "rgba(50, 172, 45, 0.97)"
-      ],
       "datasource": "prometheus",
       "description": "Timestamp of the latest snapshot successfully uploaded to the snapstore.",
-      "editable": true,
-      "error": false,
       "fieldConfig": {
-        "defaults": {},
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "id": 0,
+              "op": "=",
+              "text": "N/A",
+              "type": 1,
+              "value": "null"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "rgb(255, 255, 255)",
+                "value": null
+              }
+            ]
+          },
+          "unit": "dateTimeAsUS"
+        },
         "overrides": []
       },
-      "format": "dateTimeAsUS",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
       "gridPos": {
-        "h": 5,
+        "h": 2,
         "w": 11,
         "x": 0,
         "y": 1
       },
       "id": 2,
       "interval": null,
-      "isNew": true,
       "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
       "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "span": 3,
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": false
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
       },
-      "tableColumn": "",
+      "pluginVersion": "7.5.32",
       "targets": [
         {
           "exemplar": true,
@@ -114,87 +101,64 @@
           "step": 20
         }
       ],
-      "thresholds": "",
       "title": "Latest Snapshot Timestamp",
-      "type": "singlestat",
-      "valueFontSize": "200%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
+      "type": "stat"
     },
     {
       "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": false,
-      "colors": [
-        "rgba(245, 54, 54, 0.9)",
-        "rgba(237, 129, 40, 0.89)",
-        "rgba(50, 172, 45, 0.97)"
-      ],
       "datasource": "prometheus",
       "description": "Maximum duration worth of possible data loss in the event that etcd data gets corrupted at this moment.",
-      "editable": true,
-      "error": false,
       "fieldConfig": {
-        "defaults": {},
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "id": 0,
+              "op": "=",
+              "text": "N/A",
+              "type": 1,
+              "value": "null"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "rgb(255, 255, 255)",
+                "value": null
+              }
+            ]
+          },
+          "unit": "dtdurations"
+        },
         "overrides": []
       },
-      "format": "dtdurations",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
       "gridPos": {
-        "h": 5,
+        "h": 2,
         "w": 6,
         "x": 11,
         "y": 1
       },
       "id": 36,
       "interval": null,
-      "isNew": true,
       "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
       "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "span": 3,
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": false
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
       },
-      "tableColumn": "",
+      "pluginVersion": "7.5.32",
       "targets": [
         {
           "exemplar": true,
@@ -209,87 +173,64 @@
           "step": 20
         }
       ],
-      "thresholds": "",
       "title": "Maximum Possible Data Loss",
-      "type": "singlestat",
-      "valueFontSize": "200%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
+      "type": "stat"
     },
     {
       "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": false,
-      "colors": [
-        "rgba(245, 54, 54, 0.9)",
-        "rgba(237, 129, 40, 0.89)",
-        "rgba(50, 172, 45, 0.97)"
-      ],
       "datasource": "prometheus",
       "description": "Latest revision of the data from the latest snapshot uploaded to the snapstore.",
-      "editable": true,
-      "error": false,
       "fieldConfig": {
-        "defaults": {},
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "id": 0,
+              "op": "=",
+              "text": "N/A",
+              "type": 1,
+              "value": "null"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "rgb(255, 255, 255)",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
         "overrides": []
       },
-      "format": "none",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
       "gridPos": {
-        "h": 5,
-        "w": 7,
+        "h": 2,
+        "w": 6,
         "x": 17,
         "y": 1
       },
       "id": 35,
       "interval": null,
-      "isNew": true,
       "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
       "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "span": 3,
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": false
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
       },
-      "tableColumn": "",
+      "pluginVersion": "7.5.32",
       "targets": [
         {
           "exemplar": true,
@@ -304,18 +245,8 @@
           "step": 20
         }
       ],
-      "thresholds": "",
       "title": "Latest Snapshot Revision",
-      "type": "singlestat",
-      "valueFontSize": "200%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
+      "type": "stat"
     },
     {
       "aliasColors": {
@@ -341,7 +272,7 @@
         "h": 5,
         "w": 12,
         "x": 0,
-        "y": 6
+        "y": 3
       },
       "hiddenSeries": false,
       "id": 4,
@@ -371,7 +302,7 @@
       "spaceLength": 10,
       "span": 5,
       "stack": false,
-      "steppedLine": true,
+      "steppedLine": false,
       "targets": [
         {
           "exemplar": true,
@@ -417,6 +348,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:787",
           "decimals": 0,
           "format": "none",
           "label": null,
@@ -426,6 +358,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:788",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -463,7 +396,7 @@
         "h": 5,
         "w": 12,
         "x": 12,
-        "y": 6
+        "y": 3
       },
       "hiddenSeries": false,
       "id": 37,
@@ -493,7 +426,7 @@
       "spaceLength": 10,
       "span": 5,
       "stack": false,
-      "steppedLine": true,
+      "steppedLine": false,
       "targets": [
         {
           "exemplar": true,
@@ -539,6 +472,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:735",
           "decimals": 0,
           "format": "none",
           "label": null,
@@ -548,6 +482,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:736",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -585,7 +520,7 @@
         "h": 5,
         "w": 8,
         "x": 0,
-        "y": 11
+        "y": 8
       },
       "hiddenSeries": false,
       "id": 12,
@@ -656,6 +591,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:683",
           "decimals": 0,
           "format": "none",
           "label": null,
@@ -665,6 +601,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:684",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -702,7 +639,7 @@
         "h": 5,
         "w": 8,
         "x": 8,
-        "y": 11
+        "y": 8
       },
       "hiddenSeries": false,
       "id": 38,
@@ -732,7 +669,7 @@
       "spaceLength": 10,
       "span": 4,
       "stack": false,
-      "steppedLine": true,
+      "steppedLine": false,
       "targets": [
         {
           "exemplar": true,
@@ -775,6 +712,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:839",
           "decimals": 0,
           "format": "none",
           "label": null,
@@ -784,6 +722,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:840",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -818,7 +757,7 @@
         "h": 5,
         "w": 8,
         "x": 16,
-        "y": 11
+        "y": 8
       },
       "hiddenSeries": false,
       "id": 39,
@@ -848,7 +787,7 @@
       "spaceLength": 10,
       "span": 4,
       "stack": false,
-      "steppedLine": true,
+      "steppedLine": false,
       "targets": [
         {
           "exemplar": true,
@@ -893,6 +832,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:941",
           "decimals": null,
           "format": "s",
           "label": null,
@@ -902,6 +842,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:942",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -939,7 +880,7 @@
         "h": 5,
         "w": 12,
         "x": 0,
-        "y": 16
+        "y": 13
       },
       "hiddenSeries": false,
       "id": 40,
@@ -969,7 +910,7 @@
       "spaceLength": 10,
       "span": 5,
       "stack": false,
-      "steppedLine": true,
+      "steppedLine": false,
       "targets": [
         {
           "exemplar": true,
@@ -1016,6 +957,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:1045",
           "decimals": 0,
           "format": "none",
           "label": null,
@@ -1025,6 +967,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:1046",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -1062,7 +1005,7 @@
         "h": 5,
         "w": 12,
         "x": 12,
-        "y": 16
+        "y": 13
       },
       "hiddenSeries": false,
       "id": 41,
@@ -1092,7 +1035,7 @@
       "spaceLength": 10,
       "span": 5,
       "stack": false,
-      "steppedLine": true,
+      "steppedLine": false,
       "targets": [
         {
           "exemplar": true,
@@ -1139,6 +1082,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:993",
           "decimals": 0,
           "format": "none",
           "label": null,
@@ -1148,6 +1092,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:994",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -1168,7 +1113,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 21
+        "y": 18
       },
       "id": 30,
       "panels": [],
@@ -1196,7 +1141,7 @@
         "h": 5,
         "w": 12,
         "x": 0,
-        "y": 22
+        "y": 19
       },
       "hiddenSeries": false,
       "id": 42,
@@ -1226,7 +1171,7 @@
       "spaceLength": 10,
       "span": 5,
       "stack": false,
-      "steppedLine": true,
+      "steppedLine": false,
       "targets": [
         {
           "expr": "process_resident_memory_bytes{job=\"kube-etcd3-backup-restore-main\"}",
@@ -1259,6 +1204,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:631",
           "decimals": 0,
           "format": "decbytes",
           "label": null,
@@ -1268,6 +1214,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:632",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -1302,7 +1249,7 @@
         "h": 5,
         "w": 12,
         "x": 12,
-        "y": 22
+        "y": 19
       },
       "hiddenSeries": false,
       "id": 43,
@@ -1332,7 +1279,7 @@
       "spaceLength": 10,
       "span": 5,
       "stack": false,
-      "steppedLine": true,
+      "steppedLine": false,
       "targets": [
         {
           "expr": "rate(process_cpu_seconds_total{job=\"kube-etcd3-backup-restore-main\"}[$__rate_interval]) * 100",
@@ -1365,6 +1312,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:1147",
           "decimals": 0,
           "format": "percent",
           "label": null,
@@ -1374,6 +1322,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:1148",
           "format": "short",
           "label": null,
           "logBase": 1,
