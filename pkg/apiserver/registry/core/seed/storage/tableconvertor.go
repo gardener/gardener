@@ -73,9 +73,9 @@ func (c *convertor) ConvertToTable(_ context.Context, obj runtime.Object, _ runt
 		if gardenletReadyCondition != nil && gardenletReadyCondition.Status == core.ConditionUnknown {
 			cells = append(cells, "Unknown")
 		} else if (gardenletReadyCondition == nil || gardenletReadyCondition.Status != core.ConditionTrue) ||
-			(extensionsReadyCondition == nil || extensionsReadyCondition.Status != core.ConditionTrue) ||
 			(backupBucketCondition != nil && backupBucketCondition.Status != core.ConditionTrue) ||
-			(seedSystemComponentsHealthyCondition != nil && seedSystemComponentsHealthyCondition.Status != core.ConditionTrue) {
+			(extensionsReadyCondition == nil || extensionsReadyCondition.Status == core.ConditionFalse || extensionsReadyCondition.Status == core.ConditionUnknown) ||
+			(seedSystemComponentsHealthyCondition != nil && (seedSystemComponentsHealthyCondition.Status == core.ConditionFalse || seedSystemComponentsHealthyCondition.Status == core.ConditionUnknown)) {
 			cells = append(cells, "NotReady")
 		} else {
 			cells = append(cells, "Ready")
