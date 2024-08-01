@@ -50,6 +50,9 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupEntryList":                            schema_pkg_apis_core_v1beta1_BackupEntryList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupEntrySpec":                            schema_pkg_apis_core_v1beta1_BackupEntrySpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupEntryStatus":                          schema_pkg_apis_core_v1beta1_BackupEntryStatus(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Bastion":                                    schema_pkg_apis_core_v1beta1_Bastion(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.BastionMachineImage":                        schema_pkg_apis_core_v1beta1_BastionMachineImage(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.BastionMachineType":                         schema_pkg_apis_core_v1beta1_BastionMachineType(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CARotation":                                 schema_pkg_apis_core_v1beta1_CARotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI":                                        schema_pkg_apis_core_v1beta1_CRI(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfile":                               schema_pkg_apis_core_v1beta1_CloudProfile(ref),
@@ -1660,6 +1663,88 @@ func schema_pkg_apis_core_v1beta1_BackupEntryStatus(ref common.ReferenceCallback
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_Bastion(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Bastion contains the bastions creation info",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"machineImage": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MachineImage contains the bastions machine image properties",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.BastionMachineImage"),
+						},
+					},
+					"machineType": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MachineType contains the bastions machine type properties",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.BastionMachineType"),
+						},
+					},
+				},
+				Required: []string{"machineImage", "machineType"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.BastionMachineImage", "github.com/gardener/gardener/pkg/apis/core/v1beta1.BastionMachineType"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_BastionMachineImage(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "BastionMachineImage contains the bastions machine image properties",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name of the machine image",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"version": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Version of the machine image",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"name", "version"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_BastionMachineType(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "BastionMachineType contains the bastions machine type properties",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name of the machine type",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"name"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_CARotation(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -1991,12 +2076,18 @@ func schema_pkg_apis_core_v1beta1_CloudProfileSpec(ref common.ReferenceCallback)
 							},
 						},
 					},
+					"bastion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Bastion contains the machine and image properties",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Bastion"),
+						},
+					},
 				},
 				Required: []string{"kubernetes", "machineImages", "machineTypes", "regions", "type"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImage", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineType", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Region", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector", "github.com/gardener/gardener/pkg/apis/core/v1beta1.VolumeType", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Bastion", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImage", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineType", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Region", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector", "github.com/gardener/gardener/pkg/apis/core/v1beta1.VolumeType", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 

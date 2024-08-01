@@ -454,6 +454,20 @@ string
 <p>VolumeTypes contains constraints regarding allowed values for volume types in the &lsquo;workers&rsquo; block in the Shoot specification.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>bastion</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Bastion">
+Bastion
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Bastion contains the machine and image properties</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -2902,6 +2916,122 @@ Kubernetes meta/v1.Time
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.Bastion">Bastion
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>)
+</p>
+<p>
+<p>Bastion contains the bastions creation info</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>machineImage</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.BastionMachineImage">
+BastionMachineImage
+</a>
+</em>
+</td>
+<td>
+<p>MachineImage contains the bastions machine image properties</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>machineType</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.BastionMachineType">
+BastionMachineType
+</a>
+</em>
+</td>
+<td>
+<p>MachineType contains the bastions machine type properties</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.BastionMachineImage">BastionMachineImage
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.Bastion">Bastion</a>)
+</p>
+<p>
+<p>BastionMachineImage contains the bastions machine image properties</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name of the machine image</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>version</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Version of the machine image</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.BastionMachineType">BastionMachineType
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.Bastion">Bastion</a>)
+</p>
+<p>
+<p>BastionMachineType contains the bastions machine type properties</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name of the machine type</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.CARotation">CARotation
 </h3>
 <p>
@@ -3229,6 +3359,20 @@ string
 <td>
 <em>(Optional)</em>
 <p>VolumeTypes contains constraints regarding allowed values for volume types in the &lsquo;workers&rsquo; block in the Shoot specification.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>bastion</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Bastion">
+Bastion
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Bastion contains the machine and image properties</p>
 </td>
 </tr>
 </tbody>

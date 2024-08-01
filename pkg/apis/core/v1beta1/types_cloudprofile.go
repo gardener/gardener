@@ -74,6 +74,9 @@ type CloudProfileSpec struct {
 	// +patchStrategy=merge
 	// +optional
 	VolumeTypes []VolumeType `json:"volumeTypes,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,9,rep,name=volumeTypes"`
+	// Bastion contains the machine and image properties
+	// +optional
+	Bastion *Bastion `json:"bastion,omitempty" protobuf:"bytes,10,opt,name=bastion"`
 }
 
 // SeedSelector contains constraints for selecting seed to be usable for shoots using a profile
@@ -217,6 +220,28 @@ type VolumeType struct {
 	// MinSize is the minimal supported storage size.
 	// +optional
 	MinSize *resource.Quantity `json:"minSize,omitempty" protobuf:"bytes,4,opt,name=minSize"`
+}
+
+// Bastion contains the bastions creation info
+type Bastion struct {
+	// MachineImage contains the bastions machine image properties
+	MachineImage BastionMachineImage `json:"machineImage" protobuf:"bytes,1,name=machineImage"`
+	// MachineType contains the bastions machine type properties
+	MachineType BastionMachineType `json:"machineType" protobuf:"bytes,2,name=machineType"`
+}
+
+// BastionMachineImage contains the bastions machine image properties
+type BastionMachineImage struct {
+	// Name of the machine image
+	Name string `json:"name" protobuf:"bytes,1,name=name"`
+	// Version of the machine image
+	Version string `json:"version" protobuf:"bytes,2,name=version"`
+}
+
+// BastionMachineType contains the bastions machine type properties
+type BastionMachineType struct {
+	// Name of the machine type
+	Name string `json:"name" protobuf:"bytes,1,name=name"`
 }
 
 const (
