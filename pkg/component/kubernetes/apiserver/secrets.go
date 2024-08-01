@@ -24,6 +24,7 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -49,7 +50,9 @@ func (k *kubeAPIServer) emptySecret(name string) *corev1.Secret {
 }
 
 func (k *kubeAPIServer) reconcileSecretOIDCCABundle(ctx context.Context, secret *corev1.Secret) error {
-	if k.values.OIDC == nil || k.values.OIDC.CABundle == nil {
+	if value, ok := k.values.FeatureGates["StructuredAuthenticationConfiguration"]; k.values.OIDC == nil ||
+		(versionutils.ConstraintK8sGreaterEqual130.Check(k.values.Version) && (!ok || value)) ||
+		k.values.OIDC.CABundle == nil {
 		// We don't delete the secret here as we don't know its name (as it's unique). Instead, we rely on the usual
 		// garbage collection for unique secrets/configmaps.
 		return nil
