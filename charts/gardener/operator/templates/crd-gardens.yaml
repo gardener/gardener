@@ -1159,9 +1159,20 @@ spec:
                             - kubeconfigSecretName
                             type: object
                           authentication:
-                            description: Authentication contains settings related
-                              to authentication.
+                            description: |-
+                              Authentication contains configuration settings for authentication to the kube-apiserver.
+                              This field is only available for Kubernetes v1.30 or later.
                             properties:
+                              structured:
+                                description: Structured contains configuration settings
+                                  for structured authentication to the kube-apiserver.
+                                properties:
+                                  configMapName:
+                                    description: |-
+                                      ConfigMapName is the name of the ConfigMap in the project namespace
+                                      which contains AuthenticationConfiguration for the kube-apiserver.
+                                    type: string
+                                type: object
                               webhook:
                                 description: Webhook contains settings related to
                                   an authentication webhook configuration.

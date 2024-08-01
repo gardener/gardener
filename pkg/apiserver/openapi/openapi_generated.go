@@ -40,6 +40,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Alerting":                                   schema_pkg_apis_core_v1beta1_Alerting(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditConfig":                                schema_pkg_apis_core_v1beta1_AuditConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditPolicy":                                schema_pkg_apis_core_v1beta1_AuditPolicy(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Authentication":                             schema_pkg_apis_core_v1beta1_Authentication(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.AvailabilityZone":                           schema_pkg_apis_core_v1beta1_AvailabilityZone(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupBucket":                               schema_pkg_apis_core_v1beta1_BackupBucket(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupBucketList":                           schema_pkg_apis_core_v1beta1_BackupBucketList(ref),
@@ -205,6 +206,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootStateSpec":                             schema_pkg_apis_core_v1beta1_ShootStateSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootStatus":                                schema_pkg_apis_core_v1beta1_ShootStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootTemplate":                              schema_pkg_apis_core_v1beta1_ShootTemplate(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.StructuredAuthentication":                   schema_pkg_apis_core_v1beta1_StructuredAuthentication(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SystemComponents":                           schema_pkg_apis_core_v1beta1_SystemComponents(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Toleration":                                 schema_pkg_apis_core_v1beta1_Toleration(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.VerticalPodAutoscaler":                      schema_pkg_apis_core_v1beta1_VerticalPodAutoscaler(ref),
@@ -1209,6 +1211,27 @@ func schema_pkg_apis_core_v1beta1_AuditPolicy(ref common.ReferenceCallback) comm
 		},
 		Dependencies: []string{
 			"k8s.io/api/core/v1.ObjectReference"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_Authentication(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Authentication contains settings for authentication to the kube-apiserver",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"structured": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Structured contains configuration settings for structured authentication to the kube-apiserver.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.StructuredAuthentication"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.StructuredAuthentication"},
 	}
 }
 
@@ -4213,11 +4236,17 @@ func schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref common.ReferenceCallba
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionConfig"),
 						},
 					},
+					"authentication": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Authentication contains configuration settings for authentication to the kube-apiserver. This field is only available for Kubernetes v1.30 or later.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Authentication"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerLogging", "github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerRequests", "github.com/gardener/gardener/pkg/apis/core/v1beta1.AdmissionPlugin", "github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.OIDCConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WatchCacheSizes", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerLogging", "github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerRequests", "github.com/gardener/gardener/pkg/apis/core/v1beta1.AdmissionPlugin", "github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Authentication", "github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.OIDCConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WatchCacheSizes", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
@@ -9167,6 +9196,26 @@ func schema_pkg_apis_core_v1beta1_ShootTemplate(ref common.ReferenceCallback) co
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_StructuredAuthentication(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "StructuredAuthentication contains authentication config for kube-apiserver",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"configMapName": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ConfigMapName is the name of the ConfigMap in the project namespace which contains AuthenticationConfiguration for the kube-apiserver.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
 	}
 }
 
