@@ -709,6 +709,130 @@ exemptions:
 			)
 		})
 
+		Describe("AuthenticationConfiguration", func() {
+			var (
+				config                        = "some-config"
+				authenticationConfigurationCm *corev1.ConfigMap
+			)
+
+			BeforeEach(func() {
+				authenticationConfigurationCm = &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "auth-config",
+						Namespace: objectMeta.Namespace,
+					},
+					Data: map[string]string{"config.yaml": config},
+				}
+			})
+
+			DescribeTable("should have the expected authentication configuration",
+				func(prepTest func(), expectedConfig *string, errMatcher gomegatypes.GomegaMatcher) {
+					if prepTest != nil {
+						prepTest()
+					}
+
+					kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+					Expect(err).To(errMatcher)
+					if kubeAPIServer != nil {
+						Expect(kubeAPIServer.GetValues().AuthenticationConfiguration).To(Equal(expectedConfig))
+					}
+				},
+
+				Entry("KubeAPIServerConfig is nil",
+					nil,
+					nil,
+					Not(HaveOccurred()),
+				),
+				Entry("Authentication is nil",
+					func() {
+						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{}
+					},
+					nil,
+					Not(HaveOccurred()),
+				),
+				Entry("Structured is nil",
+					func() {
+						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
+							Authentication: &gardencorev1beta1.Authentication{},
+						}
+					},
+					nil,
+					Not(HaveOccurred()),
+				),
+				Entry("ConfigMapName is empty",
+					func() {
+						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
+							Authentication: &gardencorev1beta1.Authentication{
+								Structured: &gardencorev1beta1.StructuredAuthentication{
+									ConfigMapName: "",
+								},
+							},
+						}
+					},
+					nil,
+					Not(HaveOccurred()),
+				),
+				Entry("ConfigMapName is provided but configmap is missing",
+					func() {
+						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
+							Authentication: &gardencorev1beta1.Authentication{
+								Structured: &gardencorev1beta1.StructuredAuthentication{
+									ConfigMapName: authenticationConfigurationCm.Name,
+								},
+							},
+						}
+					},
+					nil,
+					MatchError(ContainSubstring("not found")),
+				),
+				Entry("ConfigMapName is provided but configmap is missing while shoot has a deletion timestamp",
+					func() {
+						objectMeta.DeletionTimestamp = &metav1.Time{}
+						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
+							Authentication: &gardencorev1beta1.Authentication{
+								Structured: &gardencorev1beta1.StructuredAuthentication{
+									ConfigMapName: authenticationConfigurationCm.Name,
+								},
+							},
+						}
+					},
+					nil,
+					Not(HaveOccurred()),
+				),
+				Entry("ConfigMapName is provided but configmap does not have correct data field",
+					func() {
+						authenticationConfigurationCm.Data = nil
+						Expect(resourceConfigClient.Create(ctx, authenticationConfigurationCm)).To(Succeed())
+
+						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
+							Authentication: &gardencorev1beta1.Authentication{
+								Structured: &gardencorev1beta1.StructuredAuthentication{
+									ConfigMapName: authenticationConfigurationCm.Name,
+								},
+							},
+						}
+					},
+					nil,
+					MatchError(ContainSubstring("missing '.data.config.yaml' in authentication configuration ConfigMap")),
+				),
+				Entry("ConfigMapName is provided and configmap is compliant",
+					func() {
+						Expect(resourceConfigClient.Create(ctx, authenticationConfigurationCm)).To(Succeed())
+
+						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
+							Authentication: &gardencorev1beta1.Authentication{
+								Structured: &gardencorev1beta1.StructuredAuthentication{
+									ConfigMapName: authenticationConfigurationCm.Name,
+								},
+							},
+						}
+					},
+					ptr.To(config),
+					Not(HaveOccurred()),
+				),
+			)
+		})
+
 		Describe("DefaultNotReadyTolerationSeconds and DefaultUnreachableTolerationSeconds", func() {
 			It("should not set the fields", func() {
 				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)

@@ -62,6 +62,42 @@ func computeAPIServerAuditConfig(
 	return out, nil
 }
 
+func computeAPIServerAuthenticationConfig(
+	ctx context.Context,
+	cl client.Client,
+	objectMeta metav1.ObjectMeta,
+	authentication *gardencorev1beta1.Authentication,
+) (
+	*string,
+	error,
+) {
+	if authentication == nil || authentication.Structured == nil || len(authentication.Structured.ConfigMapName) == 0 {
+		return nil, nil
+	}
+
+	var (
+		out *string
+		key = client.ObjectKey{Namespace: objectMeta.Namespace, Name: authentication.Structured.ConfigMapName}
+	)
+
+	configMap := &corev1.ConfigMap{}
+	if err := cl.Get(ctx, key, configMap); err != nil {
+		// Ignore missing authentication configuration on cluster deletion to prevent failing redeployments of the
+		// API server in case the end-user deleted the configmap before/simultaneously to the deletion.
+		if !apierrors.IsNotFound(err) || objectMeta.DeletionTimestamp == nil {
+			return nil, fmt.Errorf("retrieving authentication configuration from the ConfigMap %s failed: %w", key, err)
+		}
+	} else {
+		config, ok := configMap.Data["config.yaml"]
+		if !ok {
+			return nil, fmt.Errorf("missing '.data.config.yaml' in authentication configuration ConfigMap %s", key)
+		}
+		out = ptr.To(config)
+	}
+
+	return out, nil
+}
+
 func computeEnabledAPIServerAdmissionPlugins(defaultPlugins, configuredPlugins []gardencorev1beta1.AdmissionPlugin) []gardencorev1beta1.AdmissionPlugin {
 	for _, plugin := range configuredPlugins {
 		pluginOverwritesDefault := false
