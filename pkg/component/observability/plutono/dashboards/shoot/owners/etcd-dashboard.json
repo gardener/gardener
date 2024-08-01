@@ -16,7 +16,7 @@
   "gnetId": null,
   "graphTooltip": 0,
   "id": 29,
-  "iteration": 1720599800346,
+  "iteration": 1722495993188,
   "links": [],
   "panels": [
     {
@@ -103,7 +103,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(etcd_server_has_leader{role=~\"etcd-$cluster\"})",
+          "expr": "sum(etcd_server_has_leader{role=~\"etcd-$role\"})",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -178,7 +178,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(grpc_server_started_total{role=~\"etcd-$cluster\",grpc_type=\"unary\"}[$__rate_interval]))",
+          "expr": "sum(rate(grpc_server_started_total{role=~\"etcd-$role\",grpc_type=\"unary\"}[$__rate_interval]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -189,7 +189,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(rate(grpc_server_handled_total{role=~\"etcd-$cluster\",grpc_type=\"unary\",grpc_code!=\"OK\"}[$__rate_interval]))",
+          "expr": "sum(rate(grpc_server_handled_total{role=~\"etcd-$role\",grpc_type=\"unary\",grpc_code!=\"OK\"}[$__rate_interval]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -293,7 +293,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(grpc_server_started_total{role=~\"etcd-$cluster\",grpc_service=\"etcdserverpb.Watch\",grpc_type=\"bidi_stream\"}) - sum(grpc_server_handled_total{role=~\"etcd-$cluster\",grpc_service=\"etcdserverpb.Watch\",grpc_type=\"bidi_stream\"})",
+          "expr": "sum(grpc_server_started_total{role=~\"etcd-$role\",grpc_service=\"etcdserverpb.Watch\",grpc_type=\"bidi_stream\"}) - sum(grpc_server_handled_total{role=~\"etcd-$role\",grpc_service=\"etcdserverpb.Watch\",grpc_type=\"bidi_stream\"})",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -304,7 +304,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(grpc_server_started_total{role=~\"etcd-$cluster\",grpc_service=\"etcdserverpb.Lease\",grpc_type=\"bidi_stream\"}) - sum(grpc_server_handled_total{role=~\"etcd-$cluster\",grpc_service=\"etcdserverpb.Lease\",grpc_type=\"bidi_stream\"})",
+          "expr": "sum(grpc_server_started_total{role=~\"etcd-$role\",grpc_service=\"etcdserverpb.Lease\",grpc_type=\"bidi_stream\"}) - sum(grpc_server_handled_total{role=~\"etcd-$role\",grpc_service=\"etcdserverpb.Lease\",grpc_type=\"bidi_stream\"})",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -408,7 +408,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "process_resident_memory_bytes{job=\"kube-etcd3-$cluster\"}",
+          "expr": "process_resident_memory_bytes{job=\"kube-etcd3-$role\"}",
           "interval": "",
           "intervalFactor": 2,
           "legendFormat": "{{pod}} Resident Memory",
@@ -438,7 +438,6 @@
       },
       "yaxes": [
         {
-          "$$hashKey": "object:69",
           "format": "bytes",
           "label": null,
           "logBase": 1,
@@ -447,7 +446,6 @@
           "show": true
         },
         {
-          "$$hashKey": "object:70",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -514,7 +512,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "etcd_mvcc_db_total_size_in_bytes{role=~\"etcd-$cluster\"}",
+          "expr": "etcd_mvcc_db_total_size_in_bytes{role=~\"etcd-$role\"}",
           "hide": false,
           "interval": "",
           "intervalFactor": 2,
@@ -616,7 +614,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_wal_fsync_duration_seconds_bucket{role=~\"etcd-$cluster\"}[$__rate_interval])) by (instance, le))",
+          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_wal_fsync_duration_seconds_bucket{role=~\"etcd-$role\"}[$__rate_interval])) by (instance, le))",
           "hide": false,
           "interval": "",
           "intervalFactor": 2,
@@ -627,7 +625,7 @@
         },
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_backend_commit_duration_seconds_bucket{role=~\"etcd-$cluster\"}[$__rate_interval])) by (instance, le))",
+          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_backend_commit_duration_seconds_bucket{role=~\"etcd-$role\"}[$__rate_interval])) by (instance, le))",
           "interval": "",
           "intervalFactor": 2,
           "legendFormat": "{{pod}} DB fsync",
@@ -728,7 +726,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(etcd_network_client_grpc_received_bytes_total{role=~\"etcd-$cluster\"}[$__rate_interval])",
+          "expr": "rate(etcd_network_client_grpc_received_bytes_total{role=~\"etcd-$role\"}[$__rate_interval])",
           "interval": "",
           "intervalFactor": 2,
           "legendFormat": "{{pod}} Client Traffic In",
@@ -831,7 +829,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(etcd_network_client_grpc_sent_bytes_total{role=~\"etcd-$cluster\"}[$__rate_interval])",
+          "expr": "rate(etcd_network_client_grpc_sent_bytes_total{role=~\"etcd-$role\"}[$__rate_interval])",
           "interval": "",
           "intervalFactor": 2,
           "legendFormat": "{{pod}} Client Traffic Out",
@@ -944,8 +942,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(container_fs_reads_bytes_total{namespace=\"kube-system\", pod=~\"etcd-(${cluster:pipe}).*\"}[$__rate_interval])) by(pod, container)",
+          "exemplar": true,
+          "expr": "sum(rate(container_fs_reads_bytes_total{namespace=\"kube-system\", pod=~\"etcd-(${role:pipe}).*\"}[$__rate_interval])) by(pod, container)",
           "format": "time_series",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "{{pod}} / {{container}}",
           "refId": "A"
@@ -1040,8 +1040,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(container_fs_writes_bytes_total{namespace=\"kube-system\", pod=~\"etcd-(${cluster:pipe}).*\"}[$__rate_interval])) by(pod, container)",
+          "exemplar": true,
+          "expr": "sum(rate(container_fs_writes_bytes_total{namespace=\"kube-system\", pod=~\"etcd-(${role:pipe}).*\"}[$__rate_interval])) by(pod, container)",
           "format": "time_series",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "{{pod}} / {{container}}",
           "refId": "A"
@@ -1101,14 +1103,19 @@
           "text": "main",
           "value": "main"
         },
-        "description": "",
+        "description": null,
         "error": null,
         "hide": 0,
-        "includeAll": false,
+        "includeAll": true,
         "label": null,
         "multi": false,
-        "name": "cluster",
+        "name": "role",
         "options": [
+          {
+            "selected": false,
+            "text": "All",
+            "value": "$__all"
+          },
           {
             "selected": true,
             "text": "main",
