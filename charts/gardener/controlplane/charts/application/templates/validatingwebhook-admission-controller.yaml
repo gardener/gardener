@@ -247,6 +247,42 @@ webhooks:
     {{- end }}
     caBundle: {{ required ".Values.global.admission.config.server.webhooks.tls.caBundle is required" (b64enc .Values.global.admission.config.server.webhooks.tls.caBundle) }}
   sideEffects: None
+- name: authentication-configurations.gardener.cloud
+  admissionReviewVersions: ["v1", "v1beta1"]
+  timeoutSeconds: 10
+  rules:
+  - apiGroups:
+    - "core.gardener.cloud"
+    apiVersions:
+    - "*"
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - shoots
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - UPDATE
+    resources:
+    - configmaps
+  failurePolicy: Fail
+  namespaceSelector:
+    matchLabels:
+      gardener.cloud/role: project
+  clientConfig:
+    {{- if .Values.global.deployment.virtualGarden.enabled }}
+    url: https://gardener-admission-controller.garden/webhooks/authentication-configuration
+    {{- else }}
+    service:
+      namespace: garden
+      name: gardener-admission-controller
+      path: /webhooks/authentication-configuration
+    {{- end }}
+    caBundle: {{ required ".Values.global.admission.config.server.webhooks.tls.caBundle is required" (b64enc .Values.global.admission.config.server.webhooks.tls.caBundle) }}
+  sideEffects: None
 - name: admission-plugin-secret.gardener.cloud
   admissionReviewVersions: ["v1", "v1beta1"]
   timeoutSeconds: 10

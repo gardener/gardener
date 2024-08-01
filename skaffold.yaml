@@ -436,6 +436,7 @@ build:
             - pkg/admissioncontroller/webhook/admission
             - pkg/admissioncontroller/webhook/admission/admissionpluginsecret
             - pkg/admissioncontroller/webhook/admission/auditpolicy
+            - pkg/admissioncontroller/webhook/admission/authenticationconfig
             - pkg/admissioncontroller/webhook/admission/internaldomainsecret
             - pkg/admissioncontroller/webhook/admission/kubeconfigsecret
             - pkg/admissioncontroller/webhook/admission/namespacedeletion
