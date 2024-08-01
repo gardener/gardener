@@ -12,11 +12,12 @@ The [`shoots/adminkubeconfig`](../proposals/16-adminkubeconfig-subresource.md) s
 
 The username associated with such `kubeconfig` will be the same which is used for authenticating to the Gardener API. Apart from this advantage, the created `kubeconfig` will not be persisted anywhere.
 
-In order to request such a `kubeconfig`, you can run the following commands:
+In order to request such a `kubeconfig`, you can run the following commands (targeting the garden cluster):
 
 ```bash
 export NAMESPACE=garden-my-namespace
 export SHOOT_NAME=my-shoot
+export KUBECONFIG=<kubeconfig for garden cluster>  # can be set using "gardenctl target --garden <landscape>"
 kubectl create \
     -f <(printf '{"spec":{"expirationSeconds":600}}') \
     --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME}/adminkubeconfig | \
@@ -41,7 +42,7 @@ if err != nil {
 config = adminKubeconfigRequest.Status.Kubeconfig
 ```
 
-In Python you can use the native [`kubernetes` client](https://github.com/kubernetes-client/python) to create such a kubeconfig like this:
+In Python, you can use the native [`kubernetes` client](https://github.com/kubernetes-client/python) to create such a kubeconfig like this:
 
 ```python
 # This script first loads an existing kubeconfig from your system, and then sends a request to the Gardener API to create a new kubeconfig for a shoot cluster. 
@@ -121,11 +122,11 @@ spec:
       ...
 ```
 
-It is the end-user's responsibility to incorporate the OpenID Connect configurations in `kubeconfig` for accessing the cluster (i.e., Gardener will not automatically generate `kubeconfig` based on these OIDC settings).
+It is the end-user's responsibility to incorporate the OpenID Connect configurations in the `kubeconfig` for accessing the cluster (i.e., Gardener will not automatically generate the `kubeconfig` based on these OIDC settings).
 The recommended way is using the `kubectl` plugin called [`kubectl oidc-login`](https://github.com/int128/kubelogin) for OIDC authentication.
 
 If you want to use the same OIDC configuration for all your shoots by default, then you can use the `ClusterOpenIDConnectPreset` and `OpenIDConnectPreset` API resources. They allow defaulting the `.spec.kubernetes.kubeAPIServer.oidcConfig` fields for newly created `Shoot`s such that you don't have to repeat yourself every time (similar to `PodPreset` resources in Kubernetes).
-`ClusterOpenIDConnectPreset` specified OIDC configuration applies to `Projects` and `Shoots` cluster-wide (hence, only available to Gardener operators) while `OpenIDConnectPreset` is `Project`-scoped.
+`ClusterOpenIDConnectPreset` specified OIDC configuration applies to `Projects` and `Shoots` cluster-wide (hence, only available to Gardener operators), while `OpenIDConnectPreset` is `Project`-scoped.
 Shoots have to "opt-in" for such defaulting by using the `oidc=enable` label.
 
 For further information on `(Cluster)OpenIDConnectPreset`, refer to [ClusterOpenIDConnectPreset and OpenIDConnectPreset](openidconnect-presets.md).
@@ -149,12 +150,12 @@ spec:
 
 It is **not** the recommended method to access the shoot cluster, as the static token `kubeconfig` has some security flaws associated with it:
 
-- The static token in the `kubeconfig` doesn't have any expiration date. Read [this document](shoot_credentials_rotation.md#kubeconfig) to learn how to rotate the static token.
+- The static token in the `kubeconfig` doesn't have any expiration date. Read [Credentials Rotation for Shoot Clusters](shoot_credentials_rotation.md#kubeconfig) to learn how to rotate the static token.
 - The static token doesn't have any user identity associated with it. The user in that token will always be `system:cluster-admin`, irrespective of the person accessing the cluster. Hence, it is impossible to audit the events in cluster.
 
-When `enableStaticTokenKubeconfig` field is not explicitly set in the Shoot spec:
+When the `enableStaticTokenKubeconfig` field is not explicitly set in the Shoot spec:
 
-- for Shoot clusters using Kubernetes version < 1.26 the field is defaulted to `true`.
-- for Shoot clusters using Kubernetes version >= 1.26 the field is defaulted to `false`.
+- for Shoot clusters using Kubernetes version < 1.26, the field is defaulted to `true`.
+- for Shoot clusters using Kubernetes version >= 1.26, the field is defaulted to `false`.
 
 > **Note:** Starting with Kubernetes 1.27, the `enableStaticTokenKubeconfig` field will be locked to `false`.
