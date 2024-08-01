@@ -87,7 +87,7 @@ if [[ -f "/etc/debian_version" ]]; then
     # Copy certificates from default "localcertsdir" because /usr is mounted read-only in Garden Linux.
     # See https://github.com/gardenlinux/gardenlinux/issues/1490
     mkdir -p "/var/lib/ca-certificates-local"
-    if [[ -d "/usr/local/share/ca-certificates" ]]; then
+    if [[ -d "/usr/local/share/ca-certificates" && -n "$(ls -A '/usr/local/share/ca-certificates')" ]]; then
         cp -af /usr/local/share/ca-certificates/* "/var/lib/ca-certificates-local"
     fi
     # localcertsdir is supported on Debian based OS only
