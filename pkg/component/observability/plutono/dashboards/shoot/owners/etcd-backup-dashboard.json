@@ -1,11 +1,21 @@
 {
   "annotations": {
-    "list": []
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Plutono --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
   },
   "editable": true,
+  "gnetId": null,
   "graphTooltip": 0,
-  "id": 1,
-  "iteration": 1542111230310,
+  "id": 16,
   "links": [],
   "panels": [
     {
@@ -35,6 +45,10 @@
       "description": "Timestamp of the latest snapshot successfully uploaded to the snapstore.",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "dateTimeAsUS",
       "gauge": {
         "maxValue": 100,
@@ -67,7 +81,6 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
-      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -89,9 +102,11 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "max(etcdbr_snapshot_latest_timestamp{role=\"main\"})*1000",
+          "exemplar": true,
+          "expr": "max(etcdbr_snapshot_latest_timestamp{role=\"etcd-main\"})*1000",
           "format": "time_series",
           "instant": true,
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "",
           "metric": "etcdbr_snapshot_latest_timestamp",
@@ -125,6 +140,10 @@
       "description": "Maximum duration worth of possible data loss in the event that etcd data gets corrupted at this moment.",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "dtdurations",
       "gauge": {
         "maxValue": 100,
@@ -157,7 +176,6 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
-      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -179,9 +197,11 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "time()-max(etcdbr_snapshot_latest_timestamp{role=\"main\"})",
+          "exemplar": true,
+          "expr": "time()-max(etcdbr_snapshot_latest_timestamp{role=\"etcd-main\"})",
           "format": "time_series",
           "instant": false,
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "",
           "metric": "etcdbr_snapshot_latest_timestamp",
@@ -215,6 +235,10 @@
       "description": "Latest revision of the data from the latest snapshot uploaded to the snapstore.",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -247,7 +271,6 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
-      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -269,9 +292,11 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "max(etcdbr_snapshot_latest_revision{role=\"main\"})",
+          "exemplar": true,
+          "expr": "max(etcdbr_snapshot_latest_revision{role=\"etcd-main\"})",
           "format": "time_series",
           "instant": true,
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "",
           "metric": "etcdbr_snapshot_latest_revision",
@@ -294,8 +319,8 @@
     },
     {
       "aliasColors": {
-          "Succeeded": "green",
-          "Failed": "red"
+        "Failed": "red",
+        "Succeeded": "green"
       },
       "bars": false,
       "dashLength": 10,
@@ -304,6 +329,12 @@
       "description": "Total number of full snapshots successfully uploaded to the snapstore, as well as total number of failed attempts for the same, over time.",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -329,9 +360,10 @@
       "links": [],
       "nullPointMode": "connected",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.5.32",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -342,8 +374,10 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "etcdbr_snapshot_duration_seconds_count{role=\"main\",kind=\"Full\",succeeded=\"true\"}",
+          "exemplar": true,
+          "expr": "etcdbr_snapshot_duration_seconds_count{role=\"etcd-main\",kind=\"Full\",succeeded=\"true\"}",
           "format": "time_series",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "{{pod}} Succeeded",
           "metric": "etcdbr_snapshot_duration_seconds_count",
@@ -351,8 +385,10 @@
           "step": 2
         },
         {
-          "expr": "etcdbr_snapshot_duration_seconds_count{role=\"main\",kind=\"Full\",succeeded=\"false\"}",
+          "exemplar": true,
+          "expr": "etcdbr_snapshot_duration_seconds_count{role=\"etcd-main\",kind=\"Full\",succeeded=\"false\"}",
           "format": "time_series",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "{{pod}} Failed",
           "metric": "etcdbr_snapshot_duration_seconds_count",
@@ -405,8 +441,8 @@
     },
     {
       "aliasColors": {
-          "Succeeded": "green",
-          "Failed": "red"
+        "Failed": "red",
+        "Succeeded": "green"
       },
       "bars": false,
       "dashLength": 10,
@@ -415,6 +451,12 @@
       "description": "Total number of delta snapshots successfully uploaded to the snapstore, as well as total number of failed attempts for the same, over time.",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -440,9 +482,10 @@
       "links": [],
       "nullPointMode": "connected",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.5.32",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -453,8 +496,10 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "etcdbr_snapshot_duration_seconds_count{role=\"main\",kind=\"Incr\",succeeded=\"true\"}",
+          "exemplar": true,
+          "expr": "etcdbr_snapshot_duration_seconds_count{role=\"etcd-main\",kind=\"Incr\",succeeded=\"true\"}",
           "format": "time_series",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "{{pod}} Succeeded",
           "metric": "etcdbr_snapshot_duration_seconds_count",
@@ -462,8 +507,10 @@
           "step": 2
         },
         {
-          "expr": "etcdbr_snapshot_duration_seconds_count{role=\"main\",kind=\"Incr\",succeeded=\"false\"}",
+          "exemplar": true,
+          "expr": "etcdbr_snapshot_duration_seconds_count{role=\"etcd-main\",kind=\"Incr\",succeeded=\"false\"}",
           "format": "time_series",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "{{pod}} Failed",
           "metric": "etcdbr_snapshot_duration_seconds_count",
@@ -516,8 +563,8 @@
     },
     {
       "aliasColors": {
-          "Succeeded": "green",
-          "Failed": "red"
+        "Failed": "red",
+        "Succeeded": "green"
       },
       "bars": false,
       "dashLength": 10,
@@ -526,6 +573,12 @@
       "description": "Total number of snapshots successfully garbage-collected from the snapstore, as well as total number of failed attempts for the same, over time.",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -551,9 +604,10 @@
       "links": [],
       "nullPointMode": "connected",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.5.32",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -564,7 +618,9 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(etcdbr_snapshot_gc_total{role=\"main\",succeeded=\"true\",kind=~\"Full|Incr\"})",
+          "exemplar": true,
+          "expr": "sum(etcdbr_snapshot_gc_total{role=\"etcd-main\",succeeded=\"true\",kind=~\"Full|Incr\"})",
+          "interval": "",
           "intervalFactor": 2,
           "legendFormat": "Succeeded",
           "metric": "etcdbr_snapshot_gc_total",
@@ -572,7 +628,9 @@
           "step": 4
         },
         {
-          "expr": "sum(etcdbr_snapshot_gc_total{role=\"main\",succeeded=\"false\",kind=~\"Full|Incr\"})",
+          "exemplar": true,
+          "expr": "sum(etcdbr_snapshot_gc_total{role=\"etcd-main\",succeeded=\"false\",kind=~\"Full|Incr\"})",
+          "interval": "",
           "legendFormat": "Failed",
           "refId": "B"
         }
@@ -622,8 +680,8 @@
     },
     {
       "aliasColors": {
-          "Succeeded": "green",
-          "Failed": "red"
+        "Failed": "red",
+        "Succeeded": "green"
       },
       "bars": false,
       "dashLength": 10,
@@ -632,6 +690,12 @@
       "description": "Total number of successful and failed attempts to defragment the etcd data store over time.",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -657,9 +721,10 @@
       "links": [],
       "nullPointMode": "connected",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.5.32",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -670,8 +735,10 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "etcdbr_defragmentation_duration_seconds_count{role=\"main\",succeeded=\"true\"}",
+          "exemplar": true,
+          "expr": "etcdbr_defragmentation_duration_seconds_count{role=\"etcd-main\",succeeded=\"true\"}",
           "instant": false,
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "{{pod}} Succeeded",
           "metric": "etcdbr_defragmentation_duration_seconds_count",
@@ -679,8 +746,10 @@
           "step": 4
         },
         {
-          "expr": "etcdbr_defragmentation_duration_seconds_count{role=\"main\",succeeded=\"false\"}",
+          "exemplar": true,
+          "expr": "etcdbr_defragmentation_duration_seconds_count{role=\"etcd-main\",succeeded=\"false\"}",
           "instant": false,
+          "interval": "",
           "legendFormat": "{{pod}} Failed",
           "refId": "B"
         }
@@ -737,6 +806,12 @@
       "description": "Duration of taking full and delta snapshots over time.",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -762,9 +837,10 @@
       "links": [],
       "nullPointMode": "connected",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.5.32",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -775,9 +851,11 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "histogram_quantile(0.99, sum(rate(etcdbr_snapshot_duration_seconds_bucket{role=\"main\",kind=\"Full\"}[$__rate_interval])) by (le))",
+          "exemplar": true,
+          "expr": "histogram_quantile(0.99, sum(rate(etcdbr_snapshot_duration_seconds_bucket{role=\"etcd-main\",kind=\"Full\"}[$__rate_interval])) by (le))",
           "hide": false,
           "instant": false,
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Full",
           "metric": "etcdbr_snapshot_duration_seconds_bucket",
@@ -785,9 +863,11 @@
           "step": 4
         },
         {
-          "expr": "histogram_quantile(0.99, sum(rate(etcdbr_snapshot_duration_seconds_bucket{role=\"main\",kind=\"Incr\"}[$__rate_interval])) by (le))",
+          "exemplar": true,
+          "expr": "histogram_quantile(0.99, sum(rate(etcdbr_snapshot_duration_seconds_bucket{role=\"etcd-main\",kind=\"Incr\"}[$__rate_interval])) by (le))",
           "hide": false,
           "instant": false,
+          "interval": "",
           "legendFormat": "Delta",
           "refId": "B"
         }
@@ -837,8 +917,8 @@
     },
     {
       "aliasColors": {
-          "Succeeded": "green",
-          "Failed": "red"
+        "Failed": "red",
+        "Succeeded": "green"
       },
       "bars": false,
       "dashLength": 10,
@@ -847,6 +927,12 @@
       "description": "Total number of successful and failed attempts at etcd data validations over time.",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -872,9 +958,10 @@
       "links": [],
       "nullPointMode": "connected",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.5.32",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -885,8 +972,10 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "etcdbr_validation_duration_seconds_count{role=\"main\",succeeded=\"true\"}",
+          "exemplar": true,
+          "expr": "etcdbr_validation_duration_seconds_count{role=\"etcd-main\",succeeded=\"true\"}",
           "format": "time_series",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "{{pod}} Succeeded",
           "metric": "etcdbr_validation_duration_seconds_count",
@@ -894,9 +983,11 @@
           "step": 2
         },
         {
-          "expr": "etcdbr_validation_duration_seconds_count{role=\"main\",succeeded=\"false\"}",
+          "exemplar": true,
+          "expr": "etcdbr_validation_duration_seconds_count{role=\"etcd-main\",succeeded=\"false\"}",
           "format": "time_series",
           "hide": false,
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "{{pod}} Failed",
           "metric": "etcdbr_validation_duration_seconds_count",
@@ -949,8 +1040,8 @@
     },
     {
       "aliasColors": {
-          "Succeeded": "green",
-          "Failed": "red"
+        "Failed": "red",
+        "Succeeded": "green"
       },
       "bars": false,
       "dashLength": 10,
@@ -959,6 +1050,12 @@
       "description": "Total number of successful and failed attempts at etcd data restorations over time.",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -984,9 +1081,10 @@
       "links": [],
       "nullPointMode": "connected",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.5.32",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -997,8 +1095,10 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "etcdbr_restoration_duration_seconds_count{role=\"main\",succeeded=\"true\"}",
+          "exemplar": true,
+          "expr": "etcdbr_restoration_duration_seconds_count{role=\"etcd-main\",succeeded=\"true\"}",
           "format": "time_series",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "{{pod}} {{restore}} Succeeded",
           "metric": "etcdbr_restoration_duration_seconds_count",
@@ -1006,9 +1106,11 @@
           "step": 2
         },
         {
-          "expr": "etcdbr_restoration_duration_seconds_count{role=\"main\",succeeded=\"false\"}",
+          "exemplar": true,
+          "expr": "etcdbr_restoration_duration_seconds_count{role=\"etcd-main\",succeeded=\"false\"}",
           "format": "time_series",
           "hide": false,
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "{{pod}} {{restore}} Failed",
           "metric": "etcdbr_restoration_duration_seconds_count",
@@ -1082,6 +1184,12 @@
       "description": "Memory consumed by etcd-backup-restore process over time.",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -1107,9 +1215,10 @@
       "links": [],
       "nullPointMode": "connected",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.5.32",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1181,6 +1290,12 @@
       "description": "Total CPU usage by etcd-backup-restore process as a percentage of total available CPU to the container, over time.",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -1206,9 +1321,10 @@
       "links": [],
       "nullPointMode": "connected",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.5.32",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1272,12 +1388,9 @@
       }
     }
   ],
-  "schemaVersion": 21,
+  "schemaVersion": 27,
   "style": "dark",
-  "tags": [
-    "controlplane",
-    "seed"
-  ],
+  "tags": ["controlplane", "seed"],
   "templating": {
     "list": []
   },
@@ -1286,16 +1399,7 @@
     "to": "now"
   },
   "timepicker": {
-    "refresh_intervals": [
-      "5s",
-      "10s",
-      "30s",
-      "1m",
-      "5m",
-      "15m",
-      "30m",
-      "1h"
-    ],
+    "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m", "30m", "1h"],
     "time_options": [
       "5m",
       "15m",
