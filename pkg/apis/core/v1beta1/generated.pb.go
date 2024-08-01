@@ -266,10 +266,38 @@ func (m *AuditPolicy) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_AuditPolicy proto.InternalMessageInfo
 
+func (m *Authentication) Reset()      { *m = Authentication{} }
+func (*Authentication) ProtoMessage() {}
+func (*Authentication) Descriptor() ([]byte, []int) {
+	return fileDescriptor_ca37af0df9a5bbd2, []int{8}
+}
+func (m *Authentication) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *Authentication) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	b = b[:cap(b)]
+	n, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b[:n], nil
+}
+func (m *Authentication) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Authentication.Merge(m, src)
+}
+func (m *Authentication) XXX_Size() int {
+	return m.Size()
+}
+func (m *Authentication) XXX_DiscardUnknown() {
+	xxx_messageInfo_Authentication.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Authentication proto.InternalMessageInfo
+
 func (m *AvailabilityZone) Reset()      { *m = AvailabilityZone{} }
 func (*AvailabilityZone) ProtoMessage() {}
 func (*AvailabilityZone) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{8}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{9}
 }
 func (m *AvailabilityZone) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -297,7 +325,7 @@ var xxx_messageInfo_AvailabilityZone proto.InternalMessageInfo
 func (m *BackupBucket) Reset()      { *m = BackupBucket{} }
 func (*BackupBucket) ProtoMessage() {}
 func (*BackupBucket) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{9}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{10}
 }
 func (m *BackupBucket) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -325,7 +353,7 @@ var xxx_messageInfo_BackupBucket proto.InternalMessageInfo
 func (m *BackupBucketList) Reset()      { *m = BackupBucketList{} }
 func (*BackupBucketList) ProtoMessage() {}
 func (*BackupBucketList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{10}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{11}
 }
 func (m *BackupBucketList) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -353,7 +381,7 @@ var xxx_messageInfo_BackupBucketList proto.InternalMessageInfo
 func (m *BackupBucketProvider) Reset()      { *m = BackupBucketProvider{} }
 func (*BackupBucketProvider) ProtoMessage() {}
 func (*BackupBucketProvider) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{11}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{12}
 }
 func (m *BackupBucketProvider) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -381,7 +409,7 @@ var xxx_messageInfo_BackupBucketProvider proto.InternalMessageInfo
 func (m *BackupBucketSpec) Reset()      { *m = BackupBucketSpec{} }
 func (*BackupBucketSpec) ProtoMessage() {}
 func (*BackupBucketSpec) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{12}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{13}
 }
 func (m *BackupBucketSpec) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -409,7 +437,7 @@ var xxx_messageInfo_BackupBucketSpec proto.InternalMessageInfo
 func (m *BackupBucketStatus) Reset()      { *m = BackupBucketStatus{} }
 func (*BackupBucketStatus) ProtoMessage() {}
 func (*BackupBucketStatus) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{13}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{14}
 }
 func (m *BackupBucketStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -437,7 +465,7 @@ var xxx_messageInfo_BackupBucketStatus proto.InternalMessageInfo
 func (m *BackupEntry) Reset()      { *m = BackupEntry{} }
 func (*BackupEntry) ProtoMessage() {}
 func (*BackupEntry) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{14}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{15}
 }
 func (m *BackupEntry) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -465,7 +493,7 @@ var xxx_messageInfo_BackupEntry proto.InternalMessageInfo
 func (m *BackupEntryList) Reset()      { *m = BackupEntryList{} }
 func (*BackupEntryList) ProtoMessage() {}
 func (*BackupEntryList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{15}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{16}
 }
 func (m *BackupEntryList) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -493,7 +521,7 @@ var xxx_messageInfo_BackupEntryList proto.InternalMessageInfo
 func (m *BackupEntrySpec) Reset()      { *m = BackupEntrySpec{} }
 func (*BackupEntrySpec) ProtoMessage() {}
 func (*BackupEntrySpec) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{16}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{17}
 }
 func (m *BackupEntrySpec) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -521,7 +549,7 @@ var xxx_messageInfo_BackupEntrySpec proto.InternalMessageInfo
 func (m *BackupEntryStatus) Reset()      { *m = BackupEntryStatus{} }
 func (*BackupEntryStatus) ProtoMessage() {}
 func (*BackupEntryStatus) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ca37af0df9a5bbd2, []int{17}
+	return fileDescriptor_ca37af0df9a5bbd2, []int{18}
 }
 func (m *BackupEntryStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4888,6 +4916,34 @@ func (m *ShootTemplate) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ShootTemplate proto.InternalMessageInfo
 
+func (m *StructuredAuthentication) Reset()      { *m = StructuredAuthentication{} }
+func (*StructuredAuthentication) ProtoMessage() {}
+func (*StructuredAuthentication) Descriptor() ([]byte, []int) {
+	return fileDescriptor_ca37af0df9a5bbd2, []int{171}
+}
+func (m *StructuredAuthentication) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *StructuredAuthentication) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	b = b[:cap(b)]
+	n, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b[:n], nil
+}
+func (m *StructuredAuthentication) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_StructuredAuthentication.Merge(m, src)
+}
+func (m *StructuredAuthentication) XXX_Size() int {
+	return m.Size()
+}
+func (m *StructuredAuthentication) XXX_DiscardUnknown() {
+	xxx_messageInfo_StructuredAuthentication.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_StructuredAuthentication proto.InternalMessageInfo
+
 func (m *SystemComponents) Reset()      { *m = SystemComponents{} }
 func (*SystemComponents) ProtoMessage() {}
 func (*SystemComponents) Descriptor() ([]byte, []int) {
@@ -5177,6 +5233,7 @@ func init() {
 	proto.RegisterType((*Alerting)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.Alerting")
 	proto.RegisterType((*AuditConfig)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.AuditConfig")
 	proto.RegisterType((*AuditPolicy)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.AuditPolicy")
+	proto.RegisterType((*Authentication)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.Authentication")
 	proto.RegisterType((*AvailabilityZone)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.AvailabilityZone")
 	proto.RegisterType((*BackupBucket)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.BackupBucket")
 	proto.RegisterType((*BackupBucketList)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.BackupBucketList")
@@ -5358,6 +5415,7 @@ func init() {
 	proto.RegisterType((*ShootStateSpec)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.ShootStateSpec")
 	proto.RegisterType((*ShootStatus)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.ShootStatus")
 	proto.RegisterType((*ShootTemplate)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.ShootTemplate")
+	proto.RegisterType((*StructuredAuthentication)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.StructuredAuthentication")
 	proto.RegisterType((*SystemComponents)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.SystemComponents")
 	proto.RegisterType((*Toleration)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.Toleration")
 	proto.RegisterType((*VerticalPodAutoscaler)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.VerticalPodAutoscaler")
@@ -6478,6 +6536,41 @@ func (m *AuditPolicy) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	if m.ConfigMapRef != nil {
 		{
 			size, err := m.ConfigMapRef.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintGenerated(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *Authentication) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *Authentication) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *Authentication) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.Structured != nil {
+		{
+			size, err := m.Structured.MarshalToSizedBuffer(dAtA[:i])
 			if err != nil {
 				return 0, err
 			}
@@ -9933,6 +10026,20 @@ func (m *KubeAPIServerConfig) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.Authentication != nil {
+		{
+			size, err := m.Authentication.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintGenerated(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x1
+		i--
+		dAtA[i] = 0x8a
+	}
 	if m.EncryptionConfig != nil {
 		{
 			size, err := m.EncryptionConfig.MarshalToSizedBuffer(dAtA[:i])
@@ -16278,6 +16385,34 @@ func (m *ShootTemplate) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *StructuredAuthentication) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *StructuredAuthentication) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *StructuredAuthentication) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	i -= len(m.ConfigMapName)
+	copy(dAtA[i:], m.ConfigMapName)
+	i = encodeVarintGenerated(dAtA, i, uint64(len(m.ConfigMapName)))
+	i--
+	dAtA[i] = 0xa
+	return len(dAtA) - i, nil
+}
+
 func (m *SystemComponents) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -17156,6 +17291,19 @@ func (m *AuditPolicy) Size() (n int) {
 	_ = l
 	if m.ConfigMapRef != nil {
 		l = m.ConfigMapRef.Size()
+		n += 1 + l + sovGenerated(uint64(l))
+	}
+	return n
+}
+
+func (m *Authentication) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Structured != nil {
+		l = m.Structured.Size()
 		n += 1 + l + sovGenerated(uint64(l))
 	}
 	return n
@@ -18514,6 +18662,10 @@ func (m *KubeAPIServerConfig) Size() (n int) {
 	}
 	if m.EncryptionConfig != nil {
 		l = m.EncryptionConfig.Size()
+		n += 2 + l + sovGenerated(uint64(l))
+	}
+	if m.Authentication != nil {
+		l = m.Authentication.Size()
 		n += 2 + l + sovGenerated(uint64(l))
 	}
 	return n
@@ -20812,6 +20964,17 @@ func (m *ShootTemplate) Size() (n int) {
 	return n
 }
 
+func (m *StructuredAuthentication) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.ConfigMapName)
+	n += 1 + l + sovGenerated(uint64(l))
+	return n
+}
+
 func (m *SystemComponents) Size() (n int) {
 	if m == nil {
 		return 0
@@ -21185,6 +21348,16 @@ func (this *AuditPolicy) String() string {
 	}
 	s := strings.Join([]string{`&AuditPolicy{`,
 		`ConfigMapRef:` + strings.Replace(fmt.Sprintf("%v", this.ConfigMapRef), "ObjectReference", "v1.ObjectReference", 1) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *Authentication) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&Authentication{`,
+		`Structured:` + strings.Replace(this.Structured.String(), "StructuredAuthentication", "StructuredAuthentication", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -22139,6 +22312,7 @@ func (this *KubeAPIServerConfig) String() string {
 		`DefaultNotReadyTolerationSeconds:` + valueToStringGenerated(this.DefaultNotReadyTolerationSeconds) + `,`,
 		`DefaultUnreachableTolerationSeconds:` + valueToStringGenerated(this.DefaultUnreachableTolerationSeconds) + `,`,
 		`EncryptionConfig:` + strings.Replace(this.EncryptionConfig.String(), "EncryptionConfig", "EncryptionConfig", 1) + `,`,
+		`Authentication:` + strings.Replace(this.Authentication.String(), "Authentication", "Authentication", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -23716,6 +23890,16 @@ func (this *ShootTemplate) String() string {
 	}, "")
 	return s
 }
+func (this *StructuredAuthentication) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&StructuredAuthentication{`,
+		`ConfigMapName:` + fmt.Sprintf("%v", this.ConfigMapName) + `,`,
+		`}`,
+	}, "")
+	return s
+}
 func (this *SystemComponents) String() string {
 	if this == nil {
 		return "nil"
@@ -24686,6 +24870,92 @@ func (m *AuditPolicy) Unmarshal(dAtA []byte) error {
 				m.ConfigMapRef = &v1.ObjectReference{}
 			}
 			if err := m.ConfigMapRef.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGenerated(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *Authentication) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGenerated
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: Authentication: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: Authentication: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Structured", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Structured == nil {
+				m.Structured = &StructuredAuthentication{}
+			}
+			if err := m.Structured.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -35301,6 +35571,42 @@ func (m *KubeAPIServerConfig) Unmarshal(dAtA []byte) error {
 				m.EncryptionConfig = &EncryptionConfig{}
 			}
 			if err := m.EncryptionConfig.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 17:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Authentication", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Authentication == nil {
+				m.Authentication = &Authentication{}
+			}
+			if err := m.Authentication.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -53612,6 +53918,88 @@ func (m *ShootTemplate) Unmarshal(dAtA []byte) error {
 			if err := m.Spec.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGenerated(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *StructuredAuthentication) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGenerated
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: StructuredAuthentication: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: StructuredAuthentication: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ConfigMapName", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ConfigMapName = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
