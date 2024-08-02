@@ -248,11 +248,13 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			localBackupBucketOptions.Completed().Apply(&localbackupentry.DefaultAddOptions)
 			heartbeatCtrlOptions.Completed().Apply(&heartbeat.DefaultAddOptions)
 
-			reconcileOpts.Completed().Apply(&localcontrolplane.DefaultAddOptions.IgnoreOperationAnnotation)
-			reconcileOpts.Completed().Apply(&localdnsrecord.DefaultAddOptions.IgnoreOperationAnnotation)
-			reconcileOpts.Completed().Apply(&localinfrastructure.DefaultAddOptions.IgnoreOperationAnnotation)
-			reconcileOpts.Completed().Apply(&localoperatingsystemconfig.DefaultAddOptions.IgnoreOperationAnnotation)
-			reconcileOpts.Completed().Apply(&localworker.DefaultAddOptions.IgnoreOperationAnnotation)
+			reconcileOpts.Completed().Apply(&localbackupbucket.DefaultAddOptions.IgnoreOperationAnnotation, &localbackupbucket.DefaultAddOptions.ExtensionClass)
+			reconcileOpts.Completed().Apply(&localcontrolplane.DefaultAddOptions.IgnoreOperationAnnotation, &localcontrolplane.DefaultAddOptions.ExtensionClass)
+			reconcileOpts.Completed().Apply(&localdnsrecord.DefaultAddOptions.IgnoreOperationAnnotation, &localdnsrecord.DefaultAddOptions.ExtensionClass)
+			reconcileOpts.Completed().Apply(&localinfrastructure.DefaultAddOptions.IgnoreOperationAnnotation, &localinfrastructure.DefaultAddOptions.ExtensionClass)
+			reconcileOpts.Completed().Apply(&localoperatingsystemconfig.DefaultAddOptions.IgnoreOperationAnnotation, &localoperatingsystemconfig.DefaultAddOptions.ExtensionClass)
+			reconcileOpts.Completed().Apply(&localworker.DefaultAddOptions.IgnoreOperationAnnotation, &localworker.DefaultAddOptions.ExtensionClass)
+			reconcileOpts.Completed().Apply(nil, &localhealthcheck.DefaultAddOptions.ExtensionClass)
 
 			if err := mgr.AddReadyzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {
 				return fmt.Errorf("could not add readycheck for informers: %w", err)

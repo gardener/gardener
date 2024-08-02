@@ -37,7 +37,7 @@ var (
 )
 
 // RegisterHealthChecks registers health checks for each extension resource
-// HealthChecks are grouped by extension (e.g worker), extension.type (e.g local) and  Health Check Type (e.g SystemComponentsHealthy)
+// HealthChecks are grouped by extension (e.g. worker), extension.type (e.g. local) and  Health Check Type (e.g. SystemComponentsHealthy)
 func RegisterHealthChecks(ctx context.Context, mgr manager.Manager, opts healthcheck.DefaultAddArgs) error {
 	healthChecks := []healthcheck.ConditionTypeToHealthCheck{{
 		ConditionType: string(gardencorev1beta1.ShootEveryNodeReady),
