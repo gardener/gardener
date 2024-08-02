@@ -21,10 +21,12 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	operatorpredicate "github.com/gardener/gardener/pkg/operator/predicate"
+	"github.com/gardener/gardener/pkg/utils/oci"
 )
 
 // ControllerName is the name of this controller.
@@ -32,8 +34,24 @@ const ControllerName = "extension"
 
 // AddToManager adds Reconciler to the given manager.
 func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gardenClientMap clientmap.ClientMap) error {
-	if r.RuntimeClient == nil {
-		r.RuntimeClient = mgr.GetClient()
+	var err error
+
+	if r.RuntimeClientSet == nil {
+		r.RuntimeClientSet, err = kubernetes.NewWithConfig(
+			kubernetes.WithRESTConfig(mgr.GetConfig()),
+			kubernetes.WithRuntimeAPIReader(mgr.GetAPIReader()),
+			kubernetes.WithRuntimeClient(mgr.GetClient()),
+			kubernetes.WithRuntimeCache(mgr.GetCache()),
+		)
+		if err != nil {
+			return fmt.Errorf("failed creating runtime clientset: %w", err)
+		}
+	}
+	if r.HelmRegistry == nil {
+		r.HelmRegistry, err = oci.NewHelmRegistry()
+		if err != nil {
+			return fmt.Errorf("failed creating Helm registry: %w", err)
+		}
 	}
 	if r.Clock == nil {
 		r.Clock = clock.RealClock{}
