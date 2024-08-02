@@ -14,7 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	genericapiserverv1alpha1 "k8s.io/apiserver/pkg/apis/apiserver/v1alpha1"
+	apiserverv1alpha1 "k8s.io/apiserver/pkg/apis/apiserver/v1alpha1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
@@ -52,7 +52,7 @@ func (k *kubeAPIServer) reconcileConfigMapAuthenticationConfig(ctx context.Conte
 		authenticationConfig = *k.values.AuthenticationConfiguration
 	}
 	if k.values.OIDC != nil {
-		oidcAuthenticationConfig, err := computeAuthenticationConfigRawConfig(k.values.OIDC)
+		oidcAuthenticationConfig, err := ComputeAuthenticationConfigRawConfig(k.values.OIDC)
 		if err != nil {
 			return err
 		}
@@ -65,16 +65,15 @@ func (k *kubeAPIServer) reconcileConfigMapAuthenticationConfig(ctx context.Conte
 	return client.IgnoreAlreadyExists(k.client.Client().Create(ctx, configMap))
 }
 
-func computeAuthenticationConfigRawConfig(OIDC *gardencorev1beta1.OIDCConfig) (string, error) {
-	authenticationConfiguration := &genericapiserverv1alpha1.AuthenticationConfiguration{
+// ComputeAuthenticationConfigRawConfig computes a AuthenticationConfiguration from oidcConfiguration.
+func ComputeAuthenticationConfigRawConfig(OIDC *gardencorev1beta1.OIDCConfig) (string, error) {
+	authenticationConfiguration := &apiserverv1alpha1.AuthenticationConfiguration{
 		TypeMeta: metav1.TypeMeta{
 			// TODO(AleksandarSavchev): use v1beta1 when kubernetes packages are updated to version >= v1.30
-			APIVersion: "apiserver.config.k8s.io/v1alpha1",
+			APIVersion: apiserverv1alpha1.ConfigSchemeGroupVersion.String(),
 			Kind:       "AuthenticationConfiguration",
 		},
-		JWT: []genericapiserverv1alpha1.JWTAuthenticator{
-			{},
-		},
+		JWT: []apiserverv1alpha1.JWTAuthenticator{{}},
 	}
 	if v := OIDC.CABundle; v != nil {
 		authenticationConfiguration.JWT[0].Issuer.CertificateAuthority = *v
@@ -99,6 +98,8 @@ func computeAuthenticationConfigRawConfig(OIDC *gardencorev1beta1.OIDCConfig) (s
 		usernamePrefix = *v
 	}
 
+	// For the authentication config, there is no defaulting for claim or prefix.
+	// We use the defaulting suggested in kubernetes https://github.com/kubernetes/kubernetes/blob/a2106b5f73fe9352f7bc0520788855d57fc301e1/staging/src/k8s.io/apiserver/pkg/apis/apiserver/v1alpha1/types.go#L357-L366
 	switch {
 	case usernamePrefix == "-":
 		authenticationConfiguration.JWT[0].ClaimMappings.Username.Prefix = ptr.To("")
@@ -118,7 +119,7 @@ func computeAuthenticationConfigRawConfig(OIDC *gardencorev1beta1.OIDCConfig) (s
 	}
 
 	for key, value := range OIDC.RequiredClaims {
-		claimValidationRule := genericapiserverv1alpha1.ClaimValidationRule{
+		claimValidationRule := apiserverv1alpha1.ClaimValidationRule{
 			Claim:         key,
 			RequiredValue: value,
 		}
