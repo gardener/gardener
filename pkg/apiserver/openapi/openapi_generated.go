@@ -5995,7 +5995,7 @@ func schema_pkg_apis_core_v1beta1_OIDCConfig(ref common.ReferenceCallback) commo
 					},
 					"clientAuthentication": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ClientAuthentication can optionally contain client configuration used for kubeconfig generation.",
+							Description: "ClientAuthentication can optionally contain client configuration used for kubeconfig generation. Deprecated: This filed has no implemented use. It's use was planned for genereting OIDC kubeconfig https://github.com/gardener/gardener/issues/1433",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.OpenIDConnectClientAuthentication"),
 						},
 					},

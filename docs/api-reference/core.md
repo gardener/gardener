@@ -8538,7 +8538,10 @@ OpenIDConnectClientAuthentication
 </td>
 <td>
 <em>(Optional)</em>
-<p>ClientAuthentication can optionally contain client configuration used for kubeconfig generation.</p>
+<p>ClientAuthentication can optionally contain client configuration used for kubeconfig generation.
+Deprecated: This field has no implemented use.
+It&rsquo;s use was planned for genereting OIDC kubeconfig <a href="https://github.com/gardener/gardener/issues/1433">https://github.com/gardener/gardener/issues/1433</a>
+TODO(AleksandarSavchev): Drop this field after v1.102 has been released.</p>
 </td>
 </tr>
 <tr>
