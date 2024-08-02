@@ -6,6 +6,7 @@ package extension
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -18,16 +19,23 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
+
+func virtualClusterAdmissionManagedResourceName(extension *operatorv1alpha1.Extension) string {
+	return fmt.Sprintf("extension-admission-virtual-%s", extension.Name)
+}
 
 func (r *Reconciler) reconcileVirtualClusterResources(ctx context.Context, log logr.Logger, virtualClusterClient client.Client, extension *operatorv1alpha1.Extension) error {
 	// return early if we do not have to make a deployment
 	if extension.Spec.Deployment == nil ||
 		extension.Spec.Deployment.ExtensionDeployment == nil ||
 		extension.Spec.Deployment.ExtensionDeployment.Helm == nil {
-		return r.deleteVirtualClusterResources(ctx, log, virtualClusterClient, extension)
+		return r.deleteVirtualClusterDeploymentResources(ctx, log, virtualClusterClient, extension)
 	}
 
 	if err := r.reconcileControllerDeployment(ctx, virtualClusterClient, extension); err != nil {
@@ -93,7 +101,7 @@ func (r *Reconciler) reconcileControllerRegistration(ctx context.Context, virtua
 	return err
 }
 
-func (r *Reconciler) deleteVirtualClusterResources(ctx context.Context, log logr.Logger, virtualClusterClient client.Client, extension *operatorv1alpha1.Extension) error {
+func (r *Reconciler) deleteVirtualClusterDeploymentResources(ctx context.Context, log logr.Logger, virtualClusterClient client.Client, extension *operatorv1alpha1.Extension) error {
 	log.Info("Deleting extension virtual resources")
 	var (
 		controllerDeployment = &gardencorev1.ControllerDeployment{
@@ -125,4 +133,63 @@ func (r *Reconciler) deleteVirtualClusterResources(ctx context.Context, log logr
 	}
 	r.Recorder.Event(extension, corev1.EventTypeNormal, "Deletion", "Successfully deleted ControllerDeployment")
 	return nil
+}
+
+func (r *Reconciler) reconcileAdmissionVirtualClusterResources(ctx context.Context, log logr.Logger, virtualClusterClientSet kubernetes.Interface, extension *operatorv1alpha1.Extension) error {
+	// return early if we do not have to make a deployment
+	if extension.Spec.Deployment == nil ||
+		extension.Spec.Deployment.AdmissionDeployment == nil ||
+		extension.Spec.Deployment.AdmissionDeployment.VirtualCluster == nil ||
+		extension.Spec.Deployment.AdmissionDeployment.VirtualCluster.Helm == nil {
+		return r.deleteAdmissionVirtualClusterResources(ctx, log, extension)
+	}
+
+	archive, err := r.HelmRegistry.Pull(ctx, extension.Spec.Deployment.AdmissionDeployment.VirtualCluster.Helm.OCIRepository)
+	if err != nil {
+		return fmt.Errorf("failed pulling Helm chart from OCI repository: %w", err)
+	}
+
+	gardenerValues := map[string]any{
+		"global": map[string]any{
+			"virtualGarden": map[string]any{
+				"enabled": true,
+				"user": map[string]any{
+					"name": fmt.Sprintf("system:serviceaccount:kube-system:%s", r.getVirtualClusterAccessSecret(extension).ServiceAccountName),
+				},
+			},
+		},
+	}
+
+	var helmValues map[string]any
+	if extension.Spec.Deployment.AdmissionDeployment.Values != nil {
+		if err := json.Unmarshal(extension.Spec.Deployment.AdmissionDeployment.Values.Raw, &helmValues); err != nil {
+			return err
+		}
+	}
+
+	renderedChart, err := virtualClusterClientSet.ChartRenderer().RenderArchive(archive, extension.Name, v1beta1constants.GardenNamespace, utils.MergeMaps(helmValues, gardenerValues))
+	if err != nil {
+		return fmt.Errorf("failed rendering Helm chart: %w", err)
+	}
+
+	if err := managedresources.CreateForShoot(ctx, r.RuntimeClientSet.Client(), r.GardenNamespace, virtualClusterAdmissionManagedResourceName(extension), managedresources.LabelValueGardener, false, renderedChart.AsSecretData()); err != nil {
+		return fmt.Errorf("failed creating ManagedResource: %w", err)
+	}
+
+	if err := managedresources.WaitUntilHealthy(ctx, r.RuntimeClientSet.Client(), r.GardenNamespace, virtualClusterAdmissionManagedResourceName(extension)); err != nil {
+		return fmt.Errorf("failed waiting for ManagedResource to be healthy: %w", err)
+	}
+
+	r.Recorder.Event(extension, corev1.EventTypeNormal, "Reconciliation", "Admission Helm chart applied successfully to virtual cluster")
+
+	return nil
+}
+
+func (r *Reconciler) deleteAdmissionVirtualClusterResources(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension) error {
+	log.Info("Deleting admission ManagedResource for virtual cluster")
+	if err := managedresources.DeleteForShoot(ctx, r.RuntimeClientSet.Client(), r.GardenNamespace, virtualClusterAdmissionManagedResourceName(extension)); err != nil {
+		return fmt.Errorf("failed deleting ManagedResource: %w", err)
+	}
+
+	return managedresources.WaitUntilDeleted(ctx, r.RuntimeClientSet.Client(), r.GardenNamespace, virtualClusterAdmissionManagedResourceName(extension))
 }
