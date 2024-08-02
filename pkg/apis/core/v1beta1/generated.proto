@@ -1972,6 +1972,9 @@ message OIDCConfig {
   optional string caBundle = 1;
 
   // ClientAuthentication can optionally contain client configuration used for kubeconfig generation.
+  // Deprecated: This filed has no implemented use.
+  // It's use was planned for genereting OIDC kubeconfig https://github.com/gardener/gardener/issues/1433
+  // TODO(AleksandarSavchev): Drop this field after v1.102 has been released.
   // +optional
   optional OpenIDConnectClientAuthentication clientAuthentication = 2;
 
