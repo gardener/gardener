@@ -8694,7 +8694,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>The client ID for the OpenID Connect client, must be set if oidc-issuer-url is set.</p>
+<p>The client ID for the OpenID Connect client, must be set.</p>
 </td>
 </tr>
 <tr>
@@ -8730,7 +8730,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>The URL of the OpenID issuer, only HTTPS scheme will be accepted. If set, it will be used to verify the OIDC JSON Web Token (JWT).</p>
+<p>The URL of the OpenID issuer, only HTTPS scheme will be accepted. Used to verify the OIDC JSON Web Token (JWT).</p>
 </td>
 </tr>
 <tr>
