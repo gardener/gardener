@@ -3,9 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // +k8s:deepcopy-gen=package
-// +k8s:conversion-gen=github.com/gardener/gardener/pkg/apis/resources
 // +k8s:openapi-gen=true
-// +k8s:defaulter-gen=TypeMeta
 
 //go:generate gen-crd-api-reference-docs -api-dir . -config ../../../../hack/api-reference/resources-config.json -template-dir ../../../../hack/api-reference/template -out-file ../../../../docs/api-reference/resources.md
 

@@ -39,10 +39,6 @@ source $(dirname $0)/vgopath-setup.sh
 
 CODE_GEN_DIR=$(go list -m -f '{{.Dir}}' k8s.io/code-generator)
 
-# We need to explicitly pass GO111MODULE=off to k8s.io/code-generator as it is significantly slower otherwise,
-# see https://github.com/kubernetes/code-generator/issues/100.
-export GO111MODULE=off
-
 rm -f ${GOPATH}/bin/*-gen
 
 CURRENT_DIR=$(dirname $0)
@@ -76,21 +72,19 @@ parse_flags() {
 core_groups() {
   echo "Generating API groups for pkg/apis/core"
 
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    deepcopy,defaulter,client,lister,informer \
-    github.com/gardener/gardener/pkg/client/core \
-    github.com/gardener/gardener/pkg/apis \
-    github.com/gardener/gardener/pkg/apis \
-    "core:v1beta1,v1" \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
-
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    conversion \
-    github.com/gardener/gardener/pkg/client/core \
-    github.com/gardener/gardener/pkg/apis \
-    github.com/gardener/gardener/pkg/apis \
-    "core:v1beta1,v1" \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
+  
+  kube::codegen::gen_helpers \
+    --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
+    "${PROJECT_ROOT}/pkg/apis/core"
+  
+  kube::codegen::gen_client \
+    --with-watch \
+    --one-input-api "core" \
+    --output-dir "${PROJECT_ROOT}/pkg/client/core" \
+    --output-pkg "github.com/gardener/gardener/pkg/client/core" \
+    --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
+    "${PROJECT_ROOT}/pkg/apis"
 }
 export -f core_groups
 
@@ -99,13 +93,11 @@ export -f core_groups
 extensions_groups() {
   echo "Generating API groups for pkg/apis/extensions"
 
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    "deepcopy" \
-    github.com/gardener/gardener/pkg/apis \
-    "" \
-    github.com/gardener/gardener/pkg/apis \
-    "extensions:v1alpha1" \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
+  
+  kube::codegen::gen_helpers \
+    --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
+    "${PROJECT_ROOT}/pkg/apis/extensions"
 }
 export -f extensions_groups
 
@@ -114,13 +106,11 @@ export -f extensions_groups
 resources_groups() {
   echo "Generating API groups for pkg/apis/resources"
 
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    deepcopy \
-    github.com/gardener/gardener/pkg/apis \
-    "" \
-    github.com/gardener/gardener/pkg/apis \
-    "resources:v1alpha1" \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
+  
+  kube::codegen::gen_helpers \
+    --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
+    "${PROJECT_ROOT}/pkg/apis/resources"
 }
 export -f resources_groups
 
@@ -129,13 +119,11 @@ export -f resources_groups
 operator_groups() {
   echo "Generating API groups for pkg/apis/operator"
 
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    deepcopy \
-    github.com/gardener/gardener/pkg/apis \
-    "" \
-    github.com/gardener/gardener/pkg/apis \
-    "operator:v1alpha1" \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
+  
+  kube::codegen::gen_helpers \
+    --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
+    "${PROJECT_ROOT}/pkg/apis/operator"
 }
 export -f operator_groups
 
@@ -144,21 +132,19 @@ export -f operator_groups
 seedmanagement_groups() {
   echo "Generating API groups for pkg/apis/seedmanagement"
 
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    client,deepcopy,informer,lister \
-    github.com/gardener/gardener/pkg/client/seedmanagement \
-    "" \
-    github.com/gardener/gardener/pkg/apis \
-    "seedmanagement:v1alpha1" \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
-
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    "deepcopy,defaulter,conversion" \
-    github.com/gardener/gardener/pkg/client/seedmanagement \
-    github.com/gardener/gardener/pkg/apis \
-    github.com/gardener/gardener/pkg/apis \
-    "seedmanagement:v1alpha1" \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
+  
+  kube::codegen::gen_helpers \
+    --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
+    "${PROJECT_ROOT}/pkg/apis/seedmanagement"
+  
+  kube::codegen::gen_client \
+    --with-watch \
+    --one-input-api "seedmanagement" \
+    --output-dir "${PROJECT_ROOT}/pkg/client/seedmanagement" \
+    --output-pkg "github.com/gardener/gardener/pkg/client/seedmanagement" \
+    --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
+    "${PROJECT_ROOT}/pkg/apis"
 }
 export -f seedmanagement_groups
 
@@ -167,21 +153,19 @@ export -f seedmanagement_groups
 settings_groups() {
   echo "Generating API groups for pkg/apis/settings"
 
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    client,deepcopy,informer,lister \
-    github.com/gardener/gardener/pkg/client/settings \
-    "" \
-    github.com/gardener/gardener/pkg/apis \
-    "settings:v1alpha1" \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
-
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    "deepcopy,defaulter,conversion" \
-    github.com/gardener/gardener/pkg/client/settings \
-    github.com/gardener/gardener/pkg/apis \
-    github.com/gardener/gardener/pkg/apis \
-    "settings:v1alpha1" \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
+  
+  kube::codegen::gen_helpers \
+    --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
+    "${PROJECT_ROOT}/pkg/apis/settings"
+  
+  kube::codegen::gen_client \
+    --with-watch \
+    --one-input-api "settings" \
+    --output-dir "${PROJECT_ROOT}/pkg/client/settings" \
+    --output-pkg "github.com/gardener/gardener/pkg/client/settings" \
+    --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
+    "${PROJECT_ROOT}/pkg/apis"
 }
 export -f settings_groups
 
@@ -190,21 +174,19 @@ export -f settings_groups
 security_groups() {
   echo "Generating API groups for pkg/apis/security"
 
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    client,deepcopy,defaulter,informer,lister \
-    github.com/gardener/gardener/pkg/client/security \
-    "" \
-    github.com/gardener/gardener/pkg/apis \
-    "security:v1alpha1" \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
-
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    deepcopy,defaulter,conversion \
-    github.com/gardener/gardener/pkg/client/security \
-    github.com/gardener/gardener/pkg/apis \
-    github.com/gardener/gardener/pkg/apis \
-    "security:v1alpha1" \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
+  
+  kube::codegen::gen_helpers \
+    --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
+    "${PROJECT_ROOT}/pkg/apis/security"
+  
+  kube::codegen::gen_client \
+    --with-watch \
+    --one-input-api "security" \
+    --output-dir "${PROJECT_ROOT}/pkg/client/security" \
+    --output-pkg "github.com/gardener/gardener/pkg/client/security" \
+    --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
+    "${PROJECT_ROOT}/pkg/apis"
 }
 export -f security_groups
 
@@ -213,21 +195,11 @@ export -f security_groups
 operations_groups() {
   echo "Generating API groups for pkg/apis/operations"
 
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    deepcopy,defaulter \
-    github.com/gardener/gardener/pkg/apis \
-    github.com/gardener/gardener/pkg/apis \
-    github.com/gardener/gardener/pkg/apis \
-    "operations:v1alpha1" \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
-
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    conversion \
-    github.com/gardener/gardener/pkg/client/operations \
-    github.com/gardener/gardener/pkg/apis \
-    github.com/gardener/gardener/pkg/apis \
-    "operations:v1alpha1" \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
+  
+  kube::codegen::gen_helpers \
+    --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
+    "${PROJECT_ROOT}/pkg/apis/operations"
 }
 export -f operations_groups
 
@@ -236,21 +208,11 @@ export -f operations_groups
 authentication_groups() {
   echo "Generating API groups for pkg/apis/authentication"
 
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    deepcopy,defaulter \
-    github.com/gardener/gardener/pkg/client/authentication \
-    "" \
-    github.com/gardener/gardener/pkg/apis \
-    "authentication:v1alpha1" \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
-
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    deepcopy,defaulter,conversion \
-    github.com/gardener/gardener/pkg/client/authentication \
-    github.com/gardener/gardener/pkg/apis \
-    github.com/gardener/gardener/pkg/apis \
-    "authentication:v1alpha1" \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
+  
+  kube::codegen::gen_helpers \
+    --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
+    "${PROJECT_ROOT}/pkg/apis/authentication"
 }
 export -f authentication_groups
 
@@ -259,22 +221,18 @@ export -f authentication_groups
 operatorconfig_groups() {
   echo "Generating API groups for pkg/operator/apis/config"
 
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    deepcopy,defaulter \
-    github.com/gardener/gardener/pkg/client/componentconfig \
-    github.com/gardener/gardener/pkg/operator/apis \
-    github.com/gardener/gardener/pkg/operator/apis \
-    "config:v1alpha1" \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
-
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    conversion \
-    github.com/gardener/gardener/pkg/client/componentconfig \
-    github.com/gardener/gardener/pkg/operator/apis \
-    github.com/gardener/gardener/pkg/operator/apis \
-    "config:v1alpha1" \
-    --extra-peer-dirs=github.com/gardener/gardener/pkg/operator/apis/config,github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1,k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/conversion,k8s.io/apimachinery/pkg/runtime,k8s.io/component-base/config,k8s.io/component-base/config/v1alpha1 \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
+  
+  kube::codegen::gen_helpers \
+    --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
+    --extra-peer-dir github.com/gardener/gardener/pkg/operator/apis/config \
+    --extra-peer-dir github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1 \
+    --extra-peer-dir k8s.io/apimachinery/pkg/apis/meta/v1 \
+    --extra-peer-dir k8s.io/apimachinery/pkg/conversion \
+    --extra-peer-dir k8s.io/apimachinery/pkg/runtime \
+    --extra-peer-dir k8s.io/component-base/config \
+    --extra-peer-dir k8s.io/component-base/config/v1alpha1 \
+    "${PROJECT_ROOT}/pkg/operator/apis/config"
 }
 export -f operatorconfig_groups
 
@@ -283,22 +241,18 @@ export -f operatorconfig_groups
 controllermanager_groups() {
   echo "Generating API groups for pkg/controllermanager/apis/config"
 
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    deepcopy,defaulter \
-    github.com/gardener/gardener/pkg/client/componentconfig \
-    github.com/gardener/gardener/pkg/controllermanager/apis \
-    github.com/gardener/gardener/pkg/controllermanager/apis \
-    "config:v1alpha1" \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
-
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    conversion \
-    github.com/gardener/gardener/pkg/client/componentconfig \
-    github.com/gardener/gardener/pkg/controllermanager/apis \
-    github.com/gardener/gardener/pkg/controllermanager/apis \
-    "config:v1alpha1" \
-    --extra-peer-dirs=github.com/gardener/gardener/pkg/controllermanager/apis/config,github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1,k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/conversion,k8s.io/apimachinery/pkg/runtime,k8s.io/component-base/config,k8s.io/component-base/config/v1alpha1 \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
+  
+  kube::codegen::gen_helpers \
+    --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
+    --extra-peer-dir github.com/gardener/gardener/pkg/controllermanager/apis/config \
+    --extra-peer-dir github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1 \
+    --extra-peer-dir k8s.io/apimachinery/pkg/apis/meta/v1 \
+    --extra-peer-dir k8s.io/apimachinery/pkg/conversion \
+    --extra-peer-dir k8s.io/apimachinery/pkg/runtime \
+    --extra-peer-dir k8s.io/component-base/config \
+    --extra-peer-dir k8s.io/component-base/config/v1alpha1 \
+    "${PROJECT_ROOT}/pkg/controllermanager/apis/config"
 }
 export -f controllermanager_groups
 
@@ -307,22 +261,17 @@ export -f controllermanager_groups
 admissioncontroller_groups() {
   echo "Generating API groups for pkg/admissioncontroller/apis/config"
 
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    deepcopy,defaulter \
-    github.com/gardener/gardener/pkg/client/admissioncontrollerconfig \
-    github.com/gardener/gardener/pkg/admissioncontroller/apis \
-    github.com/gardener/gardener/pkg/admissioncontroller/apis \
-    "config:v1alpha1" \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
-
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    conversion \
-    github.com/gardener/gardener/pkg/client/admissioncontrollerconfig \
-    github.com/gardener/gardener/pkg/admissioncontroller/apis \
-    github.com/gardener/gardener/pkg/admissioncontroller/apis \
-    "config:v1alpha1" \
-    --extra-peer-dirs=github.com/gardener/gardener/pkg/admissioncontroller/apis/config,github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1,k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/conversion,k8s.io/apimachinery/pkg/runtime,k8s.io/component-base/config,k8s.io/component-base/config/v1alpha1 \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
+  
+  kube::codegen::gen_helpers \
+    --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
+    --extra-peer-dir github.com/gardener/gardener/pkg/admissioncontroller/apis/config \
+    --extra-peer-dir github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1 \
+    --extra-peer-dir k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/conversion \
+    --extra-peer-dir k8s.io/apimachinery/pkg/runtime \
+    --extra-peer-dir k8s.io/component-base/config \
+    --extra-peer-dir k8s.io/component-base/config/v1alpha1 \
+    "${PROJECT_ROOT}/pkg/admissioncontroller/apis/config"
 }
 export -f admissioncontroller_groups
 
@@ -331,22 +280,18 @@ export -f admissioncontroller_groups
 scheduler_groups() {
   echo "Generating API groups for pkg/scheduler/apis/config"
 
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    deepcopy,defaulter \
-    github.com/gardener/gardener/pkg/scheduler/client \
-    github.com/gardener/gardener/pkg/scheduler/apis \
-    github.com/gardener/gardener/pkg/scheduler/apis \
-    "config:v1alpha1" \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
-
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    conversion \
-    github.com/gardener/gardener/pkg/scheduler/client \
-    github.com/gardener/gardener/pkg/scheduler/apis \
-    github.com/gardener/gardener/pkg/scheduler/apis \
-    "config:v1alpha1" \
-    --extra-peer-dirs=github.com/gardener/gardener/pkg/scheduler/apis/config,github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1,k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/conversion,k8s.io/apimachinery/pkg/runtime,k8s.io/component-base/config,k8s.io/component-base/config/v1alpha1 \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
+  
+  kube::codegen::gen_helpers \
+    --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
+    --extra-peer-dir github.com/gardener/gardener/pkg/scheduler/apis/config \
+    --extra-peer-dir github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1 \
+    --extra-peer-dir k8s.io/apimachinery/pkg/apis/meta/v1 \
+    --extra-peer-dir k8s.io/apimachinery/pkg/conversion \
+    --extra-peer-dir k8s.io/apimachinery/pkg/runtime \
+    --extra-peer-dir k8s.io/component-base/config \
+    --extra-peer-dir k8s.io/component-base/config/v1alpha1 \
+    "${PROJECT_ROOT}/pkg/scheduler/apis/config"
 }
 export -f scheduler_groups
 
@@ -355,22 +300,18 @@ export -f scheduler_groups
 gardenlet_groups() {
   echo "Generating API groups for pkg/gardenlet/apis/config"
 
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    deepcopy,defaulter \
-    github.com/gardener/gardener/pkg/client/componentconfig \
-    github.com/gardener/gardener/pkg/gardenlet/apis \
-    github.com/gardener/gardener/pkg/gardenlet/apis \
-    "config:v1alpha1" \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
-
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    conversion \
-    github.com/gardener/gardener/pkg/client/componentconfig \
-    github.com/gardener/gardener/pkg/gardenlet/apis \
-    github.com/gardener/gardener/pkg/gardenlet/apis \
-    "config:v1alpha1" \
-    --extra-peer-dirs=github.com/gardener/gardener/pkg/gardenlet/apis/config,github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1,k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/conversion,k8s.io/apimachinery/pkg/runtime,k8s.io/component-base/config,k8s.io/component-base/config/v1alpha1 \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
+  
+  kube::codegen::gen_helpers \
+    --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
+    --extra-peer-dir github.com/gardener/gardener/pkg/gardenlet/apis/config \
+    --extra-peer-dir github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1 \
+    --extra-peer-dir k8s.io/apimachinery/pkg/apis/meta/v1 \
+    --extra-peer-dir k8s.io/apimachinery/pkg/conversion \
+    --extra-peer-dir k8s.io/apimachinery/pkg/runtime \
+    --extra-peer-dir k8s.io/component-base/config \
+    --extra-peer-dir k8s.io/component-base/config/v1alpha1 \
+    "${PROJECT_ROOT}/pkg/gardenlet/apis/config"
 }
 export -f gardenlet_groups
 
@@ -379,22 +320,18 @@ export -f gardenlet_groups
 resourcemanager_groups() {
   echo "Generating API groups for pkg/resourcemanager/apis/config"
 
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    deepcopy,defaulter \
-    github.com/gardener/gardener/pkg/client/componentconfig \
-    github.com/gardener/gardener/pkg/resourcemanager/apis \
-    github.com/gardener/gardener/pkg/resourcemanager/apis \
-    "config:v1alpha1" \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
-
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    conversion \
-    github.com/gardener/gardener/pkg/client/componentconfig \
-    github.com/gardener/gardener/pkg/resourcemanager/apis \
-    github.com/gardener/gardener/pkg/resourcemanager/apis \
-    "config:v1alpha1" \
-    --extra-peer-dirs=github.com/gardener/gardener/pkg/resourcemanager/apis/config,github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1,k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/conversion,k8s.io/apimachinery/pkg/runtime,k8s.io/component-base/config,k8s.io/component-base/config/v1alpha1 \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
+  
+  kube::codegen::gen_helpers \
+    --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
+    --extra-peer-dir github.com/gardener/gardener/pkg/resourcemanager/apis/config \
+    --extra-peer-dir github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1 \
+    --extra-peer-dir k8s.io/apimachinery/pkg/apis/meta/v1 \
+    --extra-peer-dir k8s.io/apimachinery/pkg/conversion \
+    --extra-peer-dir k8s.io/apimachinery/pkg/runtime \
+    --extra-peer-dir k8s.io/component-base/config \
+    --extra-peer-dir k8s.io/component-base/config/v1alpha1 \
+    "${PROJECT_ROOT}/pkg/resourcemanager/apis/config"
 }
 export -f resourcemanager_groups
 
@@ -403,22 +340,18 @@ export -f resourcemanager_groups
 nodeagent_groups() {
   echo "Generating API groups for pkg/nodeagent/apis/config"
 
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    deepcopy,defaulter \
-    github.com/gardener/gardener/pkg/client/componentconfig \
-    github.com/gardener/gardener/pkg/nodeagent/apis \
-    github.com/gardener/gardener/pkg/nodeagent/apis \
-    "config:v1alpha1" \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
-
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    conversion \
-    github.com/gardener/gardener/pkg/client/componentconfig \
-    github.com/gardener/gardener/pkg/nodeagent/apis \
-    github.com/gardener/gardener/pkg/nodeagent/apis \
-    "config:v1alpha1" \
-    --extra-peer-dirs=github.com/gardener/gardener/pkg/nodeagent/apis/config,github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1,k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/conversion,k8s.io/apimachinery/pkg/runtime,k8s.io/component-base/config,k8s.io/component-base/config/v1alpha1 \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
+  
+  kube::codegen::gen_helpers \
+    --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
+    --extra-peer-dir github.com/gardener/gardener/pkg/nodeagent/apis/config \
+    --extra-peer-dir github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1 \
+    --extra-peer-dir k8s.io/apimachinery/pkg/apis/meta/v1 \
+    --extra-peer-dir k8s.io/apimachinery/pkg/conversion \
+    --extra-peer-dir k8s.io/apimachinery/pkg/runtime \
+    --extra-peer-dir k8s.io/component-base/config \
+    --extra-peer-dir k8s.io/component-base/config/v1alpha1 \
+    "${PROJECT_ROOT}/pkg/nodeagent/apis/config"
 }
 export -f nodeagent_groups
 
@@ -427,66 +360,51 @@ export -f nodeagent_groups
 shoottolerationrestriction_groups() {
   echo "Generating API groups for plugin/pkg/shoot/tolerationrestriction/apis/shoottolerationrestriction"
 
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    deepcopy,defaulter \
-    github.com/gardener/gardener/pkg/client/componentconfig \
-    github.com/gardener/gardener/plugin/pkg/shoot/tolerationrestriction/apis \
-    github.com/gardener/gardener/plugin/pkg/shoot/tolerationrestriction/apis \
-    "shoottolerationrestriction:v1alpha1" \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
-
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    conversion \
-    github.com/gardener/gardener/pkg/client/componentconfig \
-    github.com/gardener/gardener/plugin/pkg/shoot/tolerationrestriction/apis \
-    github.com/gardener/gardener/plugin/pkg/shoot/tolerationrestriction/apis \
-    "shoottolerationrestriction:v1alpha1" \
-    --extra-peer-dirs=github.com/gardener/gardener/plugin/pkg/shoot/tolerationrestriction/apis/shoottolerationrestriction,github.com/gardener/gardener/plugin/pkg/shoot/tolerationrestriction/apis/shoottolerationrestriction/v1alpha1,k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/conversion,k8s.io/apimachinery/pkg/runtime,k8s.io/component-base/config,k8s.io/component-base/config/v1alpha1 \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
+  
+  kube::codegen::gen_helpers \
+    --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
+    --extra-peer-dir github.com/gardener/gardener/plugin/pkg/shoot/tolerationrestriction/apis/shoottolerationrestriction \
+    --extra-peer-dir github.com/gardener/gardener/plugin/pkg/shoot/tolerationrestriction/apis/shoottolerationrestriction/v1alpha1 \
+    --extra-peer-dir k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/conversion \
+    --extra-peer-dir k8s.io/apimachinery/pkg/runtime \
+    --extra-peer-dir k8s.io/component-base/config \
+    --extra-peer-dir k8s.io/component-base/config/v1alpha1 \
+    "${PROJECT_ROOT}/plugin/pkg/shoot/tolerationrestriction/apis/shoottolerationrestriction"
 }
 export -f shoottolerationrestriction_groups
 
 shootdnsrewriting_groups() {
   echo "Generating API groups for plugin/pkg/shoot/dnsrewriting/apis/shootdnsrewriting"
 
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    deepcopy,defaulter \
-    github.com/gardener/gardener/pkg/client/componentconfig \
-    github.com/gardener/gardener/plugin/pkg/shoot/dnsrewriting/apis \
-    github.com/gardener/gardener/plugin/pkg/shoot/dnsrewriting/apis \
-    "shootdnsrewriting:v1alpha1" \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
-
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    conversion \
-    github.com/gardener/gardener/pkg/client/componentconfig \
-    github.com/gardener/gardener/plugin/pkg/shoot/dnsrewriting/apis \
-    github.com/gardener/gardener/plugin/pkg/shoot/dnsrewriting/apis \
-    "shootdnsrewriting:v1alpha1" \
-    --extra-peer-dirs=github.com/gardener/gardener/plugin/pkg/shoot/dnsrewriting/apis/shootdnsrewriting,github.com/gardener/gardener/plugin/pkg/shoot/dnsrewriting/apis/shootdnsrewriting/v1alpha1,k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/conversion,k8s.io/apimachinery/pkg/runtime,k8s.io/component-base/config,k8s.io/component-base/config/v1alpha1 \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
+  
+  kube::codegen::gen_helpers \
+    --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
+    --extra-peer-dir github.com/gardener/gardener/plugin/pkg/shoot/dnsrewriting/apis/shootdnsrewriting \
+    --extra-peer-dir github.com/gardener/gardener/plugin/pkg/shoot/dnsrewriting/apis/shootdnsrewriting/v1alpha1 \
+    --extra-peer-dir k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/conversion \
+    --extra-peer-dir k8s.io/apimachinery/pkg/runtime \
+    --extra-peer-dir k8s.io/component-base/config \
+    --extra-peer-dir k8s.io/component-base/config/v1alpha1 \
+    "${PROJECT_ROOT}/plugin/pkg/shoot/dnsrewriting/apis/shootdnsrewriting"
 }
 export -f shootdnsrewriting_groups
 
 shootresourcereservation_groups() {
   echo "Generating API groups for plugin/pkg/shoot/resourcereservation/apis/shootresourcereservation"
 
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    deepcopy,defaulter \
-    github.com/gardener/gardener/pkg/client/componentconfig \
-    github.com/gardener/gardener/plugin/pkg/shoot/resourcereservation/apis \
-    github.com/gardener/gardener/plugin/pkg/shoot/resourcereservation/apis \
-    "shootresourcereservation:v1alpha1" \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
-
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    conversion \
-    github.com/gardener/gardener/pkg/client/componentconfig \
-    github.com/gardener/gardener/plugin/pkg/shoot/resourcereservation/apis \
-    github.com/gardener/gardener/plugin/pkg/shoot/resourcereservation/apis \
-    "shootresourcereservation:v1alpha1" \
-    --extra-peer-dirs=github.com/gardener/gardener/plugin/pkg/shoot/resourcereservation/apis/shootresourcereservation,github.com/gardener/gardener/plugin/pkg/shoot/resourcereservation/apis/shootresourcereservation/v1alpha1,k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/conversion,k8s.io/apimachinery/pkg/runtime,k8s.io/component-base/config,k8s.io/component-base/config/v1alpha1 \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
+  
+  kube::codegen::gen_helpers \
+    --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
+    --extra-peer-dir github.com/gardener/gardener/plugin/pkg/shoot/resourcereservation/apis/shootresourcereservation \
+    --extra-peer-dir github.com/gardener/gardener/plugin/pkg/shoot/resourcereservation/apis/shootresourcereservation/v1alpha1 \
+    --extra-peer-dir k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/conversion \
+    --extra-peer-dir k8s.io/apimachinery/pkg/runtime \
+    --extra-peer-dir k8s.io/component-base/config \
+    --extra-peer-dir k8s.io/component-base/config/v1alpha1 \
+    "${PROJECT_ROOT}/plugin/pkg/shoot/resourcereservation/apis/shootresourcereservation"
 }
 export -f shootresourcereservation_groups
 
@@ -495,22 +413,16 @@ export -f shootresourcereservation_groups
 provider_local_groups() {
   echo "Generating API groups for pkg/provider-local/apis/local"
 
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    deepcopy,defaulter \
-    github.com/gardener/gardener/pkg/client/provider-local \
-    github.com/gardener/gardener/pkg/provider-local/apis \
-    github.com/gardener/gardener/pkg/provider-local/apis \
-    "local:v1alpha1" \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
-
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    conversion \
-    github.com/gardener/gardener/pkg/client/provider-local \
-    github.com/gardener/gardener/pkg/provider-local/apis \
-    github.com/gardener/gardener/pkg/provider-local/apis \
-    "local:v1alpha1" \
-    --extra-peer-dirs=github.com/gardener/gardener/pkg/provider-local/apis/local,github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1,k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/conversion,k8s.io/apimachinery/pkg/runtime \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
+  
+  kube::codegen::gen_helpers \
+    --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
+    --extra-peer-dir github.com/gardener/gardener/pkg/provider-local/apis/local \
+    --extra-peer-dir github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1 \
+    --extra-peer-dir k8s.io/apimachinery/pkg/apis/meta/v1 \
+    --extra-peer-dir k8s.io/apimachinery/pkg/conversion \
+    --extra-peer-dir k8s.io/apimachinery/pkg/runtime \
+    "${PROJECT_ROOT}/pkg/provider-local/apis/local"
 }
 export -f provider_local_groups
 
@@ -519,13 +431,11 @@ export -f provider_local_groups
 extensions_config_groups() {
   echo "Generating API groups for extensions/pkg/apis/config"
 
-  bash "${CODE_GEN_DIR}"/generate-internal-groups.sh \
-    "deepcopy" \
-    github.com/gardener/gardener/extensions/pkg/apis \
-    github.com/gardener/gardener/extensions/pkg/apis \
-    github.com/gardener/gardener/extensions/pkg/apis \
-    "config:v1alpha1" \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+  source "${CODE_GEN_DIR}/kube_codegen.sh"
+  
+  kube::codegen::gen_helpers \
+    --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
+    "${PROJECT_ROOT}/extensions/pkg/apis/config"
 }
 export -f extensions_config_groups
 
@@ -534,31 +444,37 @@ export -f extensions_config_groups
 openapi_definitions() {
   echo "> Generating openapi definitions"
   rm -Rf ./${PROJECT_ROOT}/openapi/openapi_generated.go
-  openapi-gen \
-    --v 1 \
-    --logtostderr \
-    --input-dirs=github.com/gardener/gardener/pkg/apis/authentication/v1alpha1 \
-    --input-dirs=github.com/gardener/gardener/pkg/apis/core/v1 \
-    --input-dirs=github.com/gardener/gardener/pkg/apis/core/v1beta1 \
-    --input-dirs=github.com/gardener/gardener/pkg/apis/settings/v1alpha1 \
-    --input-dirs=github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1 \
-    --input-dirs=github.com/gardener/gardener/pkg/apis/security/v1alpha1 \
-    --input-dirs=github.com/gardener/gardener/pkg/apis/operations/v1alpha1 \
-    --input-dirs=k8s.io/api/core/v1 \
-    --input-dirs=k8s.io/api/rbac/v1 \
-    --input-dirs=k8s.io/api/autoscaling/v1 \
-    --input-dirs=k8s.io/api/networking/v1 \
-    --input-dirs=k8s.io/apimachinery/pkg/apis/meta/v1 \
-    --input-dirs=k8s.io/apimachinery/pkg/api/resource \
-    --input-dirs=k8s.io/apimachinery/pkg/types \
-    --input-dirs=k8s.io/apimachinery/pkg/version \
-    --input-dirs=k8s.io/apimachinery/pkg/runtime \
-    --input-dirs=k8s.io/apimachinery/pkg/util/intstr \
-    --input-dirs=k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1 \
-    --report-filename=${PROJECT_ROOT}/pkg/apiserver/openapi/api_violations.report \
-    --output-package=github.com/gardener/gardener/pkg/apiserver/openapi \
-    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
 
+  GO111MODULE=on go install k8s.io/kube-openapi/cmd/openapi-gen
+
+  # Go installs in $GOBIN if defined, and $GOPATH/bin otherwise
+  gobin="${GOBIN:-$(go env GOPATH)/bin}"
+
+  "${gobin}/openapi-gen" \
+    -v 1 \
+    --output-file openapi_generated.go \
+    --go-header-file "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
+    --output-dir "${PROJECT_ROOT}/pkg/apiserver/openapi" \
+    --output-pkg "github.com/gardener/gardener/pkg/apiserver/openapi" \
+    --report-filename "${PROJECT_ROOT}/pkg/apiserver/openapi/api_violations.report" \
+    "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1" \
+    "github.com/gardener/gardener/pkg/apis/core/v1" \
+    "github.com/gardener/gardener/pkg/apis/core/v1beta1" \
+    "github.com/gardener/gardener/pkg/apis/settings/v1alpha1" \
+    "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1" \
+    "github.com/gardener/gardener/pkg/apis/security/v1alpha1" \
+    "github.com/gardener/gardener/pkg/apis/operations/v1alpha1" \
+    "k8s.io/api/core/v1" \
+    "k8s.io/api/rbac/v1" \
+    "k8s.io/api/autoscaling/v1" \
+    "k8s.io/api/networking/v1" \
+    "k8s.io/apimachinery/pkg/apis/meta/v1" \
+    "k8s.io/apimachinery/pkg/api/resource" \
+    "k8s.io/apimachinery/pkg/types" \
+    "k8s.io/apimachinery/pkg/version" \
+    "k8s.io/apimachinery/pkg/runtime" \
+    "k8s.io/apimachinery/pkg/util/intstr" \
+    "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 }
 export -f openapi_definitions
 
