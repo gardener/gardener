@@ -572,10 +572,6 @@ spec:
   #-#-# only usable with Kubernetes >= 1.11
   #     requiredClaims:
   #       key: value
-  #-# only usable with Kubernetes >= 1.30
-  #   authentication:
-  #     structured:
-  #       configMapName: name-of-configmap-containing-authenticaion-config
   #   admissionPlugins:
   #   - name: PodNodeSelector
   #     config: |
