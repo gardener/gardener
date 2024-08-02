@@ -90,8 +90,12 @@ func (w *ServerOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&w.Namespace, NamespaceFlag, w.Namespace, "The webhook config namespace for 'service' mode.")
 }
 
-// DisableFlag is the name of the command line flag to disable individual webhooks.
-const DisableFlag = "disable-webhooks"
+const (
+	// DisableFlag is the name of the command line flag to disable individual webhooks.
+	DisableFlag = "disable-webhooks"
+	// disableAllWildcard is the wildcard to disable all webhooks.
+	disableAllWildcard = "*"
+)
 
 // NameToFactory binds a specific name to a webhook's factory function.
 type NameToFactory struct {
@@ -123,6 +127,9 @@ func (w *SwitchOptions) AddFlags(fs *pflag.FlagSet) {
 func (w *SwitchOptions) Complete() error {
 	disabled := sets.New[string]()
 	for _, disabledName := range w.Disabled {
+		if disabledName == disableAllWildcard {
+			return nil
+		}
 		if _, ok := w.nameToWebhookFactory[disabledName]; !ok {
 			return fmt.Errorf("cannot disable unknown webhook %q", disabledName)
 		}
