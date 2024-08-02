@@ -309,7 +309,7 @@ jwt:
 					}
 					return nil
 				})
-				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInvalid, "missing '.data.config.yaml' in authentication configuration configmap", "")
+				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInvalid, "missing '.data[config.yaml]' in authentication configuration configmap", "")
 			})
 
 			It("references authentication configuration which breaks validation rules", func() {
@@ -400,7 +400,7 @@ jwt:
 				It("has no data key", func() {
 					newCm := cm.DeepCopy()
 					newCm.Data = nil
-					test(admissionv1.Update, cm, newCm, false, statusCodeInvalid, "missing '.data.config.yaml' in authentication configuration configmap", "")
+					test(admissionv1.Update, cm, newCm, false, statusCodeInvalid, "missing '.data[config.yaml]' in authentication configuration configmap", "")
 				})
 
 				It("has empty config.yaml", func() {

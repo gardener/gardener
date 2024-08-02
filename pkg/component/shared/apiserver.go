@@ -90,7 +90,7 @@ func computeAPIServerAuthenticationConfig(
 	} else {
 		config, ok := configMap.Data["config.yaml"]
 		if !ok {
-			return nil, fmt.Errorf("missing '.data.config.yaml' in authentication configuration ConfigMap %s", key)
+			return nil, fmt.Errorf("missing '.data[config.yaml]' in authentication configuration ConfigMap %s", key)
 		}
 		out = ptr.To(config)
 	}
