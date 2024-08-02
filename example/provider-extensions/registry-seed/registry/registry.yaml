@@ -24,7 +24,7 @@ spec:
       automountServiceAccountToken: false
       containers:
       - name: registry
-        image: europe-docker.pkg.dev/gardener-project/releases/3rd/registry:2.8.3
+        image: europe-docker.pkg.dev/gardener-project/releases/3rd/registry:3.0.0-beta.1
         imagePullPolicy: IfNotPresent
         env:
         - name: REGISTRY_HTTP_TLS_CERTIFICATE
@@ -37,6 +37,12 @@ spec:
           value: /htpasswd/auth
         - name: REGISTRY_AUTH_HTPASSWD_REALM
           value: Registry Realm
+        - name: REGISTRY_HTTP_DEBUG_ADDR
+          value: ""
+        - name: REGISTRY_LOG_LEVEL
+          value: info
+        - name: OTEL_TRACES_EXPORTER
+          value: none
         ports:
         - name: registry
           containerPort: 5000
