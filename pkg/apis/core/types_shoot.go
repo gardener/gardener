@@ -690,13 +690,13 @@ type AuditPolicy struct {
 	ConfigMapRef *corev1.ObjectReference
 }
 
-// Authentication contains settings for authentication to the kube-apiserver
+// Authentication contains settings for authentication to the kube-apiserver.
 type Authentication struct {
 	// Structured contains configuration settings for structured authentication to the kube-apiserver.
 	Structured *StructuredAuthentication
 }
 
-// StructuredAuthentication contains authentication config for kube-apiserver
+// StructuredAuthentication contains authentication config for kube-apiserver.
 type StructuredAuthentication struct {
 	// ConfigMapName is the name of the ConfigMap in the project namespace
 	// which contains AuthenticationConfiguration for the kube-apiserver.

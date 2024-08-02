@@ -13,5 +13,5 @@ import (
 
 func TestAuthenticationConfig(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "AdmissionController Webhook Admission AuthenticaiotnConfiguration Suite")
+	RunSpecs(t, "AdmissionController Webhook Admission AuthenticationConfiguration Suite")
 }

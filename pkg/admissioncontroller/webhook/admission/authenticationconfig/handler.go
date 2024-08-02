@@ -20,7 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/runtime/serializer/versioning"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	apiserver_internal "k8s.io/apiserver/pkg/apis/apiserver"
+	"k8s.io/apiserver/pkg/apis/apiserver"
 	apiserverv1alpha1 "k8s.io/apiserver/pkg/apis/apiserver/v1alpha1"
 	apiservervalidation "k8s.io/apiserver/pkg/apis/apiserver/validation"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -49,7 +49,7 @@ func init() {
 	schemeBuilder := runtime.NewSchemeBuilder(
 		// TODO(AleksandarSavchev): add v1beta1 when kubernetes packages are updated to version >= v1.30
 		apiserverv1alpha1.AddToScheme,
-		apiserver_internal.AddToScheme,
+		apiserver.AddToScheme,
 	)
 	utilruntime.Must(schemeBuilder.AddToScheme(authenticationConfigScheme))
 	configDecoder = serializer.NewCodecFactory(authenticationConfigScheme).UniversalDecoder()
@@ -207,15 +207,15 @@ func (h *Handler) getOldObject(request admission.Request, oldObj runtime.Object)
 }
 
 func validateAuthenticaionConfigurationSemantics(authenticaionConfiguration string) (errCode int32, err error) {
-	authenticationConfigurationObj, schemaVersion, err := configDecoder.Decode([]byte(authenticaionConfiguration), nil, nil)
+	authConfigObj, schemaVersion, err := configDecoder.Decode([]byte(authenticaionConfiguration), nil, nil)
 	if err != nil {
 		return http.StatusUnprocessableEntity, fmt.Errorf("failed to decode the provided authentication configuration: %w", err)
 	}
-	authenticationCOnfigurationInternal, ok := authenticationConfigurationObj.(*apiserver_internal.AuthenticationConfiguration)
+	authConfig, ok := authConfigObj.(*apiserver.AuthenticationConfiguration)
 	if !ok {
 		return http.StatusInternalServerError, fmt.Errorf("failure to cast to authentication configuration type: %v", schemaVersion)
 	}
-	errList := apiservervalidation.ValidateAuthenticationConfiguration(authenticationCOnfigurationInternal)
+	errList := apiservervalidation.ValidateAuthenticationConfiguration(authConfig)
 	if len(errList) != 0 {
 		return http.StatusUnprocessableEntity, fmt.Errorf("provided invalid authentication configuration: %v", errList)
 	}
@@ -226,7 +226,7 @@ func validateAuthenticaionConfigurationSemantics(authenticaionConfiguration stri
 func getAuthenticationConfiguration(cm *corev1.ConfigMap) (string, error) {
 	authenticationConfigurationRaw, ok := cm.Data[authenticationConfigurationCmDataKey]
 	if !ok {
-		return "", fmt.Errorf("missing '.data.%s' in authentication configuration configmap", authenticationConfigurationCmDataKey)
+		return "", fmt.Errorf("missing '.data[%s]' in authentication configuration configmap", authenticationConfigurationCmDataKey)
 	}
 	if len(authenticationConfigurationRaw) == 0 {
 		return "", errors.New("empty authentication configuration. Provide non-empty authentication configuration")

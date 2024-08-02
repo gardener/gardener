@@ -813,7 +813,7 @@ exemptions:
 						}
 					},
 					nil,
-					MatchError(ContainSubstring("missing '.data.config.yaml' in authentication configuration ConfigMap")),
+					MatchError(ContainSubstring("missing '.data[config.yaml]' in authentication configuration ConfigMap")),
 				),
 				Entry("ConfigMapName is provided and configmap is compliant",
 					func() {
