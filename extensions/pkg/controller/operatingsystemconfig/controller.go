@@ -25,9 +25,9 @@ const (
 	ControllerName = "operatingsystemconfig"
 )
 
-// AddArgs are arguments for adding an operatingsystemconfig controller to a manager.
+// AddArgs are arguments for adding an OperatingSystemConfig controller to a manager.
 type AddArgs struct {
-	// Actuator is an operatingsystemconfig actuator.
+	// Actuator is an OperatingSystemConfig actuator.
 	Actuator Actuator
 	// ControllerOptions are the controller options used for creating a controller.
 	// The options.Reconciler is always overridden with a reconciler created from the
@@ -39,12 +39,15 @@ type AddArgs struct {
 	// Types are the similar types which can be combined with a logic or,
 	// of the resource considered for reconciliation.
 	Types []string
+	// ExtensionClass defines the extension class this extension is responsible for.
+	ExtensionClass extensionsv1alpha1.ExtensionClass
 }
 
 // Add adds an operatingsystemconfig controller to the given manager using the given AddArgs.
 func Add(mgr manager.Manager, args AddArgs) error {
 	args.ControllerOptions.Reconciler = NewReconciler(mgr, args.Actuator)
 	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Types...)
+	predicates = append(predicates, extensionspredicate.HasClass(args.ExtensionClass))
 	return add(mgr, args.ControllerOptions, predicates)
 }
 

@@ -33,7 +33,7 @@ const (
 	ControllerName = "healthcheck"
 )
 
-// AddArgs are arguments for adding an health check controller to a controller-runtime manager.
+// AddArgs are arguments for adding a health check controller to a controller-runtime manager.
 type AddArgs struct {
 	// ControllerOptions are the controller options used for creating a controller.
 	// The options.Reconciler is always overridden with a reconciler created from the
@@ -44,6 +44,8 @@ type AddArgs struct {
 	Predicates []predicate.Predicate
 	// Type is the type of the resource considered for reconciliation.
 	Type string
+	// ExtensionClass defines the extension class this extension is responsible for.
+	ExtensionClass extensionsv1alpha1.ExtensionClass
 	// SyncPeriod is the duration how often the registered extension is being reconciled
 	SyncPeriod metav1.Duration
 	// registeredExtension is the registered extensions that the HealthCheck Controller watches and writes HealthConditions for.
@@ -60,6 +62,8 @@ type DefaultAddArgs struct {
 	Controller controller.Options
 	// HealthCheckConfig contains additional config for the health check controller
 	HealthCheckConfig extensionsconfig.HealthCheckConfig
+	// ExtensionClass defines the extension class this extension is responsible for.
+	ExtensionClass extensionsv1alpha1.ExtensionClass
 }
 
 // RegisteredExtension is a registered extensions that the HealthCheck Controller watches.
@@ -77,16 +81,27 @@ type RegisteredExtension struct {
 
 // DefaultRegistration configures the default health check NewActuator to execute the provided health checks and adds it to the provided controller-runtime manager.
 // the NewActuator reconciles a single extension with a specific type and writes conditions for each distinct healthConditionTypes.
-// extensionType (e.g aws) defines the spec.type of the extension to watch
+// extensionType (e.g. aws) defines the spec.type of the extension to watch
 // kind defines the GroupVersionKind of the extension
 // GetExtensionObjListFunc returns a client.ObjectList representation of the extension to register
-// getExtensionObjFunc returns a extensionsv1alpha1.Object representation of the extension to register
+// getExtensionObjFunc returns an extensionsv1alpha1.Object representation of the extension to register
 // mgr is the controller runtime manager
 // opts contain config for the healthcheck controller
 // custom predicates allow for fine-grained control which resources to watch
 // healthChecks defines the checks to execute mapped to the healthConditionTypes its contributing to (e.g checkDeployment in Seed -> ControlPlaneHealthy).
 // register returns a runtime representation of the extension resource to register it with the controller-runtime
-func DefaultRegistration(ctx context.Context, extensionType string, kind schema.GroupVersionKind, getExtensionObjListFunc GetExtensionObjectListFunc, getExtensionObjFunc GetExtensionObjectFunc, mgr manager.Manager, opts DefaultAddArgs, customPredicates []predicate.Predicate, healthChecks []ConditionTypeToHealthCheck, conditionTypesToRemove sets.Set[gardencorev1beta1.ConditionType]) error {
+func DefaultRegistration(
+	ctx context.Context,
+	extensionType string,
+	kind schema.GroupVersionKind,
+	getExtensionObjListFunc GetExtensionObjectListFunc,
+	getExtensionObjFunc GetExtensionObjectFunc,
+	mgr manager.Manager,
+	opts DefaultAddArgs,
+	customPredicates []predicate.Predicate,
+	healthChecks []ConditionTypeToHealthCheck,
+	conditionTypesToRemove sets.Set[gardencorev1beta1.ConditionType],
+) error {
 	predicates := append(DefaultPredicates(), customPredicates...)
 	opts.Controller.RecoverPanic = ptr.To(true)
 
@@ -94,6 +109,7 @@ func DefaultRegistration(ctx context.Context, extensionType string, kind schema.
 		ControllerOptions:       opts.Controller,
 		Predicates:              predicates,
 		Type:                    extensionType,
+		ExtensionClass:          opts.ExtensionClass,
 		SyncPeriod:              opts.HealthCheckConfig.SyncPeriod,
 		GetExtensionObjListFunc: getExtensionObjListFunc,
 	}
@@ -115,8 +131,13 @@ func DefaultRegistration(ctx context.Context, extensionType string, kind schema.
 // throws and error if the extensionResources is not a extensionsv1alpha1.Object
 // The controller writes the healthCheckTypes as a condition.type into the extension resource.
 // To contribute to the Shoot's health, the Gardener checks each extension for a Health Condition Type of SystemComponentsHealthy, EveryNodeReady, ControlPlaneHealthy.
-// However extensions are free to choose any healthCheckType
-func (a *AddArgs) RegisterExtension(getExtensionObjFunc GetExtensionObjectFunc, conditionTypes []string, kind schema.GroupVersionKind, conditionTypesToRemove sets.Set[gardencorev1beta1.ConditionType]) error {
+// However, extensions are free to choose any healthCheckType
+func (a *AddArgs) RegisterExtension(
+	getExtensionObjFunc GetExtensionObjectFunc,
+	conditionTypes []string,
+	kind schema.GroupVersionKind,
+	conditionTypesToRemove sets.Set[gardencorev1beta1.ConditionType],
+) error {
 	acc, err := extensions.Accessor(getExtensionObjFunc())
 	if err != nil {
 		return err
@@ -169,14 +190,15 @@ func add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
 
 	log.Log.Info("Registered health check controller", "kind", args.registeredExtension.groupVersionKind.Kind, "type", args.Type, "conditionTypes", args.registeredExtension.healthConditionTypes, "syncPeriod", args.SyncPeriod.Duration.String())
 
-	// add type predicate to only watch registered resource (e.g ControlPlane) with a certain type (e.g aws)
+	// add type predicate to only watch registered resource (e.g. ControlPlane) with a certain type (e.g. aws)
 	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
+	predicates = append(predicates, extensionspredicate.HasClass(args.ExtensionClass))
 
 	if err := ctrl.Watch(source.Kind(mgr.GetCache(), args.registeredExtension.getExtensionObjFunc()), &handler.EnqueueRequestForObject{}, predicates...); err != nil {
 		return err
 	}
 
-	// watch Cluster of Shoot provider type (e.g aws)
+	// watch Cluster of Shoot provider type (e.g. aws)
 	// this is to be notified when the Shoot is being hibernated (stop health checks) and wakes up (start health checks again)
 	return ctrl.Watch(
 		source.Kind(mgr.GetCache(), &extensionsv1alpha1.Cluster{}),

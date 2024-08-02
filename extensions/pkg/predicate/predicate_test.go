@@ -9,8 +9,10 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	gomegatypes "github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -76,6 +78,100 @@ var _ = Describe("Predicate", func() {
 			Expect(predicate.Update(updateEvent)).To(BeFalse())
 			Expect(predicate.Delete(deleteEvent)).To(BeFalse())
 			Expect(predicate.Generic(genericEvent)).To(BeFalse())
+		})
+	})
+
+	Describe("#HasClass", func() {
+		var (
+			extensionClass *extensionsv1alpha1.ExtensionClass
+
+			object       client.Object
+			createEvent  event.CreateEvent
+			updateEvent  event.UpdateEvent
+			deleteEvent  event.DeleteEvent
+			genericEvent event.GenericEvent
+		)
+
+		JustBeforeEach(func() {
+			object = &extensionsv1alpha1.Extension{
+				Spec: extensionsv1alpha1.ExtensionSpec{
+					DefaultSpec: extensionsv1alpha1.DefaultSpec{
+						Class: extensionClass,
+					},
+				},
+			}
+			createEvent = event.CreateEvent{
+				Object: object,
+			}
+			updateEvent = event.UpdateEvent{
+				ObjectOld: object,
+				ObjectNew: object,
+			}
+			deleteEvent = event.DeleteEvent{
+				Object: object,
+			}
+			genericEvent = event.GenericEvent{
+				Object: object,
+			}
+		})
+
+		testAndVerify := func(class extensionsv1alpha1.ExtensionClass, match gomegatypes.GomegaMatcher) {
+			predicate := HasClass(class)
+
+			Expect(predicate.Create(createEvent)).To(match)
+			Expect(predicate.Update(updateEvent)).To(match)
+			Expect(predicate.Delete(deleteEvent)).To(match)
+			Expect(predicate.Generic(genericEvent)).To(match)
+		}
+
+		Context("when class is unset", func() {
+			It("should match an empty class", func() {
+				testAndVerify("", BeTrue())
+			})
+
+			It("should match the 'shoot' class", func() {
+				testAndVerify("shoot", BeTrue())
+			})
+
+			It("should not match the 'garden' class", func() {
+				testAndVerify("garden", BeFalse())
+			})
+		})
+
+		Context("when class is set to 'shoot'", func() {
+			BeforeEach(func() {
+				extensionClass = ptr.To[extensionsv1alpha1.ExtensionClass]("shoot")
+			})
+
+			It("should match an empty class", func() {
+				testAndVerify("", BeTrue())
+			})
+
+			It("should match the 'shoot' class", func() {
+				testAndVerify("shoot", BeTrue())
+			})
+
+			It("should not match the 'garden' class", func() {
+				testAndVerify("garden", BeFalse())
+			})
+		})
+
+		Context("when class is set to 'garden'", func() {
+			BeforeEach(func() {
+				extensionClass = ptr.To[extensionsv1alpha1.ExtensionClass]("garden")
+			})
+
+			It("should not match an empty class", func() {
+				testAndVerify("", BeFalse())
+			})
+
+			It("should not match the 'shoot' class", func() {
+				testAndVerify("shoot", BeFalse())
+			})
+
+			It("should match the 'garden' class", func() {
+				testAndVerify("garden", BeTrue())
+			})
 		})
 	})
 

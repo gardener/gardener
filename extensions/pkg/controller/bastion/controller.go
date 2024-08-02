@@ -37,6 +37,8 @@ type AddArgs struct {
 	Predicates []predicate.Predicate
 	// Type is the type of the resource considered for reconciliation.
 	Type string
+	// ExtensionClass defines the extension class this extension is responsible for.
+	ExtensionClass extensionsv1alpha1.ExtensionClass
 }
 
 // DefaultPredicates returns the default predicates for a bastion reconciler.
@@ -49,6 +51,7 @@ func DefaultPredicates(ignoreOperationAnnotation bool) []predicate.Predicate {
 func Add(mgr manager.Manager, args AddArgs) error {
 	args.ControllerOptions.Reconciler = NewReconciler(mgr, args.Actuator, args.ConfigValidator)
 	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
+	predicates = append(predicates, extensionspredicate.HasClass(args.ExtensionClass))
 	return add(mgr, args, predicates)
 }
 

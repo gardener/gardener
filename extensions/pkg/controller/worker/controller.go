@@ -25,9 +25,9 @@ const (
 	ControllerName = "worker"
 )
 
-// AddArgs are arguments for adding an worker controller to a manager.
+// AddArgs are arguments for adding a Worker controller to a manager.
 type AddArgs struct {
-	// Actuator is an worker actuator.
+	// Actuator is a Worker actuator.
 	Actuator Actuator
 	// ControllerOptions are the controller options used for creating a controller.
 	// The options.Reconciler is always overridden with a reconciler created from the
@@ -40,8 +40,10 @@ type AddArgs struct {
 	Type string
 	// IgnoreOperationAnnotation specifies whether to ignore the operation annotation or not.
 	// If the annotation is not ignored, the extension controller will only reconcile
-	// with a present operation annotation typically set during a reconcile (e.g in the maintenance time) by the Gardenlet
+	// with a present operation annotation typically set during a reconcile (e.g. in the maintenance time) by the Gardenlet
 	IgnoreOperationAnnotation bool
+	// ExtensionClass defines the extension class this extension is responsible for.
+	ExtensionClass extensionsv1alpha1.ExtensionClass
 }
 
 // DefaultPredicates returns the default predicates for a Worker reconciler.
@@ -55,6 +57,7 @@ func Add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
 	args.ControllerOptions.Reconciler = NewReconciler(mgr, args.Actuator)
 
 	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
+	predicates = append(predicates, extensionspredicate.HasClass(args.ExtensionClass))
 
 	ctrl, err := controller.New(ControllerName, mgr, args.ControllerOptions)
 	if err != nil {

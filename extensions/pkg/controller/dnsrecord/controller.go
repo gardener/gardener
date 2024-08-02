@@ -25,9 +25,9 @@ const (
 	ControllerName = "dnsrecord"
 )
 
-// AddArgs are arguments for adding an dnsrecord controller to a manager.
+// AddArgs are arguments for adding a DNSRecord controller to a manager.
 type AddArgs struct {
-	// Actuator is an dnsrecord actuator.
+	// Actuator is a DNSRecord actuator.
 	Actuator Actuator
 	// ControllerOptions are the controller options used for creating a controller.
 	// The options.Reconciler is always overridden with a reconciler created from the
@@ -42,6 +42,8 @@ type AddArgs struct {
 	// If the annotation is not ignored, the extension controller will only reconcile
 	// with a present operation annotation typically set during a reconcile (e.g in the maintenance time) by the Gardenlet
 	IgnoreOperationAnnotation bool
+	// ExtensionClass defines the extension class this extension is responsible for.
+	ExtensionClass extensionsv1alpha1.ExtensionClass
 }
 
 // DefaultPredicates returns the default predicates for a dnsrecord reconciler.
@@ -68,6 +70,8 @@ func Add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
 	}
 
 	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
+	predicates = append(predicates, extensionspredicate.HasClass(args.ExtensionClass))
+
 	if args.IgnoreOperationAnnotation {
 		if err := ctrl.Watch(
 			source.Kind(mgr.GetCache(), &extensionsv1alpha1.Cluster{}),

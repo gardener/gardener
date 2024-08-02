@@ -5,6 +5,7 @@
 package predicate
 
 import (
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -48,6 +49,28 @@ func AddTypePredicate(predicates []predicate.Predicate, extensionTypes ...string
 	}
 
 	return append(resultPredicates, predicate.Or(orPreds...))
+}
+
+// HasClass filters the incoming objects for the given extension class.
+// For backwards compatibility, if the extension class is unset, it is assumed that the extension belongs to a shoot cluster.
+// An empty given 'extensionClass' is likewise treated to be of class 'shoot'.
+func HasClass(extensionClass extensionsv1alpha1.ExtensionClass) predicate.Predicate {
+	if extensionClass == "" {
+		extensionClass = extensionsv1alpha1.ExtensionClassShoot
+	}
+
+	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		if obj == nil {
+			return false
+		}
+
+		accessor, err := extensions.Accessor(obj)
+		if err != nil {
+			return false
+		}
+
+		return ptr.Deref(accessor.GetExtensionSpec().GetExtensionClass(), extensionsv1alpha1.ExtensionClassShoot) == extensionClass
+	})
 }
 
 // HasPurpose filters the incoming ControlPlanes for the given spec.purpose.
