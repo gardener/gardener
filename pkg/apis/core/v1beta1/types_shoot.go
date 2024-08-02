@@ -881,7 +881,7 @@ type OIDCConfig struct {
 	// ClientAuthentication can optionally contain client configuration used for kubeconfig generation.
 	// +optional
 	ClientAuthentication *OpenIDConnectClientAuthentication `json:"clientAuthentication,omitempty" protobuf:"bytes,2,opt,name=clientAuthentication"`
-	// The client ID for the OpenID Connect client, must be set if oidc-issuer-url is set.
+	// The client ID for the OpenID Connect client, must be set.
 	// +optional
 	ClientID *string `json:"clientID,omitempty" protobuf:"bytes,3,opt,name=clientID"`
 	// If provided, the name of a custom OpenID Connect claim for specifying user groups. The claim value is expected to be a string or array of strings. This flag is experimental, please see the authentication documentation for further details.
@@ -890,7 +890,7 @@ type OIDCConfig struct {
 	// If provided, all groups will be prefixed with this value to prevent conflicts with other authentication strategies.
 	// +optional
 	GroupsPrefix *string `json:"groupsPrefix,omitempty" protobuf:"bytes,5,opt,name=groupsPrefix"`
-	// The URL of the OpenID issuer, only HTTPS scheme will be accepted. If set, it will be used to verify the OIDC JSON Web Token (JWT).
+	// The URL of the OpenID issuer, only HTTPS scheme will be accepted. Used to verify the OIDC JSON Web Token (JWT).
 	// +optional
 	IssuerURL *string `json:"issuerURL,omitempty" protobuf:"bytes,6,opt,name=issuerURL"`
 	// key=value pairs that describes a required claim in the ID Token. If set, the claim is verified to be present in the ID Token with a matching value.

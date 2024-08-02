@@ -679,13 +679,13 @@ type OIDCConfig struct {
 	CABundle *string
 	// ClientAuthentication can optionally contain client configuration used for kubeconfig generation.
 	ClientAuthentication *OpenIDConnectClientAuthentication
-	// The client ID for the OpenID Connect client, must be set if oidc-issuer-url is set.
+	// The client ID for the OpenID Connect client, must be set.
 	ClientID *string
 	// If provided, the name of a custom OpenID Connect claim for specifying user groups. The claim value is expected to be a string or array of strings. This flag is experimental, please see the authentication documentation for further details.
 	GroupsClaim *string
 	// If provided, all groups will be prefixed with this value to prevent conflicts with other authentication strategies.
 	GroupsPrefix *string
-	// The URL of the OpenID issuer, only HTTPS scheme will be accepted. If set, it will be used to verify the OIDC JSON Web Token (JWT).
+	// The URL of the OpenID issuer, only HTTPS scheme will be accepted. Used to verify the OIDC JSON Web Token (JWT).
 	IssuerURL *string
 	// key=value pairs that describes a required claim in the ID Token. If set, the claim is verified to be present in the ID Token with a matching value.
 	RequiredClaims map[string]string
