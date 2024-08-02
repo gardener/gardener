@@ -1645,7 +1645,14 @@ var _ = Describe("Validation Tests", func() {
 
 						It("should not complain when OIDC config is configured in both gardener-dashboard and kube-apiserver config", func() {
 							garden.Spec.VirtualCluster.Gardener.Dashboard = &operatorv1alpha1.GardenerDashboardConfig{OIDC: &operatorv1alpha1.DashboardOIDC{}}
-							garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = &operatorv1alpha1.KubeAPIServerConfig{KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{OIDCConfig: &gardencorev1beta1.OIDCConfig{}}}
+							garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = &operatorv1alpha1.KubeAPIServerConfig{
+								KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{
+									OIDCConfig: &gardencorev1beta1.OIDCConfig{
+										ClientID:  ptr.To("someClientID"),
+										IssuerURL: ptr.To("https://issuer.com"),
+									},
+								},
+							}
 
 							Expect(ValidateGarden(garden)).To(BeEmpty())
 						})
