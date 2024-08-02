@@ -131,7 +131,7 @@ Shoots have to "opt-in" for such defaulting by using the `oidc=enable` label.
 
 For further information on `(Cluster)OpenIDConnectPreset`, refer to [ClusterOpenIDConnectPreset and OpenIDConnectPreset](openidconnect-presets.md).
 
-For shoots with kubernetes version `>= 1.30`, which have `StructuredAuthenticationConfiguration` feature gate enabled (enabled by default), the oidcConfig is translated into an `AuthenticationConfiguration` file to use for [Structured Authentication configuration]https://kubernetes.io/docs/reference/access-authn-authz/authentication/#using-authentication-configuration
+For shoots with kubernetes version `>= 1.30`, which have `StructuredAuthenticationConfiguration` feature gate enabled (enabled by default), it is advised to use Structured Authentication instead of configuring `.spec.kubernetes.kubeAPIServer.oidcConfig`. If oidcConfig is configured, it is translated into an `AuthenticationConfiguration` file to use for [Structured Authentication configuration]https://kubernetes.io/docs/reference/access-authn-authz/authentication/#using-authentication-configuration
 
 ## Structured Authentication
 
@@ -149,7 +149,7 @@ spec:
           configMapName: name-of-configmap-containing-authenticaion-config
 ```
 
-The `configMapName` references a user created configMap in the project namespace containing the `AuthenticationConfiguration` in it's `config.yaml` data field. Example `configMap`:
+The `configMapName` references a user created `ConfigMap` in the project namespace containing the `AuthenticationConfiguration` in it's `config.yaml` data field. Here is an example of such `ConfigMap`:
 
 ```yaml
 apiVersion: v1
@@ -179,7 +179,7 @@ data:
         message: "the hosted domain name must be example.com"
 ```
 
-Currently only `apiVersion: apiserver.config.k8s.io/v1alpha1` is supported. The user is resposible for the validity of the configured `JWTAuthenticator`s. There is a hard max limit of `64` `JWTAuthenticator`s.
+Currently only `apiVersion: apiserver.config.k8s.io/v1alpha1` is supported. The user is resposible for the validity of the configured `JWTAuthenticator`s.
 
 ## Static Token kubeconfig
 
