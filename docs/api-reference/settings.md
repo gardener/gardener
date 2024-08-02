@@ -201,7 +201,10 @@ OpenIDConnectClientAuthentication
 <p>Client contains the configuration used for client OIDC authentication
 of Shoot clusters.
 This configuration is not overwriting any existing OpenID Connect
-client authentication already set on the Shoot object.</p>
+client authentication already set on the Shoot object.
+Deprecated: The OpenID Connect configuration this field specifies is not used.
+It&rsquo;s use was planned for genereting OIDC kubeconfig <a href="https://github.com/gardener/gardener/issues/1433">https://github.com/gardener/gardener/issues/1433</a>
+TODO(AleksandarSavchev): Drop this field after v1.102 has been released.</p>
 </td>
 </tr>
 <tr>
@@ -515,7 +518,10 @@ OpenIDConnectClientAuthentication
 <p>Client contains the configuration used for client OIDC authentication
 of Shoot clusters.
 This configuration is not overwriting any existing OpenID Connect
-client authentication already set on the Shoot object.</p>
+client authentication already set on the Shoot object.
+Deprecated: The OpenID Connect configuration this field specifies is not used.
+It&rsquo;s use was planned for genereting OIDC kubeconfig <a href="https://github.com/gardener/gardener/issues/1433">https://github.com/gardener/gardener/issues/1433</a>
+TODO(AleksandarSavchev): Drop this field after v1.102 has been released.</p>
 </td>
 </tr>
 <tr>

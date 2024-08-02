@@ -11599,7 +11599,7 @@ func schema_pkg_apis_settings_v1alpha1_ClusterOpenIDConnectPresetSpec(ref common
 					},
 					"client": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Client contains the configuration used for client OIDC authentication of Shoot clusters. This configuration is not overwriting any existing OpenID Connect client authentication already set on the Shoot object.",
+							Description: "Client contains the configuration used for client OIDC authentication of Shoot clusters. This configuration is not overwriting any existing OpenID Connect client authentication already set on the Shoot object. Deprecated: The OpenID Connect configuration this filed specifies is not used. It's use was planned for genereting OIDC kubeconfig https://github.com/gardener/gardener/issues/1433",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/settings/v1alpha1.OpenIDConnectClientAuthentication"),
 						},
 					},
@@ -11875,7 +11875,7 @@ func schema_pkg_apis_settings_v1alpha1_OpenIDConnectPresetSpec(ref common.Refere
 					},
 					"client": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Client contains the configuration used for client OIDC authentication of Shoot clusters. This configuration is not overwriting any existing OpenID Connect client authentication already set on the Shoot object.",
+							Description: "Client contains the configuration used for client OIDC authentication of Shoot clusters. This configuration is not overwriting any existing OpenID Connect client authentication already set on the Shoot object. Deprecated: The OpenID Connect configuration this filed specifies is not used. It's use was planned for genereting OIDC kubeconfig https://github.com/gardener/gardener/issues/1433",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/settings/v1alpha1.OpenIDConnectClientAuthentication"),
 						},
 					},
