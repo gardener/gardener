@@ -30,7 +30,5 @@ yq -i "$image_ref |= \"$IMG\"" "$chart_dir/values.yaml"
 # valid dns name.
 yq -i ".name |= \"$name\"" "$chart_dir/Chart.yaml"
 
-
 helm package "$chart_dir" -d "$chart_dir" --version "$tag"
 helm push --plain-http "$chart_dir/$name-$tag.tgz" "oci://$registry"
-
