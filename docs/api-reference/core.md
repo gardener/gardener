@@ -2538,7 +2538,7 @@ which contains the audit policy for the kube-apiserver.</p>
 <a href="#core.gardener.cloud/v1beta1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
 </p>
 <p>
-<p>Authentication contains settings for authentication to the kube-apiserver</p>
+<p>Authentication contains settings for authentication to the kube-apiserver.</p>
 </p>
 <table>
 <thead>
@@ -12744,7 +12744,7 @@ This field is immutable.</p>
 <a href="#core.gardener.cloud/v1beta1.Authentication">Authentication</a>)
 </p>
 <p>
-<p>StructuredAuthentication contains authentication config for kube-apiserver</p>
+<p>StructuredAuthentication contains authentication config for kube-apiserver.</p>
 </p>
 <table>
 <thead>

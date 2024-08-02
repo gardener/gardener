@@ -1218,7 +1218,7 @@ func schema_pkg_apis_core_v1beta1_Authentication(ref common.ReferenceCallback) c
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "Authentication contains settings for authentication to the kube-apiserver",
+				Description: "Authentication contains settings for authentication to the kube-apiserver.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"structured": {
@@ -9203,7 +9203,7 @@ func schema_pkg_apis_core_v1beta1_StructuredAuthentication(ref common.ReferenceC
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "StructuredAuthentication contains authentication config for kube-apiserver",
+				Description: "StructuredAuthentication contains authentication config for kube-apiserver.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"configMapName": {
