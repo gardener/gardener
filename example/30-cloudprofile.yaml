@@ -18,10 +18,10 @@ spec:
 # If not provided, these properties depend on the implicit ordering of the CloudProfile.
 # In this case, the provider extension will use the first found supported image, and the first usable machine type.
 # bastion:
-#   machineImage:
+#   machineImage: # optional - will use the newest of the first found supported image
 #     name: gardenlinux
-#     version: 1443.3.0
-#   machineType:
+#     version: 1443.3.0 # optional - will use the newest and supported for the specified name
+#   machineType: # optional - will use the machine with lowest amount of CPUs
 #     name: n1-standard-2
   kubernetes:
     versions:

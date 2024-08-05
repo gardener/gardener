@@ -2299,12 +2299,8 @@ func Convert_core_BackupEntryStatus_To_v1beta1_BackupEntryStatus(in *core.Backup
 }
 
 func autoConvert_v1beta1_Bastion_To_core_Bastion(in *Bastion, out *core.Bastion, s conversion.Scope) error {
-	if err := Convert_v1beta1_BastionMachineImage_To_core_BastionMachineImage(&in.MachineImage, &out.MachineImage, s); err != nil {
-		return err
-	}
-	if err := Convert_v1beta1_BastionMachineType_To_core_BastionMachineType(&in.MachineType, &out.MachineType, s); err != nil {
-		return err
-	}
+	out.MachineImage = (*core.BastionMachineImage)(unsafe.Pointer(in.MachineImage))
+	out.MachineType = (*core.BastionMachineType)(unsafe.Pointer(in.MachineType))
 	return nil
 }
 
@@ -2314,12 +2310,8 @@ func Convert_v1beta1_Bastion_To_core_Bastion(in *Bastion, out *core.Bastion, s c
 }
 
 func autoConvert_core_Bastion_To_v1beta1_Bastion(in *core.Bastion, out *Bastion, s conversion.Scope) error {
-	if err := Convert_core_BastionMachineImage_To_v1beta1_BastionMachineImage(&in.MachineImage, &out.MachineImage, s); err != nil {
-		return err
-	}
-	if err := Convert_core_BastionMachineType_To_v1beta1_BastionMachineType(&in.MachineType, &out.MachineType, s); err != nil {
-		return err
-	}
+	out.MachineImage = (*BastionMachineImage)(unsafe.Pointer(in.MachineImage))
+	out.MachineType = (*BastionMachineType)(unsafe.Pointer(in.MachineType))
 	return nil
 }
 
@@ -2330,7 +2322,7 @@ func Convert_core_Bastion_To_v1beta1_Bastion(in *core.Bastion, out *Bastion, s c
 
 func autoConvert_v1beta1_BastionMachineImage_To_core_BastionMachineImage(in *BastionMachineImage, out *core.BastionMachineImage, s conversion.Scope) error {
 	out.Name = in.Name
-	out.Version = in.Version
+	out.Version = (*string)(unsafe.Pointer(in.Version))
 	return nil
 }
 
@@ -2341,7 +2333,7 @@ func Convert_v1beta1_BastionMachineImage_To_core_BastionMachineImage(in *Bastion
 
 func autoConvert_core_BastionMachineImage_To_v1beta1_BastionMachineImage(in *core.BastionMachineImage, out *BastionMachineImage, s conversion.Scope) error {
 	out.Name = in.Name
-	out.Version = in.Version
+	out.Version = (*string)(unsafe.Pointer(in.Version))
 	return nil
 }
 
