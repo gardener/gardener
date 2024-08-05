@@ -179,8 +179,7 @@ var _ = Describe("Secrets", func() {
 
 		It("should return error when shoot credentials are of unknown type", func() {
 			botanist.Shoot.Credentials = &corev1.Pod{}
-			err := botanist.DeployCloudProviderSecret(ctx)
-			Expect(err.Error()).To(Equal("unexpected type *v1.Pod, should be either Secret or WorkloadIdentity"))
+			Expect(botanist.DeployCloudProviderSecret(ctx)).To(MatchError(Equal("unexpected type *v1.Pod, should be either Secret or WorkloadIdentity")))
 		})
 	})
 

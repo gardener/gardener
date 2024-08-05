@@ -1050,7 +1050,7 @@ var _ = Describe("Shoot", func() {
 			)
 
 			_, err := ConstructExternalDomain(ctx, fakeClient, shoot, workloadIdentity, nil)
-			Expect(err.Error()).To(Equal("shoot credentials of type workload identity cannot be used as domain secret"))
+			Expect(err).To(MatchError(Equal("shoot credentials of type workload identity cannot be used as domain secret")))
 		})
 
 		It("returns error because shoot credential type is not supported", func() {
@@ -1074,7 +1074,7 @@ var _ = Describe("Shoot", func() {
 			)
 
 			_, err := ConstructExternalDomain(ctx, fakeClient, shoot, pod, nil)
-			Expect(err.Error()).To(Equal("unexpected shoot credentials type"))
+			Expect(err).To(MatchError(Equal("unexpected shoot credentials type")))
 		})
 	})
 

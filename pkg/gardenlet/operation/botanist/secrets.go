@@ -476,12 +476,12 @@ func (b *Botanist) DeployCloudProviderSecret(ctx context.Context) error {
 	)
 	switch credentials := b.Shoot.Credentials.(type) {
 	case *securityv1alpha1.WorkloadIdentity:
-		providerConfigBytes, err := json.Marshal(credentials.Spec.TargetSystem.ProviderConfig)
+		providerConfigRaw, err := json.Marshal(credentials.Spec.TargetSystem.ProviderConfig)
 		if err != nil {
 			return err
 		}
 		data = map[string][]byte{
-			"config": providerConfigBytes,
+			"config": providerConfigRaw,
 		}
 		shootInfo := b.Shoot.GetInfo()
 		shootMeta := securityv1alpha1.ContextObject{

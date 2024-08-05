@@ -62,25 +62,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 }
 
 func (r *Reconciler) getCredentialsFromRef(ctx context.Context, ref corev1.ObjectReference) (client.Object, error) {
-	secretGVK := corev1.SchemeGroupVersion.WithKind("Secret")
-	if ref.GroupVersionKind() == secretGVK {
-		secret := &corev1.Secret{}
-		if err := r.Client.Get(ctx, client.ObjectKey{Namespace: ref.Namespace, Name: ref.Name}, secret); err != nil {
-			return nil, err
-		}
-		return secret, nil
+	var obj client.Object
+	switch ref.GroupVersionKind() {
+	case corev1.SchemeGroupVersion.WithKind("Secret"):
+		obj = &corev1.Secret{}
+	case securityv1alpha1.SchemeGroupVersion.WithKind("WorkloadIdentity"):
+		obj = &securityv1alpha1.WorkloadIdentity{}
+	default:
+		return nil, fmt.Errorf("unsupported credentials reference: %s, %s", ref.Namespace+"/"+ref.Name, ref.GroupVersionKind().String())
 	}
 
-	wiGVK := securityv1alpha1.SchemeGroupVersion.WithKind("WorkloadIdentity")
-	if ref.GroupVersionKind() == wiGVK {
-		workloadIdentity := &securityv1alpha1.WorkloadIdentity{}
-		if err := r.Client.Get(ctx, client.ObjectKey{Namespace: ref.Namespace, Name: ref.Name}, workloadIdentity); err != nil {
-			return nil, err
-		}
-		return workloadIdentity, nil
-	}
-
-	return nil, fmt.Errorf("unsuported credentials reference: %s, %s", ref.Namespace+"/"+ref.Name, ref.GroupVersionKind().String())
+	return obj, r.Client.Get(ctx, client.ObjectKey{Namespace: ref.Namespace, Name: ref.Name}, obj)
 }
 
 func (r *Reconciler) reconcile(ctx context.Context, credentialsBinding *securityv1alpha1.CredentialsBinding, log logr.Logger) error {

@@ -144,8 +144,7 @@ func (b *Builder) WithShootCredentialsFrom(c client.Reader) *Builder {
 			}
 			key = client.ObjectKey{Namespace: binding.CredentialsRef.Namespace, Name: binding.CredentialsRef.Name}
 
-			wiGVK := securityv1alpha1.SchemeGroupVersion.WithKind("WorkloadIdentity")
-			if wiGVK == binding.CredentialsRef.GroupVersionKind() {
+			if binding.CredentialsRef.GroupVersionKind() == securityv1alpha1.SchemeGroupVersion.WithKind("WorkloadIdentity") {
 				workloadIdentity := &securityv1alpha1.WorkloadIdentity{}
 				if err := c.Get(ctx, key, workloadIdentity); err != nil {
 					return nil, err
