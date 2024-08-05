@@ -117,7 +117,7 @@ var _ = Describe("Secrets", func() {
 	})
 
 	Describe("#DeployCloudProviderSecret", func() {
-		It("should create cloud provider secret contaning secret data", func() {
+		It("should create cloud provider secret containing secret data", func() {
 			botanist.Shoot.Credentials = &corev1.Secret{
 				Data: map[string][]byte{"foo": []byte("bar")},
 			}

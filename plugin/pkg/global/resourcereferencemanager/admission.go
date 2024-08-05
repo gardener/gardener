@@ -707,7 +707,7 @@ func (r *ReferenceManager) ensureBindingReferences(ctx context.Context, attribut
 		ResourceRequest: true,
 	}
 	if decision, _, _ := r.authorizer.Authorize(ctx, readAttributes); decision != authorizer.DecisionAllow {
-		return fmt.Errorf("%s cannot reference a %s you are not allowed to read", credentialsKind, binding.GetObjectKind().GroupVersionKind().Kind)
+		return fmt.Errorf("%s cannot reference a %s you are not allowed to read", binding.GetObjectKind().GroupVersionKind().Kind, credentialsKind)
 	}
 
 	switch credentialsKind {
