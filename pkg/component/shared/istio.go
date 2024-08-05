@@ -75,7 +75,7 @@ func NewIstio(
 		// zonal load balancer is exposed individually via its own IP address. Therefore, having
 		// just one replica may negatively affect availability.
 		minReplicas = ptr.To(len(zones) * 2)
-		// The default configuration without availability zones has 5 as the maximum amount of
+		// The default configuration without availability zones has 9 as the maximum amount of
 		// replicas, which apparently works in all known Gardener scenarios. Reducing it to less
 		// per zone gives some room for autoscaling while it is assumed to never reach the maximum.
 		maxReplicas = ptr.To(len(zones) * 6)
