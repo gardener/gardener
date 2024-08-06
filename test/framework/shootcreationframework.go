@@ -33,7 +33,8 @@ type ShootCreationConfig struct {
 	shootMachineImageName        string
 	shootMachineType             string
 	shootMachineImageVersion     string
-	cloudProfile                 string
+	cloudProfileName             string
+	cloudProfileKind             string
 	seedName                     string
 	shootRegion                  string
 	secretBinding                string
@@ -209,8 +210,12 @@ func mergeShootCreationConfig(base, overwrite *ShootCreationConfig) *ShootCreati
 		base.shootMachineImageVersion = overwrite.shootMachineImageVersion
 	}
 
-	if StringSet(overwrite.cloudProfile) {
-		base.cloudProfile = overwrite.cloudProfile
+	if StringSet(overwrite.cloudProfileName) {
+		base.cloudProfileName = overwrite.cloudProfileName
+	}
+
+	if StringSet(overwrite.cloudProfileKind) {
+		base.cloudProfileKind = overwrite.cloudProfileKind
 	}
 
 	if StringSet(overwrite.seedName) {
@@ -306,7 +311,8 @@ func RegisterShootCreationFrameworkFlags() *ShootCreationConfig {
 	flag.StringVar(&newCfg.shootMachineImageName, "machine-image-name", "", "the Machine Image Name of the test shoot. Defaults to first machine image in the CloudProfile.")
 	flag.StringVar(&newCfg.shootMachineType, "machine-type", "", "the Machine type of the first worker of the test shoot. Needs to match the machine types for that Provider available in the CloudProfile.")
 	flag.StringVar(&newCfg.shootMachineImageVersion, "machine-image-version", "", "the Machine Image version of the first worker of the test shoot. Needs to be set when the MachineImageName is set.")
-	flag.StringVar(&newCfg.cloudProfile, "cloud-profile", "", "cloudProfile to use for the shoot.")
+	flag.StringVar(&newCfg.cloudProfileName, "cloud-profile-name", "", "cloudProfile name to use for the shoot.")
+	flag.StringVar(&newCfg.cloudProfileKind, "cloud-profile-kind", "", "cloudProfile kind to use for the shoot. Optional.")
 	flag.StringVar(&newCfg.seedName, "seed", "", "Name of the seed to use for the shoot.")
 	flag.StringVar(&newCfg.shootRegion, "region", "", "region to use for the shoot. Must be compatible with the infrastructureProvider.Zone.")
 	flag.StringVar(&newCfg.secretBinding, "secret-binding", "", "the secretBinding for the provider account of the shoot.")

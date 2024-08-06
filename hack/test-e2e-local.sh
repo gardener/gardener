@@ -78,6 +78,7 @@ else
     e2e-unpriv.local
     e2e-wake-up.local
     e2e-wake-up-wl.local
+    e2e-wake-up-ncp.local
     e2e-migrate.local
     e2e-migrate-wl.local
     e2e-mgr-hib.local
