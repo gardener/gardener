@@ -172,7 +172,7 @@ func (r *Reconciler) reconcileAdmissionVirtualClusterResources(ctx context.Conte
 		return fmt.Errorf("failed rendering Helm chart: %w", err)
 	}
 
-	if err := managedresources.CreateForShoot(ctx, r.RuntimeClientSet.Client(), r.GardenNamespace, virtualClusterAdmissionManagedResourceName(extension), managedresources.LabelValueGardener, false, renderedChart.AsSecretData()); err != nil {
+	if err := managedresources.CreateForShoot(ctx, r.RuntimeClientSet.Client(), r.GardenNamespace, virtualClusterAdmissionManagedResourceName(extension), managedresources.LabelValueOperator, false, renderedChart.AsSecretData()); err != nil {
 		return fmt.Errorf("failed creating ManagedResource: %w", err)
 	}
 

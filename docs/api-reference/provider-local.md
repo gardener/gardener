@@ -12,6 +12,8 @@ Resource Types:
 <ul><li>
 <a href="#local.provider.extensions.gardener.cloud/v1alpha1.CloudProfileConfig">CloudProfileConfig</a>
 </li><li>
+<a href="#local.provider.extensions.gardener.cloud/v1alpha1.ControlPlaneConfig">ControlPlaneConfig</a>
+</li><li>
 <a href="#local.provider.extensions.gardener.cloud/v1alpha1.WorkerStatus">WorkerStatus</a>
 </li></ul>
 <h3 id="local.provider.extensions.gardener.cloud/v1alpha1.CloudProfileConfig">CloudProfileConfig
@@ -57,6 +59,50 @@ string
 <td>
 <p>MachineImages is the list of machine images that are understood by the controller. It maps
 logical names and versions to provider-specific identifiers.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="local.provider.extensions.gardener.cloud/v1alpha1.ControlPlaneConfig">ControlPlaneConfig
+</h3>
+<p>
+<p>ControlPlaneConfig contains configuration settings for the control plane.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code></br>
+string</td>
+<td>
+<code>
+local.provider.extensions.gardener.cloud/v1alpha1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code></br>
+string
+</td>
+<td><code>ControlPlaneConfig</code></td>
+</tr>
+<tr>
+<td>
+<code>testValue</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>TestValue contains a value injected by the admission webhook for testing purpose only.</p>
 </td>
 </tr>
 </tbody>

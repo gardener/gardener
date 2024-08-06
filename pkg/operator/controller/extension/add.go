@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -71,7 +72,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
-		For(&operatorv1alpha1.Extension{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		For(&operatorv1alpha1.Extension{}, builder.WithPredicates(predicate.Or(predicate.GenerationChangedPredicate{}, disableAnnotationChangedPredicate{}))).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: ptr.Deref(r.Config.Controllers.Extension.ConcurrentSyncs, 0),
 		}).
@@ -93,4 +94,17 @@ func (r *Reconciler) MapToAllExtensions(ctx context.Context, log logr.Logger, re
 	}
 
 	return mapper.ObjectListToRequests(extensionList)
+}
+
+type disableAnnotationChangedPredicate struct {
+	predicate.Funcs
+}
+
+// Update implements default UpdateEvent filter for validating annotation change.
+func (disableAnnotationChangedPredicate) Update(e event.UpdateEvent) bool {
+	if e.ObjectOld == nil || e.ObjectNew == nil {
+		return false
+	}
+
+	return e.ObjectNew.GetAnnotations()[AnnotationKeyDisableAdmission] != e.ObjectOld.GetAnnotations()[AnnotationKeyDisableAdmission]
 }
