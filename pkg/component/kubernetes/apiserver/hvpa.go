@@ -65,6 +65,8 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 		}
 	)
 
+	kubernetesutils.MergeMinValuesIntoResourceList(k.values.Values.Autoscaling.VPAMaxAllowed, kubeAPIServerMaxAllowed)
+
 	if k.values.Autoscaling.UseMemoryMetricForHvpaHPA {
 		hpaMetrics = append(hpaMetrics, autoscalingv2beta1.MetricSpec{
 			Type: autoscalingv2beta1.ResourceMetricSourceType,

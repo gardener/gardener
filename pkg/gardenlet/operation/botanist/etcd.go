@@ -47,6 +47,15 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 		hvpaEnabled = features.DefaultFeatureGate.Enabled(features.HVPAForShootedSeed)
 	}
 
+	var vpaMaxAllowed corev1.ResourceList
+	if b.Config != nil &&
+		b.Config.SeedConfig != nil &&
+		b.Config.SeedConfig.Spec.Settings != nil &&
+		b.Config.SeedConfig.Spec.Settings.VerticalPodAutoscaler != nil &&
+		b.Config.SeedConfig.Spec.Settings.VerticalPodAutoscaler.MaxAllowed != nil {
+		vpaMaxAllowed = b.Config.SeedConfig.Spec.Settings.VerticalPodAutoscaler.MaxAllowed.DeepCopy()
+	}
+
 	e := NewEtcd(
 		b.Logger,
 		b.SeedClientSet.Client(),
@@ -67,6 +76,7 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 			HighAvailabilityEnabled:     v1beta1helper.IsHAControlPlaneConfigured(b.Shoot.GetInfo()),
 			TopologyAwareRoutingEnabled: b.Shoot.TopologyAwareRoutingEnabled,
 			VPAEnabled:                  features.DefaultFeatureGate.Enabled(features.VPAForETCD),
+			VPAMaxAllowed:               vpaMaxAllowed,
 		},
 	)
 

@@ -7811,10 +7811,26 @@ func schema_pkg_apis_core_v1beta1_SeedSettingVerticalPodAutoscaler(ref common.Re
 							Format:      "",
 						},
 					},
+					"maxAllowed": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxAllowed specifies the maximum amount of resources that will be recommended for Gardener components. The value is applied by setting it in the MaxAllowed field of the component's VPA object. If the VPA has a default value for MaxAllowed, the smaller of the two values is used. If this field is nil, no change is made to the MaxAllowed values in component VPAs.\n\nThe effects of the setting are currently limited to the following shoot control plane components:\n etcd, kube-apiserver,prometheus",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"enabled"},
 			},
 		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/api/resource.Quantity"},
 	}
 }
 

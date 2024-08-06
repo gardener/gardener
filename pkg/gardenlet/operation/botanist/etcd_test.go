@@ -21,6 +21,7 @@ import (
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -29,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
@@ -236,6 +238,33 @@ var _ = Describe("Etcd", func() {
 			etcd, err := botanist.DefaultEtcd(role, class)
 			Expect(etcd).To(BeNil())
 			Expect(err).To(HaveOccurred())
+		})
+
+		It("should pass along seed-level MaxAllowed", func() {
+			botanist.Config = &gardenletconfig.GardenletConfiguration{
+				SeedConfig: &gardenletconfig.SeedConfig{
+					SeedTemplate: core.SeedTemplate{
+						Spec: core.SeedSpec{
+							Settings: &core.SeedSettings{
+								VerticalPodAutoscaler: &core.SeedSettingVerticalPodAutoscaler{
+									MaxAllowed: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("777m"),
+										corev1.ResourceMemory: resource.MustParse("777M"),
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			etcd, err := botanist.DefaultEtcd(role, class)
+			Expect(etcd).NotTo(BeNil())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(etcd.GetValues().VPAMaxAllowed).To(Equal(corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("777m"),
+				corev1.ResourceMemory: resource.MustParse("777M"),
+			}))
 		})
 	})
 

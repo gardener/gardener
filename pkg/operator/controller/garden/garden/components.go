@@ -518,6 +518,7 @@ func (r *Reconciler) newEtcd(
 			HighAvailabilityEnabled:     highAvailabilityEnabled,
 			TopologyAwareRoutingEnabled: helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
 			VPAEnabled:                  features.DefaultFeatureGate.Enabled(features.VPAForETCD),
+			VPAMaxAllowed:               nil,
 		},
 	), nil
 }

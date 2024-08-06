@@ -162,6 +162,7 @@ type Values struct {
 	HighAvailabilityEnabled     bool
 	TopologyAwareRoutingEnabled bool
 	VPAEnabled                  bool
+	VPAMaxAllowed               corev1.ResourceList
 }
 
 func (e *etcd) Deploy(ctx context.Context) error {
@@ -219,6 +220,8 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			corev1.ResourceMemory: resource.MustParse("28G"),
 		}
 	)
+
+	kubernetesutils.MergeMinValuesIntoResourceList(e.values.VPAMaxAllowed, maxAllowed)
 
 	if e.values.Class == ClassImportant {
 		if !e.values.HighAvailabilityEnabled {

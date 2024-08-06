@@ -69,6 +69,7 @@ func (k *kubeAPIServer) reconcileVerticalPodAutoscalerInVPAAndHPAMode(ctx contex
 		corev1.ResourceCPU:    resource.MustParse("7"),
 		corev1.ResourceMemory: resource.MustParse("28G"),
 	}
+	kubernetesutils.MergeMinValuesIntoResourceList(k.values.Values.Autoscaling.VPAMaxAllowed, kubeAPIServerMaxAllowed)
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), verticalPodAutoscaler, func() error {
 		verticalPodAutoscaler.Spec = vpaautoscalingv1.VerticalPodAutoscalerSpec{
