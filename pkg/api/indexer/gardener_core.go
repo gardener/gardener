@@ -69,6 +69,15 @@ func InternalSecretTypeIndexerFunc(obj client.Object) []string {
 	return []string{string(internalSecret.Type)}
 }
 
+// NamespacedCloudProfileParentRefNameIndexerFunc extracts the .spec.parent.name field of a NamespacedCloudProfile.
+func NamespacedCloudProfileParentRefNameIndexerFunc(obj client.Object) []string {
+	namespacedCloudProfile, ok := obj.(*gardencorev1beta1.NamespacedCloudProfile)
+	if !ok {
+		return []string{""}
+	}
+	return []string{namespacedCloudProfile.Spec.Parent.Name}
+}
+
 // AddProjectNamespace adds an index for core.ProjectNamespace to the given indexer.
 func AddProjectNamespace(ctx context.Context, indexer client.FieldIndexer) error {
 	if err := indexer.IndexField(ctx, &gardencorev1beta1.Project{}, core.ProjectNamespace, ProjectNamespaceIndexerFunc); err != nil {
@@ -155,6 +164,14 @@ func AddControllerInstallationRegistrationRefName(ctx context.Context, indexer c
 func AddInternalSecretType(ctx context.Context, indexer client.FieldIndexer) error {
 	if err := indexer.IndexField(ctx, &gardencorev1beta1.InternalSecret{}, core.InternalSecretType, InternalSecretTypeIndexerFunc); err != nil {
 		return fmt.Errorf("failed to add indexer for %s to InternalSecret Informer: %w", core.InternalSecretType, err)
+	}
+	return nil
+}
+
+// AddNamespacedCloudProfileParentRefName adds an index for core.NamespacedCloudProfileParentRefName to the given indexer.
+func AddNamespacedCloudProfileParentRefName(ctx context.Context, indexer client.FieldIndexer) error {
+	if err := indexer.IndexField(ctx, &gardencorev1beta1.NamespacedCloudProfile{}, core.NamespacedCloudProfileParentRefName, NamespacedCloudProfileParentRefNameIndexerFunc); err != nil {
+		return fmt.Errorf("failed to add indexer for %s to NamespacedCloudProfile Informer: %w", core.NamespacedCloudProfileParentRefName, err)
 	}
 	return nil
 }

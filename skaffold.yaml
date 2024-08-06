@@ -39,6 +39,7 @@ build:
             - cmd/utils
             - pkg/api
             - pkg/api/core/shoot
+            - pkg/api/extensions
             - pkg/apis/authentication
             - pkg/apis/authentication/install
             - pkg/apis/authentication/v1alpha1
@@ -170,7 +171,11 @@ build:
             - pkg/client/settings/informers/externalversions/settings
             - pkg/client/settings/informers/externalversions/settings/v1alpha1
             - pkg/client/settings/listers/settings/v1alpha1
+            - pkg/controllermanager/apis/config
+            - pkg/controllermanager/controller/namespacedcloudprofile
             - pkg/controllerutils
+            - pkg/controllerutils/mapper
+            - pkg/controllerutils/predicate
             - pkg/features
             - pkg/gardenlet/apis/config
             - pkg/gardenlet/apis/config/helper
@@ -297,6 +302,7 @@ build:
             - pkg/controllermanager/controller/event
             - pkg/controllermanager/controller/exposureclass
             - pkg/controllermanager/controller/managedseedset
+            - pkg/controllermanager/controller/namespacedcloudprofile
             - pkg/controllermanager/controller/project
             - pkg/controllermanager/controller/project/activity
             - pkg/controllermanager/controller/project/project

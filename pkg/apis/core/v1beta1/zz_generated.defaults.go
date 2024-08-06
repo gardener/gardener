@@ -81,38 +81,8 @@ func SetObjectDefaults_ControllerRegistrationList(in *ControllerRegistrationList
 }
 
 func SetObjectDefaults_NamespacedCloudProfile(in *NamespacedCloudProfile) {
-	for i := range in.Spec.MachineImages {
-		a := &in.Spec.MachineImages[i]
-		SetDefaults_MachineImage(a)
-		for j := range a.Versions {
-			b := &a.Versions[j]
-			SetDefaults_MachineImageVersion(b)
-		}
-	}
-	for i := range in.Spec.MachineTypes {
-		a := &in.Spec.MachineTypes[i]
-		SetDefaults_MachineType(a)
-	}
-	for i := range in.Spec.VolumeTypes {
-		a := &in.Spec.VolumeTypes[i]
-		SetDefaults_VolumeType(a)
-	}
-	for i := range in.Status.CloudProfileSpec.MachineImages {
-		a := &in.Status.CloudProfileSpec.MachineImages[i]
-		SetDefaults_MachineImage(a)
-		for j := range a.Versions {
-			b := &a.Versions[j]
-			SetDefaults_MachineImageVersion(b)
-		}
-	}
-	for i := range in.Status.CloudProfileSpec.MachineTypes {
-		a := &in.Status.CloudProfileSpec.MachineTypes[i]
-		SetDefaults_MachineType(a)
-	}
-	for i := range in.Status.CloudProfileSpec.VolumeTypes {
-		a := &in.Status.CloudProfileSpec.VolumeTypes[i]
-		SetDefaults_VolumeType(a)
-	}
+	SetObjectDefaults_NamespacedCloudProfileSpec(&in.Spec)
+	SetObjectDefaults_NamespacedCloudProfileStatus(&in.Status)
 }
 
 func SetObjectDefaults_NamespacedCloudProfileList(in *NamespacedCloudProfileList) {

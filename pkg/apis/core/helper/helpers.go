@@ -266,13 +266,13 @@ func FindWorkerByName(workers []core.Worker, name string) *core.Worker {
 }
 
 // GetRemovedVersions finds versions that have been removed in the old compared to the new version slice.
-// returns a map associating the version with its index in the in the old version slice.
+// returns a map associating the version with its index in the old version slice.
 func GetRemovedVersions(old, new []core.ExpirableVersion) map[string]int {
 	return getVersionDiff(old, new)
 }
 
 // GetAddedVersions finds versions that have been added in the new compared to the new version slice.
-// returns a map associating the version with its index in the in the old version slice.
+// returns a map associating the version with its index in the old version slice.
 func GetAddedVersions(old, new []core.ExpirableVersion) map[string]int {
 	return getVersionDiff(new, old)
 }

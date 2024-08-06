@@ -3176,7 +3176,7 @@ CRIName
 <a href="#core.gardener.cloud/v1beta1.ShootSpec">ShootSpec</a>)
 </p>
 <p>
-<p>CloudProfileReference holds the information about the parent of the NamespacedCloudProfile.</p>
+<p>CloudProfileReference holds the information about a CloudProfile or a NamespacedCloudProfile.</p>
 </p>
 <table>
 <thead>
@@ -8263,7 +8263,7 @@ int64
 </td>
 <td>
 <em>(Optional)</em>
-<p>ObservedGeneration is the most recent generation observed for this project.</p>
+<p>ObservedGeneration is the most recent generation observed for this NamespacedCloudProfile.</p>
 </td>
 </tr>
 </tbody>

@@ -45,6 +45,8 @@ type ControllerManagerControllerConfiguration struct {
 	CertificateSigningRequest *CertificateSigningRequestControllerConfiguration
 	// CloudProfile defines the configuration of the CloudProfile controller.
 	CloudProfile *CloudProfileControllerConfiguration
+	// NamespacedCloudProfile defines the configuration of the NamespacedCloudProfile controller.
+	NamespacedCloudProfile *NamespacedCloudProfileControllerConfiguration
 	// ControllerDeployment defines the configuration of the ControllerDeployment controller.
 	ControllerDeployment *ControllerDeploymentControllerConfiguration
 	// ControllerRegistration defines the configuration of the ControllerRegistration controller.
@@ -107,6 +109,14 @@ type CertificateSigningRequestControllerConfiguration struct {
 // CloudProfileControllerConfiguration defines the configuration of the CloudProfile
 // controller.
 type CloudProfileControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs *int
+}
+
+// NamespacedCloudProfileControllerConfiguration defines the configuration of the NamespacedCloudProfile
+// controller.
+type NamespacedCloudProfileControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs *int

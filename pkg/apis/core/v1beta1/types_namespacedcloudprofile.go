@@ -65,12 +65,12 @@ type NamespacedCloudProfileSpec struct {
 type NamespacedCloudProfileStatus struct {
 	// CloudProfile is the most recently generated CloudProfile of the NamespacedCloudProfile.
 	CloudProfileSpec CloudProfileSpec `json:"cloudProfileSpec,omitempty" protobuf:"bytes,1,req,name=cloudProfileSpec"`
-	// ObservedGeneration is the most recent generation observed for this project.
+	// ObservedGeneration is the most recent generation observed for this NamespacedCloudProfile.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,2,opt,name=observedGeneration"`
 }
 
-// CloudProfileReference holds the information about the parent of the NamespacedCloudProfile.
+// CloudProfileReference holds the information about a CloudProfile or a NamespacedCloudProfile.
 type CloudProfileReference struct {
 	// Kind contains a CloudProfile kind.
 	Kind string `json:"kind" protobuf:"bytes,1,req,name=kind"`

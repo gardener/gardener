@@ -117,7 +117,7 @@ func (s *Shoot) GetProviderType() string {
 
 // ShootStatus holds the most recently observed status of the Shoot cluster.
 type ShootStatus struct {
-	// Conditions represents the latest available observations of a Shoots's current state.
+	// Conditions represents the latest available observations of a Shoot's current state.
 	Conditions []Condition
 	// Constraints represents conditions of a Shoot's current state that constraint some operations on it.
 	Constraints []Condition

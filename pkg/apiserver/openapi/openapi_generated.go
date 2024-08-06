@@ -1926,7 +1926,7 @@ func schema_pkg_apis_core_v1beta1_CloudProfileReference(ref common.ReferenceCall
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "CloudProfileReference holds the information about the parent of the NamespacedCloudProfile.",
+				Description: "CloudProfileReference holds the information about a CloudProfile or a NamespacedCloudProfile.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"kind": {
@@ -5773,7 +5773,7 @@ func schema_pkg_apis_core_v1beta1_NamespacedCloudProfileStatus(ref common.Refere
 					},
 					"observedGeneration": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ObservedGeneration is the most recent generation observed for this project.",
+							Description: "ObservedGeneration is the most recent generation observed for this NamespacedCloudProfile.",
 							Type:        []string{"integer"},
 							Format:      "int64",
 						},
