@@ -15,8 +15,8 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 9,
-  "iteration": 1542111230310,
+  "id": 11,
+  "iteration": 1722590655607,
   "links": [],
   "panels": [
     {
@@ -70,20 +70,18 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
+          "calcs": ["last"],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.32",
       "targets": [
         {
           "exemplar": true,
-          "expr": "etcdbr_cluster_size{job=\"kube-etcd3-backup-restore-$cluster\",pod=~\".*$cluster-$member\"}",
+          "expr": "etcdbr_cluster_size{job=\"kube-etcd3-backup-restore-$role\",pod=~\".*$role-$member\"}",
           "instant": false,
           "interval": "",
           "legendFormat": "",
@@ -131,20 +129,18 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
+          "calcs": ["last"],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.32",
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(up{job=\"kube-etcd3-backup-restore-$cluster\"})",
+          "expr": "sum(up{job=\"kube-etcd3-backup-restore-$role\"})",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -191,20 +187,18 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
+          "calcs": ["last"],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.32",
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(etcd_server_has_leader{job=\"kube-etcd3-$cluster\"})",
+          "expr": "sum(etcd_server_has_leader{job=\"kube-etcd3-$role\"})",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -284,27 +278,25 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
+          "calcs": ["last"],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.32",
       "targets": [
         {
           "exemplar": true,
-          "expr": "etcd_server_is_leader{job=\"kube-etcd3-$cluster\",pod=~\".*$cluster-$member\"}*2 + etcd_server_is_learner{job=\"kube-etcd3-$cluster\",pod=~\".*$cluster-$member\"}",
+          "expr": "etcd_server_is_leader{job=\"kube-etcd3-$role\",pod=~\".*$role-$member\"}*2 + etcd_server_is_learner{job=\"kube-etcd3-$role\",pod=~\".*$role-$member\"}",
           "instant": true,
           "interval": "",
           "legendFormat": "",
           "refId": "A"
         }
       ],
-      "title": "\"etcd-$cluster-$member\" Membership Status",
+      "title": "\"etcd-$role-$member\" Membership Status",
       "type": "stat"
     },
     {
@@ -366,27 +358,25 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
+          "calcs": ["last"],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.32",
       "targets": [
         {
           "exemplar": true,
-          "expr": "etcd_server_has_leader{job=\"kube-etcd3-$cluster\",pod=~\".*$cluster-$member\"}",
+          "expr": "etcd_server_has_leader{job=\"kube-etcd3-$role\",pod=~\".*$role-$member\"}",
           "instant": false,
           "interval": "",
           "legendFormat": "",
           "refId": "A"
         }
       ],
-      "title": "\"etcd-$cluster-$member\" Member Health Status",
+      "title": "\"etcd-$role-$member\" Member Health Status",
       "type": "stat"
     },
     {
@@ -440,7 +430,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.32",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -451,7 +441,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "increase(etcd_server_leader_changes_seen_total{job=\"kube-etcd3-$cluster\"}[1d])",
+          "expr": "increase(etcd_server_leader_changes_seen_total{job=\"kube-etcd3-$role\"}[1d])",
           "interval": "",
           "legendFormat": "{{pod}}",
           "refId": "A"
@@ -537,7 +527,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.32",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -548,7 +538,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(etcd_server_heartbeat_send_failures_total{job=\"kube-etcd3-$cluster\"}[$__rate_interval])",
+          "expr": "rate(etcd_server_heartbeat_send_failures_total{job=\"kube-etcd3-$role\"}[$__rate_interval])",
           "instant": false,
           "interval": "",
           "legendFormat": "{{pod}}",
@@ -639,7 +629,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.32",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -650,7 +640,9 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(etcd_server_proposals_failed_total{role=~\"$cluster\"}[$__rate_interval]))",
+          "exemplar": true,
+          "expr": "sum(rate(etcd_server_proposals_failed_total{role=~\"etcd-$role\"}[$__rate_interval]))",
+          "interval": "",
           "intervalFactor": 2,
           "legendFormat": "Proposal Failure Rate",
           "metric": "etcd_server_proposals_failed_total",
@@ -658,7 +650,9 @@
           "step": 2
         },
         {
-          "expr": "sum(etcd_server_proposals_pending{role=~\"$cluster\"})",
+          "exemplar": true,
+          "expr": "sum(etcd_server_proposals_pending{role=~\"etcd-$role\"})",
+          "interval": "",
           "intervalFactor": 2,
           "legendFormat": "Proposal Pending",
           "metric": "etcd_server_proposals_pending",
@@ -666,7 +660,9 @@
           "step": 2
         },
         {
-          "expr": "sum(rate(etcd_server_proposals_committed_total{role=~\"$cluster\"}[$__rate_interval]))",
+          "exemplar": true,
+          "expr": "sum(rate(etcd_server_proposals_committed_total{role=~\"etcd-$role\"}[$__rate_interval]))",
+          "interval": "",
           "intervalFactor": 2,
           "legendFormat": "Proposal Commit Rate",
           "metric": "etcd_server_proposals_committed_total",
@@ -674,7 +670,9 @@
           "step": 2
         },
         {
-          "expr": "sum(rate(etcd_server_proposals_applied_total{role=~\"$cluster\"}[$__rate_interval]))",
+          "exemplar": true,
+          "expr": "sum(rate(etcd_server_proposals_applied_total{role=~\"etcd-$role\"}[$__rate_interval]))",
+          "interval": "",
           "intervalFactor": 2,
           "legendFormat": "Proposal Apply Rate",
           "refId": "D",
@@ -702,6 +700,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:118",
           "format": "short",
           "label": "",
           "logBase": 1,
@@ -710,6 +709,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:119",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -760,7 +760,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.32",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -771,9 +771,9 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.99, sum(rate(etcdbr_add_learner_duration_seconds_bucket{job=\"kube-etcd3-backup-restore-$cluster\"}[$__rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(etcdbr_add_learner_duration_seconds_bucket{job=\"kube-etcd3-backup-restore-$role\"}[$__rate_interval])) by (le))",
           "interval": "",
-          "legendFormat": "etcd-$cluster",
+          "legendFormat": "etcd-$role",
           "refId": "A"
         }
       ],
@@ -857,7 +857,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.32",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -868,7 +868,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "etcd_server_learner_promote_successes{job=\"kube-etcd3-$cluster\"}",
+          "expr": "etcd_server_learner_promote_successes{job=\"kube-etcd3-$role\"}",
           "interval": "",
           "legendFormat": "{{pod}}",
           "refId": "A"
@@ -954,7 +954,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.32",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -965,10 +965,10 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.99, sum(rate(etcdbr_member_remove_duration_seconds_bucket{job=\"kube-etcd3-backup-restore-$cluster\"}[$__rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(etcdbr_member_remove_duration_seconds_bucket{job=\"kube-etcd3-backup-restore-$role\"}[$__rate_interval])) by (le))",
           "instant": false,
           "interval": "",
-          "legendFormat": "etcd-$cluster",
+          "legendFormat": "etcd-$role",
           "refId": "A"
         }
       ],
@@ -1075,27 +1075,25 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
+          "calcs": ["last"],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.32",
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(etcd_network_active_peers{job=\"kube-etcd3-$cluster\",pod=~\".*$cluster-$member\"})",
+          "expr": "sum(etcd_network_active_peers{job=\"kube-etcd3-$role\",pod=~\".*$role-$member\"})",
           "instant": false,
           "interval": "",
           "legendFormat": "",
           "refId": "A"
         }
       ],
-      "title": "\"etcd-$cluster-$member\" Active Peers",
+      "title": "\"etcd-$role-$member\" Active Peers",
       "type": "stat"
     },
     {
@@ -1135,7 +1133,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.32",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1146,9 +1144,9 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.99, sum(rate(etcd_network_peer_round_trip_time_seconds_bucket{job=\"kube-etcd3-$cluster\"}[$__rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(etcd_network_peer_round_trip_time_seconds_bucket{job=\"kube-etcd3-$role\"}[$__rate_interval])) by (le))",
           "interval": "",
-          "legendFormat": "etcd-$cluster",
+          "legendFormat": "etcd-$role",
           "refId": "A"
         }
       ],
@@ -1232,7 +1230,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.32",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1243,7 +1241,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(etcd_network_peer_sent_bytes_total{job=\"kube-etcd3-$cluster\",pod=~\".*$cluster-$member\"}[5m])",
+          "expr": "rate(etcd_network_peer_sent_bytes_total{job=\"kube-etcd3-$role\",pod=~\".*$role-$member\"}[5m])",
           "interval": "",
           "legendFormat": "{{To}}",
           "refId": "A"
@@ -1329,7 +1327,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.32",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1340,7 +1338,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(etcd_network_peer_received_bytes_total{job=\"kube-etcd3-$cluster\",pod=~\".*$cluster-$member\"}[5m])",
+          "expr": "rate(etcd_network_peer_received_bytes_total{job=\"kube-etcd3-$role\",pod=~\".*$role-$member\"}[5m])",
           "interval": "",
           "legendFormat": "{{From}}",
           "refId": "A"
@@ -1440,7 +1438,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.32",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1451,7 +1449,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(etcd_server_slow_apply_total{job=\"kube-etcd3-$cluster\"}[$__rate_interval])",
+          "expr": "rate(etcd_server_slow_apply_total{job=\"kube-etcd3-$role\"}[$__rate_interval])",
           "interval": "",
           "legendFormat": "{{pod}}",
           "refId": "A"
@@ -1537,7 +1535,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.32",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1548,7 +1546,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(etcd_server_slow_read_indexes_total{job=\"kube-etcd3-$cluster\"}[$__rate_interval])",
+          "expr": "rate(etcd_server_slow_read_indexes_total{job=\"kube-etcd3-$role\"}[$__rate_interval])",
           "interval": "",
           "legendFormat": "{{pod}}",
           "refId": "A"
@@ -1600,16 +1598,13 @@
   ],
   "schemaVersion": 27,
   "style": "dark",
-  "tags": [
-    "controlplane",
-    "seed"
-  ],
+  "tags": ["controlplane", "seed"],
   "templating": {
     "list": [
       {
         "allValue": null,
         "current": {
-          "tags": [],
+          "selected": true,
           "text": "main",
           "value": "main"
         },
@@ -1619,7 +1614,7 @@
         "includeAll": false,
         "label": null,
         "multi": false,
-        "name": "cluster",
+        "name": "role",
         "options": [
           {
             "selected": true,
@@ -1633,6 +1628,7 @@
           }
         ],
         "query": "main, events",
+        "queryValue": "",
         "skipUrlSync": false,
         "type": "custom"
       },
@@ -1679,16 +1675,7 @@
     "to": "now"
   },
   "timepicker": {
-    "refresh_intervals": [
-      "5s",
-      "10s",
-      "30s",
-      "1m",
-      "5m",
-      "15m",
-      "30m",
-      "1h"
-    ],
+    "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m", "30m", "1h"],
     "time_options": [
       "5m",
       "15m",
