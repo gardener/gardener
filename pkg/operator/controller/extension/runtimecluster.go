@@ -71,7 +71,15 @@ func (r *Reconciler) reconcileAdmissionRuntimeClusterResources(ctx context.Conte
 		return fmt.Errorf("failed rendering Helm chart: %w", err)
 	}
 
-	if err := managedresources.CreateForSeed(ctx, r.RuntimeClientSet.Client(), r.GardenNamespace, runtimeClusterAdmissionManagedResourceName(extension), false, renderedChart.AsSecretData()); err != nil {
+	if err := managedresources.CreateForSeedWithLabels(
+		ctx,
+		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		runtimeClusterAdmissionManagedResourceName(extension),
+		false,
+		map[string]string{managedresources.LabelKeyOrigin: managedresources.LabelValueOperator},
+		renderedChart.AsSecretData(),
+	); err != nil {
 		return fmt.Errorf("failed creating ManagedResource: %w", err)
 	}
 

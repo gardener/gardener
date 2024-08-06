@@ -1,0 +1,36 @@
+global:
+  virtualGarden:
+    enabled: false
+    user:
+      name: ""
+  image: local-skaffold/gardener-extension-admission-local:latest
+  imagePullPolicy: IfNotPresent
+# priorityClassName: gardener-garden-system-400
+  replicaCount: 1
+  resources: {}
+  healthPort: 8081
+  vpa:
+    enabled: true
+    resourcePolicy:
+      minAllowed:
+        memory: 64Mi
+
+    updatePolicy:
+      updateMode: "Auto"
+  webhookConfig:
+    serverPort: 10250
+  # Kubeconfig to the target cluster. In-cluster configuration will be used if not specified.
+  kubeconfig:
+
+# projectedKubeconfig:
+#   baseMountPath: /var/run/secrets/gardener.cloud
+#   genericKubeconfigSecretName: generic-token-kubeconfig
+#   tokenSecretName: access-local-admission
+
+  serviceAccountTokenVolumeProjection:
+    enabled: false
+    expirationSeconds: 43200
+    audience: ""
+  service:
+    topologyAwareRouting:
+      enabled: false

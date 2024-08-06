@@ -1,0 +1,5 @@
+global:
+  virtualGarden:
+    enabled: false
+    user:
+      name: ""

@@ -46,6 +46,10 @@ const (
 	ConditionDeleteSuccessful = "DeleteSuccessful"
 	// requeueGardenResourceNotReady is the time after which an extension will be requeued, if the Garden resource was not ready during its reconciliation.
 	requeueGardenResourceNotReady = 10 * time.Second
+
+	// AnnotationKeyDisableAdmission is an annotation key to disable the admission controller.
+	// If set to "true", the managed resources of the admission controller for runtime and virtual cluster are deleted.
+	AnnotationKeyDisableAdmission = "operator.gardener.cloud/disable-admission"
 )
 
 // Reconciler reconciles Extensions.
@@ -99,7 +103,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, &reconciler.RequeueAfterError{
 			RequeueAfter: requeueGardenResourceNotReady,
 		}
-	case lastOperation.Type == gardencorev1beta1.LastOperationTypeDelete:
+	case lastOperation.Type == gardencorev1beta1.LastOperationTypeDelete && extension.Annotations[AnnotationKeyDisableAdmission] != "true":
 		// if the last operation is a delete, then do nothing. Once the Garden resource is deleted, we will reconcile and remove the finalizers from the Extension.
 		return reconcile.Result{}, nil
 	}
@@ -109,8 +113,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving virtual cluster client set: %w", err)
 	}
 
-	if extension.DeletionTimestamp != nil {
-		return reconcile.Result{}, r.delete(ctx, log, virtualClusterClientSet.Client(), extension)
+	if extension.DeletionTimestamp != nil || extension.Annotations[AnnotationKeyDisableAdmission] == "true" {
+		if extension.Annotations[AnnotationKeyDisableAdmission] == "true" {
+			log.Info("Disabling admission controller because of annotation " + AnnotationKeyDisableAdmission)
+		}
+		return reconcile.Result{}, r.delete(ctx, log, virtualClusterClientSet.Client(), extension, extension.DeletionTimestamp == nil)
 	}
 
 	genericTokenKubeconfigSecretName := garden.Annotations[v1beta1constants.AnnotationKeyGenericTokenKubeconfigSecretName]
@@ -179,12 +186,14 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, virtualClus
 	return r.updateExtensionStatus(ctx, log, extension, conditions)
 }
 
-func (r *Reconciler) delete(ctx context.Context, log logr.Logger, virtualClusterClient client.Client, extension *operatorv1alpha1.Extension) error {
+func (r *Reconciler) delete(ctx context.Context, log logr.Logger, virtualClusterClient client.Client, extension *operatorv1alpha1.Extension, disableAdmissionOnly bool) error {
 	conditions := NewConditions(r.Clock, extension.Status)
 
-	if err := r.deleteVirtualClusterDeploymentResources(ctx, log, virtualClusterClient, extension); err != nil {
-		conditions.virtualClusterReconciled = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.virtualClusterReconciled, gardencorev1beta1.ConditionFalse, ConditionDeleteFailed, err.Error())
-		return errors.Join(err, r.updateExtensionStatus(ctx, log, extension, conditions))
+	if !disableAdmissionOnly {
+		if err := r.deleteVirtualClusterDeploymentResources(ctx, log, virtualClusterClient, extension); err != nil {
+			conditions.virtualClusterReconciled = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.virtualClusterReconciled, gardencorev1beta1.ConditionFalse, ConditionDeleteFailed, err.Error())
+			return errors.Join(err, r.updateExtensionStatus(ctx, log, extension, conditions))
+		}
 	}
 	if err := r.deleteAdmissionVirtualClusterResources(ctx, log, extension); err != nil {
 		conditions.virtualClusterReconciled = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.virtualClusterReconciled, gardencorev1beta1.ConditionFalse, ConditionDeleteFailed, err.Error())
@@ -202,6 +211,9 @@ func (r *Reconciler) delete(ctx context.Context, log logr.Logger, virtualCluster
 		log.Error(err, "Failed to update extension status")
 	}
 
+	if disableAdmissionOnly {
+		return nil
+	}
 	return r.removeFinalizer(ctx, log, extension)
 }
 
