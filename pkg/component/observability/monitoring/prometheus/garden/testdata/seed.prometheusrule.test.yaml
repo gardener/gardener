@@ -91,12 +91,12 @@ tests:
         values: "0x32"
       - series: garden_seed_condition{condition = "GardenletReady",
                                       name      = "seed-three"}
-        values: "0x10"
+        values: "0x9"
       - series: garden_shoot_condition{condition = "APIServerUnavailable",
                                        is_seed   = "true",
                                        operation = "Reconcile",
                                        name      = "seed-four"}
-        values: "0x10"
+        values: "0x9"
     external_labels:
       landscape: landscape-unit-tests
     alert_rule_test:
