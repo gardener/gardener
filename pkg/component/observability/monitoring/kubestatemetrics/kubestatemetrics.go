@@ -94,6 +94,12 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 		if err := component.DestroyResourceConfigs(ctx, k.client, k.namespace, k.values.ClusterType, managedResourceName, k.getResourceConfigs("", nil)); client.IgnoreNotFound(err) != nil {
 			return err
 		}
+
+		timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
+		defer cancel()
+		if err := managedresources.WaitUntilDeleted(timeoutCtx, k.client, k.namespace, managedResourceName); client.IgnoreNotFound(err) != nil {
+			return err
+		}
 	}
 
 	if k.values.ClusterType == component.ClusterTypeShoot {
