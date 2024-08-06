@@ -62,7 +62,7 @@ var _ = Describe("istiod", func() {
 		renderer chartrenderer.Interface
 
 		minReplicas = 2
-		maxReplicas = 5
+		maxReplicas = 9
 
 		externalTrafficPolicy corev1.ServiceExternalTrafficPolicyType
 
@@ -139,7 +139,7 @@ var _ = Describe("istiod", func() {
 		istioIngressAutoscaler = func(min *int, max *int) string {
 			data, _ := os.ReadFile("./test_charts/ingress_autoscaler.yaml")
 			str := strings.ReplaceAll(string(data), "<MIN_REPLICAS>", strconv.Itoa(ptr.Deref(min, 2)))
-			str = strings.ReplaceAll(str, "<MAX_REPLICAS>", strconv.Itoa(ptr.Deref(max, 5)))
+			str = strings.ReplaceAll(str, "<MAX_REPLICAS>", strconv.Itoa(ptr.Deref(max, 9)))
 			return str
 		}
 
