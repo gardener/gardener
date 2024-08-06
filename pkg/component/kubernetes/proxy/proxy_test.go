@@ -338,9 +338,9 @@ var _ = Describe("KubeProxy", func() {
 
 			configMapNameFor = func(ipvsEnabled bool) string {
 				if !ipvsEnabled {
-					return "kube-proxy-config-0e676511"
+					return "kube-proxy-config-c3039bb4"
 				}
-				return "kube-proxy-config-eaba5162"
+				return "kube-proxy-config-c09a0894"
 			}
 
 			configMapFor = func(ipvsEnabled bool) *corev1.ConfigMap {
@@ -400,6 +400,8 @@ logging:
   flushFrequency: 0
   options:
     json:
+      infoBufferSize: "0"
+    text:
       infoBufferSize: "0"
   verbosity: 0
 metricsBindAddress: 0.0.0.0:10249`
