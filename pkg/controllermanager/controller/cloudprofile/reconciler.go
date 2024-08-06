@@ -48,12 +48,27 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	// The deletionTimestamp labels the CloudProfile as intended to get deleted. Before deletion, it has to be ensured that
-	// no Shoots and Seed are assigned to the CloudProfile anymore. If this is the case then the controller will remove
-	// the finalizers from the CloudProfile so that it can be garbage collected.
+	// no Shoots, Seeds and other NamespacedCloudProfiles are assigned to the CloudProfile anymore.
+	// If this is the case then the controller will remove the finalizers from the CloudProfile so that it can be garbage collected.
 	if cloudProfile.DeletionTimestamp != nil {
 		if !sets.New(cloudProfile.Finalizers...).Has(gardencorev1beta1.GardenerName) {
 			return reconcile.Result{}, nil
 		}
+
+		namespacedCloudProfileList, err := controllerutils.GetNamespacedCloudProfilesReferencingCloudProfile(ctx, r.Client, cloudProfile.Name)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+		if len(namespacedCloudProfileList.Items) != 0 {
+			var associatedNamespacedCloudProfiles []string
+			for _, namespacedCloudProfile := range namespacedCloudProfileList.Items {
+				associatedNamespacedCloudProfiles = append(associatedNamespacedCloudProfiles, fmt.Sprintf("%s/%s", namespacedCloudProfile.Namespace, namespacedCloudProfile.Name))
+			}
+			message := fmt.Sprintf("Cannot delete CloudProfile, because the following NamespacedCloudProfiles are still referencing it: %+v", associatedNamespacedCloudProfiles)
+			r.Recorder.Event(cloudProfile, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, message)
+			return reconcile.Result{}, errors.New(message)
+		}
+		log.Info("No NamespacedCloudProfiles are referencing the CloudProfile")
 
 		associatedShoots, err := controllerutils.DetermineShootsAssociatedTo(ctx, r.Client, cloudProfile)
 		if err != nil {

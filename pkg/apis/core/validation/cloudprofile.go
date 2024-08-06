@@ -85,9 +85,6 @@ func ValidateCloudProfileSpec(spec *core.CloudProfileSpec, fldPath *field.Path) 
 	return allErrs
 }
 
-// k8sVersionCPRegex is used to validate kubernetes versions in a cloud profile.
-var k8sVersionCPRegex = regexp.MustCompile(`^([0-9]+\.){2}[0-9]+$`)
-
 func validateKubernetesSettings(kubernetes core.KubernetesSettings, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if len(kubernetes.Versions) == 0 {
@@ -101,8 +98,29 @@ func validateKubernetesSettings(kubernetes core.KubernetesSettings, fldPath *fie
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("versions[]").Child("expirationDate"), latestKubernetesVersion.ExpirationDate, fmt.Sprintf("expiration date of latest kubernetes version ('%s') must not be set", latestKubernetesVersion.Version)))
 	}
 
-	versionsFound := sets.New[string]()
+	allErrs = append(allErrs, validateSpecStaticKubernetesVersions(kubernetes.Versions, fldPath)...)
+
 	for i, version := range kubernetes.Versions {
+		idxPath := fldPath.Child("versions").Index(i)
+		allErrs = append(allErrs, validateExpirableVersionInContext(version, kubernetes.Versions, idxPath)...)
+	}
+
+	return allErrs
+}
+
+// k8sVersionCPRegex is used to validate kubernetes versions in a cloud profile.
+var k8sVersionCPRegex = regexp.MustCompile(`^([0-9]+\.){2}[0-9]+$`)
+
+var supportedVersionClassifications = sets.New(string(core.ClassificationPreview), string(core.ClassificationSupported), string(core.ClassificationDeprecated))
+
+func validateSpecStaticKubernetesVersions(versions []core.ExpirableVersion, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if len(versions) == 0 {
+		return allErrs
+	}
+
+	versionsFound := sets.New[string]()
+	for i, version := range versions {
 		idxPath := fldPath.Child("versions").Index(i)
 		if !k8sVersionCPRegex.MatchString(version.Version) {
 			allErrs = append(allErrs, field.Invalid(idxPath, version, fmt.Sprintf("all Kubernetes versions must match the regex %s", k8sVersionCPRegex)))
@@ -111,19 +129,17 @@ func validateKubernetesSettings(kubernetes core.KubernetesSettings, fldPath *fie
 		} else {
 			versionsFound.Insert(version.Version)
 		}
-		allErrs = append(allErrs, validateExpirableVersion(version, kubernetes.Versions, idxPath)...)
+
+		if version.Classification != nil && !supportedVersionClassifications.Has(string(*version.Classification)) {
+			allErrs = append(allErrs, field.NotSupported(idxPath.Child("classification"), *version.Classification, sets.List(supportedVersionClassifications)))
+		}
 	}
 
 	return allErrs
 }
 
-var supportedVersionClassifications = sets.New(string(core.ClassificationPreview), string(core.ClassificationSupported), string(core.ClassificationDeprecated))
-
-func validateExpirableVersion(version core.ExpirableVersion, allVersions []core.ExpirableVersion, fldPath *field.Path) field.ErrorList {
+func validateExpirableVersionInContext(version core.ExpirableVersion, allVersions []core.ExpirableVersion, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-	if version.Classification != nil && !supportedVersionClassifications.Has(string(*version.Classification)) {
-		allErrs = append(allErrs, field.NotSupported(fldPath.Child("classification"), *version.Classification, sets.List(supportedVersionClassifications)))
-	}
 
 	if version.Classification != nil && *version.Classification == core.ClassificationSupported {
 		currentSemVer, err := semver.NewVersion(version.Version)
@@ -218,6 +234,27 @@ func validateMachineImages(machineImages []core.MachineImage, fldPath *field.Pat
 		allErrs = append(allErrs, field.Required(fldPath, "must provide at least one machine image"))
 	}
 
+	allErrs = append(allErrs, validateSpecStaticMachineImages(machineImages, fldPath)...)
+
+	for i, image := range machineImages {
+		idxPath := fldPath.Index(i)
+		for index, machineVersion := range image.Versions {
+			versionsPath := idxPath.Child("versions").Index(index)
+			allErrs = append(allErrs, validateContainerRuntimesInterfaces(machineVersion.CRI, versionsPath.Child("cri"))...)
+			allErrs = append(allErrs, validateExpirableVersionInContext(machineVersion.ExpirableVersion, helper.ToExpirableVersions(image.Versions), versionsPath)...)
+		}
+	}
+
+	return allErrs
+}
+
+func validateSpecStaticMachineImages(machineImages []core.MachineImage, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if len(machineImages) == 0 {
+		return allErrs
+	}
+
 	latestMachineImages, err := helper.DetermineLatestMachineImageVersions(machineImages)
 	if err != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath, latestMachineImages, err.Error()))
@@ -262,8 +299,10 @@ func validateMachineImages(machineImages []core.MachineImage, fldPath *field.Pat
 				allErrs = append(allErrs, field.Invalid(versionsPath.Child("version"), machineVersion.Version, "could not parse version. Use a semantic version. In case there is no semantic version for this image use the extensibility provider (define mapping in the CloudProfile) to map to the actual non semantic version"))
 			}
 
-			allErrs = append(allErrs, validateExpirableVersion(machineVersion.ExpirableVersion, helper.ToExpirableVersions(image.Versions), versionsPath)...)
-			allErrs = append(allErrs, validateContainerRuntimesInterfaces(machineVersion.CRI, versionsPath.Child("cri"))...)
+			if machineVersion.Classification != nil && !supportedVersionClassifications.Has(string(*machineVersion.Classification)) {
+				allErrs = append(allErrs, field.NotSupported(versionsPath.Child("classification"), *machineVersion.Classification, sets.List(supportedVersionClassifications)))
+			}
+
 			allErrs = append(allErrs, validateMachineImageVersionArchitecture(machineVersion.Architectures, versionsPath.Child("architecture"))...)
 
 			if machineVersion.KubeletVersionConstraint != nil {

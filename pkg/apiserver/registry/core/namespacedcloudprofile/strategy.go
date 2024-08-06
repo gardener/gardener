@@ -126,3 +126,13 @@ type namespacedCloudProfileStatusStrategy struct {
 
 // StatusStrategy defines the storage strategy for the status subresource of NamespacedCloudProfiles.
 var StatusStrategy = namespacedCloudProfileStatusStrategy{Strategy}
+
+func (namespacedCloudProfileStatusStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
+	newNamespacedCloudProfile := obj.(*core.NamespacedCloudProfile)
+	oldNamespacedCloudProfile := old.(*core.NamespacedCloudProfile)
+	newNamespacedCloudProfile.Spec = oldNamespacedCloudProfile.Spec
+}
+
+func (namespacedCloudProfileStatusStrategy) ValidateUpdate(_ context.Context, _, _ runtime.Object) field.ErrorList {
+	return field.ErrorList{}
+}
