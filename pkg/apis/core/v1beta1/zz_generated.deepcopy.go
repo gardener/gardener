@@ -3284,8 +3284,8 @@ func (in *NetworkingStatus) DeepCopyInto(out *NetworkingStatus) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
-	if in.Egress != nil {
-		in, out := &in.Egress, &out.Egress
+	if in.EgressCIDRs != nil {
+		in, out := &in.EgressCIDRs, &out.EgressCIDRs
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}

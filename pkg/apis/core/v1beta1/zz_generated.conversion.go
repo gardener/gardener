@@ -4719,7 +4719,7 @@ func autoConvert_v1beta1_NetworkingStatus_To_core_NetworkingStatus(in *Networkin
 	out.Pods = *(*[]string)(unsafe.Pointer(&in.Pods))
 	out.Nodes = *(*[]string)(unsafe.Pointer(&in.Nodes))
 	out.Services = *(*[]string)(unsafe.Pointer(&in.Services))
-	out.Egress = *(*[]string)(unsafe.Pointer(&in.Egress))
+	out.EgressCIDRs = *(*[]string)(unsafe.Pointer(&in.EgressCIDRs))
 	return nil
 }
 
@@ -4732,7 +4732,7 @@ func autoConvert_core_NetworkingStatus_To_v1beta1_NetworkingStatus(in *core.Netw
 	out.Pods = *(*[]string)(unsafe.Pointer(&in.Pods))
 	out.Nodes = *(*[]string)(unsafe.Pointer(&in.Nodes))
 	out.Services = *(*[]string)(unsafe.Pointer(&in.Services))
-	out.Egress = *(*[]string)(unsafe.Pointer(&in.Egress))
+	out.EgressCIDRs = *(*[]string)(unsafe.Pointer(&in.EgressCIDRs))
 	return nil
 }
 

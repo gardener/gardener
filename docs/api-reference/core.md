@@ -8420,16 +8420,16 @@ Defaults to [&ldquo;IPv4&rdquo;].</p>
 </tr>
 <tr>
 <td>
-<code>egress</code></br>
+<code>egressCIDRs</code></br>
 <em>
 []string
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>Egress are the CIDRs used by the shoot as the source IP for egress traffic as reported by the used Infrastructure
-extension controller. For certain environments the egress IPs may not be stable in which case the extension
-controller may opt to not populate this field.</p>
+<p>EgressCIDRs is a list of CIDRs used by the shoot as the source IP for egress traffic as reported by the used
+Infrastructure extension controller. For certain environments the egress IPs may not be stable in which case the
+extension controller may opt to not populate this field.</p>
 </td>
 </tr>
 </tbody>

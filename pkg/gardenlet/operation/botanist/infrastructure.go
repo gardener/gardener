@@ -82,7 +82,7 @@ func (b *Botanist) WaitForInfrastructure(ctx context.Context) error {
 		networkingStatus.Pods = podsCIDRs
 	}
 	if egressCIDRs := b.Shoot.Components.Extensions.Infrastructure.EgressCIDRs(); len(egressCIDRs) > 0 {
-		networkingStatus.Egress = egressCIDRs
+		networkingStatus.EgressCIDRs = egressCIDRs
 	}
 
 	if err := b.Shoot.UpdateInfoStatus(ctx, b.GardenClient, true, func(shoot *gardencorev1beta1.Shoot) error {

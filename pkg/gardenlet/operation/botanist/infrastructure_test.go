@@ -176,10 +176,10 @@ var _ = Describe("Infrastructure", func() {
 
 			updatedShoot2 := updatedShoot.DeepCopy()
 			updatedShoot2.Status.Networking = &gardencorev1beta1.NetworkingStatus{
-				Nodes:    nodesCIDRs,
-				Pods:     podsCIDRs,
-				Services: servicesCIDRs,
-				Egress:   egressCIDRs,
+				Nodes:       nodesCIDRs,
+				Pods:        podsCIDRs,
+				Services:    servicesCIDRs,
+				EgressCIDRs: egressCIDRs,
 			}
 			gardenClient.EXPECT().Status().Return(mockStatusWriter)
 			test.EXPECTStatusPatch(ctx, mockStatusWriter, updatedShoot2, updatedShoot, types.StrategicMergePatchType)
