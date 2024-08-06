@@ -90,35 +90,12 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 				}))))
 		})
 
-		Context("tests for unknown cloud profiles", func() {
+		Context("tests for invalid NamespacedCloudProfile spec", func() {
 			var (
 				namespacedCloudProfile *core.NamespacedCloudProfile
 
 				duplicatedKubernetes = core.KubernetesSettings{
-					Versions: []core.ExpirableVersion{{Version: "1.11.4"}, {Version: "1.11.4", Classification: &previewClassification}},
-				}
-				duplicatedRegions = []core.Region{
-					{
-						Name: regionName,
-						Zones: []core.AvailabilityZone{
-							{Name: zoneName},
-						},
-					},
-					{
-						Name: regionName,
-						Zones: []core.AvailabilityZone{
-							{Name: zoneName},
-						},
-					},
-				}
-				duplicatedZones = []core.Region{
-					{
-						Name: regionName,
-						Zones: []core.AvailabilityZone{
-							{Name: zoneName},
-							{Name: zoneName},
-						},
-					},
+					Versions: []core.ExpirableVersion{{Version: "1.11.4"}, {Version: "1.11.4", ExpirationDate: &metav1.Time{Time: time.Now().Add(24 * time.Hour)}}},
 				}
 			)
 
@@ -146,16 +123,7 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 										ExpirableVersion: core.ExpirableVersion{
 											Version: "1.2.3",
 										},
-										CRI: []core.CRI{{Name: "containerd"}},
 									},
-								},
-							},
-						},
-						Regions: []core.Region{
-							{
-								Name: regionName,
-								Zones: []core.AvailabilityZone{
-									{Name: zoneName},
 								},
 							},
 						},
@@ -226,7 +194,7 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 					}))))
 			})
 
-			It("should forbid not specifying an invalid parent kind", func() {
+			It("should forbid specifying an invalid parent kind", func() {
 				namespacedCloudProfile.Spec.Parent = core.CloudProfileReference{Kind: "SomeOtherCloudPofile", Name: "my-profile"}
 
 				errorList := ValidateNamespacedCloudProfile(namespacedCloudProfile)
@@ -251,20 +219,6 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 			})
 
 			Context("kubernetes version constraints", func() {
-				It("should enforce that at least one version has been defined", func() {
-					namespacedCloudProfile.Spec.Kubernetes.Versions = []core.ExpirableVersion{}
-
-					errorList := ValidateNamespacedCloudProfile(namespacedCloudProfile)
-
-					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal("spec.kubernetes.versions"),
-					})), PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.kubernetes.versions"),
-					}))))
-				})
-
 				It("should forbid versions of a not allowed pattern", func() {
 					namespacedCloudProfile.Spec.Kubernetes.Versions = []core.ExpirableVersion{{Version: "1.11"}}
 
@@ -273,28 +227,6 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.kubernetes.versions[0]"),
-					}))))
-				})
-
-				It("should forbid expiration date on latest kubernetes version", func() {
-					expirationDate := &metav1.Time{Time: time.Now().AddDate(0, 0, 1)}
-					namespacedCloudProfile.Spec.Kubernetes.Versions = []core.ExpirableVersion{
-						{
-							Version:        "1.1.0",
-							Classification: &supportedClassification,
-						},
-						{
-							Version:        "1.2.0",
-							Classification: &deprecatedClassification,
-							ExpirationDate: expirationDate,
-						},
-					}
-
-					errorList := ValidateNamespacedCloudProfile(namespacedCloudProfile)
-
-					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.kubernetes.versions[].expirationDate"),
 					}))))
 				})
 
@@ -310,59 +242,27 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 						}))))
 				})
 
-				It("should forbid invalid classification for kubernetes versions", func() {
-					classification := core.VersionClassification("dummy")
+				It("should forbid providing a classification", func() {
+					classification := core.ClassificationSupported
 					namespacedCloudProfile.Spec.Kubernetes.Versions = []core.ExpirableVersion{
 						{
 							Version:        "1.1.0",
 							Classification: &classification,
+							ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(24 * time.Hour)}),
 						},
 					}
 
 					errorList := ValidateNamespacedCloudProfile(namespacedCloudProfile)
 
 					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":     Equal(field.ErrorTypeNotSupported),
-						"Field":    Equal("spec.kubernetes.versions[0].classification"),
-						"BadValue": Equal(classification),
-					}))))
-				})
-
-				It("only allow one supported version per minor version", func() {
-					namespacedCloudProfile.Spec.Kubernetes.Versions = []core.ExpirableVersion{
-						{
-							Version:        "1.1.0",
-							Classification: &supportedClassification,
-						},
-						{
-							Version:        "1.1.1",
-							Classification: &supportedClassification,
-						},
-					}
-					errorList := ValidateNamespacedCloudProfile(namespacedCloudProfile)
-
-					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.kubernetes.versions[1]"),
-					})), PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.kubernetes.versions[0]"),
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.kubernetes.versions[0].classification"),
+						"Detail": Equal("must not provide a classification to a Kubernetes version in NamespacedCloudProfile"),
 					}))))
 				})
 			})
 
 			Context("machine image validation", func() {
-				It("should forbid an empty list of machine images", func() {
-					namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{}
-
-					errorList := ValidateNamespacedCloudProfile(namespacedCloudProfile)
-
-					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal("spec.machineImages"),
-					}))))
-				})
-
 				It("should forbid duplicate names in list of machine images", func() {
 					namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
 						{
@@ -370,10 +270,8 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 							Versions: []core.MachineImageVersion{
 								{
 									ExpirableVersion: core.ExpirableVersion{
-										Version:        "3.4.6",
-										Classification: &supportedClassification,
+										Version: "3.4.6",
 									},
-									CRI: []core.CRI{{Name: "containerd"}},
 								},
 							},
 						},
@@ -382,10 +280,8 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 							Versions: []core.MachineImageVersion{
 								{
 									ExpirableVersion: core.ExpirableVersion{
-										Version:        "3.4.5",
-										Classification: &previewClassification,
+										Version: "3.4.5",
 									},
-									CRI: []core.CRI{{Name: "containerd"}},
 								},
 							},
 						},
@@ -415,34 +311,51 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 					}))))
 				})
 
-				It("should forbid machine images with an invalid machine image update strategy", func() {
-					updateStrategy := core.MachineImageUpdateStrategy("dummy")
+				It("should forbid providing other values to fields than expiration dates", func() {
+					validExpirationDate := &metav1.Time{Time: time.Now().AddDate(0, 1, 0)}
 					namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
 						{
-							Name: "some-machineimage",
+							Name:           "some-machineimage",
+							UpdateStrategy: ptr.To(core.UpdateStrategyPatch),
 							Versions: []core.MachineImageVersion{
 								{
 									ExpirableVersion: core.ExpirableVersion{
 										Version:        "3.4.6",
-										Classification: &supportedClassification,
+										ExpirationDate: validExpirationDate,
+										Classification: ptr.To(core.ClassificationDeprecated),
 									},
-									CRI: []core.CRI{{Name: "containerd"}},
+									CRI:                      []core.CRI{{Name: "containerd"}},
+									Architectures:            []string{"amd64"},
+									KubeletVersionConstraint: ptr.To(">= 1.30.0"),
 								},
 							},
-							UpdateStrategy: &updateStrategy,
 						},
 					}
 
 					errorList := ValidateNamespacedCloudProfile(namespacedCloudProfile)
 
-					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeNotSupported),
-						"Field": Equal("spec.machineImages[0].updateStrategy"),
-					}))))
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeForbidden),
+							"Field": Equal("spec.machineImages[0].updateStrategy"),
+						})), PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeForbidden),
+							"Field": Equal("spec.machineImages[0].versions[0].classification"),
+						})), PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeForbidden),
+							"Field": Equal("spec.machineImages[0].versions[0].cri"),
+						})), PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeForbidden),
+							"Field": Equal("spec.machineImages[0].versions[0].architectures"),
+						})), PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeForbidden),
+							"Field": Equal("spec.machineImages[0].versions[0].kubeletVersionConstraint"),
+						})),
+					))
 				})
 
-				It("should allow machine images with a valid machine image update strategy", func() {
-					updateStrategy := core.UpdateStrategyMinor
+				It("should allow empty additional values", func() {
+					validExpirationDate := &metav1.Time{Time: time.Now().AddDate(0, 1, 0)}
 					namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
 						{
 							Name: "some-machineimage",
@@ -450,18 +363,16 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 								{
 									ExpirableVersion: core.ExpirableVersion{
 										Version:        "3.4.6",
-										Classification: &supportedClassification,
+										ExpirationDate: validExpirationDate,
 									},
-									CRI: []core.CRI{{Name: "containerd"}},
+									CRI:           []core.CRI{},
+									Architectures: []string{},
 								},
 							},
-							UpdateStrategy: &updateStrategy,
 						},
 					}
 
-					errorList := ValidateNamespacedCloudProfile(namespacedCloudProfile)
-
-					Expect(errorList).To(BeEmpty())
+					Expect(ValidateNamespacedCloudProfile(namespacedCloudProfile)).To(BeEmpty())
 				})
 
 				It("should forbid nonSemVer machine image versions", func() {
@@ -471,10 +382,8 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 							Versions: []core.MachineImageVersion{
 								{
 									ExpirableVersion: core.ExpirableVersion{
-										Version:        "0.1.2",
-										Classification: &supportedClassification,
+										Version: "0.1.2",
 									},
-									CRI: []core.CRI{{Name: "containerd"}},
 								},
 							},
 						},
@@ -483,10 +392,8 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 							Versions: []core.MachineImageVersion{
 								{
 									ExpirableVersion: core.ExpirableVersion{
-										Version:        "a.b.c",
-										Classification: &supportedClassification,
+										Version: "a.b.c",
 									},
-									CRI: []core.CRI{{Name: "containerd"}},
 								},
 							},
 						},
@@ -502,310 +409,9 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 						"Field": Equal("spec.machineImages[1].versions[0].version"),
 					}))))
 				})
-
-				It("should allow expiration date on latest machine image version", func() {
-					expirationDate := &metav1.Time{Time: time.Now().AddDate(0, 0, 1)}
-					namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
-						{
-							Name: "some-machineimage",
-							Versions: []core.MachineImageVersion{
-								{
-									ExpirableVersion: core.ExpirableVersion{
-										Version:        "0.1.2",
-										ExpirationDate: expirationDate,
-										Classification: &previewClassification,
-									},
-									CRI: []core.CRI{{Name: "containerd"}},
-								},
-								{
-									ExpirableVersion: core.ExpirableVersion{
-										Version:        "0.1.1",
-										Classification: &supportedClassification,
-									},
-									CRI: []core.CRI{{Name: "containerd"}},
-								},
-							},
-						},
-						{
-							Name: "xy",
-							Versions: []core.MachineImageVersion{
-								{
-									ExpirableVersion: core.ExpirableVersion{
-										Version:        "0.1.1",
-										ExpirationDate: expirationDate,
-										Classification: &supportedClassification,
-									},
-									CRI: []core.CRI{{Name: "containerd"}},
-								},
-							},
-						},
-					}
-
-					errorList := ValidateNamespacedCloudProfile(namespacedCloudProfile)
-					Expect(errorList).To(BeEmpty())
-				})
-
-				It("should forbid invalid classification for machine image versions", func() {
-					classification := core.VersionClassification("dummy")
-					namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
-						{
-							Name: "some-machineimage",
-							Versions: []core.MachineImageVersion{
-								{
-									ExpirableVersion: core.ExpirableVersion{
-										Version:        "0.1.2",
-										Classification: &classification,
-									},
-									CRI: []core.CRI{{Name: "containerd"}},
-								},
-							},
-						},
-					}
-
-					errorList := ValidateNamespacedCloudProfile(namespacedCloudProfile)
-					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":     Equal(field.ErrorTypeNotSupported),
-						"Field":    Equal("spec.machineImages[0].versions[0].classification"),
-						"BadValue": Equal(classification),
-					}))))
-				})
-
-				It("should allow valid CPU architecture for machine image versions", func() {
-					namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
-						{
-							Name: "some-machineimage",
-							Versions: []core.MachineImageVersion{
-								{
-									ExpirableVersion: core.ExpirableVersion{
-										Version: "0.1.2",
-									},
-									CRI:           []core.CRI{{Name: "containerd"}},
-									Architectures: []string{"amd64", "arm64"},
-								},
-								{
-									ExpirableVersion: core.ExpirableVersion{
-										Version: "0.1.3",
-									},
-									CRI:           []core.CRI{{Name: "containerd"}},
-									Architectures: []string{"amd64"},
-								},
-								{
-									ExpirableVersion: core.ExpirableVersion{
-										Version: "0.1.4",
-									},
-									CRI:           []core.CRI{{Name: "containerd"}},
-									Architectures: []string{"arm64"},
-								},
-							},
-						},
-					}
-
-					errorList := ValidateNamespacedCloudProfile(namespacedCloudProfile)
-					Expect(errorList).To(BeEmpty())
-				})
-
-				It("should forbid invalid CPU architecture for machine image versions", func() {
-					namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
-						{
-							Name: "some-machineimage",
-							Versions: []core.MachineImageVersion{
-								{
-									ExpirableVersion: core.ExpirableVersion{
-										Version: "0.1.2",
-									},
-									CRI:           []core.CRI{{Name: "containerd"}},
-									Architectures: []string{"foo"},
-								},
-							},
-						},
-					}
-
-					errorList := ValidateNamespacedCloudProfile(namespacedCloudProfile)
-					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeNotSupported),
-						"Field": Equal("spec.machineImages[0].versions[0].architecture"),
-					}))))
-				})
-
-				It("should allow valid kubeletVersionConstraint for machine image versions", func() {
-					namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
-						{
-							Name: "some-machineimage",
-							Versions: []core.MachineImageVersion{
-								{
-									ExpirableVersion: core.ExpirableVersion{
-										Version: "0.1.2",
-									},
-									CRI:                      []core.CRI{{Name: "containerd"}},
-									KubeletVersionConstraint: ptr.To("< 1.26"),
-								},
-								{
-									ExpirableVersion: core.ExpirableVersion{
-										Version: "0.1.3",
-									},
-									CRI:                      []core.CRI{{Name: "containerd"}},
-									KubeletVersionConstraint: ptr.To(">= 1.26"),
-								},
-							},
-						},
-					}
-
-					errorList := ValidateNamespacedCloudProfile(namespacedCloudProfile)
-					Expect(errorList).To(BeEmpty())
-				})
-
-				It("should forbid invalid kubeletVersionConstraint for machine image versions", func() {
-					namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
-						{
-							Name: "some-machineimage",
-							Versions: []core.MachineImageVersion{
-								{
-									ExpirableVersion: core.ExpirableVersion{
-										Version: "0.1.2",
-									},
-									CRI:                      []core.CRI{{Name: "containerd"}},
-									KubeletVersionConstraint: ptr.To(""),
-								},
-								{
-									ExpirableVersion: core.ExpirableVersion{
-										Version: "0.1.3",
-									},
-									CRI:                      []core.CRI{{Name: "containerd"}},
-									KubeletVersionConstraint: ptr.To("invalid-version"),
-								},
-							},
-						},
-					}
-
-					errorList := ValidateNamespacedCloudProfile(namespacedCloudProfile)
-					Expect(errorList).To(ConsistOf(
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":  Equal(field.ErrorTypeInvalid),
-							"Field": Equal("spec.machineImages[0].versions[0].kubeletVersionConstraint"),
-						})),
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":  Equal(field.ErrorTypeInvalid),
-							"Field": Equal("spec.machineImages[0].versions[1].kubeletVersionConstraint"),
-						})),
-					))
-				})
-			})
-
-			It("should forbid if no cri is present", func() {
-				namespacedCloudProfile.Spec.MachineImages[0].Versions[0].CRI = nil
-
-				errorList := ValidateNamespacedCloudProfile(namespacedCloudProfile)
-
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("spec.machineImages[0].versions[0].cri"),
-				}))))
-			})
-
-			It("should forbid non-supported container runtime interface names", func() {
-				namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
-					{
-						Name: "invalid-cri-name",
-						Versions: []core.MachineImageVersion{
-							{
-								ExpirableVersion: core.ExpirableVersion{
-									Version: "0.1.2",
-								},
-								CRI: []core.CRI{
-									{
-										Name: "invalid-cri-name",
-									},
-									{
-										Name: "docker",
-									},
-								},
-							},
-						},
-					},
-					{
-						Name: "valid-cri-name",
-						Versions: []core.MachineImageVersion{
-							{
-								ExpirableVersion: core.ExpirableVersion{
-									Version: "0.1.2",
-								},
-								CRI: []core.CRI{
-									{
-										Name: core.CRINameContainerD,
-									},
-								},
-							},
-						},
-					},
-				}
-
-				errorList := ValidateNamespacedCloudProfile(namespacedCloudProfile)
-
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeNotSupported),
-					"Field":  Equal("spec.machineImages[0].versions[0].cri[0].name"),
-					"Detail": Equal("supported values: \"containerd\""),
-				})), PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeNotSupported),
-					"Field":  Equal("spec.machineImages[0].versions[0].cri[1].name"),
-					"Detail": Equal("supported values: \"containerd\""),
-				})),
-				))
-			})
-
-			It("should forbid duplicated container runtime interface names", func() {
-				namespacedCloudProfile.Spec.MachineImages[0].Versions[0].CRI = []core.CRI{
-					{
-						Name: core.CRINameContainerD,
-					},
-					{
-						Name: core.CRINameContainerD,
-					},
-				}
-
-				errorList := ValidateNamespacedCloudProfile(namespacedCloudProfile)
-
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeDuplicate),
-					"Field": Equal("spec.machineImages[0].versions[0].cri[1]"),
-				}))))
-			})
-
-			It("should forbid duplicated container runtime names", func() {
-				namespacedCloudProfile.Spec.MachineImages[0].Versions[0].CRI = []core.CRI{
-					{
-						Name: core.CRINameContainerD,
-						ContainerRuntimes: []core.ContainerRuntime{
-							{
-								Type: "cr1",
-							},
-							{
-								Type: "cr1",
-							},
-						},
-					},
-				}
-
-				errorList := ValidateNamespacedCloudProfile(namespacedCloudProfile)
-
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeDuplicate),
-					"Field": Equal("spec.machineImages[0].versions[0].cri[0].containerRuntimes[1].type"),
-				}))))
 			})
 
 			Context("machine types validation", func() {
-				It("should enforce that at least one machine type has been defined", func() {
-					namespacedCloudProfile.Spec.MachineTypes = []core.MachineType{}
-
-					errorList := ValidateNamespacedCloudProfile(namespacedCloudProfile)
-
-					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal("spec.machineTypes"),
-					}))))
-				})
-
 				It("should enforce uniqueness of machine type names", func() {
 					namespacedCloudProfile.Spec.MachineTypes = []core.MachineType{
 						namespacedCloudProfile.Spec.MachineTypes[0],
@@ -861,75 +467,6 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 
 					errorList := ValidateNamespacedCloudProfile(namespacedCloudProfile)
 					Expect(errorList).To(BeEmpty())
-				})
-			})
-
-			Context("regions validation", func() {
-				It("should forbid regions with unsupported name values", func() {
-					namespacedCloudProfile.Spec.Regions = []core.Region{
-						{
-							Name:  "",
-							Zones: []core.AvailabilityZone{{Name: ""}},
-						},
-					}
-
-					errorList := ValidateNamespacedCloudProfile(namespacedCloudProfile)
-
-					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal("spec.regions[0].name"),
-					})), PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal("spec.regions[0].zones[0].name"),
-					}))))
-				})
-
-				It("should forbid duplicated region names", func() {
-					namespacedCloudProfile.Spec.Regions = duplicatedRegions
-
-					errorList := ValidateNamespacedCloudProfile(namespacedCloudProfile)
-
-					Expect(errorList).To(ConsistOf(
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":  Equal(field.ErrorTypeDuplicate),
-							"Field": Equal(fmt.Sprintf("spec.regions[%d].name", len(duplicatedRegions)-1)),
-						}))))
-				})
-
-				It("should forbid duplicated zone names", func() {
-					namespacedCloudProfile.Spec.Regions = duplicatedZones
-
-					errorList := ValidateNamespacedCloudProfile(namespacedCloudProfile)
-
-					Expect(errorList).To(ConsistOf(
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":  Equal(field.ErrorTypeDuplicate),
-							"Field": Equal(fmt.Sprintf("spec.regions[0].zones[%d].name", len(duplicatedZones[0].Zones)-1)),
-						}))))
-				})
-
-				It("should forbid invalid label specifications", func() {
-					namespacedCloudProfile.Spec.Regions[0].Labels = map[string]string{
-						"this-is-not-allowed": "?*&!@",
-						"toolongtoolongtoolongtoolongtoolongtoolongtoolongtoolongtoolongtoolongtoolong": "toolongtoolongtoolongtoolongtoolongtoolongtoolongtoolongtoolongtoolongtoolong",
-					}
-
-					errorList := ValidateNamespacedCloudProfile(namespacedCloudProfile)
-
-					Expect(errorList).To(ConsistOf(
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":  Equal(field.ErrorTypeInvalid),
-							"Field": Equal("spec.regions[0].labels"),
-						})),
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":  Equal(field.ErrorTypeInvalid),
-							"Field": Equal("spec.regions[0].labels"),
-						})),
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":  Equal(field.ErrorTypeInvalid),
-							"Field": Equal("spec.regions[0].labels"),
-						})),
-					))
 				})
 			})
 
@@ -995,9 +532,8 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 								{
 									ExpirableVersion: core.ExpirableVersion{
 										Version:        "1.2.3",
-										Classification: &supportedClassification,
+										ExpirationDate: dateInThePast,
 									},
-									CRI: []core.CRI{{Name: "containerd"}},
 								},
 							},
 						},
@@ -1006,15 +542,7 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 						Versions: []core.ExpirableVersion{
 							{
 								Version:        "1.17.2",
-								Classification: &deprecatedClassification,
-							},
-						},
-					},
-					Regions: []core.Region{
-						{
-							Name: regionName,
-							Zones: []core.AvailabilityZone{
-								{Name: zoneName},
+								ExpirationDate: dateInThePast,
 							},
 						},
 					},
@@ -1028,9 +556,9 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 		Context("Removed Kubernetes versions", func() {
 			It("deleting version - should not return any errors", func() {
 				versions := []core.ExpirableVersion{
-					{Version: "1.17.2", Classification: &deprecatedClassification},
-					{Version: "1.17.1", Classification: &deprecatedClassification, ExpirationDate: dateInThePast},
-					{Version: "1.17.0", Classification: &deprecatedClassification, ExpirationDate: dateInThePast},
+					{Version: "1.17.2"},
+					{Version: "1.17.1", ExpirationDate: dateInThePast},
+					{Version: "1.17.0", ExpirationDate: dateInThePast},
 				}
 				cloudProfileNew.Spec.Kubernetes.Versions = versions[0:1]
 				cloudProfileOld.Spec.Kubernetes.Versions = versions
@@ -1045,26 +573,20 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 				versions := []core.MachineImageVersion{
 					{
 						ExpirableVersion: core.ExpirableVersion{
-							Version:        "2135.6.2",
-							Classification: &deprecatedClassification,
+							Version: "2135.6.2",
 						},
-						CRI: []core.CRI{{Name: "containerd"}},
 					},
 					{
 						ExpirableVersion: core.ExpirableVersion{
 							Version:        "2135.6.1",
-							Classification: &deprecatedClassification,
 							ExpirationDate: dateInThePast,
 						},
-						CRI: []core.CRI{{Name: "containerd"}},
 					},
 					{
 						ExpirableVersion: core.ExpirableVersion{
 							Version:        "2135.6.0",
-							Classification: &deprecatedClassification,
 							ExpirationDate: dateInThePast,
 						},
-						CRI: []core.CRI{{Name: "containerd"}},
 					},
 				}
 				cloudProfileNew.Spec.MachineImages[0].Versions = versions[0:1]

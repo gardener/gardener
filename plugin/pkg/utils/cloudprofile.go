@@ -9,7 +9,6 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/api/equality"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/utils/ptr"
 
@@ -150,73 +149,4 @@ func SyncCloudProfileFields(oldShoot, newShoot *core.Shoot) {
 	if newShoot.Spec.CloudProfile != nil && newShoot.Spec.CloudProfile.Kind != constants.CloudProfileReferenceKindCloudProfile {
 		newShoot.Spec.CloudProfileName = nil
 	}
-}
-
-// MergeCloudProfiles builds the cloud profile spec from a base CloudProfile and a NamespacedCloudProfile by updating the CloudProfile Spec inplace.
-// The CloudProfile Spec can then be used as NamespacedCloudProfile.Status.CloudProfileSpec value.
-func MergeCloudProfiles(resultingCloudProfile *gardencorev1beta1.CloudProfile, namespacedCloudProfile *gardencorev1beta1.NamespacedCloudProfile) {
-	resultingCloudProfile.ObjectMeta = metav1.ObjectMeta{}
-	if namespacedCloudProfile.Spec.Kubernetes != nil {
-		resultingCloudProfile.Spec.Kubernetes.Versions = mergeDeep(resultingCloudProfile.Spec.Kubernetes.Versions, namespacedCloudProfile.Spec.Kubernetes.Versions, func(v gardencorev1beta1.ExpirableVersion) string { return v.Version }, mergeExpirationDates, false)
-	}
-	resultingCloudProfile.Spec.MachineImages = mergeDeep(resultingCloudProfile.Spec.MachineImages, namespacedCloudProfile.Spec.MachineImages, func(image gardencorev1beta1.MachineImage) string { return image.Name }, mergeMachineImages, false)
-	resultingCloudProfile.Spec.MachineTypes = mergeDeep(resultingCloudProfile.Spec.MachineTypes, namespacedCloudProfile.Spec.MachineTypes, func(machineType gardencorev1beta1.MachineType) string { return machineType.Name }, nil, true)
-	resultingCloudProfile.Spec.Regions = append(resultingCloudProfile.Spec.Regions, namespacedCloudProfile.Spec.Regions...)
-	resultingCloudProfile.Spec.VolumeTypes = append(resultingCloudProfile.Spec.VolumeTypes, namespacedCloudProfile.Spec.VolumeTypes...)
-	if namespacedCloudProfile.Spec.CABundle != nil {
-		mergedCABundles := fmt.Sprintf("%s%s", ptr.Deref(resultingCloudProfile.Spec.CABundle, ""), ptr.Deref(namespacedCloudProfile.Spec.CABundle, ""))
-		resultingCloudProfile.Spec.CABundle = &mergedCABundles
-	}
-}
-
-func mergeExpirationDates(base, override gardencorev1beta1.ExpirableVersion) gardencorev1beta1.ExpirableVersion {
-	base.ExpirationDate = override.ExpirationDate
-	return base
-}
-
-func mergeMachineImages(base, override gardencorev1beta1.MachineImage) gardencorev1beta1.MachineImage {
-	base.Versions = mergeDeep(base.Versions, override.Versions, func(v gardencorev1beta1.MachineImageVersion) string { return v.Version }, mergeMachineImageVersions, false)
-	return base
-}
-
-func mergeMachineImageVersions(base, override gardencorev1beta1.MachineImageVersion) gardencorev1beta1.MachineImageVersion {
-	base.ExpirableVersion = mergeExpirationDates(base.ExpirableVersion, override.ExpirableVersion)
-	return base
-}
-
-// Values converts the values of a map to an array.
-func Values[T any](m map[string]T) []T {
-	var values []T
-	for _, version := range m {
-		values = append(values, version)
-	}
-	return values
-}
-
-// MapOf converts the values of an array to a map using a key function.
-func MapOf[T any](arr []T, keyFunc func(T) string) map[string]T {
-	mapped := make(map[string]T, len(arr))
-	for _, value := range arr {
-		mapped[keyFunc(value)] = value
-	}
-	return mapped
-}
-
-func mergeDeep[T any](baseArr, override []T, keyFunc func(T) string, mergeFunc func(T, T) T, allowAdditional bool) []T {
-	existing := MapOf(baseArr, keyFunc)
-	for _, value := range override {
-		key := keyFunc(value)
-		if _, exists := existing[key]; !exists {
-			if allowAdditional {
-				existing[key] = value
-			}
-			continue
-		}
-		if mergeFunc != nil {
-			existing[key] = mergeFunc(existing[key], value)
-		} else {
-			existing[key] = value
-		}
-	}
-	return Values(existing)
 }
