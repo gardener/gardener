@@ -199,15 +199,15 @@ cat <<EOF | sudo tee -a /etc/hosts
 
 # Begin of Gardener local setup section
 # Shoot API server domains
-127.0.0.1 api.local.local.external.local.gardener.cloud
-127.0.0.1 api.local.local.internal.local.gardener.cloud
+172.18.255.1 api.local.local.external.local.gardener.cloud
+172.18.255.1 api.local.local.internal.local.gardener.cloud
 
 # Ingress
-127.0.0.1 p-seed.ingress.local.seed.local.gardener.cloud
-127.0.0.1 g-seed.ingress.local.seed.local.gardener.cloud
-127.0.0.1 gu-local--local.ingress.local.seed.local.gardener.cloud
-127.0.0.1 p-local--local.ingress.local.seed.local.gardener.cloud
-127.0.0.1 v-local--local.ingress.local.seed.local.gardener.cloud
+172.18.255.1 p-seed.ingress.local.seed.local.gardener.cloud
+172.18.255.1 g-seed.ingress.local.seed.local.gardener.cloud
+172.18.255.1 gu-local--local.ingress.local.seed.local.gardener.cloud
+172.18.255.1 p-local--local.ingress.local.seed.local.gardener.cloud
+172.18.255.1 v-local--local.ingress.local.seed.local.gardener.cloud
 
 # E2e tests
 172.18.255.1 api.e2e-managedseed.garden.external.local.gardener.cloud
@@ -335,7 +335,7 @@ make kind-down
 
 ## Alternative Way to Set Up Garden and Seed Leveraging `gardener-operator`
 
-Instead of starting Garden and Seed via `make kind-up gardener-up`, you can also use `gardener-operator` to create your local dev landscape.  
+Instead of starting Garden and Seed via `make kind-up gardener-up`, you can also use `gardener-operator` to create your local dev landscape.
 In this setup, the virtual garden cluster has its own load balancer, so you have to create an own DNS entry in your `/etc/hosts`:
 
 ```shell
