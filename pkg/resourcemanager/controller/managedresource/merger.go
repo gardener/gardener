@@ -13,6 +13,7 @@ import (
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -145,17 +146,26 @@ func mergeDeployment(scheme *runtime.Scheme, oldObj, newObj runtime.Object, pres
 	return scheme.Convert(newDeployment, newObj, nil)
 }
 
+const restartedAtAnnotation = "kubectl.kubernetes.io/restartedAt"
+
 func mergePodTemplate(oldPod, newPod *corev1.PodTemplateSpec, preserveResources bool) {
-	if !preserveResources {
-		return
+	// Do not overwrite the "kubectl.kubernetes.io/restartedAt" annotation as it is used by
+	// the "kubectl rollout restart <RESOURCE>" command to trigger rollouts.
+	// Otherwise, the resource-manager would revert this annotation set by the kubectl command and
+	// this would revert the triggered rollout.
+	// Ref https://kubernetes.io/docs/reference/labels-annotations-taints/#kubectl-k8s-io-restart-at
+	if metav1.HasAnnotation(oldPod.ObjectMeta, restartedAtAnnotation) {
+		metav1.SetMetaDataAnnotation(&newPod.ObjectMeta, restartedAtAnnotation, oldPod.Annotations[restartedAtAnnotation])
 	}
 
-	// Do not overwrite a PodTemplate's resource requests / limits if it is scaled by an HVPA
-	for i, newContainer := range newPod.Spec.Containers {
-		for j, oldContainer := range oldPod.Spec.Containers {
-			if newContainer.Name == oldContainer.Name {
-				mergeContainer(&oldPod.Spec.Containers[j], &newPod.Spec.Containers[i], preserveResources)
-				break
+	if preserveResources {
+		// Do not overwrite a PodTemplate's resource requests / limits if it is scaled by an HVPA
+		for i, newContainer := range newPod.Spec.Containers {
+			for j, oldContainer := range oldPod.Spec.Containers {
+				if newContainer.Name == oldContainer.Name {
+					mergeContainer(&oldPod.Spec.Containers[j], &newPod.Spec.Containers[i], preserveResources)
+					break
+				}
 			}
 		}
 	}
