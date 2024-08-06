@@ -301,16 +301,18 @@ spec:
           The seed cluster {{$labels.name}} in {{$externalLabels.landscape}}
           has a failing condition: {{$labels.condition}}.
 
+      # avoid alert noise for flapping conditions except for GardenletReady and APIServerUnavailable
     - alert: SeedConditionFailing
       expr: |
         max by (name, condition) (
-          last_over_time((
+          count_over_time((
             garden_seed_condition{condition != "GardenletReady"} <= 0
             or
             garden_shoot_condition{condition != "APIServerUnavailable",
                                    is_seed    = "true",
-                                   operation  = "Reconcile"} <= 0)[5m:]))
-      for: 30m # avoid alert noise for flapping conditions except for GardenletReady and APIServerUnavailable
+                                   operation  = "Reconcile"} <= 0)[8m:]) >= 4
+        )
+      for: 30m
       labels:
         severity: critical
         topology: seed
