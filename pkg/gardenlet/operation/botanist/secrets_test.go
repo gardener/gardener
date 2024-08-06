@@ -139,7 +139,7 @@ var _ = Describe("Secrets", func() {
 			}))
 		})
 
-		It("should create cloud provider secret contaning workload identity data", func() {
+		It("should create cloud provider secret containing workload identity data", func() {
 			botanist.Shoot.Credentials = &securityv1alpha1.WorkloadIdentity{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "wi-name",
