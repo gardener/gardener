@@ -458,10 +458,6 @@ var _ = Describe("Etcd", func() {
 											MinAllowed: corev1.ResourceList{
 												corev1.ResourceMemory: resource.MustParse("200M"),
 											},
-											MaxAllowed: corev1.ResourceList{
-												corev1.ResourceCPU:    resource.MustParse("4"),
-												corev1.ResourceMemory: resource.MustParse("28G"),
-											},
 											ControlledValues: &controlledValues,
 										},
 										{
@@ -515,12 +511,8 @@ var _ = Describe("Etcd", func() {
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
-							ContainerName: "etcd",
-							MinAllowed:    corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("200M")},
-							MaxAllowed: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("4"),
-								corev1.ResourceMemory: resource.MustParse("28G"),
-							},
+							ContainerName:    "etcd",
+							MinAllowed:       corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("200M")},
 							ControlledValues: &controlledValues,
 							Mode:             &containerPolicyAuto,
 						},

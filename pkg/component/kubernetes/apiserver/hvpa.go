@@ -52,10 +52,6 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 		kubeAPIServerMinAllowed = corev1.ResourceList{
 			corev1.ResourceMemory: resource.MustParse("200M"),
 		}
-		kubeAPIServerMaxAllowed = corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse("8"),
-			corev1.ResourceMemory: resource.MustParse("25G"),
-		}
 		weightBasedScalingIntervals = []hvpav1alpha1.WeightBasedScalingInterval{
 			{
 				VpaWeight:         hvpav1alpha1.VpaOnly,
@@ -165,7 +161,7 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 				},
 				Spec: hvpav1alpha1.VpaTemplateSpec{
 					ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-						ContainerPolicies: k.computeVerticalPodAutoscalerContainerResourcePolicies(kubeAPIServerMinAllowed, kubeAPIServerMaxAllowed),
+						ContainerPolicies: k.computeVerticalPodAutoscalerContainerResourcePolicies(kubeAPIServerMinAllowed),
 					},
 				},
 			},
@@ -181,13 +177,12 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 	return err
 }
 
-func (k *kubeAPIServer) computeVerticalPodAutoscalerContainerResourcePolicies(kubeAPIServerMinAllowed, kubeAPIServerMaxAllowed corev1.ResourceList) []vpaautoscalingv1.ContainerResourcePolicy {
+func (k *kubeAPIServer) computeVerticalPodAutoscalerContainerResourcePolicies(kubeAPIServerMinAllowed corev1.ResourceList) []vpaautoscalingv1.ContainerResourcePolicy {
 	var (
 		vpaContainerResourcePolicies = []vpaautoscalingv1.ContainerResourcePolicy{
 			{
 				ContainerName:    ContainerNameKubeAPIServer,
 				MinAllowed:       kubeAPIServerMinAllowed,
-				MaxAllowed:       kubeAPIServerMaxAllowed,
 				ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 			},
 		}

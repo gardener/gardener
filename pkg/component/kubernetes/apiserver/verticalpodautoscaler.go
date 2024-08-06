@@ -64,11 +64,6 @@ func (k *kubeAPIServer) reconcileVerticalPodAutoscalerInVPAAndHPAMode(ctx contex
 		corev1.ResourceCPU:    resource.MustParse("20m"),
 		corev1.ResourceMemory: resource.MustParse("200M"),
 	}
-	kubeAPIServerMaxAllowed := corev1.ResourceList{
-		// The CPU and memory are aligned to the machine ration of 1:4.
-		corev1.ResourceCPU:    resource.MustParse("7"),
-		corev1.ResourceMemory: resource.MustParse("28G"),
-	}
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), verticalPodAutoscaler, func() error {
 		verticalPodAutoscaler.Spec = vpaautoscalingv1.VerticalPodAutoscalerSpec{
@@ -81,7 +76,7 @@ func (k *kubeAPIServer) reconcileVerticalPodAutoscalerInVPAAndHPAMode(ctx contex
 				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
 			},
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-				ContainerPolicies: k.computeVerticalPodAutoscalerContainerResourcePolicies(kubeAPIServerMinAllowed, kubeAPIServerMaxAllowed),
+				ContainerPolicies: k.computeVerticalPodAutoscalerContainerResourcePolicies(kubeAPIServerMinAllowed),
 			},
 		}
 
