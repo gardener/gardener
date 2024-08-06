@@ -71,6 +71,24 @@ func MergeStringMaps[T any](oldMap map[string]T, newMaps ...map[string]T) map[st
 	return out
 }
 
+// Values converts the values of a map to an array.
+func Values[T any](m map[string]T) []T {
+	var values []T
+	for _, version := range m {
+		values = append(values, version)
+	}
+	return values
+}
+
+// MapOf converts the values of an array to a map using a key function.
+func MapOf[T any](arr []T, keyFunc func(T) string) map[string]T {
+	mapped := make(map[string]T, len(arr))
+	for _, value := range arr {
+		mapped[keyFunc(value)] = value
+	}
+	return mapped
+}
+
 // TimeElapsed takes a <timestamp> and a <duration> checks whether the elapsed time until now is less than the <duration>.
 // If yes, it returns true, otherwise it returns false.
 func TimeElapsed(timestamp *metav1.Time, duration time.Duration) bool {
