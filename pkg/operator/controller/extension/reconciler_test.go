@@ -169,6 +169,7 @@ var _ = Describe("Reconciler", func() {
 				}
 				Expect(runtimeClientSet.Client().Create(ctx, garden)).To(Succeed())
 
+				By("reconcile extension")
 				req = reconcile.Request{NamespacedName: client.ObjectKey{Name: extensionName}}
 				Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{}))
 
@@ -195,6 +196,39 @@ var _ = Describe("Reconciler", func() {
 				Expect(controllerDeploymentList.Items).To(HaveLen(1))
 				Expect(controllerRegistrationList.Items).To(HaveLen(1))
 
+				By("reconcile extension after disabling admission by annotation")
+				toggleAdmission(ctx, runtimeClientSet.Client(), false)
+				Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{}))
+				Expect(runtimeClientSet.Client().Get(ctx, client.ObjectKey{Name: extensionName}, extension)).To(Succeed())
+				Expect(extension.Status.Conditions).To(HaveLen(2))
+				Expect(extension.Status.Conditions[0]).To(gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
+					"Type":   Equal(operatorv1alpha1.RuntimeClusterExtensionReconciled),
+					"Status": Equal(gardencorev1beta1.ConditionFalse),
+					"Reason": Equal(ConditionDeleteSuccessful),
+				}))
+				Expect(extension.Status.Conditions[1]).To(gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
+					"Type":   Equal(operatorv1alpha1.VirtualClusterExtensionReconciled),
+					"Status": Equal(gardencorev1beta1.ConditionFalse),
+					"Reason": Equal(ConditionDeleteSuccessful),
+				}))
+
+				By("reoncile extension after re-enabling admission by annotation")
+				toggleAdmission(ctx, runtimeClientSet.Client(), true)
+				Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{}))
+				Expect(runtimeClientSet.Client().Get(ctx, client.ObjectKey{Name: extensionName}, extension)).To(Succeed())
+				Expect(extension.Status.Conditions).To(HaveLen(2))
+				Expect(extension.Status.Conditions[0]).To(gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
+					"Type":   Equal(operatorv1alpha1.RuntimeClusterExtensionReconciled),
+					"Status": Equal(gardencorev1beta1.ConditionTrue),
+					"Reason": Equal(ConditionReconcileSuccess),
+				}))
+				Expect(extension.Status.Conditions[1]).To(gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
+					"Type":   Equal(operatorv1alpha1.VirtualClusterExtensionReconciled),
+					"Status": Equal(gardencorev1beta1.ConditionTrue),
+					"Reason": Equal(ConditionReconcileSuccess),
+				}))
+
+				By("delete extension")
 				Expect(runtimeClientSet.Client().Delete(ctx, extension)).To(Succeed())
 				req = reconcile.Request{NamespacedName: client.ObjectKey{Name: extensionName}}
 				Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{}))
@@ -208,3 +242,21 @@ var _ = Describe("Reconciler", func() {
 		})
 	})
 })
+
+func toggleAdmission(ctx context.Context, runtimeClient client.Client, enable bool) {
+	obj := &operatorv1alpha1.Extension{}
+	Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: extensionName}, obj)).To(Succeed())
+
+	patch := client.MergeFrom(obj.DeepCopyObject().(client.Object))
+	annotations := obj.GetAnnotations()
+	if enable {
+		delete(annotations, AnnotationKeyDisableAdmission)
+	} else {
+		if annotations == nil {
+			annotations = map[string]string{}
+		}
+		annotations[AnnotationKeyDisableAdmission] = "true"
+	}
+	obj.SetAnnotations(annotations)
+	Expect(runtimeClient.Patch(ctx, obj, patch)).To(Succeed())
+}

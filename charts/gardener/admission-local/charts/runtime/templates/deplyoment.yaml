@@ -1,0 +1,136 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ include "labels" . | indent 4 }}
+    high-availability-config.resources.gardener.cloud/type: server
+spec:
+  revisionHistoryLimit: 5
+  replicas: {{ .Values.global.replicaCount }}
+  selector:
+    matchLabels:
+{{ include "labels" . | indent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- if .Values.global.kubeconfig }}
+        checksum/gardener-extension-admission-local-kubeconfig: {{ include (print $.Template.BasePath "/secret-kubeconfig.yaml") . | sha256sum }}
+        {{- end }}
+      labels:
+        networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-runtime-apiserver: allowed
+        networking.resources.gardener.cloud/to-virtual-garden-kube-apiserver-tcp-443: allowed
+{{ include "labels" . | indent 8 }}
+    spec:
+      {{- if .Values.global.priorityClassName }}
+      priorityClassName: {{ .Values.global.priorityClassName }}
+      {{- end }}
+      serviceAccountName: {{ include "name" . }}
+      {{- if .Values.global.kubeconfig }}
+      automountServiceAccountToken: false
+      {{- end }}
+      containers:
+      - name: {{ include "name" . }}
+        image: {{ .Values.global.image }}
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        args:
+        - --webhook-config-server-port={{ .Values.global.webhookConfig.serverPort }}
+        {{- if .Values.global.virtualGarden.enabled }}
+        - --webhook-config-mode=url
+        - --webhook-config-url={{ printf "%s.%s" (include "name" .) (.Release.Namespace) }}
+        {{- else }}
+        - --webhook-config-mode=service
+        {{- end }}
+        - --webhook-config-namespace={{ .Release.Namespace }}
+        {{- if .Values.global.kubeconfig }}
+        - --kubeconfig=/etc/gardener-extension-admission-local/kubeconfig/kubeconfig
+        {{- end }}
+        {{- if .Values.global.projectedKubeconfig }}
+        - --kubeconfig={{ required ".Values.global.projectedKubeconfig.baseMountPath is required" .Values.global.projectedKubeconfig.baseMountPath }}/kubeconfig
+        {{- end }}
+        - --health-bind-address=:{{ .Values.global.healthPort }}
+        - --leader-election-id={{ include "leaderelectionid" . }}
+        env:
+        - name: LEADER_ELECTION_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        {{- if .Values.global.virtualGarden.enabled }}
+        - name: SOURCE_CLUSTER
+          value: enabled
+        {{- end }}
+        ports:
+        - name: webhook-server
+          containerPort: {{ .Values.global.webhookConfig.serverPort }}
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: {{ .Values.global.healthPort }}
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: {{ .Values.global.healthPort }}
+            scheme: HTTP
+          initialDelaySeconds: 5
+{{- if .Values.global.resources }}
+        resources:
+{{ toYaml .Values.global.resources | nindent 10 }}
+{{- end }}
+        volumeMounts:
+        {{- if .Values.global.kubeconfig }}
+        - name: gardener-extension-admission-local-kubeconfig
+          mountPath: /etc/gardener-extension-admission-local/kubeconfig
+          readOnly: true
+        {{- end }}
+        {{- if .Values.global.serviceAccountTokenVolumeProjection.enabled }}
+        - name: service-account-token
+          mountPath: /var/run/secrets/projected/serviceaccount
+          readOnly: true
+        {{- end }}
+        {{- if .Values.global.projectedKubeconfig }}
+        - name: kubeconfig
+          mountPath: {{ required ".Values.global.projectedKubeconfig.baseMountPath is required" .Values.global.projectedKubeconfig.baseMountPath }}
+          readOnly: true
+        {{- end }}
+      volumes:
+      {{- if .Values.global.kubeconfig }}
+      - name: gardener-extension-admission-local-kubeconfig
+        secret:
+          secretName: gardener-extension-admission-local-kubeconfig
+          defaultMode: 420
+      {{- end }}
+      {{- if .Values.global.serviceAccountTokenVolumeProjection.enabled }}
+      - name: service-account-token
+        projected:
+          sources:
+          - serviceAccountToken:
+              path: token
+              expirationSeconds: {{ .Values.global.serviceAccountTokenVolumeProjection.expirationSeconds }}
+              {{- if .Values.global.serviceAccountTokenVolumeProjection.audience }}
+              audience: {{ .Values.global.serviceAccountTokenVolumeProjection.audience }}
+              {{- end }}
+      {{- end }}
+      {{- if .Values.global.projectedKubeconfig }}
+      - name: kubeconfig
+        projected:
+          defaultMode: 420
+          sources:
+          - secret:
+              items:
+              - key: kubeconfig
+                path: kubeconfig
+              name: {{ required ".Values.global.projectedKubeconfig.genericKubeconfigSecretName is required" .Values.global.projectedKubeconfig.genericKubeconfigSecretName }}
+              optional: false
+          - secret:
+              items:
+              - key: token
+                path: token
+              name: {{ required ".Values.global.projectedKubeconfig.tokenSecretName is required" .Values.global.projectedKubeconfig.tokenSecretName }}
+              optional: false
+      {{- end }}

@@ -348,7 +348,11 @@ func (r *Reconciler) delete(
 
 func (r *Reconciler) checkIfManagedResourcesExist() func(context.Context) error {
 	return func(ctx context.Context) error {
-		managedResourcesStillExist, err := managedresources.CheckIfManagedResourcesExist(ctx, r.RuntimeClientSet.Client(), ptr.To(v1beta1constants.SeedResourceManagerClass))
+		managedResourcesStillExist, err := managedresources.CheckIfManagedResourcesExist(
+			ctx,
+			r.RuntimeClientSet.Client(),
+			ptr.To(v1beta1constants.SeedResourceManagerClass),
+		)
 		if err != nil {
 			return err
 		}
