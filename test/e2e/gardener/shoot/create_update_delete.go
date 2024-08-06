@@ -126,7 +126,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				networking := ptr.Deref(f.Shoot.Status.Networking, gardencorev1beta1.NetworkingStatus{})
 				if nodes := f.Shoot.Spec.Networking.Nodes; nodes != nil {
 					g.Expect(networking.Nodes).To(ConsistOf(*nodes))
-					g.Expect(networking.Egress).To(ConsistOf(*nodes))
+					g.Expect(networking.EgressCIDRs).To(ConsistOf(*nodes))
 				}
 				if services := f.Shoot.Spec.Networking.Services; services != nil {
 					g.Expect(networking.Services).To(ConsistOf(*services))
