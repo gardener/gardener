@@ -11,8 +11,8 @@ import (
 	"sync/atomic"
 
 	"github.com/Masterminds/semver/v3"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/component"
@@ -51,7 +51,7 @@ import (
 type Builder struct {
 	shootObjectFunc              func(context.Context) (*gardencorev1beta1.Shoot, error)
 	cloudProfileFunc             func(context.Context, *gardencorev1beta1.Shoot) (*gardencorev1beta1.CloudProfile, error)
-	shootSecretFunc              func(context.Context, string, string, bool) (*corev1.Secret, error)
+	shootCredentialsFunc         func(context.Context, string, string, bool) (client.Object, error)
 	serviceAccountIssuerHostname func() (*string, error)
 	seed                         *gardencorev1beta1.Seed
 	exposureClass                *gardencorev1beta1.ExposureClass
@@ -67,7 +67,8 @@ type Shoot struct {
 
 	shootState atomic.Value
 
-	Secret        *corev1.Secret
+	// Credentials is either [*corev1.Secret] or [*securityv1alpha1.WorkloadIdentity]
+	Credentials   client.Object
 	CloudProfile  *gardencorev1beta1.CloudProfile
 	ExposureClass *gardencorev1beta1.ExposureClass
 

@@ -360,7 +360,7 @@ func (r *Reconciler) initializeOperation(
 		NewBuilder().
 		WithShootObject(shoot).
 		WithCloudProfileObject(cloudProfile).
-		WithShootSecretFrom(r.GardenClient).
+		WithShootCredentialsFrom(r.GardenClient).
 		WithSeedObject(seed).
 		WithExposureClassObject(exposureClass).
 		WithProjectName(project.Name).

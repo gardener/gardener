@@ -30,6 +30,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	. "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
@@ -1026,6 +1027,54 @@ var _ = Describe("Shoot", func() {
 				SecretData: shootSecretData,
 			}))
 			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("returns error because workload identity credential is not supported", func() {
+			var (
+				ctx = context.TODO()
+
+				workloadIdentity = &securityv1alpha1.WorkloadIdentity{}
+				shoot            = &gardencorev1beta1.Shoot{
+					Spec: gardencorev1beta1.ShootSpec{
+						DNS: &gardencorev1beta1.DNS{
+							Domain: &domain,
+							Providers: []gardencorev1beta1.DNSProvider{
+								{
+									Type:    &provider,
+									Primary: ptr.To(true),
+								},
+							},
+						},
+					},
+				}
+			)
+
+			_, err := ConstructExternalDomain(ctx, fakeClient, shoot, workloadIdentity, nil)
+			Expect(err).To(MatchError(Equal("shoot credentials of type workload identity cannot be used as domain secret")))
+		})
+
+		It("returns error because shoot credential type is not supported", func() {
+			var (
+				ctx = context.TODO()
+
+				pod   = &corev1.Pod{}
+				shoot = &gardencorev1beta1.Shoot{
+					Spec: gardencorev1beta1.ShootSpec{
+						DNS: &gardencorev1beta1.DNS{
+							Domain: &domain,
+							Providers: []gardencorev1beta1.DNSProvider{
+								{
+									Type:    &provider,
+									Primary: ptr.To(true),
+								},
+							},
+						},
+					},
+				}
+			)
+
+			_, err := ConstructExternalDomain(ctx, fakeClient, shoot, pod, nil)
+			Expect(err).To(MatchError(Equal("unexpected shoot credentials type")))
 		})
 	})
 

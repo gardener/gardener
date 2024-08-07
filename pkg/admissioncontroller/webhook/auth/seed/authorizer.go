@@ -77,6 +77,7 @@ var (
 	shootResource                     = gardencorev1beta1.Resource("shoots")
 	shootStateResource                = gardencorev1beta1.Resource("shootstates")
 	credentialsBindingResource        = securityv1alpha1.Resource("credentialsbindings")
+	workloadIdentityResource          = securityv1alpha1.Resource("workloadidentities")
 )
 
 // TODO: Revisit all `DecisionNoOpinion` later. Today we cannot deny the request for backwards compatibility
@@ -188,6 +189,8 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			return a.authorizeRead(requestLog, seedName, graph.VertexTypeCredentialsBinding, attrs)
 		case secretResource:
 			return a.authorizeSecret(requestLog, seedName, attrs)
+		case workloadIdentityResource:
+			return a.authorizeRead(requestLog, seedName, graph.VertexTypeWorkloadIdentity, attrs)
 		case seedResource:
 			return a.authorize(requestLog, seedName, graph.VertexTypeSeed, attrs,
 				nil,

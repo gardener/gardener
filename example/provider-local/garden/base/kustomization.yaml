@@ -1,10 +1,14 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
+sortOptions:
+  order: fifo
+
 resources:
 - cloudprofile.yaml
 - project.yaml
 - secret-backup.yaml
 - secretbinding.yaml
+- credentialsbinding.yaml
 - https://raw.githubusercontent.com/gardener/gardener-extension-networking-cilium/v1.36.0/example/controller-registration.yaml
 - https://raw.githubusercontent.com/gardener/gardener-extension-networking-calico/v1.40.0/example/controller-registration.yaml

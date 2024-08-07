@@ -490,6 +490,92 @@ var _ = Describe("Seed", func() {
 				})
 			})
 
+			Context("when requested for WorkloadIdentities", func() {
+				var (
+					name, namespace string
+					attrs           *auth.AttributesRecord
+				)
+
+				BeforeEach(func() {
+					name, namespace = "foo", "bar"
+					attrs = &auth.AttributesRecord{
+						User:            seedUser,
+						Name:            name,
+						Namespace:       namespace,
+						APIGroup:        securityv1alpha1.SchemeGroupVersion.Group,
+						Resource:        "workloadidentities",
+						ResourceRequest: true,
+						Verb:            "get",
+					}
+				})
+
+				DescribeTable("should return correct result if path exists",
+					func(verb string) {
+						attrs.Verb = verb
+
+						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeWorkloadIdentity, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionAllow))
+						Expect(reason).To(BeEmpty())
+					},
+
+					Entry("get", "get"),
+					Entry("list", "list"),
+					Entry("watch", "watch"),
+				)
+
+				DescribeTable("should have no opinion because no allowed verb",
+					func(verb string) {
+						attrs.Verb = verb
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get list watch]"))
+					},
+
+					Entry("create", "create"),
+					Entry("patch", "patch"),
+					Entry("update", "update"),
+					Entry("delete", "delete"),
+					Entry("deletecollection", "deletecollection"),
+				)
+
+				It("should have no opinion because path to seed does not exists", func() {
+					graph.EXPECT().HasPathFrom(graphpkg.VertexTypeWorkloadIdentity, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("no relationship found"))
+				})
+
+				It("should have no opinion because request is for a subresource", func() {
+					attrs.Subresource = "status"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: []"))
+				})
+
+				It("should have no opinion because no resource name is given", func() {
+					attrs.Name = ""
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("No Object name found"))
+				})
+			})
+
 			Context("when requested for ShootStates", func() {
 				var (
 					name, namespace string

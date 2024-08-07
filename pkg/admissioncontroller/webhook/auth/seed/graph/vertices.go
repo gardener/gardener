@@ -58,6 +58,8 @@ const (
 	VertexTypeGardenlet
 	// VertexTypeCredentialsBinding is a constant for a 'CredentialsBinding' vertex.
 	VertexTypeCredentialsBinding
+	// VertexTypeWorkloadIdentity is a constant for a 'WorkloadIdentity' vertex.
+	VertexTypeWorkloadIdentity
 )
 
 var vertexTypes = map[VertexType]string{
@@ -85,6 +87,7 @@ var vertexTypes = map[VertexType]string{
 	VertexTypeShoot:                     "Shoot",
 	VertexTypeShootState:                "ShootState",
 	VertexTypeCredentialsBinding:        "CredentialsBinding",
+	VertexTypeWorkloadIdentity:          "WorkloadIdentity",
 }
 
 type vertex struct {

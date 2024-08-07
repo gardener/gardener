@@ -64,13 +64,19 @@ func (g *graph) handleCredentialsBindingCreateOrUpdate(credentialsBinding *secur
 	defer g.lock.Unlock()
 
 	g.deleteAllIncomingEdges(VertexTypeSecret, VertexTypeCredentialsBinding, credentialsBinding.Namespace, credentialsBinding.Name)
+	g.deleteAllIncomingEdges(VertexTypeWorkloadIdentity, VertexTypeCredentialsBinding, credentialsBinding.Namespace, credentialsBinding.Name)
+
 	var (
 		credentialsBindingVertex = g.getOrCreateVertex(VertexTypeCredentialsBinding, credentialsBinding.Namespace, credentialsBinding.Name)
-		// TODO(dimityrmirchev): This should eventually handle workload identities
-		secretVertex = g.getOrCreateVertex(VertexTypeSecret, credentialsBinding.CredentialsRef.Namespace, credentialsBinding.CredentialsRef.Name)
+		credentialsVertex        *vertex
 	)
-
-	g.addEdge(secretVertex, credentialsBindingVertex)
+	if credentialsBinding.CredentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() &&
+		credentialsBinding.CredentialsRef.Kind == "WorkloadIdentity" {
+		credentialsVertex = g.getOrCreateVertex(VertexTypeWorkloadIdentity, credentialsBinding.CredentialsRef.Namespace, credentialsBinding.CredentialsRef.Name)
+	} else {
+		credentialsVertex = g.getOrCreateVertex(VertexTypeSecret, credentialsBinding.CredentialsRef.Namespace, credentialsBinding.CredentialsRef.Name)
+	}
+	g.addEdge(credentialsVertex, credentialsBindingVertex)
 }
 
 func (g *graph) handleCredentialsBindingDelete(credentialsBinding *securityv1alpha1.CredentialsBinding) {
