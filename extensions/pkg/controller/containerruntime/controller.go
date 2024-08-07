@@ -26,9 +26,9 @@ const (
 	ControllerName = "containerruntime"
 )
 
-// AddArgs are arguments for adding an ContainerRuntime resources controller to a manager.
+// AddArgs are arguments for adding a ContainerRuntime resources controller to a manager.
 type AddArgs struct {
-	// Actuator is an ContainerRuntime resource actuator.
+	// Actuator is a ContainerRuntime resource actuator.
 	Actuator Actuator
 	// FinalizerSuffix is the suffix for the finalizer name.
 	FinalizerSuffix string
@@ -44,8 +44,10 @@ type AddArgs struct {
 	Type string
 	// IgnoreOperationAnnotation specifies whether to ignore the operation annotation or not.
 	// If the annotation is not ignored, the extension controller will only reconcile
-	// with a present operation annotation typically set during a reconcile (e.g in the maintenance time) by the Gardenlet
+	// with a present operation annotation typically set during a reconcile (e.g. in the maintenance time) by the Gardenlet
 	IgnoreOperationAnnotation bool
+	// ExtensionClass defines the extension class this extension is responsible for.
+	ExtensionClass extensionsv1alpha1.ExtensionClass
 }
 
 // Add adds an ContainerRuntime controller to the given manager using the given AddArgs.
@@ -66,6 +68,7 @@ func add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
 	}
 
 	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
+	predicates = append(predicates, extensionspredicate.HasClass(args.ExtensionClass))
 
 	if args.IgnoreOperationAnnotation {
 		if err := ctrl.Watch(

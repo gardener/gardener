@@ -49,6 +49,8 @@ type Status interface {
 type Spec interface {
 	// GetExtensionType retrieves the extension type.
 	GetExtensionType() string
+	// GetExtensionClass retrieves the extension class.
+	GetExtensionClass() *ExtensionClass
 	// GetExtensionPurpose retrieves the extension purpose.
 	GetExtensionPurpose() *string
 	// GetProviderConfig retrieves the provider config.

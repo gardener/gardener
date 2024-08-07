@@ -27,11 +27,11 @@ const (
 	ControllerName = "infrastructure"
 )
 
-// AddArgs are arguments for adding an infrastructure controller to a manager.
+// AddArgs are arguments for adding an Infrastructure controller to a manager.
 type AddArgs struct {
-	// Actuator is an infrastructure actuator.
+	// Actuator is an Infrastructure actuator.
 	Actuator Actuator
-	// ConfigValidator is an infrastructure config validator.
+	// ConfigValidator is an Infrastructure config validator.
 	ConfigValidator ConfigValidator
 	// ControllerOptions are the controller options used for creating a controller.
 	// The options.Reconciler is always overridden with a reconciler created from the
@@ -46,8 +46,10 @@ type AddArgs struct {
 	WatchBuilder extensionscontroller.WatchBuilder
 	// IgnoreOperationAnnotation specifies whether to ignore the operation annotation or not.
 	// If the annotation is not ignored, the extension controller will only reconcile
-	// with a present operation annotation typically set during a reconcile (e.g in the maintenance time) by the Gardenlet
+	// with a present operation annotation typically set during a reconcile (e.g. in the maintenance time) by the Gardenlet
 	IgnoreOperationAnnotation bool
+	// ExtensionClass defines the extension class this extension is responsible for.
+	ExtensionClass extensionsv1alpha1.ExtensionClass
 	// KnownCodes is a map of known error codes and their respective error check functions.
 	KnownCodes map[gardencorev1beta1.ErrorCode]func(string) bool
 }
@@ -72,6 +74,7 @@ func add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
 	}
 
 	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
+	predicates = append(predicates, extensionspredicate.HasClass(args.ExtensionClass))
 
 	if err := ctrl.Watch(source.Kind(mgr.GetCache(), &extensionsv1alpha1.Infrastructure{}), &handler.EnqueueRequestForObject{}, predicates...); err != nil {
 		return err

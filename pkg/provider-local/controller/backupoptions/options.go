@@ -7,6 +7,8 @@ package backupoptions
 import (
 	"github.com/spf13/pflag"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 const (
@@ -36,6 +38,8 @@ type AddOptions struct {
 	Controller controller.Options
 	// IgnoreOperationAnnotation specifies whether to ignore the operation annotation or not.
 	IgnoreOperationAnnotation bool
+	// ExtensionClass defines the extension class this extension is responsible for.
+	ExtensionClass extensionsv1alpha1.ExtensionClass
 }
 
 // AddFlags implements Flagger.AddFlags.

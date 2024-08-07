@@ -2825,6 +2825,20 @@ string
 </tr>
 <tr>
 <td>
+<code>class</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.ExtensionClass">
+ExtensionClass
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Class holds the extension class used to control the responsibility for multiple provider extensions.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>providerConfig</code></br>
 <em>
 <a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
@@ -3004,6 +3018,15 @@ string
 </tr>
 </tbody>
 </table>
+<h3 id="extensions.gardener.cloud/v1alpha1.ExtensionClass">ExtensionClass
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.DefaultSpec">DefaultSpec</a>)
+</p>
+<p>
+<p>ExtensionClass is a string alias for an extension class.</p>
+</p>
 <h3 id="extensions.gardener.cloud/v1alpha1.ExtensionSpec">ExtensionSpec
 </h3>
 <p>

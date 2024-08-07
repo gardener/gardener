@@ -60,6 +60,13 @@ spec:
               Specification of the Infrastructure.
               If the object's deletion timestamp is set, this field is immutable.
             properties:
+              class:
+                description: Class holds the extension class used to control the responsibility
+                  for multiple provider extensions.
+                type: string
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
               providerConfig:
                 description: ProviderConfig is the provider specific configuration.
                 type: object

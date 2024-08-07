@@ -29,6 +29,7 @@ func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts back
 		ControllerOptions: opts.Controller,
 		Predicates:        backupentry.DefaultPredicates(opts.IgnoreOperationAnnotation),
 		Type:              local.Type,
+		ExtensionClass:    opts.ExtensionClass,
 	})
 }
 
