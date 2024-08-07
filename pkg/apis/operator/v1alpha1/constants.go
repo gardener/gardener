@@ -18,4 +18,11 @@ const (
 	// If set to true, gardener-operator will automatically update the `.spec.deployment.helm.ociRepository.ref` field
 	// to its own version after a successful operator.gardener.cloud/v1alpha1.Garden reconciliation.
 	LabelKeyGardenletAutoUpdates = "operator.gardener.cloud/auto-update-gardenlet-helm-chart-ref"
+
+	// OperationRotateWorkloadIdentityKeyStart is a constant for an annotation on a Garden indicating that the
+	// rotation of the workload identity signing key shall be started.
+	OperationRotateWorkloadIdentityKeyStart = "rotate-workload-identity-key-start"
+	// OperationRotateWorkloadIdentityKeyComplete is a constant for an annotation on a Shoot indicating that the
+	// rotation of the workload identity signing key shall be completed.
+	OperationRotateWorkloadIdentityKeyComplete = "rotate-workload-identity-key-complete"
 )
