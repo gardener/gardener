@@ -161,6 +161,7 @@
     },
     {
       // Do not use docker for images from gardener registry except those which do not work with github-releases.
+      // Exclude valitail updates due to hard dependency on glibc version of the target nodes.
       "matchDatasources": ["docker"],
       "matchFileNames": ["imagevector/**"],
       "matchPackagePatterns": [
@@ -168,7 +169,8 @@
       ],
       "excludePackagePatterns": [
         "europe-docker\\.pkg\\.dev\/gardener-project\/releases\/3rd\/alpine",
-        "europe-docker\\.pkg\\.dev\/gardener-project\/releases\/3rd\/kubernetesui\/.+"
+        "europe-docker\\.pkg\\.dev\/gardener-project\/releases\/3rd\/kubernetesui\/.+",
+        "europe-docker\\.pkg\\.dev\/gardener-project\/releases\/3rd\/credativ\/valitail"
       ],
       "enabled": false
     },
