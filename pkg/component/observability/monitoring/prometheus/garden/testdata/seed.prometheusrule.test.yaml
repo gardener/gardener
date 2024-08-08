@@ -16,10 +16,10 @@ tests:
     input_series:
       - series: garden_seed_condition{condition = "ExtensionsReady",
                                       name      = "seed-flapping"}
-        values: 0 0 2 -1 2 0x25
+        values: 0x2 0 0 2 -1 2 0x24
       - series: garden_seed_condition{condition = "ExtensionsReady",
                                       name      = "seed-progressing-for-long"}
-        values: 2 2 0 0 2 2 0x24
+        values: 0x2 2 2 0 2 2 2 0x23
       - series: garden_seed_condition{condition = "GardenletReady",
                                       name      = "seed-flapping"}
         values: 0 0 2 -1 2 0 0 0 0 0
@@ -40,7 +40,7 @@ tests:
       landscape: landscape-unit-tests
     alert_rule_test:
       - alertname: SeedConditionFailing
-        eval_time: 30m
+        eval_time: 33m
         exp_alerts:
           - exp_labels:
               severity: critical
@@ -86,22 +86,22 @@ tests:
     interval: 1m
     input_series:
       - series: garden_shoot_condition{is_seed="true", operation="Reconcile", condition="SystemComponentsHealthy", name="seed-one"}
-        values: "0x30"
+        values: "0x32"
       - series: garden_seed_condition{condition="SeedSystemComponentsHealthy", name="seed-two"}
-        values: "0x30"
+        values: "0x32"
       - series: garden_seed_condition{condition = "GardenletReady",
                                       name      = "seed-three"}
-        values: "0x10"
+        values: "0x9"
       - series: garden_shoot_condition{condition = "APIServerUnavailable",
                                        is_seed   = "true",
                                        operation = "Reconcile",
                                        name      = "seed-four"}
-        values: "0x10"
+        values: "0x9"
     external_labels:
       landscape: landscape-unit-tests
     alert_rule_test:
       - alertname: SeedConditionFailing
-        eval_time: 30m
+        eval_time: 33m
         exp_alerts:
           - exp_labels:
               severity: critical
