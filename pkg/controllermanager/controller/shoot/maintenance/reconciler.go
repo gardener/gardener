@@ -224,6 +224,10 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		}
 	}
 
+	// TODO(MichaelEischer): Kubernetes.Kubelet.SystemReserved is no longer supported in Gardener starting from K8S 1.31.
+	// If Kubernetes.Kubelet.SystemReserved != nil for a Shoot or Worker pool, then add/move the values of its resources to
+	// Kubernetes.Kubelete.KubeReserved
+
 	operation := maintainOperation(maintainedShoot)
 	if operation != "" {
 		operations = append(operations, fmt.Sprintf("Added %q operation annotation", operation))
