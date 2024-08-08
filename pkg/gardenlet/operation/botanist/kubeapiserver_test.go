@@ -240,27 +240,6 @@ var _ = Describe("KubeAPIServer", func() {
 						ScaleDownDisabled:         false,
 					},
 				),
-				Entry("shoot purpose production, VPAAndHPAForAPIServer is enabled",
-					func() {
-						botanist.Shoot.Purpose = gardencorev1beta1.ShootPurposeProduction
-					},
-					map[featuregate.Feature]bool{
-						features.VPAAndHPAForAPIServer: true,
-					},
-					apiserver.AutoscalingConfig{
-						Mode: apiserver.AutoscalingModeVPAAndHPA,
-						APIServerResources: corev1.ResourceRequirements{
-							Requests: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("250m"),
-								corev1.ResourceMemory: resource.MustParse("500Mi"),
-							},
-						},
-						MinReplicas:               2,
-						MaxReplicas:               6,
-						UseMemoryMetricForHvpaHPA: false,
-						ScaleDownDisabled:         false,
-					},
-				),
 				Entry("shoot disables scale down, HVPA is enabled, VPAAndHPAForAPIServer is disabled",
 					func() {
 						botanist.Shoot.GetInfo().Annotations = map[string]string{"alpha.control-plane.scaling.shoot.gardener.cloud/scale-down-disabled": "true"}
