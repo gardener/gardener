@@ -1319,6 +1319,71 @@ var _ = Describe("OperatingSystemConfig", func() {
 			It("when changing the combined kubernetes patch version", func() {
 				kubernetesVersion = semver.MustParse("1.2.4")
 			})
+
+			It("when systemReserved is empty", func() {
+				kubeletConfig.SystemReserved = &gardencorev1beta1.KubeletConfigReserved{}
+			})
+
+			It("when systemReserved has zero value for CPU", func() {
+				kubeletConfig.SystemReserved = &gardencorev1beta1.KubeletConfigReserved{
+					CPU: ptr.To(resource.MustParse("0")),
+				}
+			})
+
+			It("when systemReserved has zero value for memory", func() {
+				kubeletConfig.SystemReserved = &gardencorev1beta1.KubeletConfigReserved{
+					Memory: ptr.To(resource.MustParse("0")),
+				}
+			})
+
+			It("when systemReserved has zero value for PID", func() {
+				kubeletConfig.SystemReserved = &gardencorev1beta1.KubeletConfigReserved{
+					PID: ptr.To(resource.MustParse("0")),
+				}
+			})
+
+			It("when systemReserved has zero value for EphemeralStorage", func() {
+				kubeletConfig.SystemReserved = &gardencorev1beta1.KubeletConfigReserved{
+					EphemeralStorage: ptr.To(resource.MustParse("0")),
+				}
+			})
+
+			It("when moving CPU between kubeReserved and systemReserved", func() {
+				kubeletConfig.KubeReserved.CPU = ptr.To(resource.MustParse("70m"))
+				kubeletConfig.SystemReserved = &gardencorev1beta1.KubeletConfigReserved{
+					CPU: ptr.To(resource.MustParse("10m")),
+				}
+			})
+
+			It("when moving memory between kubeReserved and systemReserved", func() {
+				kubeletConfig.KubeReserved.Memory = ptr.To(resource.MustParse("896Mi"))
+				kubeletConfig.SystemReserved = &gardencorev1beta1.KubeletConfigReserved{
+					Memory: ptr.To(resource.MustParse("128Mi")),
+				}
+			})
+
+			It("when moving PID between kubeReserved and systemReserved", func() {
+				kubeletConfig.KubeReserved.PID = ptr.To(resource.MustParse("9k"))
+				kubeletConfig.SystemReserved = &gardencorev1beta1.KubeletConfigReserved{
+					PID: ptr.To(resource.MustParse("1000")),
+				}
+			})
+
+			It("when moving EphemeralStorage between kubeReserved and systemReserved", func() {
+				kubeletConfig.KubeReserved.EphemeralStorage = ptr.To(resource.MustParse("18Gi"))
+				kubeletConfig.SystemReserved = &gardencorev1beta1.KubeletConfigReserved{
+					EphemeralStorage: ptr.To(resource.MustParse("2048Mi")),
+				}
+			})
+
+			It("when specifying kubeReserved with different quantities", func() {
+				kubeletConfig.KubeReserved = &gardencorev1beta1.KubeletConfigReserved{
+					CPU:              ptr.To(resource.MustParse("80m")),
+					Memory:           ptr.To(resource.MustParse("1024Mi")),
+					PID:              ptr.To(resource.MustParse("10000")),
+					EphemeralStorage: ptr.To(resource.MustParse("20480Mi")),
+				}
+			})
 		})
 
 		Context("hash value should change", func() {
@@ -1433,6 +1498,30 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 			It("when changing CPUManagerPolicy", func() {
 				kubeletConfig.CPUManagerPolicy = ptr.To("test")
+			})
+
+			It("when changing systemReserved CPU", func() {
+				kubeletConfig.SystemReserved = &gardencorev1beta1.KubeletConfigReserved{
+					CPU: ptr.To(resource.MustParse("1m")),
+				}
+			})
+
+			It("when changing systemReserved memory", func() {
+				kubeletConfig.SystemReserved = &gardencorev1beta1.KubeletConfigReserved{
+					Memory: ptr.To(resource.MustParse("1Mi")),
+				}
+			})
+
+			It("when systemReserved PID", func() {
+				kubeletConfig.SystemReserved = &gardencorev1beta1.KubeletConfigReserved{
+					PID: ptr.To(resource.MustParse("1k")),
+				}
+			})
+
+			It("when changing systemReserved EphemeralStorage", func() {
+				kubeletConfig.SystemReserved = &gardencorev1beta1.KubeletConfigReserved{
+					EphemeralStorage: ptr.To(resource.MustParse("100Gi")),
+				}
 			})
 		})
 	})
