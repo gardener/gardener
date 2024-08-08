@@ -6,6 +6,7 @@ package kubelet_test
 
 import (
 	"strings"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
@@ -57,6 +58,7 @@ var _ = Describe("Component", func() {
 			}
 			ctx.PreferIPv6 = preferIPv6
 			ctx.ClusterDNSAddresses = []string{"2001::db8:1", "2001::db8:2"}
+			ctx.NodeMonitorGracePeriod.Duration = time.Duration(40) * time.Second
 
 			cliFlags := CLIFlags(ctx.KubernetesVersion, ctx.NodeLabels, ctx.CRIName, ctx.KubeletCLIFlags, ctx.PreferIPv6)
 			units, files, err := component.Config(ctx)
@@ -230,7 +232,7 @@ WantedBy=multi-user.target
 [Service]
 Restart=always
 RestartSec=5
-Environment="HTTP2_READ_IDLE_TIMEOUT_SECONDS=20" "HTTP2_PING_TIMEOUT_SECONDS=10"
+Environment="HTTP2_READ_IDLE_TIMEOUT_SECONDS=25" "HTTP2_PING_TIMEOUT_SECONDS=12"
 EnvironmentFile=/etc/environment
 EnvironmentFile=-/var/lib/kubelet/extra_args` + kubeletStartPre + `
 ExecStart=/opt/bin/kubelet \
