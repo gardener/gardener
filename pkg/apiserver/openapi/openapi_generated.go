@@ -4470,7 +4470,7 @@ func schema_pkg_apis_core_v1beta1_KubeletConfig(ref common.ReferenceCallback) co
 					},
 					"systemReserved": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SystemReserved is the configuration for resources reserved for system processes not managed by kubernetes (e.g. journald). When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied. Deprecated: Separately configuring resource reservations for system processes is deprecated in Gardener and will be removed soon. Please merge existing resource reservations into the kubeReserved field.",
+							Description: "SystemReserved is the configuration for resources reserved for system processes not managed by kubernetes (e.g. journald). When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied. Deprecated: Separately configuring resource reservations for system processes is deprecated in Gardener and will be forbidden starting from Kubernetes 1.31. Please merge existing resource reservations into the kubeReserved field.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigReserved"),
 						},
 					},
