@@ -170,17 +170,18 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 		if !ok {
 			return nil, fmt.Errorf("missing operating system config for worker pool %v", workerPool.Name)
 		}
+
 		if oscConfig.Init.SecretName == nil {
 			return nil, fmt.Errorf("missing secret name for worker pool %v", workerPool.Name)
 		}
 
-		var (
-			gardenerNodeAgentSecretName = oscConfig.Init.GardenerNodeAgentSecretName
-			nodeAgentSecretName         *string
-		)
-		if oscConfig.Init.IncludeSecretNameInWorkerPool {
-			nodeAgentSecretName = &gardenerNodeAgentSecretName
+		// TODO(rfranzke): Remove userData after v1.100 has been released.
+		userData := []byte(oscConfig.Init.Content)
+		userDataSecretRef := &corev1.SecretKeySelector{
+			LocalObjectReference: corev1.LocalObjectReference{Name: *oscConfig.Init.SecretName},
+			Key:                  extensionsv1alpha1.OperatingSystemConfigSecretDataKey,
 		}
+		gardenerNodeAgentSecretName := oscConfig.Init.GardenerNodeAgentSecretName
 
 		workerPoolKubernetesVersion := w.values.KubernetesVersion.String()
 		if workerPool.Kubernetes != nil && workerPool.Kubernetes.Version != nil {
@@ -224,6 +225,11 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			}
 		}
 
+		var nodeAgentSecretName *string
+		if oscConfig.Init.IncludeSecretNameInWorkerPool {
+			nodeAgentSecretName = &oscConfig.Init.GardenerNodeAgentSecretName
+		}
+
 		pools = append(pools, extensionsv1alpha1.WorkerPool{
 			Name:           workerPool.Name,
 			Minimum:        workerPool.Minimum,
@@ -241,10 +247,9 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			NodeTemplate:        nodeTemplate,
 			NodeAgentSecretName: nodeAgentSecretName,
 			ProviderConfig:      pConfig,
-			UserDataSecretRef: corev1.SecretKeySelector{
-				LocalObjectReference: corev1.LocalObjectReference{Name: *oscConfig.Init.SecretName},
-				Key:                  extensionsv1alpha1.OperatingSystemConfigSecretDataKey,
-			},
+			// TODO(rfranzke): Remove usage of UserData field after v1.100 has been released.
+			UserData:                         userData,
+			UserDataSecretRef:                userDataSecretRef,
 			Volume:                           volume,
 			DataVolumes:                      dataVolumes,
 			KubeletDataVolumeName:            workerPool.KubeletDataVolumeName,
