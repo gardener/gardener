@@ -322,7 +322,7 @@ func Convert_security_TokenRequestSpec_To_v1alpha1_TokenRequestSpec(in *security
 
 func autoConvert_v1alpha1_TokenRequestStatus_To_security_TokenRequestStatus(in *TokenRequestStatus, out *security.TokenRequestStatus, s conversion.Scope) error {
 	out.Token = in.Token
-	out.ExpirationTimeStamp = in.ExpirationTimeStamp
+	out.ExpirationTimestamp = in.ExpirationTimestamp
 	return nil
 }
 
@@ -333,7 +333,7 @@ func Convert_v1alpha1_TokenRequestStatus_To_security_TokenRequestStatus(in *Toke
 
 func autoConvert_security_TokenRequestStatus_To_v1alpha1_TokenRequestStatus(in *security.TokenRequestStatus, out *TokenRequestStatus, s conversion.Scope) error {
 	out.Token = in.Token
-	out.ExpirationTimeStamp = in.ExpirationTimeStamp
+	out.ExpirationTimestamp = in.ExpirationTimestamp
 	return nil
 }
 

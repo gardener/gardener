@@ -10269,7 +10269,7 @@ func schema_pkg_apis_security_v1alpha1_TokenRequestStatus(ref common.ReferenceCa
 					},
 					"expirationTimestamp": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ExpirationTimeStamp is the time of expiration of the returned token.",
+							Description: "ExpirationTimestamp is the time of expiration of the returned token.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},

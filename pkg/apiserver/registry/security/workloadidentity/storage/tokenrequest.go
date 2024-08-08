@@ -146,7 +146,7 @@ func (r *TokenRequestREST) Create(ctx context.Context, name string, obj runtime.
 
 	tokenRequest.Status = securityapi.TokenRequestStatus{
 		Token:               token,
-		ExpirationTimeStamp: metav1.Time{Time: *exp},
+		ExpirationTimestamp: metav1.Time{Time: *exp},
 	}
 
 	var out = &securityv1alpha1.TokenRequest{}
