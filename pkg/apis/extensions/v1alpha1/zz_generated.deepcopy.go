@@ -1849,7 +1849,16 @@ func (in *WorkerPool) DeepCopyInto(out *WorkerPool) {
 		*out = new(runtime.RawExtension)
 		(*in).DeepCopyInto(*out)
 	}
-	in.UserDataSecretRef.DeepCopyInto(&out.UserDataSecretRef)
+	if in.UserData != nil {
+		in, out := &in.UserData, &out.UserData
+		*out = make([]byte, len(*in))
+		copy(*out, *in)
+	}
+	if in.UserDataSecretRef != nil {
+		in, out := &in.UserDataSecretRef, &out.UserDataSecretRef
+		*out = new(v1.SecretKeySelector)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.Volume != nil {
 		in, out := &in.Volume, &out.Volume
 		*out = new(Volume)

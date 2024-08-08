@@ -204,7 +204,10 @@ type OperatingSystemConfigs struct {
 type Data struct {
 	// Object is the plain OperatingSystemConfig object.
 	Object *extensionsv1alpha1.OperatingSystemConfig
-	// IncludeSecretNameInWorkerPool states whether a extensionsv1alpha1.WorkerPool must include the GardenerNodeAgentSecretName
+	// Content is the actual cloud-config user data.
+	// TODO(rfranzke): Remove this Content field after v1.140 is released.
+	Content string
+	// IncludeSecretNameInWorkerPool states whether an extensionsv1alpha1.WorkerPool must include the GardenerNodeAgentSecretName
 	IncludeSecretNameInWorkerPool bool
 	// GardenerNodeAgentSecretName is the name of the secret storing the gardener node agent configuration in the shoot cluster.
 	GardenerNodeAgentSecretName string
@@ -428,6 +431,7 @@ func (o *operatingSystemConfig) Wait(ctx context.Context) error {
 
 				data := Data{
 					Object:                        osc,
+					Content:                       string(secret.Data[extensionsv1alpha1.OperatingSystemConfigSecretDataKey]),
 					IncludeSecretNameInWorkerPool: hashVersion > 1,
 					GardenerNodeAgentSecretName:   oscKey,
 					SecretName:                    &secret.Name,

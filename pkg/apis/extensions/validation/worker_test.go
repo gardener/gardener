@@ -47,6 +47,7 @@ var _ = Describe("Worker validation tests", func() {
 						},
 						Name:         "pool1",
 						Architecture: ptr.To("amd64"),
+						UserData:     []byte("bootstrap data"),
 					},
 				},
 			},
@@ -105,12 +106,34 @@ var _ = Describe("Worker validation tests", func() {
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("spec.pools[0].name"),
 			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.pools[0].userData"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.pools[0].nodeTemplate.capacity.cpu"),
 			})), PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeNotSupported),
 				"Field": Equal("spec.pools[0].architecture"),
 			}))))
+		})
+
+		It("should complain Worker resources without user data", func() {
+			workerCopy := worker.DeepCopy()
+
+			workerCopy.Spec.Pools[0].UserData = nil
+
+			Expect(ValidateWorker(workerCopy)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.pools[0].userData"),
+			}))))
+		})
+
+		It("should allow Worker resources with user data secret ref", func() {
+			workerCopy := worker.DeepCopy()
+
+			workerCopy.Spec.Pools[0].UserDataSecretRef = &corev1.SecretKeySelector{}
+
+			Expect(ValidateWorker(workerCopy)).To(BeEmpty())
 		})
 
 		It("should allow valid worker resources", func() {
@@ -187,9 +210,9 @@ var _ = Describe("Worker validation tests", func() {
 						Name:    "image2",
 						Version: "version2",
 					},
-					Name:              "pool2",
-					Architecture:      ptr.To("amd64"),
-					UserDataSecretRef: corev1.SecretKeySelector{Key: "new-bootstrap-data-key"},
+					Name:         "pool2",
+					Architecture: ptr.To("amd64"),
+					UserData:     []byte("new bootstrap data"),
 				},
 			}
 
