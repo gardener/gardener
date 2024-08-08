@@ -37,7 +37,7 @@ func MutateCARotation(garden *operatorv1alpha1.Garden, f func(rotation *gardenco
 	f(garden.Status.Credentials.Rotation.CertificateAuthorities)
 }
 
-// GetServiceAccountKeyRotationPhase returns the specified shoot service account key rotation phase or an empty
+// GetServiceAccountKeyRotationPhase returns the specified garden service account key rotation phase or an empty
 // string.
 func GetServiceAccountKeyRotationPhase(credentials *operatorv1alpha1.Credentials) gardencorev1beta1.CredentialsRotationPhase {
 	if credentials != nil && credentials.Rotation != nil && credentials.Rotation.ServiceAccountKey != nil {
@@ -66,7 +66,7 @@ func MutateServiceAccountKeyRotation(garden *operatorv1alpha1.Garden, f func(*ga
 	f(garden.Status.Credentials.Rotation.ServiceAccountKey)
 }
 
-// GetETCDEncryptionKeyRotationPhase returns the specified shoot ETCD encryption key rotation phase or an empty
+// GetETCDEncryptionKeyRotationPhase returns the specified garden ETCD encryption key rotation phase or an empty
 // string.
 func GetETCDEncryptionKeyRotationPhase(credentials *operatorv1alpha1.Credentials) gardencorev1beta1.CredentialsRotationPhase {
 	if credentials != nil && credentials.Rotation != nil && credentials.Rotation.ETCDEncryptionKey != nil {
@@ -93,6 +93,35 @@ func MutateETCDEncryptionKeyRotation(garden *operatorv1alpha1.Garden, f func(*ga
 	}
 
 	f(garden.Status.Credentials.Rotation.ETCDEncryptionKey)
+}
+
+// GetWorkloadIdentityKeyRotationPhase returns the specified garden workload identity key rotation phase or an empty
+// string.
+func GetWorkloadIdentityKeyRotationPhase(credentials *operatorv1alpha1.Credentials) gardencorev1beta1.CredentialsRotationPhase {
+	if credentials != nil && credentials.Rotation != nil && credentials.Rotation.WorkloadIdentityKey != nil {
+		return credentials.Rotation.WorkloadIdentityKey.Phase
+	}
+	return ""
+}
+
+// MutateWorkloadIdentityKeyRotation mutates the .status.credentials.rotation.workloadIdentityKey field based on the
+// provided mutation function. If the field is nil then it is initialized.
+func MutateWorkloadIdentityKeyRotation(garden *operatorv1alpha1.Garden, f func(*operatorv1alpha1.WorkloadIdentityKeyRotation)) {
+	if f == nil {
+		return
+	}
+
+	if garden.Status.Credentials == nil {
+		garden.Status.Credentials = &operatorv1alpha1.Credentials{}
+	}
+	if garden.Status.Credentials.Rotation == nil {
+		garden.Status.Credentials.Rotation = &operatorv1alpha1.CredentialsRotation{}
+	}
+	if garden.Status.Credentials.Rotation.WorkloadIdentityKey == nil {
+		garden.Status.Credentials.Rotation.WorkloadIdentityKey = &operatorv1alpha1.WorkloadIdentityKeyRotation{}
+	}
+
+	f(garden.Status.Credentials.Rotation.WorkloadIdentityKey)
 }
 
 // IsObservabilityRotationInitiationTimeAfterLastCompletionTime returns true when the lastInitiationTime in the

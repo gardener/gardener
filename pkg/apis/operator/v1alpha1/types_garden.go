@@ -764,6 +764,8 @@ var AvailableOperationAnnotations = sets.New(
 	v1beta1constants.OperationRotateObservabilityCredentials,
 	v1beta1constants.OperationRotateCredentialsStart,
 	v1beta1constants.OperationRotateCredentialsComplete,
+	OperationRotateWorkloadIdentityKeyStart,
+	OperationRotateWorkloadIdentityKeyComplete,
 )
 
 // FinalizerName is the name of the finalizer used by gardener-operator.

@@ -121,6 +121,40 @@ var _ = Describe("helper", func() {
 		)
 	})
 
+	DescribeTable("#GetWorkloadIdentityKeyRotationPhase",
+		func(credentials *operatorv1alpha1.Credentials, expectedPhase gardencorev1beta1.CredentialsRotationPhase) {
+			Expect(GetWorkloadIdentityKeyRotationPhase(credentials)).To(Equal(expectedPhase))
+		},
+
+		Entry("credentials nil", nil, gardencorev1beta1.CredentialsRotationPhase("")),
+		Entry("rotation nil", &operatorv1alpha1.Credentials{}, gardencorev1beta1.CredentialsRotationPhase("")),
+		Entry("workload identity nil", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{}}, gardencorev1beta1.CredentialsRotationPhase("")),
+		Entry("phase empty", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{WorkloadIdentityKey: &operatorv1alpha1.WorkloadIdentityKeyRotation{}}}, gardencorev1beta1.CredentialsRotationPhase("")),
+		Entry("phase set", &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{WorkloadIdentityKey: &operatorv1alpha1.WorkloadIdentityKeyRotation{Phase: gardencorev1beta1.RotationCompleting}}}, gardencorev1beta1.RotationCompleting),
+	)
+
+	Describe("#MutateWorkloadIdentityKeyRotation", func() {
+		It("should do nothing when mutate function is nil", func() {
+			garden := &operatorv1alpha1.Garden{}
+			MutateWorkloadIdentityKeyRotation(garden, nil)
+			Expect(GetWorkloadIdentityKeyRotationPhase(garden.Status.Credentials)).To(BeEmpty())
+		})
+
+		DescribeTable("mutate function not nil",
+			func(garden *operatorv1alpha1.Garden, phase gardencorev1beta1.CredentialsRotationPhase) {
+				MutateWorkloadIdentityKeyRotation(garden, func(rotation *operatorv1alpha1.WorkloadIdentityKeyRotation) {
+					rotation.Phase = phase
+				})
+				Expect(garden.Status.Credentials.Rotation.WorkloadIdentityKey.Phase).To(Equal(phase))
+			},
+
+			Entry("credentials nil", &operatorv1alpha1.Garden{}, gardencorev1beta1.RotationCompleting),
+			Entry("rotation nil", &operatorv1alpha1.Garden{Status: operatorv1alpha1.GardenStatus{Credentials: &operatorv1alpha1.Credentials{}}}, gardencorev1beta1.RotationCompleting),
+			Entry("certificateAuthorities nil", &operatorv1alpha1.Garden{Status: operatorv1alpha1.GardenStatus{Credentials: &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{}}}}, gardencorev1beta1.RotationCompleting),
+			Entry("certificateAuthorities non-nil", &operatorv1alpha1.Garden{Status: operatorv1alpha1.GardenStatus{Credentials: &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{WorkloadIdentityKey: &operatorv1alpha1.WorkloadIdentityKeyRotation{}}}}}, gardencorev1beta1.RotationCompleting),
+		)
+	})
+
 	DescribeTable("#IsShootObservabilityRotationInitiationTimeAfterLastCompletionTime",
 		func(credentials *operatorv1alpha1.Credentials, matcher gomegatypes.GomegaMatcher) {
 			Expect(IsObservabilityRotationInitiationTimeAfterLastCompletionTime(credentials)).To(matcher)
