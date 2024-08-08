@@ -4491,7 +4491,7 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 when a new machine/VM that is part of this worker pool shall be spawned.
 Either this or UserDataSecretRef must be provided.
 Deprecated: This field will be removed in future release.
-TODO(rfranzke): Remove this field after v1.100 has been released.</p>
+TODO(rfranzke): Remove this field after v1.104 has been released.</p>
 </td>
 </tr>
 <tr>

@@ -138,7 +138,7 @@ type WorkerPool struct {
 	// when a new machine/VM that is part of this worker pool shall be spawned.
 	// Either this or UserDataSecretRef must be provided.
 	// Deprecated: This field will be removed in future release.
-	// TODO(rfranzke): Remove this field after v1.100 has been released.
+	// TODO(rfranzke): Remove this field after v1.104 has been released.
 	// +optional
 	UserData []byte `json:"userData,omitempty"`
 	// UserDataSecretRef references a Secret and a data key containing the data that is sent to the provider's APIs when
