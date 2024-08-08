@@ -237,7 +237,7 @@ type ShootKubeconfigRotation struct {
 
 // ShootSSHKeypairRotation contains information about the ssh-keypair credential rotation.
 type ShootSSHKeypairRotation struct {
-	// LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
+	// LastInitiationTime is the most recent time when the ssh-keypair credential rotation was initiated.
 	LastInitiationTime *metav1.Time
 	// LastCompletionTime is the most recent time when the ssh-keypair credential rotation was successfully completed.
 	LastCompletionTime *metav1.Time
@@ -260,10 +260,10 @@ type ServiceAccountKeyRotation struct {
 	LastCompletionTime *metav1.Time
 	// LastInitiationTime is the most recent time when the service account key credential rotation was initiated.
 	LastInitiationTime *metav1.Time
-	// LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was
+	// LastInitiationFinishedTime is the recent time when the service account key credential rotation initiation was
 	// completed.
 	LastInitiationFinishedTime *metav1.Time
-	// LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was
+	// LastCompletionTriggeredTime is the recent time when the service account key credential rotation completion was
 	// triggered.
 	LastCompletionTriggeredTime *metav1.Time
 }
@@ -277,10 +277,10 @@ type ETCDEncryptionKeyRotation struct {
 	LastCompletionTime *metav1.Time
 	// LastInitiationTime is the most recent time when the ETCD encryption key credential rotation was initiated.
 	LastInitiationTime *metav1.Time
-	// LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was
+	// LastInitiationFinishedTime is the recent time when the ETCD encryption key credential rotation initiation was
 	// completed.
 	LastInitiationFinishedTime *metav1.Time
-	// LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was
+	// LastCompletionTriggeredTime is the recent time when the ETCD encryption key credential rotation completion was
 	// triggered.
 	LastCompletionTriggeredTime *metav1.Time
 }

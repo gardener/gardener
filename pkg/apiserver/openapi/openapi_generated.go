@@ -3267,13 +3267,13 @@ func schema_pkg_apis_core_v1beta1_ETCDEncryptionKeyRotation(ref common.Reference
 					},
 					"lastInitiationFinishedTime": {
 						SchemaProps: spec.SchemaProps{
-							Description: "LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was completed.",
+							Description: "LastInitiationFinishedTime is the recent time when the ETCD encryption key credential rotation initiation was completed.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
 					"lastCompletionTriggeredTime": {
 						SchemaProps: spec.SchemaProps{
-							Description: "LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was triggered.",
+							Description: "LastCompletionTriggeredTime is the recent time when the ETCD encryption key credential rotation completion was triggered.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
@@ -8250,13 +8250,13 @@ func schema_pkg_apis_core_v1beta1_ServiceAccountKeyRotation(ref common.Reference
 					},
 					"lastInitiationFinishedTime": {
 						SchemaProps: spec.SchemaProps{
-							Description: "LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was completed.",
+							Description: "LastInitiationFinishedTime is the recent time when the service account key credential rotation initiation was completed.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
 					"lastCompletionTriggeredTime": {
 						SchemaProps: spec.SchemaProps{
-							Description: "LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was triggered.",
+							Description: "LastCompletionTriggeredTime is the recent time when the service account key credential rotation completion was triggered.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
