@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/gardener/gardener/pkg/features"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -280,6 +281,11 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	}
 	shoot.VPNHighAvailabilityNumberOfSeedServers = vpnseedserver.HighAvailabilityReplicaCount
 	shoot.VPNHighAvailabilityNumberOfShootClients = vpnseedserver.HighAvailabilityReplicaCount
+
+	shoot.VPNDisableNewImplementation = !features.DefaultFeatureGate.Enabled(features.NewVPN)
+	if disableNewVPN, err := strconv.ParseBool(shoot.GetInfo().GetAnnotations()[v1beta1constants.ShootAlphaControlPlaneDisableNewVPN]); err == nil {
+		shoot.VPNDisableNewImplementation = disableNewVPN
+	}
 
 	needsClusterAutoscaler, err := v1beta1helper.ShootWantsClusterAutoscaler(shootObject)
 	if err != nil {

@@ -7,6 +7,7 @@ package botanist_test
 import (
 	"net"
 
+	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
@@ -54,6 +55,8 @@ var _ = Describe("VPNShoot", func() {
 					},
 				},
 			})
+			botanist.Seed = &seedpkg.Seed{}
+			botanist.Seed.SetInfo(&gardencorev1beta1.Seed{})
 		})
 
 		It("should successfully create a vpnShoot interface for ReversedVPN", func() {
