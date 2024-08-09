@@ -222,6 +222,8 @@ cat <<EOF | sudo tee -a /etc/hosts
 172.18.255.1 api.e2e-wake-up.local.internal.local.gardener.cloud
 172.18.255.1 api.e2e-wake-up-wl.local.external.local.gardener.cloud
 172.18.255.1 api.e2e-wake-up-wl.local.internal.local.gardener.cloud
+172.18.255.1 api.e2e-wake-up-ncp.local.external.local.gardener.cloud
+172.18.255.1 api.e2e-wake-up-ncp.local.internal.local.gardener.cloud
 172.18.255.1 api.e2e-migrate.local.external.local.gardener.cloud
 172.18.255.1 api.e2e-migrate.local.internal.local.gardener.cloud
 172.18.255.1 api.e2e-migrate-wl.local.external.local.gardener.cloud

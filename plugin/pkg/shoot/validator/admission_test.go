@@ -2301,7 +2301,7 @@ var _ = Describe("validator", func() {
 				})
 			})
 
-			Context("kubernetes version checks", func() {
+			Context("kubernetes version checks against CloudProfile", func() {
 				var (
 					highestSupportedVersion    gardencorev1beta1.ExpirableVersion
 					highestSupported126Release gardencorev1beta1.ExpirableVersion
@@ -2576,6 +2576,53 @@ var _ = Describe("validator", func() {
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
 					Expect(err).ToNot(HaveOccurred())
+				})
+			})
+
+			Context("kubernetes version checks against NamespacedCloudProfile", func() {
+				var (
+					expiredVersion gardencorev1beta1.ExpirableVersion
+				)
+
+				BeforeEach(func() {
+					shoot.Spec.CloudProfileName = nil
+					shoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "NamespacedCloudProfile",
+						Name: namespacedCloudProfile.Name,
+					}
+
+					expiredVersion = gardencorev1beta1.ExpirableVersion{Version: "1.26.8", Classification: ptr.To(gardencorev1beta1.ClassificationDeprecated), ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)}}
+
+					cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
+						expiredVersion,
+					}
+
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				})
+
+				It("should not allow to create a cluster with an outdated extended Kubernetes version", func() {
+					namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes = (cloudProfile.DeepCopy()).Spec.Kubernetes
+					Expect(coreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(&namespacedCloudProfile)).To(Succeed())
+
+					shoot.Spec.Kubernetes.Version = expiredVersion.Version
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					Expect(admissionHandler.Admit(ctx, attrs, nil)).To(MatchError(And(ContainSubstring("Unsupported value"), ContainSubstring("1.26.8"))))
+				})
+
+				It("should allow to create a cluster with an extended Kubernetes version", func() {
+					namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes = (cloudProfile.DeepCopy()).Spec.Kubernetes
+					namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes.Versions[0].ExpirationDate = ptr.To(metav1.Time{Time: time.Now().Add(48 * time.Hour)})
+					Expect(coreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(&namespacedCloudProfile)).To(Succeed())
+
+					shoot.Spec.Kubernetes.Version = expiredVersion.Version
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
 				})
 			})
 

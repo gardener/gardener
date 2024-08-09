@@ -29,7 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 )
 
-// Reconciler checks the object in the given request for Secret or ConfiGMap references to further objects in order to
+// Reconciler checks the object in the given request for Secret or ConfigMap references to further objects in order to
 // protect them from deletions as long as they are still referenced.
 type Reconciler struct {
 	Client                      client.Client

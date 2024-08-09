@@ -62,7 +62,9 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 			ControlPlane:      getShootControlPlane(),
 			Region:            "local",
 			SecretBindingName: ptr.To("local"),
-			CloudProfileName:  ptr.To("local"),
+			CloudProfile: &gardencorev1beta1.CloudProfileReference{
+				Name: "local",
+			},
 			Kubernetes: gardencorev1beta1.Kubernetes{
 				Version:                     "1.30.0",
 				EnableStaticTokenKubeconfig: ptr.To(false),
@@ -123,9 +125,11 @@ func DefaultWorkerlessShoot(name string) *gardencorev1beta1.Shoot {
 			Name: name + "-wl",
 		},
 		Spec: gardencorev1beta1.ShootSpec{
-			ControlPlane:     getShootControlPlane(),
-			Region:           "local",
-			CloudProfileName: ptr.To("local"),
+			ControlPlane: getShootControlPlane(),
+			Region:       "local",
+			CloudProfile: &gardencorev1beta1.CloudProfileReference{
+				Name: "local",
+			},
 			Kubernetes: gardencorev1beta1.Kubernetes{
 				Version:                     "1.30.0",
 				EnableStaticTokenKubeconfig: ptr.To(false),
@@ -151,4 +155,20 @@ func DefaultWorkerlessShoot(name string) *gardencorev1beta1.Shoot {
 	}
 
 	return shoot
+}
+
+// DefaultNamespacedCloudProfile returns a NamespacedCloudProfile object with default values for the e2e tests.
+func DefaultNamespacedCloudProfile() *gardencorev1beta1.NamespacedCloudProfile {
+	return &gardencorev1beta1.NamespacedCloudProfile{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "my-profile",
+			Namespace: "garden-local",
+		},
+		Spec: gardencorev1beta1.NamespacedCloudProfileSpec{
+			Parent: gardencorev1beta1.CloudProfileReference{
+				Kind: "CloudProfile",
+				Name: "local",
+			},
+		},
+	}
 }

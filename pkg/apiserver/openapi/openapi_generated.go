@@ -1925,7 +1925,7 @@ func schema_pkg_apis_core_v1beta1_CloudProfileReference(ref common.ReferenceCall
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "CloudProfileReference holds the information about the parent of the NamespacedCloudProfile.",
+				Description: "CloudProfileReference holds the information about the parent CloudProfile of the NamespacedCloudProfile.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"kind": {

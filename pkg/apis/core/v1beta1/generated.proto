@@ -333,7 +333,7 @@ message CloudProfileList {
   repeated CloudProfile items = 2;
 }
 
-// CloudProfileReference holds the information about the parent of the NamespacedCloudProfile.
+// CloudProfileReference holds the information about the parent CloudProfile of the NamespacedCloudProfile.
 message CloudProfileReference {
   // Kind contains a CloudProfile kind.
   optional string kind = 1;

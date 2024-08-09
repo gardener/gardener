@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package cloudprofile_test
+package namespacedcloudprofile_test
 
 import (
 	"context"
@@ -27,18 +27,20 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	"github.com/gardener/gardener/pkg/controllermanager/controller/cloudprofile"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/namespacedcloudprofile"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	gardenerenvtest "github.com/gardener/gardener/test/envtest"
 )
 
-func TestCloudProfile(t *testing.T) {
+func TestNamespacedCloudProfile(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Test Integration ControllerManager CloudProfile Suite")
+	RunSpecs(t, "Test Integration ControllerManager NamespacedCloudProfile Suite")
 }
 
-const testID = "cloudprofile-controller-test"
+const testID = "namespacedcloudprofile-controller-test"
 
 var (
 	ctx = context.Background()
@@ -101,7 +103,7 @@ var _ = BeforeSuite(func() {
 		Cache: cache.Options{
 			DefaultNamespaces: map[string]cache.Config{testNamespace.Name: {}},
 			ByObject: map[client.Object]cache.ByObject{
-				&gardencorev1beta1.CloudProfile{}: {
+				&gardencorev1beta1.NamespacedCloudProfile{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 				},
 			},
@@ -114,11 +116,13 @@ var _ = BeforeSuite(func() {
 	Expect(indexer.AddNamespacedCloudProfileParentRefName(ctx, mgr.GetFieldIndexer())).To(Succeed())
 
 	By("Register controller")
-	Expect((&cloudprofile.Reconciler{
-		Config: config.CloudProfileControllerConfiguration{
+	Expect((&namespacedcloudprofile.Reconciler{
+		Config: config.NamespacedCloudProfileControllerConfiguration{
 			ConcurrentSyncs: ptr.To(5),
 		},
-	}).AddToManager(mgr)).To(Succeed())
+	}).AddToManager(ctx, mgr)).To(Succeed())
+
+	DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, true))
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)

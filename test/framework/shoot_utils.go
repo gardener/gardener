@@ -223,8 +223,18 @@ func setShootGeneralSettings(shoot *gardencorev1beta1.Shoot, cfg *ShootCreationC
 		shoot.Spec.Region = cfg.shootRegion
 	}
 
-	if StringSet(cfg.cloudProfile) {
-		shoot.Spec.CloudProfileName = &cfg.cloudProfile
+	if StringSet(cfg.cloudProfileName) {
+		if shoot.Spec.CloudProfile == nil {
+			shoot.Spec.CloudProfile = &gardencorev1beta1.CloudProfileReference{}
+		}
+		shoot.Spec.CloudProfile.Name = cfg.cloudProfileName
+	}
+
+	if StringSet(cfg.cloudProfileKind) {
+		if shoot.Spec.CloudProfile == nil {
+			shoot.Spec.CloudProfile = &gardencorev1beta1.CloudProfileReference{}
+		}
+		shoot.Spec.CloudProfile.Kind = cfg.cloudProfileKind
 	}
 
 	if StringSet(cfg.secretBinding) {

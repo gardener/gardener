@@ -162,6 +162,7 @@ func addAllFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
 		indexer.AddBackupEntrySeedName,
 		indexer.AddControllerInstallationSeedRefName,
 		indexer.AddControllerInstallationRegistrationRefName,
+		indexer.AddNamespacedCloudProfileParentRefName,
 		// operations API group
 		indexer.AddBastionShootName,
 		// seedmanagement API group

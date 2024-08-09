@@ -75,7 +75,7 @@ type NamespacedCloudProfileStatus struct {
 	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,2,opt,name=observedGeneration"`
 }
 
-// CloudProfileReference holds the information about the parent of the NamespacedCloudProfile.
+// CloudProfileReference holds the information about the parent CloudProfile of the NamespacedCloudProfile.
 type CloudProfileReference struct {
 	// Kind contains a CloudProfile kind.
 	Kind string `json:"kind" protobuf:"bytes,1,req,name=kind"`
