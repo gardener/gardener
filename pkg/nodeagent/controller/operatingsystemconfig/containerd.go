@@ -7,6 +7,7 @@ package operatingsystemconfig
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -175,6 +176,17 @@ func (r *Reconciler) ensureContainerdConfiguration(log logr.Logger, criConfig *e
 
 	patches := []patch{
 		{
+			name: "cgroup driver",
+			path: structuredmap.Path{"plugins", "io.containerd.grpc.v1.cri", "containerd", "runtimes", "runc", "options", "SystemdCgroup"},
+			setFn: func(value any) (any, error) {
+				if criConfig.CgroupDriver == nil {
+					return value, nil
+				}
+
+				return *criConfig.CgroupDriver == extensionsv1alpha1.CgroupDriverSystemd, nil
+			},
+		},
+		{
 			name: "registry config path",
 			path: structuredmap.Path{"plugins", "io.containerd.grpc.v1.cri", "registry", "config_path"},
 			setFn: func(_ any) (any, error) {
@@ -210,13 +222,45 @@ func (r *Reconciler) ensureContainerdConfiguration(log logr.Logger, criConfig *e
 			name: "sandbox image",
 			path: structuredmap.Path{"plugins", "io.containerd.grpc.v1.cri", "sandbox_image"},
 			setFn: func(value any) (any, error) {
-				if criConfig == nil || criConfig.Containerd == nil {
+				if criConfig.Containerd == nil {
 					return value, nil
 				}
 
 				return criConfig.Containerd.SandboxImage, nil
 			},
 		},
+	}
+
+	if criConfig.Containerd != nil {
+		for _, pluginConfig := range criConfig.Containerd.Plugins {
+			patches = append(patches, patch{
+				name: "plugin configuration",
+				path: append(structuredmap.Path{"plugins"}, pluginConfig.Path...),
+				setFn: func(val any) (any, error) {
+					values, ok := val.(map[string]any)
+					if !ok || values == nil {
+						values = map[string]any{}
+					}
+
+					pluginValues := pluginConfig.Values
+					// Return unchanged values if plugin values is not set, i.e. only create table.
+					if pluginValues == nil {
+						return values, nil
+					}
+
+					// Return nil if plugin values is an empty json object, which deleted the entire sub-tree.
+					if string(pluginValues.Raw) == "{}" {
+						return nil, nil
+					}
+
+					if err := json.Unmarshal(pluginValues.Raw, &values); err != nil {
+						return nil, err
+					}
+
+					return values, nil
+				},
+			})
+		}
 	}
 
 	for _, p := range patches {

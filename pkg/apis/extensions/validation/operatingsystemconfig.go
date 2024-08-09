@@ -5,6 +5,7 @@
 package validation
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"regexp"
@@ -82,12 +83,18 @@ func ValidateOperatingSystemConfigStatus(status *extensionsv1alpha1.OperatingSys
 	return allErrs
 }
 
+var availableCgroupDrivers = sets.New(extensionsv1alpha1.CgroupDriverCgroupfs, extensionsv1alpha1.CgroupDriverSystemd)
+
 // ValidateCRIConfig validates the spec of a CRIConfig object.
 func ValidateCRIConfig(config *extensionsv1alpha1.CRIConfig, purpose extensionsv1alpha1.OperatingSystemConfigPurpose, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if config == nil {
 		return allErrs
+	}
+
+	if config.CgroupDriver != nil && !availableCgroupDrivers.Has(*config.CgroupDriver) {
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("cgroupDriver"), *config.CgroupDriver, availableCgroupDrivers.UnsortedList()))
 	}
 
 	allErrs = append(allErrs, ValidateContainerdConfig(config.Containerd, purpose, fldPath.Child("containerd"))...)
@@ -114,13 +121,30 @@ func ValidateContainerdConfig(config *extensionsv1alpha1.ContainerdConfig, purpo
 
 	allErrs = append(allErrs, ValidateContainerdRegistryConfigs(config.Registries, fldPath.Child("registries"))...)
 
+	for i, p := range config.Plugins {
+		idxPath := fldPath.Child("plugins").Index(i)
+
+		if len(p.Path) == 0 {
+			allErrs = append(allErrs, field.Required(idxPath.Child("path"), "must provider a path"))
+		}
+
+		if p.Values != nil && len(p.Values.Raw) > 0 {
+			values := map[string]any{}
+
+			err := json.Unmarshal(p.Values.Raw, &values)
+			if err != nil {
+				allErrs = append(allErrs, field.Invalid(idxPath.Child("values"), string(p.Values.Raw), "provided values must be given in json format"))
+			}
+		}
+	}
+
 	return allErrs
 }
 
-var availableCapabilities = sets.New(extensionsv1alpha1.PullCapability, extensionsv1alpha1.ResolveCapability, extensionsv1alpha1.PushCapability)
-
-var digitsRegex = regexp.MustCompile(`^\d+$`)
-var portRegexp = regexp.MustCompile(`^([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$`)
+var (
+	digitsRegex = regexp.MustCompile(`^\d+$`)
+	portRegexp  = regexp.MustCompile(`^([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$`)
+)
 
 // validateHostPort check that host and optional port format is `<host>[:<port>]`
 func validateHostPort(hostPort string) []string {
@@ -137,6 +161,8 @@ func validateHostPort(hostPort string) []string {
 	}
 	return append(errs, validation.IsDNS1123Subdomain(host)...)
 }
+
+var availableCapabilities = sets.New(extensionsv1alpha1.PullCapability, extensionsv1alpha1.ResolveCapability, extensionsv1alpha1.PushCapability)
 
 // ValidateContainerdRegistryConfigs validates the spec of a RegistryConfig object.
 func ValidateContainerdRegistryConfigs(registries []extensionsv1alpha1.RegistryConfig, fldPath *field.Path) field.ErrorList {
