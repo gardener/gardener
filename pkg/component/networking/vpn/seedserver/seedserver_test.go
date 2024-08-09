@@ -76,7 +76,7 @@ var _ = Describe("VpnSeedServer", func() {
 	)
 
 	var (
-		template = func(nodeNetworks []net.IPNet, highAvailability, disableRewrite bool) *corev1.PodTemplateSpec {
+		template = func(nodeNetworks []net.IPNet, highAvailability, disableNewVPN bool) *corev1.PodTemplateSpec {
 			hostPathCharDev := corev1.HostPathCharDev
 			nodes := ""
 			if len(nodeNetworks) > 0 {
@@ -327,7 +327,7 @@ var _ = Describe("VpnSeedServer", func() {
 					},
 					VolumeMounts: []corev1.VolumeMount{mount},
 				}
-				if disableRewrite {
+				if disableNewVPN {
 					exporterContainer.Command = []string{
 						"/openvpn-exporter",
 						"-openvpn.status_paths",
@@ -451,7 +451,7 @@ var _ = Describe("VpnSeedServer", func() {
 			return deploy
 		}
 
-		statefulSet = func(nodeNetworks []net.IPNet, disableRewrite bool) *appsv1.StatefulSet {
+		statefulSet = func(nodeNetworks []net.IPNet, disableNewVPN bool) *appsv1.StatefulSet {
 			sts := &appsv1.StatefulSet{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "vpn-seed-server",
@@ -472,7 +472,7 @@ var _ = Describe("VpnSeedServer", func() {
 					UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
 						Type: appsv1.RollingUpdateStatefulSetStrategyType,
 					},
-					Template: *template(nodeNetworks, true, disableRewrite),
+					Template: *template(nodeNetworks, true, disableNewVPN),
 				},
 			}
 
@@ -1024,7 +1024,7 @@ var _ = Describe("VpnSeedServer", func() {
 				values.HighAvailabilityEnabled = true
 				values.HighAvailabilityNumberOfSeedServers = 3
 				values.HighAvailabilityNumberOfShootClients = 2
-				values.DisableRewrite = true
+				values.DisableNewVPN = true
 			})
 
 			JustBeforeEach(func() {

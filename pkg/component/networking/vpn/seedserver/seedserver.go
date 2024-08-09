@@ -133,9 +133,9 @@ type Values struct {
 	HighAvailabilityNumberOfShootClients int
 	// VPAUpdateDisabled indicates whether the vertical pod autoscaler update should be disabled.
 	VPAUpdateDisabled bool
-	// DisableRewrite disable VPN go-rewrite
-	// TODO (MartinWeindel) remove after Oct 2024
-	DisableRewrite bool
+	// DisableNewVPN disable new VPN implementation
+	// TODO (MartinWeindel) Remove after experience shows, that new VPN implementation is working smoothly.
+	DisableNewVPN bool
 }
 
 // New creates a new instance of DeployWaiter for the vpn-seed-server.
@@ -596,7 +596,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 				},
 			},
 		}
-		if v.values.DisableRewrite {
+		if v.values.DisableNewVPN {
 			statusPath := filepath.Join(volumeMountPathStatusDir, "openvpn.status")
 			exporterContainer.Command = []string{
 				"/openvpn-exporter",

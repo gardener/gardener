@@ -98,9 +98,9 @@ type Values struct {
 	HighAvailabilityNumberOfSeedServers int
 	// HighAvailabilityNumberOfShootClients is the number of VPN shoot clients used for HA
 	HighAvailabilityNumberOfShootClients int
-	// DisableRewrite disable VPN go-rewrite
-	// TODO (MartinWeindel) remove after Oct 2024
-	DisableRewrite bool
+	// DisableNewVPN disable new VPN implementation
+	// TODO (MartinWeindel) Remove after experience shows, that new VPN implementation is working smoothly.
+	DisableNewVPN bool
 }
 
 // New creates a new instance of DeployWaiter for vpnshoot
@@ -765,7 +765,7 @@ func (v *vpnShoot) getEnvVars(index *int) []corev1.EnvVar {
 			}...)
 	}
 
-	if v.values.DisableRewrite {
+	if v.values.DisableNewVPN {
 		envVariables = append(envVariables,
 			corev1.EnvVar{
 				Name:  "DO_NOT_CONFIGURE_KERNEL_SETTINGS",
@@ -930,7 +930,7 @@ func (v *vpnShoot) getInitContainers() []corev1.Container {
 			},
 		}...)
 	}
-	if v.values.DisableRewrite {
+	if v.values.DisableNewVPN {
 		container.Command = nil
 		container.Env = append(container.Env,
 			corev1.EnvVar{

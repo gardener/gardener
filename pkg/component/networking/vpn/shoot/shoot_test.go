@@ -407,7 +407,7 @@ var _ = Describe("VPNShoot", func() {
 				return pdb
 			}
 
-			containerFor = func(clients int, index *int, vpaEnabled, disableRewrite, highAvailable bool) *corev1.Container {
+			containerFor = func(clients int, index *int, vpaEnabled, disableNewVPN, highAvailable bool) *corev1.Container {
 				var (
 					limits       corev1.ResourceList
 					env          []corev1.EnvVar
@@ -530,7 +530,7 @@ var _ = Describe("VPNShoot", func() {
 					},
 					VolumeMounts: volumeMounts,
 				}
-				if disableRewrite {
+				if disableNewVPN {
 					container.Env = append(container.Env,
 						corev1.EnvVar{
 							Name:  "DO_NOT_CONFIGURE_KERNEL_SETTINGS",
@@ -599,7 +599,7 @@ var _ = Describe("VPNShoot", func() {
 				return volumes
 			}
 
-			templateForEx = func(servers int, secretNameClients []string, secretNameCA, secretNameTLSAuth string, vpaEnabled, disableRewrite, highAvailable bool) *corev1.PodTemplateSpec {
+			templateForEx = func(servers int, secretNameClients []string, secretNameCA, secretNameTLSAuth string, vpaEnabled, disableNewVPN, highAvailable bool) *corev1.PodTemplateSpec {
 				var (
 					annotations = map[string]string{
 						references.AnnotationKey(references.KindSecret, secretNameCA): secretNameCA,
@@ -689,10 +689,10 @@ var _ = Describe("VPNShoot", func() {
 				}
 
 				if !highAvailable {
-					obj.Spec.Containers = append(obj.Spec.Containers, *containerFor(1, nil, vpaEnabled, disableRewrite, highAvailable))
+					obj.Spec.Containers = append(obj.Spec.Containers, *containerFor(1, nil, vpaEnabled, disableNewVPN, highAvailable))
 				} else {
 					for i := 0; i < servers; i++ {
-						obj.Spec.Containers = append(obj.Spec.Containers, *containerFor(len(secretNameClients), &i, vpaEnabled, disableRewrite, highAvailable))
+						obj.Spec.Containers = append(obj.Spec.Containers, *containerFor(len(secretNameClients), &i, vpaEnabled, disableNewVPN, highAvailable))
 					}
 					obj.Spec.Containers = append(obj.Spec.Containers, corev1.Container{
 						Name:    "tunnel-controller",
@@ -733,7 +733,7 @@ var _ = Describe("VPNShoot", func() {
 						},
 					}...)
 				}
-				if disableRewrite {
+				if disableNewVPN {
 					initContainer.Command = nil
 					initContainer.Env = append(initContainer.Env,
 						corev1.EnvVar{
@@ -756,7 +756,7 @@ var _ = Describe("VPNShoot", func() {
 			}
 
 			templateFor = func(secretNameCA, secretNameClient, secretNameTLSAuth string) *corev1.PodTemplateSpec {
-				return templateForEx(1, []string{secretNameClient}, secretNameCA, secretNameTLSAuth, values.VPAEnabled, values.DisableRewrite, false)
+				return templateForEx(1, []string{secretNameClient}, secretNameCA, secretNameTLSAuth, values.VPAEnabled, values.DisableNewVPN, false)
 			}
 
 			objectMetaForEx = func(secretNameClients []string, secretNameCA, secretNameTLSAuth string) *metav1.ObjectMeta {
@@ -831,7 +831,7 @@ var _ = Describe("VPNShoot", func() {
 								"app": "vpn-shoot",
 							},
 						},
-						Template: *templateForEx(servers, secretNameClients, secretNameCA, secretNameTLSAuth, values.VPAEnabled, values.DisableRewrite, true),
+						Template: *templateForEx(servers, secretNameClients, secretNameCA, secretNameTLSAuth, values.VPAEnabled, values.DisableNewVPN, true),
 					},
 				}
 			}
@@ -942,7 +942,7 @@ var _ = Describe("VPNShoot", func() {
 			Context("w/ VPA and old VPN", func() {
 				BeforeEach(func() {
 					values.VPAEnabled = true
-					values.DisableRewrite = true
+					values.DisableNewVPN = true
 				})
 
 				It("should successfully deploy all resources", func() {
@@ -1058,7 +1058,7 @@ var _ = Describe("VPNShoot", func() {
 					values.HighAvailabilityEnabled = true
 					values.HighAvailabilityNumberOfSeedServers = 3
 					values.HighAvailabilityNumberOfShootClients = 2
-					values.DisableRewrite = true
+					values.DisableNewVPN = true
 				})
 
 				JustBeforeEach(func() {

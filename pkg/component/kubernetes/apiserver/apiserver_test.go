@@ -2811,7 +2811,7 @@ kind: AuthenticationConfiguration
 				Expect(deployment.Spec.Template.Spec.InitContainers).To(BeEmpty())
 			})
 
-			haVPNClientContainerFor := func(index int, disableRewrite bool) corev1.Container {
+			haVPNClientContainerFor := func(index int, disableNewVPN bool) corev1.Container {
 				container := corev1.Container{
 					Name:            fmt.Sprintf("vpn-client-%d", index),
 					Image:           "vpn-client-image:really-latest",
@@ -2892,7 +2892,7 @@ kind: AuthenticationConfiguration
 					},
 				}
 
-				if disableRewrite {
+				if disableNewVPN {
 					container.Env = append(container.Env,
 						corev1.EnvVar{
 							Name:  "DO_NOT_CONFIGURE_KERNEL_SETTINGS",
@@ -2903,8 +2903,8 @@ kind: AuthenticationConfiguration
 				return container
 			}
 
-			haVPNInitClientContainer := func(disableRewrite bool) corev1.Container {
-				initContainer := haVPNClientContainerFor(0, disableRewrite)
+			haVPNInitClientContainer := func(disableNewVPN bool) corev1.Container {
+				initContainer := haVPNClientContainerFor(0, disableNewVPN)
 				initContainer.Name = "vpn-client-init"
 				initContainer.LivenessProbe = nil
 				initContainer.Command = []string{"/bin/vpn-client", "setup"}
@@ -2931,7 +2931,7 @@ kind: AuthenticationConfiguration
 					MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
 					ReadOnly:  true,
 				})
-				if disableRewrite {
+				if disableNewVPN {
 					initContainer.Command = nil
 					initContainer.Env = append(initContainer.Env,
 						corev1.EnvVar{
@@ -2947,7 +2947,7 @@ kind: AuthenticationConfiguration
 				return initContainer
 			}
 
-			testHAVPN := func(disableRewrite bool) {
+			testHAVPN := func(disableNewVPN bool) {
 				values = Values{
 					Values: apiserver.Values{
 						RuntimeVersion: runtimeVersion,
@@ -2962,20 +2962,20 @@ kind: AuthenticationConfiguration
 						PodNetworkCIDRs:                      []net.IPNet{{IP: net.ParseIP("1.2.3.0"), Mask: net.CIDRMask(24, 32)}},
 						NodeNetworkCIDRs:                     []net.IPNet{{IP: net.ParseIP("7.8.9.0"), Mask: net.CIDRMask(24, 32)}},
 						IPFamilies:                           []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
-						DisableRewrite:                       disableRewrite,
+						DisableNewVPN:                        disableNewVPN,
 					},
 					Version: version,
 				}
 				kapi = New(kubernetesInterface, namespace, sm, values)
 				deployAndRead()
 
-				initContainer := haVPNInitClientContainer(disableRewrite)
+				initContainer := haVPNInitClientContainer(disableNewVPN)
 				Expect(deployment.Spec.Template.Spec.InitContainers).To(DeepEqual([]corev1.Container{initContainer}))
 				Expect(deployment.Spec.Template.Spec.Containers).To(HaveLen(values.VPN.HighAvailabilityNumberOfSeedServers + 2))
 				for i := 0; i < values.VPN.HighAvailabilityNumberOfSeedServers; i++ {
 					labelKey := fmt.Sprintf("networking.resources.gardener.cloud/to-vpn-seed-server-%d-tcp-1194", i)
 					Expect(deployment.Spec.Template.Labels).To(HaveKeyWithValue(labelKey, "allowed"))
-					Expect(deployment.Spec.Template.Spec.Containers[i+1]).To(DeepEqual(haVPNClientContainerFor(i, disableRewrite)))
+					Expect(deployment.Spec.Template.Spec.Containers[i+1]).To(DeepEqual(haVPNClientContainerFor(i, disableNewVPN)))
 				}
 				pathControllerContainer := corev1.Container{
 					Name:            "vpn-path-controller",
@@ -3028,7 +3028,7 @@ kind: AuthenticationConfiguration
 					TerminationMessagePath:   "/dev/termination-log",
 					TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 				}
-				if disableRewrite {
+				if disableNewVPN {
 					pathControllerContainer.Command = nil
 					pathControllerContainer.Args = []string{"/path-controller.sh"}
 					pathControllerContainer.Env = append(pathControllerContainer.Env, corev1.EnvVar{
