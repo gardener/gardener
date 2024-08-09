@@ -164,21 +164,18 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Deployment.ReplicaCount).To(Equal(ptr.To[int32](2)))
 			Expect(obj.Spec.Deployment.RevisionHistoryLimit).To(Equal(ptr.To[int32](2)))
 			Expect(obj.Spec.Deployment.Image).NotTo(BeNil())
-			Expect(obj.Spec.Deployment.VPA).To(Equal(ptr.To(true)))
 		})
 
 		It("should not overwrite the already set values for GardenletDeployment field", func() {
 			obj.Spec.Deployment = GardenletSelfDeployment{GardenletDeployment: GardenletDeployment{
 				ReplicaCount:         ptr.To[int32](3),
 				RevisionHistoryLimit: ptr.To[int32](3),
-				VPA:                  ptr.To(false),
 			}}
 			SetObjectDefaults_Gardenlet(obj)
 
 			Expect(obj.Spec.Deployment.ReplicaCount).To(Equal(ptr.To[int32](3)))
 			Expect(obj.Spec.Deployment.RevisionHistoryLimit).To(Equal(ptr.To[int32](3)))
 			Expect(obj.Spec.Deployment.Image).NotTo(BeNil())
-			Expect(obj.Spec.Deployment.VPA).To(Equal(ptr.To(false)))
 		})
 	})
 
