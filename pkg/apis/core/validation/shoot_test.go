@@ -3010,19 +3010,36 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		Context("VerticalPodAutoscaler validation", func() {
+			var (
+				percentileLessThanZero   = -1.0
+				percentileGreaterThanOne = 3.14
+			)
+
 			DescribeTable("verticalPod autoscaler values",
 				func(verticalPodAutoscaler core.VerticalPodAutoscaler, matcher gomegatypes.GomegaMatcher) {
 					Expect(ValidateVerticalPodAutoscaler(verticalPodAutoscaler, nil)).To(matcher)
 				},
 				Entry("valid", core.VerticalPodAutoscaler{}, BeEmpty()),
 				Entry("invalid negative durations", core.VerticalPodAutoscaler{
-					EvictAfterOOMThreshold: &negativeDuration,
-					UpdaterInterval:        &negativeDuration,
-					RecommenderInterval:    &negativeDuration,
+					EvictAfterOOMThreshold:                   &negativeDuration,
+					UpdaterInterval:                          &negativeDuration,
+					RecommenderInterval:                      &negativeDuration,
+					TargetCPUPercentile:                      &percentileLessThanZero,
+					RecommendationLowerBoundCPUPercentile:    &percentileLessThanZero,
+					RecommendationUpperBoundCPUPercentile:    &percentileGreaterThanOne,
+					TargetMemoryPercentile:                   &percentileGreaterThanOne,
+					RecommendationLowerBoundMemoryPercentile: &percentileLessThanZero,
+					RecommendationUpperBoundMemoryPercentile: &percentileGreaterThanOne,
 				}, ConsistOf(
 					field.Invalid(field.NewPath("evictAfterOOMThreshold"), negativeDuration, "can not be negative"),
 					field.Invalid(field.NewPath("updaterInterval"), negativeDuration, "can not be negative"),
 					field.Invalid(field.NewPath("recommenderInterval"), negativeDuration, "can not be negative"),
+					field.Invalid(field.NewPath("targetCPUPercentile"), percentileLessThanZero, "percentile value must be in the range [0, 1]"),
+					field.Invalid(field.NewPath("recommendationLowerBoundCPUPercentile"), percentileLessThanZero, "percentile value must be in the range [0, 1]"),
+					field.Invalid(field.NewPath("recommendationUpperBoundCPUPercentile"), percentileGreaterThanOne, "percentile value must be in the range [0, 1]"),
+					field.Invalid(field.NewPath("targetMemoryPercentile"), percentileGreaterThanOne, "percentile value must be in the range [0, 1]"),
+					field.Invalid(field.NewPath("recommendationLowerBoundMemoryPercentile"), percentileLessThanZero, "percentile value must be in the range [0, 1]"),
+					field.Invalid(field.NewPath("recommendationUpperBoundMemoryPercentile"), percentileGreaterThanOne, "percentile value must be in the range [0, 1]"),
 				)),
 			)
 		})

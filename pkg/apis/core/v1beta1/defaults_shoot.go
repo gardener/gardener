@@ -254,6 +254,26 @@ func SetDefaults_VerticalPodAutoscaler(obj *VerticalPodAutoscaler) {
 		v := DefaultTargetCPUPercentile
 		obj.TargetCPUPercentile = &v
 	}
+	if obj.RecommendationLowerBoundCPUPercentile == nil {
+		v := DefaultRecommendationLowerBoundCPUPercentile
+		obj.RecommendationLowerBoundCPUPercentile = &v
+	}
+	if obj.RecommendationUpperBoundCPUPercentile == nil {
+		v := DefaultRecommendationUpperBoundCPUPercentile
+		obj.RecommendationUpperBoundCPUPercentile = &v
+	}
+	if obj.TargetMemoryPercentile == nil {
+		v := DefaultTargetMemoryPercentile
+		obj.TargetMemoryPercentile = &v
+	}
+	if obj.RecommendationLowerBoundMemoryPercentile == nil {
+		v := DefaultRecommendationLowerBoundMemoryPercentile
+		obj.RecommendationLowerBoundMemoryPercentile = &v
+	}
+	if obj.RecommendationUpperBoundMemoryPercentile == nil {
+		v := DefaultRecommendationUpperBoundMemoryPercentile
+		obj.RecommendationUpperBoundMemoryPercentile = &v
+	}
 }
 
 // SetDefaults_Worker sets default values for Worker objects.

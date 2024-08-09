@@ -6574,6 +6574,11 @@ func autoConvert_v1beta1_VerticalPodAutoscaler_To_core_VerticalPodAutoscaler(in 
 	out.UpdaterInterval = (*metav1.Duration)(unsafe.Pointer(in.UpdaterInterval))
 	out.RecommenderInterval = (*metav1.Duration)(unsafe.Pointer(in.RecommenderInterval))
 	out.TargetCPUPercentile = (*float64)(unsafe.Pointer(in.TargetCPUPercentile))
+	out.RecommendationLowerBoundCPUPercentile = (*float64)(unsafe.Pointer(in.RecommendationLowerBoundCPUPercentile))
+	out.RecommendationUpperBoundCPUPercentile = (*float64)(unsafe.Pointer(in.RecommendationUpperBoundCPUPercentile))
+	out.TargetMemoryPercentile = (*float64)(unsafe.Pointer(in.TargetMemoryPercentile))
+	out.RecommendationLowerBoundMemoryPercentile = (*float64)(unsafe.Pointer(in.RecommendationLowerBoundMemoryPercentile))
+	out.RecommendationUpperBoundMemoryPercentile = (*float64)(unsafe.Pointer(in.RecommendationUpperBoundMemoryPercentile))
 	return nil
 }
 
@@ -6592,6 +6597,11 @@ func autoConvert_core_VerticalPodAutoscaler_To_v1beta1_VerticalPodAutoscaler(in 
 	out.UpdaterInterval = (*metav1.Duration)(unsafe.Pointer(in.UpdaterInterval))
 	out.RecommenderInterval = (*metav1.Duration)(unsafe.Pointer(in.RecommenderInterval))
 	out.TargetCPUPercentile = (*float64)(unsafe.Pointer(in.TargetCPUPercentile))
+	out.RecommendationLowerBoundCPUPercentile = (*float64)(unsafe.Pointer(in.RecommendationLowerBoundCPUPercentile))
+	out.RecommendationUpperBoundCPUPercentile = (*float64)(unsafe.Pointer(in.RecommendationUpperBoundCPUPercentile))
+	out.TargetMemoryPercentile = (*float64)(unsafe.Pointer(in.TargetMemoryPercentile))
+	out.RecommendationLowerBoundMemoryPercentile = (*float64)(unsafe.Pointer(in.RecommendationLowerBoundMemoryPercentile))
+	out.RecommendationUpperBoundMemoryPercentile = (*float64)(unsafe.Pointer(in.RecommendationUpperBoundMemoryPercentile))
 	return nil
 }
 
