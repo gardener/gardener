@@ -105,12 +105,12 @@ func (v *vpa) reconcileGeneralClusterRoleBindingActor(clusterRoleBinding *rbacv1
 		{
 			Kind:      rbacv1.ServiceAccountKind,
 			Name:      recommender,
-			Namespace: v.serviceAccountNamespace(),
+			Namespace: v.namespaceForApplicationClassResource(),
 		},
 		{
 			Kind:      rbacv1.ServiceAccountKind,
 			Name:      updater,
-			Namespace: v.serviceAccountNamespace(),
+			Namespace: v.namespaceForApplicationClassResource(),
 		},
 	}
 }
@@ -158,17 +158,17 @@ func (v *vpa) reconcileGeneralClusterRoleBindingTargetReader(clusterRoleBinding 
 		{
 			Kind:      rbacv1.ServiceAccountKind,
 			Name:      admissionController,
-			Namespace: v.serviceAccountNamespace(),
+			Namespace: v.namespaceForApplicationClassResource(),
 		},
 		{
 			Kind:      rbacv1.ServiceAccountKind,
 			Name:      recommender,
-			Namespace: v.serviceAccountNamespace(),
+			Namespace: v.namespaceForApplicationClassResource(),
 		},
 		{
 			Kind:      rbacv1.ServiceAccountKind,
 			Name:      updater,
-			Namespace: v.serviceAccountNamespace(),
+			Namespace: v.namespaceForApplicationClassResource(),
 		},
 	}
 }

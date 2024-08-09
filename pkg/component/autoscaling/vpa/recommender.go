@@ -63,8 +63,11 @@ func (v *vpa) recommenderResourceConfigs() component.ResourceConfigs {
 		clusterRoleBindingCheckpointActor = v.emptyClusterRoleBinding("checkpoint-actor")
 		clusterRoleStatusActor            = v.emptyClusterRole("status-actor")
 		clusterRoleBindingStatusActor     = v.emptyClusterRoleBinding("status-actor")
+		roleLeaderLocking                 = v.emptyRole("leader-locking-vpa-recommender")
+		roleBindingLeaderLocking          = v.emptyRoleBinding("leader-locking-vpa-recommender")
 		service                           = v.emptyService(recommender)
 		deployment                        = v.emptyDeployment(recommender)
+		podDisruptionBudget               = v.emptyPodDisruptionBudget(recommender)
 		podMonitor                        = v.emptyPodMonitor(recommender)
 	)
 
@@ -81,6 +84,10 @@ func (v *vpa) recommenderResourceConfigs() component.ResourceConfigs {
 		{Obj: clusterRoleBindingStatusActor, Class: component.Application, MutateFn: func() {
 			v.reconcileRecommenderClusterRoleBinding(clusterRoleBindingStatusActor, clusterRoleStatusActor, recommender)
 		}},
+		{Obj: roleLeaderLocking, Class: component.Application, MutateFn: func() { v.reconcileRecommenderRoleLeaderLocking(roleLeaderLocking) }},
+		{Obj: roleBindingLeaderLocking, Class: component.Application, MutateFn: func() {
+			v.reconcileRecommenderRoleBindingLeaderLocking(roleBindingLeaderLocking, roleLeaderLocking, recommender)
+		}},
 		{Obj: service, Class: component.Runtime, MutateFn: func() { v.reconcileRecommenderService(service) }},
 	}
 
@@ -95,12 +102,14 @@ func (v *vpa) recommenderResourceConfigs() component.ResourceConfigs {
 			component.ResourceConfig{Obj: serviceAccount, Class: component.Application, MutateFn: func() { v.reconcileRecommenderServiceAccount(serviceAccount) }},
 			component.ResourceConfig{Obj: deployment, Class: component.Runtime, MutateFn: func() { v.reconcileRecommenderDeployment(deployment, &serviceAccount.Name) }},
 			component.ResourceConfig{Obj: podMonitor, Class: component.Runtime, MutateFn: func() { v.reconcileRecommenderPodMonitor(podMonitor) }},
+			component.ResourceConfig{Obj: podDisruptionBudget, Class: component.Runtime, MutateFn: func() { v.reconcilePodDisruptionBudget(podDisruptionBudget, deployment) }},
 		)
 	} else {
 		vpa := v.emptyVerticalPodAutoscaler(recommender)
 		configs = append(configs,
 			component.ResourceConfig{Obj: vpa, Class: component.Runtime, MutateFn: func() { v.reconcileRecommenderVPA(vpa, deployment) }},
 			component.ResourceConfig{Obj: deployment, Class: component.Runtime, MutateFn: func() { v.reconcileRecommenderDeployment(deployment, nil) }},
+			component.ResourceConfig{Obj: podDisruptionBudget, Class: component.Runtime, MutateFn: func() { v.reconcilePodDisruptionBudget(podDisruptionBudget, deployment) }},
 		)
 	}
 
@@ -161,7 +170,38 @@ func (v *vpa) reconcileRecommenderClusterRoleBinding(clusterRoleBinding *rbacv1.
 	clusterRoleBinding.Subjects = []rbacv1.Subject{{
 		Kind:      rbacv1.ServiceAccountKind,
 		Name:      serviceAccountName,
-		Namespace: v.serviceAccountNamespace(),
+		Namespace: v.namespaceForApplicationClassResource(),
+	}}
+}
+
+func (v *vpa) reconcileRecommenderRoleLeaderLocking(role *rbacv1.Role) {
+	role.Labels = getRoleLabel()
+	role.Rules = []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{"coordination.k8s.io"},
+			Resources: []string{"leases"},
+			Verbs:     []string{"create"},
+		},
+		{
+			APIGroups:     []string{"coordination.k8s.io"},
+			Resources:     []string{"leases"},
+			ResourceNames: []string{"vpa-recommender"},
+			Verbs:         []string{"get", "watch", "update"},
+		},
+	}
+}
+
+func (v *vpa) reconcileRecommenderRoleBindingLeaderLocking(roleBinding *rbacv1.RoleBinding, role *rbacv1.Role, serviceAccountName string) {
+	roleBinding.Labels = getRoleLabel()
+	roleBinding.RoleRef = rbacv1.RoleRef{
+		APIGroup: rbacv1.GroupName,
+		Kind:     "Role",
+		Name:     role.Name,
+	}
+	roleBinding.Subjects = []rbacv1.Subject{{
+		Kind:      rbacv1.ServiceAccountKind,
+		Name:      serviceAccountName,
+		Namespace: v.namespaceForApplicationClassResource(),
 	}}
 }
 
@@ -179,9 +219,9 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 		memoryRequest = "800M"
 	}
 
-	// vpa-recommender is not using leader election, hence it is not capable of running multiple replicas (and as a
-	// consequence, don't need a PDB).
-	deployment.Labels = v.getDeploymentLabels(recommender)
+	deployment.Labels = utils.MergeStringMaps(v.getDeploymentLabels(recommender), map[string]string{
+		resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
+	})
 	deployment.Spec = appsv1.DeploymentSpec{
 		Replicas:             ptr.To(ptr.Deref(v.values.Recommender.Replicas, 1)),
 		RevisionHistoryLimit: ptr.To[int32](2),
@@ -210,6 +250,8 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 						"--kube-api-burst=120",
 						"--memory-saver=true",
 						fmt.Sprintf("--target-cpu-percentile=%f", ptr.Deref(v.values.Recommender.TargetCPUPercentile, gardencorev1beta1.DefaultTargetCPUPercentile)),
+						"--leader-elect=true",
+						fmt.Sprintf("--leader-elect-resource-namespace=%s", v.namespaceForApplicationClassResource()),
 					},
 					LivenessProbe: newDefaultLivenessProbe(),
 					Ports: []corev1.ContainerPort{
