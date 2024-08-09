@@ -697,7 +697,7 @@ var _ = Describe("VPNShoot", func() {
 					obj.Spec.Containers = append(obj.Spec.Containers, corev1.Container{
 						Name:    "tunnel-controller",
 						Image:   image,
-						Command: []string{"/bin/tunnelcontroller"},
+						Command: []string{"/bin/tunnel-controller"},
 						SecurityContext: &corev1.SecurityContext{
 							Privileged: ptr.To(false),
 							Capabilities: &corev1.Capabilities{

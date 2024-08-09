@@ -619,7 +619,7 @@ func (v *vpnShoot) tunnelControllerContainer() *corev1.Container {
 		Name:            "tunnel-controller",
 		Image:           v.values.Image,
 		ImagePullPolicy: corev1.PullIfNotPresent,
-		Command:         []string{"/bin/tunnelcontroller"},
+		Command:         []string{"/bin/tunnel-controller"},
 		SecurityContext: &corev1.SecurityContext{
 			Privileged: ptr.To(false),
 			Capabilities: &corev1.Capabilities{
