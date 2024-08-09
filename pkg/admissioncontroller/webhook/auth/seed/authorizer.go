@@ -169,7 +169,7 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 		case gardenletResource:
 			return a.authorize(requestLog, seedName, graph.VertexTypeGardenlet, attrs,
 				[]string{"update", "patch"},
-				[]string{"get", "list", "watch"},
+				[]string{"get", "list", "watch", "create"},
 				[]string{"status"},
 			)
 		case managedSeedResource:

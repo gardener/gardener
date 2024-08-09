@@ -46,6 +46,7 @@ var (
 	bastionResource                   = operationsv1alpha1.Resource("bastions")
 	certificateSigningRequestResource = certificatesv1.Resource("certificatesigningrequests")
 	clusterRoleBindingResource        = rbacv1.Resource("clusterrolebindings")
+	gardenletResource                 = seedmanagementv1alpha1.Resource("gardenlets")
 	internalSecretResource            = gardencorev1beta1.Resource("internalsecrets")
 	leaseResource                     = coordinationv1.Resource("leases")
 	secretResource                    = corev1.Resource("secrets")
@@ -81,14 +82,16 @@ func (h *Handler) Handle(ctx context.Context, request admission.Request) admissi
 		return h.admitCertificateSigningRequest(seedName, userType, request)
 	case clusterRoleBindingResource:
 		return h.admitClusterRoleBinding(ctx, seedName, userType, request)
+	case configMapResource:
+		return h.admitConfigMap(ctx, seedName, request)
 	case internalSecretResource:
 		return h.admitInternalSecret(ctx, seedName, request)
+	case gardenletResource:
+		return h.admitGardenlet(seedName, request)
 	case leaseResource:
 		return h.admitLease(seedName, userType, request)
 	case secretResource:
 		return h.admitSecret(ctx, seedName, request)
-	case configMapResource:
-		return h.admitConfigMap(ctx, seedName, request)
 	case seedResource:
 		return h.admitSeed(ctx, seedName, request)
 	case serviceAccountResource:
@@ -253,6 +256,18 @@ func (h *Handler) admitClusterRoleBinding(ctx context.Context, seedName string, 
 	}
 
 	return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to seed %q", seedName))
+}
+
+func (h *Handler) admitGardenlet(seedName string, request admission.Request) admission.Response {
+	if request.Operation != admissionv1.Create {
+		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
+	}
+
+	if request.Namespace != v1beta1constants.GardenNamespace {
+		return admission.Errored(http.StatusBadRequest, fmt.Errorf("object must be in namespace: %q", v1beta1constants.GardenNamespace))
+	}
+
+	return h.admit(seedName, &request.Name)
 }
 
 func (h *Handler) admitInternalSecret(ctx context.Context, seedName string, request admission.Request) admission.Response {
