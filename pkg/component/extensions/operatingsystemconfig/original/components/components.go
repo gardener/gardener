@@ -7,6 +7,7 @@ package components
 import (
 	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -29,6 +30,7 @@ type Context struct {
 	CRIName                 extensionsv1alpha1.CRIName
 	Images                  map[string]*imagevector.Image
 	NodeLabels              map[string]string
+	NodeMonitorGracePeriod  metav1.Duration
 	KubeletCABundle         []byte
 	KubeletCLIFlags         ConfigurableKubeletCLIFlags
 	KubeletConfigParameters ConfigurableKubeletConfigParameters

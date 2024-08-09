@@ -141,6 +141,8 @@ type OriginalValues struct {
 	ValitailEnabled bool
 	// ValiIngressHostName is the ingress host name of the shoot's Vali.
 	ValiIngressHostName string
+	// NodeMonitorGracePeriod defines the grace period before an unresponsive node is marked unhealthy.
+	NodeMonitorGracePeriod metav1.Duration
 	// NodeLocalDNSEnabled indicates whether node local dns is enabled or not.
 	NodeLocalDNSEnabled bool
 	// PrimaryIPFamily represents the preferred IP family (IPv4 or IPv6) to be used.
@@ -738,6 +740,7 @@ func (o *operatingSystemConfig) newDeployer(version int, osc *extensionsv1alpha1
 		sshAccessEnabled:        o.values.SSHAccessEnabled,
 		valiIngressHostName:     o.values.ValiIngressHostName,
 		valitailEnabled:         o.values.ValitailEnabled,
+		nodeMonitorGracePeriod:  o.values.NodeMonitorGracePeriod,
 		nodeLocalDNSEnabled:     o.values.NodeLocalDNSEnabled,
 		primaryIPFamily:         o.values.PrimaryIPFamily,
 		taints:                  worker.Taints,
@@ -803,6 +806,7 @@ type deployer struct {
 	valiIngressHostName     string
 	valitailEnabled         bool
 	nodeLocalDNSEnabled     bool
+	nodeMonitorGracePeriod  metav1.Duration
 	primaryIPFamily         gardencorev1beta1.IPFamily
 	taints                  []corev1.Taint
 }
@@ -830,6 +834,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 		CRIName:                 d.criName,
 		Images:                  d.images,
 		NodeLabels:              gardenerutils.NodeLabelsForWorkerPool(d.worker, d.nodeLocalDNSEnabled, d.key),
+		NodeMonitorGracePeriod:  d.nodeMonitorGracePeriod,
 		KubeletCABundle:         d.kubeletCABundle,
 		KubeletConfigParameters: d.kubeletConfigParameters,
 		KubeletCLIFlags:         d.kubeletCLIFlags,
