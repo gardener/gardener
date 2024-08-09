@@ -22,7 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/controller/vpaevictionrequirements"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	"github.com/gardener/gardener/pkg/operator/controller/controllerregistrar"
-	"github.com/gardener/gardener/pkg/operator/controller/extension/virtualcluster"
+	"github.com/gardener/gardener/pkg/operator/controller/extension"
 	"github.com/gardener/gardener/pkg/operator/controller/garden"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -38,10 +38,10 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 		return err
 	}
 
-	if err := (&virtualcluster.Reconciler{
+	if err := (&extension.Reconciler{
 		Config: *cfg,
 	}).AddToManager(ctx, mgr, gardenClientMap); err != nil {
-		return fmt.Errorf("failed adding Extension virtual cluster controller: %w", err)
+		return fmt.Errorf("failed adding Extension controller: %w", err)
 	}
 
 	if err := (&controllerregistrar.Reconciler{

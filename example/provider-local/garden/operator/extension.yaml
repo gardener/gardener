@@ -9,7 +9,18 @@ spec:
     extension:
       helm:
         ociRepository:
-          ref: local-skaffold/gardener-extension-provider-local/charts/extension:latest
+          ref: local-skaffold/gardener-extension-provider-local/charts/extension:v0.0.0
+      values:
+        logLevel: debug
+    admission:
+      runtimeCluster:
+        helm:
+          ociRepository:
+            ref: local-skaffold/gardener-extension-admission-local/charts/runtime:v0.0.0
+      virtualCluster:
+        helm:
+          ociRepository:
+            ref: local-skaffold/gardener-extension-admission-local/charts/application:v0.0.0
       values:
         logLevel: debug
   resources:

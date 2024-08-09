@@ -1,0 +1,15 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ include "labels" . | indent 4 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+{{ include "labels" . | indent 6 }}
+{{- if semverCompare ">= 1.26-0" .Capabilities.KubeVersion.Version }}
+  unhealthyPodEvictionPolicy: AlwaysAllow
+{{- end }}

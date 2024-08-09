@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package virtualcluster_test
+package extension_test
 
 import (
 	"context"
@@ -34,19 +34,19 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
-	"github.com/gardener/gardener/pkg/operator/controller/extension/virtualcluster"
+	"github.com/gardener/gardener/pkg/operator/controller/extension"
 	"github.com/gardener/gardener/pkg/operator/features"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	gardenerenvtest "github.com/gardener/gardener/test/envtest"
 	"github.com/gardener/gardener/test/framework"
 )
 
-func TestVirtualCluster(t *testing.T) {
+func TestExtension(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Test Integration Operator Extension VirtualCluster Suite")
+	RunSpecs(t, "Test Integration Operator Extension Suite")
 }
 
-const testID = "garden-extension-virtualcluster-test"
+const testID = "garden-extension-test"
 
 var (
 	ctx = context.Background()
@@ -74,9 +74,9 @@ var _ = BeforeSuite(func() {
 		Environment: &envtest.Environment{
 			CRDInstallOptions: envtest.CRDInstallOptions{
 				Paths: []string{
-					filepath.Join("..", "..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_gardens.yaml"),
-					filepath.Join("..", "..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_extensions.yaml"),
-					filepath.Join("..", "..", "..", "..", "..", "example", "resource-manager", "10-crd-resources.gardener.cloud_managedresources.yaml"),
+					filepath.Join("..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_gardens.yaml"),
+					filepath.Join("..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_extensions.yaml"),
+					filepath.Join("..", "..", "..", "..", "example", "resource-manager", "10-crd-resources.gardener.cloud_managedresources.yaml"),
 				},
 			},
 			ErrorIfCRDPathMissing: true,
@@ -155,7 +155,7 @@ var _ = BeforeSuite(func() {
 	gardenClientMap := fakeclientmap.NewClientMapBuilder().WithClientSetForKey(keys.ForGarden(&operatorv1alpha1.Garden{ObjectMeta: metav1.ObjectMeta{Name: gardenName}}), testClientSet).Build()
 
 	By("Register controller")
-	Expect((&virtualcluster.Reconciler{
+	Expect((&extension.Reconciler{
 		Config: config.OperatorConfiguration{
 			Controllers: config.ControllerConfiguration{},
 		},

@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package virtualcluster_test
+package mutator_test
 
 import (
 	"testing"
@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestVirtualCluster(t *testing.T) {
+func TestMutator(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Operator Controller Extension VirtualCluster Suite")
+	RunSpecs(t, "Shoot Mutator Suite")
 }
