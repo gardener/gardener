@@ -306,6 +306,11 @@ spec:
   #   updaterInterval: 1m0s
   #   recommenderInterval: 1m0s
   #   targetCPUPercentile: 0.9
+  #   recommendationLowerBoundCPUPercentile: 0.5
+  #   recommendationUpperBoundCPUPercentile: 0.95
+  #   targetMemoryPercentile: 0.9
+  #   recommendationLowerBoundMemoryPercentile: 0.5
+  #   recommendationUpperBoundMemoryPercentile: 0.95
   dns:
     # When the shoot shall use a cluster domain no domain and no providers need to be provided - Gardener will
     # automatically compute a correct domain based on the default domains in the garden cluster.

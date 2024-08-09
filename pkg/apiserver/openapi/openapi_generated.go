@@ -9294,6 +9294,41 @@ func schema_pkg_apis_core_v1beta1_VerticalPodAutoscaler(ref common.ReferenceCall
 							Format:      "double",
 						},
 					},
+					"recommendationLowerBoundCPUPercentile": {
+						SchemaProps: spec.SchemaProps{
+							Description: "RecommendationLowerBoundCPUPercentile is the usage percentile that will be used for the lower bound on CPU recommendation. (default: 0.5)",
+							Type:        []string{"number"},
+							Format:      "double",
+						},
+					},
+					"recommendationUpperBoundCPUPercentile": {
+						SchemaProps: spec.SchemaProps{
+							Description: "RecommendationUpperBoundCPUPercentile is the usage percentile that will be used for the upper bound on CPU recommendation. (default: 0.95)",
+							Type:        []string{"number"},
+							Format:      "double",
+						},
+					},
+					"targetMemoryPercentile": {
+						SchemaProps: spec.SchemaProps{
+							Description: "TargetMemoryPercentile is the usage percentile that will be used as a base for memory target recommendation. Doesn't affect memory lower bound nor memory upper bound. (default: 0.9)",
+							Type:        []string{"number"},
+							Format:      "double",
+						},
+					},
+					"recommendationLowerBoundMemoryPercentile": {
+						SchemaProps: spec.SchemaProps{
+							Description: "RecommendationLowerBoundMemoryPercentile is the usage percentile that will be used for the lower bound on memory recommendation. (default: 0.5)",
+							Type:        []string{"number"},
+							Format:      "double",
+						},
+					},
+					"recommendationUpperBoundMemoryPercentile": {
+						SchemaProps: spec.SchemaProps{
+							Description: "RecommendationUpperBoundMemoryPercentile is the usage percentile that will be used for the upper bound on memory recommendation. (default: 0.95)",
+							Type:        []string{"number"},
+							Format:      "double",
+						},
+					},
 				},
 				Required: []string{"enabled"},
 			},

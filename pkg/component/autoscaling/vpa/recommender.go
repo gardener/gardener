@@ -45,6 +45,17 @@ type ValuesRecommender struct {
 	// TargetCPUPercentile is the CPU usage percentile that will be used as a base for CPU target recommendation.
 	// Doesn't affect CPU lower bound, CPU upper bound nor memory recommendations.
 	TargetCPUPercentile *float64
+	// RecommendationLowerBoundCPUPercentile is the usage percentile that will be used for the lower bound on CPU recommendation.
+	RecommendationLowerBoundCPUPercentile *float64
+	// RecommendationUpperBoundCPUPercentile is the usage percentile that will be used for the upper bound on CPU recommendation.
+	RecommendationUpperBoundCPUPercentile *float64
+	// TargetMemoryPercentile is the usage percentile that will be used as a base for memory target recommendation.
+	// Doesn't affect memory lower bound nor memory upper bound.
+	TargetMemoryPercentile *float64
+	// RecommendationLowerBoundMemoryPercentile is the usage percentile that will be used for the lower bound on memory recommendation.
+	RecommendationLowerBoundMemoryPercentile *float64
+	// RecommendationUpperBoundMemoryPercentile is the usage percentile that will be used for the upper bound on memory recommendation.
+	RecommendationUpperBoundMemoryPercentile *float64
 	// Image is the container image.
 	Image string
 	// Interval is the interval how often the recommender should run.
@@ -210,6 +221,11 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 						"--kube-api-burst=120",
 						"--memory-saver=true",
 						fmt.Sprintf("--target-cpu-percentile=%f", ptr.Deref(v.values.Recommender.TargetCPUPercentile, gardencorev1beta1.DefaultTargetCPUPercentile)),
+						fmt.Sprintf("--recommendation-lower-bound-cpu-percentile=%f", ptr.Deref(v.values.Recommender.RecommendationLowerBoundCPUPercentile, gardencorev1beta1.DefaultRecommendationLowerBoundCPUPercentile)),
+						fmt.Sprintf("--recommendation-upper-bound-cpu-percentile=%f", ptr.Deref(v.values.Recommender.RecommendationUpperBoundCPUPercentile, gardencorev1beta1.DefaultRecommendationUpperBoundCPUPercentile)),
+						fmt.Sprintf("--target-memory-percentile=%f", ptr.Deref(v.values.Recommender.TargetMemoryPercentile, gardencorev1beta1.DefaultTargetMemoryPercentile)),
+						fmt.Sprintf("--recommendation-lower-bound-memory-percentile=%f", ptr.Deref(v.values.Recommender.RecommendationLowerBoundMemoryPercentile, gardencorev1beta1.DefaultRecommendationLowerBoundMemoryPercentile)),
+						fmt.Sprintf("--recommendation-upper-bound-memory-percentile=%f", ptr.Deref(v.values.Recommender.RecommendationUpperBoundMemoryPercentile, gardencorev1beta1.DefaultRecommendationUpperBoundMemoryPercentile)),
 					},
 					LivenessProbe: newDefaultLivenessProbe(),
 					Ports: []corev1.ContainerPort{

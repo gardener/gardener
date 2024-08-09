@@ -552,6 +552,22 @@ type VerticalPodAutoscaler struct {
 	// Doesn't affect CPU lower bound, CPU upper bound nor memory recommendations.
 	// (default: 0.9)
 	TargetCPUPercentile *float64
+	// RecommendationLowerBoundCPUPercentile is the usage percentile that will be used for the lower bound on CPU recommendation.
+	// (default: 0.5)
+	RecommendationLowerBoundCPUPercentile *float64
+	// RecommendationUpperBoundCPUPercentile is the usage percentile that will be used for the upper bound on CPU recommendation.
+	// (default: 0.95)
+	RecommendationUpperBoundCPUPercentile *float64
+	// TargetMemoryPercentile is the usage percentile that will be used as a base for memory target recommendation.
+	// Doesn't affect memory lower bound nor memory upper bound.
+	// (default: 0.9)
+	TargetMemoryPercentile *float64
+	// RecommendationLowerBoundMemoryPercentile is the usage percentile that will be used for the lower bound on memory recommendation.
+	// (default: 0.5)
+	RecommendationLowerBoundMemoryPercentile *float64
+	// RecommendationUpperBoundMemoryPercentile is the usage percentile that will be used for the upper bound on memory recommendation.
+	// (default: 0.95)
+	RecommendationUpperBoundMemoryPercentile *float64
 }
 
 // KubernetesConfig contains common configuration fields for the control plane components.

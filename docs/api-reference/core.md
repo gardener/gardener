@@ -12934,6 +12934,72 @@ Doesn&rsquo;t affect CPU lower bound, CPU upper bound nor memory recommendations
 (default: 0.9)</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>recommendationLowerBoundCPUPercentile</code></br>
+<em>
+float64
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>RecommendationLowerBoundCPUPercentile is the usage percentile that will be used for the lower bound on CPU recommendation.
+(default: 0.5)</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>recommendationUpperBoundCPUPercentile</code></br>
+<em>
+float64
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>RecommendationUpperBoundCPUPercentile is the usage percentile that will be used for the upper bound on CPU recommendation.
+(default: 0.95)</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>targetMemoryPercentile</code></br>
+<em>
+float64
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>TargetMemoryPercentile is the usage percentile that will be used as a base for memory target recommendation.
+Doesn&rsquo;t affect memory lower bound nor memory upper bound.
+(default: 0.9)</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>recommendationLowerBoundMemoryPercentile</code></br>
+<em>
+float64
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>RecommendationLowerBoundMemoryPercentile is the usage percentile that will be used for the lower bound on memory recommendation.
+(default: 0.5)</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>recommendationUpperBoundMemoryPercentile</code></br>
+<em>
+float64
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>RecommendationUpperBoundMemoryPercentile is the usage percentile that will be used for the upper bound on memory recommendation.
+(default: 0.95)</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.Volume">Volume
