@@ -290,6 +290,16 @@ var _ = Describe("Strategy", func() {
 
 				Expect(newShoot.Spec.CredentialsBindingName).To(Equal(ptr.To("binding")))
 			})
+
+			It("should not mutate shoots being deleted (cloud profile sync)", func() {
+				oldShoot.Spec.CloudProfileName = ptr.To("profile")
+				oldShoot.DeletionTimestamp = ptr.To(metav1.Now())
+				newShoot = oldShoot.DeepCopy()
+
+				strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+
+				Expect(newShoot.Spec).To(Equal(oldShoot.Spec))
+			})
 		})
 
 		Context("seedName change", func() {
