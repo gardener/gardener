@@ -32,7 +32,6 @@ spec:
     additionalVolumes: []
     additionalVolumeMounts: []
     env: []
-    vpa: true
   config:
     apiVersion: gardenlet.config.gardener.cloud/v1alpha1
     kind: GardenletConfiguration

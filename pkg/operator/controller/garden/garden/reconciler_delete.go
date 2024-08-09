@@ -97,6 +97,12 @@ func (r *Reconciler) delete(
 			Name: "Destroying blackbox-exporter",
 			Fn:   component.OpDestroyAndWait(c.blackboxExporter).Destroy,
 		})
+		destroyGardenerOperatorVPA = g.Add(flow.Task{
+			Name: "Destroying VPA for gardener-operator",
+			Fn: func(ctx context.Context) error {
+				return gardenerutils.DeleteVPAForGardenerComponent(ctx, r.RuntimeClientSet.Client(), v1beta1constants.DeploymentNameGardenerOperator, r.GardenNamespace)
+			},
+		})
 
 		destroyGardenerDiscoveryServer = g.Add(flow.Task{
 			Name: "Destroying Gardener Discovery Server",
@@ -264,6 +270,7 @@ func (r *Reconciler) delete(
 			destroyVali,
 			destroyPrometheusOperator,
 			destroyBlackboxExporter,
+			destroyGardenerOperatorVPA,
 		)
 
 		destroyRuntimeSystemResources = g.Add(flow.Task{

@@ -253,6 +253,13 @@ func (r *Reconciler) runReconcileSeedFlow(
 			deployPrometheusCRD,
 		)
 
+		_ = g.Add(flow.Task{
+			Name: "Deploying VPA for gardenlet",
+			Fn: func(ctx context.Context) error {
+				return gardenerutils.ReconcileVPAForGardenerComponent(ctx, r.SeedClientSet.Client(), v1beta1constants.DeploymentNameGardenlet, r.GardenNamespace)
+			},
+			Dependencies: flow.NewTaskIDs(syncPointCRDs),
+		})
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Deploying and waiting for gardener-resource-manager to be healthy",
 			Fn:           component.OpWait(c.gardenerResourceManager).Deploy,

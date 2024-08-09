@@ -18,6 +18,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -572,6 +573,11 @@ var _ = Describe("Seed controller tests", func() {
 						g.Expect(testClient.List(ctx, crdList)).To(Succeed())
 						return crdList.Items
 					}).Should(ContainElements(crdsOnlyForSeedClusters))
+
+					By("Verify that VPA was created for gardenlet")
+					Eventually(func() error {
+						return testClient.Get(ctx, client.ObjectKey{Name: "gardenlet-vpa", Namespace: testNamespace.Name}, &vpaautoscalingv1.VerticalPodAutoscaler{})
+					}).Should(Succeed())
 
 					if !seedIsGarden {
 						By("Verify that the CRDs shared with the garden cluster have been deployed")
