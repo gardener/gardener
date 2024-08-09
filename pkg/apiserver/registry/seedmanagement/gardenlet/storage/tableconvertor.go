@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/rest"
 
+	"github.com/gardener/gardener/pkg/apis/core/helper"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 )
 
@@ -28,6 +29,7 @@ func newTableConvertor() rest.TableConvertor {
 		headers: []metav1beta1.TableColumnDefinition{
 			{Name: "Name", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["name"]},
 			{Name: "OCI Repository", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["ociRepository"]},
+			{Name: "Reconciled", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["reconciled"]},
 			{Name: "Age", Type: "date", Description: swaggerMetadataDescriptions["creationTimestamp"]},
 		},
 	}
@@ -58,6 +60,11 @@ func (c *convertor) ConvertToTable(_ context.Context, obj runtime.Object, _ runt
 		)
 		cells = append(cells, gardenlet.Name)
 		cells = append(cells, gardenlet.Spec.Deployment.Helm.OCIRepository.GetURL())
+		if cond := helper.GetCondition(gardenlet.Status.Conditions, seedmanagement.GardenletReconciled); cond != nil {
+			cells = append(cells, cond.Status)
+		} else {
+			cells = append(cells, "<unknown>")
+		}
 		cells = append(cells, metatable.ConvertToHumanReadableDateType(gardenlet.CreationTimestamp))
 		return cells, nil
 	})
