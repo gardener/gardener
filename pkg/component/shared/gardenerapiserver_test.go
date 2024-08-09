@@ -246,7 +246,7 @@ var _ = Describe("GardenerAPIServer", func() {
 					nil,
 					MatchError(ContainSubstring("not found")),
 				),
-				Entry("ConfigMapRef is provided but configmap is missing while shoot has a deletion timestamp",
+				Entry("ConfigMapRef is provided but configmap is missing while garden has a deletion timestamp",
 					func() {
 						objectMeta.DeletionTimestamp = &metav1.Time{}
 						apiServerConfig = &operatorv1alpha1.GardenerAPIServerConfig{
@@ -389,9 +389,10 @@ var _ = Describe("GardenerAPIServer", func() {
 
 	Describe("#DeployGardenerAPIServer", func() {
 		var (
-			ctrl                           *gomock.Controller
-			gardenerAPIServer              *mockgardenerapiserver.MockInterface
-			etcdEncryptionKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase
+			ctrl                             *gomock.Controller
+			gardenerAPIServer                *mockgardenerapiserver.MockInterface
+			etcdEncryptionKeyRotationPhase   gardencorev1beta1.CredentialsRotationPhase
+			workloadIdentityKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase
 		)
 
 		BeforeEach(func() {
@@ -400,6 +401,7 @@ var _ = Describe("GardenerAPIServer", func() {
 
 			gardenerAPIServer = mockgardenerapiserver.NewMockInterface(ctrl)
 			etcdEncryptionKeyRotationPhase = ""
+			workloadIdentityKeyRotationPhase = ""
 		})
 
 		DescribeTable("ETCD Encryption key rotation",
@@ -413,9 +415,10 @@ var _ = Describe("GardenerAPIServer", func() {
 				}
 
 				gardenerAPIServer.EXPECT().SetETCDEncryptionConfig(expectedETCDEncryptionConfig)
+				gardenerAPIServer.EXPECT().SetWorkloadIdentityKeyRotationPhase(workloadIdentityKeyRotationPhase)
 				gardenerAPIServer.EXPECT().Deploy(ctx)
 
-				Expect(DeployGardenerAPIServer(ctx, runtimeClient, namespace, gardenerAPIServer, nil, nil, etcdEncryptionKeyRotationPhase)).To(Succeed())
+				Expect(DeployGardenerAPIServer(ctx, runtimeClient, namespace, gardenerAPIServer, nil, nil, etcdEncryptionKeyRotationPhase, workloadIdentityKeyRotationPhase)).To(Succeed())
 
 				if finalizeTest != nil {
 					finalizeTest()
@@ -523,9 +526,10 @@ var _ = Describe("GardenerAPIServer", func() {
 				}
 
 				gardenerAPIServer.EXPECT().SetETCDEncryptionConfig(expectedETCDEncryptionConfig)
+				gardenerAPIServer.EXPECT().SetWorkloadIdentityKeyRotationPhase(workloadIdentityKeyRotationPhase)
 				gardenerAPIServer.EXPECT().Deploy(ctx)
 
-				Expect(DeployGardenerAPIServer(ctx, runtimeClient, namespace, gardenerAPIServer, nil, nil, etcdEncryptionKeyRotationPhase)).To(Succeed())
+				Expect(DeployGardenerAPIServer(ctx, runtimeClient, namespace, gardenerAPIServer, nil, nil, etcdEncryptionKeyRotationPhase, workloadIdentityKeyRotationPhase)).To(Succeed())
 			})
 
 			It("It should deploy GardenerAPIServer with the default resources appended to the passed resources", func() {
@@ -550,6 +554,7 @@ var _ = Describe("GardenerAPIServer", func() {
 				}
 
 				gardenerAPIServer.EXPECT().SetETCDEncryptionConfig(expectedETCDEncryptionConfig)
+				gardenerAPIServer.EXPECT().SetWorkloadIdentityKeyRotationPhase(workloadIdentityKeyRotationPhase)
 				gardenerAPIServer.EXPECT().Deploy(ctx)
 
 				resourcesToEncrypt := []string{
@@ -562,7 +567,7 @@ var _ = Describe("GardenerAPIServer", func() {
 					"bastions.operations.gardener.cloud",
 				}
 
-				Expect(DeployGardenerAPIServer(ctx, runtimeClient, namespace, gardenerAPIServer, resourcesToEncrypt, encryptedResources, etcdEncryptionKeyRotationPhase)).To(Succeed())
+				Expect(DeployGardenerAPIServer(ctx, runtimeClient, namespace, gardenerAPIServer, resourcesToEncrypt, encryptedResources, etcdEncryptionKeyRotationPhase, workloadIdentityKeyRotationPhase)).To(Succeed())
 			})
 		})
 	})

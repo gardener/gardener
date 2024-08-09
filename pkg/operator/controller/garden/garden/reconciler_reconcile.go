@@ -688,6 +688,7 @@ func (r *Reconciler) deployGardenerAPIServerFunc(garden *operatorv1alpha1.Garden
 			getGardenerResourcesForEncryption(garden),
 			utils.FilterEntriesByFilterFn(garden.Status.EncryptedResources, gardenerutils.IsServedByGardenerAPIServer),
 			helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials),
+			helper.GetWorkloadIdentityKeyRotationPhase(garden.Status.Credentials),
 		)
 	}
 }

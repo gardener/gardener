@@ -214,11 +214,13 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *ope
 		startRotationServiceAccountKey(garden, &now)
 		startRotationETCDEncryptionKey(garden, &now)
 		startRotationObservability(garden, &now)
+		startRotationWorkloadIdentityKey(garden, &now)
 	case v1beta1constants.OperationRotateCredentialsComplete:
 		mustRemoveOperationAnnotation = true
 		completeRotationCA(garden, &now)
 		completeRotationServiceAccountKey(garden, &now)
 		completeRotationETCDEncryptionKey(garden, &now)
+		completeRotationWorkloadIdentityKey(garden, &now)
 
 	case v1beta1constants.OperationRotateCAStart:
 		mustRemoveOperationAnnotation = true
@@ -244,6 +246,13 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *ope
 	case v1beta1constants.OperationRotateObservabilityCredentials:
 		mustRemoveOperationAnnotation = true
 		startRotationObservability(garden, &now)
+
+	case operatorv1alpha1.OperationRotateWorkloadIdentityKeyStart:
+		mustRemoveOperationAnnotation = true
+		startRotationWorkloadIdentityKey(garden, &now)
+	case operatorv1alpha1.OperationRotateWorkloadIdentityKeyComplete:
+		mustRemoveOperationAnnotation = true
+		completeRotationWorkloadIdentityKey(garden, &now)
 	}
 
 	if err := r.RuntimeClientSet.Client().Status().Update(ctx, garden); err != nil {
@@ -331,6 +340,22 @@ func (r *Reconciler) updateStatusOperationSuccess(ctx context.Context, garden *o
 	if helper.IsObservabilityRotationInitiationTimeAfterLastCompletionTime(garden.Status.Credentials) {
 		helper.MutateObservabilityRotation(garden, func(rotation *gardencorev1beta1.ObservabilityRotation) {
 			rotation.LastCompletionTime = &now
+		})
+	}
+
+	switch helper.GetWorkloadIdentityKeyRotationPhase(garden.Status.Credentials) {
+	case gardencorev1beta1.RotationPreparing:
+		helper.MutateWorkloadIdentityKeyRotation(garden, func(rotation *operatorv1alpha1.WorkloadIdentityKeyRotation) {
+			rotation.Phase = gardencorev1beta1.RotationPrepared
+			rotation.LastInitiationFinishedTime = &now
+		})
+
+	case gardencorev1beta1.RotationCompleting:
+		helper.MutateWorkloadIdentityKeyRotation(garden, func(rotation *operatorv1alpha1.WorkloadIdentityKeyRotation) {
+			rotation.Phase = gardencorev1beta1.RotationCompleted
+			rotation.LastCompletionTime = &now
+			rotation.LastInitiationFinishedTime = nil
+			rotation.LastCompletionTriggeredTime = nil
 		})
 	}
 
@@ -442,6 +467,22 @@ func startRotationObservability(garden *operatorv1alpha1.Garden, now *metav1.Tim
 	})
 }
 
+func startRotationWorkloadIdentityKey(garden *operatorv1alpha1.Garden, now *metav1.Time) {
+	helper.MutateWorkloadIdentityKeyRotation(garden, func(rotation *operatorv1alpha1.WorkloadIdentityKeyRotation) {
+		rotation.Phase = gardencorev1beta1.RotationPreparing
+		rotation.LastInitiationTime = now
+		rotation.LastInitiationFinishedTime = nil
+		rotation.LastCompletionTriggeredTime = nil
+	})
+}
+
+func completeRotationWorkloadIdentityKey(garden *operatorv1alpha1.Garden, now *metav1.Time) {
+	helper.MutateWorkloadIdentityKeyRotation(garden, func(rotation *operatorv1alpha1.WorkloadIdentityKeyRotation) {
+		rotation.Phase = gardencorev1beta1.RotationCompleting
+		rotation.LastCompletionTriggeredTime = now
+	})
+}
+
 func caCertConfigurations() []secretsutils.ConfigInterface {
 	return append([]secretsutils.ConfigInterface{
 		&secretsutils.CertificateSecretConfig{Name: operatorv1alpha1.SecretNameCARuntime, CertType: secretsutils.CACert, Validity: ptr.To(30 * 24 * time.Hour)},
@@ -493,6 +534,10 @@ func lastSecretRotationStartTimes(garden *operatorv1alpha1.Garden) map[string]ti
 
 		if gardenStatus.Credentials.Rotation.Observability != nil && gardenStatus.Credentials.Rotation.Observability.LastInitiationTime != nil {
 			rotation[v1beta1constants.SecretNameObservabilityIngress] = gardenStatus.Credentials.Rotation.Observability.LastInitiationTime.Time
+		}
+
+		if gardenStatus.Credentials.Rotation.WorkloadIdentityKey != nil && gardenStatus.Credentials.Rotation.WorkloadIdentityKey.LastInitiationTime != nil {
+			rotation[operatorv1alpha1.SecretNameWorkloadIdentityKey] = gardenStatus.Credentials.Rotation.WorkloadIdentityKey.LastInitiationTime.Time
 		}
 	}
 

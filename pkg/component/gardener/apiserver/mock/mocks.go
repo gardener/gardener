@@ -13,6 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	apiserver "github.com/gardener/gardener/pkg/component/apiserver"
 	apiserver0 "github.com/gardener/gardener/pkg/component/gardener/apiserver"
 	gomock "go.uber.org/mock/gomock"
@@ -132,6 +133,18 @@ func (m *MockInterface) SetETCDEncryptionConfig(arg0 apiserver.ETCDEncryptionCon
 func (mr *MockInterfaceMockRecorder) SetETCDEncryptionConfig(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetETCDEncryptionConfig", reflect.TypeOf((*MockInterface)(nil).SetETCDEncryptionConfig), arg0)
+}
+
+// SetWorkloadIdentityKeyRotationPhase mocks base method.
+func (m *MockInterface) SetWorkloadIdentityKeyRotationPhase(arg0 v1beta1.CredentialsRotationPhase) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetWorkloadIdentityKeyRotationPhase", arg0)
+}
+
+// SetWorkloadIdentityKeyRotationPhase indicates an expected call of SetWorkloadIdentityKeyRotationPhase.
+func (mr *MockInterfaceMockRecorder) SetWorkloadIdentityKeyRotationPhase(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetWorkloadIdentityKeyRotationPhase", reflect.TypeOf((*MockInterface)(nil).SetWorkloadIdentityKeyRotationPhase), arg0)
 }
 
 // Wait mocks base method.

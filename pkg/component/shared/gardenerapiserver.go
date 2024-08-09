@@ -117,6 +117,7 @@ func DeployGardenerAPIServer(
 	resourcesToEncrypt []string,
 	encryptedResources []string,
 	etcdEncryptionKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase,
+	workloadIdentityKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase,
 ) error {
 	etcdEncryptionConfig, err := computeAPIServerETCDEncryptionConfig(
 		ctx,
@@ -131,6 +132,7 @@ func DeployGardenerAPIServer(
 		return err
 	}
 	gardenerAPIServer.SetETCDEncryptionConfig(etcdEncryptionConfig)
+	gardenerAPIServer.SetWorkloadIdentityKeyRotationPhase(workloadIdentityKeyRotationPhase)
 
 	if err := gardenerAPIServer.Deploy(ctx); err != nil {
 		return err

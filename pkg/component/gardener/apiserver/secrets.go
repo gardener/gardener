@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/apiserver"
@@ -22,7 +23,6 @@ import (
 const (
 	secretAuditWebhookKubeconfigNamePrefix = "gardener-apiserver-audit-webhook-kubeconfig"
 	secretAdmissionKubeconfigsNamePrefix   = "gardener-apiserver-admission-kubeconfigs"
-	secretWorkloadIdentityNamePrefix       = "gardener-apiserver-workload-identity-signing-key"
 )
 
 func (g *gardenerAPIServer) emptySecret(name string) *corev1.Secret {
@@ -57,12 +57,15 @@ func (g *gardenerAPIServer) reconcileSecretServer(ctx context.Context) (*corev1.
 
 func (g *gardenerAPIServer) reconcileWorkloadIdentityKey(ctx context.Context) (*corev1.Secret, error) {
 	options := []secretsmanager.GenerateOption{
-		secretsmanager.Persist(),
-		secretsmanager.Rotate(secretsmanager.KeepOld), // TODO(vpnachev): Implement rotation triggers in Garden resource. Revise rotation strategy, if needed.
+		secretsmanager.Rotate(secretsmanager.KeepOld),
+	}
+
+	if g.values.WorkloadIdentityKeyRotationPhase == gardencorev1beta1.RotationCompleting {
+		options = append(options, secretsmanager.IgnoreOldSecrets())
 	}
 
 	return g.secretsManager.Generate(ctx, &secretsutils.RSASecretConfig{
-		Name: secretWorkloadIdentityNamePrefix,
+		Name: operatorv1alpha1.SecretNameWorkloadIdentityKey,
 		Bits: 4096,
 	}, options...)
 }

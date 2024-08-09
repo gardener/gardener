@@ -13,6 +13,9 @@ const (
 	// SecretNameCAGardener is a constant for the name of a Kubernetes secret object that contains the CA
 	// certificate of the Gardener control plane.
 	SecretNameCAGardener = "ca-gardener"
+	// SecretNameWorkloadIdentityKey is a constant for the name of a Kubernetes secret object that contains a
+	// PEM-encoded private RSA or ECDSA key used by the Gardener API Server to sign workload identity tokens.
+	SecretNameWorkloadIdentityKey = "gardener-apiserver-workload-identity-signing-key"
 
 	// LabelKeyGardenletAutoUpdates is a key for a label on seedmanagement.gardener.cloud/v1alpha1.Gardenlet resources.
 	// If set to true, gardener-operator will automatically update the `.spec.deployment.helm.ociRepository.ref` field
