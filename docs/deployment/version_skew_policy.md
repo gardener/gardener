@@ -30,15 +30,25 @@ Example:
 - newest `gardener-apiserver` is at **1.37**
 - other `gardener-apiserver` instances are supported at **1.37** and **1.36**
 
-#### gardener-controller-manager, gardener-scheduler, gardener-admission-controller, gardenlet
+#### gardener-controller-manager, gardener-scheduler, gardener-admission-controller
 
-`gardener-controller-manager`, `gardener-scheduler`, `gardener-admission-controller`, and `gardenlet` must not be newer than the `gardener-apiserver` instances they communicate with.
+`gardener-controller-manager`, `gardener-scheduler`, and `gardener-admission-controller` must not be newer than the `gardener-apiserver` instances they communicate with.
 They are expected to match the `gardener-apiserver` minor version, but may be up to one minor version older (to allow live upgrades).
 
 Example:
 
 - `gardener-apiserver` is at **1.37**
-- `gardener-controller-manager`, `gardener-scheduler`, `gardener-admission-controller`, and `gardenlet` are supported at **1.37** and **1.36**
+- `gardener-controller-manager`, `gardener-scheduler`, and `gardener-admission-controller` are supported at **1.37** and **1.36**
+
+#### gardenlet
+
+- `gardenlet` must not be newer than `gardener-apiserver`
+- `gardenlet` may be up to two minor versions older than `gardener-apiserver`
+
+Example:
+
+- `gardener-apiserver` is at **1.37**
+- `gardenlet` is supported at **1.37**, **1.36**, and **1.35**
 
 #### gardener-operator
 
@@ -61,13 +71,14 @@ Prerequisites:
 
 - In a single-instance setup, the existing `gardener-apiserver` instance is **1.37**.
 - In a multi-instance setup, all `gardener-apiserver` instances are at **1.37** or **1.38** (this ensures maximum skew of 1 minor version between the oldest and newest `gardener-apiserver` instance).
-- The `gardener-controller-manager`, `gardener-scheduler`, `gardener-admission-controller`, and `gardenlet` instances that communicate with this `gardener-apiserver` are at version **1.37** (this ensures they are not newer than the existing API server version and are within 1 minor version of the new API server version).
+- The `gardener-controller-manager`, `gardener-scheduler`, and `gardener-admission-controller`
+- `gardenlet` instances on all seeds are at version **1.37** or **1.36** (this ensures they are not newer than the existing API server version and are within 2 minor versions of the new API server version).
 
 Actions:
 
 - Upgrade `gardener-apiserver` to **1.38**.
 
-#### gardener-controller-manager, gardener-scheduler, gardener-admission-controller, gardenlet
+#### gardener-controller-manager, gardener-scheduler, gardener-admission-controller
 
 Prerequisites:
 
@@ -75,7 +86,20 @@ Prerequisites:
 
 Actions:
 
-- Upgrade `gardener-controller-manager`, `gardener-scheduler`, `gardener-admission-controller`, and `gardenlet` to **1.38**
+- Upgrade `gardener-controller-manager`, `gardener-scheduler`, and `gardener-admission-controller` to **1.38**
+
+#### gardenlet
+
+Prerequisites:
+
+- The `gardener-apiserver` instances the `gardenlet` communicates with are at **1.38**.
+
+Actions:
+
+- Optionally upgrade `gardenlet` instances to **1.38** (or they can be left at **1.37** or **1.36**).
+
+> [!WARNING]
+> Running a landscape with `gardenlet` instances that are persistently two minor versions behind `gardener-apiserver` means they must be upgraded before the Gardener control plane can be upgraded.
 
 #### gardener-operator
 
