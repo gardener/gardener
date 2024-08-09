@@ -170,11 +170,6 @@ kind: Shoot
 spec:
   kubernetes:
     kubelet:
-      systemReserved:                          # explicit resource reservation for operating system daemons
-        cpu: 100m
-        memory: 1Gi
-        ephemeralStorage: 1Gi
-        pid: 1000
       kubeReserved:                            # explicit resource reservation for Kubernetes daemons
         cpu: 100m
         memory: 1Gi

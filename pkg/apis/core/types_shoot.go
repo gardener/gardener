@@ -887,9 +887,9 @@ type KubeletConfig struct {
 	KubeReserved *KubeletConfigReserved
 	// SystemReserved is the configuration for resources reserved for system processes not managed by kubernetes (e.g. journald).
 	// When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.
-	// Deprecated: Separately configuring resource reservations for system processes is deprecated in Gardener and will be removed soon.
+	// Deprecated: Separately configuring resource reservations for system processes is deprecated in Gardener and will be forbidden starting from Kubernetes 1.31.
 	// Please merge existing resource reservations into the kubeReserved field.
-	// TODO(MichaelEischer): Drop this field after v1.113 has been released.
+	// TODO(MichaelEischer): Drop this field once Kubernetes 1.31 is the oldest supported version.
 	SystemReserved *KubeletConfigReserved
 	// ImageGCHighThresholdPercent describes the percent of the disk usage which triggers image garbage collection.
 	ImageGCHighThresholdPercent *int32
