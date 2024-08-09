@@ -190,9 +190,9 @@ type VolumeType struct {
 // Bastion contains the bastions creation info
 type Bastion struct {
 	// MachineImage contains the bastions machine image properties
-	MachineImage BastionMachineImage
+	MachineImage *BastionMachineImage
 	// MachineType contains the bastions machine type properties
-	MachineType BastionMachineType
+	MachineType *BastionMachineType
 }
 
 // BastionMachineImage contains the bastions machine image properties
@@ -200,7 +200,7 @@ type BastionMachineImage struct {
 	// Name of the machine image
 	Name string
 	// Version of the machine image
-	Version string
+	Version *string
 }
 
 // BastionMachineType contains the bastions machine type properties

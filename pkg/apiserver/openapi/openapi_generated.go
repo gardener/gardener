@@ -1673,19 +1673,16 @@ func schema_pkg_apis_core_v1beta1_Bastion(ref common.ReferenceCallback) common.O
 					"machineImage": {
 						SchemaProps: spec.SchemaProps{
 							Description: "MachineImage contains the bastions machine image properties",
-							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.BastionMachineImage"),
 						},
 					},
 					"machineType": {
 						SchemaProps: spec.SchemaProps{
 							Description: "MachineType contains the bastions machine type properties",
-							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.BastionMachineType"),
 						},
 					},
 				},
-				Required: []string{"machineImage", "machineType"},
 			},
 		},
 		Dependencies: []string{
@@ -1711,13 +1708,12 @@ func schema_pkg_apis_core_v1beta1_BastionMachineImage(ref common.ReferenceCallba
 					"version": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Version of the machine image",
-							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 				},
-				Required: []string{"name", "version"},
+				Required: []string{"name"},
 			},
 		},
 	}
