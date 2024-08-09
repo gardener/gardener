@@ -78,6 +78,7 @@ func (v *vpa) recommenderResourceConfigs() component.ResourceConfigs {
 		roleBindingLeaderLocking          = v.emptyRoleBinding("leader-locking-vpa-recommender")
 		service                           = v.emptyService(recommender)
 		deployment                        = v.emptyDeployment(recommender)
+		podDisruptionBudget               = v.emptyPodDisruptionBudget(recommender)
 		podMonitor                        = v.emptyPodMonitor(recommender)
 	)
 
@@ -112,12 +113,14 @@ func (v *vpa) recommenderResourceConfigs() component.ResourceConfigs {
 			component.ResourceConfig{Obj: serviceAccount, Class: component.Application, MutateFn: func() { v.reconcileRecommenderServiceAccount(serviceAccount) }},
 			component.ResourceConfig{Obj: deployment, Class: component.Runtime, MutateFn: func() { v.reconcileRecommenderDeployment(deployment, &serviceAccount.Name) }},
 			component.ResourceConfig{Obj: podMonitor, Class: component.Runtime, MutateFn: func() { v.reconcileRecommenderPodMonitor(podMonitor) }},
+			component.ResourceConfig{Obj: podDisruptionBudget, Class: component.Runtime, MutateFn: func() { v.reconcilePodDisruptionBudget(podDisruptionBudget, deployment) }},
 		)
 	} else {
 		vpa := v.emptyVerticalPodAutoscaler(recommender)
 		configs = append(configs,
 			component.ResourceConfig{Obj: vpa, Class: component.Runtime, MutateFn: func() { v.reconcileRecommenderVPA(vpa, deployment) }},
 			component.ResourceConfig{Obj: deployment, Class: component.Runtime, MutateFn: func() { v.reconcileRecommenderDeployment(deployment, nil) }},
+			component.ResourceConfig{Obj: podDisruptionBudget, Class: component.Runtime, MutateFn: func() { v.reconcilePodDisruptionBudget(podDisruptionBudget, deployment) }},
 		)
 	}
 
@@ -227,9 +230,9 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 		memoryRequest = "800M"
 	}
 
-	// vpa-recommender is not using leader election, hence it is not capable of running multiple replicas (and as a
-	// consequence, don't need a PDB).
-	deployment.Labels = v.getDeploymentLabels(recommender)
+	deployment.Labels = utils.MergeStringMaps(v.getDeploymentLabels(recommender), map[string]string{
+		resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
+	})
 	deployment.Spec = appsv1.DeploymentSpec{
 		Replicas:             ptr.To(ptr.Deref(v.values.Recommender.Replicas, 1)),
 		RevisionHistoryLimit: ptr.To[int32](2),

@@ -122,6 +122,7 @@ var _ = Describe("VPA", func() {
 		roleBindingLeaderLockingUpdater *rbacv1.RoleBinding
 		shootAccessSecretUpdater        *corev1.Secret
 		deploymentUpdaterFor            func(bool, *metav1.Duration, *metav1.Duration, *int32, *float64, *float64, string) *appsv1.Deployment
+		podDisruptionBudgetUpdater      *policyv1.PodDisruptionBudget
 		vpaUpdater                      *vpaautoscalingv1.VerticalPodAutoscaler
 
 		serviceAccountRecommender                    *corev1.ServiceAccount
@@ -136,6 +137,7 @@ var _ = Describe("VPA", func() {
 		serviceRecommenderFor                        func(component.ClusterType) *corev1.Service
 		shootAccessSecretRecommender                 *corev1.Secret
 		deploymentRecommenderFor                     func(bool, *metav1.Duration, *float64, component.ClusterType, *float64, *float64, *float64, *float64, *float64, *float64, string) *appsv1.Deployment
+		podDisruptionBudgetRecommender               *policyv1.PodDisruptionBudget
 		vpaRecommender                               *vpaautoscalingv1.VerticalPodAutoscaler
 		podMonitorRecommender                        *monitoringv1.PodMonitor
 
@@ -329,6 +331,7 @@ var _ = Describe("VPA", func() {
 					Labels: map[string]string{
 						"app":                 "vpa-updater",
 						"gardener.cloud/role": "vpa",
+						"high-availability-config.resources.gardener.cloud/type": "controller",
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
@@ -414,6 +417,21 @@ var _ = Describe("VPA", func() {
 			}
 
 			return obj
+		}
+		podDisruptionBudgetUpdater = &policyv1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "vpa-updater",
+				Namespace: namespace,
+				Labels:    map[string]string{"gardener.cloud/role": "vpa"},
+			},
+			Spec: policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &maxUnavailable,
+				Selector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"app": "vpa-updater",
+					},
+				},
+			},
 		}
 		vpaUpdater = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
@@ -680,6 +698,7 @@ var _ = Describe("VPA", func() {
 					Labels: map[string]string{
 						"app":                 "vpa-recommender",
 						"gardener.cloud/role": "vpa",
+						"high-availability-config.resources.gardener.cloud/type": "controller",
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
@@ -762,6 +781,21 @@ var _ = Describe("VPA", func() {
 			}
 
 			return obj
+		}
+		podDisruptionBudgetRecommender = &policyv1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "vpa-recommender",
+				Namespace: namespace,
+				Labels:    map[string]string{"gardener.cloud/role": "vpa"},
+			},
+			Spec: policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &maxUnavailable,
+				Selector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"app": "vpa-recommender",
+					},
+				},
+			},
 		}
 		vpaRecommender = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
@@ -1498,7 +1532,11 @@ var _ = Describe("VPA", func() {
 
 				Context("Kubernetes versions < 1.26", func() {
 					It("should successfully deploy all resources", func() {
-						expectedObjects = append(expectedObjects, podDisruptionBudgetAdmissionController)
+						expectedObjects = append(expectedObjects,
+							podDisruptionBudgetUpdater,
+							podDisruptionBudgetRecommender,
+							podDisruptionBudgetAdmissionController,
+						)
 						Expect(managedResource).To(consistOf(expectedObjects...))
 					})
 				})
@@ -1518,8 +1556,14 @@ var _ = Describe("VPA", func() {
 
 					It("should successfully deploy all resources", func() {
 						unhealthyPodEvictionPolicyAlwaysAllow := policyv1.AlwaysAllow
+						podDisruptionBudgetUpdater.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwaysAllow
+						podDisruptionBudgetRecommender.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwaysAllow
 						podDisruptionBudgetAdmissionController.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwaysAllow
-						expectedObjects = append(expectedObjects, podDisruptionBudgetAdmissionController)
+						expectedObjects = append(expectedObjects,
+							podDisruptionBudgetUpdater,
+							podDisruptionBudgetRecommender,
+							podDisruptionBudgetAdmissionController,
+						)
 						Expect(managedResource).To(consistOf(expectedObjects...))
 					})
 				})
@@ -1779,10 +1823,18 @@ var _ = Describe("VPA", func() {
 
 				Context("Kubernetes versions < 1.26", func() {
 					It("should successfully deploy all resources", func() {
-						podDisruptionBudget := &policyv1.PodDisruptionBudget{}
-						Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudgetAdmissionController), podDisruptionBudget)).To(Succeed())
-						podDisruptionBudgetAdmissionController.ResourceVersion = "1"
-						Expect(podDisruptionBudget).To(Equal(podDisruptionBudgetAdmissionController))
+						expectedPodDisruptionBudgets := []*policyv1.PodDisruptionBudget{
+							podDisruptionBudgetUpdater,
+							podDisruptionBudgetRecommender,
+							podDisruptionBudgetAdmissionController,
+						}
+
+						for _, expected := range expectedPodDisruptionBudgets {
+							actual := &policyv1.PodDisruptionBudget{}
+							Expect(c.Get(ctx, client.ObjectKeyFromObject(expected), actual)).To(Succeed())
+							expected.ResourceVersion = "1"
+							Expect(actual).To(Equal(expected))
+						}
 					})
 				})
 
@@ -1800,12 +1852,20 @@ var _ = Describe("VPA", func() {
 					})
 
 					It("should successfully deploy all resources", func() {
-						podDisruptionBudget := &policyv1.PodDisruptionBudget{}
-						Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudgetAdmissionController), podDisruptionBudget)).To(Succeed())
-						podDisruptionBudgetAdmissionController.ResourceVersion = "1"
-						unhealthyPodEvictionPolicyAlwaysAllow := policyv1.AlwaysAllow
-						podDisruptionBudgetAdmissionController.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwaysAllow
-						Expect(podDisruptionBudget).To(Equal(podDisruptionBudgetAdmissionController))
+						expectedPodDisruptionBudgets := []*policyv1.PodDisruptionBudget{
+							podDisruptionBudgetUpdater,
+							podDisruptionBudgetRecommender,
+							podDisruptionBudgetAdmissionController,
+						}
+
+						for _, expected := range expectedPodDisruptionBudgets {
+							actual := &policyv1.PodDisruptionBudget{}
+							Expect(c.Get(ctx, client.ObjectKeyFromObject(expected), actual)).To(Succeed())
+							expected.ResourceVersion = "1"
+							unhealthyPodEvictionPolicyAlwaysAllow := policyv1.AlwaysAllow
+							expected.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwaysAllow
+							Expect(actual).To(Equal(expected))
+						}
 					})
 				})
 			})
@@ -1865,11 +1925,13 @@ var _ = Describe("VPA", func() {
 
 				By("Create vpa-updater runtime resources")
 				Expect(c.Create(ctx, deploymentUpdaterFor(true, nil, nil, nil, nil, nil, "kube-system"))).To(Succeed())
+				Expect(c.Create(ctx, podDisruptionBudgetUpdater)).To(Succeed())
 				Expect(c.Create(ctx, vpaUpdater)).To(Succeed())
 
 				By("Create vpa-recommender runtime resources")
-				Expect(c.Create(ctx, deploymentRecommenderFor(true, nil, nil, component.ClusterTypeShoot, nil, nil, nil, nil, nil, nil, "kube-system"))).To(Succeed())
 				Expect(c.Create(ctx, serviceRecommenderFor(component.ClusterTypeShoot))).To(Succeed())
+				Expect(c.Create(ctx, deploymentRecommenderFor(true, nil, nil, component.ClusterTypeShoot, nil, nil, nil, nil, nil, nil, "kube-system"))).To(Succeed())
+				Expect(c.Create(ctx, podDisruptionBudgetRecommender)).To(Succeed())
 				Expect(c.Create(ctx, vpaRecommender)).To(Succeed())
 
 				By("Create vpa-admission-controller runtime resources")
@@ -1885,11 +1947,13 @@ var _ = Describe("VPA", func() {
 
 				By("Verify vpa-updater runtime resources")
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentUpdaterFor(true, nil, nil, nil, nil, nil, "kube-system")), &appsv1.Deployment{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudgetUpdater), &policyv1.PodDisruptionBudget{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaUpdater), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
 
 				By("Verify vpa-recommender runtime resources")
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentRecommenderFor(true, nil, nil, component.ClusterTypeShoot, nil, nil, nil, nil, nil, nil, "kube-system")), &appsv1.Deployment{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceRecommenderFor(component.ClusterTypeShoot)), &appsv1.Deployment{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentRecommenderFor(true, nil, nil, component.ClusterTypeShoot, nil, nil, nil, nil, nil, nil, "kube-system")), &appsv1.Deployment{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudgetRecommender), &policyv1.PodDisruptionBudget{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaRecommender), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
 
 				By("Verify vpa-admission-controller runtime resources")
