@@ -73,8 +73,9 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 
 	log.Info("Requesting new token")
 
-	contextObject := &securityv1alpha1.ContextObject{}
+	var contextObject *securityv1alpha1.ContextObject
 	if v, ok := secret.Annotations[securityv1alpha1constants.AnnotationWorkloadIdentityContextObject]; ok {
+		contextObject = &securityv1alpha1.ContextObject{}
 		if err := json.Unmarshal([]byte(v), contextObject); err != nil {
 			return reconcile.Result{}, fmt.Errorf("cannot parse context object: %w", err)
 		}
