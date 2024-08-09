@@ -13,7 +13,6 @@ import (
 	"github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
-	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -24,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	baseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/ptr"
@@ -39,42 +37,6 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
-
-// ValidateGardenletChartVPA validates the vpa of the Gardenlet chart.
-func ValidateGardenletChartVPA(ctx context.Context, c client.Client) {
-	vpa := &vpaautoscalingv1.VerticalPodAutoscaler{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "gardenlet-vpa",
-			Namespace: "garden",
-		},
-	}
-
-	Expect(c.Get(
-		ctx,
-		client.ObjectKey{Namespace: vpa.Namespace, Name: vpa.Name},
-		vpa,
-	)).ToNot(HaveOccurred())
-
-	auto := vpaautoscalingv1.UpdateModeAuto
-	expectedSpec := vpaautoscalingv1.VerticalPodAutoscalerSpec{
-		TargetRef: &autoscalingv1.CrossVersionObjectReference{
-			APIVersion: "apps/v1",
-			Kind:       "Deployment",
-			Name:       "gardenlet",
-		},
-		UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: &auto},
-		ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
-			{
-				ContainerName: "*",
-				MinAllowed: corev1.ResourceList{
-					"memory": resource.MustParse("200Mi"),
-				},
-			},
-		}},
-	}
-
-	Expect(vpa.Spec).To(DeepEqual(expectedSpec))
-}
 
 // ValidateGardenletChartPriorityClass validates the priority class of the Gardenlet chart.
 func ValidateGardenletChartPriorityClass(ctx context.Context, c client.Client) {

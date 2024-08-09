@@ -340,10 +340,6 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 				secret := getEmptyKubeconfigGardenBootstrapSecret()
 				validateKubeconfigSecret(ctx, c, secret, bootstrapKubeconfigContent, expectedLabels, "gardenlet-kubeconfig-bootstrap")
 			}
-
-			if deploymentConfiguration != nil && deploymentConfiguration.VPA != nil && *deploymentConfiguration.VPA {
-				ValidateGardenletChartVPA(ctx, c)
-			}
 		},
 		Entry("verify the default values for the Gardenlet chart & the Gardenlet component config", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-f44c8fea"}, false),
 		Entry("verify Gardenlet with component config having the Garden client connection kubeconfig set", ptr.To("dummy garden kubeconfig"), nil, nil, nil, nil, nil, nil, nil, nil, nil, map[string]string{

@@ -51,7 +51,6 @@ data:
         env:
         {{- .Values.env | toYaml | nindent 8 }}
         {{- end }}
-        vpa: {{ .Values.vpa }}
       config:
 {{ include "gardenlet.config" . | indent 8 }}
 {{- end }}
