@@ -525,7 +525,21 @@ var _ = Describe("Seed", func() {
 					Entry("get", "get"),
 					Entry("list", "list"),
 					Entry("watch", "watch"),
+					Entry("create", "create"),
 				)
+
+				It("should allow the request when the request is for 'token' subresource and path exists", func() {
+					attrs.Subresource = "token"
+					attrs.Verb = "create"
+
+					graph.EXPECT().HasPathFrom(graphpkg.VertexTypeWorkloadIdentity, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+				})
 
 				DescribeTable("should have no opinion because no allowed verb",
 					func(verb string) {
@@ -535,10 +549,9 @@ var _ = Describe("Seed", func() {
 
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionNoOpinion))
-						Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get list watch]"))
+						Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get list watch create]"))
 					},
 
-					Entry("create", "create"),
 					Entry("patch", "patch"),
 					Entry("update", "update"),
 					Entry("delete", "delete"),
@@ -562,7 +575,7 @@ var _ = Describe("Seed", func() {
 
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionNoOpinion))
-					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: []"))
+					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [token]"))
 				})
 
 				It("should have no opinion because no resource name is given", func() {

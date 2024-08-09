@@ -254,7 +254,6 @@ API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1bet
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,ShootStatus,IsHibernated
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,Volume,VolumeSize
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,Worker,MachineControllerManagerSettings
-API rule violation: names_match,github.com/gardener/gardener/pkg/apis/security/v1alpha1,TokenRequestStatus,ExpirationTimeStamp
 API rule violation: names_match,k8s.io/api/core/v1,AzureDiskVolumeSource,DataDiskURI
 API rule violation: names_match,k8s.io/api/core/v1,ContainerStatus,LastTerminationState
 API rule violation: names_match,k8s.io/api/core/v1,DaemonEndpoint,Port

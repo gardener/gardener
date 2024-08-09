@@ -109,7 +109,7 @@ message TokenRequestStatus {
   // Token is the issued token.
   optional string token = 1;
 
-  // ExpirationTimeStamp is the time of expiration of the returned token.
+  // ExpirationTimestamp is the time of expiration of the returned token.
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time expirationTimestamp = 2;
 }
 

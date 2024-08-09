@@ -33,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/controller/seed"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/vpaevictionrequirements"
+	workloadidentitytokenrequestor "github.com/gardener/gardener/pkg/gardenlet/controller/workloadidentity/tokenrequestor"
 	"github.com/gardener/gardener/pkg/healthz"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -133,6 +134,14 @@ func AddToManager(
 		TargetNamespace: gardenerutils.ComputeGardenNamespace(cfg.SeedConfig.Name),
 	}).AddToManager(mgr, seedCluster, gardenCluster); err != nil {
 		return fmt.Errorf("failed adding token requestor controller: %w", err)
+	}
+
+	if err := (&workloadidentitytokenrequestor.Reconciler{
+		ConcurrentSyncs: ptr.Deref(cfg.Controllers.TokenRequestor.ConcurrentSyncs, 0),
+		Clock:           clock.RealClock{},
+		JitterFunc:      wait.Jitter,
+	}).AddToManager(mgr, seedCluster, gardenCluster); err != nil {
+		return fmt.Errorf("failed adding workload identity token requestor controller: %w", err)
 	}
 
 	return nil

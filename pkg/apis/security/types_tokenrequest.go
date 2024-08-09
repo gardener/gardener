@@ -48,6 +48,6 @@ type ContextObject struct {
 type TokenRequestStatus struct {
 	// Token is the issued token.
 	Token string
-	// ExpirationTimeStamp is the time of expiration of the returned token.
-	ExpirationTimeStamp metav1.Time
+	// ExpirationTimestamp is the time of expiration of the returned token.
+	ExpirationTimestamp metav1.Time
 }

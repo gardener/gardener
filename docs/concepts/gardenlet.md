@@ -510,6 +510,12 @@ Specifically, the following actions will be taken for the respective label and a
 * If the VPA has the annotation `eviction-requirements.autoscaling.gardener.cloud/downscale-restriction: never`, an `EvictionRequirement` is added to the VPA object that allows evictions for upscaling only
 * If the VPA has the annotation `eviction-requirements.autoscaling.gardener.cloud/downscale-restriction: in-maintenance-window-only`, the same `EvictionRequirement` is added to the VPA object when the Shoot is currently outside of its maintenance window. When the Shoot is inside its maintenance window, the `EvictionRequirement` is removed. Information about the Shoot maintenance window times are stored in the annotation `shoot.gardener.cloud/maintenance-window` on the VPA
 
+### [`WorkloadIdentityTokenRequestor` Controller](../../pkg/gardenlet/controller/workloadidentity/tokenrequestor)
+
+The `WorkloadIdentityTokenRequestor` controller in the `gardenlet` reconciles `Secret`s labeled with `security.gardener.cloud/purpose=workload-identity-token-requestor`. When it encounters such `Secret` it associates the `Secret` with a specific `WorkloadIdentity` using the annotations `workloadidentity.security.gardener.cloud/name` and `workloadidentity.security.gardener.cloud/namespace`. Any workload creating such `Secret`s is responsible to label and annotate the `Secret`s accordingly. After the association is made the `gardenlet` requests a token for the specific `WorkloadIdentity` from the Gardener API Server and writes it back in the `Secret`'s data against the `token` key. The `gardenlet` is responsible to keep this token valid by refreshing it periodically. The token is then used by control plane components running in the seed cluster in order to present the said `WorkloadIdentity` before external systems, e.g. by calling cloud provider APIs.
+
+Please refer to [GEP-26: Workload Identity - Trust Based Authentication](../proposals/26-workload-identity.md) for more details.
+
 ## Managed Seeds
 
 Gardener users can use shoot clusters as seed clusters, so-called "managed seeds" (aka "shooted seeds"),
