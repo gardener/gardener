@@ -10,6 +10,9 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -64,10 +67,6 @@ type kubeStateMetrics struct {
 // Values is a set of configuration values for the kube-state-metrics.
 type Values struct {
 	// ClusterType specifies the type of the cluster to which kube-state-metrics is being deployed.
-	// For seeds, all resources are being deployed as part of a ManagedResource.
-	// For shoots, the kube-state-metrics runs in the shoot namespace in the seed as part of the control plane. Hence,
-	// only the runtime resources (like Deployment, Service, etc.) are being deployed directly (with the client). All
-	// other application-related resources (like RBAC roles, CRD, etc.) are deployed as part of a ManagedResource.
 	ClusterType component.ClusterType
 	// KubernetesVersion is the Kubernetes version of the cluster.
 	KubernetesVersion *semver.Version
@@ -77,21 +76,71 @@ type Values struct {
 	PriorityClassName string
 	// Replicas is the number of replicas.
 	Replicas int32
-	// IsWorkerless specifies whether the cluster has worker nodes.
-	IsWorkerless bool
 	// NameSuffix is attached to the deployment name and related resources.
 	NameSuffix string
 }
 
+func (k *kubeStateMetrics) getResourcesForSeed() []client.Object {
+	var scrapeConfig *monitoringv1alpha1.ScrapeConfig
+	if k.values.NameSuffix == SuffixSeed {
+		scrapeConfig = k.scrapeConfigSeed()
+	} else if k.values.NameSuffix == SuffixRuntime {
+		scrapeConfig = k.scrapeConfigGarden()
+	}
+
+	clusterRole := k.clusterRole()
+	serviceAccount := k.serviceAccount()
+	customResourceStateConfigMap := k.customResourceStateConfigMap()
+	deployment := k.deployment(serviceAccount, "", nil, customResourceStateConfigMap.Name)
+	return []client.Object{
+		clusterRole,
+		serviceAccount,
+		k.clusterRoleBinding(clusterRole, serviceAccount),
+		deployment,
+		k.podDisruptionBudget(deployment),
+		k.scrapeConfigCache(),
+		scrapeConfig,
+		k.service(),
+		k.verticalPodAutoscaler(deployment),
+		customResourceStateConfigMap,
+	}
+}
+
+func (k *kubeStateMetrics) getResourcesForShoot(genericTokenKubeconfigSecretName string, shootAccessSecret *gardenerutils.AccessSecret) []client.Object {
+	customResourceStateConfigMap := k.customResourceStateConfigMap()
+	deployment := k.deployment(nil, genericTokenKubeconfigSecretName, shootAccessSecret, customResourceStateConfigMap.Name)
+	return []client.Object{
+		deployment,
+		k.prometheusRuleShoot(),
+		k.scrapeConfigShoot(),
+		k.service(),
+		k.verticalPodAutoscaler(deployment),
+		customResourceStateConfigMap,
+	}
+}
+
+func (k *kubeStateMetrics) getResourcesForShootTarget(shootAccessSecret *gardenerutils.AccessSecret) []client.Object {
+	clusterRole := k.clusterRole()
+	return []client.Object{
+		clusterRole,
+		k.clusterRoleBinding(clusterRole, &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      shootAccessSecret.ServiceAccountName,
+				Namespace: metav1.NamespaceSystem,
+			},
+		}),
+	}
+}
+
 func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 	var (
-		genericTokenKubeconfigSecretName string
-		shootAccessSecret                *gardenerutils.AccessSecret
+		shootAccessSecret *gardenerutils.AccessSecret
+		registry          = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 	)
 
 	// TODO(chrkl): Remove after release v1.103
 	if k.values.ClusterType == component.ClusterTypeSeed && k.values.NameSuffix != "" {
-		if err := component.DestroyResourceConfigs(ctx, k.client, k.namespace, k.values.ClusterType, managedResourceName, k.getResourceConfigs("", nil)); client.IgnoreNotFound(err) != nil {
+		if err := component.DestroyResourceConfigs(ctx, k.client, k.namespace, k.values.ClusterType, managedResourceName, nil); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 
@@ -107,30 +156,77 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 		if !found {
 			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
 		}
-		genericTokenKubeconfigSecretName = genericTokenKubeconfigSecret.Name
 
 		shootAccessSecret = k.newShootAccessSecret()
 		if err := shootAccessSecret.Reconcile(ctx, k.client); err != nil {
 			return err
 		}
+
+		if err := registry.Add(k.getResourcesForShoot(genericTokenKubeconfigSecret.Name, shootAccessSecret)...); err != nil {
+			return err
+		}
 	}
 
-	var registry *managedresources.Registry
 	if k.values.ClusterType == component.ClusterTypeSeed {
-		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
-	} else {
-		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+		if err := registry.Add(k.getResourcesForSeed()...); err != nil {
+			return err
+		}
 	}
 
-	return component.DeployResourceConfigs(ctx, k.client, k.namespace, k.values.ClusterType, k.managedResourceName(), map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}, registry, k.getResourceConfigs(genericTokenKubeconfigSecretName, shootAccessSecret))
-}
+	serializedResources, err := registry.SerializedObjects()
+	if err != nil {
+		return err
+	}
 
-func (k *kubeStateMetrics) Destroy(ctx context.Context) error {
-	if err := component.DestroyResourceConfigs(ctx, k.client, k.namespace, k.values.ClusterType, k.managedResourceName(), k.getResourceConfigs("", nil)); err != nil {
+	if err := managedresources.CreateForSeedWithLabels(
+		ctx,
+		k.client,
+		k.namespace,
+		k.managedResourceName(),
+		false,
+		map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy},
+		serializedResources,
+	); err != nil {
 		return err
 	}
 
 	if k.values.ClusterType == component.ClusterTypeShoot {
+		registryTarget := managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+		resourcesTarget, err := registryTarget.AddAllAndSerialize(k.getResourcesForShootTarget(shootAccessSecret)...)
+		if err != nil {
+			return err
+		}
+
+		// TODO(vicwicker): Remove after KSM upgrade to 2.13.
+		if err := managedresources.WaitUntilHealthyAndNotProgressing(ctx, k.client, k.namespace, k.managedResourceName()); err != nil {
+			return err
+		}
+
+		return managedresources.CreateForShootWithLabels(
+			ctx,
+			k.client,
+			k.namespace,
+			k.managedResourceName()+"-target",
+			managedresources.LabelValueGardener,
+			false,
+			map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy},
+			resourcesTarget,
+		)
+	}
+
+	return nil
+}
+
+func (k *kubeStateMetrics) Destroy(ctx context.Context) error {
+	if err := managedresources.DeleteForSeed(ctx, k.client, k.namespace, k.managedResourceName()); err != nil {
+		return err
+	}
+
+	if k.values.ClusterType == component.ClusterTypeShoot {
+		if err := managedresources.DeleteForShoot(ctx, k.client, k.namespace, k.managedResourceName()+"-target"); err != nil {
+			return err
+		}
+
 		return client.IgnoreNotFound(k.client.Delete(ctx, k.newShootAccessSecret().Secret))
 	}
 
