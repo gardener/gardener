@@ -56,11 +56,6 @@ spec:
     - RS256
     requiredClaims:
       key: value
-  client:
-    secret: oidc-client-secret
-    extraConfig:
-      extra-scopes: "email,offline_access,profile"
-      foo: bar
   weight: 90
 ```
 
@@ -119,11 +114,6 @@ spec:
   kubernetes:
     kubeAPIServer:
       oidcConfig:
-        clientAuthentication:
-          extraConfig:
-            extra-scopes: email,offline_access,profile
-            foo: bar
-          secret: oidc-client-secret
         clientID: test-1
         groupsClaim: groups-claim
         groupsPrefix: groups-prefix
@@ -200,11 +190,6 @@ spec:
     - RS256
     requiredClaims:
       key: value
-  client:
-    secret: oidc-client-secret
-    extraConfig:
-      extra-scopes: "email,offline_access,profile"
-      foo: bar
   weight: 90
 ```
 
@@ -261,11 +246,6 @@ spec:
   kubernetes:
     kubeAPIServer:
       oidcConfig:
-        clientAuthentication:
-          extraConfig:
-            extra-scopes: email,offline_access,profile
-            foo: bar
-          secret: oidc-client-secret
         clientID: cluster-preset
         groupsClaim: groups-claim
         groupsPrefix: groups-prefix

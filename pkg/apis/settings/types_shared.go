@@ -21,6 +21,9 @@ type OpenIDConnectPresetSpec struct {
 	// of Shoot clusters.
 	// This configuration is not overwriting any existing OpenID Connect
 	// client authentication already set on the Shoot object.
+	// Deprecated: The OpenID Connect configuration this field specifies is not used.
+	// It's use was planned for genereting OIDC kubeconfig https://github.com/gardener/gardener/issues/1433
+	// TODO(AleksandarSavchev): Drop this field after v1.102 has been released.
 	Client *OpenIDConnectClientAuthentication
 
 	// ShootSelector decides whether to apply the configuration if the

@@ -879,6 +879,9 @@ type OIDCConfig struct {
 	// +optional
 	CABundle *string `json:"caBundle,omitempty" protobuf:"bytes,1,opt,name=caBundle"`
 	// ClientAuthentication can optionally contain client configuration used for kubeconfig generation.
+	// Deprecated: This field has no implemented use.
+	// It's use was planned for genereting OIDC kubeconfig https://github.com/gardener/gardener/issues/1433
+	// TODO(AleksandarSavchev): Drop this field after v1.102 has been released.
 	// +optional
 	ClientAuthentication *OpenIDConnectClientAuthentication `json:"clientAuthentication,omitempty" protobuf:"bytes,2,opt,name=clientAuthentication"`
 	// The client ID for the OpenID Connect client, must be set if oidc-issuer-url is set.

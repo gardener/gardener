@@ -24,9 +24,4 @@ spec:
     # - RS256
     # requiredClaims:
     #   key: value
-  client:
-    secret: oidc-client-secret
-    extraConfig:
-      extra-scopes: email,offline_access,profile
-      foo: bar
   weight: 90 # value from 1 to 100
