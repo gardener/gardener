@@ -2943,6 +2943,7 @@ BastionMachineImage
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>MachineImage contains the bastions machine image properties</p>
 </td>
 </tr>
@@ -2956,6 +2957,7 @@ BastionMachineType
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>MachineType contains the bastions machine type properties</p>
 </td>
 </tr>
@@ -2997,6 +2999,7 @@ string
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Version of the machine image</p>
 </td>
 </tr>
