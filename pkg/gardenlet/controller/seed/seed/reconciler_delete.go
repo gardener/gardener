@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
@@ -272,6 +273,12 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Dependencies: flow.NewTaskIDs(destroyFluentOperatorResources, noControllerInstallations),
 			SkipIf:       seedIsGarden,
 		})
+		destroyGardenletVPA = g.Add(flow.Task{
+			Name: "Destroying VPA for gardenlet",
+			Fn: func(ctx context.Context) error {
+				return gardenerutils.DeleteVPAForGardenerComponent(ctx, r.SeedClientSet.Client(), v1beta1constants.DeploymentNameGardenlet, r.GardenNamespace)
+			},
+		})
 
 		syncPointCleanedUp = flow.NewTaskIDs(
 			destroyClusterIdentity,
@@ -303,6 +310,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 			destroyVali,
 			destroyEtcdCRD,
 			destroyFluentOperatorCRDs,
+			destroyGardenletVPA,
 		)
 
 		destroySystemResources = g.Add(flow.Task{
