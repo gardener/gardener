@@ -1773,10 +1773,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 					errorList := ValidateShoot(shoot)
 
 					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
+						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.issuerURL"),
 					})), PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
+						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.clientID"),
 					})), PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
@@ -1800,19 +1800,20 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}))))
 				})
 
-				DescribeTable("should forbid issuerURL to be empty string or nil, if clientID exists ", func(errorListSize int, issuerURL *string) {
+				DescribeTable("should forbid issuerURL to be empty string or nil", func(errorListSize int, issuerURL *string, detail string) {
 					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = ptr.To("someClientID")
 					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = issuerURL
 
 					errorList := ValidateShoot(shoot)
 					Expect(errorList).To(HaveLen(errorListSize))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.issuerURL"),
+						"Type":   Equal(field.ErrorTypeRequired),
+						"Field":  Equal("spec.kubernetes.kubeAPIServer.oidcConfig.issuerURL"),
+						"Detail": Equal(detail),
 					}))
 				},
-					Entry("should add error if clientID is set but issuerURL is nil ", 1, nil),
-					Entry("should add error if clientID is set but issuerURL is empty string", 2, ptr.To("")),
+					Entry("should add error if issuerURL is nil ", 1, nil, "issuerURL must be set when oidcConfig is provided"),
+					Entry("should add error if issuerURL is empty string", 1, ptr.To(""), "issuerURL cannot be empty"),
 				)
 
 				It("should forbid issuerURL which is not HTTPS schema", func() {
@@ -1837,19 +1838,20 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(errorList).To(BeEmpty())
 				})
 
-				DescribeTable("should forbid clientID to be empty string or nil, if issuerURL exists ", func(errorListSize int, clientID *string) {
-					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = ptr.To("https://issuer.com")
+				DescribeTable("should forbid clientID to be empty string or nil", func(errorListSize int, clientID *string, detail string) {
 					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = clientID
+					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = ptr.To("https://issuer.com")
 
 					errorList := ValidateShoot(shoot)
 					Expect(errorList).To(HaveLen(errorListSize))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.clientID"),
+						"Type":   Equal(field.ErrorTypeRequired),
+						"Field":  Equal("spec.kubernetes.kubeAPIServer.oidcConfig.clientID"),
+						"Detail": Equal(detail),
 					}))
 				},
-					Entry("should add error if issuerURL is set but clientID is nil", 1, nil),
-					Entry("should add error if issuerURL is set but clientID is empty string ", 2, ptr.To("")),
+					Entry("should add error if clientID is nil", 1, nil, "clientID must be set when oidcConfig is provided"),
+					Entry("should add error if clientID is empty string ", 1, ptr.To(""), "clientID cannot be empty"),
 				)
 			})
 
