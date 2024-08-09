@@ -82,6 +82,6 @@ type GardenletStatus struct {
 }
 
 const (
-	// GardenletReconciled is a condition type for indicating whether the Gardenlet's has been reconciled.
+	// GardenletReconciled is a condition type for indicating whether the Gardenlet has been reconciled.
 	GardenletReconciled gardencore.ConditionType = "GardenletReconciled"
 )
