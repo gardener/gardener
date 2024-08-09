@@ -8,6 +8,7 @@ This document describes how to contribute features or hotfixes, and how new Gard
     - [Release Validation](#release-validation)
   - [Contributing New Features or Fixes](#contributing-new-features-or-fixes)
     - [TODO Statements](#todo-statements)
+    - [Deprecations and Backwards-Compatibility](#deprecations-and-backwards-compatibility)
   - [Cherry Picks](#cherry-picks)
     - [Prerequisites](#prerequisites)
     - [Initiate a Cherry Pick](#initiate-a-cherry-pick)
@@ -151,7 +152,7 @@ Usually, the new release is triggered in the beginning of the second week if all
 ## Contributing New Features or Fixes
 
 Please refer to the [Gardener contributor guide](https://gardener.cloud/docs/contribute/).
-Besides a lot of a general information, it also provides a checklist for newly created pull requests that may help you to prepare your changes for an efficient review process.
+Besides a lot of general information, it also provides a checklist for newly created pull requests that may help you to prepare your changes for an efficient review process.
 If you are contributing a fix or major improvement, please take care to open cherry-pick PRs to all affected and still supported versions once the change is approved and merged in the `master` branch.
 
 :warning: Please ensure that your modifications pass the verification checks (linting, formatting, static code checks, tests, etc.) by executing
@@ -182,6 +183,29 @@ In order to properly follow-up with such TODOs and to prevent them from piling u
   ```
   The associated person should actively drive the implementation of the referenced issue (unless it cannot be done because of third-party dependencies or conditions) so that the TODO statement does not get stale.
 - TODO statements without actionable tasks or those that are unlikely to ever be implemented (maybe because of very low priorities) should not be specified in the first place. If a TODO is specified, the associated person should make sure to actively follow-up.
+
+### Deprecations and Backwards-Compatibility
+
+In case you have to remove functionality _relevant to end-users_ (e.g., a field or default value in the `Shoot` API), please **connect it with a Kubernetes minor version upgrade**.
+This way, end-users are forced to actively adapt their manifests when they perform their Kubernetes upgrades.
+For example, the `.spec.kubernetes.enableStaticTokenKubeconfig` field in the `Shoot` API is no longer allowed to be set for Kubernetes versions `>= 1.27`.
+
+In case you have to remove or change functionality _which cannot be directly connected with a Kubernetes version upgrade_, please consider introducing a feature gate.
+This way, landscape operators can announce the planned changes to their users and communicate a timeline when they plan to activate the feature gate.
+End-users can then prepare for it accordingly.
+For example, the fact that changes to `kubelet.kubeReserved` in the `Shoot` API will lead to a rolling update of the worker nodes (previously, these changes were updated in-place) is controlled via the `NewWorkerPoolHash` feature gate.
+
+In case you have to remove functionality _relevant to Gardener extensions_, please deprecate it first, and add a [TODO statement](#todo-statements) to remove it only after **at least 9 releases**.
+Do not forget to write a proper release note as part of your pull request.
+This gives extension developers enough time (~18 weeks) to adapt to the changes (and to release a new version of their extension) before Gardener finally removes the functionality.
+Examples are removing a field in the `extensions.gardener.cloud/v1alpha1` API group, or removing a controller in the extensions library.
+
+In case you have to run migration code (_which is mostly internal_), please add a [TODO statement](#todo-statements) to remove it only after **3 releases**.
+This way, we can ensure that the Gardener version skew policy is not violated.
+For example, the migration code for moving the Prometheus instances under management of `prometheus-operator` was running for three releases.
+
+> [!TIP]
+> Please revisit the [version skew policy](../deployment/version_skew_policy.md).
 
 ## Cherry Picks
 
