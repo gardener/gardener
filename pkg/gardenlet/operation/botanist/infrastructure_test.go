@@ -136,6 +136,7 @@ var _ = Describe("Infrastructure", func() {
 			nodesCIDRs    = []string{"1.2.3.4/5"}
 			podsCIDRs     = []string{"2.3.4.5/6"}
 			servicesCIDRs = []string{"3.4.5.6/7"}
+			egressCIDRs   = []string{"4.5.6.7/8"}
 			shoot         = &gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
@@ -143,7 +144,7 @@ var _ = Describe("Infrastructure", func() {
 				},
 				Spec: gardencorev1beta1.ShootSpec{
 					Networking: &gardencorev1beta1.Networking{
-						//Nodes:    ptr.To(nodesCIDRs[0]),
+						// Nodes:    ptr.To(nodesCIDRs[0]),
 						Pods:     ptr.To(podsCIDRs[0]),
 						Services: ptr.To(servicesCIDRs[0]),
 					},
@@ -162,40 +163,50 @@ var _ = Describe("Infrastructure", func() {
 			botanist.Shoot.SetInfo(shoot)
 		})
 
-		It("should successfully wait (w/ provider status, w/ nodes cidr)", func() {
+		It("should successfully wait (w/ CIDRs)", func() {
 			infrastructure.EXPECT().Wait(ctx)
 			infrastructure.EXPECT().NodesCIDRs().Return(nodesCIDRs)
 			infrastructure.EXPECT().PodsCIDRs().Return(podsCIDRs)
-			infrastructure.EXPECT().PodsCIDRs().Return(podsCIDRs)
 			infrastructure.EXPECT().ServicesCIDRs().Return(servicesCIDRs)
-			infrastructure.EXPECT().ServicesCIDRs().Return(servicesCIDRs)
+			infrastructure.EXPECT().EgressCIDRs().Return(egressCIDRs)
 
 			updatedShoot := shoot.DeepCopy()
 			updatedShoot.Spec.Networking.Nodes = ptr.To(nodesCIDRs[0])
 			test.EXPECTPatch(ctx, gardenClient, updatedShoot, shoot, types.StrategicMergePatchType)
 
-			seedClientSet.EXPECT().Client().Return(seedClient)
-
 			updatedShoot2 := updatedShoot.DeepCopy()
 			updatedShoot2.Status.Networking = &gardencorev1beta1.NetworkingStatus{
-				Nodes:    nodesCIDRs,
-				Pods:     podsCIDRs,
-				Services: servicesCIDRs,
+				Nodes:       nodesCIDRs,
+				Pods:        podsCIDRs,
+				Services:    servicesCIDRs,
+				EgressCIDRs: egressCIDRs,
 			}
 			gardenClient.EXPECT().Status().Return(mockStatusWriter)
 			test.EXPECTStatusPatch(ctx, mockStatusWriter, updatedShoot2, updatedShoot, types.StrategicMergePatchType)
+
+			seedClientSet.EXPECT().Client().Return(seedClient)
 
 			Expect(botanist.WaitForInfrastructure(ctx)).To(Succeed())
 			Expect(botanist.Shoot.GetInfo()).To(Equal(updatedShoot2))
 		})
 
-		It("should successfully wait (w/o provider status, w/o nodes cidr)", func() {
+		It("should successfully wait (w/o CIDRs)", func() {
 			infrastructure.EXPECT().Wait(ctx)
 			infrastructure.EXPECT().NodesCIDRs()
+			infrastructure.EXPECT().PodsCIDRs()
+			infrastructure.EXPECT().ServicesCIDRs()
+			infrastructure.EXPECT().EgressCIDRs()
 			shoot.Spec.Networking.Nodes = ptr.To(nodesCIDRs[0])
 
+			updatedShoot := shoot.DeepCopy()
+			updatedShoot.Status.Networking = &gardencorev1beta1.NetworkingStatus{}
+			gardenClient.EXPECT().Status().Return(mockStatusWriter)
+			test.EXPECTStatusPatch(ctx, mockStatusWriter, updatedShoot, shoot, types.StrategicMergePatchType)
+
+			seedClientSet.EXPECT().Client().Return(seedClient)
+
 			Expect(botanist.WaitForInfrastructure(ctx)).To(Succeed())
-			Expect(botanist.Shoot.GetInfo()).To(Equal(shoot))
+			Expect(botanist.Shoot.GetInfo()).To(Equal(updatedShoot))
 		})
 
 		It("should return the error during wait", func() {
