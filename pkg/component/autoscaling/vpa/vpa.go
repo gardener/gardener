@@ -220,6 +220,14 @@ func (v *vpa) emptyClusterRoleBinding(name string) *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: v.rbacNamePrefix() + name}}
 }
 
+func (v *vpa) emptyRole(name string) *rbacv1.Role {
+	return &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: v.rbacNamePrefix() + name, Namespace: v.namespaceForApplicationClassResource()}}
+}
+
+func (v *vpa) emptyRoleBinding(name string) *rbacv1.RoleBinding {
+	return &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: v.rbacNamePrefix() + name, Namespace: v.namespaceForApplicationClassResource()}}
+}
+
 func (v *vpa) emptyDeployment(name string) *appsv1.Deployment {
 	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: v.namespace}}
 }
@@ -263,7 +271,7 @@ func (v *vpa) rbacNamePrefix() string {
 	return prefix + "target:"
 }
 
-func (v *vpa) serviceAccountNamespace() string {
+func (v *vpa) namespaceForApplicationClassResource() string {
 	if v.values.ClusterType == component.ClusterTypeSeed {
 		return v.namespace
 	}

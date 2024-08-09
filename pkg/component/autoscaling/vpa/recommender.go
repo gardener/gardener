@@ -63,6 +63,8 @@ func (v *vpa) recommenderResourceConfigs() component.ResourceConfigs {
 		clusterRoleBindingCheckpointActor = v.emptyClusterRoleBinding("checkpoint-actor")
 		clusterRoleStatusActor            = v.emptyClusterRole("status-actor")
 		clusterRoleBindingStatusActor     = v.emptyClusterRoleBinding("status-actor")
+		roleLeaderLocking                 = v.emptyRole("leader-locking-vpa-recommender")
+		roleBindingLeaderLocking          = v.emptyRoleBinding("leader-locking-vpa-recommender")
 		service                           = v.emptyService(recommender)
 		deployment                        = v.emptyDeployment(recommender)
 		podMonitor                        = v.emptyPodMonitor(recommender)
@@ -80,6 +82,10 @@ func (v *vpa) recommenderResourceConfigs() component.ResourceConfigs {
 		{Obj: clusterRoleStatusActor, Class: component.Application, MutateFn: func() { v.reconcileRecommenderClusterRoleStatusActor(clusterRoleStatusActor) }},
 		{Obj: clusterRoleBindingStatusActor, Class: component.Application, MutateFn: func() {
 			v.reconcileRecommenderClusterRoleBinding(clusterRoleBindingStatusActor, clusterRoleStatusActor, recommender)
+		}},
+		{Obj: roleLeaderLocking, Class: component.Application, MutateFn: func() { v.reconcileRecommenderRoleLeaderLocking(roleLeaderLocking) }},
+		{Obj: roleBindingLeaderLocking, Class: component.Application, MutateFn: func() {
+			v.reconcileRecommenderRoleBindingLeaderLocking(roleBindingLeaderLocking, roleLeaderLocking, recommender)
 		}},
 		{Obj: service, Class: component.Runtime, MutateFn: func() { v.reconcileRecommenderService(service) }},
 	}
@@ -161,7 +167,38 @@ func (v *vpa) reconcileRecommenderClusterRoleBinding(clusterRoleBinding *rbacv1.
 	clusterRoleBinding.Subjects = []rbacv1.Subject{{
 		Kind:      rbacv1.ServiceAccountKind,
 		Name:      serviceAccountName,
-		Namespace: v.serviceAccountNamespace(),
+		Namespace: v.namespaceForApplicationClassResource(),
+	}}
+}
+
+func (v *vpa) reconcileRecommenderRoleLeaderLocking(role *rbacv1.Role) {
+	role.Labels = getRoleLabel()
+	role.Rules = []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{"coordination.k8s.io"},
+			Resources: []string{"leases"},
+			Verbs:     []string{"create"},
+		},
+		{
+			APIGroups:     []string{"coordination.k8s.io"},
+			Resources:     []string{"leases"},
+			ResourceNames: []string{"vpa-recommender"},
+			Verbs:         []string{"get", "watch", "update"},
+		},
+	}
+}
+
+func (v *vpa) reconcileRecommenderRoleBindingLeaderLocking(roleBinding *rbacv1.RoleBinding, role *rbacv1.Role, serviceAccountName string) {
+	roleBinding.Labels = getRoleLabel()
+	roleBinding.RoleRef = rbacv1.RoleRef{
+		APIGroup: rbacv1.GroupName,
+		Kind:     "Role",
+		Name:     role.Name,
+	}
+	roleBinding.Subjects = []rbacv1.Subject{{
+		Kind:      rbacv1.ServiceAccountKind,
+		Name:      serviceAccountName,
+		Namespace: v.namespaceForApplicationClassResource(),
 	}}
 }
 
@@ -210,6 +247,8 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 						"--kube-api-burst=120",
 						"--memory-saver=true",
 						fmt.Sprintf("--target-cpu-percentile=%f", ptr.Deref(v.values.Recommender.TargetCPUPercentile, gardencorev1beta1.DefaultTargetCPUPercentile)),
+						"--leader-elect=true",
+						fmt.Sprintf("--leader-elect-resource-namespace=%s", v.namespaceForApplicationClassResource()),
 					},
 					LivenessProbe: newDefaultLivenessProbe(),
 					Ports: []corev1.ContainerPort{

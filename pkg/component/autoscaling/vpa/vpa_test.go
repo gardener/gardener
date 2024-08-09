@@ -115,12 +115,14 @@ var _ = Describe("VPA", func() {
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 
-		serviceAccountUpdater     *corev1.ServiceAccount
-		clusterRoleUpdater        *rbacv1.ClusterRole
-		clusterRoleBindingUpdater *rbacv1.ClusterRoleBinding
-		shootAccessSecretUpdater  *corev1.Secret
-		deploymentUpdaterFor      func(bool, *metav1.Duration, *metav1.Duration, *int32, *float64, *float64) *appsv1.Deployment
-		vpaUpdater                *vpaautoscalingv1.VerticalPodAutoscaler
+		serviceAccountUpdater           *corev1.ServiceAccount
+		clusterRoleUpdater              *rbacv1.ClusterRole
+		clusterRoleBindingUpdater       *rbacv1.ClusterRoleBinding
+		roleLeaderLockingUpdater        *rbacv1.Role
+		roleBindingLeaderLockingUpdater *rbacv1.RoleBinding
+		shootAccessSecretUpdater        *corev1.Secret
+		deploymentUpdaterFor            func(bool, *metav1.Duration, *metav1.Duration, *int32, *float64, *float64, string) *appsv1.Deployment
+		vpaUpdater                      *vpaautoscalingv1.VerticalPodAutoscaler
 
 		serviceAccountRecommender                    *corev1.ServiceAccount
 		clusterRoleRecommenderMetricsReader          *rbacv1.ClusterRole
@@ -129,9 +131,11 @@ var _ = Describe("VPA", func() {
 		clusterRoleBindingRecommenderCheckpointActor *rbacv1.ClusterRoleBinding
 		clusterRoleRecommenderStatusActor            *rbacv1.ClusterRole
 		clusterRoleBindingRecommenderStatusActor     *rbacv1.ClusterRoleBinding
+		roleLeaderLockingRecommender                 *rbacv1.Role
+		roleBindingLeaderLockingRecommender          *rbacv1.RoleBinding
 		serviceRecommenderFor                        func(component.ClusterType) *corev1.Service
 		shootAccessSecretRecommender                 *corev1.Secret
-		deploymentRecommenderFor                     func(bool, *metav1.Duration, *float64, component.ClusterType, *float64) *appsv1.Deployment
+		deploymentRecommenderFor                     func(bool, *metav1.Duration, *float64, component.ClusterType, *float64, string) *appsv1.Deployment
 		vpaRecommender                               *vpaautoscalingv1.VerticalPodAutoscaler
 		podMonitorRecommender                        *monitoringv1.PodMonitor
 
@@ -229,6 +233,47 @@ var _ = Describe("VPA", func() {
 				Namespace: namespace,
 			}},
 		}
+		roleLeaderLockingUpdater = &rbacv1.Role{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud:vpa:target:leader-locking-vpa-updater",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"gardener.cloud/role": "vpa",
+				},
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{"coordination.k8s.io"},
+					Resources: []string{"leases"},
+					Verbs:     []string{"create"},
+				},
+				{
+					APIGroups:     []string{"coordination.k8s.io"},
+					Resources:     []string{"leases"},
+					ResourceNames: []string{"vpa-updater"},
+					Verbs:         []string{"get", "watch", "update"},
+				},
+			},
+		}
+		roleBindingLeaderLockingUpdater = &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud:vpa:target:leader-locking-vpa-updater",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"gardener.cloud/role": "vpa",
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "Role",
+				Name:     "gardener.cloud:vpa:target:leader-locking-vpa-updater",
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      "ServiceAccount",
+				Name:      "vpa-updater",
+				Namespace: namespace,
+			}},
+		}
 		shootAccessSecretUpdater = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "shoot-access-vpa-updater",
@@ -251,6 +296,7 @@ var _ = Describe("VPA", func() {
 			evictionRateBurst *int32,
 			evictionRateLimit *float64,
 			evictionTolerance *float64,
+			leaderElectionNamespace string,
 		) *appsv1.Deployment {
 			var (
 				flagEvictionToleranceValue      = "0.500000"
@@ -320,6 +366,8 @@ var _ = Describe("VPA", func() {
 									"--v=2",
 									"--kube-api-qps=100",
 									"--kube-api-burst=120",
+									"--leader-elect=true",
+									fmt.Sprintf("--leader-elect-resource-namespace=%s", leaderElectionNamespace),
 								},
 								LivenessProbe: livenessProbeVpa,
 								Ports: []corev1.ContainerPort{
@@ -518,6 +566,47 @@ var _ = Describe("VPA", func() {
 				Name:     "gardener.cloud:vpa:target:status-actor",
 			},
 		}
+		roleLeaderLockingRecommender = &rbacv1.Role{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud:vpa:target:leader-locking-vpa-recommender",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"gardener.cloud/role": "vpa",
+				},
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{"coordination.k8s.io"},
+					Resources: []string{"leases"},
+					Verbs:     []string{"create"},
+				},
+				{
+					APIGroups:     []string{"coordination.k8s.io"},
+					Resources:     []string{"leases"},
+					ResourceNames: []string{"vpa-recommender"},
+					Verbs:         []string{"get", "watch", "update"},
+				},
+			},
+		}
+		roleBindingLeaderLockingRecommender = &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud:vpa:target:leader-locking-vpa-recommender",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"gardener.cloud/role": "vpa",
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "Role",
+				Name:     "gardener.cloud:vpa:target:leader-locking-vpa-recommender",
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      "ServiceAccount",
+				Name:      "vpa-recommender",
+				Namespace: namespace,
+			}},
+		}
 		serviceRecommenderFor = func(clusterType component.ClusterType) *corev1.Service {
 			obj := &corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
@@ -567,6 +656,7 @@ var _ = Describe("VPA", func() {
 			recommendationMarginFraction *float64,
 			clusterType component.ClusterType,
 			targetCPUPercentile *float64,
+			leaderElectionNamespace string,
 		) *appsv1.Deployment {
 			var (
 				flagRecommendationMarginFraction = "0.150000"
@@ -638,6 +728,8 @@ var _ = Describe("VPA", func() {
 									"--kube-api-burst=120",
 									"--memory-saver=true",
 									fmt.Sprintf("--target-cpu-percentile=%s", flagTargetCPUPercentile),
+									"--leader-elect=true",
+									fmt.Sprintf("--leader-elect-resource-namespace=%s", leaderElectionNamespace),
 								},
 								LivenessProbe: livenessProbeVpa,
 								Ports: []corev1.ContainerPort{
@@ -1316,14 +1408,19 @@ var _ = Describe("VPA", func() {
 					clusterRoleUpdater.Name = replaceTargetSubstrings(clusterRoleUpdater.Name)
 					clusterRoleBindingUpdater.Name = replaceTargetSubstrings(clusterRoleBindingUpdater.Name)
 					clusterRoleBindingUpdater.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingUpdater.RoleRef.Name)
+					roleLeaderLockingUpdater.Name = replaceTargetSubstrings(roleLeaderLockingUpdater.Name)
+					roleBindingLeaderLockingUpdater.Name = replaceTargetSubstrings(roleBindingLeaderLockingUpdater.Name)
+					roleBindingLeaderLockingUpdater.RoleRef.Name = replaceTargetSubstrings(roleBindingLeaderLockingUpdater.RoleRef.Name)
 
-					deploymentUpdater := deploymentUpdaterFor(true, nil, nil, nil, nil, nil)
+					deploymentUpdater := deploymentUpdaterFor(true, nil, nil, nil, nil, nil, namespace)
 					adaptNetworkPolicyLabelsForClusterTypeSeed(deploymentUpdater.Spec.Template.Labels)
 
 					expectedObjects = []client.Object{
 						serviceAccountUpdater,
 						clusterRoleUpdater,
 						clusterRoleBindingUpdater,
+						roleLeaderLockingUpdater,
+						roleBindingLeaderLockingUpdater,
 						deploymentUpdater,
 						vpaUpdater,
 					}
@@ -1338,8 +1435,11 @@ var _ = Describe("VPA", func() {
 					clusterRoleRecommenderStatusActor.Name = replaceTargetSubstrings(clusterRoleRecommenderStatusActor.Name)
 					clusterRoleBindingRecommenderStatusActor.Name = replaceTargetSubstrings(clusterRoleBindingRecommenderStatusActor.Name)
 					clusterRoleBindingRecommenderStatusActor.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingRecommenderStatusActor.RoleRef.Name)
+					roleLeaderLockingRecommender.Name = replaceTargetSubstrings(roleLeaderLockingRecommender.Name)
+					roleBindingLeaderLockingRecommender.Name = replaceTargetSubstrings(roleBindingLeaderLockingRecommender.Name)
+					roleBindingLeaderLockingRecommender.RoleRef.Name = replaceTargetSubstrings(roleBindingLeaderLockingRecommender.RoleRef.Name)
 
-					deploymentRecommender := deploymentRecommenderFor(true, nil, nil, component.ClusterTypeSeed, nil)
+					deploymentRecommender := deploymentRecommenderFor(true, nil, nil, component.ClusterTypeSeed, nil, namespace)
 					adaptNetworkPolicyLabelsForClusterTypeSeed(deploymentRecommender.Spec.Template.Labels)
 
 					expectedObjects = append(expectedObjects,
@@ -1350,6 +1450,8 @@ var _ = Describe("VPA", func() {
 						clusterRoleBindingRecommenderCheckpointActor,
 						clusterRoleRecommenderStatusActor,
 						clusterRoleBindingRecommenderStatusActor,
+						roleLeaderLockingRecommender,
+						roleBindingLeaderLockingRecommender,
 						deploymentRecommender,
 						serviceRecommenderFor(component.ClusterTypeSeed),
 						podMonitorRecommender,
@@ -1481,6 +1583,7 @@ var _ = Describe("VPA", func() {
 					valuesUpdater.EvictionRateBurst,
 					valuesUpdater.EvictionRateLimit,
 					valuesUpdater.EvictionTolerance,
+					namespace,
 				)
 				adaptNetworkPolicyLabelsForClusterTypeSeed(deploymentUpdater.Spec.Template.Labels)
 
@@ -1490,6 +1593,7 @@ var _ = Describe("VPA", func() {
 					valuesRecommender.RecommendationMarginFraction,
 					component.ClusterTypeSeed,
 					valuesRecommender.TargetCPUPercentile,
+					namespace,
 				)
 				adaptNetworkPolicyLabelsForClusterTypeSeed(deploymentRecommender.Spec.Template.Labels)
 
@@ -1545,8 +1649,16 @@ var _ = Describe("VPA", func() {
 
 					By("Verify vpa-updater application resources")
 					clusterRoleBindingUpdater.Subjects[0].Namespace = "kube-system"
+					roleLeaderLockingUpdater.Namespace = "kube-system"
+					roleBindingLeaderLockingUpdater.Namespace = "kube-system"
+					roleBindingLeaderLockingUpdater.Subjects[0].Namespace = "kube-system"
 
-					Expect(managedResource).To(contain(clusterRoleUpdater, clusterRoleBindingUpdater))
+					Expect(managedResource).To(contain(
+						clusterRoleUpdater,
+						clusterRoleBindingUpdater,
+						roleLeaderLockingUpdater,
+						roleBindingLeaderLockingUpdater,
+					))
 					Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 					Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
@@ -1558,7 +1670,7 @@ var _ = Describe("VPA", func() {
 
 					deployment := &appsv1.Deployment{}
 					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-updater"}, deployment)).To(Succeed())
-					deploymentUpdater := deploymentUpdaterFor(false, nil, nil, nil, nil, nil)
+					deploymentUpdater := deploymentUpdaterFor(false, nil, nil, nil, nil, nil, "kube-system")
 					deploymentUpdater.ResourceVersion = "1"
 					Expect(deployment).To(Equal(deploymentUpdater))
 
@@ -1570,12 +1682,20 @@ var _ = Describe("VPA", func() {
 					By("Verify vpa-recommender application resources")
 					clusterRoleBindingRecommenderMetricsReader.Subjects[0].Namespace = "kube-system"
 					clusterRoleBindingRecommenderCheckpointActor.Subjects[0].Namespace = "kube-system"
+					clusterRoleBindingRecommenderStatusActor.Subjects[0].Namespace = "kube-system"
+					roleLeaderLockingRecommender.Namespace = "kube-system"
+					roleBindingLeaderLockingRecommender.Namespace = "kube-system"
+					roleBindingLeaderLockingRecommender.Subjects[0].Namespace = "kube-system"
 
 					Expect(managedResource).To(contain(
 						clusterRoleRecommenderMetricsReader,
 						clusterRoleBindingRecommenderMetricsReader,
 						clusterRoleRecommenderCheckpointActor,
 						clusterRoleBindingRecommenderCheckpointActor,
+						clusterRoleRecommenderStatusActor,
+						clusterRoleBindingRecommenderStatusActor,
+						roleLeaderLockingRecommender,
+						roleBindingLeaderLockingRecommender,
 					))
 
 					By("Verify vpa-recommender runtime resources")
@@ -1586,7 +1706,7 @@ var _ = Describe("VPA", func() {
 
 					deployment = &appsv1.Deployment{}
 					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-recommender"}, deployment)).To(Succeed())
-					deploymentRecommender := deploymentRecommenderFor(false, nil, nil, component.ClusterTypeShoot, nil)
+					deploymentRecommender := deploymentRecommenderFor(false, nil, nil, component.ClusterTypeShoot, nil, "kube-system")
 					deploymentRecommender.ResourceVersion = "1"
 					Expect(deployment).To(Equal(deploymentRecommender))
 
@@ -1740,11 +1860,11 @@ var _ = Describe("VPA", func() {
 				Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())
 
 				By("Create vpa-updater runtime resources")
-				Expect(c.Create(ctx, deploymentUpdaterFor(true, nil, nil, nil, nil, nil))).To(Succeed())
+				Expect(c.Create(ctx, deploymentUpdaterFor(true, nil, nil, nil, nil, nil, "kube-system"))).To(Succeed())
 				Expect(c.Create(ctx, vpaUpdater)).To(Succeed())
 
 				By("Create vpa-recommender runtime resources")
-				Expect(c.Create(ctx, deploymentRecommenderFor(true, nil, nil, component.ClusterTypeShoot, nil))).To(Succeed())
+				Expect(c.Create(ctx, deploymentRecommenderFor(true, nil, nil, component.ClusterTypeShoot, nil, "kube-system"))).To(Succeed())
 				Expect(c.Create(ctx, serviceRecommenderFor(component.ClusterTypeShoot))).To(Succeed())
 				Expect(c.Create(ctx, vpaRecommender)).To(Succeed())
 
@@ -1760,11 +1880,11 @@ var _ = Describe("VPA", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
 
 				By("Verify vpa-updater runtime resources")
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentUpdaterFor(true, nil, nil, nil, nil, nil)), &appsv1.Deployment{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentUpdaterFor(true, nil, nil, nil, nil, nil, "kube-system")), &appsv1.Deployment{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaUpdater), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
 
 				By("Verify vpa-recommender runtime resources")
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentRecommenderFor(true, nil, nil, component.ClusterTypeShoot, nil)), &appsv1.Deployment{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentRecommenderFor(true, nil, nil, component.ClusterTypeShoot, nil, "kube-system")), &appsv1.Deployment{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceRecommenderFor(component.ClusterTypeShoot)), &appsv1.Deployment{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaRecommender), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
 
