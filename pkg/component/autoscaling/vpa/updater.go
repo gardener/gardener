@@ -61,6 +61,7 @@ func (v *vpa) updaterResourceConfigs() component.ResourceConfigs {
 		roleLeaderLocking        = v.emptyRole("leader-locking-vpa-updater")
 		roleBindingLeaderLocking = v.emptyRoleBinding("leader-locking-vpa-updater")
 		deployment               = v.emptyDeployment(updater)
+		podDisruptionBudget      = v.emptyPodDisruptionBudget(updater)
 		vpa                      = v.emptyVerticalPodAutoscaler(updater)
 	)
 
@@ -79,10 +80,12 @@ func (v *vpa) updaterResourceConfigs() component.ResourceConfigs {
 		configs = append(configs,
 			component.ResourceConfig{Obj: serviceAccount, Class: component.Application, MutateFn: func() { v.reconcileUpdaterServiceAccount(serviceAccount) }},
 			component.ResourceConfig{Obj: deployment, Class: component.Runtime, MutateFn: func() { v.reconcileUpdaterDeployment(deployment, &serviceAccount.Name) }},
+			component.ResourceConfig{Obj: podDisruptionBudget, Class: component.Runtime, MutateFn: func() { v.reconcilePodDisruptionBudget(podDisruptionBudget, deployment) }},
 		)
 	} else {
 		configs = append(configs,
 			component.ResourceConfig{Obj: deployment, Class: component.Runtime, MutateFn: func() { v.reconcileUpdaterDeployment(deployment, nil) }},
+			component.ResourceConfig{Obj: podDisruptionBudget, Class: component.Runtime, MutateFn: func() { v.reconcilePodDisruptionBudget(podDisruptionBudget, deployment) }},
 		)
 	}
 
@@ -157,9 +160,9 @@ func (v *vpa) reconcileUpdaterRoleBindingLeaderLocking(roleBinding *rbacv1.RoleB
 }
 
 func (v *vpa) reconcileUpdaterDeployment(deployment *appsv1.Deployment, serviceAccountName *string) {
-	// vpa-updater is not using leader election, hence it is not capable of running multiple replicas (and as a
-	// consequence, don't need a PDB).
-	deployment.Labels = v.getDeploymentLabels(updater)
+	deployment.Labels = utils.MergeStringMaps(v.getDeploymentLabels(updater), map[string]string{
+		resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
+	})
 	deployment.Spec = appsv1.DeploymentSpec{
 		Replicas:             ptr.To(ptr.Deref(v.values.Updater.Replicas, 1)),
 		RevisionHistoryLimit: ptr.To[int32](2),
