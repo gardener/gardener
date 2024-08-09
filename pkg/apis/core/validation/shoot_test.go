@@ -31,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	"github.com/gardener/gardener/plugin/pkg/utils"
 )
 
 var _ = Describe("Shoot Validation Tests", func() {
@@ -4902,6 +4903,17 @@ var _ = Describe("Shoot Validation Tests", func() {
 				newShoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
 
 				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+			})
+
+			It("should not sync cloud profile fields for shoots being deleted", func() {
+				shoot.Spec.CloudProfileName = ptr.To("profile")
+				shoot.DeletionTimestamp = ptr.To(metav1.Now())
+				newShoot := prepareShootForUpdate(shoot)
+
+				utils.SyncCloudProfileFields(shoot, newShoot)
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+				Expect(errorList).To(BeEmpty())
 			})
 		})
 
