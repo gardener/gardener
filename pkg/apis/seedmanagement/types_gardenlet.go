@@ -80,3 +80,8 @@ type GardenletStatus struct {
 	// Gardenlet's generation, which is updated on mutation by the API Server.
 	ObservedGeneration int64
 }
+
+const (
+	// GardenletReconciled is a condition type for indicating whether the Gardenlet has been reconciled.
+	GardenletReconciled gardencore.ConditionType = "GardenletReconciled"
+)
