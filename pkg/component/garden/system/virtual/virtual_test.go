@@ -321,15 +321,22 @@ var _ = Describe("Virtual", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener.cloud:system:read-global-resources",
 			},
-			Rules: []rbacv1.PolicyRule{{
-				APIGroups: []string{"core.gardener.cloud"},
-				Resources: []string{
-					"cloudprofiles",
-					"exposureclasses",
-					"seeds",
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{"core.gardener.cloud"},
+					Resources: []string{
+						"cloudprofiles",
+						"exposureclasses",
+						"seeds",
+					},
+					Verbs: []string{"get", "list", "watch"},
 				},
-				Verbs: []string{"get", "list", "watch"},
-			}},
+				{
+					APIGroups: []string{"apiextensions.k8s.io"},
+					Resources: []string{"customresourcedefinitions"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+			},
 		}
 		clusterRoleBindingReadGlobalResources = &rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
