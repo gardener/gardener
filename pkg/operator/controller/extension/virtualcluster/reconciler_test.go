@@ -26,7 +26,6 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	. "github.com/gardener/gardener/pkg/operator/controller/extension/virtualcluster"
@@ -74,9 +73,7 @@ var _ = Describe("Reconciler", func() {
 			},
 			Spec: operatorv1alpha1.ExtensionSpec{
 				Resources: []gardencorev1beta1.ControllerResource{
-					gardencorev1beta1.ControllerResource{
-						Kind: "Worker",
-					},
+					{Kind: "Worker"},
 				},
 				Deployment: &operatorv1alpha1.Deployment{
 					ExtensionDeployment: &operatorv1alpha1.ExtensionDeploymentSpec{
@@ -93,7 +90,8 @@ var _ = Describe("Reconciler", func() {
 		}
 
 		virtualClient = fakeclient.NewClientBuilder().WithScheme(operatorclient.VirtualScheme).Build()
-		runtimeClient = fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).
+		runtimeClient = fakeclient.NewClientBuilder().
+			WithScheme(operatorclient.RuntimeScheme).
 			WithStatusSubresource(&operatorv1alpha1.Extension{}, &operatorv1alpha1.Extension{}).Build()
 		gardenClientMap = fakeclientmap.NewClientMapBuilder().WithRuntimeClientForKey(keys.ForGarden(garden), virtualClient, nil).Build()
 
@@ -149,9 +147,8 @@ var _ = Describe("Reconciler", func() {
 				Expect(runtimeClient.Create(ctx, garden)).To(Succeed())
 
 				res, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: client.ObjectKey{Name: extensionName}})
-				Expect(res).To(Equal(reconcile.Result{}))
-				Expect(err).To(HaveOccurred())
-				Expect(err).To(BeAssignableToTypeOf(&reconcilerutils.RequeueAfterError{}))
+				Expect(res).To(Equal(reconcile.Result{RequeueAfter: 10 * time.Second}))
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("should create the controller-{registration,deployment} if garden is ready", func() {

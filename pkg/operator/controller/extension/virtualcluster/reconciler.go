@@ -29,7 +29,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -96,9 +95,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	// check Garden's last operation status. If the last operation is a successful reconciliation, we can proceed to install the extensions to the virtual garden cluster.
 	switch lastOperation := garden.Status.LastOperation; {
 	case lastOperation == nil || (lastOperation.Type == gardencorev1beta1.LastOperationTypeReconcile && lastOperation.State != gardencorev1beta1.LastOperationStateSucceeded):
-		return reconcile.Result{}, &reconciler.RequeueAfterError{
-			RequeueAfter: requeueGardenResourceNotReady,
-		}
+		log.Info("Garden is not yet in 'Reconcile Succeeded' state, requeueing", "requeueAfter", requeueGardenResourceNotReady)
+		return reconcile.Result{RequeueAfter: requeueGardenResourceNotReady}, nil
 	case lastOperation.Type == gardencorev1beta1.LastOperationTypeDelete:
 		// if the last operation is a delete, then do nothing. Once the Garden resource is deleted, we will reconcile and remove the finalizers from the Extension.
 		return reconcile.Result{}, nil
