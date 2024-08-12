@@ -14,7 +14,7 @@ deploy:
             command:
               - bash
               - -ec
-              - hack/usage/wait-for.sh garden local VirtualGardenAPIServerAvailable VirtualComponentsHealthy
+              - hack/usage/wait-for.sh garden local VirtualGardenAPIServerAvailable RuntimeComponentsHealthy VirtualComponentsHealthy
         - host:
             command:
               - bash
