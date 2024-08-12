@@ -1135,7 +1135,7 @@ var _ = Describe("Seed", func() {
 					}
 				})
 
-				DescribeTable("should allow without consulting the graph because verb is get, list, or watch",
+				DescribeTable("should allow without consulting the graph because verb is get, list, watch, or create",
 					func(verb string) {
 						attrs.Verb = verb
 
@@ -1148,6 +1148,7 @@ var _ = Describe("Seed", func() {
 					Entry("get", "get"),
 					Entry("list", "list"),
 					Entry("watch", "watch"),
+					Entry("create", "create"),
 				)
 
 				DescribeTable("should have no opinion because verb is not allowed",
@@ -1157,11 +1158,10 @@ var _ = Describe("Seed", func() {
 						decision, reason, err := authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionNoOpinion))
-						Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get list watch update patch]"))
+						Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get list watch create update patch]"))
 
 					},
 
-					Entry("create", "create"),
 					Entry("delete", "delete"),
 					Entry("deletecollection", "deletecollection"),
 				)
