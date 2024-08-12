@@ -132,7 +132,6 @@ func getFileContentKubeletConfig(kubernetesVersion *semver.Version, clusterDNSAd
 // This results in issues if the tcp connection to kube-apiserver is silently dropped,
 // as node-monitor-grace-period is only 40s.
 // HTTP2_READ_IDLE_TIMEOUT_SECONDS + HTTP2_PING_TIMEOUT_SECONDS should be less than node-monitor-grace-period.
-
 func calcKubeletHTTP2Timeouts(nodeMonitorGracePeriod metav1.Duration) (int, int) {
 	http2ReadIdleTimeSeconds := int(30)
 	http2PingTimeSeconds := int(15)
