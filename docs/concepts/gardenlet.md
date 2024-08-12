@@ -494,7 +494,7 @@ Alternatively, it can be disabled by setting the `concurrentSyncs=0` for the con
 
 Please refer to [GEP-22: Improved Usage of the `ShootState` API](../proposals/22-improved-usage-of-shootstate-api.md) for all information.
 
-### [`TokenRequestor` Controller](../../pkg/controller/tokenrequestor)
+### [`TokenRequestor` Controller](../../pkg/gardenlet/controller/tokenrequestor/serviceaccount)
 
 The `gardenlet` uses an instance of the `TokenRequestor` controller which initially was developed in the context of the `gardener-resource-manager`, please read [this document](resource-manager.md#tokenrequestor-controller) for further information.
 
@@ -503,16 +503,9 @@ The mechanism works the same way as for shoot control plane components running i
 However, `gardenlet`'s instance of the `TokenRequestor` controller is restricted to `Secret`s labeled with `resources.gardener.cloud/class=garden`.
 Furthermore, it doesn't respect the `serviceaccount.resources.gardener.cloud/namespace` annotation. Instead, it always uses the seed's namespace in the garden cluster for managing `ServiceAccounts` and their tokens.
 
-### [`VPAEvictionRequirements` Controller](../../pkg/gardenlet/controller/vpaevictionrequirements)
+### [`TokenRequestorWorkloadIdentity` Controller](../../pkg/gardenlet/controller/tokenrequestor/workloadidentity)
 
-The `VPAEvictionRequirements` controller in the `gardenlet` reconciles `VerticalPodAutoscaler` objects labeled with `autoscaling.gardener.cloud/eviction-requirements: managed-by-controller`. It manages the [`EvictionRequirements`](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler/enhancements/4831-control-eviction-behavior) on a VPA object, which are used to restrict when and how a Pod can be evicted to apply a new resource recommendation.
-Specifically, the following actions will be taken for the respective label and annotation configuration:
-* If the VPA has the annotation `eviction-requirements.autoscaling.gardener.cloud/downscale-restriction: never`, an `EvictionRequirement` is added to the VPA object that allows evictions for upscaling only
-* If the VPA has the annotation `eviction-requirements.autoscaling.gardener.cloud/downscale-restriction: in-maintenance-window-only`, the same `EvictionRequirement` is added to the VPA object when the Shoot is currently outside of its maintenance window. When the Shoot is inside its maintenance window, the `EvictionRequirement` is removed. Information about the Shoot maintenance window times are stored in the annotation `shoot.gardener.cloud/maintenance-window` on the VPA
-
-### [`WorkloadIdentityTokenRequestor` Controller](../../pkg/gardenlet/controller/workloadidentity/tokenrequestor)
-
-The `WorkloadIdentityTokenRequestor` controller in the `gardenlet` reconciles `Secret`s labeled with `security.gardener.cloud/purpose=workload-identity-token-requestor`.
+The `TokenRequestorWorkloadIdentity` controller in the `gardenlet` reconciles `Secret`s labeled with `security.gardener.cloud/purpose=workload-identity-token-requestor`.
 When it encounters such `Secret`, it associates the `Secret` with a specific `WorkloadIdentity` using the annotations `workloadidentity.security.gardener.cloud/name` and `workloadidentity.security.gardener.cloud/namespace`.
 Any workload creating such `Secret`s is responsible to label and annotate the `Secret`s accordingly.
 After the association is made, the `gardenlet` requests a token for the specific `WorkloadIdentity` from the Gardener API Server and writes it back in the `Secret`'s data against the `token` key.
@@ -520,6 +513,13 @@ The `gardenlet` is responsible to keep this token valid by refreshing it periodi
 The token is then used by control plane components running in the seed cluster in order to present the said `WorkloadIdentity` before external systems, e.g. by calling cloud provider APIs.
 
 Please refer to [GEP-26: Workload Identity - Trust Based Authentication](../proposals/26-workload-identity.md) for more details.
+
+### [`VPAEvictionRequirements` Controller](../../pkg/gardenlet/controller/vpaevictionrequirements)
+
+The `VPAEvictionRequirements` controller in the `gardenlet` reconciles `VerticalPodAutoscaler` objects labeled with `autoscaling.gardener.cloud/eviction-requirements: managed-by-controller`. It manages the [`EvictionRequirements`](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler/enhancements/4831-control-eviction-behavior) on a VPA object, which are used to restrict when and how a Pod can be evicted to apply a new resource recommendation.
+Specifically, the following actions will be taken for the respective label and annotation configuration:
+* If the VPA has the annotation `eviction-requirements.autoscaling.gardener.cloud/downscale-restriction: never`, an `EvictionRequirement` is added to the VPA object that allows evictions for upscaling only
+* If the VPA has the annotation `eviction-requirements.autoscaling.gardener.cloud/downscale-restriction: in-maintenance-window-only`, the same `EvictionRequirement` is added to the VPA object when the Shoot is currently outside of its maintenance window. When the Shoot is inside its maintenance window, the `EvictionRequirement` is removed. Information about the Shoot maintenance window times are stored in the annotation `shoot.gardener.cloud/maintenance-window` on the VPA
 
 ## Managed Seeds
 
