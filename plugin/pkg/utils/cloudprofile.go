@@ -115,6 +115,10 @@ func BuildCloudProfileReference(shoot *core.Shoot) *gardencorev1beta1.CloudProfi
 // SyncCloudProfileFields handles the coexistence of a Shoot Spec's cloudProfileName and cloudProfile
 // by making sure both fields are synced correctly and appropriate fallback cases are handled.
 func SyncCloudProfileFields(oldShoot, newShoot *core.Shoot) {
+	if newShoot.DeletionTimestamp != nil {
+		return
+	}
+
 	// clear cloudProfile if namespacedCloudProfile is newly provided but feature toggle is disabled
 	if newShoot.Spec.CloudProfile != nil && newShoot.Spec.CloudProfile.Kind == constants.CloudProfileReferenceKindNamespacedCloudProfile && !utilfeature.DefaultFeatureGate.Enabled(features.UseNamespacedCloudProfile) &&
 		(oldShoot == nil || oldShoot.Spec.CloudProfile == nil || oldShoot.Spec.CloudProfile.Kind != constants.CloudProfileReferenceKindNamespacedCloudProfile) {
