@@ -43,6 +43,7 @@ import (
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/operator/controller"
+	"github.com/gardener/gardener/pkg/operator/metrics"
 	"github.com/gardener/gardener/pkg/operator/webhook"
 )
 
@@ -197,6 +198,11 @@ func run(ctx context.Context, log logr.Logger, cfg *config.OperatorConfiguration
 	}
 	if err := mgr.Add(gardenClientMap); err != nil {
 		return err
+	}
+
+	log.Info("Adding custom metrics to manager")
+	if err := metrics.AddToManager(ctx, mgr); err != nil {
+		return fmt.Errorf("failed adding metrics to manager: %w", err)
 	}
 
 	log.Info("Adding controllers to manager")

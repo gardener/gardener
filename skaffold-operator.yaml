@@ -239,6 +239,7 @@ build:
             - pkg/operator/controller/garden/reference
             - pkg/operator/controller/gardenlet
             - pkg/operator/features
+            - pkg/operator/metrics
             - pkg/operator/predicate
             - pkg/operator/webhook
             - pkg/operator/webhook/defaulting
