@@ -4,7 +4,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# This script waits until all conditions are passed for a given resource in a kubernetes cluster.
+# This script waits until the last operation state is 'Succeeded' and all provided conditions are passed for a given
+# resource in a kubernetes cluster.
 # It takes the resource type, object name, and a list of conditions as arguments
 set -euo pipefail
 
@@ -32,30 +33,35 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 NO_COLOR='\033[0m'
 
-echo "⏳ Checking conditions for ${RESOURCE_TYPE}/${OBJECT_NAME}..."
+echo "⏳ Checking last operation state and conditions for ${RESOURCE_TYPE}/${OBJECT_NAME}..."
 retries=0
 while [ "${retries}" -lt "${TIMEOUT}" ]; do
+  LAST_OPERATION_SUCCEEDED=true
+  ALL_CONDITIONS_TRUE=true
+
   if [ -z "$NAMESPACE" ]; then
-    # Get the condition types in jsonpath format and pipe to yq to extract the value of conditions
+    LAST_OPERATION_STATE=$(kubectl get "${RESOURCE_TYPE}" "${OBJECT_NAME}" -o json | yq '.status.lastOperation.state') || true
     CONDITION_STATES=$(kubectl get "${RESOURCE_TYPE}" "${OBJECT_NAME}" -o json | yq '.status.conditions') || true
   else
-    # Get the condition types in jsonpath format and pipe to yq to extract the value of conditions
+    LAST_OPERATION_STATE=$(kubectl get "${RESOURCE_TYPE}" "${OBJECT_NAME}" -n "$NAMESPACE" -o json | yq '.status.lastOperation.state') || true
     CONDITION_STATES=$(kubectl get "${RESOURCE_TYPE}" "${OBJECT_NAME}" -n "$NAMESPACE" -o json | yq '.status.conditions') || true
   fi
 
-  # A flag to indicate if all conditions have passed
-  ALL_PASSED=true
-  # Iterate through each condition
+  # Check last operation state
+  if [ "$LAST_OPERATION_STATE" != "Succeeded" ]; then
+    LAST_OPERATION_SUCCEEDED=false
+  fi
+
+  # Check the status of each condition
   for condition in "${CONDITIONS[@]}"; do
     if ! echo "${CONDITION_STATES}" | yq -e '.[] | select(.type == "'"${condition}"'").status == "True"' &>/dev/null; then
-      ALL_PASSED=false
+      ALL_CONDITIONS_TRUE=false
       break
     fi
   done
 
-  # If all conditions have passed, break the loop
-  if [ "${ALL_PASSED}" = true ]; then
-    echo -e "${GREEN}✅ All conditions passed for ${RESOURCE_TYPE}/${OBJECT_NAME}.${NO_COLOR}"
+  if [ "${LAST_OPERATION_SUCCEEDED}" = true ] && [ "${ALL_CONDITIONS_TRUE}" = true ]; then
+    echo -e "${GREEN}✅ Last operation state is 'Succeeded' and all conditions passed for ${RESOURCE_TYPE}/${OBJECT_NAME}.${NO_COLOR}"
     break
   fi
 
@@ -64,6 +70,6 @@ while [ "${retries}" -lt "${TIMEOUT}" ]; do
 done
 
 if [ "${retries}" -ge "${TIMEOUT}" ]; then
-  echo -e "${RED}❌ ERROR: ${condition} not met for ${RESOURCE_TYPE}/${OBJECT_NAME} after ${TIMEOUT} seconds.${NO_COLOR}"
+  echo -e "${RED}❌ ERROR: Last operation state not 'Succeeded' or ${condition} not met for ${RESOURCE_TYPE}/${OBJECT_NAME} after ${TIMEOUT} seconds.${NO_COLOR}"
   exit 1
 fi
