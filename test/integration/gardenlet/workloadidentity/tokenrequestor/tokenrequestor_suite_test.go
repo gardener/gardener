@@ -68,10 +68,8 @@ var _ = BeforeSuite(func() {
 	log = logf.Log.WithName(testID)
 
 	dirPath := filepath.Join(".", "testdata")
-	if err := os.Mkdir(dirPath, 0700); err != nil {
-		if !os.IsExist(err) {
-			Expect(err).ToNot(HaveOccurred())
-		}
+	if err := os.Mkdir(dirPath, 0700); err != nil && !os.IsExist(err) {
+		Expect(err).ToNot(HaveOccurred())
 	}
 
 	keyFile := filepath.Join(dirPath, "key.pem")

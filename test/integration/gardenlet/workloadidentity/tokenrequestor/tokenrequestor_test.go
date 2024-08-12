@@ -31,6 +31,18 @@ var _ = Describe("WorkloadIdentity TokenRequestor tests", func() {
 	)
 
 	BeforeEach(func() {
+		DeferCleanup(func() {
+			Expect(testClient.Delete(ctx, secret)).To(Or(Succeed(), BeNotFoundError()))
+			Eventually(func() error {
+				return testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)
+			}).Should(BeNotFoundError())
+
+			Expect(testClient.Delete(ctx, workloadIdentity)).To(Or(Succeed(), BeNotFoundError()))
+			Eventually(func() error {
+				return testClient.Get(ctx, client.ObjectKeyFromObject(workloadIdentity), workloadIdentity)
+			}).Should(BeNotFoundError())
+		})
+
 		resourceName = "test-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 
 		secret = &corev1.Secret{
@@ -95,17 +107,5 @@ var _ = Describe("WorkloadIdentity TokenRequestor tests", func() {
 		}).Should(Succeed())
 
 		Expect(testClient.Delete(ctx, secret)).To(Succeed())
-	})
-
-	AfterEach(func() {
-		Expect(testClient.Delete(ctx, secret)).To(Or(Succeed(), BeNotFoundError()))
-		Eventually(func() error {
-			return testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)
-		}).Should(BeNotFoundError())
-
-		Expect(testClient.Delete(ctx, workloadIdentity)).To(Or(Succeed(), BeNotFoundError()))
-		Eventually(func() error {
-			return testClient.Get(ctx, client.ObjectKeyFromObject(workloadIdentity), workloadIdentity)
-		}).Should(BeNotFoundError())
 	})
 })

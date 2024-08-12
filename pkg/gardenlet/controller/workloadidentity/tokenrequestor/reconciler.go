@@ -81,25 +81,25 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 		}
 	}
 
-	wi := &securityv1alpha1.WorkloadIdentity{
+	workloadIdentity := &securityv1alpha1.WorkloadIdentity{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secret.Annotations[securityv1alpha1constants.AnnotationWorkloadIdentityName],
 			Namespace: secret.Annotations[securityv1alpha1constants.AnnotationWorkloadIdentityNamespace],
 		},
 	}
 
-	if err := r.GardenClient.Get(ctx, client.ObjectKeyFromObject(wi), wi); err != nil {
-		return reconcile.Result{}, err
+	if err := r.GardenClient.Get(ctx, client.ObjectKeyFromObject(workloadIdentity), workloadIdentity); err != nil {
+		return reconcile.Result{}, fmt.Errorf("could not read workload identity: %w", err)
 	}
 
-	tokenRequest, err := r.GardenSecurityClient.SecurityV1alpha1().WorkloadIdentities(wi.Namespace).CreateToken(ctx, wi.Name, &securityv1alpha1.TokenRequest{
+	tokenRequest, err := r.GardenSecurityClient.SecurityV1alpha1().WorkloadIdentities(workloadIdentity.Namespace).CreateToken(ctx, workloadIdentity.Name, &securityv1alpha1.TokenRequest{
 		Spec: securityv1alpha1.TokenRequestSpec{
 			ContextObject:     contextObject,
 			ExpirationSeconds: ptr.To((int64(expirationDuration / time.Second))),
 		},
 	}, metav1.CreateOptions{})
 	if err != nil {
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("could not request token for workload identity: %w", err)
 	}
 
 	renewDuration := r.renewDuration(tokenRequest.Status.ExpirationTimestamp.Time)
@@ -116,24 +116,13 @@ func (r *Reconciler) reconcileSecret(ctx context.Context, log logr.Logger, secre
 	patch := client.MergeFrom(secret.DeepCopy())
 	metav1.SetMetaDataAnnotation(&secret.ObjectMeta, tokenRenewTimestamp, r.Clock.Now().UTC().Add(renewDuration).Format(time.RFC3339))
 
-	log.Info("Populating the token to secret")
-	if err := r.populateToken(log, secret, token)(); err != nil {
-		return err
+	log.Info("Writing token to secret")
+	if secret.Data == nil {
+		secret.Data = make(map[string][]byte, 1)
 	}
+	secret.Data["token"] = []byte(token)
 
 	return r.SeedClient.Patch(ctx, secret, patch)
-}
-
-func (r *Reconciler) populateToken(log logr.Logger, secret *corev1.Secret, token string) func() error {
-	return func() error {
-		if secret.Data == nil {
-			secret.Data = make(map[string][]byte, 1)
-		}
-
-		log.Info("Writing token to data")
-		secret.Data["token"] = []byte(token)
-		return nil
-	}
 }
 
 func (r *Reconciler) requeue(secret *corev1.Secret) (bool, time.Duration, error) {

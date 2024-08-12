@@ -13,5 +13,5 @@ import (
 
 func TestWorkloadIdentityTokenRequestor(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Controller WorkloadIdentity TokenRequestor Suite")
+	RunSpecs(t, "Gardenlet Controller WorkloadIdentity TokenRequestor Suite")
 }
