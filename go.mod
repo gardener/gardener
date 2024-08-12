@@ -20,7 +20,7 @@ require (
 	github.com/go-jose/go-jose/v4 v4.0.3
 	github.com/go-logr/logr v1.4.2
 	github.com/go-test/deep v1.1.0
-	github.com/gogo/protobuf v1.3.2
+	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/gnostic-models v0.6.8
 	github.com/google/go-cmp v0.6.0
 	github.com/google/go-containerregistry v0.20.0
