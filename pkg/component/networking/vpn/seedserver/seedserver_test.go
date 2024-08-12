@@ -54,7 +54,8 @@ var _ = Describe("VpnSeedServer", func() {
 
 		ctx                      = context.TODO()
 		namespace                = "shoot--foo--bar"
-		vpnImage                 = "eu.gcr.io/gardener-project/gardener/vpn-seed-server:v1.2.3"
+		vpnSeedServerImage       = "some-image:some-tag"
+		apiServerProxyImage      = "some-image2:some-tag2"
 		values                   = Values{}
 		runtimeKubernetesVersion *semver.Version
 
@@ -98,7 +99,7 @@ var _ = Describe("VpnSeedServer", func() {
 					Containers: []corev1.Container{
 						{
 							Name:            "vpn-seed-server",
-							Image:           vpnImage,
+							Image:           vpnSeedServerImage,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Ports: []corev1.ContainerPort{
 								{
@@ -271,7 +272,7 @@ var _ = Describe("VpnSeedServer", func() {
 				template.Spec.Containers[0].VolumeMounts = append(template.Spec.Containers[0].VolumeMounts, mount)
 				template.Spec.Containers = append(template.Spec.Containers, corev1.Container{
 					Name:            "openvpn-exporter",
-					Image:           vpnImage,
+					Image:           vpnSeedServerImage,
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					Command: []string{
 						"/openvpn-exporter",
@@ -328,7 +329,7 @@ var _ = Describe("VpnSeedServer", func() {
 			} else {
 				template.Spec.Containers = append(template.Spec.Containers, corev1.Container{
 					Name:            "envoy-proxy",
-					Image:           values.ImageAPIServerProxy,
+					Image:           apiServerProxyImage,
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					SecurityContext: &corev1.SecurityContext{
 						Capabilities: &corev1.Capabilities{
@@ -735,8 +736,8 @@ var _ = Describe("VpnSeedServer", func() {
 		runtimeKubernetesVersion = semver.MustParse("1.25.0")
 
 		values = Values{
-			ImageAPIServerProxy: "envoyproxy/envoy:v4.5.6",
-			ImageVPNSeedServer:  vpnImage,
+			ImageAPIServerProxy: apiServerProxyImage,
+			ImageVPNSeedServer:  vpnSeedServerImage,
 			KubeAPIServerHost:   ptr.To("foo.bar"),
 			Network: NetworkValues{
 				PodCIDRs:     []net.IPNet{{IP: net.ParseIP("10.0.1.0"), Mask: net.CIDRMask(24, 32)}},
