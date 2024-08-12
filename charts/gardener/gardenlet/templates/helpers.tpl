@@ -269,6 +269,8 @@ controllers:
   {{- end }}
   tokenRequestor:
     concurrentSyncs: {{ required ".Values.config.controllers.tokenRequestor.concurrentSyncs is required" .Values.config.controllers.tokenRequestor.concurrentSyncs }}
+  tokenRequestorWorkloadIdentity:
+    concurrentSyncs: {{ required ".Values.config.controllers.tokenRequestorWorkloadIdentity.concurrentSyncs is required" .Values.config.controllers.tokenRequestorWorkloadIdentity.concurrentSyncs }}
   {{- if .Values.config.controllers.vpaEvictionRequirements }}
   vpaEvictionRequirements:
     {{- if .Values.config.controllers.vpaEvictionRequirements.concurrentSyncs }}
