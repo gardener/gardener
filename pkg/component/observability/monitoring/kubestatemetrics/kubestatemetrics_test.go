@@ -1136,7 +1136,7 @@ var _ = Describe("KubeStateMetrics", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceTarget), managedResourceTarget)).To(BeNotFoundError())
 
-				// TODO(vicwicker): Remove after KSM upgrade to 2.13.
+				// TODO(vicwicker): Remove after Gardener v1.104 got released.
 				go func() {
 					defer GinkgoRecover()
 					mr := &resourcesv1alpha1.ManagedResource{
@@ -1218,7 +1218,7 @@ var _ = Describe("KubeStateMetrics", func() {
 					},
 				}
 
-				// TODO(vicwicker): Remove after KSM upgrade to 2.13.
+				// TODO(vicwicker): Remove after Gardener v1.104 got released.
 				expectedMr.ObjectMeta.ResourceVersion = "2"
 				expectedMr.ObjectMeta.Generation = 1
 				expectedMr.Status = resourcesv1alpha1.ManagedResourceStatus{

@@ -79,21 +79,27 @@ type Values struct {
 	NameSuffix string
 }
 
-func (k *kubeStateMetrics) getResourcesForSeed() []client.Object {
-	customResourceStateConfigMap := k.customResourceStateConfigMap()
-	clusterRole := k.clusterRole()
-	serviceAccount := k.serviceAccount()
-	deployment := k.deployment(serviceAccount, "", nil, customResourceStateConfigMap.Name)
-	resources := []client.Object{
-		clusterRole,
-		serviceAccount,
-		k.clusterRoleBinding(clusterRole, serviceAccount),
-		deployment,
-		k.podDisruptionBudget(deployment),
-		k.service(),
-		k.verticalPodAutoscaler(deployment),
-		customResourceStateConfigMap,
+func (k *kubeStateMetrics) getResourcesForSeed() ([]client.Object, error) {
+	customResourceStateConfigMap, err := k.customResourceStateConfigMap()
+	if err != nil {
+		return nil, err
 	}
+
+	var (
+		clusterRole    = k.clusterRole()
+		serviceAccount = k.serviceAccount()
+		deployment     = k.deployment(serviceAccount, "", nil, customResourceStateConfigMap.Name)
+		resources      = []client.Object{
+			clusterRole,
+			serviceAccount,
+			k.clusterRoleBinding(clusterRole, serviceAccount),
+			deployment,
+			k.podDisruptionBudget(deployment),
+			k.service(),
+			k.verticalPodAutoscaler(deployment),
+			customResourceStateConfigMap,
+		}
+	)
 
 	if k.values.NameSuffix == SuffixSeed {
 		resources = append(
@@ -108,11 +114,15 @@ func (k *kubeStateMetrics) getResourcesForSeed() []client.Object {
 		)
 	}
 
-	return resources
+	return resources, nil
 }
 
-func (k *kubeStateMetrics) getResourcesForShoot(genericTokenKubeconfigSecretName string, shootAccessSecret *gardenerutils.AccessSecret) []client.Object {
-	customResourceStateConfigMap := k.customResourceStateConfigMap()
+func (k *kubeStateMetrics) getResourcesForShoot(genericTokenKubeconfigSecretName string, shootAccessSecret *gardenerutils.AccessSecret) ([]client.Object, error) {
+	customResourceStateConfigMap, err := k.customResourceStateConfigMap()
+	if err != nil {
+		return nil, err
+	}
+
 	deployment := k.deployment(nil, genericTokenKubeconfigSecretName, shootAccessSecret, customResourceStateConfigMap.Name)
 	return []client.Object{
 		deployment,
@@ -121,7 +131,7 @@ func (k *kubeStateMetrics) getResourcesForShoot(genericTokenKubeconfigSecretName
 		k.service(),
 		k.verticalPodAutoscaler(deployment),
 		customResourceStateConfigMap,
-	}
+	}, nil
 }
 
 func (k *kubeStateMetrics) getResourcesForShootTarget(shootAccessSecret *gardenerutils.AccessSecret) []client.Object {
@@ -167,13 +177,23 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 			return err
 		}
 
-		if err := registry.Add(k.getResourcesForShoot(genericTokenKubeconfigSecret.Name, shootAccessSecret)...); err != nil {
+		resources, err := k.getResourcesForShoot(genericTokenKubeconfigSecret.Name, shootAccessSecret)
+		if err != nil {
+			return err
+		}
+
+		if err := registry.Add(resources...); err != nil {
 			return err
 		}
 	}
 
 	if k.values.ClusterType == component.ClusterTypeSeed {
-		if err := registry.Add(k.getResourcesForSeed()...); err != nil {
+		resources, err := k.getResourcesForSeed()
+		if err != nil {
+			return err
+		}
+
+		if err := registry.Add(resources...); err != nil {
 			return err
 		}
 	}
@@ -202,7 +222,7 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 			return err
 		}
 
-		// TODO(vicwicker): Remove after KSM upgrade to 2.13.
+		// TODO(vicwicker): Remove after Gardener v1.104 got released.
 		if err := managedresources.WaitUntilHealthyAndNotProgressing(ctx, k.client, k.namespace, k.managedResourceName()); err != nil {
 			return err
 		}

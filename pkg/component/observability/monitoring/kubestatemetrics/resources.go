@@ -713,13 +713,18 @@ func (k *kubeStateMetrics) nameSuffix() string {
 	return suffix + k.values.NameSuffix
 }
 
-func (k *kubeStateMetrics) customResourceStateConfigMap() *corev1.ConfigMap {
+func (k *kubeStateMetrics) customResourceStateConfigMap() (*corev1.ConfigMap, error) {
 	customResourceStateConfig, err := yaml.Marshal(NewCustomResourceStateConfig())
-	utilruntime.Must(err)
-	cm := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: customResourceStateConfigMapNamePrefix, Namespace: k.namespace}}
-	cm.Data = map[string]string{
-		customResourceStateConfigMountFile: string(customResourceStateConfig),
+	if err != nil {
+		return nil, err
 	}
-	utilruntime.Must(kubernetesutils.MakeUnique(cm))
-	return cm
+
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{Name: customResourceStateConfigMapNamePrefix, Namespace: k.namespace},
+		Data: map[string]string{
+			customResourceStateConfigMountFile: string(customResourceStateConfig),
+		},
+	}
+	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
+	return configMap, nil
 }
