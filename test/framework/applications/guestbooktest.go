@@ -145,8 +145,8 @@ func (t *GuestBookTest) DeployGuestBookApp(ctx context.Context) {
 	// redis-slaves are not required for test success
 	values := map[string]any{
 		"image": map[string]any{
-			"registry":   "eu.gcr.io",
-			"repository": "gardener-project/3rd/redis",
+			"registry":   "europe-docker.pkg.dev",
+			"repository": "gardener-project/releases/3rd/redis",
 			"tag":        "5.0.8",
 		},
 		"cluster": map[string]any{
