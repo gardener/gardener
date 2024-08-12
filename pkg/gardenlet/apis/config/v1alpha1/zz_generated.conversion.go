@@ -461,13 +461,23 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*TokenRequestorControllerConfiguration)(nil), (*config.TokenRequestorControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha1_TokenRequestorControllerConfiguration_To_config_TokenRequestorControllerConfiguration(a.(*TokenRequestorControllerConfiguration), b.(*config.TokenRequestorControllerConfiguration), scope)
+	if err := s.AddGeneratedConversionFunc((*TokenRequestorServiceAccountControllerConfiguration)(nil), (*config.TokenRequestorServiceAccountControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_TokenRequestorServiceAccountControllerConfiguration_To_config_TokenRequestorServiceAccountControllerConfiguration(a.(*TokenRequestorServiceAccountControllerConfiguration), b.(*config.TokenRequestorServiceAccountControllerConfiguration), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*config.TokenRequestorControllerConfiguration)(nil), (*TokenRequestorControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_config_TokenRequestorControllerConfiguration_To_v1alpha1_TokenRequestorControllerConfiguration(a.(*config.TokenRequestorControllerConfiguration), b.(*TokenRequestorControllerConfiguration), scope)
+	if err := s.AddGeneratedConversionFunc((*config.TokenRequestorServiceAccountControllerConfiguration)(nil), (*TokenRequestorServiceAccountControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_TokenRequestorServiceAccountControllerConfiguration_To_v1alpha1_TokenRequestorServiceAccountControllerConfiguration(a.(*config.TokenRequestorServiceAccountControllerConfiguration), b.(*TokenRequestorServiceAccountControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*TokenRequestorWorkloadIdentityControllerConfiguration)(nil), (*config.TokenRequestorWorkloadIdentityControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_TokenRequestorWorkloadIdentityControllerConfiguration_To_config_TokenRequestorWorkloadIdentityControllerConfiguration(a.(*TokenRequestorWorkloadIdentityControllerConfiguration), b.(*config.TokenRequestorWorkloadIdentityControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.TokenRequestorWorkloadIdentityControllerConfiguration)(nil), (*TokenRequestorWorkloadIdentityControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_TokenRequestorWorkloadIdentityControllerConfiguration_To_v1alpha1_TokenRequestorWorkloadIdentityControllerConfiguration(a.(*config.TokenRequestorWorkloadIdentityControllerConfiguration), b.(*TokenRequestorWorkloadIdentityControllerConfiguration), scope)
 	}); err != nil {
 		return err
 	}
@@ -1023,7 +1033,8 @@ func autoConvert_v1alpha1_GardenletControllerConfiguration_To_config_GardenletCo
 	out.ShootState = (*config.ShootStateControllerConfiguration)(unsafe.Pointer(in.ShootState))
 	out.NetworkPolicy = (*config.NetworkPolicyControllerConfiguration)(unsafe.Pointer(in.NetworkPolicy))
 	out.ManagedSeed = (*config.ManagedSeedControllerConfiguration)(unsafe.Pointer(in.ManagedSeed))
-	out.TokenRequestor = (*config.TokenRequestorControllerConfiguration)(unsafe.Pointer(in.TokenRequestor))
+	out.TokenRequestorServiceAccount = (*config.TokenRequestorServiceAccountControllerConfiguration)(unsafe.Pointer(in.TokenRequestorServiceAccount))
+	out.TokenRequestorWorkloadIdentity = (*config.TokenRequestorWorkloadIdentityControllerConfiguration)(unsafe.Pointer(in.TokenRequestorWorkloadIdentity))
 	out.VPAEvictionRequirements = (*config.VPAEvictionRequirementsControllerConfiguration)(unsafe.Pointer(in.VPAEvictionRequirements))
 	return nil
 }
@@ -1048,7 +1059,8 @@ func autoConvert_config_GardenletControllerConfiguration_To_v1alpha1_GardenletCo
 	out.ShootState = (*ShootStateControllerConfiguration)(unsafe.Pointer(in.ShootState))
 	out.NetworkPolicy = (*NetworkPolicyControllerConfiguration)(unsafe.Pointer(in.NetworkPolicy))
 	out.ManagedSeed = (*ManagedSeedControllerConfiguration)(unsafe.Pointer(in.ManagedSeed))
-	out.TokenRequestor = (*TokenRequestorControllerConfiguration)(unsafe.Pointer(in.TokenRequestor))
+	out.TokenRequestorServiceAccount = (*TokenRequestorServiceAccountControllerConfiguration)(unsafe.Pointer(in.TokenRequestorServiceAccount))
+	out.TokenRequestorWorkloadIdentity = (*TokenRequestorWorkloadIdentityControllerConfiguration)(unsafe.Pointer(in.TokenRequestorWorkloadIdentity))
 	out.VPAEvictionRequirements = (*VPAEvictionRequirementsControllerConfiguration)(unsafe.Pointer(in.VPAEvictionRequirements))
 	return nil
 }
@@ -1662,24 +1674,44 @@ func Convert_config_StaleExtensionHealthChecks_To_v1alpha1_StaleExtensionHealthC
 	return autoConvert_config_StaleExtensionHealthChecks_To_v1alpha1_StaleExtensionHealthChecks(in, out, s)
 }
 
-func autoConvert_v1alpha1_TokenRequestorControllerConfiguration_To_config_TokenRequestorControllerConfiguration(in *TokenRequestorControllerConfiguration, out *config.TokenRequestorControllerConfiguration, s conversion.Scope) error {
+func autoConvert_v1alpha1_TokenRequestorServiceAccountControllerConfiguration_To_config_TokenRequestorServiceAccountControllerConfiguration(in *TokenRequestorServiceAccountControllerConfiguration, out *config.TokenRequestorServiceAccountControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	return nil
 }
 
-// Convert_v1alpha1_TokenRequestorControllerConfiguration_To_config_TokenRequestorControllerConfiguration is an autogenerated conversion function.
-func Convert_v1alpha1_TokenRequestorControllerConfiguration_To_config_TokenRequestorControllerConfiguration(in *TokenRequestorControllerConfiguration, out *config.TokenRequestorControllerConfiguration, s conversion.Scope) error {
-	return autoConvert_v1alpha1_TokenRequestorControllerConfiguration_To_config_TokenRequestorControllerConfiguration(in, out, s)
+// Convert_v1alpha1_TokenRequestorServiceAccountControllerConfiguration_To_config_TokenRequestorServiceAccountControllerConfiguration is an autogenerated conversion function.
+func Convert_v1alpha1_TokenRequestorServiceAccountControllerConfiguration_To_config_TokenRequestorServiceAccountControllerConfiguration(in *TokenRequestorServiceAccountControllerConfiguration, out *config.TokenRequestorServiceAccountControllerConfiguration, s conversion.Scope) error {
+	return autoConvert_v1alpha1_TokenRequestorServiceAccountControllerConfiguration_To_config_TokenRequestorServiceAccountControllerConfiguration(in, out, s)
 }
 
-func autoConvert_config_TokenRequestorControllerConfiguration_To_v1alpha1_TokenRequestorControllerConfiguration(in *config.TokenRequestorControllerConfiguration, out *TokenRequestorControllerConfiguration, s conversion.Scope) error {
+func autoConvert_config_TokenRequestorServiceAccountControllerConfiguration_To_v1alpha1_TokenRequestorServiceAccountControllerConfiguration(in *config.TokenRequestorServiceAccountControllerConfiguration, out *TokenRequestorServiceAccountControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	return nil
 }
 
-// Convert_config_TokenRequestorControllerConfiguration_To_v1alpha1_TokenRequestorControllerConfiguration is an autogenerated conversion function.
-func Convert_config_TokenRequestorControllerConfiguration_To_v1alpha1_TokenRequestorControllerConfiguration(in *config.TokenRequestorControllerConfiguration, out *TokenRequestorControllerConfiguration, s conversion.Scope) error {
-	return autoConvert_config_TokenRequestorControllerConfiguration_To_v1alpha1_TokenRequestorControllerConfiguration(in, out, s)
+// Convert_config_TokenRequestorServiceAccountControllerConfiguration_To_v1alpha1_TokenRequestorServiceAccountControllerConfiguration is an autogenerated conversion function.
+func Convert_config_TokenRequestorServiceAccountControllerConfiguration_To_v1alpha1_TokenRequestorServiceAccountControllerConfiguration(in *config.TokenRequestorServiceAccountControllerConfiguration, out *TokenRequestorServiceAccountControllerConfiguration, s conversion.Scope) error {
+	return autoConvert_config_TokenRequestorServiceAccountControllerConfiguration_To_v1alpha1_TokenRequestorServiceAccountControllerConfiguration(in, out, s)
+}
+
+func autoConvert_v1alpha1_TokenRequestorWorkloadIdentityControllerConfiguration_To_config_TokenRequestorWorkloadIdentityControllerConfiguration(in *TokenRequestorWorkloadIdentityControllerConfiguration, out *config.TokenRequestorWorkloadIdentityControllerConfiguration, s conversion.Scope) error {
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
+	return nil
+}
+
+// Convert_v1alpha1_TokenRequestorWorkloadIdentityControllerConfiguration_To_config_TokenRequestorWorkloadIdentityControllerConfiguration is an autogenerated conversion function.
+func Convert_v1alpha1_TokenRequestorWorkloadIdentityControllerConfiguration_To_config_TokenRequestorWorkloadIdentityControllerConfiguration(in *TokenRequestorWorkloadIdentityControllerConfiguration, out *config.TokenRequestorWorkloadIdentityControllerConfiguration, s conversion.Scope) error {
+	return autoConvert_v1alpha1_TokenRequestorWorkloadIdentityControllerConfiguration_To_config_TokenRequestorWorkloadIdentityControllerConfiguration(in, out, s)
+}
+
+func autoConvert_config_TokenRequestorWorkloadIdentityControllerConfiguration_To_v1alpha1_TokenRequestorWorkloadIdentityControllerConfiguration(in *config.TokenRequestorWorkloadIdentityControllerConfiguration, out *TokenRequestorWorkloadIdentityControllerConfiguration, s conversion.Scope) error {
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
+	return nil
+}
+
+// Convert_config_TokenRequestorWorkloadIdentityControllerConfiguration_To_v1alpha1_TokenRequestorWorkloadIdentityControllerConfiguration is an autogenerated conversion function.
+func Convert_config_TokenRequestorWorkloadIdentityControllerConfiguration_To_v1alpha1_TokenRequestorWorkloadIdentityControllerConfiguration(in *config.TokenRequestorWorkloadIdentityControllerConfiguration, out *TokenRequestorWorkloadIdentityControllerConfiguration, s conversion.Scope) error {
+	return autoConvert_config_TokenRequestorWorkloadIdentityControllerConfiguration_To_v1alpha1_TokenRequestorWorkloadIdentityControllerConfiguration(in, out, s)
 }
 
 func autoConvert_v1alpha1_VPAEvictionRequirementsControllerConfiguration_To_config_VPAEvictionRequirementsControllerConfiguration(in *VPAEvictionRequirementsControllerConfiguration, out *config.VPAEvictionRequirementsControllerConfiguration, s conversion.Scope) error {

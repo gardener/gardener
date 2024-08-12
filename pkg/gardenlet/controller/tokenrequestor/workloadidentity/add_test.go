@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package tokenrequestor_test
+package workloadidentity_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
@@ -12,7 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	workloadidentitytokenrequestor "github.com/gardener/gardener/pkg/gardenlet/controller/workloadidentity/tokenrequestor"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/tokenrequestor/workloadidentity"
 )
 
 var _ = Describe("Add", func() {
@@ -23,7 +23,7 @@ var _ = Describe("Add", func() {
 		)
 
 		BeforeEach(func() {
-			p = (&workloadidentitytokenrequestor.Reconciler{}).SecretPredicate()
+			p = (&workloadidentity.Reconciler{}).SecretPredicate()
 			secret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{"security.gardener.cloud/purpose": "workload-identity-token-requestor"},

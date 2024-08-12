@@ -512,20 +512,37 @@ var _ = Describe("Defaults", func() {
 		})
 	})
 
-	Describe("TokenRequestorControllerConfiguration defaulting", func() {
-		It("should default the token requestor controller configuration", func() {
+	Describe("TokenRequestorServiceAccountControllerConfiguration defaulting", func() {
+		It("should default the token requestor service account controller configuration", func() {
 			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.Controllers.TokenRequestor.ConcurrentSyncs).To(PointTo(Equal(5)))
+			Expect(obj.Controllers.TokenRequestorServiceAccount.ConcurrentSyncs).To(PointTo(Equal(5)))
 		})
 
 		It("should not overwrite already set values for the token requestor controller configuration", func() {
 			obj.Controllers = &GardenletControllerConfiguration{
-				TokenRequestor: &TokenRequestorControllerConfiguration{ConcurrentSyncs: ptr.To(10)},
+				TokenRequestorServiceAccount: &TokenRequestorServiceAccountControllerConfiguration{ConcurrentSyncs: ptr.To(10)},
 			}
 			SetObjectDefaults_GardenletConfiguration(obj)
 
-			Expect(obj.Controllers.TokenRequestor.ConcurrentSyncs).To(PointTo(Equal(10)))
+			Expect(obj.Controllers.TokenRequestorServiceAccount.ConcurrentSyncs).To(PointTo(Equal(10)))
+		})
+	})
+
+	Describe("TokenRequestorWorkloadIdentityControllerConfiguration defaulting", func() {
+		It("should default the token requestor workload identity controller configuration", func() {
+			SetObjectDefaults_GardenletConfiguration(obj)
+
+			Expect(obj.Controllers.TokenRequestorWorkloadIdentity.ConcurrentSyncs).To(PointTo(Equal(5)))
+		})
+
+		It("should not overwrite already set values for the token requestor controller configuration", func() {
+			obj.Controllers = &GardenletControllerConfiguration{
+				TokenRequestorWorkloadIdentity: &TokenRequestorWorkloadIdentityControllerConfiguration{ConcurrentSyncs: ptr.To(10)},
+			}
+			SetObjectDefaults_GardenletConfiguration(obj)
+
+			Expect(obj.Controllers.TokenRequestorWorkloadIdentity.ConcurrentSyncs).To(PointTo(Equal(10)))
 		})
 	})
 

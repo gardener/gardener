@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package tokenrequestor_test
+package workloadidentity_test
 
 import (
 	"testing"
@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestWorkloadIdentityTokenRequestor(t *testing.T) {
+func TestTokenRequestorWorkloadIdentity(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Gardenlet Controller WorkloadIdentity TokenRequestor Suite")
+	RunSpecs(t, "Gardenlet Controller TokenRequestor WorkloadIdentity Suite")
 }

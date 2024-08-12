@@ -35,18 +35,18 @@ import (
 
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/workloadidentity/tokenrequestor"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/tokenrequestor/workloadidentity"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	gardenerenvtest "github.com/gardener/gardener/test/envtest"
 )
 
-func TestWorkloadIdentityTokenRequestor(t *testing.T) {
+func TestTokenRequestorWorkloadIdentity(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Test Integration Gardenlet WorkloadIdentity TokenRequestor Suite")
+	RunSpecs(t, "Test Integration Gardenlet TokenRequestor WorkloadIdentity Suite")
 }
 
-const testID = "workloadidentity-tokenrequestor-controller-test"
+const testID = "tokenrequestor-workloadidentity-controller-test"
 
 var (
 	ctx = context.Background()
@@ -153,7 +153,7 @@ var _ = BeforeSuite(func() {
 
 	By("Register controller")
 	fakeClock = testclock.NewFakeClock(time.Now())
-	Expect((&tokenrequestor.Reconciler{
+	Expect((&workloadidentity.Reconciler{
 		Clock:           fakeClock,
 		JitterFunc:      func(_ time.Duration, _ float64) time.Duration { return time.Second },
 		ConcurrentSyncs: 5,

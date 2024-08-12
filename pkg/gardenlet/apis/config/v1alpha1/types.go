@@ -187,9 +187,12 @@ type GardenletControllerConfiguration struct {
 	// ManagedSeed defines the configuration of the ManagedSeed controller.
 	// +optional
 	ManagedSeed *ManagedSeedControllerConfiguration `json:"managedSeed,omitempty"`
-	// TokenRequestorControllerConfiguration defines the configuration of the TokenRequestor controller.
+	// TokenRequestorServiceAccount defines the configuration of the TokenRequestorServiceAccount controller.
 	// +optional
-	TokenRequestor *TokenRequestorControllerConfiguration `json:"tokenRequestor,omitempty"`
+	TokenRequestorServiceAccount *TokenRequestorServiceAccountControllerConfiguration `json:"tokenRequestor,omitempty"`
+	// TokenRequestorWorkloadIdentity defines the configuration of the TokenRequestorWorkloadIdentity controller.
+	// +optional
+	TokenRequestorWorkloadIdentity *TokenRequestorWorkloadIdentityControllerConfiguration `json:"tokenRequestorWorkloadIdentity,omitempty"`
 	// VPAEvictionRequirements defines the configuration of the VPAEvictionRequirements controller.
 	// +optional
 	VPAEvictionRequirements *VPAEvictionRequirementsControllerConfiguration `json:"vpaEvictionRequirements,omitempty"`
@@ -423,8 +426,15 @@ type ManagedSeedControllerConfiguration struct {
 	JitterUpdates *bool `json:"jitterUpdates,omitempty"`
 }
 
-// TokenRequestorControllerConfiguration defines the configuration of the TokenRequestor controller.
-type TokenRequestorControllerConfiguration struct {
+// TokenRequestorServiceAccountControllerConfiguration defines the configuration of the TokenRequestorServiceAccount controller.
+type TokenRequestorServiceAccountControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on events.
+	// +optional
+	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+}
+
+// TokenRequestorWorkloadIdentityControllerConfiguration defines the configuration of the TokenRequestorWorkloadIdentity controller.
+type TokenRequestorWorkloadIdentityControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on events.
 	// +optional
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`

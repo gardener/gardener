@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package tokenrequestor_test
+package workloadidentity_test
 
 import (
 	"context"
@@ -27,7 +27,7 @@ import (
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	securityfake "github.com/gardener/gardener/pkg/client/security/clientset/versioned/fake"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/workloadidentity/tokenrequestor"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/tokenrequestor/workloadidentity"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -42,7 +42,7 @@ var _ = Describe("Reconciler", func() {
 			seedClient, gardenClient client.Client
 			securityClient           *securityfake.Clientset
 
-			ctrl *tokenrequestor.Reconciler
+			ctrl *workloadidentity.Reconciler
 
 			secret           *corev1.Secret
 			workloadIdentity *securityv1alpha1.WorkloadIdentity
@@ -95,7 +95,7 @@ var _ = Describe("Reconciler", func() {
 			gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 			securityClient = &securityfake.Clientset{Fake: testing.Fake{}}
 
-			ctrl = &tokenrequestor.Reconciler{
+			ctrl = &workloadidentity.Reconciler{
 				SeedClient:           seedClient,
 				GardenClient:         gardenClient,
 				GardenSecurityClient: securityClient,

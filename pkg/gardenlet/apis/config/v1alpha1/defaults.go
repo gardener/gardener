@@ -170,8 +170,11 @@ func SetDefaults_GardenletControllerConfiguration(obj *GardenletControllerConfig
 	if obj.ManagedSeed == nil {
 		obj.ManagedSeed = &ManagedSeedControllerConfiguration{}
 	}
-	if obj.TokenRequestor == nil {
-		obj.TokenRequestor = &TokenRequestorControllerConfiguration{}
+	if obj.TokenRequestorServiceAccount == nil {
+		obj.TokenRequestorServiceAccount = &TokenRequestorServiceAccountControllerConfiguration{}
+	}
+	if obj.TokenRequestorWorkloadIdentity == nil {
+		obj.TokenRequestorWorkloadIdentity = &TokenRequestorWorkloadIdentityControllerConfiguration{}
 	}
 	if obj.VPAEvictionRequirements == nil {
 		obj.VPAEvictionRequirements = &VPAEvictionRequirementsControllerConfiguration{}
@@ -415,8 +418,15 @@ func SetDefaults_ManagedSeedControllerConfiguration(obj *ManagedSeedControllerCo
 	}
 }
 
-// SetDefaults_TokenRequestorControllerConfiguration sets defaults for the TokenRequestor controller.
-func SetDefaults_TokenRequestorControllerConfiguration(obj *TokenRequestorControllerConfiguration) {
+// SetDefaults_TokenRequestorServiceAccountControllerConfiguration sets defaults for the TokenRequestorServiceAccount controller.
+func SetDefaults_TokenRequestorServiceAccountControllerConfiguration(obj *TokenRequestorServiceAccountControllerConfiguration) {
+	if obj.ConcurrentSyncs == nil {
+		obj.ConcurrentSyncs = ptr.To(5)
+	}
+}
+
+// SetDefaults_TokenRequestorWorkloadIdentityControllerConfiguration sets defaults for the TokenRequestorWorkloadIdentity controller.
+func SetDefaults_TokenRequestorWorkloadIdentityControllerConfiguration(obj *TokenRequestorWorkloadIdentityControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
 		obj.ConcurrentSyncs = ptr.To(5)
 	}
