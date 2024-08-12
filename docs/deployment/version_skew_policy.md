@@ -71,7 +71,7 @@ Prerequisites:
 
 - In a single-instance setup, the existing `gardener-apiserver` instance is **1.37**.
 - In a multi-instance setup, all `gardener-apiserver` instances are at **1.37** or **1.38** (this ensures maximum skew of 1 minor version between the oldest and newest `gardener-apiserver` instance).
-- The `gardener-controller-manager`, `gardener-scheduler`, and `gardener-admission-controller`
+- The `gardener-controller-manager`, `gardener-scheduler`, and `gardener-admission-controller` instances that communicate with this `gardener-apiserver` are at version **1.37** (this ensures they are not newer than the existing API server version and are within 1 minor version of the new API server version).
 - `gardenlet` instances on all seeds are at version **1.37** or **1.36** (this ensures they are not newer than the existing API server version and are within 2 minor versions of the new API server version).
 
 Actions:
