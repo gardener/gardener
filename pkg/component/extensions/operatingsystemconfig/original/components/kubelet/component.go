@@ -6,10 +6,12 @@ package kubelet
 
 import (
 	_ "embed"
+	"strconv"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/imagevector"
@@ -90,6 +92,8 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 
 	cliFlags := CLIFlags(ctx.KubernetesVersion, ctx.NodeLabels, ctx.CRIName, ctx.KubeletCLIFlags, ctx.PreferIPv6)
 
+	http2ReadIdleTimeSeconds, http2PingTimeSeconds := calcKubeletHTTP2Timeouts(ctx.NodeMonitorGracePeriod)
+
 	kubeletUnit := extensionsv1alpha1.Unit{
 		Name:    UnitName,
 		Command: ptr.To(extensionsv1alpha1.CommandStart),
@@ -103,6 +107,7 @@ WantedBy=multi-user.target
 [Service]
 Restart=always
 RestartSec=5
+Environment="HTTP2_READ_IDLE_TIMEOUT_SECONDS=` + strconv.Itoa(http2ReadIdleTimeSeconds) + `" "HTTP2_PING_TIMEOUT_SECONDS=` + strconv.Itoa(http2PingTimeSeconds) + `"
 EnvironmentFile=/etc/environment
 EnvironmentFile=-/var/lib/kubelet/extra_args
 ExecStart=` + v1beta1constants.OperatingSystemConfigFilePathBinaries + `/kubelet \
@@ -121,4 +126,26 @@ func getFileContentKubeletConfig(kubernetesVersion *semver.Version, clusterDNSAd
 	)
 
 	return kcCodec.Encode(kubeletConfig, configFCI.Encoding)
+}
+
+// The default for HTTP2_READ_IDLE_TIMEOUT_SECONDS is 30 and for HTTP2_PING_TIMEOUT_SECONDS 15.
+// This results in issues if the tcp connection to kube-apiserver is silently dropped,
+// as node-monitor-grace-period is only 40s.
+// HTTP2_READ_IDLE_TIMEOUT_SECONDS + HTTP2_PING_TIMEOUT_SECONDS should be less than node-monitor-grace-period.
+func calcKubeletHTTP2Timeouts(nodeMonitorGracePeriod metav1.Duration) (int, int) {
+	http2ReadIdleTimeSeconds := int(30)
+	http2PingTimeSeconds := int(15)
+
+	if nodeMonitorGracePeriod.Duration.Seconds() < 46 {
+		http2ReadIdleTimeSeconds = positiveOrZero(int((nodeMonitorGracePeriod.Duration.Seconds() - 2) * 2 / 3))
+		http2PingTimeSeconds = positiveOrZero(int((nodeMonitorGracePeriod.Duration.Seconds() - 2) * 1 / 3))
+	}
+	return http2ReadIdleTimeSeconds, http2PingTimeSeconds
+}
+
+func positiveOrZero(v int) int {
+	if v > 0 {
+		return v
+	}
+	return 0
 }
