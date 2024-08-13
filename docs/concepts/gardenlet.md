@@ -494,7 +494,7 @@ Alternatively, it can be disabled by setting the `concurrentSyncs=0` for the con
 
 Please refer to [GEP-22: Improved Usage of the `ShootState` API](../proposals/22-improved-usage-of-shootstate-api.md) for all information.
 
-### [`TokenRequestor` Controller](../../pkg/gardenlet/controller/tokenrequestor/serviceaccount)
+### [`TokenRequestor` Controller For `ServiceAccount`s](../../pkg/gardenlet/controller/tokenrequestor/serviceaccount)
 
 The `gardenlet` uses an instance of the `TokenRequestor` controller which initially was developed in the context of the `gardener-resource-manager`, please read [this document](resource-manager.md#tokenrequestor-controller) for further information.
 
@@ -503,7 +503,7 @@ The mechanism works the same way as for shoot control plane components running i
 However, `gardenlet`'s instance of the `TokenRequestor` controller is restricted to `Secret`s labeled with `resources.gardener.cloud/class=garden`.
 Furthermore, it doesn't respect the `serviceaccount.resources.gardener.cloud/namespace` annotation. Instead, it always uses the seed's namespace in the garden cluster for managing `ServiceAccounts` and their tokens.
 
-### [`TokenRequestorWorkloadIdentity` Controller](../../pkg/gardenlet/controller/tokenrequestor/workloadidentity)
+### [`TokenRequestor` Controller For `WorkloadIdentity`s](../../pkg/gardenlet/controller/tokenrequestor/workloadidentity)
 
 The `TokenRequestorWorkloadIdentity` controller in the `gardenlet` reconciles `Secret`s labeled with `security.gardener.cloud/purpose=workload-identity-token-requestor`.
 When it encounters such `Secret`, it associates the `Secret` with a specific `WorkloadIdentity` using the annotations `workloadidentity.security.gardener.cloud/name` and `workloadidentity.security.gardener.cloud/namespace`.
