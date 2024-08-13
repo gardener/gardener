@@ -59,7 +59,7 @@ const finalizerName = "core.gardener.cloud/controllerinstallation"
 
 // RequeueDurationWhenResourceDeletionStillPresent is the duration used for requeueing when owned resources are still in
 // the process of being deleted when deleting a ControllerInstallation.
-var RequeueDurationWhenResourceDeletionStillPresent = 30 * time.Second
+var RequeueDurationWhenResourceDeletionStillPresent = 5 * time.Second
 
 // Reconciler reconciles ControllerInstallations and deploys them into the seed cluster.
 type Reconciler struct {
