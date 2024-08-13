@@ -107,10 +107,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	if seed.DeletionTimestamp != nil {
-		if err := r.delete(ctx, log, seedObj, seedIsGarden, isManagedSeed); err != nil {
-			return reconcile.Result{}, r.updateStatusOperationError(ctx, seed, err, operationType)
+		result, err := r.delete(ctx, log, seedObj, seedIsGarden, isManagedSeed)
+		if err != nil {
+			return result, r.updateStatusOperationError(ctx, seed, err, operationType)
 		}
-		return reconcile.Result{}, nil
+		return result, nil
 	}
 
 	if err := r.reconcile(ctx, log, seedObj, seedIsGarden, isManagedSeed); err != nil {

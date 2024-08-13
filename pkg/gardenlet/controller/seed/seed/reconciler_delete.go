@@ -6,8 +6,8 @@ package seed
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -17,6 +17,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -34,11 +35,14 @@ func (r *Reconciler) delete(
 	seedObj *seedpkg.Seed,
 	seedIsGarden bool,
 	isManagedSeed bool,
-) error {
+) (
+	reconcile.Result,
+	error,
+) {
 	seed := seedObj.GetInfo()
 
 	if !sets.New(seed.Finalizers...).Has(gardencorev1beta1.GardenerName) {
-		return nil
+		return reconcile.Result{}, nil
 	}
 
 	// Before deletion, it has to be ensured that no Shoots nor BackupBuckets depend on the Seed anymore.
@@ -47,51 +51,50 @@ func (r *Reconciler) delete(
 
 	associatedShoots, err := controllerutils.DetermineShootsAssociatedTo(ctx, r.GardenClient, seed)
 	if err != nil {
-		return err
+		return reconcile.Result{}, fmt.Errorf("failed to determine shoots associated to this seed: %w", err)
 	}
 
 	if len(associatedShoots) > 0 {
 		log.Info("Cannot delete Seed because the following Shoots are still referencing it", "shoots", associatedShoots)
 		r.Recorder.Event(seed, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, fmt.Sprintf("%s Shoots=%v", parentLogMessage, associatedShoots))
 
-		return errors.New("seed still has references")
+		return reconcile.Result{RequeueAfter: time.Minute}, nil
 	}
 
 	if seed.Spec.Backup != nil {
 		backupBucket := &gardencorev1beta1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: string(seed.UID)}}
 
 		if err := r.GardenClient.Delete(ctx, backupBucket); client.IgnoreNotFound(err) != nil {
-			return err
+			return reconcile.Result{}, fmt.Errorf("failed deleting backup bucket %s: %w", client.ObjectKeyFromObject(backupBucket), err)
 		}
 	}
 
 	associatedBackupBuckets, err := controllerutils.DetermineBackupBucketAssociations(ctx, r.GardenClient, seed.Name)
 	if err != nil {
-		return err
+		return reconcile.Result{}, fmt.Errorf("failed to determine backup buckets associated to this seed: %w", err)
 	}
 
 	if len(associatedBackupBuckets) > 0 {
 		log.Info("Cannot delete Seed because the following BackupBuckets are still referencing it", "backupBuckets", associatedBackupBuckets)
 		r.Recorder.Event(seed, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, fmt.Sprintf("%s BackupBuckets=%v", parentLogMessage, associatedBackupBuckets))
-
-		return errors.New("seed still has references")
+		return reconcile.Result{RequeueAfter: 5 * time.Second}, nil
 	}
 
 	log.Info("No Shoots or BackupBuckets are referencing the Seed, deletion accepted")
 
 	if err := r.runDeleteSeedFlow(ctx, log, seedObj, seedIsGarden, isManagedSeed); err != nil {
-		return err
+		return reconcile.Result{}, err
 	}
 
 	// Remove finalizer from Seed
 	if controllerutil.ContainsFinalizer(seed, gardencorev1beta1.GardenerName) {
 		log.Info("Removing finalizer")
 		if err := controllerutils.RemoveFinalizers(ctx, r.GardenClient, seed, gardencorev1beta1.GardenerName); err != nil {
-			return fmt.Errorf("failed to remove finalizer: %w", err)
+			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
 		}
 	}
 
-	return nil
+	return reconcile.Result{}, nil
 }
 
 func (r *Reconciler) runDeleteSeedFlow(
