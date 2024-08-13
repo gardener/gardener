@@ -140,7 +140,6 @@ var _ = Describe("ManagedSeed controller test", func() {
 						Image: &seedmanagementv1alpha1.Image{
 							PullPolicy: ptr.To(corev1.PullIfNotPresent),
 						},
-						VPA: ptr.To(false),
 					},
 					Config:    *gardenletConfig,
 					Bootstrap: ptr.To(seedmanagementv1alpha1.BootstrapToken),

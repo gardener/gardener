@@ -65,7 +65,7 @@ var _ = Describe("VPA", func() {
 					},
 					ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 						ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
-							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+							ContainerName: name,
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceMemory: resource.MustParse("200Mi"),
 							},
