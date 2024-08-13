@@ -50,7 +50,10 @@ All of the following steps assume that you are using this kubeconfig.
 
 Additionally, this command also deploys a local container registry to the cluster, as well as a few registry mirrors, that are set up as a pull-through cache for all upstream registries Gardener uses by default.
 This is done to speed up image pulls across local clusters.
-The local registry can be accessed as `garden.local.gardener.cloud:5001` for pushing and pulling.
+
+> You will need to add `127.0.0.1 garden.local.gardener.cloud` to your /etc/hosts.
+
+The local registry can now be accessed either via `localhost:5001` or `garden.local.gardener.cloud:5001` for pushing and pulling.
 The storage directories of the registries are mounted to the host machine under `dev/local-registry`.
 With this, mirrored images don't have to be pulled again after recreating the cluster.
 
