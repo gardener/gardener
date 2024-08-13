@@ -58,7 +58,24 @@ parse_flags() {
 setup_kind_network() {
   # check if network already exists
   local existing_network_id
+  local glgc_ip_address
   existing_network_id="$(docker network list --filter=name=^kind$ --format='{{.ID}}')"
+  glgc_ip_address=""
+    
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    if dscacheutil -q host -a name garden.local.gardener.cloud | grep -q "ip_address"; then
+        glgc_ip_address=$(dscacheutil -q host -a name garden.local.gardener.cloud | grep "ip_address" | head -n 1| cut -d' ' -f2)
+    fi
+  elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    glgc_ip_address=$(getent hosts garden.local.gardener.cloud | cut -d' ' -f1)
+  else
+    echo "WARN: Unknown OS. Make sure garden.local.gardener.cloud resolves to 127.0.0.1"
+  fi
+
+  if [ "$glgc_ip_address" != "127.0.0.1" ]; then
+      echo "garden.local.gardener.cloud does not resolve to 127.0.0.1. Please add a line for it in /etc/hosts"
+      exit 1
+  fi
 
   if [ -n "$existing_network_id" ] ; then
     # ensure the network is configured correctly

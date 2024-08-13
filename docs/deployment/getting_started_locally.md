@@ -50,7 +50,7 @@ All of the following steps assume that you are using this kubeconfig.
 
 Additionally, this command also deploys a local container registry to the cluster, as well as a few registry mirrors, that are set up as a pull-through cache for all upstream registries Gardener uses by default.
 This is done to speed up image pulls across local clusters.
-The local registry can be accessed as `localhost:5001` for pushing and pulling.
+The local registry can be accessed as `garden.local.gardener.cloud:5001` for pushing and pulling.
 The storage directories of the registries are mounted to the host machine under `dev/local-registry`.
 With this, mirrored images don't have to be pulled again after recreating the cluster.
 
@@ -66,7 +66,7 @@ First, ensure that your `/etc/hosts` file contains an entry resolving `localhost
 ```
 
 Typically, only `ip6-localhost` is mapped to `::1` on linux machines.
-However, we need `localhost` to resolve to both `127.0.0.1` and `::1` so that we can talk to our registry via a single address (`localhost:5001`).
+However, we need `garden.local.gardener.cloud` to resolve to both `127.0.0.1` and `::1` so that we can talk to our registry via a single address (`garden.local.gardener.cloud:5001`).
 
 Next, we need to configure NAT for outgoing traffic from the kind network to the internet.
 After executing `make kind-up IPFAMILY=ipv6`, execute the following command to set up the corresponding iptables rules:
