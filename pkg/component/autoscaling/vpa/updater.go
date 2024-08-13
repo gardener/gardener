@@ -139,7 +139,7 @@ func (v *vpa) reconcileUpdaterRoleLeaderLocking(role *rbacv1.Role) {
 		{
 			APIGroups:     []string{"coordination.k8s.io"},
 			Resources:     []string{"leases"},
-			ResourceNames: []string{"vpa-updater"},
+			ResourceNames: []string{updater},
 			Verbs:         []string{"get", "watch", "update"},
 		},
 	}

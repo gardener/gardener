@@ -150,6 +150,10 @@ This document provides a checklist for them that you can walk through.
 
    To reduce costs and to improve the network traffic latency in multi-zone Seed clusters, consider making a `Service` topology-aware, if applicable. In short, when a `Service` is topology-aware, Kubernetes routes network traffic to the `Endpoint`s (`Pod`s) which are located in the same zone where the traffic originated from. In this way, the cross availability zone traffic is avoided. See [Topology-Aware Traffic Routing](../operations/topology_aware_routing.md).
 
+7. **Enable leader election unconditionally for controllers** ([example 1](https://github.com/gardener/gardener/blob/bd0a90854f0a8751d361e6f1cedd97ce5a746e3c/pkg/component/kubernetes/controllermanager/controllermanager.go#L677), [example 2](https://github.com/gardener/gardener/blob/bd0a90854f0a8751d361e6f1cedd97ce5a746e3c/pkg/component/kubernetes/scheduler/scheduler.go#L75-L76), [example 3](https://github.com/gardener/gardener/blob/bd0a90854f0a8751d361e6f1cedd97ce5a746e3c/pkg/component/gardener/resourcemanager/resource_manager.go#L519-L523))
+
+   Enable leader election unconditionally for controllers independently from the number of replicas or from the high availability configurations. Having leader election enabled even for a single replica Deployment prevents having two Pods active at the same time. Otherwise, there are some corner cases that can result in two active Pods - Deployment rolling update or kubelet stops running on a Node and is not able to terminate the old replica while kube-controller-manager creates a new replica to match the Deployment's desired replicas count.
+
 ## Scalability
 
 1. **Provide resource requirements** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/metricsserver/metrics_server.go#L345-L353))
