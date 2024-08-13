@@ -90,9 +90,9 @@ func buildRef(oci *gardencorev1.OCIRepository) (name.Reference, error) {
 	}
 
 	// in the local setup we don't want to use TLS
-        if strings.Contains(ref, "garden.local.gardener.cloud:5001") {
+	if strings.Contains(ref, "garden.local.gardener.cloud:5001") {
 		opts = append(opts, name.Insecure)
-        }
+	}
 
 	return name.ParseReference(ref, opts...)
 }
