@@ -134,7 +134,7 @@ func (v *vpa) reconcileAdmissionControllerClusterRoleBinding(clusterRoleBinding 
 	clusterRoleBinding.Subjects = []rbacv1.Subject{{
 		Kind:      rbacv1.ServiceAccountKind,
 		Name:      serviceAccountName,
-		Namespace: v.serviceAccountNamespace(),
+		Namespace: v.namespaceForApplicationClassResource(),
 	}}
 }
 

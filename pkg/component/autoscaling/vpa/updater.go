@@ -56,15 +56,22 @@ type ValuesUpdater struct {
 
 func (v *vpa) updaterResourceConfigs() component.ResourceConfigs {
 	var (
-		clusterRole        = v.emptyClusterRole("evictioner")
-		clusterRoleBinding = v.emptyClusterRoleBinding("evictioner")
-		deployment         = v.emptyDeployment(updater)
-		vpa                = v.emptyVerticalPodAutoscaler(updater)
+		clusterRole              = v.emptyClusterRole("evictioner")
+		clusterRoleBinding       = v.emptyClusterRoleBinding("evictioner")
+		roleLeaderLocking        = v.emptyRole("leader-locking-vpa-updater")
+		roleBindingLeaderLocking = v.emptyRoleBinding("leader-locking-vpa-updater")
+		deployment               = v.emptyDeployment(updater)
+		podDisruptionBudget      = v.emptyPodDisruptionBudget(updater)
+		vpa                      = v.emptyVerticalPodAutoscaler(updater)
 	)
 
 	configs := component.ResourceConfigs{
 		{Obj: clusterRole, Class: component.Application, MutateFn: func() { v.reconcileUpdaterClusterRole(clusterRole) }},
 		{Obj: clusterRoleBinding, Class: component.Application, MutateFn: func() { v.reconcileUpdaterClusterRoleBinding(clusterRoleBinding, clusterRole, updater) }},
+		{Obj: roleLeaderLocking, Class: component.Application, MutateFn: func() { v.reconcileUpdaterRoleLeaderLocking(roleLeaderLocking) }},
+		{Obj: roleBindingLeaderLocking, Class: component.Application, MutateFn: func() {
+			v.reconcileUpdaterRoleBindingLeaderLocking(roleBindingLeaderLocking, roleLeaderLocking, updater)
+		}},
 		{Obj: vpa, Class: component.Runtime, MutateFn: func() { v.reconcileUpdaterVPA(vpa, deployment) }},
 	}
 
@@ -73,10 +80,12 @@ func (v *vpa) updaterResourceConfigs() component.ResourceConfigs {
 		configs = append(configs,
 			component.ResourceConfig{Obj: serviceAccount, Class: component.Application, MutateFn: func() { v.reconcileUpdaterServiceAccount(serviceAccount) }},
 			component.ResourceConfig{Obj: deployment, Class: component.Runtime, MutateFn: func() { v.reconcileUpdaterDeployment(deployment, &serviceAccount.Name) }},
+			component.ResourceConfig{Obj: podDisruptionBudget, Class: component.Runtime, MutateFn: func() { v.reconcilePodDisruptionBudget(podDisruptionBudget, deployment) }},
 		)
 	} else {
 		configs = append(configs,
 			component.ResourceConfig{Obj: deployment, Class: component.Runtime, MutateFn: func() { v.reconcileUpdaterDeployment(deployment, nil) }},
+			component.ResourceConfig{Obj: podDisruptionBudget, Class: component.Runtime, MutateFn: func() { v.reconcilePodDisruptionBudget(podDisruptionBudget, deployment) }},
 		)
 	}
 
@@ -115,14 +124,45 @@ func (v *vpa) reconcileUpdaterClusterRoleBinding(clusterRoleBinding *rbacv1.Clus
 	clusterRoleBinding.Subjects = []rbacv1.Subject{{
 		Kind:      rbacv1.ServiceAccountKind,
 		Name:      serviceAccountName,
-		Namespace: v.serviceAccountNamespace(),
+		Namespace: v.namespaceForApplicationClassResource(),
+	}}
+}
+
+func (v *vpa) reconcileUpdaterRoleLeaderLocking(role *rbacv1.Role) {
+	role.Labels = getRoleLabel()
+	role.Rules = []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{"coordination.k8s.io"},
+			Resources: []string{"leases"},
+			Verbs:     []string{"create"},
+		},
+		{
+			APIGroups:     []string{"coordination.k8s.io"},
+			Resources:     []string{"leases"},
+			ResourceNames: []string{updater},
+			Verbs:         []string{"get", "watch", "update"},
+		},
+	}
+}
+
+func (v *vpa) reconcileUpdaterRoleBindingLeaderLocking(roleBinding *rbacv1.RoleBinding, role *rbacv1.Role, serviceAccountName string) {
+	roleBinding.Labels = getRoleLabel()
+	roleBinding.RoleRef = rbacv1.RoleRef{
+		APIGroup: rbacv1.GroupName,
+		Kind:     "Role",
+		Name:     role.Name,
+	}
+	roleBinding.Subjects = []rbacv1.Subject{{
+		Kind:      rbacv1.ServiceAccountKind,
+		Name:      serviceAccountName,
+		Namespace: v.namespaceForApplicationClassResource(),
 	}}
 }
 
 func (v *vpa) reconcileUpdaterDeployment(deployment *appsv1.Deployment, serviceAccountName *string) {
-	// vpa-updater is not using leader election, hence it is not capable of running multiple replicas (and as a
-	// consequence, don't need a PDB).
-	deployment.Labels = v.getDeploymentLabels(updater)
+	deployment.Labels = utils.MergeStringMaps(v.getDeploymentLabels(updater), map[string]string{
+		resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
+	})
 	deployment.Spec = appsv1.DeploymentSpec{
 		Replicas:             ptr.To(ptr.Deref(v.values.Updater.Replicas, 1)),
 		RevisionHistoryLimit: ptr.To[int32](2),
@@ -151,6 +191,8 @@ func (v *vpa) reconcileUpdaterDeployment(deployment *appsv1.Deployment, serviceA
 						"--v=2",
 						"--kube-api-qps=100",
 						"--kube-api-burst=120",
+						"--leader-elect=true",
+						fmt.Sprintf("--leader-elect-resource-namespace=%s", v.namespaceForApplicationClassResource()),
 					},
 					LivenessProbe: newDefaultLivenessProbe(),
 					Ports: []corev1.ContainerPort{
