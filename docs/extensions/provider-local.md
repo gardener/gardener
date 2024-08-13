@@ -110,8 +110,8 @@ Additionally, it generates the [`MachineClass`es](https://github.com/gardener/ma
 
 The gardenlet creates a wildcard DNS record for the Seed's ingress domain pointing to the `nginx-ingress-controller`'s LoadBalancer.
 This domain is commonly used by all `Ingress` objects created in the Seed for Seed and Shoot components.
-However, provider-local implements the `DNSRecord` extension API (see the [`DNSRecord`section](#dnsrecord)).
-To make `Ingress` domains resolvable on the host, this controller reconciles all `Ingresses` and creates `DNSRecords` of type `local` for each host included in `spec.rules`.
+As provider-local implements the `DNSRecord` extension API (see the [`DNSRecord`section](#dnsrecord)), this controller reconciles all `Ingress`s and creates `DNSRecord`s of type `local` for each host included in `spec.rules`.
+This only happens for shoot namespaces (`gardener.cloud/role=shoot` label) to make `Ingress` domains resolvable on the machine pods.
 
 #### `Service`
 

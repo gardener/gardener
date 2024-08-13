@@ -32,9 +32,8 @@ type reconciler struct {
 func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
-	key := req.NamespacedName
 	ingress := &networkingv1.Ingress{}
-	if err := r.client.Get(ctx, key, ingress); err != nil {
+	if err := r.client.Get(ctx, req.NamespacedName, ingress); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
