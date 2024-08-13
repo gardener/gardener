@@ -996,6 +996,132 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 				})
 			})
 
+			Context("bastion validation", func() {
+				It("should forbid unknown machineType", func() {
+					cloudProfile.Spec.Bastion = &core.Bastion{
+						MachineType: &core.BastionMachineType{Name: "unknown"},
+					}
+
+					errorList := ValidateCloudProfile(cloudProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.bastion.machineType.name"),
+					}))))
+				})
+
+				It("should allow known machineType", func() {
+					cloudProfile.Spec.Bastion = &core.Bastion{
+						MachineType: &core.BastionMachineType{Name: machineType.Name},
+					}
+
+					errorList := ValidateCloudProfile(cloudProfile)
+					Expect(errorList).To(BeEmpty())
+				})
+
+				It("should forbid unknown machineImage", func() {
+					cloudProfile.Spec.Bastion = &core.Bastion{
+						MachineImage: &core.BastionMachineImage{Name: "unknown"},
+					}
+
+					errorList := ValidateCloudProfile(cloudProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.bastion.machineImage.name"),
+					}))))
+				})
+
+				It("should forbid preview image if version is not specified", func() {
+					cloudProfile.Spec.Bastion = &core.Bastion{
+						MachineImage: &core.BastionMachineImage{Name: "some-machineimage"},
+					}
+					cloudProfile.Spec.MachineImages[0].Versions[0].Classification = &previewClassification
+					cloudProfile.Spec.MachineImages[0].Versions[0].Architectures = []string{"amd64"}
+
+					errorList := ValidateCloudProfile(cloudProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.bastion.machineImage.name"),
+					}))))
+				})
+
+				It("should forbid no arch images", func() {
+					cloudProfile.Spec.Bastion = &core.Bastion{
+						MachineImage: &core.BastionMachineImage{Name: "some-machineimage"},
+					}
+					cloudProfile.Spec.MachineImages[0].Versions[0].Classification = &supportedClassification
+					cloudProfile.Spec.MachineImages[0].Versions[0].Architectures = []string{}
+
+					errorList := ValidateCloudProfile(cloudProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.bastion.machineImage.name"),
+					}))))
+				})
+
+				It("should allow images with supported classification and architecture specification", func() {
+					cloudProfile.Spec.Bastion = &core.Bastion{
+						MachineImage: &core.BastionMachineImage{Name: "some-machineimage"},
+					}
+					cloudProfile.Spec.MachineImages[0].Versions[0].Classification = &supportedClassification
+					cloudProfile.Spec.MachineImages[0].Versions[0].Architectures = []string{"amd64"}
+
+					errorList := ValidateCloudProfile(cloudProfile)
+					Expect(errorList).To(BeEmpty())
+				})
+
+				It("should allow preview image if version is defined", func() {
+					cloudProfile.Spec.Bastion = &core.Bastion{
+						MachineImage: &core.BastionMachineImage{
+							Name:    "some-machineimage",
+							Version: ptr.To("1.2.3"),
+						},
+					}
+					cloudProfile.Spec.MachineImages[0].Versions[0].Classification = &previewClassification
+					cloudProfile.Spec.MachineImages[0].Versions[0].Architectures = []string{"amd64"}
+
+					errorList := ValidateCloudProfile(cloudProfile)
+					Expect(errorList).To(BeEmpty())
+				})
+
+				It("should allow matching arch of machineType and machineImage", func() {
+					cloudProfile.Spec.Bastion = &core.Bastion{
+						MachineType: &core.BastionMachineType{Name: machineType.Name},
+						MachineImage: &core.BastionMachineImage{
+							Name:    "some-machineimage",
+							Version: ptr.To("1.2.3"),
+						},
+					}
+					cloudProfile.Spec.MachineImages[0].Versions[0].Classification = &previewClassification
+					cloudProfile.Spec.MachineImages[0].Versions[0].Architectures = []string{*machineType.Architecture}
+
+					errorList := ValidateCloudProfile(cloudProfile)
+					Expect(errorList).To(BeEmpty())
+				})
+
+				It("should forbid different arch of machineType and machineImage", func() {
+					cloudProfile.Spec.Bastion = &core.Bastion{
+						MachineType: &core.BastionMachineType{Name: machineType.Name},
+						MachineImage: &core.BastionMachineImage{
+							Name:    "some-machineimage",
+							Version: ptr.To("1.2.3"),
+						},
+					}
+					cloudProfile.Spec.MachineImages[0].Versions[0].Classification = &supportedClassification
+					cloudProfile.Spec.MachineImages[0].Versions[0].Architectures = []string{"arm64"}
+
+					errorList := ValidateCloudProfile(cloudProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.bastion.machineImage.version"),
+					}))))
+				})
+			})
+
 			It("should forbid unsupported seed selectors", func() {
 				cloudProfile.Spec.SeedSelector.MatchLabels["foo"] = "no/slash/allowed"
 
