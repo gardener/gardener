@@ -884,7 +884,6 @@ var _ = Describe("KubeStateMetrics", func() {
 					serviceFor(component.ClusterTypeSeed),
 					deploymentFor(component.ClusterTypeSeed),
 					vpaFor("-runtime"),
-					scrapeConfigCacheFor("-runtime"),
 					scrapeConfigGarden,
 				}
 
