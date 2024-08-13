@@ -1792,6 +1792,10 @@ func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, version string, fld
 	}
 	if kubeletConfig.SystemReserved != nil {
 		allErrs = append(allErrs, validateKubeletConfigReserved(kubeletConfig.SystemReserved, fldPath.Child("systemReserved"))...)
+
+		if k8sGreaterEqual131, _ := versionutils.CheckVersionMeetsConstraint(version, ">= 1.31"); k8sGreaterEqual131 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("systemReserved"), kubeletConfig.SystemReserved, "systemReserved is no longer supported by Gardener starting from Kubernetes 1.31"))
+		}
 	}
 	if v := kubeletConfig.ImageGCHighThresholdPercent; v != nil && (*v < 0 || *v > 100) {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("imageGCHighThresholdPercent"), *v, "value must be in [0,100]"))
