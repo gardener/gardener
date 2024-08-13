@@ -2,7 +2,7 @@ module github.com/gardener/gardener
 
 go 1.22.4
 
-toolchain go1.22.5
+toolchain go1.23.0
 
 require (
 	github.com/Masterminds/semver/v3 v3.2.1
