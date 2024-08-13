@@ -3020,42 +3020,6 @@ var _ = Describe("validator", func() {
 					Expect(err).To(BeForbiddenError())
 					Expect(err.Error()).To(ContainSubstring("total reserved memory (kubeReserved + systemReserved) cannot be more than the Node's memory capacity"))
 				})
-
-				It("should not allow creation of Shoot if systemReserved of a worker set for kubernetes version 1.31", func() {
-					shoot.Spec.Kubernetes.Version = "1.31.0"
-					cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{{Version: "1.31.0"}}
-					worker.Kubernetes.Kubelet.KubeReserved = nil
-					worker.Kubernetes.Kubelet.SystemReserved = &core.KubeletConfigReserved{
-						CPU: &resourceCPU1,
-					}
-					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, worker)
-
-					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-					err := admissionHandler.Admit(ctx, attrs, nil)
-
-					Expect(err).To(BeForbiddenError())
-					Expect(err.Error()).To(ContainSubstring("systemReserved is no longer supported by Gardener starting from Kubernetes 1.31"))
-				})
-
-				It("should not allow creation of Shoot if systemReserved default of a shoot is set for kubernetes version 1.31", func() {
-					shoot.Spec.Kubernetes.Version = "1.31.0"
-					cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{{Version: "1.31.0"}}
-
-					kubeletConfig.KubeReserved = nil
-					kubeletConfig.SystemReserved = &core.KubeletConfigReserved{
-						CPU: &resourceCPU1,
-					}
-					shoot.Spec.Kubernetes.Kubelet = kubeletConfig
-
-					worker.Kubernetes.Kubelet = nil
-					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, worker)
-
-					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-					err := admissionHandler.Admit(ctx, attrs, nil)
-
-					Expect(err).To(BeForbiddenError())
-					Expect(err.Error()).To(ContainSubstring("systemReserved is no longer supported by Gardener starting from Kubernetes 1.31"))
-				})
 			})
 
 			Context("machine architecture check", func() {

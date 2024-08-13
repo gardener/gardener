@@ -924,7 +924,6 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 			}
 		}
 
-		var kubeletVersion *semver.Version
 		idxPath := path.Child("workers").Index(i)
 		if worker.Machine.Architecture != nil && !slices.Contains(v1beta1constants.ValidArchitectures, *worker.Machine.Architecture) {
 			allErrs = append(allErrs, field.NotSupported(idxPath.Child("machine", "architecture"), *worker.Machine.Architecture, v1beta1constants.ValidArchitectures))
@@ -964,7 +963,7 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 			} else {
 				allErrs = append(allErrs, validateContainerRuntimeConstraints(c.cloudProfileSpec.MachineImages, worker, oldWorker, idxPath.Child("cri"))...)
 
-				kubeletVersion, err = helper.CalculateEffectiveKubernetesVersion(controlPlaneVersion, worker.Kubernetes)
+				kubeletVersion, err := helper.CalculateEffectiveKubernetesVersion(controlPlaneVersion, worker.Kubernetes)
 				if err != nil {
 					allErrs = append(allErrs, field.Invalid(idxPath.Child("kubernetes", "version"), worker.Kubernetes.Version, "cannot determine effective Kubernetes version for worker pool"))
 					// exit early, all other validation errors will be misleading
@@ -995,7 +994,7 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 			if worker.Kubernetes.Kubelet != nil {
 				kubeletConfig = worker.Kubernetes.Kubelet
 			}
-			allErrs = append(allErrs, validateKubeletConfig(idxPath.Child("kubernetes").Child("kubelet"), c.cloudProfileSpec.MachineTypes, worker.Machine.Type, kubeletConfig, kubeletVersion)...)
+			allErrs = append(allErrs, validateKubeletConfig(idxPath.Child("kubernetes").Child("kubelet"), c.cloudProfileSpec.MachineTypes, worker.Machine.Type, kubeletConfig)...)
 
 			if worker.Kubernetes.Version != nil {
 				oldWorkerKubernetesVersion := c.oldShoot.Spec.Kubernetes.Version
@@ -1343,7 +1342,7 @@ func isUnavailableInAtleastOneZone(regions []gardencorev1beta1.Region, region st
 	return false
 }
 
-func validateKubeletConfig(fldPath *field.Path, machineTypes []gardencorev1beta1.MachineType, workerMachineType string, kubeletConfig *core.KubeletConfig, kubeletVersion *semver.Version) field.ErrorList {
+func validateKubeletConfig(fldPath *field.Path, machineTypes []gardencorev1beta1.MachineType, workerMachineType string, kubeletConfig *core.KubeletConfig) field.ErrorList {
 	var allErrs field.ErrorList
 
 	if kubeletConfig == nil {
@@ -1368,11 +1367,6 @@ func validateKubeletConfig(fldPath *field.Path, machineTypes []gardencorev1beta1
 		}
 		if kubeletConfig.SystemReserved.Memory != nil {
 			reservedMemory.Add(*kubeletConfig.SystemReserved.Memory)
-		}
-		k8sGreaterOrEqual131, _ := semver.NewConstraint(">= 1.31")
-
-		if kubeletVersion != nil && k8sGreaterOrEqual131.Check(kubeletVersion) {
-			allErrs = append(allErrs, field.Invalid(fldPath, "systemReserved", "systemReserved is no longer supported by Gardener starting from Kubernetes 1.31"))
 		}
 	}
 
