@@ -1588,7 +1588,7 @@ profiles:
   - name: operator
     patches:
       - op: remove
-        path: /deploy
+        path: /deploy/helm
       - op: add
         path: /build/artifacts/0/hooks
         value:
@@ -1628,3 +1628,12 @@ profiles:
       kustomize:
         paths:
           - example/gardener-local/gardenlet/operator
+    deploy:
+      kubectl:
+        hooks:
+          after:
+            - host:
+                command:
+                  - bash
+                  - -ec
+                  - KUBECONFIG=$VIRTUAL_GARDEN_KUBECONFIG hack/usage/wait-for.sh seed local GardenletReady SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
