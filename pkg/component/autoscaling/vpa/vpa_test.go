@@ -428,6 +428,7 @@ var _ = Describe("VPA", func() {
 						"app": "vpa-updater",
 					},
 				},
+				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 			},
 		}
 		vpaUpdater = &vpaautoscalingv1.VerticalPodAutoscaler{
@@ -787,6 +788,7 @@ var _ = Describe("VPA", func() {
 						"app": "vpa-recommender",
 					},
 				},
+				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 			},
 		}
 		vpaRecommender = &vpaautoscalingv1.VerticalPodAutoscaler{
@@ -1124,6 +1126,7 @@ var _ = Describe("VPA", func() {
 						"app": "vpa-admission-controller",
 					},
 				},
+				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 			},
 		}
 		vpaAdmissionController = &vpaautoscalingv1.VerticalPodAutoscaler{
@@ -1388,175 +1391,140 @@ var _ = Describe("VPA", func() {
 				managedResourceName = "vpa"
 			})
 
-			Context("Different Kubernetes versions", func() {
+			It("should successfully deploy all resources", func() {
 				var expectedObjects []client.Object
 
-				JustBeforeEach(func() {
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
 
-					Expect(vpa.Deploy(ctx)).To(Succeed())
+				Expect(vpa.Deploy(ctx)).To(Succeed())
 
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-					expectedMr := &resourcesv1alpha1.ManagedResource{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:            managedResourceName,
-							Namespace:       namespace,
-							Labels:          map[string]string{"gardener.cloud/role": "seed-system-component"},
-							ResourceVersion: "1",
-						},
-						Spec: resourcesv1alpha1.ManagedResourceSpec{
-							Class: ptr.To("seed"),
-							SecretRefs: []corev1.LocalObjectReference{{
-								Name: managedResource.Spec.SecretRefs[0].Name,
-							}},
-							KeepObjects: ptr.To(false),
-						},
-					}
-					utilruntime.Must(references.InjectAnnotations(expectedMr))
-					Expect(managedResource).To(DeepEqual(expectedMr))
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+				expectedMr := &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            managedResourceName,
+						Namespace:       namespace,
+						Labels:          map[string]string{"gardener.cloud/role": "seed-system-component"},
+						ResourceVersion: "1",
+					},
+					Spec: resourcesv1alpha1.ManagedResourceSpec{
+						Class: ptr.To("seed"),
+						SecretRefs: []corev1.LocalObjectReference{{
+							Name: managedResource.Spec.SecretRefs[0].Name,
+						}},
+						KeepObjects: ptr.To(false),
+					},
+				}
+				utilruntime.Must(references.InjectAnnotations(expectedMr))
+				Expect(managedResource).To(DeepEqual(expectedMr))
 
-					managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
-					Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
-					Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
-					Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+				managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 
-					By("Verify vpa-updater resources")
-					clusterRoleUpdater.Name = replaceTargetSubstrings(clusterRoleUpdater.Name)
-					clusterRoleBindingUpdater.Name = replaceTargetSubstrings(clusterRoleBindingUpdater.Name)
-					clusterRoleBindingUpdater.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingUpdater.RoleRef.Name)
-					roleLeaderLockingUpdater.Name = replaceTargetSubstrings(roleLeaderLockingUpdater.Name)
-					roleBindingLeaderLockingUpdater.Name = replaceTargetSubstrings(roleBindingLeaderLockingUpdater.Name)
-					roleBindingLeaderLockingUpdater.RoleRef.Name = replaceTargetSubstrings(roleBindingLeaderLockingUpdater.RoleRef.Name)
+				By("Verify vpa-updater resources")
+				clusterRoleUpdater.Name = replaceTargetSubstrings(clusterRoleUpdater.Name)
+				clusterRoleBindingUpdater.Name = replaceTargetSubstrings(clusterRoleBindingUpdater.Name)
+				clusterRoleBindingUpdater.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingUpdater.RoleRef.Name)
+				roleLeaderLockingUpdater.Name = replaceTargetSubstrings(roleLeaderLockingUpdater.Name)
+				roleBindingLeaderLockingUpdater.Name = replaceTargetSubstrings(roleBindingLeaderLockingUpdater.Name)
+				roleBindingLeaderLockingUpdater.RoleRef.Name = replaceTargetSubstrings(roleBindingLeaderLockingUpdater.RoleRef.Name)
 
-					deploymentUpdater := deploymentUpdaterFor(true, nil, nil, nil, nil, nil, namespace)
-					adaptNetworkPolicyLabelsForClusterTypeSeed(deploymentUpdater.Spec.Template.Labels)
+				deploymentUpdater := deploymentUpdaterFor(true, nil, nil, nil, nil, nil, namespace)
+				adaptNetworkPolicyLabelsForClusterTypeSeed(deploymentUpdater.Spec.Template.Labels)
 
-					expectedObjects = []client.Object{
-						serviceAccountUpdater,
-						clusterRoleUpdater,
-						clusterRoleBindingUpdater,
-						roleLeaderLockingUpdater,
-						roleBindingLeaderLockingUpdater,
-						deploymentUpdater,
-						vpaUpdater,
-					}
+				expectedObjects = []client.Object{
+					serviceAccountUpdater,
+					clusterRoleUpdater,
+					clusterRoleBindingUpdater,
+					roleLeaderLockingUpdater,
+					roleBindingLeaderLockingUpdater,
+					deploymentUpdater,
+					vpaUpdater,
+				}
 
-					By("Verify vpa-recommender resources")
-					clusterRoleRecommenderMetricsReader.Name = replaceTargetSubstrings(clusterRoleRecommenderMetricsReader.Name)
-					clusterRoleBindingRecommenderMetricsReader.Name = replaceTargetSubstrings(clusterRoleBindingRecommenderMetricsReader.Name)
-					clusterRoleBindingRecommenderMetricsReader.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingRecommenderMetricsReader.RoleRef.Name)
-					clusterRoleRecommenderCheckpointActor.Name = replaceTargetSubstrings(clusterRoleRecommenderCheckpointActor.Name)
-					clusterRoleBindingRecommenderCheckpointActor.Name = replaceTargetSubstrings(clusterRoleBindingRecommenderCheckpointActor.Name)
-					clusterRoleBindingRecommenderCheckpointActor.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingRecommenderCheckpointActor.RoleRef.Name)
-					clusterRoleRecommenderStatusActor.Name = replaceTargetSubstrings(clusterRoleRecommenderStatusActor.Name)
-					clusterRoleBindingRecommenderStatusActor.Name = replaceTargetSubstrings(clusterRoleBindingRecommenderStatusActor.Name)
-					clusterRoleBindingRecommenderStatusActor.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingRecommenderStatusActor.RoleRef.Name)
-					roleLeaderLockingRecommender.Name = replaceTargetSubstrings(roleLeaderLockingRecommender.Name)
-					roleBindingLeaderLockingRecommender.Name = replaceTargetSubstrings(roleBindingLeaderLockingRecommender.Name)
-					roleBindingLeaderLockingRecommender.RoleRef.Name = replaceTargetSubstrings(roleBindingLeaderLockingRecommender.RoleRef.Name)
+				By("Verify vpa-recommender resources")
+				clusterRoleRecommenderMetricsReader.Name = replaceTargetSubstrings(clusterRoleRecommenderMetricsReader.Name)
+				clusterRoleBindingRecommenderMetricsReader.Name = replaceTargetSubstrings(clusterRoleBindingRecommenderMetricsReader.Name)
+				clusterRoleBindingRecommenderMetricsReader.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingRecommenderMetricsReader.RoleRef.Name)
+				clusterRoleRecommenderCheckpointActor.Name = replaceTargetSubstrings(clusterRoleRecommenderCheckpointActor.Name)
+				clusterRoleBindingRecommenderCheckpointActor.Name = replaceTargetSubstrings(clusterRoleBindingRecommenderCheckpointActor.Name)
+				clusterRoleBindingRecommenderCheckpointActor.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingRecommenderCheckpointActor.RoleRef.Name)
+				clusterRoleRecommenderStatusActor.Name = replaceTargetSubstrings(clusterRoleRecommenderStatusActor.Name)
+				clusterRoleBindingRecommenderStatusActor.Name = replaceTargetSubstrings(clusterRoleBindingRecommenderStatusActor.Name)
+				clusterRoleBindingRecommenderStatusActor.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingRecommenderStatusActor.RoleRef.Name)
+				roleLeaderLockingRecommender.Name = replaceTargetSubstrings(roleLeaderLockingRecommender.Name)
+				roleBindingLeaderLockingRecommender.Name = replaceTargetSubstrings(roleBindingLeaderLockingRecommender.Name)
+				roleBindingLeaderLockingRecommender.RoleRef.Name = replaceTargetSubstrings(roleBindingLeaderLockingRecommender.RoleRef.Name)
 
-					deploymentRecommender := deploymentRecommenderFor(true, nil, nil, component.ClusterTypeSeed, nil, nil, nil, nil, nil, nil, namespace)
-					adaptNetworkPolicyLabelsForClusterTypeSeed(deploymentRecommender.Spec.Template.Labels)
+				deploymentRecommender := deploymentRecommenderFor(true, nil, nil, component.ClusterTypeSeed, nil, nil, nil, nil, nil, nil, namespace)
+				adaptNetworkPolicyLabelsForClusterTypeSeed(deploymentRecommender.Spec.Template.Labels)
 
-					expectedObjects = append(expectedObjects,
-						serviceAccountRecommender,
-						clusterRoleRecommenderMetricsReader,
-						clusterRoleBindingRecommenderMetricsReader,
-						clusterRoleRecommenderCheckpointActor,
-						clusterRoleBindingRecommenderCheckpointActor,
-						clusterRoleRecommenderStatusActor,
-						clusterRoleBindingRecommenderStatusActor,
-						roleLeaderLockingRecommender,
-						roleBindingLeaderLockingRecommender,
-						deploymentRecommender,
-						serviceRecommenderFor(component.ClusterTypeSeed),
-						serviceMonitorRecommenderFor(component.ClusterTypeSeed),
-					)
+				expectedObjects = append(expectedObjects,
+					serviceAccountRecommender,
+					clusterRoleRecommenderMetricsReader,
+					clusterRoleBindingRecommenderMetricsReader,
+					clusterRoleRecommenderCheckpointActor,
+					clusterRoleBindingRecommenderCheckpointActor,
+					clusterRoleRecommenderStatusActor,
+					clusterRoleBindingRecommenderStatusActor,
+					roleLeaderLockingRecommender,
+					roleBindingLeaderLockingRecommender,
+					deploymentRecommender,
+					serviceRecommenderFor(component.ClusterTypeSeed),
+					serviceMonitorRecommenderFor(component.ClusterTypeSeed),
+				)
 
-					Expect(managedResourceSecret.Data).NotTo(HaveKey("verticalpodautoscaler__" + namespace + "__vpa-recommender.yaml"))
+				Expect(managedResourceSecret.Data).NotTo(HaveKey("verticalpodautoscaler__" + namespace + "__vpa-recommender.yaml"))
 
-					By("Verify vpa-admission-controller resources")
-					clusterRoleAdmissionController.Name = replaceTargetSubstrings(clusterRoleAdmissionController.Name)
-					clusterRoleBindingAdmissionController.Name = replaceTargetSubstrings(clusterRoleBindingAdmissionController.Name)
-					clusterRoleBindingAdmissionController.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingAdmissionController.RoleRef.Name)
+				By("Verify vpa-admission-controller resources")
+				clusterRoleAdmissionController.Name = replaceTargetSubstrings(clusterRoleAdmissionController.Name)
+				clusterRoleBindingAdmissionController.Name = replaceTargetSubstrings(clusterRoleBindingAdmissionController.Name)
+				clusterRoleBindingAdmissionController.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingAdmissionController.RoleRef.Name)
 
-					deploymentAdmissionController := deploymentAdmissionControllerFor(true)
-					adaptNetworkPolicyLabelsForClusterTypeSeed(deploymentAdmissionController.Spec.Template.Labels)
+				deploymentAdmissionController := deploymentAdmissionControllerFor(true)
+				adaptNetworkPolicyLabelsForClusterTypeSeed(deploymentAdmissionController.Spec.Template.Labels)
 
-					expectedObjects = append(expectedObjects,
-						serviceAccountAdmissionController,
-						clusterRoleAdmissionController,
-						clusterRoleBindingAdmissionController,
-						serviceAdmissionControllerFor(component.ClusterTypeSeed, false),
-						deploymentAdmissionController,
-						vpaAdmissionController,
-						serviceMonitorAdmissionController,
-					)
+				expectedObjects = append(expectedObjects,
+					serviceAccountAdmissionController,
+					clusterRoleAdmissionController,
+					clusterRoleBindingAdmissionController,
+					serviceAdmissionControllerFor(component.ClusterTypeSeed, false),
+					deploymentAdmissionController,
+					vpaAdmissionController,
+					serviceMonitorAdmissionController,
+				)
 
-					By("Verify general resources")
-					clusterRoleGeneralActor.Name = replaceTargetSubstrings(clusterRoleGeneralActor.Name)
-					clusterRoleGeneralTargetReader.Name = replaceTargetSubstrings(clusterRoleGeneralTargetReader.Name)
-					clusterRoleBindingGeneralActor.Name = replaceTargetSubstrings(clusterRoleBindingGeneralActor.Name)
-					clusterRoleBindingGeneralActor.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingGeneralActor.RoleRef.Name)
-					clusterRoleBindingGeneralTargetReader.Name = replaceTargetSubstrings(clusterRoleBindingGeneralTargetReader.Name)
-					clusterRoleBindingGeneralTargetReader.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingGeneralTargetReader.RoleRef.Name)
-					mutatingWebhookConfiguration.Name = strings.Replace(mutatingWebhookConfiguration.Name, "-target", "-source", -1)
-					mutatingWebhookConfiguration.Webhooks[0].ClientConfig = admissionregistrationv1.WebhookClientConfig{
-						Service: &admissionregistrationv1.ServiceReference{
-							Name:      "vpa-webhook",
-							Namespace: namespace,
-							Port:      ptr.To[int32](443),
-						},
-					}
+				By("Verify general resources")
+				clusterRoleGeneralActor.Name = replaceTargetSubstrings(clusterRoleGeneralActor.Name)
+				clusterRoleGeneralTargetReader.Name = replaceTargetSubstrings(clusterRoleGeneralTargetReader.Name)
+				clusterRoleBindingGeneralActor.Name = replaceTargetSubstrings(clusterRoleBindingGeneralActor.Name)
+				clusterRoleBindingGeneralActor.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingGeneralActor.RoleRef.Name)
+				clusterRoleBindingGeneralTargetReader.Name = replaceTargetSubstrings(clusterRoleBindingGeneralTargetReader.Name)
+				clusterRoleBindingGeneralTargetReader.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingGeneralTargetReader.RoleRef.Name)
+				mutatingWebhookConfiguration.Name = strings.Replace(mutatingWebhookConfiguration.Name, "-target", "-source", -1)
+				mutatingWebhookConfiguration.Webhooks[0].ClientConfig = admissionregistrationv1.WebhookClientConfig{
+					Service: &admissionregistrationv1.ServiceReference{
+						Name:      "vpa-webhook",
+						Namespace: namespace,
+						Port:      ptr.To[int32](443),
+					},
+				}
 
-					expectedObjects = append(expectedObjects,
-						clusterRoleGeneralActor,
-						clusterRoleBindingGeneralActor,
-						clusterRoleGeneralTargetReader,
-						clusterRoleBindingGeneralTargetReader,
-						mutatingWebhookConfiguration,
-					)
-				})
+				expectedObjects = append(expectedObjects,
+					clusterRoleGeneralActor,
+					clusterRoleBindingGeneralActor,
+					clusterRoleGeneralTargetReader,
+					clusterRoleBindingGeneralTargetReader,
+					mutatingWebhookConfiguration,
+					podDisruptionBudgetUpdater,
+					podDisruptionBudgetRecommender,
+					podDisruptionBudgetAdmissionController,
+				)
 
-				Context("Kubernetes versions < 1.26", func() {
-					It("should successfully deploy all resources", func() {
-						expectedObjects = append(expectedObjects,
-							podDisruptionBudgetUpdater,
-							podDisruptionBudgetRecommender,
-							podDisruptionBudgetAdmissionController,
-						)
-						Expect(managedResource).To(consistOf(expectedObjects...))
-					})
-				})
-
-				Context("Kubernetes versions >= 1.26", func() {
-					BeforeEach(func() {
-						vpa = New(c, namespace, sm, Values{
-							ClusterType:              component.ClusterTypeSeed,
-							Enabled:                  true,
-							SecretNameServerCA:       secretNameCA,
-							RuntimeKubernetesVersion: semver.MustParse("1.26.0"),
-							AdmissionController:      valuesAdmissionController,
-							Recommender:              valuesRecommender,
-							Updater:                  valuesUpdater,
-						})
-					})
-
-					It("should successfully deploy all resources", func() {
-						unhealthyPodEvictionPolicyAlwaysAllow := policyv1.AlwaysAllow
-						podDisruptionBudgetUpdater.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwaysAllow
-						podDisruptionBudgetRecommender.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwaysAllow
-						podDisruptionBudgetAdmissionController.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwaysAllow
-						expectedObjects = append(expectedObjects,
-							podDisruptionBudgetUpdater,
-							podDisruptionBudgetRecommender,
-							podDisruptionBudgetAdmissionController,
-						)
-						Expect(managedResource).To(consistOf(expectedObjects...))
-					})
-				})
+				Expect(managedResource).To(consistOf(expectedObjects...))
 			})
 
 			It("should successfully deploy with special configuration", func() {
@@ -1655,215 +1623,184 @@ var _ = Describe("VPA", func() {
 				managedResourceName = "shoot-core-vpa"
 			})
 
-			Context("Different Kubernetes versions", func() {
-				JustBeforeEach(func() {
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
+			It("should successfully deploy all resources", func() {
 
-					Expect(vpa.Deploy(ctx)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+				Expect(vpa.Deploy(ctx)).To(Succeed())
 
-					expectedMr := &resourcesv1alpha1.ManagedResource{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:            managedResourceName,
-							Namespace:       namespace,
-							ResourceVersion: "1",
-							Labels:          map[string]string{"origin": "gardener"},
-						},
-						Spec: resourcesv1alpha1.ManagedResourceSpec{
-							InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-							SecretRefs: []corev1.LocalObjectReference{{
-								Name: managedResource.Spec.SecretRefs[0].Name,
-							}},
-							KeepObjects: ptr.To(false),
-						},
-					}
-					utilruntime.Must(references.InjectAnnotations(expectedMr))
-					Expect(managedResource).To(DeepEqual(expectedMr))
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 
-					managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
-					Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+				expectedMr := &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            managedResourceName,
+						Namespace:       namespace,
+						ResourceVersion: "1",
+						Labels:          map[string]string{"origin": "gardener"},
+					},
+					Spec: resourcesv1alpha1.ManagedResourceSpec{
+						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+						SecretRefs: []corev1.LocalObjectReference{{
+							Name: managedResource.Spec.SecretRefs[0].Name,
+						}},
+						KeepObjects: ptr.To(false),
+					},
+				}
+				utilruntime.Must(references.InjectAnnotations(expectedMr))
+				Expect(managedResource).To(DeepEqual(expectedMr))
 
-					By("Verify vpa-updater application resources")
-					clusterRoleBindingUpdater.Subjects[0].Namespace = "kube-system"
-					roleLeaderLockingUpdater.Namespace = "kube-system"
-					roleBindingLeaderLockingUpdater.Namespace = "kube-system"
-					roleBindingLeaderLockingUpdater.Subjects[0].Namespace = "kube-system"
+				managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 
-					Expect(managedResource).To(contain(
-						clusterRoleUpdater,
-						clusterRoleBindingUpdater,
-						roleLeaderLockingUpdater,
-						roleBindingLeaderLockingUpdater,
-					))
-					Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
-					Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+				By("Verify vpa-updater application resources")
+				clusterRoleBindingUpdater.Subjects[0].Namespace = "kube-system"
+				roleLeaderLockingUpdater.Namespace = "kube-system"
+				roleBindingLeaderLockingUpdater.Namespace = "kube-system"
+				roleBindingLeaderLockingUpdater.Subjects[0].Namespace = "kube-system"
 
-					By("Verify vpa-updater runtime resources")
-					secret := &corev1.Secret{}
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(shootAccessSecretUpdater), secret)).To(Succeed())
-					shootAccessSecretUpdater.ResourceVersion = "1"
-					Expect(secret).To(Equal(shootAccessSecretUpdater))
+				Expect(managedResource).To(contain(
+					clusterRoleUpdater,
+					clusterRoleBindingUpdater,
+					roleLeaderLockingUpdater,
+					roleBindingLeaderLockingUpdater,
+				))
+				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
-					deployment := &appsv1.Deployment{}
-					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-updater"}, deployment)).To(Succeed())
-					deploymentUpdater := deploymentUpdaterFor(false, nil, nil, nil, nil, nil, "kube-system")
-					deploymentUpdater.ResourceVersion = "1"
-					Expect(deployment).To(Equal(deploymentUpdater))
+				By("Verify vpa-updater runtime resources")
+				secret := &corev1.Secret{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(shootAccessSecretUpdater), secret)).To(Succeed())
+				shootAccessSecretUpdater.ResourceVersion = "1"
+				Expect(secret).To(Equal(shootAccessSecretUpdater))
 
-					vpa := &vpaautoscalingv1.VerticalPodAutoscaler{}
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaUpdater), vpa)).To(Succeed())
-					vpaUpdater.ResourceVersion = "1"
-					Expect(vpa).To(Equal(vpaUpdater))
+				deployment := &appsv1.Deployment{}
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-updater"}, deployment)).To(Succeed())
+				deploymentUpdater := deploymentUpdaterFor(false, nil, nil, nil, nil, nil, "kube-system")
+				deploymentUpdater.ResourceVersion = "1"
+				Expect(deployment).To(Equal(deploymentUpdater))
 
-					By("Verify vpa-recommender application resources")
-					clusterRoleBindingRecommenderMetricsReader.Subjects[0].Namespace = "kube-system"
-					clusterRoleBindingRecommenderCheckpointActor.Subjects[0].Namespace = "kube-system"
-					clusterRoleBindingRecommenderStatusActor.Subjects[0].Namespace = "kube-system"
-					roleLeaderLockingRecommender.Namespace = "kube-system"
-					roleBindingLeaderLockingRecommender.Namespace = "kube-system"
-					roleBindingLeaderLockingRecommender.Subjects[0].Namespace = "kube-system"
+				pdb := &policyv1.PodDisruptionBudget{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudgetUpdater), pdb)).To(Succeed())
+				podDisruptionBudgetUpdater.ResourceVersion = "1"
+				Expect(pdb).To(Equal(podDisruptionBudgetUpdater))
 
-					Expect(managedResource).To(contain(
-						clusterRoleRecommenderMetricsReader,
-						clusterRoleBindingRecommenderMetricsReader,
-						clusterRoleRecommenderCheckpointActor,
-						clusterRoleBindingRecommenderCheckpointActor,
-						clusterRoleRecommenderStatusActor,
-						clusterRoleBindingRecommenderStatusActor,
-						roleLeaderLockingRecommender,
-						roleBindingLeaderLockingRecommender,
-					))
+				vpa := &vpaautoscalingv1.VerticalPodAutoscaler{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaUpdater), vpa)).To(Succeed())
+				vpaUpdater.ResourceVersion = "1"
+				Expect(vpa).To(Equal(vpaUpdater))
 
-					By("Verify vpa-recommender runtime resources")
-					secret = &corev1.Secret{}
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(shootAccessSecretRecommender), secret)).To(Succeed())
-					shootAccessSecretRecommender.ResourceVersion = "1"
-					Expect(secret).To(Equal(shootAccessSecretRecommender))
+				By("Verify vpa-recommender application resources")
+				clusterRoleBindingRecommenderMetricsReader.Subjects[0].Namespace = "kube-system"
+				clusterRoleBindingRecommenderCheckpointActor.Subjects[0].Namespace = "kube-system"
+				clusterRoleBindingRecommenderStatusActor.Subjects[0].Namespace = "kube-system"
+				roleLeaderLockingRecommender.Namespace = "kube-system"
+				roleBindingLeaderLockingRecommender.Namespace = "kube-system"
+				roleBindingLeaderLockingRecommender.Subjects[0].Namespace = "kube-system"
 
-					deployment = &appsv1.Deployment{}
-					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-recommender"}, deployment)).To(Succeed())
-					deploymentRecommender := deploymentRecommenderFor(false, nil, nil, component.ClusterTypeShoot, nil, nil, nil, nil, nil, nil, "kube-system")
-					deploymentRecommender.ResourceVersion = "1"
-					Expect(deployment).To(Equal(deploymentRecommender))
+				Expect(managedResource).To(contain(
+					clusterRoleRecommenderMetricsReader,
+					clusterRoleBindingRecommenderMetricsReader,
+					clusterRoleRecommenderCheckpointActor,
+					clusterRoleBindingRecommenderCheckpointActor,
+					clusterRoleRecommenderStatusActor,
+					clusterRoleBindingRecommenderStatusActor,
+					roleLeaderLockingRecommender,
+					roleBindingLeaderLockingRecommender,
+				))
 
-					service := &corev1.Service{}
-					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-recommender"}, service)).To(Succeed())
-					serviceRecommender := serviceRecommenderFor(component.ClusterTypeShoot)
-					serviceRecommender.ResourceVersion = "1"
-					Expect(service).To(Equal(serviceRecommender))
+				By("Verify vpa-recommender runtime resources")
+				secret = &corev1.Secret{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(shootAccessSecretRecommender), secret)).To(Succeed())
+				shootAccessSecretRecommender.ResourceVersion = "1"
+				Expect(secret).To(Equal(shootAccessSecretRecommender))
 
-					vpa = &vpaautoscalingv1.VerticalPodAutoscaler{}
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaRecommender), vpa)).To(Succeed())
-					vpaRecommender.ResourceVersion = "1"
-					Expect(vpa).To(Equal(vpaRecommender))
+				deployment = &appsv1.Deployment{}
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-recommender"}, deployment)).To(Succeed())
+				deploymentRecommender := deploymentRecommenderFor(false, nil, nil, component.ClusterTypeShoot, nil, nil, nil, nil, nil, nil, "kube-system")
+				deploymentRecommender.ResourceVersion = "1"
+				Expect(deployment).To(Equal(deploymentRecommender))
 
-					serviceMonitor := &monitoringv1.ServiceMonitor{}
-					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot-vpa-recommender"}, serviceMonitor)).To(Succeed())
-					serviceMonitorRecommender := serviceMonitorRecommenderFor(component.ClusterTypeShoot)
-					serviceMonitorRecommender.ResourceVersion = "1"
-					Expect(serviceMonitor).To(Equal(serviceMonitorRecommender))
+				pdb = &policyv1.PodDisruptionBudget{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudgetRecommender), pdb)).To(Succeed())
+				podDisruptionBudgetRecommender.ResourceVersion = "1"
+				Expect(pdb).To(Equal(podDisruptionBudgetRecommender))
 
-					By("Verify vpa-admission-controller application resources")
-					clusterRoleBindingAdmissionController.Subjects[0].Namespace = "kube-system"
+				serviceMonitor := &monitoringv1.ServiceMonitor{}
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot-vpa-recommender"}, serviceMonitor)).To(Succeed())
+				serviceMonitorRecommender := serviceMonitorRecommenderFor(component.ClusterTypeShoot)
+				serviceMonitorRecommender.ResourceVersion = "1"
+				Expect(serviceMonitor).To(Equal(serviceMonitorRecommender))
 
-					Expect(managedResource).To(contain(clusterRoleAdmissionController, clusterRoleBindingAdmissionController))
+				By("Verify vpa-admission-controller application resources")
+				clusterRoleBindingAdmissionController.Subjects[0].Namespace = "kube-system"
 
-					By("Verify vpa-admission-controller runtime resources")
-					secret = &corev1.Secret{}
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(shootAccessSecretAdmissionController), secret)).To(Succeed())
-					shootAccessSecretAdmissionController.ResourceVersion = "1"
-					Expect(secret).To(Equal(shootAccessSecretAdmissionController))
+				service := &corev1.Service{}
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-recommender"}, service)).To(Succeed())
+				serviceRecommender := serviceRecommenderFor(component.ClusterTypeShoot)
+				serviceRecommender.ResourceVersion = "1"
+				Expect(service).To(Equal(serviceRecommender))
 
-					service = &corev1.Service{}
-					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-webhook"}, service)).To(Succeed())
-					serviceAdmissionController := serviceAdmissionControllerFor(component.ClusterTypeShoot, false)
-					serviceAdmissionController.ResourceVersion = "1"
-					Expect(service).To(Equal(serviceAdmissionController))
+				vpa = &vpaautoscalingv1.VerticalPodAutoscaler{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaRecommender), vpa)).To(Succeed())
+				vpaRecommender.ResourceVersion = "1"
+				Expect(vpa).To(Equal(vpaRecommender))
 
-					deployment = &appsv1.Deployment{}
-					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-admission-controller"}, deployment)).To(Succeed())
-					deploymentAdmissionController := deploymentAdmissionControllerFor(false)
-					deploymentAdmissionController.ResourceVersion = "1"
-					Expect(deployment).To(Equal(deploymentAdmissionController))
+				By("Verify vpa-admission-controller application resources")
+				clusterRoleBindingAdmissionController.Subjects[0].Namespace = "kube-system"
 
-					vpa = &vpaautoscalingv1.VerticalPodAutoscaler{}
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaAdmissionController), vpa)).To(Succeed())
-					vpaAdmissionController.ResourceVersion = "1"
-					Expect(vpa).To(Equal(vpaAdmissionController))
+				Expect(managedResource).To(contain(clusterRoleAdmissionController, clusterRoleBindingAdmissionController))
 
-					By("Verify general application resources")
-					clusterRoleBindingGeneralActor.Subjects[0].Namespace = "kube-system"
-					clusterRoleBindingGeneralActor.Subjects[1].Namespace = "kube-system"
-					clusterRoleBindingGeneralTargetReader.Subjects[0].Namespace = "kube-system"
-					clusterRoleBindingGeneralTargetReader.Subjects[1].Namespace = "kube-system"
-					clusterRoleBindingGeneralTargetReader.Subjects[2].Namespace = "kube-system"
+				By("Verify vpa-admission-controller runtime resources")
+				secret = &corev1.Secret{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(shootAccessSecretAdmissionController), secret)).To(Succeed())
+				shootAccessSecretAdmissionController.ResourceVersion = "1"
+				Expect(secret).To(Equal(shootAccessSecretAdmissionController))
 
-					vpaCRD := &apiextensionsv1.CustomResourceDefinition{}
-					Expect(yaml.Unmarshal(verticalPodAutoscalerCRD, vpaCRD)).To(Succeed())
+				service = &corev1.Service{}
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-webhook"}, service)).To(Succeed())
+				serviceAdmissionController := serviceAdmissionControllerFor(component.ClusterTypeShoot, false)
+				serviceAdmissionController.ResourceVersion = "1"
+				Expect(service).To(Equal(serviceAdmissionController))
 
-					vpaChkPtCRD := &apiextensionsv1.CustomResourceDefinition{}
-					Expect(yaml.Unmarshal(verticalPodAutoscalerCheckpointCRD, vpaChkPtCRD)).To(Succeed())
+				deployment = &appsv1.Deployment{}
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-admission-controller"}, deployment)).To(Succeed())
+				deploymentAdmissionController := deploymentAdmissionControllerFor(false)
+				deploymentAdmissionController.ResourceVersion = "1"
+				Expect(deployment).To(Equal(deploymentAdmissionController))
 
-					Expect(managedResource).To(contain(
-						clusterRoleGeneralActor,
-						clusterRoleBindingGeneralActor,
-						clusterRoleGeneralTargetReader,
-						clusterRoleBindingGeneralTargetReader,
-						mutatingWebhookConfiguration,
-						vpaCRD,
-						vpaChkPtCRD,
-					))
-				})
+				pdb = &policyv1.PodDisruptionBudget{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudgetAdmissionController), pdb)).To(Succeed())
+				podDisruptionBudgetAdmissionController.ResourceVersion = "1"
+				Expect(pdb).To(Equal(podDisruptionBudgetAdmissionController))
 
-				Context("Kubernetes versions < 1.26", func() {
-					It("should successfully deploy all resources", func() {
-						expectedPodDisruptionBudgets := []*policyv1.PodDisruptionBudget{
-							podDisruptionBudgetUpdater,
-							podDisruptionBudgetRecommender,
-							podDisruptionBudgetAdmissionController,
-						}
+				vpa = &vpaautoscalingv1.VerticalPodAutoscaler{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaAdmissionController), vpa)).To(Succeed())
+				vpaAdmissionController.ResourceVersion = "1"
+				Expect(vpa).To(Equal(vpaAdmissionController))
 
-						for _, expected := range expectedPodDisruptionBudgets {
-							actual := &policyv1.PodDisruptionBudget{}
-							Expect(c.Get(ctx, client.ObjectKeyFromObject(expected), actual)).To(Succeed())
-							expected.ResourceVersion = "1"
-							Expect(actual).To(Equal(expected))
-						}
-					})
-				})
+				By("Verify general application resources")
+				clusterRoleBindingGeneralActor.Subjects[0].Namespace = "kube-system"
+				clusterRoleBindingGeneralActor.Subjects[1].Namespace = "kube-system"
+				clusterRoleBindingGeneralTargetReader.Subjects[0].Namespace = "kube-system"
+				clusterRoleBindingGeneralTargetReader.Subjects[1].Namespace = "kube-system"
+				clusterRoleBindingGeneralTargetReader.Subjects[2].Namespace = "kube-system"
 
-				Context("Kubernetes versions >= 1.26", func() {
-					BeforeEach(func() {
-						vpa = New(c, namespace, sm, Values{
-							ClusterType:              component.ClusterTypeShoot,
-							Enabled:                  true,
-							SecretNameServerCA:       secretNameCA,
-							RuntimeKubernetesVersion: semver.MustParse("1.26.0"),
-							AdmissionController:      valuesAdmissionController,
-							Recommender:              valuesRecommender,
-							Updater:                  valuesUpdater,
-						})
-					})
+				vpaCRD := &apiextensionsv1.CustomResourceDefinition{}
+				Expect(yaml.Unmarshal(verticalPodAutoscalerCRD, vpaCRD)).To(Succeed())
 
-					It("should successfully deploy all resources", func() {
-						expectedPodDisruptionBudgets := []*policyv1.PodDisruptionBudget{
-							podDisruptionBudgetUpdater,
-							podDisruptionBudgetRecommender,
-							podDisruptionBudgetAdmissionController,
-						}
+				vpaChkPtCRD := &apiextensionsv1.CustomResourceDefinition{}
+				Expect(yaml.Unmarshal(verticalPodAutoscalerCheckpointCRD, vpaChkPtCRD)).To(Succeed())
 
-						for _, expected := range expectedPodDisruptionBudgets {
-							actual := &policyv1.PodDisruptionBudget{}
-							Expect(c.Get(ctx, client.ObjectKeyFromObject(expected), actual)).To(Succeed())
-							expected.ResourceVersion = "1"
-							unhealthyPodEvictionPolicyAlwaysAllow := policyv1.AlwaysAllow
-							expected.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwaysAllow
-							Expect(actual).To(Equal(expected))
-						}
-					})
-				})
+				Expect(managedResource).To(contain(
+					clusterRoleGeneralActor,
+					clusterRoleBindingGeneralActor,
+					clusterRoleGeneralTargetReader,
+					clusterRoleBindingGeneralTargetReader,
+					mutatingWebhookConfiguration,
+					vpaCRD,
+					vpaChkPtCRD,
+				))
 			})
 
 			Context("when TopologyAwareRoutingEnabled=true", func() {

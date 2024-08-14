@@ -5,7 +5,6 @@
 package shared
 
 import (
-	"github.com/Masterminds/semver/v3"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
@@ -18,7 +17,6 @@ func NewHVPA(
 	c client.Client,
 	gardenNamespaceName string,
 	enabled bool,
-	kubernetesVersion *semver.Version,
 	priorityClassName string,
 ) (
 	deployer component.DeployWaiter,
@@ -32,7 +30,6 @@ func NewHVPA(
 	deployer = hvpa.New(c, gardenNamespaceName, hvpa.Values{
 		Image:             image.String(),
 		PriorityClassName: priorityClassName,
-		KubernetesVersion: kubernetesVersion,
 	})
 
 	if !enabled {

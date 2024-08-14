@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -67,8 +66,6 @@ type kubeStateMetrics struct {
 type Values struct {
 	// ClusterType specifies the type of the cluster to which kube-state-metrics is being deployed.
 	ClusterType component.ClusterType
-	// KubernetesVersion is the Kubernetes version of the cluster.
-	KubernetesVersion *semver.Version
 	// Image is the container image.
 	Image string
 	// PriorityClassName is the name of the priority class.
