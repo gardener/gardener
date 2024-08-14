@@ -53,7 +53,7 @@ func CheckEtcdObject(obj client.Object) error {
 	}
 
 	if etcd.Status.LastError != nil {
-		return retry.RetriableError(fmt.Errorf(*etcd.Status.LastError))
+		return retry.RetriableError(fmt.Errorf("error during reconciliation: %s", *etcd.Status.LastError))
 	}
 
 	if etcd.DeletionTimestamp != nil {

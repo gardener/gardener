@@ -209,10 +209,8 @@ var _ = Describe("deleteconfirmation", func() {
 			Context("Shoot resources", func() {
 				It("should do nothing because the resource is already removed", func() {
 					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
-					msg := `shoot.core.gardener.cloud "dummy" not found`
-
 					gardenClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
-						return true, nil, fmt.Errorf(msg)
+						return true, nil, fmt.Errorf("shoot.core.gardener.cloud \"dummy\" not found")
 					})
 
 					err := admissionHandler.Validate(context.TODO(), attrs, nil)
@@ -450,7 +448,7 @@ var _ = Describe("deleteconfirmation", func() {
 					msg := `project.core.gardenerutils.cloud "dummy" not found`
 
 					gardenClient.AddReactor("get", "projects", func(_ testing.Action) (bool, runtime.Object, error) {
-						return true, nil, fmt.Errorf(msg)
+						return true, nil, fmt.Errorf("project.core.gardenerutils.cloud \"dummy\" not found")
 					})
 
 					err := admissionHandler.Validate(context.TODO(), attrs, nil)
@@ -548,10 +546,8 @@ var _ = Describe("deleteconfirmation", func() {
 			Context("ShootState resources", func() {
 				It("should do nothing because the resource is already removed", func() {
 					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("ShootState").WithVersion("version"), shootState.Namespace, shootState.Name, core.Resource("shootstates").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
-					msg := `shoot.core.gardener.cloud "dummyName" not found`
-
 					gardenClient.AddReactor("get", "shootstates", func(_ testing.Action) (bool, runtime.Object, error) {
-						return true, nil, fmt.Errorf(msg)
+						return true, nil, fmt.Errorf("shoot.core.gardener.cloud \"dummyName\" not found")
 					})
 
 					err := admissionHandler.Validate(context.TODO(), attrs, nil)

@@ -24,5 +24,5 @@ type remoteAddrInjectingHandler struct {
 // ServerHTTP implements http.Handler by delegating to the underlying handler but injecting request.RemoteAddr into
 // the request's context.
 func (h remoteAddrInjectingHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	h.Handler.ServeHTTP(w, r.Clone(context.WithValue(r.Context(), remoteAddrContextKey, r.RemoteAddr)))
+	h.Handler.ServeHTTP(w, r.Clone(context.WithValue(r.Context(), remoteAddrContextKey, r.RemoteAddr))) //nolint:staticcheck
 }

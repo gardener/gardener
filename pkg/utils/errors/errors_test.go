@@ -132,11 +132,11 @@ var _ = Describe("Errors", func() {
 		It("Should call failure handler on fail", func() {
 			errID := "x1"
 			errorText := "Error from task"
-			expectedErr := fmt.Errorf("Got %s %s", errID, errorText)
+			expectedErr := fmt.Errorf("Got %s (%w)", errID, errors.New(errorText))
 			err := errorsutils.HandleErrors(errorContext,
 				nil,
 				func(errorID string, err error) error {
-					return fmt.Errorf(fmt.Sprintf("Got %s %s", errorID, err))
+					return fmt.Errorf("Got %s (%w)", errorID, err)
 				},
 				errorsutils.ToExecute(errID, func() error {
 					return errors.New(errorText)

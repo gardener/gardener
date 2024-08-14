@@ -151,7 +151,7 @@ func (s *statusUpdater) ErrorCustom(
 		lastOp, lastErr = ReconcileError(lastOperationType, errDescription, 50, v1beta1helper.ExtractErrorCodes(err)...)
 	)
 
-	log.Error(fmt.Errorf(errDescription), "Error") //nolint:logcheck
+	log.Error(fmt.Errorf("%s", errDescription), "Error") //nolint:logcheck
 
 	patch := client.MergeFrom(obj.DeepCopyObject().(client.Object))
 	obj.GetExtensionStatus().SetObservedGeneration(obj.GetGeneration())
