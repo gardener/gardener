@@ -51,7 +51,7 @@ var _ = Describe("ScrapeConfigs", func() {
 							TargetLabel: "job",
 						}},
 						MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
-							Replacement: ptr.To("kube-system"),
+							Replacement: ptr.To("shoot-control-plane"),
 							TargetLabel: "namespace",
 						}},
 					},
