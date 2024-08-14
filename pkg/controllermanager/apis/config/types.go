@@ -61,6 +61,8 @@ type ControllerManagerControllerConfiguration struct {
 	SecretBinding *SecretBindingControllerConfiguration
 	// CredentialsBinding defines the configuration of the CredentialsBinding controller.
 	CredentialsBinding *CredentialsBindingControllerConfiguration
+	// CredentialsBindingReferenceCleaner defines the configuration of the CredentialsBindingReferenceCleaner controller.
+	CredentialsBindingReferenceCleaner *CredentialsBindingReferenceCleanerControllerConfiguration
 	// Seed defines the configuration of the Seed controller.
 	Seed *SeedControllerConfiguration
 	// SeedExtensionsCheck defines the configuration of the SeedExtensionsCheck controller.
@@ -197,6 +199,13 @@ type CredentialsBindingControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs *int
+}
+
+// CredentialsBindingReferenceCleanerControllerConfiguration defines the configuration of the
+// CredentialsBindingReferenceCleaner controller.
+type CredentialsBindingReferenceCleanerControllerConfiguration struct {
+	// SyncPeriod is the duration how often the controller performs its reconciliation.
+	SyncPeriod *metav1.Duration
 }
 
 // SeedControllerConfiguration defines the configuration of the

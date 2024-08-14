@@ -75,6 +75,9 @@ type ControllerManagerControllerConfiguration struct {
 	// CredentialsBinding defines the configuration of the CredentialsBinding controller.
 	// +optional
 	CredentialsBinding *CredentialsBindingControllerConfiguration `json:"credentialsBinding,omitempty"`
+	// CredentialsBindingReferenceCleaner defines the configuration of the CredentialsBindingReferenceCleaner controller.
+	// +optional
+	CredentialsBindingReferenceCleaner *CredentialsBindingReferenceCleanerControllerConfiguration `json:"credentialsBindingReferenceCleaner,omitempty"`
 	// Seed defines the configuration of the Seed lifecycle controller.
 	// +optional
 	Seed *SeedControllerConfiguration `json:"seed,omitempty"`
@@ -239,6 +242,14 @@ type CredentialsBindingControllerConfiguration struct {
 	// events.
 	// +optional
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+}
+
+// CredentialsBindingReferenceCleanerControllerConfiguration defines the configuration of the
+// CredentialsBindingReferenceCleaner controller.
+type CredentialsBindingReferenceCleanerControllerConfiguration struct {
+	// SyncPeriod is the duration how often the controller performs its reconciliation.
+	// +optional
+	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
 }
 
 // SeedControllerConfiguration defines the configuration of the

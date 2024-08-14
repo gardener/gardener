@@ -84,6 +84,10 @@ data:
       credentialsBinding:
         concurrentSyncs: {{ required ".Values.global.controller.config.controllers.credentialsBinding.concurrentSyncs is required" .Values.global.controller.config.controllers.credentialsBinding.concurrentSyncs }}
       {{- end }}
+      {{- if .Values.global.controller.config.controllers.credentialsBindingReferenceCleaner }}
+      credentialsBindingReferenceCleaner:
+        syncPeriod: {{ required ".Values.global.controller.config.controllers.credentialsBindingReferenceCleaner.syncPeriod is required" .Values.global.controller.config.controllers.credentialsBindingReferenceCleaner.syncPeriod }}
+      {{- end }}
       {{- if .Values.global.controller.config.controllers.seed }}
       seed:
         concurrentSyncs: {{ required ".Values.global.controller.config.controllers.seed.concurrentSyncs is required" .Values.global.controller.config.controllers.seed.concurrentSyncs }}

@@ -60,6 +60,9 @@ func SetObjectDefaults_ControllerManagerConfiguration(in *ControllerManagerConfi
 	if in.Controllers.CredentialsBinding != nil {
 		SetDefaults_CredentialsBindingControllerConfiguration(in.Controllers.CredentialsBinding)
 	}
+	if in.Controllers.CredentialsBindingReferenceCleaner != nil {
+		SetDefaults_CredentialsBindingReferenceCleanerControllerConfiguration(in.Controllers.CredentialsBindingReferenceCleaner)
+	}
 	if in.Controllers.Seed != nil {
 		SetDefaults_SeedControllerConfiguration(in.Controllers.Seed)
 	}

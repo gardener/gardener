@@ -18,6 +18,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerdeployment"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/credentialsbinding"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/credentialsbinding/referencecleaner"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/event"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/exposureclass"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
@@ -68,6 +69,12 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Controll
 		Config: *cfg.Controllers.CredentialsBinding,
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding CredentialsBinding controller: %w", err)
+	}
+
+	if err := (&referencecleaner.Reconciler{
+		Config: *cfg.Controllers.CredentialsBindingReferenceCleaner,
+	}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding CredentialsBindingReferenceCleaner controller: %w", err)
 	}
 
 	if config := cfg.Controllers.Event; config != nil {

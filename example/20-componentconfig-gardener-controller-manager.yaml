@@ -14,6 +14,8 @@ controllers:
     concurrentSyncs: 5
   credentialsBinding:
     concurrentSyncs: 5
+  credentialsBindingReferenceCleaner:
+    syncPeriod: 1h
   seed:
     concurrentSyncs: 5
     syncPeriod: 10s

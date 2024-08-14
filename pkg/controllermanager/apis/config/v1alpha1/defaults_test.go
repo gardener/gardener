@@ -496,6 +496,32 @@ var _ = Describe("Defaults", func() {
 		})
 	})
 
+	Describe("CredentialsBindingReferenceCleanerControllerConfiguration defaulting", func() {
+		It("should default the CredentialsBindingReferenceCleanerControllerConfiguration correctly", func() {
+			obj.Controllers.CredentialsBindingReferenceCleaner = &CredentialsBindingReferenceCleanerControllerConfiguration{}
+
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.CredentialsBindingReferenceCleaner.SyncPeriod).To(Equal(&metav1.Duration{Duration: time.Hour}))
+		})
+
+		It("should not overwrite already set values for CredentialsBindingReferenceCleanerControllerConfiguration", func() {
+			for i := 1; i <= 2; i++ {
+				obj = &ControllerManagerConfiguration{
+					Controllers: ControllerManagerControllerConfiguration{
+						CredentialsBindingReferenceCleaner: &CredentialsBindingReferenceCleanerControllerConfiguration{
+							SyncPeriod: &metav1.Duration{Duration: time.Second * time.Duration(i)},
+						},
+					},
+				}
+				expected := obj.Controllers.CredentialsBindingReferenceCleaner.DeepCopy()
+				SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+				Expect(obj.Controllers.CredentialsBindingReferenceCleaner).To(Equal(expected))
+			}
+		})
+	})
+
 	Describe("SeedExtensionsCheckControllerConfiguration defaulting", func() {
 		It("should default SeedExtensionsCheckControllerConfiguration correctly", func() {
 			expected := &SeedExtensionsCheckControllerConfiguration{

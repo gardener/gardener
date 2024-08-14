@@ -193,6 +193,13 @@ func SetDefaults_CredentialsBindingControllerConfiguration(obj *CredentialsBindi
 	}
 }
 
+// SetDefaults_CredentialsBindingReferenceCleanerControllerConfiguration sets defaults for the CredentialsBindingControllerConfiguration.
+func SetDefaults_CredentialsBindingReferenceCleanerControllerConfiguration(obj *CredentialsBindingReferenceCleanerControllerConfiguration) {
+	if obj.SyncPeriod == nil {
+		obj.SyncPeriod = &metav1.Duration{Duration: time.Hour}
+	}
+}
+
 // SetDefaults_SeedExtensionsCheckControllerConfiguration sets defaults for the SeedExtensionsCheckControllerConfiguration.
 func SetDefaults_SeedExtensionsCheckControllerConfiguration(obj *SeedExtensionsCheckControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
@@ -317,6 +324,9 @@ func SetDefaults_ControllerManagerControllerConfiguration(obj *ControllerManager
 	}
 	if obj.CredentialsBinding == nil {
 		obj.CredentialsBinding = &CredentialsBindingControllerConfiguration{}
+	}
+	if obj.CredentialsBindingReferenceCleaner == nil {
+		obj.CredentialsBindingReferenceCleaner = &CredentialsBindingReferenceCleanerControllerConfiguration{}
 	}
 	if obj.Seed == nil {
 		obj.Seed = &SeedControllerConfiguration{}
