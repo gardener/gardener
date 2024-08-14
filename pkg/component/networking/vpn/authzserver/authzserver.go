@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Masterminds/semver/v3"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	istionetworkingv1beta1 "istio.io/api/networking/v1beta1"
@@ -47,13 +46,11 @@ func New(
 	client client.Client,
 	namespace string,
 	imageExtAuthzServer string,
-	kubernetesVersion *semver.Version,
 ) component.DeployWaiter {
 	return &authzServer{
 		client:              client,
 		namespace:           namespace,
 		imageExtAuthzServer: imageExtAuthzServer,
-		kubernetesVersion:   kubernetesVersion,
 	}
 }
 
@@ -61,7 +58,6 @@ type authzServer struct {
 	client              client.Client
 	namespace           string
 	imageExtAuthzServer string
-	kubernetesVersion   *semver.Version
 }
 
 func (a *authzServer) Deploy(ctx context.Context) error {
@@ -282,9 +278,8 @@ func (a *authzServer) reconcilePodDisruptionBudget(ctx context.Context, pdb *pol
 			Selector: &metav1.LabelSelector{
 				MatchLabels: getLabels(),
 			},
+			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 		}
-
-		kubernetesutils.SetAlwaysAllowEviction(pdb, a.kubernetesVersion)
 
 		return nil
 	})
