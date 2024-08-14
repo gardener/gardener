@@ -8,7 +8,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -56,7 +55,6 @@ var _ = Describe("Etcd", func() {
 
 		ctx                      = context.Background()
 		namespace                = "shoot--foo--bar"
-		kubernetesVersion        *semver.Version
 		etcdDruidImage           = "etcd/druid:1.2.3"
 		imageVectorOverwrite     *string
 		imageVectorOverwriteFull = ptr.To("some overwrite")
@@ -98,7 +96,7 @@ var _ = Describe("Etcd", func() {
 		// Create CA secret for etcd-components webhook handler
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretNameCA, Namespace: namespace}})).To(Succeed())
 
-		bootstrapper = NewBootstrapper(c, namespace, kubernetesVersion, etcdConfig, etcdDruidImage, imageVectorOverwrite, sm, secretNameCA, priorityClassName)
+		bootstrapper = NewBootstrapper(c, namespace, etcdConfig, etcdDruidImage, imageVectorOverwrite, sm, secretNameCA, priorityClassName)
 
 		managedResourceSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -650,36 +648,29 @@ var _ = Describe("Etcd", func() {
 				},
 			}
 
-			podDisruptionFor = func(k8sGreaterEquals126 bool) *policyv1.PodDisruptionBudget {
-				podDisruptionBudget := &policyv1.PodDisruptionBudget{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "etcd-druid",
-						Namespace: namespace,
-						Labels: map[string]string{
+			podDisruption = &policyv1.PodDisruptionBudget{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "etcd-druid",
+					Namespace: namespace,
+					Labels: map[string]string{
+						"gardener.cloud/role": "etcd-druid",
+					},
+				},
+				Spec: policyv1.PodDisruptionBudgetSpec{
+					MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
 							"gardener.cloud/role": "etcd-druid",
 						},
 					},
-					Spec: policyv1.PodDisruptionBudgetSpec{
-						MaxUnavailable: ptr.To(intstr.FromInt32(1)),
-						Selector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{
-								"gardener.cloud/role": "etcd-druid",
-							},
-						},
-					},
-					Status: policyv1.PodDisruptionBudgetStatus{
-						CurrentHealthy:     0,
-						DesiredHealthy:     0,
-						DisruptionsAllowed: 0,
-						ExpectedPods:       0,
-					},
-				}
-
-				if k8sGreaterEquals126 {
-					podDisruptionBudget.Spec.UnhealthyPodEvictionPolicy = ptr.To(policyv1.AlwaysAllow)
-				}
-
-				return podDisruptionBudget
+					UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+				},
+				Status: policyv1.PodDisruptionBudgetStatus{
+					CurrentHealthy:     0,
+					DesiredHealthy:     0,
+					DisruptionsAllowed: 0,
+					ExpectedPods:       0,
+				},
 			}
 
 			serviceMonitor = &monitoringv1.ServiceMonitor{
@@ -718,7 +709,6 @@ var _ = Describe("Etcd", func() {
 		BeforeEach(func() {
 			imageVectorOverwrite = nil
 			featureGates = nil
-			kubernetesVersion = semver.MustParse("1.25.0")
 		})
 
 		JustBeforeEach(func() {
@@ -748,6 +738,7 @@ var _ = Describe("Etcd", func() {
 				serviceAccount,
 				clusterRole,
 				clusterRoleBinding,
+				podDisruption,
 				vpa,
 				service,
 				validatingWebhookConfiguration,
@@ -770,24 +761,8 @@ var _ = Describe("Etcd", func() {
 		})
 
 		Context("w/o image vector overwrite", func() {
-			JustBeforeEach(func() {
+			It("should successfully deploy all the resources (w/o image vector overwrite)", func() {
 				expectedResources = append(expectedResources, deploymentWithoutImageVectorOverwriteFor(false))
-			})
-
-			Context("kubernetes versions < 1.26", func() {
-				It("should successfully deploy all the resources (w/o image vector overwrite)", func() {
-					expectedResources = append(expectedResources, podDisruptionFor(false))
-				})
-			})
-
-			Context("kubernetes versions >= 1.26", func() {
-				BeforeEach(func() {
-					kubernetesVersion = semver.MustParse("1.26.0")
-				})
-
-				It("should successfully deploy all the resources", func() {
-					expectedResources = append(expectedResources, podDisruptionFor(true))
-				})
 			})
 		})
 
@@ -797,12 +772,11 @@ var _ = Describe("Etcd", func() {
 			})
 
 			It("should successfully deploy all the resources (w/ image vector overwrite)", func() {
-				bootstrapper = NewBootstrapper(c, namespace, kubernetesVersion, etcdConfig, etcdDruidImage, imageVectorOverwriteFull, sm, secretNameCA, priorityClassName)
+				bootstrapper = NewBootstrapper(c, namespace, etcdConfig, etcdDruidImage, imageVectorOverwriteFull, sm, secretNameCA, priorityClassName)
 
 				expectedResources = append(expectedResources,
 					deploymentWithImageVectorOverwrite,
 					configMapImageVectorOverwrite,
-					podDisruptionFor(false),
 				)
 			})
 		})
@@ -817,7 +791,6 @@ var _ = Describe("Etcd", func() {
 			It("should successfully deploy all the resources", func() {
 				expectedResources = append(expectedResources,
 					deploymentWithoutImageVectorOverwriteFor(true),
-					podDisruptionFor(false),
 				)
 			})
 		})

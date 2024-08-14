@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -48,8 +47,6 @@ type Values struct {
 	LogLevel string
 	// Quotas is the default configuration matching projects are set up with if a quota is not already specified.
 	Quotas []controllermanagerconfigv1alpha1.QuotaConfiguration
-	// RuntimeVersion is the Kubernetes version of the runtime cluster.
-	RuntimeVersion *semver.Version
 	// FeatureGates is the set of feature gates.
 	FeatureGates map[string]bool
 }
