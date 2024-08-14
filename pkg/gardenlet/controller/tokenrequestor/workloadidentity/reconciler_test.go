@@ -28,7 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	securityfake "github.com/gardener/gardener/pkg/client/security/clientset/versioned/fake"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/tokenrequestor/workloadidentity"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("Reconciler", func() {
@@ -228,14 +227,6 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		Context("error", func() {
-			It("workload identity is not present in the garden cluster", func() {
-				Expect(seedClient.Create(ctx, secret)).To(Succeed())
-
-				result, err := ctrl.Reconcile(ctx, request)
-				Expect(err).To(BeNotFoundError())
-				Expect(result).To(Equal(reconcile.Result{}))
-			})
-
 			It("provided context object cannot be parsed", func() {
 				secret.Annotations["workloadidentity.security.gardener.cloud/context-object"] = "unparseable"
 

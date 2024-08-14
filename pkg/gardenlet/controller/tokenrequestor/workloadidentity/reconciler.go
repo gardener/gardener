@@ -81,19 +81,10 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 		}
 	}
 
-	workloadIdentity := &securityv1alpha1.WorkloadIdentity{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      secret.Annotations[securityv1alpha1constants.AnnotationWorkloadIdentityName],
-			Namespace: secret.Annotations[securityv1alpha1constants.AnnotationWorkloadIdentityNamespace],
-		},
-	}
-
-	if err := r.GardenClient.Get(ctx, client.ObjectKeyFromObject(workloadIdentity), workloadIdentity); err != nil {
-		return reconcile.Result{}, fmt.Errorf("could not read workload identity: %w", err)
-	}
-
 	// TODO(dimityrmirchev): Use controller-runtime SubResourceClient once fakeSubResourceClient supports CreateToken
-	tokenRequest, err := r.GardenSecurityClient.SecurityV1alpha1().WorkloadIdentities(workloadIdentity.Namespace).CreateToken(ctx, workloadIdentity.Name, &securityv1alpha1.TokenRequest{
+	workloadIdentityName := secret.Annotations[securityv1alpha1constants.AnnotationWorkloadIdentityName]
+	workloadIdentityNamespace := secret.Annotations[securityv1alpha1constants.AnnotationWorkloadIdentityNamespace]
+	tokenRequest, err := r.GardenSecurityClient.SecurityV1alpha1().WorkloadIdentities(workloadIdentityNamespace).CreateToken(ctx, workloadIdentityName, &securityv1alpha1.TokenRequest{
 		Spec: securityv1alpha1.TokenRequestSpec{
 			ContextObject:     contextObject,
 			ExpirationSeconds: ptr.To((int64(expirationDuration / time.Second))),
