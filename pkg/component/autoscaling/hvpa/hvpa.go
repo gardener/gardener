@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -33,7 +32,6 @@ import (
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
@@ -74,8 +72,6 @@ type hvpa struct {
 type Values struct {
 	// Image is the container image.
 	Image string
-	// KubernetesVersion is the version of the runtime cluster.
-	KubernetesVersion *semver.Version
 	// PriorityClassName is the name of the priority class.
 	PriorityClassName string
 }
@@ -294,8 +290,9 @@ func (h *hvpa) Deploy(ctx context.Context) error {
 				Labels:    utils.MergeStringMaps(getLabels(), getDeploymentLabels()),
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: ptr.To(intstr.FromInt32(1)),
-				Selector:       deployment.Spec.Selector,
+				MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+				Selector:                   deployment.Spec.Selector,
+				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 			},
 		}
 
@@ -321,8 +318,6 @@ func (h *hvpa) Deploy(ctx context.Context) error {
 			},
 		}
 	)
-
-	kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, h.values.KubernetesVersion)
 
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, networkingv1.NetworkPolicyPort{
 		Port:     ptr.To(intstr.FromInt32(portMetrics)),

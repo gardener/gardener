@@ -79,14 +79,14 @@ var _ = Describe("GardenerAPIServer", func() {
 		managedResourceSecretRuntime *corev1.Secret
 		managedResourceSecretVirtual *corev1.Secret
 
-		podDisruptionBudgetFor func(bool) *policyv1.PodDisruptionBudget
-		serviceRuntimeFor      func(bool) *corev1.Service
-		vpaInBaselineMode      *vpaautoscalingv1.VerticalPodAutoscaler
-		vpaInHPAAndVPAMode     *vpaautoscalingv1.VerticalPodAutoscaler
-		hpaOnHPAAndVPAMode     *autoscalingv2.HorizontalPodAutoscaler
-		hvpa                   *hvpav1alpha1.Hvpa
-		deploymentFor          func(bool) *appsv1.Deployment
-		apiServiceFor          = func(group, version string) *apiregistrationv1.APIService {
+		podDisruptionBudget *policyv1.PodDisruptionBudget
+		serviceRuntimeFor   func(bool) *corev1.Service
+		vpaInBaselineMode   *vpaautoscalingv1.VerticalPodAutoscaler
+		vpaInHPAAndVPAMode  *vpaautoscalingv1.VerticalPodAutoscaler
+		hpaOnHPAAndVPAMode  *autoscalingv2.HorizontalPodAutoscaler
+		hvpa                *hvpav1alpha1.Hvpa
+		deploymentFor       func(bool) *appsv1.Deployment
+		apiServiceFor       = func(group, version string) *apiregistrationv1.APIService {
 			return &apiregistrationv1.APIService{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: version + "." + group,
@@ -175,34 +175,25 @@ var _ = Describe("GardenerAPIServer", func() {
 			},
 		}
 
-		podDisruptionBudgetFor = func(k8sGreaterEqual126 bool) *policyv1.PodDisruptionBudget {
-			var (
-				unhealthyPodEvictionPolicyAlwatysAllow = policyv1.AlwaysAllow
-				pdb                                    = &policyv1.PodDisruptionBudget{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gardener-apiserver",
-						Namespace: namespace,
-						Labels: map[string]string{
-							"app":  "gardener",
-							"role": "apiserver",
-						},
-					},
-					Spec: policyv1.PodDisruptionBudgetSpec{
-						MaxUnavailable: ptr.To(intstr.FromInt32(1)),
-						Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
-							"app":  "gardener",
-							"role": "apiserver",
-						}},
-					},
-				}
-			)
-
-			if k8sGreaterEqual126 {
-				pdb.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
-			}
-
-			return pdb
+		podDisruptionBudget = &policyv1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener-apiserver",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "apiserver",
+				},
+			},
+			Spec: policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
+					"app":  "gardener",
+					"role": "apiserver",
+				}},
+				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+			},
 		}
+
 		serviceRuntimeFor = func(k8sGreaterEqual127 bool) *corev1.Service {
 			svc := &corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
@@ -1577,7 +1568,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					managedResourceSecretVirtual.Name = managedResourceVirtual.Spec.SecretRefs[0].Name
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretVirtual), managedResourceSecretVirtual)).To(Succeed())
 
-					expectedRuntimeObjects = []client.Object{deploymentFor(false), serviceMonitor}
+					expectedRuntimeObjects = []client.Object{deploymentFor(false), serviceMonitor, podDisruptionBudget}
 					Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
 					Expect(managedResourceSecretRuntime.Immutable).To(Equal(ptr.To(true)))
 					Expect(managedResourceSecretRuntime.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
@@ -1611,7 +1602,6 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 						expectedRuntimeObjects = append(
 							expectedRuntimeObjects,
 							vpaInBaselineMode,
-							podDisruptionBudgetFor(true),
 							serviceRuntimeFor(true),
 						)
 
@@ -1629,7 +1619,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 						expectedRuntimeObjects = append(
 							expectedRuntimeObjects,
 							hvpa,
-							podDisruptionBudgetFor(true),
+							podDisruptionBudget,
 							serviceRuntimeFor(true),
 						)
 
@@ -1651,45 +1641,9 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 							serviceMonitor,
 							vpaInHPAAndVPAMode,
 							hpaOnHPAAndVPAMode,
-							podDisruptionBudgetFor(true),
+							podDisruptionBudget,
 							serviceRuntimeFor(true),
 						}
-
-						Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
-					})
-				})
-
-				Context("when kubernetes version is < 1.26", func() {
-					BeforeEach(func() {
-						values.RuntimeVersion = semver.MustParse("1.25.0")
-						deployer = New(fakeClient, namespace, fakeSecretManager, values)
-					})
-
-					It("should successfully deploy all resources", func() {
-						expectedRuntimeObjects = append(
-							expectedRuntimeObjects,
-							vpaInBaselineMode,
-							podDisruptionBudgetFor(false),
-							serviceRuntimeFor(false),
-						)
-
-						Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
-					})
-				})
-
-				Context("when kubernetes version is < 1.27", func() {
-					BeforeEach(func() {
-						values.RuntimeVersion = semver.MustParse("1.26.0")
-						deployer = New(fakeClient, namespace, fakeSecretManager, values)
-					})
-
-					It("should successfully deploy all resources", func() {
-						expectedRuntimeObjects = append(
-							expectedRuntimeObjects,
-							vpaInBaselineMode,
-							podDisruptionBudgetFor(true),
-							serviceRuntimeFor(false),
-						)
 
 						Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
 					})
