@@ -96,11 +96,15 @@ The complete list of fields that trigger a rolling update:
 If feature gate `NewWorkerPoolHash` is enabled:
 
 * `.spec.kubernetes.kubelet.kubeReserved` (unless a worker pool-specific value is set)
+* `.spec.kubernetes.kubelet.systemReserved` (unless a worker pool-specific value is set)
 * `.spec.kubernetes.kubelet.evictionHard` (unless a worker pool-specific value is set)
 * `.spec.kubernetes.kubelet.cpuManagerPolicy` (unless a worker pool-specific value is set)
 * `.spec.provider.workers[].kubernetes.kubelet.kubeReserved`
+* `.spec.provider.workers[].kubernetes.kubelet.systemReserved`
 * `.spec.provider.workers[].kubernetes.kubelet.evictionHard`
 * `.spec.provider.workers[].kubernetes.kubelet.cpuManagerPolicy`
+
+Changes to `kubeReserved` or `systemReserved` do not trigger a node roll if their sum does not change.
 
 Generally, the provider extension controllers might have additional constraints for changes leading to rolling updates, so please consult the respective documentation as well.
 In particular, if the feature gate `NewWorkerPoolHash` is enabled and a worker pool uses the new hash, then the `providerConfig` as a whole is not included. Instead only fields selected by the provider extension are considered.

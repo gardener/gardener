@@ -6494,7 +6494,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			)
 
 			DescribeTable("SystemReserved",
-				func(cpu, memory, ephemeralStorage, pid *resource.Quantity, matcher gomegatypes.GomegaMatcher) {
+				func(cpu, memory, ephemeralStorage, pid *resource.Quantity, k8sVersion string, matcher gomegatypes.GomegaMatcher) {
 					kubeletConfig := core.KubeletConfig{
 						SystemReserved: &core.KubeletConfigReserved{
 							CPU:              cpu,
@@ -6503,17 +6503,21 @@ var _ = Describe("Shoot Validation Tests", func() {
 							PID:              pid,
 						},
 					}
-					Expect(ValidateKubeletConfig(kubeletConfig, "", nil)).To(matcher)
+					Expect(ValidateKubeletConfig(kubeletConfig, k8sVersion, nil)).To(matcher)
 				},
 
-				Entry("valid configuration (cpu)", &validResourceQuantity, nil, nil, nil, BeEmpty()),
-				Entry("valid configuration (memory)", nil, &validResourceQuantity, nil, nil, BeEmpty()),
-				Entry("valid configuration (storage)", nil, nil, &validResourceQuantity, nil, BeEmpty()),
-				Entry("valid configuration (pid)", nil, nil, nil, &validResourceQuantity, BeEmpty()),
-				Entry("valid configuration (all)", &validResourceQuantity, &validResourceQuantity, &validResourceQuantity, &validResourceQuantity, BeEmpty()),
-				Entry("only allow positive resource.Quantity for any value", &invalidResourceQuantity, &validResourceQuantity, &validResourceQuantity, &validResourceQuantity, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				Entry("valid configuration (cpu)", &validResourceQuantity, nil, nil, nil, "1.30.0", BeEmpty()),
+				Entry("valid configuration (memory)", nil, &validResourceQuantity, nil, nil, "1.30.0", BeEmpty()),
+				Entry("valid configuration (storage)", nil, nil, &validResourceQuantity, nil, "1.30.0", BeEmpty()),
+				Entry("valid configuration (pid)", nil, nil, nil, &validResourceQuantity, "1.30.0", BeEmpty()),
+				Entry("valid configuration (all)", &validResourceQuantity, &validResourceQuantity, &validResourceQuantity, &validResourceQuantity, "1.30.0", BeEmpty()),
+				Entry("only allow positive resource.Quantity for any value", &invalidResourceQuantity, &validResourceQuantity, &validResourceQuantity, &validResourceQuantity, "1.30.0", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(field.NewPath("systemReserved.cpu").String()),
+				})))),
+				Entry("forbid string from kubernetes version 1.31", &validResourceQuantity, &validResourceQuantity, &validResourceQuantity, &validResourceQuantity, "1.31.0", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(field.NewPath("systemReserved").String()),
 				})))),
 			)
 		})

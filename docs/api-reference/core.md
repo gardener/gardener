@@ -6367,9 +6367,9 @@ KubeletConfigReserved
 <em>(Optional)</em>
 <p>SystemReserved is the configuration for resources reserved for system processes not managed by kubernetes (e.g. journald).
 When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.
-Deprecated: Separately configuring resource reservations for system processes is deprecated in Gardener and will be removed soon.
+Deprecated: Separately configuring resource reservations for system processes is deprecated in Gardener and will be forbidden starting from Kubernetes 1.31.
 Please merge existing resource reservations into the kubeReserved field.
-TODO(MichaelEischer): Drop this field after v1.113 has been released.</p>
+TODO(MichaelEischer): Drop this field after support for Kubernetes 1.30 is dropped.</p>
 </td>
 </tr>
 <tr>
