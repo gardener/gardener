@@ -189,7 +189,7 @@ type GardenletControllerConfiguration struct {
 	ManagedSeed *ManagedSeedControllerConfiguration `json:"managedSeed,omitempty"`
 	// TokenRequestorServiceAccount defines the configuration of the TokenRequestorServiceAccount controller.
 	// +optional
-	TokenRequestorServiceAccount *TokenRequestorServiceAccountControllerConfiguration `json:"tokenRequestor,omitempty"` // The name of the field differs from the json property in order to not itroduce incompatible changes when it was changed after its first introduction.
+	TokenRequestorServiceAccount *TokenRequestorServiceAccountControllerConfiguration `json:"tokenRequestor,omitempty"` // The name of the field differs from the json property in order to not introduce incompatible changes when it was changed after its first introduction.
 	// TokenRequestorWorkloadIdentity defines the configuration of the TokenRequestorWorkloadIdentity controller.
 	// +optional
 	TokenRequestorWorkloadIdentity *TokenRequestorWorkloadIdentityControllerConfiguration `json:"tokenRequestorWorkloadIdentity,omitempty"`
