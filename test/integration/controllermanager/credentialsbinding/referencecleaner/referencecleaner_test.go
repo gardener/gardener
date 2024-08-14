@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -120,8 +121,8 @@ var _ = Describe("CredentialsBinding controller test", func() {
 				}).Should(BeNotFoundError())
 
 				By("Delete Secret")
-				secret.Finalizers = []string{}
-				Expect(testClient.Update(ctx, secret)).To(Or(Succeed(), BeNotFoundError()))
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Or(Succeed(), BeNotFoundError()))
+				Expect(controllerutils.RemoveFinalizers(ctx, testClient, secret, "gardener.cloud/gardener")).To(Or(Succeed(), BeNotFoundError()))
 				Expect(testClient.Delete(ctx, secret)).To(Or(Succeed(), BeNotFoundError()))
 				Eventually(func() error {
 					return testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)
@@ -248,8 +249,8 @@ var _ = Describe("CredentialsBinding controller test", func() {
 				}).Should(BeNotFoundError())
 
 				By("Delete WorkloadIdentity")
-				workloadIdentity.Finalizers = []string{}
-				Expect(testClient.Update(ctx, workloadIdentity)).To(Or(Succeed(), BeNotFoundError()))
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(workloadIdentity), workloadIdentity)).To(Or(Succeed(), BeNotFoundError()))
+				Expect(controllerutils.RemoveFinalizers(ctx, testClient, workloadIdentity, "gardener.cloud/gardener")).To(Or(Succeed(), BeNotFoundError()))
 				Expect(testClient.Delete(ctx, workloadIdentity)).To(Or(Succeed(), BeNotFoundError()))
 				Eventually(func() error {
 					return testClient.Get(ctx, client.ObjectKeyFromObject(workloadIdentity), workloadIdentity)
