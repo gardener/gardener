@@ -13,6 +13,15 @@ if [[ -f "/etc/debian_version" ]]; then
     fi
     # localcertsdir is supported on Debian based OS only
     /usr/sbin/update-ca-certificates --fresh --localcertsdir "{{ .pathLocalSSLCerts }}"
-else
-    /usr/sbin/update-ca-certificates --fresh
+    exit
 fi
+
+if grep -q flatcar "/etc/os-release"; then
+    # Flatcar needs the file in /etc/ssl/certs/ with .pem file extension
+    cp "{{ .pathLocalSSLCerts }}/ROOTcerts.crt" /etc/ssl/certs/ROOTcerts.pem
+    # Flatcar does not support --fresh
+    /usr/sbin/update-ca-certificates
+    exit
+fi
+
+/usr/sbin/update-ca-certificates --fresh
