@@ -61,18 +61,19 @@ var (
 
 	fakeClock       *testclock.FakeClock
 	verificationKey crypto.PublicKey
+
+	dirPath = filepath.Join(".", "testdata")
+	keyFile = filepath.Join(dirPath, "key.pem")
 )
 
 var _ = BeforeSuite(func() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName(testID)
 
-	dirPath := filepath.Join(".", "testdata")
 	if err := os.Mkdir(dirPath, 0700); err != nil && !os.IsExist(err) {
 		Expect(err).ToNot(HaveOccurred())
 	}
 
-	keyFile := filepath.Join(dirPath, "key.pem")
 	if _, err := os.Stat(keyFile); os.IsNotExist(err) {
 		key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		Expect(err).ToNot(HaveOccurred())
@@ -117,6 +118,8 @@ var _ = BeforeSuite(func() {
 	DeferCleanup(func() {
 		By("Stop test environment")
 		Expect(testEnv.Stop()).To(Succeed())
+
+		Expect(os.Remove(keyFile)).To(Succeed())
 	})
 
 	By("Create test client")

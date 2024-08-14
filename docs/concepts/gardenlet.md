@@ -510,7 +510,7 @@ When it encounters such `Secret`, it associates the `Secret` with a specific `Wo
 Any workload creating such `Secret`s is responsible to label and annotate the `Secret`s accordingly.
 After the association is made, the `gardenlet` requests a token for the specific `WorkloadIdentity` from the Gardener API Server and writes it back in the `Secret`'s data against the `token` key.
 The `gardenlet` is responsible to keep this token valid by refreshing it periodically.
-The token is then used by control plane components running in the seed cluster in order to present the said `WorkloadIdentity` before external systems, e.g. by calling cloud provider APIs.
+The token is then used by components running in the seed cluster in order to present the said `WorkloadIdentity` before external systems, e.g. by calling cloud provider APIs.
 
 Please refer to [GEP-26: Workload Identity - Trust Based Authentication](../proposals/26-workload-identity.md) for more details.
 

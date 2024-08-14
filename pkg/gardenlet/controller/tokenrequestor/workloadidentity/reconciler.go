@@ -62,7 +62,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 		return reconcile.Result{}, nil
 	}
 
-	mustRequeue, requeueAfter, err := r.requeue(secret)
+	mustRequeue, requeueAfter, err := r.shouldRequeue(secret)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -92,6 +92,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 		return reconcile.Result{}, fmt.Errorf("could not read workload identity: %w", err)
 	}
 
+	// TODO(dimityrmirchev): Use controller-runtime SubResourceClient once fakeSubResourceClient supports CreateToken
 	tokenRequest, err := r.GardenSecurityClient.SecurityV1alpha1().WorkloadIdentities(workloadIdentity.Namespace).CreateToken(ctx, workloadIdentity.Name, &securityv1alpha1.TokenRequest{
 		Spec: securityv1alpha1.TokenRequestSpec{
 			ContextObject:     contextObject,
@@ -125,7 +126,7 @@ func (r *Reconciler) reconcileSecret(ctx context.Context, log logr.Logger, secre
 	return r.SeedClient.Patch(ctx, secret, patch)
 }
 
-func (r *Reconciler) requeue(secret *corev1.Secret) (bool, time.Duration, error) {
+func (r *Reconciler) shouldRequeue(secret *corev1.Secret) (bool, time.Duration, error) {
 	renewTimestamp := secret.Annotations[tokenRenewTimestamp]
 	if len(renewTimestamp) == 0 {
 		return false, 0, nil
