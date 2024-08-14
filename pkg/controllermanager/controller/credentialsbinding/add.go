@@ -5,32 +5,28 @@
 package credentialsbinding
 
 import (
-	"k8s.io/utils/ptr"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"fmt"
+
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/credentialsbinding/credentialsbinding"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/credentialsbinding/referencecleaner"
 )
 
-// ControllerName is the name of this controller.
-const ControllerName = "credentialsbinding"
-
-// AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(mgr manager.Manager) error {
-	if r.Client == nil {
-		r.Client = mgr.GetClient()
-	}
-	if r.Recorder == nil {
-		r.Recorder = mgr.GetEventRecorderFor(ControllerName + "-controller")
+// AddToManager adds all CredentialsBinding controllers to the given manager.
+func AddToManager(mgr manager.Manager, cfg config.ControllerManagerConfiguration) error {
+	if err := (&credentialsbinding.Reconciler{
+		Config: *cfg.Controllers.CredentialsBinding,
+	}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding main reconciler: %w", err)
 	}
 
-	return builder.
-		ControllerManagedBy(mgr).
-		Named(ControllerName).
-		For(&securityv1alpha1.CredentialsBinding{}).
-		WithOptions(controller.Options{
-			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
-		}).
-		Complete(r)
+	if err := (&referencecleaner.Reconciler{
+		Config: *cfg.Controllers.CredentialsBindingReferenceCleaner,
+	}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding reference cleaner reconciler: %w", err)
+	}
+
+	return nil
 }

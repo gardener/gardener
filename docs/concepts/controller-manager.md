@@ -106,13 +106,17 @@ You can read more about the purpose of this reconciler in [this document](../ext
 ### [`CredentialsBinding` Controller](../../pkg/controllermanager/controller/credentialsbinding)
 
 `CredentialsBinding`s reference `Secret`s, `WorkloadIdentity`s and `Quota`s and are themselves referenced by `Shoot`s.
+There are multiple controllers responsible for different aspects of `CredentialsBinding` objects.
+
+#### ["Main" Reconciler](../../pkg/controllermanager/controller/credentialsbinding/credentialsbinding)
+
 The controller adds finalizers to the referenced objects to ensure they don't get deleted while still being referenced.
 Similarly, to ensure that `CredentialsBinding`s in-use are always present in the system until the last referring `Shoot` gets deleted, the controller adds a finalizer which is only released when there is no `Shoot` referencing the `CredentialsBinding` anymore.
 
 Referenced `Secret`s and `WorkloadIdentity`s will also be labeled with `provider.shoot.gardener.cloud/<type>=true`, where `<type>` is the value of the `.provider.type` of the `CredentialsBinding`.
 Also, all referenced `Secret`s and `WorkloadIdentity`s, as well as `Quota`s, will be labeled with `reference.gardener.cloud/credentialsbinding=true` to allow for easily filtering for objects referenced by `CredentialsBinding`s.
 
-### [`CredentialsBindingReferenceCleaner` Controller](../../pkg/controllermanager/controller/credentialsbinding/referencecleaner)
+#### ["Reference Cleaner" Reconciler](../../pkg/controllermanager/controller/credentialsbinding/referencecleaner)
 
 This controller triggers periodically and removes unwanted `reference.gardener.cloud/credentialsbinding=true` and `provider.shoot.gardener.cloud/<type>=true` labels and finalizers from `Secret`s and `WorkloadIdentity`s that are no longer referenced by a `CredentialsBinding`.
 

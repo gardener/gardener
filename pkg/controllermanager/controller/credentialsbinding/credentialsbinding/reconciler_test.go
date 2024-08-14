@@ -19,7 +19,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/controller/credentialsbinding"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/credentialsbinding/credentialsbinding"
 )
 
 var _ = Describe("CredentialsBindingControl", func() {

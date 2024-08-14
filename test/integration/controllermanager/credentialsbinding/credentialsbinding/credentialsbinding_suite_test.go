@@ -24,7 +24,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	credentialsbindingcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/credentialsbinding"
+	credentialsbindingcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/credentialsbinding/credentialsbinding"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	gardenerenvtest "github.com/gardener/gardener/test/envtest"
