@@ -8,7 +8,6 @@ import (
 	"context"
 	"strconv"
 
-	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -91,7 +90,6 @@ var _ = Describe("NginxIngress", func() {
 
 			values = Values{
 				ClusterType:               component.ClusterTypeSeed,
-				KubernetesVersion:         semver.MustParse("1.26"),
 				TargetNamespace:           namespace,
 				IngressClass:              v1beta1constants.SeedNginxIngressClass,
 				PriorityClassName:         v1beta1constants.PriorityClassNameSeedSystem600,
@@ -360,8 +358,7 @@ metadata:
 spec:
   controller: k8s.io/` + v1beta1constants.SeedNginxIngressClass + `
 `
-				podDisruptionBudgetYAMLFor = func(k8sGreaterEquals126 bool) string {
-					out := `apiVersion: policy/v1
+				podDisruptionBudgetYAML = `apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   creationTimestamp: null
@@ -376,21 +373,13 @@ spec:
     matchLabels:
       app: nginx-ingress
       component: controller
-`
-					if k8sGreaterEquals126 {
-						out += `  unhealthyPodEvictionPolicy: AlwaysAllow
-`
-					}
-
-					out += `status:
+  unhealthyPodEvictionPolicy: AlwaysAllow
+status:
   currentHealthy: 0
   desiredHealthy: 0
   disruptionsAllowed: 0
   expectedPods: 0
 `
-					return out
-				}
-
 				vpaYAML = `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
@@ -664,7 +653,7 @@ status: {}
 				}
 			)
 
-			JustBeforeEach(func() {
+			It("should successfully deploy all resources", func() {
 				nginxIngress = New(c, namespace, values)
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
@@ -715,27 +704,12 @@ status: {}
 					ingressClassYAML,
 					destinationRuleYAML,
 					gatewayYAML,
+					podDisruptionBudgetYAML,
 					virtualServiceYAML(0),
 					virtualServiceYAML(1),
 				}
-			})
 
-			Context("Kubernetes version < 1.26", func() {
-				BeforeEach(func() {
-					values.KubernetesVersion = semver.MustParse("1.25")
-				})
-
-				It("should successfully deploy all resources", func() {
-					expectedManifests = append(expectedManifests, podDisruptionBudgetYAMLFor(false))
-					Expect(manifests).To(ConsistOf(expectedManifests))
-				})
-			})
-
-			Context("Kubernetes version >= 1.26", func() {
-				It("should successfully deploy all resources", func() {
-					expectedManifests = append(expectedManifests, podDisruptionBudgetYAMLFor(true))
-					Expect(manifests).To(ConsistOf(expectedManifests))
-				})
+				Expect(manifests).To(ConsistOf(expectedManifests))
 			})
 		})
 

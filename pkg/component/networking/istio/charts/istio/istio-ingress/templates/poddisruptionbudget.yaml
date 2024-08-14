@@ -10,6 +10,4 @@ spec:
   selector:
     matchLabels:
 {{ .Values.labels | toYaml | trim | indent 6 }}
-{{- if semverCompare ">= 1.26-0" .Capabilities.KubeVersion.Version }}
   unhealthyPodEvictionPolicy: AlwaysAllow
-{{- end }}

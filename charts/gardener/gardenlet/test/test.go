@@ -550,9 +550,8 @@ func ValidateGardenletChartServiceAccount(ctx context.Context, c client.Client, 
 }
 
 // ValidateGardenletChartPodDisruptionBudget validates the PodDisruptionBudget of the Gardenlet chart.
-func ValidateGardenletChartPodDisruptionBudget(ctx context.Context, c client.Client, expectedLabels map[string]string, replicaCount *int32, k8sGreaterEquals126 bool) {
+func ValidateGardenletChartPodDisruptionBudget(ctx context.Context, c client.Client, expectedLabels map[string]string, replicaCount *int32) {
 	maxUnavailable := intstr.FromInt32(1)
-	unhealthyPodEvictionPolicyAlwatysAllow := policyv1.AlwaysAllow
 
 	pdb := &policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
@@ -560,13 +559,10 @@ func ValidateGardenletChartPodDisruptionBudget(ctx context.Context, c client.Cli
 			Namespace: v1beta1constants.GardenNamespace,
 		},
 		Spec: policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: &maxUnavailable,
-			Selector:       &metav1.LabelSelector{},
+			MaxUnavailable:             &maxUnavailable,
+			Selector:                   &metav1.LabelSelector{},
+			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 		},
-	}
-
-	if k8sGreaterEquals126 {
-		pdb.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
 	}
 
 	if ptr.Deref(replicaCount, 2) < 2 {
