@@ -198,7 +198,7 @@ var _ = Describe("#CheckEtcdObject", func() {
 	It("should return error if reconciliation failed", func() {
 		obj.Status.LastError = ptr.To("foo")
 		err := CheckEtcdObject(obj)
-		Expect(err).To(MatchError("foo"))
+		Expect(err).To(MatchError("error during reconciliation: foo"))
 		Expect(retry.IsRetriable(err)).To(BeTrue())
 	})
 
