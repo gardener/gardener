@@ -201,7 +201,6 @@ var _ = Describe("Interface", func() {
 				Image: &seedmanagementv1alpha1.Image{
 					PullPolicy: ptr.To(corev1.PullIfNotPresent),
 				},
-				VPA: ptr.To(true),
 			},
 			Config: runtime.RawExtension{
 				Object: &gardenletv1alpha1.GardenletConfiguration{

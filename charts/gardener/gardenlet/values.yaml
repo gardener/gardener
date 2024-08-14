@@ -16,7 +16,6 @@ resources:
 additionalVolumes: []
 additionalVolumeMounts: []
 env: []
-vpa: false
 # imageVectorOverwrite: |
 #  Please find documentation in /docs/deployment/image_vector.md#overwriting-image-vector
 # componentImageVectorOverwrites: |

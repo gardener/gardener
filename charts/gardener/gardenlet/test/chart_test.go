@@ -243,10 +243,6 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 				gardenletValues["env"] = deploymentConfiguration.Env
 			}
 
-			if deploymentConfiguration.VPA != nil {
-				gardenletValues["vpa"] = *deploymentConfiguration.VPA
-			}
-
 			if k8sGreaterEqual126 {
 				renderer := chartrenderer.NewWithServerVersion(&version.Info{GitVersion: "1.26.0"})
 				chartApplier = kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(c, mapper))
@@ -339,10 +335,6 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 			if bootstrapKubeconfigContent != nil {
 				secret := getEmptyKubeconfigGardenBootstrapSecret()
 				validateKubeconfigSecret(ctx, c, secret, bootstrapKubeconfigContent, expectedLabels, "gardenlet-kubeconfig-bootstrap")
-			}
-
-			if deploymentConfiguration != nil && deploymentConfiguration.VPA != nil && *deploymentConfiguration.VPA {
-				ValidateGardenletChartVPA(ctx, c)
 			}
 		},
 		Entry("verify the default values for the Gardenlet chart & the Gardenlet component config", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-f44c8fea"}, false),
@@ -484,13 +476,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 			},
 		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-f44c8fea"}, false),
 
-		Entry("verify deployment with VPA enabled", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
-			VPA: ptr.To(true),
-		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-f44c8fea"}, false),
-
-		Entry("verify deployment with VPA enabled and kubernetes version >= 1.26", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
-			VPA: ptr.To(true),
-		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-f44c8fea"}, true),
+		Entry("verify deployment with kubernetes version >= 1.26", nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-f44c8fea"}, true),
 	)
 })
 

@@ -116,7 +116,6 @@ var _ = Describe("ValuesHelper", func() {
 			PodAnnotations: map[string]string{
 				"foo": "bar",
 			},
-			VPA: ptr.To(true),
 		}
 		gardenletConfig = &gardenletv1alpha1.GardenletConfiguration{
 			TypeMeta: metav1.TypeMeta{
@@ -139,7 +138,6 @@ var _ = Describe("ValuesHelper", func() {
 			PodAnnotations: map[string]string{
 				"foo": "bar",
 			},
-			VPA: ptr.To(true),
 		}
 		mergedGardenletConfig = func(withBootstrap bool) *gardenletv1alpha1.GardenletConfiguration {
 			var kubeconfigPath string
@@ -217,7 +215,6 @@ var _ = Describe("ValuesHelper", func() {
 				"podAnnotations": map[string]any{
 					"foo": "bar",
 				},
-				"vpa":                            true,
 				"imageVectorOverwrite":           "image vector overwrite",
 				"componentImageVectorOverwrites": "component image vector overwrites",
 				"config": map[string]any{

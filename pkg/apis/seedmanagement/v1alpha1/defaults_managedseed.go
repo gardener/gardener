@@ -39,11 +39,6 @@ func SetDefaults_GardenletDeployment(obj *GardenletDeployment) {
 	if obj.Image == nil {
 		obj.Image = &Image{}
 	}
-
-	// Set default VPA
-	if obj.VPA == nil {
-		obj.VPA = ptr.To(true)
-	}
 }
 
 // SetDefaults_Image sets default values for Image objects.

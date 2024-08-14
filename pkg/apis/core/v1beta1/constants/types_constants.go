@@ -123,6 +123,9 @@ const (
 	// DeploymentNameGardenlet is a constant for the name of a Kubernetes deployment object that contains
 	// the Gardenlet pod.
 	DeploymentNameGardenlet = "gardenlet"
+	// DeploymentNameGardenerOperator is a constant for the name of a Kubernetes deployment object that contains
+	// the gardener-operator pod.
+	DeploymentNameGardenerOperator = "gardener-operator"
 
 	// DeploymentNameVPNSeedServer is a constant for the name of a Kubernetes deployment object that contains
 	// the vpn-seed-server pod.
