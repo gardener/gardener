@@ -20,7 +20,7 @@ import (
 
 // Config returns a kubelet config based on the provided parameters and for the provided Kubernetes version.
 func Config(kubernetesVersion *semver.Version, clusterDNSAddresses []string, clusterDomain string, taints []corev1.Taint, params components.ConfigurableKubeletConfigParameters) *kubeletconfigv1beta1.KubeletConfiguration {
-	setConfigDefaults(&params, kubernetesVersion)
+	setConfigDefaults(&params)
 
 	nodeTaints := append(taints, corev1.Taint{
 		Key:    v1beta1constants.TaintNodeCriticalComponentsNotReady,
@@ -144,14 +144,6 @@ var (
 	}
 )
 
-// ShouldProtectKernelDefaultsBeEnabled returns true if ProtectKernelDefaults is set to true in the kubelet's config parameters or k8s version is >= 1.26.
-func ShouldProtectKernelDefaultsBeEnabled(kubeletConfigParameters *components.ConfigurableKubeletConfigParameters, kubernetesVersion *semver.Version) bool {
-	if kubeletConfigParameters.ProtectKernelDefaults != nil {
-		return *kubeletConfigParameters.ProtectKernelDefaults
-	}
-	return kubernetesVersion != nil && version.ConstraintK8sGreaterEqual126.Check(kubernetesVersion)
-}
-
 // TODO: Consider NOT specifying the cgroup driver when the KubeletCgroupDriverFromCRI feature gate is GA and every OS runs containerd 2.0+.
 // The implementation of KubeletCgroupDriverFromCRI requires a new CRI API that will be available only in containerd 2.0+.
 //
@@ -168,7 +160,7 @@ func getCgroupDriver(kubernetesVersion *semver.Version) string {
 	return cgroupDriver
 }
 
-func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters, kubernetesVersion *semver.Version) {
+func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters) {
 	if c.CpuCFSQuota == nil {
 		c.CpuCFSQuota = ptr.To(true)
 	}
@@ -254,14 +246,9 @@ func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters, kubern
 		c.ContainerLogMaxSize = ptr.To("100Mi")
 	}
 
-	c.ProtectKernelDefaults = ptr.To(ShouldProtectKernelDefaultsBeEnabled(c, kubernetesVersion))
+	c.ProtectKernelDefaults = ptr.To(ptr.Deref(c.ProtectKernelDefaults, true))
 
 	if c.StreamingConnectionIdleTimeout == nil {
-		if version.ConstraintK8sGreaterEqual126.Check(kubernetesVersion) {
-			c.StreamingConnectionIdleTimeout = &metav1.Duration{Duration: time.Minute * 5}
-		} else {
-			// this is also the kubernetes default
-			c.StreamingConnectionIdleTimeout = &metav1.Duration{Duration: time.Hour * 4}
-		}
+		c.StreamingConnectionIdleTimeout = &metav1.Duration{Duration: time.Minute * 5}
 	}
 }
