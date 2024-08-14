@@ -76,7 +76,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			return reconcile.Result{}, nil
 		}
 
-		r.Recorder.Event(exposureClass, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, fmt.Sprintf("Cannot delete ExposureClasss, because it is still associated by the following Shoots: %+v", associatedShoots))
+		r.Recorder.Event(exposureClass, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, fmt.Sprintf("Cannot delete ExposureClass, because it is still associated by the following Shoots: %+v", associatedShoots))
 		return reconcile.Result{}, fmt.Errorf("Cannot delete ExposureClasss, because it is still associated by the following Shoots: %+v", associatedShoots)
 	}
 
