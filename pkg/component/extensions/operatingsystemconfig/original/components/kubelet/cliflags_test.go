@@ -34,28 +34,6 @@ var _ = Describe("CLIFlags", func() {
 		},
 
 		Entry(
-			"kubernetes 1.26 w/ containerd",
-			"1.26.6",
-			extensionsv1alpha1.CRINameContainerD,
-			components.ConfigurableKubeletCLIFlags{},
-			false,
-			ConsistOf(
-				"--bootstrap-kubeconfig=/var/lib/kubelet/kubeconfig-bootstrap",
-				"--config=/var/lib/kubelet/config/kubelet",
-				"--kubeconfig=/var/lib/kubelet/kubeconfig-real",
-				"--node-labels=worker.gardener.cloud/kubernetes-version=1.26.6",
-				"--node-labels=containerruntime.worker.gardener.cloud/gvisor=true",
-				"--node-labels=kubernetes.io/arch=amd64",
-				"--node-labels=test=foo",
-				"--node-labels=test2=bar",
-				"--node-labels=worker.gardener.cloud/pool=worker",
-				"--container-runtime=remote",
-				"--container-runtime-endpoint=unix:///run/containerd/containerd.sock",
-				"--runtime-cgroups=/system.slice/containerd.service",
-				"--v=2",
-			),
-		),
-		Entry(
 			"kubernetes 1.27 w/ containerd",
 			"1.27.0",
 			extensionsv1alpha1.CRINameContainerD,

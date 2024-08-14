@@ -1015,9 +1015,7 @@ type KubeletConfig struct {
 	ProtectKernelDefaults *bool
 	// StreamingConnectionIdleTimeout is the maximum time a streaming connection can be idle before the connection is automatically closed.
 	// This field cannot be set lower than "30s" or greater than "4h".
-	// Default:
-	//  "4h" for Kubernetes < v1.26.
-	//  "5m" for Kubernetes >= v1.26.
+	// Default: "5m".
 	StreamingConnectionIdleTimeout *metav1.Duration
 	// MemorySwap configures swap memory available to container workloads.
 	MemorySwap *MemorySwapConfiguration
