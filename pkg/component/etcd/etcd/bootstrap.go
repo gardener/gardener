@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -71,7 +70,6 @@ const (
 func NewBootstrapper(
 	c client.Client,
 	namespace string,
-	kubernetesVersion *semver.Version,
 	etcdConfig *config.ETCDConfig,
 	image string,
 	imageVectorOverwrite *string,
@@ -80,7 +78,6 @@ func NewBootstrapper(
 	return &bootstrapper{
 		client:               c,
 		namespace:            namespace,
-		kubernetesVersion:    kubernetesVersion,
 		etcdConfig:           etcdConfig,
 		image:                image,
 		imageVectorOverwrite: imageVectorOverwrite,
@@ -91,7 +88,6 @@ func NewBootstrapper(
 type bootstrapper struct {
 	client               client.Client
 	namespace            string
-	kubernetesVersion    *semver.Version
 	etcdConfig           *config.ETCDConfig
 	image                string
 	imageVectorOverwrite *string
@@ -318,8 +314,9 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 				Labels:    labels(),
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: ptr.To(intstr.FromInt32(1)),
-				Selector:       deployment.Spec.Selector,
+				MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+				Selector:                   deployment.Spec.Selector,
+				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 			},
 		}
 
@@ -349,8 +346,6 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 			serviceMonitor,
 		}
 	)
-
-	kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, b.kubernetesVersion)
 
 	resourcesToAdd = append(resourcesToAdd, podDisruptionBudget)
 
