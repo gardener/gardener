@@ -53,15 +53,10 @@ parse_flags() {
   done
 }
 
-# setup_kind_network is similar to kind's network creation logic, ref https://github.com/kubernetes-sigs/kind/blob/23d2ac0e9c41028fa252dd1340411d70d46e2fd4/pkg/cluster/internal/providers/docker/network.go#L50
-# In addition to kind's logic, we ensure stable CIDRs that we can rely on in our local setup manifests and code.
-setup_kind_network() {
-  # check if network already exists
-  local existing_network_id
+check_local_dns_records() {
   local glgc_ip_address
-  existing_network_id="$(docker network list --filter=name=^kind$ --format='{{.ID}}')"
   glgc_ip_address=""
-    
+
   if [[ "$OSTYPE" == "darwin"* ]]; then
     if dscacheutil -q host -a name garden.local.gardener.cloud | grep -q "ip_address"; then
         glgc_ip_address=$(dscacheutil -q host -a name garden.local.gardener.cloud | grep "ip_address" | head -n 1| cut -d' ' -f2)
@@ -69,13 +64,22 @@ setup_kind_network() {
   elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
     glgc_ip_address=$(getent hosts garden.local.gardener.cloud | cut -d' ' -f1)
   else
-    echo "WARN: Unknown OS. Make sure garden.local.gardener.cloud resolves to 127.0.0.1"
+    echo "Warning: Unknown OS. Make sure garden.local.gardener.cloud resolves to 127.0.0.1"
+    return 0
   fi
 
   if [ "$glgc_ip_address" != "127.0.0.1" ]; then
-      echo "garden.local.gardener.cloud does not resolve to 127.0.0.1. Please add a line for it in /etc/hosts"
+      echo "Error: garden.local.gardener.cloud does not resolve to 127.0.0.1. Please add a line for it in /etc/hosts"
       exit 1
   fi
+}
+
+# setup_kind_network is similar to kind's network creation logic, ref https://github.com/kubernetes-sigs/kind/blob/23d2ac0e9c41028fa252dd1340411d70d46e2fd4/pkg/cluster/internal/providers/docker/network.go#L50
+# In addition to kind's logic, we ensure stable CIDRs that we can rely on in our local setup manifests and code.
+setup_kind_network() {
+  # check if network already exists
+  local existing_network_id
+  existing_network_id="$(docker network list --filter=name=^kind$ --format='{{.ID}}')"
 
   if [ -n "$existing_network_id" ] ; then
     # ensure the network is configured correctly
@@ -269,6 +273,7 @@ check_shell_dependencies() {
 }
 
 check_shell_dependencies
+check_local_dns_records
 
 parse_flags "$@"
 
