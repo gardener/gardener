@@ -127,3 +127,14 @@ func (c *FakeWorkloadIdentities) Patch(ctx context.Context, name string, pt type
 	}
 	return obj.(*v1alpha1.WorkloadIdentity), err
 }
+
+// CreateToken takes the representation of a tokenRequest and creates it.  Returns the server's representation of the tokenRequest, and an error, if there is any.
+func (c *FakeWorkloadIdentities) CreateToken(ctx context.Context, workloadIdentityName string, tokenRequest *v1alpha1.TokenRequest, opts v1.CreateOptions) (result *v1alpha1.TokenRequest, err error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewCreateSubresourceAction(workloadidentitiesResource, workloadIdentityName, "token", c.ns, tokenRequest), &v1alpha1.TokenRequest{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.TokenRequest), err
+}

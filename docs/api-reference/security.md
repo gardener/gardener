@@ -528,7 +528,7 @@ Kubernetes meta/v1.Time
 </em>
 </td>
 <td>
-<p>ExpirationTimeStamp is the time of expiration of the returned token.</p>
+<p>ExpirationTimestamp is the time of expiration of the returned token.</p>
 </td>
 </tr>
 </tbody>

@@ -83,8 +83,11 @@ func SetObjectDefaults_GardenletConfiguration(in *GardenletConfiguration) {
 		if in.Controllers.ManagedSeed != nil {
 			SetDefaults_ManagedSeedControllerConfiguration(in.Controllers.ManagedSeed)
 		}
-		if in.Controllers.TokenRequestor != nil {
-			SetDefaults_TokenRequestorControllerConfiguration(in.Controllers.TokenRequestor)
+		if in.Controllers.TokenRequestorServiceAccount != nil {
+			SetDefaults_TokenRequestorServiceAccountControllerConfiguration(in.Controllers.TokenRequestorServiceAccount)
+		}
+		if in.Controllers.TokenRequestorWorkloadIdentity != nil {
+			SetDefaults_TokenRequestorWorkloadIdentityControllerConfiguration(in.Controllers.TokenRequestorWorkloadIdentity)
 		}
 		if in.Controllers.VPAEvictionRequirements != nil {
 			SetDefaults_VPAEvictionRequirementsControllerConfiguration(in.Controllers.VPAEvictionRequirements)

@@ -132,6 +132,8 @@ config:
     #     foo: bar
     tokenRequestor:
       concurrentSyncs: 5
+    tokenRequestorWorkloadIdentity:
+      concurrentSyncs: 5
     vpaEvictionRequirements:
       concurrentSyncs: 5
   resources:

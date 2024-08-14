@@ -35,6 +35,8 @@ type WorkloadIdentityInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.WorkloadIdentityList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
 	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.WorkloadIdentity, err error)
+	CreateToken(ctx context.Context, workloadIdentityName string, tokenRequest *v1alpha1.TokenRequest, opts v1.CreateOptions) (*v1alpha1.TokenRequest, error)
+
 	WorkloadIdentityExpansion
 }
 
@@ -177,6 +179,21 @@ func (c *workloadIdentities) Patch(ctx context.Context, name string, pt types.Pa
 		SubResource(subresources...).
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(data).
+		Do(ctx).
+		Into(result)
+	return
+}
+
+// CreateToken takes the representation of a tokenRequest and creates it.  Returns the server's representation of the tokenRequest, and an error, if there is any.
+func (c *workloadIdentities) CreateToken(ctx context.Context, workloadIdentityName string, tokenRequest *v1alpha1.TokenRequest, opts v1.CreateOptions) (result *v1alpha1.TokenRequest, err error) {
+	result = &v1alpha1.TokenRequest{}
+	err = c.client.Post().
+		Namespace(c.ns).
+		Resource("workloadidentities").
+		Name(workloadIdentityName).
+		SubResource("token").
+		VersionedParams(&opts, scheme.ParameterCodec).
+		Body(tokenRequest).
 		Do(ctx).
 		Into(result)
 	return

@@ -148,8 +148,10 @@ type GardenletControllerConfiguration struct {
 	NetworkPolicy *NetworkPolicyControllerConfiguration
 	// ManagedSeed defines the configuration of the ManagedSeed controller.
 	ManagedSeed *ManagedSeedControllerConfiguration
-	// TokenRequestorControllerConfiguration defines the configuration of the TokenRequestor controller.
-	TokenRequestor *TokenRequestorControllerConfiguration
+	// TokenRequestorServiceAccount defines the configuration of the TokenRequestorServiceAccount controller.
+	TokenRequestorServiceAccount *TokenRequestorServiceAccountControllerConfiguration
+	// TokenRequestorWorkloadIdentity defines the configuration of the TokenRequestorWorkloadIdentity controller.
+	TokenRequestorWorkloadIdentity *TokenRequestorWorkloadIdentityControllerConfiguration
 	// VPAEvictionRequirements defines the configuration of the VPAEvictionRequirements controller.
 	VPAEvictionRequirements *VPAEvictionRequirementsControllerConfiguration
 }
@@ -345,8 +347,14 @@ type ManagedSeedControllerConfiguration struct {
 	JitterUpdates *bool
 }
 
-// TokenRequestorControllerConfiguration defines the configuration of the TokenRequestor controller.
-type TokenRequestorControllerConfiguration struct {
+// TokenRequestorServiceAccountControllerConfiguration defines the configuration of the TokenRequestorServiceAccount controller.
+type TokenRequestorServiceAccountControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on events.
+	ConcurrentSyncs *int
+}
+
+// TokenRequestorWorkloadIdentityControllerConfiguration defines the configuration of the TokenRequestorWorkloadIdentity controller.
+type TokenRequestorWorkloadIdentityControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on events.
 	ConcurrentSyncs *int
 }

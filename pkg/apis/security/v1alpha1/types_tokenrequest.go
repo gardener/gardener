@@ -51,6 +51,6 @@ type ContextObject struct {
 type TokenRequestStatus struct {
 	// Token is the issued token.
 	Token string `json:"token" protobuf:"bytes,1,opt,name=token"`
-	// ExpirationTimeStamp is the time of expiration of the returned token.
-	ExpirationTimeStamp metav1.Time `json:"expirationTimestamp" protobuf:"bytes,2,opt,name=expirationTimestamp"`
+	// ExpirationTimestamp is the time of expiration of the returned token.
+	ExpirationTimestamp metav1.Time `json:"expirationTimestamp" protobuf:"bytes,2,opt,name=expirationTimestamp"`
 }

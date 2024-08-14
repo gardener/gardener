@@ -968,6 +968,9 @@ build:
             - pkg/client/kubernetes/clientmap
             - pkg/client/kubernetes/clientmap/builder
             - pkg/client/kubernetes/clientmap/keys
+            - pkg/client/security/clientset/versioned
+            - pkg/client/security/clientset/versioned/scheme
+            - pkg/client/security/clientset/versioned/typed/security/v1alpha1
             - pkg/component
             - pkg/component/apiserver
             - pkg/component/autoscaling/clusterautoscaler
@@ -1187,6 +1190,8 @@ build:
             - pkg/gardenlet/controller/shoot/shoot
             - pkg/gardenlet/controller/shoot/shoot/helper
             - pkg/gardenlet/controller/shoot/state
+            - pkg/gardenlet/controller/tokenrequestor/serviceaccount
+            - pkg/gardenlet/controller/tokenrequestor/workloadidentity
             - pkg/gardenlet/controller/vpaevictionrequirements
             - pkg/gardenlet/features
             - pkg/gardenlet/operation

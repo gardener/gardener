@@ -494,7 +494,7 @@ Alternatively, it can be disabled by setting the `concurrentSyncs=0` for the con
 
 Please refer to [GEP-22: Improved Usage of the `ShootState` API](../proposals/22-improved-usage-of-shootstate-api.md) for all information.
 
-### [`TokenRequestor` Controller](../../pkg/controller/tokenrequestor)
+### [`TokenRequestor` Controller For `ServiceAccount`s](../../pkg/gardenlet/controller/tokenrequestor/serviceaccount)
 
 The `gardenlet` uses an instance of the `TokenRequestor` controller which initially was developed in the context of the `gardener-resource-manager`, please read [this document](resource-manager.md#tokenrequestor-controller) for further information.
 
@@ -502,6 +502,17 @@ The `gardenlet` uses an instance of the `TokenRequestor` controller which initia
 The mechanism works the same way as for shoot control plane components running in the seed which need to communicate with the shoot cluster.
 However, `gardenlet`'s instance of the `TokenRequestor` controller is restricted to `Secret`s labeled with `resources.gardener.cloud/class=garden`.
 Furthermore, it doesn't respect the `serviceaccount.resources.gardener.cloud/namespace` annotation. Instead, it always uses the seed's namespace in the garden cluster for managing `ServiceAccounts` and their tokens.
+
+### [`TokenRequestor` Controller For `WorkloadIdentity`s](../../pkg/gardenlet/controller/tokenrequestor/workloadidentity)
+
+The `TokenRequestorWorkloadIdentity` controller in the `gardenlet` reconciles `Secret`s labeled with `security.gardener.cloud/purpose=workload-identity-token-requestor`.
+When it encounters such `Secret`, it associates the `Secret` with a specific `WorkloadIdentity` using the annotations `workloadidentity.security.gardener.cloud/name` and `workloadidentity.security.gardener.cloud/namespace`.
+Any workload creating such `Secret`s is responsible to label and annotate the `Secret`s accordingly.
+After the association is made, the `gardenlet` requests a token for the specific `WorkloadIdentity` from the Gardener API Server and writes it back in the `Secret`'s data against the `token` key.
+The `gardenlet` is responsible to keep this token valid by refreshing it periodically.
+The token is then used by components running in the seed cluster in order to present the said `WorkloadIdentity` before external systems, e.g. by calling cloud provider APIs.
+
+Please refer to [GEP-26: Workload Identity - Trust Based Authentication](../proposals/26-workload-identity.md) for more details.
 
 ### [`VPAEvictionRequirements` Controller](../../pkg/gardenlet/controller/vpaevictionrequirements)
 
