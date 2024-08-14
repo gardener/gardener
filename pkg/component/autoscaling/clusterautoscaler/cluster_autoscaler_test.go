@@ -152,6 +152,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 						"role": "cluster-autoscaler",
 					},
 				},
+				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 			},
 		}
 		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
@@ -590,17 +591,13 @@ var _ = Describe("ClusterAutoscaler", func() {
 
 	Describe("#Deploy", func() {
 		Context("should successfully deploy all the resources", func() {
-			test := func(withConfig bool, runtimeVersionGreaterEquals126 bool) {
+			test := func(withConfig bool) {
 				var config *gardencorev1beta1.ClusterAutoscaler
 				if withConfig {
 					config = configFull
 				}
 
-				if runtimeVersionGreaterEquals126 {
-					clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, config, 0, semver.MustParse("1.26.1"))
-				} else {
-					clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, config, 0, semver.MustParse("1.25.0"))
-				}
+				clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, config, 0, semver.MustParse("1.28.1"))
 				clusterAutoscaler.SetNamespaceUID(namespaceUID)
 				clusterAutoscaler.SetMachineDeployments(machineDeployments)
 
@@ -637,11 +634,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 				Expect(actualDeployment).To(DeepEqual(deploy))
 
 				actualPDB := &policyv1.PodDisruptionBudget{}
-				unhealthyPodEvictionPolicyAlwatysAllow := policyv1.AlwaysAllow
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(pdb), actualPDB)).To(Succeed())
-				if runtimeVersionGreaterEquals126 {
-					pdb.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
-				}
 				Expect(actualPDB).To(DeepEqual(pdb))
 
 				actualVPA := &vpaautoscalingv1.VerticalPodAutoscaler{}
@@ -657,9 +650,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 				Expect(actualServiceMonitor).To(DeepEqual(serviceMonitor))
 			}
 
-			It("w/o config", func() { test(false, false) })
-			It("w/ config, kubernetes version < 1.26", func() { test(true, false) })
-			It("w/ config, kubernetes version >= 1.26", func() { test(true, true) })
+			It("w/o config", func() { test(false) })
+			It("w/ config", func() { test(true) })
 		})
 	})
 

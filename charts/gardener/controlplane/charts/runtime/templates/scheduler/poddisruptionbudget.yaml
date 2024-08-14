@@ -19,7 +19,5 @@ spec:
       chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
       release: "{{ .Release.Name }}"
       heritage: "{{ .Release.Service }}"
-{{- if semverCompare ">= 1.26-0" .Capabilities.KubeVersion.Version }}
   unhealthyPodEvictionPolicy: AlwaysAllow
-{{- end }}
 {{- end }}

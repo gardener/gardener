@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -46,7 +45,6 @@ var _ = Describe("ExtAuthzServer", func() {
 		defaultDepWaiter component.DeployWaiter
 		namespace        = "shoot--foo--bar"
 
-		kubernetesVersion *semver.Version
 		image             = "some-image"
 		maxSurge          = intstr.FromInt32(100)
 		maxUnavailable    = intstr.FromInt32(0)
@@ -78,8 +76,6 @@ var _ = Describe("ExtAuthzServer", func() {
 		Expect(schedulingv1.AddToScheme(s)).To(Succeed())
 
 		c = fake.NewClientBuilder().WithScheme(s).Build()
-
-		kubernetesVersion = semver.MustParse("1.26")
 
 		expectedDeployment = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
@@ -264,16 +260,17 @@ var _ = Describe("ExtAuthzServer", func() {
 						"app": deploymentName,
 					},
 				},
+				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 			},
 		}
 	})
 
 	JustBeforeEach(func() {
-		defaultDepWaiter = vpnauthzserver.New(c, namespace, image, kubernetesVersion)
+		defaultDepWaiter = vpnauthzserver.New(c, namespace, image)
 	})
 
 	Describe("#Deploy", func() {
-		JustBeforeEach(func() {
+		It("should successfully deploy all the components", func() {
 			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
 			actualDeployment := &appsv1.Deployment{}
@@ -283,6 +280,10 @@ var _ = Describe("ExtAuthzServer", func() {
 			actualDestinationRule := &istionetworkingv1beta1.DestinationRule{}
 			Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedDestinationRule.Namespace, Name: expectedDestinationRule.Name}, actualDestinationRule)).To(Succeed())
 			Expect(actualDestinationRule).To(BeComparableTo(expectedDestinationRule, test.CmpOptsForDestinationRule()))
+
+			actualPodDisruptionBudget := &policyv1.PodDisruptionBudget{}
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedPodDisruptionBudget.Namespace, Name: expectedPodDisruptionBudget.Name}, actualPodDisruptionBudget)).To(Succeed())
+			Expect(actualPodDisruptionBudget).To(DeepEqual(expectedPodDisruptionBudget))
 
 			actualService := &corev1.Service{}
 			Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedService.Namespace, Name: expectedService.Name}, actualService)).To(Succeed())
@@ -295,29 +296,6 @@ var _ = Describe("ExtAuthzServer", func() {
 			actualVpa := &vpaautoscalingv1.VerticalPodAutoscaler{}
 			Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedVpa.Namespace, Name: expectedVpa.Name}, actualVpa)).To(Succeed())
 			Expect(actualVpa).To(DeepEqual(expectedVpa))
-		})
-
-		Context("Kubernetes version < 1.26", func() {
-			BeforeEach(func() {
-				kubernetesVersion = semver.MustParse("1.25")
-			})
-
-			It("should successfully deploy all the components", func() {
-				actualPodDisruptionBudget := &policyv1.PodDisruptionBudget{}
-				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedPodDisruptionBudget.Namespace, Name: expectedPodDisruptionBudget.Name}, actualPodDisruptionBudget)).To(Succeed())
-				Expect(actualPodDisruptionBudget).To(DeepEqual(expectedPodDisruptionBudget))
-			})
-		})
-
-		Context("Kubernetes version >= 1.26", func() {
-			It("should successfully deploy all the components", func() {
-				unhealthyPodEvictionPolicyAlwatysAllow := policyv1.AlwaysAllow
-				expectedPodDisruptionBudget.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
-
-				actualPodDisruptionBudget := &policyv1.PodDisruptionBudget{}
-				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedPodDisruptionBudget.Namespace, Name: expectedPodDisruptionBudget.Name}, actualPodDisruptionBudget)).To(Succeed())
-				Expect(actualPodDisruptionBudget).To(DeepEqual(expectedPodDisruptionBudget))
-			})
 		})
 	})
 
