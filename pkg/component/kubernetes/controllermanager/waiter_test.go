@@ -38,7 +38,7 @@ var _ = Describe("WaiterTest", func() {
 		ctx                   = context.TODO()
 		testLogger            = logr.Discard()
 		errorMsg              = "fake error"
-		fakeErr               = fmt.Errorf(errorMsg)
+		fakeErr               = fmt.Errorf("fake error")
 		kubeControllerManager Interface
 		namespace             = "shoot--foo--bar"
 		version               = semver.MustParse("v1.25.8")

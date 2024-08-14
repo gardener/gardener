@@ -136,7 +136,7 @@ var _ = Describe("Errors", func() {
 			err := errorsutils.HandleErrors(errorContext,
 				nil,
 				func(errorID string, err error) error {
-					return fmt.Errorf(fmt.Sprintf("Got %s %s", errorID, err))
+					return fmt.Errorf("Got %s %s", errorID, err)
 				},
 				errorsutils.ToExecute(errID, func() error {
 					return errors.New(errorText)
