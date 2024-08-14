@@ -163,7 +163,7 @@ The `ManagedSeedSet` controller creates and deletes `ManagedSeed`s and `Shoot`s 
 
 `Quota` object limits the resources consumed by shoot clusters either per provider secret or per project/namespace.
 
-Consequently, to ensure that `Quota`s in-use are always present in the system until the last `SecretBinding` that references them gets deleted, the controller adds a finalizer which is only released when there is no `SecretBinding` referencing the `Quota` anymore.
+Consequently, to ensure that `Quota`s in-use are always present in the system until the last `SecretBinding` or `CredentialsBinding` that references them gets deleted, the controller adds a finalizer which is only released when there is no `SecretBinding` or `CredentialsBinding` referencing the `Quota` anymore.
 
 ### [`Project` Controller](../../pkg/controllermanager/controller/project)
 
@@ -183,7 +183,7 @@ These RBAC resources are prefixed with `gardener.cloud:system:project{-member,-v
 Gardener administrators and extension developers can define their own roles. For more information, see [Extending Project Roles](../extensions/project-roles.md) for more information.
 
 In addition, operators can configure the Project controller to maintain a default [ResourceQuota](https://kubernetes.io/docs/concepts/policy/resource-quotas/) for project namespaces.
-Quotas can especially limit the creation of user facing resources, e.g. `Shoots`, `SecretBindings`, `Secrets` and thus protect the garden cluster from massive resource exhaustion but also enable operators to align quotas with respective enterprise policies.
+Quotas can especially limit the creation of user facing resources, e.g. `Shoots`, `SecretBindings`, `CredentialsBinding`, `Secrets` and thus protect the garden cluster from massive resource exhaustion but also enable operators to align quotas with respective enterprise policies.
 
 > :warning: **Gardener itself is not exempted from configured quotas**. For example, Gardener creates `Secrets` for every shoot cluster in the project namespace and at the same time increases the available quota count. Please mind this additional resource consumption.
 
@@ -200,6 +200,7 @@ controllers:
           hard:
             count/shoots.core.gardener.cloud: "100"
             count/secretbindings.core.gardener.cloud: "10"
+            count/credentialsbindings.security.gardener.cloud: "10"
             count/secrets: "800"
       projectSelector: {}
 ```
@@ -229,8 +230,8 @@ This reconciler is enabled by default and works as follows:
 1. Projects are considered as "stale"/not actively used when all of the following conditions apply: The namespace associated with the `Project` does not have any...
     1. `Shoot` resources.
     1. `BackupEntry` resources.
-    1. `Secret` resources that are referenced by a `SecretBinding` that is in use by a `Shoot` (not necessarily in the same namespace).
-    1. `Quota` resources that are referenced by a `SecretBinding` that is in use by a `Shoot` (not necessarily in the same namespace).
+    1. `Secret` resources that are referenced by a `SecretBinding` or a `CredentialsBinding` that is in use by a `Shoot` (not necessarily in the same namespace).
+    1. `Quota` resources that are referenced by a `SecretBinding` or a `CredentialsBinding` that is in use by a `Shoot` (not necessarily in the same namespace).
     1. The time period when the project was used for the last time (`status.lastActivityTimestamp`) is longer than the configured `minimumLifetimeDays`
 
 If a project is considered "stale", then its `.status.staleSinceTimestamp` will be set to the time when it was first detected to be stale.
@@ -327,7 +328,7 @@ It could also add some operation or task annotations. For more information, see 
 
 #### ["Quota" Reconciler](../../pkg/controllermanager/controller/shoot/quota)
 
-This reconciler might auto-delete shoot clusters in case their referenced `SecretBinding` is itself referencing a `Quota` with `.spec.clusterLifetimeDays != nil`.
+This reconciler might auto-delete shoot clusters in case their referenced `SecretBinding` or `CredentialsBinding` is itself referencing a `Quota` with `.spec.clusterLifetimeDays != nil`.
 If the shoot cluster is older than the configured lifetime, then it gets deleted.
 It maintains the expiration time of the `Shoot` in the value of the `shoot.gardener.cloud/expiration-timestamp` annotation.
 This annotation might be overridden, however only by at most twice the value of the `.spec.clusterLifetimeDays`.
