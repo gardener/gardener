@@ -1,4 +1,4 @@
-FROM kindest/node:v1.30.3
+FROM kindest/node:v1.30.4
 
 ARG TARGETOS
 ARG TARGETARCH
