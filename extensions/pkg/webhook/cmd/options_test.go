@@ -9,7 +9,9 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/spf13/pflag"
 	"go.uber.org/mock/gomock"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	. "github.com/gardener/gardener/extensions/pkg/webhook/cmd"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
@@ -55,6 +57,28 @@ var _ = Describe("Options", func() {
 				Expect(switches.Complete()).To(Succeed())
 
 				Expect(switches.Disabled).To(Equal([]string{name1, name2}))
+			})
+
+			It("should not add any webhook when wildcard is used", func() {
+				switches := NewSwitchOptions(
+					Switch("foo", func(_ manager.Manager) (*extensionswebhook.Webhook, error) {
+						return nil, nil
+					}),
+				)
+
+				fs := pflag.NewFlagSet(commandName, pflag.ContinueOnError)
+				switches.AddFlags(fs)
+
+				err := fs.Parse(test.NewCommandBuilder(commandName).
+					Flags(
+						test.StringSliceFlag(DisableFlag, "*"),
+					).
+					Command().
+					Slice())
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(switches.Complete()).NotTo(HaveOccurred())
+				Expect(switches.Completed().WebhooksFactory(nil)).To(BeEmpty())
 			})
 
 			It("should error on an unknown webhook", func() {
