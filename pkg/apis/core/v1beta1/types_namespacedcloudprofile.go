@@ -52,11 +52,6 @@ type NamespacedCloudProfileSpec struct {
 	// +patchStrategy=merge
 	// +optional
 	MachineTypes []MachineType `json:"machineTypes" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,4,opt,name=machineTypes"`
-	// Regions contains constraints regarding allowed values for regions and zones.
-	// +patchMergeKey=name
-	// +patchStrategy=merge
-	// +optional
-	Regions []Region `json:"regions" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,5,opt,name=regions"`
 	// VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.
 	// +patchMergeKey=name
 	// +patchStrategy=merge

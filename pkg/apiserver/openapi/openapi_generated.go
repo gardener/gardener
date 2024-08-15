@@ -5721,26 +5721,6 @@ func schema_pkg_apis_core_v1beta1_NamespacedCloudProfileSpec(ref common.Referenc
 							},
 						},
 					},
-					"regions": {
-						VendorExtensible: spec.VendorExtensible{
-							Extensions: spec.Extensions{
-								"x-kubernetes-patch-merge-key": "name",
-								"x-kubernetes-patch-strategy":  "merge",
-							},
-						},
-						SchemaProps: spec.SchemaProps{
-							Description: "Regions contains constraints regarding allowed values for regions and zones.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Region"),
-									},
-								},
-							},
-						},
-					},
 					"volumeTypes": {
 						VendorExtensible: spec.VendorExtensible{
 							Extensions: spec.Extensions{
@@ -5773,7 +5753,7 @@ func schema_pkg_apis_core_v1beta1_NamespacedCloudProfileSpec(ref common.Referenc
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileReference", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImage", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineType", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Region", "github.com/gardener/gardener/pkg/apis/core/v1beta1.VolumeType"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileReference", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImage", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineType", "github.com/gardener/gardener/pkg/apis/core/v1beta1.VolumeType"},
 	}
 }
 
