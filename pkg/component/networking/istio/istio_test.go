@@ -64,7 +64,7 @@ var _ = Describe("istiod", func() {
 		minReplicas = 2
 		maxReplicas = 9
 
-		externalTrafficPolicy corev1.ServiceExternalTrafficPolicyType
+		externalTrafficPolicy corev1.ServiceExternalTrafficPolicy
 
 		istiodService = func() string {
 			data, _ := os.ReadFile("./test_charts/istiod_service.yaml")
@@ -564,7 +564,7 @@ var _ = Describe("istiod", func() {
 
 		Context("external traffic policy cluster", func() {
 			BeforeEach(func() {
-				externalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeCluster
+				externalTrafficPolicy = corev1.ServiceExternalTrafficPolicyCluster
 				igw[0].ExternalTrafficPolicy = &externalTrafficPolicy
 				istiod = NewIstio(
 					c,
@@ -595,7 +595,7 @@ var _ = Describe("istiod", func() {
 
 		Context("external traffic policy local", func() {
 			BeforeEach(func() {
-				externalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
+				externalTrafficPolicy = corev1.ServiceExternalTrafficPolicyLocal
 				igw[0].ExternalTrafficPolicy = &externalTrafficPolicy
 				istiod = NewIstio(
 					c,
@@ -626,7 +626,7 @@ var _ = Describe("istiod", func() {
 
 		Context("dual stack istio service", func() {
 			BeforeEach(func() {
-				externalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
+				externalTrafficPolicy = corev1.ServiceExternalTrafficPolicyLocal
 				igw[0].ExternalTrafficPolicy = &externalTrafficPolicy
 				igw[0].DualStack = true
 				istiod = NewIstio(
