@@ -337,7 +337,9 @@ var _ = Describe("KubeStateMetrics", func() {
 							"^kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_minallowed_memory$," +
 							"^kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_maxallowed_cpu$," +
 							"^kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_maxallowed_memory$," +
-							"^kube_customresource_verticalpodautoscaler_spec_updatepolicy_updatemode$",
+							"^kube_customresource_verticalpodautoscaler_spec_updatepolicy_updatemode$," +
+							"^garden_garden_condition$," +
+							"^garden_garden_last_operation$",
 						"--custom-resource-state-config-file=/config/custom-resource-state.yaml",
 					}
 				}
@@ -843,16 +845,6 @@ var _ = Describe("KubeStateMetrics", func() {
 				AutomountServiceAccountToken: ptr.To(false),
 			}
 		}
-		customResourceStateConfigMap = &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "custom-resource-state-config",
-				Namespace: namespace,
-			},
-			Data: map[string]string{
-				"custom-resource-state.yaml": expectedCustomResourceStateConfig(),
-			},
-		}
-		Expect(kubernetesutils.MakeUnique(customResourceStateConfigMap)).To(Succeed())
 		secretShootAccess = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "shoot-access-kube-state-metrics",
@@ -959,6 +951,17 @@ var _ = Describe("KubeStateMetrics", func() {
 					NameSuffix:        "-runtime",
 				})
 				managedResourceName = "kube-state-metrics-runtime"
+
+				customResourceStateConfigMap = &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "custom-resource-state-config",
+						Namespace: namespace,
+					},
+					Data: map[string]string{
+						"custom-resource-state.yaml": expectedCustomResourceStateConfig(values.NameSuffix),
+					},
+				}
+				Expect(kubernetesutils.MakeUnique(customResourceStateConfigMap)).To(Succeed())
 			})
 
 			JustBeforeEach(func() {
@@ -1045,6 +1048,17 @@ var _ = Describe("KubeStateMetrics", func() {
 					NameSuffix:        "-seed",
 				})
 				managedResourceName = "kube-state-metrics-seed"
+
+				customResourceStateConfigMap = &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "custom-resource-state-config",
+						Namespace: namespace,
+					},
+					Data: map[string]string{
+						"custom-resource-state.yaml": expectedCustomResourceStateConfig(values.NameSuffix),
+					},
+				}
+				Expect(kubernetesutils.MakeUnique(customResourceStateConfigMap)).To(Succeed())
 			})
 
 			JustBeforeEach(func() {
@@ -1126,6 +1140,17 @@ var _ = Describe("KubeStateMetrics", func() {
 				}
 				managedResourceName = "shoot-core-kube-state-metrics"
 				managedResourceTargetName = "shoot-core-kube-state-metrics-target"
+
+				customResourceStateConfigMap = &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "custom-resource-state-config",
+						Namespace: namespace,
+					},
+					Data: map[string]string{
+						"custom-resource-state.yaml": expectedCustomResourceStateConfig(values.NameSuffix),
+					},
+				}
+				Expect(kubernetesutils.MakeUnique(customResourceStateConfigMap)).To(Succeed())
 			})
 
 			JustBeforeEach(func() {

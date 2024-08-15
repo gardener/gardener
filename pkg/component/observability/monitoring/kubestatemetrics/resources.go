@@ -391,6 +391,8 @@ var gardenMetricAllowlist = []string{
 	"^kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_maxallowed_cpu$",
 	"^kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_maxallowed_memory$",
 	"^kube_customresource_verticalpodautoscaler_spec_updatepolicy_updatemode$",
+	"^garden_garden_condition$",
+	"^garden_garden_last_operation$",
 }
 
 var cacheMetricAllowlist = []string{
