@@ -714,7 +714,18 @@ func (k *kubeStateMetrics) nameSuffix() string {
 }
 
 func (k *kubeStateMetrics) customResourceStateConfigMap() (*corev1.ConfigMap, error) {
-	customResourceStateConfig, err := yaml.Marshal(NewCustomResourceStateConfig())
+	var customResourceStateConfig []byte
+	var err error
+
+	suffix := k.values.NameSuffix
+
+	switch suffix {
+	case SuffixRuntime:
+		customResourceStateConfig, err = yaml.Marshal(NewCustomResourceStateConfig(WithVPAMetrics, WithGardenResourceMetrics))
+	default:
+		customResourceStateConfig, err = yaml.Marshal(NewCustomResourceStateConfig(WithVPAMetrics))
+	}
+
 	if err != nil {
 		return nil, err
 	}

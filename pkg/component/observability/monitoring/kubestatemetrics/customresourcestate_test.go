@@ -22,7 +22,7 @@ import (
 func expectedCustomResourceStateConfig() string {
 	defer GinkgoRecover()
 
-	rawActual, err := yaml.Marshal(NewCustomResourceStateConfig())
+	rawActual, err := yaml.Marshal(NewCustomResourceStateConfig(WithVPAMetrics))
 	Expect(err).ToNot(HaveOccurred())
 
 	actual := string(rawActual)
