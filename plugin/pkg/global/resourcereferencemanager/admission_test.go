@@ -914,8 +914,22 @@ var _ = Describe("resourcereferencemanager", func() {
 					},
 					Spec: gardencorev1beta1.QuotaSpec{
 						Scope: corev1.ObjectReference{
-							APIVersion: "core.gardener.cloud/v1beta1",
-							Kind:       "Project",
+							APIVersion: "v1",
+							Kind:       "Secret",
+						},
+					},
+				}
+
+				quotaName3 := "quota-3"
+				quota3 := gardencorev1beta1.Quota{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      quotaName3,
+						Namespace: namespace,
+					},
+					Spec: gardencorev1beta1.QuotaSpec{
+						Scope: corev1.ObjectReference{
+							APIVersion: securityv1alpha1.SchemeGroupVersion.String(),
+							Kind:       "WorkloadIdentity",
 						},
 					},
 				}
@@ -924,13 +938,18 @@ var _ = Describe("resourcereferencemanager", func() {
 					Name:      quotaName2,
 					Namespace: namespace,
 				}
+				quota3Ref := corev1.ObjectReference{
+					Name:      quotaName3,
+					Namespace: namespace,
+				}
 				quotaRefList := securityCredentialsBindingRefWorkloadIdentity.Quotas
-				quotaRefList = append(quotaRefList, quota2Ref)
+				quotaRefList = append(quotaRefList, quota2Ref, quota3Ref)
 				securityCredentialsBindingRefWorkloadIdentity.Quotas = quotaRefList
 
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota2)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota3)).To(Succeed())
 
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefWorkloadIdentity, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefWorkloadIdentity.Namespace, securityCredentialsBindingRefWorkloadIdentity.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)

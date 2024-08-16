@@ -1405,7 +1405,7 @@ Kubernetes core/v1.ObjectReference
 </em>
 </td>
 <td>
-<p>Scope is the scope of the Quota object, either &lsquo;project&rsquo; or &lsquo;secret&rsquo;. This field is immutable.</p>
+<p>Scope is the scope of the Quota object, either &lsquo;project&rsquo;, &lsquo;secret&rsquo; or &lsquo;workloadidentity&rsquo;. This field is immutable.</p>
 </td>
 </tr>
 </table>
@@ -9372,7 +9372,7 @@ Kubernetes core/v1.ObjectReference
 </em>
 </td>
 <td>
-<p>Scope is the scope of the Quota object, either &lsquo;project&rsquo; or &lsquo;secret&rsquo;. This field is immutable.</p>
+<p>Scope is the scope of the Quota object, either &lsquo;project&rsquo;, &lsquo;secret&rsquo; or &lsquo;workloadidentity&rsquo;. This field is immutable.</p>
 </td>
 </tr>
 </tbody>
