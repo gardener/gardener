@@ -679,7 +679,7 @@ images:
 - name: vpa-updater
   sourceRepository: github.com/kubernetes/autoscaler
   repository: registry.k8s.io/autoscaling/vpa-updater
-  tag: "1.2.0"
+  tag: "1.2.1"
   labels:
     - name: 'gardener.cloud/cve-categorisation'
       value:
