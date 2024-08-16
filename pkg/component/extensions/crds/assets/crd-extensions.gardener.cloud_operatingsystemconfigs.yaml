@@ -91,8 +91,8 @@ spec:
                             for the containerd plugins section.
                           properties:
                             path:
-                              description: Path are the elements that construct the
-                                path in the plugins section.
+                              description: Path is a list of elements that construct
+                                the path in the plugins section.
                               items:
                                 type: string
                               type: array

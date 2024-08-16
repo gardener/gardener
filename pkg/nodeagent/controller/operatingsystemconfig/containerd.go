@@ -267,8 +267,7 @@ func (r *Reconciler) ensureContainerdConfiguration(log logr.Logger, criConfig *e
 	}
 
 	for _, p := range patches {
-		content, err = structuredmap.SetMapEntry(content, p.path, p.setFn)
-		if err != nil {
+		if err := structuredmap.SetMapEntry(content, p.path, p.setFn); err != nil {
 			return fmt.Errorf("unable setting %q in containerd config.toml: %w", p.name, err)
 		}
 	}

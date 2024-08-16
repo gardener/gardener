@@ -119,24 +119,8 @@ func ValidateContainerdConfig(config *extensionsv1alpha1.ContainerdConfig, purpo
 		allErrs = append(allErrs, field.Required(fldPath.Child("sandboxImage"), "field is required"))
 	}
 
-	allErrs = append(allErrs, ValidateContainerdRegistryConfigs(config.Registries, fldPath.Child("registries"))...)
-
-	for i, p := range config.Plugins {
-		idxPath := fldPath.Child("plugins").Index(i)
-
-		if len(p.Path) == 0 {
-			allErrs = append(allErrs, field.Required(idxPath.Child("path"), "must provider a path"))
-		}
-
-		if p.Values != nil && len(p.Values.Raw) > 0 {
-			values := map[string]any{}
-
-			err := json.Unmarshal(p.Values.Raw, &values)
-			if err != nil {
-				allErrs = append(allErrs, field.Invalid(idxPath.Child("values"), string(p.Values.Raw), "provided values must be given in json format"))
-			}
-		}
-	}
+	allErrs = append(allErrs, validateContainerdRegistryConfigs(config.Registries, fldPath.Child("registries"))...)
+	allErrs = append(allErrs, validateContainerdPluginConfigs(config, fldPath.Child("plugins"))...)
 
 	return allErrs
 }
@@ -165,7 +149,7 @@ func validateHostPort(hostPort string) []string {
 var availableCapabilities = sets.New(extensionsv1alpha1.PullCapability, extensionsv1alpha1.ResolveCapability, extensionsv1alpha1.PushCapability)
 
 // ValidateContainerdRegistryConfigs validates the spec of a RegistryConfig object.
-func ValidateContainerdRegistryConfigs(registries []extensionsv1alpha1.RegistryConfig, fldPath *field.Path) field.ErrorList {
+func validateContainerdRegistryConfigs(registries []extensionsv1alpha1.RegistryConfig, fldPath *field.Path) field.ErrorList {
 	const form = "; desired format: https://host[:port]"
 
 	allErrs := field.ErrorList{}
@@ -216,6 +200,29 @@ func ValidateContainerdRegistryConfigs(registries []extensionsv1alpha1.RegistryC
 				if !availableCapabilities.Has(capability) {
 					allErrs = append(allErrs, field.NotSupported(fldHost.Child("capabilities").Index(k), capability, []string{"push", "pull", "resolve"}))
 				}
+			}
+		}
+	}
+
+	return allErrs
+}
+
+func validateContainerdPluginConfigs(config *extensionsv1alpha1.ContainerdConfig, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	for i, p := range config.Plugins {
+		idxPath := fldPath.Index(i)
+
+		if len(p.Path) == 0 {
+			allErrs = append(allErrs, field.Required(idxPath.Child("path"), "must provide a path"))
+		}
+
+		if p.Values != nil && len(p.Values.Raw) > 0 {
+			values := map[string]any{}
+
+			err := json.Unmarshal(p.Values.Raw, &values)
+			if err != nil {
+				allErrs = append(allErrs, field.Invalid(idxPath.Child("values"), string(p.Values.Raw), "provided values must be given in json format"))
 			}
 		}
 	}

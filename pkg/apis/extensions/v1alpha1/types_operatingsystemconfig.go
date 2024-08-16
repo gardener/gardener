@@ -231,9 +231,9 @@ const (
 type CgroupDriverName string
 
 const (
-	// CgroupDriverCgroupfs sets the cgroup driver to cgroupfs.
+	// CgroupDriverCgroupfs is the name of the 'cgroupfs' cgroup driver.
 	CgroupDriverCgroupfs CgroupDriverName = "cgroupfs"
-	// CgroupDriverSystemd sets the cgroup driver to system.
+	// CgroupDriverSystemd is the name of the 'systemd' cgroup driver.
 	CgroupDriverSystemd CgroupDriverName = "systemd"
 )
 
@@ -266,7 +266,7 @@ type ContainerdConfig struct {
 
 // PluginConfig contains configuration values for the containerd plugins section.
 type PluginConfig struct {
-	// Path are the elements that construct the path in the plugins section.
+	// Path is a list of elements that construct the path in the plugins section.
 	Path []string `json:"path"`
 	// Values are the values configured at the given path. If defined, it is expected as json format:
 	// - A given json object will be put to the given path.

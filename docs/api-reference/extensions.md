@@ -4049,7 +4049,7 @@ config spec. It contains a reference to a secret as the result may contain confi
 </em>
 </td>
 <td>
-<p>Path are the elements that construct the path in the plugins section.</p>
+<p>Path is a list of elements that construct the path in the plugins section.</p>
 </td>
 </tr>
 <tr>

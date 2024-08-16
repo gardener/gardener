@@ -105,7 +105,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
   [plugins.foo]
 
     [plugins.foo.bar]
-      someKey = "someValue"
+      someKey2 = "someValue2"
 
       [plugins.foo.bar."foo.bar"]
         someKey = "someValue"
@@ -324,7 +324,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		}
 		pluginConfig2 = extensionsv1alpha1.PluginConfig{
 			Path:   []string{"foo", "bar"},
-			Values: &apiextensionsv1.JSON{Raw: []byte(`{"someKey": "someValue"}`)},
+			Values: &apiextensionsv1.JSON{Raw: []byte(`{"someKey2": "someValue2"}`)},
 		}
 		pluginConfig3 = extensionsv1alpha1.PluginConfig{
 			Path: []string{"bar"},

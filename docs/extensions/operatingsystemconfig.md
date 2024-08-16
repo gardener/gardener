@@ -325,7 +325,7 @@ spec:
     name: containerd
 #   cgroupDriver: cgroupfs # or systemd
     containerd:
-      sandboxImage: registry.k8s.io/pause     
+      sandboxImage: registry.k8s.io/pause
 #     registries:
 #     - upstream: docker.io
 #       server: https://registry-1.docker.io

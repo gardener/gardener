@@ -281,7 +281,7 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 			))
 		})
 
-		It("should forbid OperatingSystemConfigs with duplicate files", func() {
+		It("should forbid an empty OperatingSystemConfigs plugin path", func() {
 			oscCopy := osc.DeepCopy()
 			oscCopy.Spec.Units = nil
 			oscCopy.Spec.Files = []extensionsv1alpha1.File{{
@@ -316,7 +316,7 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 				oscCopy := osc.DeepCopy()
 				oscCopy.Spec.CRIConfig.CgroupDriver = ptr.To(driver)
 
-				Expect(ValidateOperatingSystemConfig(oscCopy)).To(BeEmpty())
+				Expect(ValidateOperatingSystemConfig(oscCopy)).To(BeEmpty(), driver+" should be configurable")
 			}
 		})
 
@@ -483,7 +483,7 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 			}))))
 		})
 
-		It("should forbid OperatingSystemConfigs an empty plugin path", func() {
+		It("should forbid OperatingSystemConfig with an empty plugin path", func() {
 			oscCopy := osc.DeepCopy()
 			oscCopy.Spec.CRIConfig.Containerd.Plugins = []extensionsv1alpha1.PluginConfig{
 				{
@@ -497,7 +497,7 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 			}))))
 		})
 
-		It("should forbid OperatingSystemConfigs plugin values that are not in json format", func() {
+		It("should forbid OperatingSystemConfig with invalid plugin values", func() {
 			oscCopy := osc.DeepCopy()
 			oscCopy.Spec.CRIConfig.Containerd.Plugins = []extensionsv1alpha1.PluginConfig{
 				{
