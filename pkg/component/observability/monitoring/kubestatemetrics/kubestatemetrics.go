@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -167,6 +168,20 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 	}
 
 	if k.values.ClusterType == component.ClusterTypeShoot {
+		// TODO(vicwicker): Remove after release v1.104
+		mr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceNameShoot, Namespace: k.namespace}}
+		if err := k.client.Get(ctx, client.ObjectKeyFromObject(mr), mr); client.IgnoreNotFound(err) != nil {
+			return err
+		} else if err == nil && mr.Spec.Class == nil {
+			// spec.class nil means shoot
+			if err := managedresources.DeleteForShoot(ctx, k.client, k.namespace, managedResourceNameShoot); err != nil {
+				return err
+			}
+			if err := managedresources.WaitUntilDeleted(ctx, k.client, k.namespace, managedResourceNameShoot); err != nil {
+				return err
+			}
+		}
+
 		genericTokenKubeconfigSecret, found := k.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
 		if !found {
 			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
