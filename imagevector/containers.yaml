@@ -656,9 +656,8 @@ images:
         confidentiality_requirement: 'low'
         integrity_requirement: 'high'
         availability_requirement: 'high'
-# We use a forked version of the vpa-recommender for the following reasons:
-#   1. It includes a fix for the nil pointer exception in vpa-recommender 1.2.0 (check https://github.com/kubernetes/autoscaler/pull/7161 for more info)
-#   2. It adds verbose logging when the vpa-recommender estimates memory values which are less than or equal to the minAllowed defined in the
+# We use a forked version of the vpa-recommender for the following reason:
+#   - It adds verbose logging when the vpa-recommender estimates memory values which are less than or equal to the minAllowed defined in the
 # corresponding VPA resource. A new metric is also included which counts how many times such estimations have occurred for each VPA resource.
 # (check https://github.com/gardener/autoscaler/pull/322 for more info).
 #
