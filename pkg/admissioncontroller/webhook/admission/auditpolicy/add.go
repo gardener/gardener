@@ -5,6 +5,7 @@
 package auditpolicy
 
 import (
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
@@ -20,7 +21,7 @@ const (
 func (h *Handler) AddToManager(mgr manager.Manager) error {
 	webhook := &admission.Webhook{
 		Handler:      h,
-		RecoverPanic: true,
+		RecoverPanic: ptr.To(true),
 	}
 
 	mgr.GetWebhookServer().Register(WebhookPath, webhook)
