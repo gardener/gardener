@@ -21,11 +21,11 @@ import (
 var _ = Describe("Source", func() {
 	var (
 		ctx   = context.Background()
-		queue workqueue.RateLimitingInterface
+		queue workqueue.TypedRateLimitingInterface[reconcile.Request]
 	)
 
 	BeforeEach(func() {
-		queue = workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
+		queue = workqueue.NewTypedRateLimitingQueue(workqueue.DefaultTypedControllerRateLimiter[reconcile.Request]())
 	})
 
 	Describe("#EnqueueOnce", func() {

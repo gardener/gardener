@@ -40,7 +40,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WatchesRawSource(
-			source.Func(func(_ context.Context, q workqueue.RateLimitingInterface) error {
+			source.Func(func(_ context.Context, q workqueue.TypedRateLimitingInterface[reconcile.Request]) error {
 				for _, config := range r.Config.SyncConfigs {
 					q.Add(reconcile.Request{NamespacedName: types.NamespacedName{Name: config.SecretName, Namespace: metav1.NamespaceSystem}})
 				}

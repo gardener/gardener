@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/backupbucket"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -30,7 +31,7 @@ func addTestControllerToManagerWithOptions(ctx context.Context, mgr manager.Mana
 		ControllerOptions: controller.Options{
 			// Use custom rate limiter to slow down re-enqueuing in case of errors.
 			// Some tests rely on reading an error state which is removed too quickly by subsequent reconciliations.
-			RateLimiter: workqueue.NewItemExponentialFailureRateLimiter(50*time.Millisecond, 1000*time.Second),
+			RateLimiter: workqueue.NewTypedItemExponentialFailureRateLimiter[reconcile.Request](50*time.Millisecond, 1000*time.Second),
 		},
 		Predicates:                backupbucket.DefaultPredicates(ignoreOperationAnnotation),
 		Type:                      extensionsintegrationtest.Type,

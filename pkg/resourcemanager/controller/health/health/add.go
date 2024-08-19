@@ -115,13 +115,13 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 // EnqueueCreateAndUpdate returns an event handler which only enqueues create and update events.
 func (r *Reconciler) EnqueueCreateAndUpdate() handler.EventHandler {
 	return &handler.Funcs{
-		CreateFunc: func(_ context.Context, e event.CreateEvent, q workqueue.RateLimitingInterface) {
+		CreateFunc: func(_ context.Context, e event.CreateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 			q.Add(reconcile.Request{NamespacedName: types.NamespacedName{
 				Name:      e.Object.GetName(),
 				Namespace: e.Object.GetNamespace(),
 			}})
 		},
-		UpdateFunc: func(_ context.Context, e event.UpdateEvent, q workqueue.RateLimitingInterface) {
+		UpdateFunc: func(_ context.Context, e event.UpdateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 			q.Add(reconcile.Request{NamespacedName: types.NamespacedName{
 				Name:      e.ObjectNew.GetName(),
 				Namespace: e.ObjectNew.GetNamespace(),

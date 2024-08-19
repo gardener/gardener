@@ -55,8 +55,8 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 1,
 			// if going into exponential backoff, wait at most the configured sync period
-			RateLimiter: workqueue.NewWithMaxWaitRateLimiter(
-				workqueue.DefaultControllerRateLimiter(),
+			RateLimiter: workqueue.NewTypedWithMaxWaitRateLimiter[reconcile.Request](
+				workqueue.DefaultTypedControllerRateLimiter[reconcile.Request](),
 				r.Config.Controllers.GardenCare.SyncPeriod.Duration,
 			),
 		}).

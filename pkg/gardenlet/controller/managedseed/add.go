@@ -218,7 +218,7 @@ var RandomDurationWithMetaDuration = utils.RandomDurationWithMetaDuration
 // All other events are normally enqueued.
 func (r *Reconciler) EnqueueWithJitterDelay() handler.EventHandler {
 	return &handler.Funcs{
-		CreateFunc: func(_ context.Context, evt event.CreateEvent, q workqueue.RateLimitingInterface) {
+		CreateFunc: func(_ context.Context, evt event.CreateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 			managedSeed, ok := evt.Object.(*seedmanagementv1alpha1.ManagedSeed)
 			if !ok {
 				return
@@ -246,7 +246,7 @@ func (r *Reconciler) EnqueueWithJitterDelay() handler.EventHandler {
 			// roughly at the same time.
 			q.AddAfter(reconcileRequest(evt.Object), RandomDurationWithMetaDuration(r.Config.Controllers.ManagedSeed.SyncJitterPeriod))
 		},
-		UpdateFunc: func(_ context.Context, evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
+		UpdateFunc: func(_ context.Context, evt event.UpdateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 			managedSeed, ok := evt.ObjectNew.(*seedmanagementv1alpha1.ManagedSeed)
 			if !ok {
 				return
@@ -269,7 +269,7 @@ func (r *Reconciler) EnqueueWithJitterDelay() handler.EventHandler {
 				q.Add(reconcileRequest(evt.ObjectNew))
 			}
 		},
-		DeleteFunc: func(_ context.Context, evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
+		DeleteFunc: func(_ context.Context, evt event.DeleteEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 			if evt.Object == nil {
 				return
 			}

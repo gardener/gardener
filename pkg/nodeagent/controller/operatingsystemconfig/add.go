@@ -109,14 +109,14 @@ func (r *Reconciler) EnqueueWithJitterDelay(ctx context.Context, log logr.Logger
 	}
 
 	return &handler.Funcs{
-		CreateFunc: func(_ context.Context, evt event.CreateEvent, q workqueue.RateLimitingInterface) {
+		CreateFunc: func(_ context.Context, evt event.CreateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 			if evt.Object == nil {
 				return
 			}
 			q.Add(reconcileRequest(evt.Object))
 		},
 
-		UpdateFunc: func(_ context.Context, evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
+		UpdateFunc: func(_ context.Context, evt event.UpdateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 			oldSecret, ok := evt.ObjectOld.(*corev1.Secret)
 			if !ok {
 				return

@@ -47,7 +47,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: ptr.Deref(r.Config.Controllers.ShootCare.ConcurrentSyncs, 0),
 			// if going into exponential backoff, wait at most the configured sync period
-			RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), r.Config.Controllers.ShootCare.SyncPeriod.Duration),
+			RateLimiter: workqueue.NewTypedWithMaxWaitRateLimiter(workqueue.DefaultTypedControllerRateLimiter[reconcile.Request](), r.Config.Controllers.ShootCare.SyncPeriod.Duration),
 		}).
 		WatchesRawSource(
 			source.Kind[client.Object](gardenCluster.GetCache(),
@@ -64,7 +64,7 @@ var RandomDurationWithMetaDuration = utils.RandomDurationWithMetaDuration
 // EventHandler returns a handler for Shoot events.
 func (r *Reconciler) EventHandler() handler.EventHandler {
 	return &handler.Funcs{
-		CreateFunc: func(_ context.Context, e event.CreateEvent, q workqueue.RateLimitingInterface) {
+		CreateFunc: func(_ context.Context, e event.CreateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 			shoot, ok := e.Object.(*gardencorev1beta1.Shoot)
 			if !ok {
 				return
@@ -85,7 +85,7 @@ func (r *Reconciler) EventHandler() handler.EventHandler {
 			// don't add random duration for enqueueing new Shoots which have never been health checked yet
 			q.Add(req)
 		},
-		UpdateFunc: func(_ context.Context, e event.UpdateEvent, q workqueue.RateLimitingInterface) {
+		UpdateFunc: func(_ context.Context, e event.UpdateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 			q.Add(reconcile.Request{NamespacedName: types.NamespacedName{
 				Name:      e.ObjectNew.GetName(),
 				Namespace: e.ObjectNew.GetNamespace(),

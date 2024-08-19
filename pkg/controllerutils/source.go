@@ -17,7 +17,7 @@ import (
 
 // EnqueueOnce is a source.Source that simply triggers the reconciler once by directly enqueueing an empty
 // reconcile.Request.
-var EnqueueOnce = source.Func(func(_ context.Context, q workqueue.RateLimitingInterface) error {
+var EnqueueOnce = source.Func(func(_ context.Context, q workqueue.TypedRateLimitingInterface[reconcile.Request]) error {
 	q.Add(reconcile.Request{})
 	return nil
 })
