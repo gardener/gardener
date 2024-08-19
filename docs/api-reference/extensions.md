@@ -4043,6 +4043,20 @@ config spec. It contains a reference to a secret as the result may contain confi
 <tbody>
 <tr>
 <td>
+<code>op</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.PluginPathOperation">
+PluginPathOperation
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Op is the operation for the given path. Possible values are &lsquo;add&rsquo; and &lsquo;remove&rsquo;, defaults to &lsquo;add&rsquo;.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>path</code></br>
 <em>
 []string
@@ -4064,11 +4078,20 @@ k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON
 <p>Values are the values configured at the given path. If defined, it is expected as json format:
 - A given json object will be put to the given path.
 - An empty json object deletes the entire subtree, including the table entry at the given path.
-- An empty value results in only the table entry to be created.</p>
+- If not configured, only the table entry to be created.</p>
 </td>
 </tr>
 </tbody>
 </table>
+<h3 id="extensions.gardener.cloud/v1alpha1.PluginPathOperation">PluginPathOperation
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.PluginConfig">PluginConfig</a>)
+</p>
+<p>
+<p>PluginPathOperation is a type alias for operations at containerd&rsquo;s plugin configuration.</p>
+</p>
 <h3 id="extensions.gardener.cloud/v1alpha1.Purpose">Purpose
 (<code>string</code> alias)</p></h3>
 <p>

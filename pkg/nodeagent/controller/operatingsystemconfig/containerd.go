@@ -240,27 +240,30 @@ func (r *Reconciler) ensureContainerdConfiguration(log logr.Logger, criConfig *e
 				name: "plugin configuration",
 				path: append(structuredmap.Path{"plugins"}, pluginConfig.Path...),
 				setFn: func(val any) (any, error) {
-					values, ok := val.(map[string]any)
-					if !ok || values == nil {
-						values = map[string]any{}
-					}
+					switch op := ptr.Deref(pluginConfig.Op, extensionsv1alpha1.AddPluginPathOperation); op {
+					case extensionsv1alpha1.AddPluginPathOperation:
+						values, ok := val.(map[string]any)
+						if !ok || values == nil {
+							values = map[string]any{}
+						}
 
-					pluginValues := pluginConfig.Values
-					// Return unchanged values if plugin values is not set, i.e. only create table.
-					if pluginValues == nil {
+						pluginValues := pluginConfig.Values
+						// Return unchanged values if plugin values is not set, i.e. only create table.
+						if pluginValues == nil {
+							return values, nil
+						}
+
+						if err := json.Unmarshal(pluginValues.Raw, &values); err != nil {
+							return nil, err
+						}
+
 						return values, nil
-					}
-
-					// Return nil if plugin values is an empty json object, which deleted the entire sub-tree.
-					if string(pluginValues.Raw) == "{}" {
+					case extensionsv1alpha1.RemovePluginPathOperation:
+						// Return nil if operation is remove, to delete the entire sub-tree.
 						return nil, nil
+					default:
+						return nil, fmt.Errorf("operation %q is not supported", op)
 					}
-
-					if err := json.Unmarshal(pluginValues.Raw, &values); err != nil {
-						return nil, err
-					}
-
-					return values, nil
 				},
 			})
 		}

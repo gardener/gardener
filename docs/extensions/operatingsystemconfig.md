@@ -332,7 +332,8 @@ spec:
 #       hosts:
 #       - url: http://<service-ip>:<port>]
 #     plugins:
-#     - path: [io.containerd.grpc.v1.cri, containerd]
+#     - op: add # add (default) or remove
+#       path: [io.containerd.grpc.v1.cri, containerd]
 #       values: '{"default_runtime_name": "runc"}'
 ...
 ```

@@ -207,11 +207,17 @@ func validateContainerdRegistryConfigs(registries []extensionsv1alpha1.RegistryC
 	return allErrs
 }
 
+var availablePluginPathOperations = sets.New(extensionsv1alpha1.AddPluginPathOperation, extensionsv1alpha1.RemovePluginPathOperation)
+
 func validateContainerdPluginConfigs(config *extensionsv1alpha1.ContainerdConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	for i, p := range config.Plugins {
 		idxPath := fldPath.Index(i)
+
+		if p.Op != nil && !availablePluginPathOperations.Has(*p.Op) {
+			allErrs = append(allErrs, field.NotSupported(idxPath.Child("op"), *p.Op, availablePluginPathOperations.UnsortedList()))
+		}
 
 		if len(p.Path) == 0 {
 			allErrs = append(allErrs, field.Required(idxPath.Child("path"), "must provide a path"))

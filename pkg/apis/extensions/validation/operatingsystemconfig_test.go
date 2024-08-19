@@ -483,6 +483,35 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 			}))))
 		})
 
+		It("should forbid OperatingSystemConfig with an invalid plugin path operation", func() {
+			oscCopy := osc.DeepCopy()
+			oscCopy.Spec.CRIConfig.Containerd.Plugins = []extensionsv1alpha1.PluginConfig{
+				{
+					Op:   ptr.To[extensionsv1alpha1.PluginPathOperation]("invalid-op"),
+					Path: []string{"foo"},
+				},
+			}
+
+			Expect(ValidateOperatingSystemConfig(oscCopy)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("spec.criConfig.containerd.plugins[0].op"),
+			}))))
+		})
+
+		It("should allow OperatingSystemConfig with an valid plugin path operation", func() {
+			for _, op := range []extensionsv1alpha1.PluginPathOperation{"add", "remove"} {
+				oscCopy := osc.DeepCopy()
+				oscCopy.Spec.CRIConfig.Containerd.Plugins = []extensionsv1alpha1.PluginConfig{
+					{
+						Op:   ptr.To(op),
+						Path: []string{"foo"},
+					},
+				}
+
+				Expect(ValidateOperatingSystemConfig(oscCopy)).To(BeEmpty(), op+" should be configurable")
+			}
+		})
+
 		It("should forbid OperatingSystemConfig with an empty plugin path", func() {
 			oscCopy := osc.DeepCopy()
 			oscCopy.Spec.CRIConfig.Containerd.Plugins = []extensionsv1alpha1.PluginConfig{

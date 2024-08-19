@@ -88,6 +88,11 @@ spec:
                           description: PluginConfig contains configuration values
                             for the containerd plugins section.
                           properties:
+                            op:
+                              description: Op is the operation for the given path.
+                                Possible values are 'add' and 'remove', defaults to
+                                'add'.
+                              type: string
                             path:
                               description: Path is a list of elements that construct
                                 the path in the plugins section.
@@ -99,7 +104,7 @@ spec:
                                 Values are the values configured at the given path. If defined, it is expected as json format:
                                 - A given json object will be put to the given path.
                                 - An empty json object deletes the entire subtree, including the table entry at the given path.
-                                - An empty value results in only the table entry to be created.
+                                - If not configured, only the table entry to be created.
                               x-kubernetes-preserve-unknown-fields: true
                           required:
                           - path

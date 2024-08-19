@@ -264,14 +264,27 @@ type ContainerdConfig struct {
 	Plugins []PluginConfig `json:"plugins,omitempty"`
 }
 
+// PluginPathOperation is a type alias for operations at containerd's plugin configuration.
+type PluginPathOperation string
+
+const (
+	// AddPluginPathOperation is the name of the 'add' operation.
+	AddPluginPathOperation PluginPathOperation = "add"
+	// RemovePluginPathOperation is the name of the 'remove' operation.
+	RemovePluginPathOperation PluginPathOperation = "remove"
+)
+
 // PluginConfig contains configuration values for the containerd plugins section.
 type PluginConfig struct {
+	// Op is the operation for the given path. Possible values are 'add' and 'remove', defaults to 'add'.
+	// +optional
+	Op *PluginPathOperation `json:"op,omitempty"`
 	// Path is a list of elements that construct the path in the plugins section.
 	Path []string `json:"path"`
 	// Values are the values configured at the given path. If defined, it is expected as json format:
 	// - A given json object will be put to the given path.
 	// - An empty json object deletes the entire subtree, including the table entry at the given path.
-	// - An empty value results in only the table entry to be created.
+	// - If not configured, only the table entry to be created.
 	// +optional
 	Values *apiextensionsv1.JSON `json:"values,omitempty"`
 }

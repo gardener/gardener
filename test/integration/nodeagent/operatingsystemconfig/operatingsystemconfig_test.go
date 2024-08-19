@@ -683,8 +683,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 
 		By("Update Operating System Config")
 		operatingSystemConfig.Spec.CRIConfig.Containerd.Plugins = append(operatingSystemConfig.Spec.CRIConfig.Containerd.Plugins, extensionsv1alpha1.PluginConfig{
-			Path:   []string{"foo"},
-			Values: &apiextensionsv1.JSON{Raw: []byte("{}")},
+			Path: []string{"foo"},
+			Op:   ptr.To[extensionsv1alpha1.PluginPathOperation]("remove"),
 		})
 
 		var err error
