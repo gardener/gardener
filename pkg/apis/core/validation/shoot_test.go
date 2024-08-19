@@ -1851,6 +1851,19 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Entry("should add error if issuerURL is set but clientID is nil", 1, nil),
 					Entry("should add error if issuerURL is set but clientID is empty string ", 2, ptr.To("")),
 				)
+
+				It("should forbid setting clinetAuthentication from kubernetes version 1.31", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientAuthentication = &core.OpenIDConnectClientAuthentication{}
+					shoot.Spec.Kubernetes.Version = "1.31"
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(HaveLen(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.clientAuthentication"),
+					}))
+				})
 			})
 
 			Context("admission plugin validation", func() {

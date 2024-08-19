@@ -678,9 +678,9 @@ type OIDCConfig struct {
 	// If set, the OpenID server's certificate will be verified by one of the authorities in the oidc-ca-file, otherwise the host's root CA set will be used.
 	CABundle *string
 	// ClientAuthentication can optionally contain client configuration used for kubeconfig generation.
-	// Deprecated: This field has no implemented use.
+	// Deprecated: This field has no implemented use and will be forbidden starting from Kubernetes 1.31.
 	// It's use was planned for genereting OIDC kubeconfig https://github.com/gardener/gardener/issues/1433
-	// TODO(AleksandarSavchev): Drop this field after v1.102 has been released.
+	// TODO(AleksandarSavchev): Drop this field after support for Kubernetes 1.30 is dropped.
 	ClientAuthentication *OpenIDConnectClientAuthentication
 	// The client ID for the OpenID Connect client, must be set if oidc-issuer-url is set.
 	ClientID *string

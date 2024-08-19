@@ -1295,6 +1295,11 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 				allErrs = append(allErrs, field.Invalid(oidcPath.Child("caBundle"), *oidc.CABundle, "caBundle is not a valid PEM-encoded certificate"))
 			}
 		}
+		// TODO(AleksandarSavchev): Remove this check as soon as v1.31 is the least supported Kubernetes version in Gardener.
+		k8sGreaterEqual131, _ := versionutils.CheckVersionMeetsConstraint(version, ">= 1.31")
+		if oidc.ClientAuthentication != nil && k8sGreaterEqual131 {
+			allErrs = append(allErrs, field.Invalid(oidcPath.Child("clientAuthentication"), *oidc.ClientAuthentication, "for Kubernetes versions >= 1.31, clientAuthentication field is no longer supported"))
+		}
 		if oidc.GroupsClaim != nil && len(*oidc.GroupsClaim) == 0 {
 			allErrs = append(allErrs, field.Invalid(oidcPath.Child("groupsClaim"), *oidc.GroupsClaim, "groupsClaim cannot be empty when key is provided"))
 		}
