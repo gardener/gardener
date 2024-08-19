@@ -143,8 +143,8 @@ var _ = Describe("buildRef", func() {
 			&gardencorev1.OCIRepository{Repository: ptr.To("oci://example.com/foo"), Tag: ptr.To("1.0.0"), Digest: ptr.To(digest)},
 			mustNewDigest("example.com/foo@"+digest),
 		),
-		Entry("replace registry and configure insecure in local setup",
-			&gardencorev1.OCIRepository{Ref: ptr.To("localhost:5001/foo:1.0.0")},
+		Entry("configure insecure in local setup when using garden.local.gardener.cloud",
+			&gardencorev1.OCIRepository{Ref: ptr.To("garden.local.gardener.cloud:5001/foo:1.0.0")},
 			name.MustParseReference("garden.local.gardener.cloud:5001/foo:1.0.0", name.Insecure),
 		),
 	)

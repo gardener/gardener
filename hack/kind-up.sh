@@ -58,11 +58,11 @@ check_local_dns_records() {
   glgc_ip_address=""
 
   if [[ "$OSTYPE" == "darwin"* ]]; then
-    if dscacheutil -q host -a name garden.local.gardener.cloud | grep -q "ip_address"; then
-        glgc_ip_address=$(dscacheutil -q host -a name garden.local.gardener.cloud | grep "ip_address" | head -n 1| cut -d' ' -f2)
-    fi
+    # Suppress exit code using "|| true"
+    glgc_ip_address=$(dscacheutil -q host -a name garden.local.gardener.cloud | grep "ip_address" | head -n 1| cut -d' ' -f2 || true)
   elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-    glgc_ip_address=$(getent hosts garden.local.gardener.cloud | cut -d' ' -f1)
+    # Suppress exit code using "|| true"
+    glgc_ip_address="$(getent hosts garden.local.gardener.cloud | cut -d' ' -f1 || true)"
   else
     echo "Warning: Unknown OS. Make sure garden.local.gardener.cloud resolves to 127.0.0.1"
     return 0
