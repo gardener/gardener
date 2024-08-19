@@ -5995,7 +5995,7 @@ func schema_pkg_apis_core_v1beta1_OIDCConfig(ref common.ReferenceCallback) commo
 					},
 					"clientAuthentication": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ClientAuthentication can optionally contain client configuration used for kubeconfig generation. Deprecated: This field has no implemented use. It's use was planned for genereting OIDC kubeconfig https://github.com/gardener/gardener/issues/1433",
+							Description: "ClientAuthentication can optionally contain client configuration used for kubeconfig generation. Deprecated: This field has no implemented use and will be forbidden starting from Kubernetes 1.31. It's use was planned for genereting OIDC kubeconfig https://github.com/gardener/gardener/issues/1433",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.OpenIDConnectClientAuthentication"),
 						},
 					},
@@ -11599,7 +11599,7 @@ func schema_pkg_apis_settings_v1alpha1_ClusterOpenIDConnectPresetSpec(ref common
 					},
 					"client": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Client contains the configuration used for client OIDC authentication of Shoot clusters. This configuration is not overwriting any existing OpenID Connect client authentication already set on the Shoot object. Deprecated: The OpenID Connect configuration this field specifies is not used. It's use was planned for genereting OIDC kubeconfig https://github.com/gardener/gardener/issues/1433",
+							Description: "Client contains the configuration used for client OIDC authentication of Shoot clusters. This configuration is not overwriting any existing OpenID Connect client authentication already set on the Shoot object. Deprecated: The OpenID Connect configuration this field specifies is not used and will be forbidden starting from Kubernetes 1.31. It's use was planned for genereting OIDC kubeconfig https://github.com/gardener/gardener/issues/1433",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/settings/v1alpha1.OpenIDConnectClientAuthentication"),
 						},
 					},
@@ -11875,7 +11875,7 @@ func schema_pkg_apis_settings_v1alpha1_OpenIDConnectPresetSpec(ref common.Refere
 					},
 					"client": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Client contains the configuration used for client OIDC authentication of Shoot clusters. This configuration is not overwriting any existing OpenID Connect client authentication already set on the Shoot object. Deprecated: The OpenID Connect configuration this field specifies is not used. It's use was planned for genereting OIDC kubeconfig https://github.com/gardener/gardener/issues/1433",
+							Description: "Client contains the configuration used for client OIDC authentication of Shoot clusters. This configuration is not overwriting any existing OpenID Connect client authentication already set on the Shoot object. Deprecated: The OpenID Connect configuration this field specifies is not used and will be forbidden starting from Kubernetes 1.31. It's use was planned for genereting OIDC kubeconfig https://github.com/gardener/gardener/issues/1433",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/settings/v1alpha1.OpenIDConnectClientAuthentication"),
 						},
 					},

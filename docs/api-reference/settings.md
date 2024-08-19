@@ -202,9 +202,9 @@ OpenIDConnectClientAuthentication
 of Shoot clusters.
 This configuration is not overwriting any existing OpenID Connect
 client authentication already set on the Shoot object.
-Deprecated: The OpenID Connect configuration this field specifies is not used.
+Deprecated: The OpenID Connect configuration this field specifies is not used and will be forbidden starting from Kubernetes 1.31.
 It&rsquo;s use was planned for genereting OIDC kubeconfig <a href="https://github.com/gardener/gardener/issues/1433">https://github.com/gardener/gardener/issues/1433</a>
-TODO(AleksandarSavchev): Drop this field after v1.102 has been released.</p>
+TODO(AleksandarSavchev): Drop this field after support for Kubernetes 1.30 is dropped.</p>
 </td>
 </tr>
 <tr>
@@ -519,9 +519,9 @@ OpenIDConnectClientAuthentication
 of Shoot clusters.
 This configuration is not overwriting any existing OpenID Connect
 client authentication already set on the Shoot object.
-Deprecated: The OpenID Connect configuration this field specifies is not used.
+Deprecated: The OpenID Connect configuration this field specifies is not used and will be forbidden starting from Kubernetes 1.31.
 It&rsquo;s use was planned for genereting OIDC kubeconfig <a href="https://github.com/gardener/gardener/issues/1433">https://github.com/gardener/gardener/issues/1433</a>
-TODO(AleksandarSavchev): Drop this field after v1.102 has been released.</p>
+TODO(AleksandarSavchev): Drop this field after support for Kubernetes 1.30 is dropped.</p>
 </td>
 </tr>
 <tr>
