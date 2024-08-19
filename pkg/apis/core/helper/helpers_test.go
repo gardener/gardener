@@ -482,31 +482,30 @@ var _ = Describe("helper", func() {
 		}, &corev1.ObjectReference{Name: "foo"})
 	})
 
-	Describe("GetShootAuthenticationConfigurationConfigMapName", func() {
-		test := func(description string, config *core.KubeAPIServerConfig, expectedName string) {
-			It(description, Offset(1), func() {
-				Expect(GetShootAuthenticationConfigurationConfigMapName(config)).To(Equal(expectedName))
-			})
-		}
+	DescribeTable("#GetShootAuthenticationConfigurationConfigMapName",
+		func(kubeAPIServerConfig *core.KubeAPIServerConfig, expectedName string) {
+			authConfigName := GetShootAuthenticationConfigurationConfigMapName(kubeAPIServerConfig)
+			Expect(authConfigName).To(Equal(expectedName))
+		},
 
-		test("KubeAPIServerConfig = nil", nil, "")
-		test("Authentication = nil", &core.KubeAPIServerConfig{}, "")
-		test("Structured = nil", &core.KubeAPIServerConfig{
+		Entry("KubeAPIServerConfig = nil", nil, ""),
+		Entry("Authentication = nil", &core.KubeAPIServerConfig{}, ""),
+		Entry("Structured = nil", &core.KubeAPIServerConfig{
 			Authentication: &core.Authentication{},
-		}, "")
-		test("ConfigMapName not set", &core.KubeAPIServerConfig{
+		}, ""),
+		Entry("ConfigMapName not set", &core.KubeAPIServerConfig{
 			Authentication: &core.Authentication{
 				Structured: &core.StructuredAuthentication{},
 			},
-		}, "")
-		test("ConfigMapName set", &core.KubeAPIServerConfig{
+		}, ""),
+		Entry("ConfigMapName set", &core.KubeAPIServerConfig{
 			Authentication: &core.Authentication{
 				Structured: &core.StructuredAuthentication{
 					ConfigMapName: "foo",
 				},
 			},
-		}, "foo")
-	})
+		}, "foo"),
+	)
 
 	DescribeTable("#HibernationIsEnabled",
 		func(shoot *core.Shoot, hibernated bool) {

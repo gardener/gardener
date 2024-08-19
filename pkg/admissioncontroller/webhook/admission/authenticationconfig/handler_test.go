@@ -289,21 +289,21 @@ jwt:
 
 		Context("Deny", func() {
 			It("references a configmap that does not exist", func() {
-				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: shootNamespace, Name: cmName}, &corev1.ConfigMap{}).DoAndReturn(func(_ context.Context, _ client.ObjectKey, _ *corev1.ConfigMap, _ ...client.GetOption) error {
+				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: shootNamespace, Name: cmName}, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, _ *corev1.ConfigMap, _ ...client.GetOption) error {
 					return apierrors.NewNotFound(schema.GroupResource{Resource: "configmaps"}, cmName)
 				})
-				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInvalid, "referenced authentication configuration does not exist", "")
+				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInvalid, "could not retrieve configmap: configmaps \"fake-cm-name\" not found", "")
 			})
 
 			It("fails getting cm", func() {
-				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: shootNamespace, Name: cmName}, &corev1.ConfigMap{}).DoAndReturn(func(_ context.Context, _ client.ObjectKey, _ *corev1.ConfigMap, _ ...client.GetOption) error {
+				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: shootNamespace, Name: cmName}, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, _ *corev1.ConfigMap, _ ...client.GetOption) error {
 					return errors.New("fake")
 				})
-				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInternalError, "could not retrieve config map: fake", "")
+				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInternalError, "could not retrieve configmap: fake", "")
 			})
 
 			It("references configmap without a config.yaml key", func() {
-				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: shootNamespace, Name: cmName}, &corev1.ConfigMap{}).DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
+				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: shootNamespace, Name: cmName}, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
 					*cm = corev1.ConfigMap{
 						Data: nil,
 					}

@@ -17,8 +17,8 @@ import (
 var _ = Describe("Authentication", func() {
 	Describe("#ComputeAuthenticationConfigRawConfig", func() {
 		DescribeTable("should compute correct AuthenticationConfiguration",
-			func(OIDC *gardencorev1beta1.OIDCConfig, exptectedResult string, errorMatcher gomegatypes.GomegaMatcher) {
-				res, err := ComputeAuthenticationConfigRawConfig(OIDC)
+			func(oidc *gardencorev1beta1.OIDCConfig, exptectedResult string, errorMatcher gomegatypes.GomegaMatcher) {
+				res, err := ComputeAuthenticationConfigRawConfig(oidc)
 
 				Expect(err).To(errorMatcher)
 				Expect(res).To(Equal(exptectedResult))

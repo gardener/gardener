@@ -15,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -95,7 +96,12 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 		return admissionwebhook.Allowed("shoot is already marked for deletion")
 	}
 
-	var oldAuthenticationConfigurationCmName, newAuthenticationConfigurationCmName, oldShootKubernetesVersion, newShootKubernetesVersion string
+	var (
+		oldAuthenticationConfigurationCmName string
+		newAuthenticationConfigurationCmName string
+		oldShootKubernetesVersion            string
+		newShootKubernetesVersion            string
+	)
 
 	if request.Operation == admissionv1.Update {
 		oldShoot := &gardencore.Shoot{}
@@ -126,17 +132,17 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 		return admissionwebhook.Allowed("authentication configuration configmap was not changed")
 	}
 
-	authenticationConfigurationCm := &corev1.ConfigMap{}
-	if err := h.APIReader.Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: newAuthenticationConfigurationCmName}, authenticationConfigurationCm); err != nil {
+	authenticationConfigurationCm := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: shoot.Namespace, Name: newAuthenticationConfigurationCmName}}
+	if err := h.APIReader.Get(ctx, client.ObjectKeyFromObject(authenticationConfigurationCm), authenticationConfigurationCm); err != nil {
+		status := http.StatusInternalServerError
 		if apierrors.IsNotFound(err) {
-			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("referenced authentication configuration does not exist: namespace: %s, name: %s", shoot.Namespace, newAuthenticationConfigurationCmName))
+			status = http.StatusUnprocessableEntity
 		}
-		return admission.Errored(http.StatusInternalServerError, fmt.Errorf("could not retrieve config map: %s", err))
+		return admission.Errored(int32(status), fmt.Errorf("could not retrieve configmap: %w", err))
 	}
-
 	authenticationConfiguration, err := getAuthenticationConfiguration(authenticationConfigurationCm)
 	if err != nil {
-		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("error getting authentication configuration from ConfigMap %s/%s: %w", shoot.Namespace, newAuthenticationConfigurationCmName, err))
+		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("error getting authentication configuration from configmap %s: %w", client.ObjectKeyFromObject(authenticationConfigurationCm), err))
 	}
 
 	if errCode, err := validateAuthenticaionConfigurationSemantics(authenticationConfiguration); err != nil {

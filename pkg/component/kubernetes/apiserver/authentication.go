@@ -66,7 +66,7 @@ func (k *kubeAPIServer) reconcileConfigMapAuthenticationConfig(ctx context.Conte
 }
 
 // ComputeAuthenticationConfigRawConfig computes a AuthenticationConfiguration from oidcConfiguration.
-func ComputeAuthenticationConfigRawConfig(OIDC *gardencorev1beta1.OIDCConfig) (string, error) {
+func ComputeAuthenticationConfigRawConfig(oidc *gardencorev1beta1.OIDCConfig) (string, error) {
 	authenticationConfiguration := &apiserverv1alpha1.AuthenticationConfiguration{
 		TypeMeta: metav1.TypeMeta{
 			// TODO(AleksandarSavchev): use v1beta1 when kubernetes packages are updated to version >= v1.30
@@ -75,26 +75,26 @@ func ComputeAuthenticationConfigRawConfig(OIDC *gardencorev1beta1.OIDCConfig) (s
 		},
 		JWT: []apiserverv1alpha1.JWTAuthenticator{{}},
 	}
-	if v := OIDC.CABundle; v != nil {
+	if v := oidc.CABundle; v != nil {
 		authenticationConfiguration.JWT[0].Issuer.CertificateAuthority = *v
 	}
 
-	if v := OIDC.IssuerURL; v != nil {
+	if v := oidc.IssuerURL; v != nil {
 		authenticationConfiguration.JWT[0].Issuer.URL = *v
 	}
 
-	if v := OIDC.ClientID; v != nil {
+	if v := oidc.ClientID; v != nil {
 		authenticationConfiguration.JWT[0].Issuer.Audiences = append(authenticationConfiguration.JWT[0].Issuer.Audiences, *v)
 	}
 
-	if v := OIDC.UsernameClaim; v != nil {
+	if v := oidc.UsernameClaim; v != nil {
 		authenticationConfiguration.JWT[0].ClaimMappings.Username.Claim = *v
 	} else {
 		authenticationConfiguration.JWT[0].ClaimMappings.Username.Claim = "sub"
 	}
 
 	usernamePrefix := ""
-	if v := OIDC.UsernamePrefix; v != nil {
+	if v := oidc.UsernamePrefix; v != nil {
 		usernamePrefix = *v
 	}
 
@@ -109,16 +109,16 @@ func ComputeAuthenticationConfigRawConfig(OIDC *gardencorev1beta1.OIDCConfig) (s
 		authenticationConfiguration.JWT[0].ClaimMappings.Username.Prefix = ptr.To(usernamePrefix)
 	}
 
-	if v := OIDC.GroupsClaim; v != nil {
+	if v := oidc.GroupsClaim; v != nil {
 		authenticationConfiguration.JWT[0].ClaimMappings.Groups.Claim = *v
-		if v := OIDC.GroupsPrefix; v != nil {
+		if v := oidc.GroupsPrefix; v != nil {
 			authenticationConfiguration.JWT[0].ClaimMappings.Groups.Prefix = v
 		} else {
 			authenticationConfiguration.JWT[0].ClaimMappings.Groups.Prefix = ptr.To("")
 		}
 	}
 
-	for key, value := range OIDC.RequiredClaims {
+	for key, value := range oidc.RequiredClaims {
 		claimValidationRule := apiserverv1alpha1.ClaimValidationRule{
 			Claim:         key,
 			RequiredValue: value,
