@@ -21,13 +21,10 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
-	extensioncontroller "github.com/gardener/gardener/pkg/operator/controller/extension"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	. "github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -177,7 +174,6 @@ func defaultGarden(backupSecret, certManagementRootCA *corev1.Secret) *operatorv
 }
 
 func waitForGardenToBeReconciled(ctx context.Context, garden *operatorv1alpha1.Garden) {
-	toggleProviderLocalAdmission(ctx, true)
 	CEventually(ctx, func(g Gomega) gardencorev1beta1.LastOperationState {
 		g.Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
 		if garden.Status.LastOperation == nil {
@@ -188,7 +184,6 @@ func waitForGardenToBeReconciled(ctx context.Context, garden *operatorv1alpha1.G
 }
 
 func waitForGardenToBeDeleted(ctx context.Context, garden *operatorv1alpha1.Garden) {
-	toggleProviderLocalAdmission(ctx, false)
 	CEventually(ctx, func() error {
 		return runtimeClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)
 	}).WithPolling(2 * time.Second).Should(BeNotFoundError())
@@ -212,32 +207,4 @@ func cleanupVolumes(ctx context.Context) {
 
 		return true
 	}).WithPolling(2 * time.Second).Should(BeTrue())
-}
-
-func toggleProviderLocalAdmission(ctx context.Context, enable bool) {
-	obj := &operatorv1alpha1.Extension{}
-	Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: "provider-local"}, obj)).To(Succeed())
-	if (obj.Annotations[extensioncontroller.AnnotationKeyDisableAdmission] == "true") == enable {
-		patch := client.MergeFrom(obj.DeepCopyObject().(client.Object))
-		annotations := obj.GetAnnotations()
-		if enable {
-			delete(annotations, extensioncontroller.AnnotationKeyDisableAdmission)
-		} else {
-			if annotations == nil {
-				annotations = map[string]string{}
-			}
-			annotations[extensioncontroller.AnnotationKeyDisableAdmission] = "true"
-		}
-		obj.SetAnnotations(annotations)
-		Expect(runtimeClient.Patch(ctx, obj, patch)).To(Succeed())
-	}
-
-	if !enable {
-		// wait for managed resources to be deleted
-		CEventually(ctx, func(g Gomega) {
-			managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
-			g.Expect(runtimeClient.List(ctx, managedResourceList, client.InNamespace(namespace), client.MatchingLabels{managedresources.LabelKeyOrigin: managedresources.LabelValueOperator})).To(Succeed())
-			g.Expect(managedResourceList.Items).To(BeEmpty())
-		}).WithTimeout(2 * time.Minute).WithPolling(2 * time.Second).Should(Succeed())
-	}
 }

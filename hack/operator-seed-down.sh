@@ -44,8 +44,8 @@ kubectl --kubeconfig "$PATH_KIND_KUBECONFIG" delete ns \
   seed-local \
   --ignore-not-found
 
-# disable provider-local admission controller
-kubectl --kubeconfig "$PATH_KIND_KUBECONFIG" annotate extensions.operator.gardener.cloud provider-local operator.gardener.cloud/disable-admission=true
+# delete provider-local extension
+kubectl --kubeconfig "$PATH_KIND_KUBECONFIG" delete extensions.operator.gardener.cloud provider-local
 # cleanup garden
 kubectl --kubeconfig "$PATH_KIND_KUBECONFIG" annotate garden local confirmation.gardener.cloud/deletion=true
 skaffold -f=skaffold-operator-garden.yaml --kubeconfig "$PATH_KIND_KUBECONFIG" delete -m garden
