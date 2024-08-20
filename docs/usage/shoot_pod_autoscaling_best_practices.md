@@ -200,7 +200,7 @@ There are a few more configurable options of lesser interest:
 There are many more options that you can only configure if you deploy your own VPA and which we will not discuss here, but you can check them out [here](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/FAQ.md#what-are-the-parameters-to-vpa-recommender).
 
 > [!NOTE]
-> Due to an implementation detail (smallest bucket size), VPA cannot create recommendations below [10m cores](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/pkg/recommender/model/aggregations_config.go#L89-L99) and [10M memory](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/pkg/recommender/model/aggregations_config.go#L101-L111) even if `minAllowed` is lower.
+> Due to an implementation detail (smallest bucket size), VPA cannot create recommendations below [10m cores](https://github.com/kubernetes/autoscaler/blob/1f89ff92cf87dd3700f74f9b387ae4846aa51846/vertical-pod-autoscaler/pkg/recommender/model/aggregations_config.go#L89-L99) and [10M memory](https://github.com/kubernetes/autoscaler/blob/1f89ff92cf87dd3700f74f9b387ae4846aa51846/vertical-pod-autoscaler/pkg/recommender/model/aggregations_config.go#L101-L111) even if `minAllowed` is lower.
 
 ### VPA Updater Options
 
