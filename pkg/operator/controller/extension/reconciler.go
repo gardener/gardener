@@ -156,7 +156,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, virtualClus
 	}
 
 	log.Info("Reconciling extension virtual resources")
-	if err := r.reconcileVirtualClusterResources(ctx, log, virtualClusterClientSet.Client(), extension); err != nil {
+	if err := r.reconcileExtensionVirtualClusterResources(ctx, log, virtualClusterClientSet.Client(), extension); err != nil {
 		conditions.virtualClusterReconciled = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.virtualClusterReconciled, gardencorev1beta1.ConditionFalse, ConditionReconcileFailed, err.Error())
 		return errors.Join(err, r.updateExtensionStatus(ctx, log, extension, conditions))
 	}
@@ -180,7 +180,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, virtualClus
 func (r *Reconciler) delete(ctx context.Context, log logr.Logger, virtualClusterClient client.Client, extension *operatorv1alpha1.Extension) error {
 	conditions := NewConditions(r.Clock, extension.Status)
 
-	if err := r.deleteVirtualClusterDeploymentResources(ctx, log, virtualClusterClient, extension); err != nil {
+	if err := r.deleteExtensionVirtualClusterResources(ctx, log, virtualClusterClient, extension); err != nil {
 		conditions.virtualClusterReconciled = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.virtualClusterReconciled, gardencorev1beta1.ConditionFalse, ConditionDeleteFailed, err.Error())
 		return errors.Join(err, r.updateExtensionStatus(ctx, log, extension, conditions))
 	}

@@ -30,12 +30,12 @@ func virtualClusterAdmissionManagedResourceName(extension *operatorv1alpha1.Exte
 	return fmt.Sprintf("extension-admission-virtual-%s", extension.Name)
 }
 
-func (r *Reconciler) reconcileVirtualClusterResources(ctx context.Context, log logr.Logger, virtualClusterClient client.Client, extension *operatorv1alpha1.Extension) error {
+func (r *Reconciler) reconcileExtensionVirtualClusterResources(ctx context.Context, log logr.Logger, virtualClusterClient client.Client, extension *operatorv1alpha1.Extension) error {
 	// return early if we do not have to make a deployment
 	if extension.Spec.Deployment == nil ||
 		extension.Spec.Deployment.ExtensionDeployment == nil ||
 		extension.Spec.Deployment.ExtensionDeployment.Helm == nil {
-		return r.deleteVirtualClusterDeploymentResources(ctx, log, virtualClusterClient, extension)
+		return r.deleteExtensionVirtualClusterResources(ctx, log, virtualClusterClient, extension)
 	}
 
 	if err := r.reconcileControllerDeployment(ctx, virtualClusterClient, extension); err != nil {
@@ -101,7 +101,7 @@ func (r *Reconciler) reconcileControllerRegistration(ctx context.Context, virtua
 	return err
 }
 
-func (r *Reconciler) deleteVirtualClusterDeploymentResources(ctx context.Context, log logr.Logger, virtualClusterClient client.Client, extension *operatorv1alpha1.Extension) error {
+func (r *Reconciler) deleteExtensionVirtualClusterResources(ctx context.Context, log logr.Logger, virtualClusterClient client.Client, extension *operatorv1alpha1.Extension) error {
 	log.Info("Deleting extension virtual resources")
 	var (
 		controllerDeployment = &gardencorev1.ControllerDeployment{
@@ -136,7 +136,6 @@ func (r *Reconciler) deleteVirtualClusterDeploymentResources(ctx context.Context
 }
 
 func (r *Reconciler) reconcileAdmissionVirtualClusterResources(ctx context.Context, log logr.Logger, virtualClusterClientSet kubernetes.Interface, extension *operatorv1alpha1.Extension) error {
-	// return early if we do not have to make a deployment
 	if extension.Spec.Deployment == nil ||
 		extension.Spec.Deployment.AdmissionDeployment == nil ||
 		extension.Spec.Deployment.AdmissionDeployment.VirtualCluster == nil ||
@@ -183,8 +182,10 @@ func (r *Reconciler) reconcileAdmissionVirtualClusterResources(ctx context.Conte
 }
 
 func (r *Reconciler) deleteAdmissionVirtualClusterResources(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension) error {
-	log.Info("Deleting admission ManagedResource for virtual cluster")
-	if err := managedresources.DeleteForShoot(ctx, r.RuntimeClientSet.Client(), r.GardenNamespace, virtualClusterAdmissionManagedResourceName(extension)); err != nil {
+	managedResourceName := virtualClusterAdmissionManagedResourceName(extension)
+
+	log.Info("Deleting admission ManagedResource for virtual cluster", "managedResource", client.ObjectKey{Name: managedResourceName, Namespace: r.GardenNamespace})
+	if err := managedresources.DeleteForShoot(ctx, r.RuntimeClientSet.Client(), r.GardenNamespace, managedResourceName); err != nil {
 		return fmt.Errorf("failed deleting ManagedResource: %w", err)
 	}
 

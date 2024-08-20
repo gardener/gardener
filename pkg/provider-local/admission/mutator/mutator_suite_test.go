@@ -13,5 +13,5 @@ import (
 
 func TestMutator(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Shoot Mutator Suite")
+	RunSpecs(t, "Provider-Local Admission Mutator Suite")
 }

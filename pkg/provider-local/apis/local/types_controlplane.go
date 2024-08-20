@@ -12,7 +12,7 @@ import (
 
 // ControlPlaneConfig contains configuration settings for the control plane.
 type ControlPlaneConfig struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta
 
 	// TestValue contains a value injected by the admission webhook for testing purpose only.
 	TestValue *string

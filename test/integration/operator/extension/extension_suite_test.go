@@ -46,7 +46,7 @@ func TestExtension(t *testing.T) {
 	RunSpecs(t, "Test Integration Operator Extension Suite")
 }
 
-const testID = "garden-extension-test"
+const testID = "extension-test"
 
 var (
 	ctx = context.Background()

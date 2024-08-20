@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
@@ -25,7 +26,6 @@ func runtimeClusterAdmissionManagedResourceName(extension *operatorv1alpha1.Exte
 }
 
 func (r *Reconciler) reconcileAdmissionRuntimeClusterResources(ctx context.Context, log logr.Logger, genericTokenKubeconfigSecretName string, extension *operatorv1alpha1.Extension) error {
-	// return early if we do not have to make a deployment
 	if extension.Spec.Deployment == nil ||
 		extension.Spec.Deployment.AdmissionDeployment == nil ||
 		extension.Spec.Deployment.AdmissionDeployment.RuntimeCluster == nil ||
@@ -86,8 +86,10 @@ func (r *Reconciler) reconcileAdmissionRuntimeClusterResources(ctx context.Conte
 }
 
 func (r *Reconciler) deleteAdmissionRuntimeClusterResources(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension) error {
-	log.Info("Deleting admission ManagedResource for runtime cluster")
-	if err := managedresources.DeleteForSeed(ctx, r.RuntimeClientSet.Client(), r.GardenNamespace, runtimeClusterAdmissionManagedResourceName(extension)); err != nil {
+	managedResourceName := runtimeClusterAdmissionManagedResourceName(extension)
+
+	log.Info("Deleting admission ManagedResource for runtime cluster if present", "managedResource", client.ObjectKey{Name: managedResourceName, Namespace: r.GardenNamespace})
+	if err := managedresources.DeleteForSeed(ctx, r.RuntimeClientSet.Client(), r.GardenNamespace, managedResourceName); err != nil {
 		return fmt.Errorf("failed deleting ManagedResource: %w", err)
 	}
 
@@ -95,6 +97,8 @@ func (r *Reconciler) deleteAdmissionRuntimeClusterResources(ctx context.Context,
 		return fmt.Errorf("failed waiting for ManagedResource to be deleted: %w", err)
 	}
 
-	log.Info("Deleting admission access secret for virtual cluster")
-	return kubernetesutils.DeleteObjects(ctx, r.RuntimeClientSet.Client(), r.getVirtualClusterAccessSecret(extension).Secret)
+	accessSecret := r.getVirtualClusterAccessSecret(extension).Secret
+
+	log.Info("Deleting admission access secret for virtual cluster", "secret", client.ObjectKeyFromObject(accessSecret))
+	return kubernetesutils.DeleteObjects(ctx, r.RuntimeClientSet.Client(), accessSecret)
 }

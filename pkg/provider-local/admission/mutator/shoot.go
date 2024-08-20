@@ -18,7 +18,7 @@ import (
 
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1"
+	localv1alpha1 "github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1"
 )
 
 // NewShootMutator returns a new instance of a shoot mutator.
@@ -58,9 +58,9 @@ func (s *shoot) Mutate(_ context.Context, newObj, oldObj client.Object) error {
 	}
 
 	shoot.Spec.Provider.ControlPlaneConfig = &runtime.RawExtension{
-		Object: &v1alpha1.ControlPlaneConfig{
+		Object: &localv1alpha1.ControlPlaneConfig{
 			TypeMeta: metav1.TypeMeta{
-				APIVersion: v1alpha1.SchemeGroupVersion.String(),
+				APIVersion: localv1alpha1.SchemeGroupVersion.String(),
 				Kind:       "ControlPlaneConfig",
 			},
 			TestValue: ptr.To("filled-by-admission-webhook"),
