@@ -341,7 +341,11 @@ func (r *Reconciler) deleteBackupEntry(
 			},
 		}
 
-		if err := r.SeedClient.Get(seedCtx, client.ObjectKeyFromObject(extensionBackupEntry), extensionBackupEntry); err == nil {
+		if err := r.SeedClient.Get(seedCtx, client.ObjectKeyFromObject(extensionBackupEntry), extensionBackupEntry); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return reconcile.Result{}, err
+			}
+		} else if err == nil {
 			if lastError := extensionBackupEntry.Status.LastError; lastError != nil {
 				r.Recorder.Event(backupEntry, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, lastError.Description)
 
@@ -352,8 +356,6 @@ func (r *Reconciler) deleteBackupEntry(
 			}
 			log.Info("Extension BackupEntry not yet deleted", "extensionBackupEntry", client.ObjectKeyFromObject(extensionBackupEntry))
 			return reconcile.Result{RequeueAfter: RequeueDurationWhenResourceDeletionStillPresent}, nil
-		} else if !apierrors.IsNotFound(err) {
-			return reconcile.Result{}, err
 		}
 
 		if err := client.IgnoreNotFound(r.SeedClient.Delete(seedCtx, extensionSecret)); err != nil {
