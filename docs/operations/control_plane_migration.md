@@ -10,7 +10,7 @@ The `Seed`s involved in the control plane migration must have backups enabled - 
 
 ## Shoot Control Plane Migration
 
-Triggering the migration is done by changing the `Shoot`'s `.spec.seedName` to a `Seed` that differs from the `.status.seedName`, we call this `Seed` a `"Destination Seed"`. This action can only be performed by an operator with the necessary RBAC. If the `Destination Seed` does not have a backup and restore configuration, the change to `spec.seedName` is rejected. Additionally, this Seed must not be set for deletion and must be healthy.
+Triggering the migration is done by changing the `Shoot`'s `.spec.seedName` to a `Seed` that differs from the `.status.seedName`, we call this `Seed` a `"Destination Seed"`. This action can only be performed by an operator (see [Triggering the Migration](#triggering-the-migration)). If the `Destination Seed` does not have a backup and restore configuration, the change to `spec.seedName` is rejected. Additionally, this Seed must not be set for deletion and must be healthy.
 
 If the `Shoot` has different `.spec.seedName` and `.status.seedName`, a process is started to prepare the Control Plane for migration:
 
@@ -35,7 +35,7 @@ kubectl get --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoo
 ```
 
 
-> [!NOTE]
+> [!IMPORTANT]
 > When migrating `Shoot`s to a `Destination Seed` with different provider type from the `Source Seed`, make sure of the following:
 >
 > Pods running in the `Destination Seed` must have network connectivity to the backup storage provider of the `Source Seed` so that etcd backups can be copied successfully. Otherwise, the `Restore` operation will get stuck at the `Waiting until etcd backups are copied` step. However, if you do end up in this case, you can still finish the control plane migration by following the [guide to manually copy etcd backups](#copying-etcd-backups-manually-during-the-restore-operation).
@@ -45,7 +45,7 @@ kubectl get --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoo
 
 ## Copying ETCD Backups Manually During the `Restore` Operation
 
-Following is a workaround that can be used to copy etcd backups manually in situations where a `Shoot`'s control plane has been moved to a `Destination Seed` and the pods running in it lack network connectivity to the `Source Seed`s storage provider:
+Following is a workaround that can be used to copy etcd backups manually in situations where a `Shoot`'s control plane has been moved to a `Destination Seed` and the pods running in it lack network connectivity to the `Source Seed`'s storage provider:
 
 1. Follow the instructions in the [`etcd-backup-restore` getting started documentation](https://github.com/gardener/etcd-backup-restore/blob/master/docs/deployment/getting_started.md#getting-started) on how to run the `etcdbrctl` command locally or in a container.
 1. Follow the instructions in the [passing-credentials guide](https://github.com/gardener/etcd-backup-restore/blob/master/docs/deployment/getting_started.md#passing-credentials) on how to set up the required credentials for the copy operation depending on the storage providers for which you want to perform it.
@@ -57,5 +57,5 @@ Following is a workaround that can be used to copy etcd backups manually in situ
 
     kubectl patch -n shoot--${PROJECT_NAME}--${SHOOT_NAME} etcdcopybackupstask ${SHOOT_NAME} --subresource status --type merge -p "{\"status\":{\"conditions\":[{\"type\":\"Succeeded\",\"status\":\"True\",\"reason\":\"manual copy successful\",\"message\":\"manual copy successful\",\"lastTransitionTime\":\"$(date -Iseconds)\",\"lastUpdateTime\":\"$(date -Iseconds)\"}]}}"
     ```
-1. After the `main-etcd` becomes `Ready`, remove the finalizer on the source `extensions.gardener.cloud/v1alpha1.BackupEntry` (the resource has `source-` as a prefix in its name) in the `Destination Seed` so that it can be deleted successfully. This is necessary as the `Destination Seed` will not have network connectivity to perform the actual deletion of the source backup directory.
+1. After the `main-etcd` becomes `Ready`, and the `source-etcd-backup` secret is deleted from the `Shoot`'s control plane, remove the finalizer on the source `extensions.gardener.cloud/v1alpha1.BackupEntry` in the `Destination Seed` so that it can be deleted successfully (the resource name uses the following format: `source-shoot--<project-name>--<shoot-name>--<uid>`). This is necessary as the `Destination Seed` will not have network connectivity to the `Source Seed`'s storage provider and the deletion will fail.
 1. Once the control plane migration has finished successfully, make sure to manually clean up the source backup directory in the `Source Seed`'s storage provider.
