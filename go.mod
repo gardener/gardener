@@ -64,7 +64,7 @@ require (
 	k8s.io/apiextensions-apiserver v0.29.8
 	k8s.io/apimachinery v0.29.8
 	k8s.io/apiserver v0.29.8
-	k8s.io/autoscaler/vertical-pod-autoscaler v1.2.0
+	k8s.io/autoscaler/vertical-pod-autoscaler v1.2.1
 	k8s.io/client-go v0.29.8
 	k8s.io/cluster-bootstrap v0.29.8
 	k8s.io/code-generator v0.29.8
