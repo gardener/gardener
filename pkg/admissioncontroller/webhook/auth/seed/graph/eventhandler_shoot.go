@@ -135,13 +135,13 @@ func (g *graph) handleShootCreateOrUpdate(ctx context.Context, shoot *gardencore
 		g.addEdge(exposureClassVertex, shootVertex)
 	}
 
-	if kapi := shoot.Spec.Kubernetes.KubeAPIServer; kapi != nil {
-		if len(v1beta1helper.GetShootAuditPolicyConfigMapName(kapi)) > 0 {
+	if kubeAPIServer := shoot.Spec.Kubernetes.KubeAPIServer; kubeAPIServer != nil {
+		if len(v1beta1helper.GetShootAuditPolicyConfigMapName(kubeAPIServer)) > 0 {
 			configMapVertex := g.getOrCreateVertex(VertexTypeConfigMap, shoot.Namespace, shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.Name)
 			g.addEdge(configMapVertex, shootVertex)
 		}
 
-		if len(v1beta1helper.GetShootAuthenticationConfigurationConfigMapName(kapi)) > 0 {
+		if len(v1beta1helper.GetShootAuthenticationConfigurationConfigMapName(kubeAPIServer)) > 0 {
 			configMapVertex := g.getOrCreateVertex(VertexTypeConfigMap, shoot.Namespace, shoot.Spec.Kubernetes.KubeAPIServer.Authentication.Structured.ConfigMapName)
 			g.addEdge(configMapVertex, shootVertex)
 		}

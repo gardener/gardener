@@ -12762,7 +12762,6 @@ string
 </em>
 </td>
 <td>
-<em>(Optional)</em>
 <p>ConfigMapName is the name of the ConfigMap in the project namespace
 which contains AuthenticationConfiguration for the kube-apiserver.</p>
 </td>

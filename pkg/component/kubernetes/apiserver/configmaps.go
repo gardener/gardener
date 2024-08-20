@@ -44,7 +44,7 @@ func init() {
 const (
 	configMapAdmissionNamePrefix            = "kube-apiserver-admission-config"
 	configMapAuditPolicyNamePrefix          = "audit-policy-config"
-	configMapAuthenticationConfigNamePrefix = "authentication-config"
+	configMapAuthenticationConfigNamePrefix = "kube-apiserver-authentication-config"
 	configMapEgressSelectorNamePrefix       = "kube-apiserver-egress-selector-config"
 	configMapEgressSelectorDataKey          = "egress-selector-configuration.yaml"
 )

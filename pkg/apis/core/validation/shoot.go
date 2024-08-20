@@ -1355,7 +1355,7 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 	if authentication := kubeAPIServer.Authentication; authentication != nil && authentication.Structured != nil {
 		structAuthPath := fldPath.Child("authentication", "structured")
 		if k8sLess130 {
-			allErrs = append(allErrs, field.Forbidden(structAuthPath, "is available for kubernetes versions >= v1.30"))
+			allErrs = append(allErrs, field.Forbidden(structAuthPath, "is available for Kubernetes versions >= v1.30"))
 		}
 		if value, ok := kubeAPIServer.FeatureGates["StructuredAuthenticationConfiguration"]; ok && !value {
 			allErrs = append(allErrs, field.Forbidden(structAuthPath, "requires feature gate StructuredAuthenticationConfiguration to be enabled"))

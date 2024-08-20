@@ -27,8 +27,8 @@ import (
 const (
 	volumeNameStructuredAuthenticationConfig = "authentication-config"
 
-	volumeMountStructuredAuthenticationConfig = "/etc/kubernetes/structured/authentication"
-	volumeMountPathOIDCCABundle               = "/srv/kubernetes/oidc"
+	volumeMountPathStructuredAuthenticationConfig = "/etc/kubernetes/structured/authentication"
+	volumeMountPathOIDCCABundle                   = "/srv/kubernetes/oidc"
 
 	configMapAuthenticationConfigDataKey = "config.yaml"
 )
@@ -38,19 +38,18 @@ func (k *kubeAPIServer) reconcileConfigMapAuthenticationConfig(ctx context.Conte
 	if versionutils.ConstraintK8sLess130.Check(k.values.Version) && k.values.AuthenticationConfiguration != nil {
 		return errors.New("structured authentication is not available for versions < v1.30")
 	}
+
 	if k.values.AuthenticationConfiguration != nil && k.values.OIDC != nil {
 		return errors.New("oidc configuration is incompatible with structured authentication")
 	}
+
 	if value, ok := k.values.FeatureGates["StructuredAuthenticationConfiguration"]; (ok && !value) ||
 		(k.values.AuthenticationConfiguration == nil && k.values.OIDC == nil) ||
 		versionutils.ConstraintK8sLess130.Check(k.values.Version) {
 		return nil
 	}
 
-	var authenticationConfig string
-	if k.values.AuthenticationConfiguration != nil {
-		authenticationConfig = *k.values.AuthenticationConfiguration
-	}
+	authenticationConfig := ptr.Deref(k.values.AuthenticationConfiguration, "")
 	if k.values.OIDC != nil {
 		oidcAuthenticationConfig, err := ComputeAuthenticationConfigRawConfig(k.values.OIDC)
 		if err != nil {
@@ -75,6 +74,7 @@ func ComputeAuthenticationConfigRawConfig(oidc *gardencorev1beta1.OIDCConfig) (s
 		},
 		JWT: []apiserverv1alpha1.JWTAuthenticator{{}},
 	}
+
 	if v := oidc.CABundle; v != nil {
 		authenticationConfiguration.JWT[0].Issuer.CertificateAuthority = *v
 	}
@@ -87,16 +87,9 @@ func ComputeAuthenticationConfigRawConfig(oidc *gardencorev1beta1.OIDCConfig) (s
 		authenticationConfiguration.JWT[0].Issuer.Audiences = append(authenticationConfiguration.JWT[0].Issuer.Audiences, *v)
 	}
 
-	if v := oidc.UsernameClaim; v != nil {
-		authenticationConfiguration.JWT[0].ClaimMappings.Username.Claim = *v
-	} else {
-		authenticationConfiguration.JWT[0].ClaimMappings.Username.Claim = "sub"
-	}
+	authenticationConfiguration.JWT[0].ClaimMappings.Username.Claim = ptr.Deref(oidc.UsernameClaim, "sub")
 
-	usernamePrefix := ""
-	if v := oidc.UsernamePrefix; v != nil {
-		usernamePrefix = *v
-	}
+	usernamePrefix := ptr.Deref(oidc.UsernamePrefix, "")
 
 	// For the authentication config, there is no defaulting for claim or prefix.
 	// We use the defaulting suggested in kubernetes https://github.com/kubernetes/kubernetes/blob/a2106b5f73fe9352f7bc0520788855d57fc301e1/staging/src/k8s.io/apiserver/pkg/apis/apiserver/v1alpha1/types.go#L357-L366
@@ -111,11 +104,7 @@ func ComputeAuthenticationConfigRawConfig(oidc *gardencorev1beta1.OIDCConfig) (s
 
 	if v := oidc.GroupsClaim; v != nil {
 		authenticationConfiguration.JWT[0].ClaimMappings.Groups.Claim = *v
-		if v := oidc.GroupsPrefix; v != nil {
-			authenticationConfiguration.JWT[0].ClaimMappings.Groups.Prefix = v
-		} else {
-			authenticationConfiguration.JWT[0].ClaimMappings.Groups.Prefix = ptr.To("")
-		}
+		authenticationConfiguration.JWT[0].ClaimMappings.Groups.Prefix = ptr.To(ptr.Deref(oidc.GroupsPrefix, ""))
 	}
 
 	for key, value := range oidc.RequiredClaims {
@@ -128,7 +117,7 @@ func ComputeAuthenticationConfigRawConfig(oidc *gardencorev1beta1.OIDCConfig) (s
 
 	rawConfig, err := yaml.Marshal(authenticationConfiguration)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("unable to parse authenticationConfiguration: %w", err)
 	}
 
 	return string(rawConfig), nil
@@ -144,10 +133,10 @@ func (k *kubeAPIServer) handleAuthenticationSettings(deployment *appsv1.Deployme
 		return
 	}
 
-	deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--authentication-config=%s/%s", volumeMountStructuredAuthenticationConfig, configMapAuthenticationConfigDataKey))
+	deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--authentication-config=%s/%s", volumeMountPathStructuredAuthenticationConfig, configMapAuthenticationConfigDataKey))
 	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
 		Name:      volumeNameStructuredAuthenticationConfig,
-		MountPath: volumeMountStructuredAuthenticationConfig,
+		MountPath: volumeMountPathStructuredAuthenticationConfig,
 	})
 	deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
 		Name: volumeNameStructuredAuthenticationConfig,

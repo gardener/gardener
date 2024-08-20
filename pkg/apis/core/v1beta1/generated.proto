@@ -3151,7 +3151,6 @@ message ShootTemplate {
 message StructuredAuthentication {
   // ConfigMapName is the name of the ConfigMap in the project namespace
   // which contains AuthenticationConfiguration for the kube-apiserver.
-  // +optional
   optional string configMapName = 1;
 }
 

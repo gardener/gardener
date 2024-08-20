@@ -35,7 +35,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 )
 
-const authenticationConfigurationCmDataKey = "config.yaml"
+const authenticationConfigurationDataKey = "config.yaml"
 
 var (
 	configDecoder   runtime.Decoder
@@ -97,10 +97,10 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 	}
 
 	var (
-		oldAuthenticationConfigurationCmName string
-		newAuthenticationConfigurationCmName string
-		oldShootKubernetesVersion            string
-		newShootKubernetesVersion            string
+		oldAuthenticationConfigurationConfigMapName string
+		newAuthenticationConfigurationConfigMapName string
+		oldShootKubernetesVersion                   string
+		newShootKubernetesVersion                   string
 	)
 
 	if request.Operation == admissionv1.Update {
@@ -116,36 +116,36 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 		}
 
 		oldShootKubernetesVersion = oldShoot.Spec.Kubernetes.Version
-		oldAuthenticationConfigurationCmName = gardencorehelper.GetShootAuthenticationConfigurationConfigMapName(oldShoot.Spec.Kubernetes.KubeAPIServer)
+		oldAuthenticationConfigurationConfigMapName = gardencorehelper.GetShootAuthenticationConfigurationConfigMapName(oldShoot.Spec.Kubernetes.KubeAPIServer)
 	}
 	newShootKubernetesVersion = shoot.Spec.Kubernetes.Version
-	newAuthenticationConfigurationCmName = gardencorehelper.GetShootAuthenticationConfigurationConfigMapName(shoot.Spec.Kubernetes.KubeAPIServer)
+	newAuthenticationConfigurationConfigMapName = gardencorehelper.GetShootAuthenticationConfigurationConfigMapName(shoot.Spec.Kubernetes.KubeAPIServer)
 
-	if newAuthenticationConfigurationCmName == "" {
+	if newAuthenticationConfigurationConfigMapName == "" {
 		return admissionwebhook.Allowed("shoot resource is not specifying any authentication configuration")
 	}
 
-	// oldAuthenticationConfigurationCmName is empty for CREATE shoot requests that specify authentication configuration reference
+	// oldAuthenticationConfigurationConfigMapName is empty for CREATE shoot requests that specify authentication configuration reference
 	// if Kubernetes version is changed we need to revalidate if the authentication configuration API version is compatible with
 	// new Kubernetes version
-	if oldAuthenticationConfigurationCmName == newAuthenticationConfigurationCmName && oldShootKubernetesVersion == newShootKubernetesVersion {
+	if oldAuthenticationConfigurationConfigMapName == newAuthenticationConfigurationConfigMapName && oldShootKubernetesVersion == newShootKubernetesVersion {
 		return admissionwebhook.Allowed("authentication configuration configmap was not changed")
 	}
 
-	authenticationConfigurationCm := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: shoot.Namespace, Name: newAuthenticationConfigurationCmName}}
-	if err := h.APIReader.Get(ctx, client.ObjectKeyFromObject(authenticationConfigurationCm), authenticationConfigurationCm); err != nil {
+	authenticationConfigurationConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: shoot.Namespace, Name: newAuthenticationConfigurationConfigMapName}}
+	if err := h.APIReader.Get(ctx, client.ObjectKeyFromObject(authenticationConfigurationConfigMap), authenticationConfigurationConfigMap); err != nil {
 		status := http.StatusInternalServerError
 		if apierrors.IsNotFound(err) {
 			status = http.StatusUnprocessableEntity
 		}
 		return admission.Errored(int32(status), fmt.Errorf("could not retrieve configmap: %w", err))
 	}
-	authenticationConfiguration, err := getAuthenticationConfiguration(authenticationConfigurationCm)
+	authenticationConfiguration, err := getAuthenticationConfiguration(authenticationConfigurationConfigMap)
 	if err != nil {
-		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("error getting authentication configuration from configmap %s: %w", client.ObjectKeyFromObject(authenticationConfigurationCm), err))
+		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("error getting authentication configuration from configmap %s: %w", client.ObjectKeyFromObject(authenticationConfigurationConfigMap), err))
 	}
 
-	if errCode, err := validateAuthenticaionConfigurationSemantics(authenticationConfiguration); err != nil {
+	if errCode, err := validateAuthenticationConfigurationSemantics(authenticationConfiguration); err != nil {
 		return admission.Errored(errCode, err)
 	}
 
@@ -154,15 +154,15 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 
 func (h *Handler) admitConfigMap(ctx context.Context, request admission.Request) admission.Response {
 	var (
-		oldCm = &corev1.ConfigMap{}
-		cm    = &corev1.ConfigMap{}
+		oldConfigMap = &corev1.ConfigMap{}
+		configMap    = &corev1.ConfigMap{}
 	)
 
 	if request.Operation != admissionv1.Update {
 		return admissionwebhook.Allowed("operation is not update")
 	}
 
-	if err := h.Decoder.Decode(request, cm); err != nil {
+	if err := h.Decoder.Decode(request, configMap); err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
@@ -184,21 +184,20 @@ func (h *Handler) admitConfigMap(ctx context.Context, request admission.Request)
 		return admissionwebhook.Allowed("configmap is not referenced by a Shoot")
 	}
 
-	authenticaionConfiguration, err := getAuthenticationConfiguration(cm)
+	authenticationConfiguration, err := getAuthenticationConfiguration(configMap)
 	if err != nil {
 		return admission.Errored(http.StatusUnprocessableEntity, err)
 	}
 
-	if err = h.getOldObject(request, oldCm); err != nil {
+	if err = h.getOldObject(request, oldConfigMap); err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
-	oldAuthenticationConfiguration, ok := oldCm.Data[authenticationConfigurationCmDataKey]
-	if ok && oldAuthenticationConfiguration == authenticaionConfiguration {
+	oldAuthenticationConfiguration, ok := oldConfigMap.Data[authenticationConfigurationDataKey]
+	if ok && oldAuthenticationConfiguration == authenticationConfiguration {
 		return admissionwebhook.Allowed("authentication configuration not changed")
 	}
 
-	errCode, err := validateAuthenticaionConfigurationSemantics(authenticaionConfiguration)
-	if err != nil {
+	if errCode, err := validateAuthenticationConfigurationSemantics(authenticationConfiguration); err != nil {
 		return admission.Errored(errCode, err)
 	}
 
@@ -212,8 +211,8 @@ func (h *Handler) getOldObject(request admission.Request, oldObj runtime.Object)
 	return errors.New("could not find old object")
 }
 
-func validateAuthenticaionConfigurationSemantics(authenticaionConfiguration string) (errCode int32, err error) {
-	authConfigObj, schemaVersion, err := configDecoder.Decode([]byte(authenticaionConfiguration), nil, nil)
+func validateAuthenticationConfigurationSemantics(authenticationConfiguration string) (errCode int32, err error) {
+	authConfigObj, schemaVersion, err := configDecoder.Decode([]byte(authenticationConfiguration), nil, nil)
 	if err != nil {
 		return http.StatusUnprocessableEntity, fmt.Errorf("failed to decode the provided authentication configuration: %w", err)
 	}
@@ -221,8 +220,7 @@ func validateAuthenticaionConfigurationSemantics(authenticaionConfiguration stri
 	if !ok {
 		return http.StatusInternalServerError, fmt.Errorf("failure to cast to authentication configuration type: %v", schemaVersion)
 	}
-	errList := apiservervalidation.ValidateAuthenticationConfiguration(authConfig)
-	if len(errList) != 0 {
+	if errList := apiservervalidation.ValidateAuthenticationConfiguration(authConfig); len(errList) != 0 {
 		return http.StatusUnprocessableEntity, fmt.Errorf("provided invalid authentication configuration: %v", errList)
 	}
 
@@ -230,9 +228,9 @@ func validateAuthenticaionConfigurationSemantics(authenticaionConfiguration stri
 }
 
 func getAuthenticationConfiguration(cm *corev1.ConfigMap) (string, error) {
-	authenticationConfigurationRaw, ok := cm.Data[authenticationConfigurationCmDataKey]
+	authenticationConfigurationRaw, ok := cm.Data[authenticationConfigurationDataKey]
 	if !ok {
-		return "", fmt.Errorf("missing '.data[%s]' in authentication configuration configmap", authenticationConfigurationCmDataKey)
+		return "", fmt.Errorf("missing '.data[%s]' in authentication configuration configmap", authenticationConfigurationDataKey)
 	}
 	if len(authenticationConfigurationRaw) == 0 {
 		return "", errors.New("empty authentication configuration. Provide non-empty authentication configuration")

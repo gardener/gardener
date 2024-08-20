@@ -9209,11 +9209,13 @@ func schema_pkg_apis_core_v1beta1_StructuredAuthentication(ref common.ReferenceC
 					"configMapName": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ConfigMapName is the name of the ConfigMap in the project namespace which contains AuthenticationConfiguration for the kube-apiserver.",
+							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 				},
+				Required: []string{"configMapName"},
 			},
 		},
 	}

@@ -918,8 +918,7 @@ type Authentication struct {
 type StructuredAuthentication struct {
 	// ConfigMapName is the name of the ConfigMap in the project namespace
 	// which contains AuthenticationConfiguration for the kube-apiserver.
-	// +optional
-	ConfigMapName string `json:"configMapName,omitempty" protobuf:"bytes,1,opt,name=configMapName"`
+	ConfigMapName string `json:"configMapName" protobuf:"bytes,1,opt,name=configMapName"`
 }
 
 // OIDCConfig contains configuration settings for the OIDC provider.

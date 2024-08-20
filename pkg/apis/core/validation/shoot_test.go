@@ -3079,7 +3079,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("spec.kubernetes.kubeAPIServer.authentication.structured"),
-					"Detail": Equal("is available for kubernetes versions >= v1.30"),
+					"Detail": Equal("is available for Kubernetes versions >= v1.30"),
 				}))))
 			})
 

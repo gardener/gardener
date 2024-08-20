@@ -2129,6 +2129,7 @@ rules:
 
 					Expect(kapi.Deploy(ctx)).To(MatchError("structured authentication is not available for versions < v1.30"))
 				})
+
 				It("should error when authentcation config and oidc settings are configured", func() {
 					var (
 						authenticationConfig = "some-auth-config"
@@ -2145,7 +2146,7 @@ rules:
 					})
 
 					configMapAuthConfig = &corev1.ConfigMap{
-						ObjectMeta: metav1.ObjectMeta{Name: "authentication-config", Namespace: namespace},
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authentication-config", Namespace: namespace},
 						Data:       map[string]string{"config.yaml": authenticationConfig},
 					}
 					Expect(kubernetesutils.MakeUnique(configMapAuthConfig)).To(Succeed())
@@ -2153,6 +2154,7 @@ rules:
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthConfig), configMapAuthConfig)).To(BeNotFoundError())
 					Expect(kapi.Deploy(ctx)).To(MatchError("oidc configuration is incompatible with structured authentication"))
 				})
+
 				It("should successfully deploy the configmap resource", func() {
 					var (
 						authenticationConfig = "some-auth-config"
@@ -2168,7 +2170,7 @@ rules:
 					})
 
 					configMapAuthConfig = &corev1.ConfigMap{
-						ObjectMeta: metav1.ObjectMeta{Name: "authentication-config", Namespace: namespace},
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authentication-config", Namespace: namespace},
 						Data:       map[string]string{"config.yaml": authenticationConfig},
 					}
 					Expect(kubernetesutils.MakeUnique(configMapAuthConfig)).To(Succeed())
@@ -2187,6 +2189,7 @@ rules:
 						Data:      configMapAuthConfig.Data,
 					}))
 				})
+
 				It("should not deploy the configmap resource when feature gate is disabled", func() {
 					var (
 						authenticationConfig = "some-auth-config"
@@ -2205,7 +2208,7 @@ rules:
 					})
 
 					configMapAuthConfig = &corev1.ConfigMap{
-						ObjectMeta: metav1.ObjectMeta{Name: "authentication-config", Namespace: namespace},
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authentication-config", Namespace: namespace},
 						Data:       map[string]string{"config.yaml": authenticationConfig},
 					}
 					Expect(kubernetesutils.MakeUnique(configMapAuthConfig)).To(Succeed())
@@ -2214,6 +2217,7 @@ rules:
 					Expect(kapi.Deploy(ctx)).To(Succeed())
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthConfig), configMapAuthConfig)).To(BeNotFoundError())
 				})
+
 				It("should successfully deploy the configmap resource from oidc settings", func() {
 					var (
 						oidc = &gardencorev1beta1.OIDCConfig{
@@ -2261,7 +2265,7 @@ kind: AuthenticationConfiguration
 					})
 
 					configMapAuthConfig = &corev1.ConfigMap{
-						ObjectMeta: metav1.ObjectMeta{Name: "authentication-config", Namespace: namespace},
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authentication-config", Namespace: namespace},
 						Data:       map[string]string{"config.yaml": authenticationConfig},
 					}
 					Expect(kubernetesutils.MakeUnique(configMapAuthConfig)).To(Succeed())
@@ -2281,6 +2285,7 @@ kind: AuthenticationConfiguration
 					}))
 				})
 			})
+
 			It("should successfully deploy the configmap resource from oidc settings with defaults", func() {
 				var (
 					oidc = &gardencorev1beta1.OIDCConfig{
@@ -2316,7 +2321,7 @@ kind: AuthenticationConfiguration
 				})
 
 				configMapAuthConfig = &corev1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{Name: "authentication-config", Namespace: namespace},
+					ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authentication-config", Namespace: namespace},
 					Data:       map[string]string{"config.yaml": authenticationConfig},
 				}
 				Expect(kubernetesutils.MakeUnique(configMapAuthConfig)).To(Succeed())
@@ -2369,7 +2374,7 @@ kind: AuthenticationConfiguration
 				})
 
 				configMapAuthConfig = &corev1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{Name: "authentication-config", Namespace: namespace},
+					ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authentication-config", Namespace: namespace},
 					Data:       map[string]string{"config.yaml": authenticationConfig},
 				}
 				Expect(kubernetesutils.MakeUnique(configMapAuthConfig)).To(Succeed())
@@ -3719,7 +3724,7 @@ kind: AuthenticationConfiguration
 					})
 
 					configMapAuthConfig = &corev1.ConfigMap{
-						ObjectMeta: metav1.ObjectMeta{Name: "authentication-config", Namespace: namespace},
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authentication-config", Namespace: namespace},
 						Data:       map[string]string{"config.yaml": authenticationConfig},
 					}
 					Expect(kubernetesutils.MakeUnique(configMapAuthConfig)).To(Succeed())
@@ -3789,7 +3794,7 @@ kind: AuthenticationConfiguration
 					})
 
 					configMapAuthConfig = &corev1.ConfigMap{
-						ObjectMeta: metav1.ObjectMeta{Name: "authentication-config", Namespace: namespace},
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authentication-config", Namespace: namespace},
 						Data:       map[string]string{"config.yaml": authenticationConfig},
 					}
 					Expect(kubernetesutils.MakeUnique(configMapAuthConfig)).To(Succeed())
