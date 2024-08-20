@@ -44,18 +44,10 @@ func (r *Reconciler) reconcileAdmissionRuntimeClusterResources(ctx context.Conte
 	}
 
 	gardenerValues := map[string]any{
-		"global": map[string]any{
-			"projectedKubeconfig": map[string]any{
-				"baseMountPath":               gardenerutils.VolumeMountPathGenericKubeconfig,
-				"genericKubeconfigSecretName": genericTokenKubeconfigSecretName,
-				"tokenSecretName":             accessSecret.Secret.Name,
-			},
-			"virtualGarden": map[string]any{
-				"enabled": true,
-				"user": map[string]any{
-					"name": fmt.Sprintf("system:serviceaccount:kube-system:%s", accessSecret.ServiceAccountName),
-				},
-			},
+		"projectedKubeconfig": map[string]any{
+			"baseMountPath":               gardenerutils.VolumeMountPathGenericKubeconfig,
+			"genericKubeconfigSecretName": genericTokenKubeconfigSecretName,
+			"tokenSecretName":             accessSecret.Secret.Name,
 		},
 	}
 

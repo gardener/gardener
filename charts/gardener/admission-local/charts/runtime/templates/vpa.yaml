@@ -1,22 +1,22 @@
-{{- if .Values.global.vpa.enabled}}
+{{- if .Values.vpa.enabled }}
 apiVersion: "autoscaling.k8s.io/v1"
 kind: VerticalPodAutoscaler
 metadata:
   name: {{ include "name" . }}-vpa
   namespace: {{ .Release.Namespace }}
 spec:
-  {{- if .Values.global.vpa.resourcePolicy }}
+  {{- if .Values.vpa.resourcePolicy }}
   resourcePolicy:
     containerPolicies:
     - containerName: '*'
-      {{- if .Values.global.vpa.resourcePolicy.minAllowed }}
+      {{- if .Values.vpa.resourcePolicy.minAllowed }}
       minAllowed:
-        memory: {{ required ".Values.global.vpa.resourcePolicy.minAllowed.memory is required" .Values.global.vpa.resourcePolicy.minAllowed.memory }}
+        memory: {{ required ".Values.vpa.resourcePolicy.minAllowed.memory is required" .Values.vpa.resourcePolicy.minAllowed.memory }}
       {{- end }}
-      {{- if .Values.global.vpa.resourcePolicy.maxAllowed }}
+      {{- if .Values.vpa.resourcePolicy.maxAllowed }}
       maxAllowed:
-        cpu: {{ required ".Values.global.vpa.resourcePolicy.maxAllowed.cpu is required" .Values.global.vpa.resourcePolicy.maxAllowed.cpu }}
-        memory: {{ required ".Values.global.vpa.resourcePolicy.maxAllowed.memory is required" .Values.global.vpa.resourcePolicy.maxAllowed.memory }}
+        cpu: {{ required ".Values.vpa.resourcePolicy.maxAllowed.cpu is required" .Values.vpa.resourcePolicy.maxAllowed.cpu }}
+        memory: {{ required ".Values.vpa.resourcePolicy.maxAllowed.memory is required" .Values.vpa.resourcePolicy.maxAllowed.memory }}
       {{- end }}
   {{- end }}
   targetRef:
@@ -24,5 +24,5 @@ spec:
     kind: Deployment
     name: {{ include "name" . }}
   updatePolicy:
-    updateMode: {{ .Values.global.vpa.updatePolicy.updateMode }}
+    updateMode: {{ .Values.vpa.updatePolicy.updateMode }}
 {{- end }}

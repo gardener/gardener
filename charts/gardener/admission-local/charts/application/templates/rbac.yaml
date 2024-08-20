@@ -45,12 +45,6 @@ roleRef:
   kind: ClusterRole
   name: {{ include "name" . }}
 subjects:
-{{- if and .Values.global.virtualGarden.enabled .Values.global.virtualGarden.user.name }}
 - apiGroup: rbac.authorization.k8s.io
   kind: User
-  name: {{ .Values.global.virtualGarden.user.name  }}
-{{- else }}
-- kind: ServiceAccount
-  name: {{ include "name" . }}
-  namespace: {{ .Release.Namespace }}
-{{- end }}
+  name: {{ required ".Values.virtualGarden.user.name is required" .Values.virtualGarden.user.name }}
