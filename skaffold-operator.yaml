@@ -60,6 +60,7 @@ build:
             - pkg/apis/security
             - pkg/apis/security/install
             - pkg/apis/security/v1alpha1
+            - pkg/apis/security/v1alpha1/constants
             - pkg/apis/seedmanagement
             - pkg/apis/seedmanagement/encoding
             - pkg/apis/seedmanagement/install

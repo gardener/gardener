@@ -386,9 +386,12 @@ const (
 	// OperationRotateETCDEncryptionKeyComplete is a constant for an annotation on a Shoot indicating that the
 	// rotation of the ETCD encryption key shall be completed.
 	OperationRotateETCDEncryptionKeyComplete = "rotate-etcd-encryption-key-complete"
-	// SeedOperationRenewGardenAccessSecrets is a constant for an annotation on a Seed indicating that the
+	// SeedOperationRenewGardenAccessSecrets is a constant for an annotation on a Seed indicating that
 	// all garden access secrets on the seed shall be renewed.
 	SeedOperationRenewGardenAccessSecrets = "renew-garden-access-secrets" // #nosec G101 -- No credential.
+	// SeedOperationRenewWorkloadIdentityTokens is a constant for an annotation on a Seed indicating that
+	// all workload identity tokens on the seed shall be renewed.
+	SeedOperationRenewWorkloadIdentityTokens = "renew-workload-identity-tokens"
 	// KubeconfigSecretOperationRenew is a constant for an annotation on the secret in a Seed containing the garden
 	// cluster kubeconfig of a gardenlet indicating that it should be renewed.
 	KubeconfigSecretOperationRenew = "renew"

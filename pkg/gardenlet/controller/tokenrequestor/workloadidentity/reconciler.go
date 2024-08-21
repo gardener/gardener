@@ -27,7 +27,6 @@ import (
 )
 
 const (
-	tokenRenewTimestamp   = securityv1alpha1constants.WorkloadIdentityPrefix + "token-renew-timestamp"
 	maxExpirationDuration = 24 * time.Hour
 	expirationDuration    = 6 * time.Hour // short enough to be secure and long enough to be resilient to disruptions
 )
@@ -106,7 +105,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 
 func (r *Reconciler) reconcileSecret(ctx context.Context, log logr.Logger, secret *corev1.Secret, token string, renewDuration time.Duration) error {
 	patch := client.MergeFrom(secret.DeepCopy())
-	metav1.SetMetaDataAnnotation(&secret.ObjectMeta, tokenRenewTimestamp, r.Clock.Now().UTC().Add(renewDuration).Format(time.RFC3339))
+	metav1.SetMetaDataAnnotation(&secret.ObjectMeta, securityv1alpha1constants.AnnotationWorkloadIdentityTokenRenewTimestamp, r.Clock.Now().UTC().Add(renewDuration).Format(time.RFC3339))
 
 	log.Info("Writing token to secret")
 	if secret.Data == nil {
@@ -118,7 +117,7 @@ func (r *Reconciler) reconcileSecret(ctx context.Context, log logr.Logger, secre
 }
 
 func (r *Reconciler) shouldRequeue(secret *corev1.Secret) (bool, time.Duration, error) {
-	renewTimestamp := secret.Annotations[tokenRenewTimestamp]
+	renewTimestamp := secret.Annotations[securityv1alpha1constants.AnnotationWorkloadIdentityTokenRenewTimestamp]
 	if len(renewTimestamp) == 0 {
 		return false, 0, nil
 	}

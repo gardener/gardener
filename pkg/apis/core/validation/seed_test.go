@@ -159,6 +159,7 @@ var _ = Describe("Seed Validation Tests", func() {
 				Entry("reconcile", "reconcile"),
 				Entry("renew-garden-access-secrets", "renew-garden-access-secrets"),
 				Entry("renew-kubeconfig", "renew-kubeconfig"),
+				Entry("renew-workload-identity-tokens", "renew-workload-identity-tokens"),
 			)
 
 			DescribeTable("should do nothing if a valid operation annotation is added", func(operation string) {
@@ -169,6 +170,7 @@ var _ = Describe("Seed Validation Tests", func() {
 				Entry("reconcile", "reconcile"),
 				Entry("renew-garden-access-secrets", "renew-garden-access-secrets"),
 				Entry("renew-kubeconfig", "renew-kubeconfig"),
+				Entry("renew-workload-identity-tokens", "renew-workload-identity-tokens"),
 			)
 
 			DescribeTable("should do nothing if a valid operation annotation is removed", func(operation string) {
@@ -180,6 +182,7 @@ var _ = Describe("Seed Validation Tests", func() {
 				Entry("reconcile", "reconcile"),
 				Entry("renew-garden-access-secrets", "renew-garden-access-secrets"),
 				Entry("renew-kubeconfig", "renew-kubeconfig"),
+				Entry("renew-workload-identity-tokens", "renew-workload-identity-tokens"),
 			)
 
 			DescribeTable("should do nothing if a valid operation annotation does not change during an update", func(operation string) {
@@ -190,6 +193,7 @@ var _ = Describe("Seed Validation Tests", func() {
 				Entry("reconcile", "reconcile"),
 				Entry("renew-garden-access-secrets", "renew-garden-access-secrets"),
 				Entry("renew-kubeconfig", "renew-kubeconfig"),
+				Entry("renew-workload-identity-tokens", "renew-workload-identity-tokens"),
 			)
 
 			It("should return an error if a valid operation should be overwritten with a different valid operation", func() {

@@ -16,6 +16,9 @@ const (
 	AnnotationWorkloadIdentityName = WorkloadIdentityPrefix + "name"
 	// AnnotationWorkloadIdentityContextObject is an annotation key used to indicate the context object for which the origin WorkloadIdentity will be used.
 	AnnotationWorkloadIdentityContextObject = WorkloadIdentityPrefix + "context-object"
+	// AnnotationWorkloadIdentityTokenRenewTimestamp is an annotation key used to indicate
+	// the timestamp after which the workload identity token has to be renewed.
+	AnnotationWorkloadIdentityTokenRenewTimestamp = WorkloadIdentityPrefix + "token-renew-timestamp"
 
 	// LabelPurpose is a label used to indicate the purpose of the labeled resource.
 	// Specific values might cause controllers to act on the said object.
