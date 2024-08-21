@@ -268,6 +268,26 @@ var _ = Describe("CredentialsBinding Validation Tests", func() {
 			}
 		})
 
+		It("should forbid updating the CredentialsBinding credentialsRef field", func() {
+			newCredentialsBinding := prepareCredentialsBindingForUpdate(credentialsBinding)
+			newCredentialsBinding.CredentialsRef = corev1.ObjectReference{
+				APIVersion: "security.gardener.cloud/v1alpha1",
+				Kind:       "WorkloadIdentity",
+				Name:       "new-workloadidentity",
+				Namespace:  "my-namespace",
+			}
+
+			errorList := ValidateCredentialsBindingUpdate(newCredentialsBinding, credentialsBinding)
+
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("credentialsRef"),
+					"Detail": Equal("field is immutable"),
+				})),
+			))
+		})
+
 		It("should forbid updating the CredentialsBinding quota fields", func() {
 			newCredentialsBinding := prepareCredentialsBindingForUpdate(credentialsBinding)
 			newCredentialsBinding.Quotas = append(newCredentialsBinding.Quotas, corev1.ObjectReference{
@@ -279,8 +299,9 @@ var _ = Describe("CredentialsBinding Validation Tests", func() {
 
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("quotas"),
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("quotas"),
+					"Detail": Equal("field is immutable"),
 				})),
 			))
 		})
