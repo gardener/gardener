@@ -175,17 +175,11 @@ var _ = Describe("Reconciler", func() {
 
 				extension := &operatorv1alpha1.Extension{}
 				Expect(runtimeClientSet.Client().Get(ctx, client.ObjectKey{Name: extensionName}, extension)).To(Succeed())
-				Expect(extension.Status.Conditions).To(HaveLen(2))
-				Expect(extension.Status.Conditions[0]).To(gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
-					"Type":   Equal(operatorv1alpha1.RuntimeClusterExtensionReconciled),
-					"Status": Equal(gardencorev1beta1.ConditionTrue),
-					"Reason": Equal(ConditionReconcileSuccess),
-				}))
-				Expect(extension.Status.Conditions[1]).To(gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
-					"Type":   Equal(operatorv1alpha1.VirtualClusterExtensionReconciled),
-					"Status": Equal(gardencorev1beta1.ConditionTrue),
-					"Reason": Equal(ConditionReconcileSuccess),
-				}))
+				Expect(extension.Status.Conditions).To(ConsistOf(gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
+					"Type":   Equal(gardencorev1beta1.ConditionType("Installed")),
+					"Status": Equal(gardencorev1beta1.ConditionStatus("True")),
+					"Reason": Equal("ReconcileSuccessful"),
+				})))
 
 				var (
 					controllerDeploymentList   gardencorev1.ControllerDeploymentList

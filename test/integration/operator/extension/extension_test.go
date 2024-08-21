@@ -180,7 +180,7 @@ var _ = Describe("Extension controller tests", func() {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionBar), extensionBar)).To(Succeed())
 			return extensionBar.Status.Conditions
 		}).Should(ContainCondition(
-			OfType(operatorv1alpha1.VirtualClusterExtensionReconciled),
+			OfType(operatorv1alpha1.ExtensionInstalled),
 			WithStatus(gardencorev1beta1.ConditionFalse),
 			WithReason("NoGardenFound"),
 		))
@@ -237,7 +237,7 @@ var _ = Describe("Extension controller tests", func() {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionBar), extensionBar)).To(Succeed())
 			return extensionBar.Status.Conditions
 		}).Should(ContainCondition(
-			OfType(operatorv1alpha1.VirtualClusterExtensionReconciled),
+			OfType(operatorv1alpha1.ExtensionInstalled),
 			WithStatus(gardencorev1beta1.ConditionTrue),
 			WithReason("ReconcileSuccessful"),
 		))
@@ -261,7 +261,7 @@ var _ = Describe("Extension controller tests", func() {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionFoo), extensionFoo)).To(Succeed())
 			return extensionFoo.Status.Conditions
 		}).Should(ContainCondition(
-			OfType(operatorv1alpha1.VirtualClusterExtensionReconciled),
+			OfType(operatorv1alpha1.ExtensionInstalled),
 			WithStatus(gardencorev1beta1.ConditionTrue),
 			WithReason("ReconcileSuccessful"),
 		))
