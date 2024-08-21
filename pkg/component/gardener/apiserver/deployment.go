@@ -100,7 +100,6 @@ func (g *gardenerAPIServer) deployment(
 							"--log-level=" + g.values.LogLevel,
 							"--log-format=" + g.values.LogFormat,
 							fmt.Sprintf("--secure-port=%d", port),
-							"--workload-identity-token-issuer=" + g.values.WorkloadIdentityTokenIssuer,
 						},
 						Ports: []corev1.ContainerPort{{
 							Name:          "https",
@@ -142,7 +141,7 @@ func (g *gardenerAPIServer) deployment(
 		},
 	}
 
-	injectWorkloadIdentitySettings(deployment, secretWorkloadIdentitySigningKey)
+	injectWorkloadIdentitySettings(deployment, g.values.WorkloadIdentityTokenIssuer, secretWorkloadIdentitySigningKey)
 	apiserver.InjectDefaultSettings(deployment, "virtual-garden-", g.values.Values, secretCAETCD, secretETCDClient, secretServer)
 	apiserver.InjectAuditSettings(deployment, configMapAuditPolicy, secretAuditWebhookKubeconfig, g.values.Audit)
 	apiserver.InjectAdmissionSettings(deployment, configMapAdmissionConfigs, secretAdmissionKubeconfigs, g.values.Values)
@@ -169,7 +168,7 @@ func (g *gardenerAPIServer) deployment(
 	return deployment
 }
 
-func injectWorkloadIdentitySettings(deployment *appsv1.Deployment, secret *corev1.Secret) {
+func injectWorkloadIdentitySettings(deployment *appsv1.Deployment, issuer string, secret *corev1.Secret) {
 	const (
 		mountPath  = "/etc/gardener-apiserver/workload-identity/signing"
 		fileName   = "key.pem"
@@ -178,6 +177,7 @@ func injectWorkloadIdentitySettings(deployment *appsv1.Deployment, secret *corev
 
 	deployment.Spec.Template.Spec.Containers[0].Args = append(
 		deployment.Spec.Template.Spec.Containers[0].Args,
+		fmt.Sprintf("--workload-identity-token-issuer=%s", issuer),
 		fmt.Sprintf("--workload-identity-signing-key-file=%s/%s", mountPath, fileName),
 	)
 
