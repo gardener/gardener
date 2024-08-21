@@ -315,6 +315,9 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, _ adm
 	if err := validationContext.validateShootHibernation(a); err != nil {
 		return err
 	}
+	if err := validationContext.validateSecretBindingToCredentialsBindingMigration(a, v.secretBindingLister, v.credentialsBindingLister); err != nil {
+		return err
+	}
 	if allErrs = validationContext.ensureMachineImages(); len(allErrs) > 0 {
 		return admission.NewForbidden(a, fmt.Errorf("%+v", allErrs))
 	}
@@ -623,6 +626,37 @@ func (c *validationContext) validateShootHibernation(a admission.Attributes) err
 	if !newIsHibernated && oldIsHibernated {
 		addInfrastructureDeploymentTask(c.shoot)
 		addDNSRecordDeploymentTasks(c.shoot)
+	}
+
+	return nil
+}
+
+func (c *validationContext) validateSecretBindingToCredentialsBindingMigration(
+	a admission.Attributes,
+	secretBindingLister gardencorev1beta1listers.SecretBindingLister,
+	credentialsBindingLister securityv1alpha1listers.CredentialsBindingLister,
+) error {
+	secretBindingNameProgressedToEmpty := c.oldShoot.Spec.SecretBindingName != nil && c.shoot.Spec.SecretBindingName == nil
+	credentialsBindingNameProgressedToSet := c.oldShoot.Spec.CredentialsBindingName == nil && c.shoot.Spec.CredentialsBindingName != nil
+
+	if secretBindingNameProgressedToEmpty && credentialsBindingNameProgressedToSet {
+		secretBinding, err := secretBindingLister.SecretBindings(c.oldShoot.Namespace).Get(*c.oldShoot.Spec.SecretBindingName)
+		if err != nil {
+			return apierrors.NewInternalError(fmt.Errorf("could not retrieve previously referenced secret binding: %+v", err.Error()))
+		}
+		credentialsBinding, err := credentialsBindingLister.CredentialsBindings(c.shoot.Namespace).Get(*c.shoot.Spec.CredentialsBindingName)
+		if err != nil {
+			return apierrors.NewInternalError(fmt.Errorf("could not retrieve newly referenced credentials binding: %+v", err.Error()))
+		}
+
+		// during migration the newly referenced credential should be
+		// the exact same one that was referenced by the secret binding
+		if credentialsBinding.CredentialsRef.Kind != "Secret" ||
+			credentialsBinding.CredentialsRef.APIVersion != corev1.SchemeGroupVersion.String() ||
+			credentialsBinding.CredentialsRef.Name != secretBinding.SecretRef.Name ||
+			credentialsBinding.CredentialsRef.Namespace != secretBinding.SecretRef.Namespace {
+			return admission.NewForbidden(a, errors.New("it is not allowed to change the referenced Secret when migrating from SecretBindingName to CredentialsBindingName"))
+		}
 	}
 
 	return nil

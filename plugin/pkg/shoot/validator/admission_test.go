@@ -1063,6 +1063,87 @@ var _ = Describe("validator", func() {
 				Expect(err.Error()).To(ContainSubstring("provider type in shoot must match provider type of referenced CredentialsBinding: %q", credentialsBinding.Provider.Type))
 			})
 
+			It("should reject migration to credentials binding because a different secret is referenced", func() {
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.SecretBindingName = nil
+				oldShoot.Spec.CredentialsBindingName = nil
+
+				secretBinding.SecretRef = corev1.SecretReference{
+					Namespace: shoot.Namespace,
+					Name:      "secret1",
+				}
+				credentialsBinding.CredentialsRef = corev1.ObjectReference{
+					Namespace:  shoot.Namespace,
+					Name:       "another-secret1",
+					Kind:       "Secret",
+					APIVersion: corev1.SchemeGroupVersion.String(),
+				}
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(BeForbiddenError())
+				Expect(err.Error()).To(ContainSubstring("it is not allowed to change the referenced Secret when migrating from SecretBindingName to CredentialsBindingName"))
+			})
+
+			It("should reject migration to credentials binding because a workload identity is referenced", func() {
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.SecretBindingName = nil
+				oldShoot.Spec.CredentialsBindingName = nil
+
+				secretBinding.SecretRef = corev1.SecretReference{
+					Namespace: shoot.Namespace,
+					Name:      "secret1",
+				}
+				credentialsBinding.CredentialsRef = corev1.ObjectReference{
+					Namespace:  shoot.Namespace,
+					Name:       "secret1",
+					Kind:       "WorkloadIdentity",
+					APIVersion: securityv1alpha1.SchemeGroupVersion.String(),
+				}
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(BeForbiddenError())
+				Expect(err.Error()).To(ContainSubstring("it is not allowed to change the referenced Secret when migrating from SecretBindingName to CredentialsBindingName"))
+			})
+
+			It("should allow migration to credentials binding because the referenced secret stays the same", func() {
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.SecretBindingName = nil
+				oldShoot.Spec.CredentialsBindingName = nil
+
+				secretBinding.SecretRef = corev1.SecretReference{
+					Namespace: shoot.Namespace,
+					Name:      "secret1",
+				}
+				credentialsBinding.CredentialsRef = corev1.ObjectReference{
+					Namespace:  shoot.Namespace,
+					Name:       "secret1",
+					Kind:       "Secret",
+					APIVersion: corev1.SchemeGroupVersion.String(),
+				}
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+				Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+			})
+
 			It("should not error if and secret and credentials binding are nil", func() {
 				shoot.Spec.Provider.Type = "aws"
 				shoot.Spec.SecretBindingName = nil
