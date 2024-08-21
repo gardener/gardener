@@ -1,0 +1,7 @@
+AWS_REGION: ap-south-1
+HELM_VERSION: 1.101.1
+HELM_REPOSITORY: charts/gardener/operator
+EKS_CLUSTER_NAME: ora-test-2
+NAMESPACE: garden
+INITIAL_WAIT: 20
+FINAL_WAIT: 900

@@ -1,0 +1,127 @@
+name: Deploy to EKS
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Check Network and Tools
+      run: |
+        echo "Checking network connectivity..."
+        curl -I https://github.com
+        echo "Checking curl version..."
+        curl --version
+        echo "Checking wget version..."
+        wget --version
+
+    - name: Install yq
+      run: |
+        mkdir -p $HOME/bin
+        wget https://github.com/mikefarah/yq/releases/download/v4.20.2/yq_linux_amd64 -O $HOME/bin/yq
+        chmod +x $HOME/bin/yq
+        echo "$HOME/bin" >> $GITHUB_PATH
+
+    - name: Load Configuration
+      id: load-config
+      run: |
+        echo "Loading configuration from config/config-workflow.yaml..."
+        export AWS_REGION=$(yq eval '.AWS_REGION' config/config-workflow.yaml)
+        export HELM_VERSION=$(yq eval '.HELM_VERSION' config/config-workflow.yaml)
+        export HELM_REPOSITORY=$(yq eval '.HELM_REPOSITORY' config/config-workflow.yaml)
+        export EKS_CLUSTER_NAME=$(yq eval '.EKS_CLUSTER_NAME' config/config-workflow.yaml)
+        export NAMESPACE=$(yq eval '.NAMESPACE' config/config-workflow.yaml)
+        export INITIAL_WAIT=$(yq eval '.INITIAL_WAIT' config/config-workflow.yaml)
+        export FINAL_WAIT=$(yq eval '.FINAL_WAIT' config/config-workflow.yaml)
+        echo "Configuration loaded."
+        echo "AWS_REGION=$AWS_REGION" >> $GITHUB_ENV
+        echo "HELM_VERSION=$HELM_VERSION" >> $GITHUB_ENV
+        echo "HELM_REPOSITORY=$HELM_REPOSITORY" >> $GITHUB_ENV
+        echo "EKS_CLUSTER_NAME=$EKS_CLUSTER_NAME" >> $GITHUB_ENV
+        echo "NAMESPACE=$NAMESPACE" >> $GITHUB_ENV
+        echo "INITIAL_WAIT=$INITIAL_WAIT" >> $GITHUB_ENV
+        echo "FINAL_WAIT=$FINAL_WAIT" >> $GITHUB_ENV
+      shell: bash
+
+    - name: Set up AWS CLI
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Set up kubectl
+      uses: azure/setup-kubectl@v1
+
+    - name: Check if Helm is installed
+      run: |
+        if ! command -v helm &> /dev/null; then
+          echo "Helm not found, installing..."
+          curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+          chmod 700 get_helm.sh
+          ./get_helm.sh
+        else
+          echo "Helm is already installed."
+        fi
+
+    - name: Clone Kubernetes Autoscaler Repository
+      run: |
+        if [ ! -d "autoscaler" ]; then
+          git clone https://github.com/kubernetes/autoscaler.git
+        else
+          echo "Kubernetes Autoscaler repository already exists."
+        fi
+
+    - name: Configure kubeconfig
+      run: |
+        aws eks --region ${{ env.AWS_REGION }} update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }}
+
+    - name: Create Namespace if Not Exists
+      run: |
+        kubectl get namespace ${{ env.NAMESPACE }} || kubectl create namespace ${{ env.NAMESPACE }}
+
+    - name: Setup Vertical Pod Autoscaler (VPA)
+      run: |
+        cd autoscaler/vertical-pod-autoscaler
+        git fetch --tags
+        git checkout $(git tag -l | grep -E '^v1.2.[0-9]$' | sort -V | tail -n 1)
+        bash hack/vpa-up.sh
+
+    - name: Upgrade or Install Gardener Operator
+      run: |
+        helm upgrade --install gardener-operator ${{ env.HELM_REPOSITORY }} --namespace ${{ env.NAMESPACE }} || {
+          echo "Installation failed, uninstalling existing release";
+          helm uninstall gardener-operator --namespace ${{ env.NAMESPACE }} || echo "Release not found, nothing to uninstall";
+          echo "Reinstalling";
+          helm upgrade --install gardener-operator ${{ env.HELM_REPOSITORY }} --namespace ${{ env.NAMESPACE }}
+        }
+
+    - name: Wait and Verify Deployment
+      run: |
+        echo "Waiting for ${{ env.INITIAL_WAIT }} seconds..."
+        sleep ${{ env.INITIAL_WAIT }}
+        echo "Checking all resources in the '${{ env.NAMESPACE }}' namespace..."
+        kubectl get all -n ${{ env.NAMESPACE }}
+        kubectl get all -n ${{ env.NAMESPACE }} | grep 'pod/gardener-operator' || echo "Pod 'gardener-operator' not found or not running"
+        kubectl get all -n ${{ env.NAMESPACE }} | grep 'service/gardener-operator' || echo "Service 'gardener-operator' not found"
+        kubectl get all -n ${{ env.NAMESPACE }} | grep 'deployment.apps/gardener-operator' || echo "Deployment 'gardener-operator' not found"
+        kubectl get all -n ${{ env.NAMESPACE }} | grep 'replicaset.apps/gardener-operator' || echo "ReplicaSet 'gardener-operator' not found"
+
+    - name: Apply Kubernetes Manifest
+      run: |
+        kubectl apply -f example/operator/20-garden.yaml -n ${{ env.NAMESPACE }}
+
+    - name: Wait and Verify Manifest Setup
+      run: |
+        echo "Waiting for ${{ env.FINAL_WAIT }} seconds for the cluster and observability stack to be up and running..."
+        sleep ${{ env.FINAL_WAIT }}
+        echo "Checking the status of the 'garden' resources..."
+        kubectl get garden | tee garden_status.txt
+        grep 'runtime' garden_status.txt | grep 'True' || echo "Runtime not True"
