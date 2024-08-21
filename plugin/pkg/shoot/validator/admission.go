@@ -318,6 +318,9 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, _ adm
 	if err := validationContext.validateSecretBindingToCredentialsBindingMigration(a, v.secretBindingLister, v.credentialsBindingLister); err != nil {
 		return err
 	}
+	if err := validationContext.validateCredentialsBindingChange(ctx, a, v.authorizer, v.credentialsBindingLister); err != nil {
+		return err
+	}
 	if allErrs = validationContext.ensureMachineImages(); len(allErrs) > 0 {
 		return admission.NewForbidden(a, fmt.Errorf("%+v", allErrs))
 	}
@@ -659,6 +662,76 @@ func (c *validationContext) validateSecretBindingToCredentialsBindingMigration(
 		}
 	}
 
+	return nil
+}
+
+func (c *validationContext) validateCredentialsBindingChange(
+	ctx context.Context,
+	a admission.Attributes,
+	auth authorizer.Authorizer,
+	credentialsBindingLister securityv1alpha1listers.CredentialsBindingLister,
+) error {
+	getAttributesRecord := func(credentialsBinding *securityv1alpha1.CredentialsBinding) (authorizer.AttributesRecord, error) {
+		var (
+			credentialsAPIGroup   string
+			credentialsAPIVersion string
+			credentialsResource   string
+		)
+		if credentialsBinding.CredentialsRef.APIVersion == corev1.SchemeGroupVersion.String() {
+			credentialsAPIGroup = corev1.SchemeGroupVersion.Group
+			credentialsAPIVersion = corev1.SchemeGroupVersion.Version
+			credentialsResource = "secrets"
+		} else if credentialsBinding.CredentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() {
+			credentialsAPIGroup = securityv1alpha1.SchemeGroupVersion.Group
+			credentialsAPIVersion = securityv1alpha1.SchemeGroupVersion.Version
+			credentialsResource = "workloadidentities"
+		} else {
+			return authorizer.AttributesRecord{}, errors.New("unknown credentials ref: CredentialsBinding is referencing neither a Secret nor a WorkloadIdentity")
+		}
+		return authorizer.AttributesRecord{
+			User:            a.GetUserInfo(),
+			Verb:            "get",
+			APIGroup:        credentialsAPIGroup,
+			APIVersion:      credentialsAPIVersion,
+			Resource:        credentialsResource,
+			Namespace:       credentialsBinding.CredentialsRef.Namespace,
+			Name:            credentialsBinding.CredentialsRef.Name,
+			ResourceRequest: true,
+		}, nil
+	}
+
+	// Prevent users from changing the credentials binding unless they have read permissions for both old and new credentials.
+	// This ensures that if a user has access to a cluster
+	if c.oldShoot.Spec.CredentialsBindingName != nil && c.shoot.Spec.CredentialsBindingName != nil &&
+		*c.oldShoot.Spec.CredentialsBindingName != *c.shoot.Spec.CredentialsBindingName {
+		oldCredentialsBinding, err := credentialsBindingLister.CredentialsBindings(c.oldShoot.Namespace).Get(*c.oldShoot.Spec.CredentialsBindingName)
+		if err != nil {
+			return apierrors.NewInternalError(fmt.Errorf("could not retrieve previously referenced credentials binding: %+v", err.Error()))
+		}
+
+		oldCredentialsBindingAttributesRecord, err := getAttributesRecord(oldCredentialsBinding)
+		if err != nil {
+			return admission.NewForbidden(a, err)
+		}
+
+		if decision, _, _ := auth.Authorize(ctx, oldCredentialsBindingAttributesRecord); decision != authorizer.DecisionAllow {
+			return admission.NewForbidden(a, fmt.Errorf("user %q is not allowed to read the previously referenced %s %q", a.GetUserInfo().GetName(), oldCredentialsBinding.CredentialsRef.Kind, oldCredentialsBinding.CredentialsRef.Namespace+"/"+oldCredentialsBinding.CredentialsRef.Name))
+		}
+
+		newCredentialsBinding, err := credentialsBindingLister.CredentialsBindings(c.shoot.Namespace).Get(*c.shoot.Spec.CredentialsBindingName)
+		if err != nil {
+			return apierrors.NewInternalError(fmt.Errorf("could not retrieve newly referenced credentials binding: %+v", err.Error()))
+		}
+
+		newCredentialsBindingAttributesRecord, err := getAttributesRecord(newCredentialsBinding)
+		if err != nil {
+			return admission.NewForbidden(a, err)
+		}
+
+		if decision, _, _ := auth.Authorize(ctx, newCredentialsBindingAttributesRecord); decision != authorizer.DecisionAllow {
+			return admission.NewForbidden(a, fmt.Errorf("user %q is not allowed to read the newly referenced %s %q", a.GetUserInfo().GetName(), newCredentialsBinding.CredentialsRef.Kind, newCredentialsBinding.CredentialsRef.Namespace+"/"+newCredentialsBinding.CredentialsRef.Name))
+		}
+	}
 	return nil
 }
 
