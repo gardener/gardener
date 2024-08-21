@@ -44,6 +44,7 @@ func (r *Reconciler) reconcileAdmissionRuntimeClusterResources(ctx context.Conte
 	}
 
 	gardenerValues := map[string]any{
+		"priorityClassName": v1beta1constants.PriorityClassNameGardenSystem400,
 		"projectedKubeconfig": map[string]any{
 			"baseMountPath":               gardenerutils.VolumeMountPathGenericKubeconfig,
 			"genericKubeconfigSecretName": genericTokenKubeconfigSecretName,
