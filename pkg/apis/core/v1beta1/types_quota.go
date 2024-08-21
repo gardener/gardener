@@ -42,6 +42,6 @@ type QuotaSpec struct {
 	ClusterLifetimeDays *int32 `json:"clusterLifetimeDays,omitempty" protobuf:"varint,1,opt,name=clusterLifetimeDays"`
 	// Metrics is a list of resources which will be put under constraints.
 	Metrics corev1.ResourceList `json:"metrics" protobuf:"bytes,2,rep,name=metrics,casttype=k8s.io/api/core/v1.ResourceList,castkey=k8s.io/api/core/v1.ResourceName"`
-	// Scope is the scope of the Quota object, either 'project' or 'secret'. This field is immutable.
-	Scope corev1.ObjectReference `json:"scope" protobuf:"bytes,3,opt,name=scope"`
+	// Scope is the scope of the Quota object, either 'project', 'secret' or 'workloadidentity'. This field is immutable.
+	Scope corev1.ObjectReference `json:"scope" protobuf:"bytes,3,opt,name=scope"` // TODO: When graduating the API to v1 consider reworking this field as described in https://github.com/gardener/gardener/issues/9773#issuecomment-2293340267
 }

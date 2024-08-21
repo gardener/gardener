@@ -59,7 +59,8 @@ var _ = Describe("helper", func() {
 		},
 
 		Entry("project", "core.gardener.cloud/v1beta1", "Project", "project", BeNil()),
-		Entry("secret", "v1", "Secret", "secret", BeNil()),
+		Entry("secret", "v1", "Secret", "credentials", BeNil()),
+		Entry("workloadidentity", "security.gardener.cloud/v1alpha1", "WorkloadIdentity", "credentials", BeNil()),
 		Entry("unknown", "v2", "Foo", "", HaveOccurred()),
 	)
 

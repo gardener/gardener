@@ -6768,7 +6768,7 @@ func schema_pkg_apis_core_v1beta1_QuotaSpec(ref common.ReferenceCallback) common
 					},
 					"scope": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Scope is the scope of the Quota object, either 'project' or 'secret'. This field is immutable.",
+							Description: "Scope is the scope of the Quota object, either 'project', 'secret' or 'workloadidentity'. This field is immutable.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
 						},

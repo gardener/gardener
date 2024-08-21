@@ -119,5 +119,15 @@ var _ = Describe("Quota Validation Tests ", func() {
 				})),
 			))
 		})
+
+		It("should allow quota scope referencing WorkloadIdentity", func() {
+			quota.Spec.Scope = corev1.ObjectReference{
+				Kind:       "WorkloadIdentity",
+				APIVersion: "security.gardener.cloud/v1alpha1",
+			}
+			errorList := ValidateQuota(quota)
+
+			Expect(errorList).To(BeEmpty())
+		})
 	})
 })

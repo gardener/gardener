@@ -49,7 +49,10 @@ func QuotaScope(scopeRef corev1.ObjectReference) (string, error) {
 		return "project", nil
 	}
 	if scopeRef.APIVersion == "v1" && scopeRef.Kind == "Secret" {
-		return "secret", nil
+		return "credentials", nil
+	}
+	if gvk := schema.FromAPIVersionAndKind(scopeRef.APIVersion, scopeRef.Kind); gvk.Group == "security.gardener.cloud" && gvk.Kind == "WorkloadIdentity" {
+		return "credentials", nil
 	}
 	return "", errors.New("unknown quota scope")
 }

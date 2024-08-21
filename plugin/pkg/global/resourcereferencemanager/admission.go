@@ -723,10 +723,9 @@ func (r *ReferenceManager) ensureBindingReferences(ctx context.Context, attribut
 		return fmt.Errorf("unknown credentials kind: %s", credentialsKind)
 	}
 
-	// TODO(dimityrmirchev): Extend quota scope to allow workload identities
 	var (
-		secretQuotaCount  int
-		projectQuotaCount int
+		credentialsQuotaCount int
+		projectQuotaCount     int
 	)
 
 	for _, quotaRef := range quotas {
@@ -759,11 +758,11 @@ func (r *ReferenceManager) ensureBindingReferences(ctx context.Context, attribut
 		if scope == "project" {
 			projectQuotaCount++
 		}
-		if scope == "secret" {
-			secretQuotaCount++
+		if scope == "credentials" {
+			credentialsQuotaCount++
 		}
-		if projectQuotaCount > 1 || secretQuotaCount > 1 {
-			return errors.New("only one quota per scope (project or secret) can be assigned")
+		if projectQuotaCount > 1 || credentialsQuotaCount > 1 {
+			return errors.New("only one quota per scope (project or credentials) can be assigned")
 		}
 	}
 
