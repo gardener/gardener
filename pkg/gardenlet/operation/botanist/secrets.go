@@ -467,20 +467,17 @@ func (b *Botanist) DeployCloudProviderSecret(ctx context.Context) error {
 				Namespace: b.Shoot.SeedNamespace,
 			},
 		}
+
+		mutateFunc func() error
 	)
 
-	var (
-		data                  map[string][]byte
-		additionalLabels      map[string]string
-		additionalAnnotations map[string]string
-	)
 	switch credentials := b.Shoot.Credentials.(type) {
 	case *securityv1alpha1.WorkloadIdentity:
 		providerConfigRaw, err := json.Marshal(credentials.Spec.TargetSystem.ProviderConfig)
 		if err != nil {
 			return err
 		}
-		data = map[string][]byte{
+		data := map[string][]byte{
 			"config": providerConfigRaw,
 		}
 		shootInfo := b.Shoot.GetInfo()
@@ -495,29 +492,48 @@ func (b *Botanist) DeployCloudProviderSecret(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		additionalAnnotations = map[string]string{
-			securityv1alpha1constants.AnnotationWorkloadIdentityNamespace:     credentials.Namespace,
-			securityv1alpha1constants.AnnotationWorkloadIdentityName:          credentials.Name,
-			securityv1alpha1constants.AnnotationWorkloadIdentityContextObject: string(shootData),
-		}
-		additionalLabels = map[string]string{
-			securityv1alpha1constants.LabelPurpose:                  securityv1alpha1constants.LabelPurposeWorkloadIdentityTokenRequestor,
-			securityv1alpha1constants.LabelWorkloadIdentityProvider: credentials.Spec.TargetSystem.Type,
+
+		mutateFunc = func() error {
+			secret.Annotations = utils.MergeStringMaps(secret.Annotations,
+				map[string]string{
+					securityv1alpha1constants.AnnotationWorkloadIdentityNamespace:     credentials.Namespace,
+					securityv1alpha1constants.AnnotationWorkloadIdentityName:          credentials.Name,
+					securityv1alpha1constants.AnnotationWorkloadIdentityContextObject: string(shootData),
+				},
+			)
+			secret.Labels = utils.MergeStringMaps(
+				secret.Labels,
+				map[string]string{
+					securityv1alpha1constants.LabelPurpose:                  securityv1alpha1constants.LabelPurposeWorkloadIdentityTokenRequestor,
+					securityv1alpha1constants.LabelWorkloadIdentityProvider: credentials.Spec.TargetSystem.Type,
+				},
+				map[string]string{v1beta1constants.GardenerPurpose: v1beta1constants.SecretNameCloudProvider},
+			)
+
+			// Preserve the token field if already set, otherwise it is removed
+			// which triggers unwanted renewal of the workload identity token.
+			if token, ok := secret.Data["token"]; ok {
+				data["token"] = token
+			}
+
+			secret.Type = corev1.SecretTypeOpaque
+			secret.Data = utils.MergeStringMaps(secret.Data, data)
+			return nil
 		}
 	case *corev1.Secret:
-		data = credentials.Data
+		mutateFunc = func() error {
+			secret.Data = credentials.Data
+			secret.Labels = utils.MergeStringMaps(
+				secret.Labels,
+				map[string]string{v1beta1constants.GardenerPurpose: v1beta1constants.SecretNameCloudProvider},
+			)
+			secret.Type = corev1.SecretTypeOpaque
+			return nil
+		}
 	default:
 		return fmt.Errorf("unexpected type %T, should be either Secret or WorkloadIdentity", credentials)
 	}
 
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.SeedClientSet.Client(), secret, func() error {
-		secret.Annotations = additionalAnnotations
-		secret.Labels = utils.MergeStringMaps(map[string]string{
-			v1beta1constants.GardenerPurpose: v1beta1constants.SecretNameCloudProvider,
-		}, additionalLabels)
-		secret.Type = corev1.SecretTypeOpaque
-		secret.Data = data
-		return nil
-	})
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.SeedClientSet.Client(), secret, mutateFunc)
 	return err
 }
