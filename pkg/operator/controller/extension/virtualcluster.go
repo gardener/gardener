@@ -148,10 +148,15 @@ func (r *Reconciler) reconcileAdmissionVirtualClusterResources(ctx context.Conte
 		return fmt.Errorf("failed pulling Helm chart from OCI repository: %w", err)
 	}
 
+	accessSecret := r.getVirtualClusterAccessSecret(admissionResourceName(extension))
+
 	gardenerValues := map[string]any{
-		"virtualGarden": map[string]any{
-			"user": map[string]any{
-				"name": fmt.Sprintf("system:serviceaccount:kube-system:%s", r.getVirtualClusterAccessSecret(extension).ServiceAccountName),
+		"gardener": map[string]any{
+			"virtualCluster": map[string]any{
+				"serviceAccount": map[string]any{
+					"name":      accessSecret.ServiceAccountName,
+					"namespace": metav1.NamespaceSystem,
+				},
 			},
 		},
 	}

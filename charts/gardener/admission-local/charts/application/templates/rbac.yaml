@@ -45,6 +45,6 @@ roleRef:
   kind: ClusterRole
   name: {{ include "name" . }}
 subjects:
-- apiGroup: rbac.authorization.k8s.io
-  kind: User
-  name: {{ required ".Values.virtualGarden.user.name is required" .Values.virtualGarden.user.name }}
+- kind: ServiceAccount
+  name: {{ required ".Values.gardener.virtualCluster.serviceAccount.name is required" .Values.gardener.virtualCluster.serviceAccount.name }}
+  namespace: {{ required ".Values.gardener.virtualCluster.serviceAccount.namespace is required" .Values.gardener.virtualCluster.serviceAccount.namespace }}

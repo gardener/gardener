@@ -20,8 +20,8 @@ spec:
         networking.resources.gardener.cloud/to-virtual-garden-kube-apiserver-tcp-443: allowed
 {{ include "labels" . | indent 8 }}
     spec:
-      {{- if .Values.priorityClassName }}
-      priorityClassName: {{ .Values.priorityClassName }}
+      {{- if .Values.gardener.runtimeCluster.priorityClassName }}
+      priorityClassName: {{ .Values.gardener.runtimeCluster.priorityClassName }}
       {{- end }}
       serviceAccountName: {{ include "name" . }}
       containers:
@@ -33,7 +33,6 @@ spec:
         - --webhook-config-mode=url
         - --webhook-config-url={{ printf "%s.%s" (include "name" .) (.Release.Namespace) }}
         - --webhook-config-namespace={{ .Release.Namespace }}
-        - --kubeconfig={{ required ".Values.projectedKubeconfig.baseMountPath is required" .Values.projectedKubeconfig.baseMountPath }}/kubeconfig
         - --health-bind-address=:{{ .Values.healthPort }}
         - --leader-election-id={{ include "leaderelectionid" . }}
         env:
@@ -64,24 +63,3 @@ spec:
         resources:
 {{ toYaml .Values.resources | nindent 10 }}
 {{- end }}
-        volumeMounts:
-        - name: kubeconfig
-          mountPath: {{ required ".Values.projectedKubeconfig.baseMountPath is required" .Values.projectedKubeconfig.baseMountPath }}
-          readOnly: true
-      volumes:
-      - name: kubeconfig
-        projected:
-          defaultMode: 420
-          sources:
-          - secret:
-              items:
-              - key: kubeconfig
-                path: kubeconfig
-              name: {{ required ".Values.projectedKubeconfig.genericKubeconfigSecretName is required" .Values.projectedKubeconfig.genericKubeconfigSecretName }}
-              optional: false
-          - secret:
-              items:
-              - key: token
-                path: token
-              name: {{ required ".Values.projectedKubeconfig.tokenSecretName is required" .Values.projectedKubeconfig.tokenSecretName }}
-              optional: false

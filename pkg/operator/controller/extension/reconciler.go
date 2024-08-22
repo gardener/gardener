@@ -205,8 +205,8 @@ func (r *Reconciler) delete(ctx context.Context, log logr.Logger, virtualCluster
 	return r.removeFinalizer(ctx, log, extension)
 }
 
-func (r *Reconciler) getVirtualClusterAccessSecret(extension *operatorv1alpha1.Extension) *gardenerutils.AccessSecret {
-	return gardenerutils.NewShootAccessSecret(fmt.Sprintf("extension-%s", extension.Name), r.GardenNamespace)
+func (r *Reconciler) getVirtualClusterAccessSecret(name string) *gardenerutils.AccessSecret {
+	return gardenerutils.NewShootAccessSecret(name, r.GardenNamespace)
 }
 
 func (r *Reconciler) removeFinalizer(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension) error {

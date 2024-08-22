@@ -1,3 +1,5 @@
-# virtualGarden:
-#   user:
-#     name: ""
+gardener:
+  virtualCluster:
+    serviceAccount:
+      name: extension-admission-local
+      namespace: kube-system

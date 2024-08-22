@@ -10,7 +10,10 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -20,6 +23,10 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
+
+func admissionResourceName(extension *operatorv1alpha1.Extension) string {
+	return fmt.Sprintf("extension-admission-%s", extension.Name)
+}
 
 func runtimeClusterAdmissionManagedResourceName(extension *operatorv1alpha1.Extension) string {
 	return fmt.Sprintf("extension-admission-runtime-%s", extension.Name)
@@ -38,17 +45,16 @@ func (r *Reconciler) reconcileAdmissionRuntimeClusterResources(ctx context.Conte
 		return fmt.Errorf("failed pulling Helm chart from OCI repository: %w", err)
 	}
 
-	accessSecret := r.getVirtualClusterAccessSecret(extension)
+	accessSecret := r.getVirtualClusterAccessSecret(admissionResourceName(extension))
 	if err := accessSecret.Reconcile(ctx, r.RuntimeClientSet.Client()); err != nil {
 		return fmt.Errorf("failed reconciling access secret: %w", err)
 	}
 
 	gardenerValues := map[string]any{
-		"priorityClassName": v1beta1constants.PriorityClassNameGardenSystem400,
-		"projectedKubeconfig": map[string]any{
-			"baseMountPath":               gardenerutils.VolumeMountPathGenericKubeconfig,
-			"genericKubeconfigSecretName": genericTokenKubeconfigSecretName,
-			"tokenSecretName":             accessSecret.Secret.Name,
+		"gardener": map[string]any{
+			"runtimeCluster": map[string]any{
+				"priorityClassName": v1beta1constants.PriorityClassNameGardenSystem400,
+			},
 		},
 	}
 
@@ -64,6 +70,24 @@ func (r *Reconciler) reconcileAdmissionRuntimeClusterResources(ctx context.Conte
 		return fmt.Errorf("failed rendering Helm chart: %w", err)
 	}
 
+	secretData := renderedChart.AsSecretData()
+
+	// Inject Kubeconfig for Garden cluster access.
+	if err := gardenerutils.MutateObjectsInSecretData(
+		secretData,
+		r.GardenNamespace,
+		[]string{appsv1.GroupName, batchv1.GroupName},
+		func(obj runtime.Object) error {
+			return gardenerutils.InjectGenericGardenKubeconfig(
+				obj,
+				genericTokenKubeconfigSecretName,
+				accessSecret.Secret.Name,
+				gardenerutils.VolumeMountPathGenericKubeconfig,
+			)
+		}); err != nil {
+		return fmt.Errorf("failed to inject garden access secrets: %w", err)
+	}
+
 	if err := managedresources.CreateForSeedWithLabels(
 		ctx,
 		r.RuntimeClientSet.Client(),
@@ -71,7 +95,7 @@ func (r *Reconciler) reconcileAdmissionRuntimeClusterResources(ctx context.Conte
 		runtimeClusterAdmissionManagedResourceName(extension),
 		false,
 		map[string]string{managedresources.LabelKeyOrigin: managedresources.LabelValueOperator},
-		renderedChart.AsSecretData(),
+		secretData,
 	); err != nil {
 		return fmt.Errorf("failed creating ManagedResource: %w", err)
 	}
@@ -97,7 +121,7 @@ func (r *Reconciler) deleteAdmissionRuntimeClusterResources(ctx context.Context,
 		return fmt.Errorf("failed waiting for ManagedResource to be deleted: %w", err)
 	}
 
-	accessSecret := r.getVirtualClusterAccessSecret(extension).Secret
+	accessSecret := r.getVirtualClusterAccessSecret(admissionResourceName(extension)).Secret
 
 	log.Info("Deleting admission access secret for virtual cluster", "secret", client.ObjectKeyFromObject(accessSecret))
 	return kubernetesutils.DeleteObjects(ctx, r.RuntimeClientSet.Client(), accessSecret)
