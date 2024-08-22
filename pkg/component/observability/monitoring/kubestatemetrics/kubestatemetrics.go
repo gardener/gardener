@@ -18,6 +18,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -174,6 +175,14 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 			return err
 		} else if err == nil && mr.Spec.Class == nil {
 			// spec.class nil means shoot
+
+			// remove the finalizer to prevent deleting the cluster role and cluster role binding in the shoot even when the GRM is not running
+			// in a hibernated control-plane. It is similar to "mr.Spec.KeepObjects = true", but it supports hibernated shoots as well.
+			// The cluster role and cluster role binding are going to be adopted by the new managed resource with the "-target" suffix.
+			if err := controllerutils.RemoveAllFinalizers(ctx, k.client, mr); err != nil {
+				return err
+			}
+
 			if err := managedresources.DeleteForShoot(ctx, k.client, k.namespace, managedResourceNameShoot); err != nil {
 				return err
 			}
