@@ -6,12 +6,15 @@ package operatingsystemconfig
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	_ "embed"
 	"fmt"
 	"net/http"
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"text/template"
 	"time"
 
@@ -312,15 +315,35 @@ func addRegistryToContainerdFunc(ctx context.Context, log logr.Logger, registryC
 	if !exists && ptr.Deref(registryConfig.ReadinessProbe, false) {
 		log.Info("Probing endpoints for image registry", "upstream", registryConfig.Upstream)
 		if err := retry.Until(ctx, 2*time.Second, func(ctx context.Context) (done bool, err error) {
-			for _, registryHosts := range registryConfig.Hosts {
-				req, err := http.NewRequestWithContext(ctx, http.MethodGet, registryHosts.URL, nil)
+			for _, registryHost := range registryConfig.Hosts {
+				req, err := http.NewRequestWithContext(ctx, http.MethodGet, registryHost.URL, nil)
 				if err != nil {
-					return false, fmt.Errorf("failed to construct http request %s for upstream %s: %w", registryHosts.URL, registryConfig.Upstream, err)
+					return false, fmt.Errorf("failed to construct http request %s for upstream %s: %w", registryHost.URL, registryConfig.Upstream, err)
+				}
+
+				if len(registryHost.CACerts) > 0 {
+					caCertPool := x509.NewCertPool()
+					for _, caCert := range registryHost.CACerts {
+						if !filepath.IsAbs(caCert) {
+							caCert = filepath.Join(baseDir, caCert)
+						}
+						pemContent, err := fs.ReadFile(caCert)
+						if err != nil {
+							return false, fmt.Errorf("failed to read ca file %s for host %s and upstream %s: %w", caCert, registryHost.URL, registryConfig.Upstream, err)
+						}
+						caCertPool.AppendCertsFromPEM(pemContent)
+					}
+					httpClient.Transport = &http.Transport{
+						TLSClientConfig: &tls.Config{
+							RootCAs:    caCertPool,
+							MinVersion: tls.VersionTLS12,
+						},
+					}
 				}
 
 				_, err = httpClient.Do(req)
 				if err != nil {
-					return false, fmt.Errorf("failed to reach registry %s for upstream %s: %w", registryHosts.URL, registryConfig.Upstream, err)
+					return false, fmt.Errorf("failed to reach registry %s for upstream %s: %w", registryHost.URL, registryConfig.Upstream, err)
 				}
 			}
 			return true, nil
