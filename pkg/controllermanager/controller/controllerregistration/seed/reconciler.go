@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -83,8 +84,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	backupBucketList := &gardencorev1beta1.BackupBucketList{}
-	if err := r.Client.List(ctx, backupBucketList, client.MatchingFields{core.BackupBucketSeedName: seed.Name}); err != nil {
+	if err := r.Client.List(ctx, backupBucketList); err != nil {
 		return reconcile.Result{}, err
+	}
+	backupBucketNameToObject := make(map[string]*gardencorev1beta1.BackupBucket, len(backupBucketList.Items))
+	for _, backupBucket := range backupBucketList.Items {
+		backupBucketNameToObject[backupBucket.Name] = &backupBucket
 	}
 
 	backupEntryList := &gardencorev1beta1.BackupEntryList{}
@@ -118,10 +123,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	var (
 		controllerRegistrations = computeControllerRegistrationMaps(controllerRegistrationList)
 
-		wantedKindTypeCombinationForBackupBuckets, buckets = computeKindTypesForBackupBuckets(backupBucketList)
-		wantedKindTypeCombinationForBackupEntries          = computeKindTypesForBackupEntries(log, backupEntryList, buckets)
-		wantedKindTypeCombinationForShoots                 = computeKindTypesForShoots(ctx, log, r.Client, shootList, seed, controllerRegistrationList, internalDomain, defaultDomains)
-		wantedKindTypeCombinationForSeed                   = computeKindTypesForSeed(seed)
+		wantedKindTypeCombinationForBackupBuckets = computeKindTypesForBackupBuckets(backupBucketNameToObject, seed.Name)
+		wantedKindTypeCombinationForBackupEntries = computeKindTypesForBackupEntries(log, backupEntryList, backupBucketNameToObject)
+		wantedKindTypeCombinationForShoots        = computeKindTypesForShoots(ctx, log, r.Client, shootList, seed, controllerRegistrationList, internalDomain, defaultDomains)
+		wantedKindTypeCombinationForSeed          = computeKindTypesForSeed(seed)
 
 		wantedKindTypeCombinations = sets.
 						New[string]().
@@ -155,22 +160,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 // computeKindTypesForBackupBucket computes the list of wanted kind/type combinations for extension resources based on the
 // the list of existing BackupBucket resources.
 func computeKindTypesForBackupBuckets(
-	backupBucketList *gardencorev1beta1.BackupBucketList,
-) (
-	sets.Set[string],
-	map[string]gardencorev1beta1.BackupBucket,
-) {
-	var (
-		wantedKindTypeCombinations = sets.New[string]()
-		buckets                    = make(map[string]gardencorev1beta1.BackupBucket)
-	)
+	backupBucketNameToObject map[string]*gardencorev1beta1.BackupBucket,
+	seedName string,
+) sets.Set[string] {
+	wantedKindTypeCombinations := sets.New[string]()
 
-	for _, backupBucket := range backupBucketList.Items {
-		buckets[backupBucket.Name] = backupBucket
-		wantedKindTypeCombinations.Insert(gardenerutils.ExtensionsID(extensionsv1alpha1.BackupBucketResource, backupBucket.Spec.Provider.Type))
+	for _, backupBucket := range backupBucketNameToObject {
+		if ptr.Deref(backupBucket.Spec.SeedName, "") == seedName {
+			wantedKindTypeCombinations.Insert(gardenerutils.ExtensionsID(extensionsv1alpha1.BackupBucketResource, backupBucket.Spec.Provider.Type))
+		}
 	}
 
-	return wantedKindTypeCombinations, buckets
+	return wantedKindTypeCombinations
 }
 
 // computeKindTypesForBackupEntries computes the list of wanted kind/type combinations for extension resources based on the
@@ -178,12 +179,12 @@ func computeKindTypesForBackupBuckets(
 func computeKindTypesForBackupEntries(
 	log logr.Logger,
 	backupEntryList *gardencorev1beta1.BackupEntryList,
-	buckets map[string]gardencorev1beta1.BackupBucket,
+	backupBucketNameToObject map[string]*gardencorev1beta1.BackupBucket,
 ) sets.Set[string] {
 	wantedKindTypeCombinations := sets.New[string]()
 
 	for _, backupEntry := range backupEntryList.Items {
-		bucket, ok := buckets[backupEntry.Spec.BucketName]
+		bucket, ok := backupBucketNameToObject[backupEntry.Spec.BucketName]
 		if !ok {
 			log.Error(fmt.Errorf("BackupBucket not found in list"), "Couldn't find referenced BackupBucket for BackupEntry", "backupBucketName", backupEntry.Spec.BucketName, "backupEntry", client.ObjectKeyFromObject(&backupEntry))
 			continue

@@ -33,6 +33,7 @@ var _ = Describe("Reconciler", func() {
 		nopLogger = logr.Discard()
 
 		seedName       = "seed"
+		sourceSeedName = "sourceSeed"
 		seedLabels     = map[string]string{"foo": "bar"}
 		seedObjectMeta = metav1.ObjectMeta{
 			Name:   seedName,
@@ -56,6 +57,8 @@ var _ = Describe("Reconciler", func() {
 		type11 = "type11"
 		type12 = "type12"
 
+		sourceType = "sourceType"
+
 		backupBucket1 = &gardencorev1beta1.BackupBucket{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "bb1",
@@ -78,15 +81,22 @@ var _ = Describe("Reconciler", func() {
 				},
 			},
 		}
-		backupBucketList = &gardencorev1beta1.BackupBucketList{
-			Items: []gardencorev1beta1.BackupBucket{
-				*backupBucket1,
-				*backupBucket2,
+		sourceBackupBucket = &gardencorev1beta1.BackupBucket{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "sourceBackupBucket",
+			},
+			Spec: gardencorev1beta1.BackupBucketSpec{
+				SeedName: &sourceSeedName,
+				Provider: gardencorev1beta1.BackupBucketProvider{
+					Type: sourceType,
+				},
 			},
 		}
-		buckets = map[string]gardencorev1beta1.BackupBucket{
-			backupBucket1.Name: *backupBucket1,
-			backupBucket2.Name: *backupBucket2,
+
+		backupBucketsMap = map[string]*gardencorev1beta1.BackupBucket{
+			backupBucket1.Name:      backupBucket1,
+			backupBucket2.Name:      backupBucket2,
+			sourceBackupBucket.Name: sourceBackupBucket,
 		}
 
 		backupEntry2 = &gardencorev1beta1.BackupEntry{
@@ -107,10 +117,20 @@ var _ = Describe("Reconciler", func() {
 				BucketName: backupBucket1.Name,
 			},
 		}
+		sourceBackupEntry = &gardencorev1beta1.BackupEntry{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "sourceBackupEntry",
+			},
+			Spec: gardencorev1beta1.BackupEntrySpec{
+				SeedName:   &seedName,
+				BucketName: sourceBackupBucket.Name,
+			},
+		}
 		backupEntryList = &gardencorev1beta1.BackupEntryList{
 			Items: []gardencorev1beta1.BackupEntry{
 				*backupEntry2,
 				*backupEntry3,
+				*sourceBackupEntry,
 			},
 		}
 
@@ -438,20 +458,18 @@ var _ = Describe("Reconciler", func() {
 
 	Describe("#computeKindTypesForBackupBuckets", func() {
 		It("should return empty results for empty input", func() {
-			kindTypes, bs := computeKindTypesForBackupBuckets(&gardencorev1beta1.BackupBucketList{})
+			kindTypes := computeKindTypesForBackupBuckets(map[string]*gardencorev1beta1.BackupBucket{}, seedName)
 
 			Expect(kindTypes.Len()).To(BeZero())
-			Expect(bs).To(BeEmpty())
 		})
 
 		It("should correctly compute the result", func() {
-			kindTypes, bs := computeKindTypesForBackupBuckets(backupBucketList)
+			kindTypes := computeKindTypesForBackupBuckets(backupBucketsMap, seedName)
 
 			Expect(kindTypes).To(Equal(sets.New(
 				extensionsv1alpha1.BackupBucketResource+"/"+backupBucket1.Spec.Provider.Type,
 				extensionsv1alpha1.BackupBucketResource+"/"+backupBucket2.Spec.Provider.Type,
 			)))
-			Expect(bs).To(Equal(buckets))
 		})
 	})
 
@@ -463,10 +481,11 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		It("should correctly compute the result", func() {
-			kindTypes := computeKindTypesForBackupEntries(nopLogger, backupEntryList, buckets)
+			kindTypes := computeKindTypesForBackupEntries(nopLogger, backupEntryList, backupBucketsMap)
 
 			Expect(kindTypes).To(Equal(sets.New(
-				extensionsv1alpha1.BackupEntryResource + "/" + backupBucket1.Spec.Provider.Type,
+				extensionsv1alpha1.BackupEntryResource+"/"+backupBucket1.Spec.Provider.Type,
+				extensionsv1alpha1.BackupEntryResource+"/"+sourceBackupBucket.Spec.Provider.Type,
 			)))
 		})
 	})

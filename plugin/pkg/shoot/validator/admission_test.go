@@ -4868,15 +4868,14 @@ var _ = Describe("validator", func() {
 					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("backup is not configured for old seed %q", seedName)))
 				})
 
-				It("should reject update of binding, because cloud provider for new Seed is not equal to cloud provider for old Seed", func() {
+				It("should allow update of binding to Seed with different provider type", func() {
 					seed.Spec.Provider.Type = "gcp"
 					newSeed.Spec.Provider.Type = "aws"
 
 					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
-					Expect(err).To(BeForbiddenError())
-					Expect(err.Error()).To(ContainSubstring("cannot change seed because cloud provider for new seed (%s) is not equal to cloud provider for old seed (%s)", newSeed.Spec.Provider.Type, seed.Spec.Provider.Type))
+					Expect(err).NotTo(HaveOccurred())
 				})
 			})
 
