@@ -567,7 +567,7 @@ var _ = Describe("VpnSeedServer", func() {
 			},
 		}
 
-		scrapeConfig = func(haEnabled bool) *monitoringv1alpha1.ScrapeConfig {
+		scrapeConfig = func(highAvailabilityEnabled bool) *monitoringv1alpha1.ScrapeConfig {
 			jobName, serviceNameRegexSuffix := "reversed-vpn-envoy-side-car", ""
 			allowedMetrics := []string{
 				"envoy_cluster_external_upstream_rq",
@@ -623,7 +623,7 @@ var _ = Describe("VpnSeedServer", func() {
 				"envoy_http_downstream_cx_length_ms_sum",
 			}
 
-			if haEnabled {
+			if highAvailabilityEnabled {
 				jobName, serviceNameRegexSuffix = "openvpn-server-exporter", "-[0-2]"
 				allowedMetrics = []string{
 					"openvpn_server_client_received_bytes_total",
@@ -662,7 +662,7 @@ var _ = Describe("VpnSeedServer", func() {
 				},
 			}
 
-			if haEnabled {
+			if highAvailabilityEnabled {
 				scrapeConfig.Spec.MetricRelabelConfigs = append(scrapeConfig.Spec.MetricRelabelConfigs,
 					monitoringv1.RelabelConfig{
 						SourceLabels: []monitoringv1.LabelName{"instance"},
@@ -695,40 +695,47 @@ var _ = Describe("VpnSeedServer", func() {
 			return svc
 		}
 
-		expectedVpa = &vpaautoscalingv1.VerticalPodAutoscaler{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:            "vpn-seed-server" + "-vpa",
-				Namespace:       namespace,
-				ResourceVersion: "1",
-			},
-			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
-				TargetRef: &autoscalingv1.CrossVersionObjectReference{
-					APIVersion: appsv1.SchemeGroupVersion.String(),
-					Kind:       "Deployment",
-					Name:       "vpn-seed-server",
+		expectedVPAFor = func(highAvailabilityEnabled bool) *vpaautoscalingv1.VerticalPodAutoscaler {
+			targetKindRef := "Deployment"
+			if highAvailabilityEnabled {
+				targetKindRef = "StatefulSet"
+			}
+
+			return &vpaautoscalingv1.VerticalPodAutoscaler{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            "vpn-seed-server" + "-vpa",
+					Namespace:       namespace,
+					ResourceVersion: "1",
 				},
-				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: &vpaUpdateMode,
-				},
-				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
-						{
-							ContainerName: "vpn-seed-server",
-							MinAllowed: corev1.ResourceList{
-								corev1.ResourceMemory: resource.MustParse("20Mi"),
+				Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
+					TargetRef: &autoscalingv1.CrossVersionObjectReference{
+						APIVersion: appsv1.SchemeGroupVersion.String(),
+						Kind:       targetKindRef,
+						Name:       "vpn-seed-server",
+					},
+					UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
+						UpdateMode: &vpaUpdateMode,
+					},
+					ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+						ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+							{
+								ContainerName: "vpn-seed-server",
+								MinAllowed: corev1.ResourceList{
+									corev1.ResourceMemory: resource.MustParse("20Mi"),
+								},
+								ControlledValues: &controlledValues,
 							},
-							ControlledValues: &controlledValues,
-						},
-						{
-							ContainerName: "envoy-proxy",
-							MinAllowed: corev1.ResourceList{
-								corev1.ResourceMemory: resource.MustParse("100Mi"),
+							{
+								ContainerName: "envoy-proxy",
+								MinAllowed: corev1.ResourceList{
+									corev1.ResourceMemory: resource.MustParse("100Mi"),
+								},
+								ControlledValues: &controlledValues,
 							},
-							ControlledValues: &controlledValues,
 						},
 					},
 				},
-			},
+			}
 		}
 	)
 
@@ -808,9 +815,10 @@ var _ = Describe("VpnSeedServer", func() {
 				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedConfigMap.Namespace, Name: expectedConfigMap.Name}, actualConfigMap)).To(Succeed())
 				Expect(actualConfigMap).To(DeepEqual(expectedConfigMap))
 
-				actualVpa := &vpaautoscalingv1.VerticalPodAutoscaler{}
-				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedVpa.Namespace, Name: expectedVpa.Name}, actualVpa)).To(Succeed())
-				Expect(actualVpa).To(DeepEqual(expectedVpa))
+				actualVPA := &vpaautoscalingv1.VerticalPodAutoscaler{}
+				expectedVPA := expectedVPAFor(values.HighAvailabilityEnabled)
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedVPA.Namespace, Name: expectedVPA.Name}, actualVPA)).To(Succeed())
+				Expect(actualVPA).To(DeepEqual(expectedVPA))
 
 				actualDestinationRule := &istionetworkingv1beta1.DestinationRule{}
 				expectedDestinationRule := destinationRule()
@@ -922,9 +930,10 @@ var _ = Describe("VpnSeedServer", func() {
 				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedConfigMap.Namespace, Name: expectedConfigMap.Name}, actualConfigMap)).To(Succeed())
 				Expect(actualConfigMap).To(DeepEqual(expectedConfigMap))
 
-				actualVpa := &vpaautoscalingv1.VerticalPodAutoscaler{}
-				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedVpa.Namespace, Name: expectedVpa.Name}, actualVpa)).To(Succeed())
-				Expect(actualVpa).To(DeepEqual(expectedVpa))
+				actualVPA := &vpaautoscalingv1.VerticalPodAutoscaler{}
+				expectedVPA := expectedVPAFor(values.HighAvailabilityEnabled)
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedVPA.Namespace, Name: expectedVPA.Name}, actualVPA)).To(Succeed())
+				Expect(actualVPA).To(DeepEqual(expectedVPA))
 
 				actualScrapeConfig := &monitoringv1alpha1.ScrapeConfig{}
 				expectedScrapeConfig := scrapeConfig(values.HighAvailabilityEnabled)
@@ -997,7 +1006,7 @@ var _ = Describe("VpnSeedServer", func() {
 			sc.ResourceVersion = ""
 			Expect(c.Create(ctx, sc)).To(Succeed())
 
-			vpa := expectedVpa.DeepCopy()
+			vpa := expectedVPAFor(values.HighAvailabilityEnabled).DeepCopy()
 			vpa.ResourceVersion = ""
 			Expect(c.Create(ctx, vpa)).To(Succeed())
 
@@ -1020,7 +1029,7 @@ var _ = Describe("VpnSeedServer", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(destinationRule()), &istionetworkingv1beta1.DestinationRule{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedService), &corev1.Service{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(scrapeConfig(values.HighAvailabilityEnabled)), &monitoringv1alpha1.ScrapeConfig{})).To(BeNotFoundError())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedVpa), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedVPAFor(values.HighAvailabilityEnabled)), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKey{Namespace: istioNamespace, Name: namespace + "-vpn"}, &networkingv1alpha3.EnvoyFilter{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedPodDisruptionBudgetFor(false)), &policyv1.PodDisruptionBudget{})).To(BeNotFoundError())
 		})
