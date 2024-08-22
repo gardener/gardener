@@ -5,11 +5,9 @@
 package controllerinstallation
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"strings"
 	"time"
 
@@ -19,10 +17,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -44,7 +40,6 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	ctrlinstutils "github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/utils"
-	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
@@ -52,7 +47,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/oci"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
-	forkedyaml "github.com/gardener/gardener/third_party/gopkg.in/yaml.v2"
 )
 
 const finalizerName = "core.gardener.cloud/controllerinstallation"
@@ -272,7 +266,25 @@ func (r *Reconciler) reconcile(
 	conditionValid = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionValid, gardencorev1beta1.ConditionTrue, "RegistrationValid", "chart could be rendered successfully.")
 	secretData := release.AsSecretData()
 
-	if err := injectGardenAccessSecrets(secretData, namespace.Name, genericGardenKubeconfigSecretName, gardenAccessSecret.Secret.Name, seed.Name); err != nil {
+	if err := gardenerutils.MutateObjectsInSecretData(
+		secretData,
+		namespace.Name,
+		[]string{appsv1.GroupName, batchv1.GroupName},
+		// Inject generic kubeconfig
+		func(obj runtime.Object) error {
+			return gardenerutils.InjectGenericGardenKubeconfig(obj, genericGardenKubeconfigSecretName, gardenAccessSecret.Secret.Name, gardenerutils.VolumeMountPathGenericGardenKubeconfig)
+		},
+		// Set seed name
+		func(obj runtime.Object) error {
+			return kubernetesutils.VisitPodSpec(obj, func(podSpec *corev1.PodSpec) {
+				kubernetesutils.VisitContainers(podSpec, func(container *corev1.Container) {
+					kubernetesutils.AddEnvVar(container, corev1.EnvVar{
+						Name:  v1beta1constants.EnvSeedName,
+						Value: seed.Name,
+					}, true)
+				})
+			})
+		}); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to inject garden access secrets: %w", err)
 	}
 
@@ -456,113 +468,4 @@ func (r *Reconciler) reconcileGardenAccessSecret(ctx context.Context, controller
 		WithServiceAccountLabels(map[string]string{v1beta1constants.LabelControllerRegistrationName: controllerRegistrationName})
 
 	return accessSecret, accessSecret.Reconcile(ctx, r.SeedClientSet.Client())
-}
-
-var (
-	injectionScheme    = kubernetes.SeedScheme
-	injectionAPIGroups = sets.New[string](appsv1.GroupName, batchv1.GroupName)
-)
-
-// injectGardenAccessSecrets iterates over the given rendered secret data and injects the given garden access secrets
-// into all objects in the apps API group.
-func injectGardenAccessSecrets(secretData map[string][]byte, namespace, genericGardenKubeconfigSecretName, gardenAccessSecretName, seedName string) error {
-	return mutateObjects(secretData, func(obj *unstructured.Unstructured) error {
-		// only inject into objects of selected API groups
-		if !injectionAPIGroups.Has(obj.GetObjectKind().GroupVersionKind().Group) {
-			return nil
-		}
-
-		// we can only inject the access secret into objects in the ControllerInstallation's namespace
-		if obj.GetNamespace() != namespace {
-			return nil
-		}
-
-		return mutateTypedObject(obj, func(typedObject runtime.Object) error {
-			// inject garden kubeconfig
-			if err := gardenerutils.InjectGenericGardenKubeconfig(
-				typedObject,
-				genericGardenKubeconfigSecretName,
-				gardenAccessSecretName,
-			); err != nil {
-				return err
-			}
-
-			// inject reference annotations for generic kubeconfig
-			if err := references.InjectAnnotations(typedObject); err != nil {
-				return err
-			}
-
-			// inject seed name env var
-			return kubernetesutils.VisitPodSpec(typedObject, func(podSpec *corev1.PodSpec) {
-				kubernetesutils.VisitContainers(podSpec, func(container *corev1.Container) {
-					kubernetesutils.AddEnvVar(container, corev1.EnvVar{
-						Name:  v1beta1constants.EnvSeedName,
-						Value: seedName,
-					}, true)
-				})
-			})
-		})
-	})
-}
-
-// mutateObject iterates over the given rendered secret data and calls the given mutator for each of them. It marshals
-// the objects back (with stable key ordering) after mutation and updates the secret data.
-func mutateObjects(secretData map[string][]byte, mutate func(obj *unstructured.Unstructured) error) error {
-	for key, data := range secretData {
-		buffer := &bytes.Buffer{}
-		manifestReader := kubernetes.NewManifestReader(data)
-
-		for {
-			_, _ = buffer.WriteString("\n---\n")
-			obj, err := manifestReader.Read()
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				return err
-			}
-			if obj == nil {
-				continue
-			}
-
-			if err := mutate(obj); err != nil {
-				return err
-			}
-
-			// serialize unstructured back to secret data (with stable key ordering)
-			// Note: we have to do this for all objects, not only for mutated ones, as there could be multiple objects in one file
-			objBytes, err := forkedyaml.Marshal(obj.Object)
-			if err != nil {
-				return err
-			}
-
-			if _, err := buffer.Write(objBytes); err != nil {
-				return err
-			}
-		}
-
-		secretData[key] = buffer.Bytes()
-	}
-
-	return nil
-}
-
-// mutateTypedObject converts the given object to a typed object, calls the mutator, and converts the object back to the
-// original type.
-func mutateTypedObject(obj runtime.Object, mutate func(obj runtime.Object) error) error {
-	// convert to typed object for injection logic
-	typedObject, err := injectionScheme.New(obj.GetObjectKind().GroupVersionKind())
-	if err != nil {
-		return err
-	}
-	if err := injectionScheme.Convert(obj, typedObject, nil); err != nil {
-		return err
-	}
-
-	if err := mutate(typedObject); err != nil {
-		return err
-	}
-
-	// convert back into unstructured for serialization
-	return injectionScheme.Convert(typedObject, obj, nil)
 }
