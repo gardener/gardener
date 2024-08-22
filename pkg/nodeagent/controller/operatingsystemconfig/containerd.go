@@ -335,7 +335,8 @@ func addRegistryToContainerdFunc(ctx context.Context, log logr.Logger, registryC
 					}
 					httpClient.Transport = &http.Transport{
 						TLSClientConfig: &tls.Config{
-							RootCAs: caCertPool,
+							RootCAs:    caCertPool,
+							MinVersion: tls.VersionTLS12,
 						},
 					}
 				}
