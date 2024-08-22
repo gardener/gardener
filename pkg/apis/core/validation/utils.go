@@ -7,6 +7,7 @@ package validation
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -21,6 +22,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/features"
 	kubernetescorevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
 )
@@ -178,8 +180,8 @@ var k8sVersionCPRegex = regexp.MustCompile(`^([0-9]+\.){2}[0-9]+$`)
 
 var supportedVersionClassifications = sets.New(string(core.ClassificationPreview), string(core.ClassificationSupported), string(core.ClassificationDeprecated))
 
-// ValidateKubernetesVersions validates the given list of ExpirableVersions for valid Kubernetes versions.
-func ValidateKubernetesVersions(versions []core.ExpirableVersion, fldPath *field.Path) field.ErrorList {
+// validateKubernetesVersions validates the given list of ExpirableVersions for valid Kubernetes versions.
+func validateKubernetesVersions(versions []core.ExpirableVersion, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if len(versions) == 0 {
 		return allErrs
@@ -204,8 +206,8 @@ func ValidateKubernetesVersions(versions []core.ExpirableVersion, fldPath *field
 	return allErrs
 }
 
-// ValidateMachineImages validates the given list of machine images for valid values and combinations.
-func ValidateMachineImages(machineImages []core.MachineImage, fldPath *field.Path) field.ErrorList {
+// validateMachineImages validates the given list of machine images for valid values and combinations.
+func validateMachineImages(machineImages []core.MachineImage, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(machineImages) == 0 {
@@ -273,8 +275,8 @@ func ValidateMachineImages(machineImages []core.MachineImage, fldPath *field.Pat
 	return allErrs
 }
 
-// ValidateMachineTypes validates the given list of machine types for valid values and combinations.
-func ValidateMachineTypes(machineTypes []core.MachineType, fldPath *field.Path) field.ErrorList {
+// validateMachineTypes validates the given list of machine types for valid values and combinations.
+func validateMachineTypes(machineTypes []core.MachineType, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	names := make(map[string]struct{}, len(machineTypes))
@@ -305,6 +307,84 @@ func ValidateMachineTypes(machineTypes []core.MachineType, fldPath *field.Path) 
 		if machineType.Storage != nil {
 			allErrs = append(allErrs, validateMachineTypeStorage(*machineType.Storage, idxPath.Child("storage"))...)
 		}
+	}
+
+	return allErrs
+}
+
+// validateVolumeTypes validates the given list of volume types for valid values and combinations.
+func validateVolumeTypes(volumeTypes []core.VolumeType, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	names := make(map[string]struct{}, len(volumeTypes))
+
+	for i, volumeType := range volumeTypes {
+		idxPath := fldPath.Index(i)
+
+		namePath := idxPath.Child("name")
+		if len(volumeType.Name) == 0 {
+			allErrs = append(allErrs, field.Required(namePath, "must provide a name"))
+		}
+
+		if _, ok := names[volumeType.Name]; ok {
+			allErrs = append(allErrs, field.Duplicate(namePath, volumeType.Name))
+			break
+		}
+		names[volumeType.Name] = struct{}{}
+
+		if len(volumeType.Class) == 0 {
+			allErrs = append(allErrs, field.Required(idxPath.Child("class"), "must provide a class"))
+		}
+
+		if volumeType.MinSize != nil {
+			allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("minSize", *volumeType.MinSize, idxPath.Child("minSize"))...)
+		}
+	}
+
+	return allErrs
+}
+
+func validateMachineImageVersionArchitecture(archs []string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	for _, arch := range archs {
+		if !slices.Contains(v1beta1constants.ValidArchitectures, arch) {
+			allErrs = append(allErrs, field.NotSupported(fldPath, arch, v1beta1constants.ValidArchitectures))
+		}
+	}
+
+	return allErrs
+}
+
+func validateMachineTypeArchitecture(arch *string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if !slices.Contains(v1beta1constants.ValidArchitectures, *arch) {
+		allErrs = append(allErrs, field.NotSupported(fldPath, *arch, v1beta1constants.ValidArchitectures))
+	}
+
+	return allErrs
+}
+
+func validateMachineTypeStorage(storage core.MachineTypeStorage, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if storage.StorageSize == nil && storage.MinSize == nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, storage, `must either configure "size" or "minSize"`))
+		return allErrs
+	}
+
+	if storage.StorageSize != nil && storage.MinSize != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, storage, `not allowed to configure both "size" and "minSize"`))
+		return allErrs
+	}
+
+	if storage.StorageSize != nil {
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("size", *storage.StorageSize, fldPath.Child("size"))...)
+	}
+
+	if storage.MinSize != nil {
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("minSize", *storage.MinSize, fldPath.Child("minSize"))...)
 	}
 
 	return allErrs

@@ -53,7 +53,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	)
 }
 
-// MapCloudProfileToNamespacedCloudProfile is a mapper.MapFunc for mapping a core.gardener.cloud/v1beta1.CloudProfile to core.gardener.cloud/v1beta1.NamespacedCloudProfile
+// MapCloudProfileToNamespacedCloudProfile is a mapper.MapFunc for mapping a core.gardener.cloud/v1beta1.CloudProfile to core.gardener.cloud/v1beta1.NamespacedCloudProfile.
 func (r *Reconciler) MapCloudProfileToNamespacedCloudProfile(ctx context.Context, log logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
 	cloudProfile, ok := obj.(*gardencorev1beta1.CloudProfile)
 	if !ok {
@@ -61,7 +61,7 @@ func (r *Reconciler) MapCloudProfileToNamespacedCloudProfile(ctx context.Context
 	}
 	namespacedCloudProfileList, err := controllerutils.GetNamespacedCloudProfilesReferencingCloudProfile(ctx, r.Client, cloudProfile.Name)
 	if err != nil {
-		log.Error(err, "Failed to list namespacedcloudprofiles referencing this cloudprofile", "cloudProfileName", cloudProfile.Name)
+		log.Error(err, "Failed to list NamespacedCloudProfiles referencing this CloudProfile", "cloudProfileName", cloudProfile.Name)
 		return nil
 	}
 	return mapper.ObjectListToRequests(namespacedCloudProfileList)

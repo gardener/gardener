@@ -6,7 +6,6 @@ package validation
 
 import (
 	"fmt"
-	"slices"
 
 	"github.com/Masterminds/semver/v3"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
@@ -16,9 +15,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
-	kubernetescorevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
 )
 
 var (
@@ -65,11 +62,11 @@ func ValidateCloudProfileSpec(spec *core.CloudProfileSpec, fldPath *field.Path) 
 		allErrs = append(allErrs, field.Required(fldPath.Child("type"), "must provide a provider type"))
 	}
 
-	allErrs = append(allErrs, validateKubernetesSettings(spec.Kubernetes, fldPath.Child("kubernetes"))...)
-	allErrs = append(allErrs, validateMachineImagesConfiguration(spec.MachineImages, fldPath.Child("machineImages"))...)
-	allErrs = append(allErrs, validateMandatoryMachineTypes(spec.MachineTypes, fldPath.Child("machineTypes"))...)
+	allErrs = append(allErrs, validateCloudProfileKubernetesSettings(spec.Kubernetes, fldPath.Child("kubernetes"))...)
+	allErrs = append(allErrs, validateCloudProfileMachineImages(spec.MachineImages, fldPath.Child("machineImages"))...)
+	allErrs = append(allErrs, validateCloudProfileMachineTypes(spec.MachineTypes, fldPath.Child("machineTypes"))...)
 	allErrs = append(allErrs, validateVolumeTypes(spec.VolumeTypes, fldPath.Child("volumeTypes"))...)
-	allErrs = append(allErrs, validateRegions(spec.Regions, fldPath.Child("regions"))...)
+	allErrs = append(allErrs, validateCloudProfileRegions(spec.Regions, fldPath.Child("regions"))...)
 	if spec.SeedSelector != nil {
 		allErrs = append(allErrs, metav1validation.ValidateLabelSelector(&spec.SeedSelector.LabelSelector, metav1validation.LabelSelectorValidationOptions{AllowInvalidLabelValueInSelector: true}, fldPath.Child("seedSelector"))...)
 	}
@@ -84,7 +81,7 @@ func ValidateCloudProfileSpec(spec *core.CloudProfileSpec, fldPath *field.Path) 
 	return allErrs
 }
 
-func validateKubernetesSettings(kubernetes core.KubernetesSettings, fldPath *field.Path) field.ErrorList {
+func validateCloudProfileKubernetesSettings(kubernetes core.KubernetesSettings, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if len(kubernetes.Versions) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("versions"), "must provide at least one Kubernetes version"))
@@ -97,7 +94,7 @@ func validateKubernetesSettings(kubernetes core.KubernetesSettings, fldPath *fie
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("versions[]").Child("expirationDate"), latestKubernetesVersion.ExpirationDate, fmt.Sprintf("expiration date of latest kubernetes version ('%s') must not be set", latestKubernetesVersion.Version)))
 	}
 
-	allErrs = append(allErrs, ValidateKubernetesVersions(kubernetes.Versions, fldPath)...)
+	allErrs = append(allErrs, validateKubernetesVersions(kubernetes.Versions, fldPath)...)
 
 	for i, version := range kubernetes.Versions {
 		idxPath := fldPath.Child("versions").Index(i)
@@ -132,49 +129,25 @@ func validateSupportedVersionsConfiguration(version core.ExpirableVersion, allVe
 	return allErrs
 }
 
-func validateMandatoryMachineTypes(machineTypes []core.MachineType, fldPath *field.Path) field.ErrorList {
+func validateCloudProfileMachineTypes(machineTypes []core.MachineType, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(machineTypes) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath, "must provide at least one machine type"))
 	}
-	allErrs = append(allErrs, ValidateMachineTypes(machineTypes, fldPath)...)
+	allErrs = append(allErrs, validateMachineTypes(machineTypes, fldPath)...)
 
 	return allErrs
 }
 
-func validateMachineTypeStorage(storage core.MachineTypeStorage, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if storage.StorageSize == nil && storage.MinSize == nil {
-		allErrs = append(allErrs, field.Invalid(fldPath, storage, `must either configure "size" or "minSize"`))
-		return allErrs
-	}
-
-	if storage.StorageSize != nil && storage.MinSize != nil {
-		allErrs = append(allErrs, field.Invalid(fldPath, storage, `not allowed to configure both "size" and "minSize"`))
-		return allErrs
-	}
-
-	if storage.StorageSize != nil {
-		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("size", *storage.StorageSize, fldPath.Child("size"))...)
-	}
-
-	if storage.MinSize != nil {
-		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("minSize", *storage.MinSize, fldPath.Child("minSize"))...)
-	}
-
-	return allErrs
-}
-
-func validateMachineImagesConfiguration(machineImages []core.MachineImage, fldPath *field.Path) field.ErrorList {
+func validateCloudProfileMachineImages(machineImages []core.MachineImage, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(machineImages) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath, "must provide at least one machine image"))
 	}
 
-	allErrs = append(allErrs, ValidateMachineImages(machineImages, fldPath)...)
+	allErrs = append(allErrs, validateMachineImages(machineImages, fldPath)...)
 
 	for i, image := range machineImages {
 		idxPath := fldPath.Index(i)
@@ -229,60 +202,7 @@ func validateContainerRuntimes(containerRuntimes []core.ContainerRuntime, fldPat
 	return allErrs
 }
 
-func validateMachineImageVersionArchitecture(archs []string, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	for _, arch := range archs {
-		if !slices.Contains(v1beta1constants.ValidArchitectures, arch) {
-			allErrs = append(allErrs, field.NotSupported(fldPath, arch, v1beta1constants.ValidArchitectures))
-		}
-	}
-
-	return allErrs
-}
-
-func validateMachineTypeArchitecture(arch *string, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if !slices.Contains(v1beta1constants.ValidArchitectures, *arch) {
-		allErrs = append(allErrs, field.NotSupported(fldPath, *arch, v1beta1constants.ValidArchitectures))
-	}
-
-	return allErrs
-}
-
-func validateVolumeTypes(volumeTypes []core.VolumeType, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	names := make(map[string]struct{}, len(volumeTypes))
-
-	for i, volumeType := range volumeTypes {
-		idxPath := fldPath.Index(i)
-
-		namePath := idxPath.Child("name")
-		if len(volumeType.Name) == 0 {
-			allErrs = append(allErrs, field.Required(namePath, "must provide a name"))
-		}
-
-		if _, ok := names[volumeType.Name]; ok {
-			allErrs = append(allErrs, field.Duplicate(namePath, volumeType.Name))
-			break
-		}
-		names[volumeType.Name] = struct{}{}
-
-		if len(volumeType.Class) == 0 {
-			allErrs = append(allErrs, field.Required(idxPath.Child("class"), "must provide a class"))
-		}
-
-		if volumeType.MinSize != nil {
-			allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("minSize", *volumeType.MinSize, idxPath.Child("minSize"))...)
-		}
-	}
-
-	return allErrs
-}
-
-func validateRegions(regions []core.Region, fldPath *field.Path) field.ErrorList {
+func validateCloudProfileRegions(regions []core.Region, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(regions) == 0 {

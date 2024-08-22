@@ -208,7 +208,7 @@ func (c *validationContext) validateKubernetesVersionOverrides(attr admission.At
 		if newVersion.ExpirationDate == nil {
 			return fmt.Errorf("specified version '%s' does not set expiration date", newVersion.Version)
 		}
-		if newVersion.ExpirationDate.Before(now) {
+		if attr.GetOperation() == admission.Update && newVersion.ExpirationDate.Before(now) {
 			if override, exists := currentVersionsMerged[newVersion.Version]; !exists || !override.ExpirationDate.Equal(newVersion.ExpirationDate) {
 				return fmt.Errorf("expiration date of version '%s' is in the past", newVersion.Version)
 			}
@@ -217,8 +217,15 @@ func (c *validationContext) validateKubernetesVersionOverrides(attr admission.At
 	return nil
 }
 
-func (c *validationContext) validateMachineImageOverrides(_ admission.Attributes) error {
+func (c *validationContext) validateMachineImageOverrides(attr admission.Attributes) error {
+	now := ptr.To(metav1.Now())
 	parentImages := utils.CreateMapFromSlice(c.parentCloudProfile.Spec.MachineImages, func(mi gardencorev1beta1.MachineImage) string { return mi.Name })
+	currentVersionsMerged := make(map[string]map[string]gardencore.MachineImageVersion)
+	if attr.GetOperation() == admission.Update {
+		for _, machineImage := range c.oldNamespacedCloudProfile.Status.CloudProfileSpec.MachineImages {
+			currentVersionsMerged[machineImage.Name] = utils.CreateMapFromSlice(machineImage.Versions, func(version gardencore.MachineImageVersion) string { return version.Version })
+		}
+	}
 	for _, newImage := range c.namespacedCloudProfile.Spec.MachineImages {
 		if _, exists := parentImages[newImage.Name]; !exists {
 			return fmt.Errorf("invalid machine image specified: '%s' does not exist in parent CloudProfile and thus cannot be overridden", newImage.Name)
@@ -227,6 +234,19 @@ func (c *validationContext) validateMachineImageOverrides(_ admission.Attributes
 		for _, newVersion := range newImage.Versions {
 			if _, exists := parentVersions[newVersion.Version]; !exists {
 				return fmt.Errorf("invalid machine image specified: '%s@%s' does not exist in parent CloudProfile and thus cannot be overridden", newImage.Name, newVersion.Version)
+			}
+			if newVersion.ExpirationDate == nil {
+				return fmt.Errorf("specified version '%s' does not set expiration date", newVersion.Version)
+			}
+			if attr.GetOperation() == admission.Update && newVersion.ExpirationDate.Before(now) {
+				var override gardencore.MachineImageVersion
+				exists := false
+				if _, imageNameExists := currentVersionsMerged[newImage.Name]; imageNameExists {
+					override, exists = currentVersionsMerged[newImage.Name][newVersion.Version]
+				}
+				if !exists || !override.ExpirationDate.Equal(newVersion.ExpirationDate) {
+					return fmt.Errorf("expiration date of version '%s' is in the past", newVersion.Version)
+				}
 			}
 		}
 	}

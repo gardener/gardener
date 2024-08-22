@@ -18,12 +18,12 @@ func ValidateNamespacedCloudProfile(namespacedCloudProfile *core.NamespacedCloud
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&namespacedCloudProfile.ObjectMeta, true, ValidateName, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, validateParent(namespacedCloudProfile.Spec.Parent, field.NewPath("spec.parent"))...)
+	allErrs = append(allErrs, validateNamespacedCloudProfileParent(namespacedCloudProfile.Spec.Parent, field.NewPath("spec.parent"))...)
 
-	allErrs = append(allErrs, validateKubernetesVersions(namespacedCloudProfile.Spec.Kubernetes, field.NewPath("spec.kubernetes"))...)
-	allErrs = append(allErrs, validateMachineImages(namespacedCloudProfile.Spec.MachineImages, field.NewPath("spec.machineImages"))...)
+	allErrs = append(allErrs, validateNscpflKubernetesVersions(namespacedCloudProfile.Spec.Kubernetes, field.NewPath("spec.kubernetes"))...)
+	allErrs = append(allErrs, validateNscpflMachineImages(namespacedCloudProfile.Spec.MachineImages, field.NewPath("spec.machineImages"))...)
 	allErrs = append(allErrs, validateVolumeTypes(namespacedCloudProfile.Spec.VolumeTypes, field.NewPath("spec.volumeTypes"))...)
-	allErrs = append(allErrs, ValidateMachineTypes(namespacedCloudProfile.Spec.MachineTypes, field.NewPath("spec.machineTypes"))...)
+	allErrs = append(allErrs, validateMachineTypes(namespacedCloudProfile.Spec.MachineTypes, field.NewPath("spec.machineTypes"))...)
 
 	if namespacedCloudProfile.Spec.CABundle != nil {
 		_, err := utils.DecodeCertificate([]byte(*(namespacedCloudProfile.Spec.CABundle)))
@@ -59,24 +59,21 @@ func ValidateNamespacedCloudProfileSpecUpdate(oldProfile, newProfile *core.Names
 func ValidateNamespacedCloudProfileStatus(spec *core.CloudProfileSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, validateKubernetesSettings(spec.Kubernetes, fldPath.Child("kubernetes"))...)
+	allErrs = append(allErrs, validateCloudProfileKubernetesSettings(spec.Kubernetes, fldPath.Child("kubernetes"))...)
 	if spec.MachineImages != nil {
-		allErrs = append(allErrs, validateMachineImagesConfiguration(spec.MachineImages, fldPath.Child("machineImages"))...)
+		allErrs = append(allErrs, validateCloudProfileMachineImages(spec.MachineImages, fldPath.Child("machineImages"))...)
 	}
 	if spec.MachineTypes != nil {
-		allErrs = append(allErrs, ValidateMachineTypes(spec.MachineTypes, fldPath.Child("machineTypes"))...)
+		allErrs = append(allErrs, validateMachineTypes(spec.MachineTypes, fldPath.Child("machineTypes"))...)
 	}
 	if spec.VolumeTypes != nil {
 		allErrs = append(allErrs, validateVolumeTypes(spec.VolumeTypes, fldPath.Child("volumeTypes"))...)
-	}
-	if spec.Regions != nil {
-		allErrs = append(allErrs, validateRegions(spec.Regions, fldPath.Child("regions"))...)
 	}
 
 	return allErrs
 }
 
-func validateParent(parent core.CloudProfileReference, fldPath *field.Path) field.ErrorList {
+func validateNamespacedCloudProfileParent(parent core.CloudProfileReference, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if parent.Kind != "CloudProfile" {
@@ -89,7 +86,7 @@ func validateParent(parent core.CloudProfileReference, fldPath *field.Path) fiel
 	return allErrs
 }
 
-func validateKubernetesVersions(kubernetesSettings *core.KubernetesSettings, fldPath *field.Path) field.ErrorList {
+func validateNscpflKubernetesVersions(kubernetesSettings *core.KubernetesSettings, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if kubernetesSettings == nil {
@@ -103,11 +100,11 @@ func validateKubernetesVersions(kubernetesSettings *core.KubernetesSettings, fld
 			allErrs = append(allErrs, field.Forbidden(idxPath.Child("classification"), "must not provide a classification to a Kubernetes version in NamespacedCloudProfile"))
 		}
 	}
-	allErrs = append(allErrs, ValidateKubernetesVersions(versions, fldPath)...)
+	allErrs = append(allErrs, validateKubernetesVersions(versions, fldPath)...)
 	return allErrs
 }
 
-func validateMachineImages(machineImages []core.MachineImage, fldPath *field.Path) field.ErrorList {
+func validateNscpflMachineImages(machineImages []core.MachineImage, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	for i, image := range machineImages {
@@ -135,7 +132,7 @@ func validateMachineImages(machineImages []core.MachineImage, fldPath *field.Pat
 		}
 	}
 
-	allErrs = append(allErrs, ValidateMachineImages(machineImages, fldPath)...)
+	allErrs = append(allErrs, validateMachineImages(machineImages, fldPath)...)
 
 	return allErrs
 }

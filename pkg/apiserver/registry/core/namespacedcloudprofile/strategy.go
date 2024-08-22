@@ -106,6 +106,7 @@ func dropExpiredVersions(namespacedCloudProfile *core.NamespacedCloudProfile) {
 		namespacedCloudProfile.Spec.Kubernetes.Versions = validKubernetesVersions
 	}
 
+	validMachineImages := []core.MachineImage{}
 	for i, machineImage := range namespacedCloudProfile.Spec.MachineImages {
 		var validMachineImageVersions []core.MachineImageVersion
 
@@ -115,9 +116,12 @@ func dropExpiredVersions(namespacedCloudProfile *core.NamespacedCloudProfile) {
 			}
 			validMachineImageVersions = append(validMachineImageVersions, version)
 		}
-
-		namespacedCloudProfile.Spec.MachineImages[i].Versions = validMachineImageVersions
+		if len(validMachineImageVersions) > 0 {
+			namespacedCloudProfile.Spec.MachineImages[i].Versions = validMachineImageVersions
+			validMachineImages = append(validMachineImages, namespacedCloudProfile.Spec.MachineImages[i])
+		}
 	}
+	namespacedCloudProfile.Spec.MachineImages = validMachineImages
 }
 
 type namespacedCloudProfileStatusStrategy struct {

@@ -1818,6 +1818,29 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
 			})
 
+			It("should accept removal of kubernetes versions that are used by shoots using another unrelated NamespacedCloudProfile of same name", func() {
+				cloudProfileNew := cloudProfile
+				cloudProfileNew.Spec = core.CloudProfileSpec{
+					Kubernetes: core.KubernetesSettings{
+						Versions: []core.ExpirableVersion{
+							{Version: "1.24.2"},
+						},
+					},
+				}
+
+				shoot := shootOne.DeepCopy()
+				shoot.Spec.CloudProfile = &gardencorev1beta1.CloudProfileReference{
+					Kind: "NamespacedCloudProfile",
+					Name: "aws-profile",
+				}
+				shoot.Spec.Kubernetes.Version = "1.24.1"
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&cloudProfileNew, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+			})
+
 			It("should accept removal of kubernetes version that is still in use by a shoot that is being deleted", func() {
 				t := metav1.Now()
 				shootTwoDeleted := shootTwo.DeepCopy()

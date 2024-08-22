@@ -54,7 +54,7 @@ Consequently, to ensure that `CloudProfile`s in-use are always present in the sy
 
 ### [`NamespacedCloudProfile` Controller](../../pkg/controllermanager/controller/namespacedcloudprofile)
 
-`NamespacedCloudProfile`s provide a project-scoped extension to `CloudProfile`s, allowing for adjustments to a parent `CloudProfile` (e.g. by overriding expiration dates of Kubernetes versions or machine images). This allows for modifications without global project visibility. Like `CloudProfile`s do in their spec, `NamespacedCloudProfile`s also expose the resulting `Shoot` constraints as a `CloudProfileSpec` in their status.
+`NamespacedCloudProfile`s provide a project-scoped extension to `CloudProfile`s, allowing for adjustments of a parent `CloudProfile` (e.g. by overriding expiration dates of Kubernetes versions or machine images). This allows for modifications without global project visibility. Like `CloudProfile`s do in their spec, `NamespacedCloudProfile`s also expose the resulting `Shoot` constraints as a `CloudProfileSpec` in their status.
 
 The controller ensures that `NamespacedCloudProfile`s in-use remain present in the system until the last referring `Shoot` is deleted by adding a finalizer that is only released when there is no `Shoot` referencing the `NamespacedCloudProfile` anymore.
 

@@ -41,7 +41,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 					if err != nil {
 						return retry.SevereError(err)
 					}
-					if len(namespacedCloudProfile.Status.CloudProfileSpec.Regions) == 0 {
+					if namespacedCloudProfile.Status.ObservedGeneration != namespacedCloudProfile.Generation {
 						return retry.MinorError(fmt.Errorf("namespaced cloud profile exists but has not been reconciled yet"))
 					}
 					return retry.Ok()
