@@ -82,7 +82,6 @@ const (
 	volumeMountPathHTTPProxy                       = "/etc/srv/kubernetes/envoy"
 	volumeMountPathKubeAPIServerToKubelet          = "/srv/kubernetes/apiserver-kubelet"
 	volumeMountPathKubeAggregator                  = "/srv/kubernetes/aggregator"
-	volumeMountPathOIDCCABundle                    = "/srv/kubernetes/oidc"
 	volumeMountPathServiceAccountKey               = "/srv/kubernetes/service-account-key"
 	volumeMountPathServiceAccountKeyBundle         = "/srv/kubernetes/service-account-key-bundle"
 	volumeMountPathStaticToken                     = "/srv/kubernetes/token"    // #nosec G101 -- No credential.
@@ -106,6 +105,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 	deployment *appsv1.Deployment,
 	serviceAccount *corev1.ServiceAccount,
 	configMapAuditPolicy *corev1.ConfigMap,
+	configMapAuthenticationConfig *corev1.ConfigMap,
 	configMapAdmissionConfigs *corev1.ConfigMap,
 	secretAdmissionKubeconfigs *corev1.Secret,
 	configMapEgressSelector *corev1.ConfigMap,
@@ -374,9 +374,9 @@ func (k *kubeAPIServer) reconcileDeployment(
 		apiserver.InjectEncryptionSettings(deployment, secretETCDEncryptionConfiguration)
 		k.handleSNISettings(deployment)
 		k.handleTLSSNISettings(deployment, tlsSNISecrets)
-		k.handleOIDCSettings(deployment, secretOIDCCABundle)
+		k.handleAuthenticationSettings(deployment, configMapAuthenticationConfig, secretOIDCCABundle)
 		k.handleServiceAccountSigningKeySettings(deployment)
-		k.handleAuthenticationSettings(deployment, secretAuthenticationWebhookKubeconfig)
+		k.handleAuthenticationWebhookSettings(deployment, secretAuthenticationWebhookKubeconfig)
 		k.handleAuthorizationSettings(deployment, secretAuthorizationWebhookKubeconfig)
 		if err := k.handleVPNSettings(deployment, serviceAccount, configMapEgressSelector, secretHTTPProxy, secretHAVPNSeedClient, secretHAVPNSeedClientSeedTLSAuth); err != nil {
 			return err
@@ -892,64 +892,6 @@ func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
 	return container
 }
 
-func (k *kubeAPIServer) handleOIDCSettings(deployment *appsv1.Deployment, secretOIDCCABundle *corev1.Secret) {
-	if k.values.OIDC == nil {
-		return
-	}
-
-	if k.values.OIDC.CABundle != nil {
-		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--oidc-ca-file=%s/%s", volumeMountPathOIDCCABundle, secretOIDCCABundleDataKeyCaCrt))
-		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
-			{
-				Name:      volumeNameOIDCCABundle,
-				MountPath: volumeMountPathOIDCCABundle,
-			},
-		}...)
-		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, []corev1.Volume{
-			{
-				Name: volumeNameOIDCCABundle,
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName: secretOIDCCABundle.Name,
-					},
-				},
-			},
-		}...)
-	}
-
-	if v := k.values.OIDC.IssuerURL; v != nil {
-		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, "--oidc-issuer-url="+*v)
-	}
-
-	if v := k.values.OIDC.ClientID; v != nil {
-		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, "--oidc-client-id="+*v)
-	}
-
-	if v := k.values.OIDC.UsernameClaim; v != nil {
-		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, "--oidc-username-claim="+*v)
-	}
-
-	if v := k.values.OIDC.GroupsClaim; v != nil {
-		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, "--oidc-groups-claim="+*v)
-	}
-
-	if v := k.values.OIDC.UsernamePrefix; v != nil {
-		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, "--oidc-username-prefix="+*v)
-	}
-
-	if v := k.values.OIDC.GroupsPrefix; v != nil {
-		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, "--oidc-groups-prefix="+*v)
-	}
-
-	if k.values.OIDC.SigningAlgs != nil {
-		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, "--oidc-signing-algs="+strings.Join(k.values.OIDC.SigningAlgs, ","))
-	}
-
-	for key, value := range k.values.OIDC.RequiredClaims {
-		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, "--oidc-required-claim="+fmt.Sprintf("%s=%s", key, value))
-	}
-}
-
 func (k *kubeAPIServer) handleServiceAccountSigningKeySettings(deployment *appsv1.Deployment) {
 	deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--service-account-signing-key-file=%s/%s", volumeMountPathServiceAccountKey, secrets.DataKeyRSAPrivateKey))
 	deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--service-account-key-file=%s/%s", volumeMountPathServiceAccountKeyBundle, secrets.DataKeyPrivateKeyBundle))
@@ -1005,7 +947,7 @@ func (k *kubeAPIServer) handleKubeletSettings(deployment *appsv1.Deployment, sec
 	return nil
 }
 
-func (k *kubeAPIServer) handleAuthenticationSettings(deployment *appsv1.Deployment, secretWebhookKubeconfig *corev1.Secret) {
+func (k *kubeAPIServer) handleAuthenticationWebhookSettings(deployment *appsv1.Deployment, secretWebhookKubeconfig *corev1.Secret) {
 	if k.values.AuthenticationWebhook == nil {
 		return
 	}

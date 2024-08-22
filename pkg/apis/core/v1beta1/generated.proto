@@ -103,6 +103,13 @@ message AuditPolicy {
   optional k8s.io.api.core.v1.ObjectReference configMapRef = 1;
 }
 
+// Authentication contains settings for authentication to the kube-apiserver.
+message Authentication {
+  // Structured contains configuration settings for structured authentication to the kube-apiserver.
+  // +optional
+  optional StructuredAuthentication structured = 1;
+}
+
 // AvailabilityZone is an availability zone.
 message AvailabilityZone {
   // Name is an availability zone name.
@@ -1204,6 +1211,11 @@ message KubeAPIServerConfig {
   // EncryptionConfig contains customizable encryption configuration of the Kube API server.
   // +optional
   optional EncryptionConfig encryptionConfig = 16;
+
+  // Authentication contains configuration settings for authentication to the kube-apiserver.
+  // This field is only available for Kubernetes v1.30 or later.
+  // +optional
+  optional Authentication authentication = 17;
 }
 
 // KubeControllerManagerConfig contains configuration settings for the kube-controller-manager.
@@ -3136,6 +3148,13 @@ message ShootTemplate {
   // Specification of the desired behavior of the Shoot.
   // +optional
   optional ShootSpec spec = 2;
+}
+
+// StructuredAuthentication contains authentication config for kube-apiserver.
+message StructuredAuthentication {
+  // ConfigMapName is the name of the ConfigMap in the project namespace
+  // which contains AuthenticationConfiguration for the kube-apiserver.
+  optional string configMapName = 1;
 }
 
 // SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.

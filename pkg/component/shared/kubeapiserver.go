@@ -102,6 +102,7 @@ func NewKubeAPIServer(
 		disabledAdmissionPlugins            []gardencorev1beta1.AdmissionPlugin
 		apiAudiences                        = []string{"kubernetes", "gardener"}
 		auditConfig                         *apiserver.AuditConfig
+		authenticationConfiguration         *string
 		defaultNotReadyTolerationSeconds    *int64
 		defaultUnreachableTolerationSeconds *int64
 		eventTTL                            *metav1.Duration
@@ -130,6 +131,11 @@ func NewKubeAPIServer(
 		}
 
 		auditConfig, err = computeAPIServerAuditConfig(ctx, resourceConfigClient, objectMeta, apiServerConfig.AuditConfig, auditWebhookConfig)
+		if err != nil {
+			return nil, err
+		}
+
+		authenticationConfiguration, err = computeAPIServerAuthenticationConfig(ctx, resourceConfigClient, objectMeta, apiServerConfig.Authentication)
 		if err != nil {
 			return nil, err
 		}
@@ -168,6 +174,7 @@ func NewKubeAPIServer(
 			},
 			AnonymousAuthenticationEnabled:      v1beta1helper.AnonymousAuthenticationEnabled(apiServerConfig),
 			APIAudiences:                        apiAudiences,
+			AuthenticationConfiguration:         authenticationConfiguration,
 			AuthenticationWebhook:               authenticationWebhookConfig,
 			AuthorizationWebhook:                authorizationWebhookConfig,
 			DefaultNotReadyTolerationSeconds:    defaultNotReadyTolerationSeconds,

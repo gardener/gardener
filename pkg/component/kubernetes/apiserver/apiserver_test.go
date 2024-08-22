@@ -117,6 +117,7 @@ var _ = Describe("KubeAPIServer", func() {
 		configMapAdmission         *corev1.ConfigMap
 		secretAdmissionKubeconfigs *corev1.Secret
 		configMapAuditPolicy       *corev1.ConfigMap
+		configMapAuthConfig        *corev1.ConfigMap
 		configMapEgressSelector    *corev1.ConfigMap
 		managedResource            *resourcesv1alpha1.ManagedResource
 
@@ -1337,6 +1338,117 @@ var _ = Describe("KubeAPIServer", func() {
 				}))
 			})
 
+			It("should not deploy the OIDCCABundle secret resource when version is >= v1.30 and feature gate is not set", func() {
+				var (
+					caBundle   = "some-ca-bundle"
+					clientID   = "some-client-id"
+					issuerURL  = "https://issuer.url.com"
+					version    = semver.MustParse("1.30.0")
+					oidcConfig = &gardencorev1beta1.OIDCConfig{
+						IssuerURL: &issuerURL,
+						ClientID:  &clientID,
+						CABundle:  &caBundle,
+					}
+				)
+
+				kapi = New(kubernetesInterface, namespace, sm, Values{
+					Values: apiserver.Values{
+						RuntimeVersion: runtimeVersion,
+					},
+					OIDC:    oidcConfig,
+					Version: version,
+				})
+
+				expectedSecretOIDCCABundle := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-oidc-cabundle", Namespace: namespace},
+					Data:       map[string][]byte{"ca.crt": []byte(caBundle)},
+				}
+				Expect(kubernetesutils.MakeUnique(expectedSecretOIDCCABundle)).To(Succeed())
+
+				actualSecretOIDCCABundle := &corev1.Secret{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecretOIDCCABundle), actualSecretOIDCCABundle)).To(BeNotFoundError())
+				Expect(kapi.Deploy(ctx)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecretOIDCCABundle), actualSecretOIDCCABundle)).To(BeNotFoundError())
+			})
+
+			It("should not deploy the OIDCCABundle secret resource when version is >= v1.30 and feature gate is set to true", func() {
+				var (
+					caBundle   = "some-ca-bundle"
+					clientID   = "some-client-id"
+					issuerURL  = "https://issuer.url.com"
+					version    = semver.MustParse("1.30.0")
+					oidcConfig = &gardencorev1beta1.OIDCConfig{
+						IssuerURL: &issuerURL,
+						ClientID:  &clientID,
+						CABundle:  &caBundle,
+					}
+				)
+
+				kapi = New(kubernetesInterface, namespace, sm, Values{
+					Values: apiserver.Values{
+						RuntimeVersion: runtimeVersion,
+						FeatureGates: map[string]bool{
+							"StructuredAuthenticationConfiguration": true,
+						},
+					},
+					OIDC:    oidcConfig,
+					Version: version,
+				})
+
+				expectedSecretOIDCCABundle := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-oidc-cabundle", Namespace: namespace},
+					Data:       map[string][]byte{"ca.crt": []byte(caBundle)},
+				}
+				Expect(kubernetesutils.MakeUnique(expectedSecretOIDCCABundle)).To(Succeed())
+
+				actualSecretOIDCCABundle := &corev1.Secret{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecretOIDCCABundle), actualSecretOIDCCABundle)).To(BeNotFoundError())
+				Expect(kapi.Deploy(ctx)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecretOIDCCABundle), actualSecretOIDCCABundle)).To(BeNotFoundError())
+			})
+
+			It("should successfully deploy the OIDCCABundle secret resource when version is >= v1.30 and feature gate is set to false", func() {
+				var (
+					caBundle   = "some-ca-bundle"
+					version    = semver.MustParse("1.30.0")
+					oidcConfig = &gardencorev1beta1.OIDCConfig{CABundle: &caBundle}
+				)
+
+				kapi = New(kubernetesInterface, namespace, sm, Values{
+					Values: apiserver.Values{
+						RuntimeVersion: runtimeVersion,
+						FeatureGates: map[string]bool{
+							"StructuredAuthenticationConfiguration": false,
+						},
+					},
+					OIDC:    oidcConfig,
+					Version: version,
+				})
+
+				expectedSecretOIDCCABundle := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-oidc-cabundle", Namespace: namespace},
+					Data:       map[string][]byte{"ca.crt": []byte(caBundle)},
+				}
+				Expect(kubernetesutils.MakeUnique(expectedSecretOIDCCABundle)).To(Succeed())
+
+				actualSecretOIDCCABundle := &corev1.Secret{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecretOIDCCABundle), actualSecretOIDCCABundle)).To(BeNotFoundError())
+
+				Expect(kapi.Deploy(ctx)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecretOIDCCABundle), actualSecretOIDCCABundle)).To(Succeed())
+				Expect(actualSecretOIDCCABundle).To(DeepEqual(&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            expectedSecretOIDCCABundle.Name,
+						Namespace:       expectedSecretOIDCCABundle.Namespace,
+						Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+						ResourceVersion: "1",
+					},
+					Immutable: ptr.To(true),
+					Data:      expectedSecretOIDCCABundle.Data,
+				}))
+			})
+
 			It("should successfully deploy the ETCD encryption configuration secret resource", func() {
 				etcdEncryptionConfiguration := `apiVersion: apiserver.config.k8s.io/v1
 kind: EncryptionConfiguration
@@ -1998,6 +2110,288 @@ rules:
 						Data:      configMapAuditPolicy.Data,
 					}))
 				})
+			})
+
+			Context("authentication configuration", func() {
+				It("should error when authentication config is set but version is < v1.30", func() {
+					var (
+						authenticationConfig = "some-auth-config"
+						version              = semver.MustParse("1.29.0")
+					)
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						AuthenticationConfiguration: ptr.To(authenticationConfig),
+						Version:                     version,
+					})
+
+					Expect(kapi.Deploy(ctx)).To(MatchError("structured authentication is not available for versions < v1.30"))
+				})
+
+				It("should error when authentcation config and oidc settings are configured", func() {
+					var (
+						authenticationConfig = "some-auth-config"
+						version              = semver.MustParse("1.30.0")
+					)
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						AuthenticationConfiguration: ptr.To(authenticationConfig),
+						OIDC:                        &gardencorev1beta1.OIDCConfig{},
+						Version:                     version,
+					})
+
+					configMapAuthConfig = &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authentication-config", Namespace: namespace},
+						Data:       map[string]string{"config.yaml": authenticationConfig},
+					}
+					Expect(kubernetesutils.MakeUnique(configMapAuthConfig)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthConfig), configMapAuthConfig)).To(BeNotFoundError())
+					Expect(kapi.Deploy(ctx)).To(MatchError("oidc configuration is incompatible with structured authentication"))
+				})
+
+				It("should successfully deploy the configmap resource", func() {
+					var (
+						authenticationConfig = "some-auth-config"
+						version              = semver.MustParse("1.30.0")
+					)
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						AuthenticationConfiguration: ptr.To(authenticationConfig),
+						Version:                     version,
+					})
+
+					configMapAuthConfig = &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authentication-config", Namespace: namespace},
+						Data:       map[string]string{"config.yaml": authenticationConfig},
+					}
+					Expect(kubernetesutils.MakeUnique(configMapAuthConfig)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthConfig), configMapAuthConfig)).To(BeNotFoundError())
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthConfig), configMapAuthConfig)).To(Succeed())
+					Expect(configMapAuthConfig).To(DeepEqual(&corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            configMapAuthConfig.Name,
+							Namespace:       configMapAuthConfig.Namespace,
+							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							ResourceVersion: "1",
+						},
+						Immutable: ptr.To(true),
+						Data:      configMapAuthConfig.Data,
+					}))
+				})
+
+				It("should not deploy the configmap resource when feature gate is disabled", func() {
+					var (
+						authenticationConfig = "some-auth-config"
+						version              = semver.MustParse("1.30.0")
+					)
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+							FeatureGates: map[string]bool{
+								"StructuredAuthenticationConfiguration": false,
+							},
+						},
+						AuthenticationConfiguration: ptr.To(authenticationConfig),
+						Version:                     version,
+					})
+
+					configMapAuthConfig = &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authentication-config", Namespace: namespace},
+						Data:       map[string]string{"config.yaml": authenticationConfig},
+					}
+					Expect(kubernetesutils.MakeUnique(configMapAuthConfig)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthConfig), configMapAuthConfig)).To(BeNotFoundError())
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthConfig), configMapAuthConfig)).To(BeNotFoundError())
+				})
+
+				It("should successfully deploy the configmap resource from oidc settings", func() {
+					var (
+						oidc = &gardencorev1beta1.OIDCConfig{
+							CABundle:     ptr.To("some-ca-bundle"),
+							ClientID:     ptr.To("some-client-id"),
+							GroupsClaim:  ptr.To("some-groups-claim"),
+							GroupsPrefix: ptr.To("some-groups-prefix"),
+							IssuerURL:    ptr.To("https://issuer.url.com"),
+							RequiredClaims: map[string]string{
+								"claim": "value",
+							},
+							SigningAlgs:    []string{"signing", "algs"},
+							UsernameClaim:  ptr.To("some-username-claim"),
+							UsernamePrefix: ptr.To("some-username-prefix"),
+						}
+						version              = semver.MustParse("1.30.0")
+						authenticationConfig = `apiVersion: apiserver.config.k8s.io/v1alpha1
+jwt:
+- claimMappings:
+    groups:
+      claim: some-groups-claim
+      prefix: some-groups-prefix
+    uid: {}
+    username:
+      claim: some-username-claim
+      prefix: some-username-prefix
+  claimValidationRules:
+  - claim: claim
+    requiredValue: value
+  issuer:
+    audiences:
+    - some-client-id
+    certificateAuthority: some-ca-bundle
+    url: https://issuer.url.com
+kind: AuthenticationConfiguration
+`
+					)
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						OIDC:    oidc,
+						Version: version,
+					})
+
+					configMapAuthConfig = &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authentication-config", Namespace: namespace},
+						Data:       map[string]string{"config.yaml": authenticationConfig},
+					}
+					Expect(kubernetesutils.MakeUnique(configMapAuthConfig)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthConfig), configMapAuthConfig)).To(BeNotFoundError())
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthConfig), configMapAuthConfig)).To(Succeed())
+					Expect(configMapAuthConfig).To(DeepEqual(&corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            configMapAuthConfig.Name,
+							Namespace:       configMapAuthConfig.Namespace,
+							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							ResourceVersion: "1",
+						},
+						Immutable: ptr.To(true),
+						Data:      configMapAuthConfig.Data,
+					}))
+				})
+			})
+
+			It("should successfully deploy the configmap resource from oidc settings with defaults", func() {
+				var (
+					oidc = &gardencorev1beta1.OIDCConfig{
+						ClientID:    ptr.To("some-client-id"),
+						GroupsClaim: ptr.To("some-groups-claim"),
+						IssuerURL:   ptr.To("https://issuer.url.com"),
+					}
+					version              = semver.MustParse("1.30.0")
+					authenticationConfig = `apiVersion: apiserver.config.k8s.io/v1alpha1
+jwt:
+- claimMappings:
+    groups:
+      claim: some-groups-claim
+      prefix: ""
+    uid: {}
+    username:
+      claim: sub
+      prefix: https://issuer.url.com#
+  issuer:
+    audiences:
+    - some-client-id
+    url: https://issuer.url.com
+kind: AuthenticationConfiguration
+`
+				)
+
+				kapi = New(kubernetesInterface, namespace, sm, Values{
+					Values: apiserver.Values{
+						RuntimeVersion: runtimeVersion,
+					},
+					OIDC:    oidc,
+					Version: version,
+				})
+
+				configMapAuthConfig = &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authentication-config", Namespace: namespace},
+					Data:       map[string]string{"config.yaml": authenticationConfig},
+				}
+				Expect(kubernetesutils.MakeUnique(configMapAuthConfig)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthConfig), configMapAuthConfig)).To(BeNotFoundError())
+				Expect(kapi.Deploy(ctx)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthConfig), configMapAuthConfig)).To(Succeed())
+				Expect(configMapAuthConfig).To(DeepEqual(&corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            configMapAuthConfig.Name,
+						Namespace:       configMapAuthConfig.Namespace,
+						Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+						ResourceVersion: "1",
+					},
+					Immutable: ptr.To(true),
+					Data:      configMapAuthConfig.Data,
+				}))
+			})
+
+			It("should successfully deploy the configmap resource from oidc settings with empty user prefix", func() {
+				var (
+					oidc = &gardencorev1beta1.OIDCConfig{
+						ClientID:       ptr.To("some-client-id"),
+						IssuerURL:      ptr.To("https://issuer.url.com"),
+						UsernamePrefix: ptr.To("-"),
+					}
+					version              = semver.MustParse("1.30.0")
+					authenticationConfig = `apiVersion: apiserver.config.k8s.io/v1alpha1
+jwt:
+- claimMappings:
+    groups: {}
+    uid: {}
+    username:
+      claim: sub
+      prefix: ""
+  issuer:
+    audiences:
+    - some-client-id
+    url: https://issuer.url.com
+kind: AuthenticationConfiguration
+`
+				)
+
+				kapi = New(kubernetesInterface, namespace, sm, Values{
+					Values: apiserver.Values{
+						RuntimeVersion: runtimeVersion,
+					},
+					OIDC:    oidc,
+					Version: version,
+				})
+
+				configMapAuthConfig = &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authentication-config", Namespace: namespace},
+					Data:       map[string]string{"config.yaml": authenticationConfig},
+				}
+				Expect(kubernetesutils.MakeUnique(configMapAuthConfig)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthConfig), configMapAuthConfig)).To(BeNotFoundError())
+				Expect(kapi.Deploy(ctx)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthConfig), configMapAuthConfig)).To(Succeed())
+				Expect(configMapAuthConfig).To(DeepEqual(&corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            configMapAuthConfig.Name,
+						Namespace:       configMapAuthConfig.Namespace,
+						Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+						ResourceVersion: "1",
+					},
+					Immutable: ptr.To(true),
+					Data:      configMapAuthConfig.Data,
+				}))
 			})
 
 			Context("egress selector", func() {
@@ -3312,6 +3706,121 @@ rules:
 					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElements(
 						"--max-requests-inflight=123",
 						"--max-mutating-requests-inflight=456",
+					))
+				})
+
+				It("should configure authentication config when authentication configuration is set", func() {
+					var (
+						authenticationConfig = "some-auth-config"
+						version              = semver.MustParse("1.30.0")
+					)
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						AuthenticationConfiguration: ptr.To(authenticationConfig),
+						Version:                     version,
+					})
+
+					configMapAuthConfig = &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authentication-config", Namespace: namespace},
+						Data:       map[string]string{"config.yaml": authenticationConfig},
+					}
+					Expect(kubernetesutils.MakeUnique(configMapAuthConfig)).To(Succeed())
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						AuthenticationConfiguration: ptr.To(authenticationConfig),
+						Version:                     version,
+					})
+
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
+						corev1.Volume{
+							Name: "authentication-config",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: configMapAuthConfig.Name,
+									},
+								},
+							},
+						},
+					))
+					Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ContainElements(
+						corev1.VolumeMount{
+							Name:      "authentication-config",
+							MountPath: "/etc/kubernetes/structured/authentication",
+						},
+					))
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElements(
+						"--authentication-config=/etc/kubernetes/structured/authentication/config.yaml",
+					))
+				})
+
+				It("should configure authentication config when oidc configuration is set", func() {
+					var (
+						oidc = &gardencorev1beta1.OIDCConfig{
+							ClientID:  ptr.To("some-client-id"),
+							IssuerURL: ptr.To("https://issuer.url.com"),
+						}
+						version              = semver.MustParse("1.30.0")
+						authenticationConfig = `apiVersion: apiserver.config.k8s.io/v1alpha1
+jwt:
+- claimMappings:
+    groups: {}
+    uid: {}
+    username:
+      claim: sub
+      prefix: https://issuer.url.com#
+  issuer:
+    audiences:
+    - some-client-id
+    url: https://issuer.url.com
+kind: AuthenticationConfiguration
+`
+					)
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						OIDC:    oidc,
+						Version: version,
+					})
+
+					configMapAuthConfig = &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authentication-config", Namespace: namespace},
+						Data:       map[string]string{"config.yaml": authenticationConfig},
+					}
+					Expect(kubernetesutils.MakeUnique(configMapAuthConfig)).To(Succeed())
+
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
+						corev1.Volume{
+							Name: "authentication-config",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: configMapAuthConfig.Name,
+									},
+								},
+							},
+						},
+					))
+					Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ContainElements(
+						corev1.VolumeMount{
+							Name:      "authentication-config",
+							MountPath: "/etc/kubernetes/structured/authentication",
+						},
+					))
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElements(
+						"--authentication-config=/etc/kubernetes/structured/authentication/config.yaml",
 					))
 				})
 

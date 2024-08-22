@@ -1051,6 +1051,40 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 				SideEffects: &sideEffectsNone,
 			},
 			{
+				Name:                    "authentication-configuration.gardener.cloud",
+				AdmissionReviewVersions: []string{"v1", "v1beta1"},
+				TimeoutSeconds:          ptr.To[int32](10),
+				Rules: []admissionregistrationv1.RuleWithOperations{
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{gardencorev1beta1.GroupName},
+							APIVersions: []string{"v1beta1"},
+							Resources:   []string{"shoots"},
+						},
+					},
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{""},
+							APIVersions: []string{"v1"},
+							Resources:   []string{"configmaps"},
+						},
+					},
+				},
+				FailurePolicy: &failurePolicyFail,
+				NamespaceSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"gardener.cloud/role": "project",
+					},
+				},
+				ClientConfig: admissionregistrationv1.WebhookClientConfig{
+					URL:      ptr.To("https://gardener-admission-controller." + namespace + "/webhooks/authentication-configuration"),
+					CABundle: caBundle,
+				},
+				SideEffects: &sideEffectsNone,
+			},
+			{
 				Name:                    "admission-plugin-secret.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
 				TimeoutSeconds:          ptr.To[int32](10),

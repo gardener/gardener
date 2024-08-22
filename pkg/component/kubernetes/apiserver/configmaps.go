@@ -42,10 +42,11 @@ func init() {
 }
 
 const (
-	configMapAdmissionNamePrefix      = "kube-apiserver-admission-config"
-	configMapAuditPolicyNamePrefix    = "audit-policy-config"
-	configMapEgressSelectorNamePrefix = "kube-apiserver-egress-selector-config"
-	configMapEgressSelectorDataKey    = "egress-selector-configuration.yaml"
+	configMapAdmissionNamePrefix            = "kube-apiserver-admission-config"
+	configMapAuditPolicyNamePrefix          = "audit-policy-config"
+	configMapAuthenticationConfigNamePrefix = "kube-apiserver-authentication-config"
+	configMapEgressSelectorNamePrefix       = "kube-apiserver-egress-selector-config"
+	configMapEgressSelectorDataKey          = "egress-selector-configuration.yaml"
 )
 
 func (k *kubeAPIServer) emptyConfigMap(name string) *corev1.ConfigMap {
