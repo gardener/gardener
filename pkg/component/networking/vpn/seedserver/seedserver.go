@@ -870,10 +870,16 @@ func (v *vpnSeedServer) deployVPA(ctx context.Context) error {
 		vpaUpdateMode    = vpaautoscalingv1.UpdateModeAuto
 		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 	)
+
+	targetRefKind := "Deployment"
+	if v.values.HighAvailabilityEnabled {
+		targetRefKind = "StatefulSet"
+	}
+
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, vpa, func() error {
 		vpa.Spec.TargetRef = &autoscalingv1.CrossVersionObjectReference{
 			APIVersion: appsv1.SchemeGroupVersion.String(),
-			Kind:       "Deployment",
+			Kind:       targetRefKind,
 			Name:       deploymentName,
 		}
 		vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
