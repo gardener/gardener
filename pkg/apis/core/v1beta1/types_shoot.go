@@ -826,7 +826,7 @@ type KubeAPIServerConfig struct {
 	// StructuredAuthentication contains configuration settings for structured authentication to the kube-apiserver.
 	// This field is only available for Kubernetes v1.30 or later.
 	// +optional
-	StructuredAuthentication *StructuredAuthentication `json:"structuredAuthentication,omitempty" protobuf:"bytes,17,opt,name=authentication"`
+	StructuredAuthentication *StructuredAuthentication `json:"structuredAuthentication,omitempty" protobuf:"bytes,17,opt,name=structuredAuthentication"`
 }
 
 // APIServerLogging contains configuration for the logs level and http access logs

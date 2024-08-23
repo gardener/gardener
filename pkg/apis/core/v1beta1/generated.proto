@@ -1208,7 +1208,7 @@ message KubeAPIServerConfig {
   // StructuredAuthentication contains configuration settings for structured authentication to the kube-apiserver.
   // This field is only available for Kubernetes v1.30 or later.
   // +optional
-  optional StructuredAuthentication authentication = 17;
+  optional StructuredAuthentication structuredAuthentication = 17;
 }
 
 // KubeControllerManagerConfig contains configuration settings for the kube-controller-manager.
