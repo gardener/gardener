@@ -135,7 +135,7 @@ func NewKubeAPIServer(
 			return nil, err
 		}
 
-		authenticationConfiguration, err = computeAPIServerAuthenticationConfig(ctx, resourceConfigClient, objectMeta, apiServerConfig.Authentication)
+		authenticationConfiguration, err = computeAPIServerAuthenticationConfig(ctx, resourceConfigClient, objectMeta, apiServerConfig.StructuredAuthentication)
 		if err != nil {
 			return nil, err
 		}

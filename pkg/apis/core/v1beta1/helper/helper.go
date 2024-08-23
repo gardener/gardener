@@ -1123,9 +1123,8 @@ func GetShootAuditPolicyConfigMapRef(apiServerConfig *gardencorev1beta1.KubeAPIS
 // GetShootAuthenticationConfigurationConfigMapName returns the Shoot's ConfigMap reference name for the aithentication configuration.
 func GetShootAuthenticationConfigurationConfigMapName(apiServerConfig *gardencorev1beta1.KubeAPIServerConfig) string {
 	if apiServerConfig != nil &&
-		apiServerConfig.Authentication != nil &&
-		apiServerConfig.Authentication.Structured != nil {
-		return apiServerConfig.Authentication.Structured.ConfigMapName
+		apiServerConfig.StructuredAuthentication != nil {
+		return apiServerConfig.StructuredAuthentication.ConfigMapName
 	}
 	return ""
 }

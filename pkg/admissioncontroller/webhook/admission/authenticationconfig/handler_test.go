@@ -151,10 +151,8 @@ jwt:
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					Version: "1.30.0",
 					KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
-						Authentication: &gardencorev1beta1.Authentication{
-							Structured: &gardencorev1beta1.StructuredAuthentication{
-								ConfigMapName: cmName,
-							},
+						StructuredAuthentication: &gardencorev1beta1.StructuredAuthentication{
+							ConfigMapName: cmName,
 						},
 					},
 				},
@@ -205,13 +203,13 @@ jwt:
 				test(admissionv1.Create, nil, shootv1beta1, true, statusCodeAllowed, "shoot resource is not specifying any authentication configuration", "")
 			})
 
-			It("has no Authentication", func() {
-				shootv1beta1.Spec.Kubernetes.KubeAPIServer.Authentication = nil
+			It("has no Structured Authentication", func() {
+				shootv1beta1.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication = nil
 				test(admissionv1.Create, nil, shootv1beta1, true, statusCodeAllowed, "shoot resource is not specifying any authentication configuration", "")
 			})
 
 			It("has no authentication configuration cm Ref", func() {
-				shootv1beta1.Spec.Kubernetes.KubeAPIServer.Authentication.Structured.ConfigMapName = ""
+				shootv1beta1.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication.ConfigMapName = ""
 				test(admissionv1.Create, nil, shootv1beta1, true, statusCodeAllowed, "shoot resource is not specifying any authentication configuration", "")
 			})
 
@@ -254,7 +252,7 @@ jwt:
 					Data: map[string]string{"config.yaml": validAuthenticationConfiguration},
 				}
 				newShoot := shootv1beta1.DeepCopy()
-				newShoot.Spec.Kubernetes.KubeAPIServer.Authentication.Structured.ConfigMapName = cmNameOther
+				newShoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication.ConfigMapName = cmNameOther
 				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: shootNamespace, Name: cmNameOther}, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
 					*cm = returnedCm
 					return nil
