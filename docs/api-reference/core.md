@@ -5929,7 +5929,7 @@ StructuredAuthentication
 </td>
 <td>
 <em>(Optional)</em>
-<p>Authentication contains configuration settings for structured authentication to the kube-apiserver.
+<p>StructuredAuthentication contains configuration settings for structured authentication to the kube-apiserver.
 This field is only available for Kubernetes v1.30 or later.</p>
 </td>
 </tr>
