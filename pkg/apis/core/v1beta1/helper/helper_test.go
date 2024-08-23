@@ -2551,20 +2551,13 @@ var _ = Describe("Helper", func() {
 		},
 
 		Entry("KubeAPIServerConfig = nil", nil, ""),
-		Entry("Authentication = nil", &gardencorev1beta1.KubeAPIServerConfig{}, ""),
-		Entry("Structured = nil", &gardencorev1beta1.KubeAPIServerConfig{
-			Authentication: &gardencorev1beta1.Authentication{},
-		}, ""),
+		Entry("StructuredAuthentication = nil", &gardencorev1beta1.KubeAPIServerConfig{}, ""),
 		Entry("ConfigMapName not set", &gardencorev1beta1.KubeAPIServerConfig{
-			Authentication: &gardencorev1beta1.Authentication{
-				Structured: &gardencorev1beta1.StructuredAuthentication{},
-			},
+			StructuredAuthentication: &gardencorev1beta1.StructuredAuthentication{},
 		}, ""),
 		Entry("ConfigMapName set", &gardencorev1beta1.KubeAPIServerConfig{
-			Authentication: &gardencorev1beta1.Authentication{
-				Structured: &gardencorev1beta1.StructuredAuthentication{
-					ConfigMapName: "foo",
-				},
+			StructuredAuthentication: &gardencorev1beta1.StructuredAuthentication{
+				ConfigMapName: "foo",
 			},
 		}, "foo"),
 	)

@@ -92,6 +92,8 @@ spec:
     #     - RS256
     #     requiredClaims:
     #       key: value
+    #   structuredAuthentication: # requires Kubernetes version >= 1.30
+    #     configMapName: name-of-configmap-containing-authentication-config
     #   admissionPlugins:
     #   - name: PodNodeSelector
     #     disabled: false

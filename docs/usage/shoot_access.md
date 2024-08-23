@@ -145,9 +145,8 @@ kind: Shoot
 spec:
   kubernetes:
     kubeAPIServer:
-      authentication:
-        structured:
-          configMapName: name-of-configmap-containing-authentication-config
+      structuredAuthentication:
+        configMapName: name-of-configmap-containing-authentication-config
 ```
 
 The `configMapName` references a user created `ConfigMap` in the project namespace containing the `AuthenticationConfiguration` in it's `config.yaml` data field.

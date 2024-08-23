@@ -490,20 +490,13 @@ var _ = Describe("helper", func() {
 		},
 
 		Entry("KubeAPIServerConfig = nil", nil, ""),
-		Entry("Authentication = nil", &core.KubeAPIServerConfig{}, ""),
-		Entry("Structured = nil", &core.KubeAPIServerConfig{
-			Authentication: &core.Authentication{},
-		}, ""),
+		Entry("StructuredAuthentication = nil", &core.KubeAPIServerConfig{}, ""),
 		Entry("ConfigMapName not set", &core.KubeAPIServerConfig{
-			Authentication: &core.Authentication{
-				Structured: &core.StructuredAuthentication{},
-			},
+			StructuredAuthentication: &core.StructuredAuthentication{},
 		}, ""),
 		Entry("ConfigMapName set", &core.KubeAPIServerConfig{
-			Authentication: &core.Authentication{
-				Structured: &core.StructuredAuthentication{
-					ConfigMapName: "foo",
-				},
+			StructuredAuthentication: &core.StructuredAuthentication{
+				ConfigMapName: "foo",
 			},
 		}, "foo"),
 	)
