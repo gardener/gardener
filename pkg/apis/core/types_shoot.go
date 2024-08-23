@@ -588,7 +588,7 @@ type KubeAPIServerConfig struct {
 	APIAudiences []string
 	// AuditConfig contains configuration settings for the audit of the kube-apiserver.
 	AuditConfig *AuditConfig
-	// Authentication contains configuration settings for structured authentication to the kube-apiserver.
+	// StructuredAuthentication contains configuration settings for structured authentication to the kube-apiserver.
 	StructuredAuthentication *StructuredAuthentication
 	// OIDCConfig contains configuration settings for the OIDC provider.
 	OIDCConfig *OIDCConfig

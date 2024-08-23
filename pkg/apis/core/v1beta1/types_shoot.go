@@ -823,7 +823,7 @@ type KubeAPIServerConfig struct {
 	// EncryptionConfig contains customizable encryption configuration of the Kube API server.
 	// +optional
 	EncryptionConfig *EncryptionConfig `json:"encryptionConfig,omitempty" protobuf:"bytes,16,opt,name=encryptionConfig"`
-	// Authentication contains configuration settings for structured authentication to the kube-apiserver.
+	// StructuredAuthentication contains configuration settings for structured authentication to the kube-apiserver.
 	// This field is only available for Kubernetes v1.30 or later.
 	// +optional
 	StructuredAuthentication *StructuredAuthentication `json:"structuredAuthentication,omitempty" protobuf:"bytes,17,opt,name=authentication"`
