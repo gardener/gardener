@@ -346,9 +346,8 @@ func GetShootAuditPolicyConfigMapRef(apiServerConfig *core.KubeAPIServerConfig) 
 // GetShootAuthenticationConfigurationConfigMapName returns the Shoot's ConfigMap reference name for the aithentication configuration.
 func GetShootAuthenticationConfigurationConfigMapName(apiServerConfig *core.KubeAPIServerConfig) string {
 	if apiServerConfig != nil &&
-		apiServerConfig.Authentication != nil &&
-		apiServerConfig.Authentication.Structured != nil {
-		return apiServerConfig.Authentication.Structured.ConfigMapName
+		apiServerConfig.StructuredAuthentication != nil {
+		return apiServerConfig.StructuredAuthentication.ConfigMapName
 	}
 	return ""
 }

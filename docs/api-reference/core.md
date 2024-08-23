@@ -2531,39 +2531,6 @@ which contains the audit policy for the kube-apiserver.</p>
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1beta1.Authentication">Authentication
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
-</p>
-<p>
-<p>Authentication contains settings for authentication to the kube-apiserver.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>structured</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.StructuredAuthentication">
-StructuredAuthentication
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Structured contains configuration settings for structured authentication to the kube-apiserver.</p>
-</td>
-</tr>
-</tbody>
-</table>
 <h3 id="core.gardener.cloud/v1beta1.AvailabilityZone">AvailabilityZone
 </h3>
 <p>
@@ -5953,16 +5920,16 @@ EncryptionConfig
 </tr>
 <tr>
 <td>
-<code>authentication</code></br>
+<code>structuredAuthentication</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.Authentication">
-Authentication
+<a href="#core.gardener.cloud/v1beta1.StructuredAuthentication">
+StructuredAuthentication
 </a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>Authentication contains configuration settings for authentication to the kube-apiserver.
+<p>StructuredAuthentication contains configuration settings for structured authentication to the kube-apiserver.
 This field is only available for Kubernetes v1.30 or later.</p>
 </td>
 </tr>
@@ -12744,7 +12711,7 @@ This field is immutable.</p>
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.Authentication">Authentication</a>)
+<a href="#core.gardener.cloud/v1beta1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
 </p>
 <p>
 <p>StructuredAuthentication contains authentication config for kube-apiserver.</p>
