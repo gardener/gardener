@@ -1,0 +1,62 @@
+rule_files:
+- shoot.prometheusrule.yaml
+
+tests:
+
+  - name: ShootVerticalPodAutoscalerCappedRecommendation
+    interval: 1m
+    input_series:
+      - series: ALERTS{alertname             = "VerticalPodAutoscalerCappedRecommendation",
+                       type                  = "shoot",
+                       alertstate            = "firing",
+                       verticalpodautoscaler = "vpa-unit-tests",
+                       namespace             = "ns-unit-tests",
+                       cluster               = "cluster-unit-tests",
+                       unit                  = "core",
+                       container             = "container-unit-tests",
+                       seed                  = "seed-unit-tests"}
+        values: "1"
+      - series: ALERTS{alertname             = "VerticalPodAutoscalerCappedRecommendation",
+                       type                  = "shoot",
+                       alertstate            = "firing",
+                       verticalpodautoscaler = "vpa-unit-tests",
+                       namespace             = "ns-unit-tests",
+                       cluster               = "cluster-unit-tests",
+                       unit                  = "byte",
+                       container             = "container-unit-tests",
+                       seed                  = "seed-unit-tests"}
+        values: "1"
+      - series: ALERTS{alertname             = "VerticalPodAutoscalerCappedRecommendation",
+                       type                  = "shoot",
+                       alertstate            = "firing",
+                       verticalpodautoscaler = "vpa-unit-tests",
+                       namespace             = "ns-unit-tests",
+                       cluster               = "cluster-unit-tests-2",
+                       unit                  = "core",
+                       container             = "container-unit-tests",
+                       seed                  = "seed-unit-tests"}
+        values: "1"
+      - series: ALERTS{alertname             = "VerticalPodAutoscalerCappedRecommendation",
+                       type                  = "shoot",
+                       alertstate            = "firing",
+                       verticalpodautoscaler = "vpa-unit-tests",
+                       namespace             = "ns-unit-tests",
+                       cluster               = "cluster-unit-tests-2",
+                       unit                  = "byte",
+                       container             = "container-unit-tests",
+                       seed                  = "seed-unit-tests"}
+        values: "1"
+    external_labels:
+      landscape: landscape-unit-tests
+    alert_rule_test:
+    - alertname: ShootVerticalPodAutoscalerCappedRecommendation
+      eval_time: 0m # test the alert fires immediately
+      exp_alerts:
+        - exp_labels:
+          exp_annotations:
+            summary: >-
+              A VPA recommendation in a shoot is capped.
+            description: >-
+              There are 2 shoots in landscape-unit-tests with a VPA that shows an uncapped
+              target recommendation larger than the regular target recommendation. Query
+              for this alert in the garden Prometheus for more details.

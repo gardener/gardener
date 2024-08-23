@@ -19,6 +19,9 @@ var (
 	//go:embed assets/prometheusrules/prometheus.yaml
 	prometheusYAML []byte
 	prometheus     *monitoringv1.PrometheusRule
+	//go:embed assets/prometheusrules/verticalpodautoscaler.yaml
+	vpaYAML []byte
+	vpa     *monitoringv1.PrometheusRule
 
 	// optional rules
 	//go:embed assets/prometheusrules/optional/alertmanager.yaml
@@ -49,6 +52,8 @@ func init() {
 	// general rules
 	prometheus = &monitoringv1.PrometheusRule{}
 	utilruntime.Must(runtime.DecodeInto(monitoringutils.Decoder, prometheusYAML, prometheus))
+	vpa = &monitoringv1.PrometheusRule{}
+	utilruntime.Must(runtime.DecodeInto(monitoringutils.Decoder, vpaYAML, vpa))
 
 	// optional rules
 	alertManager = &monitoringv1.PrometheusRule{}
@@ -71,7 +76,10 @@ func init() {
 
 // CentralPrometheusRules returns the central PrometheusRule resources for the shoot prometheus.
 func CentralPrometheusRules(isWorkerless, wantsAlertmanager bool) []*monitoringv1.PrometheusRule {
-	out := []*monitoringv1.PrometheusRule{prometheus.DeepCopy()}
+	out := []*monitoringv1.PrometheusRule{
+		prometheus.DeepCopy(),
+		vpa.DeepCopy(),
+	}
 
 	if isWorkerless {
 		out = append(out, workerlessKubePods.DeepCopy(), workerlessNetworking.DeepCopy())

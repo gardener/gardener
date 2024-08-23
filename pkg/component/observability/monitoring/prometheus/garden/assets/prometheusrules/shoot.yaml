@@ -111,3 +111,16 @@ spec:
         description: >-
           The seed cluster: {{$labels.project}}/{{$labels.name}} has a filesystem mounted at {{ $labels.mountpoint }}
           on node {{ $labels.node }} that has only {{ printf "%.2f" $value }}% available inodes left.
+
+    - alert: ShootVerticalPodAutoscalerCappedRecommendation
+      expr: |
+          count(
+            count by (cluster) (ALERTS{alertname="VerticalPodAutoscalerCappedRecommendation", type="shoot", alertstate="firing"})
+          )
+      annotations:
+        summary: >-
+          A VPA recommendation in a shoot is capped.
+        description: >-
+          There are {{ .Value }} shoots in {{ $externalLabels.landscape }} with a VPA that shows
+          an uncapped target recommendation larger than the regular target recommendation. Query
+          for this alert in the garden Prometheus for more details.

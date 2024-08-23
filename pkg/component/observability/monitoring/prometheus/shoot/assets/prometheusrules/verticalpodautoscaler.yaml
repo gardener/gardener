@@ -1,0 +1,27 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: verticalpodautoscaler
+spec:
+  groups:
+  - name: verticalpodautoscaler.rules
+    rules:
+    - alert: VerticalPodAutoscalerCappedRecommendation
+      expr: |2-
+          {__name__=~"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_uncappedtarget_.+"}
+        >
+          {__name__=~"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_.+"}
+      labels:
+        severity: warning
+        type: shoot
+        visibility: operator
+      annotations:
+        summary: A VPA recommendation in a shoot is capped.
+        description: |-
+          The following VPA from a shoot shows a
+          {{- if eq .Labels.unit "core" }} CPU {{ else if eq .Labels.unit "byte" }} memory {{ end -}}
+          uncapped target recommendation larger than the regular target recommendation:
+          - cluster = {{ $externalLabels.cluster }}
+          - namespace = {{ $labels.namespace }}
+          - vpa = {{ $labels.verticalpodautoscaler }}
+          - container = {{ $labels.container }}

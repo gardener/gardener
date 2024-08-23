@@ -1,0 +1,65 @@
+rule_files:
+- verticalpodautoscaler.prometheusrule.yaml
+
+tests:
+- name: VerticalPodAutoscalerCappedRecommendation
+  interval: 1m
+  input_series:
+  - series: kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_uncappedtarget_cpu{verticalpodautoscaler = "vpa-test",
+                                                                                                                        namespace             = "namespace-test",
+                                                                                                                        container             = "container-test",
+                                                                                                                        unit                  = "core"}
+    values: "2"
+  - series: kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_cpu{verticalpodautoscaler = "vpa-test",
+                                                                                                                namespace             = "namespace-test",
+                                                                                                                container             = "container-test",
+                                                                                                                unit                  = "core"}
+    values: "1"
+  - series: kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_uncappedtarget_memory{verticalpodautoscaler = "vpa-test",
+                                                                                                                           namespace             = "namespace-test",
+                                                                                                                           container             = "container-test",
+                                                                                                                           unit                  = "byte"}
+    values: "2"
+  - series: kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_memory{verticalpodautoscaler = "vpa-test",
+                                                                                                                   namespace             = "namespace-test",
+                                                                                                                   container             = "container-test",
+                                                                                                                   unit                  = "byte"}
+    values: "1"
+  external_labels:
+    cluster: cluster-test
+  alert_rule_test:
+  - eval_time: 0m # test the alert fires immediately
+    alertname: VerticalPodAutoscalerCappedRecommendation
+    exp_alerts:
+    - exp_labels:
+        verticalpodautoscaler: vpa-test
+        namespace: namespace-test
+        container: container-test
+        unit: core
+        type: shoot
+        visibility: operator
+        severity: warning
+      exp_annotations:
+        summary: A VPA recommendation in a shoot is capped.
+        description: |-
+          The following VPA from a shoot shows a CPU uncapped target recommendation larger than the regular target recommendation:
+          - cluster = cluster-test
+          - namespace = namespace-test
+          - vpa = vpa-test
+          - container = container-test
+    - exp_labels:
+        verticalpodautoscaler: vpa-test
+        namespace: namespace-test
+        container: container-test
+        unit: byte
+        type: shoot
+        visibility: operator
+        severity: warning
+      exp_annotations:
+        summary: A VPA recommendation in a shoot is capped.
+        description: |-
+          The following VPA from a shoot shows a memory uncapped target recommendation larger than the regular target recommendation:
+          - cluster = cluster-test
+          - namespace = namespace-test
+          - vpa = vpa-test
+          - container = container-test
