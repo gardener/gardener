@@ -154,3 +154,57 @@ tests:
               description: >-
                 The seed cluster seed-four in landscape-unit-tests
                 has a failing condition: APIServerUnavailable.
+
+  - name: SeedVerticalPodAutoscalerCappedRecommendation
+    interval: 1m
+    input_series:
+      - series: ALERTS{alertname             = "VerticalPodAutoscalerCappedRecommendation",
+                       type                  = "seed",
+                       alertstate            = "firing",
+                       verticalpodautoscaler = "vpa-unit-tests",
+                       namespace             = "ns-unit-tests",
+                       seed                  = "seed-unit-tests",
+                       unit                  = "core",
+                       container             = "container-unit-tests"}
+        values: "1"
+      - series: ALERTS{alertname             = "VerticalPodAutoscalerCappedRecommendation",
+                       type                  = "seed",
+                       alertstate            = "firing",
+                       verticalpodautoscaler = "vpa-unit-tests",
+                       namespace             = "ns-unit-tests",
+                       seed                  = "seed-unit-tests",
+                       unit                  = "byte",
+                       container             = "container-unit-tests"}
+        values: "1"
+      - series: ALERTS{alertname             = "VerticalPodAutoscalerCappedRecommendation",
+                       type                  = "seed",
+                       alertstate            = "firing",
+                       verticalpodautoscaler = "vpa-unit-tests",
+                       namespace             = "ns-unit-tests",
+                       seed                  = "seed-unit-tests-2",
+                       unit                  = "core",
+                       container             = "container-unit-tests"}
+        values: "1"
+      - series: ALERTS{alertname             = "VerticalPodAutoscalerCappedRecommendation",
+                       type                  = "seed",
+                       alertstate            = "firing",
+                       verticalpodautoscaler = "vpa-unit-tests",
+                       namespace             = "ns-unit-tests",
+                       seed                  = "seed-unit-tests-2",
+                       unit                  = "byte",
+                       container             = "container-unit-tests"}
+        values: "1"
+    external_labels:
+      landscape: landscape-unit-tests
+    alert_rule_test:
+    - alertname: SeedVerticalPodAutoscalerCappedRecommendation
+      eval_time: 0m # test the alert fires immediately
+      exp_alerts:
+        - exp_labels:
+          exp_annotations:
+            summary: >-
+              A VPA recommendation in a seed is capped.
+            description: >-
+              There are 2 seeds in landscape-unit-tests with a VPA that shows an uncapped
+              target recommendation larger than the regular target recommendation. Query
+              for this alert in the garden Prometheus for more details.

@@ -62,8 +62,10 @@ var _ = Describe("PrometheusRules", func() {
 				},
 			},
 		}
-		It("should return the expected objects", func() {
-			Expect(aggregate.CentralPrometheusRules()).To(HaveExactElements(
+
+		It("should return the expected objects when the seed is also the garden cluster", func() {
+			seedIsGarden := true
+			Expect(aggregate.CentralPrometheusRules(seedIsGarden)).To(HaveExactElements(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"TypeMeta":   MatchFields(IgnoreExtras, Fields{"APIVersion": Equal("monitoring.coreos.com/v1"), "Kind": Equal("PrometheusRule")}),
 					"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("metering-stateful")}),
@@ -74,6 +76,47 @@ var _ = Describe("PrometheusRules", func() {
 						Groups: []monitoringv1.RuleGroup{{
 							Name:  "seed.rules",
 							Rules: rules,
+						}},
+					},
+				}),
+			))
+		})
+
+		It("should return the expected objects when the seed and the garden clusters are different", func() {
+			seedIsGarden := false
+			vpaRule := monitoringv1.Rule{
+				Alert: "VerticalPodAutoscalerCappedRecommendation",
+				Expr: intstr.FromString(`
+    {__name__=~"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_uncappedtarget_.+"}
+>
+    {__name__=~"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_.+"}`),
+				Labels: map[string]string{
+					"severity":   "warning",
+					"type":       "seed",
+					"visibility": "operator",
+				},
+				Annotations: map[string]string{
+					"summary": "A VPA recommendation in a seed is capped.",
+					"description": "The following VPA from a seed shows a " +
+						"{{ if eq .Labels.unit \"core\" -}} CPU {{- else if eq .Labels.unit \"byte\" -}} memory {{- end }} " +
+						"uncapped target recommendation larger than the regular target recommendation:\n" +
+						"- seed = {{ $externalLabels.seed }}\n" +
+						"- namespace = {{ $labels.namespace }}\n" +
+						"- vpa = {{ $labels.verticalpodautoscaler }}\n" +
+						"- container = {{ $labels.container }}",
+				},
+			}
+			Expect(aggregate.CentralPrometheusRules(seedIsGarden)).To(HaveExactElements(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"TypeMeta":   MatchFields(IgnoreExtras, Fields{"APIVersion": Equal("monitoring.coreos.com/v1"), "Kind": Equal("PrometheusRule")}),
+					"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("metering-stateful")}),
+				})),
+				Equal(&monitoringv1.PrometheusRule{
+					ObjectMeta: metav1.ObjectMeta{Name: "seed"},
+					Spec: monitoringv1.PrometheusRuleSpec{
+						Groups: []monitoringv1.RuleGroup{{
+							Name:  "seed.rules",
+							Rules: append(rules, vpaRule),
 						}},
 					},
 				}),

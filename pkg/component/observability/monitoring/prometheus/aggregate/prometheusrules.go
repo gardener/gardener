@@ -30,7 +30,7 @@ func init() {
 }
 
 // CentralPrometheusRules returns the central PrometheusRule resources for the aggregate prometheus.
-func CentralPrometheusRules() []*monitoringv1.PrometheusRule {
+func CentralPrometheusRules(seedIsGarden bool) []*monitoringv1.PrometheusRule {
 	rules := []monitoringv1.Rule{
 		{
 			Alert: "PodStuckInPending",
@@ -73,6 +73,32 @@ func CentralPrometheusRules() []*monitoringv1.PrometheusRule {
 				"summary":     "Too many etcd snapshot compaction jobs are failing in the seed.",
 			},
 		},
+	}
+
+	// Avoid duplicating the alert when the seed is garden because the garden cluster always deploys the VPA capped recommendation alert.
+	if !seedIsGarden {
+		rules = append(rules, monitoringv1.Rule{
+			Alert: "VerticalPodAutoscalerCappedRecommendation",
+			Expr: intstr.FromString(`
+    {__name__=~"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_uncappedtarget_.+"}
+>
+    {__name__=~"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_.+"}`),
+			Labels: map[string]string{
+				"severity":   "warning",
+				"type":       "seed",
+				"visibility": "operator",
+			},
+			Annotations: map[string]string{
+				"summary": "A VPA recommendation in a seed is capped.",
+				"description": "The following VPA from a seed shows a " +
+					"{{ if eq .Labels.unit \"core\" -}} CPU {{- else if eq .Labels.unit \"byte\" -}} memory {{- end }} " +
+					"uncapped target recommendation larger than the regular target recommendation:\n" +
+					"- seed = {{ $externalLabels.seed }}\n" +
+					"- namespace = {{ $labels.namespace }}\n" +
+					"- vpa = {{ $labels.verticalpodautoscaler }}\n" +
+					"- container = {{ $labels.container }}",
+			},
+		})
 	}
 
 	return []*monitoringv1.PrometheusRule{
