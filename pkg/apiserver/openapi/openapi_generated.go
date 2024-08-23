@@ -4216,7 +4216,7 @@ func schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref common.ReferenceCallba
 					},
 					"structuredAuthentication": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Authentication contains configuration settings for structured authentication to the kube-apiserver. This field is only available for Kubernetes v1.30 or later.",
+							Description: "StructuredAuthentication contains configuration settings for structured authentication to the kube-apiserver. This field is only available for Kubernetes v1.30 or later.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.StructuredAuthentication"),
 						},
 					},

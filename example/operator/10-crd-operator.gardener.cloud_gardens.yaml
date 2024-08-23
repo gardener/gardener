@@ -1438,7 +1438,7 @@ spec:
                             type: object
                           structuredAuthentication:
                             description: |-
-                              Authentication contains configuration settings for structured authentication to the kube-apiserver.
+                              StructuredAuthentication contains configuration settings for structured authentication to the kube-apiserver.
                               This field is only available for Kubernetes v1.30 or later.
                             properties:
                               configMapName:
