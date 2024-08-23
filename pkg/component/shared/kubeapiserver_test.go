@@ -743,18 +743,9 @@ exemptions:
 					nil,
 					Not(HaveOccurred()),
 				),
-				Entry("Authentication is nil",
+				Entry("StructuredAuthentication is nil",
 					func() {
 						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{}
-					},
-					nil,
-					Not(HaveOccurred()),
-				),
-				Entry("Structured is nil",
-					func() {
-						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
-							Authentication: &gardencorev1beta1.Authentication{},
-						}
 					},
 					nil,
 					Not(HaveOccurred()),
@@ -762,10 +753,8 @@ exemptions:
 				Entry("ConfigMapName is empty",
 					func() {
 						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
-							Authentication: &gardencorev1beta1.Authentication{
-								Structured: &gardencorev1beta1.StructuredAuthentication{
-									ConfigMapName: "",
-								},
+							StructuredAuthentication: &gardencorev1beta1.StructuredAuthentication{
+								ConfigMapName: "",
 							},
 						}
 					},
@@ -775,10 +764,8 @@ exemptions:
 				Entry("ConfigMapName is provided but configmap is missing",
 					func() {
 						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
-							Authentication: &gardencorev1beta1.Authentication{
-								Structured: &gardencorev1beta1.StructuredAuthentication{
-									ConfigMapName: authenticationConfigurationCm.Name,
-								},
+							StructuredAuthentication: &gardencorev1beta1.StructuredAuthentication{
+								ConfigMapName: authenticationConfigurationCm.Name,
 							},
 						}
 					},
@@ -789,10 +776,8 @@ exemptions:
 					func() {
 						objectMeta.DeletionTimestamp = &metav1.Time{}
 						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
-							Authentication: &gardencorev1beta1.Authentication{
-								Structured: &gardencorev1beta1.StructuredAuthentication{
-									ConfigMapName: authenticationConfigurationCm.Name,
-								},
+							StructuredAuthentication: &gardencorev1beta1.StructuredAuthentication{
+								ConfigMapName: authenticationConfigurationCm.Name,
 							},
 						}
 					},
@@ -805,10 +790,8 @@ exemptions:
 						Expect(resourceConfigClient.Create(ctx, authenticationConfigurationCm)).To(Succeed())
 
 						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
-							Authentication: &gardencorev1beta1.Authentication{
-								Structured: &gardencorev1beta1.StructuredAuthentication{
-									ConfigMapName: authenticationConfigurationCm.Name,
-								},
+							StructuredAuthentication: &gardencorev1beta1.StructuredAuthentication{
+								ConfigMapName: authenticationConfigurationCm.Name,
 							},
 						}
 					},
@@ -820,10 +803,8 @@ exemptions:
 						Expect(resourceConfigClient.Create(ctx, authenticationConfigurationCm)).To(Succeed())
 
 						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
-							Authentication: &gardencorev1beta1.Authentication{
-								Structured: &gardencorev1beta1.StructuredAuthentication{
-									ConfigMapName: authenticationConfigurationCm.Name,
-								},
+							StructuredAuthentication: &gardencorev1beta1.StructuredAuthentication{
+								ConfigMapName: authenticationConfigurationCm.Name,
 							},
 						}
 					},

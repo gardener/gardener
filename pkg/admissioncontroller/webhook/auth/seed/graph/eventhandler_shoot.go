@@ -142,7 +142,7 @@ func (g *graph) handleShootCreateOrUpdate(ctx context.Context, shoot *gardencore
 		}
 
 		if len(v1beta1helper.GetShootAuthenticationConfigurationConfigMapName(kubeAPIServer)) > 0 {
-			configMapVertex := g.getOrCreateVertex(VertexTypeConfigMap, shoot.Namespace, shoot.Spec.Kubernetes.KubeAPIServer.Authentication.Structured.ConfigMapName)
+			configMapVertex := g.getOrCreateVertex(VertexTypeConfigMap, shoot.Namespace, shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication.ConfigMapName)
 			g.addEdge(configMapVertex, shootVertex)
 		}
 	}

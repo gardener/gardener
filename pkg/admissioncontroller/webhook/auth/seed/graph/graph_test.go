@@ -213,10 +213,8 @@ var _ = Describe("graph", func() {
 								ConfigMapRef: &shoot1AuditPolicyConfigMapRef,
 							},
 						},
-						Authentication: &gardencorev1beta1.Authentication{
-							Structured: &gardencorev1beta1.StructuredAuthentication{
-								ConfigMapName: shoot1AuthConfigConfigMapName,
-							},
+						StructuredAuthentication: &gardencorev1beta1.StructuredAuthentication{
+							ConfigMapName: shoot1AuthConfigConfigMapName,
 						},
 					},
 				},
@@ -649,7 +647,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 
 		By("Update (structured authentication config map name)")
 		shoot1Copy = shoot1.DeepCopy()
-		shoot1.Spec.Kubernetes.KubeAPIServer.Authentication = nil
+		shoot1.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication = nil
 		fakeInformerShoot.Update(shoot1Copy, shoot1)
 		Expect(graph.graph.Nodes().Len()).To(Equal(19))
 		Expect(graph.graph.Edges().Len()).To(Equal(18))

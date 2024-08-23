@@ -66,18 +66,18 @@ func computeAPIServerAuthenticationConfig(
 	ctx context.Context,
 	cl client.Client,
 	objectMeta metav1.ObjectMeta,
-	authentication *gardencorev1beta1.Authentication,
+	structuredAuthentication *gardencorev1beta1.StructuredAuthentication,
 ) (
 	*string,
 	error,
 ) {
-	if authentication == nil || authentication.Structured == nil || len(authentication.Structured.ConfigMapName) == 0 {
+	if structuredAuthentication == nil || len(structuredAuthentication.ConfigMapName) == 0 {
 		return nil, nil
 	}
 
 	var (
 		out *string
-		key = client.ObjectKey{Namespace: objectMeta.Namespace, Name: authentication.Structured.ConfigMapName}
+		key = client.ObjectKey{Namespace: objectMeta.Namespace, Name: structuredAuthentication.ConfigMapName}
 	)
 
 	configMap := &corev1.ConfigMap{}

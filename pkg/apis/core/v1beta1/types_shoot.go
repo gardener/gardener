@@ -823,10 +823,10 @@ type KubeAPIServerConfig struct {
 	// EncryptionConfig contains customizable encryption configuration of the Kube API server.
 	// +optional
 	EncryptionConfig *EncryptionConfig `json:"encryptionConfig,omitempty" protobuf:"bytes,16,opt,name=encryptionConfig"`
-	// Authentication contains configuration settings for authentication to the kube-apiserver.
+	// Authentication contains configuration settings for structured authentication to the kube-apiserver.
 	// This field is only available for Kubernetes v1.30 or later.
 	// +optional
-	Authentication *Authentication `json:"authentication,omitempty" protobuf:"bytes,17,opt,name=authentication"`
+	StructuredAuthentication *StructuredAuthentication `json:"structuredAuthentication,omitempty" protobuf:"bytes,17,opt,name=authentication"`
 }
 
 // APIServerLogging contains configuration for the logs level and http access logs
@@ -905,13 +905,6 @@ type AuditPolicy struct {
 	// which contains the audit policy for the kube-apiserver.
 	// +optional
 	ConfigMapRef *corev1.ObjectReference `json:"configMapRef,omitempty" protobuf:"bytes,1,opt,name=configMapRef"`
-}
-
-// Authentication contains settings for authentication to the kube-apiserver.
-type Authentication struct {
-	// Structured contains configuration settings for structured authentication to the kube-apiserver.
-	// +optional
-	Structured *StructuredAuthentication `json:"structured,omitempty" protobuf:"bytes,1,opt,name=structured"`
 }
 
 // StructuredAuthentication contains authentication config for kube-apiserver.
