@@ -64,6 +64,7 @@ build:
             - pkg/apis/security
             - pkg/apis/security/install
             - pkg/apis/security/v1alpha1
+            - pkg/apis/security/v1alpha1/constants
             - pkg/apis/security/validation
             - pkg/apis/seedmanagement
             - pkg/apis/seedmanagement/encoding
@@ -1254,6 +1255,7 @@ build:
             - pkg/utils/validation/kubernetes/core
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
+            - pkg/utils/workloadidentity
             - third_party/gopkg.in/yaml.v2
             - VERSION
         ldflags:

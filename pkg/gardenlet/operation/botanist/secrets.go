@@ -459,15 +459,6 @@ func (b *Botanist) reconcileWildcardIngressCertificate(ctx context.Context) erro
 // DeployCloudProviderSecret creates or updates the cloud provider secret in the Shoot namespace
 // in the Seed cluster.
 func (b *Botanist) DeployCloudProviderSecret(ctx context.Context) error {
-	var (
-		secret = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      v1beta1constants.SecretNameCloudProvider,
-				Namespace: b.Shoot.SeedNamespace,
-			},
-		}
-	)
-
 	switch credentials := b.Shoot.Credentials.(type) {
 	case *securityv1alpha1.WorkloadIdentity:
 		shootInfo := b.Shoot.GetInfo()
@@ -479,7 +470,7 @@ func (b *Botanist) DeployCloudProviderSecret(ctx context.Context) error {
 			UID:        shootInfo.ObjectMeta.UID,
 		}
 
-		workloadIdentitySecret, err := workloadidentity.NewSecret(
+		secret, err := workloadidentity.NewSecret(
 			v1beta1constants.SecretNameCloudProvider,
 			b.Shoot.SeedNamespace,
 			workloadidentity.ForWorkloadIdentity(credentials.Name, credentials.Namespace, credentials.Spec.TargetSystem.Type),
@@ -490,8 +481,14 @@ func (b *Botanist) DeployCloudProviderSecret(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		return workloadIdentitySecret.Reconcile(ctx, b.SeedClientSet.Client())
+		return secret.Reconcile(ctx, b.SeedClientSet.Client())
 	case *corev1.Secret:
+		secret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      v1beta1constants.SecretNameCloudProvider,
+				Namespace: b.Shoot.SeedNamespace,
+			},
+		}
 		_, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.SeedClientSet.Client(), secret, func() error {
 			secret.Annotations = map[string]string{}
 			secret.Labels = map[string]string{
