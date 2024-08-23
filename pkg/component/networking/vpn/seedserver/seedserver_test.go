@@ -1069,6 +1069,7 @@ var _ = Describe("VpnSeedServer", func() {
 				Expect(actualConfigMap).To(DeepEqual(expectedConfigMap))
 
 				actualVpa := &vpaautoscalingv1.VerticalPodAutoscaler{}
+				expectedVpa := expectedVPAFor(values.HighAvailabilityEnabled)
 				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedVpa.Namespace, Name: expectedVpa.Name}, actualVpa)).To(Succeed())
 				Expect(actualVpa).To(DeepEqual(expectedVpa))
 

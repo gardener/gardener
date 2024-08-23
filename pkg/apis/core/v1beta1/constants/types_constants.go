@@ -782,7 +782,7 @@ const (
 	// DefaultVPNRange is the default IPv4 network range for the VPN between seed and shoot cluster.
 	DefaultVPNRange = "192.168.123.0/24"
 	// DefaultVPNRangeV6 is the default IPv6 network range for the VPN between seed and shoot cluster.
-	DefaultVPNRangeV6 = "fd8f:6d53:b97a:1::/120"
+	DefaultVPNRangeV6 = "fd8f:6d53:b97a:1::/96"
 
 	// BackupSecretName is the name of secret having credentials for etcd backups.
 	BackupSecretName string = "etcd-backup"

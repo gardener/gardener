@@ -586,7 +586,9 @@ func (v *vpnShoot) podTemplate(serviceAccount *corev1.ServiceAccount, secrets []
 		for i := 0; i < v.values.HighAvailabilityNumberOfSeedServers; i++ {
 			template.Spec.Containers = append(template.Spec.Containers, *v.container(secrets, &i))
 		}
-		template.Spec.Containers = append(template.Spec.Containers, *v.tunnelControllerContainer())
+		if !v.values.DisableNewVPN {
+			template.Spec.Containers = append(template.Spec.Containers, *v.tunnelControllerContainer())
+		}
 	}
 
 	return template
