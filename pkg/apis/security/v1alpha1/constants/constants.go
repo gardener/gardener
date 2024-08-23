@@ -20,6 +20,9 @@ const (
 	// the timestamp after which the workload identity token has to be renewed.
 	AnnotationWorkloadIdentityTokenRenewTimestamp = WorkloadIdentityPrefix + "token-renew-timestamp"
 
+	// AnnotationWorkloadIdentityTokenRenewTimestamp is an annotation key used to indicate the time when a workload identity token will be
+	AnnotationWorkloadIdentityTokenRenewTimestamp = WorkloadIdentityPrefix + "token-renew-timestamp"
+
 	// LabelPurpose is a label used to indicate the purpose of the labeled resource.
 	// Specific values might cause controllers to act on the said object.
 	LabelPurpose = groupName + "/purpose"
