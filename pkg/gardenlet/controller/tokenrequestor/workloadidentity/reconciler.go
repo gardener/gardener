@@ -111,7 +111,7 @@ func (r *Reconciler) reconcileSecret(ctx context.Context, log logr.Logger, secre
 	if secret.Data == nil {
 		secret.Data = make(map[string][]byte, 1)
 	}
-	secret.Data["token"] = []byte(token)
+	secret.Data[securityv1alpha1constants.DataKeyToken] = []byte(token)
 
 	return r.SeedClient.Patch(ctx, secret, patch)
 }
@@ -122,7 +122,7 @@ func (r *Reconciler) shouldRequeue(secret *corev1.Secret) (bool, time.Duration, 
 		return false, 0, nil
 	}
 
-	if _, ok := secret.Data["token"]; !ok {
+	if _, ok := secret.Data[securityv1alpha1constants.DataKeyToken]; !ok {
 		return false, 0, nil
 	}
 
