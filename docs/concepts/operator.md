@@ -69,7 +69,7 @@ If the `cert-controller-manager` should make requests to any ACME servers runnin
 
 ##### Default Issuer using an ACME server
 
-Please provide at least server and e-mail address. 
+Please provide at least server and e-mail address.
 
 ```yaml
 spec:
@@ -121,7 +121,7 @@ The `spec.virtualCluster.kubernetes.kubeAPIServer.encryptionConfig` field in the
 
 ## `Extension` Resource
 
-A Gardener installation relies on extension controllers to provide support for new cloud providers or to add new capabilities. 
+A Gardener installation relies on extension controllers to provide support for new cloud providers or to add new capabilities.
 You can find out more about Gardener's extensions and how they can be used [here](../extensions/extension.md#contract-extension-resource).
 
 The `Extension` resource is intended to automate the installation and management of extensions in a Gardener landscape.
@@ -148,13 +148,13 @@ Each one is described in more details below.
 
 #### Configuration for Extension Deployment
 
-`.spec.deployment.extension` contains configuration for the registration of an extension controller in the garden cluster. 
+`.spec.deployment.extension` contains configuration for the registration of an extension controller in the garden cluster.
 `gardener-operator` follows the same principles described by [this document](../extensions/controllerregistration.md#registering-extension-controllers):
 - `.spec.deployment.extension.helm` and `.spec.deployment.extension.values` are used when creating the `ControllerDeployment` in the garden cluster.
 - `.spec.deployment.extension.policy` and `.spec.deployment.extension.seedSelector` define the extension's installation policy as per the [`ControllerDeployment's` respective fields](../extensions/controllerregistration.md#deployment-configuration-options)
 
-The extension controller can also be deployed in the runtime cluster to manage resources required by the `Garden` resource. 
-Since the environment in the runtime cluster may differ from that of a `Seed`, the extension is installed in the runtime cluster with a distinct set of Helm chart values specified in `.spec.deployment.extension.runtimeValues`. 
+The extension controller can also be deployed in the runtime cluster to manage resources required by the `Garden` resource.
+Since the environment in the runtime cluster may differ from that of a `Seed`, the extension is installed in the runtime cluster with a distinct set of Helm chart values specified in `.spec.deployment.extension.runtimeValues`.
 This configuration allows for precise control over various extension parameters, such as requested resources, [priority classes](../development/priority-classes.md), and more.
 
 #### Configuration for Admission Deployment
@@ -167,8 +167,8 @@ As of today, deployment of admission controllers via `.spec.deployment.admission
 
 ### Configuration for Extension Resources
 
-The `.spec.resources` field refers to the extension resources as defined by Gardener in the `extensions.gardener.cloud/v1alpha1` API. 
-These include both well-known types such as `Infrastructure`, `Worker` etc. and [generic resources](https://github.com/gardener/gardener/blob/master/docs/extensions/controllerregistration.md#extension-resource-configurations). 
+The `.spec.resources` field refers to the extension resources as defined by Gardener in the `extensions.gardener.cloud/v1alpha1` API.
+These include both well-known types such as `Infrastructure`, `Worker` etc. and [generic resources](https://github.com/gardener/gardener/blob/master/docs/extensions/controllerregistration.md#extension-resource-configurations).
 The field will be used to populate the respective field in the resulting `ControllerRegistration` in the garden cluster.
 
 ## Controllers
@@ -244,7 +244,7 @@ The Gardener control plane components are:
 - `gardener-scheduler`
 
 Besides those, the `gardener-operator` is able to deploy the following optional components:
- - [Gardener Dashboard](https://github.com/gardener/dashboard) (and the [controller for web terminals](https://github.com/gardener/terminal-controller-manager)) when `.spec.virtualCluster.gardener.gardenerDashboard` (or `.spec.virtualCluster.gardener.gardenerDashboard.terminal`, respectively) is set. 
+ - [Gardener Dashboard](https://github.com/gardener/dashboard) (and the [controller for web terminals](https://github.com/gardener/terminal-controller-manager)) when `.spec.virtualCluster.gardener.gardenerDashboard` (or `.spec.virtualCluster.gardener.gardenerDashboard.terminal`, respectively) is set.
  You can read more about it and its configuration in [this section](#gardener-dashboard).
  - [Gardener Discovery Server](https://github.com/gardener/gardener-discovery-server) when `.spec.virtualCluster.gardener.gardenerDiscoveryServer` is set.
  The service account issuer of shoots will be calculated in the format `https://discovery.<.spec.runtimeCluster.ingress.domains[0]>/projects/<project-name>/shoots/<shoot-uid>/issuer`.
@@ -553,7 +553,7 @@ It contains the networking information of the garden runtime cluster which is re
 
 ### [`Extension` Controller](../../pkg/operator/controller/extension)
 
-Gardener relies on extensions to provide various capabilities, such as supporting cloud providers. 
+Gardener relies on extensions to provide various capabilities, such as supporting cloud providers.
 This controller automates the management of extensions by managing all necessary resources in the runtime and virtual garden clusters.
 
 Currently, this controller only supports the reconciliation of `ControllerDeployment` and `ControllerRegistration` resources in the virtual garden cluster.
@@ -647,6 +647,7 @@ Please refer to [this document](../usage/shoot_credentials_rotation.md#gardener-
 - ETCD encryption key
 - observability password for Plutono
 - `ServiceAccount` token signing key
+- `WorkloadIdentity` token signing key
 
 ⚠️ Rotation of static `ServiceAccount` secrets is not supported since the `kube-controller-manager` does not enable the `serviceaccount-token` controller.
 
@@ -657,6 +658,9 @@ Read more about it [here](../extensions/garden-api-access.md#renewing-all-garden
 Similarly, when the CA certificate rotation is in `Preparing` phase, then `gardener-operator` annotates all `Seed`s with `gardener.cloud/operation=renew-kubeconfig`.
 This causes `gardenlet` to request a new client certificate for its garden cluster kubeconfig, which is now signed with the new client CA, and which also contains the new CA bundle for the server certificate verification.
 Read more about it [here](gardenlet.md#rotate-certificates-using-bootstrap-kubeconfig).
+
+Also, when the `WorkloadIdentity` token signing key is in `Preparing` phase, then `gardener-operator` annotates all `Seed`s with `gardener.cloud/operation=renew-workload-identity-tokens`.
+This causes `gardenlet` to renew all workload identity tokens in the seed cluster with new tokens now signed with the new signing key.
 
 ## Migrating an Existing Gardener Landscape to `gardener-operator`
 
