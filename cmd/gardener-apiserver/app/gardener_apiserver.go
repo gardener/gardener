@@ -137,7 +137,7 @@ func NewOptions() *Options {
 		schema.GroupKind{Group: gardencorev1beta1.GroupName},
 	)
 	apiserver.RegisterAllAdmissionPlugins(o.Recommended.Admission.Plugins)
-	o.Recommended.Admission.DefaultOffPlugins = sets.NewString(sets.List(sets.New(plugin.AllPluginNames()...).Difference(plugin.DefaultOnPlugins()))...)
+	o.Recommended.Admission.DefaultOffPlugins = sets.New(sets.List(sets.New(plugin.AllPluginNames()...).Difference(plugin.DefaultOnPlugins()))...)
 	o.Recommended.Admission.RecommendedPluginOrder = plugin.AllPluginNames()
 
 	return o
