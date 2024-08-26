@@ -6,6 +6,8 @@ package extension_test
 
 import (
 	"context"
+	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -17,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -26,7 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
@@ -36,6 +39,7 @@ import (
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/operator/controller/extension"
 	"github.com/gardener/gardener/pkg/operator/features"
+	ocifake "github.com/gardener/gardener/pkg/utils/oci/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	gardenerenvtest "github.com/gardener/gardener/test/envtest"
 	"github.com/gardener/gardener/test/framework"
@@ -52,15 +56,18 @@ var (
 	ctx = context.Background()
 	log logr.Logger
 
-	restConfig    *rest.Config
-	testEnv       *gardenerenvtest.GardenerTestEnvironment
-	testClient    client.Client
-	testClientSet kubernetes.Interface
-	mgrClient     client.Client
+	restConfig *rest.Config
+	testEnv    *gardenerenvtest.GardenerTestEnvironment
+	testClient client.Client
+	mgrClient  client.Client
 
 	testRunID     string
 	testNamespace *corev1.Namespace
 	gardenName    string
+
+	fakeRegistry             *ocifake.Registry
+	ociRepositoryApplication gardencorev1.OCIRepository
+	ociRepositoryRuntime     gardencorev1.OCIRepository
 )
 
 var _ = BeforeSuite(func() {
@@ -144,7 +151,7 @@ var _ = BeforeSuite(func() {
 	mgrClient = mgr.GetClient()
 
 	By("Create test clientset")
-	testClientSet, err = kubernetes.NewWithConfig(
+	testClientSet, err := kubernetes.NewWithConfig(
 		kubernetes.WithRESTConfig(mgr.GetConfig()),
 		kubernetes.WithRuntimeAPIReader(mgr.GetAPIReader()),
 		kubernetes.WithRuntimeClient(mgr.GetClient()),
@@ -154,12 +161,35 @@ var _ = BeforeSuite(func() {
 
 	gardenClientMap := fakeclientmap.NewClientMapBuilder().WithClientSetForKey(keys.ForGarden(&operatorv1alpha1.Garden{ObjectMeta: metav1.ObjectMeta{Name: gardenName}}), testClientSet).Build()
 
+	By("Setup fake OCI registry with admission-local charts")
+	ociRepositoryApplication = gardencorev1.OCIRepository{Repository: ptr.To("admission-local-application"), Tag: ptr.To("test")}
+	ociRepositoryRuntime = gardencorev1.OCIRepository{Repository: ptr.To("admission-local-runtime"), Tag: ptr.To("test")}
+
+	Expect(exec.Command("helm", "package", filepath.Join("..", "..", "..", "..", "charts", "gardener", "admission-local", "charts", "application"), "--destination", ".").Run()).To(Succeed())
+	DeferCleanup(func() {
+		Expect(os.Remove("admission-local-application-0.1.0.tgz")).To(Succeed())
+	})
+	admissionLocalApplication, err := os.ReadFile("admission-local-application-0.1.0.tgz")
+	Expect(err).NotTo(HaveOccurred())
+
+	Expect(exec.Command("helm", "package", filepath.Join("..", "..", "..", "..", "charts", "gardener", "admission-local", "charts", "runtime"), "--destination", ".").Run()).To(Succeed())
+	DeferCleanup(func() {
+		Expect(os.Remove("admission-local-runtime-0.1.0.tgz")).To(Succeed())
+	})
+	admissionLocalRuntime, err := os.ReadFile("admission-local-runtime-0.1.0.tgz")
+	Expect(err).NotTo(HaveOccurred())
+
+	fakeRegistry = ocifake.NewRegistry()
+	fakeRegistry.AddArtifact(&ociRepositoryApplication, admissionLocalApplication)
+	fakeRegistry.AddArtifact(&ociRepositoryRuntime, admissionLocalRuntime)
+
 	By("Register controller")
 	Expect((&extension.Reconciler{
 		Config: config.OperatorConfiguration{
 			Controllers: config.ControllerConfiguration{},
 		},
-		GardenNamespace: v1beta1constants.GardenNamespace,
+		HelmRegistry:    fakeRegistry,
+		GardenNamespace: testNamespace.Name,
 	}).AddToManager(ctx, mgr, gardenClientMap)).Should(Succeed())
 
 	By("Start manager")

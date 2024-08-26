@@ -95,7 +95,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		log.Info("Garden is not yet in 'Reconcile Succeeded' state, requeueing", "requeueAfter", requeueGardenResourceNotReady)
 		return reconcile.Result{RequeueAfter: requeueGardenResourceNotReady}, nil
 	case lastOperation.Type == gardencorev1beta1.LastOperationTypeDelete:
-		// if the last operation is a delete, then do nothing. Once the Garden resource is deleted, we will reconcile and remove the finalizers from the Extension.
+		// If the last operation is a delete, then do nothing. Once the Garden resource is deleted, we will reconcile and remove the finalizers from the Extension.
+		// TODO(timuthy): Drop this handling and implement a proper removal procedure when the garden is deleted. Planned for release v1.103 or v1.104.
 		return reconcile.Result{}, nil
 	}
 

@@ -177,7 +177,7 @@ func (r *Reconciler) reconcileAdmissionVirtualClusterResources(ctx context.Conte
 		return fmt.Errorf("failed creating ManagedResource: %w", err)
 	}
 
-	if err := managedresources.WaitUntilHealthy(ctx, r.RuntimeClientSet.Client(), r.GardenNamespace, virtualClusterAdmissionManagedResourceName(extension)); err != nil {
+	if err := managedresources.WaitUntilHealthyAndNotProgressing(ctx, r.RuntimeClientSet.Client(), r.GardenNamespace, virtualClusterAdmissionManagedResourceName(extension)); err != nil {
 		return fmt.Errorf("failed waiting for ManagedResource to be healthy: %w", err)
 	}
 
