@@ -383,7 +383,6 @@ func (o *Options) ApplyTo(config *apiserver.Config, kubeClient kubernetes.Interf
 	gardenerAPIServerConfig := config.GenericConfig
 
 	gardenerVersion := version.Get()
-	gardenerAPIServerConfig.Version = &gardenerVersion
 	gardenerAPIServerConfig.OpenAPIV3Config = genericapiserver.DefaultOpenAPIV3Config(openapi.GetOpenAPIDefinitions, openapinamer.NewDefinitionNamer(api.Scheme))
 	gardenerAPIServerConfig.OpenAPIV3Config.Info.Title = "Gardener"
 	gardenerAPIServerConfig.OpenAPIV3Config.Info.Version = gardenerVersion.GitVersion
