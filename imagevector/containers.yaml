@@ -693,7 +693,7 @@ images:
 - name: hvpa-controller
   sourceRepository: github.com/gardener/hvpa-controller
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/hvpa-controller
-  tag: "v0.15.0"
+  tag: "v0.16.0"
   labels:
     - name: 'gardener.cloud/cve-categorisation'
       value:
