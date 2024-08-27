@@ -1161,39 +1161,6 @@ var _ = Describe("KubeStateMetrics", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceTarget), managedResourceTarget)).To(BeNotFoundError())
 
-				// TODO(vicwicker): Remove after Gardener v1.104 got released.
-				go func() {
-					defer GinkgoRecover()
-					mr := &resourcesv1alpha1.ManagedResource{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      managedResourceName,
-							Namespace: namespace,
-						},
-					}
-					Eventually(func() error {
-						return c.Get(ctx, client.ObjectKeyFromObject(mr), mr)
-					}).Should(Succeed())
-					mr.ObjectMeta.Generation = 1
-					mr.Status = resourcesv1alpha1.ManagedResourceStatus{
-						ObservedGeneration: 1,
-						Conditions: []gardencorev1beta1.Condition{
-							{
-								Type:   resourcesv1alpha1.ResourcesApplied,
-								Status: gardencorev1beta1.ConditionTrue,
-							},
-							{
-								Type:   resourcesv1alpha1.ResourcesHealthy,
-								Status: gardencorev1beta1.ConditionTrue,
-							},
-							{
-								Type:   resourcesv1alpha1.ResourcesProgressing,
-								Status: gardencorev1beta1.ConditionFalse,
-							},
-						},
-					}
-					Expect(c.Update(ctx, mr)).To(Succeed())
-				}()
-
 				Expect(ksm.Deploy(ctx)).To(Succeed())
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
@@ -1240,27 +1207,6 @@ var _ = Describe("KubeStateMetrics", func() {
 							Name: managedResource.Spec.SecretRefs[0].Name,
 						}},
 						KeepObjects: ptr.To(false),
-					},
-				}
-
-				// TODO(vicwicker): Remove after Gardener v1.104 got released.
-				expectedMr.ObjectMeta.ResourceVersion = "2"
-				expectedMr.ObjectMeta.Generation = 1
-				expectedMr.Status = resourcesv1alpha1.ManagedResourceStatus{
-					ObservedGeneration: 1,
-					Conditions: []gardencorev1beta1.Condition{
-						{
-							Type:   resourcesv1alpha1.ResourcesApplied,
-							Status: gardencorev1beta1.ConditionTrue,
-						},
-						{
-							Type:   resourcesv1alpha1.ResourcesHealthy,
-							Status: gardencorev1beta1.ConditionTrue,
-						},
-						{
-							Type:   resourcesv1alpha1.ResourcesProgressing,
-							Status: gardencorev1beta1.ConditionFalse,
-						},
 					},
 				}
 
