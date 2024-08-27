@@ -21,9 +21,9 @@ func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.Interface, error) {
 		return nil, err
 	}
 
-	imageNameVpnSeedServer := imagevector.ImageNameVpnServer
+	imageNameVpnSeedServer := imagevector.ContainerImageNameVpnServer
 	if b.Shoot.VPNDisableNewImplementation {
-		imageNameVpnSeedServer = imagevector.ImageNameVpnSeedServer
+		imageNameVpnSeedServer = imagevector.ContainerImageNameVpnSeedServer
 	}
 	imageVPNSeedServer, err := imagevector.Containers().FindImage(imageNameVpnSeedServer, imagevectorutils.RuntimeVersion(b.SeedVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
