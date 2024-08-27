@@ -60,12 +60,18 @@ func GetTopologySpreadConstraints(
 	}
 
 	whenUnsatisfiable := corev1.ScheduleAnyway
-	if (failureToleranceType != nil && *failureToleranceType != "") || enforceSpreadAcrossHosts {
+	if ptr.Deref(failureToleranceType, "") != "" || enforceSpreadAcrossHosts {
 		whenUnsatisfiable = corev1.DoNotSchedule
+	}
+
+	var minDomainsHosts *int32
+	if ptr.Deref(failureToleranceType, "") == gardencorev1beta1.FailureToleranceTypeNode || enforceSpreadAcrossHosts {
+		minDomainsHosts = calculateMinDomains(3, maxReplicas)
 	}
 
 	topologySpreadConstraints := []corev1.TopologySpreadConstraint{{
 		TopologyKey:       corev1.LabelHostname,
+		MinDomains:        minDomainsHosts,
 		MaxSkew:           1,
 		WhenUnsatisfiable: whenUnsatisfiable,
 		LabelSelector:     &labelSelector,
@@ -84,7 +90,7 @@ func GetTopologySpreadConstraints(
 
 		topologySpreadConstraints = append(topologySpreadConstraints, corev1.TopologySpreadConstraint{
 			TopologyKey:       corev1.LabelTopologyZone,
-			MinDomains:        minDomains(numberOfZones, maxReplicas),
+			MinDomains:        calculateMinDomains(numberOfZones, maxReplicas),
 			MaxSkew:           maxSkew,
 			WhenUnsatisfiable: corev1.DoNotSchedule,
 			LabelSelector:     &labelSelector,
@@ -94,13 +100,13 @@ func GetTopologySpreadConstraints(
 	return topologySpreadConstraints
 }
 
-func minDomains(numberOfZones, maxReplicas int32) *int32 {
-	// If the maximum replica count is lower than the number of zones, then we only need to set 'minDomains' to
+func calculateMinDomains(numDomains, maxReplicas int32) *int32 {
+	// If the maximum replica count is lower than the number of zones (e.g. zone count), then we only need to set 'minDomains' to
 	// the number of replicas because there is no benefit of enforcing a further zone spread for additional replicas,
 	// e.g. when a rolling update is performed.
-	if maxReplicas < numberOfZones {
+	if maxReplicas < numDomains {
 		return ptr.To(maxReplicas)
 	}
 	// Return the number of zones otherwise because it's not possible to spread pods over more zones than there are available.
-	return ptr.To(numberOfZones)
+	return ptr.To(numDomains)
 }
