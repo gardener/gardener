@@ -323,12 +323,18 @@ spec:
   purpose: reconcile
   cri:
     name: containerd
-#   containerd:
-#      registries:
-#      - upstream: docker.io
-#        server: https://registry-1.docker.io
-#        hosts:
-#        - url: http://<service-ip>:<port>
+#   cgroupDriver: cgroupfs # or systemd
+    containerd:
+      sandboxImage: registry.k8s.io/pause
+#     registries:
+#     - upstream: docker.io
+#       server: https://registry-1.docker.io
+#       hosts:
+#       - url: http://<service-ip>:<port>]
+#     plugins:
+#     - op: add # add (default) or remove
+#       path: [io.containerd.grpc.v1.cri, containerd]
+#       values: '{"default_runtime_name": "runc"}'
 ...
 ```
 

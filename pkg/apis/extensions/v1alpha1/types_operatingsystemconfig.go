@@ -6,6 +6,7 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -226,12 +227,25 @@ const (
 	OperatingSystemConfigSecretDataKey = "cloud_config" // #nosec G101 -- No credential.
 )
 
+// CgroupDriverName is a string denoting the CRI cgroup driver.
+type CgroupDriverName string
+
+const (
+	// CgroupDriverCgroupfs is the name of the 'cgroupfs' cgroup driver.
+	CgroupDriverCgroupfs CgroupDriverName = "cgroupfs"
+	// CgroupDriverSystemd is the name of the 'systemd' cgroup driver.
+	CgroupDriverSystemd CgroupDriverName = "systemd"
+)
+
 // CRIConfig contains configurations of the CRI library.
 type CRIConfig struct {
 	// Name is a mandatory string containing the name of the CRI library. Supported values are `containerd`.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +kubebuilder:validation:Enum="containerd"
 	Name CRIName `json:"name"`
+	// CgroupDriver configures the CRI's cgroup driver. Supported values are `cgroupfs` or `systemd`.
+	// +optional
+	CgroupDriver *CgroupDriverName `json:"cgroupDriver,omitempty"`
 	// ContainerdConfig is the containerd configuration.
 	// Only to be set for OperatingSystemConfigs with purpose 'reconcile'.
 	// +optional
@@ -245,6 +259,33 @@ type ContainerdConfig struct {
 	Registries []RegistryConfig `json:"registries,omitempty"`
 	// SandboxImage configures the sandbox image for containerd.
 	SandboxImage string `json:"sandboxImage"`
+	// Plugins configures the plugins section in containerd's config.toml.
+	// +optional
+	Plugins []PluginConfig `json:"plugins,omitempty"`
+}
+
+// PluginPathOperation is a type alias for operations at containerd's plugin configuration.
+type PluginPathOperation string
+
+const (
+	// AddPluginPathOperation is the name of the 'add' operation.
+	AddPluginPathOperation PluginPathOperation = "add"
+	// RemovePluginPathOperation is the name of the 'remove' operation.
+	RemovePluginPathOperation PluginPathOperation = "remove"
+)
+
+// PluginConfig contains configuration values for the containerd plugins section.
+type PluginConfig struct {
+	// Op is the operation for the given path. Possible values are 'add' and 'remove', defaults to 'add'.
+	// +optional
+	Op *PluginPathOperation `json:"op,omitempty"`
+	// Path is a list of elements that construct the path in the plugins section.
+	Path []string `json:"path"`
+	// Values are the values configured at the given path. If defined, it is expected as json format:
+	// - A given json object will be put to the given path.
+	// - If not configured, only the table entry to be created.
+	// +optional
+	Values *apiextensionsv1.JSON `json:"values,omitempty"`
 }
 
 // RegistryConfig contains registry configuration options.

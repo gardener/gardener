@@ -9,6 +9,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	_ "embed"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -213,7 +214,7 @@ func (r *Reconciler) ensureContainerdConfiguration(log logr.Logger, criConfig *e
 			name: "sandbox image",
 			path: structuredmap.Path{"plugins", "io.containerd.grpc.v1.cri", "sandbox_image"},
 			setFn: func(value any) (any, error) {
-				if criConfig == nil || criConfig.Containerd == nil {
+				if criConfig.Containerd == nil {
 					return value, nil
 				}
 
@@ -222,9 +223,53 @@ func (r *Reconciler) ensureContainerdConfiguration(log logr.Logger, criConfig *e
 		},
 	}
 
+	if criConfig.CgroupDriver != nil {
+		patches = append(patches, patch{
+			name: "cgroup driver",
+			path: structuredmap.Path{"plugins", "io.containerd.grpc.v1.cri", "containerd", "runtimes", "runc", "options", "SystemdCgroup"},
+			setFn: func(_ any) (any, error) {
+				return *criConfig.CgroupDriver == extensionsv1alpha1.CgroupDriverSystemd, nil
+			},
+		})
+	}
+
+	if criConfig.Containerd != nil {
+		for _, pluginConfig := range criConfig.Containerd.Plugins {
+			patches = append(patches, patch{
+				name: "plugin configuration",
+				path: append(structuredmap.Path{"plugins"}, pluginConfig.Path...),
+				setFn: func(val any) (any, error) {
+					switch op := ptr.Deref(pluginConfig.Op, extensionsv1alpha1.AddPluginPathOperation); op {
+					case extensionsv1alpha1.AddPluginPathOperation:
+						values, ok := val.(map[string]any)
+						if !ok || values == nil {
+							values = map[string]any{}
+						}
+
+						pluginValues := pluginConfig.Values
+						// Return unchanged values if plugin values is not set, i.e. only create table.
+						if pluginValues == nil {
+							return values, nil
+						}
+
+						if err := json.Unmarshal(pluginValues.Raw, &values); err != nil {
+							return nil, err
+						}
+
+						return values, nil
+					case extensionsv1alpha1.RemovePluginPathOperation:
+						// Return nil if operation is remove, to delete the entire sub-tree.
+						return nil, nil
+					default:
+						return nil, fmt.Errorf("operation %q is not supported", op)
+					}
+				},
+			})
+		}
+	}
+
 	for _, p := range patches {
-		content, err = structuredmap.SetMapEntry(content, p.path, p.setFn)
-		if err != nil {
+		if err := structuredmap.SetMapEntry(content, p.path, p.setFn); err != nil {
 			return fmt.Errorf("unable setting %q in containerd config.toml: %w", p.name, err)
 		}
 	}

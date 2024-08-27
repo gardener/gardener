@@ -72,11 +72,43 @@ spec:
                 description: CRI config is a structure contains configurations of
                   the CRI library
                 properties:
+                  cgroupDriver:
+                    description: CgroupDriver configures the CRI's cgroup driver.
+                      Supported values are `cgroupfs` or `systemd`.
+                    type: string
                   containerd:
                     description: |-
                       ContainerdConfig is the containerd configuration.
                       Only to be set for OperatingSystemConfigs with purpose 'reconcile'.
                     properties:
+                      plugins:
+                        description: Plugins configures the plugins section in containerd's
+                          config.toml.
+                        items:
+                          description: PluginConfig contains configuration values
+                            for the containerd plugins section.
+                          properties:
+                            op:
+                              description: Op is the operation for the given path.
+                                Possible values are 'add' and 'remove', defaults to
+                                'add'.
+                              type: string
+                            path:
+                              description: Path is a list of elements that construct
+                                the path in the plugins section.
+                              items:
+                                type: string
+                              type: array
+                            values:
+                              description: |-
+                                Values are the values configured at the given path. If defined, it is expected as json format:
+                                - A given json object will be put to the given path.
+                                - If not configured, only the table entry to be created.
+                              x-kubernetes-preserve-unknown-fields: true
+                          required:
+                          - path
+                          type: object
+                        type: array
                       registries:
                         description: Registries configures the registry hosts for
                           containerd.

@@ -2034,6 +2034,20 @@ CRIName
 </tr>
 <tr>
 <td>
+<code>cgroupDriver</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.CgroupDriverName">
+CgroupDriverName
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CgroupDriver configures the CRI&rsquo;s cgroup driver. Supported values are <code>cgroupfs</code> or <code>systemd</code>.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>containerd</code></br>
 <em>
 <a href="#extensions.gardener.cloud/v1alpha1.ContainerdConfig">
@@ -2057,6 +2071,15 @@ Only to be set for OperatingSystemConfigs with purpose &lsquo;reconcile&rsquo;.<
 </p>
 <p>
 <p>CRIName is a type alias for the CRI name string.</p>
+</p>
+<h3 id="extensions.gardener.cloud/v1alpha1.CgroupDriverName">CgroupDriverName
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.CRIConfig">CRIConfig</a>)
+</p>
+<p>
+<p>CgroupDriverName is a string denoting the CRI cgroup driver.</p>
 </p>
 <h3 id="extensions.gardener.cloud/v1alpha1.CloudConfig">CloudConfig
 </h3>
@@ -2415,6 +2438,20 @@ string
 </td>
 <td>
 <p>SandboxImage configures the sandbox image for containerd.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>plugins</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.PluginConfig">
+[]PluginConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Plugins configures the plugins section in containerd&rsquo;s config.toml.</p>
 </td>
 </tr>
 </tbody>
@@ -3987,6 +4024,73 @@ config spec. It contains a reference to a secret as the result may contain confi
 </tr>
 </tbody>
 </table>
+<h3 id="extensions.gardener.cloud/v1alpha1.PluginConfig">PluginConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.ContainerdConfig">ContainerdConfig</a>)
+</p>
+<p>
+<p>PluginConfig contains configuration values for the containerd plugins section.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>op</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.PluginPathOperation">
+PluginPathOperation
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Op is the operation for the given path. Possible values are &lsquo;add&rsquo; and &lsquo;remove&rsquo;, defaults to &lsquo;add&rsquo;.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>path</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<p>Path is a list of elements that construct the path in the plugins section.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>values</code></br>
+<em>
+k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Values are the values configured at the given path. If defined, it is expected as json format:
+- A given json object will be put to the given path.
+- If not configured, only the table entry to be created.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.PluginPathOperation">PluginPathOperation
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.PluginConfig">PluginConfig</a>)
+</p>
+<p>
+<p>PluginPathOperation is a type alias for operations at containerd&rsquo;s plugin configuration.</p>
+</p>
 <h3 id="extensions.gardener.cloud/v1alpha1.Purpose">Purpose
 (<code>string</code> alias)</p></h3>
 <p>

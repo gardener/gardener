@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -48,6 +49,14 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 							},
 						},
 						SandboxImage: "pause",
+						Plugins: []extensionsv1alpha1.PluginConfig{
+							{
+								Path: []string{"io.containerd.grpc.v1.cri", "registry", "configs", "gcr.io", "auth"},
+								Values: &apiextensionsv1.JSON{
+									Raw: []byte(`{"username": "foo"}`),
+								},
+							},
+						},
 					},
 				},
 				Units: []extensionsv1alpha1.Unit{
@@ -272,7 +281,7 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 			))
 		})
 
-		It("should forbid OperatingSystemConfigs with duplicate files", func() {
+		It("should forbid an empty OperatingSystemConfigs plugin path", func() {
 			oscCopy := osc.DeepCopy()
 			oscCopy.Spec.Units = nil
 			oscCopy.Spec.Files = []extensionsv1alpha1.File{{
@@ -290,6 +299,25 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 				"Type":  Equal(field.ErrorTypeDuplicate),
 				"Field": Equal("status.extensionFiles[0].path"),
 			}))))
+		})
+
+		It("should forbid setting an unknown cgroup driver", func() {
+			oscCopy := osc.DeepCopy()
+			oscCopy.Spec.CRIConfig.CgroupDriver = ptr.To(extensionsv1alpha1.CgroupDriverName("unknown"))
+
+			Expect(ValidateOperatingSystemConfig(oscCopy)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("spec.criConfig.cgroupDriver"),
+			}))))
+		})
+
+		It("should allow setting a known cgroup driver", func() {
+			for _, driver := range []extensionsv1alpha1.CgroupDriverName{"cgroupfs", "systemd"} {
+				oscCopy := osc.DeepCopy()
+				oscCopy.Spec.CRIConfig.CgroupDriver = ptr.To(driver)
+
+				Expect(ValidateOperatingSystemConfig(oscCopy)).To(BeEmpty(), driver+" should be configurable")
+			}
 		})
 
 		It("should allow setting CRI name for provisioning OSC", func() {
@@ -452,6 +480,84 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 			Expect(ValidateOperatingSystemConfig(oscCopy)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("spec.criConfig.containerd.sandboxImage"),
+			}))))
+		})
+
+		It("should forbid OperatingSystemConfig with an invalid plugin path operation", func() {
+			oscCopy := osc.DeepCopy()
+			oscCopy.Spec.CRIConfig.Containerd.Plugins = []extensionsv1alpha1.PluginConfig{
+				{
+					Op:   ptr.To[extensionsv1alpha1.PluginPathOperation]("invalid-op"),
+					Path: []string{"foo"},
+				},
+			}
+
+			Expect(ValidateOperatingSystemConfig(oscCopy)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("spec.criConfig.containerd.plugins[0].op"),
+			}))))
+		})
+
+		It("should allow OperatingSystemConfig with an valid plugin path operation", func() {
+			for _, op := range []extensionsv1alpha1.PluginPathOperation{"add", "remove"} {
+				oscCopy := osc.DeepCopy()
+				oscCopy.Spec.CRIConfig.Containerd.Plugins = []extensionsv1alpha1.PluginConfig{
+					{
+						Op:   ptr.To(op),
+						Path: []string{"foo"},
+					},
+				}
+
+				Expect(ValidateOperatingSystemConfig(oscCopy)).To(BeEmpty(), op+" should be configurable")
+			}
+		})
+
+		It("should forbid OperatingSystemConfig with an empty plugin path", func() {
+			oscCopy := osc.DeepCopy()
+			oscCopy.Spec.CRIConfig.Containerd.Plugins = []extensionsv1alpha1.PluginConfig{
+				{
+					Path: []string{},
+				},
+			}
+
+			Expect(ValidateOperatingSystemConfig(oscCopy)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.criConfig.containerd.plugins[0].path"),
+			}))))
+		})
+
+		It("should forbid OperatingSystemConfig with invalid plugin values", func() {
+			oscCopy := osc.DeepCopy()
+			oscCopy.Spec.CRIConfig.Containerd.Plugins = []extensionsv1alpha1.PluginConfig{
+				{
+					Path: []string{"foo"},
+					Values: &apiextensionsv1.JSON{
+						Raw: []byte(`[1]`),
+					},
+				},
+			}
+
+			Expect(ValidateOperatingSystemConfig(oscCopy)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.criConfig.containerd.plugins[0].values"),
+			}))))
+		})
+
+		It("should forbid OperatingSystemConfig with plugin values when remove operation is used", func() {
+			oscCopy := osc.DeepCopy()
+			oscCopy.Spec.CRIConfig.Containerd.Plugins = []extensionsv1alpha1.PluginConfig{
+				{
+					Path: []string{"foo"},
+					Op:   ptr.To[extensionsv1alpha1.PluginPathOperation]("remove"),
+					Values: &apiextensionsv1.JSON{
+						Raw: []byte(`[1]`),
+					},
+				},
+			}
+
+			Expect(ValidateOperatingSystemConfig(oscCopy)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeForbidden),
+				"Field": Equal("spec.criConfig.containerd.plugins[0].values"),
 			}))))
 		})
 

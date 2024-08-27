@@ -5,6 +5,7 @@
 package validation
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"regexp"
@@ -17,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
@@ -82,12 +84,18 @@ func ValidateOperatingSystemConfigStatus(status *extensionsv1alpha1.OperatingSys
 	return allErrs
 }
 
+var availableCgroupDrivers = sets.New(extensionsv1alpha1.CgroupDriverCgroupfs, extensionsv1alpha1.CgroupDriverSystemd)
+
 // ValidateCRIConfig validates the spec of a CRIConfig object.
 func ValidateCRIConfig(config *extensionsv1alpha1.CRIConfig, purpose extensionsv1alpha1.OperatingSystemConfigPurpose, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if config == nil {
 		return allErrs
+	}
+
+	if config.CgroupDriver != nil && !availableCgroupDrivers.Has(*config.CgroupDriver) {
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("cgroupDriver"), *config.CgroupDriver, availableCgroupDrivers.UnsortedList()))
 	}
 
 	allErrs = append(allErrs, ValidateContainerdConfig(config.Containerd, purpose, fldPath.Child("containerd"))...)
@@ -112,15 +120,16 @@ func ValidateContainerdConfig(config *extensionsv1alpha1.ContainerdConfig, purpo
 		allErrs = append(allErrs, field.Required(fldPath.Child("sandboxImage"), "field is required"))
 	}
 
-	allErrs = append(allErrs, ValidateContainerdRegistryConfigs(config.Registries, fldPath.Child("registries"))...)
+	allErrs = append(allErrs, validateContainerdRegistryConfigs(config.Registries, fldPath.Child("registries"))...)
+	allErrs = append(allErrs, validateContainerdPluginConfigs(config, fldPath.Child("plugins"))...)
 
 	return allErrs
 }
 
-var availableCapabilities = sets.New(extensionsv1alpha1.PullCapability, extensionsv1alpha1.ResolveCapability, extensionsv1alpha1.PushCapability)
-
-var digitsRegex = regexp.MustCompile(`^\d+$`)
-var portRegexp = regexp.MustCompile(`^([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$`)
+var (
+	digitsRegex = regexp.MustCompile(`^\d+$`)
+	portRegexp  = regexp.MustCompile(`^([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$`)
+)
 
 // validateHostPort check that host and optional port format is `<host>[:<port>]`
 func validateHostPort(hostPort string) []string {
@@ -138,8 +147,10 @@ func validateHostPort(hostPort string) []string {
 	return append(errs, validation.IsDNS1123Subdomain(host)...)
 }
 
+var availableCapabilities = sets.New(extensionsv1alpha1.PullCapability, extensionsv1alpha1.ResolveCapability, extensionsv1alpha1.PushCapability)
+
 // ValidateContainerdRegistryConfigs validates the spec of a RegistryConfig object.
-func ValidateContainerdRegistryConfigs(registries []extensionsv1alpha1.RegistryConfig, fldPath *field.Path) field.ErrorList {
+func validateContainerdRegistryConfigs(registries []extensionsv1alpha1.RegistryConfig, fldPath *field.Path) field.ErrorList {
 	const form = "; desired format: https://host[:port]"
 
 	allErrs := field.ErrorList{}
@@ -189,6 +200,41 @@ func ValidateContainerdRegistryConfigs(registries []extensionsv1alpha1.RegistryC
 			for k, capability := range host.Capabilities {
 				if !availableCapabilities.Has(capability) {
 					allErrs = append(allErrs, field.NotSupported(fldHost.Child("capabilities").Index(k), capability, []string{"push", "pull", "resolve"}))
+				}
+			}
+		}
+	}
+
+	return allErrs
+}
+
+var availablePluginPathOperations = sets.New(extensionsv1alpha1.AddPluginPathOperation, extensionsv1alpha1.RemovePluginPathOperation)
+
+func validateContainerdPluginConfigs(config *extensionsv1alpha1.ContainerdConfig, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	for i, p := range config.Plugins {
+		idxPath := fldPath.Index(i)
+
+		if p.Op != nil && !availablePluginPathOperations.Has(*p.Op) {
+			allErrs = append(allErrs, field.NotSupported(idxPath.Child("op"), *p.Op, availablePluginPathOperations.UnsortedList()))
+		}
+
+		if len(p.Path) == 0 {
+			allErrs = append(allErrs, field.Required(idxPath.Child("path"), "must provide a path"))
+		}
+
+		if p.Values != nil && len(p.Values.Raw) > 0 {
+			valuesFldPath := idxPath.Child("values")
+
+			if ptr.Deref(p.Op, extensionsv1alpha1.AddPluginPathOperation) == extensionsv1alpha1.RemovePluginPathOperation {
+				allErrs = append(allErrs, field.Forbidden(valuesFldPath, "values must not be specified when 'remove' operation is used"))
+			} else {
+				values := map[string]any{}
+
+				err := json.Unmarshal(p.Values.Raw, &values)
+				if err != nil {
+					allErrs = append(allErrs, field.Invalid(valuesFldPath, string(p.Values.Raw), "provided values must be given in json format"))
 				}
 			}
 		}
