@@ -121,6 +121,11 @@ var _ = Describe("KubeStateMetrics", func() {
 						Resources: []string{"verticalpodautoscalers"},
 						Verbs:     []string{"list", "watch"},
 					},
+					{
+						APIGroups: []string{"operator.gardener.cloud"},
+						Resources: []string{"gardens"},
+						Verbs:     []string{"list", "watch"},
+					},
 				},
 			}
 

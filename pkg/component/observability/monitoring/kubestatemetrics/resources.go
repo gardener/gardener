@@ -87,6 +87,11 @@ func (k *kubeStateMetrics) clusterRole() *rbacv1.ClusterRole {
 			Resources: []string{"verticalpodautoscalers"},
 			Verbs:     []string{"list", "watch"},
 		},
+		{
+			APIGroups: []string{"operator.gardener.cloud"},
+			Resources: []string{"gardens"},
+			Verbs:     []string{"list", "watch"},
+		},
 	}
 
 	if k.values.ClusterType == component.ClusterTypeSeed {
