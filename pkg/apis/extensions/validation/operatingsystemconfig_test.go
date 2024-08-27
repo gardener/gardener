@@ -543,6 +543,24 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 			}))))
 		})
 
+		It("should forbid OperatingSystemConfig with plugin values when remove operation is used", func() {
+			oscCopy := osc.DeepCopy()
+			oscCopy.Spec.CRIConfig.Containerd.Plugins = []extensionsv1alpha1.PluginConfig{
+				{
+					Path: []string{"foo"},
+					Op:   ptr.To[extensionsv1alpha1.PluginPathOperation]("remove"),
+					Values: &apiextensionsv1.JSON{
+						Raw: []byte(`[1]`),
+					},
+				},
+			}
+
+			Expect(ValidateOperatingSystemConfig(oscCopy)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeForbidden),
+				"Field": Equal("spec.criConfig.containerd.plugins[0].values"),
+			}))))
+		})
+
 		It("should allow valid osc resources", func() {
 			errorList := ValidateOperatingSystemConfig(osc)
 

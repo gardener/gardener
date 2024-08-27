@@ -4077,7 +4077,6 @@ k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON
 <em>(Optional)</em>
 <p>Values are the values configured at the given path. If defined, it is expected as json format:
 - A given json object will be put to the given path.
-- An empty json object deletes the entire subtree, including the table entry at the given path.
 - If not configured, only the table entry to be created.</p>
 </td>
 </tr>

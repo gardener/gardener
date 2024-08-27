@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
@@ -224,11 +225,17 @@ func validateContainerdPluginConfigs(config *extensionsv1alpha1.ContainerdConfig
 		}
 
 		if p.Values != nil && len(p.Values.Raw) > 0 {
-			values := map[string]any{}
+			valuesFldPath := idxPath.Child("values")
 
-			err := json.Unmarshal(p.Values.Raw, &values)
-			if err != nil {
-				allErrs = append(allErrs, field.Invalid(idxPath.Child("values"), string(p.Values.Raw), "provided values must be given in json format"))
+			if ptr.Deref(p.Op, extensionsv1alpha1.AddPluginPathOperation) == extensionsv1alpha1.RemovePluginPathOperation {
+				allErrs = append(allErrs, field.Forbidden(valuesFldPath, "values must not be specified when 'remove' operation is used"))
+			} else {
+				values := map[string]any{}
+
+				err := json.Unmarshal(p.Values.Raw, &values)
+				if err != nil {
+					allErrs = append(allErrs, field.Invalid(valuesFldPath, string(p.Values.Raw), "provided values must be given in json format"))
+				}
 			}
 		}
 	}
