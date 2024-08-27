@@ -18,6 +18,7 @@ import (
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/utils"
@@ -33,19 +34,28 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 	)
 
 	It("Create Garden, Rotate Credentials and Delete Garden", Label("credentials-rotation"), func() {
-		By("Create Garden")
 		ctx, cancel := context.WithTimeout(parentCtx, 20*time.Minute)
 		defer cancel()
 
+		By("Create Garden")
 		Expect(runtimeClient.Create(ctx, backupSecret)).To(Succeed())
 		Expect(runtimeClient.Create(ctx, garden)).To(Succeed())
 		waitForGardenToBeReconciled(ctx, garden)
 
 		DeferCleanup(func() {
-			By("Delete Garden")
 			ctx, cancel = context.WithTimeout(parentCtx, 5*time.Minute)
 			defer cancel()
 
+			// TODO(timuthy): Remove this special handling as soon as extensions provider a proper deletion procedure. Planned for release v1.103 or v1.104.
+			By("Remove admission from provider-local")
+			extension := &operatorv1alpha1.Extension{}
+			Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(extensionProviderLocal), extension)).To(Succeed())
+			patch := client.MergeFrom(extension.DeepCopy())
+			Expect(extension.Spec.Deployment).NotTo(BeNil())
+			extension.Spec.Deployment.AdmissionDeployment = nil
+			Expect(runtimeClient.Patch(ctx, extension, patch)).To(Succeed())
+
+			By("Delete Garden")
 			Expect(gardenerutils.ConfirmDeletion(ctx, runtimeClient, garden)).To(Succeed())
 			Expect(runtimeClient.Delete(ctx, garden)).To(Succeed())
 			Expect(runtimeClient.Delete(ctx, backupSecret)).To(Succeed())

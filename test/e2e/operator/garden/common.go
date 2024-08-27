@@ -35,20 +35,38 @@ const namespace = "garden"
 var (
 	parentCtx     context.Context
 	runtimeClient client.Client
+
+	extensionProviderLocal *operatorv1alpha1.Extension
 )
 
 var _ = BeforeSuite(func() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
-})
-
-var _ = BeforeEach(func() {
-	parentCtx = context.Background()
 
 	restConfig, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&componentbaseconfig.ClientConnectionConfiguration{Kubeconfig: os.Getenv("KUBECONFIG")}, nil, kubernetes.AuthTokenFile)
 	Expect(err).NotTo(HaveOccurred())
 
 	runtimeClient, err = client.New(restConfig, client.Options{Scheme: operatorclient.RuntimeScheme})
 	Expect(err).NotTo(HaveOccurred())
+
+	// TODO(timuthy): Remove this special handling as soon as extensions provider a proper deletion procedure. Planned for release v1.103 or v1.104.
+	extensionProviderLocal = &operatorv1alpha1.Extension{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "provider-local",
+		},
+	}
+	Expect(runtimeClient.Get(context.Background(), client.ObjectKeyFromObject(extensionProviderLocal), extensionProviderLocal)).To(Succeed())
+})
+
+var _ = BeforeEach(func() {
+	parentCtx = context.Background()
+
+	// Revert extension to state that was originally deplpoyed through Skaffold.
+	// TODO(timuthy): Remove this special handling as soon as extensions provider a proper deletion procedure. Planned for release v1.103 or v1.104.
+	extension := &operatorv1alpha1.Extension{}
+	Expect(runtimeClient.Get(parentCtx, client.ObjectKeyFromObject(extensionProviderLocal), extension)).To(Succeed())
+	patch := client.MergeFrom(extension.DeepCopy())
+	extension.Spec = extensionProviderLocal.Spec
+	Expect(runtimeClient.Patch(parentCtx, extension, patch)).To(Succeed())
 })
 
 func defaultBackupSecret() *corev1.Secret {

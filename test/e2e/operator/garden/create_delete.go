@@ -52,10 +52,19 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 		waitForGardenToBeReconciled(ctx, garden)
 
 		DeferCleanup(func() {
-			By("Delete Garden")
 			ctx, cancel = context.WithTimeout(parentCtx, 5*time.Minute)
 			defer cancel()
 
+			// TODO(timuthy): Remove this special handling as soon as extensions provider a proper deletion procedure. Planned for release v1.103 or v1.104.
+			By("Remove admission from provider-local")
+			extension := &operatorv1alpha1.Extension{}
+			Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(extensionProviderLocal), extension)).To(Succeed())
+			patch := client.MergeFrom(extension.DeepCopy())
+			Expect(extension.Spec.Deployment).NotTo(BeNil())
+			extension.Spec.Deployment.AdmissionDeployment = nil
+			Expect(runtimeClient.Patch(ctx, extension, patch)).To(Succeed())
+
+			By("Delete Garden")
 			Expect(gardenerutils.ConfirmDeletion(ctx, runtimeClient, garden)).To(Succeed())
 			Expect(runtimeClient.Delete(ctx, garden)).To(Succeed())
 			Expect(runtimeClient.Delete(ctx, backupSecret)).To(Succeed())
