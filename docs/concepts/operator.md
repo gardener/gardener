@@ -161,9 +161,32 @@ This configuration allows for precise control over various extension parameters,
 
 The `.spec.deployment.admission` defines how an extension's admission controller may be deployed by the `gardener-operator`.
 The deployment of an admission controller is optional and may be omitted.
-Typically, the admission controllers run in the runtime cluster alongside the virtual cluster deployment.
-However, to function properly, the admission controllers require access and permissions for the virtual garden cluster in order to watch the Gardener API resources like `Shoot`s.
-As of today, deployment of admission controllers via `.spec.deployment.admission` is not yet supported, but it is currently under active development.
+Typically, the admission controllers are split in two parts:
+
+##### Runtime
+The `runtime` part contains deployment relevant manifests, required to run the admission service in the runtime cluster.
+The following values are passed to the chart during reconciliation:
+
+```yaml
+gardener:
+  runtimeCluster:
+    priorityClassName: <Class to be used for admission controller>
+```
+
+##### Virtual
+The `virtual` part includes the webhook registration ([MutatingWebhookConfiguration`/`Validatingwebhookconfiguration](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/)) and RBAC configuration.
+The following values are passed to the chart during reconciliation:
+
+```yaml
+gardener:
+  virtualCluster:
+    serviceAccount:
+      name: <Name of the service account used to connect to the garden cluster>
+      namespace: <Namespace of the service account>
+```
+
+Admission controllers often need to retrieve additional context from the garden cluster in order to process validating or mutating requests. For example, the corresponding `CloudProfile` might be needed to perform a provider specific shoot validation.
+Therefore, Gardener automatically injects a kubeconfig into the admission deployment to interact with the (virtual) garden cluster (see [this document](https://github.com/gardener/gardener/blob/master/docs/extensions/garden-api-access.md) for more information).
 
 ### Configuration for Extension Resources
 
@@ -556,7 +579,9 @@ It contains the networking information of the garden runtime cluster which is re
 Gardener relies on extensions to provide various capabilities, such as supporting cloud providers. 
 This controller automates the management of extensions by managing all necessary resources in the runtime and virtual garden clusters.
 
-Currently, this controller only supports the reconciliation of `ControllerDeployment` and `ControllerRegistration` resources in the virtual garden cluster.
+Currently, this controller handles the following scenarios:
+- Admission controller deployment for the virtual garden cluster.
+- `ControllerDeployment` and `ControllerRegistration` reconciliation in the virtual garden cluster.
 
 ### [`Gardenlet` Controller](../../pkg/operator/controller/gardenlet)
 
