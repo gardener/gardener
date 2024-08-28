@@ -85,7 +85,7 @@ var _ = Describe("Add", func() {
 
 			fakeClient client.Client
 			hdlr       handler.EventHandler
-			queue      *mockworkqueue.MockRateLimitingInterface
+			queue      *mockworkqueue.MockTypedRateLimitingInterface[reconcile.Request]
 			obj        *corev1.Secret
 			req        reconcile.Request
 
@@ -103,7 +103,7 @@ var _ = Describe("Add", func() {
 				Client:   fakeClient,
 				NodeName: nodeName,
 			}).EnqueueWithJitterDelay(ctx, log)
-			queue = mockworkqueue.NewMockRateLimitingInterface(gomock.NewController(GinkgoT()))
+			queue = mockworkqueue.NewMockTypedRateLimitingInterface[reconcile.Request](gomock.NewController(GinkgoT()))
 			obj = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "osc-secret", Namespace: "namespace"}}
 			req = reconcile.Request{NamespacedName: types.NamespacedName{Name: obj.Name, Namespace: obj.Namespace}}
 		})
