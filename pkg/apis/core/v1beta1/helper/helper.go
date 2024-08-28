@@ -389,6 +389,15 @@ func SeedSettingVerticalPodAutoscalerEnabled(settings *gardencorev1beta1.SeedSet
 	return settings == nil || settings.VerticalPodAutoscaler == nil || settings.VerticalPodAutoscaler.Enabled
 }
 
+// SeedSettingVerticalPodAutoscalerMaxAllowed returns the configured vertical pod autoscaler's maximum allowed recommendation.
+func SeedSettingVerticalPodAutoscalerMaxAllowed(settings *gardencorev1beta1.SeedSettings) corev1.ResourceList {
+	if settings == nil || settings.VerticalPodAutoscaler == nil {
+		return nil
+	}
+
+	return settings.VerticalPodAutoscaler.MaxAllowed
+}
+
 // SeedSettingDependencyWatchdogWeederEnabled returns true if the dependency-watchdog-weeder is enabled.
 func SeedSettingDependencyWatchdogWeederEnabled(settings *gardencorev1beta1.SeedSettings) bool {
 	return settings == nil || settings.DependencyWatchdog == nil || settings.DependencyWatchdog.Weeder == nil || settings.DependencyWatchdog.Weeder.Enabled
