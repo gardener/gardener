@@ -15,6 +15,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
@@ -42,6 +43,7 @@ const (
 
 	portNameMetrics = "metrics"
 	portMetrics     = 10249
+	portHealthz     = 10256
 
 	dataKeyKubeconfig         = "kubeconfig"
 	dataKeyConfig             = "config.yaml"
@@ -594,6 +596,20 @@ func (k *kubeProxy) getKubeProxyContainer(k8sGreaterEqual129 bool, image string,
 			HostPort:      portMetrics,
 			Protocol:      corev1.ProtocolTCP,
 		}}
+
+		container.ReadinessProbe = &corev1.Probe{
+			ProbeHandler: corev1.ProbeHandler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path:   "/healthz",
+					Port:   intstr.FromInt32(portHealthz),
+					Scheme: corev1.URISchemeHTTP,
+				},
+			},
+			InitialDelaySeconds: 15,
+			TimeoutSeconds:      15,
+			SuccessThreshold:    1,
+			FailureThreshold:    2,
+		}
 	}
 
 	return container
