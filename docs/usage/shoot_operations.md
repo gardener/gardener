@@ -48,7 +48,7 @@ The annotation is not set on the `Shoot` resource but directly on the `Node` obj
 For example, the following will restart both the `kubelet` and the `containerd` services:
 
 ```bash
-kubectl annotate node <node-name> worker.gardener.cloud/restart-systemd-services=kubelet,containerd
+kubectl annotate node <node-name> worker.gardener.cloud/restart-systemd-services=kubelet.service,containerd.service
 ```
 
 It may take up to a minute until the service is restarted.
