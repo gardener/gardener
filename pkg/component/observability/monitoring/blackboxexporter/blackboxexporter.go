@@ -52,15 +52,24 @@ const (
 
 	volumeNameClusterAccess = "cluster-access"
 	// VolumeMountPathClusterAccess is the volume mount path to the cluster access credentials.
-	VolumeMountPathClusterAccess = "/var/run/secrets/blackbox_exporter/" + volumeNameClusterAccess
+	VolumeMountPathClusterAccess = "/var/run/secrets/blackbox_exporter/cluster-access"
 
 	volumeNameGardenerCA = "gardener-ca"
-	volumeNameRuntimeCA  = "runtime-ca"
+
+	// VolumeNameRuntimeCA is the name of the volume containing the runtime CA certificate bundle.
+	volumeNameRuntimeCA = "runtime-ca"
+
 	// VolumeMountPathGardenerCA is the volume mount path to the gardener CA certificate bundle.
-	VolumeMountPathGardenerCA = "/var/run/secrets/blackbox_exporter/" + volumeNameGardenerCA
-	VolumeMountPathRuntimeCA  = "/var/run/secrets/blackbox_exporter/" + volumeNameRuntimeCA
-	runtimeCAConfigMapName    = "kube-root-ca.crt"
-	RuntimeCAConfigMapKey     = "ca.crt"
+	VolumeMountPathGardenerCA = "/var/run/secrets/blackbox_exporter/gardener-ca"
+
+	// VolumeMountPathRuntimeCA is the volume mount path to the runtime CA certificate bundle.
+	VolumeMountPathRuntimeCA = "/var/run/secrets/blackbox_exporter/runtime-ca"
+
+	// runtimeCAConfigMapName is the name of the ConfigMap containing the runtime CA certificate bundle.
+	runtimeCAConfigMapName = "kube-root-ca.crt"
+
+	// RuntimeCAConfigMapKey is the key of the runtime CA certificate bundle in the ConfigMap.
+	RuntimeCAConfigMapKey = "ca.crt"
 
 	port int32 = 9115
 )

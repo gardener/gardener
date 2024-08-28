@@ -51,14 +51,14 @@ func Config(isDashboardCertificateIssuedByGardener, isGardenerDiscoveryServerEna
 		pathKubeAPIServerCABundle     = blackboxexporter.VolumeMountPathClusterAccess + "/" + secretsutils.DataKeyCertificateBundle
 		pathRuntimeAPIServerCABundle  = blackboxexporter.VolumeMountPathRuntimeCA + "/" + blackboxexporter.RuntimeCAConfigMapKey
 		pathToken                     = blackboxexporter.VolumeMountPathClusterAccess + "/" + resourcesv1alpha1.DataKeyToken
-		pathToRuntimeToken            = blackboxexporter.VolumeMountPathRuntimeCA + "/" + resourcesv1alpha1.DataKeyToken
+		pathRuntimeToken              = blackboxexporter.VolumeMountPathRuntimeCA + "/" + resourcesv1alpha1.DataKeyToken
 	)
 
 	httpGardenerAPIServerModule.HTTP.HTTPClientConfig.TLSConfig.CAFile = pathGardenerAPIServerCABundle
 	httpKubeAPIServerModule.HTTP.HTTPClientConfig.BearerTokenFile = pathToken
 	httpKubeAPIServerModule.HTTP.HTTPClientConfig.TLSConfig.CAFile = pathKubeAPIServerCABundle
 	httpKubeAPIServerRootCAsModule.HTTP.HTTPClientConfig.BearerTokenFile = pathToken
-	httpRuntimeAPIServerModule.HTTP.HTTPClientConfig.BearerTokenFile = pathToRuntimeToken
+	httpRuntimeAPIServerModule.HTTP.HTTPClientConfig.BearerTokenFile = pathRuntimeToken
 	httpRuntimeAPIServerModule.HTTP.HTTPClientConfig.TLSConfig.CAFile = pathRuntimeAPIServerCABundle
 
 	if isDashboardCertificateIssuedByGardener {

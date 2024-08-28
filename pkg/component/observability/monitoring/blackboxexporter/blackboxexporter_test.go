@@ -30,7 +30,6 @@ import (
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	"github.com/onsi/gomega/format"
 )
 
 var _ = Describe("BlackboxExporter", func() {
@@ -98,7 +97,6 @@ var _ = Describe("BlackboxExporter", func() {
 			},
 		}
 
-		format.MaxLength = 100000
 		serviceAccountYAML = `apiVersion: v1
 automountServiceAccountToken: false
 kind: ServiceAccount
