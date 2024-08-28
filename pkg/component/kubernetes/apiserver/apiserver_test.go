@@ -423,7 +423,7 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 				),
 				Entry("autoscaling mode is VPAAndHPA",
-					apiserver.AutoscalingConfig{Mode: apiserver.AutoscalingModeVPAAndHPA},
+					apiserver.AutoscalingConfig{Mode: apiserver.AutoscalingModeVPAAndHPA, VPAMaxAllowed: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("42")}},
 					false,
 					nil,
 					nil,
@@ -435,6 +435,9 @@ var _ = Describe("KubeAPIServer", func() {
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("20m"),
 								corev1.ResourceMemory: resource.MustParse("200M"),
+							},
+							MaxAllowed: corev1.ResourceList{
+								corev1.ResourceCPU: resource.MustParse("42"),
 							},
 						},
 					},

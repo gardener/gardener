@@ -109,6 +109,8 @@ type AutoscalingConfig struct {
 	// ScaleDownDisabled states whether scale-down shall be disabled.
 	// Only HVPA and VPAAndHPA autoscaling modes support disabling scale-down.
 	ScaleDownDisabled bool
+	// VPAMaxAllowed defines the resource list for the minAllowed field for the API server container resource policy.
+	VPAMaxAllowed corev1.ResourceList
 }
 
 // ETCDEncryptionConfig contains configuration for the encryption of resources in etcd.

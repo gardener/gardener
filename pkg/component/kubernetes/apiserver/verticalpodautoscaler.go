@@ -76,7 +76,7 @@ func (k *kubeAPIServer) reconcileVerticalPodAutoscalerInVPAAndHPAMode(ctx contex
 				UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
 			},
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-				ContainerPolicies: k.computeVerticalPodAutoscalerContainerResourcePolicies(kubeAPIServerMinAllowed),
+				ContainerPolicies: k.computeVerticalPodAutoscalerContainerResourcePolicies(kubeAPIServerMinAllowed, k.values.Autoscaling.VPAMaxAllowed),
 			},
 		}
 
