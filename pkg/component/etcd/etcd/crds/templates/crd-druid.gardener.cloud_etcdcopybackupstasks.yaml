@@ -161,7 +161,7 @@ spec:
                       format: date-time
                       type: string
                     message:
-                      description: A human readable message indicating details about
+                      description: A human-readable message indicating details about
                         the transition.
                       type: string
                     reason:

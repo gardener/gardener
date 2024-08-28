@@ -590,8 +590,8 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		serviceMonitor.Labels = monitoringutils.Labels(e.prometheusLabel())
 		serviceMonitor.Spec = monitoringv1.ServiceMonitorSpec{
 			Selector: metav1.LabelSelector{MatchLabels: map[string]string{
-				"name":     "etcd",
-				"instance": e.etcd.Name,
+				druidv1alpha1.LabelAppNameKey: "etcd",
+				druidv1alpha1.LabelPartOfKey:  e.etcd.Name,
 			}},
 			Endpoints: []monitoringv1.Endpoint{
 				{

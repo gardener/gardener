@@ -120,13 +120,13 @@ generate_group () {
     # See https://github.com/gardener/gardener/pull/6850 and https://github.com/gardener/gardener/pull/8560#discussion_r1347470394
     # TODO(shreyas-s-rao): Remove this workaround as soon as the scale subresource is supported properly.
     etcd_druid_dir="$(go list -f '{{ .Dir }}' "github.com/gardener/etcd-druid")"
-    etcd_api_types_file="${etcd_druid_dir}/api/v1alpha1/types_etcd.go"
+    etcd_api_file="${etcd_druid_dir}/api/v1alpha1/etcd.go"
     # Create a local copy outside the mod cache path in order to patch the types file via sed.
-    etcd_api_types_backup="$(mktemp -d)/types_etcd.go"
-    cp "$etcd_api_types_file" "$etcd_api_types_backup"
-    chmod +w "$etcd_api_types_file" "$etcd_druid_dir/api/v1alpha1/"
-    trap 'cp "$etcd_api_types_backup" "$etcd_api_types_file" && chmod -w "$etcd_druid_dir/api/v1alpha1/"' EXIT
-    sed -i '/\/\/ +kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas,selectorpath=.status.labelSelector/d' "$etcd_api_types_file"
+    etcd_api_file_backup="$(mktemp -d)/etcd.go"
+    cp "$etcd_api_file" "$etcd_api_file_backup"
+    chmod +w "$etcd_api_file" "$etcd_druid_dir/api/v1alpha1/"
+    trap 'cp "$etcd_api_file_backup" "$etcd_api_file" && chmod -w "$etcd_druid_dir/api/v1alpha1/"' EXIT
+    sed -i '/\/\/ +kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas/d' "$etcd_api_file"
     $generate
   elif [[ "$group" == "autoscaling.k8s.io" ]]; then
     # See https://github.com/kubernetes/autoscaler/blame/master/vertical-pod-autoscaler/hack/generate-crd-yaml.sh#L43-L45

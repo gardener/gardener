@@ -13,6 +13,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 // NewEtcdDruid instantiates a new `etcd-druid` component.
@@ -22,6 +23,8 @@ func NewEtcdDruid(
 	runtimeVersion *semver.Version,
 	imageVectorOverwrites map[string]string,
 	etcdConfig *config.ETCDConfig,
+	secretsManager secretsmanager.Interface,
+	secretNameServerCA string,
 	priorityClassName string,
 ) (
 	component.DeployWaiter,
@@ -37,5 +40,14 @@ func NewEtcdDruid(
 		imageVectorOverwrite = &val
 	}
 
-	return etcd.NewBootstrapper(c, gardenNamespaceName, runtimeVersion, etcdConfig, image.String(), imageVectorOverwrite, priorityClassName), nil
+	return etcd.NewBootstrapper(
+		c,
+		gardenNamespaceName,
+		runtimeVersion,
+		etcdConfig,
+		image.String(),
+		imageVectorOverwrite,
+		secretsManager,
+		secretNameServerCA,
+		priorityClassName), nil
 }
