@@ -294,6 +294,9 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			v1beta1constants.LabelRole:  e.values.Role,
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 		}
+		if e.values.Class == ClassNormal {
+			metav1.SetMetaDataAnnotation(&e.etcd.ObjectMeta, "resources.druid.gardener.cloud/allow-unhealthy-pod-eviction", "")
+		}
 		e.etcd.Spec.Replicas = replicas
 		e.etcd.Spec.PriorityClassName = &e.values.PriorityClassName
 		e.etcd.Spec.Annotations = annotations
