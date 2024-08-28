@@ -1011,36 +1011,76 @@ var _ = Describe("Seed Validation Tests", func() {
 				})
 			})
 
-			It("should prevent enabling topology-aware routing on single-zone Seed cluster", func() {
-				seed.Spec.Provider.Zones = []string{"a"}
-				seed.Spec.Settings = &core.SeedSettings{
-					TopologyAwareRouting: &core.SeedSettingTopologyAwareRouting{
-						Enabled: true,
-					},
-				}
+			Context("vertical pod autoscaler", func() {
+				It("should not allow maxAllowed with invalid resources", func() {
+					seed.Spec.Settings = &core.SeedSettings{
+						VerticalPodAutoscaler: &core.SeedSettingVerticalPodAutoscaler{
+							MaxAllowed: corev1.ResourceList{
+								"cpu":    resource.MustParse("-1"),
+								"memory": resource.MustParse("-2"),
+							},
+						},
+					}
 
-				errorList := ValidateSeed(seed)
+					errorList := ValidateSeed(seed)
 
-				Expect(errorList).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeForbidden),
-						"Field":  Equal("spec.settings.topologyAwareRouting.enabled"),
-						"Detail": Equal("topology-aware routing can only be enabled on multi-zone Seed clusters (with at least two zones in spec.provider.zones)"),
-					})),
-				))
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal("spec.settings.verticalPodAutoscaler.maxAllowed.cpu"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal("spec.settings.verticalPodAutoscaler.maxAllowed.memory"),
+						})),
+					))
+				})
+
+				It("should allow maxAllowed with valid resources", func() {
+					seed.Spec.Settings = &core.SeedSettings{
+						VerticalPodAutoscaler: &core.SeedSettingVerticalPodAutoscaler{
+							Enabled: true,
+							MaxAllowed: corev1.ResourceList{
+								"cpu":    resource.MustParse("8"),
+								"memory": resource.MustParse("32Gi"),
+							},
+						},
+					}
+
+					Expect(ValidateSeed(seed)).To(BeEmpty())
+				})
 			})
 
-			It("should allow enabling topology-aware routing on multi-zone Seed cluster", func() {
-				seed.Spec.Provider.Zones = []string{"a", "b"}
-				seed.Spec.Settings = &core.SeedSettings{
-					TopologyAwareRouting: &core.SeedSettingTopologyAwareRouting{
-						Enabled: true,
-					},
-				}
+			Context("topology-aware routing", func() {
+				It("should prevent enabling topology-aware routing on single-zone Seed cluster", func() {
+					seed.Spec.Provider.Zones = []string{"a"}
+					seed.Spec.Settings = &core.SeedSettings{
+						TopologyAwareRouting: &core.SeedSettingTopologyAwareRouting{
+							Enabled: true,
+						},
+					}
 
-				errorList := ValidateSeed(seed)
+					errorList := ValidateSeed(seed)
 
-				Expect(errorList).To(BeEmpty())
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.settings.topologyAwareRouting.enabled"),
+							"Detail": Equal("topology-aware routing can only be enabled on multi-zone Seed clusters (with at least two zones in spec.provider.zones)"),
+						})),
+					))
+				})
+
+				It("should allow enabling topology-aware routing on multi-zone Seed cluster", func() {
+					seed.Spec.Provider.Zones = []string{"a", "b"}
+					seed.Spec.Settings = &core.SeedSettings{
+						TopologyAwareRouting: &core.SeedSettingTopologyAwareRouting{
+							Enabled: true,
+						},
+					}
+
+					Expect(ValidateSeed(seed)).To(BeEmpty())
+				})
 			})
 		})
 
