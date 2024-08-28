@@ -79,6 +79,10 @@ var _ = Describe("Etcd", func() {
 		storageClassName        = "my-storage-class"
 		defragmentationSchedule = "abcd"
 		priorityClassName       = "some-priority-class"
+		maxAllowed              = corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("8"),
+			corev1.ResourceMemory: resource.MustParse("32Gi"),
+		}
 
 		secretNameCA         = "ca-etcd"
 		secretNamePeerCA     = "ca-etcd-peer"
@@ -458,6 +462,7 @@ var _ = Describe("Etcd", func() {
 											MinAllowed: corev1.ResourceList{
 												corev1.ResourceMemory: resource.MustParse("200M"),
 											},
+											MaxAllowed:       maxAllowed,
 											ControlledValues: &controlledValues,
 										},
 										{
@@ -513,6 +518,7 @@ var _ = Describe("Etcd", func() {
 						{
 							ContainerName:    "etcd",
 							MinAllowed:       corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("200M")},
+							MaxAllowed:       maxAllowed,
 							ControlledValues: &controlledValues,
 							Mode:             &containerPolicyAuto,
 						},
@@ -834,6 +840,7 @@ var _ = Describe("Etcd", func() {
 			MaintenanceTimeWindow:   maintenanceTimeWindow,
 			ScaleDownUpdateMode:     scaleDownUpdateMode,
 			VPAEnabled:              vpaEnabled,
+			VPAMaxAllowed:           maxAllowed,
 			HighAvailabilityEnabled: highAvailabilityEnabled,
 			BackupConfig:            backupConfig,
 		})
@@ -993,6 +1000,7 @@ var _ = Describe("Etcd", func() {
 				PriorityClassName:       priorityClassName,
 				HVPAEnabled:             true,
 				MaintenanceTimeWindow:   maintenanceTimeWindow,
+				VPAMaxAllowed:           maxAllowed,
 			})
 
 			gomock.InOrder(
@@ -1068,6 +1076,7 @@ var _ = Describe("Etcd", func() {
 				HVPAEnabled:             true,
 				MaintenanceTimeWindow:   maintenanceTimeWindow,
 				PriorityClassName:       priorityClassName,
+				VPAMaxAllowed:           maxAllowed,
 			})
 
 			gomock.InOrder(
@@ -1483,6 +1492,7 @@ var _ = Describe("Etcd", func() {
 					MaintenanceTimeWindow:   maintenanceTimeWindow,
 					PriorityClassName:       priorityClassName,
 					ScaleDownUpdateMode:     ptr.To(updateMode),
+					VPAMaxAllowed:           maxAllowed,
 				})
 
 				gomock.InOrder(
@@ -1990,6 +2000,7 @@ var _ = Describe("Etcd", func() {
 					HVPAEnabled:                 hvpaEnabled,
 					MaintenanceTimeWindow:       maintenanceTimeWindow,
 					TopologyAwareRoutingEnabled: true,
+					VPAMaxAllowed:               maxAllowed,
 				})
 
 				gomock.InOrder(

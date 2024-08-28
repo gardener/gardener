@@ -162,6 +162,7 @@ type Values struct {
 	HighAvailabilityEnabled     bool
 	TopologyAwareRoutingEnabled bool
 	VPAEnabled                  bool
+	VPAMaxAllowed               corev1.ResourceList
 }
 
 func (e *etcd) Deploy(ctx context.Context) error {
@@ -422,7 +423,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		if err := kubernetesutils.DeleteObjects(ctx, e.client, hvpa); err != nil {
 			return err
 		}
-		if err := e.reconcileVerticalPodAutoscaler(ctx, vpa, minAllowed); err != nil {
+		if err := e.reconcileVerticalPodAutoscaler(ctx, vpa, minAllowed, e.values.VPAMaxAllowed); err != nil {
 			return err
 		}
 	} else if e.values.HVPAEnabled {
@@ -535,6 +536,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 								{
 									ContainerName:    containerNameEtcd,
 									MinAllowed:       minAllowed,
+									MaxAllowed:       e.values.VPAMaxAllowed,
 									ControlledValues: &controlledValues,
 								},
 								{
@@ -948,7 +950,7 @@ func (e *etcd) emptyVerticalPodAutoscaler() *vpaautoscalingv1.VerticalPodAutosca
 	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: e.etcd.Name, Namespace: e.namespace}}
 }
 
-func (e *etcd) reconcileVerticalPodAutoscaler(ctx context.Context, vpa *vpaautoscalingv1.VerticalPodAutoscaler, minAllowed corev1.ResourceList) error {
+func (e *etcd) reconcileVerticalPodAutoscaler(ctx context.Context, vpa *vpaautoscalingv1.VerticalPodAutoscaler, minAllowed, maxAllowed corev1.ResourceList) error {
 	vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
 	containerPolicyOff := vpaautoscalingv1.ContainerScalingModeOff
 	containerPolicyAuto := vpaautoscalingv1.ContainerScalingModeAuto
@@ -986,6 +988,7 @@ func (e *etcd) reconcileVerticalPodAutoscaler(ctx context.Context, vpa *vpaautos
 					{
 						ContainerName:    containerNameEtcd,
 						MinAllowed:       minAllowed,
+						MaxAllowed:       maxAllowed,
 						ControlledValues: &controlledValues,
 						Mode:             &containerPolicyAuto,
 					},
