@@ -196,6 +196,18 @@ func gardenPrometheusRule(isGardenerDiscoveryServerEnabled bool) *monitoringv1.P
 					"last hour. The pod is running on the garden cluster.",
 			},
 		},
+		{
+			Alert:  "RuntimeCACertificateAboutToExpire",
+			Expr:   intstr.FromString("probe_ssl_earliest_cert_expiry - time() < 86400 * 30"),
+			For:    ptr.To(monitoringv1.Duration("10m")),
+			Labels: getLabels("warning"),
+			Annotations: map[string]string{
+				"summary": "Runtime CA certificate is about to expire",
+				"description": "A certificate on for job {{ $labels.instance }} is about to expire" +
+					"in the next 30 days" +
+					"last hour. The pod is running on the garden cluster.",
+			},
+		},
 	}
 
 	if isGardenerDiscoveryServerEnabled {
