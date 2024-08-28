@@ -54,7 +54,7 @@ Concretely, all seed system components should respect the following conventions:
         matchLabels: ...
     ```
 
-    `minDomains` is set when failure tolerance is `node` or annotation `high-availability-config.resources.gardener.cloud/host-spread="true"` is given. Otherwise, e.g. for shoots with failure tolerance type `zone`, the node spread is done on best-effort basis only.
+    `minDomains` is set when failure tolerance is configured or annotation `high-availability-config.resources.gardener.cloud/host-spread="true"` is given.
 
   - ... and the seed cluster has `>= 2` zones, then the component should also have a second `topologySpreadConstraint`, ensuring the replicas are spread over the zones:
 

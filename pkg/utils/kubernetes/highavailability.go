@@ -59,13 +59,12 @@ func GetTopologySpreadConstraints(
 		return nil
 	}
 
-	whenUnsatisfiable := corev1.ScheduleAnyway
+	var (
+		minDomainsHosts   *int32
+		whenUnsatisfiable = corev1.ScheduleAnyway
+	)
 	if ptr.Deref(failureToleranceType, "") != "" || enforceSpreadAcrossHosts {
 		whenUnsatisfiable = corev1.DoNotSchedule
-	}
-
-	var minDomainsHosts *int32
-	if ptr.Deref(failureToleranceType, "") == gardencorev1beta1.FailureToleranceTypeNode || enforceSpreadAcrossHosts {
 		minDomainsHosts = calculateMinDomains(3, maxReplicas)
 	}
 
@@ -101,7 +100,7 @@ func GetTopologySpreadConstraints(
 }
 
 func calculateMinDomains(numDomains, maxReplicas int32) *int32 {
-	// If the maximum replica count is lower than the number of zones (e.g. zone count), then we only need to set 'minDomains' to
+	// If the maximum replica count is lower than the number of domains (e.g. zone or node count), then we only need to set 'minDomains' to
 	// the number of replicas because there is no benefit of enforcing a further zone spread for additional replicas,
 	// e.g. when a rolling update is performed.
 	if maxReplicas < numDomains {

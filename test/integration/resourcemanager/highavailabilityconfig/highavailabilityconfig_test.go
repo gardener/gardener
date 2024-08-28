@@ -658,6 +658,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 								It("should add topology spread constraints", func() {
 									Expect(getPodSpec().TopologySpreadConstraints).To(ConsistOf(corev1.TopologySpreadConstraint{
 										TopologyKey:       corev1.LabelHostname,
+										MinDomains:        ptr.To[int32](2),
 										MaxSkew:           1,
 										WhenUnsatisfiable: corev1.DoNotSchedule,
 										LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
@@ -674,6 +675,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 									Expect(getPodSpec().TopologySpreadConstraints).To(ConsistOf(
 										corev1.TopologySpreadConstraint{
 											TopologyKey:       corev1.LabelHostname,
+											MinDomains:        ptr.To[int32](2),
 											MaxSkew:           1,
 											WhenUnsatisfiable: corev1.DoNotSchedule,
 											LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},

@@ -998,7 +998,7 @@ The webhook performs the following actions:
           labelSelector: ...
       ```
 
-      This ensures that the (multiple) pods are scheduled across nodes. `minDomains` is set when failure tolerance is `node` or annotation `high-availability-config.resources.gardener.cloud/host-spread="true"` is given.
+      This ensures that the (multiple) pods are scheduled across nodes. `minDomains` is set when failure tolerance is configured or annotation `high-availability-config.resources.gardener.cloud/host-spread="true"` is given.
 
     - ... contains at least two zones, then the following is added:
 
