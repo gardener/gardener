@@ -659,7 +659,7 @@ Similarly, when the CA certificate rotation is in `Preparing` phase, then `garde
 This causes `gardenlet` to request a new client certificate for its garden cluster kubeconfig, which is now signed with the new client CA, and which also contains the new CA bundle for the server certificate verification.
 Read more about it [here](gardenlet.md#rotate-certificates-using-bootstrap-kubeconfig).
 
-Also, when the `WorkloadIdentity` token signing key is in `Preparing` phase, then `gardener-operator` annotates all `Seed`s with `gardener.cloud/operation=renew-workload-identity-tokens`.
+Also, when the `WorkloadIdentity` token signing key rotation is in `Preparing` phase, then `gardener-operator` annotates all `Seed`s with `gardener.cloud/operation=renew-workload-identity-tokens`.
 This causes `gardenlet` to renew all workload identity tokens in the seed cluster with new tokens now signed with the new signing key.
 
 ## Migrating an Existing Gardener Landscape to `gardener-operator`
