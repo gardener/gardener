@@ -18,6 +18,13 @@ import (
 )
 
 func (p *prometheus) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
+	minAllowed := p.values.VPAMinAllowed
+	if minAllowed == nil {
+		minAllowed = corev1.ResourceList{
+			corev1.ResourceMemory: resource.MustParse("1000M"),
+		}
+	}
+
 	obj := &vpaautoscalingv1.VerticalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      p.name(),
@@ -38,10 +45,9 @@ func (p *prometheus) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 					{
-						ContainerName: "prometheus",
-						MinAllowed: ptr.Deref(p.values.VPAMinAllowed, corev1.ResourceList{
-							corev1.ResourceMemory: resource.MustParse("1000M"),
-						}),
+						ContainerName:    "prometheus",
+						MinAllowed:       minAllowed,
+						MaxAllowed:       p.values.VPAMaxAllowed,
 						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 					},
 					{

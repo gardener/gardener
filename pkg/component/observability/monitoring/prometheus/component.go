@@ -77,7 +77,9 @@ type Values struct {
 	// ScrapeTimeout is the timeout duration when scraping targets.
 	ScrapeTimeout monitoringv1.Duration
 	// VPAMinAllowed defines the resource list for the minAllowed field for the prometheus container resource policy.
-	VPAMinAllowed *corev1.ResourceList
+	VPAMinAllowed corev1.ResourceList
+	// VPAMaxAllowed defines the resource list for the maxAllowed field for the prometheus container resource policy.
+	VPAMaxAllowed corev1.ResourceList
 	// ExternalLabels is the set of external labels for the Prometheus configuration.
 	ExternalLabels map[string]string
 	// AdditionalPodLabels is a map containing additional labels for the created pods.

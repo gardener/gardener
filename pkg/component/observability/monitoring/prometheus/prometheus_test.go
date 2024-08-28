@@ -70,6 +70,10 @@ var _ = Describe("Prometheus", func() {
 		alertmanagerName2                     = "alertmgr-test-2"
 		alertmanagerNamespace2                = "alertmanager-namespace-2"
 		serviceAccountNameTargetCluster       = "target-cluster-service-account"
+		maxAllowed                            = corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("8"),
+			corev1.ResourceMemory: resource.MustParse("32Gi"),
+		}
 
 		additionalScrapeConfig1 = `job_name: foo
 honor_labels: false`
@@ -127,6 +131,7 @@ honor_labels: true`
 			RetentionSize:       retentionSize,
 			ExternalLabels:      externalLabels,
 			AdditionalPodLabels: additionalLabels,
+			VPAMaxAllowed:       maxAllowed,
 		}
 
 		fakeOps = &retryfake.Ops{MaxAttempts: 2}
@@ -338,6 +343,7 @@ honor_labels: true`
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceMemory: resource.MustParse("1000M"),
 							},
+							MaxAllowed:       maxAllowed,
 							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 						},
 						{
