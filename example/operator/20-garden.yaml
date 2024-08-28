@@ -38,6 +38,9 @@ spec:
     #     foo: bar
       verticalPodAutoscaler:
         enabled: true
+      # maxAllowed:
+      #   cpu: 8
+      #   memory: 32Gi
       topologyAwareRouting:
         enabled: false
   # volume:
