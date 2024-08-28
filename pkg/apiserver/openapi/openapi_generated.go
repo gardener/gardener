@@ -7814,10 +7814,26 @@ func schema_pkg_apis_core_v1beta1_SeedSettingVerticalPodAutoscaler(ref common.Re
 							Format:      "",
 						},
 					},
+					"maxAllowed": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxAllowed specifies the maximum amount of resources that will be recommended by vpa-recommender for the VPAs deployed in the Seed cluster. Defaults to nil (no maximum).\n\nCurrently, the effect of setting this field is only limited to VPAs of the following components: etcd, kube-apiserver and prometheus.",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"enabled"},
 			},
 		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/api/resource.Quantity"},
 	}
 }
 

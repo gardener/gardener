@@ -10448,6 +10448,25 @@ is enabled by default because Gardener heavily relies on a VPA being deployed. Y
 your seed cluster already has another, manually/custom managed VPA deployment.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>maxAllowed</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#resourcelist-v1-core">
+Kubernetes core/v1.ResourceList
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MaxAllowed specifies the maximum amount of resources that will be recommended by vpa-recommender
+for the VPAs deployed in the Seed cluster.
+Defaults to nil (no maximum).</p>
+<p>Currently, the effect of setting this field is only limited to VPAs of the following components:
+etcd, kube-apiserver and prometheus.
+TODO(ialidzhikov): Rework the current implementation to cover all VPAs in the Seed cluster.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.SeedSettings">SeedSettings
