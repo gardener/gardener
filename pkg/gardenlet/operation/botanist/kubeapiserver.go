@@ -82,6 +82,7 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() apiserver.Autoscaling
 		minReplicas        int32 = 2
 		maxReplicas        int32 = 3
 		apiServerResources corev1.ResourceRequirements
+		maxAllowed         = v1beta1helper.SeedSettingVerticalPodAutoscalerMaxAllowed(b.Seed.GetInfo().Spec.Settings)
 	)
 
 	if v1beta1helper.IsHAControlPlaneConfigured(b.Shoot.GetInfo()) {
@@ -144,6 +145,7 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() apiserver.Autoscaling
 		MaxReplicas:               maxReplicas,
 		UseMemoryMetricForHvpaHPA: useMemoryMetricForHvpaHPA,
 		ScaleDownDisabled:         scaleDownDisabled,
+		VPAMaxAllowed:             maxAllowed,
 	}
 }
 

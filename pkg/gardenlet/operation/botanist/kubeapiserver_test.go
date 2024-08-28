@@ -419,6 +419,38 @@ var _ = Describe("KubeAPIServer", func() {
 						ScaleDownDisabled:         false,
 					},
 				),
+				Entry("seed has vertical pod autoscaler max allowed",
+					func() {
+						botanist.Seed.GetInfo().Spec.Settings = &gardencorev1beta1.SeedSettings{
+							VerticalPodAutoscaler: &gardencorev1beta1.SeedSettingVerticalPodAutoscaler{
+								MaxAllowed: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("8"),
+									corev1.ResourceMemory: resource.MustParse("32Gi"),
+								},
+							},
+						}
+					},
+					map[featuregate.Feature]bool{
+						features.VPAAndHPAForAPIServer: true,
+					},
+					apiserver.AutoscalingConfig{
+						Mode: apiserver.AutoscalingModeVPAAndHPA,
+						APIServerResources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("250m"),
+								corev1.ResourceMemory: resource.MustParse("500Mi"),
+							},
+						},
+						MinReplicas:               2,
+						MaxReplicas:               6,
+						UseMemoryMetricForHvpaHPA: false,
+						ScaleDownDisabled:         false,
+						VPAMaxAllowed: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("8"),
+							corev1.ResourceMemory: resource.MustParse("32Gi"),
+						},
+					},
+				),
 			)
 		})
 	})

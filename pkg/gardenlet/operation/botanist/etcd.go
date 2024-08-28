@@ -67,6 +67,7 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 			HighAvailabilityEnabled:     v1beta1helper.IsHAControlPlaneConfigured(b.Shoot.GetInfo()),
 			TopologyAwareRoutingEnabled: b.Shoot.TopologyAwareRoutingEnabled,
 			VPAEnabled:                  features.DefaultFeatureGate.Enabled(features.VPAForETCD),
+			VPAMaxAllowed:               v1beta1helper.SeedSettingVerticalPodAutoscalerMaxAllowed(b.Seed.GetInfo().Spec.Settings),
 		},
 	)
 

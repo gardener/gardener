@@ -546,6 +546,7 @@ func (r *Reconciler) newCachePrometheus(log logr.Logger, seed *seedpkg.Seed, isM
 		Replicas:          1,
 		Retention:         ptr.To(monitoringv1.Duration("1d")),
 		RetentionSize:     "5GB",
+		VPAMaxAllowed:     v1beta1helper.SeedSettingVerticalPodAutoscalerMaxAllowed(seed.GetInfo().Spec.Settings),
 		AdditionalPodLabels: map[string]string{
 			"networking.resources.gardener.cloud/to-" + v1beta1constants.LabelNetworkPolicySeedScrapeTargets: v1beta1constants.LabelNetworkPolicyAllowed,
 		},
@@ -568,7 +569,8 @@ func (r *Reconciler) newSeedPrometheus(log logr.Logger, seed *seedpkg.Seed) (com
 		StorageCapacity:   resource.MustParse(seed.GetValidVolumeSize("100Gi")),
 		Replicas:          1,
 		RetentionSize:     "85GB",
-		VPAMinAllowed:     &corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("400Mi")},
+		VPAMinAllowed:     corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("400Mi")},
+		VPAMaxAllowed:     v1beta1helper.SeedSettingVerticalPodAutoscalerMaxAllowed(seed.GetInfo().Spec.Settings),
 		AdditionalPodLabels: map[string]string{
 			"networking.resources.gardener.cloud/to-" + v1beta1constants.LabelNetworkPolicySeedScrapeTargets:            v1beta1constants.LabelNetworkPolicyAllowed,
 			"networking.resources.gardener.cloud/to-extensions-" + v1beta1constants.LabelNetworkPolicySeedScrapeTargets: v1beta1constants.LabelNetworkPolicyAllowed,
@@ -594,7 +596,8 @@ func (r *Reconciler) newAggregatePrometheus(log logr.Logger, seed *seedpkg.Seed,
 		Retention:         ptr.To(monitoringv1.Duration("30d")),
 		RetentionSize:     "15GB",
 		ExternalLabels:    map[string]string{"seed": seed.GetInfo().Name},
-		VPAMinAllowed:     &corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("1000M")},
+		VPAMinAllowed:     corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("1000M")},
+		VPAMaxAllowed:     v1beta1helper.SeedSettingVerticalPodAutoscalerMaxAllowed(seed.GetInfo().Spec.Settings),
 		CentralConfigs: prometheus.CentralConfigs{
 			PrometheusRules: aggregateprometheus.CentralPrometheusRules(),
 			ScrapeConfigs:   aggregateprometheus.CentralScrapeConfigs(),

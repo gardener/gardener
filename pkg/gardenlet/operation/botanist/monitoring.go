@@ -14,6 +14,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
@@ -115,6 +116,7 @@ func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
 			ServiceAccountName: shootprometheus.ServiceAccountName,
 			ScrapesMetrics:     true,
 		},
+		VPAMaxAllowed: v1beta1helper.SeedSettingVerticalPodAutoscalerMaxAllowed(b.Seed.GetInfo().Spec.Settings),
 	}
 
 	if b.Shoot.WantsAlertmanager {
