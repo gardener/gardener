@@ -518,6 +518,7 @@ func (r *Reconciler) newEtcd(
 			HighAvailabilityEnabled:     highAvailabilityEnabled,
 			TopologyAwareRoutingEnabled: helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
 			VPAEnabled:                  features.DefaultFeatureGate.Enabled(features.VPAForETCD),
+			VPAMaxAllowed:               helper.VerticalPodAutoscalerMaxAllowed(garden.Spec.RuntimeCluster.Settings),
 		},
 	), nil
 }
@@ -664,6 +665,7 @@ func defaultAPIServerAutoscalingConfig(garden *operatorv1alpha1.Garden) apiserve
 		MaxReplicas:               6,
 		UseMemoryMetricForHvpaHPA: true,
 		ScaleDownDisabled:         false,
+		VPAMaxAllowed:             helper.VerticalPodAutoscalerMaxAllowed(garden.Spec.RuntimeCluster.Settings),
 	}
 }
 
@@ -1260,6 +1262,7 @@ func (r *Reconciler) newPrometheusGarden(log logr.Logger, garden *operatorv1alph
 			WildcardCertSecretName: wildcardCertSecretName,
 		},
 		TargetCluster: &prometheus.TargetClusterValues{ServiceAccountName: gardenprometheus.ServiceAccountName},
+		VPAMaxAllowed: helper.VerticalPodAutoscalerMaxAllowed(garden.Spec.RuntimeCluster.Settings),
 	})
 }
 
@@ -1294,6 +1297,7 @@ func (r *Reconciler) newPrometheusLongTerm(log logr.Logger, garden *operatorv1al
 			Image:         imageCortex.String(),
 			CacheValidity: 7 * 24 * time.Hour, // 1 week
 		},
+		VPAMaxAllowed: helper.VerticalPodAutoscalerMaxAllowed(garden.Spec.RuntimeCluster.Settings),
 	})
 }
 
