@@ -3012,7 +3012,7 @@ according to its value enable/disable topology-aware routing for their Services.
 </p>
 <p>
 <p>SettingVerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the
-seed.</p>
+runtime cluster.</p>
 </p>
 <table>
 <thead>
@@ -3035,6 +3035,25 @@ bool
 the operator (and Gardener) heavily rely on a VPA being deployed. You should only disable this if your runtime
 cluster already has another, manually/custom managed VPA deployment. If this is not the case, but you still
 disable it, then reconciliation will fail.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>maxAllowed</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#resourcelist-v1-core">
+Kubernetes core/v1.ResourceList
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MaxAllowed specifies the maximum amount of resources that will be recommended by vpa-recommender
+for the VPAs deployed in the runtime cluster.
+Defaults to nil (no maximum).</p>
+<p>Currently, the effect of setting this field is only limited to VPAs of the following components:
+etcd, virtual-garden-kube-apiserver, gardener-apiserver and prometheus.
+TODO(ialidzhikov): Rework the current implementation to cover all VPAs in the runtime cluster.</p>
 </td>
 </tr>
 </tbody>
@@ -3082,7 +3101,7 @@ SettingVerticalPodAutoscaler
 </td>
 <td>
 <em>(Optional)</em>
-<p>VerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the
+<p>VerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the runtime
 cluster.</p>
 </td>
 </tr>

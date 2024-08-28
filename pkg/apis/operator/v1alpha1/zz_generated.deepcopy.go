@@ -1525,6 +1525,13 @@ func (in *SettingVerticalPodAutoscaler) DeepCopyInto(out *SettingVerticalPodAuto
 		*out = new(bool)
 		**out = **in
 	}
+	if in.MaxAllowed != nil {
+		in, out := &in.MaxAllowed, &out.MaxAllowed
+		*out = make(v1.ResourceList, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val.DeepCopy()
+		}
+	}
 	return
 }
 
