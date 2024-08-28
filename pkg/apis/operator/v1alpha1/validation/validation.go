@@ -36,6 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
+	kubernetescorevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
 	"github.com/gardener/gardener/pkg/utils/validation/kubernetesversion"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 )
@@ -54,17 +55,8 @@ func ValidateGarden(garden *operatorv1alpha1.Garden) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateOperation(garden.Annotations[v1beta1constants.GardenerOperation], garden, field.NewPath("metadata", "annotations"))...)
-	allErrs = append(allErrs, validateRuntimeCluster(garden.Spec.RuntimeCluster, field.NewPath("spec", "runtimeCluster"))...)
+	allErrs = append(allErrs, validateRuntimeCluster(garden.Spec.RuntimeCluster, helper.HighAvailabilityEnabled(garden), field.NewPath("spec", "runtimeCluster"))...)
 	allErrs = append(allErrs, validateVirtualCluster(garden.Spec.VirtualCluster, garden.Spec.RuntimeCluster, field.NewPath("spec", "virtualCluster"))...)
-
-	if helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings) {
-		if len(garden.Spec.RuntimeCluster.Provider.Zones) <= 1 {
-			allErrs = append(allErrs, field.Forbidden(field.NewPath("spec", "runtimeCluster", "settings", "topologyAwareRouting", "enabled"), "topology-aware routing can only be enabled on multi-zone garden runtime cluster (with at least two zones in spec.provider.zones)"))
-		}
-		if !helper.HighAvailabilityEnabled(garden) {
-			allErrs = append(allErrs, field.Forbidden(field.NewPath("spec", "runtimeCluster", "settings", "topologyAwareRouting", "enabled"), "topology-aware routing can only be enabled when virtual cluster's high-availability is enabled"))
-		}
-	}
 
 	return allErrs
 }
@@ -123,7 +115,7 @@ func validateVirtualClusterUpdate(oldGarden, newGarden *operatorv1alpha1.Garden)
 	return allErrs
 }
 
-func validateRuntimeCluster(runtimeCluster operatorv1alpha1.RuntimeCluster, fldPath *field.Path) field.ErrorList {
+func validateRuntimeCluster(runtimeCluster operatorv1alpha1.RuntimeCluster, virtualClusterHAEnabled bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if cidrvalidation.NetworksIntersect(runtimeCluster.Networking.Pods, runtimeCluster.Networking.Services) {
@@ -145,6 +137,23 @@ func validateRuntimeCluster(runtimeCluster operatorv1alpha1.RuntimeCluster, fldP
 			allErrs = append(allErrs, field.Duplicate(fldPath.Child("ingress", "domains").Index(i), domain))
 		}
 		domains.Insert(domain)
+	}
+
+	if runtimeCluster.Settings != nil {
+		if runtimeCluster.Settings.VerticalPodAutoscaler != nil {
+			for resource, value := range runtimeCluster.Settings.VerticalPodAutoscaler.MaxAllowed {
+				allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue(resource.String(), value, fldPath.Child("settings", "verticalPodAutoscaler", "maxAllowed").Child(resource.String()))...)
+			}
+		}
+
+		if helper.TopologyAwareRoutingEnabled(runtimeCluster.Settings) {
+			if len(runtimeCluster.Provider.Zones) <= 1 {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("settings", "topologyAwareRouting", "enabled"), "topology-aware routing can only be enabled on multi-zone garden runtime cluster (with at least two zones in spec.provider.zones)"))
+			}
+			if !virtualClusterHAEnabled {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("settings", "topologyAwareRouting", "enabled"), "topology-aware routing can only be enabled when virtual cluster's high-availability is enabled"))
+			}
+		}
 	}
 
 	if runtimeCluster.CertManagement != nil {

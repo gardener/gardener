@@ -1026,7 +1026,46 @@ var _ = Describe("Validation Tests", func() {
 				})
 			})
 
-			Context("topology-aware routing field", func() {
+			Context("vertical pod autoscaler", func() {
+				It("should not allow maxAllowed with invalid resources", func() {
+					garden.Spec.RuntimeCluster.Settings = &operatorv1alpha1.Settings{
+						VerticalPodAutoscaler: &operatorv1alpha1.SettingVerticalPodAutoscaler{
+							Enabled: ptr.To(true),
+							MaxAllowed: corev1.ResourceList{
+								"cpu":    resource.MustParse("-1"),
+								"memory": resource.MustParse("-2"),
+							},
+						},
+					}
+
+					Expect(ValidateGarden(garden)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal("spec.runtimeCluster.settings.verticalPodAutoscaler.maxAllowed.cpu"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal("spec.runtimeCluster.settings.verticalPodAutoscaler.maxAllowed.memory"),
+						})),
+					))
+				})
+
+				It("should allow maxAllowed with valid resources", func() {
+					garden.Spec.RuntimeCluster.Settings = &operatorv1alpha1.Settings{
+						VerticalPodAutoscaler: &operatorv1alpha1.SettingVerticalPodAutoscaler{
+							Enabled: ptr.To(true),
+							MaxAllowed: corev1.ResourceList{
+								"cpu":    resource.MustParse("8"),
+								"memory": resource.MustParse("32Gi"),
+							},
+						},
+					}
+
+					Expect(ValidateGarden(garden)).To(BeEmpty())
+				})
+			})
+
+			Context("topology-aware routing", func() {
 				It("should prevent enabling topology-aware routing on single-zone cluster", func() {
 					garden.Spec.RuntimeCluster.Provider.Zones = []string{"a"}
 					garden.Spec.RuntimeCluster.Settings = &operatorv1alpha1.Settings{
