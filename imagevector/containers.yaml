@@ -91,21 +91,7 @@ images:
   sourceRepository: github.com/kubernetes/ingress-nginx
   repository: registry.k8s.io/ingress-nginx/controller-chroot
   tag: "v1.11.4"
-  targetVersion: ">= 1.26 < 1.28"
-  labels:
-  - name: 'gardener.cloud/cve-categorisation'
-    value:
-      network_exposure: 'public'
-      authentication_enforced: true
-      user_interaction: 'end-user'
-      confidentiality_requirement: 'high'
-      integrity_requirement: 'high'
-      availability_requirement: 'low'
-- name: nginx-ingress-controller
-  sourceRepository: github.com/kubernetes/ingress-nginx
-  repository: registry.k8s.io/ingress-nginx/controller-chroot
-  tag: "v1.9.6"
-  targetVersion: "1.25.x"
+  targetVersion: "1.27.x"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -180,16 +166,6 @@ images:
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/autoscaler/cluster-autoscaler
   tag: "v1.27.3"
   targetVersion: "1.27.x"
-- name: cluster-autoscaler
-  sourceRepository: github.com/gardener/autoscaler
-  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/autoscaler/cluster-autoscaler
-  tag: "v1.26.3"
-  targetVersion: "1.26.x"
-- name: cluster-autoscaler
-  sourceRepository: github.com/gardener/autoscaler
-  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/autoscaler/cluster-autoscaler
-  tag: "v1.25.4"
-  targetVersion: "1.25.x"
 - name: vpn-server
   sourceRepository: github.com/gardener/vpn2
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/vpn-server
