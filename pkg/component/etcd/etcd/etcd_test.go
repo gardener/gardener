@@ -278,6 +278,8 @@ var _ = Describe("Etcd", func() {
 				}
 				obj.Spec.Etcd.Metrics = &metricsExtensive
 				obj.Spec.VolumeClaimTemplate = ptr.To(testRole + "-etcd")
+			} else if class == ClassNormal {
+				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "resources.druid.gardener.cloud/allow-unhealthy-pod-eviction", "")
 			}
 
 			if replicas == 3 {
