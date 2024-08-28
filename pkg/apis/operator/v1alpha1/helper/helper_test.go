@@ -11,6 +11,8 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -214,5 +216,18 @@ var _ = Describe("helper", func() {
 		Entry("no topology-aware routing setting", &operatorv1alpha1.Settings{}, false),
 		Entry("topology-aware routing enabled", &operatorv1alpha1.Settings{TopologyAwareRouting: &operatorv1alpha1.SettingTopologyAwareRouting{Enabled: true}}, true),
 		Entry("topology-aware routing disabled", &operatorv1alpha1.Settings{TopologyAwareRouting: &operatorv1alpha1.SettingTopologyAwareRouting{Enabled: false}}, false),
+	)
+
+	DescribeTable("#VerticalPodAutoscalerMaxAllowed",
+		func(settings *operatorv1alpha1.Settings, expected corev1.ResourceList) {
+			Expect(VerticalPodAutoscalerMaxAllowed(settings)).To(Equal(expected))
+		},
+
+		Entry("no settings", nil, nil),
+		Entry("no vertical pod autocaler setting", &operatorv1alpha1.Settings{}, nil),
+		Entry("vertical pod autocaler max allowed setting exists",
+			&operatorv1alpha1.Settings{VerticalPodAutoscaler: &operatorv1alpha1.SettingVerticalPodAutoscaler{MaxAllowed: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("2")}}},
+			corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("2")},
+		),
 	)
 })
