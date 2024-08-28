@@ -81,9 +81,16 @@ func (r *Reconciler) newActuator(gardenlet *seedmanagementv1alpha1.Gardenlet) ga
 					kubernetes.WithRuntimeAPIReader(r.RuntimeCluster.GetAPIReader()),
 					kubernetes.WithRuntimeClient(r.RuntimeCluster.GetClient()),
 					kubernetes.WithRuntimeCache(r.RuntimeCluster.GetCache()),
+					kubernetes.WithDisabledCachedClient(),
 				)
 			}
-			return kubernetes.NewClientFromSecret(ctx, r.RuntimeClient, gardenlet.Namespace, gardenlet.Spec.KubeconfigSecretRef.Name)
+			return kubernetes.NewClientFromSecret(
+				ctx,
+				r.RuntimeClient,
+				gardenlet.Namespace,
+				gardenlet.Spec.KubeconfigSecretRef.Name,
+				kubernetes.WithDisabledCachedClient(),
+			)
 		},
 		CheckIfVPAAlreadyExists: func(_ context.Context) (bool, error) {
 			return false, nil
