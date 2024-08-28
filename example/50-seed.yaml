@@ -81,6 +81,9 @@ spec:
   #       allowed: true
     verticalPodAutoscaler:
       enabled: true # a Gardener-managed VPA deployment is enabled
+    # maxAllowed:
+    #   cpu: 8
+    #   memory: 32Gi
     topologyAwareRouting:
       enabled: true # certain Services deployed in the seed will be topology-aware
 # taints:
