@@ -122,6 +122,15 @@ By setting the `.spec.settings.verticalPodAutoscaler.enabled=false`, you can dis
 
 ⚠️ In any case, there must be a VPA available for your seed cluster. Using a seed without VPA is not supported.
 
+### Vertical Pod Autoscaler Maximum Allowed Recommendation
+
+One of the [known limitations](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/README.md#known-limitations) of VPA is that it is unaware of the Node's capacity, and can increase the resource requests of a Pod beyond the capacity of any single Node. Such Pod is likely to become permanently unschedulable. That problem can be partly mitigated by using the VerticalPodAutoscaler's `.spec.resourcePolicy.containerPolicies[].maxAllowed` field to constrain Pod resource requests to the level of Nodes' allocatable resources to make sure that the Pod will be always schedulable.
+
+By setting the `.spec.settings.verticalPodAutoscaler.maxAllowed` field to the largest Seed Nodes' allocatable resources you can make sure that no Pods will be unschedulable due to the above-mentioned VPA limitation.
+
+> [!WARNING]  
+> Currently, the effect of setting this field is only limited to VPAs of the following components: etcd, kube-apiserver and prometheus.
+
 ### VPA Pitfall: Excessive Resource Requests Making Pod Unschedulable
 VPA is unaware of node capacity, and can increase the resource requests of a pod beyond the capacity of any single node.
 Such pod is likely to become permanently unschedulable. That problem can be partly mitigated by using the
