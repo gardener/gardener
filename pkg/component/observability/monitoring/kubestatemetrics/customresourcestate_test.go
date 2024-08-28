@@ -21,12 +21,15 @@ import (
 // file and to easily update it when it needs to be changed
 func expectedCustomResourceStateConfig(suffix string) string {
 	defer GinkgoRecover()
-	var rawActual []byte
-	var expectFilePath string
-	var err error
+	var (
+		rawActual                    []byte
+		expectFilePath, relativePath string
+		err                          error
+		options                      []Option
+	)
 
-	options := []Option{WithVPAMetrics}
-	relativePath := "testdata/custom-resource-state-vpa.expectation.yaml"
+	options = []Option{WithVPAMetrics}
+	relativePath = "testdata/custom-resource-state-vpa.expectation.yaml"
 
 	if suffix == SuffixRuntime {
 		options = append(options, WithGardenResourceMetrics)
