@@ -18,7 +18,7 @@ import (
 var _ = Describe("Config", func() {
 	Describe("#Config", func() {
 		It("should return the expected config for the garden's blackbox-exporter", func() {
-			Expect(Config(false, true)).To(Equal(blackboxexporterconfig.Config{Modules: map[string]blackboxexporterconfig.Module{
+			Expect(Config(false, true, true)).To(Equal(blackboxexporterconfig.Config{Modules: map[string]blackboxexporterconfig.Module{
 				"http_gardener_apiserver": {
 					Prober:  "http",
 					Timeout: 10 * time.Second,
@@ -84,12 +84,27 @@ var _ = Describe("Config", func() {
 						IPProtocol: "ipv4",
 					},
 				},
+				"http_runtime": {
+					Prober:  "http",
+					Timeout: 10 * time.Second,
+					HTTP: blackboxexporterconfig.HTTPProbe{
+						Headers: map[string]string{
+							"Accept":          "*/*",
+							"Accept-Language": "en-US",
+						},
+						HTTPClientConfig: prometheuscommonconfig.HTTPClientConfig{
+							TLSConfig:       prometheuscommonconfig.TLSConfig{CAFile: "/var/run/secrets/blackbox_exporter/runtime-ca/ca.crt"},
+							BearerTokenFile: "/var/run/secrets/blackbox_exporter/runtime-ca/token",
+						},
+						IPProtocol: "ipv4",
+					},
+				},
 			}}))
 		})
 
 		When("isDashboardCertificateIssuedByGardener is true", func() {
 			It("should configure the Gardener CA for the http_gardener_dashboard module", func() {
-				Expect(Config(true, true).Modules["http_gardener_dashboard"].HTTP.HTTPClientConfig.TLSConfig).To(Equal(
+				Expect(Config(true, true, false).Modules["http_gardener_dashboard"].HTTP.HTTPClientConfig.TLSConfig).To(Equal(
 					prometheuscommonconfig.TLSConfig{
 						CAFile: "/var/run/secrets/blackbox_exporter/gardener-ca/bundle.crt"},
 				))
@@ -98,8 +113,25 @@ var _ = Describe("Config", func() {
 
 		When("isGardenerDiscoveryServerEnabled is false", func() {
 			It("should remove configuration for http_gardener_discovery_server module", func() {
-				Expect(Config(false, false).Modules).ToNot(HaveKey("http_gardener_discovery_server"))
+				Expect(Config(false, false, false).Modules).ToNot(HaveKey("http_gardener_discovery_server"))
 			})
 		})
+		When("isGarden is true", func() {
+			It("should configure the Gardener CA for the http_runtime module", func() {
+				Expect(Config(true, true, true).Modules["http_runtime"].HTTP.HTTPClientConfig).To(Equal(
+					prometheuscommonconfig.HTTPClientConfig{
+						TLSConfig:       prometheuscommonconfig.TLSConfig{CAFile: "/var/run/secrets/blackbox_exporter/runtime-ca/ca.crt"},
+						BearerTokenFile: "/var/run/secrets/blackbox_exporter/runtime-ca/token",
+					},
+				))
+			})
+		})
+
+		When("isGarden is false", func() {
+			It("should remove configuration for http_runtime module", func() {
+				Expect(Config(false, false, false).Modules).ToNot(HaveKey("http_runtime"))
+			})
+		})
+
 	})
 })

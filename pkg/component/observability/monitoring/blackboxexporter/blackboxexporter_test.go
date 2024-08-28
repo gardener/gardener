@@ -30,6 +30,7 @@ import (
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	"github.com/onsi/gomega/format"
 )
 
 var _ = Describe("BlackboxExporter", func() {
@@ -97,6 +98,7 @@ var _ = Describe("BlackboxExporter", func() {
 			},
 		}
 
+		format.MaxLength = 100000
 		serviceAccountYAML = `apiVersion: v1
 automountServiceAccountToken: false
 kind: ServiceAccount
@@ -214,7 +216,9 @@ spec:
 				if isGardenCluster {
 					out += `
         - mountPath: /var/run/secrets/blackbox_exporter/gardener-ca
-          name: gardener-ca`
+          name: gardener-ca
+        - mountPath: /var/run/secrets/blackbox_exporter/runtime-ca
+          name: runtime-ca`
 				}
 			}
 
@@ -268,6 +272,19 @@ spec:
 
 				if isGardenCluster {
 					out += `
+      - name: runtime-ca
+        projected:
+          defaultMode: 420
+          sources:
+          - configMap:
+              items:
+              - key: ca.crt
+                path: ca.crt
+              name: kube-root-ca.crt
+              optional: false
+          - serviceAccountToken:
+              expirationSeconds: 3600
+              path: token
       - name: gardener-ca
         secret:
           secretName: ca-gardener`

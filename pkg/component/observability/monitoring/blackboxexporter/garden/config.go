@@ -20,10 +20,11 @@ const (
 	httpKubeAPIServerRootCAsModuleName    = "http_kube_apiserver_root_cas"
 	httpGardenerDashboardModuleName       = "http_gardener_dashboard"
 	httpGardenerDiscoveryServerModuleName = "http_gardener_discovery_server"
+	httpRuntimeAPIServerModuleName        = "http_runtime"
 )
 
 // Config returns the blackbox-exporter config for the garden use-case.
-func Config(isDashboardCertificateIssuedByGardener, isGardenerDiscoveryServerEnabled bool) blackboxexporterconfig.Config {
+func Config(isDashboardCertificateIssuedByGardener, isGardenerDiscoveryServerEnabled, isGarden bool) blackboxexporterconfig.Config {
 	var (
 		defaultModuleConfig = func() blackboxexporterconfig.Module {
 			return blackboxexporterconfig.Module{
@@ -44,16 +45,21 @@ func Config(isDashboardCertificateIssuedByGardener, isGardenerDiscoveryServerEna
 		httpKubeAPIServerRootCAsModule    = defaultModuleConfig()
 		httpGardenerDashboardModule       = defaultModuleConfig()
 		httpGardenerDiscoveryServerModule = defaultModuleConfig()
+		httpRuntimeAPIServerModule        = defaultModuleConfig()
 
 		pathGardenerAPIServerCABundle = blackboxexporter.VolumeMountPathGardenerCA + "/" + secretsutils.DataKeyCertificateBundle
 		pathKubeAPIServerCABundle     = blackboxexporter.VolumeMountPathClusterAccess + "/" + secretsutils.DataKeyCertificateBundle
+		pathRuntimeAPIServerCABundle  = blackboxexporter.VolumeMountPathRuntimeCA + "/" + blackboxexporter.RuntimeCAConfigMapKey
 		pathToken                     = blackboxexporter.VolumeMountPathClusterAccess + "/" + resourcesv1alpha1.DataKeyToken
+		pathToRuntimeToken            = blackboxexporter.VolumeMountPathRuntimeCA + "/" + resourcesv1alpha1.DataKeyToken
 	)
 
 	httpGardenerAPIServerModule.HTTP.HTTPClientConfig.TLSConfig.CAFile = pathGardenerAPIServerCABundle
-	httpKubeAPIServerModule.HTTP.HTTPClientConfig.TLSConfig.CAFile = pathKubeAPIServerCABundle
 	httpKubeAPIServerModule.HTTP.HTTPClientConfig.BearerTokenFile = pathToken
+	httpKubeAPIServerModule.HTTP.HTTPClientConfig.TLSConfig.CAFile = pathKubeAPIServerCABundle
 	httpKubeAPIServerRootCAsModule.HTTP.HTTPClientConfig.BearerTokenFile = pathToken
+	httpRuntimeAPIServerModule.HTTP.HTTPClientConfig.BearerTokenFile = pathToRuntimeToken
+	httpRuntimeAPIServerModule.HTTP.HTTPClientConfig.TLSConfig.CAFile = pathRuntimeAPIServerCABundle
 
 	if isDashboardCertificateIssuedByGardener {
 		httpGardenerDashboardModule.HTTP.HTTPClientConfig.TLSConfig.CAFile = pathGardenerAPIServerCABundle
@@ -68,6 +74,9 @@ func Config(isDashboardCertificateIssuedByGardener, isGardenerDiscoveryServerEna
 
 	if isGardenerDiscoveryServerEnabled {
 		config.Modules[httpGardenerDiscoveryServerModuleName] = httpGardenerDiscoveryServerModule
+	}
+	if isGarden {
+		config.Modules[httpRuntimeAPIServerModuleName] = httpRuntimeAPIServerModule
 	}
 
 	return config

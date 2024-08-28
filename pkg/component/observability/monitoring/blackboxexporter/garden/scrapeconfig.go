@@ -14,7 +14,7 @@ import (
 )
 
 // ScrapeConfig returns the scrape configs related to the blackbox-exporter for the garden use-case.
-func ScrapeConfig(namespace string, kubeAPIServerTargets []monitoringv1alpha1.Target, gardenerDashboardTarget monitoringv1alpha1.Target) []*monitoringv1alpha1.ScrapeConfig {
+func ScrapeConfig(namespace string, kubeAPIServerTargets []monitoringv1alpha1.Target, gardenerDashboardTarget monitoringv1alpha1.Target, isGarden bool) []*monitoringv1alpha1.ScrapeConfig {
 	defaultKeepMetrics := []string{
 		"probe_success",
 		"probe_http_status_code",
@@ -90,5 +90,11 @@ func ScrapeConfig(namespace string, kubeAPIServerTargets []monitoringv1alpha1.Ta
 		Action:       "replace",
 	}}, kubeAPIServerScrapeConfig.Spec.RelabelConfigs...)
 
+	if isGarden {
+		var (
+			runtimeKubeAPIScrapeConfig = tlsScrapeConfig("runtime-kube-api", httpRuntimeAPIServerModuleName, []monitoringv1alpha1.Target{"https://kubernetes.default.svc.cluster.local/healthz"})
+		)
+		return []*monitoringv1alpha1.ScrapeConfig{gardenerAPIServerScrapeConfig, kubeAPIServerScrapeConfig, gardenerDashboardScrapeConfig, gardenerDiscoveryServerScrapeConfig, runtimeKubeAPIScrapeConfig}
+	}
 	return []*monitoringv1alpha1.ScrapeConfig{gardenerAPIServerScrapeConfig, kubeAPIServerScrapeConfig, gardenerDashboardScrapeConfig, gardenerDiscoveryServerScrapeConfig}
 }

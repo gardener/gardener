@@ -52,11 +52,15 @@ const (
 
 	volumeNameClusterAccess = "cluster-access"
 	// VolumeMountPathClusterAccess is the volume mount path to the cluster access credentials.
-	VolumeMountPathClusterAccess = "/var/run/secrets/blackbox_exporter/cluster-access"
+	VolumeMountPathClusterAccess = "/var/run/secrets/blackbox_exporter/" + volumeNameClusterAccess
 
 	volumeNameGardenerCA = "gardener-ca"
+	volumeNameRuntimeCA  = "runtime-ca"
 	// VolumeMountPathGardenerCA is the volume mount path to the gardener CA certificate bundle.
-	VolumeMountPathGardenerCA = "/var/run/secrets/blackbox_exporter/gardener-ca"
+	VolumeMountPathGardenerCA = "/var/run/secrets/blackbox_exporter/" + volumeNameGardenerCA
+	VolumeMountPathRuntimeCA  = "/var/run/secrets/blackbox_exporter/" + volumeNameRuntimeCA
+	runtimeCAConfigMapName    = "kube-root-ca.crt"
+	RuntimeCAConfigMapKey     = "ca.crt"
 
 	port int32 = 9115
 )
@@ -440,18 +444,56 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 				return nil, fmt.Errorf("secret %q not found", operatorv1alpha1.SecretNameCAGardener)
 			}
 
-			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
-				Name: volumeNameGardenerCA,
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName: caGardenerSecret.Name,
+			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes,
+				corev1.Volume{
+					Name: volumeNameRuntimeCA,
+					VolumeSource: corev1.VolumeSource{
+						Projected: &corev1.ProjectedVolumeSource{
+							DefaultMode: ptr.To(int32(420)),
+							Sources: []corev1.VolumeProjection{
+								{
+									ConfigMap: &corev1.ConfigMapProjection{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: runtimeCAConfigMapName,
+										},
+										Items: []corev1.KeyToPath{
+											{
+												Key:  RuntimeCAConfigMapKey,
+												Path: RuntimeCAConfigMapKey,
+											},
+										},
+										Optional: ptr.To(false),
+									},
+								},
+								{
+									ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
+										Path:              resourcesv1alpha1.DataKeyToken,
+										ExpirationSeconds: ptr.To(int64(3600)),
+									},
+								},
+							},
+						},
 					},
 				},
-			})
-			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-				Name:      volumeNameGardenerCA,
-				MountPath: VolumeMountPathGardenerCA,
-			})
+				corev1.Volume{
+					Name: volumeNameGardenerCA,
+					VolumeSource: corev1.VolumeSource{
+						Secret: &corev1.SecretVolumeSource{
+							SecretName: caGardenerSecret.Name,
+						},
+					},
+				},
+			)
+			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts,
+				corev1.VolumeMount{
+					Name:      volumeNameGardenerCA,
+					MountPath: VolumeMountPathGardenerCA,
+				},
+				corev1.VolumeMount{
+					Name:      volumeNameRuntimeCA,
+					MountPath: VolumeMountPathRuntimeCA,
+				},
+			)
 		}
 	}
 
