@@ -50,6 +50,7 @@ func (g *gardenerAPIServer) verticalPodAutoscalerInBaselineMode() *vpaautoscalin
 						MinAllowed: corev1.ResourceList{
 							corev1.ResourceMemory: resource.MustParse("256Mi"),
 						},
+						MaxAllowed: g.values.Autoscaling.VPAMaxAllowed,
 					},
 				},
 			},
@@ -80,11 +81,7 @@ func (g *gardenerAPIServer) verticalPodAutoscalerInVPAAndHPAMode() *vpaautoscali
 						MinAllowed: corev1.ResourceList{
 							corev1.ResourceMemory: resource.MustParse("200M"),
 						},
-						MaxAllowed: corev1.ResourceList{
-							// The CPU and memory are aligned to the machine ration of 1:4.
-							corev1.ResourceCPU:    resource.MustParse("7"),
-							corev1.ResourceMemory: resource.MustParse("28G"),
-						},
+						MaxAllowed:       g.values.Autoscaling.VPAMaxAllowed,
 						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 					},
 				},

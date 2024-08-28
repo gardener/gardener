@@ -64,6 +64,10 @@ var _ = Describe("GardenerAPIServer", func() {
 			Requests: corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("20Mi")},
 			Limits:   corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("90Mi")},
 		}
+		maxAllowed = corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("8"),
+			corev1.ResourceMemory: resource.MustParse("32Gi"),
+		}
 		clusterIP = "1.2.3.4"
 
 		fakeClient        client.Client
@@ -128,6 +132,7 @@ var _ = Describe("GardenerAPIServer", func() {
 				Autoscaling: apiserver.AutoscalingConfig{
 					Replicas:           &replicas,
 					APIServerResources: resources,
+					VPAMaxAllowed:      maxAllowed,
 				},
 				ETCDEncryption: apiserver.ETCDEncryptionConfig{
 					ResourcesToEncrypt: []string{"shootstates.core.gardener.cloud"},
@@ -266,6 +271,7 @@ var _ = Describe("GardenerAPIServer", func() {
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceMemory: resource.MustParse("256Mi"),
 							},
+							MaxAllowed: maxAllowed,
 						},
 					},
 				},
@@ -296,10 +302,7 @@ var _ = Describe("GardenerAPIServer", func() {
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceMemory: resource.MustParse("200M"),
 							},
-							MaxAllowed: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("7"),
-								corev1.ResourceMemory: resource.MustParse("28G"),
-							},
+							MaxAllowed:       maxAllowed,
 							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 						},
 					},
@@ -477,10 +480,7 @@ var _ = Describe("GardenerAPIServer", func() {
 									MinAllowed: corev1.ResourceList{
 										corev1.ResourceMemory: resource.MustParse("400M"),
 									},
-									MaxAllowed: corev1.ResourceList{
-										corev1.ResourceCPU:    resource.MustParse("4"),
-										corev1.ResourceMemory: resource.MustParse("25G"),
-									},
+									MaxAllowed: maxAllowed,
 								}},
 							},
 						},

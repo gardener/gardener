@@ -134,10 +134,7 @@ func (g *gardenerAPIServer) hvpa() *hvpav1alpha1.Hvpa {
 								MinAllowed: corev1.ResourceList{
 									corev1.ResourceMemory: resource.MustParse("400M"),
 								},
-								MaxAllowed: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("4"),
-									corev1.ResourceMemory: resource.MustParse("25G"),
-								},
+								MaxAllowed: g.values.Autoscaling.VPAMaxAllowed,
 							}},
 						},
 					},
