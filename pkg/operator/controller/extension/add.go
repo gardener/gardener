@@ -71,7 +71,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
-		For(&operatorv1alpha1.Extension{}, builder.WithPredicates(predicate.Or(predicate.GenerationChangedPredicate{}))).
+		For(&operatorv1alpha1.Extension{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: ptr.Deref(r.Config.Controllers.Extension.ConcurrentSyncs, 0),
 		}).
