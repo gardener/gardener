@@ -123,7 +123,7 @@ type Settings struct {
 	// cluster.
 	// +optional
 	LoadBalancerServices *SettingLoadBalancerServices `json:"loadBalancerServices,omitempty"`
-	// VerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the
+	// VerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the runtime
 	// cluster.
 	// +optional
 	VerticalPodAutoscaler *SettingVerticalPodAutoscaler `json:"verticalPodAutoscaler,omitempty"`
@@ -142,7 +142,7 @@ type SettingLoadBalancerServices struct {
 }
 
 // SettingVerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the
-// seed.
+// runtime cluster.
 type SettingVerticalPodAutoscaler struct {
 	// Enabled controls whether the VPA components shall be deployed into this cluster. It is true by default because
 	// the operator (and Gardener) heavily rely on a VPA being deployed. You should only disable this if your runtime
@@ -151,6 +151,15 @@ type SettingVerticalPodAutoscaler struct {
 	// +kubebuilder:default=true
 	// +optional
 	Enabled *bool `json:"enabled,omitempty"`
+	// MaxAllowed specifies the maximum amount of resources that will be recommended by vpa-recommender
+	// for the VPAs deployed in the runtime cluster.
+	// Defaults to nil (no maximum).
+	//
+	// Currently, the effect of setting this field is only limited to VPAs of the following components:
+	// etcd, virtual-garden-kube-apiserver, gardener-apiserver and prometheus.
+	// TODO(ialidzhikov): Rework the current implementation to cover all VPAs in the runtime cluster.
+	// +optional
+	MaxAllowed corev1.ResourceList `json:"maxAllowed,omitempty"`
 }
 
 // SettingTopologyAwareRouting controls certain settings for topology-aware traffic routing in the cluster.
