@@ -334,11 +334,11 @@ type ServiceAccountKeyRotation struct {
 	// LastInitiationTime is the most recent time when the service account key credential rotation was initiated.
 	// +optional
 	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty" protobuf:"bytes,3,opt,name=lastInitiationTime"`
-	// LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was
+	// LastInitiationFinishedTime is the recent time when the service account key credential rotation initiation was
 	// completed.
 	// +optional
 	LastInitiationFinishedTime *metav1.Time `json:"lastInitiationFinishedTime,omitempty" protobuf:"bytes,4,opt,name=lastInitiationFinishedTime"`
-	// LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was
+	// LastCompletionTriggeredTime is the recent time when the service account key credential rotation completion was
 	// triggered.
 	// +optional
 	LastCompletionTriggeredTime *metav1.Time `json:"lastCompletionTriggeredTime,omitempty" protobuf:"bytes,5,opt,name=lastCompletionTriggeredTime"`
@@ -355,11 +355,11 @@ type ETCDEncryptionKeyRotation struct {
 	// LastInitiationTime is the most recent time when the ETCD encryption key credential rotation was initiated.
 	// +optional
 	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty" protobuf:"bytes,3,opt,name=lastInitiationTime"`
-	// LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was
+	// LastInitiationFinishedTime is the recent time when the ETCD encryption key credential rotation initiation was
 	// completed.
 	// +optional
 	LastInitiationFinishedTime *metav1.Time `json:"lastInitiationFinishedTime,omitempty" protobuf:"bytes,4,opt,name=lastInitiationFinishedTime"`
-	// LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was
+	// LastCompletionTriggeredTime is the recent time when the ETCD encryption key credential rotation completion was
 	// triggered.
 	// +optional
 	LastCompletionTriggeredTime *metav1.Time `json:"lastCompletionTriggeredTime,omitempty" protobuf:"bytes,5,opt,name=lastCompletionTriggeredTime"`

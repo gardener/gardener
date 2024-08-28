@@ -34,6 +34,7 @@ var (
 		v1beta1constants.SeedOperationRenewGardenAccessSecrets,
 		v1beta1constants.GardenerOperationReconcile,
 		v1beta1constants.GardenerOperationRenewKubeconfig,
+		v1beta1constants.SeedOperationRenewWorkloadIdentityTokens,
 	)
 )
 

@@ -18,6 +18,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	securityv1alpha1constants "github.com/gardener/gardener/pkg/apis/security/v1alpha1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -25,11 +26,17 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
-var tokenRequestorRequirement *labels.Requirement
+var (
+	tokenRequestorRequirement                 *labels.Requirement
+	workloadIdentityTokenRequestorRequirement *labels.Requirement
+)
 
 func init() {
 	var err error
 	tokenRequestorRequirement, err = labels.NewRequirement(resourcesv1alpha1.ResourceManagerPurpose, selection.Equals, []string{resourcesv1alpha1.LabelPurposeTokenRequest})
+	utilruntime.Must(err)
+
+	workloadIdentityTokenRequestorRequirement, err = labels.NewRequirement(securityv1alpha1constants.LabelPurpose, selection.Equals, []string{securityv1alpha1constants.LabelPurposeWorkloadIdentityTokenRequestor})
 	utilruntime.Must(err)
 }
 
@@ -61,15 +68,29 @@ func GenerateGenericTokenKubeconfig(ctx context.Context, secretsManager secretsm
 // access secrets selected by the given list options.
 // This will make the token-requestor controller in gardener-resource-manager/gardenlet issue new tokens immediately.
 func RenewAccessSecrets(ctx context.Context, c client.Client, opts ...client.ListOption) error {
+	// Apply to secrets labeled with resources.gardener.cloud/purpose=token-requestor.
+	return renewTokenInSecrets(ctx, c, resourcesv1alpha1.ServiceAccountTokenRenewTimestamp, *tokenRequestorRequirement, opts...)
+}
+
+// RenewWorkloadIdentityTokens drops the workloadidentity.security.gardener.cloud/token-renew-timestamp annotation
+// from all token secrets selected by the given list options. This will make the token-requestor-workload-identity
+// controller in gardenlet to issue new tokens immediately.
+func RenewWorkloadIdentityTokens(ctx context.Context, c client.Client, opts ...client.ListOption) error {
+	// Apply to secrets labeled with security.gardener.cloud/purpose=workload-identity-token-requestor.
+	return renewTokenInSecrets(ctx, c, securityv1alpha1constants.AnnotationWorkloadIdentityTokenRenewTimestamp, *workloadIdentityTokenRequestorRequirement, opts...)
+}
+
+// renewTokenInSecrets removes the [annotationKey] annotation from all secrets listed with with applied [labelSelector] and [opts].
+// Removal of annotation is expected to trigger reconciliation of the secrets by a token requestor controller.
+func renewTokenInSecrets(ctx context.Context, c client.Client, annotationKey string, labelSelector labels.Requirement, opts ...client.ListOption) error {
 	listOptions := &client.ListOptions{}
 	listOptions.ApplyOptions(opts)
 
-	// Add resources.gardener.cloud/purpose=token-requestor selector requirement.
 	// We cannot use MatchingLabels directly, as it would overwrite other label selectors given in opts.
 	if listOptions.LabelSelector == nil {
 		listOptions.LabelSelector = labels.NewSelector()
 	}
-	listOptions.LabelSelector = listOptions.LabelSelector.Add(*tokenRequestorRequirement)
+	listOptions.LabelSelector = listOptions.LabelSelector.Add(labelSelector)
 
 	secretList := &corev1.SecretList{}
 	if err := c.List(ctx, secretList, listOptions); err != nil {
@@ -83,7 +104,7 @@ func RenewAccessSecrets(ctx context.Context, c client.Client, opts ...client.Lis
 
 		fns = append(fns, func(ctx context.Context) error {
 			patch := client.MergeFrom(secret.DeepCopy())
-			delete(secret.Annotations, resourcesv1alpha1.ServiceAccountTokenRenewTimestamp)
+			delete(secret.Annotations, annotationKey)
 			return c.Patch(ctx, &secret, patch)
 		})
 	}

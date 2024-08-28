@@ -4822,7 +4822,7 @@ Kubernetes meta/v1.Time
 </td>
 <td>
 <em>(Optional)</em>
-<p>LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was
+<p>LastInitiationFinishedTime is the recent time when the ETCD encryption key credential rotation initiation was
 completed.</p>
 </td>
 </tr>
@@ -4837,7 +4837,7 @@ Kubernetes meta/v1.Time
 </td>
 <td>
 <em>(Optional)</em>
-<p>LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was
+<p>LastCompletionTriggeredTime is the recent time when the ETCD encryption key credential rotation completion was
 triggered.</p>
 </td>
 </tr>
@@ -11267,7 +11267,7 @@ Kubernetes meta/v1.Time
 </td>
 <td>
 <em>(Optional)</em>
-<p>LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was
+<p>LastInitiationFinishedTime is the recent time when the service account key credential rotation initiation was
 completed.</p>
 </td>
 </tr>
@@ -11282,7 +11282,7 @@ Kubernetes meta/v1.Time
 </td>
 <td>
 <em>(Optional)</em>
-<p>LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was
+<p>LastCompletionTriggeredTime is the recent time when the service account key credential rotation completion was
 triggered.</p>
 </td>
 </tr>

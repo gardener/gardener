@@ -90,6 +90,8 @@ var _ = Describe("Validation Tests", func() {
 				Entry("start ETCD encryption key rotation", "rotate-etcd-encryption-key-start"),
 				Entry("complete ETCD encryption key rotation", "rotate-etcd-encryption-key-complete"),
 				Entry("start Observability key rotation", "rotate-observability-credentials"),
+				Entry("start WorkloadIdentity key rotation", "rotate-workload-identity-key-start"),
+				Entry("complete WorkloadIdentity key rotation", "rotate-workload-identity-key-complete"),
 			)
 
 			DescribeTable("starting rotation of all credentials",
@@ -143,6 +145,15 @@ var _ = Describe("Validation Tests", func() {
 						},
 					},
 				}, nil, nil),
+				Entry("workload identity key rotation phase is preparing", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							WorkloadIdentityKey: &operatorv1alpha1.WorkloadIdentityKeyRotation{
+								Phase: gardencorev1beta1.RotationPreparing,
+							},
+						},
+					},
+				}, nil, nil),
 				Entry("ca rotation phase is prepared", false, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
@@ -165,6 +176,15 @@ var _ = Describe("Validation Tests", func() {
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
 							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+						},
+					},
+				}, nil, nil),
+				Entry("workload identity key rotation phase is prepared", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							WorkloadIdentityKey: &operatorv1alpha1.WorkloadIdentityKeyRotation{
 								Phase: gardencorev1beta1.RotationPrepared,
 							},
 						},
@@ -197,6 +217,15 @@ var _ = Describe("Validation Tests", func() {
 						},
 					},
 				}, nil, nil),
+				Entry("workload identity key rotation phase is completing", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							WorkloadIdentityKey: &operatorv1alpha1.WorkloadIdentityKeyRotation{
+								Phase: gardencorev1beta1.RotationCompleting,
+							},
+						},
+					},
+				}, nil, nil),
 				Entry("ca rotation phase is completed", true, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
@@ -219,6 +248,15 @@ var _ = Describe("Validation Tests", func() {
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
 							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+								Phase: gardencorev1beta1.RotationCompleted,
+							},
+						},
+					},
+				}, nil, nil),
+				Entry("workload identity key rotation phase is completed", true, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							WorkloadIdentityKey: &operatorv1alpha1.WorkloadIdentityKeyRotation{
 								Phase: gardencorev1beta1.RotationCompleted,
 							},
 						},
@@ -273,6 +311,9 @@ var _ = Describe("Validation Tests", func() {
 							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
 								Phase: gardencorev1beta1.RotationPrepared,
 							},
+							WorkloadIdentityKey: &operatorv1alpha1.WorkloadIdentityKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
 						},
 					},
 				}),
@@ -286,6 +327,9 @@ var _ = Describe("Validation Tests", func() {
 								Phase: gardencorev1beta1.RotationPreparing,
 							},
 							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+							WorkloadIdentityKey: &operatorv1alpha1.WorkloadIdentityKeyRotation{
 								Phase: gardencorev1beta1.RotationPrepared,
 							},
 						},
@@ -303,6 +347,27 @@ var _ = Describe("Validation Tests", func() {
 							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
 								Phase: gardencorev1beta1.RotationPreparing,
 							},
+							WorkloadIdentityKey: &operatorv1alpha1.WorkloadIdentityKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+						},
+					},
+				}),
+				Entry("workload identity key rotation phase is preparing", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							CertificateAuthorities: &gardencorev1beta1.CARotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+							ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+							WorkloadIdentityKey: &operatorv1alpha1.WorkloadIdentityKeyRotation{
+								Phase: gardencorev1beta1.RotationPreparing,
+							},
 						},
 					},
 				}),
@@ -316,6 +381,9 @@ var _ = Describe("Validation Tests", func() {
 								Phase: gardencorev1beta1.RotationPrepared,
 							},
 							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+							WorkloadIdentityKey: &operatorv1alpha1.WorkloadIdentityKeyRotation{
 								Phase: gardencorev1beta1.RotationPrepared,
 							},
 						},
@@ -333,6 +401,9 @@ var _ = Describe("Validation Tests", func() {
 							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
 								Phase: gardencorev1beta1.RotationPrepared,
 							},
+							WorkloadIdentityKey: &operatorv1alpha1.WorkloadIdentityKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
 						},
 					},
 				}),
@@ -346,6 +417,9 @@ var _ = Describe("Validation Tests", func() {
 								Phase: gardencorev1beta1.RotationCompleting,
 							},
 							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+							WorkloadIdentityKey: &operatorv1alpha1.WorkloadIdentityKeyRotation{
 								Phase: gardencorev1beta1.RotationPrepared,
 							},
 						},
@@ -363,6 +437,27 @@ var _ = Describe("Validation Tests", func() {
 							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
 								Phase: gardencorev1beta1.RotationCompleting,
 							},
+							WorkloadIdentityKey: &operatorv1alpha1.WorkloadIdentityKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+						},
+					},
+				}),
+				Entry("workload identity key rotation phase is completing", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							CertificateAuthorities: &gardencorev1beta1.CARotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+							ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+							WorkloadIdentityKey: &operatorv1alpha1.WorkloadIdentityKeyRotation{
+								Phase: gardencorev1beta1.RotationCompleting,
+							},
 						},
 					},
 				}),
@@ -376,6 +471,9 @@ var _ = Describe("Validation Tests", func() {
 								Phase: gardencorev1beta1.RotationPrepared,
 							},
 							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+							WorkloadIdentityKey: &operatorv1alpha1.WorkloadIdentityKeyRotation{
 								Phase: gardencorev1beta1.RotationPrepared,
 							},
 						},
@@ -393,6 +491,9 @@ var _ = Describe("Validation Tests", func() {
 							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
 								Phase: gardencorev1beta1.RotationPrepared,
 							},
+							WorkloadIdentityKey: &operatorv1alpha1.WorkloadIdentityKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
 						},
 					},
 				}),
@@ -406,6 +507,27 @@ var _ = Describe("Validation Tests", func() {
 								Phase: gardencorev1beta1.RotationPrepared,
 							},
 							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+								Phase: gardencorev1beta1.RotationCompleted,
+							},
+							WorkloadIdentityKey: &operatorv1alpha1.WorkloadIdentityKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+						},
+					},
+				}),
+				Entry("workload identity key rotation phase is completed", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							CertificateAuthorities: &gardencorev1beta1.CARotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+							ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+							WorkloadIdentityKey: &operatorv1alpha1.WorkloadIdentityKeyRotation{
 								Phase: gardencorev1beta1.RotationCompleted,
 							},
 						},
@@ -764,6 +886,114 @@ var _ = Describe("Validation Tests", func() {
 					},
 				}),
 			)
+
+			DescribeTable("starting workload identity key rotation",
+				func(allowed bool, status operatorv1alpha1.GardenStatus) {
+					metav1.SetMetaDataAnnotation(&garden.ObjectMeta, "gardener.cloud/operation", "rotate-workload-identity-key-start")
+					garden.Status = status
+
+					matcher := BeEmpty()
+					if !allowed {
+						matcher = ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeForbidden),
+							"Field": Equal("metadata.annotations[gardener.cloud/operation]"),
+						})))
+					}
+
+					Expect(ValidateGarden(garden)).To(matcher)
+				},
+				Entry("rotation phase is preparing", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							WorkloadIdentityKey: &operatorv1alpha1.WorkloadIdentityKeyRotation{
+								Phase: gardencorev1beta1.RotationPreparing,
+							},
+						},
+					},
+				}),
+				Entry("rotation phase is prepared", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							WorkloadIdentityKey: &operatorv1alpha1.WorkloadIdentityKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+						},
+					},
+				}),
+				Entry("rotation phase is completing", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							WorkloadIdentityKey: &operatorv1alpha1.WorkloadIdentityKeyRotation{
+								Phase: gardencorev1beta1.RotationCompleting,
+							},
+						},
+					},
+				}),
+				Entry("rotation phase is completed", true, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							WorkloadIdentityKey: &operatorv1alpha1.WorkloadIdentityKeyRotation{
+								Phase: gardencorev1beta1.RotationCompleted,
+							},
+						},
+					},
+				}),
+			)
+
+			DescribeTable("completing workload identity key rotation",
+				func(allowed bool, status operatorv1alpha1.GardenStatus) {
+					metav1.SetMetaDataAnnotation(&garden.ObjectMeta, "gardener.cloud/operation", "rotate-workload-identity-key-complete")
+					garden.Status = status
+
+					matcher := BeEmpty()
+					if !allowed {
+						matcher = ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeForbidden),
+							"Field": Equal("metadata.annotations[gardener.cloud/operation]"),
+						})))
+					}
+
+					Expect(ValidateGarden(garden)).To(matcher)
+				},
+
+				Entry("rotation phase is preparing", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							WorkloadIdentityKey: &operatorv1alpha1.WorkloadIdentityKeyRotation{
+								Phase: gardencorev1beta1.RotationPreparing,
+							},
+						},
+					},
+				}),
+				Entry("rotation phase is prepared", true, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							WorkloadIdentityKey: &operatorv1alpha1.WorkloadIdentityKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+						},
+					},
+				}),
+				Entry("rotation phase is completing", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							WorkloadIdentityKey: &operatorv1alpha1.WorkloadIdentityKeyRotation{
+								Phase: gardencorev1beta1.RotationCompleting,
+							},
+						},
+					},
+				}),
+				Entry("rotation phase is completed", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							WorkloadIdentityKey: &operatorv1alpha1.WorkloadIdentityKeyRotation{
+								Phase: gardencorev1beta1.RotationCompleted,
+							},
+						},
+					},
+				}),
+			)
+
 		})
 
 		Context("runtime cluster", func() {

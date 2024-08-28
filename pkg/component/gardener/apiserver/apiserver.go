@@ -47,6 +47,8 @@ type Interface interface {
 	apiserver.Interface
 	// GetValues returns the current configuration values of the deployer.
 	GetValues() Values
+	// SetWorkloadIdentityKeyRotationPhase sets the current workload identity key rotation phase.
+	SetWorkloadIdentityKeyRotationPhase(gardencorev1beta1.CredentialsRotationPhase)
 }
 
 // Values contains configuration values for the gardener-apiserver resources.
@@ -64,6 +66,8 @@ type Values struct {
 	TopologyAwareRoutingEnabled bool
 	// WorkloadIdentityTokenIssuer is the issuer identifier of the workload identity tokens set in the 'iss' claim.
 	WorkloadIdentityTokenIssuer string
+	// WorkloadIdentityKeyRotationPhase is the rotation phase of workload identity key.
+	WorkloadIdentityKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase
 }
 
 // New creates a new instance of DeployWaiter for the gardener-apiserver.
@@ -254,6 +258,10 @@ func (g *gardenerAPIServer) SetAutoscalingReplicas(replicas *int32) {
 
 func (g *gardenerAPIServer) SetETCDEncryptionConfig(config apiserver.ETCDEncryptionConfig) {
 	g.values.ETCDEncryption = config
+}
+
+func (g *gardenerAPIServer) SetWorkloadIdentityKeyRotationPhase(phase gardencorev1beta1.CredentialsRotationPhase) {
+	g.values.WorkloadIdentityKeyRotationPhase = phase
 }
 
 // GetLabels returns the labels for the gardener-apiserver.

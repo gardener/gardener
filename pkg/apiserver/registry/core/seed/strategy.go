@@ -72,6 +72,8 @@ func mustIncreaseGeneration(oldSeed, newSeed *core.Seed) bool {
 		switch newSeed.Annotations[v1beta1constants.GardenerOperation] {
 		case v1beta1constants.SeedOperationRenewGardenAccessSecrets:
 			return true
+		case v1beta1constants.SeedOperationRenewWorkloadIdentityTokens:
+			return true
 		case v1beta1constants.GardenerOperationReconcile:
 			delete(newSeed.Annotations, v1beta1constants.GardenerOperation)
 			return true

@@ -1731,13 +1731,13 @@ spec:
                             type: string
                           lastCompletionTriggeredTime:
                             description: |-
-                              LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was
+                              LastCompletionTriggeredTime is the recent time when the ETCD encryption key credential rotation completion was
                               triggered.
                             format: date-time
                             type: string
                           lastInitiationFinishedTime:
                             description: |-
-                              LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was
+                              LastInitiationFinishedTime is the recent time when the ETCD encryption key credential rotation initiation was
                               completed.
                             format: date-time
                             type: string
@@ -1782,13 +1782,13 @@ spec:
                             type: string
                           lastCompletionTriggeredTime:
                             description: |-
-                              LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was
+                              LastCompletionTriggeredTime is the recent time when the service account key credential rotation completion was
                               triggered.
                             format: date-time
                             type: string
                           lastInitiationFinishedTime:
                             description: |-
-                              LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was
+                              LastInitiationFinishedTime is the recent time when the service account key credential rotation initiation was
                               completed.
                             format: date-time
                             type: string
@@ -1801,6 +1801,41 @@ spec:
                           phase:
                             description: Phase describes the phase of the service
                               account key credential rotation.
+                            type: string
+                        required:
+                        - phase
+                        type: object
+                      workloadIdentityKey:
+                        description: WorkloadIdentityKey contains information about
+                          the workload identity key credential rotation.
+                        properties:
+                          lastCompletionTime:
+                            description: |-
+                              LastCompletionTime is the most recent time when the workload identity key credential rotation was successfully
+                              completed.
+                            format: date-time
+                            type: string
+                          lastCompletionTriggeredTime:
+                            description: |-
+                              LastCompletionTriggeredTime is the recent time when the workload identity key credential rotation completion was
+                              triggered.
+                            format: date-time
+                            type: string
+                          lastInitiationFinishedTime:
+                            description: |-
+                              LastInitiationFinishedTime is the recent time when the workload identity key credential rotation initiation was
+                              completed.
+                            format: date-time
+                            type: string
+                          lastInitiationTime:
+                            description: LastInitiationTime is the most recent time
+                              when the workload identity key credential rotation was
+                              initiated.
+                            format: date-time
+                            type: string
+                          phase:
+                            description: Phase describes the phase of the workload
+                              identity key credential rotation.
                             type: string
                         required:
                         - phase

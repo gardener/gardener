@@ -12,7 +12,7 @@ This document outlines all the requirements that Gardener extensions need to ful
 - Extensions must not rely on static CA `Secret` names managed by the gardenlet, because their names are changing during CA rotation.
 - Extensions cannot issue or use client certificates for authenticating against shoot API servers. Instead, they should use short-lived auto-rotated `ServiceAccount` tokens via gardener-resource-manager's `TokenRequestor`. Also see [Conventions](./conventions.md) and [`TokenRequestor`](../concepts/resource-manager.md#tokenrequestor) documents.
 - Extensions need to generate dedicated CAs for signing server certificates (e.g. `cloud-controller-manager`). There should be one CA per controller and purpose in order to bind the lifecycle to the reconciliation cycle of the respective object for which it is created.
-- CAs managed by extensions should be rotated in lock-step with the shoot cluster CA. 
+- CAs managed by extensions should be rotated in lock-step with the shoot cluster CA.
   When the user triggers a rotation, the gardenlet writes phase and initiation time to `Shoot.status.credentials.rotation.certificateAuthorities.{phase,lastInitiationTime}`. See [GEP-18](../proposals/18-shoot-CA-rotation.md#rotation-sequence-for-cluster-and-client-ca) for a detailed description on what needs to happen in each phase.
   Extensions can retrieve this information from [`Cluster.shoot.status`](./cluster.md).
 
@@ -67,7 +67,7 @@ func Reconcile() {
 
   // initialize SecretsManager based on Cluster object
   sm, err := extensionssecretsmanager.SecretsManagerForCluster(ctx, logger.WithName("secretsmanager"), clock.RealClock{}, client, cluster, identity, secretConfigs)
-  
+
   // generate all wanted secrets (first CAs, then the rest)
   secrets, err := extensionssecretsmanager.GenerateAllSecrets(ctx, sm, secretConfigs)
 

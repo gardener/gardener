@@ -830,12 +830,12 @@ message ETCDEncryptionKeyRotation {
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 3;
 
-  // LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was
+  // LastInitiationFinishedTime is the recent time when the ETCD encryption key credential rotation initiation was
   // completed.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationFinishedTime = 4;
 
-  // LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was
+  // LastCompletionTriggeredTime is the recent time when the ETCD encryption key credential rotation completion was
   // triggered.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTriggeredTime = 5;
@@ -2771,12 +2771,12 @@ message ServiceAccountKeyRotation {
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 3;
 
-  // LastInitiationFinishedTime is the recent time when the certificate authority credential rotation initiation was
+  // LastInitiationFinishedTime is the recent time when the service account key credential rotation initiation was
   // completed.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationFinishedTime = 4;
 
-  // LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was
+  // LastCompletionTriggeredTime is the recent time when the service account key credential rotation completion was
   // triggered.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTriggeredTime = 5;

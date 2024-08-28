@@ -161,6 +161,79 @@ var _ = Describe("Secrets", func() {
 		})
 	})
 
+	Describe("#RenewWorkloadIdentityTokens", func() {
+		It("should remove the renew-timestamp annotation from all relevant workload identity secrets", func() {
+			var (
+				relevantSecrets = []*corev1.Secret{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:        "secret1",
+							Namespace:   namespace,
+							Annotations: map[string]string{"workloadidentity.security.gardener.cloud/token-renew-timestamp": "foo"},
+							Labels: map[string]string{
+								"security.gardener.cloud/purpose": "workload-identity-token-requestor",
+							},
+						},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:        "secret2",
+							Namespace:   namespace,
+							Annotations: map[string]string{"workloadidentity.security.gardener.cloud/token-renew-timestamp": "foo"},
+							Labels: map[string]string{
+								"security.gardener.cloud/purpose": "workload-identity-token-requestor",
+							},
+						},
+					},
+				}
+				irrelevantSecrets = []*corev1.Secret{
+					{
+						// doesn't have the token-requestor label
+						ObjectMeta: metav1.ObjectMeta{
+							Name:        "secret3",
+							Namespace:   namespace,
+							Annotations: map[string]string{"workloadidentity.security.gardener.cloud/token-renew-timestamp": "foo"},
+						},
+					},
+					{
+						// in another namespace
+						ObjectMeta: metav1.ObjectMeta{
+							Name:        "secret4",
+							Namespace:   namespace + "-other",
+							Annotations: map[string]string{"workloadidentity.security.gardener.cloud/token-renew-timestamp": "foo"},
+							Labels: map[string]string{
+								"resources.gardener.cloud/purpose": "token-requestor",
+								"resources.gardener.cloud/class":   "shoot",
+							},
+						},
+					},
+				}
+			)
+
+			for _, secret := range append(relevantSecrets, irrelevantSecrets...) {
+				Expect(c.Create(ctx, secret)).To(Succeed(), "should be able to create secret %s", client.ObjectKeyFromObject(secret))
+			}
+
+			Expect(RenewWorkloadIdentityTokens(ctx, c, client.InNamespace(namespace))).To(Succeed())
+
+			for _, secret := range relevantSecrets {
+				key := client.ObjectKeyFromObject(secret)
+				Expect(c.Get(ctx, key, secret)).To(Succeed(), "should be able to get secret %s", key)
+				Expect(secret.Annotations).NotTo(HaveKey("workloadidentity.security.gardener.cloud/token-renew-timestamp"),
+					"should have removed renew timestamp from relevant secret %s", key,
+				)
+			}
+
+			for _, secret := range irrelevantSecrets {
+				key := client.ObjectKeyFromObject(secret)
+				Expect(c.Get(ctx, key, secret)).To(Succeed(), "should be able to get secret %s", key)
+				Expect(secret.Annotations).To(HaveKey("workloadidentity.security.gardener.cloud/token-renew-timestamp"),
+					"should not have removed renew timestamp from irrelevant secret %s", key,
+				)
+			}
+		})
+	})
+
 	Describe("#IsTokenPopulated", func() {
 		var (
 			kubeconfigWithToken = `apiVersion: v1

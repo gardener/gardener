@@ -582,6 +582,20 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.ObservabilityRotation
 <p>Observability contains information about the observability credential rotation.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>workloadIdentityKey</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.WorkloadIdentityKeyRotation">
+WorkloadIdentityKeyRotation
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>WorkloadIdentityKey contains information about the workload identity key credential rotation.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="operator.gardener.cloud/v1alpha1.DNS">DNS
@@ -3273,6 +3287,95 @@ k8s.io/apimachinery/pkg/api/resource.Quantity
 <td>
 <em>(Optional)</em>
 <p>MinimumSize defines the minimum size that should be used for PVCs in the runtime cluster.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.WorkloadIdentityKeyRotation">WorkloadIdentityKeyRotation
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.CredentialsRotation">CredentialsRotation</a>)
+</p>
+<p>
+<p>WorkloadIdentityKeyRotation contains information about the workload identity key credential rotation.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>phase</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.CredentialsRotationPhase
+</em>
+</td>
+<td>
+<p>Phase describes the phase of the workload identity key credential rotation.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>lastCompletionTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastCompletionTime is the most recent time when the workload identity key credential rotation was successfully
+completed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>lastInitiationTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastInitiationTime is the most recent time when the workload identity key credential rotation was initiated.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>lastInitiationFinishedTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastInitiationFinishedTime is the recent time when the workload identity key credential rotation initiation was
+completed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>lastCompletionTriggeredTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastCompletionTriggeredTime is the recent time when the workload identity key credential rotation completion was
+triggered.</p>
 </td>
 </tr>
 </tbody>

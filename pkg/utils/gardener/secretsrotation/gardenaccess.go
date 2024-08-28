@@ -25,7 +25,7 @@ func RenewGardenSecretsInAllSeeds(ctx context.Context, log logr.Logger, c client
 		return err
 	}
 
-	log.Info("Seeds requiring renewal of their garden secrets", v1beta1constants.GardenerOperation, operationAnnotation, "number", len(seedList.Items))
+	log.Info("Seeds requiring renewal of their secrets", v1beta1constants.GardenerOperation, operationAnnotation, "number", len(seedList.Items))
 
 	for _, seed := range seedList.Items {
 		log := log.WithValues("seed", seed.Name)
@@ -43,14 +43,14 @@ func RenewGardenSecretsInAllSeeds(ctx context.Context, log logr.Logger, c client
 		if err := c.Patch(ctx, &seed, patch); err != nil {
 			return fmt.Errorf("error annotating seed %s: %w", seed.Name, err)
 		}
-		log.Info("Successfully annotated seed to renew its garden secrets", v1beta1constants.GardenerOperation, operationAnnotation)
+		log.Info("Successfully annotated seed to renew its secrets", v1beta1constants.GardenerOperation, operationAnnotation)
 	}
 
 	return nil
 }
 
 // CheckIfGardenSecretsRenewalCompletedInAllSeeds checks if renewal of garden secrets is completed for all seeds.
-func CheckIfGardenSecretsRenewalCompletedInAllSeeds(ctx context.Context, c client.Client, operationAnnotation string) error {
+func CheckIfGardenSecretsRenewalCompletedInAllSeeds(ctx context.Context, c client.Client, operationAnnotation string, secretType string) error {
 	seedList := &metav1.PartialObjectMetadataList{}
 	seedList.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("SeedList"))
 	if err := c.List(ctx, seedList); err != nil {
@@ -59,7 +59,7 @@ func CheckIfGardenSecretsRenewalCompletedInAllSeeds(ctx context.Context, c clien
 
 	for _, seed := range seedList.Items {
 		if seed.Annotations[v1beta1constants.GardenerOperation] == operationAnnotation {
-			return fmt.Errorf("renewing secrets for seed %q is not yet completed", seed.Name)
+			return fmt.Errorf("renewing %q secrets for seed %q is not yet completed", secretType, seed.Name)
 		}
 	}
 

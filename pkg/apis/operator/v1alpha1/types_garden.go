@@ -715,6 +715,30 @@ type CredentialsRotation struct {
 	// Observability contains information about the observability credential rotation.
 	// +optional
 	Observability *gardencorev1beta1.ObservabilityRotation `json:"observability,omitempty"`
+	// WorkloadIdentityKey contains information about the workload identity key credential rotation.
+	// +optional
+	WorkloadIdentityKey *WorkloadIdentityKeyRotation `json:"workloadIdentityKey,omitempty"`
+}
+
+// WorkloadIdentityKeyRotation contains information about the workload identity key credential rotation.
+type WorkloadIdentityKeyRotation struct {
+	// Phase describes the phase of the workload identity key credential rotation.
+	Phase gardencorev1beta1.CredentialsRotationPhase `json:"phase"`
+	// LastCompletionTime is the most recent time when the workload identity key credential rotation was successfully
+	// completed.
+	// +optional
+	LastCompletionTime *metav1.Time `json:"lastCompletionTime,omitempty"`
+	// LastInitiationTime is the most recent time when the workload identity key credential rotation was initiated.
+	// +optional
+	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty"`
+	// LastInitiationFinishedTime is the recent time when the workload identity key credential rotation initiation was
+	// completed.
+	// +optional
+	LastInitiationFinishedTime *metav1.Time `json:"lastInitiationFinishedTime,omitempty"`
+	// LastCompletionTriggeredTime is the recent time when the workload identity key credential rotation completion was
+	// triggered.
+	// +optional
+	LastCompletionTriggeredTime *metav1.Time `json:"lastCompletionTriggeredTime,omitempty"`
 }
 
 const (
@@ -740,6 +764,8 @@ var AvailableOperationAnnotations = sets.New(
 	v1beta1constants.OperationRotateObservabilityCredentials,
 	v1beta1constants.OperationRotateCredentialsStart,
 	v1beta1constants.OperationRotateCredentialsComplete,
+	OperationRotateWorkloadIdentityKeyStart,
+	OperationRotateWorkloadIdentityKeyComplete,
 )
 
 // FinalizerName is the name of the finalizer used by gardener-operator.
