@@ -244,6 +244,7 @@ func validateCloudProfileRegions(regions []core.Region, fldPath *field.Path) fie
 
 	return allErrs
 }
+
 func validateCloudProfileBastion(spec *core.CloudProfileSpec, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs     field.ErrorList
