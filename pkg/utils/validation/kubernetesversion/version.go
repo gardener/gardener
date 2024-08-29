@@ -19,6 +19,7 @@ var SupportedVersions = []string{
 	"1.28",
 	"1.29",
 	"1.30",
+	"1.31",
 }
 
 // CheckIfSupported checks if the provided version is part of the supported Kubernetes versions list.
