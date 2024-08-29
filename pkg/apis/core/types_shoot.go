@@ -344,7 +344,7 @@ type NginxIngress struct {
 	Config map[string]string
 	// ExternalTrafficPolicy controls the `.spec.externalTrafficPolicy` value of the load balancer `Service`
 	// exposing the nginx-ingress. Defaults to `Cluster`.
-	ExternalTrafficPolicy *corev1.ServiceExternalTrafficPolicyType
+	ExternalTrafficPolicy *corev1.ServiceExternalTrafficPolicy
 }
 
 // ControlPlane holds information about the general settings for the control plane of a shoot.

@@ -27,8 +27,8 @@ var (
 		v1beta1constants.IngressKindNginx,
 	)
 	availableExternalTrafficPolicies = sets.New(
-		string(corev1.ServiceExternalTrafficPolicyTypeCluster),
-		string(corev1.ServiceExternalTrafficPolicyTypeLocal),
+		string(corev1.ServiceExternalTrafficPolicyCluster),
+		string(corev1.ServiceExternalTrafficPolicyLocal),
 	)
 	availableSeedOperations = sets.New(
 		v1beta1constants.SeedOperationRenewGardenAccessSecrets,

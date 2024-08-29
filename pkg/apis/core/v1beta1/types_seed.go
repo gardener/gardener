@@ -294,7 +294,7 @@ type SeedSettingLoadBalancerServices struct {
 	// receive on one of the service's "externally-facing" addresses.
 	// Defaults to "Cluster".
 	// +optional
-	ExternalTrafficPolicy *corev1.ServiceExternalTrafficPolicyType `json:"externalTrafficPolicy,omitempty" protobuf:"bytes,2,opt,name=externalTrafficPolicy"`
+	ExternalTrafficPolicy *corev1.ServiceExternalTrafficPolicy `json:"externalTrafficPolicy,omitempty" protobuf:"bytes,2,opt,name=externalTrafficPolicy"`
 	// Zones controls settings, which are specific to the single-zone load balancers in a multi-zonal setup.
 	// Can be empty for single-zone seeds. Each specified zone has to relate to one of the zones in seed.spec.provider.zones.
 	// +optional
@@ -317,7 +317,7 @@ type SeedSettingLoadBalancerServicesZones struct {
 	// receive on one of the service's "externally-facing" addresses.
 	// Defaults to "Cluster".
 	// +optional
-	ExternalTrafficPolicy *corev1.ServiceExternalTrafficPolicyType `json:"externalTrafficPolicy,omitempty" protobuf:"bytes,3,opt,name=externalTrafficPolicy"`
+	ExternalTrafficPolicy *corev1.ServiceExternalTrafficPolicy `json:"externalTrafficPolicy,omitempty" protobuf:"bytes,3,opt,name=externalTrafficPolicy"`
 	// ProxyProtocol controls whether ProxyProtocol is (optionally) allowed for the load balancer services.
 	// Defaults to nil, which is equivalent to not allowing ProxyProtocol.
 	// +optional
