@@ -56,8 +56,8 @@ var (
 		core.KubernetesDashboardAuthModeToken,
 	)
 	availableNginxIngressExternalTrafficPolicies = sets.New(
-		string(corev1.ServiceExternalTrafficPolicyTypeCluster),
-		string(corev1.ServiceExternalTrafficPolicyTypeLocal),
+		string(corev1.ServiceExternalTrafficPolicyCluster),
+		string(corev1.ServiceExternalTrafficPolicyLocal),
 	)
 	availableShootOperations = sets.New(
 		v1beta1constants.ShootOperationMaintain,

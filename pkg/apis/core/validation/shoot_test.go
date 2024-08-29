@@ -660,14 +660,14 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		It("should allow external traffic policies 'Cluster' for nginx-ingress", func() {
-			v := corev1.ServiceExternalTrafficPolicyTypeCluster
+			v := corev1.ServiceExternalTrafficPolicyCluster
 			shoot.Spec.Addons.NginxIngress.ExternalTrafficPolicy = &v
 			errorList := ValidateShoot(shoot)
 			Expect(errorList).To(BeEmpty())
 		})
 
 		It("should allow external traffic policies 'Local' for nginx-ingress", func() {
-			v := corev1.ServiceExternalTrafficPolicyTypeLocal
+			v := corev1.ServiceExternalTrafficPolicyLocal
 			shoot.Spec.Addons.NginxIngress.ExternalTrafficPolicy = &v
 			errorList := ValidateShoot(shoot)
 			Expect(errorList).To(BeEmpty())
