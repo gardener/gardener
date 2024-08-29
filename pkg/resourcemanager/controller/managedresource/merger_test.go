@@ -1054,16 +1054,16 @@ var _ = Describe("merger", func() {
 			}),
 			Entry("LoadBalancer with ExternalTrafficPolicy=Local and HealthCheckNodePort", func() {
 				newService.Spec.HealthCheckNodePort = 123
-				newService.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
+				newService.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyLocal
 
 				expected = newService.DeepCopy()
 			}),
 			Entry("LoadBalancer with ExternalTrafficPolicy=Local and no HealthCheckNodePort", func() {
-				old.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
+				old.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyLocal
 				old.Spec.HealthCheckNodePort = 3333
 
 				newService.Spec.HealthCheckNodePort = 0
-				newService.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
+				newService.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyLocal
 
 				expected = old.DeepCopy()
 			}),
@@ -1115,7 +1115,7 @@ var _ = Describe("merger", func() {
 			Entry("LoadBalancer with ExternalTrafficPolicy=Local and HealthCheckNodePort", func() {
 				newService.Spec.Type = corev1.ServiceTypeLoadBalancer
 				newService.Spec.HealthCheckNodePort = 123
-				newService.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
+				newService.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyLocal
 				newService.Spec.ExternalName = ""
 				newService.Spec.ClusterIP = "3.4.5.6"
 

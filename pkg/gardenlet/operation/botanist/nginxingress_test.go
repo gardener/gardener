@@ -55,7 +55,7 @@ var _ = Describe("NginxIngress", func() {
 		shootKubernetesVersion, _ := semver.NewVersion("1.26.1")
 		botanist = &Botanist{Operation: &operation.Operation{}}
 		botanist.Shoot = &shootpkg.Shoot{KubernetesVersion: shootKubernetesVersion}
-		policy := corev1.ServiceExternalTrafficPolicyTypeCluster
+		policy := corev1.ServiceExternalTrafficPolicyCluster
 		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 			Spec: gardencorev1beta1.ShootSpec{
 				Kubernetes: gardencorev1beta1.Kubernetes{
