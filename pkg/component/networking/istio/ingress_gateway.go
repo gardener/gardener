@@ -27,7 +27,7 @@ type IngressGatewayValues struct {
 	Annotations                        map[string]string
 	Labels                             map[string]string
 	NetworkPolicyLabels                map[string]string
-	ExternalTrafficPolicy              *corev1.ServiceExternalTrafficPolicyType
+	ExternalTrafficPolicy              *corev1.ServiceExternalTrafficPolicy
 	Image                              string
 	IstiodNamespace                    string
 	LoadBalancerIP                     *string
