@@ -26,7 +26,7 @@ func (b *Botanist) DefaultNginxIngress() (component.DeployWaiter, error) {
 	var (
 		configData               map[string]string
 		loadBalancerSourceRanges []string
-		externalTrafficPolicy    corev1.ServiceExternalTrafficPolicyType
+		externalTrafficPolicy    corev1.ServiceExternalTrafficPolicy
 	)
 
 	if nginxIngressSpec := b.Shoot.GetInfo().Spec.Addons.NginxIngress; nginxIngressSpec != nil {

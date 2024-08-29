@@ -35,7 +35,7 @@ type istioTestValues struct {
 	labels                             map[string]string
 	kubeAPIServerPolicyLabel           string
 	lbAnnotations                      map[string]string
-	externalTrafficPolicy              *corev1.ServiceExternalTrafficPolicyType
+	externalTrafficPolicy              *corev1.ServiceExternalTrafficPolicy
 	serviceExternalIP                  *string
 	servicePorts                       []corev1.ServicePort
 	proxyProtocolEnabled               bool
@@ -142,7 +142,7 @@ func checkAdditionalIstioGateway(cl client.Client,
 	namespace string,
 	annotations map[string]string,
 	labels map[string]string,
-	externalTrafficPolicy *corev1.ServiceExternalTrafficPolicyType,
+	externalTrafficPolicy *corev1.ServiceExternalTrafficPolicy,
 	serviceExternalIP *string,
 	zone *string,
 	dualstack bool) {
@@ -314,7 +314,7 @@ var _ = Describe("Istio", func() {
 			namespace             string
 			annotations           map[string]string
 			labels                map[string]string
-			externalTrafficPolicy corev1.ServiceExternalTrafficPolicyType
+			externalTrafficPolicy corev1.ServiceExternalTrafficPolicy
 			serviceExternalIP     *string
 			zone                  *string
 		)

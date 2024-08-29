@@ -98,7 +98,7 @@ type Values struct {
 	LoadBalancerSourceRanges []string
 	// ExternalTrafficPolicy controls the `.spec.externalTrafficPolicy` value of the load balancer `Service`
 	// exposing the nginx-ingress.
-	ExternalTrafficPolicy corev1.ServiceExternalTrafficPolicyType
+	ExternalTrafficPolicy corev1.ServiceExternalTrafficPolicy
 	// VPAEnabled marks whether VerticalPodAutoscaler is enabled for the shoot.
 	VPAEnabled bool
 	// WildcardIngressDomains are the wildcard domains used by all ingress resources exposed by nginx-ingress.
