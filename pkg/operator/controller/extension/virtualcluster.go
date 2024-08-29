@@ -31,7 +31,6 @@ func virtualClusterAdmissionManagedResourceName(extension *operatorv1alpha1.Exte
 }
 
 func (r *Reconciler) reconcileExtensionVirtualClusterResources(ctx context.Context, log logr.Logger, virtualClusterClient client.Client, extension *operatorv1alpha1.Extension) error {
-	// return early if we do not have to make a deployment
 	if extension.Spec.Deployment == nil ||
 		extension.Spec.Deployment.ExtensionDeployment == nil ||
 		extension.Spec.Deployment.ExtensionDeployment.Helm == nil {
