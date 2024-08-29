@@ -496,21 +496,21 @@ spec:
 					Entry(
 						"LoadBalancer with ExternalTrafficPolicy=Local and HealthCheckNodePort", func() {
 							newService.Spec.HealthCheckNodePort = 123
-							newService.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
+							newService.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyLocal
 
 							expected.Spec.HealthCheckNodePort = 123
-							expected.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
+							expected.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyLocal
 						}),
 					Entry(
 						"LoadBalancer with ExternalTrafficPolicy=Local and no HealthCheckNodePort", func() {
-							oldService.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
+							oldService.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyLocal
 							oldService.Spec.HealthCheckNodePort = 3333
 
 							newService.Spec.HealthCheckNodePort = 0
-							newService.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
+							newService.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyLocal
 
 							expected.Spec.HealthCheckNodePort = 3333
-							expected.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
+							expected.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyLocal
 						}),
 				)
 
@@ -593,13 +593,13 @@ spec:
 						"LoadBalancer with ExternalTrafficPolicy=Local and HealthCheckNodePort", func() {
 							newService.Spec.Type = corev1.ServiceTypeLoadBalancer
 							newService.Spec.HealthCheckNodePort = 123
-							newService.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
+							newService.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyLocal
 							newService.Spec.ExternalName = ""
 							newService.Spec.ClusterIP = "3.4.5.6"
 
 							expected.Spec.Type = corev1.ServiceTypeLoadBalancer
 							expected.Spec.HealthCheckNodePort = 123
-							expected.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
+							expected.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyLocal
 							expected.Spec.ExternalName = ""
 							expected.Spec.ClusterIP = "3.4.5.6"
 						}),

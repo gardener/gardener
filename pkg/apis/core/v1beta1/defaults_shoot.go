@@ -318,7 +318,7 @@ func SetDefaults_ClusterAutoscaler(obj *ClusterAutoscaler) {
 // SetDefaults_NginxIngress sets default values for NginxIngress objects.
 func SetDefaults_NginxIngress(obj *NginxIngress) {
 	if obj.ExternalTrafficPolicy == nil {
-		v := corev1.ServiceExternalTrafficPolicyTypeCluster
+		v := corev1.ServiceExternalTrafficPolicyCluster
 		obj.ExternalTrafficPolicy = &v
 	}
 }

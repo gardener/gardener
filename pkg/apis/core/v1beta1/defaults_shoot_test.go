@@ -464,7 +464,7 @@ var _ = Describe("Shoot defaulting", func() {
 
 			Expect(obj.Spec.Addons.NginxIngress).NotTo(BeNil())
 			Expect(obj.Spec.Addons.NginxIngress.ExternalTrafficPolicy).NotTo(BeNil())
-			Expect(obj.Spec.Addons.NginxIngress.ExternalTrafficPolicy).To(PointTo(Equal(corev1.ServiceExternalTrafficPolicyTypeCluster)))
+			Expect(obj.Spec.Addons.NginxIngress.ExternalTrafficPolicy).To(PointTo(Equal(corev1.ServiceExternalTrafficPolicyCluster)))
 		})
 
 		It("should not overwrite the already set values for nginxIngress field", func() {
