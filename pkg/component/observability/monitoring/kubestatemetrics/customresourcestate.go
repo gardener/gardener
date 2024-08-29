@@ -126,14 +126,86 @@ func newCustomResourceStateMetricsForVPA() customresourcestate.Resource {
 	return resource
 }
 
-// NewCustomResourceStateConfig returns a new CustomResourceState configuration that can be serialized
-// and passed to the kube-state-metrics binary to create metrics from custom resource definitions
-func NewCustomResourceStateConfig() customresourcestate.Metrics {
-	return customresourcestate.Metrics{
-		Spec: customresourcestate.MetricsSpec{
-			Resources: []customresourcestate.Resource{
-				newCustomResourceStateMetricsForVPA(),
+func newGardenCustomResourceStateMetrics() customresourcestate.Resource {
+	gardenMetricNamePrefix := "garden"
+
+	resource := customresourcestate.Resource{
+		GroupVersionKind: customresourcestate.GroupVersionKind{
+			Group:   "operator.gardener.cloud",
+			Kind:    "Garden",
+			Version: "v1alpha1",
+		},
+		MetricNamePrefix: &gardenMetricNamePrefix,
+		Labels: customresourcestate.Labels{
+			LabelsFromPath: map[string][]string{
+				"name": {"metadata", "name"},
 			},
 		},
 	}
+
+	resource.Metrics = append(resource.Metrics, customresourcestate.Generator{
+		Name: "garden_condition",
+		Help: "represents a condition of a Garden object",
+		Each: customresourcestate.Metric{
+			Type: customresourcestate.MetricTypeStateSet,
+			StateSet: &customresourcestate.MetricStateSet{
+				LabelName: "status",
+				List:      []string{"Progressing", "True", "False", "Unknown"},
+				ValueFrom: []string{"status"},
+				MetricMeta: customresourcestate.MetricMeta{
+					LabelsFromPath: map[string][]string{
+						"condition": {"type"},
+					},
+					Path: []string{"status", "conditions"},
+				},
+			},
+		},
+	})
+
+	resource.Metrics = append(resource.Metrics, customresourcestate.Generator{
+		Name: "garden_last_operation",
+		Help: "denotes the last operation performed on a Garden object",
+		Each: customresourcestate.Metric{
+			Type: customresourcestate.MetricTypeStateSet,
+			StateSet: &customresourcestate.MetricStateSet{
+				LabelName: "last_operation",
+				List:      []string{"Create", "Reconcile", "Delete", "Migrate", "Restore"},
+				ValueFrom: []string{"type"},
+				MetricMeta: customresourcestate.MetricMeta{
+					Path: []string{"status", "lastOperation"},
+				},
+			},
+		},
+	})
+
+	return resource
+}
+
+// Option is a functional option type used to configure the CustomResourceState settings
+type Option func(*customresourcestate.Metrics)
+
+// WithGardenResourceMetrics adds the custom resource state configuration for the Garden resource
+func WithGardenResourceMetrics(c *customresourcestate.Metrics) {
+	c.Spec.Resources = append(c.Spec.Resources, newGardenCustomResourceStateMetrics())
+}
+
+// WithVPAMetrics adds the custom resource state configuration for the VerticalPodAutoscaler resource
+func WithVPAMetrics(c *customresourcestate.Metrics) {
+	c.Spec.Resources = append(c.Spec.Resources, newCustomResourceStateMetricsForVPA())
+}
+
+// NewCustomResourceStateConfig returns a new CustomResourceState configuration that can be serialized
+// and passed to the kube-state-metrics binary to create metrics from custom resource definitions
+func NewCustomResourceStateConfig(options ...Option) customresourcestate.Metrics {
+	metrics := customresourcestate.Metrics{
+		Spec: customresourcestate.MetricsSpec{
+			Resources: []customresourcestate.Resource{},
+		},
+	}
+
+	for _, opt := range options {
+		opt(&metrics)
+	}
+
+	return metrics
 }

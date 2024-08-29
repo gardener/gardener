@@ -121,6 +121,11 @@ var _ = Describe("KubeStateMetrics", func() {
 						Resources: []string{"verticalpodautoscalers"},
 						Verbs:     []string{"list", "watch"},
 					},
+					{
+						APIGroups: []string{"operator.gardener.cloud"},
+						Resources: []string{"gardens"},
+						Verbs:     []string{"list", "watch"},
+					},
 				},
 			}
 
@@ -337,7 +342,9 @@ var _ = Describe("KubeStateMetrics", func() {
 							"^kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_minallowed_memory$," +
 							"^kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_maxallowed_cpu$," +
 							"^kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_maxallowed_memory$," +
-							"^kube_customresource_verticalpodautoscaler_spec_updatepolicy_updatemode$",
+							"^kube_customresource_verticalpodautoscaler_spec_updatepolicy_updatemode$," +
+							"^garden_garden_condition$," +
+							"^garden_garden_last_operation$",
 						"--custom-resource-state-config-file=/config/custom-resource-state.yaml",
 					}
 				}
@@ -843,16 +850,6 @@ var _ = Describe("KubeStateMetrics", func() {
 				AutomountServiceAccountToken: ptr.To(false),
 			}
 		}
-		customResourceStateConfigMap = &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "custom-resource-state-config",
-				Namespace: namespace,
-			},
-			Data: map[string]string{
-				"custom-resource-state.yaml": expectedCustomResourceStateConfig(),
-			},
-		}
-		Expect(kubernetesutils.MakeUnique(customResourceStateConfigMap)).To(Succeed())
 		secretShootAccess = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "shoot-access-kube-state-metrics",
@@ -959,6 +956,17 @@ var _ = Describe("KubeStateMetrics", func() {
 					NameSuffix:        "-runtime",
 				})
 				managedResourceName = "kube-state-metrics-runtime"
+
+				customResourceStateConfigMap = &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "custom-resource-state-config",
+						Namespace: namespace,
+					},
+					Data: map[string]string{
+						"custom-resource-state.yaml": expectedCustomResourceStateConfig(values.NameSuffix),
+					},
+				}
+				Expect(kubernetesutils.MakeUnique(customResourceStateConfigMap)).To(Succeed())
 			})
 
 			JustBeforeEach(func() {
@@ -1045,6 +1053,17 @@ var _ = Describe("KubeStateMetrics", func() {
 					NameSuffix:        "-seed",
 				})
 				managedResourceName = "kube-state-metrics-seed"
+
+				customResourceStateConfigMap = &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "custom-resource-state-config",
+						Namespace: namespace,
+					},
+					Data: map[string]string{
+						"custom-resource-state.yaml": expectedCustomResourceStateConfig(values.NameSuffix),
+					},
+				}
+				Expect(kubernetesutils.MakeUnique(customResourceStateConfigMap)).To(Succeed())
 			})
 
 			JustBeforeEach(func() {
@@ -1126,6 +1145,17 @@ var _ = Describe("KubeStateMetrics", func() {
 				}
 				managedResourceName = "shoot-core-kube-state-metrics"
 				managedResourceTargetName = "shoot-core-kube-state-metrics-target"
+
+				customResourceStateConfigMap = &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "custom-resource-state-config",
+						Namespace: namespace,
+					},
+					Data: map[string]string{
+						"custom-resource-state.yaml": expectedCustomResourceStateConfig(values.NameSuffix),
+					},
+				}
+				Expect(kubernetesutils.MakeUnique(customResourceStateConfigMap)).To(Succeed())
 			})
 
 			JustBeforeEach(func() {
@@ -1135,39 +1165,6 @@ var _ = Describe("KubeStateMetrics", func() {
 			It("should successfully deploy all resources", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceTarget), managedResourceTarget)).To(BeNotFoundError())
-
-				// TODO(vicwicker): Remove after Gardener v1.104 got released.
-				go func() {
-					defer GinkgoRecover()
-					mr := &resourcesv1alpha1.ManagedResource{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      managedResourceName,
-							Namespace: namespace,
-						},
-					}
-					Eventually(func() error {
-						return c.Get(ctx, client.ObjectKeyFromObject(mr), mr)
-					}).Should(Succeed())
-					mr.ObjectMeta.Generation = 1
-					mr.Status = resourcesv1alpha1.ManagedResourceStatus{
-						ObservedGeneration: 1,
-						Conditions: []gardencorev1beta1.Condition{
-							{
-								Type:   resourcesv1alpha1.ResourcesApplied,
-								Status: gardencorev1beta1.ConditionTrue,
-							},
-							{
-								Type:   resourcesv1alpha1.ResourcesHealthy,
-								Status: gardencorev1beta1.ConditionTrue,
-							},
-							{
-								Type:   resourcesv1alpha1.ResourcesProgressing,
-								Status: gardencorev1beta1.ConditionFalse,
-							},
-						},
-					}
-					Expect(c.Update(ctx, mr)).To(Succeed())
-				}()
 
 				Expect(ksm.Deploy(ctx)).To(Succeed())
 
@@ -1215,27 +1212,6 @@ var _ = Describe("KubeStateMetrics", func() {
 							Name: managedResource.Spec.SecretRefs[0].Name,
 						}},
 						KeepObjects: ptr.To(false),
-					},
-				}
-
-				// TODO(vicwicker): Remove after Gardener v1.104 got released.
-				expectedMr.ObjectMeta.ResourceVersion = "2"
-				expectedMr.ObjectMeta.Generation = 1
-				expectedMr.Status = resourcesv1alpha1.ManagedResourceStatus{
-					ObservedGeneration: 1,
-					Conditions: []gardencorev1beta1.Condition{
-						{
-							Type:   resourcesv1alpha1.ResourcesApplied,
-							Status: gardencorev1beta1.ConditionTrue,
-						},
-						{
-							Type:   resourcesv1alpha1.ResourcesHealthy,
-							Status: gardencorev1beta1.ConditionTrue,
-						},
-						{
-							Type:   resourcesv1alpha1.ResourcesProgressing,
-							Status: gardencorev1beta1.ConditionFalse,
-						},
 					},
 				}
 

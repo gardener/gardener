@@ -19,17 +19,29 @@ import (
 // This assertion is performed inside this function to allow to give more human readable errors when the
 // long config document actually differs. This also allows to keep the expectation in a standalone yaml
 // file and to easily update it when it needs to be changed
-func expectedCustomResourceStateConfig() string {
+func expectedCustomResourceStateConfig(suffix string) string {
 	defer GinkgoRecover()
+	var (
+		rawActual                    []byte
+		expectFilePath, relativePath string
+		err                          error
+		options                      []Option
+	)
 
-	rawActual, err := yaml.Marshal(NewCustomResourceStateConfig())
+	options = []Option{WithVPAMetrics}
+	relativePath = "testdata/custom-resource-state-vpa.expectation.yaml"
+
+	if suffix == SuffixRuntime {
+		options = append(options, WithGardenResourceMetrics)
+		relativePath = "testdata/custom-resource-state-garden.expectation.yaml"
+	}
+
+	expectFilePath, err = filepath.Abs(relativePath)
+	Expect(err).ToNot(HaveOccurred())
+	rawActual, err = yaml.Marshal(NewCustomResourceStateConfig(options...))
 	Expect(err).ToNot(HaveOccurred())
 
 	actual := string(rawActual)
-
-	expectFilePath, err := filepath.Abs("testdata/custom-resource-state.expectation.yaml")
-	Expect(err).ToNot(HaveOccurred())
-
 	rawExpect, err := os.ReadFile(expectFilePath)
 	Expect(err).ToNot(HaveOccurred())
 

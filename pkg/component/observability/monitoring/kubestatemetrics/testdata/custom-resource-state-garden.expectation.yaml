@@ -1,0 +1,398 @@
+spec:
+  resources:
+  - metricNamePrefix: null
+    groupVersionKind:
+      group: autoscaling.k8s.io
+      version: v1
+      kind: VerticalPodAutoscaler
+    commonLabels: {}
+    labelsFromPath:
+      namespace:
+      - metadata
+      - namespace
+      target_api_version:
+      - spec
+      - targetRef
+      - apiVersion
+      target_kind:
+      - spec
+      - targetRef
+      - kind
+      target_name:
+      - spec
+      - targetRef
+      - name
+      verticalpodautoscaler:
+      - metadata
+      - name
+    metrics:
+    - name: verticalpodautoscaler_status_recommendation_containerrecommendations_target_cpu
+      help: Target cpu the VerticalPodAutoscaler recommends for the container.
+      each:
+        type: Gauge
+        gauge:
+          labelsFromPath:
+            container:
+            - containerName
+          path:
+          - status
+          - recommendation
+          - containerRecommendations
+          valueFrom:
+          - target
+          - cpu
+          labelFromKey: ""
+          nilIsZero: true
+        stateSet: null
+        info: null
+      commonLabels:
+        unit: core
+      labelsFromPath: {}
+      errorLogV: 0
+    - name: verticalpodautoscaler_status_recommendation_containerrecommendations_upperbound_cpu
+      help: Maximum cpu the container can use before the VerticalPodAutoscaler updater
+        evicts it.
+      each:
+        type: Gauge
+        gauge:
+          labelsFromPath:
+            container:
+            - containerName
+          path:
+          - status
+          - recommendation
+          - containerRecommendations
+          valueFrom:
+          - upperBound
+          - cpu
+          labelFromKey: ""
+          nilIsZero: true
+        stateSet: null
+        info: null
+      commonLabels:
+        unit: core
+      labelsFromPath: {}
+      errorLogV: 0
+    - name: verticalpodautoscaler_status_recommendation_containerrecommendations_lowerbound_cpu
+      help: Minimum cpu the container can use before the VerticalPodAutoscaler updater
+        evicts it.
+      each:
+        type: Gauge
+        gauge:
+          labelsFromPath:
+            container:
+            - containerName
+          path:
+          - status
+          - recommendation
+          - containerRecommendations
+          valueFrom:
+          - lowerBound
+          - cpu
+          labelFromKey: ""
+          nilIsZero: true
+        stateSet: null
+        info: null
+      commonLabels:
+        unit: core
+      labelsFromPath: {}
+      errorLogV: 0
+    - name: verticalpodautoscaler_status_recommendation_containerrecommendations_uncappedtarget_cpu
+      help: Target cpu the VerticalPodAutoscaler recommends for the container ignoring
+        bounds.
+      each:
+        type: Gauge
+        gauge:
+          labelsFromPath:
+            container:
+            - containerName
+          path:
+          - status
+          - recommendation
+          - containerRecommendations
+          valueFrom:
+          - uncappedTarget
+          - cpu
+          labelFromKey: ""
+          nilIsZero: true
+        stateSet: null
+        info: null
+      commonLabels:
+        unit: core
+      labelsFromPath: {}
+      errorLogV: 0
+    - name: verticalpodautoscaler_spec_resourcepolicy_containerpolicies_minallowed_cpu
+      help: Minimum cpu the VerticalPodAutoscaler can set for containers matching
+        the name.
+      each:
+        type: Gauge
+        gauge:
+          labelsFromPath:
+            container:
+            - containerName
+          path:
+          - spec
+          - resourcePolicy
+          - containerPolicies
+          valueFrom:
+          - minAllowed
+          - cpu
+          labelFromKey: ""
+          nilIsZero: true
+        stateSet: null
+        info: null
+      commonLabels:
+        unit: core
+      labelsFromPath: {}
+      errorLogV: 0
+    - name: verticalpodautoscaler_spec_resourcepolicy_containerpolicies_maxallowed_cpu
+      help: Maximum cpu the VerticalPodAutoscaler can set for containers matching
+        the name.
+      each:
+        type: Gauge
+        gauge:
+          labelsFromPath:
+            container:
+            - containerName
+          path:
+          - spec
+          - resourcePolicy
+          - containerPolicies
+          valueFrom:
+          - maxAllowed
+          - cpu
+          labelFromKey: ""
+          nilIsZero: true
+        stateSet: null
+        info: null
+      commonLabels:
+        unit: core
+      labelsFromPath: {}
+      errorLogV: 0
+    - name: verticalpodautoscaler_status_recommendation_containerrecommendations_target_memory
+      help: Target memory the VerticalPodAutoscaler recommends for the container.
+      each:
+        type: Gauge
+        gauge:
+          labelsFromPath:
+            container:
+            - containerName
+          path:
+          - status
+          - recommendation
+          - containerRecommendations
+          valueFrom:
+          - target
+          - memory
+          labelFromKey: ""
+          nilIsZero: true
+        stateSet: null
+        info: null
+      commonLabels:
+        unit: byte
+      labelsFromPath: {}
+      errorLogV: 0
+    - name: verticalpodautoscaler_status_recommendation_containerrecommendations_upperbound_memory
+      help: Maximum memory the container can use before the VerticalPodAutoscaler
+        updater evicts it.
+      each:
+        type: Gauge
+        gauge:
+          labelsFromPath:
+            container:
+            - containerName
+          path:
+          - status
+          - recommendation
+          - containerRecommendations
+          valueFrom:
+          - upperBound
+          - memory
+          labelFromKey: ""
+          nilIsZero: true
+        stateSet: null
+        info: null
+      commonLabels:
+        unit: byte
+      labelsFromPath: {}
+      errorLogV: 0
+    - name: verticalpodautoscaler_status_recommendation_containerrecommendations_lowerbound_memory
+      help: Minimum memory the container can use before the VerticalPodAutoscaler
+        updater evicts it.
+      each:
+        type: Gauge
+        gauge:
+          labelsFromPath:
+            container:
+            - containerName
+          path:
+          - status
+          - recommendation
+          - containerRecommendations
+          valueFrom:
+          - lowerBound
+          - memory
+          labelFromKey: ""
+          nilIsZero: true
+        stateSet: null
+        info: null
+      commonLabels:
+        unit: byte
+      labelsFromPath: {}
+      errorLogV: 0
+    - name: verticalpodautoscaler_status_recommendation_containerrecommendations_uncappedtarget_memory
+      help: Target memory the VerticalPodAutoscaler recommends for the container ignoring
+        bounds.
+      each:
+        type: Gauge
+        gauge:
+          labelsFromPath:
+            container:
+            - containerName
+          path:
+          - status
+          - recommendation
+          - containerRecommendations
+          valueFrom:
+          - uncappedTarget
+          - memory
+          labelFromKey: ""
+          nilIsZero: true
+        stateSet: null
+        info: null
+      commonLabels:
+        unit: byte
+      labelsFromPath: {}
+      errorLogV: 0
+    - name: verticalpodautoscaler_spec_resourcepolicy_containerpolicies_minallowed_memory
+      help: Minimum memory the VerticalPodAutoscaler can set for containers matching
+        the name.
+      each:
+        type: Gauge
+        gauge:
+          labelsFromPath:
+            container:
+            - containerName
+          path:
+          - spec
+          - resourcePolicy
+          - containerPolicies
+          valueFrom:
+          - minAllowed
+          - memory
+          labelFromKey: ""
+          nilIsZero: true
+        stateSet: null
+        info: null
+      commonLabels:
+        unit: byte
+      labelsFromPath: {}
+      errorLogV: 0
+    - name: verticalpodautoscaler_spec_resourcepolicy_containerpolicies_maxallowed_memory
+      help: Maximum memory the VerticalPodAutoscaler can set for containers matching
+        the name.
+      each:
+        type: Gauge
+        gauge:
+          labelsFromPath:
+            container:
+            - containerName
+          path:
+          - spec
+          - resourcePolicy
+          - containerPolicies
+          valueFrom:
+          - maxAllowed
+          - memory
+          labelFromKey: ""
+          nilIsZero: true
+        stateSet: null
+        info: null
+      commonLabels:
+        unit: byte
+      labelsFromPath: {}
+      errorLogV: 0
+    - name: verticalpodautoscaler_spec_updatepolicy_updatemode
+      help: Update mode of the VerticalPodAutoscaler.
+      each:
+        type: StateSet
+        gauge: null
+        stateSet:
+          labelsFromPath: {}
+          path:
+          - spec
+          - updatePolicy
+          - updateMode
+          list:
+          - "Off"
+          - Initial
+          - Recreate
+          - Auto
+          labelName: update_mode
+          valueFrom: []
+        info: null
+      commonLabels: {}
+      labelsFromPath: {}
+      errorLogV: 0
+    errorLogV: 0
+    resourcePlural: ""
+  - metricNamePrefix: garden
+    groupVersionKind:
+      group: operator.gardener.cloud
+      version: v1alpha1
+      kind: Garden
+    commonLabels: {}
+    labelsFromPath:
+      name:
+      - metadata
+      - name
+    metrics:
+    - name: garden_condition
+      help: represents a condition of a Garden object
+      each:
+        type: StateSet
+        gauge: null
+        stateSet:
+          labelsFromPath:
+            condition:
+            - type
+          path:
+          - status
+          - conditions
+          list:
+          - Progressing
+          - "True"
+          - "False"
+          - Unknown
+          labelName: status
+          valueFrom:
+          - status
+        info: null
+      commonLabels: {}
+      labelsFromPath: {}
+      errorLogV: 0
+    - name: garden_last_operation
+      help: denotes the last operation performed on a Garden object
+      each:
+        type: StateSet
+        gauge: null
+        stateSet:
+          labelsFromPath: {}
+          path:
+          - status
+          - lastOperation
+          list:
+          - Create
+          - Reconcile
+          - Delete
+          - Migrate
+          - Restore
+          labelName: last_operation
+          valueFrom:
+          - type
+        info: null
+      commonLabels: {}
+      labelsFromPath: {}
+      errorLogV: 0
+    errorLogV: 0
+    resourcePlural: ""

@@ -87,6 +87,11 @@ func (k *kubeStateMetrics) clusterRole() *rbacv1.ClusterRole {
 			Resources: []string{"verticalpodautoscalers"},
 			Verbs:     []string{"list", "watch"},
 		},
+		{
+			APIGroups: []string{"operator.gardener.cloud"},
+			Resources: []string{"gardens"},
+			Verbs:     []string{"list", "watch"},
+		},
 	}
 
 	if k.values.ClusterType == component.ClusterTypeSeed {
@@ -391,6 +396,8 @@ var gardenMetricAllowlist = []string{
 	"^kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_maxallowed_cpu$",
 	"^kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_maxallowed_memory$",
 	"^kube_customresource_verticalpodautoscaler_spec_updatepolicy_updatemode$",
+	"^garden_garden_condition$",
+	"^garden_garden_last_operation$",
 }
 
 var cacheMetricAllowlist = []string{
@@ -714,7 +721,13 @@ func (k *kubeStateMetrics) nameSuffix() string {
 }
 
 func (k *kubeStateMetrics) customResourceStateConfigMap() (*corev1.ConfigMap, error) {
-	customResourceStateConfig, err := yaml.Marshal(NewCustomResourceStateConfig())
+	opts := []Option{WithVPAMetrics}
+	if k.values.NameSuffix == SuffixRuntime {
+		opts = append(opts, WithGardenResourceMetrics)
+	}
+
+	customResourceStateConfig, err := yaml.Marshal(NewCustomResourceStateConfig(opts...))
+
 	if err != nil {
 		return nil, err
 	}
