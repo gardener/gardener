@@ -215,8 +215,8 @@ var (
 
 			if oldSvcType == string(corev1.ServiceTypeLoadBalancer) &&
 				newSvcType == string(corev1.ServiceTypeLoadBalancer) &&
-				newETP == string(corev1.ServiceExternalTrafficPolicyTypeLocal) &&
-				oldETP == string(corev1.ServiceExternalTrafficPolicyTypeLocal) {
+				newETP == string(corev1.ServiceExternalTrafficPolicyLocal) &&
+				oldETP == string(corev1.ServiceExternalTrafficPolicyLocal) {
 				newHealthCheckPort, _ := nestedFloat64OrInt64(newObj.Object, "spec", "healthCheckNodePort")
 				if newHealthCheckPort == 0 {
 					oldHealthCheckPort, _ := nestedFloat64OrInt64(oldObj.Object, "spec", "healthCheckNodePort")

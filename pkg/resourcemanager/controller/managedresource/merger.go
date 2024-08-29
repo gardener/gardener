@@ -384,8 +384,8 @@ func mergeService(scheme *runtime.Scheme, oldObj, newObj runtime.Object) error {
 
 	if oldService.Spec.Type == corev1.ServiceTypeLoadBalancer &&
 		newService.Spec.Type == corev1.ServiceTypeLoadBalancer &&
-		newService.Spec.ExternalTrafficPolicy == corev1.ServiceExternalTrafficPolicyTypeLocal &&
-		oldService.Spec.ExternalTrafficPolicy == corev1.ServiceExternalTrafficPolicyTypeLocal &&
+		newService.Spec.ExternalTrafficPolicy == corev1.ServiceExternalTrafficPolicyLocal &&
+		oldService.Spec.ExternalTrafficPolicy == corev1.ServiceExternalTrafficPolicyLocal &&
 		newService.Spec.HealthCheckNodePort == 0 {
 		newService.Spec.HealthCheckNodePort = oldService.Spec.HealthCheckNodePort
 	}
