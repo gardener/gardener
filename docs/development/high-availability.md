@@ -47,22 +47,23 @@ Concretely, all seed system components should respect the following conventions:
     ```yaml
     spec:
       topologySpreadConstraints:
-      - maxSkew: 1
-        topologyKey: kubernetes.io/hostname
+      - topologyKey: kubernetes.io/hostname
+        minDomains: 3 # lower value of max replicas or 3
+        maxSkew: 1
         whenUnsatisfiable: ScheduleAnyway
         matchLabels: ...
     ```
 
-    Hence, the node spread is done on best-effort basis only.
+    `minDomains` is set when failure tolerance is configured or annotation `high-availability-config.resources.gardener.cloud/host-spread="true"` is given.
 
   - ... and the seed cluster has `>= 2` zones, then the component should also have a second `topologySpreadConstraint`, ensuring the replicas are spread over the zones:
 
     ```yaml
     spec:
       topologySpreadConstraints:
-      - maxSkew: 1
+      - topologyKey: topology.kubernetes.io/zone
         minDomains: 2 # lower value of max replicas or number of zones
-        topologyKey: topology.kubernetes.io/zone
+        maxSkew: 1
         whenUnsatisfiable: DoNotSchedule
         matchLabels: ...
     ```
