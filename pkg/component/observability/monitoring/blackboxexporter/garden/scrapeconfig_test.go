@@ -18,11 +18,10 @@ import (
 var _ = Describe("ScrapeConfig", func() {
 	Describe("#ScrapeConfig", func() {
 		var (
-			namespace                  = "namespace"
-			kubeAPIServerTargets       = []monitoringv1alpha1.Target{"target1", "target2"}
-			gardenerDashboardTarget    = monitoringv1alpha1.Target("target3")
-			produceGardenScrapeConfigs = true
-			defaultScrapeConfigs       = []*monitoringv1alpha1.ScrapeConfig{
+			namespace               = "namespace"
+			kubeAPIServerTargets    = []monitoringv1alpha1.Target{"target1", "target2"}
+			gardenerDashboardTarget = monitoringv1alpha1.Target("target3")
+			defaultScrapeConfigs    = []*monitoringv1alpha1.ScrapeConfig{
 				&monitoringv1alpha1.ScrapeConfig{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "garden-blackbox-gardener-apiserver",
@@ -231,71 +230,60 @@ var _ = Describe("ScrapeConfig", func() {
 						}},
 					},
 				},
-			}
-			runtimeScrapeConfig = &monitoringv1alpha1.ScrapeConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "garden-blackbox-runtime-kube-api",
-					Namespace: namespace,
-					Labels:    map[string]string{"prometheus": "garden"},
-				},
-				Spec: monitoringv1alpha1.ScrapeConfigSpec{
-					Params:      map[string][]string{"module": {"http_runtime"}},
-					MetricsPath: ptr.To("/probe"),
-					StaticConfigs: []monitoringv1alpha1.StaticConfig{{
-						Targets: []monitoringv1alpha1.Target{"https://kubernetes.default.svc.cluster.local/healthz"},
-						Labels:  map[monitoringv1.LabelName]string{"purpose": "availability"},
-					}},
-					RelabelConfigs: []monitoringv1.RelabelConfig{
-						{
-							SourceLabels: []monitoringv1.LabelName{"__address__"},
-							Separator:    ptr.To(";"),
-							Regex:        `(.*)`,
-							TargetLabel:  "__param_target",
-							Replacement:  ptr.To(`$1`),
-							Action:       "replace",
-						},
-						{
-							SourceLabels: []monitoringv1.LabelName{"__param_target"},
-							Separator:    ptr.To(";"),
-							Regex:        `(.*)`,
-							TargetLabel:  "instance",
-							Replacement:  ptr.To(`$1`),
-							Action:       "replace",
-						},
-						{
-							Separator:   ptr.To(";"),
-							Regex:       `(.*)`,
-							TargetLabel: "__address__",
-							Replacement: ptr.To("blackbox-exporter:9115"),
-							Action:      "replace",
-						},
-						{
-							Action:      "replace",
-							Replacement: ptr.To("blackbox-runtime-kube-api"),
-							TargetLabel: "job",
-						},
+				&monitoringv1alpha1.ScrapeConfig{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "garden-blackbox-runtime-kube-api",
+						Namespace: namespace,
+						Labels:    map[string]string{"prometheus": "garden"},
 					},
-					MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
-						SourceLabels: []monitoringv1.LabelName{"__name__"},
-						Action:       "keep",
-						Regex:        `^(probe_success|probe_http_status_code|probe_http_duration_seconds|probe_ssl_earliest_cert_expiry)$`,
-					}},
+					Spec: monitoringv1alpha1.ScrapeConfigSpec{
+						Params:      map[string][]string{"module": {"http_runtime"}},
+						MetricsPath: ptr.To("/probe"),
+						StaticConfigs: []monitoringv1alpha1.StaticConfig{{
+							Targets: []monitoringv1alpha1.Target{"https://kubernetes.default.svc.cluster.local/healthz"},
+							Labels:  map[monitoringv1.LabelName]string{"purpose": "availability"},
+						}},
+						RelabelConfigs: []monitoringv1.RelabelConfig{
+							{
+								SourceLabels: []monitoringv1.LabelName{"__address__"},
+								Separator:    ptr.To(";"),
+								Regex:        `(.*)`,
+								TargetLabel:  "__param_target",
+								Replacement:  ptr.To(`$1`),
+								Action:       "replace",
+							},
+							{
+								SourceLabels: []monitoringv1.LabelName{"__param_target"},
+								Separator:    ptr.To(";"),
+								Regex:        `(.*)`,
+								TargetLabel:  "instance",
+								Replacement:  ptr.To(`$1`),
+								Action:       "replace",
+							},
+							{
+								Separator:   ptr.To(";"),
+								Regex:       `(.*)`,
+								TargetLabel: "__address__",
+								Replacement: ptr.To("blackbox-exporter:9115"),
+								Action:      "replace",
+							},
+							{
+								Action:      "replace",
+								Replacement: ptr.To("blackbox-runtime-kube-api"),
+								TargetLabel: "job",
+							},
+						},
+						MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
+							SourceLabels: []monitoringv1.LabelName{"__name__"},
+							Action:       "keep",
+							Regex:        `^(probe_success|probe_http_status_code|probe_http_duration_seconds|probe_ssl_earliest_cert_expiry)$`,
+						}},
+					},
 				},
 			}
 		)
-		When("the default scrape configs should be produced", func() {
-			It("should compute the default scrape configs", func() {
-				Expect(ScrapeConfig(namespace, kubeAPIServerTargets, gardenerDashboardTarget, !produceGardenScrapeConfigs)).To(ConsistOf(
-					defaultScrapeConfigs,
-				))
-			})
-		})
-		When("the garden scrape configs should be produced", func() {
-			It("should compute the scrape configs for the garden", func() {
-				Expect(ScrapeConfig(namespace, kubeAPIServerTargets, gardenerDashboardTarget, produceGardenScrapeConfigs)).To(ConsistOf(
-					append(defaultScrapeConfigs, runtimeScrapeConfig),
-				))
-			})
+		It("should compute the default scrape configs", func() {
+			Expect(ScrapeConfig(namespace, kubeAPIServerTargets, gardenerDashboardTarget)).To(ConsistOf(defaultScrapeConfigs))
 		})
 	})
 })

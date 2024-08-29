@@ -14,7 +14,7 @@ import (
 )
 
 // ScrapeConfig returns the scrape configs related to the blackbox-exporter for the garden use-case.
-func ScrapeConfig(namespace string, kubeAPIServerTargets []monitoringv1alpha1.Target, gardenerDashboardTarget monitoringv1alpha1.Target, isGarden bool) []*monitoringv1alpha1.ScrapeConfig {
+func ScrapeConfig(namespace string, kubeAPIServerTargets []monitoringv1alpha1.Target, gardenerDashboardTarget monitoringv1alpha1.Target) []*monitoringv1alpha1.ScrapeConfig {
 	var (
 		defaultKeepMetrics []string = []string{
 			"probe_success",
@@ -78,6 +78,7 @@ func ScrapeConfig(namespace string, kubeAPIServerTargets []monitoringv1alpha1.Ta
 		kubeAPIServerScrapeConfig           = tlsScrapeConfig("apiserver", httpKubeAPIServerModuleName, kubeAPIServerTargets)
 		gardenerDashboardScrapeConfig       = tlsScrapeConfig("dashboard", httpGardenerDashboardModuleName, []monitoringv1alpha1.Target{gardenerDashboardTarget})
 		gardenerDiscoveryServerScrapeConfig = defaultScrapeConfig("discovery-server", httpGardenerDiscoveryServerModuleName, []monitoringv1alpha1.Target{"http://gardener-discovery-server.garden.svc.cluster.local:8081/healthz"})
+		runtimeKubeAPIScrapeConfig          = tlsScrapeConfig("runtime-kube-api", httpRuntimeAPIServerModuleName, []monitoringv1alpha1.Target{"https://kubernetes.default.svc.cluster.local/healthz"})
 	)
 
 	kubeAPIServerScrapeConfig.Spec.RelabelConfigs = append([]monitoringv1.RelabelConfig{{
@@ -89,11 +90,5 @@ func ScrapeConfig(namespace string, kubeAPIServerTargets []monitoringv1alpha1.Ta
 		Action:       "replace",
 	}}, kubeAPIServerScrapeConfig.Spec.RelabelConfigs...)
 
-	if isGarden {
-		var (
-			runtimeKubeAPIScrapeConfig = tlsScrapeConfig("runtime-kube-api", httpRuntimeAPIServerModuleName, []monitoringv1alpha1.Target{"https://kubernetes.default.svc.cluster.local/healthz"})
-		)
-		return []*monitoringv1alpha1.ScrapeConfig{gardenerAPIServerScrapeConfig, kubeAPIServerScrapeConfig, gardenerDashboardScrapeConfig, gardenerDiscoveryServerScrapeConfig, runtimeKubeAPIScrapeConfig}
-	}
-	return []*monitoringv1alpha1.ScrapeConfig{gardenerAPIServerScrapeConfig, kubeAPIServerScrapeConfig, gardenerDashboardScrapeConfig, gardenerDiscoveryServerScrapeConfig}
+	return []*monitoringv1alpha1.ScrapeConfig{gardenerAPIServerScrapeConfig, kubeAPIServerScrapeConfig, gardenerDashboardScrapeConfig, gardenerDiscoveryServerScrapeConfig, runtimeKubeAPIScrapeConfig}
 }

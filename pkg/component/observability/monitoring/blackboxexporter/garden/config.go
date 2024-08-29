@@ -24,7 +24,7 @@ const (
 )
 
 // Config returns the blackbox-exporter config for the garden use-case.
-func Config(isDashboardCertificateIssuedByGardener, isGardenerDiscoveryServerEnabled, isGarden bool) blackboxexporterconfig.Config {
+func Config(isDashboardCertificateIssuedByGardener, isGardenerDiscoveryServerEnabled bool) blackboxexporterconfig.Config {
 	var (
 		defaultModuleConfig = func() blackboxexporterconfig.Module {
 			return blackboxexporterconfig.Module{
@@ -70,13 +70,11 @@ func Config(isDashboardCertificateIssuedByGardener, isGardenerDiscoveryServerEna
 		httpKubeAPIServerModuleName:        httpKubeAPIServerModule,
 		httpKubeAPIServerRootCAsModuleName: httpKubeAPIServerRootCAsModule,
 		httpGardenerDashboardModuleName:    httpGardenerDashboardModule,
+		httpRuntimeAPIServerModuleName:     httpRuntimeAPIServerModule,
 	}}
 
 	if isGardenerDiscoveryServerEnabled {
 		config.Modules[httpGardenerDiscoveryServerModuleName] = httpGardenerDiscoveryServerModule
-	}
-	if isGarden {
-		config.Modules[httpRuntimeAPIServerModuleName] = httpRuntimeAPIServerModule
 	}
 
 	return config
