@@ -674,7 +674,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		It("should forbid unsupported external traffic policies for nginx-ingress", func() {
-			v := corev1.ServiceExternalTrafficPolicyType("something-else")
+			v := corev1.ServiceExternalTrafficPolicy("something-else")
 			shoot.Spec.Addons.NginxIngress.ExternalTrafficPolicy = &v
 
 			errorList := ValidateShoot(shoot)

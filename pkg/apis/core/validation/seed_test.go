@@ -877,7 +877,7 @@ var _ = Describe("Seed Validation Tests", func() {
 
 				It("should allow valid load balancer service traffic policy", func() {
 					for _, p := range []string{"Cluster", "Local"} {
-						policy := corev1.ServiceExternalTrafficPolicyType(p)
+						policy := corev1.ServiceExternalTrafficPolicy(p)
 						seed.Spec.Settings = &core.SeedSettings{
 							LoadBalancerServices: &core.SeedSettingLoadBalancerServices{
 								ExternalTrafficPolicy: &policy,
@@ -891,7 +891,7 @@ var _ = Describe("Seed Validation Tests", func() {
 				})
 
 				It("should prevent invalid load balancer service traffic policy", func() {
-					policy := corev1.ServiceExternalTrafficPolicyType("foobar")
+					policy := corev1.ServiceExternalTrafficPolicy("foobar")
 					seed.Spec.Settings = &core.SeedSettings{
 						LoadBalancerServices: &core.SeedSettingLoadBalancerServices{
 							ExternalTrafficPolicy: &policy,
@@ -910,7 +910,7 @@ var _ = Describe("Seed Validation Tests", func() {
 
 				It("should allow valid zonal load balancer service annotations and traffic policy", func() {
 					for _, p := range []string{"Cluster", "Local"} {
-						policy := corev1.ServiceExternalTrafficPolicyType(p)
+						policy := corev1.ServiceExternalTrafficPolicy(p)
 						zoneName := "a"
 						seed.Spec.Provider.Zones = []string{zoneName, "b"}
 						seed.Spec.Settings = &core.SeedSettings{
@@ -944,7 +944,7 @@ var _ = Describe("Seed Validation Tests", func() {
 				})
 
 				It("should prevent invalid zonal load balancer service annotations, traffic policy and duplicate zones", func() {
-					policy := corev1.ServiceExternalTrafficPolicyType("foobar")
+					policy := corev1.ServiceExternalTrafficPolicy("foobar")
 					zoneName := "a"
 					incorrectZoneName := "b"
 					seed.Spec.Provider.Zones = []string{zoneName}
