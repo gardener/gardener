@@ -125,7 +125,7 @@ var _ = Describe("seed", func() {
 	Describe("#GetLoadBalancerServiceExternalTrafficPolicy", func() {
 		It("should return the traffic policy", func() {
 			var (
-				policy = corev1.ServiceExternalTrafficPolicyTypeLocal
+				policy = corev1.ServiceExternalTrafficPolicyLocal
 				seed   = &Seed{}
 			)
 			seed.SetInfo(&gardencorev1beta1.Seed{
@@ -294,8 +294,8 @@ var _ = Describe("seed", func() {
 	Describe("#GetZonalLoadBalancerServiceExternalTrafficPolicy", func() {
 		It("should return the zonal traffic policy", func() {
 			var (
-				policy1 = corev1.ServiceExternalTrafficPolicyTypeLocal
-				policy2 = corev1.ServiceExternalTrafficPolicyTypeCluster
+				policy1 = corev1.ServiceExternalTrafficPolicyLocal
+				policy2 = corev1.ServiceExternalTrafficPolicyCluster
 				zone1   = "a"
 				zone2   = "b"
 				seed    = &Seed{}
