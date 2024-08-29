@@ -169,7 +169,7 @@ func (s *Seed) GetLoadBalancerServiceAnnotations() map[string]string {
 }
 
 // GetLoadBalancerServiceExternalTrafficPolicy indicates the external traffic policy for the seed if any.
-func (s *Seed) GetLoadBalancerServiceExternalTrafficPolicy() *corev1.ServiceExternalTrafficPolicyType {
+func (s *Seed) GetLoadBalancerServiceExternalTrafficPolicy() *corev1.ServiceExternalTrafficPolicy {
 	seed := s.GetInfo()
 	if seed.Spec.Settings != nil && seed.Spec.Settings.LoadBalancerServices != nil {
 		return seed.Spec.Settings.LoadBalancerServices.ExternalTrafficPolicy
@@ -192,7 +192,7 @@ func (s *Seed) GetZonalLoadBalancerServiceAnnotations(zone string) map[string]st
 }
 
 // GetZonalLoadBalancerServiceExternalTrafficPolicy indicates the zonal external traffic policy for the seed if any.
-func (s *Seed) GetZonalLoadBalancerServiceExternalTrafficPolicy(zone string) *corev1.ServiceExternalTrafficPolicyType {
+func (s *Seed) GetZonalLoadBalancerServiceExternalTrafficPolicy(zone string) *corev1.ServiceExternalTrafficPolicy {
 	seed := s.GetInfo()
 	if seed.Spec.Settings != nil && seed.Spec.Settings.LoadBalancerServices != nil {
 		for _, zoneSettings := range seed.Spec.Settings.LoadBalancerServices.Zones {
