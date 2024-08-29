@@ -64,7 +64,7 @@ var _ = Describe("istiod", func() {
 		minReplicas = 2
 		maxReplicas = 9
 
-		externalTrafficPolicy corev1.ServiceExternalTrafficPolicyType
+		externalTrafficPolicy corev1.ServiceExternalTrafficPolicy
 
 		istiodService = func() string {
 			data, _ := os.ReadFile("./test_charts/istiod_service.yaml")

@@ -232,7 +232,7 @@ type SeedSettingLoadBalancerServices struct {
 	// ExternalTrafficPolicy describes how nodes distribute service traffic they
 	// receive on one of the service's "externally-facing" addresses.
 	// Defaults to "Cluster".
-	ExternalTrafficPolicy *corev1.ServiceExternalTrafficPolicyType
+	ExternalTrafficPolicy *corev1.ServiceExternalTrafficPolicy
 	// Zones controls settings, which are specific to the single-zone load balancers in a multi-zonal setup.
 	// Can be empty for single-zone seeds. Each specified zone has to relate to one of the zones in seed.spec.provider.zones.
 	Zones []SeedSettingLoadBalancerServicesZones
@@ -251,7 +251,7 @@ type SeedSettingLoadBalancerServicesZones struct {
 	// ExternalTrafficPolicy describes how nodes distribute service traffic they
 	// receive on one of the service's "externally-facing" addresses.
 	// Defaults to "Cluster".
-	ExternalTrafficPolicy *corev1.ServiceExternalTrafficPolicyType
+	ExternalTrafficPolicy *corev1.ServiceExternalTrafficPolicy
 	// ProxyProtocol controls whether ProxyProtocol is (optionally) allowed for the load balancer services.
 	// Defaults to nil, which is equivalent to not allowing ProxyProtocol.
 	ProxyProtocol *LoadBalancerServicesProxyProtocol

@@ -27,7 +27,7 @@ func NewNginxIngress(
 	priorityClassName string,
 	vpaEnabled bool,
 	clusterType component.ClusterType,
-	externalTrafficPolicy corev1.ServiceExternalTrafficPolicyType,
+	externalTrafficPolicy corev1.ServiceExternalTrafficPolicy,
 	ingressClass string,
 	wildcardIngressDomains []string,
 	istioIngressGatewayLabels map[string]string,
