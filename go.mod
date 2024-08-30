@@ -20,7 +20,7 @@ require (
 	github.com/go-jose/go-jose/v4 v4.0.3
 	github.com/go-logr/logr v1.4.2
 	github.com/go-test/deep v1.1.0
-	github.com/gogo/protobuf v1.3.2 // indirect
+	github.com/gogo/protobuf v1.3.2
 	github.com/google/gnostic-models v0.6.8
 	github.com/google/go-cmp v0.6.0
 	github.com/google/go-containerregistry v0.20.0
@@ -71,8 +71,6 @@ require (
 	k8s.io/kube-aggregator v0.31.1
 	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340
 	k8s.io/kube-proxy v0.31.1
-	k8s.io/client-go v0.31.0
-	k8s.io/cluster-bootstrap v0.31.0
 	k8s.io/pod-security-admission v0.31.1
 	k8s.io/utils v0.0.0-20240921022957-49e7df575cb6
 	sigs.k8s.io/controller-runtime v0.19.0
@@ -84,7 +82,14 @@ require (
 
 require (
 	dario.cat/mergo v1.0.1 // indirect
-	k8s.io/kubernetes v1.30.3
+	k8s.io/kubernetes v1.31.0
+)
+
+require (
+	k8s.io/code-generator v0.31.1
+	k8s.io/kube-state-metrics/v2 v2.13.0
+	k8s.io/kubelet v0.29.5
+	k8s.io/metrics v0.29.5
 )
 
 require (
@@ -179,7 +184,7 @@ require (
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/moby/locker v1.0.1 // indirect
 	github.com/moby/spdystream v0.4.0 // indirect
-	github.com/moby/sys/mountinfo v0.6.2 // indirect
+	github.com/moby/sys/mountinfo v0.7.1 // indirect
 	github.com/moby/sys/sequential v0.5.0 // indirect
 	github.com/moby/sys/signal v0.7.0 // indirect
 	github.com/moby/sys/user v0.3.0 // indirect
@@ -255,7 +260,7 @@ require (
 	k8s.io/gengo/v2 v2.0.0-20240228010128-51d4e06bde70 // indirect
 	k8s.io/klog v1.0.0 // indirect
 	k8s.io/kms v0.31.1 // indirect
-	k8s.io/sample-controller v0.28.4 // indirect
+	k8s.io/sample-controller v0.30.3 // indirect
 	oras.land/oras-go v1.2.6 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.30.3 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
