@@ -64,7 +64,10 @@ var APIGroupControllerMap = map[string]map[string]versionutils.VersionRange{
 		"disruption": {},
 	},
 	"networking/v1alpha1": {
-		"service-cidr-controller": {AddedInVersion: "1.29"},
+		"service-cidr-controller": {AddedInVersion: "1.29", RemovedInVersion: "1.31"},
+	},
+	"networking/v1beta1": {
+		"service-cidr-controller": {AddedInVersion: "1.31"},
 	},
 	"policy/v1": {
 		"disruption": {},
@@ -73,7 +76,10 @@ var APIGroupControllerMap = map[string]map[string]versionutils.VersionRange{
 		"clusterrole-aggregation": {},
 	},
 	"resource/v1alpha2": {
-		"resource-claim-controller": {AddedInVersion: "1.27"},
+		"resource-claim-controller": {AddedInVersion: "1.27", RemovedInVersion: "1.31"},
+	},
+	"resource/v1alpha3": {
+		"resource-claim-controller": {AddedInVersion: "1.31"},
 	},
 	"storagemigration/v1alpha1": {
 		"storage-version-migrator-controller": {AddedInVersion: "1.30"},
