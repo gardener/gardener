@@ -198,8 +198,7 @@ func gardenPrometheusRule(isGardenerDiscoveryServerEnabled bool) *monitoringv1.P
 		},
 		{
 			Alert:  "RuntimeCACertificateAboutToExpire",
-			Expr:   intstr.FromString("probe_ssl_earliest_cert_expiry - time() < 86400 * 30"),
-			For:    ptr.To(monitoringv1.Duration("10m")),
+			Expr:   intstr.FromString("probe_ssl_earliest_cert_expiry - time() < 60 * 60 * 24 * 30"),
 			Labels: getLabels("warning"),
 			Annotations: map[string]string{
 				"summary": "Runtime CA certificate is about to expire",
