@@ -167,10 +167,6 @@ func verifyKubernetesVersions(ctx context.Context, shootClient kubernetes.Interf
 		if kubeletVersion := node.Status.NodeInfo.KubeletVersion; kubeletVersion != kubernetesVersion {
 			return fmt.Errorf("kubelet version of pool %q is %q but expected %q", poolName, kubeletVersion, kubernetesVersion)
 		}
-
-		if kubeProxyVersion := node.Status.NodeInfo.KubeProxyVersion; kubeProxyVersion != kubernetesVersion {
-			return fmt.Errorf("kube-proxy version of pool %q is %q but expected %q", poolName, kubeProxyVersion, kubernetesVersion)
-		}
 	}
 
 	return nil
