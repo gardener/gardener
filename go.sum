@@ -949,8 +949,6 @@ k8s.io/kube-state-metrics/v2 v2.13.0 h1:g5OV0cwrDKvyrQApYxI7Ny+vFUgU3X6MYrnIzdCA
 k8s.io/kube-state-metrics/v2 v2.13.0/go.mod h1:sGt/NFkZkA4hqb4cVd/xG2G17dzZ72TQXqSpHn8rF/U=
 k8s.io/kubelet v0.29.5 h1:tYYyc2JcrDt8jFYTsKpgcIpp+S5a/nm85CY4liosprw=
 k8s.io/kubelet v0.29.5/go.mod h1:eWJR0OtRRkLwKEYjsQXcTyTZlSfgR3Py1xJVFa0ISTk=
-k8s.io/kubernetes v1.31.0 h1:sYAB12TTWexXKp4RxqJMm/7EC+P0mNOgn4Xdj5eu7HM=
-k8s.io/kubernetes v1.31.0/go.mod h1:UTpGn7nxrUrPWw5hNIYTAjodcWIvLakgHpLtfrr6GC8=
 k8s.io/metrics v0.29.5 h1:5AZBM4pMiq+SHi2/RP1OuL90In3f07BrL610zunKoxA=
 k8s.io/metrics v0.29.5/go.mod h1:Cx7JPEEbjdDpEQ2A1QyXSBd6z5bxlwaSf9rgFJ/adfQ=
 k8s.io/pod-security-admission v0.31.1 h1:j++ISpfQU0mWpKhoS4tY06Wm5EKdn65teL4lPJhEMIM=

@@ -80,10 +80,7 @@ require (
 	sigs.k8s.io/yaml v1.4.0
 )
 
-require (
-	dario.cat/mergo v1.0.1 // indirect
-	k8s.io/kubernetes v1.31.0
-)
+require dario.cat/mergo v1.0.1 // indirect
 
 require (
 	k8s.io/code-generator v0.31.1

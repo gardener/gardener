@@ -89,6 +89,7 @@ CODE_GENERATOR_VERSION ?= $(call version_gomod,k8s.io/code-generator)
 MOCKGEN_VERSION ?= $(call version_gomod,go.uber.org/mock)
 OPENAPI_GEN_VERSION ?= $(call version_gomod,k8s.io/kube-openapi)
 CONTROLLER_RUNTIME_VERSION ?= $(call version_gomod,sigs.k8s.io/controller-runtime)
+K8S_VERSION ?= $(subst v0,v1,$(call version_gomod,k8s.io/api))
 
 # default dir for importing tool binaries
 TOOLS_BIN_SOURCE_DIR ?= /gardenertools
@@ -176,8 +177,10 @@ $(GO_TO_PROTOBUF): $(call tool_version_file,$(GO_TO_PROTOBUF),$(CODE_GENERATOR_V
 $(HELM): $(call tool_version_file,$(HELM),$(HELM_VERSION))
 	curl -sSfL https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | HELM_INSTALL_DIR=$(TOOLS_BIN_DIR) USE_SUDO=false bash -s -- --version $(HELM_VERSION)
 
-$(IMPORT_BOSS): $(call tool_version_file,$(IMPORT_BOSS),$(CODE_GENERATOR_VERSION))
-	go build -o $(IMPORT_BOSS) k8s.io/kubernetes/cmd/import-boss
+$(IMPORT_BOSS): $(call tool_version_file,$(IMPORT_BOSS),$(K8S_VERSION))
+	mkdir -p hack/tools/bin/work/import-boss
+	curl -L -o hack/tools/bin/work/import-boss/main.go https://raw.githubusercontent.com/kubernetes/kubernetes/$(K8S_VERSION)/cmd/import-boss/main.go
+	go build -o $(IMPORT_BOSS) ./hack/tools/bin/work/import-boss
 
 $(KIND): $(call tool_version_file,$(KIND),$(KIND_VERSION))
 	curl -L -o $(KIND) https://kind.sigs.k8s.io/dl/$(KIND_VERSION)/kind-$(SYSTEM_NAME)-$(SYSTEM_ARCH)
