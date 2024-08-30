@@ -65,9 +65,9 @@ var (
 	testNamespace *corev1.Namespace
 	gardenName    string
 
-	fakeRegistry             *ocifake.Registry
-	ociRepositoryApplication gardencorev1.OCIRepository
-	ociRepositoryRuntime     gardencorev1.OCIRepository
+	fakeRegistry                           *ocifake.Registry
+	ociRepositoryAdmissionApplicationChart gardencorev1.OCIRepository
+	ociRepositoryAdmissionRuntimeChart     gardencorev1.OCIRepository
 )
 
 var _ = BeforeSuite(func() {
@@ -162,26 +162,26 @@ var _ = BeforeSuite(func() {
 	gardenClientMap := fakeclientmap.NewClientMapBuilder().WithClientSetForKey(keys.ForGarden(&operatorv1alpha1.Garden{ObjectMeta: metav1.ObjectMeta{Name: gardenName}}), testClientSet).Build()
 
 	By("Setup fake OCI registry with admission-local charts")
-	ociRepositoryApplication = gardencorev1.OCIRepository{Repository: ptr.To("admission-local-application"), Tag: ptr.To("test")}
-	ociRepositoryRuntime = gardencorev1.OCIRepository{Repository: ptr.To("admission-local-runtime"), Tag: ptr.To("test")}
+	ociRepositoryAdmissionApplicationChart = gardencorev1.OCIRepository{Repository: ptr.To("admission-local-application"), Tag: ptr.To("test")}
+	ociRepositoryAdmissionRuntimeChart = gardencorev1.OCIRepository{Repository: ptr.To("admission-local-runtime"), Tag: ptr.To("test")}
 
 	Expect(exec.Command("helm", "package", filepath.Join("..", "..", "..", "..", "charts", "gardener", "admission-local", "charts", "application"), "--destination", ".").Run()).To(Succeed())
 	DeferCleanup(func() {
 		Expect(os.Remove("admission-local-application-0.1.0.tgz")).To(Succeed())
 	})
-	admissionLocalApplication, err := os.ReadFile("admission-local-application-0.1.0.tgz")
+	admissionLocalApplicationChart, err := os.ReadFile("admission-local-application-0.1.0.tgz")
 	Expect(err).NotTo(HaveOccurred())
 
 	Expect(exec.Command("helm", "package", filepath.Join("..", "..", "..", "..", "charts", "gardener", "admission-local", "charts", "runtime"), "--destination", ".").Run()).To(Succeed())
 	DeferCleanup(func() {
 		Expect(os.Remove("admission-local-runtime-0.1.0.tgz")).To(Succeed())
 	})
-	admissionLocalRuntime, err := os.ReadFile("admission-local-runtime-0.1.0.tgz")
+	admissionLocalRuntimeChart, err := os.ReadFile("admission-local-runtime-0.1.0.tgz")
 	Expect(err).NotTo(HaveOccurred())
 
 	fakeRegistry = ocifake.NewRegistry()
-	fakeRegistry.AddArtifact(&ociRepositoryApplication, admissionLocalApplication)
-	fakeRegistry.AddArtifact(&ociRepositoryRuntime, admissionLocalRuntime)
+	fakeRegistry.AddArtifact(&ociRepositoryAdmissionApplicationChart, admissionLocalApplicationChart)
+	fakeRegistry.AddArtifact(&ociRepositoryAdmissionRuntimeChart, admissionLocalRuntimeChart)
 
 	By("Register controller")
 	Expect((&extension.Reconciler{

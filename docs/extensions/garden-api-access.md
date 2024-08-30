@@ -6,13 +6,13 @@ title: Access to the Garden Cluster for Extensions
 
 Gardener offers different means to provide or equip registered extensions with a kubeconfig which may be used to connect to the garden cluster.
 
-## Admission controllers
+## Admission Controllers
 
-For extensions with an admission controller deployment, `gardener-operator` injects a token based kubeconfig as a volume and volume mount.
-The token is valid for `12h`, automatically renewed and associated with a dedicated `ServiceAccount` in the garden cluster.
+For extensions with an admission controller deployment, `gardener-operator` injects a token-based kubeconfig as a volume and volume mount.
+The token is valid for `12h`, automatically renewed, and associated with a dedicated `ServiceAccount` in the garden cluster.
 The path to this kubeconfig is revealed under the `GARDEN_KUBECONFIG` environment variable, also added to the pod spec(s).
 
-## Extensions on `Seed` clusters
+## Extensions on `Seed` Clusters
 
 Extensions that are installed on seed clusters via a `ControllerInstallation` can simply read the kubeconfig file specified by the `GARDEN_KUBECONFIG` environment variable to create a garden cluster client.
 With this, they use a short-lived token (valid for `12h`) associated with a dedicated `ServiceAccount` in the `seed-<seed-name>` namespace to securely access the garden cluster.

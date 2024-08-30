@@ -138,12 +138,12 @@ var _ = Describe("Extension controller tests", func() {
 					AdmissionDeployment: &operatorv1alpha1.AdmissionDeploymentSpec{
 						RuntimeCluster: &operatorv1alpha1.DeploymentSpec{
 							Helm: &operatorv1alpha1.ExtensionHelm{
-								OCIRepository: &ociRepositoryRuntime,
+								OCIRepository: &ociRepositoryAdmissionRuntimeChart,
 							},
 						},
 						VirtualCluster: &operatorv1alpha1.DeploymentSpec{
 							Helm: &operatorv1alpha1.ExtensionHelm{
-								OCIRepository: &ociRepositoryApplication,
+								OCIRepository: &ociRepositoryAdmissionApplicationChart,
 							},
 						},
 					},

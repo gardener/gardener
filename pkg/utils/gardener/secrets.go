@@ -85,7 +85,8 @@ func MutateObjectsInSecretData(
 	secretData map[string][]byte,
 	namespace string,
 	apiGroups []string,
-	mutateFns ...func(object runtime.Object) error) error {
+	mutateFns ...func(object runtime.Object) error,
+) error {
 	return mutateObjects(secretData, func(obj *unstructured.Unstructured) error {
 		// only inject into objects of selected API groups
 		if !slices.Contains(apiGroups, obj.GetObjectKind().GroupVersionKind().Group) {

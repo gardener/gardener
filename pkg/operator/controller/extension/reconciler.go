@@ -54,7 +54,7 @@ type Reconciler struct {
 	Clock            clock.Clock
 	Recorder         record.EventRecorder
 	GardenNamespace  string
-	// GardenClientMap is the ClientMap used to communicate with the virtual garden cluster. It should be set by AddToManager function but the field is still public for use in tests.
+	// GardenClientMap is the ClientMap used to communicate with the virtual garden cluster. It should be set by AddToManager function but the field is still public for usage in tests.
 	GardenClientMap clientmap.ClientMap
 	HelmRegistry    oci.Interface
 }
@@ -161,6 +161,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, virtualClus
 		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionFalse, ConditionReconcileFailed, err.Error())
 		return errors.Join(err, r.updateExtensionStatus(ctx, log, extension, conditions))
 	}
+
 	log.Info("Reconciling admission virtual resources")
 	if err := r.reconcileAdmissionVirtualClusterResources(reconcileCtx, log, virtualClusterClientSet, extension); err != nil {
 		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionFalse, ConditionReconcileFailed, err.Error())

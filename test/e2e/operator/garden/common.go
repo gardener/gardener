@@ -48,7 +48,7 @@ var _ = BeforeSuite(func() {
 	runtimeClient, err = client.New(restConfig, client.Options{Scheme: operatorclient.RuntimeScheme})
 	Expect(err).NotTo(HaveOccurred())
 
-	// TODO(timuthy): Remove this special handling as soon as extensions provider a proper deletion procedure. Planned for release v1.103 or v1.104.
+	// TODO(timuthy): Remove this special handling as soon as extensions provider a proper deletion procedure, i.e cleaning up extension resources when garden resource is deleted. Planned for release v1.103 or v1.104.
 	extensionProviderLocal = &operatorv1alpha1.Extension{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "provider-local",
@@ -60,8 +60,8 @@ var _ = BeforeSuite(func() {
 var _ = BeforeEach(func() {
 	parentCtx = context.Background()
 
-	// Revert extension to state that was originally deplpoyed through Skaffold.
-	// TODO(timuthy): Remove this special handling as soon as extensions provider a proper deletion procedure. Planned for release v1.103 or v1.104.
+	// Revert extension to state that was originally deployed through Skaffold.
+	// TODO(timuthy): Remove this special handling as soon as extensions provider a proper deletion procedure, i.e cleaning up extension resources when garden resource is deleted. Planned for release v1.103 or v1.104.
 	extension := &operatorv1alpha1.Extension{}
 	Expect(runtimeClient.Get(parentCtx, client.ObjectKeyFromObject(extensionProviderLocal), extension)).To(Succeed())
 	patch := client.MergeFrom(extension.DeepCopy())

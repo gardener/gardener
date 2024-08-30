@@ -164,6 +164,7 @@ The deployment of an admission controller is optional and may be omitted.
 Typically, the admission controllers are split in two parts:
 
 ##### Runtime
+
 The `runtime` part contains deployment relevant manifests, required to run the admission service in the runtime cluster.
 The following values are passed to the chart during reconciliation:
 
@@ -174,6 +175,7 @@ gardener:
 ```
 
 ##### Virtual
+
 The `virtual` part includes the webhook registration ([MutatingWebhookConfiguration`/`Validatingwebhookconfiguration](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/)) and RBAC configuration.
 The following values are passed to the chart during reconciliation:
 
@@ -185,7 +187,9 @@ gardener:
       namespace: <Namespace of the service account>
 ```
 
-Admission controllers often need to retrieve additional context from the garden cluster in order to process validating or mutating requests. For example, the corresponding `CloudProfile` might be needed to perform a provider specific shoot validation.
+Admission controllers often need to retrieve additional context from the garden cluster in order to process validating or mutating requests.
+
+For example, the corresponding `CloudProfile` might be needed to perform a provider specific shoot validation.
 Therefore, Gardener automatically injects a kubeconfig into the admission deployment to interact with the (virtual) garden cluster (see [this document](https://github.com/gardener/gardener/blob/master/docs/extensions/garden-api-access.md) for more information).
 
 ### Configuration for Extension Resources
