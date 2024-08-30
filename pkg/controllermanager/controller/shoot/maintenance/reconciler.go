@@ -145,17 +145,34 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		return err
 	}
 
-	// Reset the `EnableStaticTokenKubeconfig` value to false, when shoot cluster is updated to  k8s version >= 1.27.
-	if versionutils.ConstraintK8sLess127.Check(oldShootKubernetesVersion) && versionutils.ConstraintK8sGreaterEqual127.Check(shootKubernetesVersion) {
-		if ptr.Deref(maintainedShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, false) {
-			maintainedShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(false)
+	// Set the .spec.kubernetes.enableStaticTokenKubeconfig field to false, when Shoot cluster is being forcefully updated to K8s >= 1.27.
+	// Gardener forbids enabling the static token kubeconfig for Shoots with K8s 1.27+. See https://github.com/gardener/gardener/pull/7883/commits/ca49644d32df48e0cf3fd00192f2ad078555796c
+	{
+		if versionutils.ConstraintK8sLess127.Check(oldShootKubernetesVersion) && versionutils.ConstraintK8sGreaterEqual127.Check(shootKubernetesVersion) {
+			if ptr.Deref(maintainedShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, false) {
+				maintainedShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(false)
 
-			reason := "EnableStaticTokenKubeconfig is set to false. Reason: The static token kubeconfig can no longer be enabled for Shoot clusters using Kubernetes version 1.27 and higher"
-			operations = append(operations, reason)
+				reason := ".spec.kubernetes.enableStaticTokenKubeconfig is set to false. Reason: The static token kubeconfig can no longer be enabled for Shoot clusters using Kubernetes version 1.27+"
+				operations = append(operations, reason)
+			}
+
+			reasonsForIncreasingMaxWorkers := ensureSufficientMaxWorkers(maintainedShoot, fmt.Sprintf("Maximum number of workers of a worker group must be greater or equal to its number of zones for updating Kubernetes to %q", shootKubernetesVersion.String()))
+			operations = append(operations, reasonsForIncreasingMaxWorkers...)
 		}
+	}
 
-		reasonsForIncreasingMaxWorkers := ensureSufficientMaxWorkers(maintainedShoot, fmt.Sprintf("Maximum number of workers of a worker group must be greater or equal to its number of zones for updating Kubernetes to %q", shootKubernetesVersion.String()))
-		operations = append(operations, reasonsForIncreasingMaxWorkers...)
+	// Set the .spec.kubernetes.kubeAPIServer.oidcConfig.clientAuthentication field to nil, when Shoot cluster is being forcefully updated to K8s >= 1.31.
+	// Gardener forbids setting the field for Shoots with K8s 1.31+. See https://github.com/gardener/gardener/pull/10253
+	{
+		if versionutils.ConstraintK8sLess131.Check(oldShootKubernetesVersion) && versionutils.ConstraintK8sGreaterEqual131.Check(shootKubernetesVersion) {
+			if maintainedShoot.Spec.Kubernetes.KubeAPIServer != nil && maintainedShoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig != nil &&
+				maintainedShoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientAuthentication != nil {
+				maintainedShoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientAuthentication = nil
+
+				reason := ".spec.kubernetes.kubeAPIServer.oidcConfig.clientAuthentication is set to nil. Reason: The field was no-op since its introduction and can no longer be enabled for Shoot clusters using Kubernetes version 1.31+"
+				operations = append(operations, reason)
+			}
+		}
 	}
 
 	// Now it's time to update worker pool kubernetes version if specified

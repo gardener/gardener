@@ -29,6 +29,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 		shoot126     *gardencorev1beta1.Shoot
 		shoot127     *gardencorev1beta1.Shoot
 		shoot129     *gardencorev1beta1.Shoot
+		shoot130     *gardencorev1beta1.Shoot
 
 		// Test Machine Image
 		machineImageName             = "foo-image"
@@ -88,6 +89,12 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 						},
 						{
 							Version: "1.27.0",
+						},
+						{
+							Version: "1.30.0",
+						},
+						{
+							Version: "1.31.0",
 						},
 						testKubernetesVersionLowPatchLowMinor,
 						testKubernetesVersionHighestPatchLowMinor,
@@ -358,6 +365,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 		shoot126 = shoot.DeepCopy()
 		shoot127 = shoot.DeepCopy()
 		shoot129 = shoot.DeepCopy()
+		shoot130 = shoot.DeepCopy()
 		// set dummy kubernetes version to shoot
 		shoot.Spec.Kubernetes.Version = testKubernetesVersionLowPatchLowMinor.Version
 
@@ -994,7 +1002,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				}).Should(Equal(testKubernetesVersionHighestPatchLowMinor.Version))
 			})
 
-			It("Kubernetes version should be updated: force update minor version(>= v1.27) and set EnableStaticTokenKubeconfig value to false", func() {
+			It("Kubernetes version should be updated: force update minor version(>= v1.27) and set spec.kubernetes.enableStaticTokenKubeconfig to false", func() {
 				shoot126.Spec.Kubernetes.Version = "1.26.0"
 				shoot126.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(true)
 
@@ -1018,12 +1026,51 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				Eventually(func(g Gomega) string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot126), shoot126)).To(Succeed())
 					g.Expect(shoot126.Status.LastMaintenance).NotTo(BeNil())
-					g.Expect(shoot126.Status.LastMaintenance.Description).To(ContainSubstring("Control Plane: Updated Kubernetes version from \"1.26.0\" to \"1.27.0\". Reason: Kubernetes version expired - force update required, EnableStaticTokenKubeconfig is set to false. Reason: The static token kubeconfig can no longer be enabled for Shoot clusters using Kubernetes version 1.27 and higher"))
+					g.Expect(shoot126.Status.LastMaintenance.Description).To(ContainSubstring("Control Plane: Updated Kubernetes version from \"1.26.0\" to \"1.27.0\". Reason: Kubernetes version expired - force update required, .spec.kubernetes.enableStaticTokenKubeconfig is set to false. Reason: The static token kubeconfig can no longer be enabled for Shoot clusters using Kubernetes version 1.27+"))
 					g.Expect(shoot126.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
 					g.Expect(shoot126.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
 					g.Expect(shoot126.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(Equal(ptr.To(false)))
 					return shoot126.Spec.Kubernetes.Version
 				}).Should(Equal("1.27.0"))
+			})
+
+			It("Kubernetes version should be updated: force update minor version(>= v1.31) and set spec.kubernetes.kubeAPIServer.oidcConfig.clientAuthentication to nil", func() {
+				shoot130.Spec.Kubernetes.Version = "1.30.0"
+				shoot130.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
+					OIDCConfig: &gardencorev1beta1.OIDCConfig{
+						ClientAuthentication: &gardencorev1beta1.OpenIDConnectClientAuthentication{
+							ExtraConfig: map[string]string{"foo": "bar"},
+							Secret:      ptr.To("foo-secret"),
+						},
+					},
+				}
+
+				By("Create k8s v1.30 Shoot")
+				Expect(testClient.Create(ctx, shoot130)).To(Succeed())
+				log.Info("Created shoot with k8s v1.30 for test", "shoot", client.ObjectKeyFromObject(shoot))
+
+				DeferCleanup(func() {
+					By("Delete Shoot with k8s v1.30")
+					Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot130))).To(Succeed())
+				})
+
+				By("Expire Shoot's kubernetes version in the CloudProfile")
+				Expect(patchCloudProfileForKubernetesVersionMaintenance(ctx, testClient, *shoot130.Spec.CloudProfileName, "1.30.0", &expirationDateInThePast, &deprecatedClassification)).To(Succeed())
+
+				By("Wait until manager has observed the CloudProfile update")
+				waitKubernetesVersionToBeExpiredInCloudProfile(*shoot130.Spec.CloudProfileName, "1.30.0", &expirationDateInThePast)
+
+				Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, shoot130, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
+
+				Eventually(func(g Gomega) string {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot130), shoot130)).To(Succeed())
+					g.Expect(shoot130.Status.LastMaintenance).NotTo(BeNil())
+					g.Expect(shoot130.Status.LastMaintenance.Description).To(ContainSubstring("Control Plane: Updated Kubernetes version from \"1.30.0\" to \"1.31.0\". Reason: Kubernetes version expired - force update required, .spec.kubernetes.kubeAPIServer.oidcConfig.clientAuthentication is set to nil. Reason: The field was no-op since its introduction and can no longer be enabled for Shoot clusters using Kubernetes version 1.31+"))
+					g.Expect(shoot130.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+					g.Expect(shoot130.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
+					g.Expect(shoot130.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientAuthentication).To(BeNil())
+					return shoot130.Spec.Kubernetes.Version
+				}).Should(Equal("1.31.0"))
 			})
 
 			It("Kubernetes version should be updated: force update minor version", func() {
