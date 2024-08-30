@@ -142,7 +142,8 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		RenewDeadline:                 &cfg.LeaderElection.RenewDeadline.Duration,
 		RetryPeriod:                   &cfg.LeaderElection.RetryPeriod.Duration,
 		Controller: controllerconfig.Controller{
-			RecoverPanic: ptr.To(true),
+			SkipNameValidation: ptr.To(true),
+			RecoverPanic:       ptr.To(true),
 		},
 
 		MapperProvider: apiutil.NewDynamicRESTMapper,

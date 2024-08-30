@@ -14,8 +14,10 @@ import (
 	"github.com/spf13/afero"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
@@ -61,6 +63,9 @@ var _ = Describe("Token controller tests", func() {
 			Metrics: metricsserver.Options{BindAddress: "0"},
 			Cache: cache.Options{
 				DefaultNamespaces: map[string]cache.Config{metav1.NamespaceSystem: {}},
+			},
+			Controller: controllerconfig.Controller{
+				SkipNameValidation: ptr.To(true),
 			},
 		})
 		Expect(err).NotTo(HaveOccurred())

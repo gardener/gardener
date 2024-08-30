@@ -20,6 +20,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -105,6 +106,9 @@ var _ = BeforeSuite(func() {
 		Cache: cache.Options{
 			DefaultNamespaces:    map[string]cache.Config{testNamespace.Name: {}},
 			DefaultLabelSelector: labels.SelectorFromSet(labels.Set{testID: testRunID}),
+		},
+		Controller: controllerconfig.Controller{
+			SkipNameValidation: ptr.To(true),
 		},
 	})
 	mgrClient = mgr.GetClient()

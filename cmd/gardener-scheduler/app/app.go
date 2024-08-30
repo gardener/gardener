@@ -115,7 +115,8 @@ func run(ctx context.Context, log logr.Logger, cfg *config.SchedulerConfiguratio
 		RenewDeadline:                 &cfg.LeaderElection.RenewDeadline.Duration,
 		RetryPeriod:                   &cfg.LeaderElection.RetryPeriod.Duration,
 		Controller: controllerconfig.Controller{
-			RecoverPanic: ptr.To(true),
+			SkipNameValidation: ptr.To(true),
+			RecoverPanic:       ptr.To(true),
 		},
 	})
 	if err != nil {
