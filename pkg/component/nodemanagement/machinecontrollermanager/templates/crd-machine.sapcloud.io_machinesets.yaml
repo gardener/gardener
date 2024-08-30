@@ -5,7 +5,7 @@ metadata:
   labels:
     gardener.cloud/deletion-protected: "true"
   annotations:
-    controller-gen.kubebuilder.io/version: v0.14.0
+    controller-gen.kubebuilder.io/version: v0.16.1
   name: machinesets.machine.sapcloud.io
 spec:
   group: machine.sapcloud.io
@@ -113,11 +113,13 @@ spec:
                           items:
                             type: string
                           type: array
+                          x-kubernetes-list-type: atomic
                       required:
                       - key
                       - operator
                       type: object
                     type: array
+                    x-kubernetes-list-type: atomic
                   matchLabels:
                     additionalProperties:
                       type: string
@@ -247,6 +249,7 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                                x-kubernetes-list-type: set
                               providerID:
                                 description: 'ID of the node assigned by the cloud
                                   provider in the format: <ProviderName>://<ProviderSpecificNodeID>'
@@ -283,6 +286,7 @@ spec:
                                   - key
                                   type: object
                                 type: array
+                                x-kubernetes-list-type: atomic
                               unschedulable:
                                 description: |-
                                   Unschedulable controls node schedulability of new pods. By default, node is schedulable.

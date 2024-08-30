@@ -29,22 +29,24 @@ var shootsKind = v1beta1.SchemeGroupVersion.WithKind("Shoot")
 
 // Get takes name of the shoot, and returns the corresponding shoot object, and an error if there is any.
 func (c *FakeShoots) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.Shoot, err error) {
+	emptyResult := &v1beta1.Shoot{}
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(shootsResource, c.ns, name), &v1beta1.Shoot{})
+		Invokes(testing.NewGetActionWithOptions(shootsResource, c.ns, name, options), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.Shoot), err
 }
 
 // List takes label and field selectors, and returns the list of Shoots that match those selectors.
 func (c *FakeShoots) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.ShootList, err error) {
+	emptyResult := &v1beta1.ShootList{}
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(shootsResource, shootsKind, c.ns, opts), &v1beta1.ShootList{})
+		Invokes(testing.NewListActionWithOptions(shootsResource, shootsKind, c.ns, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -63,40 +65,43 @@ func (c *FakeShoots) List(ctx context.Context, opts v1.ListOptions) (result *v1b
 // Watch returns a watch.Interface that watches the requested shoots.
 func (c *FakeShoots) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(shootsResource, c.ns, opts))
+		InvokesWatch(testing.NewWatchActionWithOptions(shootsResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a shoot and creates it.  Returns the server's representation of the shoot, and an error, if there is any.
 func (c *FakeShoots) Create(ctx context.Context, shoot *v1beta1.Shoot, opts v1.CreateOptions) (result *v1beta1.Shoot, err error) {
+	emptyResult := &v1beta1.Shoot{}
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(shootsResource, c.ns, shoot), &v1beta1.Shoot{})
+		Invokes(testing.NewCreateActionWithOptions(shootsResource, c.ns, shoot, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.Shoot), err
 }
 
 // Update takes the representation of a shoot and updates it. Returns the server's representation of the shoot, and an error, if there is any.
 func (c *FakeShoots) Update(ctx context.Context, shoot *v1beta1.Shoot, opts v1.UpdateOptions) (result *v1beta1.Shoot, err error) {
+	emptyResult := &v1beta1.Shoot{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(shootsResource, c.ns, shoot), &v1beta1.Shoot{})
+		Invokes(testing.NewUpdateActionWithOptions(shootsResource, c.ns, shoot, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.Shoot), err
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeShoots) UpdateStatus(ctx context.Context, shoot *v1beta1.Shoot, opts v1.UpdateOptions) (*v1beta1.Shoot, error) {
+func (c *FakeShoots) UpdateStatus(ctx context.Context, shoot *v1beta1.Shoot, opts v1.UpdateOptions) (result *v1beta1.Shoot, err error) {
+	emptyResult := &v1beta1.Shoot{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(shootsResource, "status", c.ns, shoot), &v1beta1.Shoot{})
+		Invokes(testing.NewUpdateSubresourceActionWithOptions(shootsResource, "status", c.ns, shoot, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.Shoot), err
 }
@@ -111,7 +116,7 @@ func (c *FakeShoots) Delete(ctx context.Context, name string, opts v1.DeleteOpti
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeShoots) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(shootsResource, c.ns, listOpts)
+	action := testing.NewDeleteCollectionActionWithOptions(shootsResource, c.ns, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1beta1.ShootList{})
 	return err
@@ -119,11 +124,12 @@ func (c *FakeShoots) DeleteCollection(ctx context.Context, opts v1.DeleteOptions
 
 // Patch applies the patch and returns the patched shoot.
 func (c *FakeShoots) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.Shoot, err error) {
+	emptyResult := &v1beta1.Shoot{}
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(shootsResource, c.ns, name, pt, data, subresources...), &v1beta1.Shoot{})
+		Invokes(testing.NewPatchSubresourceActionWithOptions(shootsResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.Shoot), err
 }

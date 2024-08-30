@@ -5,7 +5,7 @@ metadata:
   labels:
     gardener.cloud/deletion-protected: "true"
   annotations:
-    controller-gen.kubebuilder.io/version: v0.14.0
+    controller-gen.kubebuilder.io/version: v0.16.1
   name: machinedeployments.machine.sapcloud.io
 spec:
   group: machine.sapcloud.io
@@ -145,11 +145,13 @@ spec:
                           items:
                             type: string
                           type: array
+                          x-kubernetes-list-type: atomic
                       required:
                       - key
                       - operator
                       type: object
                     type: array
+                    x-kubernetes-list-type: atomic
                   matchLabels:
                     additionalProperties:
                       type: string
@@ -168,9 +170,6 @@ spec:
                     description: |-
                       Rolling update config params. Present only if MachineDeploymentStrategyType =
                       RollingUpdate.
-                      ---
-                      TODO: Update this to follow our convention for oneOf, whatever we decide it
-                      to be.
                     properties:
                       maxSurge:
                         anyOf:
@@ -329,6 +328,7 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                                x-kubernetes-list-type: set
                               providerID:
                                 description: 'ID of the node assigned by the cloud
                                   provider in the format: <ProviderName>://<ProviderSpecificNodeID>'
@@ -365,6 +365,7 @@ spec:
                                   - key
                                   type: object
                                 type: array
+                                x-kubernetes-list-type: atomic
                               unschedulable:
                                 description: |-
                                   Unschedulable controls node schedulability of new pods. By default, node is schedulable.

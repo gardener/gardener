@@ -8,8 +8,8 @@ package v1beta1
 
 import (
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -26,25 +26,17 @@ type NamespacedCloudProfileLister interface {
 
 // namespacedCloudProfileLister implements the NamespacedCloudProfileLister interface.
 type namespacedCloudProfileLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1beta1.NamespacedCloudProfile]
 }
 
 // NewNamespacedCloudProfileLister returns a new NamespacedCloudProfileLister.
 func NewNamespacedCloudProfileLister(indexer cache.Indexer) NamespacedCloudProfileLister {
-	return &namespacedCloudProfileLister{indexer: indexer}
-}
-
-// List lists all NamespacedCloudProfiles in the indexer.
-func (s *namespacedCloudProfileLister) List(selector labels.Selector) (ret []*v1beta1.NamespacedCloudProfile, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1beta1.NamespacedCloudProfile))
-	})
-	return ret, err
+	return &namespacedCloudProfileLister{listers.New[*v1beta1.NamespacedCloudProfile](indexer, v1beta1.Resource("namespacedcloudprofile"))}
 }
 
 // NamespacedCloudProfiles returns an object that can list and get NamespacedCloudProfiles.
 func (s *namespacedCloudProfileLister) NamespacedCloudProfiles(namespace string) NamespacedCloudProfileNamespaceLister {
-	return namespacedCloudProfileNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return namespacedCloudProfileNamespaceLister{listers.NewNamespaced[*v1beta1.NamespacedCloudProfile](s.ResourceIndexer, namespace)}
 }
 
 // NamespacedCloudProfileNamespaceLister helps list and get NamespacedCloudProfiles.
@@ -62,26 +54,5 @@ type NamespacedCloudProfileNamespaceLister interface {
 // namespacedCloudProfileNamespaceLister implements the NamespacedCloudProfileNamespaceLister
 // interface.
 type namespacedCloudProfileNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all NamespacedCloudProfiles in the indexer for a given namespace.
-func (s namespacedCloudProfileNamespaceLister) List(selector labels.Selector) (ret []*v1beta1.NamespacedCloudProfile, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1beta1.NamespacedCloudProfile))
-	})
-	return ret, err
-}
-
-// Get retrieves the NamespacedCloudProfile from the indexer for a given namespace and name.
-func (s namespacedCloudProfileNamespaceLister) Get(name string) (*v1beta1.NamespacedCloudProfile, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1beta1.Resource("namespacedcloudprofile"), name)
-	}
-	return obj.(*v1beta1.NamespacedCloudProfile), nil
+	listers.ResourceIndexer[*v1beta1.NamespacedCloudProfile]
 }

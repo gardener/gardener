@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.14.0
+    controller-gen.kubebuilder.io/version: v0.16.1
   name: gardens.operator.gardener.cloud
 spec:
   group: operator.gardener.cloud
@@ -96,10 +96,13 @@ spec:
                               The certificates are expected at key 'bundle.crt'.
                             properties:
                               name:
+                                default: ""
                                 description: |-
                                   Name of the referent.
+                                  This field is effectively required, but due to backwards compatibility is
+                                  allowed to be empty. Instances of this type with an empty value here are
+                                  almost certainly wrong.
                                   More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                             type: object
                             x-kubernetes-map-type: atomic
@@ -130,10 +133,13 @@ spec:
                                   'privateKey').
                                 properties:
                                   name:
+                                    default: ""
                                     description: |-
                                       Name of the referent.
+                                      This field is effectively required, but due to backwards compatibility is
+                                      allowed to be empty. Instances of this type with an empty value here are
+                                      almost certainly wrong.
                                       More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind, uid?
                                     type: string
                                 type: object
                                 x-kubernetes-map-type: atomic
@@ -154,10 +160,13 @@ spec:
                                   containing the CA for signing certificates.
                                 properties:
                                   name:
+                                    default: ""
                                     description: |-
                                       Name of the referent.
+                                      This field is effectively required, but due to backwards compatibility is
+                                      allowed to be empty. Instances of this type with an empty value here are
+                                      almost certainly wrong.
                                       More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind, uid?
                                     type: string
                                 type: object
                                 x-kubernetes-map-type: atomic
@@ -391,10 +400,13 @@ spec:
                                   backups should be stored. It should have enough privileges to manipulate the objects as well as buckets.
                                 properties:
                                   name:
+                                    default: ""
                                     description: |-
                                       Name of the referent.
+                                      This field is effectively required, but due to backwards compatibility is
+                                      allowed to be empty. Instances of this type with an empty value here are
+                                      almost certainly wrong.
                                       More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind, uid?
                                     type: string
                                 type: object
                                 x-kubernetes-map-type: atomic
@@ -492,7 +504,6 @@ spec:
                                           the event) or if no container name is specified "spec.containers[2]" (container with
                                           index 2 in this pod). This syntax is chosen only to have some well-defined way of
                                           referencing a part of an object.
-                                          TODO: this design is not final and this field is subject to change in the future.
                                         type: string
                                       kind:
                                         description: |-
@@ -806,11 +817,13 @@ spec:
                                             items:
                                               type: string
                                             type: array
+                                            x-kubernetes-list-type: atomic
                                         required:
                                         - key
                                         - operator
                                         type: object
                                       type: array
+                                      x-kubernetes-list-type: atomic
                                     matchLabels:
                                       additionalProperties:
                                         type: string
@@ -852,10 +865,13 @@ spec:
                               (logos/icons).
                             properties:
                               name:
+                                default: ""
                                 description: |-
                                   Name of the referent.
+                                  This field is effectively required, but due to backwards compatibility is
+                                  allowed to be empty. Instances of this type with an empty value here are
+                                  almost certainly wrong.
                                   More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                             type: object
                             x-kubernetes-map-type: atomic
@@ -871,10 +887,13 @@ spec:
                               configuration.
                             properties:
                               name:
+                                default: ""
                                 description: |-
                                   Name of the referent.
+                                  This field is effectively required, but due to backwards compatibility is
+                                  allowed to be empty. Instances of this type with an empty value here are
+                                  almost certainly wrong.
                                   More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                             type: object
                             x-kubernetes-map-type: atomic
@@ -911,10 +930,13 @@ spec:
                                   in the garden namespace containing the GitHub credentials.
                                 properties:
                                   name:
+                                    default: ""
                                     description: |-
                                       Name of the referent.
+                                      This field is effectively required, but due to backwards compatibility is
+                                      allowed to be empty. Instances of this type with an empty value here are
+                                      almost certainly wrong.
                                       More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind, uid?
                                     type: string
                                 type: object
                                 x-kubernetes-map-type: atomic
@@ -953,10 +975,13 @@ spec:
                                   ID and secret for the dashboard.
                                 properties:
                                   name:
+                                    default: ""
                                     description: |-
                                       Name of the referent.
+                                      This field is effectively required, but due to backwards compatibility is
+                                      allowed to be empty. Instances of this type with an empty value here are
+                                      almost certainly wrong.
                                       More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind, uid?
                                     type: string
                                 type: object
                                 x-kubernetes-map-type: atomic
@@ -1101,7 +1126,6 @@ spec:
                                           the event) or if no container name is specified "spec.containers[2]" (container with
                                           index 2 in this pod). This syntax is chosen only to have some well-defined way of
                                           referencing a part of an object.
-                                          TODO: this design is not final and this field is subject to change in the future.
                                         type: string
                                       kind:
                                         description: |-
@@ -1270,10 +1294,8 @@ spec:
                                 description: |-
                                   ClientAuthentication can optionally contain client configuration used for kubeconfig generation.
 
-
                                   Deprecated: This field has no implemented use and will be forbidden starting from Kubernetes 1.31.
                                   It's use was planned for genereting OIDC kubeconfig https://github.com/gardener/gardener/issues/1433
-                                  TODO(AleksandarSavchev): Drop this field after support for Kubernetes 1.30 is dropped.
                                 properties:
                                   extraConfig:
                                     additionalProperties:
@@ -1560,7 +1582,6 @@ spec:
                           podEvictionTimeout:
                             description: |-
                               PodEvictionTimeout defines the grace period for deleting pods on failed nodes. Defaults to 2m.
-
 
                               Deprecated: The corresponding kube-controller-manager flag `--pod-eviction-timeout` is deprecated
                               in favor of the kube-apiserver flags `--default-not-ready-toleration-seconds` and `--default-unreachable-toleration-seconds`.

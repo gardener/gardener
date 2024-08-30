@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.14.0
+    controller-gen.kubebuilder.io/version: v0.16.1
   name: alertmanagerconfigs.monitoring.coreos.com
 spec:
   group: monitoring.coreos.com
@@ -211,6 +211,8 @@ spec:
                             type: array
                         type: object
                       type: array
+                  required:
+                  - name
                   type: object
                 type: array
               receivers:
@@ -236,10 +238,13 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
+                                default: ""
                                 description: |-
                                   Name of the referent.
+                                  This field is effectively required, but due to backwards compatibility is
+                                  allowed to be empty. Instances of this type with an empty value here are
+                                  almost certainly wrong.
                                   More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -267,10 +272,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -284,9 +292,7 @@ spec:
                                     description: |-
                                       Defines the authentication type. The value is case-insensitive.
 
-
                                       "Basic" is not a supported value.
-
 
                                       Default: "Bearer"
                                     type: string
@@ -306,10 +312,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -329,10 +338,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -355,10 +367,13 @@ spec:
                                       be a valid secret key.
                                     type: string
                                   name:
+                                    default: ""
                                     description: |-
                                       Name of the referent.
+                                      This field is effectively required, but due to backwards compatibility is
+                                      allowed to be empty. Instances of this type with an empty value here are
+                                      almost certainly wrong.
                                       More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind, uid?
                                     type: string
                                   optional:
                                     description: Specify whether the Secret or its
@@ -389,10 +404,13 @@ spec:
                                             description: The key to select.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the ConfigMap
@@ -412,10 +430,13 @@ spec:
                                               key.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the Secret
@@ -436,10 +457,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -490,10 +514,13 @@ spec:
                                             description: The key to select.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the ConfigMap
@@ -513,10 +540,13 @@ spec:
                                               key.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the Secret
@@ -539,10 +569,13 @@ spec:
                                             description: The key to select.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the ConfigMap
@@ -562,10 +595,13 @@ spec:
                                               key.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the Secret
@@ -588,10 +624,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -639,10 +678,13 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
+                                default: ""
                                 description: |-
                                   Name of the referent.
+                                  This field is effectively required, but due to backwards compatibility is
+                                  allowed to be empty. Instances of this type with an empty value here are
+                                  almost certainly wrong.
                                   More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -663,10 +705,13 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
+                                default: ""
                                 description: |-
                                   Name of the referent.
+                                  This field is effectively required, but due to backwards compatibility is
+                                  allowed to be empty. Instances of this type with an empty value here are
+                                  almost certainly wrong.
                                   More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -737,10 +782,13 @@ spec:
                                         description: The key to select.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the ConfigMap
@@ -759,10 +807,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -785,10 +836,13 @@ spec:
                                         description: The key to select.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the ConfigMap
@@ -807,10 +861,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -833,10 +890,13 @@ spec:
                                       be a valid secret key.
                                     type: string
                                   name:
+                                    default: ""
                                     description: |-
                                       Name of the referent.
+                                      This field is effectively required, but due to backwards compatibility is
+                                      allowed to be empty. Instances of this type with an empty value here are
+                                      almost certainly wrong.
                                       More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind, uid?
                                     type: string
                                   optional:
                                     description: Specify whether the Secret or its
@@ -882,10 +942,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -899,9 +962,7 @@ spec:
                                     description: |-
                                       Defines the authentication type. The value is case-insensitive.
 
-
                                       "Basic" is not a supported value.
-
 
                                       Default: "Bearer"
                                     type: string
@@ -921,10 +982,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -944,10 +1008,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -970,10 +1037,13 @@ spec:
                                       be a valid secret key.
                                     type: string
                                   name:
+                                    default: ""
                                     description: |-
                                       Name of the referent.
+                                      This field is effectively required, but due to backwards compatibility is
+                                      allowed to be empty. Instances of this type with an empty value here are
+                                      almost certainly wrong.
                                       More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind, uid?
                                     type: string
                                   optional:
                                     description: Specify whether the Secret or its
@@ -1004,10 +1074,13 @@ spec:
                                             description: The key to select.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the ConfigMap
@@ -1027,10 +1100,13 @@ spec:
                                               key.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the Secret
@@ -1051,10 +1127,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -1105,10 +1184,13 @@ spec:
                                             description: The key to select.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the ConfigMap
@@ -1128,10 +1210,13 @@ spec:
                                               key.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the Secret
@@ -1154,10 +1239,13 @@ spec:
                                             description: The key to select.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the ConfigMap
@@ -1177,10 +1265,13 @@ spec:
                                               key.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the Secret
@@ -1203,10 +1294,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -1244,10 +1338,13 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
+                                default: ""
                                 description: |-
                                   Name of the referent.
+                                  This field is effectively required, but due to backwards compatibility is
+                                  allowed to be empty. Instances of this type with an empty value here are
+                                  almost certainly wrong.
                                   More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -1288,10 +1385,13 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
+                                default: ""
                                 description: |-
                                   Name of the referent.
+                                  This field is effectively required, but due to backwards compatibility is
+                                  allowed to be empty. Instances of this type with an empty value here are
+                                  almost certainly wrong.
                                   More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -1347,10 +1447,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -1364,9 +1467,7 @@ spec:
                                     description: |-
                                       Defines the authentication type. The value is case-insensitive.
 
-
                                       "Basic" is not a supported value.
-
 
                                       Default: "Bearer"
                                     type: string
@@ -1386,10 +1487,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -1409,10 +1513,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -1435,10 +1542,13 @@ spec:
                                       be a valid secret key.
                                     type: string
                                   name:
+                                    default: ""
                                     description: |-
                                       Name of the referent.
+                                      This field is effectively required, but due to backwards compatibility is
+                                      allowed to be empty. Instances of this type with an empty value here are
+                                      almost certainly wrong.
                                       More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind, uid?
                                     type: string
                                   optional:
                                     description: Specify whether the Secret or its
@@ -1469,10 +1579,13 @@ spec:
                                             description: The key to select.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the ConfigMap
@@ -1492,10 +1605,13 @@ spec:
                                               key.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the Secret
@@ -1516,10 +1632,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -1570,10 +1689,13 @@ spec:
                                             description: The key to select.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the ConfigMap
@@ -1593,10 +1715,13 @@ spec:
                                               key.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the Secret
@@ -1619,10 +1744,13 @@ spec:
                                             description: The key to select.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the ConfigMap
@@ -1642,10 +1770,13 @@ spec:
                                               key.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the Secret
@@ -1668,10 +1799,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -1800,10 +1934,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -1817,9 +1954,7 @@ spec:
                                     description: |-
                                       Defines the authentication type. The value is case-insensitive.
 
-
                                       "Basic" is not a supported value.
-
 
                                       Default: "Bearer"
                                     type: string
@@ -1839,10 +1974,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -1862,10 +2000,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -1888,10 +2029,13 @@ spec:
                                       be a valid secret key.
                                     type: string
                                   name:
+                                    default: ""
                                     description: |-
                                       Name of the referent.
+                                      This field is effectively required, but due to backwards compatibility is
+                                      allowed to be empty. Instances of this type with an empty value here are
+                                      almost certainly wrong.
                                       More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind, uid?
                                     type: string
                                   optional:
                                     description: Specify whether the Secret or its
@@ -1922,10 +2066,13 @@ spec:
                                             description: The key to select.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the ConfigMap
@@ -1945,10 +2092,13 @@ spec:
                                               key.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the Secret
@@ -1969,10 +2119,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -2023,10 +2176,13 @@ spec:
                                             description: The key to select.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the ConfigMap
@@ -2046,10 +2202,13 @@ spec:
                                               key.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the Secret
@@ -2072,10 +2231,13 @@ spec:
                                             description: The key to select.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the ConfigMap
@@ -2095,10 +2257,13 @@ spec:
                                               key.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the Secret
@@ -2121,10 +2286,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -2189,10 +2357,13 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
+                                default: ""
                                 description: |-
                                   Name of the referent.
+                                  This field is effectively required, but due to backwards compatibility is
+                                  allowed to be empty. Instances of this type with an empty value here are
+                                  almost certainly wrong.
                                   More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -2218,10 +2389,13 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
+                                default: ""
                                 description: |-
                                   Name of the referent.
+                                  This field is effectively required, but due to backwards compatibility is
+                                  allowed to be empty. Instances of this type with an empty value here are
+                                  almost certainly wrong.
                                   More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -2278,10 +2452,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -2295,9 +2472,7 @@ spec:
                                     description: |-
                                       Defines the authentication type. The value is case-insensitive.
 
-
                                       "Basic" is not a supported value.
-
 
                                       Default: "Bearer"
                                     type: string
@@ -2317,10 +2492,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -2340,10 +2518,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -2366,10 +2547,13 @@ spec:
                                       be a valid secret key.
                                     type: string
                                   name:
+                                    default: ""
                                     description: |-
                                       Name of the referent.
+                                      This field is effectively required, but due to backwards compatibility is
+                                      allowed to be empty. Instances of this type with an empty value here are
+                                      almost certainly wrong.
                                       More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind, uid?
                                     type: string
                                   optional:
                                     description: Specify whether the Secret or its
@@ -2400,10 +2584,13 @@ spec:
                                             description: The key to select.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the ConfigMap
@@ -2423,10 +2610,13 @@ spec:
                                               key.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the Secret
@@ -2447,10 +2637,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -2501,10 +2694,13 @@ spec:
                                             description: The key to select.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the ConfigMap
@@ -2524,10 +2720,13 @@ spec:
                                               key.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the Secret
@@ -2550,10 +2749,13 @@ spec:
                                             description: The key to select.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the ConfigMap
@@ -2573,10 +2775,13 @@ spec:
                                               key.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the Secret
@@ -2599,10 +2804,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -2653,10 +2861,13 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
+                                default: ""
                                 description: |-
                                   Name of the referent.
+                                  This field is effectively required, but due to backwards compatibility is
+                                  allowed to be empty. Instances of this type with an empty value here are
+                                  almost certainly wrong.
                                   More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -2691,10 +2902,13 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
+                                default: ""
                                 description: |-
                                   Name of the referent.
+                                  This field is effectively required, but due to backwards compatibility is
+                                  allowed to be empty. Instances of this type with an empty value here are
+                                  almost certainly wrong.
                                   More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -2779,10 +2993,13 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
+                                default: ""
                                 description: |-
                                   Name of the referent.
+                                  This field is effectively required, but due to backwards compatibility is
+                                  allowed to be empty. Instances of this type with an empty value here are
+                                  almost certainly wrong.
                                   More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -2845,10 +3062,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -2862,9 +3082,7 @@ spec:
                                     description: |-
                                       Defines the authentication type. The value is case-insensitive.
 
-
                                       "Basic" is not a supported value.
-
 
                                       Default: "Bearer"
                                     type: string
@@ -2884,10 +3102,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -2907,10 +3128,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -2933,10 +3157,13 @@ spec:
                                       be a valid secret key.
                                     type: string
                                   name:
+                                    default: ""
                                     description: |-
                                       Name of the referent.
+                                      This field is effectively required, but due to backwards compatibility is
+                                      allowed to be empty. Instances of this type with an empty value here are
+                                      almost certainly wrong.
                                       More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind, uid?
                                     type: string
                                   optional:
                                     description: Specify whether the Secret or its
@@ -2967,10 +3194,13 @@ spec:
                                             description: The key to select.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the ConfigMap
@@ -2990,10 +3220,13 @@ spec:
                                               key.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the Secret
@@ -3014,10 +3247,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -3068,10 +3304,13 @@ spec:
                                             description: The key to select.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the ConfigMap
@@ -3091,10 +3330,13 @@ spec:
                                               key.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the Secret
@@ -3117,10 +3359,13 @@ spec:
                                             description: The key to select.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the ConfigMap
@@ -3140,10 +3385,13 @@ spec:
                                               key.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the Secret
@@ -3166,10 +3414,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -3251,10 +3502,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -3268,9 +3522,7 @@ spec:
                                     description: |-
                                       Defines the authentication type. The value is case-insensitive.
 
-
                                       "Basic" is not a supported value.
-
 
                                       Default: "Bearer"
                                     type: string
@@ -3290,10 +3542,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -3313,10 +3568,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -3339,10 +3597,13 @@ spec:
                                       be a valid secret key.
                                     type: string
                                   name:
+                                    default: ""
                                     description: |-
                                       Name of the referent.
+                                      This field is effectively required, but due to backwards compatibility is
+                                      allowed to be empty. Instances of this type with an empty value here are
+                                      almost certainly wrong.
                                       More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind, uid?
                                     type: string
                                   optional:
                                     description: Specify whether the Secret or its
@@ -3373,10 +3634,13 @@ spec:
                                             description: The key to select.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the ConfigMap
@@ -3396,10 +3660,13 @@ spec:
                                               key.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the Secret
@@ -3420,10 +3687,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -3474,10 +3744,13 @@ spec:
                                             description: The key to select.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the ConfigMap
@@ -3497,10 +3770,13 @@ spec:
                                               key.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the Secret
@@ -3523,10 +3799,13 @@ spec:
                                             description: The key to select.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the ConfigMap
@@ -3546,10 +3825,13 @@ spec:
                                               key.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the Secret
@@ -3572,10 +3854,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -3616,10 +3901,13 @@ spec:
                                       be a valid secret key.
                                     type: string
                                   name:
+                                    default: ""
                                     description: |-
                                       Name of the referent.
+                                      This field is effectively required, but due to backwards compatibility is
+                                      allowed to be empty. Instances of this type with an empty value here are
+                                      almost certainly wrong.
                                       More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind, uid?
                                     type: string
                                   optional:
                                     description: Specify whether the Secret or its
@@ -3651,10 +3939,13 @@ spec:
                                       be a valid secret key.
                                     type: string
                                   name:
+                                    default: ""
                                     description: |-
                                       Name of the referent.
+                                      This field is effectively required, but due to backwards compatibility is
+                                      allowed to be empty. Instances of this type with an empty value here are
+                                      almost certainly wrong.
                                       More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind, uid?
                                     type: string
                                   optional:
                                     description: Specify whether the Secret or its
@@ -3699,7 +3990,6 @@ spec:
                               The secret needs to be in the same namespace as the AlertmanagerConfig
                               object and accessible by the Prometheus Operator.
 
-
                               Either `botToken` or `botTokenFile` is required.
                             properties:
                               key:
@@ -3707,10 +3997,13 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
+                                default: ""
                                 description: |-
                                   Name of the referent.
+                                  This field is effectively required, but due to backwards compatibility is
+                                  allowed to be empty. Instances of this type with an empty value here are
+                                  almost certainly wrong.
                                   More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -3724,7 +4017,6 @@ spec:
                             description: |-
                               File to read the Telegram bot token from. It is mutually exclusive with `botToken`.
                               Either `botToken` or `botTokenFile` is required.
-
 
                               It requires Alertmanager >= v0.26.0.
                             type: string
@@ -3753,10 +4045,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -3770,9 +4065,7 @@ spec:
                                     description: |-
                                       Defines the authentication type. The value is case-insensitive.
 
-
                                       "Basic" is not a supported value.
-
 
                                       Default: "Bearer"
                                     type: string
@@ -3792,10 +4085,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -3815,10 +4111,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -3841,10 +4140,13 @@ spec:
                                       be a valid secret key.
                                     type: string
                                   name:
+                                    default: ""
                                     description: |-
                                       Name of the referent.
+                                      This field is effectively required, but due to backwards compatibility is
+                                      allowed to be empty. Instances of this type with an empty value here are
+                                      almost certainly wrong.
                                       More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind, uid?
                                     type: string
                                   optional:
                                     description: Specify whether the Secret or its
@@ -3875,10 +4177,13 @@ spec:
                                             description: The key to select.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the ConfigMap
@@ -3898,10 +4203,13 @@ spec:
                                               key.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the Secret
@@ -3922,10 +4230,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -3976,10 +4287,13 @@ spec:
                                             description: The key to select.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the ConfigMap
@@ -3999,10 +4313,13 @@ spec:
                                               key.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the Secret
@@ -4025,10 +4342,13 @@ spec:
                                             description: The key to select.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the ConfigMap
@@ -4048,10 +4368,13 @@ spec:
                                               key.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the Secret
@@ -4074,10 +4397,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -4106,6 +4432,8 @@ spec:
                           sendResolved:
                             description: Whether to notify about resolved alerts.
                             type: boolean
+                        required:
+                        - chatID
                         type: object
                       type: array
                     victoropsConfigs:
@@ -4126,10 +4454,13 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
+                                default: ""
                                 description: |-
                                   Name of the referent.
+                                  This field is effectively required, but due to backwards compatibility is
+                                  allowed to be empty. Instances of this type with an empty value here are
+                                  almost certainly wrong.
                                   More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -4180,10 +4511,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -4197,9 +4531,7 @@ spec:
                                     description: |-
                                       Defines the authentication type. The value is case-insensitive.
 
-
                                       "Basic" is not a supported value.
-
 
                                       Default: "Bearer"
                                     type: string
@@ -4219,10 +4551,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -4242,10 +4577,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -4268,10 +4606,13 @@ spec:
                                       be a valid secret key.
                                     type: string
                                   name:
+                                    default: ""
                                     description: |-
                                       Name of the referent.
+                                      This field is effectively required, but due to backwards compatibility is
+                                      allowed to be empty. Instances of this type with an empty value here are
+                                      almost certainly wrong.
                                       More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind, uid?
                                     type: string
                                   optional:
                                     description: Specify whether the Secret or its
@@ -4302,10 +4643,13 @@ spec:
                                             description: The key to select.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the ConfigMap
@@ -4325,10 +4669,13 @@ spec:
                                               key.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the Secret
@@ -4349,10 +4696,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -4403,10 +4753,13 @@ spec:
                                             description: The key to select.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the ConfigMap
@@ -4426,10 +4779,13 @@ spec:
                                               key.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the Secret
@@ -4452,10 +4808,13 @@ spec:
                                             description: The key to select.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the ConfigMap
@@ -4475,10 +4834,13 @@ spec:
                                               key.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the Secret
@@ -4501,10 +4863,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -4573,10 +4938,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -4590,9 +4958,7 @@ spec:
                                     description: |-
                                       Defines the authentication type. The value is case-insensitive.
 
-
                                       "Basic" is not a supported value.
-
 
                                       Default: "Bearer"
                                     type: string
@@ -4612,10 +4978,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -4635,10 +5004,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -4661,10 +5033,13 @@ spec:
                                       be a valid secret key.
                                     type: string
                                   name:
+                                    default: ""
                                     description: |-
                                       Name of the referent.
+                                      This field is effectively required, but due to backwards compatibility is
+                                      allowed to be empty. Instances of this type with an empty value here are
+                                      almost certainly wrong.
                                       More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind, uid?
                                     type: string
                                   optional:
                                     description: Specify whether the Secret or its
@@ -4695,10 +5070,13 @@ spec:
                                             description: The key to select.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the ConfigMap
@@ -4718,10 +5096,13 @@ spec:
                                               key.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the Secret
@@ -4742,10 +5123,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -4796,10 +5180,13 @@ spec:
                                             description: The key to select.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the ConfigMap
@@ -4819,10 +5206,13 @@ spec:
                                               key.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the Secret
@@ -4845,10 +5235,13 @@ spec:
                                             description: The key to select.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the ConfigMap
@@ -4868,10 +5261,13 @@ spec:
                                               key.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the Secret
@@ -4894,10 +5290,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -4953,10 +5352,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -4970,9 +5372,7 @@ spec:
                                     description: |-
                                       Defines the authentication type. The value is case-insensitive.
 
-
                                       "Basic" is not a supported value.
-
 
                                       Default: "Bearer"
                                     type: string
@@ -4992,10 +5392,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -5015,10 +5418,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -5041,10 +5447,13 @@ spec:
                                       be a valid secret key.
                                     type: string
                                   name:
+                                    default: ""
                                     description: |-
                                       Name of the referent.
+                                      This field is effectively required, but due to backwards compatibility is
+                                      allowed to be empty. Instances of this type with an empty value here are
+                                      almost certainly wrong.
                                       More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind, uid?
                                     type: string
                                   optional:
                                     description: Specify whether the Secret or its
@@ -5075,10 +5484,13 @@ spec:
                                             description: The key to select.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the ConfigMap
@@ -5098,10 +5510,13 @@ spec:
                                               key.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the Secret
@@ -5122,10 +5537,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -5176,10 +5594,13 @@ spec:
                                             description: The key to select.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the ConfigMap
@@ -5199,10 +5620,13 @@ spec:
                                               key.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the Secret
@@ -5225,10 +5649,13 @@ spec:
                                             description: The key to select.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the ConfigMap
@@ -5248,10 +5675,13 @@ spec:
                                               key.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the Secret
@@ -5274,10 +5704,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -5320,10 +5753,13 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
+                                default: ""
                                 description: |-
                                   Name of the referent.
+                                  This field is effectively required, but due to backwards compatibility is
+                                  allowed to be empty. Instances of this type with an empty value here are
+                                  almost certainly wrong.
                                   More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -5355,10 +5791,13 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
+                                default: ""
                                 description: |-
                                   Name of the referent.
+                                  This field is effectively required, but due to backwards compatibility is
+                                  allowed to be empty. Instances of this type with an empty value here are
+                                  almost certainly wrong.
                                   More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -5392,10 +5831,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -5409,9 +5851,7 @@ spec:
                                     description: |-
                                       Defines the authentication type. The value is case-insensitive.
 
-
                                       "Basic" is not a supported value.
-
 
                                       Default: "Bearer"
                                     type: string
@@ -5431,10 +5871,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -5454,10 +5897,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -5480,10 +5926,13 @@ spec:
                                       be a valid secret key.
                                     type: string
                                   name:
+                                    default: ""
                                     description: |-
                                       Name of the referent.
+                                      This field is effectively required, but due to backwards compatibility is
+                                      allowed to be empty. Instances of this type with an empty value here are
+                                      almost certainly wrong.
                                       More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Add other useful fields. apiVersion, kind, uid?
                                     type: string
                                   optional:
                                     description: Specify whether the Secret or its
@@ -5514,10 +5963,13 @@ spec:
                                             description: The key to select.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the ConfigMap
@@ -5537,10 +5989,13 @@ spec:
                                               key.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the Secret
@@ -5561,10 +6016,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -5615,10 +6073,13 @@ spec:
                                             description: The key to select.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the ConfigMap
@@ -5638,10 +6099,13 @@ spec:
                                               key.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the Secret
@@ -5664,10 +6128,13 @@ spec:
                                             description: The key to select.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the ConfigMap
@@ -5687,10 +6154,13 @@ spec:
                                               key.
                                             type: string
                                           name:
+                                            default: ""
                                             description: |-
                                               Name of the referent.
+                                              This field is effectively required, but due to backwards compatibility is
+                                              allowed to be empty. Instances of this type with an empty value here are
+                                              almost certainly wrong.
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                             type: string
                                           optional:
                                             description: Specify whether the Secret
@@ -5713,10 +6183,13 @@ spec:
                                           from.  Must be a valid secret key.
                                         type: string
                                       name:
+                                        default: ""
                                         description: |-
                                           Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or

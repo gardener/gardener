@@ -8,8 +8,8 @@ package v1beta1
 
 import (
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -27,30 +27,10 @@ type ControllerInstallationLister interface {
 
 // controllerInstallationLister implements the ControllerInstallationLister interface.
 type controllerInstallationLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1beta1.ControllerInstallation]
 }
 
 // NewControllerInstallationLister returns a new ControllerInstallationLister.
 func NewControllerInstallationLister(indexer cache.Indexer) ControllerInstallationLister {
-	return &controllerInstallationLister{indexer: indexer}
-}
-
-// List lists all ControllerInstallations in the indexer.
-func (s *controllerInstallationLister) List(selector labels.Selector) (ret []*v1beta1.ControllerInstallation, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1beta1.ControllerInstallation))
-	})
-	return ret, err
-}
-
-// Get retrieves the ControllerInstallation from the index for a given name.
-func (s *controllerInstallationLister) Get(name string) (*v1beta1.ControllerInstallation, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1beta1.Resource("controllerinstallation"), name)
-	}
-	return obj.(*v1beta1.ControllerInstallation), nil
+	return &controllerInstallationLister{listers.New[*v1beta1.ControllerInstallation](indexer, v1beta1.Resource("controllerinstallation"))}
 }
