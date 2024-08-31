@@ -12,7 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 	authorizationv1 "k8s.io/api/authorization/v1"
 
-	. "github.com/gardener/gardener/pkg/utils/webhook/authorizer"
+	. "github.com/gardener/gardener/pkg/webhook/authorizer"
 )
 
 var _ = Describe("Response", func() {

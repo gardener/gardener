@@ -21,7 +21,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
-	"github.com/gardener/gardener/pkg/utils/kubernetes/csr"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/certificatesigningrequest"
 )
 
 const nodeAgentCSRPrefix = "node-agent-csr-"
@@ -38,7 +38,7 @@ func RequestAndStoreKubeconfig(ctx context.Context, log logr.Logger, fs afero.Af
 		CommonName:   v1beta1constants.NodeAgentUserNamePrefix + machineName,
 	}
 
-	certData, privateKeyData, _, err := csr.RequestCertificate(ctx, log, clientSet, certificateSubject, []string{}, []net.IP{}, &metav1.Duration{Duration: time.Hour * 720}, nodeAgentCSRPrefix)
+	certData, privateKeyData, _, err := certificatesigningrequest.RequestCertificate(ctx, log, clientSet, certificateSubject, []string{}, []net.IP{}, &metav1.Duration{Duration: time.Hour * 720}, nodeAgentCSRPrefix)
 	if err != nil {
 		return fmt.Errorf("unable to request the client certificate for the gardener-node-agent kubeconfig: %w", err)
 	}

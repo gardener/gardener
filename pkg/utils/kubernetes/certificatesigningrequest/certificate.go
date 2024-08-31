@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package csr
+package certificatesigningrequest
 
 import (
 	"context"
@@ -62,7 +62,7 @@ func RequestCertificate(
 	return certData, privateKeyData, csrName, nil
 }
 
-// DigestedName is an alias for csr.DigestedName.
+// DigestedName is an alias for certificatesigningrequest.DigestedName.
 // Exposed for testing.
 var DigestedName = ComputeDigestedName
 

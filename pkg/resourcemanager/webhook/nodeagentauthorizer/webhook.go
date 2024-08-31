@@ -12,7 +12,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 )
 
-// Webhook represents the webhook of Node-Agent Authorizer
+// Webhook represents the webhook of node-agent authorizer.
 type Webhook struct {
 	Logger  logr.Logger
 	Handler http.Handler

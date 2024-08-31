@@ -26,7 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/kubernetes/csr"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/certificatesigningrequest"
 	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
@@ -237,7 +237,7 @@ func rotateCertificate(
 	ipSANs []net.IP,
 ) error {
 	// request new client certificate
-	certData, privateKeyData, _, err := csr.RequestCertificate(ctx, log, gardenClientSet.Kubernetes(), certificateSubject, dnsSANs, ipSANs, gardenClientConnection.KubeconfigValidity.Validity, bootstrap.SeedCSRPrefix)
+	certData, privateKeyData, _, err := certificatesigningrequest.RequestCertificate(ctx, log, gardenClientSet.Kubernetes(), certificateSubject, dnsSANs, ipSANs, gardenClientConnection.KubeconfigValidity.Validity, bootstrap.SeedCSRPrefix)
 	if err != nil {
 		return err
 	}

@@ -34,7 +34,7 @@ import (
 	. "github.com/gardener/gardener/pkg/gardenlet/bootstrap"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/kubernetes/csr"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/certificatesigningrequest"
 	"github.com/gardener/gardener/pkg/utils/test"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
@@ -159,7 +159,7 @@ var _ = Describe("Bootstrap", func() {
 		})
 
 		It("should not return an error", func() {
-			defer test.WithVar(&csr.DigestedName, func(any, *pkix.Name, []certificatesv1.KeyUsage, string) (string, error) {
+			defer test.WithVar(&certificatesigningrequest.DigestedName, func(any, *pkix.Name, []certificatesv1.KeyUsage, string) (string, error) {
 				return approvedCSR.Name, nil
 			})()
 
@@ -198,7 +198,7 @@ var _ = Describe("Bootstrap", func() {
 		})
 
 		It("should return an error - the CSR got denied", func() {
-			defer test.WithVar(&csr.DigestedName, func(any, *pkix.Name, []certificatesv1.KeyUsage, string) (string, error) {
+			defer test.WithVar(&certificatesigningrequest.DigestedName, func(any, *pkix.Name, []certificatesv1.KeyUsage, string) (string, error) {
 				return deniedCSR.Name, nil
 			})()
 
@@ -216,7 +216,7 @@ var _ = Describe("Bootstrap", func() {
 		})
 
 		It("should return an error - the CSR failed", func() {
-			defer test.WithVar(&csr.DigestedName, func(any, *pkix.Name, []certificatesv1.KeyUsage, string) (string, error) {
+			defer test.WithVar(&certificatesigningrequest.DigestedName, func(any, *pkix.Name, []certificatesv1.KeyUsage, string) (string, error) {
 				return failedCSR.Name, nil
 			})()
 

@@ -6,7 +6,6 @@ package bootstrappers
 
 import (
 	"context"
-	"errors"
 
 	"github.com/go-logr/logr"
 	"github.com/spf13/afero"
@@ -16,7 +15,7 @@ import (
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 )
 
-// NodeAgentKubeconfig is a runnable to create the kubeconfig for the node-agent
+// NodeAgentKubeconfig is a runnable to create the kubeconfig for the node-agent.
 type NodeAgentKubeconfig struct {
 	Log         logr.Logger
 	FS          afero.Afero
@@ -27,11 +26,13 @@ type NodeAgentKubeconfig struct {
 
 // Start performs creation of the gardener-node-agent kubeconfig.
 func (n *NodeAgentKubeconfig) Start(ctx context.Context) error {
-	if _, err := n.FS.Stat(nodeagentv1alpha1.KubeconfigFilePath); err == nil {
+	ok, err := n.FS.Exists(nodeagentv1alpha1.KubeconfigFilePath)
+	if err != nil {
+		return err
+	}
+	if ok {
 		n.Log.Info("Kubeconfig file exists, skipping bootstrap")
 		return nil
-	} else if !errors.Is(err, afero.ErrFileNotFound) {
-		return err
 	}
 
 	n.Log.Info("Requesting kubeconfig for gardener-node agent")

@@ -8,12 +8,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	authorizerwebhook "github.com/gardener/gardener/pkg/utils/webhook/authorizer"
+	authorizerwebhook "github.com/gardener/gardener/pkg/webhook/authorizer"
 )
 
 const (
 	// HandlerName is the name of this authorization webhook handler.
-	HandlerName = "nodeagentauthorizer"
+	HandlerName = "node-agent-authorizer"
 	// WebhookPath is the HTTP handler path for this authorization webhook handler.
 	WebhookPath = "/webhooks/auth/nodeagent"
 )

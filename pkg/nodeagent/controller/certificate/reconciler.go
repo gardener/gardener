@@ -29,12 +29,12 @@ import (
 // When the certificate is renewed it saves the resulting kubeconfig on the disk, cancels its context to initiate a
 // restart of gardener-node-agent.
 type Reconciler struct {
-	CancelContext context.CancelFunc
-	Client        client.Client
-	Clock         clock.Clock
-	FS            afero.Afero
-	Config        *rest.Config
-	MachineName   string
+	Cancel      context.CancelFunc
+	Client      client.Client
+	Clock       clock.Clock
+	FS          afero.Afero
+	Config      *rest.Config
+	MachineName string
 
 	renewalDeadline *time.Time
 }
@@ -64,7 +64,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			return reconcile.Result{}, fmt.Errorf("error removing operation annotation from node: %w", err)
 		}
 		log.Info("Certificate rotation complete. Restarting gardener-node-agent")
-		r.CancelContext()
+		r.Cancel()
 		return reconcile.Result{}, nil
 	}
 
@@ -87,7 +87,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 
 		log.Info("Certificate rotation complete. Restarting gardener-node-agent")
-		r.CancelContext()
+		r.Cancel()
 		return reconcile.Result{}, nil
 	}
 

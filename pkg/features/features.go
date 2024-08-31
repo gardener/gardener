@@ -91,7 +91,7 @@ const (
 	// alpha: v1.104.0
 	NewVPN featuregate.Feature = "NewVPN"
 
-	// NodeAgentAuthorizer enables authorization of gardener-node-agents to shoot kube-apiservers using an authorization webhook and CSRs.
+	// NodeAgentAuthorizer enables authorization of requests from gardener-node-agents to shoot kube-apiservers using an authorization webhook.
 	// Enabling this feature gate restricts the permissions of each gardener-node-agent instance to the objects belonging to its own node only.
 	// owner: @oliver-goetz
 	// alpha: v1.104

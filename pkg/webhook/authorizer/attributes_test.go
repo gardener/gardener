@@ -11,7 +11,7 @@ import (
 	userpkg "k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 
-	. "github.com/gardener/gardener/pkg/utils/webhook/authorizer"
+	. "github.com/gardener/gardener/pkg/webhook/authorizer"
 )
 
 var _ = Describe("Attributes", func() {

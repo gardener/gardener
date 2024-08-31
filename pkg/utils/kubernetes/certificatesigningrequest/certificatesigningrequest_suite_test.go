@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package csr_test
+package certificatesigningrequest_test
 
 import (
 	"testing"
@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestCsr(t *testing.T) {
+func TestCSR(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Csr Suite")
+	RunSpecs(t, "Utils Kubernetes CertificateSigningRequest Suite")
 }

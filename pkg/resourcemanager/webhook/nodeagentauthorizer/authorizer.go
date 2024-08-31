@@ -124,7 +124,7 @@ func (a *authorizer) authorizeEvent(log logr.Logger, attrs auth.Attributes) (aut
 		return auth.DecisionNoOpinion, reason, nil
 	}
 
-	if allowed, reason := a.checkVerb(log, attrs, "create"); !allowed {
+	if allowed, reason := a.checkVerb(log, attrs, "create", "patch"); !allowed {
 		return auth.DecisionNoOpinion, reason, nil
 	}
 
@@ -149,13 +149,13 @@ func (a *authorizer) authorizeLease(ctx context.Context, log logr.Logger, machin
 	node := machine.Labels[machinev1alpha1.NodeLabelKey]
 	if node == "" {
 		log.Info("Denying authorization for machine to the lease because the machine does not have a \"node\" label", "machine", machineName)
-		return auth.DecisionNoOpinion, fmt.Sprintf("expecting \"node\" label on machineName %q", machineName), nil
+		return auth.DecisionNoOpinion, fmt.Sprintf("expecting \"node\" label on machine %q", machineName), nil
 	}
 
 	allowedLease := "gardener-node-agent-" + node
 	if (attrs.GetVerb() != "create" && attrs.GetName() != allowedLease) || attrs.GetNamespace() != metav1.NamespaceSystem {
-		log.Info("Denying authorization because gardener-node-agent is not allowed to access the lease", "node", node, "machine", machineName)
-		return auth.DecisionNoOpinion, fmt.Sprintf("this gardener-node-agent can only access lease %q in \"kube-system\" namespace", allowedLease), nil
+		log.Info("Denying authorization because gardener-node-agent is not allowed to access the lease", "node", node, "machine", machineName, "lease", attrs.GetName())
+		return auth.DecisionNoOpinion, fmt.Sprintf("this gardener-node-agent can only access lease %q in %q namespace", allowedLease, metav1.NamespaceSystem), nil
 	}
 
 	return auth.DecisionAllow, "", nil
@@ -208,8 +208,8 @@ func (a *authorizer) authorizeSecret(ctx context.Context, log logr.Logger, machi
 	validSecrets := []string{machine.Spec.NodeTemplateSpec.Labels[v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName], valitailTokenSecretName}
 
 	if !slices.Contains(validSecrets, attrs.GetName()) || attrs.GetNamespace() != metav1.NamespaceSystem {
-		log.Info("Denying authorization because gardener-node-agent is not allowed to access secret")
-		return auth.DecisionNoOpinion, fmt.Sprintf("gardener-node-agent can only access secrets %v in \"kube-system\" namespace", validSecrets), nil
+		log.Info("Denying authorization because gardener-node-agent is not allowed to access secret", "secret", attrs.GetName(), "machine", machineName)
+		return auth.DecisionNoOpinion, fmt.Sprintf("gardener-node-agent can only access secrets %v in %q namespace", validSecrets, metav1.NamespaceSystem), nil
 	}
 
 	return auth.DecisionAllow, "", nil
@@ -225,7 +225,7 @@ func (a *authorizer) checkVerb(log logr.Logger, attrs auth.Attributes, allowedVe
 }
 
 func (a *authorizer) checkSubresource(log logr.Logger, attrs auth.Attributes, allowedSubresources ...string) (bool, string) {
-	if subresource := attrs.GetSubresource(); len(subresource) > 0 && !slices.Contains(allowedSubresources, attrs.GetSubresource()) {
+	if subresource := attrs.GetSubresource(); len(subresource) > 0 && !slices.Contains(allowedSubresources, subresource) {
 		log.Info("Denying authorization because subresource is not allowed for this resource", "allowedSubresources", allowedSubresources)
 		return false, fmt.Sprintf("only the following subresources are allowed for this resource type: %+v", allowedSubresources)
 	}

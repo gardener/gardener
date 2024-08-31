@@ -24,7 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/kubernetes/csr"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/certificatesigningrequest"
 )
 
 // SeedCSRPrefix defines the prefix of seed CSR created by gardenlet.
@@ -51,7 +51,7 @@ func RequestKubeconfigWithBootstrapClient(
 		CommonName:   v1beta1constants.SeedUserNamePrefix + seedName,
 	}
 
-	certData, privateKeyData, csrName, err := csr.RequestCertificate(ctx, log, bootstrapClientSet.Kubernetes(), certificateSubject, []string{}, []net.IP{}, validityDuration, SeedCSRPrefix)
+	certData, privateKeyData, csrName, err := certificatesigningrequest.RequestCertificate(ctx, log, bootstrapClientSet.Kubernetes(), certificateSubject, []string{}, []net.IP{}, validityDuration, SeedCSRPrefix)
 	if err != nil {
 		return nil, "", "", fmt.Errorf("unable to bootstrap the kubeconfig for the Garden cluster: %w", err)
 	}

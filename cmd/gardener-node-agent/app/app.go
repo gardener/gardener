@@ -129,7 +129,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		if features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) {
 			restConfig, mustBootstrap, err = getRESTConfig(log, fs, cfg)
 			if err != nil {
-				log.Info("Failed to get REST config for node-authorizer. Starting migration from access token kubeconfig")
+				log.Info("Failed to get REST config for node-agent. Starting migration from access token kubeconfig")
 				migrateKubeconfig = true
 			}
 			if !migrateKubeconfig {
@@ -271,8 +271,8 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 	var machineName string
 	if features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) {
 		machineName, err = fetchMachineName(fs)
-		// TODO(oliver-goetz): fetching the machine name from node label is migration code remove this migration code when feature gate NodeAgentAuthorizer is removed.
-		// Fetching the machine name from node label is migration for existing nodes when the feature gate is activated, because there is no file with the machine name yet.
+		// TODO(oliver-goetz): Fetching the machine name from node label is migration code. Remove this migration code when feature gate NodeAgentAuthorizer is removed.
+		// Fetching the machine name from node label is for migrating existing nodes when the feature gate is activated, because there is no file with the machine name yet.
 		if errors.Is(err, afero.ErrFileNotFound) {
 			machineName, err = fetchMachineNameFromNode(ctx, restConfig, fs, nodeName)
 			if err != nil {
@@ -313,10 +313,7 @@ func getRESTConfig(log logr.Logger, fs afero.Afero, cfg *config.NodeAgentConfigu
 	if kubeconfig, err := fs.ReadFile(nodeagentv1alpha1.KubeconfigFilePath); err == nil {
 		log.Info("Kubeconfig file exists, using it")
 		restConfig, err := kubernetes.RESTConfigFromKubeconfig(kubeconfig)
-		if err != nil {
-			return nil, false, err
-		}
-		return restConfig, false, nil
+		return restConfig, false, err
 	} else if !errors.Is(err, afero.ErrFileNotFound) {
 		return nil, false, err
 	}
@@ -333,9 +330,9 @@ func getRESTConfig(log logr.Logger, fs afero.Afero, cfg *config.NodeAgentConfigu
 		BearerTokenFile: nodeagentv1alpha1.BootstrapTokenFilePath,
 	}
 
-	if _, err := fs.Stat(nodeagentv1alpha1.BootstrapTokenFilePath); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
+	if ok, err := fs.Exists(nodeagentv1alpha1.BootstrapTokenFilePath); err != nil {
 		return nil, false, fmt.Errorf("failed checking whether bootstrap token file %q exists: %w", nodeagentv1alpha1.BootstrapTokenFilePath, err)
-	} else if err == nil {
+	} else if ok {
 		log.Info("Kubeconfig file does not exist, but bootstrap token file does - using it", "path", nodeagentv1alpha1.BootstrapTokenFilePath)
 		return restConfig, true, nil
 	}
@@ -405,11 +402,11 @@ func fetchAccessToken(ctx context.Context, log logr.Logger, restConfig *rest.Con
 }
 
 func fetchMachineName(fs afero.Afero) (string, error) {
-	machineNameByte, err := afero.ReadFile(fs, nodeagentv1alpha1.MachineNameFilePath)
+	machineName, err := fs.ReadFile(nodeagentv1alpha1.MachineNameFilePath)
 	if err != nil {
-		return "", fmt.Errorf("failed reading machine-name file: %w", err)
+		return "", fmt.Errorf("failed reading machine-name file %q: %w", nodeagentv1alpha1.MachineNameFilePath, err)
 	}
-	return strings.Split(string(machineNameByte), "\n")[0], nil
+	return strings.Split(string(machineName), "\n")[0], nil
 }
 
 func fetchMachineNameFromNode(ctx context.Context, restConfig *rest.Config, fs afero.Afero, nodeName string) (string, error) {
@@ -429,7 +426,7 @@ func fetchMachineNameFromNode(ctx context.Context, restConfig *rest.Config, fs a
 		return "", fmt.Errorf("unable to get machine name. No %q label on node %q", v1beta1constants.LabelMachineName, node.Name)
 	}
 
-	if err := afero.WriteFile(fs, nodeagentv1alpha1.MachineNameFilePath, []byte(machineName), 0600); err != nil {
+	if err := fs.WriteFile(nodeagentv1alpha1.MachineNameFilePath, []byte(machineName), 0600); err != nil {
 		return "", fmt.Errorf("error writing machine name to file %q: %w", nodeName, err)
 	}
 

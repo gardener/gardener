@@ -11,7 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	seedauthorizergraph "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed/graph"
-	authorizerwebhook "github.com/gardener/gardener/pkg/utils/webhook/authorizer"
+	authorizerwebhook "github.com/gardener/gardener/pkg/webhook/authorizer"
 )
 
 const (

@@ -21,7 +21,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils/test"
-	. "github.com/gardener/gardener/pkg/utils/webhook/authorizer"
+	. "github.com/gardener/gardener/pkg/webhook/authorizer"
 )
 
 var _ = Describe("Handler", func() {

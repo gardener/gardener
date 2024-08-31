@@ -123,6 +123,7 @@ featureGates:
   # Seed config. Only when this is set, gardenlet's behavior changes.
   IPv6SingleStack: true
   ShootManagedIssuer: false
+  NodeAgentAuthorizer: false
 # seedConfig:
 #   metadata:
 #     name: my-seed

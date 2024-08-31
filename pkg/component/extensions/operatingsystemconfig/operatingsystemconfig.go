@@ -237,6 +237,7 @@ func (o *operatingSystemConfig) Restore(ctx context.Context, shootState *gardenc
 
 func (o *operatingSystemConfig) reconcile(ctx context.Context, reconcileFn func(deployer) error) error {
 	if !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) {
+		// TODO(oliver-goetz): Delete the secret when the feature gate is removed.
 		if err := gardenerutils.
 			NewShootAccessSecret(nodeagentv1alpha1.AccessSecretName, o.values.Namespace).
 			WithTargetSecret(nodeagentv1alpha1.AccessSecretName, metav1.NamespaceSystem).

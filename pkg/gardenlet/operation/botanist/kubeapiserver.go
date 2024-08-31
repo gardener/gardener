@@ -248,7 +248,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		// Set authorization webhook for node-agent if enabled
 		nodeAgentAuthorizerWebhookReady, err := b.NodeAgentAuthorizerWebhookReady(ctx)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to check if NodeAgentAuthorizer webhook is ready: %w", err)
 		}
 		if nodeAgentAuthorizerWebhookReady {
 			caSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)

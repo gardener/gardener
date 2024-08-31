@@ -114,3 +114,6 @@ webhooks:
   #   tolerationSeconds: 300
   tokenInvalidator:
     enabled: true
+  nodeAgentAuthorizer:
+    enabled: true
+    machineNamespace: shoot--foo--bar

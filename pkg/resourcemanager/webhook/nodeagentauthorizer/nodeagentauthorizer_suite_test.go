@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestNodeagentauthorizer(t *testing.T) {
+func TestNodeAgentAuthorizer(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Nodeagentauthorizer Suite")
+	RunSpecs(t, "ResourceManager Webhook NodeAgentAuthorizer Suite")
 }

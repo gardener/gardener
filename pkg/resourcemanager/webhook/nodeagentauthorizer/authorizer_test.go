@@ -235,21 +235,24 @@ var _ = Describe("Authorizer", func() {
 		})
 
 		Context("#Events", func() {
-			It("should allow to create an event", func() {
+			DescribeTable("should allow some verbs", func(verb string) {
 				attrs := &auth.AttributesRecord{
 					User:            nodeAgentUser,
 					Name:            "",
 					APIGroup:        "",
 					Resource:        "events",
 					ResourceRequest: true,
-					Verb:            "create",
+					Verb:            verb,
 				}
 				decision, reason, err := authorizer.Authorize(ctx, attrs)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionAllow))
 				Expect(reason).To(BeEmpty())
-			})
+			},
+				Entry("create", "create"),
+				Entry("patch", "patch"),
+			)
 
 			DescribeTable("should have no opinion because no allowed verb", func(verb string) {
 				attrs := &auth.AttributesRecord{
@@ -264,11 +267,10 @@ var _ = Describe("Authorizer", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionNoOpinion))
-				Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [create]"))
+				Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [create patch]"))
 			},
 				Entry("get", "get"),
 				Entry("update", "update"),
-				Entry("patch", "patch"),
 				Entry("delete", "delete"),
 				Entry("deletecollection", "deletecollection"),
 				Entry("list", "list"),
@@ -325,7 +327,7 @@ var _ = Describe("Authorizer", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionNoOpinion))
-				Expect(reason).To(Equal(fmt.Sprintf("expecting \"node\" label on machineName %q", newMachineName)))
+				Expect(reason).To(Equal(fmt.Sprintf("expecting \"node\" label on machine %q", newMachineName)))
 			},
 				Entry("create", "create"),
 				Entry("get", "get"),

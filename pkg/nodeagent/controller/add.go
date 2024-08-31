@@ -33,8 +33,8 @@ func AddToManager(ctx context.Context, cancel context.CancelFunc, mgr manager.Ma
 
 	if features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) {
 		if err := (&certificate.Reconciler{
-			CancelContext: cancel,
-			MachineName:   machineName,
+			Cancel:      cancel,
+			MachineName: machineName,
 		}).AddToManager(mgr, nodePredicate); err != nil {
 			return fmt.Errorf("failed adding certificate controller: %w", err)
 		}
