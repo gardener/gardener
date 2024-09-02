@@ -21,6 +21,7 @@ type OpenIDConnectPresetSpec struct {
 	// of Shoot clusters.
 	// This configuration is not overwriting any existing OpenID Connect
 	// client authentication already set on the Shoot object.
+	//
 	// Deprecated: The OpenID Connect configuration this field specifies is not used and will be forbidden starting from Kubernetes 1.31.
 	// It's use was planned for genereting OIDC kubeconfig https://github.com/gardener/gardener/issues/1433
 	// TODO(AleksandarSavchev): Drop this field after support for Kubernetes 1.30 is dropped.

@@ -477,6 +477,7 @@ const (
 	LabelNetworkPolicyToPublicNetworks = "networking.gardener.cloud/to-public-networks"
 	// LabelNetworkPolicyToSeedAPIServer allows Egress from pods labeled with 'networking.gardener.cloud/to-seed-apiserver=allowed' to Seed's Kubernetes
 	// API Server.
+	//
 	// Deprecated: Use LabelNetworkPolicyToRuntimeAPIServer instead.
 	LabelNetworkPolicyToSeedAPIServer = "networking.gardener.cloud/to-seed-apiserver"
 	// LabelNetworkPolicyToRuntimeAPIServer allows Egress from pods labeled with 'networking.gardener.cloud/to-runtime-apiserver=allowed' to runtime Kubernetes
@@ -484,6 +485,7 @@ const (
 	LabelNetworkPolicyToRuntimeAPIServer = "networking.gardener.cloud/to-runtime-apiserver"
 	// LabelNetworkPolicyFromPrometheus allows Ingress from Prometheus to pods labeled with 'networking.gardener.cloud/from-prometheus=allowed' and ports
 	// named 'metrics' in the PodSpecification.
+	//
 	// Deprecated: This label is deprecated and will be removed in a future version. Components in shoot namespaces
 	//  which need to be scraped by Prometheus need to annotate their Services with
 	//  `networking.resources.gardener.cloud/from-policy-pod-label-selector=all-scrape-targets` and
