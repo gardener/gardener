@@ -997,6 +997,17 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 			})
 
 			Context("bastion validation", func() {
+				It("should forbid empty bastion", func() {
+					cloudProfile.Spec.Bastion = &core.Bastion{}
+
+					errorList := ValidateCloudProfile(cloudProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.bastion"),
+					}))))
+				})
+
 				It("should forbid unknown machineType", func() {
 					cloudProfile.Spec.Bastion = &core.Bastion{
 						MachineType: &core.BastionMachineType{Name: "unknown"},
