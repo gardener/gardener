@@ -57,6 +57,11 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 		valitailEnabled, valiIngressHost = true, b.ComputeValiHost()
 	}
 
+	kubeProxyEnabled := true
+	if b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy != nil && b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy.Enabled != nil {
+		kubeProxyEnabled = *b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy.Enabled
+	}
+
 	return operatingsystemconfig.New(
 		b.Logger,
 		b.SeedClientSet.Client(),
@@ -69,6 +74,7 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 				ClusterDomain:          gardencorev1beta1.DefaultDomain,
 				Images:                 oscImages,
 				KubeletConfig:          b.Shoot.GetInfo().Spec.Kubernetes.Kubelet,
+				KubeProxyEnabled:       kubeProxyEnabled,
 				MachineTypes:           b.Shoot.CloudProfile.Spec.MachineTypes,
 				SSHAccessEnabled:       v1beta1helper.ShootEnablesSSHAccess(b.Shoot.GetInfo()),
 				ValitailEnabled:        valitailEnabled,
