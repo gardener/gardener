@@ -1692,7 +1692,7 @@ func validateProvider(provider core.Provider, kubernetes core.Kubernetes, networ
 		}
 
 		allErrs = append(allErrs, ValidateWorkers(provider.Workers, fldPath.Child("workers"))...)
-		allErrs = append(allErrs, ValidateSystemComponentWorkers(provider.Workers, kubernetes.Version, fldPath.Child("workers"))...)
+		allErrs = append(allErrs, ValidateSystemComponentWorkers(provider.Workers, fldPath.Child("workers"))...)
 	}
 
 	if kubernetes.KubeControllerManager != nil && kubernetes.KubeControllerManager.NodeCIDRMaskSize != nil && networking != nil {
@@ -2168,7 +2168,7 @@ func ValidateWorkers(workers []core.Worker, fldPath *field.Path) field.ErrorList
 }
 
 // ValidateSystemComponentWorkers validates workers specified to run system components.
-func ValidateSystemComponentWorkers(workers []core.Worker, kubernetesVersion string, fldPath *field.Path) field.ErrorList {
+func ValidateSystemComponentWorkers(workers []core.Worker, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs                                   = field.ErrorList{}
 		atLeastOnePoolWithAllowedSystemComponents = false
@@ -2214,12 +2214,8 @@ func ValidateSystemComponentWorkers(workers []core.Worker, kubernetesVersion str
 		}
 	}
 
-	// TODO(timuthy): Remove this check as soon as v1.27 is the least supported Kubernetes version in Gardener.
-	k8sGreaterEqual127, _ := versionutils.CheckVersionMeetsConstraint(kubernetesVersion, ">= 1.27")
-	if k8sGreaterEqual127 {
-		for _, i := range workerPoolsWithInsufficientWorkers {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Index(i).Child("maximum"), "maximum node count should be greater than or equal to the number of zones specified for this pool"))
-		}
+	for _, i := range workerPoolsWithInsufficientWorkers {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Index(i).Child("maximum"), "maximum node count should be greater than or equal to the number of zones specified for this pool"))
 	}
 
 	if !atLeastOnePoolWithAllowedSystemComponents {

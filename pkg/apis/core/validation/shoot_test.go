@@ -1217,24 +1217,34 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.provider.workers[0].name"),
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.provider.workers[0].name"),
+						"Detail": ContainSubstring("a lowercase RFC 1123 label must consist of lower case alphanumeric characters or"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal("spec.provider.workers[0].machine.type"),
+						"Type":   Equal(field.ErrorTypeRequired),
+						"Field":  Equal("spec.provider.workers[0].machine.type"),
+						"Detail": ContainSubstring("must specify a machine type"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.provider.workers[0].minimum"),
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.provider.workers[0].minimum"),
+						"Detail": ContainSubstring("minimum value must not be negative"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.provider.workers[0].maximum"),
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.provider.workers[0].maximum"),
+						"Detail": ContainSubstring("maximum value must not be negative"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.provider.workers[0].maximum"),
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.provider.workers[0].maximum"),
+						"Detail": ContainSubstring("maximum value must not be less than minimum value"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.provider.workers[0].maximum"),
+						"Detail": ContainSubstring("maximum node count should be greater than or equal to the number of zones specified for this pool"),
 					})),
 				))
 			})
@@ -6550,7 +6560,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 				}
 
-				Expect(ValidateSystemComponentWorkers(workers, "", field.NewPath("workers"))).To(matcher)
+				Expect(ValidateSystemComponentWorkers(workers, field.NewPath("workers"))).To(matcher)
 			},
 
 			Entry("at least one worker pool min>0, max>0", zero, zero, one, one, BeEmpty()),
@@ -6584,7 +6594,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 				}
 
-				Expect(ValidateSystemComponentWorkers(workers, "", field.NewPath("workers"))).To(matcher)
+				Expect(ValidateSystemComponentWorkers(workers, field.NewPath("workers"))).To(matcher)
 			},
 
 			Entry("all worker pools min=max=0", zero, zero, zero, zero, true, true, ConsistOf(
@@ -6598,7 +6608,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		)
 
 		DescribeTable("validate maximum node count",
-			func(kubernetesVersion string, max1, max2 int, allowSystemComponents1, allowSystemComponents2 bool, zones1, zones2 []string, matcher gomegatypes.GomegaMatcher) {
+			func(max1, max2 int, allowSystemComponents1, allowSystemComponents2 bool, zones1, zones2 []string, matcher gomegatypes.GomegaMatcher) {
 				workers := []core.Worker{
 					{
 						Name:    "one-active",
@@ -6620,19 +6630,19 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 				}
 
-				Expect(ValidateSystemComponentWorkers(workers, kubernetesVersion, field.NewPath("workers"))).To(matcher)
+				Expect(ValidateSystemComponentWorkers(workers, field.NewPath("workers"))).To(matcher)
 			},
 
-			Entry("maximum == len(zones)", "v1.27", three, one, true, false, []string{"1", "2", "3"}, []string{"1"}, BeEmpty()),
-			Entry("maximum == len(zones) with multiple system component worker pools and smaller group first", "v1.27", one, three, true, true, []string{"1", "2", "3"}, []string{"1", "2", "3"}, BeEmpty()),
-			Entry("maximum == len(zones) with multiple system component worker pools and smaller group last", "v1.27", three, one, true, true, []string{"1", "2", "3"}, []string{"1", "2", "3"}, BeEmpty()),
-			Entry("maximum < len(zones)", "1.27", two, one, true, false, []string{"1", "2", "3"}, []string{"1"}, ConsistOf(
+			Entry("maximum == len(zones)", three, one, true, false, []string{"1", "2", "3"}, []string{"1"}, BeEmpty()),
+			Entry("maximum == len(zones) with multiple system component worker pools and smaller group first", one, three, true, true, []string{"1", "2", "3"}, []string{"1", "2", "3"}, BeEmpty()),
+			Entry("maximum == len(zones) with multiple system component worker pools and smaller group last", three, one, true, true, []string{"1", "2", "3"}, []string{"1", "2", "3"}, BeEmpty()),
+			Entry("maximum < len(zones)", two, one, true, false, []string{"1", "2", "3"}, []string{"1"}, ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal("workers[0].maximum"),
 				})),
 			)),
-			Entry("maximum < len(zones) with multiple system component worker pools in different zones", "1.27", two, one, true, true, []string{"1", "2", "3"}, []string{"3", "4", "5"}, ConsistOf(
+			Entry("maximum < len(zones) with multiple system component worker pools in different zones", two, one, true, true, []string{"1", "2", "3"}, []string{"3", "4", "5"}, ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal("workers[0].maximum"),
@@ -6642,13 +6652,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Field": Equal("workers[1].maximum"),
 				})),
 			)),
-			Entry("maximum < len(zones) with multiple system component worker pools in same zones", "1.27", two, one, true, false, []string{"1", "2", "3"}, []string{"3", "1", "2"}, ConsistOf(
+			Entry("maximum < len(zones) with multiple system component worker pools in same zones", two, one, true, false, []string{"1", "2", "3"}, []string{"3", "1", "2"}, ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal("workers[0].maximum"),
 				})),
 			)),
-			Entry("maximum < len(zones) for versions < 1.27", "1.26", two, one, true, false, []string{"1", "2", "3"}, []string{"1"}, BeEmpty()),
 		)
 	})
 
