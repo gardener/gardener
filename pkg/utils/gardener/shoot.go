@@ -200,6 +200,7 @@ const (
 	// ShootProjectSecretSuffixKubeconfig is a constant for a shoot project secret with suffix 'kubeconfig'.
 	ShootProjectSecretSuffixKubeconfig = "kubeconfig"
 	// ShootProjectSecretSuffixCACluster is a constant for a shoot project secret with suffix 'ca-cluster'.
+	//
 	// Deprecated: This constant is deprecated in favor of ShootProjectConfigMapSuffixCACluster
 	ShootProjectSecretSuffixCACluster = "ca-cluster"
 	// ShootProjectSecretSuffixCAClient is a constant for a shoot project secret with suffix 'ca-client'.

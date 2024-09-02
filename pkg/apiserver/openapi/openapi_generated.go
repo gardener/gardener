@@ -3024,7 +3024,7 @@ func schema_pkg_apis_core_v1beta1_DNS(ref common.ReferenceCallback) common.OpenA
 							},
 						},
 						SchemaProps: spec.SchemaProps{
-							Description: "Providers is a list of DNS providers that shall be enabled for this shoot cluster. Only relevant if not a default domain is used. Deprecated: Configuring multiple DNS providers is deprecated and will be forbidden in a future release. Please use the DNS extension provider config (e.g. shoot-dns-service) for additional providers.",
+							Description: "Providers is a list of DNS providers that shall be enabled for this shoot cluster. Only relevant if not a default domain is used.\n\nDeprecated: Configuring multiple DNS providers is deprecated and will be forbidden in a future release. Please use the DNS extension provider config (e.g. shoot-dns-service) for additional providers.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -3096,13 +3096,13 @@ func schema_pkg_apis_core_v1beta1_DNSProvider(ref common.ReferenceCallback) comm
 				Properties: map[string]spec.Schema{
 					"domains": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Domains contains information about which domains shall be included/excluded for this provider. Deprecated: This field is deprecated and will be removed in a future release. Please use the DNS extension provider config (e.g. shoot-dns-service) for additional configuration.",
+							Description: "Domains contains information about which domains shall be included/excluded for this provider.\n\nDeprecated: This field is deprecated and will be removed in a future release. Please use the DNS extension provider config (e.g. shoot-dns-service) for additional configuration.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude"),
 						},
 					},
 					"primary": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Primary indicates that this DNSProvider is used for shoot related domains. Deprecated: This field is deprecated and will be removed in a future release. Please use the DNS extension provider config (e.g. shoot-dns-service) for additional and non-primary providers.",
+							Description: "Primary indicates that this DNSProvider is used for shoot related domains.\n\nDeprecated: This field is deprecated and will be removed in a future release. Please use the DNS extension provider config (e.g. shoot-dns-service) for additional and non-primary providers.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
@@ -3123,7 +3123,7 @@ func schema_pkg_apis_core_v1beta1_DNSProvider(ref common.ReferenceCallback) comm
 					},
 					"zones": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Zones contains information about which hosted zones shall be included/excluded for this provider. Deprecated: This field is deprecated and will be removed in a future release. Please use the DNS extension provider config (e.g. shoot-dns-service) for additional configuration.",
+							Description: "Zones contains information about which hosted zones shall be included/excluded for this provider.\n\nDeprecated: This field is deprecated and will be removed in a future release. Please use the DNS extension provider config (e.g. shoot-dns-service) for additional configuration.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude"),
 						},
 					},
@@ -4473,7 +4473,7 @@ func schema_pkg_apis_core_v1beta1_KubeletConfig(ref common.ReferenceCallback) co
 					},
 					"systemReserved": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SystemReserved is the configuration for resources reserved for system processes not managed by kubernetes (e.g. journald). When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied. Deprecated: Separately configuring resource reservations for system processes is deprecated in Gardener and will be forbidden starting from Kubernetes 1.31. Please merge existing resource reservations into the kubeReserved field.",
+							Description: "SystemReserved is the configuration for resources reserved for system processes not managed by kubernetes (e.g. journald). When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.\n\nDeprecated: Separately configuring resource reservations for system processes is deprecated in Gardener and will be forbidden starting from Kubernetes 1.31. Please merge existing resource reservations into the kubeReserved field.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigReserved"),
 						},
 					},
@@ -6089,7 +6089,7 @@ func schema_pkg_apis_core_v1beta1_OIDCConfig(ref common.ReferenceCallback) commo
 					},
 					"clientAuthentication": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ClientAuthentication can optionally contain client configuration used for kubeconfig generation. Deprecated: This field has no implemented use and will be forbidden starting from Kubernetes 1.31. It's use was planned for genereting OIDC kubeconfig https://github.com/gardener/gardener/issues/1433",
+							Description: "ClientAuthentication can optionally contain client configuration used for kubeconfig generation.\n\nDeprecated: This field has no implemented use and will be forbidden starting from Kubernetes 1.31. It's use was planned for genereting OIDC kubeconfig https://github.com/gardener/gardener/issues/1433",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.OpenIDConnectClientAuthentication"),
 						},
 					},
@@ -10711,7 +10711,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_GardenletDeployment(ref common.Refe
 					},
 					"vpa": {
 						SchemaProps: spec.SchemaProps{
-							Description: "VPA specifies whether to enable VPA for gardenlet. Defaults to true. Deprecated: This field is deprecated and has no effect anymore. It will be removed in the future.",
+							Description: "VPA specifies whether to enable VPA for gardenlet. Defaults to true.\n\nDeprecated: This field is deprecated and has no effect anymore. It will be removed in the future.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
@@ -10914,7 +10914,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_GardenletSelfDeployment(ref common.
 					},
 					"vpa": {
 						SchemaProps: spec.SchemaProps{
-							Description: "VPA specifies whether to enable VPA for gardenlet. Defaults to true. Deprecated: This field is deprecated and has no effect anymore. It will be removed in the future.",
+							Description: "VPA specifies whether to enable VPA for gardenlet. Defaults to true.\n\nDeprecated: This field is deprecated and has no effect anymore. It will be removed in the future.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
@@ -11750,7 +11750,7 @@ func schema_pkg_apis_settings_v1alpha1_ClusterOpenIDConnectPresetSpec(ref common
 					},
 					"client": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Client contains the configuration used for client OIDC authentication of Shoot clusters. This configuration is not overwriting any existing OpenID Connect client authentication already set on the Shoot object. Deprecated: The OpenID Connect configuration this field specifies is not used and will be forbidden starting from Kubernetes 1.31. It's use was planned for genereting OIDC kubeconfig https://github.com/gardener/gardener/issues/1433",
+							Description: "Client contains the configuration used for client OIDC authentication of Shoot clusters. This configuration is not overwriting any existing OpenID Connect client authentication already set on the Shoot object.\n\nDeprecated: The OpenID Connect configuration this field specifies is not used and will be forbidden starting from Kubernetes 1.31. It's use was planned for genereting OIDC kubeconfig https://github.com/gardener/gardener/issues/1433",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/settings/v1alpha1.OpenIDConnectClientAuthentication"),
 						},
 					},
@@ -12026,7 +12026,7 @@ func schema_pkg_apis_settings_v1alpha1_OpenIDConnectPresetSpec(ref common.Refere
 					},
 					"client": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Client contains the configuration used for client OIDC authentication of Shoot clusters. This configuration is not overwriting any existing OpenID Connect client authentication already set on the Shoot object. Deprecated: The OpenID Connect configuration this field specifies is not used and will be forbidden starting from Kubernetes 1.31. It's use was planned for genereting OIDC kubeconfig https://github.com/gardener/gardener/issues/1433",
+							Description: "Client contains the configuration used for client OIDC authentication of Shoot clusters. This configuration is not overwriting any existing OpenID Connect client authentication already set on the Shoot object.\n\nDeprecated: The OpenID Connect configuration this field specifies is not used and will be forbidden starting from Kubernetes 1.31. It's use was planned for genereting OIDC kubeconfig https://github.com/gardener/gardener/issues/1433",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/settings/v1alpha1.OpenIDConnectClientAuthentication"),
 						},
 					},

@@ -4593,8 +4593,8 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <em>(Optional)</em>
 <p>UserData is a base64-encoded string that contains the data that is sent to the provider&rsquo;s APIs
 when a new machine/VM that is part of this worker pool shall be spawned.
-Either this or UserDataSecretRef must be provided.
-Deprecated: This field will be removed in future release.
+Either this or UserDataSecretRef must be provided.</p>
+<p>Deprecated: This field will be removed in future release.
 TODO(rfranzke): Remove this field after v1.104 has been released.</p>
 </td>
 </tr>

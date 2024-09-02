@@ -449,6 +449,7 @@ type DNS struct {
 	Domain *string `json:"domain,omitempty" protobuf:"bytes,1,opt,name=domain"`
 	// Providers is a list of DNS providers that shall be enabled for this shoot cluster. Only relevant if
 	// not a default domain is used.
+	//
 	// Deprecated: Configuring multiple DNS providers is deprecated and will be forbidden in a future release.
 	// Please use the DNS extension provider config (e.g. shoot-dns-service) for additional providers.
 	// +patchMergeKey=type
@@ -462,11 +463,13 @@ type DNS struct {
 // DNSProvider contains information about a DNS provider.
 type DNSProvider struct {
 	// Domains contains information about which domains shall be included/excluded for this provider.
+	//
 	// Deprecated: This field is deprecated and will be removed in a future release.
 	// Please use the DNS extension provider config (e.g. shoot-dns-service) for additional configuration.
 	// +optional
 	Domains *DNSIncludeExclude `json:"domains,omitempty" protobuf:"bytes,1,opt,name=domains"`
 	// Primary indicates that this DNSProvider is used for shoot related domains.
+	//
 	// Deprecated: This field is deprecated and will be removed in a future release.
 	// Please use the DNS extension provider config (e.g. shoot-dns-service) for additional and non-primary providers.
 	// +optional
@@ -482,6 +485,7 @@ type DNSProvider struct {
 	Type *string `json:"type,omitempty" protobuf:"bytes,4,opt,name=type"`
 
 	// Zones contains information about which hosted zones shall be included/excluded for this provider.
+	//
 	// Deprecated: This field is deprecated and will be removed in a future release.
 	// Please use the DNS extension provider config (e.g. shoot-dns-service) for additional configuration.
 	// +optional
@@ -921,6 +925,7 @@ type OIDCConfig struct {
 	// +optional
 	CABundle *string `json:"caBundle,omitempty" protobuf:"bytes,1,opt,name=caBundle"`
 	// ClientAuthentication can optionally contain client configuration used for kubeconfig generation.
+	//
 	// Deprecated: This field has no implemented use and will be forbidden starting from Kubernetes 1.31.
 	// It's use was planned for genereting OIDC kubeconfig https://github.com/gardener/gardener/issues/1433
 	// TODO(AleksandarSavchev): Drop this field after support for Kubernetes 1.30 is dropped.
@@ -1188,6 +1193,7 @@ type KubeletConfig struct {
 	KubeReserved *KubeletConfigReserved `json:"kubeReserved,omitempty" protobuf:"bytes,14,opt,name=kubeReserved"`
 	// SystemReserved is the configuration for resources reserved for system processes not managed by kubernetes (e.g. journald).
 	// When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.
+	//
 	// Deprecated: Separately configuring resource reservations for system processes is deprecated in Gardener and will be forbidden starting from Kubernetes 1.31.
 	// Please merge existing resource reservations into the kubeReserved field.
 	// TODO(MichaelEischer): Drop this field after support for Kubernetes 1.30 is dropped.

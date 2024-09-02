@@ -23,6 +23,7 @@ var (
 type initializer struct{}
 
 // NewInitializer returns a new containerd initializer component.
+//
 // Deprecated: The containerd initializer is deprecated and will be removed in a future version. Please don't change or add content to the init script.
 // TODO(timuthy): Remove Initializer after Gardener v1.114 was released.
 func NewInitializer() *initializer {
