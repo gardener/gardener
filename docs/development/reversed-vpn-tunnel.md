@@ -46,7 +46,7 @@ active-backup mode. This means the traffic only goes through the active sublink 
 becomes unavailable. Switching happens in the bonding network driver without changing any routes. So with this layer, 
 vpn-seed-server pods can be rolled without disrupting open connections.
 
-![VPN HA Architecture](images/vpn-ha-architecture.png)
+![VPN HA Architecture](content/vpn-ha-architecture.png)
 
 With bonding, there are 2 possible routing paths, ensuring that there is at least one routing path intact even if
 one `vpn-seed-server` pod and one `vpn-shoot` pod are unavailable at the same time.
@@ -73,6 +73,6 @@ It listens for `UDP6` packets sent periodically from the `path-controller` runni
 These `UDP6` packets contain the `IPv6` address of the bond device.
 If the tunnel controller detects a new kube-apiserver this way, it creates a new tunnel device and route to it.
 
-![Four possible routing paths](images/vpn-ha-routing-paths.png)
+![Four possible routing paths](content/vpn-ha-routing-paths.png)
 
 For general information about HA control-plane, see [GEP-20](../proposals/20-ha-control-planes.md). 

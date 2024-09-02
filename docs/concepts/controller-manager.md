@@ -136,7 +136,7 @@ In order to activate it, provide the following configuration:
 
 ### [`ExposureClass` Controller](../../pkg/controllermanager/controller/exposureclass)
 
-`ExposureClass` abstracts the ability to expose a Shoot clusters control plane in certain network environments (e.g. corporate networks, DMZ, internet) on all Seeds or a subset of the Seeds. For more information, see [ExposureClasses](../usage/exposureclasses.md).
+`ExposureClass` abstracts the ability to expose a Shoot clusters control plane in certain network environments (e.g. corporate networks, DMZ, internet) on all Seeds or a subset of the Seeds. For more information, see [ExposureClasses](../usage/networking/exposureclasses.md).
 
 Consequently, to ensure that `ExposureClass`es in-use are always present in the system until the last referring `Shoot` gets deleted, the controller adds a finalizer which is only released when there is no `Shoot` referencing the `ExposureClass` anymore.
 
@@ -171,7 +171,7 @@ Consequently, to ensure that `Quota`s in-use are always present in the system un
 ### [`Project` Controller](../../pkg/controllermanager/controller/project)
 
 There are multiple controllers responsible for different aspects of `Project` objects.
-Please also refer to the [`Project` documentation](../usage/projects.md).
+Please also refer to the [`Project` documentation](../usage/project/projects.md).
 
 #### ["Main" Reconciler](../../pkg/controllermanager/controller/project/project)
 
@@ -321,13 +321,13 @@ This is to provide a holistic view on the status of the registered seed cluster 
 #### ["Hibernation" Reconciler](../../pkg/controllermanager/controller/shoot/hibernation)
 
 This reconciler is responsible for hibernating or awakening shoot clusters based on the schedules defined in their `.spec.hibernation.schedules`.
-It ignores [failed `Shoot`s](../usage/shoot_status.md#last-operation) and those marked for deletion.
+It ignores [failed `Shoot`s](../usage/shoot-basics/shoot_status.md#last-operation) and those marked for deletion.
 
 #### ["Maintenance" Reconciler](../../pkg/controllermanager/controller/shoot/maintenance)
 
 This reconciler is responsible for maintaining shoot clusters based on the time window defined in their `.spec.maintenance.timeWindow`.
 It might auto-update the Kubernetes version or the operating system versions specified in the worker pools (`.spec.provider.workers`).
-It could also add some operation or task annotations. For more information, see [Shoot Maintenance](../usage/shoot_maintenance.md).
+It could also add some operation or task annotations. For more information, see [Shoot Maintenance](../usage/shoot-basics/shoot_maintenance.md).
 
 #### ["Quota" Reconciler](../../pkg/controllermanager/controller/shoot/quota)
 
@@ -356,8 +356,8 @@ Further checks might be added in the future.
 #### ["Retry" Reconciler](../../pkg/controllermanager/controller/shoot/retry)
 
 This reconciler is responsible for retrying certain failed `Shoot`s.
-Currently, the reconciler retries only failed `Shoot`s with an error code `ERR_INFRA_RATE_LIMITS_EXCEEDED`. See [Shoot Status](../usage/shoot_status.md#error-codes) for more details.
+Currently, the reconciler retries only failed `Shoot`s with an error code `ERR_INFRA_RATE_LIMITS_EXCEEDED`. See [Shoot Status](../usage/shoot-basics/shoot_status.md#error-codes) for more details.
 
 #### ["Status Label" Reconciler](../../pkg/controllermanager/controller/shoot/statuslabel)
 
-This reconciler is responsible for maintaining the `shoot.gardener.cloud/status` label on `Shoot`s. See [Shoot Status](../usage/shoot_status.md#status-label) for more details.
+This reconciler is responsible for maintaining the `shoot.gardener.cloud/status` label on `Shoot`s. See [Shoot Status](../usage/shoot-basics/shoot_status.md#status-label) for more details.

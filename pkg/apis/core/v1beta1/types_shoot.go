@@ -211,7 +211,7 @@ type ShootStatus struct {
 	LastMaintenance *LastMaintenance `json:"lastMaintenance,omitempty" protobuf:"bytes,17,opt,name=lastMaintenance"`
 	// EncryptedResources is the list of resources in the Shoot which are currently encrypted.
 	// Secrets are encrypted by default and are not part of the list.
-	// See https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md for more details.
+	// See https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md for more details.
 	// +optional
 	EncryptedResources []string `json:"encryptedResources,omitempty" protobuf:"bytes,18,rep,name=encryptedResources"`
 	// Networking contains information about cluster networking such as CIDRs.
@@ -864,7 +864,7 @@ type EncryptionConfig struct {
 	// Each item is a Kubernetes resource name in plural (resource or resource.group) that should be encrypted.
 	// Note that configuring a custom resource is only supported for versions >= 1.26.
 	// Wildcards are not supported for now.
-	// See https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md for more details.
+	// See https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md for more details.
 	Resources []string `json:"resources" protobuf:"bytes,1,rep,name=resources"`
 }
 
@@ -1369,7 +1369,7 @@ type Networking struct {
 	// +optional
 	Services *string `json:"services,omitempty" protobuf:"bytes,5,opt,name=services"`
 	// IPFamilies specifies the IP protocol versions to use for shoot networking. This field is immutable.
-	// See https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md.
+	// See https://github.com/gardener/gardener/blob/master/docs/development/ipv6.md.
 	// Defaults to ["IPv4"].
 	// +optional
 	IPFamilies []IPFamily `json:"ipFamilies,omitempty" protobuf:"bytes,6,rep,name=ipFamilies,casttype=IPFamily"`

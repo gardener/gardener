@@ -32,7 +32,7 @@ reviewers:
 For each `Shoot` resource, `gardenlet` creates a corresponding `ShootState` resource which has the same lifecycle as the `Shoot`.
 Today, such resources are used for two purposes:
 
-1. Exposing the client CA certificate and key of the shoot cluster such that the `gardener-apiserver` is able to issue short-lived client certificates via the [`shoots/adminkubeconfig` subresource](../usage/shoot_access.md#shootsadminkubeconfig-subresource).
+1. Exposing the client CA certificate and key of the shoot cluster such that the `gardener-apiserver` is able to issue short-lived client certificates via the [`shoots/adminkubeconfig` subresource](../usage/shoot-basics/shoot_access.md#shootsadminkubeconfig-subresource).
 2. Storing the most crucial data for shoot clusters which is necessary to migrate and restore a cluster from one `Seed` to another (certificates, keys, secrets, relevant extensions state for created infrastructure or worker machines).
 
 Especially due to the second purpose, the `ShootState` API imposes several scalability concerns and limitations for large Gardener installations.

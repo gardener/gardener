@@ -69,8 +69,8 @@ This ability removes the need for changing the `.spec.kubernetes.kubeAPIServer.s
 
 Prerequisites:
 - The Garden Cluster should have the Gardener Discovery Server deployed and configured.
-  The easiest way to handle this is by using the [gardener-operator](../concepts/operator.md#gardener-discovery-server).
-- The [`ShootManagedIssuer`](../deployment/feature_gates.md#list-of-feature-gates) feature gate should be enabled.
+  The easiest way to handle this is by using the [gardener-operator](../../concepts/operator.md#gardener-discovery-server).
+- The [`ShootManagedIssuer`](../../deployment/feature_gates.md#list-of-feature-gates) feature gate should be enabled.
 
 ### Enablement
 

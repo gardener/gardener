@@ -115,7 +115,7 @@ Because of this, a matching region with a matching provider is always preferred.
 
 ### Special handling based on shoot cluster purpose
 
-Every shoot cluster can have a purpose that describes what the cluster is used for, and also influences how the cluster is setup (see [Shoot Cluster Purpose](../usage/shoot_purposes.md) for more information).
+Every shoot cluster can have a purpose that describes what the cluster is used for, and also influences how the cluster is setup (see [Shoot Cluster Purpose](../usage/shoot-basics/shoot_purposes.md) for more information).
 
 In case the shoot has the `testing` purpose, then the scheduler only reads the `.spec.provider.type` from the `Shoot` resource and tries to find a `Seed` that has the identical `.spec.provider.type`.
 The region does not matter, i.e., `testing` shoots may also be scheduled on a seed in a complete different region if it is better for balancing the whole Gardener system.

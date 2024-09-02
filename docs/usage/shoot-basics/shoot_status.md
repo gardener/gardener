@@ -4,11 +4,11 @@ description: Shoot conditions, constraints, and error codes
 
 # Shoot Status
 
-This document provides an overview of the [ShootStatus](../api-reference/core.md#shootstatus).
+This document provides an overview of the [ShootStatus](../../api-reference/core.md#shootstatus).
 
 ## Conditions
 
-The Shoot status consists of a set of conditions. A [Condition](../api-reference/core.md#condition) has the following fields:
+The Shoot status consists of a set of conditions. A [Condition](../../api-reference/core.md#condition) has the following fields:
 
 | Field name           | Description                                                                                                        |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------ |
@@ -28,8 +28,8 @@ Currently, the available Shoot condition types are:
 - `ObservabilityComponentsHealthy`
 - `SystemComponentsHealthy`
 
-The Shoot conditions are maintained by the [shoot care reconciler](../../pkg/gardenlet/controller/shoot/care/reconciler.go) of the gardenlet.
-Find more information in the [gardelent documentation](../concepts/gardenlet.md#shoot-controller).
+The Shoot conditions are maintained by the [shoot care reconciler](../../../pkg/gardenlet/controller/shoot/care/reconciler.go) of the gardenlet.
+Find more information in the [gardelent documentation](../../concepts/gardenlet.md#shoot-controller).
 
 ### Sync Period
 
@@ -58,7 +58,7 @@ the overall request might still fail as there is overhead in communication with 
 
 Generally, it's [best practice](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#timeouts) to specify low timeouts in WebhookConfigs.
 
-As an effort to correct this common problem, the webhook remediator has been created. This is enabled by setting `.controllers.shootCare.webhookRemediatorEnabled=true` in the `gardenlet`'s configuration. This feature simply checks whether webhook configurations in shoot clusters match a set of rules described [here](../../pkg/gardenlet/operation/botanist/matchers/matcher.go). If at least one of the rules matches, it will change set `status=False` for the `.status.constraints` of type `HibernationPossible` and `MaintenancePreconditionsSatisfied` in the `Shoot` resource. In addition, the `failurePolicy` in the affected webhook configurations will be set from `Fail` to `Ignore`. Gardenlet will also add an annotation to make it visible to end-users that their webhook configurations were mutated and should be fixed/adapted according to the rules and best practices.
+As an effort to correct this common problem, the webhook remediator has been created. This is enabled by setting `.controllers.shootCare.webhookRemediatorEnabled=true` in the `gardenlet`'s configuration. This feature simply checks whether webhook configurations in shoot clusters match a set of rules described [here](../../../pkg/gardenlet/operation/botanist/matchers/matcher.go). If at least one of the rules matches, it will change set `status=False` for the `.status.constraints` of type `HibernationPossible` and `MaintenancePreconditionsSatisfied` in the `Shoot` resource. In addition, the `failurePolicy` in the affected webhook configurations will be set from `Fail` to `Ignore`. Gardenlet will also add an annotation to make it visible to end-users that their webhook configurations were mutated and should be fixed/adapted according to the rules and best practices.
 
 In most cases, you can avoid this by simply excluding the `kube-system` namespace from your webhook via the `namespaceSelector`:
 ```yaml
@@ -106,7 +106,7 @@ It is meant to make the user aware of potential problems that might occur due to
 
 This constraint indicates that there is at least one CA certificate which expires in less than `1y`.
 It will not be added to the `.status.constraints` if there is no such CA certificate.
-However, if it's visible, then a [credentials rotation operation](shoot_credentials_rotation.md#certificate-authorities) should be considered.
+However, if it's visible, then a [credentials rotation operation](../shoot-operations/shoot_credentials_rotation.md#certificate-authorities) should be considered.
 
 **`CRDsWithProblematicConversionWebhooks`**:
 
@@ -116,11 +116,11 @@ However, if it's visible, then you should consider upgrading the existing object
 
 ### Last Operation
 
-The Shoot status holds information about the last operation that is performed on the Shoot. The last operation field reflects overall progress and the tasks that are currently being executed. Allowed operation types are `Create`, `Reconcile`, `Delete`, `Migrate`, and `Restore`. Allowed operation states are `Processing`, `Succeeded`, `Error`, `Failed`, `Pending`, and `Aborted`. An operation in `Error` state is an operation that will be retried for a configurable amount of time (`controllers.shoot.retryDuration` field in `GardenletConfiguration`, defaults to `12h`). If the operation cannot complete successfully for the configured retry duration, it will be marked as `Failed`. An operation in `Failed` state is an operation that won't be retried automatically (to retry such an operation, see [Retry failed operation](./shoot_operations.md#retry-failed-operation)).
+The Shoot status holds information about the last operation that is performed on the Shoot. The last operation field reflects overall progress and the tasks that are currently being executed. Allowed operation types are `Create`, `Reconcile`, `Delete`, `Migrate`, and `Restore`. Allowed operation states are `Processing`, `Succeeded`, `Error`, `Failed`, `Pending`, and `Aborted`. An operation in `Error` state is an operation that will be retried for a configurable amount of time (`controllers.shoot.retryDuration` field in `GardenletConfiguration`, defaults to `12h`). If the operation cannot complete successfully for the configured retry duration, it will be marked as `Failed`. An operation in `Failed` state is an operation that won't be retried automatically (to retry such an operation, see [Retry failed operation](../shoot-operations/shoot_operations.md#retry-failed-operation)).
 
 ### Last Errors
 
-The Shoot status also contains information about the last occurred error(s) (if any) during an operation. A [LastError](../api-reference/core.md#lasterror) consists of identifier of the task returned error, human-readable message of the error and error codes (if any) associated with the error.
+The Shoot status also contains information about the last occurred error(s) (if any) during an operation. A [LastError](../../api-reference/core.md#lasterror) consists of identifier of the task returned error, human-readable message of the error and error codes (if any) associated with the error.
 
 ### Error Codes
 

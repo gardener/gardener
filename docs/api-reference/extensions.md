@@ -1300,7 +1300,7 @@ string
 <td>
 <em>(Optional)</em>
 <p>IPFamilies specifies the IP protocol versions to use for shoot networking. This field is immutable.
-See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md">https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md</a></p>
+See <a href="https://github.com/gardener/gardener/blob/master/docs/development/ipv6.md">https://github.com/gardener/gardener/blob/master/docs/development/ipv6.md</a></p>
 </td>
 </tr>
 </table>
@@ -3767,7 +3767,7 @@ string
 <td>
 <em>(Optional)</em>
 <p>IPFamilies specifies the IP protocol versions to use for shoot networking. This field is immutable.
-See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md">https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md</a></p>
+See <a href="https://github.com/gardener/gardener/blob/master/docs/development/ipv6.md">https://github.com/gardener/gardener/blob/master/docs/development/ipv6.md</a></p>
 </td>
 </tr>
 </tbody>

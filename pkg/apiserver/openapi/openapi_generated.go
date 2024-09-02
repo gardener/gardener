@@ -3305,7 +3305,7 @@ func schema_pkg_apis_core_v1beta1_EncryptionConfig(ref common.ReferenceCallback)
 				Properties: map[string]spec.Schema{
 					"resources": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Resources contains the list of resources that shall be encrypted in addition to secrets. Each item is a Kubernetes resource name in plural (resource or resource.group) that should be encrypted. Note that configuring a custom resource is only supported for versions >= 1.26. Wildcards are not supported for now. See https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md for more details.",
+							Description: "Resources contains the list of resources that shall be encrypted in addition to secrets. Each item is a Kubernetes resource name in plural (resource or resource.group) that should be encrypted. Note that configuring a custom resource is only supported for versions >= 1.26. Wildcards are not supported for now. See https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md for more details.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -5838,7 +5838,7 @@ func schema_pkg_apis_core_v1beta1_Networking(ref common.ReferenceCallback) commo
 					},
 					"ipFamilies": {
 						SchemaProps: spec.SchemaProps{
-							Description: "IPFamilies specifies the IP protocol versions to use for shoot networking. This field is immutable. See https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md. Defaults to [\"IPv4\"].",
+							Description: "IPFamilies specifies the IP protocol versions to use for shoot networking. This field is immutable. See https://github.com/gardener/gardener/blob/master/docs/development/ipv6.md. Defaults to [\"IPv4\"].",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -7329,7 +7329,7 @@ func schema_pkg_apis_core_v1beta1_SeedNetworks(ref common.ReferenceCallback) com
 					},
 					"ipFamilies": {
 						SchemaProps: spec.SchemaProps{
-							Description: "IPFamilies specifies the IP protocol versions to use for seed networking. This field is immutable. See https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md. Defaults to [\"IPv4\"].",
+							Description: "IPFamilies specifies the IP protocol versions to use for seed networking. This field is immutable. See https://github.com/gardener/gardener/blob/master/docs/development/ipv6.md. Defaults to [\"IPv4\"].",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -9114,7 +9114,7 @@ func schema_pkg_apis_core_v1beta1_ShootStatus(ref common.ReferenceCallback) comm
 					},
 					"encryptedResources": {
 						SchemaProps: spec.SchemaProps{
-							Description: "EncryptedResources is the list of resources in the Shoot which are currently encrypted. Secrets are encrypted by default and are not part of the list. See https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md for more details.",
+							Description: "EncryptedResources is the list of resources in the Shoot which are currently encrypted. Secrets are encrypted by default and are not part of the list. See https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md for more details.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{

@@ -292,7 +292,7 @@ func newPatchFunc(shootClient client.Client, webhookConfig client.Object, patch 
 		"(https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#best-practices-and-warnings) " +
 		"and might interfere with the cluster operations. Please make sure to follow these recommendations to prevent " +
 		"future interventions. When you are done, please remove this annotation. See also " +
-		"https://github.com/gardener/gardener/blob/master/docs/usage/shoot_status.md#constraints for further information.\n" +
+		"https://github.com/gardener/gardener/blob/master/docs/usage/shoot-basics/shoot_status.md#constraints for further information.\n" +
 		"The following modifications have been made:\n" +
 		strings.Join(addHyphenPrefix(remediations), "\n")
 	webhookConfig.SetAnnotations(annotations)

@@ -10,7 +10,7 @@ Kubernetes uses the underlying container runtime logging, which does not persist
 * One Vali Statefulset in the `garden` namespace which contains logs for the seed cluster and one per shoot namespace which contains logs for shoot's controlplane.
 * One Plutono Deployment in `garden` namespace and two Deployments per shoot namespace (one exposed to the end users and one for the operators). Plutono is the UI component used in the logging stack.
 
-![](images/logging-architecture.png)
+![](../images/logging-architecture.png)
 
 ## Container Logs Rotation and Retention
 
@@ -44,7 +44,7 @@ In the majority of the cases, the defaults should do just fine. Custom configura
 The logging stack is extended to scrape logs from the systemd services of each shoots' nodes and from all Gardener components in the shoot `kube-system` namespace. These logs are exposed only to the Gardener operators.
 
 Also, in the shoot control plane an `event-logger` pod is deployed, which scrapes events from the shoot `kube-system` namespace and shoot `control-plane` namespace in the seed. The `event-logger` logs the events to the standard output. Then the `fluent-bit` gets these events as container logs and sends them to the Vali in the shoot control plane (similar to how it works for any other control plane component).
-![](images/shoot-node-logging-architecture.png)
+![](../images/shoot-node-logging-architecture.png)
 
 ## How to Access the Logs
 
@@ -69,7 +69,7 @@ By clicking on a value, Plutono automatically eliminates all other labels and/or
 After choosing the right labels and their values, click on the `Show logs` button.
 This will build `Log query` and execute it.
 This approach is convenient when you don't know the labels names or they values.
-![](images/explore-button-usage.png)
+![](../images/explore-button-usage.png)
 
 Once you feel comfortable, you can start to use the [LogQL](https://github.com/credativ/plutono) language to search for logs.
 Next to the `Log browser >` button is the place where you can type log queries.
@@ -110,7 +110,7 @@ Examples:
 
 ## Expose Logs for Component to User Plutono
 
-Exposing logs for a new component to the User's Plutono is described in the [How to Expose Logs to the Users](../extensions/logging-and-monitoring.md#how-to-expose-logs-to-the-users) section.
+Exposing logs for a new component to the User's Plutono is described in the [How to Expose Logs to the Users](../../extensions/logging-and-monitoring.md#how-to-expose-logs-to-the-users) section.
 
 ## Configuration
 

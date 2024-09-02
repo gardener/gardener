@@ -61,13 +61,13 @@ The list of members (again a list in `.spec.members[]` using the `rbac.authoriza
 Each project member must have at least one role (currently described in `.spec.members[].role`, additional roles can be added to `.spec.members[].roles[]`). The following roles exist:
 
 * `admin`: This allows to fully manage resources inside the project (e.g., secrets, shoots, configmaps, and similar). Mind that the `admin` role has read only access to service accounts.
-* `serviceaccountmanager`: This allows to fully manage service accounts inside the project namespace and request tokens for them. The permissions of the created service accounts are instead managed by the `admin` role. Please refer to [Service Account Manager](./service-account-manager.md).
+* `serviceaccountmanager`: This allows to fully manage service accounts inside the project namespace and request tokens for them. The permissions of the created service accounts are instead managed by the `admin` role. Please refer to [Service Account Manager](service-account-manager.md).
 * `uam`: This allows to add/modify/remove human users or groups to/from the project member list.
 * `viewer`: This allows to read all resources inside the project except secrets.
 * `owner`: This combines the `admin`, `uam`, and `serviceaccountmanager` roles.
-* Extension roles (prefixed with `extension:`): Please refer to [Extending Project Roles](../extensions/project-roles.md).
+* Extension roles (prefixed with `extension:`): Please refer to [Extending Project Roles](../../extensions/project-roles.md).
 
-The [project controller](../concepts/controller-manager.md#project-controller) inside the Gardener Controller Manager is managing RBAC resources that grant the described privileges to the respective members.
+The [project controller](../../concepts/controller-manager.md#project-controller) inside the Gardener Controller Manager is managing RBAC resources that grant the described privileges to the respective members.
 
 There are three central `ClusterRole`s `gardener.cloud:system:project-member`, `gardener.cloud:system:project-viewer`, and `gardener.cloud:system:project-serviceaccountmanager` that grant the permissions for namespaced resources (e.g., `Secret`s, `Shoot`s, `ServiceAccount`s).
 Via referring `RoleBinding`s created in the respective namespace the project members get bound to these `ClusterRole`s and, thus, the needed permissions.
@@ -98,7 +98,7 @@ The project owner can gradually remove these roles if desired.
 
 ## Stale Projects
 
-When a project is not actively used for some period of time, it is marked as "stale". This is done by a controller called ["Stale Projects Reconciler"](../concepts/controller-manager.md#stale-projects-reconciler). Once the project is marked as stale, there is a time frame in which if not used it will be deleted by that controller.
+When a project is not actively used for some period of time, it is marked as "stale". This is done by a controller called ["Stale Projects Reconciler"](../../concepts/controller-manager.md#stale-projects-reconciler). Once the project is marked as stale, there is a time frame in which if not used it will be deleted by that controller.
 
 ## Four-Eyes-Principle For Resource Deletion
 

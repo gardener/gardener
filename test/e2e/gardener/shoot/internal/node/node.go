@@ -33,7 +33,7 @@ const csiNodeDaemonSetName = "e2e-test-csi-node"
 const waitForCSINodeAnnotation = v1beta1constants.AnnotationPrefixWaitForCSINode + "driver"
 const driverName = "foo.driver.example.org"
 
-// VerifyNodeCriticalComponentsBootstrapping tests the node readiness feature (see docs/usage/node-readiness.md).
+// VerifyNodeCriticalComponentsBootstrapping tests the node readiness feature (see docs/usage/advanced/node-readiness.md).
 func VerifyNodeCriticalComponentsBootstrapping(ctx context.Context, f *framework.ShootFramework) {
 	shootClientSet, err := access.CreateShootClientFromAdminKubeconfig(ctx, f.GardenClient, f.Shoot)
 	ExpectWithOffset(1, err).To(Succeed())

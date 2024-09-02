@@ -47,7 +47,7 @@ It validates that the respective resource is annotated with a deletion confirmat
 Only if this annotation is present it allows the `DELETE` operation to pass.
 This prevents users from accidental/undesired deletions.
 In addition, it applies the "four-eyes principle for deletion" concept if the `Project` is configured accordingly.
-Find all information about it [in this document](../usage/projects.md#four-eyes-principle-for-resource-deletion).
+Find all information about it [in this document](../usage/project/projects.md#four-eyes-principle-for-resource-deletion).
 
 Furthermore, this admission controller reacts on `CREATE` or `UPDATE` operations for `Shoot`s.
 It makes sure that the `deletion.gardener.cloud/confirmed-by` annotation is properly maintained in case the `Shoot` deletion is confirmed with above mentioned annotation.
@@ -121,7 +121,7 @@ It also validates the DNS configuration (`.spec.dns`) for shoots.
 _(disabled by default)_
 
 This admission controller reacts on `CREATE` operations for `Shoot`s.
-If enabled, it will enable node local dns within the shoot cluster (for more information, see [NodeLocalDNS Configuration](../usage/node-local-dns.md)) by setting `spec.systemComponents.nodeLocalDNS.enabled=true` for newly created Shoots.
+If enabled, it will enable node local dns within the shoot cluster (for more information, see [NodeLocalDNS Configuration](../usage/networking/node-local-dns.md)) by setting `spec.systemComponents.nodeLocalDNS.enabled=true` for newly created Shoots.
 Already existing Shoots and new Shoots that explicitly disable node local dns (`spec.systemComponents.nodeLocalDNS.enabled=false`)
 will not be affected by this admission plugin.
 
@@ -151,7 +151,7 @@ If a shoot contains global resource reservations, then no per worker pool resour
 _(disabled by default)_
 
 This admission controller reacts on `CREATE` operations for `Shoot`s.
-If enabled, it will enable the managed `VerticalPodAutoscaler` components (for more information, see [Vertical Pod Auto-Scaling](../usage/shoot_autoscaling.md#vertical-pod-auto-scaling)) 
+If enabled, it will enable the managed `VerticalPodAutoscaler` components (for more information, see [Vertical Pod Auto-Scaling](../usage/autoscaling/shoot_autoscaling.md#vertical-pod-auto-scaling)) 
 by setting `spec.kubernetes.verticalPodAutoscaler.enabled=true` for newly created Shoots.
 Already existing Shoots and new Shoots that explicitly disable VPA (`spec.kubernetes.verticalPodAutoscaler.enabled=false`)
 will not be affected by this admission plugin.
@@ -202,7 +202,7 @@ It rejects the deletion if there are `Shoot`s that are scheduled onto the `Seed`
 _(disabled by default)_
 
 This admission controller reacts on `CREATE` operations for `Shoot`s.
-If enabled, it adds a set of common suffixes configured in its admission plugin configuration to the `Shoot` (`spec.systemComponents.coreDNS.rewriting.commonSuffixes`) (for more information, see [DNS Search Path Optimization](../usage/dns-search-path-optimization.md)).
+If enabled, it adds a set of common suffixes configured in its admission plugin configuration to the `Shoot` (`spec.systemComponents.coreDNS.rewriting.commonSuffixes`) (for more information, see [DNS Search Path Optimization](../usage/networking/dns-search-path-optimization.md)).
 Already existing `Shoot`s will not be affected by this admission plugin.
 
 ## `NamespacedCloudProfileValidator`

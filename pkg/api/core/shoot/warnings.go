@@ -25,7 +25,7 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 	var warnings []string
 
 	if ptr.Deref(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, true) {
-		warnings = append(warnings, "you should consider disabling the static token kubeconfig, see https://github.com/gardener/gardener/blob/master/docs/usage/shoot_access.md for details")
+		warnings = append(warnings, "you should consider disabling the static token kubeconfig, see https://github.com/gardener/gardener/blob/master/docs/usage/shoot-basics/shoot_access.md for details")
 	}
 
 	if oldShoot != nil {
@@ -46,7 +46,7 @@ func getWarningsForDueCredentialsRotations(shoot *core.Shoot, credentialsRotatio
 	}
 
 	if shoot.Status.Credentials == nil || shoot.Status.Credentials.Rotation == nil {
-		return []string{"you should consider rotating the shoot credentials, see https://github.com/gardener/gardener/blob/master/docs/usage/shoot_credentials_rotation.md#gardener-provided-credentials for details"}
+		return []string{"you should consider rotating the shoot credentials, see https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/shoot_credentials_rotation.md#gardener-provided-credentials for details"}
 	}
 
 	var (
@@ -55,29 +55,29 @@ func getWarningsForDueCredentialsRotations(shoot *core.Shoot, credentialsRotatio
 	)
 
 	if rotation.CertificateAuthorities == nil || initiationDue(rotation.CertificateAuthorities.LastInitiationTime, credentialsRotationInterval) {
-		warnings = append(warnings, "you should consider rotating the certificate authorities, see https://github.com/gardener/gardener/blob/master/docs/usage/shoot_credentials_rotation.md#certificate-authorities for details")
+		warnings = append(warnings, "you should consider rotating the certificate authorities, see https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/shoot_credentials_rotation.md#certificate-authorities for details")
 	}
 
 	if rotation.ETCDEncryptionKey == nil || initiationDue(rotation.ETCDEncryptionKey.LastInitiationTime, credentialsRotationInterval) {
-		warnings = append(warnings, "you should consider rotating the ETCD encryption key, see https://github.com/gardener/gardener/blob/master/docs/usage/shoot_credentials_rotation.md#etcd-encryption-key for details")
+		warnings = append(warnings, "you should consider rotating the ETCD encryption key, see https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/shoot_credentials_rotation.md#etcd-encryption-key for details")
 	}
 
 	if ptr.Deref(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, true) &&
 		(rotation.Kubeconfig == nil || initiationDue(rotation.Kubeconfig.LastInitiationTime, credentialsRotationInterval)) {
-		warnings = append(warnings, "you should consider rotating the static token kubeconfig, see https://github.com/gardener/gardener/blob/master/docs/usage/shoot_credentials_rotation.md#kubeconfig for details")
+		warnings = append(warnings, "you should consider rotating the static token kubeconfig, see https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/shoot_credentials_rotation.md#kubeconfig for details")
 	}
 
 	if (shoot.Spec.Purpose == nil || *shoot.Spec.Purpose != core.ShootPurposeTesting) &&
 		(rotation.Observability == nil || initiationDue(rotation.Observability.LastInitiationTime, credentialsRotationInterval)) {
-		warnings = append(warnings, "you should consider rotating the observability passwords, see https://github.com/gardener/gardener/blob/master/docs/usage/shoot_credentials_rotation.md#observability-passwords-for-plutono for details")
+		warnings = append(warnings, "you should consider rotating the observability passwords, see https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/shoot_credentials_rotation.md#observability-passwords-for-plutono for details")
 	}
 
 	if rotation.ServiceAccountKey == nil || initiationDue(rotation.ServiceAccountKey.LastInitiationTime, credentialsRotationInterval) {
-		warnings = append(warnings, "you should consider rotating the ServiceAccount token signing key, see https://github.com/gardener/gardener/blob/master/docs/usage/shoot_credentials_rotation.md#serviceaccount-token-signing-key for details")
+		warnings = append(warnings, "you should consider rotating the ServiceAccount token signing key, see https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/shoot_credentials_rotation.md#serviceaccount-token-signing-key for details")
 	}
 
 	if helper.ShootEnablesSSHAccess(shoot) && (rotation.SSHKeypair == nil || initiationDue(rotation.SSHKeypair.LastInitiationTime, credentialsRotationInterval)) {
-		warnings = append(warnings, "you should consider rotating the SSH keypair, see https://github.com/gardener/gardener/blob/master/docs/usage/shoot_credentials_rotation.md#ssh-key-pair-for-worker-nodes for details")
+		warnings = append(warnings, "you should consider rotating the SSH keypair, see https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/shoot_credentials_rotation.md#ssh-key-pair-for-worker-nodes for details")
 	}
 
 	return warnings

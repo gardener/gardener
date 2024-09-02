@@ -29,7 +29,7 @@ To enable this feature, the gardenlet `DefaultSeccompProfile` feature gate must 
 featureGates:
   DefaultSeccompProfile: true
 ``` 
-Please refer to the examples in this [yaml file](../../example/20-componentconfig-gardenlet.yaml) for more information.
+Please refer to the examples in this [yaml file](../../../example/20-componentconfig-gardenlet.yaml) for more information.
 
 Once the feature gate is enabled, the webhook will be registered and configured for the seed cluster. Newly created pods will be mutated to have their seccomp profile set to `RuntimeDefault`.
 
@@ -53,4 +53,4 @@ spec:
       seccompDefault: true
 ```
 
-Please refer to the examples in this [yaml file](../../example/90-shoot.yaml) for more information.
+Please refer to the examples in this [yaml file](../../../example/90-shoot.yaml) for more information.

@@ -4,7 +4,7 @@ title: Taints and Tolerations for Seeds and Shoots
 
 # Taints and Tolerations for `Seed`s and `Shoot`s
 
-Similar to [taints and tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) for `Node`s and `Pod`s in Kubernetes, the `Seed` resource supports specifying taints (`.spec.taints`, see [this example](../../example/50-seed.yaml#L48-L55)) while the `Shoot` resource supports specifying tolerations (`.spec.tolerations`, see [this example](../../example/90-shoot.yaml#L268-L269)).
+Similar to [taints and tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) for `Node`s and `Pod`s in Kubernetes, the `Seed` resource supports specifying taints (`.spec.taints`, see [this example](../../../example/50-seed.yaml#L48-L55)) while the `Shoot` resource supports specifying tolerations (`.spec.tolerations`, see [this example](../../../example/90-shoot.yaml#L268-L269)).
 The feature is used to control scheduling to seeds as well as decisions whether a shoot can use a certain seed.
 
 Compared to Kubernetes, Gardener's taints and tolerations are very much down-stripped right now and have some behavioral differences.
@@ -24,12 +24,12 @@ Consequently, the taints/tolerations feature can be used as means to restrict us
 
 ## Toleration Defaults and Whitelist
 
-The `Project` resource features a `.spec.tolerations` object that may carry `defaults` and a `whitelist` (see [this example](../../example/05-project-dev.yaml#L33-L37)).
+The `Project` resource features a `.spec.tolerations` object that may carry `defaults` and a `whitelist` (see [this example](../../../example/05-project-dev.yaml#L33-L37)).
 The corresponding `ShootTolerationRestriction` admission plugin (cf. Kubernetes' `PodTolerationRestriction` admission plugin) is responsible for evaluating these settings during creation/update of `Shoot`s.
 
 ### Whitelist
 
-If a shoot gets created or updated with tolerations, then it is validated that only those tolerations may be used that were added to either a) the `Project`'s `.spec.tolerations.whitelist`, or b) to the global whitelist in the `ShootTolerationRestriction`'s admission config (see [this example](../../example/20-admissionconfig.yaml#L7-L14)).
+If a shoot gets created or updated with tolerations, then it is validated that only those tolerations may be used that were added to either a) the `Project`'s `.spec.tolerations.whitelist`, or b) to the global whitelist in the `ShootTolerationRestriction`'s admission config (see [this example](../../../example/20-admissionconfig.yaml#L7-L14)).
 
 ⚠️ Please note that the tolerations whitelist of `Project`s can only be changed if the user trying to change it is bound to the `modify-spec-tolerations-whitelist` custom RBAC role, e.g., via the following `ClusterRole`:
 

@@ -20,4 +20,4 @@ Gardener itself is capable of spinning up clusters with Kubernetes versions **`1
 However, the concrete versions that can be used for shoot clusters depend on the installed provider extension.
 Consequently, please consult the documentation of your provider extension to see which Kubernetes versions are supported for shoot clusters.
 
-> 👨🏼‍💻 Developers note: The [Adding Support For a New Kubernetes Version](../development/new-kubernetes-version.md) topic explains what needs to be done in order to add support for a new Kubernetes version.
+> 👨🏼‍💻 Developers note: The [Adding Support For a New Kubernetes Version](../../development/new-kubernetes-version.md) topic explains what needs to be done in order to add support for a new Kubernetes version.
