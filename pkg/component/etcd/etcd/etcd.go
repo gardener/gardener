@@ -593,7 +593,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		serviceMonitor.Labels = monitoringutils.Labels(e.prometheusLabel())
 		serviceMonitor.Spec = monitoringv1.ServiceMonitorSpec{
 			Selector: metav1.LabelSelector{MatchLabels: map[string]string{
-				druidv1alpha1.LabelAppNameKey: "etcd",
+				druidv1alpha1.LabelAppNameKey: fmt.Sprintf("%s-client", e.etcd.Name),
 				druidv1alpha1.LabelPartOfKey:  e.etcd.Name,
 			}},
 			Endpoints: []monitoringv1.Endpoint{
@@ -614,7 +614,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					}},
 					RelabelConfigs: []monitoringv1.RelabelConfig{
 						{
-							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_instance"},
+							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_app_kubernetes_io_part_of"},
 							TargetLabel:  "role",
 						},
 						{
@@ -645,7 +645,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					}},
 					RelabelConfigs: []monitoringv1.RelabelConfig{
 						{
-							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_instance"},
+							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_app_kubernetes_io_part_of"},
 							TargetLabel:  "role",
 						},
 
