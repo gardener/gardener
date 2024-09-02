@@ -1114,7 +1114,7 @@ func ValidateAPIServerRequests(requests *core.APIServerRequests, fldPath *field.
 	return allErrs
 }
 
-func validateEncryptionConfig(encryptionConfig *core.EncryptionConfig, version string, defaultEncryptedResources sets.Set[string], fldPath *field.Path) field.ErrorList {
+func validateEncryptionConfig(encryptionConfig *core.EncryptionConfig, defaultEncryptedResources sets.Set[string], fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if encryptionConfig == nil {
@@ -1139,22 +1139,6 @@ func validateEncryptionConfig(encryptionConfig *core.EncryptionConfig, version s
 		}
 
 		seenResources.Insert(resource)
-	}
-
-	k8sLess126, _ := versionutils.CheckVersionMeetsConstraint(version, "< 1.26")
-	if k8sLess126 {
-		for i, resource := range encryptionConfig.Resources {
-			idxPath := fldPath.Child("encryptionConfig", "resources").Index(i)
-
-			if elements := strings.Split(resource, "."); len(elements) > 2 {
-				// If it's a kubernetes API group, skip
-				if strings.HasSuffix(resource, ".k8s.io") {
-					continue
-				}
-
-				allErrs = append(allErrs, field.Invalid(idxPath, resource, "custom resources are only supported for Kubernetes versions >= 1.26"))
-			}
-		}
 	}
 
 	return allErrs
@@ -1447,7 +1431,7 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(*defaultUnreachableTolerationSeconds, fldPath.Child("defaultUnreachableTolerationSeconds"))...)
 	}
 
-	allErrs = append(allErrs, validateEncryptionConfig(kubeAPIServer.EncryptionConfig, version, defaultEncryptedResources, fldPath)...)
+	allErrs = append(allErrs, validateEncryptionConfig(kubeAPIServer.EncryptionConfig, defaultEncryptedResources, fldPath)...)
 
 	allErrs = append(allErrs, ValidateAPIServerRequests(kubeAPIServer.Requests, fldPath.Child("requests"))...)
 

@@ -1984,22 +1984,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 					))
 				})
 
-				It("should deny using custom resources for Kubernetes versions < 1.26", func() {
-					shoot.Spec.Kubernetes.Version = "1.25"
-					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
-						Resources: []string{"deployment.apps", "new.custom.io", "ingresses.networking.k8s.io"},
-					}
-
-					Expect(ValidateShoot(shoot)).To(ConsistOf(
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":     Equal(field.ErrorTypeInvalid),
-							"Field":    Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[1]"),
-							"BadValue": Equal("new.custom.io"),
-							"Detail":   Equal("custom resources are only supported for Kubernetes versions >= 1.26"),
-						})),
-					))
-				})
-
 				It("should deny changing items when resources in the spec and status are not equal", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
 						Resources: []string{"configmaps", "deployments.apps"},

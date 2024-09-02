@@ -707,7 +707,6 @@ type APIServerRequests struct {
 type EncryptionConfig struct {
 	// Resources contains the list of resources that shall be encrypted in addition to secrets.
 	// Each item is a Kubernetes resource name in plural (resource or resource.group) that should be encrypted.
-	// Note that configuring a custom resource is only supported for versions >= 1.26.
 	// Wildcards are not supported for now.
 	// See https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md for more details.
 	Resources []string
