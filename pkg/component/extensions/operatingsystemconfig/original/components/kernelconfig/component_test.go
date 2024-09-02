@@ -51,13 +51,14 @@ var _ = Describe("Component", func() {
 		component = New()
 	})
 
-	DescribeTable("#Config", func(k8sVersion, additionalData string, protectKernelDefaults *bool, sysctls map[string]string) {
+	DescribeTable("#Config", func(k8sVersion, additionalData string, protectKernelDefaults *bool, sysctls map[string]string, kubeProxyEnabled bool) {
 		units, files, err := component.Config(components.Context{
 			KubernetesVersion: semver.MustParse(k8sVersion),
 			KubeletConfigParameters: components.ConfigurableKubeletConfigParameters{
 				ProtectKernelDefaults: protectKernelDefaults,
 			},
-			Sysctls: sysctls,
+			KubeProxyEnabled: kubeProxyEnabled,
+			Sysctls:          sysctls,
 		})
 		unsortedData := data + additionalData
 		linesWithComments := strings.Split(unsortedData, "\n")
@@ -96,13 +97,14 @@ var _ = Describe("Component", func() {
 		Expect(units).To(ConsistOf(systemdSysctlUnit))
 		Expect(files).To(ConsistOf(kernelSettingsFile))
 	},
-		Entry("should return the expected units and files", "1.25.0", "", nil, nil),
-		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set", "1.25.0", kubeletSysctlConfig, ptr.To(true), nil),
-		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set by default", "1.26.0", kubeletSysctlConfig, nil, nil),
-		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set to false", "1.26.0", "", ptr.To(false), nil),
+		Entry("should return the expected units and files", "1.25.0", "", nil, nil, true),
+		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set", "1.25.0", kubeletSysctlConfig, ptr.To(true), nil, true),
+		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set by default", "1.26.0", kubeletSysctlConfig, nil, nil, true),
+		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set to false", "1.26.0", "", ptr.To(false), nil, true),
 		// This test prevents from unknowingly upgrading to a newer k8s version which may have different sysctl settings.
-		Entry("should return the expected units and files if k8s version has not been upgraded", "1.26.0", hardCodedKubeletSysctlConfig, nil, nil),
-		Entry("should return the expected units and files if configured to add kernel settings", "1.25.0", dummySettingConfig, nil, dummySettingMap),
+		Entry("should return the expected units and files if k8s version has not been upgraded", "1.26.0", hardCodedKubeletSysctlConfig, nil, nil, true),
+		Entry("should return the expected units and files if configured to add kernel settings", "1.25.0", dummySettingConfig, nil, dummySettingMap, true),
+		Entry("should return the expected units and files if kube-proxy is disabled", "1.25.0", nonKubeProxyData, nil, nil, false),
 	)
 })
 
@@ -156,7 +158,9 @@ fs.inotify.max_user_watches = 524288
 # See https://www.sap.com/developer/tutorials/hxe-ua-install-using-docker.html
 fs.aio-max-nr = 262144
 vm.memory_failure_early_kill = 1
-# A common problem on Linux systems is running out of space in the conntrack table,
+`
+
+const nonKubeProxyData = `# A common problem on Linux systems is running out of space in the conntrack table,
 # which can cause poor iptables performance.
 # This can happen if you run a lot of workloads on a given host,
 # or if your workloads create a lot of TCP connections or bidirectional UDP streams.

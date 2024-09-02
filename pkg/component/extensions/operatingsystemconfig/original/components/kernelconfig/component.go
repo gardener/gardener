@@ -36,6 +36,12 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		newData[key] = value
 	}
 
+	if !ctx.KubeProxyEnabled {
+		for key, value := range nonKubeProxyData {
+			newData[key] = value
+		}
+	}
+
 	if kubelet.ShouldProtectKernelDefaultsBeEnabled(&ctx.KubeletConfigParameters, ctx.KubernetesVersion) {
 		// Needed configuration by kubelet
 		// The kubelet sets these values but it is not able to when protectKernelDefaults=true
@@ -137,6 +143,10 @@ var data = map[string]string{
 	// See https://www.sap.com/developer/tutorials/hxe-ua-install-using-docker.html
 	"fs.aio-max-nr":                "262144",
 	"vm.memory_failure_early_kill": "1",
+}
+
+// Kube-proxy already sets the maximum conntrack size, but it may be useful for other scenarios.
+var nonKubeProxyData = map[string]string{
 	// A common problem on Linux systems is running out of space in the conntrack table,
 	// which can cause poor iptables performance.
 	// This can happen if you run a lot of workloads on a given host,
