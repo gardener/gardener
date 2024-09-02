@@ -728,6 +728,7 @@ message DNS {
 
   // Providers is a list of DNS providers that shall be enabled for this shoot cluster. Only relevant if
   // not a default domain is used.
+  //
   // Deprecated: Configuring multiple DNS providers is deprecated and will be forbidden in a future release.
   // Please use the DNS extension provider config (e.g. shoot-dns-service) for additional providers.
   // +patchMergeKey=type
@@ -750,12 +751,14 @@ message DNSIncludeExclude {
 // DNSProvider contains information about a DNS provider.
 message DNSProvider {
   // Domains contains information about which domains shall be included/excluded for this provider.
+  //
   // Deprecated: This field is deprecated and will be removed in a future release.
   // Please use the DNS extension provider config (e.g. shoot-dns-service) for additional configuration.
   // +optional
   optional DNSIncludeExclude domains = 1;
 
   // Primary indicates that this DNSProvider is used for shoot related domains.
+  //
   // Deprecated: This field is deprecated and will be removed in a future release.
   // Please use the DNS extension provider config (e.g. shoot-dns-service) for additional and non-primary providers.
   // +optional
@@ -773,6 +776,7 @@ message DNSProvider {
   optional string type = 4;
 
   // Zones contains information about which hosted zones shall be included/excluded for this provider.
+  //
   // Deprecated: This field is deprecated and will be removed in a future release.
   // Please use the DNS extension provider config (e.g. shoot-dns-service) for additional configuration.
   // +optional
@@ -1350,6 +1354,7 @@ message KubeletConfig {
 
   // SystemReserved is the configuration for resources reserved for system processes not managed by kubernetes (e.g. journald).
   // When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.
+  //
   // Deprecated: Separately configuring resource reservations for system processes is deprecated in Gardener and will be forbidden starting from Kubernetes 1.31.
   // Please merge existing resource reservations into the kubeReserved field.
   // TODO(MichaelEischer): Drop this field after support for Kubernetes 1.30 is dropped.
@@ -2008,6 +2013,7 @@ message OIDCConfig {
   optional string caBundle = 1;
 
   // ClientAuthentication can optionally contain client configuration used for kubeconfig generation.
+  //
   // Deprecated: This field has no implemented use and will be forbidden starting from Kubernetes 1.31.
   // It's use was planned for genereting OIDC kubeconfig https://github.com/gardener/gardener/issues/1433
   // TODO(AleksandarSavchev): Drop this field after support for Kubernetes 1.30 is dropped.

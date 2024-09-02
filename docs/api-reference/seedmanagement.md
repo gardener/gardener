@@ -659,8 +659,8 @@ bool
 </td>
 <td>
 <em>(Optional)</em>
-<p>VPA specifies whether to enable VPA for gardenlet. Defaults to true.
-Deprecated: This field is deprecated and has no effect anymore. It will be removed in the future.
+<p>VPA specifies whether to enable VPA for gardenlet. Defaults to true.</p>
+<p>Deprecated: This field is deprecated and has no effect anymore. It will be removed in the future.
 TODO(rfranzke): Remove this field after v1.110 has been released.</p>
 </td>
 </tr>

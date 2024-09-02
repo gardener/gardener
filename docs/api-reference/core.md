@@ -4459,8 +4459,8 @@ kubeconfig that is handed out to end-users. This field is immutable.</p>
 <td>
 <em>(Optional)</em>
 <p>Providers is a list of DNS providers that shall be enabled for this shoot cluster. Only relevant if
-not a default domain is used.
-Deprecated: Configuring multiple DNS providers is deprecated and will be forbidden in a future release.
+not a default domain is used.</p>
+<p>Deprecated: Configuring multiple DNS providers is deprecated and will be forbidden in a future release.
 Please use the DNS extension provider config (e.g. shoot-dns-service) for additional providers.</p>
 </td>
 </tr>
@@ -4537,8 +4537,8 @@ DNSIncludeExclude
 </td>
 <td>
 <em>(Optional)</em>
-<p>Domains contains information about which domains shall be included/excluded for this provider.
-Deprecated: This field is deprecated and will be removed in a future release.
+<p>Domains contains information about which domains shall be included/excluded for this provider.</p>
+<p>Deprecated: This field is deprecated and will be removed in a future release.
 Please use the DNS extension provider config (e.g. shoot-dns-service) for additional configuration.</p>
 </td>
 </tr>
@@ -4551,8 +4551,8 @@ bool
 </td>
 <td>
 <em>(Optional)</em>
-<p>Primary indicates that this DNSProvider is used for shoot related domains.
-Deprecated: This field is deprecated and will be removed in a future release.
+<p>Primary indicates that this DNSProvider is used for shoot related domains.</p>
+<p>Deprecated: This field is deprecated and will be removed in a future release.
 Please use the DNS extension provider config (e.g. shoot-dns-service) for additional and non-primary providers.</p>
 </td>
 </tr>
@@ -4594,8 +4594,8 @@ DNSIncludeExclude
 </td>
 <td>
 <em>(Optional)</em>
-<p>Zones contains information about which hosted zones shall be included/excluded for this provider.
-Deprecated: This field is deprecated and will be removed in a future release.
+<p>Zones contains information about which hosted zones shall be included/excluded for this provider.</p>
+<p>Deprecated: This field is deprecated and will be removed in a future release.
 Please use the DNS extension provider config (e.g. shoot-dns-service) for additional configuration.</p>
 </td>
 </tr>
@@ -6381,8 +6381,8 @@ KubeletConfigReserved
 <td>
 <em>(Optional)</em>
 <p>SystemReserved is the configuration for resources reserved for system processes not managed by kubernetes (e.g. journald).
-When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.
-Deprecated: Separately configuring resource reservations for system processes is deprecated in Gardener and will be forbidden starting from Kubernetes 1.31.
+When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.</p>
+<p>Deprecated: Separately configuring resource reservations for system processes is deprecated in Gardener and will be forbidden starting from Kubernetes 1.31.
 Please merge existing resource reservations into the kubeReserved field.
 TODO(MichaelEischer): Drop this field after support for Kubernetes 1.30 is dropped.</p>
 </td>
@@ -8700,8 +8700,8 @@ OpenIDConnectClientAuthentication
 </td>
 <td>
 <em>(Optional)</em>
-<p>ClientAuthentication can optionally contain client configuration used for kubeconfig generation.
-Deprecated: This field has no implemented use and will be forbidden starting from Kubernetes 1.31.
+<p>ClientAuthentication can optionally contain client configuration used for kubeconfig generation.</p>
+<p>Deprecated: This field has no implemented use and will be forbidden starting from Kubernetes 1.31.
 It&rsquo;s use was planned for genereting OIDC kubeconfig <a href="https://github.com/gardener/gardener/issues/1433">https://github.com/gardener/gardener/issues/1433</a>
 TODO(AleksandarSavchev): Drop this field after support for Kubernetes 1.30 is dropped.</p>
 </td>
