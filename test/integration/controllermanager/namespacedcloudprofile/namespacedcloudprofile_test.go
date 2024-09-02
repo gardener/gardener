@@ -307,10 +307,10 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 
 			DeferCleanup(func() {
 				By("Delete NamespacedCloudProfile")
-				Expect(client.IgnoreNotFound(testClient.Delete(ctx, namespacedCloudProfile))).To(Succeed())
+				Expect(testClient.Delete(ctx, namespacedCloudProfile)).To(Succeed())
 
 				By("Delete ParentCloudProfile")
-				Expect(client.IgnoreNotFound(testClient.Delete(ctx, parentCloudProfile))).To(Succeed())
+				Expect(testClient.Delete(ctx, parentCloudProfile)).To(Succeed())
 			})
 		})
 
@@ -397,15 +397,15 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 
 			DeferCleanup(func() {
 				By("Delete NamespacedCloudProfile")
-				Expect(client.IgnoreNotFound(testClient.Delete(ctx, namespacedCloudProfile))).To(Succeed())
+				Expect(testClient.Delete(ctx, namespacedCloudProfile)).To(Succeed())
 
 				By("Delete ParentCloudProfile")
-				Expect(client.IgnoreNotFound(testClient.Delete(ctx, parentCloudProfile))).To(Succeed())
+				Expect(testClient.Delete(ctx, parentCloudProfile)).To(Succeed())
 
 			})
 		})
 
-		It("should allow creation with an already expired Kubernetes version but not render the expiration date into the status", func() {
+		It("should allow creation with an already expired Kubernetes version but remove it from the persisted spec and not render it into the status", func() {
 			namespacedCloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
 				{Version: "1.2.3", ExpirationDate: &expirationDatePast},
 			}
@@ -422,12 +422,13 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 			Eventually(func(g Gomega) {
 				err := testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)
 				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(namespacedCloudProfile.Spec.Kubernetes.Versions).To(BeEmpty())
 				g.Expect(namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes.Versions).To(ContainElements(expectedKubernetesVersions.Versions))
 				g.Expect(namespacedCloudProfile.Status.ObservedGeneration).To(Equal(namespacedCloudProfile.Generation))
 			}).Should(Succeed())
 		})
 
-		It("should allow creation with an already expired MachineImage version but not render the expiration date into the status", func() {
+		It("should allow creation with an already expired MachineImage version but remove it from persisted spec and not render it into the status", func() {
 			namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 				{
 					Name: "some-image",
@@ -452,6 +453,7 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 			Eventually(func(g Gomega) {
 				err := testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)
 				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(namespacedCloudProfile.Spec.MachineImages).To(BeEmpty())
 				g.Expect(namespacedCloudProfile.Status.CloudProfileSpec.MachineImages).To(Equal(expectedMachineImages))
 				g.Expect(namespacedCloudProfile.Status.ObservedGeneration).To(Equal(namespacedCloudProfile.Generation))
 			}).Should(Succeed())
