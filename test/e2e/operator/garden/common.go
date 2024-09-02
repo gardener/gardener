@@ -207,6 +207,21 @@ func waitForGardenToBeDeleted(ctx context.Context, garden *operatorv1alpha1.Gard
 	}).WithPolling(2 * time.Second).Should(BeNotFoundError())
 }
 
+func removeAdmissionControllerFromExtension(ctx context.Context, objectKey client.ObjectKey) {
+	extension := &operatorv1alpha1.Extension{}
+	ExpectWithOffset(1, runtimeClient.Get(ctx, objectKey, extension)).To(Succeed())
+	patch := client.MergeFrom(extension.DeepCopy())
+	ExpectWithOffset(1, extension.Spec.Deployment).NotTo(BeNil())
+	extension.Spec.Deployment.AdmissionDeployment = nil
+	ExpectWithOffset(1, runtimeClient.Patch(ctx, extension, patch)).To(Succeed())
+
+	CEventually(ctx, func(g Gomega) {
+		g.Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(extension), extension)).To(Succeed())
+		g.Expect(extension.Generation).To(Equal(extension.Status.ObservedGeneration))
+		g.Expect(extension.Status.Conditions).To(ContainCondition(OfType(operatorv1alpha1.ExtensionInstalled), WithStatus(gardencorev1beta1.ConditionTrue)))
+	}).WithPolling(2 * time.Second).Should(Succeed())
+}
+
 func cleanupVolumes(ctx context.Context) {
 	Expect(runtimeClient.DeleteAllOf(ctx, &corev1.PersistentVolumeClaim{}, client.InNamespace(namespace))).To(Succeed())
 

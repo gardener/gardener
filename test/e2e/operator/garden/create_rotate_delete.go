@@ -18,7 +18,6 @@ import (
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/utils"
@@ -48,12 +47,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 
 			// TODO(timuthy): Remove this special handling as soon as extensions provider a proper deletion procedure, i.e cleaning up extension resources when garden resource is deleted. Planned for release v1.103 or v1.104.
 			By("Remove admission from provider-local")
-			extension := &operatorv1alpha1.Extension{}
-			Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(extensionProviderLocal), extension)).To(Succeed())
-			patch := client.MergeFrom(extension.DeepCopy())
-			Expect(extension.Spec.Deployment).NotTo(BeNil())
-			extension.Spec.Deployment.AdmissionDeployment = nil
-			Expect(runtimeClient.Patch(ctx, extension, patch)).To(Succeed())
+			removeAdmissionControllerFromExtension(ctx, client.ObjectKeyFromObject(extensionProviderLocal))
 
 			By("Delete Garden")
 			Expect(gardenerutils.ConfirmDeletion(ctx, runtimeClient, garden)).To(Succeed())
