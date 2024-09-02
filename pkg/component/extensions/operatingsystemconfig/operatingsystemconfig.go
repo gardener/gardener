@@ -131,6 +131,8 @@ type OriginalValues struct {
 	// KubeletConfig is the default kubelet configuration for all worker pools. Individual worker pools might overwrite
 	// this configuration.
 	KubeletConfig *gardencorev1beta1.KubeletConfig
+	// KubeProxyEnabled indicates whether kube-proxy is enabled or not.
+	KubeProxyEnabled bool
 	// MachineTypes is a list of machine types.
 	MachineTypes []gardencorev1beta1.MachineType
 	// SSHPublicKeys is a list of public SSH keys.
@@ -733,6 +735,7 @@ func (o *operatingSystemConfig) newDeployer(version int, osc *extensionsv1alpha1
 		kubeletConfigParameters: kubeletConfigParameters,
 		kubeletCLIFlags:         kubeletCLIFlags,
 		kubeletDataVolumeName:   worker.KubeletDataVolumeName,
+		kubeProxyEnabled:        o.values.KubeProxyEnabled,
 		kubernetesVersion:       kubernetesVersion,
 		sshPublicKeys:           o.values.SSHPublicKeys,
 		sshAccessEnabled:        o.values.SSHAccessEnabled,
@@ -797,6 +800,7 @@ type deployer struct {
 	kubeletConfigParameters components.ConfigurableKubeletConfigParameters
 	kubeletCLIFlags         components.ConfigurableKubeletCLIFlags
 	kubeletDataVolumeName   *string
+	kubeProxyEnabled        bool
 	kubernetesVersion       *semver.Version
 	sshPublicKeys           []string
 	sshAccessEnabled        bool
@@ -834,6 +838,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 		KubeletConfigParameters: d.kubeletConfigParameters,
 		KubeletCLIFlags:         d.kubeletCLIFlags,
 		KubeletDataVolumeName:   d.kubeletDataVolumeName,
+		KubeProxyEnabled:        d.kubeProxyEnabled,
 		KubernetesVersion:       d.kubernetesVersion,
 		SSHPublicKeys:           d.sshPublicKeys,
 		SSHAccessEnabled:        d.sshAccessEnabled,
