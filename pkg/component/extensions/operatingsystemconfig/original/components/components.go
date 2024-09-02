@@ -35,6 +35,7 @@ type Context struct {
 	KubeletCLIFlags         ConfigurableKubeletCLIFlags
 	KubeletConfigParameters ConfigurableKubeletConfigParameters
 	KubeletDataVolumeName   *string
+	KubeProxyEnabled        bool
 	KubernetesVersion       *semver.Version
 	SSHPublicKeys           []string
 	SSHAccessEnabled        bool
