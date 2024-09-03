@@ -3031,10 +3031,6 @@ kind: AuthenticationConfiguration
 				if disableNewVPN {
 					pathControllerContainer.Command = nil
 					pathControllerContainer.Args = []string{"/path-controller.sh"}
-					pathControllerContainer.Env = append(pathControllerContainer.Env, corev1.EnvVar{
-						Name:  "DO_NOT_CONFIGURE_KERNEL_SETTINGS",
-						Value: "true",
-					})
 				}
 				Expect(deployment.Spec.Template.Spec.Containers[values.VPN.HighAvailabilityNumberOfSeedServers+1]).To(DeepEqual(pathControllerContainer))
 

@@ -903,8 +903,12 @@ func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
 				Value: strconv.Itoa(k.values.VPN.HighAvailabilityNumberOfShootClients),
 			},
 			{
-				Name:      "POD_IP",
-				ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "status.podIP"}},
+				Name: "POD_IP",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "status.podIP",
+					},
+				},
 			},
 		},
 		Resources: corev1.ResourceRequirements{
@@ -931,10 +935,6 @@ func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
 	if k.values.VPN.DisableNewVPN {
 		container.Command = nil
 		container.Args = []string{"/path-controller.sh"}
-		container.Env = append(container.Env, corev1.EnvVar{
-			Name:  "DO_NOT_CONFIGURE_KERNEL_SETTINGS",
-			Value: "true",
-		})
 	}
 	return container
 }

@@ -477,11 +477,11 @@ var _ = Describe("VPNShoot", func() {
 
 				if vpaEnabled {
 					limits = corev1.ResourceList{
-						corev1.ResourceMemory: resource.MustParse("40Mi"),
+						corev1.ResourceMemory: resource.MustParse("100Mi"),
 					}
 				} else {
 					limits = corev1.ResourceList{
-						corev1.ResourceMemory: resource.MustParse("60Mi"),
+						corev1.ResourceMemory: resource.MustParse("120Mi"),
 					}
 				}
 
@@ -523,8 +523,8 @@ var _ = Describe("VPNShoot", func() {
 					},
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("10m"),
-							corev1.ResourceMemory: resource.MustParse("10Mi"),
+							corev1.ResourceCPU:    resource.MustParse("100m"),
+							corev1.ResourceMemory: resource.MustParse("100Mi"),
 						},
 						Limits: limits,
 					},

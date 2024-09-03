@@ -612,8 +612,8 @@ func (v *vpnShoot) container(secrets []vpnSecret, index *int) *corev1.Container 
 		},
 		Resources: corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("10m"),
-				corev1.ResourceMemory: resource.MustParse("10Mi"),
+				corev1.ResourceCPU:    resource.MustParse("100m"),
+				corev1.ResourceMemory: resource.MustParse("100Mi"),
 			},
 			Limits: v.getResourceLimits(),
 		},
@@ -782,11 +782,11 @@ func (v *vpnShoot) getEnvVars(index *int) []corev1.EnvVar {
 func (v *vpnShoot) getResourceLimits() corev1.ResourceList {
 	if v.values.VPAEnabled {
 		return corev1.ResourceList{
-			corev1.ResourceMemory: resource.MustParse("40Mi"),
+			corev1.ResourceMemory: resource.MustParse("100Mi"),
 		}
 	}
 	return corev1.ResourceList{
-		corev1.ResourceMemory: resource.MustParse("60Mi"),
+		corev1.ResourceMemory: resource.MustParse("120Mi"),
 	}
 }
 

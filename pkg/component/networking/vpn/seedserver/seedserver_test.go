@@ -253,10 +253,6 @@ var _ = Describe("VpnSeedServer", func() {
 						Value: "/srv/status/openvpn.status",
 					},
 					{
-						Name:  "CLIENT_TO_CLIENT",
-						Value: "true",
-					},
-					{
 						Name: "POD_NAME",
 						ValueFrom: &corev1.EnvVarSource{
 							FieldRef: &corev1.ObjectFieldSelector{
@@ -322,7 +318,7 @@ var _ = Describe("VpnSeedServer", func() {
 							corev1.ResourceMemory: resource.MustParse("10Mi"),
 						},
 						Limits: corev1.ResourceList{
-							corev1.ResourceMemory: resource.MustParse("60Mi"),
+							corev1.ResourceMemory: resource.MustParse("20Mi"),
 						},
 					},
 					VolumeMounts: []corev1.VolumeMount{mount},
