@@ -323,7 +323,7 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 	allErrs = append(allErrs, ValidateCloudProfileReference(newSpec.CloudProfile, oldSpec.CloudProfile, newSpec.CloudProfileName, oldSpec.CloudProfileName, fldPath.Child("cloudProfile"))...)
 
 	if oldSpec.CredentialsBindingName != nil && len(ptr.Deref(newSpec.CredentialsBindingName, "")) == 0 {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("credentialsBindingName"), "once set this field cannot be set to empty"))
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("credentialsBindingName"), "the field cannot be unset"))
 	}
 
 	// allow removing the value of SecretBindingName when

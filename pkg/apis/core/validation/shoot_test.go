@@ -932,7 +932,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("spec.credentialsBindingName"),
-					"Detail": Equal("once set this field cannot be set to empty"),
+					"Detail": Equal("the field cannot be unset"),
 				})),
 			))
 		})
