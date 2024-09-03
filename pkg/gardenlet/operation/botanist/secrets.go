@@ -21,16 +21,15 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
-	securityv1alpha1constants "github.com/gardener/gardener/pkg/apis/security/v1alpha1/constants"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/tokenrequest"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	"github.com/gardener/gardener/pkg/utils/workloadidentity"
 )
 
 // InitializeSecretsManagement initializes the secrets management and deploys the required secrets to the shoot
@@ -460,29 +459,8 @@ func (b *Botanist) reconcileWildcardIngressCertificate(ctx context.Context) erro
 // DeployCloudProviderSecret creates or updates the cloud provider secret in the Shoot namespace
 // in the Seed cluster.
 func (b *Botanist) DeployCloudProviderSecret(ctx context.Context) error {
-	var (
-		secret = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      v1beta1constants.SecretNameCloudProvider,
-				Namespace: b.Shoot.SeedNamespace,
-			},
-		}
-	)
-
-	var (
-		data                  map[string][]byte
-		additionalLabels      map[string]string
-		additionalAnnotations map[string]string
-	)
 	switch credentials := b.Shoot.Credentials.(type) {
 	case *securityv1alpha1.WorkloadIdentity:
-		providerConfigRaw, err := json.Marshal(credentials.Spec.TargetSystem.ProviderConfig)
-		if err != nil {
-			return err
-		}
-		data = map[string][]byte{
-			"config": providerConfigRaw,
-		}
 		shootInfo := b.Shoot.GetInfo()
 		shootMeta := securityv1alpha1.ContextObject{
 			APIVersion: shootInfo.TypeMeta.GroupVersionKind().GroupVersion().String(),
@@ -491,33 +469,37 @@ func (b *Botanist) DeployCloudProviderSecret(ctx context.Context) error {
 			Name:       shootInfo.ObjectMeta.Name,
 			UID:        shootInfo.ObjectMeta.UID,
 		}
-		shootData, err := json.Marshal(shootMeta)
+
+		secret, err := workloadidentity.NewSecret(
+			v1beta1constants.SecretNameCloudProvider,
+			b.Shoot.SeedNamespace,
+			workloadidentity.For(credentials.Name, credentials.Namespace, credentials.Spec.TargetSystem.Type),
+			workloadidentity.WithProviderConfig(credentials.Spec.TargetSystem.ProviderConfig),
+			workloadidentity.WithContextObject(shootMeta),
+			workloadidentity.WithLabels(map[string]string{v1beta1constants.GardenerPurpose: v1beta1constants.SecretNameCloudProvider}),
+		)
 		if err != nil {
 			return err
 		}
-		additionalAnnotations = map[string]string{
-			securityv1alpha1constants.AnnotationWorkloadIdentityNamespace:     credentials.Namespace,
-			securityv1alpha1constants.AnnotationWorkloadIdentityName:          credentials.Name,
-			securityv1alpha1constants.AnnotationWorkloadIdentityContextObject: string(shootData),
-		}
-		additionalLabels = map[string]string{
-			securityv1alpha1constants.LabelPurpose:                  securityv1alpha1constants.LabelPurposeWorkloadIdentityTokenRequestor,
-			securityv1alpha1constants.LabelWorkloadIdentityProvider: credentials.Spec.TargetSystem.Type,
-		}
+		return secret.Reconcile(ctx, b.SeedClientSet.Client())
 	case *corev1.Secret:
-		data = credentials.Data
+		secret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      v1beta1constants.SecretNameCloudProvider,
+				Namespace: b.Shoot.SeedNamespace,
+			},
+		}
+		_, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.SeedClientSet.Client(), secret, func() error {
+			secret.Annotations = map[string]string{}
+			secret.Labels = map[string]string{
+				v1beta1constants.GardenerPurpose: v1beta1constants.SecretNameCloudProvider,
+			}
+			secret.Type = corev1.SecretTypeOpaque
+			secret.Data = credentials.Data
+			return nil
+		})
+		return err
 	default:
 		return fmt.Errorf("unexpected type %T, should be either Secret or WorkloadIdentity", credentials)
 	}
-
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.SeedClientSet.Client(), secret, func() error {
-		secret.Annotations = additionalAnnotations
-		secret.Labels = utils.MergeStringMaps(map[string]string{
-			v1beta1constants.GardenerPurpose: v1beta1constants.SecretNameCloudProvider,
-		}, additionalLabels)
-		secret.Type = corev1.SecretTypeOpaque
-		secret.Data = data
-		return nil
-	})
-	return err
 }
