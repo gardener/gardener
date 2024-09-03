@@ -38,24 +38,26 @@ var _ = Describe("#Secret", func() {
 		secret, err := NewSecret(secretName, secretNamespace)
 		Expect(err).To(HaveOccurred())
 		Expect(secret).To(BeNil())
-		Expect(err.Error()).To(ContainSubstring("workload identity name is not set"))
-		Expect(err.Error()).To(ContainSubstring("workload identity namespace is not set"))
-		Expect(err.Error()).To(ContainSubstring("workload identity provider type is not set"))
+		Expect(err.Error()).To(And(
+			ContainSubstring("workload identity name is not set"),
+			ContainSubstring("workload identity namespace is not set"),
+			ContainSubstring("workload identity provider type is not set"),
+		))
 	})
 
 	It("should correctly create the secret", func() {
 		secret, err := NewSecret(
 			secretName,
 			secretNamespace,
-			ForWorkloadIdentity("wi-foo", "wi-ns", "provider"),
-			WithWorkloadIdentityContextObject(securityv1alpha1.ContextObject{
+			For("wi-foo", "wi-ns", "provider"),
+			WithContextObject(securityv1alpha1.ContextObject{
 				Kind:       "Shoot",
 				APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 				Name:       "shoot-name",
 				Namespace:  ptr.To("shoot-namespace"),
 				UID:        "12345678-94af-4960-9774-0e9987654321",
 			}),
-			WithWorkloadIdentityProviderConfig(&runtime.RawExtension{
+			WithProviderConfig(&runtime.RawExtension{
 				Raw: []byte(`{"foo":"bar"}`),
 			}),
 			WithLabels(map[string]string{
@@ -130,13 +132,13 @@ var _ = Describe("#Secret", func() {
 		secret, err := NewSecret(
 			secretName,
 			secretNamespace,
-			ForWorkloadIdentity("new-name", "new-namespace", "new-provider"),
+			For("new-name", "new-namespace", "new-provider"),
 			WithLabels(map[string]string{"new-foo": "new-bar"}),
 			WithAnnotations(map[string]string{"new-foo": "new-bar"}),
-			WithWorkloadIdentityProviderConfig(&runtime.RawExtension{
+			WithProviderConfig(&runtime.RawExtension{
 				Raw: []byte(`{"foo":"bar"}`),
 			}),
-			WithWorkloadIdentityContextObject(securityv1alpha1.ContextObject{
+			WithContextObject(securityv1alpha1.ContextObject{
 				Kind:       "Shoot",
 				APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 				Name:       "new-name",
@@ -209,7 +211,7 @@ var _ = Describe("#Secret", func() {
 		secret, err := NewSecret(
 			secretName,
 			secretNamespace,
-			ForWorkloadIdentity("new-name", "new-namespace", "new-provider"),
+			For("new-name", "new-namespace", "new-provider"),
 		)
 		Expect(err).ToNot(HaveOccurred())
 

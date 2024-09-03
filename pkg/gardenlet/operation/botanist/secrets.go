@@ -473,9 +473,9 @@ func (b *Botanist) DeployCloudProviderSecret(ctx context.Context) error {
 		secret, err := workloadidentity.NewSecret(
 			v1beta1constants.SecretNameCloudProvider,
 			b.Shoot.SeedNamespace,
-			workloadidentity.ForWorkloadIdentity(credentials.Name, credentials.Namespace, credentials.Spec.TargetSystem.Type),
-			workloadidentity.WithWorkloadIdentityProviderConfig(credentials.Spec.TargetSystem.ProviderConfig),
-			workloadidentity.WithWorkloadIdentityContextObject(shootMeta),
+			workloadidentity.For(credentials.Name, credentials.Namespace, credentials.Spec.TargetSystem.Type),
+			workloadidentity.WithProviderConfig(credentials.Spec.TargetSystem.ProviderConfig),
+			workloadidentity.WithContextObject(shootMeta),
 			workloadidentity.WithLabels(map[string]string{v1beta1constants.GardenerPurpose: v1beta1constants.SecretNameCloudProvider}),
 		)
 		if err != nil {

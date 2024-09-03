@@ -99,20 +99,20 @@ func WithAnnotations(annotations map[string]string) SecretOption {
 	}
 }
 
-// ForWorkloadIdentity is an option that correlates the workload identity secret with a specific workload identity.
+// For is an option that correlates the workload identity secret with a specific workload identity.
 // This option is required upon creation of such secret.
-func ForWorkloadIdentity(name, namespace, providerType string) SecretOption {
+func For(workloadIdentityName, workloadIdentityNamespace, workloadIdentityProviderType string) SecretOption {
 	return func(s *Secret) error {
-		s.workloadIdentityName = name
-		s.workloadIdentityNamespace = namespace
-		s.workloadIdentityProviderType = providerType
+		s.workloadIdentityName = workloadIdentityName
+		s.workloadIdentityNamespace = workloadIdentityNamespace
+		s.workloadIdentityProviderType = workloadIdentityProviderType
 		return nil
 	}
 }
 
-// WithWorkloadIdentityProviderConfig is an option that can be used to store
+// WithProviderConfig is an option that can be used to store
 // provider specific information in the workload identity secret.
-func WithWorkloadIdentityProviderConfig(providerConfig *runtime.RawExtension) SecretOption {
+func WithProviderConfig(providerConfig *runtime.RawExtension) SecretOption {
 	return func(s *Secret) error {
 		data, err := json.Marshal(providerConfig)
 		if err != nil {
@@ -123,10 +123,10 @@ func WithWorkloadIdentityProviderConfig(providerConfig *runtime.RawExtension) Se
 	}
 }
 
-// WithWorkloadIdentityContextObject is an option that can be used
+// WithContextObject is an option that can be used
 // to indicate to the token requestor controller for workload identities
 // that requested tokens are going to be used in the context of the passed object.
-func WithWorkloadIdentityContextObject(contextObject securityv1alpha1.ContextObject) SecretOption {
+func WithContextObject(contextObject securityv1alpha1.ContextObject) SecretOption {
 	return func(s *Secret) error {
 		data, err := json.Marshal(contextObject)
 		if err != nil {
