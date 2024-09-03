@@ -51,7 +51,7 @@ type NamespacedCloudProfileSpec struct {
 	// +patchMergeKey=name
 	// +patchStrategy=merge
 	// +optional
-	MachineTypes []MachineType `json:"machineTypes" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,4,opt,name=machineTypes"`
+	MachineTypes []MachineType `json:"machineTypes,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,4,opt,name=machineTypes"`
 	// VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.
 	// +patchMergeKey=name
 	// +patchStrategy=merge

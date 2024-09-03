@@ -1793,6 +1793,37 @@ var _ = Describe("resourcereferencemanager", func() {
 				)))
 			})
 
+			It("should reject removal of kubernetes versions that are still in use by a Shoot referencing a NamespacedCloudProfile", func() {
+				namespacedCloudProfile := &gardencorev1beta1.NamespacedCloudProfile{
+					Spec: gardencorev1beta1.NamespacedCloudProfileSpec{
+						Parent: gardencorev1beta1.CloudProfileReference{Kind: "CloudProfile", Name: cloudProfile.Name},
+					},
+				}
+				Expect(gardenCoreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(namespacedCloudProfile)).To(Succeed())
+				shootTwo.Spec.CloudProfile = &gardencorev1beta1.CloudProfileReference{
+					Kind: "NamespacedCloudProfile",
+					Name: namespacedCloudProfile.Name,
+				}
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootTwo)).To(Succeed())
+
+				cloudProfileNew := cloudProfile
+				cloudProfileNew.Spec = core.CloudProfileSpec{
+					Kubernetes: core.KubernetesSettings{
+						Versions: []core.ExpirableVersion{
+							{Version: "1.24.2"},
+						},
+					},
+				}
+
+				attrs := admission.NewAttributesRecord(&cloudProfileNew, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(MatchError(And(
+					ContainSubstring("unable to delete Kubernetes version"),
+					ContainSubstring("1.24.1"),
+					ContainSubstring("still in use by shoot '/shoot-Two'"),
+				)))
+			})
+
 			It("should accept removal of kubernetes versions that are used by another unrelated NamespacedCloudProfile", func() {
 				namespacedCloudProfile := &gardencorev1beta1.NamespacedCloudProfile{
 					Spec: gardencorev1beta1.NamespacedCloudProfileSpec{
