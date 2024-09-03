@@ -202,9 +202,15 @@ func (g *GardenerAPIServer) defaultSettings() error {
 		return errors.New("expected EtcdURL to be configured")
 	}
 
+	// resolve localhost IP (pin to IPv4)
+	addr, err := net.ResolveTCPAddr("tcp", net.JoinHostPort("localhost", "0"))
+	if err != nil {
+		return err
+	}
+
 	if g.CertDir == "" {
 		_, ca, dir, err := secrets.SelfGenerateTLSServerCertificate("gardener-apiserver",
-			[]string{"localhost", "gardener-apiserver.kube-system.svc"}, []net.IP{net.ParseIP("127.0.0.1")})
+			[]string{"localhost", "gardener-apiserver.kube-system.svc"}, []net.IP{net.ParseIP(addr.IP.String())})
 		if err != nil {
 			return err
 		}
@@ -230,11 +236,6 @@ func (g *GardenerAPIServer) defaultSettings() error {
 		}
 	}
 
-	// resolve localhost IP (pin to IPv4)
-	addr, err := net.ResolveTCPAddr("tcp", net.JoinHostPort("localhost", "0"))
-	if err != nil {
-		return err
-	}
 	g.listenURL = &url.URL{
 		Scheme: "https",
 		Host:   net.JoinHostPort(addr.IP.String(), strconv.Itoa(g.SecurePort)),
