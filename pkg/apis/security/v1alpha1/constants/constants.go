@@ -20,12 +20,8 @@ const (
 	// the timestamp after which the workload identity token has to be renewed.
 	AnnotationWorkloadIdentityTokenRenewTimestamp = WorkloadIdentityPrefix + "token-renew-timestamp"
 
-	// AnnotationWorkloadIdentityTokenRenewTimestamp is an annotation key used to indicate the time when a workload identity token will be
-	AnnotationWorkloadIdentityTokenRenewTimestamp = WorkloadIdentityPrefix + "token-renew-timestamp"
-
 	// DataKeyToken is the data key of a secret whose value contains a workload identity token.
 	DataKeyToken = "token"
-
 	// DataKeyConfig is the data key of a secret whose value contains a workload identity provider configuration.
 	DataKeyConfig = "config"
 
