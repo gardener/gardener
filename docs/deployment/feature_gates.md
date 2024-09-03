@@ -34,7 +34,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | VPAAndHPAForAPIServer     | `true`  | `Beta`  | `1.101` |         |
 | ShootCredentialsBinding   | `false` | `Alpha` | `1.98`  |         |
 | NewWorkerPoolHash         | `false` | `Alpha` | `1.98`  |         |
-| NewVPN                    | `false` | `Alpha` | `1.102` |         |
+| NewVPN                    | `false` | `Alpha` | `1.104` |         |
 
 ## Feature Gates for Graduated or Deprecated Features
 

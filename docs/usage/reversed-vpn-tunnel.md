@@ -66,11 +66,12 @@ The connection establishment with a reversed tunnel in HA case is:
 
 Here, `[k]` is the index of the kube-apiserver instance, `[j]` of the VPN shoot instance, and `[i]` of VPN seed server.
 
-For each kube-apiserver instance, an own `ip6tnl` tunnel device is needed on the shoot side. Additionally, the back routes from the VPN shoot
-to any new kube-apiserver instance must be set dynamically. Both tasks are managed by the `tunnel-controller` running
-in each VPN shoot client. It listens for `UDP6` packets sent periodically from the `path-controller` running in the kube-apiserver pods.
-These `UDP6` packets contain the `IPv6` address of the bond device. If the tunnel controller detects a new kube-apiserver
-this way, it creates a new tunnel device and route to it.
+For each kube-apiserver instance, an own `ip6tnl` tunnel device is needed on the shoot side.
+Additionally, the back routes from the VPN shoot to any new kube-apiserver instance must be set dynamically. 
+Both tasks are managed by the `tunnel-controller` running in each VPN shoot client.
+It listens for `UDP6` packets sent periodically from the `path-controller` running in the kube-apiserver pods.
+These `UDP6` packets contain the `IPv6` address of the bond device.
+If the tunnel controller detects a new kube-apiserver this way, it creates a new tunnel device and route to it.
 
 ![Four possible routing paths](images/vpn-ha-routing-paths.png)
 

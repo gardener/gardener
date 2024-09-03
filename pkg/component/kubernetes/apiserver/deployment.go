@@ -752,6 +752,7 @@ func (k *kubeAPIServer) vpnSeedClientInitContainer() *corev1.Container {
 			},
 		},
 	}...)
+
 	if k.values.VPN.DisableNewVPN {
 		container.Command = nil
 		container.Env = append(container.Env,
@@ -764,6 +765,7 @@ func (k *kubeAPIServer) vpnSeedClientInitContainer() *corev1.Container {
 				Value: "true",
 			})
 	}
+
 	container.LivenessProbe = nil
 	container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
 		Name:      volumeNameAPIServerAccess,
@@ -854,12 +856,14 @@ func (k *kubeAPIServer) vpnSeedClientContainer(index int) *corev1.Container {
 			},
 		},
 	}
+
 	if len(k.values.VPN.IPFamilies) > 0 {
 		container.Env = append(container.Env, corev1.EnvVar{
 			Name:  "IP_FAMILIES",
 			Value: string(k.values.VPN.IPFamilies[0]),
 		})
 	}
+
 	if k.values.VPN.DisableNewVPN {
 		container.Command = nil
 		container.Env = append(container.Env, corev1.EnvVar{
@@ -867,6 +871,7 @@ func (k *kubeAPIServer) vpnSeedClientContainer(index int) *corev1.Container {
 			Value: "true",
 		})
 	}
+
 	return container
 }
 
@@ -932,10 +937,12 @@ func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
 		TerminationMessagePath:   corev1.TerminationMessagePathDefault,
 		TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 	}
+
 	if k.values.VPN.DisableNewVPN {
 		container.Command = nil
 		container.Args = []string{"/path-controller.sh"}
 	}
+
 	return container
 }
 

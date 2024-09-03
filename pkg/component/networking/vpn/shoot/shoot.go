@@ -90,16 +90,16 @@ type Values struct {
 	VPAUpdateDisabled bool
 	// ReversedVPN contains the configuration values for the ReversedVPN.
 	ReversedVPN ReversedVPNValues
-	// SeedPodNetwork is the pod CIDR of the seed
+	// SeedPodNetwork is the pod CIDR of the seed.
 	SeedPodNetwork string
 	// HighAvailabilityEnabled marks whether HA is enabled for VPN.
 	HighAvailabilityEnabled bool
-	// HighAvailabilityNumberOfSeedServers is the number of VPN seed servers used for HA
+	// HighAvailabilityNumberOfSeedServers is the number of VPN seed servers used for HA.
 	HighAvailabilityNumberOfSeedServers int
-	// HighAvailabilityNumberOfShootClients is the number of VPN shoot clients used for HA
+	// HighAvailabilityNumberOfShootClients is the number of VPN shoot clients used for HA.
 	HighAvailabilityNumberOfShootClients int
-	// DisableNewVPN disable new VPN implementation
-	// TODO (MartinWeindel) Remove after experience shows, that new VPN implementation is working smoothly.
+	// DisableNewVPN disable new VPN implementation.
+	// TODO(MartinWeindel) Remove after feature gate `NewVPN` gets promoted to GA.
 	DisableNewVPN bool
 }
 
@@ -880,6 +880,7 @@ func (v *vpnShoot) getInitContainers() []corev1.Container {
 	for _, v := range v.values.ReversedVPN.IPFamilies {
 		ipFamilies = append(ipFamilies, string(v))
 	}
+
 	container := corev1.Container{
 		Name:            initContainerName,
 		Image:           v.values.Image,
@@ -916,6 +917,7 @@ func (v *vpnShoot) getInitContainers() []corev1.Container {
 			},
 		},
 	}
+
 	if v.values.HighAvailabilityEnabled {
 		container.Env = append(container.Env, []corev1.EnvVar{
 			{
@@ -932,6 +934,7 @@ func (v *vpnShoot) getInitContainers() []corev1.Container {
 			},
 		}...)
 	}
+
 	if v.values.DisableNewVPN {
 		container.Command = nil
 		container.Env = append(container.Env,
@@ -939,13 +942,16 @@ func (v *vpnShoot) getInitContainers() []corev1.Container {
 				Name:  "EXIT_AFTER_CONFIGURING_KERNEL_SETTINGS",
 				Value: "true",
 			})
+
 		if v.values.HighAvailabilityEnabled {
 			container.Env = append(container.Env,
 				corev1.EnvVar{
 					Name:  "CONFIGURE_BONDING",
 					Value: "true",
-				})
+				},
+			)
 		}
 	}
+
 	return []corev1.Container{container}
 }

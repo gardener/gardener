@@ -285,9 +285,9 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 		shoot.VPNVPAUpdateDisabled = vpnVPAUpdateDisabled
 	}
 
-	shoot.NewVPN = features.DefaultFeatureGate.Enabled(features.NewVPN)
+	shoot.UsesNewVPN = features.DefaultFeatureGate.Enabled(features.NewVPN)
 	if disableNewVPN, err := strconv.ParseBool(shoot.GetInfo().GetAnnotations()[v1beta1constants.ShootAlphaControlPlaneDisableNewVPN]); err == nil {
-		shoot.NewVPN = !disableNewVPN
+		shoot.UsesNewVPN = !disableNewVPN
 	}
 
 	needsClusterAutoscaler, err := v1beta1helper.ShootWantsClusterAutoscaler(shootObject)

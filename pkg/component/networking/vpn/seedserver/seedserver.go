@@ -115,26 +115,26 @@ type NetworkValues struct {
 type Values struct {
 	// RuntimeKubernetesVersion is the Kubernetes version of the runtime cluster.
 	RuntimeKubernetesVersion *semver.Version
-	// ImageAPIServerProxy is the image name of the apiserver-proxy
+	// ImageAPIServerProxy is the image name of the apiserver-proxy.
 	ImageAPIServerProxy string
-	// ImageVPNSeedServer is the image name of the vpn-seed-server
+	// ImageVPNSeedServer is the image name of the vpn-seed-server.
 	ImageVPNSeedServer string
-	// KubeAPIServerHost is the FQDN of the kube-apiserver
+	// KubeAPIServerHost is the FQDN of the kube-apiserver.
 	KubeAPIServerHost *string
 	// Network contains the configuration values for the network.
 	Network NetworkValues
-	// Replicas is the number of deployment replicas
+	// Replicas is the number of deployment replicas.
 	Replicas int32
 	// HighAvailabilityEnabled marks whether HA is enabled for VPN.
 	HighAvailabilityEnabled bool
-	// HighAvailabilityNumberOfSeedServers is the number of VPN seed servers used for HA
+	// HighAvailabilityNumberOfSeedServers is the number of VPN seed servers used for HA.
 	HighAvailabilityNumberOfSeedServers int
-	// HighAvailabilityNumberOfShootClients is the number of VPN shoot clients used for HA
+	// HighAvailabilityNumberOfShootClients is the number of VPN shoot clients used for HA.
 	HighAvailabilityNumberOfShootClients int
 	// VPAUpdateDisabled indicates whether the vertical pod autoscaler update should be disabled.
 	VPAUpdateDisabled bool
-	// DisableNewVPN disable new VPN implementation
-	// TODO (MartinWeindel) Remove after experience shows, that new VPN implementation is working smoothly.
+	// DisableNewVPN disable new VPN implementation.
+	// TODO(MartinWeindel) Remove after feature gate `NewVPN` gets promoted to GA.
 	DisableNewVPN bool
 }
 
@@ -534,6 +534,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 				EmptyDir: &corev1.EmptyDirVolumeSource{},
 			},
 		})
+
 		exporterContainer := corev1.Container{
 			Name:            "openvpn-exporter",
 			Image:           v.values.ImageVPNSeedServer,
@@ -592,6 +593,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 				},
 			},
 		}
+
 		if v.values.DisableNewVPN {
 			statusPath := filepath.Join(volumeMountPathStatusDir, "openvpn.status")
 			exporterContainer.Command = []string{
@@ -603,6 +605,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 			}
 			exporterContainer.Env = nil
 		}
+
 		template.Spec.Containers = append(template.Spec.Containers, exporterContainer)
 	}
 

@@ -87,8 +87,8 @@ const (
 	NewWorkerPoolHash featuregate.Feature = "NewWorkerPoolHash"
 
 	// NewVPN enables the new implementation of the VPN (go rewrite) using an IPv6 transfer network.
-	// owner: @MartinWeindel
-	// alpha: v1.102.0
+	// owner: @MartinWeindel @ScheererJ @axel7born @DockToFuture
+	// alpha: v1.104.0
 	NewVPN featuregate.Feature = "NewVPN"
 )
 
