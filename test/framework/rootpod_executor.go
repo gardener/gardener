@@ -74,7 +74,12 @@ func (e *rootPodExecutor) Execute(ctx context.Context, command string) ([]byte, 
 	command = fmt.Sprintf("chroot /hostroot %s", command)
 	reader, err := e.executor.Execute(ctx, e.Pod.Namespace, e.Pod.Name, e.Pod.Spec.Containers[0].Name, command)
 	if err != nil {
-		return nil, err
+		var response []byte
+		if reader != nil {
+			response, _ = io.ReadAll(reader)
+		}
+
+		return response, err
 	}
 	response, err := io.ReadAll(reader)
 	if err != nil {
