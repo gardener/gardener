@@ -218,7 +218,7 @@ test: $(REPORT_COLLECTOR) $(PROMTOOL) $(HELM) logcheck-symlinks
 	@cd $(LOGCHECK_DIR); go test -race -timeout=2m ./... | grep -v 'no test files'
 
 .PHONY: test-integration
-test-integration: $(REPORT_COLLECTOR) $(SETUP_ENVTEST)
+test-integration: $(REPORT_COLLECTOR) $(SETUP_ENVTEST) $(HELM)
 	@./hack/test-integration.sh ./test/integration/...
 
 .PHONY: test-cov
