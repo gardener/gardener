@@ -4,11 +4,21 @@ title: Access to the Garden Cluster for Extensions
 
 # Access to the Garden Cluster for Extensions
 
+Gardener offers different means to provide or equip registered extensions with a kubeconfig which may be used to connect to the garden cluster.
+
+## Admission Controllers
+
+For extensions with an admission controller deployment, `gardener-operator` injects a token-based kubeconfig as a volume and volume mount.
+The token is valid for `12h`, automatically renewed, and associated with a dedicated `ServiceAccount` in the garden cluster.
+The path to this kubeconfig is revealed under the `GARDEN_KUBECONFIG` environment variable, also added to the pod spec(s).
+
+## Extensions on `Seed` Clusters
+
 Extensions that are installed on seed clusters via a `ControllerInstallation` can simply read the kubeconfig file specified by the `GARDEN_KUBECONFIG` environment variable to create a garden cluster client.
 With this, they use a short-lived token (valid for `12h`) associated with a dedicated `ServiceAccount` in the `seed-<seed-name>` namespace to securely access the garden cluster.
 The used `ServiceAccounts` are granted permissions in the garden cluster similar to gardenlet clients.
 
-## Background
+### Background
 
 Historically, `gardenlet` has been the only component running in the seed cluster that has access to both the seed cluster and the garden cluster.
 Accordingly, extensions running on the seed cluster didn't have access to the garden cluster.
@@ -16,7 +26,7 @@ Accordingly, extensions running on the seed cluster didn't have access to the ga
 Starting from Gardener [`v1.74.0`](https://github.com/gardener/gardener/releases/v1.74.0), there is a new mechanism for components running on seed clusters to get access to the garden cluster.
 For this, `gardenlet` runs an instance of the [`TokenRequestor`](../concepts/gardenlet.md#tokenrequestor-controller) for requesting tokens that can be used to communicate with the garden cluster.
 
-## Using Gardenlet-Managed Garden Access
+### Using Gardenlet-Managed Garden Access
 
 By default, extensions are equipped with secure access to the garden cluster using a dedicated `ServiceAccount` without requiring any additional action.
 They can simply read the file specified by the `GARDEN_KUBECONFIG` and construct a garden client with it.
@@ -101,7 +111,7 @@ users:
     tokenFile: /var/run/secrets/gardener.cloud/garden/generic-kubeconfig/token
 ```
 
-## Manually Requesting a Token for the Garden Cluster
+### Manually Requesting a Token for the Garden Cluster
 
 Seed components that need to communicate with the garden cluster can request a token in the garden cluster by creating a garden access secret.
 This secret has to be labelled with `resources.gardener.cloud/purpose=token-requestor` and `resources.gardener.cloud/class=garden`, e.g.:
@@ -122,7 +132,7 @@ type: Opaque
 
 This will instruct gardenlet to create a new `ServiceAccount` named `example` in its own `seed-<seed-name>` namespace in the garden cluster, request a token for it, and populate the token in the secret's data under the `token` key.
 
-## Permissions in the Garden Cluster
+### Permissions in the Garden Cluster
 
 Both the [`SeedAuthorizer` and the `SeedRestriction` plugin](../deployment/gardenlet_api_access.md) handle extensions clients and generally grant the same permissions in the garden cluster to them as to gardenlet clients.
 With this, extensions are restricted to work with objects in the garden cluster that are related to seed they are running one just like gardenlet.
@@ -159,7 +169,7 @@ There is a controller part of `gardener-controller-manager` which takes care of 
 It binds all `ServiceAccount`s in the seed namespaces in the garden cluster (i.e., all extension clients) whose labels match.
 You can read more about this controller [here](../concepts/controller-manager.md#-extension-clusterrole--reconciler).
 
-### Custom Permissions
+#### Custom Permissions
 
 If an extension wants to create a dedicated `ServiceAccount` for accessing the garden cluster **without** automatically inheriting all permissions of the gardenlet, it first needs to create a garden access secret in its extension namespace in the seed cluster:
 
@@ -185,7 +195,7 @@ However, the `authorization.gardener.cloud/extensions-serviceaccount-selector` a
 
 This way, the created `ServiceAccount` will only get the permissions of [above `ClusterRole`](#additional-permissions) and nothing else.
 
-## Renewing All Garden Access Secrets
+### Renewing All Garden Access Secrets
 
 Operators can trigger an automatic renewal of all garden access secrets in a given `Seed` and their requested `ServiceAccount` tokens, e.g., when rotating the garden cluster's `ServiceAccount` signing key.
 For this, the `Seed` has to be annotated with `gardener.cloud/operation=renew-garden-access-secrets`.

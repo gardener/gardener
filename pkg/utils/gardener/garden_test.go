@@ -214,7 +214,7 @@ var _ = Describe("Garden", func() {
 		})
 
 		It("should do nothing because object is not handled", func() {
-			Expect(InjectGenericGardenKubeconfig(&corev1.Service{}, genericTokenKubeconfigSecretName, tokenSecretName)).To(MatchError(ContainSubstring("unhandled object type")))
+			Expect(InjectGenericGardenKubeconfig(&corev1.Service{}, genericTokenKubeconfigSecretName, tokenSecretName, VolumeMountPathGenericGardenKubeconfig)).To(MatchError(ContainSubstring("unhandled object type")))
 		})
 
 		It("should do nothing because a container already has the GARDEN_KUBECONFIG env var", func() {
@@ -222,7 +222,7 @@ var _ = Describe("Garden", func() {
 			container.Env = []corev1.EnvVar{{Name: "GARDEN_KUBECONFIG"}}
 			podSpec.Containers[1] = container
 
-			Expect(InjectGenericGardenKubeconfig(deployment, genericTokenKubeconfigSecretName, tokenSecretName)).To(Succeed())
+			Expect(InjectGenericGardenKubeconfig(deployment, genericTokenKubeconfigSecretName, tokenSecretName, VolumeMountPathGenericGardenKubeconfig)).To(Succeed())
 
 			Expect(podSpec.Volumes).To(BeEmpty())
 			Expect(podSpec.Containers[0].VolumeMounts).To(BeEmpty())
@@ -230,7 +230,10 @@ var _ = Describe("Garden", func() {
 		})
 
 		It("should inject the generic kubeconfig into the specified container", func() {
-			Expect(InjectGenericGardenKubeconfig(deployment, genericTokenKubeconfigSecretName, tokenSecretName, containerName1)).To(Succeed())
+			Expect(InjectGenericGardenKubeconfig(deployment, genericTokenKubeconfigSecretName, tokenSecretName, VolumeMountPathGenericGardenKubeconfig, containerName1)).To(Succeed())
+
+			Expect(deployment.GetAnnotations()).To(HaveKeyWithValue("reference.resources.gardener.cloud/secret-cd5ff419", "generic-token-kubeconfig-12345"))
+			Expect(deployment.GetAnnotations()).To(HaveKeyWithValue("reference.resources.gardener.cloud/secret-d9db2144", "tokensecret"))
 
 			Expect(podSpec.Volumes).To(ContainElement(corev1.Volume{
 				Name: "garden-kubeconfig",

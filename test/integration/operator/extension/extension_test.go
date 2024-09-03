@@ -2,9 +2,12 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package virtualcluster_test
+package extension_test
 
 import (
+	"fmt"
+	"time"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,8 +16,12 @@ import (
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -30,10 +37,13 @@ var _ = Describe("Extension controller tests", func() {
 	)
 
 	BeforeEach(func() {
+		DeferCleanup(test.WithVar(&managedresources.IntervalWait, 100*time.Millisecond))
+
 		garden = &operatorv1alpha1.Garden{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   gardenName,
-				Labels: map[string]string{testID: testRunID},
+				Name:        gardenName,
+				Labels:      map[string]string{testID: testRunID},
+				Annotations: map[string]string{v1beta1constants.AnnotationKeyGenericTokenKubeconfigSecretName: "foo-kubeconfig"},
 			},
 			Spec: operatorv1alpha1.GardenSpec{
 				RuntimeCluster: operatorv1alpha1.RuntimeCluster{
@@ -125,6 +135,18 @@ var _ = Describe("Extension controller tests", func() {
 					},
 				},
 				Deployment: &operatorv1alpha1.Deployment{
+					AdmissionDeployment: &operatorv1alpha1.AdmissionDeploymentSpec{
+						RuntimeCluster: &operatorv1alpha1.DeploymentSpec{
+							Helm: &operatorv1alpha1.ExtensionHelm{
+								OCIRepository: &ociRepositoryAdmissionRuntimeChart,
+							},
+						},
+						VirtualCluster: &operatorv1alpha1.DeploymentSpec{
+							Helm: &operatorv1alpha1.ExtensionHelm{
+								OCIRepository: &ociRepositoryAdmissionApplicationChart,
+							},
+						},
+					},
 					ExtensionDeployment: &operatorv1alpha1.ExtensionDeploymentSpec{
 						DeploymentSpec: operatorv1alpha1.DeploymentSpec{
 							Helm: &operatorv1alpha1.ExtensionHelm{
@@ -162,7 +184,7 @@ var _ = Describe("Extension controller tests", func() {
 	})
 
 	It("should reconcile virtual cluster resources", func() {
-		By("Create well-known extension local")
+		By("Create extension bar")
 		Expect(testClient.Create(ctx, extensionBar)).To(Succeed())
 		log.Info("Created extension for test", "garden", extensionBar.Name)
 		DeferCleanup(func() {
@@ -178,7 +200,7 @@ var _ = Describe("Extension controller tests", func() {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionBar), extensionBar)).To(Succeed())
 			return extensionBar.Status.Conditions
 		}).Should(ContainCondition(
-			OfType(operatorv1alpha1.VirtualClusterExtensionReconciled),
+			OfType(operatorv1alpha1.ExtensionInstalled),
 			WithStatus(gardencorev1beta1.ConditionFalse),
 			WithReason("NoGardenFound"),
 		))
@@ -230,20 +252,20 @@ var _ = Describe("Extension controller tests", func() {
 		}
 		Expect(testClient.Status().Update(ctx, garden)).To(Succeed())
 
-		By("Wait until provider-local virtual cluster resources are ready")
+		By("Wait until extension is successfully reconciled")
 		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionBar), extensionBar)).To(Succeed())
 			return extensionBar.Status.Conditions
 		}).Should(ContainCondition(
-			OfType(operatorv1alpha1.VirtualClusterExtensionReconciled),
+			OfType(operatorv1alpha1.ExtensionInstalled),
 			WithStatus(gardencorev1beta1.ConditionTrue),
 			WithReason("ReconcileSuccessful"),
-		))
+		), fmt.Sprintf("Failed conditions expected to be healthy:%+v", extensionBar.Status.Conditions))
 
 		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerRegistrationBar), controllerRegistrationBar)).To(Succeed())
 		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerDeploymentBar), controllerDeploymentBar)).To(Succeed())
 
-		By("Install another extension")
+		By("Create extension foo with admission controller")
 		Expect(testClient.Create(ctx, extensionFoo)).To(Succeed())
 		DeferCleanup(func() {
 			By("Delete extension")
@@ -254,15 +276,25 @@ var _ = Describe("Extension controller tests", func() {
 			Eventually(func() error { return mgrClient.Get(ctx, client.ObjectKeyFromObject(extensionFoo), extensionFoo) }).Should(BeNotFoundError())
 		})
 
-		By("Wait until provider-foo virtual cluster resources are ready")
+		By("Wait for admission virtual managed resource and set it as applied, healthy and not progressing")
+		Eventually(func() error {
+			return patchManagedResourceAsHealthyAndComplete("extension-admission-virtual-provider-foo")
+		}).Should(Succeed())
+
+		By("Wait for admission runtime managed resource and set it as applied, healthy and not progressing")
+		Eventually(func() error {
+			return patchManagedResourceAsHealthyAndComplete("extension-admission-runtime-provider-foo")
+		}).Should(Succeed())
+
+		By("Wait until extension is successfully reconciled")
 		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionFoo), extensionFoo)).To(Succeed())
 			return extensionFoo.Status.Conditions
 		}).Should(ContainCondition(
-			OfType(operatorv1alpha1.VirtualClusterExtensionReconciled),
+			OfType(operatorv1alpha1.ExtensionInstalled),
 			WithStatus(gardencorev1beta1.ConditionTrue),
 			WithReason("ReconcileSuccessful"),
-		))
+		), fmt.Sprintf("Failed conditions expected to be healthy:%+v", extensionFoo.Status.Conditions))
 
 		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerRegistrationFoo), controllerRegistrationFoo)).To(Succeed())
 		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerDeploymentFoo), controllerDeploymentFoo)).To(Succeed())
@@ -271,10 +303,16 @@ var _ = Describe("Extension controller tests", func() {
 		Expect(testClient.Delete(ctx, extensionFoo)).To(Succeed())
 
 		Eventually(func() error {
-			return (testClient.Get(ctx, client.ObjectKeyFromObject(controllerRegistrationFoo), controllerRegistrationFoo))
+			return testClient.Get(ctx, client.ObjectKeyFromObject(controllerRegistrationFoo), controllerRegistrationFoo)
 		}).Should(BeNotFoundError())
 		Eventually(func() error {
-			return (testClient.Get(ctx, client.ObjectKeyFromObject(controllerDeploymentFoo), controllerDeploymentFoo))
+			return testClient.Get(ctx, client.ObjectKeyFromObject(controllerDeploymentFoo), controllerDeploymentFoo)
+		}).Should(BeNotFoundError())
+		Eventually(func() error {
+			return testClient.Get(ctx, client.ObjectKey{Namespace: testNamespace.Name, Name: "extension-admission-virtual-provider-foo"}, &resourcesv1alpha1.ManagedResource{})
+		}).Should(BeNotFoundError())
+		Eventually(func() error {
+			return testClient.Get(ctx, client.ObjectKey{Namespace: testNamespace.Name, Name: "extension-admission-runtime-provider-foo"}, &resourcesv1alpha1.ManagedResource{})
 		}).Should(BeNotFoundError())
 		Eventually(func() error {
 			return mgrClient.Get(ctx, client.ObjectKeyFromObject(extensionFoo), extensionFoo)
@@ -283,10 +321,10 @@ var _ = Describe("Extension controller tests", func() {
 		By("Delete garden")
 		Expect(testClient.Delete(ctx, garden)).To(Succeed())
 		Eventually(func() error {
-			return (testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden))
+			return testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)
 		}).Should(BeNotFoundError())
 
-		By("Verify provider-local has no finalizers")
+		By("Verify extension bar has no finalizers")
 		Eventually(func() ([]string, error) {
 			err := mgrClient.Get(ctx, client.ObjectKeyFromObject(extensionBar), extensionBar)
 			if err != nil {
@@ -296,3 +334,17 @@ var _ = Describe("Extension controller tests", func() {
 		}).Should(BeEmpty())
 	})
 })
+
+func patchManagedResourceAsHealthyAndComplete(name string) error {
+	mr := &resourcesv1alpha1.ManagedResource{}
+	if err := testClient.Get(ctx, client.ObjectKey{Namespace: testNamespace.Name, Name: name}, mr); err != nil {
+		return err
+	}
+	mr.Status.Conditions = []gardencorev1beta1.Condition{
+		{Type: resourcesv1alpha1.ResourcesApplied, Status: gardencorev1beta1.ConditionTrue, LastTransitionTime: metav1.Now(), LastUpdateTime: metav1.Now()},
+		{Type: resourcesv1alpha1.ResourcesHealthy, Status: gardencorev1beta1.ConditionTrue, LastTransitionTime: metav1.Now(), LastUpdateTime: metav1.Now()},
+		{Type: resourcesv1alpha1.ResourcesProgressing, Status: gardencorev1beta1.ConditionFalse, LastTransitionTime: metav1.Now(), LastUpdateTime: metav1.Now()},
+	}
+	mr.Status.ObservedGeneration = mr.Generation
+	return testClient.Status().Update(ctx, mr)
+}

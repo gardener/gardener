@@ -1,0 +1,50 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "name" . }}
+  labels:
+{{ include "labels" . | indent 4 }}
+rules:
+- apiGroups:
+  - core.gardener.cloud
+  resources:
+  - shoots
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - admissionregistration.k8s.io
+  resources:
+  - mutatingwebhookconfigurations
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - patch
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "name" . }}
+  labels:
+{{ include "labels" . | indent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "name" . }}
+subjects:
+- kind: ServiceAccount
+  name: {{ required ".Values.gardener.virtualCluster.serviceAccount.name is required" .Values.gardener.virtualCluster.serviceAccount.name }}
+  namespace: {{ required ".Values.gardener.virtualCluster.serviceAccount.namespace is required" .Values.gardener.virtualCluster.serviceAccount.namespace }}

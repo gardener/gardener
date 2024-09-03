@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ include "labels" . | indent 4 }}
+    high-availability-config.resources.gardener.cloud/type: server
+spec:
+  revisionHistoryLimit: 5
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+{{ include "labels" . | indent 6 }}
+  template:
+    metadata:
+      labels:
+        networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-runtime-apiserver: allowed
+        networking.resources.gardener.cloud/to-virtual-garden-kube-apiserver-tcp-443: allowed
+{{ include "labels" . | indent 8 }}
+    spec:
+      {{- if .Values.gardener.runtimeCluster.priorityClassName }}
+      priorityClassName: {{ .Values.gardener.runtimeCluster.priorityClassName }}
+      {{- end }}
+      serviceAccountName: {{ include "name" . }}
+      containers:
+      - name: {{ include "name" . }}
+        image: {{ .Values.image }}
+        imagePullPolicy: {{ .Values.imagePullPolicy }}
+        args:
+        - --webhook-config-server-port={{ .Values.webhookConfig.serverPort }}
+        - --webhook-config-mode=url
+        - --webhook-config-url={{ printf "%s.%s" (include "name" .) (.Release.Namespace) }}
+        - --webhook-config-namespace={{ .Release.Namespace }}
+        - --health-bind-address=:{{ .Values.healthPort }}
+        - --leader-election-id={{ include "leaderelectionid" . }}
+        env:
+        - name: LEADER_ELECTION_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: SOURCE_CLUSTER
+          value: enabled
+        ports:
+        - name: webhook-server
+          containerPort: {{ .Values.webhookConfig.serverPort }}
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: {{ .Values.healthPort }}
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: {{ .Values.healthPort }}
+            scheme: HTTP
+          initialDelaySeconds: 5
+{{- if .Values.resources }}
+        resources:
+{{ toYaml .Values.resources | nindent 10 }}
+{{- end }}

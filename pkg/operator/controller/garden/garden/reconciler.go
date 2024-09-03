@@ -53,7 +53,7 @@ type Reconciler struct {
 	Identity              *gardencorev1beta1.Gardener
 	ComponentImageVectors imagevector.ComponentImageVectors
 	GardenNamespace       string
-	// GardenClientMap is the ClientMap used to communicate with the virtual garden cluster. It should be set by AddToManager function but the field is still public for use in tests.
+	// GardenClientMap is the ClientMap used to communicate with the virtual garden cluster. It should be set by AddToManager function but the field is still public for usage in tests.
 	GardenClientMap clientmap.ClientMap
 
 	gardenletControllerAdded bool

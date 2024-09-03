@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package virtualcluster_test
+package extension_test
 
 import (
 	"context"
@@ -23,12 +23,16 @@ import (
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
-	. "github.com/gardener/gardener/pkg/operator/controller/extension/virtualcluster"
+	. "github.com/gardener/gardener/pkg/operator/controller/extension"
+	ocifake "github.com/gardener/gardener/pkg/utils/oci/fake"
 	"github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -39,16 +43,17 @@ const (
 
 var _ = Describe("Reconciler", func() {
 	var (
-		runtimeClient   client.Client
-		virtualClient   client.Client
-		ctx             context.Context
-		operatorConfig  config.OperatorConfiguration
-		gardenClientMap *fakeclientmap.ClientMap
-		reconciler      *Reconciler
-		garden          *operatorv1alpha1.Garden
-		extension       *operatorv1alpha1.Extension
-		fakeClock       *testclock.FakeClock
-		fakeRecorder    *record.FakeRecorder
+		runtimeClientSet kubernetes.Interface
+		virtualClient    client.Client
+		ctx              context.Context
+		operatorConfig   config.OperatorConfiguration
+		gardenClientMap  *fakeclientmap.ClientMap
+		helmRegistry     *ocifake.Registry
+		reconciler       *Reconciler
+		garden           *operatorv1alpha1.Garden
+		extension        *operatorv1alpha1.Extension
+		fakeClock        *testclock.FakeClock
+		fakeRecorder     *record.FakeRecorder
 	)
 
 	BeforeEach(func() {
@@ -57,14 +62,15 @@ var _ = Describe("Reconciler", func() {
 
 		operatorConfig = config.OperatorConfiguration{
 			Controllers: config.ControllerConfiguration{
-				ExtensionVirtualCluster: config.ExtensionVirtualClusterControllerConfiguration{
+				Extension: config.ExtensionControllerConfiguration{
 					ConcurrentSyncs: ptr.To(1),
 				},
 			},
 		}
 		garden = &operatorv1alpha1.Garden{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: gardenName,
+				Name:        gardenName,
+				Annotations: map[string]string{v1beta1constants.AnnotationKeyGenericTokenKubeconfigSecretName: "foo-kubeconfig"},
 			},
 		}
 		extension = &operatorv1alpha1.Extension{
@@ -90,16 +96,18 @@ var _ = Describe("Reconciler", func() {
 		}
 
 		virtualClient = fakeclient.NewClientBuilder().WithScheme(operatorclient.VirtualScheme).Build()
-		runtimeClient = fakeclient.NewClientBuilder().
+		runtimeClient := fakeclient.NewClientBuilder().
 			WithScheme(operatorclient.RuntimeScheme).
 			WithStatusSubresource(&operatorv1alpha1.Extension{}, &operatorv1alpha1.Extension{}).Build()
+		runtimeClientSet = kubernetesfake.NewClientSetBuilder().WithClient(runtimeClient).Build()
 		gardenClientMap = fakeclientmap.NewClientMapBuilder().WithRuntimeClientForKey(keys.ForGarden(garden), virtualClient, nil).Build()
+		helmRegistry = ocifake.NewRegistry()
 
 		fakeClock = testclock.NewFakeClock(time.Now())
 		fakeRecorder = &record.FakeRecorder{}
 	})
 
-	Describe("#ExtensionVirtualCluster", func() {
+	Describe("#Extension", func() {
 		var req reconcile.Request
 
 		BeforeEach(func() {
@@ -107,13 +115,14 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		JustBeforeEach(func() {
-			Expect(runtimeClient.Create(ctx, extension)).To(Succeed())
+			Expect(runtimeClientSet.Client().Create(ctx, extension)).To(Succeed())
 			reconciler = &Reconciler{
-				Config:          operatorConfig,
-				GardenClientMap: gardenClientMap,
-				RuntimeClient:   runtimeClient,
-				Clock:           fakeClock,
-				Recorder:        fakeRecorder,
+				Config:           operatorConfig,
+				GardenClientMap:  gardenClientMap,
+				HelmRegistry:     helmRegistry,
+				RuntimeClientSet: runtimeClientSet,
+				Clock:            fakeClock,
+				Recorder:         fakeRecorder,
 			}
 		})
 
@@ -127,13 +136,13 @@ var _ = Describe("Reconciler", func() {
 		Context("reconcile based on garden state", func() {
 			It("remove finalizers when garden is deleted", func() {
 				extension.Finalizers = append(extension.Finalizers, operatorv1alpha1.FinalizerName)
-				Expect(runtimeClient.Update(ctx, extension)).To(Succeed())
+				Expect(runtimeClientSet.Client().Update(ctx, extension)).To(Succeed())
 
 				req = reconcile.Request{NamespacedName: client.ObjectKey{Name: extensionName}}
 				Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{}))
 
 				extension := &operatorv1alpha1.Extension{}
-				Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: extensionName}, extension)).To(Succeed())
+				Expect(runtimeClientSet.Client().Get(ctx, client.ObjectKey{Name: extensionName}, extension)).To(Succeed())
 				Expect(extension.Finalizers).To(BeEmpty())
 			})
 
@@ -144,7 +153,7 @@ var _ = Describe("Reconciler", func() {
 						Type:  gardencorev1beta1.LastOperationTypeReconcile,
 					},
 				}
-				Expect(runtimeClient.Create(ctx, garden)).To(Succeed())
+				Expect(runtimeClientSet.Client().Create(ctx, garden)).To(Succeed())
 
 				res, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: client.ObjectKey{Name: extensionName}})
 				Expect(res).To(Equal(reconcile.Result{RequeueAfter: 10 * time.Second}))
@@ -158,19 +167,19 @@ var _ = Describe("Reconciler", func() {
 						Type:  gardencorev1beta1.LastOperationTypeReconcile,
 					},
 				}
-				Expect(runtimeClient.Create(ctx, garden)).To(Succeed())
+				Expect(runtimeClientSet.Client().Create(ctx, garden)).To(Succeed())
 
+				By("reconcile extension")
 				req = reconcile.Request{NamespacedName: client.ObjectKey{Name: extensionName}}
 				Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{}))
 
 				extension := &operatorv1alpha1.Extension{}
-				Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: extensionName}, extension)).To(Succeed())
-				Expect(extension.Status.Conditions).To(HaveLen(1))
-				Expect(extension.Status.Conditions[0]).To(gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
-					"Type":   Equal(operatorv1alpha1.VirtualClusterExtensionReconciled),
-					"Status": Equal(gardencorev1beta1.ConditionTrue),
-					"Reason": Equal(ConditionReconcileSuccess),
-				}))
+				Expect(runtimeClientSet.Client().Get(ctx, client.ObjectKey{Name: extensionName}, extension)).To(Succeed())
+				Expect(extension.Status.Conditions).To(ConsistOf(gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
+					"Type":   Equal(gardencorev1beta1.ConditionType("Installed")),
+					"Status": Equal(gardencorev1beta1.ConditionStatus("True")),
+					"Reason": Equal("ReconcileSuccessful"),
+				})))
 
 				var (
 					controllerDeploymentList   gardencorev1.ControllerDeploymentList
@@ -181,11 +190,12 @@ var _ = Describe("Reconciler", func() {
 				Expect(controllerDeploymentList.Items).To(HaveLen(1))
 				Expect(controllerRegistrationList.Items).To(HaveLen(1))
 
-				Expect(runtimeClient.Delete(ctx, extension)).To(Succeed())
+				By("delete extension")
+				Expect(runtimeClientSet.Client().Delete(ctx, extension)).To(Succeed())
 				req = reconcile.Request{NamespacedName: client.ObjectKey{Name: extensionName}}
 				Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{}))
 
-				Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: extensionName}, extension)).To(matchers.BeNotFoundError())
+				Expect(runtimeClientSet.Client().Get(ctx, client.ObjectKey{Name: extensionName}, extension)).To(matchers.BeNotFoundError())
 				Expect(virtualClient.List(ctx, &controllerRegistrationList)).To(Succeed())
 				Expect(virtualClient.List(ctx, &controllerDeploymentList)).To(Succeed())
 				Expect(controllerDeploymentList.Items).To(BeEmpty())

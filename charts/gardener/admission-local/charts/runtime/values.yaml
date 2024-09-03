@@ -1,0 +1,21 @@
+gardener:
+  runtimeCluster:
+    priorityClassName: gardener-garden-system-400
+
+image: local-skaffold/gardener-extension-admission-local:latest
+imagePullPolicy: IfNotPresent
+replicaCount: 1
+resources: {}
+healthPort: 8081
+vpa:
+  enabled: true
+  resourcePolicy:
+    minAllowed:
+      memory: 64Mi
+  updatePolicy:
+    updateMode: "Auto"
+webhookConfig:
+  serverPort: 10250
+service:
+  topologyAwareRouting:
+    enabled: false

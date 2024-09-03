@@ -49,14 +49,17 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 		Expect(runtimeClient.Create(ctx, rootCASecret)).To(Succeed())
 		Expect(runtimeClient.Create(ctx, garden)).To(Succeed())
 
-		Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: "provider-local"}, &operatorv1alpha1.Extension{})).To(Succeed())
 		waitForGardenToBeReconciled(ctx, garden)
 
 		DeferCleanup(func() {
-			By("Delete Garden")
 			ctx, cancel = context.WithTimeout(parentCtx, 5*time.Minute)
 			defer cancel()
 
+			// TODO(timuthy): Remove this special handling as soon as extensions provider a proper deletion procedure, i.e cleaning up extension resources when garden resource is deleted. Planned for release v1.103 or v1.104.
+			By("Remove admission from provider-local")
+			removeAdmissionControllerFromExtension(ctx, client.ObjectKeyFromObject(extensionProviderLocal))
+
+			By("Delete Garden")
 			Expect(gardenerutils.ConfirmDeletion(ctx, runtimeClient, garden)).To(Succeed())
 			Expect(runtimeClient.Delete(ctx, garden)).To(Succeed())
 			Expect(runtimeClient.Delete(ctx, backupSecret)).To(Succeed())
@@ -121,6 +124,8 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 				healthyManagedResource("terminal-virtual"),
 				healthyManagedResource("gardener-metrics-exporter-runtime"),
 				healthyManagedResource("gardener-metrics-exporter-virtual"),
+				healthyManagedResource("extension-admission-runtime-provider-local"),
+				healthyManagedResource("extension-admission-virtual-provider-local"),
 				healthyManagedResource("cert-management-controller"),
 				healthyManagedResource("cert-management-issuers"),
 			))

@@ -5,12 +5,17 @@
 package gardener
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"io"
+	"slices"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -19,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
+	forkedyaml "github.com/gardener/gardener/third_party/gopkg.in/yaml.v2"
 )
 
 var (
@@ -70,4 +76,97 @@ func ReplicateGlobalMonitoringSecret(ctx context.Context, c client.Client, prefi
 		return nil
 	})
 	return globalMonitoringSecretReplica, err
+}
+
+var injectionScheme = kubernetes.SeedScheme
+
+// MutateObjectsInSecretData iterates over the given rendered secret data and invokes the given mutate functions.
+func MutateObjectsInSecretData(
+	secretData map[string][]byte,
+	namespace string,
+	apiGroups []string,
+	mutateFns ...func(object runtime.Object) error,
+) error {
+	return mutateObjects(secretData, func(obj *unstructured.Unstructured) error {
+		// only inject into objects of selected API groups
+		if !slices.Contains(apiGroups, obj.GetObjectKind().GroupVersionKind().Group) {
+			return nil
+		}
+
+		if obj.GetNamespace() != namespace {
+			return nil
+		}
+
+		return mutateTypedObject(obj, func(typedObject runtime.Object) error {
+			for _, mutate := range mutateFns {
+				if err := mutate(typedObject); err != nil {
+					return err
+				}
+			}
+
+			return nil
+		})
+	})
+}
+
+// mutateObject iterates over the given rendered secret data and calls the given mutator for each of them. It marshals
+// the objects back (with stable key ordering) after mutation and updates the secret data.
+func mutateObjects(secretData map[string][]byte, mutate func(obj *unstructured.Unstructured) error) error {
+	for key, data := range secretData {
+		buffer := &bytes.Buffer{}
+		manifestReader := kubernetes.NewManifestReader(data)
+
+		for {
+			_, _ = buffer.WriteString("\n---\n")
+			obj, err := manifestReader.Read()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				return err
+			}
+			if obj == nil {
+				continue
+			}
+
+			if err := mutate(obj); err != nil {
+				return err
+			}
+
+			// serialize unstructured back to secret data (with stable key ordering)
+			// Note: we have to do this for all objects, not only for mutated ones, as there could be multiple objects in one file
+			objBytes, err := forkedyaml.Marshal(obj.Object)
+			if err != nil {
+				return err
+			}
+
+			if _, err := buffer.Write(objBytes); err != nil {
+				return err
+			}
+		}
+
+		secretData[key] = buffer.Bytes()
+	}
+
+	return nil
+}
+
+// mutateTypedObject converts the given object to a typed object, calls the mutator, and converts the object back to the
+// original type.
+func mutateTypedObject(obj runtime.Object, mutate func(obj runtime.Object) error) error {
+	// convert to typed object for injection logic
+	typedObject, err := injectionScheme.New(obj.GetObjectKind().GroupVersionKind())
+	if err != nil {
+		return err
+	}
+	if err := injectionScheme.Convert(obj, typedObject, nil); err != nil {
+		return err
+	}
+
+	if err := mutate(typedObject); err != nil {
+		return err
+	}
+
+	// convert back into unstructured for serialization
+	return injectionScheme.Convert(typedObject, obj, nil)
 }

@@ -279,7 +279,7 @@ func expectStatusPatch(ctx any, c *mockclient.MockStatusWriter, expectedObj clie
 }
 
 // CEventually is like gomega.Eventually but with a context.Context. When it has a deadline then the gomega.Eventually
-// call with be configured with a the respective timeout.
+// call with be configured with the respective timeout.
 func CEventually(ctx context.Context, actual any) AsyncAssertion {
 	deadline, ok := ctx.Deadline()
 	if !ok {

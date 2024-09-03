@@ -234,6 +234,7 @@ build:
             - plugin/pkg/shoot/validator
             - plugin/pkg/shoot/vpa
             - plugin/pkg/utils
+            - third_party/gopkg.in/yaml.v2
             - VERSION
         ldflags:
           - '{{.LD_FLAGS}}'
@@ -415,6 +416,7 @@ build:
             - pkg/utils/validation/cidr
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
+            - third_party/gopkg.in/yaml.v2
             - VERSION
         ldflags:
           - '{{.LD_FLAGS}}'
@@ -494,6 +496,7 @@ build:
             - pkg/utils/timewindow
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
+            - third_party/gopkg.in/yaml.v2
             - VERSION
         ldflags:
           - '{{.LD_FLAGS}}'
@@ -1369,6 +1372,7 @@ build:
             - pkg/utils/validation/kubernetes/core
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
+            - third_party/gopkg.in/yaml.v2
             - VERSION
         ldflags:
           - '{{.LD_FLAGS}}'

@@ -27,6 +27,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	"github.com/gardener/gardener/pkg/apis/settings"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -265,10 +266,10 @@ func NewGardenAccessSecret(name, namespace string) *AccessSecret {
 
 // InjectGenericGardenKubeconfig injects the volumes, volume mounts, and env vars for the generic garden kubeconfig into
 // the provided object. The access secret name must be the name of a secret containing a JWT token which should be used
-// by the kubeconfig. If the object has multiple containers then the default is to inject it into all of them. If it
-// should only be done for a selection of containers then their respective names must be provided.
+// by the kubeconfig. The mount path is important to match the token path configured in the generic kubeconfig.
+// If containerNames are not specified, the adjustments happen for all containers.
 // If any of the containers in the object already has the GARDEN_KUBECONFIG env var, the object is not mutated.
-func InjectGenericGardenKubeconfig(obj runtime.Object, genericKubeconfigName, accessSecretName string, containerNames ...string) error {
+func InjectGenericGardenKubeconfig(obj runtime.Object, genericKubeconfigName, accessSecretName, mountPath string, containerNames ...string) error {
 	// check for presence of env var
 	hasGardenKubeconfig := false
 
@@ -292,9 +293,14 @@ func InjectGenericGardenKubeconfig(obj runtime.Object, genericKubeconfigName, ac
 		genericKubeconfigName,
 		accessSecretName,
 		"garden-kubeconfig",
-		VolumeMountPathGenericGardenKubeconfig,
+		mountPath,
 		containerNames...,
 	); err != nil {
+		return err
+	}
+
+	// inject reference annotations for generic kubeconfig
+	if err := references.InjectAnnotations(obj); err != nil {
 		return err
 	}
 
@@ -303,7 +309,7 @@ func InjectGenericGardenKubeconfig(obj runtime.Object, genericKubeconfigName, ac
 		kubernetesutils.VisitContainers(podSpec, func(container *corev1.Container) {
 			kubernetesutils.AddEnvVar(container, corev1.EnvVar{
 				Name:  v1beta1constants.EnvGenericGardenKubeconfig,
-				Value: PathGenericGardenKubeconfig,
+				Value: mountPath + "/" + secrets.DataKeyKubeconfig,
 			}, true)
 		}, containerNames...)
 	})
