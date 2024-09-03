@@ -156,20 +156,14 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, virtualClus
 		}
 	}
 
-	log.Info("Reconciling extension virtual resources")
-	if err := r.reconcileExtensionVirtualClusterResources(reconcileCtx, log, virtualClusterClientSet.Client(), extension); err != nil {
+	log.Info("Reconciling ControllerRegistration and ControllerDeployment")
+	if err := r.reconcileControllerRegistration(reconcileCtx, log, virtualClusterClientSet.Client(), extension); err != nil {
 		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionFalse, ConditionReconcileFailed, err.Error())
 		return errors.Join(err, r.updateExtensionStatus(ctx, log, extension, conditions))
 	}
 
-	log.Info("Reconciling admission virtual resources")
-	if err := r.reconcileAdmissionVirtualClusterResources(reconcileCtx, log, virtualClusterClientSet, extension); err != nil {
-		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionFalse, ConditionReconcileFailed, err.Error())
-		return errors.Join(err, r.updateExtensionStatus(ctx, log, extension, conditions))
-	}
-
-	log.Info("Reconciling admission runtime resources")
-	if err := r.reconcileAdmissionRuntimeClusterResources(reconcileCtx, log, genericTokenKubeconfigSecretName, extension); err != nil {
+	log.Info("Reconciling admission deployment")
+	if err := r.reconcileAdmissionDeployment(reconcileCtx, log, virtualClusterClientSet, genericTokenKubeconfigSecretName, extension); err != nil {
 		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionFalse, ConditionReconcileFailed, err.Error())
 		return errors.Join(err, r.updateExtensionStatus(ctx, log, extension, conditions))
 	}
@@ -184,17 +178,12 @@ func (r *Reconciler) delete(ctx context.Context, log logr.Logger, virtualCluster
 
 	conditions := NewConditions(r.Clock, extension.Status)
 
-	if err := r.deleteExtensionVirtualClusterResources(deleteCtx, log, virtualClusterClient, extension); err != nil {
+	if err := r.deleteControllerRegistration(deleteCtx, log, virtualClusterClient, extension); err != nil {
 		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionFalse, ConditionDeleteFailed, err.Error())
 		return errors.Join(err, r.updateExtensionStatus(ctx, log, extension, conditions))
 	}
 
-	if err := r.deleteAdmissionVirtualClusterResources(deleteCtx, log, extension); err != nil {
-		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionFalse, ConditionDeleteFailed, err.Error())
-		return errors.Join(err, r.updateExtensionStatus(ctx, log, extension, conditions))
-	}
-
-	if err := r.deleteAdmissionRuntimeClusterResources(deleteCtx, log, extension); err != nil {
+	if err := r.deleteAdmissionDeployment(deleteCtx, log, extension); err != nil {
 		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionFalse, ConditionDeleteFailed, err.Error())
 		return errors.Join(err, r.updateExtensionStatus(ctx, log, extension, conditions))
 	}
