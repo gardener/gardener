@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package workloadidentity
+package workloadidentity_test
 
 import (
 	"crypto"
@@ -18,6 +18,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/util/keyutil"
+
+	"github.com/gardener/gardener/pkg/utils/workloadidentity"
 )
 
 var (
@@ -41,9 +43,9 @@ var _ = BeforeSuite(func() {
 
 var _ = Describe("#JWT", func() {
 	BeforeEach(func() {
-		now = func() time.Time {
+		workloadidentity.SetNow(func() time.Time {
 			return time.Date(2024, time.July, 9, 2, 0, 0, 0, time.UTC)
-		}
+		})
 	})
 
 	Context("#getKeyID", func() {
@@ -65,7 +67,7 @@ wQIDAQAB
 			Expect(err).ToNot(HaveOccurred())
 			Expect(keys).To(HaveLen(1))
 
-			keyID, err := getKeyID(keys[0])
+			keyID, err := workloadidentity.GetKeyID(keys[0])
 			Expect(err).ToNot(HaveOccurred())
 			Expect(keyID).ToNot(BeEmpty())
 			Expect(keyID).To(Equal(pubKeyID))
@@ -81,10 +83,10 @@ wQIDAQAB
 			Expect(k1.Equal(k2)).To(BeFalse())
 			Expect(k2.Equal(k1)).To(BeFalse())
 
-			id1, err := getKeyID(k1.Public())
+			id1, err := workloadidentity.GetKeyID(k1.Public())
 			Expect(err).ToNot(HaveOccurred())
 			Expect(id1).ToNot(BeEmpty())
-			id2, err := getKeyID(k2.Public())
+			id2, err := workloadidentity.GetKeyID(k2.Public())
 			Expect(err).ToNot(HaveOccurred())
 			Expect(id2).ToNot(BeEmpty())
 
@@ -94,11 +96,11 @@ wQIDAQAB
 		})
 
 		It("should be idempotent", func() {
-			id1, err := getKeyID(rsaPrivateKey.Public())
+			id1, err := workloadidentity.GetKeyID(rsaPrivateKey.Public())
 			Expect(err).ToNot(HaveOccurred())
 			Expect(id1).ToNot(BeEmpty())
 
-			id2, err := getKeyID(rsaPrivateKey.Public())
+			id2, err := workloadidentity.GetKeyID(rsaPrivateKey.Public())
 			Expect(err).ToNot(HaveOccurred())
 			Expect(id2).ToNot(BeEmpty())
 
@@ -111,7 +113,7 @@ wQIDAQAB
 			var _ crypto.PublicKey = unsupportedKey{}
 			u := unsupportedKey{}
 
-			keyID, err := getKeyID(u)
+			keyID, err := workloadidentity.GetKeyID(u)
 			Expect(err).To(HaveOccurred())
 			Expect(keyID).To(BeEmpty())
 		})
@@ -119,32 +121,32 @@ wQIDAQAB
 
 	Context("#getSigner", func() {
 		It("should get RSA signer", func() {
-			s, err := getSigner(rsaPrivateKey)
+			s, err := workloadidentity.GetSigner(rsaPrivateKey)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(s).ToNot(BeNil())
 		})
 
 		It("should get ECDSA signer", func() {
-			s, err := getSigner(ecdsaPrivateKey)
+			s, err := workloadidentity.GetSigner(ecdsaPrivateKey)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(s).ToNot(BeNil())
 		})
 
 		It("should fail for unsupported key", func() {
 			type unsupportedKey struct{}
-			s, err := getSigner(unsupportedKey{})
+			s, err := workloadidentity.GetSigner(unsupportedKey{})
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("failed to construct signer from key type workloadidentity.unsupportedKey"))
+			Expect(err.Error()).To(Equal("failed to construct signer from key type workloadidentity_test.unsupportedKey"))
 			Expect(s).To(BeNil())
 		})
 
 		It("should fail for nil key", func() {
-			signer, err := getRSASigner(nil)
+			signer, err := workloadidentity.GetRSASigner(nil)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(Equal("rsa: key must not be nil"))
 			Expect(signer).To(BeNil())
 
-			signer, err = getECDSASigner(nil)
+			signer, err = workloadidentity.GetECDSASigner(nil)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(Equal("ecdsa: key must not be nil"))
 			Expect(signer).To(BeNil())
@@ -158,35 +160,35 @@ wQIDAQAB
 		)
 
 		It("should fail to create token issuer due to erroneous signing key", func() {
-			t, err := NewTokenIssuer("", issuer, minDuration, maxDuration)
+			t, err := workloadidentity.NewTokenIssuer("", issuer, minDuration, maxDuration)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError(ContainSubstring("failed to get signer")))
 			Expect(t).To(BeNil())
 		})
 
 		It("should fail to create token issuer due to empty issuer url", func() {
-			t, err := NewTokenIssuer(rsaPrivateKey, "", minDuration, maxDuration)
+			t, err := workloadidentity.NewTokenIssuer(rsaPrivateKey, "", minDuration, maxDuration)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError("issuer cannot be empty string"))
 			Expect(t).To(BeNil())
 		})
 
 		It("should fail to create token issuer when the issuer url is not valid url", func() {
-			t, err := NewTokenIssuer(rsaPrivateKey, "://test.local.gardener.cloud", minDuration, maxDuration)
+			t, err := workloadidentity.NewTokenIssuer(rsaPrivateKey, "://test.local.gardener.cloud", minDuration, maxDuration)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError(ContainSubstring("issuer is not a valid URL")))
 			Expect(t).To(BeNil())
 		})
 
 		It("should fail to create token issuer due to non https scheme issuer url", func() {
-			t, err := NewTokenIssuer(rsaPrivateKey, "http://test.local.gardener.cloud", minDuration, maxDuration)
+			t, err := workloadidentity.NewTokenIssuer(rsaPrivateKey, "http://test.local.gardener.cloud", minDuration, maxDuration)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError("issuer must be using https scheme"))
 			Expect(t).To(BeNil())
 		})
 
 		It("should  successfully create token issuer", func() {
-			t, err := NewTokenIssuer(rsaPrivateKey, issuer, minDuration, maxDuration)
+			t, err := workloadidentity.NewTokenIssuer(rsaPrivateKey, issuer, minDuration, maxDuration)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(t).ToNot(BeNil())
 		})
@@ -201,7 +203,7 @@ wQIDAQAB
 		var (
 			minDurationSeconds int64
 			maxDurationSeconds int64
-			t                  TokenIssuer
+			t                  workloadidentity.TokenIssuer
 			audiences          []string
 		)
 
@@ -215,7 +217,7 @@ wQIDAQAB
 			minDurationSeconds = int64(time.Minute.Seconds()) * 10
 			maxDurationSeconds = int64(time.Hour.Seconds()) * 48
 
-			tokenIssuer, err := NewTokenIssuer(rsaPrivateKey, issuer, minDurationSeconds, maxDurationSeconds)
+			tokenIssuer, err := workloadidentity.NewTokenIssuer(rsaPrivateKey, issuer, minDurationSeconds, maxDurationSeconds)
 			Expect(err).ToNot(HaveOccurred())
 
 			t = tokenIssuer
@@ -224,7 +226,7 @@ wQIDAQAB
 
 		It("should successfully issue token without claims", func() {
 			var (
-				n               = now()
+				n               = workloadidentity.Now()()
 				durationSeconds = int64(time.Hour.Seconds()) * 2
 			)
 			token, exp, err := t.IssueToken(sub, audiences, durationSeconds)
@@ -237,7 +239,7 @@ wQIDAQAB
 
 		It("should successfully issue token with claims", func() {
 			var (
-				n               = now()
+				n               = workloadidentity.Now()()
 				durationSeconds = int64(time.Hour.Seconds()) * 2
 			)
 
@@ -282,7 +284,7 @@ wQIDAQAB
 
 		It("should cap duration to max duration", func() {
 			var (
-				n               = now()
+				n               = workloadidentity.Now()()
 				durationSeconds = maxDurationSeconds + int64(time.Hour.Seconds())
 			)
 			token, exp, err := t.IssueToken(sub, audiences, durationSeconds)
@@ -297,7 +299,7 @@ wQIDAQAB
 
 		It("should cap duration to min duration", func() {
 			var (
-				n               = now()
+				n               = workloadidentity.Now()()
 				durationSeconds = minDurationSeconds - int64(time.Minute.Seconds())
 			)
 			token, exp, err := t.IssueToken(sub, audiences, durationSeconds)

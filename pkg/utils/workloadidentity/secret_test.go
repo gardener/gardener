@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package workloadidentity
+package workloadidentity_test
 
 import (
 	"context"
@@ -19,6 +19,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils/workloadidentity"
 )
 
 var _ = Describe("#Secret", func() {
@@ -35,7 +36,7 @@ var _ = Describe("#Secret", func() {
 	})
 
 	It("should not be able to create a secret because workload identity info is not set", func() {
-		secret, err := NewSecret(secretName, secretNamespace)
+		secret, err := workloadidentity.NewSecret(secretName, secretNamespace)
 		Expect(err).To(HaveOccurred())
 		Expect(secret).To(BeNil())
 		Expect(err.Error()).To(And(
@@ -46,25 +47,25 @@ var _ = Describe("#Secret", func() {
 	})
 
 	It("should correctly create the secret", func() {
-		secret, err := NewSecret(
+		secret, err := workloadidentity.NewSecret(
 			secretName,
 			secretNamespace,
-			For("wi-foo", "wi-ns", "provider"),
-			WithContextObject(securityv1alpha1.ContextObject{
+			workloadidentity.For("wi-foo", "wi-ns", "provider"),
+			workloadidentity.WithContextObject(securityv1alpha1.ContextObject{
 				Kind:       "Shoot",
 				APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 				Name:       "shoot-name",
 				Namespace:  ptr.To("shoot-namespace"),
 				UID:        "12345678-94af-4960-9774-0e9987654321",
 			}),
-			WithProviderConfig(&runtime.RawExtension{
+			workloadidentity.WithProviderConfig(&runtime.RawExtension{
 				Raw: []byte(`{"foo":"bar"}`),
 			}),
-			WithLabels(map[string]string{
+			workloadidentity.WithLabels(map[string]string{
 				"foo":                    "bar",
 				"gardener.cloud/purpose": "cloudprovider",
 			}),
-			WithAnnotations(map[string]string{"foo": "bar"}),
+			workloadidentity.WithAnnotations(map[string]string{"foo": "bar"}),
 		)
 		Expect(err).ToNot(HaveOccurred())
 
@@ -129,16 +130,16 @@ var _ = Describe("#Secret", func() {
 
 		Expect(fakeClient.Create(ctx, existing)).To(Succeed())
 
-		secret, err := NewSecret(
+		secret, err := workloadidentity.NewSecret(
 			secretName,
 			secretNamespace,
-			For("new-name", "new-namespace", "new-provider"),
-			WithLabels(map[string]string{"new-foo": "new-bar"}),
-			WithAnnotations(map[string]string{"new-foo": "new-bar"}),
-			WithProviderConfig(&runtime.RawExtension{
+			workloadidentity.For("new-name", "new-namespace", "new-provider"),
+			workloadidentity.WithLabels(map[string]string{"new-foo": "new-bar"}),
+			workloadidentity.WithAnnotations(map[string]string{"new-foo": "new-bar"}),
+			workloadidentity.WithProviderConfig(&runtime.RawExtension{
 				Raw: []byte(`{"foo":"bar"}`),
 			}),
-			WithContextObject(securityv1alpha1.ContextObject{
+			workloadidentity.WithContextObject(securityv1alpha1.ContextObject{
 				Kind:       "Shoot",
 				APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 				Name:       "new-name",
@@ -208,10 +209,10 @@ var _ = Describe("#Secret", func() {
 
 		Expect(fakeClient.Create(ctx, existing)).To(Succeed())
 
-		secret, err := NewSecret(
+		secret, err := workloadidentity.NewSecret(
 			secretName,
 			secretNamespace,
-			For("new-name", "new-namespace", "new-provider"),
+			workloadidentity.For("new-name", "new-namespace", "new-provider"),
 		)
 		Expect(err).ToNot(HaveOccurred())
 
