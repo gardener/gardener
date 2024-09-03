@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	jsonserializer "k8s.io/apimachinery/pkg/runtime/serializer/json"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -122,6 +123,21 @@ jwt:
       claim: username
       prefix: "foo:"
 `
+
+		invalidIssuerUrl = `
+---
+apiVersion: apiserver.config.k8s.io/v1alpha1
+kind: AuthenticationConfiguration
+jwt:
+- issuer:
+    url: https://abc.com
+    audiences:
+    - example-client-id
+  claimMappings:
+    username:
+      claim: username
+      prefix: "abc:"
+`
 	)
 
 	BeforeEach(func() {
@@ -153,6 +169,12 @@ jwt:
 					KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
 						StructuredAuthentication: &gardencorev1beta1.StructuredAuthentication{
 							ConfigMapName: cmName,
+						},
+						ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
+							Issuer: ptr.To("https://xyz.com"),
+							AcceptedIssuers: []string{
+								"https://abc.com",
+							},
 						},
 					},
 				},
@@ -335,6 +357,19 @@ jwt:
 				})
 				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInvalid, "did not find expected key", "")
 			})
+
+			It("contains disallowed issuers in the service account config", func() {
+				returnedCm := corev1.ConfigMap{
+					Data: map[string]string{"config.yaml": validAuthenticationConfiguration},
+				}
+				newShoot := shootv1beta1.DeepCopy()
+				newShoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.Issuer = ptr.To("https://foo.com")
+				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: shootNamespace, Name: cmName}, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
+					*cm = returnedCm
+					return nil
+				})
+				test(admissionv1.Create, nil, newShoot, false, statusCodeInvalid, "provided invalid authentication configuration: [jwt[0].issuer.url: Invalid value: \"https://foo.com\": URL must not overlap with disallowed issuers:", "")
+			})
 		})
 	})
 
@@ -419,6 +454,13 @@ jwt:
 					newCm.Data["config.yaml"] = missingKeyConfiguration
 
 					test(admissionv1.Update, cm, newCm, false, statusCodeInvalid, "did not find expected key", "")
+				})
+
+				It("contains disallowed issuers in the issuer url", func() {
+					newCm := cm.DeepCopy()
+					newCm.Data["config.yaml"] = invalidIssuerUrl
+
+					test(admissionv1.Update, cm, newCm, false, statusCodeInvalid, "provided invalid authentication configuration: [jwt[0].issuer.url: Invalid value: \"https://abc.com\": URL must not overlap with disallowed issuers:", "")
 				})
 			})
 		})
