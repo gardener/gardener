@@ -5,6 +5,8 @@
 package namespacedcloudprofile_test
 
 import (
+	"sort"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -20,8 +22,8 @@ import (
 
 var _ = Describe("NamespacedCloudProfile controller tests", func() {
 	var (
-		parentCloudProfileBase     gardencorev1beta1.CloudProfile
-		namespacedCloudProfileBase gardencorev1beta1.NamespacedCloudProfile
+		parentCloudProfile     *gardencorev1beta1.CloudProfile
+		namespacedCloudProfile *gardencorev1beta1.NamespacedCloudProfile
 
 		mergedCloudProfileSpec *gardencorev1beta1.CloudProfileSpec
 
@@ -32,14 +34,14 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 		dateNow, _ := time.Parse(time.DateOnly, time.Now().Format(time.DateOnly))
 		expirationDateFuture = metav1.Time{Time: dateNow.Local().Add(48 * time.Hour)}
 
-		parentCloudProfileBase = gardencorev1beta1.CloudProfile{
+		parentCloudProfile = &gardencorev1beta1.CloudProfile{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: testID + "-",
 			},
 			Spec: gardencorev1beta1.CloudProfileSpec{
 				Type: "some-type",
 				Kubernetes: gardencorev1beta1.KubernetesSettings{
-					Versions: []gardencorev1beta1.ExpirableVersion{{Version: "1.2.3"}, {Version: "1.3.0"}},
+					Versions: []gardencorev1beta1.ExpirableVersion{{Version: "1.3.0"}, {Version: "1.2.3"}},
 				},
 				MachineImages: []gardencorev1beta1.MachineImage{
 					{
@@ -61,7 +63,7 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 			},
 		}
 
-		namespacedCloudProfileBase = gardencorev1beta1.NamespacedCloudProfile{
+		namespacedCloudProfile = &gardencorev1beta1.NamespacedCloudProfile{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: testID + "-",
 				Namespace:    testNamespace.Name,
@@ -95,11 +97,11 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 		mergedCloudProfileSpec = &gardencorev1beta1.CloudProfileSpec{
 			Kubernetes: gardencorev1beta1.KubernetesSettings{
 				Versions: []gardencorev1beta1.ExpirableVersion{
+					{Version: "1.3.0"},
 					{
 						Version:        "1.2.3",
 						ExpirationDate: &expirationDateFuture,
 					},
-					{Version: "1.3.0"},
 				},
 			},
 			MachineImages: []gardencorev1beta1.MachineImage{
@@ -148,15 +150,10 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 
 	Context("deletion of NamespacedCloudProfile", func() {
 		var (
-			parentCloudProfile     *gardencorev1beta1.CloudProfile
-			namespacedCloudProfile *gardencorev1beta1.NamespacedCloudProfile
-			shoot                  *gardencorev1beta1.Shoot
+			shoot *gardencorev1beta1.Shoot
 		)
 
 		BeforeEach(func() {
-			parentCloudProfile = (&parentCloudProfileBase).DeepCopy()
-			namespacedCloudProfile = (&namespacedCloudProfileBase).DeepCopy()
-
 			shoot = &gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					GenerateName: testID + "-",
@@ -224,7 +221,7 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 				Expect(client.IgnoreNotFound(testClient.Delete(ctx, namespacedCloudProfile))).To(Succeed())
 
 				By("Delete ParentCloudProfile")
-				Expect(client.IgnoreNotFound(testClient.Delete(ctx, parentCloudProfile))).To(Succeed())
+				Expect(testClient.Delete(ctx, parentCloudProfile)).To(Succeed())
 			})
 		})
 
@@ -282,16 +279,6 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 	})
 
 	Context("merging the CloudProfiles", func() {
-		var (
-			parentCloudProfile     *gardencorev1beta1.CloudProfile
-			namespacedCloudProfile *gardencorev1beta1.NamespacedCloudProfile
-		)
-
-		BeforeEach(func() {
-			parentCloudProfile = (&parentCloudProfileBase).DeepCopy()
-			namespacedCloudProfile = (&namespacedCloudProfileBase).DeepCopy()
-		})
-
 		JustBeforeEach(func() {
 			By("Create parent CloudProfile")
 			Expect(testClient.Create(ctx, parentCloudProfile)).To(Succeed())
@@ -304,6 +291,12 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 			}
 			Expect(testClient.Create(ctx, namespacedCloudProfile)).To(Succeed())
 			log.Info("Created NamespacedCloudProfile for test", "namespacedCloudProfile", client.ObjectKeyFromObject(namespacedCloudProfile))
+
+			Eventually(func(g Gomega) {
+				err := testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(namespacedCloudProfile.Status.ObservedGeneration).To(Equal(namespacedCloudProfile.Generation))
+			}).Should(Succeed())
 
 			DeferCleanup(func() {
 				By("Delete NamespacedCloudProfile")
@@ -318,7 +311,7 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 			Eventually(func(g Gomega) {
 				err := testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)
 				g.Expect(err).NotTo(HaveOccurred())
-				g.Expect(namespacedCloudProfile.Status.CloudProfileSpec).To(Equal(*mergedCloudProfileSpec))
+				g.Expect(withSortedArrays(namespacedCloudProfile.Status.CloudProfileSpec)).To(Equal(*mergedCloudProfileSpec))
 				g.Expect(namespacedCloudProfile.Status.ObservedGeneration).To(Equal(namespacedCloudProfile.Generation))
 			}).Should(Succeed())
 		})
@@ -371,16 +364,10 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 
 	Context("handling NamespacedCloudProfile expiration date overrides", func() {
 		var (
-			parentCloudProfile     *gardencorev1beta1.CloudProfile
-			namespacedCloudProfile *gardencorev1beta1.NamespacedCloudProfile
-
 			expirationDatePast metav1.Time
 		)
 
 		BeforeEach(func() {
-			parentCloudProfile = (&parentCloudProfileBase).DeepCopy()
-			namespacedCloudProfile = (&namespacedCloudProfileBase).DeepCopy()
-
 			dateNow, _ := time.Parse(time.DateOnly, time.Now().Format(time.DateOnly))
 			expirationDatePast = metav1.Time{Time: dateNow.Local().Add(-96 * time.Hour)}
 		})
@@ -396,12 +383,8 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 			}
 
 			DeferCleanup(func() {
-				By("Delete NamespacedCloudProfile")
-				Expect(testClient.Delete(ctx, namespacedCloudProfile)).To(Succeed())
-
 				By("Delete ParentCloudProfile")
 				Expect(testClient.Delete(ctx, parentCloudProfile)).To(Succeed())
-
 			})
 		})
 
@@ -409,6 +392,7 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 			namespacedCloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
 				{Version: "1.2.3", ExpirationDate: &expirationDatePast},
 			}
+
 			Expect(testClient.Create(ctx, namespacedCloudProfile)).To(Succeed())
 			log.Info("Created NamespacedCloudProfile for test", "namespacedCloudProfile", client.ObjectKeyFromObject(namespacedCloudProfile))
 
@@ -437,6 +421,7 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 					},
 				},
 			}
+
 			Expect(testClient.Create(ctx, namespacedCloudProfile)).To(Succeed())
 			log.Info("Created NamespacedCloudProfile for test", "namespacedCloudProfile", client.ObjectKeyFromObject(namespacedCloudProfile))
 
@@ -462,6 +447,10 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 		It("should not allow update with an already expired Kubernetes version", func() {
 			Expect(testClient.Create(ctx, namespacedCloudProfile)).To(Succeed())
 			log.Info("Created NamespacedCloudProfile for test", "namespacedCloudProfile", client.ObjectKeyFromObject(namespacedCloudProfile))
+			Eventually(func(g Gomega) {
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
+				g.Expect(namespacedCloudProfile.Status.ObservedGeneration).To(Equal(namespacedCloudProfile.Generation))
+			}).Should(Succeed())
 
 			namespacedCloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
 				{Version: "1.2.3", ExpirationDate: &expirationDatePast},
@@ -474,6 +463,10 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 		It("should not allow update with an already expired MachineImage version", func() {
 			Expect(testClient.Create(ctx, namespacedCloudProfile)).To(Succeed())
 			log.Info("Created NamespacedCloudProfile for test", "namespacedCloudProfile", client.ObjectKeyFromObject(namespacedCloudProfile))
+			Eventually(func(g Gomega) {
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
+				g.Expect(namespacedCloudProfile.Status.ObservedGeneration).To(Equal(namespacedCloudProfile.Generation))
+			}).Should(Succeed())
 
 			namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 				{
@@ -489,3 +482,16 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 		})
 	})
 })
+
+func withSortedArrays(nscpfl gardencorev1beta1.CloudProfileSpec) gardencorev1beta1.CloudProfileSpec {
+	sort.Slice(nscpfl.MachineTypes, func(i, j int) bool {
+		return strings.Compare(nscpfl.MachineTypes[i].Name, nscpfl.MachineTypes[j].Name) >= 0
+	})
+	sort.Slice(nscpfl.MachineImages, func(i, j int) bool {
+		return strings.Compare(nscpfl.MachineImages[i].Name, nscpfl.MachineImages[j].Name) >= 0
+	})
+	sort.Slice(nscpfl.Kubernetes.Versions, func(i, j int) bool {
+		return strings.Compare(nscpfl.Kubernetes.Versions[i].Version, nscpfl.Kubernetes.Versions[j].Version) >= 0
+	})
+	return nscpfl
+}
