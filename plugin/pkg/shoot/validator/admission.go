@@ -715,6 +715,8 @@ func (c *validationContext) validateAdmissionPlugins(a admission.Attributes, sec
 	return allErrs
 }
 
+// For backwards-compatibility, we want to validate the oidc config only for newly created Shoot clusters.
+// There is additional oidc config validation in the static API validation.
 func (c *validationContext) validateOIDCConfig(a admission.Attributes) field.ErrorList {
 	var (
 		allErrs field.ErrorList
