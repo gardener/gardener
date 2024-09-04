@@ -1385,6 +1385,13 @@ build:
         ldflags:
           - '{{.LD_FLAGS}}'
         main: ./cmd/gardener-resource-manager
+      hooks:
+        after:
+          - command:
+              - bash
+              - hack/generate-kustomize-patch-gardenlet.sh
+              - image
+              - gardener-resource-manager
     - image: local-skaffold/gardener-node-agent
       ko:
         dependencies:
@@ -1625,15 +1632,6 @@ profiles:
                 - bash
                 - hack/generate-kustomize-patch-gardenlet.sh
                 - helm
-      - op: add
-        path: /build/artifacts/2/hooks
-        value:
-          after:
-            - command:
-                - bash
-                - hack/generate-kustomize-patch-gardenlet.sh
-                - image
-                - gardener-resource-manager
       - op: add
         path: /build/artifacts/3/hooks
         value:
