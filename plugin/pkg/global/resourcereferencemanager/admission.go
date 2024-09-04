@@ -577,16 +577,7 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 				wg.Add(len(shootList))
 
 				for _, s := range shootList {
-					shootCloudProfile := gardener.BuildCloudProfileReference(s)
-
-					if s.DeletionTimestamp != nil || shootCloudProfile == nil {
-						wg.Done()
-						continue
-					}
-
-					if shootCloudProfile.Kind == v1beta1constants.CloudProfileReferenceKindCloudProfile &&
-						shootCloudProfile.Name != cloudProfile.Name ||
-						!isShootWithDependantNscpfl(s, cloudProfile, relevantNamespacedCloudProfiles) {
+					if s.DeletionTimestamp != nil || !isShootRelatedToCloudProfile(s, cloudProfile, relevantNamespacedCloudProfiles) {
 						wg.Done()
 						continue
 					}
@@ -1041,15 +1032,16 @@ func (r *ReferenceManager) validateBackupBucketDeletion(ctx context.Context, a a
 	return nil
 }
 
-func isShootWithDependantNscpfl(shoot *gardencorev1beta1.Shoot, cloudProfile *core.CloudProfile, relevantNamespacedCloudProfiles map[string]*gardencorev1beta1.NamespacedCloudProfile) bool {
+func isShootRelatedToCloudProfile(shoot *gardencorev1beta1.Shoot, cloudProfile *core.CloudProfile, relevantNamespacedCloudProfiles map[string]*gardencorev1beta1.NamespacedCloudProfile) bool {
 	shootCloudProfile := gardener.BuildCloudProfileReference(shoot)
-	if shootCloudProfile == nil || cloudProfile == nil || relevantNamespacedCloudProfiles == nil ||
-		shootCloudProfile.Kind != v1beta1constants.CloudProfileReferenceKindNamespacedCloudProfile {
+	if shootCloudProfile == nil || cloudProfile == nil {
 		return false
 	}
 	ncpNamespacedName := types.NamespacedName{Name: shootCloudProfile.Name, Namespace: shoot.Namespace}
-	relevantNcp, exists := relevantNamespacedCloudProfiles[ncpNamespacedName.String()]
-	return exists && relevantNcp != nil && relevantNcp.Spec.Parent.Name == cloudProfile.Name
+	relevantNcp := relevantNamespacedCloudProfiles[ncpNamespacedName.String()]
+	return shootCloudProfile.Kind == v1beta1constants.CloudProfileReferenceKindCloudProfile && shootCloudProfile.Name == cloudProfile.Name ||
+		shootCloudProfile.Kind == v1beta1constants.CloudProfileReferenceKindNamespacedCloudProfile &&
+			relevantNcp != nil && relevantNcp.Spec.Parent.Name == cloudProfile.Name
 }
 
 // getRemovedKubernetesVersions returns Kubernetes versions that have been removed from the NamespacedCloudProfile.
