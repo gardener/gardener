@@ -241,9 +241,38 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		}
 	}
 
-	// TODO(ialidzhikov): Kubernetes.Kubelet.SystemReserved is no longer supported in Gardener starting from K8S 1.31.
-	// If Kubernetes.Kubelet.SystemReserved != nil for a Shoot or Worker pool, then add/move the values of its resources to
-	// Kubernetes.Kubelete.KubeReserved
+	// Move kubernetes.kubelet.systemReserved for a Shoot or worker pool to kubernetes.kubelet.kubeReserved, when Shoot cluster is being forcefully updated to K8s >= 1.31.
+	// Gardener forbids specifying kubernetes.kubelet.systemReserved for Shoots with K8s 1.31+. See https://github.com/gardener/gardener/pull/10290
+	{
+		if versionutils.ConstraintK8sLess131.Check(oldShootKubernetesVersion) && versionutils.ConstraintK8sGreaterEqual131.Check(shootKubernetesVersion) {
+			if maintainedShoot.Spec.Kubernetes.Kubelet != nil && maintainedShoot.Spec.Kubernetes.Kubelet.SystemReserved != nil {
+				maintainedShoot.Spec.Kubernetes.Kubelet.KubeReserved = v1beta1helper.SumResourceReservations(maintainedShoot.Spec.Kubernetes.Kubelet.KubeReserved, maintainedShoot.Spec.Kubernetes.Kubelet.SystemReserved)
+				maintainedShoot.Spec.Kubernetes.Kubelet.SystemReserved = nil
+
+				reason := ".spec.kubernetes.kubelet.systemReserved is added to .spec.kubernetes.kubelet.kubeReserved. Reason: The systemReserved field is forbidden for Shoot clusters using Kubernetes version 1.31+, its value has to be added to kubeReserved"
+				operations = append(operations, reason)
+			}
+		}
+
+		for i := range maintainedShoot.Spec.Provider.Workers {
+			if maintainedShoot.Spec.Provider.Workers[i].Kubernetes != nil && maintainedShoot.Spec.Provider.Workers[i].Kubernetes.Kubelet != nil &&
+				maintainedShoot.Spec.Provider.Workers[i].Kubernetes.Kubelet.SystemReserved != nil {
+				kubeletVersion := ptr.Deref(maintainedShoot.Spec.Provider.Workers[i].Kubernetes.Version, maintainedShoot.Spec.Kubernetes.Version)
+				kubeletSemverVersion, err := semver.NewVersion(kubeletVersion)
+				if err != nil {
+					return fmt.Errorf("error parsing kubelet version for worker pool %q: %w", maintainedShoot.Spec.Provider.Workers[i].Name, err)
+				}
+
+				if versionutils.ConstraintK8sGreaterEqual131.Check(kubeletSemverVersion) {
+					maintainedShoot.Spec.Provider.Workers[i].Kubernetes.Kubelet.KubeReserved = v1beta1helper.SumResourceReservations(maintainedShoot.Spec.Provider.Workers[i].Kubernetes.Kubelet.KubeReserved, maintainedShoot.Spec.Provider.Workers[i].Kubernetes.Kubelet.SystemReserved)
+					maintainedShoot.Spec.Provider.Workers[i].Kubernetes.Kubelet.SystemReserved = nil
+
+					reason := fmt.Sprintf(".spec.provider.workers[%[1]d].kubernetes.kubelet.systemReserved is added to .spec.provider.workers[%[1]d].kubernetes.kubelet.kubeReserved. Reason: The systemReserved field is forbidden for Shoot clusters using Kubernetes version 1.31+, its value has to be added to kubeReserved", i)
+					operations = append(operations, reason)
+				}
+			}
+		}
+	}
 
 	operation := maintainOperation(maintainedShoot)
 	if operation != "" {

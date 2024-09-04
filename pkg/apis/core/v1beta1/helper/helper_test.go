@@ -15,6 +15,7 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
@@ -3440,4 +3441,27 @@ var _ = Describe("Helper", func() {
 			Expect(converted[1].Name).To(Equal("shoot2"))
 		})
 	})
+
+	DescribeTable("#SumResourceReservations",
+		func(left, right, expected *gardencorev1beta1.KubeletConfigReserved) {
+			actual := SumResourceReservations(left, right)
+			Expect(actual).To(Equal(expected))
+		},
+
+		Entry("should return right when left is nil",
+			nil,
+			&gardencorev1beta1.KubeletConfigReserved{CPU: resource.NewQuantity(50, resource.DecimalSI), Memory: resource.NewQuantity(55, resource.DecimalSI)},
+			&gardencorev1beta1.KubeletConfigReserved{CPU: resource.NewQuantity(50, resource.DecimalSI), Memory: resource.NewQuantity(55, resource.DecimalSI)},
+		),
+		Entry("should return left when right is nil",
+			&gardencorev1beta1.KubeletConfigReserved{CPU: resource.NewQuantity(50, resource.DecimalSI), Memory: resource.NewQuantity(55, resource.DecimalSI)},
+			nil,
+			&gardencorev1beta1.KubeletConfigReserved{CPU: resource.NewQuantity(50, resource.DecimalSI), Memory: resource.NewQuantity(55, resource.DecimalSI)},
+		),
+		Entry("should sum left and right",
+			&gardencorev1beta1.KubeletConfigReserved{CPU: resource.NewQuantity(50, resource.DecimalSI), Memory: resource.NewQuantity(55, resource.DecimalSI), EphemeralStorage: resource.NewQuantity(60, resource.DecimalSI)},
+			&gardencorev1beta1.KubeletConfigReserved{CPU: resource.NewQuantity(100, resource.DecimalSI), Memory: resource.NewQuantity(105, resource.DecimalSI), PID: resource.NewQuantity(10, resource.DecimalSI)},
+			&gardencorev1beta1.KubeletConfigReserved{CPU: resource.NewQuantity(150, resource.DecimalSI), Memory: resource.NewQuantity(160, resource.DecimalSI), EphemeralStorage: resource.NewQuantity(60, resource.DecimalSI), PID: resource.NewQuantity(10, resource.DecimalSI)},
+		),
+	)
 })
