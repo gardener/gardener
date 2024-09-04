@@ -255,6 +255,7 @@ var _ = Describe("Extension controller tests", func() {
 		By("Wait until extension is successfully reconciled")
 		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionBar), extensionBar)).To(Succeed())
+			g.Expect(extensionBar.Finalizers).To(ConsistOf("gardener.cloud/operator"))
 			return extensionBar.Status.Conditions
 		}).Should(ContainCondition(
 			OfType(operatorv1alpha1.ExtensionInstalled),
@@ -289,6 +290,7 @@ var _ = Describe("Extension controller tests", func() {
 		By("Wait until extension is successfully reconciled")
 		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionFoo), extensionFoo)).To(Succeed())
+			g.Expect(extensionFoo.Finalizers).To(ConsistOf("gardener.cloud/operator"))
 			return extensionFoo.Status.Conditions
 		}).Should(ContainCondition(
 			OfType(operatorv1alpha1.ExtensionInstalled),

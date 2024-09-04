@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package extension
+package controllerregistration
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
@@ -22,14 +23,28 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-func (r *Reconciler) reconcileControllerRegistration(ctx context.Context, log logr.Logger, virtualClusterClient client.Client, extension *operatorv1alpha1.Extension) error {
+// Interface contains functions to handle the registration of extensions for shoot clusters.
+type Interface interface {
+	// Reconcile creates or updates the ControllerRegistration and ControllerDeployment for the given extension.
+	Reconcile(context.Context, logr.Logger, client.Client, *operatorv1alpha1.Extension) error
+	// Delete deletes the ControllerRegistration and ControllerDeployment for the given extension.
+	Delete(context.Context, logr.Logger, client.Client, *operatorv1alpha1.Extension) error
+}
+
+type registration struct {
+	recorder record.EventRecorder
+}
+
+// Reconcile creates or updates the ControllerRegistration and ControllerDeployment for the given extension.
+// If the extension doesn't define an extension deployment, the registration is deleted.
+func (r *registration) Reconcile(ctx context.Context, log logr.Logger, virtualClusterClient client.Client, extension *operatorv1alpha1.Extension) error {
 	if extension.Spec.Deployment == nil ||
 		extension.Spec.Deployment.ExtensionDeployment == nil ||
 		extension.Spec.Deployment.ExtensionDeployment.Helm == nil {
-		if err := r.deleteControllerRegistration(ctx, log, virtualClusterClient, extension); err != nil {
+		if err := r.Delete(ctx, log, virtualClusterClient, extension); err != nil {
 			return err
 		}
-		r.Recorder.Event(extension, corev1.EventTypeNormal, "Deletion", "ControllerRegistration and ControllerDeployment deleted successfully")
+		r.recorder.Event(extension, corev1.EventTypeNormal, "Deletion", "ControllerRegistration and ControllerDeployment deleted successfully")
 
 		return nil
 	}
@@ -37,12 +52,12 @@ func (r *Reconciler) reconcileControllerRegistration(ctx context.Context, log lo
 	if err := r.createOrUpdateControllerRegistration(ctx, virtualClusterClient, extension); err != nil {
 		return fmt.Errorf("failed to reconcile ControllerRegistration: %w", err)
 	}
-	r.Recorder.Event(extension, corev1.EventTypeNormal, "Reconciliation", "ControllerRegistration and ControllerDeployment applied successfully")
+	r.recorder.Event(extension, corev1.EventTypeNormal, "Reconciliation", "ControllerRegistration and ControllerDeployment applied successfully")
 
 	return nil
 }
 
-func (r *Reconciler) createOrUpdateControllerRegistration(ctx context.Context, virtualClusterClient client.Client, extension *operatorv1alpha1.Extension) error {
+func (r *registration) createOrUpdateControllerRegistration(ctx context.Context, virtualClusterClient client.Client, extension *operatorv1alpha1.Extension) error {
 	var (
 		controllerDeployment   = emptyControllerDeployment(extension)
 		controllerRegistration = emptyControllerRegistration(extension)
@@ -86,7 +101,8 @@ func (r *Reconciler) createOrUpdateControllerRegistration(ctx context.Context, v
 	return err
 }
 
-func (r *Reconciler) deleteControllerRegistration(ctx context.Context, log logr.Logger, virtualClusterClient client.Client, extension *operatorv1alpha1.Extension) error {
+// Delete deletes the ControllerRegistration and ControllerDeployment for the given extension.
+func (r *registration) Delete(ctx context.Context, log logr.Logger, virtualClusterClient client.Client, extension *operatorv1alpha1.Extension) error {
 	var (
 		controllerDeployment   = emptyControllerDeployment(extension)
 		controllerRegistration = emptyControllerRegistration(extension)
@@ -114,5 +130,12 @@ func emptyControllerDeployment(extension *operatorv1alpha1.Extension) *gardencor
 		ObjectMeta: metav1.ObjectMeta{
 			Name: extension.Name,
 		},
+	}
+}
+
+// New creates a new handler for ControllerRegistrations.
+func New(recorder record.EventRecorder) Interface {
+	return &registration{
+		recorder: recorder,
 	}
 }

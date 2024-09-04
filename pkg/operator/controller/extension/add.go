@@ -25,6 +25,8 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
+	"github.com/gardener/gardener/pkg/operator/controller/extension/admission"
+	"github.com/gardener/gardener/pkg/operator/controller/extension/controllerregistration"
 	operatorpredicate "github.com/gardener/gardener/pkg/operator/predicate"
 	"github.com/gardener/gardener/pkg/utils/oci"
 )
@@ -67,6 +69,9 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 		return fmt.Errorf("GardenClientMap must not be nil")
 	}
 	r.GardenClientMap = gardenClientMap
+
+	r.admission = admission.New(r.RuntimeClientSet, r.Recorder, r.GardenNamespace, r.HelmRegistry)
+	r.controllerRegistration = controllerregistration.New(r.Recorder)
 
 	return builder.
 		ControllerManagedBy(mgr).
