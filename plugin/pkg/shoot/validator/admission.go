@@ -327,7 +327,6 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, _ adm
 	allErrs = append(allErrs, validationContext.validateRegion()...)
 	allErrs = append(allErrs, validationContext.validateProvider(a)...)
 	allErrs = append(allErrs, validationContext.validateAdmissionPlugins(a, v.secretLister)...)
-	allErrs = append(allErrs, validationContext.validateOIDCConfig(a)...)
 
 	// Skip the validation if the operation is admission.Delete or the spec hasn't changed.
 	if a.GetOperation() != admission.Delete && !reflect.DeepEqual(validationContext.shoot.Spec, validationContext.oldShoot.Spec) {
@@ -716,8 +715,9 @@ func (c *validationContext) validateAdmissionPlugins(a admission.Attributes, sec
 }
 
 // For backwards-compatibility, we want to validate the oidc config only for newly created Shoot clusters.
+// Performing the validation for all Shoots would prevent already existing Shoots with the wrong spec to be updated/deleted.
 // There is additional oidc config validation in the static API validation.
-func (c *validationContext) validateOIDCConfig(a admission.Attributes) field.ErrorList {
+func (c *validationContext) validateKubeAPIServerOIDCConfig(a admission.Attributes) field.ErrorList {
 	var (
 		allErrs field.ErrorList
 		path    = field.NewPath("spec", "kubernetes", "kubeAPIServer", "oidcConfig")
@@ -852,6 +852,8 @@ func (c *validationContext) validateKubernetes(a admission.Attributes) field.Err
 		// We assume that the 'defaultVersion' is already calculated correctly, so only run validation if the version was not defaulted.
 		allErrs = append(allErrs, validateKubernetesVersionConstraints(a, c.cloudProfileSpec.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version, false, path.Child("version"))...)
 	}
+
+	allErrs = append(allErrs, c.validateKubeAPIServerOIDCConfig(a)...)
 
 	if c.shoot.DeletionTimestamp == nil {
 		performKubernetesDefaulting(c.shoot, c.oldShoot)
