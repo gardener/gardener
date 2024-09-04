@@ -1057,20 +1057,6 @@ KubernetesSettings
 </tr>
 <tr>
 <td>
-<code>regions</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.Region">
-[]Region
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Regions contains constraints regarding allowed values for regions and zones.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>volumeTypes</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.VolumeType">
@@ -3190,7 +3176,7 @@ CRIName
 <a href="#core.gardener.cloud/v1beta1.ShootSpec">ShootSpec</a>)
 </p>
 <p>
-<p>CloudProfileReference holds the information about the parent of the NamespacedCloudProfile.</p>
+<p>CloudProfileReference holds the information about a CloudProfile or a NamespacedCloudProfile.</p>
 </p>
 <table>
 <thead>
@@ -8211,20 +8197,6 @@ KubernetesSettings
 </tr>
 <tr>
 <td>
-<code>regions</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.Region">
-[]Region
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Regions contains constraints regarding allowed values for regions and zones.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>volumeTypes</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.VolumeType">
@@ -8291,7 +8263,7 @@ int64
 </td>
 <td>
 <em>(Optional)</em>
-<p>ObservedGeneration is the most recent generation observed for this project.</p>
+<p>ObservedGeneration is the most recent generation observed for this NamespacedCloudProfile.</p>
 </td>
 </tr>
 </tbody>
@@ -9399,8 +9371,7 @@ Kubernetes core/v1.ObjectReference
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>, 
-<a href="#core.gardener.cloud/v1beta1.NamespacedCloudProfileSpec">NamespacedCloudProfileSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>)
 </p>
 <p>
 <p>Region contains certain properties of a region.</p>

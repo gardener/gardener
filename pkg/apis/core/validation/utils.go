@@ -5,9 +5,13 @@
 package validation
 
 import (
+	"fmt"
+	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
@@ -17,7 +21,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/core/helper"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/features"
+	kubernetescorevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
 )
 
 // ValidateName is a helper function for validating that a name is a DNS sub domain.
@@ -163,6 +170,221 @@ func ValidateIPFamilies(ipFamilies []core.IPFamily, fldPath *field.Path) field.E
 
 	if len(ipFamilies) > 0 && ipFamilies[0] == core.IPFamilyIPv6 && !features.DefaultFeatureGate.Enabled(features.IPv6SingleStack) {
 		allErrs = append(allErrs, field.Invalid(fldPath, ipFamilies, "IPv6 single-stack networking is not supported"))
+	}
+
+	return allErrs
+}
+
+// k8sVersionCPRegex is used to validate kubernetes versions in a cloud profile.
+var k8sVersionCPRegex = regexp.MustCompile(`^([0-9]+\.){2}[0-9]+$`)
+
+var supportedVersionClassifications = sets.New(string(core.ClassificationPreview), string(core.ClassificationSupported), string(core.ClassificationDeprecated))
+
+// validateKubernetesVersions validates the given list of ExpirableVersions for valid Kubernetes versions.
+func validateKubernetesVersions(versions []core.ExpirableVersion, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if len(versions) == 0 {
+		return allErrs
+	}
+
+	versionsFound := sets.New[string]()
+	for i, version := range versions {
+		idxPath := fldPath.Child("versions").Index(i)
+		if !k8sVersionCPRegex.MatchString(version.Version) {
+			allErrs = append(allErrs, field.Invalid(idxPath, version, fmt.Sprintf("all Kubernetes versions must match the regex %s", k8sVersionCPRegex)))
+		} else if versionsFound.Has(version.Version) {
+			allErrs = append(allErrs, field.Duplicate(idxPath.Child("version"), version.Version))
+		} else {
+			versionsFound.Insert(version.Version)
+		}
+
+		if version.Classification != nil && !supportedVersionClassifications.Has(string(*version.Classification)) {
+			allErrs = append(allErrs, field.NotSupported(idxPath.Child("classification"), *version.Classification, sets.List(supportedVersionClassifications)))
+		}
+	}
+
+	return allErrs
+}
+
+// validateMachineImages validates the given list of machine images for valid values and combinations.
+func validateMachineImages(machineImages []core.MachineImage, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if len(machineImages) == 0 {
+		return allErrs
+	}
+
+	latestMachineImages, err := helper.DetermineLatestMachineImageVersions(machineImages)
+	if err != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, latestMachineImages, err.Error()))
+	}
+
+	duplicateNameVersion := sets.Set[string]{}
+	duplicateName := sets.Set[string]{}
+	for i, image := range machineImages {
+		idxPath := fldPath.Index(i)
+		if duplicateName.Has(image.Name) {
+			allErrs = append(allErrs, field.Duplicate(idxPath, image.Name))
+		}
+		duplicateName.Insert(image.Name)
+
+		if len(image.Name) == 0 {
+			allErrs = append(allErrs, field.Required(idxPath.Child("name"), "machine image name must not be empty"))
+		}
+
+		if len(image.Versions) == 0 {
+			allErrs = append(allErrs, field.Required(idxPath.Child("versions"), fmt.Sprintf("must provide at least one version for the machine image '%s'", image.Name)))
+		}
+
+		if image.UpdateStrategy != nil {
+			if !availableUpdateStrategiesForMachineImage.Has(string(*image.UpdateStrategy)) {
+				allErrs = append(allErrs, field.NotSupported(idxPath.Child("updateStrategy"), *image.UpdateStrategy, sets.List(availableUpdateStrategiesForMachineImage)))
+			}
+		}
+
+		for index, machineVersion := range image.Versions {
+			versionsPath := idxPath.Child("versions").Index(index)
+			key := fmt.Sprintf("%s-%s", image.Name, machineVersion.Version)
+			if duplicateNameVersion.Has(key) {
+				allErrs = append(allErrs, field.Duplicate(versionsPath, key))
+			}
+			duplicateNameVersion.Insert(key)
+			if len(machineVersion.Version) == 0 {
+				allErrs = append(allErrs, field.Required(versionsPath.Child("version"), machineVersion.Version))
+			}
+
+			_, err := semver.NewVersion(machineVersion.Version)
+			if err != nil {
+				allErrs = append(allErrs, field.Invalid(versionsPath.Child("version"), machineVersion.Version, "could not parse version. Use a semantic version. In case there is no semantic version for this image use the extensibility provider (define mapping in the CloudProfile) to map to the actual non semantic version"))
+			}
+
+			if machineVersion.Classification != nil && !supportedVersionClassifications.Has(string(*machineVersion.Classification)) {
+				allErrs = append(allErrs, field.NotSupported(versionsPath.Child("classification"), *machineVersion.Classification, sets.List(supportedVersionClassifications)))
+			}
+
+			allErrs = append(allErrs, validateMachineImageVersionArchitecture(machineVersion.Architectures, versionsPath.Child("architecture"))...)
+
+			if machineVersion.KubeletVersionConstraint != nil {
+				if _, err := semver.NewConstraint(*machineVersion.KubeletVersionConstraint); err != nil {
+					allErrs = append(allErrs, field.Invalid(versionsPath.Child("kubeletVersionConstraint"), machineVersion.KubeletVersionConstraint, fmt.Sprintf("cannot parse the kubeletVersionConstraint: %s", err.Error())))
+				}
+			}
+		}
+	}
+
+	return allErrs
+}
+
+// validateMachineTypes validates the given list of machine types for valid values and combinations.
+func validateMachineTypes(machineTypes []core.MachineType, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	names := make(map[string]struct{}, len(machineTypes))
+
+	for i, machineType := range machineTypes {
+		idxPath := fldPath.Index(i)
+		namePath := idxPath.Child("name")
+		cpuPath := idxPath.Child("cpu")
+		gpuPath := idxPath.Child("gpu")
+		memoryPath := idxPath.Child("memory")
+		archPath := idxPath.Child("architecture")
+
+		if len(machineType.Name) == 0 {
+			allErrs = append(allErrs, field.Required(namePath, "must provide a name"))
+		}
+
+		if _, ok := names[machineType.Name]; ok {
+			allErrs = append(allErrs, field.Duplicate(namePath, machineType.Name))
+			break
+		}
+		names[machineType.Name] = struct{}{}
+
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("cpu", machineType.CPU, cpuPath)...)
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("gpu", machineType.GPU, gpuPath)...)
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("memory", machineType.Memory, memoryPath)...)
+		allErrs = append(allErrs, validateMachineTypeArchitecture(machineType.Architecture, archPath)...)
+
+		if machineType.Storage != nil {
+			allErrs = append(allErrs, validateMachineTypeStorage(*machineType.Storage, idxPath.Child("storage"))...)
+		}
+	}
+
+	return allErrs
+}
+
+// validateVolumeTypes validates the given list of volume types for valid values and combinations.
+func validateVolumeTypes(volumeTypes []core.VolumeType, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	names := make(map[string]struct{}, len(volumeTypes))
+
+	for i, volumeType := range volumeTypes {
+		idxPath := fldPath.Index(i)
+
+		namePath := idxPath.Child("name")
+		if len(volumeType.Name) == 0 {
+			allErrs = append(allErrs, field.Required(namePath, "must provide a name"))
+		}
+
+		if _, ok := names[volumeType.Name]; ok {
+			allErrs = append(allErrs, field.Duplicate(namePath, volumeType.Name))
+			break
+		}
+		names[volumeType.Name] = struct{}{}
+
+		if len(volumeType.Class) == 0 {
+			allErrs = append(allErrs, field.Required(idxPath.Child("class"), "must provide a class"))
+		}
+
+		if volumeType.MinSize != nil {
+			allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("minSize", *volumeType.MinSize, idxPath.Child("minSize"))...)
+		}
+	}
+
+	return allErrs
+}
+
+func validateMachineImageVersionArchitecture(archs []string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	for _, arch := range archs {
+		if !slices.Contains(v1beta1constants.ValidArchitectures, arch) {
+			allErrs = append(allErrs, field.NotSupported(fldPath, arch, v1beta1constants.ValidArchitectures))
+		}
+	}
+
+	return allErrs
+}
+
+func validateMachineTypeArchitecture(arch *string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if !slices.Contains(v1beta1constants.ValidArchitectures, *arch) {
+		allErrs = append(allErrs, field.NotSupported(fldPath, *arch, v1beta1constants.ValidArchitectures))
+	}
+
+	return allErrs
+}
+
+func validateMachineTypeStorage(storage core.MachineTypeStorage, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if storage.StorageSize == nil && storage.MinSize == nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, storage, `must either configure "size" or "minSize"`))
+		return allErrs
+	}
+
+	if storage.StorageSize != nil && storage.MinSize != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, storage, `not allowed to configure both "size" and "minSize"`))
+		return allErrs
+	}
+
+	if storage.StorageSize != nil {
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("size", *storage.StorageSize, fldPath.Child("size"))...)
+	}
+
+	if storage.MinSize != nil {
+		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("minSize", *storage.MinSize, fldPath.Child("minSize"))...)
 	}
 
 	return allErrs

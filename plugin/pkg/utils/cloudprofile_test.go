@@ -248,6 +248,46 @@ var _ = Describe("CloudProfile", func() {
 		})
 	})
 
+	Describe("#BuildCloudProfileReference", func() {
+		It("should return nil for nil shoot", func() {
+			Expect(admissionutils.BuildCloudProfileReference(nil)).To(BeNil())
+		})
+
+		It("should build and return cloud profile reference from an existing cloudProfileName", func() {
+			Expect(admissionutils.BuildCloudProfileReference(&core.Shoot{Spec: core.ShootSpec{
+				CloudProfileName: ptr.To("profile-name"),
+			}})).To(Equal(&gardencorev1beta1.CloudProfileReference{
+				Kind: "CloudProfile",
+				Name: "profile-name",
+			}))
+		})
+
+		It("should return an existing cloud profile reference", func() {
+			Expect(admissionutils.BuildCloudProfileReference(&core.Shoot{Spec: core.ShootSpec{
+				CloudProfileName: ptr.To("ignore-me"),
+				CloudProfile: &core.CloudProfileReference{
+					Kind: "NamespacedCloudProfile",
+					Name: "profile-1",
+				},
+			}})).To(Equal(&gardencorev1beta1.CloudProfileReference{
+				Kind: "NamespacedCloudProfile",
+				Name: "profile-1",
+			}))
+		})
+
+		It("should return an existing cloud profile reference and default the kind to CloudProfile", func() {
+			Expect(admissionutils.BuildCloudProfileReference(&core.Shoot{Spec: core.ShootSpec{
+				CloudProfileName: ptr.To("ignore-me"),
+				CloudProfile: &core.CloudProfileReference{
+					Name: "profile-1",
+				},
+			}})).To(Equal(&gardencorev1beta1.CloudProfileReference{
+				Kind: "CloudProfile",
+				Name: "profile-1",
+			}))
+		})
+	})
+
 	Describe("#SyncCloudProfileFields", func() {
 		BeforeEach(func() {
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, false))

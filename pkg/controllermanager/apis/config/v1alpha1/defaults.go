@@ -151,6 +151,13 @@ func SetDefaults_CloudProfileControllerConfiguration(obj *CloudProfileController
 	}
 }
 
+// SetDefaults_NamespacedCloudProfileControllerConfiguration sets defaults for the NamespacedCloudProfileControllerConfiguration.
+func SetDefaults_NamespacedCloudProfileControllerConfiguration(obj *NamespacedCloudProfileControllerConfiguration) {
+	if obj.ConcurrentSyncs == nil {
+		obj.ConcurrentSyncs = ptr.To(DefaultControllerConcurrentSyncs)
+	}
+}
+
 // SetDefaults_ControllerDeploymentControllerConfiguration sets defaults for the ControllerDeploymentControllerConfiguration.
 func SetDefaults_ControllerDeploymentControllerConfiguration(obj *ControllerDeploymentControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
@@ -296,6 +303,9 @@ func SetDefaults_ControllerManagerControllerConfiguration(obj *ControllerManager
 	}
 	if obj.CloudProfile == nil {
 		obj.CloudProfile = &CloudProfileControllerConfiguration{}
+	}
+	if obj.NamespacedCloudProfile == nil {
+		obj.NamespacedCloudProfile = &NamespacedCloudProfileControllerConfiguration{}
 	}
 	if obj.ControllerDeployment == nil {
 		obj.ControllerDeployment = &ControllerDeploymentControllerConfiguration{}

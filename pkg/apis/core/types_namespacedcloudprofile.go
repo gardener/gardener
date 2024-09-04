@@ -43,8 +43,6 @@ type NamespacedCloudProfileSpec struct {
 	MachineImages []MachineImage
 	// MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.
 	MachineTypes []MachineType
-	// Regions contains constraints regarding allowed values for regions and zones.
-	Regions []Region
 	// VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.
 	VolumeTypes []VolumeType
 	// Parent contains a reference to a CloudProfile it inherits from.
@@ -59,7 +57,7 @@ type NamespacedCloudProfileStatus struct {
 	ObservedGeneration int64
 }
 
-// CloudProfileReference holds the information about the parent of the NamespacedCloudProfile.
+// CloudProfileReference holds the information about a CloudProfile or a NamespacedCloudProfile.
 type CloudProfileReference struct {
 	// Kind contains a CloudProfile kind.
 	Kind string

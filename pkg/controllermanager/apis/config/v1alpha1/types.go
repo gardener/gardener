@@ -51,6 +51,9 @@ type ControllerManagerControllerConfiguration struct {
 	// CloudProfile defines the configuration of the CloudProfile controller.
 	// +optional
 	CloudProfile *CloudProfileControllerConfiguration `json:"cloudProfile,omitempty"`
+	// NamespacedCloudProfile defines the configuration of the NamespacedCloudProfile controller.
+	// +optional
+	NamespacedCloudProfile *NamespacedCloudProfileControllerConfiguration `json:"namespacedCloudProfile,omitempty"`
 	// ControllerDeployment defines the configuration of the ControllerDeployment controller.
 	// +optional
 	ControllerDeployment *ControllerDeploymentControllerConfiguration `json:"controllerDeployment,omitempty"`
@@ -133,6 +136,15 @@ type CertificateSigningRequestControllerConfiguration struct {
 // CloudProfileControllerConfiguration defines the configuration of the CloudProfile
 // controller.
 type CloudProfileControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	// +optional
+	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+}
+
+// NamespacedCloudProfileControllerConfiguration defines the configuration of the NamespacedCloudProfile
+// controller.
+type NamespacedCloudProfileControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	// +optional

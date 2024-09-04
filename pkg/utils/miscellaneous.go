@@ -71,6 +71,18 @@ func MergeStringMaps[T any](oldMap map[string]T, newMaps ...map[string]T) map[st
 	return out
 }
 
+// CreateMapFromSlice converts the values of an array to a map using a key function.
+func CreateMapFromSlice[K comparable, T any](arr []T, keyFunc func(T) K) map[K]T {
+	mapped := make(map[K]T, len(arr))
+	if keyFunc == nil {
+		return mapped
+	}
+	for _, value := range arr {
+		mapped[keyFunc(value)] = value
+	}
+	return mapped
+}
+
 // TimeElapsed takes a <timestamp> and a <duration> checks whether the elapsed time until now is less than the <duration>.
 // If yes, it returns true, otherwise it returns false.
 func TimeElapsed(timestamp *metav1.Time, duration time.Duration) bool {

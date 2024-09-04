@@ -12,13 +12,20 @@ import (
 	"reflect"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
+	"k8s.io/utils/ptr"
 
+	"github.com/gardener/gardener/pkg/api"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/core/validation"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/namespacedcloudprofile"
+	"github.com/gardener/gardener/pkg/utils"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 )
 
@@ -133,6 +140,15 @@ func (v *ValidateNamespacedCloudProfile) Validate(_ context.Context, a admission
 	if err := validationContext.validateMachineTypes(a); err != nil {
 		return err
 	}
+	if err := validationContext.validateKubernetesVersionOverrides(a); err != nil {
+		return err
+	}
+	if err := validationContext.validateMachineImageOverrides(a); err != nil {
+		return err
+	}
+	if err := validationContext.validateSimulatedCloudProfileStatusMergeResult(a); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -172,4 +188,99 @@ func isMachineTypePresentInNamespacedCloudProfile(machineType gardencore.Machine
 		}
 	}
 	return false
+}
+
+func (c *validationContext) validateKubernetesVersionOverrides(attr admission.Attributes) error {
+	if c.namespacedCloudProfile.Spec.Kubernetes == nil {
+		return nil
+	}
+
+	now := ptr.To(metav1.Now())
+	parentVersions := utils.CreateMapFromSlice(c.parentCloudProfile.Spec.Kubernetes.Versions, func(version gardencorev1beta1.ExpirableVersion) string { return version.Version })
+	currentVersionsMerged := make(map[string]gardencore.ExpirableVersion)
+	if attr.GetOperation() == admission.Update {
+		currentVersionsMerged = utils.CreateMapFromSlice(c.oldNamespacedCloudProfile.Status.CloudProfileSpec.Kubernetes.Versions, func(version gardencore.ExpirableVersion) string { return version.Version })
+	}
+	for _, newVersion := range c.namespacedCloudProfile.Spec.Kubernetes.Versions {
+		if _, exists := parentVersions[newVersion.Version]; !exists {
+			return fmt.Errorf("invalid kubernetes version specified: '%s' does not exist in parent CloudProfile and thus cannot be overridden", newVersion.Version)
+		}
+		if newVersion.ExpirationDate == nil {
+			return fmt.Errorf("specified version '%s' does not set expiration date", newVersion.Version)
+		}
+		if attr.GetOperation() == admission.Update && newVersion.ExpirationDate.Before(now) {
+			if override, exists := currentVersionsMerged[newVersion.Version]; !exists || !override.ExpirationDate.Equal(newVersion.ExpirationDate) {
+				return fmt.Errorf("expiration date of version '%s' is in the past", newVersion.Version)
+			}
+		}
+	}
+	return nil
+}
+
+func (c *validationContext) validateMachineImageOverrides(attr admission.Attributes) error {
+	now := ptr.To(metav1.Now())
+	parentImages := utils.CreateMapFromSlice(c.parentCloudProfile.Spec.MachineImages, func(mi gardencorev1beta1.MachineImage) string { return mi.Name })
+	currentVersionsMerged := make(map[string]map[string]gardencore.MachineImageVersion)
+	if attr.GetOperation() == admission.Update {
+		for _, machineImage := range c.oldNamespacedCloudProfile.Status.CloudProfileSpec.MachineImages {
+			currentVersionsMerged[machineImage.Name] = utils.CreateMapFromSlice(machineImage.Versions, func(version gardencore.MachineImageVersion) string { return version.Version })
+		}
+	}
+	for _, newImage := range c.namespacedCloudProfile.Spec.MachineImages {
+		if _, exists := parentImages[newImage.Name]; !exists {
+			return fmt.Errorf("invalid machine image specified: '%s' does not exist in parent CloudProfile and thus cannot be overridden", newImage.Name)
+		}
+		parentVersions := utils.CreateMapFromSlice(parentImages[newImage.Name].Versions, func(v gardencorev1beta1.MachineImageVersion) string { return v.Version })
+		for _, newVersion := range newImage.Versions {
+			if _, exists := parentVersions[newVersion.Version]; !exists {
+				return fmt.Errorf("invalid machine image specified: '%s@%s' does not exist in parent CloudProfile and thus cannot be overridden", newImage.Name, newVersion.Version)
+			}
+			if newVersion.ExpirationDate == nil {
+				return fmt.Errorf("specified version '%s' does not set expiration date", newVersion.Version)
+			}
+			if attr.GetOperation() == admission.Update && newVersion.ExpirationDate.Before(now) {
+				var override gardencore.MachineImageVersion
+				exists := false
+				if _, imageNameExists := currentVersionsMerged[newImage.Name]; imageNameExists {
+					override, exists = currentVersionsMerged[newImage.Name][newVersion.Version]
+				}
+				if !exists || !override.ExpirationDate.Equal(newVersion.ExpirationDate) {
+					return fmt.Errorf("expiration date of version '%s' is in the past", newVersion.Version)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (c *validationContext) validateSimulatedCloudProfileStatusMergeResult(_ admission.Attributes) error {
+	namespacedCloudProfile := &gardencorev1beta1.NamespacedCloudProfile{}
+	if err := api.Scheme.Convert(c.namespacedCloudProfile, namespacedCloudProfile, nil); err != nil {
+		return err
+	}
+	errs := ValidateSimulatedNamespacedCloudProfileStatus(c.parentCloudProfile, namespacedCloudProfile)
+	if len(errs) > 0 {
+		return fmt.Errorf("error while validating merged NamespacedCloudProfile: %+v", errs)
+	}
+	return nil
+}
+
+// ValidateSimulatedNamespacedCloudProfileStatus merges the parent CloudProfile and the created or updated NamespacedCloudProfile
+// to generate and validate the NamespacedCloudProfile status.
+func ValidateSimulatedNamespacedCloudProfileStatus(originalParentCloudProfile *gardencorev1beta1.CloudProfile, originalNamespacedCloudProfile *gardencorev1beta1.NamespacedCloudProfile) field.ErrorList {
+	parentCloudProfile := originalParentCloudProfile.DeepCopy()
+	namespacedCloudProfile := originalNamespacedCloudProfile.DeepCopy()
+
+	namespacedcloudprofile.MergeCloudProfiles(namespacedCloudProfile, parentCloudProfile)
+
+	coreNamespacedCloudProfile := &gardencore.NamespacedCloudProfile{}
+	if err := api.Scheme.Convert(namespacedCloudProfile, coreNamespacedCloudProfile, nil); err != nil {
+		return field.ErrorList{{
+			Type:     field.ErrorTypeInternal,
+			Field:    "",
+			BadValue: nil,
+			Detail:   "could not convert NamespacedCloudProfile from type core.gardener.cloud/v1beta1 to the internal core type",
+		}}
+	}
+	return validation.ValidateNamespacedCloudProfileStatus(&coreNamespacedCloudProfile.Status.CloudProfileSpec, field.NewPath("status.cloudProfileSpec"))
 }

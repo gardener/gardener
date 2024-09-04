@@ -3182,13 +3182,6 @@ func (in *NamespacedCloudProfileSpec) DeepCopyInto(out *NamespacedCloudProfileSp
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.Regions != nil {
-		in, out := &in.Regions, &out.Regions
-		*out = make([]Region, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
-		}
-	}
 	if in.VolumeTypes != nil {
 		in, out := &in.VolumeTypes, &out.VolumeTypes
 		*out = make([]VolumeType, len(*in))

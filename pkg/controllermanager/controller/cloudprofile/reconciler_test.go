@@ -128,6 +128,10 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		It("should return an error because Shoot referencing CloudProfile exists", func() {
+			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfileList{}), gomock.Eq(client.MatchingFields{"spec.parent.name": cloudProfileName})).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.NamespacedCloudProfileList, _ ...client.ListOption) error {
+				(&gardencorev1beta1.NamespacedCloudProfileList{}).DeepCopyInto(obj)
+				return nil
+			})
 			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{})).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
 				(&gardencorev1beta1.ShootList{Items: []gardencorev1beta1.Shoot{
 					{
@@ -145,7 +149,32 @@ var _ = Describe("Reconciler", func() {
 			Expect(err).To(MatchError(ContainSubstring("Cannot delete CloudProfile")))
 		})
 
+		It("should return an error because NamespacedCloudProfile referencing CloudProfile exists", func() {
+			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfileList{}), gomock.Eq(client.MatchingFields{"spec.parent.name": cloudProfileName})).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.NamespacedCloudProfileList, _ ...client.ListOption) error {
+				(&gardencorev1beta1.NamespacedCloudProfileList{Items: []gardencorev1beta1.NamespacedCloudProfile{
+					{
+						ObjectMeta: metav1.ObjectMeta{Name: "test-namespacedprofile", Namespace: "test-namespace"},
+						Spec: gardencorev1beta1.NamespacedCloudProfileSpec{
+							Parent: gardencorev1beta1.CloudProfileReference{
+								Kind: "CloudProfile",
+								Name: cloudProfileName,
+							},
+						},
+					},
+				}}).DeepCopyInto(obj)
+				return nil
+			})
+
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: cloudProfileName}})
+			Expect(result).To(Equal(reconcile.Result{}))
+			Expect(err).To(MatchError(ContainSubstring("Cannot delete CloudProfile")))
+		})
+
 		It("should remove the finalizer (error)", func() {
+			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfileList{}), gomock.Eq(client.MatchingFields{"spec.parent.name": cloudProfileName})).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.NamespacedCloudProfileList, _ ...client.ListOption) error {
+				(&gardencorev1beta1.NamespacedCloudProfileList{}).DeepCopyInto(obj)
+				return nil
+			})
 			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{})).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
 				(&gardencorev1beta1.ShootList{}).DeepCopyInto(obj)
 				return nil
@@ -162,6 +191,10 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		It("should remove the finalizer (no error)", func() {
+			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfileList{}), gomock.Eq(client.MatchingFields{"spec.parent.name": cloudProfileName})).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.NamespacedCloudProfileList, _ ...client.ListOption) error {
+				(&gardencorev1beta1.NamespacedCloudProfileList{}).DeepCopyInto(obj)
+				return nil
+			})
 			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{})).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
 				(&gardencorev1beta1.ShootList{}).DeepCopyInto(obj)
 				return nil

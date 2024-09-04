@@ -329,4 +329,45 @@ baz`, spaces)).To(Equal(`foo
 			))
 		})
 	})
+
+	Describe("#CreateMapFromSlice", func() {
+		type entry struct {
+			name  string
+			value int
+		}
+
+		It("should correctly convert an empty slice", func() {
+			var entries []string
+			keyFunc := func(s string) string { return s }
+			result := CreateMapFromSlice(entries, keyFunc)
+			Expect(result).To(Equal(map[string]string{}))
+		})
+
+		It("should return an empty map for a nil keyFunc", func() {
+			entries := []string{"a", "b", "c"}
+			var keyFunc func(string) string = nil
+			result := CreateMapFromSlice(entries, keyFunc)
+			Expect(result).To(Equal(map[string]string{}))
+		})
+
+		It("should correctly create a map with a valid keyFunc returning string", func() {
+			entries := []entry{{name: "a", value: 7}, {name: "b", value: 14}}
+			keyFunc := func(e entry) string { return e.name }
+			result := CreateMapFromSlice(entries, keyFunc)
+			Expect(result).To(Equal(map[string]entry{
+				"a": {name: "a", value: 7},
+				"b": {name: "b", value: 14},
+			}))
+		})
+
+		It("should correctly create a map with a valid keyFunc returning int", func() {
+			entries := []entry{{name: "a", value: 7}, {name: "b", value: 14}}
+			keyFunc := func(e entry) int { return e.value }
+			result := CreateMapFromSlice(entries, keyFunc)
+			Expect(result).To(Equal(map[int]entry{
+				7:  {name: "a", value: 7},
+				14: {name: "b", value: 14},
+			}))
+		})
+	})
 })

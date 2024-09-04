@@ -36,6 +36,9 @@ func SetObjectDefaults_ControllerManagerConfiguration(in *ControllerManagerConfi
 	if in.Controllers.CloudProfile != nil {
 		SetDefaults_CloudProfileControllerConfiguration(in.Controllers.CloudProfile)
 	}
+	if in.Controllers.NamespacedCloudProfile != nil {
+		SetDefaults_NamespacedCloudProfileControllerConfiguration(in.Controllers.NamespacedCloudProfile)
+	}
 	if in.Controllers.ControllerDeployment != nil {
 		SetDefaults_ControllerDeploymentControllerConfiguration(in.Controllers.ControllerDeployment)
 	}

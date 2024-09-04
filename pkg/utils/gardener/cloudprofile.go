@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -33,7 +34,13 @@ func GetCloudProfile(ctx context.Context, reader client.Reader, shoot *gardencor
 		if err := reader.Get(ctx, client.ObjectKey{Name: cloudProfileReference.Name, Namespace: shoot.Namespace}, namespacedCloudProfile); err != nil {
 			return nil, err
 		}
-		cloudProfile = &gardencorev1beta1.CloudProfile{Spec: namespacedCloudProfile.Status.CloudProfileSpec}
+		cloudProfile = &gardencorev1beta1.CloudProfile{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      cloudProfileReference.Name,
+				Namespace: shoot.Namespace,
+			},
+			Spec: namespacedCloudProfile.Status.CloudProfileSpec,
+		}
 	}
 	return cloudProfile, nil
 }

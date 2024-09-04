@@ -110,6 +110,8 @@ var _ = Describe("CloudProfile", func() {
 			}
 			res, err := gardenerutils.GetCloudProfile(ctx, fakeClient, shoot)
 			Expect(res.Spec).To(Equal(namespacedCloudProfile.Status.CloudProfileSpec))
+			Expect(res.Namespace).To(Equal(namespaceName))
+			Expect(res.Name).To(Equal(namespacedCloudProfileName))
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})

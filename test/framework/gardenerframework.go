@@ -131,7 +131,7 @@ func RegisterGardenerFrameworkFlags() *GardenerConfig {
 	newCfg := &GardenerConfig{}
 
 	flag.StringVar(&newCfg.ExistingShootName, "existing-shoot-name", "", "Name of an existing shoot to use instead of creating a new one.")
-	flag.StringVar(&newCfg.GardenerKubeconfig, "kubecfg", "", "the path to the kubeconfig  of the garden cluster that will be used for integration tests")
+	flag.StringVar(&newCfg.GardenerKubeconfig, "kubecfg", "", "the path to the kubeconfig of the garden cluster that will be used for integration tests")
 	flag.StringVar(&newCfg.ProjectNamespace, "project-namespace", "", "specify the gardener project namespace to run tests")
 	flag.BoolVar(&newCfg.SkipAccessingShoot, "skip-accessing-shoot", false, "if set to true then the test does not try to access the shoot via its kubeconfig")
 

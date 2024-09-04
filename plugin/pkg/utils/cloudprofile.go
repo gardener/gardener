@@ -21,14 +21,14 @@ import (
 )
 
 // GetCloudProfileSpec determines whether the given shoot references a CloudProfile or a NamespacedCloudProfile and returns the appropriate CloudProfileSpec.
-func GetCloudProfileSpec(cloudProfileLister gardencorev1beta1listers.CloudProfileLister, NamespacedCloudProfileLister gardencorev1beta1listers.NamespacedCloudProfileLister, shoot *core.Shoot) (*gardencorev1beta1.CloudProfileSpec, error) {
+func GetCloudProfileSpec(cloudProfileLister gardencorev1beta1listers.CloudProfileLister, namespacedCloudProfileLister gardencorev1beta1listers.NamespacedCloudProfileLister, shoot *core.Shoot) (*gardencorev1beta1.CloudProfileSpec, error) {
 	cloudProfileReference := BuildCloudProfileReference(shoot)
 	if cloudProfileReference == nil {
 		return nil, fmt.Errorf("no cloudprofile reference has been provided")
 	}
 	switch cloudProfileReference.Kind {
 	case constants.CloudProfileReferenceKindNamespacedCloudProfile:
-		namespacedCloudProfile, err := NamespacedCloudProfileLister.NamespacedCloudProfiles(shoot.Namespace).Get(cloudProfileReference.Name)
+		namespacedCloudProfile, err := namespacedCloudProfileLister.NamespacedCloudProfiles(shoot.Namespace).Get(cloudProfileReference.Name)
 		if err != nil {
 			return nil, err
 		}

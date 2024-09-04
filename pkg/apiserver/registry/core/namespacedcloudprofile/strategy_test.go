@@ -156,6 +156,26 @@ var _ = Describe("PrepareForCreate", func() {
 		Entry("both kubernetes and machineImages set", true, true),
 	)
 
+	It("should drop empty machine image entries from NamespacedCloudProfile after dropping expired versions", func() {
+		namespacedCloudProfile = &core.NamespacedCloudProfile{}
+		namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
+			{Name: "machineImage1", Versions: []core.MachineImageVersion{
+				{ExpirableVersion: core.ExpirableVersion{Version: "1.0.0", ExpirationDate: expiredExpirationDate1}},
+			}},
+			{Name: "machineImage2", Versions: []core.MachineImageVersion{
+				{ExpirableVersion: core.ExpirableVersion{Version: "1.2.0"}},
+			}},
+		}
+
+		namespacedcloudprofileregistry.Strategy.PrepareForCreate(context.TODO(), namespacedCloudProfile)
+
+		Expect(namespacedCloudProfile.Spec.MachineImages).To(Equal([]core.MachineImage{
+			{Name: "machineImage2", Versions: []core.MachineImageVersion{
+				{ExpirableVersion: core.ExpirableVersion{Version: "1.2.0"}},
+			}},
+		}))
+	})
+
 	Describe("generation increment", func() {
 		var (
 			ctx context.Context

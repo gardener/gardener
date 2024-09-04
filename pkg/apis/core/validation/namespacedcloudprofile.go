@@ -7,17 +7,30 @@ package validation
 import (
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
 // ValidateNamespacedCloudProfile validates a NamespacedCloudProfile object.
-func ValidateNamespacedCloudProfile(cloudProfile *core.NamespacedCloudProfile) field.ErrorList {
+func ValidateNamespacedCloudProfile(namespacedCloudProfile *core.NamespacedCloudProfile) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&cloudProfile.ObjectMeta, true, ValidateName, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, validateNamespacedCloudProfileSpec(&cloudProfile.Spec, field.NewPath("spec"))...)
+	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&namespacedCloudProfile.ObjectMeta, true, ValidateName, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, validateNamespacedCloudProfileParent(namespacedCloudProfile.Spec.Parent, field.NewPath("spec.parent"))...)
+
+	allErrs = append(allErrs, validateNscpflKubernetesVersions(namespacedCloudProfile.Spec.Kubernetes, field.NewPath("spec.kubernetes"))...)
+	allErrs = append(allErrs, validateNscpflMachineImages(namespacedCloudProfile.Spec.MachineImages, field.NewPath("spec.machineImages"))...)
+	allErrs = append(allErrs, validateVolumeTypes(namespacedCloudProfile.Spec.VolumeTypes, field.NewPath("spec.volumeTypes"))...)
+	allErrs = append(allErrs, validateMachineTypes(namespacedCloudProfile.Spec.MachineTypes, field.NewPath("spec.machineTypes"))...)
+
+	if namespacedCloudProfile.Spec.CABundle != nil {
+		_, err := utils.DecodeCertificate([]byte(*(namespacedCloudProfile.Spec.CABundle)))
+		if err != nil {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec.caBundle"), *(namespacedCloudProfile.Spec.CABundle), "caBundle is not a valid PEM-encoded certificate"))
+		}
+	}
 
 	return allErrs
 }
@@ -42,17 +55,13 @@ func ValidateNamespacedCloudProfileSpecUpdate(oldProfile, newProfile *core.Names
 	return allErrs
 }
 
-// validateNamespacedCloudProfileSpec validates the specification of a NamespacedCloudProfile object.
-func validateNamespacedCloudProfileSpec(spec *core.NamespacedCloudProfileSpec, fldPath *field.Path) field.ErrorList {
+// ValidateNamespacedCloudProfileStatus validates the specification of a NamespacedCloudProfile object.
+func ValidateNamespacedCloudProfileStatus(spec *core.CloudProfileSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, validateParent(spec.Parent, fldPath.Child("parent"))...)
-
-	if spec.Kubernetes != nil {
-		allErrs = append(allErrs, validateKubernetesSettings(*spec.Kubernetes, fldPath.Child("kubernetes"))...)
-	}
+	allErrs = append(allErrs, validateCloudProfileKubernetesSettings(spec.Kubernetes, fldPath.Child("kubernetes"))...)
 	if spec.MachineImages != nil {
-		allErrs = append(allErrs, validateMachineImages(spec.MachineImages, fldPath.Child("machineImages"))...)
+		allErrs = append(allErrs, validateCloudProfileMachineImages(spec.MachineImages, fldPath.Child("machineImages"))...)
 	}
 	if spec.MachineTypes != nil {
 		allErrs = append(allErrs, validateMachineTypes(spec.MachineTypes, fldPath.Child("machineTypes"))...)
@@ -60,20 +69,11 @@ func validateNamespacedCloudProfileSpec(spec *core.NamespacedCloudProfileSpec, f
 	if spec.VolumeTypes != nil {
 		allErrs = append(allErrs, validateVolumeTypes(spec.VolumeTypes, fldPath.Child("volumeTypes"))...)
 	}
-	if spec.Regions != nil {
-		allErrs = append(allErrs, validateRegions(spec.Regions, fldPath.Child("regions"))...)
-	}
-	if spec.CABundle != nil {
-		_, err := utils.DecodeCertificate([]byte(*(spec.CABundle)))
-		if err != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("caBundle"), *(spec.CABundle), "caBundle is not a valid PEM-encoded certificate"))
-		}
-	}
 
 	return allErrs
 }
 
-func validateParent(parent core.CloudProfileReference, fldPath *field.Path) field.ErrorList {
+func validateNamespacedCloudProfileParent(parent core.CloudProfileReference, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if parent.Kind != "CloudProfile" {
@@ -82,6 +82,57 @@ func validateParent(parent core.CloudProfileReference, fldPath *field.Path) fiel
 	if len(parent.Name) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("name"), "must provide a parent name"))
 	}
+
+	return allErrs
+}
+
+func validateNscpflKubernetesVersions(kubernetesSettings *core.KubernetesSettings, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if kubernetesSettings == nil {
+		return allErrs
+	}
+
+	versions := kubernetesSettings.Versions
+	for i, version := range versions {
+		idxPath := fldPath.Child("versions").Index(i)
+		if version.Classification != nil {
+			allErrs = append(allErrs, field.Forbidden(idxPath.Child("classification"), "must not provide a classification to a Kubernetes version in NamespacedCloudProfile"))
+		}
+	}
+	allErrs = append(allErrs, validateKubernetesVersions(versions, fldPath)...)
+	return allErrs
+}
+
+func validateNscpflMachineImages(machineImages []core.MachineImage, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	for i, image := range machineImages {
+		idxPath := fldPath.Index(i)
+
+		if len(ptr.Deref(image.UpdateStrategy, "")) > 0 {
+			allErrs = append(allErrs, field.Forbidden(idxPath.Child("updateStrategy"), "must not provide an updateStrategy to a machine image in NamespacedCloudProfile"))
+		}
+
+		for index, machineVersion := range image.Versions {
+			versionsPath := idxPath.Child("versions").Index(index)
+
+			if len(ptr.Deref(machineVersion.Classification, "")) > 0 {
+				allErrs = append(allErrs, field.Forbidden(versionsPath.Child("classification"), "must not provide a classification to a machine image in NamespacedCloudProfile"))
+			}
+			if len(machineVersion.CRI) > 0 {
+				allErrs = append(allErrs, field.Forbidden(versionsPath.Child("cri"), "must not provide a cri to a machine image in NamespacedCloudProfile"))
+			}
+			if len(machineVersion.Architectures) > 0 {
+				allErrs = append(allErrs, field.Forbidden(versionsPath.Child("architectures"), "must not provide an architecture to a machine image in NamespacedCloudProfile"))
+			}
+			if len(ptr.Deref(machineVersion.KubeletVersionConstraint, "")) > 0 {
+				allErrs = append(allErrs, field.Forbidden(versionsPath.Child("kubeletVersionConstraint"), "must not provide a kubelet version constraint to a machine image in NamespacedCloudProfile"))
+			}
+		}
+	}
+
+	allErrs = append(allErrs, validateMachineImages(machineImages, fldPath)...)
 
 	return allErrs
 }

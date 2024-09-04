@@ -19,8 +19,8 @@ plugins:
     commonSuffixes:
     - .gardener.cloud
     - .github.com
- - name: ShootResourceReservation
-   configuration:
-    apiVersion: shootresourcereservation.admission.gardener.cloud/v1alpha1
-    kind: Configuration
-    useGKEFormula: false
+- name: ShootResourceReservation
+  configuration:
+   apiVersion: shootresourcereservation.admission.gardener.cloud/v1alpha1
+   kind: Configuration
+   useGKEFormula: false

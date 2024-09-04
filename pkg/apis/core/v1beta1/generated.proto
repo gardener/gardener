@@ -333,7 +333,7 @@ message CloudProfileList {
   repeated CloudProfile items = 2;
 }
 
-// CloudProfileReference holds the information about the parent of the NamespacedCloudProfile.
+// CloudProfileReference holds the information about a CloudProfile or a NamespacedCloudProfile.
 message CloudProfileReference {
   // Kind contains a CloudProfile kind.
   optional string kind = 1;
@@ -1875,12 +1875,6 @@ message NamespacedCloudProfileSpec {
   // +optional
   repeated MachineType machineTypes = 4;
 
-  // Regions contains constraints regarding allowed values for regions and zones.
-  // +patchMergeKey=name
-  // +patchStrategy=merge
-  // +optional
-  repeated Region regions = 5;
-
   // VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.
   // +patchMergeKey=name
   // +patchStrategy=merge
@@ -1896,7 +1890,7 @@ message NamespacedCloudProfileStatus {
   // CloudProfile is the most recently generated CloudProfile of the NamespacedCloudProfile.
   optional CloudProfileSpec cloudProfileSpec = 1;
 
-  // ObservedGeneration is the most recent generation observed for this project.
+  // ObservedGeneration is the most recent generation observed for this NamespacedCloudProfile.
   // +optional
   optional int64 observedGeneration = 2;
 }

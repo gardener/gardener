@@ -106,6 +106,7 @@ func dropExpiredVersions(namespacedCloudProfile *core.NamespacedCloudProfile) {
 		namespacedCloudProfile.Spec.Kubernetes.Versions = validKubernetesVersions
 	}
 
+	validMachineImages := []core.MachineImage{}
 	for i, machineImage := range namespacedCloudProfile.Spec.MachineImages {
 		var validMachineImageVersions []core.MachineImageVersion
 
@@ -115,9 +116,12 @@ func dropExpiredVersions(namespacedCloudProfile *core.NamespacedCloudProfile) {
 			}
 			validMachineImageVersions = append(validMachineImageVersions, version)
 		}
-
-		namespacedCloudProfile.Spec.MachineImages[i].Versions = validMachineImageVersions
+		if len(validMachineImageVersions) > 0 {
+			namespacedCloudProfile.Spec.MachineImages[i].Versions = validMachineImageVersions
+			validMachineImages = append(validMachineImages, namespacedCloudProfile.Spec.MachineImages[i])
+		}
 	}
+	namespacedCloudProfile.Spec.MachineImages = validMachineImages
 }
 
 type namespacedCloudProfileStatusStrategy struct {
@@ -126,3 +130,13 @@ type namespacedCloudProfileStatusStrategy struct {
 
 // StatusStrategy defines the storage strategy for the status subresource of NamespacedCloudProfiles.
 var StatusStrategy = namespacedCloudProfileStatusStrategy{Strategy}
+
+func (namespacedCloudProfileStatusStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
+	newNamespacedCloudProfile := obj.(*core.NamespacedCloudProfile)
+	oldNamespacedCloudProfile := old.(*core.NamespacedCloudProfile)
+	newNamespacedCloudProfile.Spec = oldNamespacedCloudProfile.Spec
+}
+
+func (namespacedCloudProfileStatusStrategy) ValidateUpdate(_ context.Context, _, _ runtime.Object) field.ErrorList {
+	return field.ErrorList{}
+}

@@ -51,12 +51,7 @@ type NamespacedCloudProfileSpec struct {
 	// +patchMergeKey=name
 	// +patchStrategy=merge
 	// +optional
-	MachineTypes []MachineType `json:"machineTypes" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,4,opt,name=machineTypes"`
-	// Regions contains constraints regarding allowed values for regions and zones.
-	// +patchMergeKey=name
-	// +patchStrategy=merge
-	// +optional
-	Regions []Region `json:"regions" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,5,opt,name=regions"`
+	MachineTypes []MachineType `json:"machineTypes,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,4,opt,name=machineTypes"`
 	// VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.
 	// +patchMergeKey=name
 	// +patchStrategy=merge
@@ -70,12 +65,12 @@ type NamespacedCloudProfileSpec struct {
 type NamespacedCloudProfileStatus struct {
 	// CloudProfile is the most recently generated CloudProfile of the NamespacedCloudProfile.
 	CloudProfileSpec CloudProfileSpec `json:"cloudProfileSpec,omitempty" protobuf:"bytes,1,req,name=cloudProfileSpec"`
-	// ObservedGeneration is the most recent generation observed for this project.
+	// ObservedGeneration is the most recent generation observed for this NamespacedCloudProfile.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,2,opt,name=observedGeneration"`
 }
 
-// CloudProfileReference holds the information about the parent of the NamespacedCloudProfile.
+// CloudProfileReference holds the information about a CloudProfile or a NamespacedCloudProfile.
 type CloudProfileReference struct {
 	// Kind contains a CloudProfile kind.
 	Kind string `json:"kind" protobuf:"bytes,1,req,name=kind"`

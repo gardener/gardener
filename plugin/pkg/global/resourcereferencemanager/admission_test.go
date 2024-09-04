@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -1763,6 +1764,114 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(err.Error()).To(ContainSubstring("1.24.1"))
 			})
 
+			It("should reject removal of kubernetes versions that are still in use by a NamespacedCloudProfile", func() {
+				namespacedCloudProfile := &gardencorev1beta1.NamespacedCloudProfile{
+					Spec: gardencorev1beta1.NamespacedCloudProfileSpec{
+						Parent: gardencorev1beta1.CloudProfileReference{Kind: "CloudProfile", Name: cloudProfile.Name},
+						Kubernetes: &gardencorev1beta1.KubernetesSettings{Versions: []gardencorev1beta1.ExpirableVersion{
+							{Version: "1.24.1"},
+						}},
+					},
+				}
+				Expect(gardenCoreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(namespacedCloudProfile)).To(Succeed())
+
+				cloudProfileNew := cloudProfile
+				cloudProfileNew.Spec = core.CloudProfileSpec{
+					Kubernetes: core.KubernetesSettings{
+						Versions: []core.ExpirableVersion{
+							{Version: "1.24.2"},
+						},
+					},
+				}
+
+				attrs := admission.NewAttributesRecord(&cloudProfileNew, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(MatchError(And(
+					ContainSubstring("unable to delete Kubernetes version"),
+					ContainSubstring("1.24.1"),
+					ContainSubstring("still in use by NamespacedCloudProfile"),
+				)))
+			})
+
+			It("should reject removal of kubernetes versions that are still in use by a Shoot referencing a NamespacedCloudProfile", func() {
+				namespacedCloudProfile := &gardencorev1beta1.NamespacedCloudProfile{
+					Spec: gardencorev1beta1.NamespacedCloudProfileSpec{
+						Parent: gardencorev1beta1.CloudProfileReference{Kind: "CloudProfile", Name: cloudProfile.Name},
+					},
+				}
+				Expect(gardenCoreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(namespacedCloudProfile)).To(Succeed())
+				shootTwo.Spec.CloudProfile = &gardencorev1beta1.CloudProfileReference{
+					Kind: "NamespacedCloudProfile",
+					Name: namespacedCloudProfile.Name,
+				}
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootTwo)).To(Succeed())
+
+				cloudProfileNew := cloudProfile
+				cloudProfileNew.Spec = core.CloudProfileSpec{
+					Kubernetes: core.KubernetesSettings{
+						Versions: []core.ExpirableVersion{
+							{Version: "1.24.2"},
+						},
+					},
+				}
+
+				attrs := admission.NewAttributesRecord(&cloudProfileNew, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(MatchError(And(
+					ContainSubstring("unable to delete Kubernetes version"),
+					ContainSubstring("1.24.1"),
+					ContainSubstring("still in use by shoot '/shoot-Two'"),
+				)))
+			})
+
+			It("should accept removal of kubernetes versions that are used by another unrelated NamespacedCloudProfile", func() {
+				namespacedCloudProfile := &gardencorev1beta1.NamespacedCloudProfile{
+					Spec: gardencorev1beta1.NamespacedCloudProfileSpec{
+						Parent: gardencorev1beta1.CloudProfileReference{Kind: "CloudProfile", Name: "another-unrelated-profile"},
+						Kubernetes: &gardencorev1beta1.KubernetesSettings{Versions: []gardencorev1beta1.ExpirableVersion{
+							{Version: "1.24.1"},
+						}},
+					},
+				}
+				Expect(gardenCoreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(namespacedCloudProfile)).To(Succeed())
+
+				cloudProfileNew := cloudProfile
+				cloudProfileNew.Spec = core.CloudProfileSpec{
+					Kubernetes: core.KubernetesSettings{
+						Versions: []core.ExpirableVersion{
+							{Version: "1.24.2"},
+						},
+					},
+				}
+
+				attrs := admission.NewAttributesRecord(&cloudProfileNew, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+			})
+
+			It("should accept removal of kubernetes versions that are used by shoots using another unrelated NamespacedCloudProfile of same name", func() {
+				cloudProfileNew := cloudProfile
+				cloudProfileNew.Spec = core.CloudProfileSpec{
+					Kubernetes: core.KubernetesSettings{
+						Versions: []core.ExpirableVersion{
+							{Version: "1.24.2"},
+						},
+					},
+				}
+
+				shoot := shootOne.DeepCopy()
+				shoot.Spec.CloudProfile = &gardencorev1beta1.CloudProfileReference{
+					Kind: "NamespacedCloudProfile",
+					Name: "aws-profile",
+				}
+				shoot.Spec.Kubernetes.Version = "1.24.1"
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&cloudProfileNew, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+			})
+
 			It("should accept removal of kubernetes version that is still in use by a shoot that is being deleted", func() {
 				t := metav1.Now()
 				shootTwoDeleted := shootTwo.DeepCopy()
@@ -2143,6 +2252,669 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(err.Error()).To(ContainSubstring("1.17.1"))
 				Expect(err.Error()).To(ContainSubstring(shootTwo.Spec.Provider.Workers[0].Name))
 				Expect(err.Error()).To(ContainSubstring(shootTwo.Spec.Provider.Workers[1].Name))
+			})
+
+			It("should accept removal of a machine version that is not in use by a related NamespacedCloudProfile", func() {
+				namespacedCloudProfile := &gardencorev1beta1.NamespacedCloudProfile{
+					Spec: gardencorev1beta1.NamespacedCloudProfileSpec{
+						Parent: gardencorev1beta1.CloudProfileReference{Kind: "CloudProfile", Name: "another-unrelated-profile"},
+						MachineImages: []gardencorev1beta1.MachineImage{
+							{
+								Name: "coreos",
+								Versions: []gardencorev1beta1.MachineImageVersion{
+									{
+										ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+											Version:        "1.16.0",
+											ExpirationDate: ptr.To(metav1.Now()),
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+				Expect(gardenCoreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(namespacedCloudProfile)).To(Succeed())
+
+				newVersions := []core.MachineImageVersion{
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version: "1.17.3",
+						},
+					},
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version: "1.17.2",
+						},
+					},
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version: "1.17.1",
+						},
+					},
+				}
+
+				// new cloud profile has version 1.17.0 and 1.16.0 removed.
+				cloudProfileNew := cloudProfile
+				cloudProfileNew.Spec = core.CloudProfileSpec{
+					MachineImages: []core.MachineImage{
+						{
+							Name:     "coreos",
+							Versions: newVersions,
+						},
+						{
+							Name:     "ubuntu",
+							Versions: newVersions,
+						},
+					},
+				}
+
+				attrs := admission.NewAttributesRecord(&cloudProfileNew, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+			})
+
+			It("should fail for removal of a machine version that is used by a NamespacedCloudProfile", func() {
+				namespacedCloudProfile := &gardencorev1beta1.NamespacedCloudProfile{
+					Spec: gardencorev1beta1.NamespacedCloudProfileSpec{
+						Parent: gardencorev1beta1.CloudProfileReference{Kind: "CloudProfile", Name: cloudProfile.Name},
+						MachineImages: []gardencorev1beta1.MachineImage{
+							{
+								Name: "coreos",
+								Versions: []gardencorev1beta1.MachineImageVersion{
+									{
+										ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+											Version:        "1.16.0",
+											ExpirationDate: ptr.To(metav1.Now()),
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+				Expect(gardenCoreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(namespacedCloudProfile)).To(Succeed())
+
+				newVersions := []core.MachineImageVersion{
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version: "1.17.3",
+						},
+					},
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version: "1.17.2",
+						},
+					},
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version: "1.17.1",
+						},
+					},
+				}
+
+				// new cloud profile has version 1.17.0 and 1.16.0 removed.
+				cloudProfileNew := cloudProfile
+				cloudProfileNew.Spec = core.CloudProfileSpec{
+					MachineImages: []core.MachineImage{
+						{
+							Name:     "coreos",
+							Versions: newVersions,
+						},
+						{
+							Name:     "ubuntu",
+							Versions: newVersions,
+						},
+					},
+				}
+
+				attrs := admission.NewAttributesRecord(&cloudProfileNew, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(MatchError(And(
+					ContainSubstring("unable to delete MachineImage version"),
+					ContainSubstring("1.16.0"),
+					ContainSubstring("still in use by NamespacedCloudProfile"),
+				)))
+			})
+
+			It("should fail for removal of a whole machine image with a NamespacedCloudProfile using a version", func() {
+				namespacedCloudProfile := &gardencorev1beta1.NamespacedCloudProfile{
+					Spec: gardencorev1beta1.NamespacedCloudProfileSpec{
+						Parent: gardencorev1beta1.CloudProfileReference{Kind: "CloudProfile", Name: cloudProfile.Name},
+						MachineImages: []gardencorev1beta1.MachineImage{
+							{
+								Name: "coreos",
+								Versions: []gardencorev1beta1.MachineImageVersion{
+									{
+										ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+											Version:        "1.16.0",
+											ExpirationDate: ptr.To(metav1.Now()),
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+				Expect(gardenCoreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(namespacedCloudProfile)).To(Succeed())
+				newVersions := []core.MachineImageVersion{
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version: "1.17.3",
+						},
+					},
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version: "1.17.2",
+						},
+					},
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version: "1.17.1",
+						},
+					},
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version: "1.17.0",
+						},
+					},
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version: "1.16.0",
+						},
+					},
+				}
+
+				// new cloud profile has ubuntu image removed.
+				cloudProfileNew := cloudProfile
+				cloudProfileNew.Spec = core.CloudProfileSpec{
+					MachineImages: []core.MachineImage{
+						{
+							Name:     "ubuntu",
+							Versions: newVersions,
+						},
+					},
+				}
+
+				attrs := admission.NewAttributesRecord(&cloudProfileNew, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(MatchError(And(
+					ContainSubstring("unable to delete MachineImage version"),
+					ContainSubstring("1.16.0"),
+					ContainSubstring("still in use by NamespacedCloudProfile"),
+				)))
+			})
+		})
+
+		Context("NamespacedCloudProfile - Extending Kubernetes versions", func() {
+			var (
+				expirationDateFuture2 metav1.Time
+				expirationDateFuture1 metav1.Time
+				expirationDatePast    metav1.Time
+			)
+
+			BeforeEach(func() {
+				expirationDateFuture2 = metav1.Time{Time: time.Now().AddDate(0, 1, 15)}
+				expirationDateFuture1 = metav1.Time{Time: time.Now().AddDate(0, 1, 0)}
+				expirationDatePast = metav1.Time{Time: time.Now().AddDate(0, -1, 0)}
+			})
+
+			It("should succeed for an update without Kubernetes versions being provided", func() {
+				namespacedCloudProfile := &core.NamespacedCloudProfile{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "namespaced-profile",
+						Namespace: namespace,
+					},
+					Spec: core.NamespacedCloudProfileSpec{},
+				}
+
+				updatedNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
+				updatedNamespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
+					{Name: "coreos", Versions: []core.MachineImageVersion{{ExpirableVersion: core.ExpirableVersion{
+						Version: "1.0.0", ExpirationDate: &expirationDateFuture1,
+					}}}},
+				}
+
+				attrs := admission.NewAttributesRecord(updatedNamespacedCloudProfile, namespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+			})
+
+			It("should succeed for the complete Kubernetes section being removed without usages", func() {
+				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+
+				namespacedCloudProfile := &core.NamespacedCloudProfile{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "namespaced-profile",
+						Namespace: namespace,
+					},
+					Spec: core.NamespacedCloudProfileSpec{
+						Parent:     core.CloudProfileReference{Name: cloudProfile.Name, Kind: "CloudProfile"},
+						Kubernetes: &core.KubernetesSettings{Versions: []core.ExpirableVersion{{Version: "1.30.0", ExpirationDate: &expirationDateFuture1}}},
+					},
+				}
+
+				updatedNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
+				updatedNamespacedCloudProfile.Spec.Kubernetes = nil
+
+				attrs := admission.NewAttributesRecord(updatedNamespacedCloudProfile, namespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+			})
+
+			It("should succeed if a used and already extended kubernetes version expiration is changed to another value still in the future", func() {
+				namespacedCloudProfile := &core.NamespacedCloudProfile{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "namespaced-profile",
+						Namespace: namespace,
+					},
+					Spec: core.NamespacedCloudProfileSpec{
+						Kubernetes: &core.KubernetesSettings{Versions: []core.ExpirableVersion{
+							{Version: "1.29.0", ExpirationDate: &expirationDateFuture1},
+						}},
+					},
+				}
+
+				shoot.Spec.CloudProfile = &gardencorev1beta1.CloudProfileReference{Kind: "NamespacedCloudProfile", Name: namespacedCloudProfile.Name}
+				shoot.Spec.CloudProfileName = nil
+				shoot.Spec.Kubernetes.Version = "1.29.0"
+
+				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
+
+				updatedNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
+				updatedNamespacedCloudProfile.Spec.Kubernetes.Versions[0].ExpirationDate = &expirationDateFuture2
+
+				attrs := admission.NewAttributesRecord(updatedNamespacedCloudProfile, namespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+			})
+
+			It("should succeed if a used and extended kubernetes version already expired is not modified", func() {
+				cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
+					{Version: "1.30.0", Classification: ptr.To(gardencorev1beta1.ClassificationPreview)},
+					{Version: "1.29.0", Classification: ptr.To(gardencorev1beta1.ClassificationSupported)},
+					{Version: "1.28.0", Classification: ptr.To(gardencorev1beta1.ClassificationDeprecated)},
+				}
+				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+
+				namespacedCloudProfile := &core.NamespacedCloudProfile{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "namespaced-profile",
+						Namespace: namespace,
+					},
+					Spec: core.NamespacedCloudProfileSpec{
+						Parent: core.CloudProfileReference{Name: cloudProfile.Name, Kind: "CloudProfile"},
+						Kubernetes: &core.KubernetesSettings{Versions: []core.ExpirableVersion{
+							{Version: "1.29.0", ExpirationDate: &expirationDatePast},
+							{Version: "1.28.0", ExpirationDate: &expirationDatePast},
+						}},
+					},
+				}
+
+				shoot.Spec.CloudProfile = &gardencorev1beta1.CloudProfileReference{Kind: "NamespacedCloudProfile", Name: namespacedCloudProfile.Name}
+				shoot.Spec.CloudProfileName = nil
+				shoot.Spec.Kubernetes.Version = "1.29.0"
+
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
+
+				updatedNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
+				updatedNamespacedCloudProfile.Spec.Kubernetes.Versions = updatedNamespacedCloudProfile.Spec.Kubernetes.Versions[:1]
+
+				attrs := admission.NewAttributesRecord(updatedNamespacedCloudProfile, namespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+			})
+
+			It("should succeed if an extended and used Kubernetes version is removed with the base version still being valid", func() {
+				cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
+					{Version: "1.30.0", Classification: ptr.To(gardencorev1beta1.ClassificationPreview)},
+					{Version: "1.29.0", Classification: ptr.To(gardencorev1beta1.ClassificationSupported)},
+				}
+
+				namespacedCloudProfile := &core.NamespacedCloudProfile{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "namespaced-profile",
+						Namespace: namespace,
+					},
+					Spec: core.NamespacedCloudProfileSpec{
+						Parent: core.CloudProfileReference{Kind: "CloudProfile", Name: cloudProfileName},
+						Kubernetes: &core.KubernetesSettings{Versions: []core.ExpirableVersion{
+							{Version: "1.29.0", ExpirationDate: &expirationDateFuture1},
+						}},
+					},
+				}
+
+				shoot.Spec.CloudProfile = &gardencorev1beta1.CloudProfileReference{Kind: "NamespacedCloudProfile", Name: namespacedCloudProfile.Name}
+				shoot.Spec.CloudProfileName = nil
+				shoot.Spec.Kubernetes.Version = "1.29.0"
+
+				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
+
+				updatedNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
+				updatedNamespacedCloudProfile.Spec.Kubernetes.Versions[0].ExpirationDate = &expirationDatePast
+
+				attrs := admission.NewAttributesRecord(updatedNamespacedCloudProfile, namespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+			})
+
+			It("should fail if an extended and used Kubernetes version is being removed with the base version being already expired", func() {
+				cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
+					{Version: "1.30.0", Classification: ptr.To(gardencorev1beta1.ClassificationPreview)},
+					{Version: "1.29.0", Classification: ptr.To(gardencorev1beta1.ClassificationSupported), ExpirationDate: &expirationDatePast},
+				}
+
+				namespacedCloudProfile := &core.NamespacedCloudProfile{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "namespaced-profile",
+						Namespace: namespace,
+					},
+					Spec: core.NamespacedCloudProfileSpec{
+						Parent: core.CloudProfileReference{Kind: "CloudProfile", Name: cloudProfileName},
+						Kubernetes: &core.KubernetesSettings{Versions: []core.ExpirableVersion{
+							{Version: "1.29.0", ExpirationDate: &expirationDateFuture1},
+						}},
+					},
+				}
+
+				shoot.Spec.CloudProfile = &gardencorev1beta1.CloudProfileReference{Kind: "NamespacedCloudProfile", Name: namespacedCloudProfile.Name}
+				shoot.Spec.CloudProfileName = nil
+				shoot.Spec.Kubernetes.Version = "1.29.0"
+
+				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(namespacedCloudProfile)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
+
+				updatedNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
+				updatedNamespacedCloudProfile.Spec.Kubernetes.Versions = nil
+
+				attrs := admission.NewAttributesRecord(updatedNamespacedCloudProfile, namespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				Expect(err).To(MatchError(And(
+					ContainSubstring("unable to delete Kubernetes version"),
+					ContainSubstring("1.29.0"),
+					ContainSubstring("still in use by shoot"),
+				)))
+			})
+
+			It("should reject for the complete Kubernetes section being removed with Shoots using overridden versions rendering expired afterwards", func() {
+				cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{{Version: "1.29.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(-48 * time.Hour)})}}
+				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+
+				namespacedCloudProfile := &core.NamespacedCloudProfile{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "namespaced-profile",
+						Namespace: namespace,
+					},
+					Spec: core.NamespacedCloudProfileSpec{
+						Parent:     core.CloudProfileReference{Name: cloudProfile.Name, Kind: "CloudProfile"},
+						Kubernetes: &core.KubernetesSettings{Versions: []core.ExpirableVersion{{Version: "1.29.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(96 * time.Hour)})}}},
+					},
+				}
+
+				shoot.Spec.CloudProfile = &gardencorev1beta1.CloudProfileReference{Kind: "NamespacedCloudProfile", Name: namespacedCloudProfile.Name}
+				shoot.Spec.CloudProfileName = nil
+				shoot.Spec.Kubernetes.Version = "1.29.0"
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
+
+				updatedNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
+				updatedNamespacedCloudProfile.Spec.Kubernetes = nil
+
+				attrs := admission.NewAttributesRecord(updatedNamespacedCloudProfile, namespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(MatchError(And(
+					ContainSubstring("unable to delete Kubernetes version"),
+					ContainSubstring("1.29.0"),
+					ContainSubstring("still in use by shoot"),
+				)))
+			})
+
+			It("should succeed if a kubernetes version extended before but not used anymore is removed", func() {
+				cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
+					{Version: "1.30.0", Classification: ptr.To(gardencorev1beta1.ClassificationPreview)},
+					{Version: "1.29.0", Classification: ptr.To(gardencorev1beta1.ClassificationSupported), ExpirationDate: &expirationDatePast},
+				}
+
+				namespacedCloudProfile := &core.NamespacedCloudProfile{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "namespaced-profile",
+						Namespace: namespace,
+					},
+					Spec: core.NamespacedCloudProfileSpec{
+						Parent: core.CloudProfileReference{Kind: "CloudProfile", Name: cloudProfileName},
+						Kubernetes: &core.KubernetesSettings{Versions: []core.ExpirableVersion{
+							{Version: "1.29.0", ExpirationDate: &expirationDateFuture1},
+						}},
+					},
+				}
+
+				shoot.Spec.CloudProfile = &gardencorev1beta1.CloudProfileReference{Kind: "NamespacedCloudProfile", Name: namespacedCloudProfile.Name}
+				shoot.Spec.CloudProfileName = nil
+				shoot.Spec.Kubernetes.Version = "1.30.0"
+
+				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(namespacedCloudProfile)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
+
+				updatedNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
+				updatedNamespacedCloudProfile.Spec.Kubernetes.Versions = []core.ExpirableVersion{}
+
+				attrs := admission.NewAttributesRecord(updatedNamespacedCloudProfile, namespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+			})
+		})
+
+		Context("NamespacedCloudProfile - Extending MachineImage versions", func() {
+			var (
+				namespacedCloudProfileName string
+
+				expirationDateFuture2 metav1.Time
+				expirationDateFuture1 metav1.Time
+				expirationDatePast    metav1.Time
+			)
+
+			BeforeEach(func() {
+				namespacedCloudProfileName = "namespaced-profile-1"
+
+				cloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
+					{Name: "coreos", Versions: []gardencorev1beta1.MachineImageVersion{
+						{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.17.3"}},
+					}},
+				}
+
+				shoot.Spec.CloudProfile = &gardencorev1beta1.CloudProfileReference{Kind: "NamespacedCloudProfile", Name: namespacedCloudProfileName}
+				shoot.Spec.CloudProfileName = nil
+				shoot.Spec.Provider.Type = "aws"
+				shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{
+					{
+						Name: "coreos-worker",
+						Machine: gardencorev1beta1.Machine{
+							Image: &gardencorev1beta1.ShootMachineImage{
+								Name:    "coreos",
+								Version: ptr.To("1.17.3"),
+							},
+						},
+					},
+				}
+
+				expirationDateFuture2 = metav1.Time{Time: time.Now().AddDate(0, 1, 15)}
+				expirationDateFuture1 = metav1.Time{Time: time.Now().AddDate(0, 1, 0)}
+				expirationDatePast = metav1.Time{Time: time.Now().AddDate(0, -1, 0)}
+			})
+
+			It("should succeed if a used and already extended MachineImage version expiration is changed to another value still in the future", func() {
+				namespacedCloudProfile := &core.NamespacedCloudProfile{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      namespacedCloudProfileName,
+						Namespace: namespace,
+					},
+					Spec: core.NamespacedCloudProfileSpec{
+						Parent: core.CloudProfileReference{Kind: "CloudProfile", Name: cloudProfileName},
+						MachineImages: []core.MachineImage{
+							{Name: "coreos", Versions: []core.MachineImageVersion{
+								{ExpirableVersion: core.ExpirableVersion{Version: "1.17.3", ExpirationDate: &expirationDateFuture1}},
+							}},
+						},
+					},
+				}
+
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+
+				updatedNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
+				updatedNamespacedCloudProfile.Spec.MachineImages[0].Versions[0].ExpirationDate = &expirationDateFuture2
+
+				attrs := admission.NewAttributesRecord(updatedNamespacedCloudProfile, namespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+			})
+
+			It("should succeed if a used and extended MachineImage version already expired is not modified", func() {
+				namespacedCloudProfile := &core.NamespacedCloudProfile{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      namespacedCloudProfileName,
+						Namespace: namespace,
+					},
+					Spec: core.NamespacedCloudProfileSpec{
+						Parent: core.CloudProfileReference{Kind: "CloudProfile", Name: cloudProfileName},
+						MachineImages: []core.MachineImage{
+							{Name: "coreos", Versions: []core.MachineImageVersion{
+								{ExpirableVersion: core.ExpirableVersion{Version: "1.17.3", ExpirationDate: &expirationDatePast}},
+							}},
+						},
+					},
+				}
+
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+
+				updatedNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
+				updatedNamespacedCloudProfile.Spec.Kubernetes = &core.KubernetesSettings{Versions: []core.ExpirableVersion{{Version: "1.30.0", ExpirationDate: &expirationDateFuture1}}}
+
+				attrs := admission.NewAttributesRecord(updatedNamespacedCloudProfile, namespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+			})
+
+			It("should succeed if an extended and used MachineImage version is removed with the base version still being valid", func() {
+				namespacedCloudProfile := &core.NamespacedCloudProfile{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      namespacedCloudProfileName,
+						Namespace: namespace,
+					},
+					Spec: core.NamespacedCloudProfileSpec{
+						Parent: core.CloudProfileReference{Kind: "CloudProfile", Name: cloudProfileName},
+						MachineImages: []core.MachineImage{
+							{Name: "coreos", Versions: []core.MachineImageVersion{
+								{ExpirableVersion: core.ExpirableVersion{Version: "1.17.3", ExpirationDate: &expirationDateFuture1}},
+							}},
+						},
+					},
+				}
+
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+
+				updatedNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
+				updatedNamespacedCloudProfile.Spec.MachineImages = []core.MachineImage{}
+
+				attrs := admission.NewAttributesRecord(updatedNamespacedCloudProfile, namespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+			})
+
+			It("should fail if an extended and used MachineImage version is being removed with the base version being already expired", func() {
+				namespacedCloudProfile := &core.NamespacedCloudProfile{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      namespacedCloudProfileName,
+						Namespace: namespace,
+					},
+					Spec: core.NamespacedCloudProfileSpec{
+						Parent: core.CloudProfileReference{Kind: "CloudProfile", Name: cloudProfileName},
+						MachineImages: []core.MachineImage{
+							{Name: "coreos", Versions: []core.MachineImageVersion{
+								{ExpirableVersion: core.ExpirableVersion{Version: "1.17.3", ExpirationDate: &expirationDateFuture1}},
+							}},
+						},
+					},
+				}
+
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
+				cloudProfile.Spec.MachineImages[0].Versions[0].ExpirationDate = &expirationDatePast
+				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+
+				updatedNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
+				updatedNamespacedCloudProfile.Spec.MachineImages = []core.MachineImage{}
+
+				attrs := admission.NewAttributesRecord(updatedNamespacedCloudProfile, namespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				Expect(err).To(MatchError(And(
+					ContainSubstring("unable to delete Machine image version"),
+					ContainSubstring("1.17.3"),
+					ContainSubstring("still in use by shoot"),
+				)))
+			})
+
+			It("should fail for the complete MachineImage section being removed with Shoots using overridden versions rendering expired afterwards", func() {
+				namespacedCloudProfile := &core.NamespacedCloudProfile{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      namespacedCloudProfileName,
+						Namespace: namespace,
+					},
+					Spec: core.NamespacedCloudProfileSpec{
+						Parent: core.CloudProfileReference{Name: cloudProfile.Name, Kind: "CloudProfile"},
+						MachineImages: []core.MachineImage{
+							{Name: "coreos", Versions: []core.MachineImageVersion{
+								{ExpirableVersion: core.ExpirableVersion{Version: "1.17.3", ExpirationDate: &expirationDateFuture1}},
+							}},
+						},
+					},
+				}
+
+				cloudProfile.Spec.MachineImages[0].Versions[0].ExpirationDate = &expirationDatePast
+				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
+
+				updatedNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
+				updatedNamespacedCloudProfile.Spec.MachineImages = []core.MachineImage{}
+
+				attrs := admission.NewAttributesRecord(updatedNamespacedCloudProfile, namespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(MatchError(And(
+					ContainSubstring("unable to delete Machine image version"),
+					ContainSubstring("1.17.3"),
+					ContainSubstring("still in use by shoot"),
+				)))
+			})
+
+			It("should succeed if a MachineImage version extended before but not used anymore is removed", func() {
+				namespacedCloudProfile := &core.NamespacedCloudProfile{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      namespacedCloudProfileName,
+						Namespace: namespace,
+					},
+					Spec: core.NamespacedCloudProfileSpec{
+						Parent: core.CloudProfileReference{Kind: "CloudProfile", Name: cloudProfileName},
+						Kubernetes: &core.KubernetesSettings{Versions: []core.ExpirableVersion{
+							{Version: "1.30.0"},
+							{Version: "1.29.0", ExpirationDate: &expirationDateFuture1},
+						}},
+					},
+				}
+
+				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
+
+				updatedNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
+				updatedNamespacedCloudProfile.Spec.MachineImages = []core.MachineImage{}
+
+				attrs := admission.NewAttributesRecord(updatedNamespacedCloudProfile, namespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
 			})
 		})
 

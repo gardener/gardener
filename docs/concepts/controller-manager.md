@@ -50,7 +50,13 @@ It only auto-approves the CSR if the client making the request is allowed to "cr
 
 `CloudProfile`s are essential when it comes to reconciling `Shoot`s since they contain constraints (like valid machine types, Kubernetes versions, or machine images) and sometimes also some global configuration for the respective environment (typically via provider-specific configuration in `.spec.providerConfig`).
 
-Consequently, to ensure that `CloudProfile`s in-use are always present in the system until the last referring `Shoot` gets deleted, the controller adds a finalizer which is only released when there is no `Shoot` referencing the `CloudProfile` anymore.
+Consequently, to ensure that `CloudProfile`s in-use are always present in the system until the last referring `Shoot` or `NamespacedCloudProfile` gets deleted, the controller adds a finalizer which is only released when there is no `Shoot` or `NamespacedCloudProfile` referencing the `CloudProfile` anymore.
+
+### [`NamespacedCloudProfile` Controller](../../pkg/controllermanager/controller/namespacedcloudprofile)
+
+`NamespacedCloudProfile`s provide a project-scoped extension to `CloudProfile`s, allowing for adjustments of a parent `CloudProfile` (e.g. by overriding expiration dates of Kubernetes versions or machine images). This allows for modifications without global project visibility. Like `CloudProfile`s do in their spec, `NamespacedCloudProfile`s also expose the resulting `Shoot` constraints as a `CloudProfileSpec` in their status.
+
+The controller ensures that `NamespacedCloudProfile`s in-use remain present in the system until the last referring `Shoot` is deleted by adding a finalizer that is only released when there is no `Shoot` referencing the `NamespacedCloudProfile` anymore.
 
 ### [`ControllerDeployment` Controller](../../pkg/controllermanager/controller/controllerdeployment)
 
