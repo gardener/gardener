@@ -1267,6 +1267,13 @@ build:
             - pkg/utils/workloadidentity
             - third_party/gopkg.in/yaml.v2
             - VERSION
+      hooks:
+        after:
+          - command:
+              - bash
+              - hack/generate-kustomize-patch-gardenlet.sh
+              - image
+              - gardenlet
         ldflags:
           - '{{.LD_FLAGS}}'
         main: ./cmd/gardenlet
@@ -1280,6 +1287,12 @@ build:
       requires:
         - image: local-skaffold/gardenlet
           alias: IMG
+      hooks:
+        after:
+          - command:
+              - bash
+              - hack/generate-kustomize-patch-gardenlet.sh
+              - helm
     - image: local-skaffold/gardener-resource-manager
       ko:
         dependencies:
@@ -1491,6 +1504,13 @@ build:
             - pkg/utils/version
             - third_party/gopkg.in/yaml.v2
             - VERSION
+      hooks:
+        after:
+          - command:
+              - bash
+              - hack/generate-kustomize-patch-gardenlet.sh
+              - image
+              - gardener-node-agent
         ldflags:
           - '{{.LD_FLAGS}}'
         main: ./cmd/gardener-node-agent
@@ -1615,32 +1635,6 @@ profiles:
     patches:
       - op: remove
         path: /deploy/helm
-      - op: add
-        path: /build/artifacts/0/hooks
-        value:
-          after:
-            - command:
-                - bash
-                - hack/generate-kustomize-patch-gardenlet.sh
-                - image
-                - gardenlet
-      - op: add
-        path: /build/artifacts/1/hooks
-        value:
-          after:
-            - command:
-                - bash
-                - hack/generate-kustomize-patch-gardenlet.sh
-                - helm
-      - op: add
-        path: /build/artifacts/3/hooks
-        value:
-          after:
-            - command:
-                - bash
-                - hack/generate-kustomize-patch-gardenlet.sh
-                - image
-                - gardener-node-agent
     manifests:
       kustomize:
         paths:
