@@ -219,6 +219,23 @@ func gardenPrometheusRule(isGardenerDiscoveryServerEnabled bool) *monitoringv1.P
 					"{{$externalLabels.landscape}} has not been scraped for 10 minutes.",
 			},
 		},
+		{
+			Alert: "VerticalPodAutoscalerCappedRecommendation",
+			Expr: intstr.FromString(`
+count(
+  count by (verticalpodautoscaler) (
+      {__name__=~"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_uncappedtarget_.+"}
+    >
+      {__name__=~"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_.+"}
+  )
+)`),
+			Annotations: map[string]string{
+				"summary": "A VPA recommendation in the garden cluster is capped.",
+				"description": "There are {{ .Value }} VPAs in the garden cluster from {{ $externalLabels.landscape }} " +
+					"that show an uncapped target recommendation larger than the regular target recommendation. " +
+					"Query for this alert in the garden Prometheus for more details.",
+			},
+		},
 	}
 
 	if isGardenerDiscoveryServerEnabled {
