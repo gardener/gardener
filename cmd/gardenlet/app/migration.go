@@ -11,17 +11,26 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/utils/flow"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 func (g *garden) runMigrations(ctx context.Context, log logr.Logger) error {
 	log.Info("Migrating deprecated failure-domain.beta.kubernetes.io labels to topology.kubernetes.io")
 	if err := migrateDeprecatedTopologyLabels(ctx, log, g.mgr.GetClient(), g.mgr.GetConfig()); err != nil {
+		return err
+	}
+
+	log.Info("Deleting stale alertmanager VPAs")
+	if err := deleteStaleAlertmanagerVPAs(ctx, log, g.mgr.GetClient()); err != nil {
 		return err
 	}
 
@@ -105,4 +114,31 @@ func migrateDeprecatedTopologyLabels(ctx context.Context, log logr.Logger, seedC
 	}
 
 	return flow.Parallel(taskFns...)(ctx)
+}
+
+// deleteStaleAlertmanagerVPAs deletes VPAs with name "alertmanager-vpa" in the Seed cluster.
+// In https://github.com/gardener/gardener/pull/9257/files#diff-31f2d707167e32b68a064c12fe955a5f2e7d6668e4de445ea9bf6b4e125e6091R95-R103 we forgot to delete
+// the VPA related to the old alertmanager deployment (https://github.com/gardener/gardener/pull/9257/files#diff-48abc7fddac745815a412837ac95081265c7ffcd80d5cbf3b2ec1454b2a4068aL160-L175).
+//
+// TODO(ialidzhikov): Remove this function after v1.106 has been released.
+func deleteStaleAlertmanagerVPAs(ctx context.Context, log logr.Logger, seedClient client.Client) error {
+	vpas := &vpaautoscalingv1.VerticalPodAutoscalerList{}
+	if err := seedClient.List(ctx, vpas); err != nil {
+		if meta.IsNoMatchError(err) {
+			log.Info("Received a 'no match error' while trying to list VPAs. Will assume that the VPA CRD is not yet installed (for example new Seed creation) and will skip cleaning up stale alertmanager VPAs")
+			return nil
+		}
+
+		return err
+	}
+
+	return utilclient.ApplyToObjects(ctx, vpas, func(ctx context.Context, obj client.Object) error {
+		if obj.GetName() == "alertmanager-vpa" {
+			if err := kubernetesutils.DeleteObject(ctx, seedClient, obj); err != nil {
+				return fmt.Errorf("failed to delete VPA %s: %w", client.ObjectKeyFromObject(obj), err)
+			}
+		}
+
+		return nil
+	})
 }
