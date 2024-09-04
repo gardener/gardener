@@ -133,14 +133,9 @@ func deleteStaleAlertmanagerVPAs(ctx context.Context, log logr.Logger, seedClien
 	}
 
 	return utilclient.ApplyToObjects(ctx, vpas, func(ctx context.Context, obj client.Object) error {
-		vpa, ok := obj.(*vpaautoscalingv1.VerticalPodAutoscaler)
-		if !ok {
-			return fmt.Errorf("expected *vpaautoscalingv1.VerticalPodAutoscaler but got %T", obj)
-		}
-
-		if vpa.Name == "alertmanager-vpa" {
-			if err := kubernetesutils.DeleteObject(ctx, seedClient, vpa); err != nil {
-				return fmt.Errorf("failed to delete VPA %s: %w", client.ObjectKeyFromObject(vpa), err)
+		if obj.GetName() == "alertmanager-vpa" {
+			if err := kubernetesutils.DeleteObject(ctx, seedClient, obj); err != nil {
+				return fmt.Errorf("failed to delete VPA %s: %w", client.ObjectKeyFromObject(obj), err)
 			}
 		}
 
