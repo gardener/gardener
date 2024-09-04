@@ -46,9 +46,6 @@ spec:
   template:
     metadata:
       annotations:
-        prometheus.io/scrape: 'true'
-        prometheus.io/scheme: 'http'
-        prometheus.io/port: {{ required ".Values.config.server.metrics.port is required" .Values.config.server.metrics.port | quote }}
 {{ include "operator.deployment.annotations" . | indent 8 }}
         {{- if .Values.podAnnotations }}
 {{ toYaml .Values.podAnnotations | indent 8 }}
