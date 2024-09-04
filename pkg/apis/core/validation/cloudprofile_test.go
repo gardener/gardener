@@ -1043,7 +1043,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					}))))
 				})
 
-				It("should forbid preview image if version is not specified", func() {
+				It("should forbid preview image", func() {
 					cloudProfile.Spec.Bastion = &core.Bastion{
 						MachineImage: &core.BastionMachineImage{Name: "some-machineimage"},
 					}
@@ -1084,20 +1084,6 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					Expect(errorList).To(BeEmpty())
 				})
 
-				It("should allow preview image if version is defined", func() {
-					cloudProfile.Spec.Bastion = &core.Bastion{
-						MachineImage: &core.BastionMachineImage{
-							Name:    "some-machineimage",
-							Version: ptr.To("1.2.3"),
-						},
-					}
-					cloudProfile.Spec.MachineImages[0].Versions[0].Classification = &previewClassification
-					cloudProfile.Spec.MachineImages[0].Versions[0].Architectures = []string{"amd64"}
-
-					errorList := ValidateCloudProfile(cloudProfile)
-					Expect(errorList).To(BeEmpty())
-				})
-
 				It("should allow matching arch of machineType and machineImage", func() {
 					cloudProfile.Spec.Bastion = &core.Bastion{
 						MachineType: &core.BastionMachineType{Name: machineType.Name},
@@ -1106,7 +1092,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 							Version: ptr.To("1.2.3"),
 						},
 					}
-					cloudProfile.Spec.MachineImages[0].Versions[0].Classification = &previewClassification
+					cloudProfile.Spec.MachineImages[0].Versions[0].Classification = &supportedClassification
 					cloudProfile.Spec.MachineImages[0].Versions[0].Architectures = []string{*machineType.Architecture}
 
 					errorList := ValidateCloudProfile(cloudProfile)
