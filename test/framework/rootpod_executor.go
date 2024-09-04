@@ -6,6 +6,7 @@ package framework
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -74,6 +75,11 @@ func (e *rootPodExecutor) Execute(ctx context.Context, command string) ([]byte, 
 	command = fmt.Sprintf("chroot /hostroot %s", command)
 	reader, err := e.executor.Execute(ctx, e.Pod.Namespace, e.Pod.Name, e.Pod.Spec.Containers[0].Name, command)
 	if err != nil {
+		if reader != nil {
+			response, readErr := io.ReadAll(reader)
+			return response, errors.Join(err, readErr)
+		}
+
 		return nil, err
 	}
 	response, err := io.ReadAll(reader)
