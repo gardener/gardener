@@ -1270,6 +1270,13 @@ build:
         ldflags:
           - '{{.LD_FLAGS}}'
         main: ./cmd/gardenlet
+      hooks:
+        after:
+          - command:
+              - bash
+              - hack/generate-kustomize-patch-gardenlet.sh
+              - image
+              - gardenlet
     - image: local-skaffold/gardenlet/chart
       custom:
         dependencies:
@@ -1280,6 +1287,12 @@ build:
       requires:
         - image: local-skaffold/gardenlet
           alias: IMG
+      hooks:
+        after:
+          - command:
+              - bash
+              - hack/generate-kustomize-patch-gardenlet.sh
+              - helm
     - image: local-skaffold/gardener-resource-manager
       ko:
         dependencies:
@@ -1385,6 +1398,13 @@ build:
         ldflags:
           - '{{.LD_FLAGS}}'
         main: ./cmd/gardener-resource-manager
+      hooks:
+        after:
+          - command:
+              - bash
+              - hack/generate-kustomize-patch-gardenlet.sh
+              - image
+              - gardener-resource-manager
     - image: local-skaffold/gardener-node-agent
       ko:
         dependencies:
@@ -1487,6 +1507,13 @@ build:
         ldflags:
           - '{{.LD_FLAGS}}'
         main: ./cmd/gardener-node-agent
+      hooks:
+        after:
+          - command:
+              - bash
+              - hack/generate-kustomize-patch-gardenlet.sh
+              - image
+              - gardener-node-agent
 deploy:
   helm:
     releases:
@@ -1608,41 +1635,6 @@ profiles:
     patches:
       - op: remove
         path: /deploy/helm
-      - op: add
-        path: /build/artifacts/0/hooks
-        value:
-          after:
-            - command:
-                - bash
-                - hack/generate-kustomize-patch-gardenlet.sh
-                - image
-                - gardenlet
-      - op: add
-        path: /build/artifacts/1/hooks
-        value:
-          after:
-            - command:
-                - bash
-                - hack/generate-kustomize-patch-gardenlet.sh
-                - helm
-      - op: add
-        path: /build/artifacts/2/hooks
-        value:
-          after:
-            - command:
-                - bash
-                - hack/generate-kustomize-patch-gardenlet.sh
-                - image
-                - gardener-resource-manager
-      - op: add
-        path: /build/artifacts/3/hooks
-        value:
-          after:
-            - command:
-                - bash
-                - hack/generate-kustomize-patch-gardenlet.sh
-                - image
-                - gardener-node-agent
     manifests:
       kustomize:
         paths:

@@ -401,6 +401,13 @@ build:
         ldflags:
           - '{{.LD_FLAGS}}'
         main: ./cmd/gardener-resource-manager
+      hooks:
+        after:
+          - command:
+              - bash
+              - hack/generate-kustomize-patch-gardenlet.sh
+              - image
+              - gardener-resource-manager
     - image: local-skaffold/gardener-apiserver
       ko:
         dependencies:
