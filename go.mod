@@ -15,7 +15,7 @@ require (
 	github.com/gardener/dependency-watchdog v1.2.3
 	github.com/gardener/etcd-druid v0.22.7
 	github.com/gardener/hvpa-controller/api v0.17.0
-	github.com/gardener/machine-controller-manager v0.53.1
+	github.com/gardener/machine-controller-manager v0.54.0
 	github.com/gardener/terminal-controller-manager v0.33.0
 	github.com/go-jose/go-jose/v4 v4.0.3
 	github.com/go-logr/logr v1.4.2
@@ -94,7 +94,6 @@ require (
 	github.com/AdamKorcz/go-118-fuzz-build v0.0.0-20230306123547-8075edf89bb0 // indirect
 	github.com/BurntSushi/toml v1.3.2 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
-	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/Microsoft/hcsshim v0.11.7 // indirect
 	github.com/NYTimes/gziphandler v1.1.1 // indirect
