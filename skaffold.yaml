@@ -1267,6 +1267,9 @@ build:
             - pkg/utils/workloadidentity
             - third_party/gopkg.in/yaml.v2
             - VERSION
+        ldflags:
+          - '{{.LD_FLAGS}}'
+        main: ./cmd/gardenlet
       hooks:
         after:
           - command:
@@ -1274,9 +1277,6 @@ build:
               - hack/generate-kustomize-patch-gardenlet.sh
               - image
               - gardenlet
-        ldflags:
-          - '{{.LD_FLAGS}}'
-        main: ./cmd/gardenlet
     - image: local-skaffold/gardenlet/chart
       custom:
         dependencies:
@@ -1504,6 +1504,9 @@ build:
             - pkg/utils/version
             - third_party/gopkg.in/yaml.v2
             - VERSION
+        ldflags:
+          - '{{.LD_FLAGS}}'
+        main: ./cmd/gardener-node-agent
       hooks:
         after:
           - command:
@@ -1511,9 +1514,6 @@ build:
               - hack/generate-kustomize-patch-gardenlet.sh
               - image
               - gardener-node-agent
-        ldflags:
-          - '{{.LD_FLAGS}}'
-        main: ./cmd/gardener-node-agent
 deploy:
   helm:
     releases:
