@@ -47,8 +47,8 @@ type deployment struct {
 // Reconcile creates or updates admission resources.
 // If the extension doesn't define an admission, the deployment is deleted.
 func (d *deployment) Reconcile(ctx context.Context, log logr.Logger, virtualClusterClientSet kubernetes.Interface, genericTokenKubeconfigSecretName string, extension *operatorv1alpha1.Extension) error {
-	log.Info("Reconciling admission virtual garden resources")
 	if virtualDeploymentSpecified(extension) {
+		log.Info("Deploying admission virtual garden resources")
 		if err := d.createOrUpdateAdmissionVirtualClusterResources(ctx, virtualClusterClientSet, extension); err != nil {
 			return err
 		}
@@ -60,8 +60,8 @@ func (d *deployment) Reconcile(ctx context.Context, log logr.Logger, virtualClus
 		d.recorder.Event(extension, corev1.EventTypeNormal, "Deletion", "Admission deployment deleted successfully in virtual cluster")
 	}
 
-	log.Info("Reconciling admission runtime resources")
 	if runtimeDeploymentSpecified(extension) {
+		log.Info("Deploying admission runtime resources")
 		if err := d.createOrUpdateAdmissionRuntimeClusterResources(ctx, genericTokenKubeconfigSecretName, extension); err != nil {
 			return err
 		}

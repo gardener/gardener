@@ -47,9 +47,9 @@ var _ = Describe("Deployment", func() {
 		virtualClient    client.Client
 		virtualClientSet *kubernetesfake.ClientSet
 
-		ociRefRuntime string
-		ociRefVirtual string
-		ociRegistry   *ocifake.Registry
+		ociRefRuntime     string
+		ociRefApplication string
+		ociRegistry       *ocifake.Registry
 
 		admission Interface
 
@@ -63,7 +63,7 @@ var _ = Describe("Deployment", func() {
 		ctrl = gomock.NewController(GinkgoT())
 
 		ociRefRuntime = "local-extension-runtime:v1.2.3"
-		ociRefVirtual = "local-extension-virtual:v1.2.3"
+		ociRefApplication = "local-extension-virtual:v1.2.3"
 		ociRegistry = ocifake.NewRegistry()
 
 		chartRenderer = mockchartrenderer.NewMockInterface(ctrl)
@@ -89,7 +89,7 @@ var _ = Describe("Deployment", func() {
 						},
 						VirtualCluster: &operatorv1alpha1.DeploymentSpec{
 							Helm: &operatorv1alpha1.ExtensionHelm{
-								OCIRepository: &gardencorev1.OCIRepository{Ref: &ociRefVirtual},
+								OCIRepository: &gardencorev1.OCIRepository{Ref: &ociRefApplication},
 							},
 						},
 					},
@@ -116,7 +116,7 @@ var _ = Describe("Deployment", func() {
 		})
 
 		It("should fail when runtime OCI artifact is not found", func() {
-			ociRegistry.AddArtifact(&gardencorev1.OCIRepository{Ref: &ociRefVirtual}, []byte(""))
+			ociRegistry.AddArtifact(&gardencorev1.OCIRepository{Ref: &ociRefApplication}, []byte(""))
 			chartRenderer.EXPECT().RenderArchive(gomock.Any(), extension.Name, "garden", gomock.Any()).Return(&chartrenderer.RenderedChart{}, nil)
 
 			defer test.WithVar(&retry.Until, func(_ context.Context, _ time.Duration, _ retry.Func) error {
@@ -132,7 +132,7 @@ var _ = Describe("Deployment", func() {
 				Raw: []byte(`{"foo": "bar"}`),
 			}
 
-			ociRegistry.AddArtifact(&gardencorev1.OCIRepository{Ref: &ociRefVirtual}, []byte("virtual-chart"))
+			ociRegistry.AddArtifact(&gardencorev1.OCIRepository{Ref: &ociRefApplication}, []byte("virtual-chart"))
 			ociRegistry.AddArtifact(&gardencorev1.OCIRepository{Ref: &ociRefRuntime}, []byte("runtime-chart"))
 
 			expectedVirtualValues := map[string]any{
@@ -225,7 +225,7 @@ var _ = Describe("Deployment", func() {
 		})
 
 		It("should only delete the managed resource for the runtime cluster", func() {
-			ociRegistry.AddArtifact(&gardencorev1.OCIRepository{Ref: &ociRefVirtual}, []byte("virtual-chart"))
+			ociRegistry.AddArtifact(&gardencorev1.OCIRepository{Ref: &ociRefApplication}, []byte("virtual-chart"))
 			chartRenderer.EXPECT().RenderArchive([]byte("virtual-chart"), extension.Name, "garden", gomock.Any()).Return(&chartrenderer.RenderedChart{}, nil)
 			defer test.WithVar(&retry.Until, func(_ context.Context, _ time.Duration, _ retry.Func) error {
 				return nil

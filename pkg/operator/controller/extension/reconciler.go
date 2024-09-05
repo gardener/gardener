@@ -161,13 +161,11 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, virtualClus
 		}
 	}
 
-	log.Info("Reconciling ControllerRegistration and ControllerDeployment")
 	if err := r.controllerRegistration.Reconcile(reconcileCtx, log, virtualClusterClientSet.Client(), extension); err != nil {
 		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionFalse, ConditionReconcileFailed, err.Error())
 		return errors.Join(err, r.updateExtensionStatus(ctx, log, extension, conditions))
 	}
 
-	log.Info("Reconciling admission deployment")
 	if err := r.admission.Reconcile(reconcileCtx, log, virtualClusterClientSet, genericTokenKubeconfigSecretName, extension); err != nil {
 		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionFalse, ConditionReconcileFailed, err.Error())
 		return errors.Join(err, r.updateExtensionStatus(ctx, log, extension, conditions))

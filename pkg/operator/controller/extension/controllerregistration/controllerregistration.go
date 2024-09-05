@@ -49,6 +49,7 @@ func (r *registration) Reconcile(ctx context.Context, log logr.Logger, virtualCl
 		return nil
 	}
 
+	log.Info("Deploying ControllerRegistration and ControllerDeployment")
 	if err := r.createOrUpdateControllerRegistration(ctx, virtualClusterClient, extension); err != nil {
 		return fmt.Errorf("failed to reconcile ControllerRegistration: %w", err)
 	}

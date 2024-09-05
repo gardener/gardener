@@ -46,7 +46,7 @@ var _ = Describe("ControllerRegistration", func() {
 		controllerRegistration = New(&record.FakeRecorder{})
 
 		extensionName = "test-extension"
-		ociRef = "local-extension:v1.2.3"
+		ociRef = "test-extension:v1.2.3"
 		extensionKind = "worker"
 
 		extension = &operatorv1alpha1.Extension{
