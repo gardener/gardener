@@ -701,7 +701,9 @@ func (c *validationContext) validateCredentialsBindingChange(
 	}
 
 	// Prevent users from changing the credentials binding unless they have read permissions for both old and new credentials.
-	// This ensures that if a user has access to a cluster
+	// This ensures that if a user has access to a shoot that references a binding in another namespace controlled by another party
+	// the said user cannot reference another binding and potentially change the underlying cloud provider account
+	// and leave orphaned resources in the other party's account.
 	if c.oldShoot.Spec.CredentialsBindingName != nil && c.shoot.Spec.CredentialsBindingName != nil &&
 		*c.oldShoot.Spec.CredentialsBindingName != *c.shoot.Spec.CredentialsBindingName {
 		oldCredentialsBinding, err := credentialsBindingLister.CredentialsBindings(c.oldShoot.Namespace).Get(*c.oldShoot.Spec.CredentialsBindingName)
