@@ -1884,6 +1884,55 @@ var _ = Describe("validator", func() {
 				})
 			})
 
+			Context("oidc config check", func() {
+				BeforeEach(func() {
+					shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{}
+				})
+
+				DescribeTable("validate oidc config on shoot create", func(clientID, issuerURL *string, errorMatcher types.GomegaMatcher) {
+					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig = &core.OIDCConfig{
+						ClientID:  clientID,
+						IssuerURL: issuerURL,
+					}
+
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).To(errorMatcher)
+				},
+					Entry("should allow when oidcConfig is valid", ptr.To("someClientID"), ptr.To("https://issuer.com"), BeNil()),
+					Entry("should forbid when oidcConfig clientID is nil", nil, ptr.To("https://issuer.com"), BeForbiddenError()),
+					Entry("should forbid when oidcConfig clientID is empty string", ptr.To(""), ptr.To("https://issuer.com"), BeForbiddenError()),
+					Entry("should forbid when oidcConfig issuerURL is nil", ptr.To("someClientID"), nil, BeForbiddenError()),
+					Entry("should forbid when oidcConfig issuerURL is empty string", ptr.To("someClientID"), ptr.To(""), BeForbiddenError()),
+				)
+
+				DescribeTable("do not validate oidc config when operation is not create", func(admissionOperation admission.Operation, operationOptions runtime.Object) {
+					oldShoot := shoot.DeepCopy()
+					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig = &core.OIDCConfig{}
+
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admissionOperation, operationOptions, false, nil)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).ToNot(HaveOccurred())
+				},
+					Entry("should allow invalid oidcConfig on shoot update", admission.Update, &metav1.UpdateOptions{}),
+					Entry("should allow invalid oidcConfig on shoot delete", admission.Delete, &metav1.DeleteOptions{}),
+				)
+			})
+
 			Context("networking settings checks", func() {
 				var (
 					oldShoot *core.Shoot

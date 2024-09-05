@@ -714,6 +714,39 @@ func (c *validationContext) validateAdmissionPlugins(a admission.Attributes, sec
 	return allErrs
 }
 
+// For backwards-compatibility, we want to validate the oidc config only for newly created Shoot clusters.
+// Performing the validation for all Shoots would prevent already existing Shoots with the wrong spec to be updated/deleted.
+// There is additional oidc config validation in the static API validation.
+func (c *validationContext) validateKubeAPIServerOIDCConfig(a admission.Attributes) field.ErrorList {
+	var (
+		allErrs field.ErrorList
+		path    = field.NewPath("spec", "kubernetes", "kubeAPIServer", "oidcConfig")
+	)
+
+	if a.GetOperation() != admission.Create {
+		return nil
+	}
+
+	if c.shoot.Spec.Kubernetes.KubeAPIServer == nil || c.shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig == nil {
+		return nil
+	}
+
+	oidc := c.shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig
+	if oidc.ClientID == nil {
+		allErrs = append(allErrs, field.Required(path.Child("clientID"), "clientID must be set when oidcConfig is provided"))
+	} else if len(*oidc.ClientID) == 0 {
+		allErrs = append(allErrs, field.Required(path.Child("clientID"), "clientID cannot be empty"))
+	}
+
+	if oidc.IssuerURL == nil {
+		allErrs = append(allErrs, field.Required(path.Child("issuerURL"), "issuerURL must be set when oidcConfig is provided"))
+	} else if len(*oidc.IssuerURL) == 0 {
+		allErrs = append(allErrs, field.Required(path.Child("issuerURL"), "issuerURL cannot be empty"))
+	}
+
+	return allErrs
+}
+
 func (c *validationContext) validateReferencedSecret(secretLister kubecorev1listers.SecretLister, secretName, namespace string, fldPath *field.Path) *field.Error {
 	var (
 		secret *corev1.Secret
@@ -819,6 +852,8 @@ func (c *validationContext) validateKubernetes(a admission.Attributes) field.Err
 		// We assume that the 'defaultVersion' is already calculated correctly, so only run validation if the version was not defaulted.
 		allErrs = append(allErrs, validateKubernetesVersionConstraints(a, c.cloudProfileSpec.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version, false, path.Child("version"))...)
 	}
+
+	allErrs = append(allErrs, c.validateKubeAPIServerOIDCConfig(a)...)
 
 	if c.shoot.DeletionTimestamp == nil {
 		performKubernetesDefaulting(c.shoot, c.oldShoot)
