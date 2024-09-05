@@ -157,9 +157,9 @@ spec:
                           It defaults to 'OnDemand'.
                         type: string
                       runtimeClusterValues:
-                        description: RuntimeClusterValues are the deployment values
-                          for the extension deployment running in the runtime garden
-                          cluster.
+                        description: |-
+                          RuntimeClusterValues are the deployment values for the extension deployment running in the runtime garden cluster.
+                          If no values are specified, a runtime deployment is considered deactivated.
                         x-kubernetes-preserve-unknown-fields: true
                       seedSelector:
                         description: |-

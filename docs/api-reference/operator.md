@@ -1259,7 +1259,8 @@ k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON
 </td>
 <td>
 <em>(Optional)</em>
-<p>RuntimeClusterValues are the deployment values for the extension deployment running in the runtime garden cluster.</p>
+<p>RuntimeClusterValues are the deployment values for the extension deployment running in the runtime garden cluster.
+If no values are specified, a runtime deployment is considered deactivated.</p>
 </td>
 </tr>
 <tr>

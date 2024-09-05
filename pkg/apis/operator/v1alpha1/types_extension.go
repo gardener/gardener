@@ -73,6 +73,7 @@ type ExtensionDeploymentSpec struct {
 	// +optional
 	Values *apiextensionsv1.JSON `json:"values,omitempty"`
 	// RuntimeClusterValues are the deployment values for the extension deployment running in the runtime garden cluster.
+	// If no values are specified, a runtime deployment is considered deactivated.
 	// +optional
 	RuntimeClusterValues *apiextensionsv1.JSON `json:"runtimeClusterValues,omitempty"`
 	// Policy controls how the controller is deployed. It defaults to 'OnDemand'.

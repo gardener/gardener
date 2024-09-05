@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	"github.com/gardener/gardener/pkg/operator/controller/extension/admission"
 	"github.com/gardener/gardener/pkg/operator/controller/extension/controllerregistration"
+	"github.com/gardener/gardener/pkg/operator/controller/extension/runtime"
 	"github.com/gardener/gardener/pkg/utils/oci"
 )
 
@@ -62,6 +63,7 @@ type Reconciler struct {
 
 	admission              admission.Interface
 	controllerRegistration controllerregistration.Interface
+	runtime                runtime.Interface
 }
 
 // Reconcile performs the main reconciliation logic.

@@ -27,6 +27,7 @@ import (
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/operator/controller/extension/admission"
 	"github.com/gardener/gardener/pkg/operator/controller/extension/controllerregistration"
+	"github.com/gardener/gardener/pkg/operator/controller/extension/runtime"
 	operatorpredicate "github.com/gardener/gardener/pkg/operator/predicate"
 	"github.com/gardener/gardener/pkg/utils/oci"
 )
@@ -72,6 +73,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 
 	r.admission = admission.New(r.RuntimeClientSet, r.Recorder, r.GardenNamespace, r.HelmRegistry)
 	r.controllerRegistration = controllerregistration.New(r.Recorder)
+	r.runtime = runtime.New(r.RuntimeClientSet, r.Recorder, r.GardenNamespace, r.HelmRegistry)
 
 	return builder.
 		ControllerManagedBy(mgr).
