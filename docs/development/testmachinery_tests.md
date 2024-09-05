@@ -249,7 +249,7 @@ go test  -timeout=0 ./test/testmachinery/system/shoot_creation \
   --v -ginkgo.v -ginkgo.show-node-events \
   -kubecfg=$HOME/.kube/config \
   -shoot-name=$SHOOT_NAME \
-  -cloud-profile=$CLOUDPROFILE \
+  -cloud-profile-name=$CLOUDPROFILE \
   -seed=$SEED \
   -secret-binding=$SECRET_BINDING \
   -provider-type=$PROVIDER_TYPE \
