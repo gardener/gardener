@@ -19,6 +19,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -461,7 +462,7 @@ var _ = Describe("Project controller tests", func() {
 			}
 
 			var err error
-			testUserClient, err = client.New(testUserConfig, client.Options{})
+			testUserClient, err = client.New(testUserConfig, client.Options{Scheme: kubernetes.GardenScheme})
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -535,6 +536,251 @@ var _ = Describe("Project controller tests", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(roleBinding), roleBinding)).To(Succeed(), "should recreate RoleBinding %s", roleBinding.GetName())
 			}).Should(Succeed())
+		})
+
+		Describe("NamespacedCloudProfile access", func() {
+			var (
+				parentCloudProfile     *gardencorev1beta1.CloudProfile
+				namespacedCloudProfile *gardencorev1beta1.NamespacedCloudProfile
+				nscpflKey              client.ObjectKey
+
+				futureExpirationDate *metav1.Time
+			)
+
+			BeforeEach(func() {
+				parentCloudProfile = &gardencorev1beta1.CloudProfile{
+					ObjectMeta: metav1.ObjectMeta{
+						GenerateName: testID + "-cpfl-",
+					},
+					Spec: gardencorev1beta1.CloudProfileSpec{
+						Kubernetes: gardencorev1beta1.KubernetesSettings{
+							Versions: []gardencorev1beta1.ExpirableVersion{{Version: "1.26.0"}, {Version: "1.25.1"}},
+						},
+						MachineImages: []gardencorev1beta1.MachineImage{
+							{
+								Name: "some-OS",
+								Versions: []gardencorev1beta1.MachineImageVersion{
+									{
+										ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.1.1"},
+										CRI: []gardencorev1beta1.CRI{
+											{
+												Name: gardencorev1beta1.CRINameContainerD,
+											},
+										},
+									},
+								},
+							},
+						},
+						MachineTypes: []gardencorev1beta1.MachineType{{Name: "large"}},
+						Regions:      []gardencorev1beta1.Region{{Name: "some-region"}},
+						Type:         "provider-type",
+					},
+				}
+
+				namespacedCloudProfile = &gardencorev1beta1.NamespacedCloudProfile{
+					ObjectMeta: metav1.ObjectMeta{
+						GenerateName: testID + "-nscpfl-",
+						Namespace:    projectNamespaceKey.Name,
+					},
+					Spec: gardencorev1beta1.NamespacedCloudProfileSpec{
+						Parent: gardencorev1beta1.CloudProfileReference{
+							Kind: "CloudProfile",
+						},
+					},
+				}
+
+				futureExpirationDate = &metav1.Time{Time: time.Now().Add(48 * time.Hour)}
+			})
+
+			JustBeforeEach(func() {
+				By("Create parent CloudProfile")
+				Expect(testClient.Create(ctx, parentCloudProfile)).To(Succeed())
+				DeferCleanup(func() {
+					Expect(testClient.Delete(ctx, parentCloudProfile)).To(Succeed())
+				})
+
+				By("Create NamespacedCloudProfile")
+				namespacedCloudProfile.Spec.Parent.Name = parentCloudProfile.Name
+				Expect(testClient.Create(ctx, namespacedCloudProfile)).To(Succeed())
+				By("Wait until NamespacedCloudProfile is reconciled")
+				Eventually(func(g Gomega) {
+					Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
+					g.Expect(namespacedCloudProfile.Status.ObservedGeneration).To(Equal(namespacedCloudProfile.Generation))
+				}).Should(Succeed())
+				DeferCleanup(func() {
+					Expect(testClient.Delete(ctx, namespacedCloudProfile)).To(Succeed())
+				})
+				nscpflKey = client.ObjectKeyFromObject(namespacedCloudProfile)
+			})
+
+			It("should not allow users not associated to a project to read its NamespacedCloudProfiles", func() {
+				By("Ensure non-members don't have access to NamespacedCloudProfiles")
+				Consistently(func(g Gomega) {
+					g.Expect(testUserClient.Get(ctx, nscpflKey, &gardencorev1beta1.NamespacedCloudProfile{})).To(BeForbiddenError())
+				}).Should(Succeed())
+			})
+
+			It("should allow project viewers to read a project's NamespacedCloudProfile", func() {
+				By("Grant project-viewer respective permissions for NamespacedCloudProfiles")
+				clusterRoleGardenerMember := &rbacv1.ClusterRole{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   "gardener.cloud:system:project-viewer",
+						Labels: map[string]string{"gardener.cloud/role": "project-viewer"},
+					},
+					Rules: []rbacv1.PolicyRule{
+						{
+							APIGroups: []string{"core.gardener.cloud"},
+							Resources: []string{"namespacedcloudprofiles"},
+							Verbs:     []string{"get", "list", "watch"},
+						},
+					},
+				}
+				Expect(testClient.Create(ctx, clusterRoleGardenerMember)).To(Succeed())
+				DeferCleanup(func() {
+					Expect(testClient.Delete(ctx, clusterRoleGardenerMember)).To(Succeed())
+				})
+
+				By("Add viewer to project")
+				patch := client.MergeFrom(project.DeepCopy())
+				project.Spec.Members = append(project.Spec.Members, gardencorev1beta1.ProjectMember{
+					Subject: rbacv1.Subject{
+						APIGroup: rbacv1.GroupName,
+						Kind:     rbacv1.UserKind,
+						Name:     testUserName,
+					},
+					Role: "viewer",
+				})
+				Expect(testClient.Patch(ctx, project, patch)).To(Succeed())
+
+				By("Ensure new admin has access to NamespacedCloudProfile")
+				Eventually(func(g Gomega) {
+					g.Expect(testUserClient.Get(ctx, nscpflKey, &gardencorev1beta1.NamespacedCloudProfile{})).To(Succeed())
+				}).Should(Succeed())
+
+				By("Ensure viewer cannot update NamespacedCloudProfile")
+				namespacedCloudProfile.Spec.MachineTypes = []gardencorev1beta1.MachineType{
+					{Name: "test-machine-type", CPU: resource.MustParse("2"), Memory: resource.MustParse("1G")},
+				}
+				Expect(testUserClient.Update(ctx, namespacedCloudProfile)).To(BeForbiddenError())
+			})
+
+			It("should allow project admins to read and modify a project's NamespacedCloudProfile for non-special fields", func() {
+				By("Grant project-member respective permissions for NamespacedCloudProfiles")
+				clusterRoleGardenerMember := &rbacv1.ClusterRole{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   "gardener.cloud:system:project-member",
+						Labels: map[string]string{"gardener.cloud/role": "project-member"},
+					},
+					Rules: []rbacv1.PolicyRule{
+						{
+							APIGroups: []string{"core.gardener.cloud"},
+							Resources: []string{"namespacedcloudprofiles"},
+							Verbs:     []string{"get", "list", "watch", "patch", "update"},
+						},
+					},
+				}
+				Expect(testClient.Create(ctx, clusterRoleGardenerMember)).To(Succeed())
+				DeferCleanup(func() {
+					Expect(testClient.Delete(ctx, clusterRoleGardenerMember)).To(Succeed())
+				})
+
+				By("Add admin to project")
+				patch := client.MergeFrom(project.DeepCopy())
+				project.Spec.Members = append(project.Spec.Members, gardencorev1beta1.ProjectMember{
+					Subject: rbacv1.Subject{
+						APIGroup: rbacv1.GroupName,
+						Kind:     rbacv1.UserKind,
+						Name:     testUserName,
+					},
+					Role: "admin",
+				})
+				Expect(testClient.Patch(ctx, project, patch)).To(Succeed())
+
+				By("Ensure new admin has access to NamespacedCloudProfile")
+				Eventually(func(g Gomega) {
+					g.Expect(testUserClient.Get(ctx, nscpflKey, &gardencorev1beta1.NamespacedCloudProfile{})).To(Succeed())
+				}).Should(Succeed())
+
+				By("Ensure admin without proper role can update NamespacedCloudProfile.Spec.{MachineTypes,VolumeTypes}")
+				namespacedCloudProfile.Spec.MachineTypes = []gardencorev1beta1.MachineType{
+					{Name: "test-machine-type", CPU: resource.MustParse("2"), Memory: resource.MustParse("1G")},
+				}
+				namespacedCloudProfile.Spec.VolumeTypes = []gardencorev1beta1.VolumeType{
+					{Name: "test-volume-type", Class: "standard"},
+				}
+				Expect(testUserClient.Update(ctx, namespacedCloudProfile)).To(Succeed())
+				Eventually(func(g Gomega) {
+					Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
+					g.Expect(namespacedCloudProfile.Status.ObservedGeneration).To(Equal(namespacedCloudProfile.Generation))
+				}).Should(Succeed())
+
+				By("Ensure admin without proper role cannot update NamespacedCloudProfile.Spec.{Kubernetes,MachineImages}")
+				updatedNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
+				updatedNamespacedCloudProfile.Spec.Kubernetes = &gardencorev1beta1.KubernetesSettings{
+					Versions: []gardencorev1beta1.ExpirableVersion{{Version: "1.25.1", ExpirationDate: futureExpirationDate}},
+				}
+				updatedNamespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
+					{Name: "some-OS", Versions: []gardencorev1beta1.MachineImageVersion{
+						{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.1.1", ExpirationDate: futureExpirationDate}},
+					}},
+				}
+				Expect(testUserClient.Update(ctx, updatedNamespacedCloudProfile)).To(BeForbiddenError())
+			})
+
+			It("should allow gardener operators to modify a project's NamespacedCloudProfiles including special fields", func() {
+				By("Grant user operator-like permissions to modify special fields in NamespacedCloudProfile")
+				clusterRoleGardenerMember := &rbacv1.ClusterRole{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   "gardener.cloud:system:project-member",
+						Labels: map[string]string{"gardener.cloud/role": "project-member"},
+					},
+					Rules: []rbacv1.PolicyRule{
+						{
+							APIGroups: []string{"core.gardener.cloud"},
+							Resources: []string{"namespacedcloudprofiles"},
+							Verbs:     []string{"get", "list", "watch", "patch", "update"},
+						},
+						{
+							APIGroups: []string{"core.gardener.cloud"},
+							Resources: []string{"namespacedcloudprofiles"},
+							Verbs:     []string{"modify-spec-kubernetes", "modify-spec-machineimages"},
+						},
+					},
+				}
+				Expect(testClient.Create(ctx, clusterRoleGardenerMember)).To(Succeed())
+				DeferCleanup(func() {
+					Expect(testClient.Delete(ctx, clusterRoleGardenerMember)).To(Succeed())
+				})
+
+				By("Add admin to project")
+				patch := client.MergeFrom(project.DeepCopy())
+				project.Spec.Members = append(project.Spec.Members, gardencorev1beta1.ProjectMember{
+					Subject: rbacv1.Subject{
+						APIGroup: rbacv1.GroupName,
+						Kind:     rbacv1.UserKind,
+						Name:     testUserName,
+					},
+					Role: "admin",
+				})
+				Expect(testClient.Patch(ctx, project, patch)).To(Succeed())
+
+				By("Ensure admin with proper role can update NamespacedCloudProfile.Spec.{Kubernetes,MachineImages}")
+				namespacedCloudProfile.Spec.Kubernetes = &gardencorev1beta1.KubernetesSettings{
+					Versions: []gardencorev1beta1.ExpirableVersion{{Version: "1.25.1", ExpirationDate: futureExpirationDate}},
+				}
+				namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
+					{Name: "some-OS", Versions: []gardencorev1beta1.MachineImageVersion{
+						{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.1.1", ExpirationDate: futureExpirationDate}},
+					}},
+				}
+				Eventually(func(g Gomega) {
+					g.Expect(testUserClient.Update(ctx, namespacedCloudProfile)).To(Succeed())
+				}).Should(Succeed())
+				Eventually(func(g Gomega) {
+					Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
+					g.Expect(namespacedCloudProfile.Status.ObservedGeneration).To(Equal(namespacedCloudProfile.Generation))
+				}).Should(Succeed())
+			})
 		})
 	})
 })
