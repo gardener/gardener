@@ -18,9 +18,7 @@ echo $LOGCHECK_DIR
 LOGR_DIR=$(go list -f '{{ .Dir }}' github.com/go-logr/logr)
 CONTROLLER_RUNTIME_LOGR_DIR=$(go list -f '{{ .Dir }}' sigs.k8s.io/controller-runtime/pkg/log)
 
-if [ ! -h  "./$LOGCHECK_DIR/pkg/logcheck/testdata/src/github.com/go-logr/logr" ]; then
-  ln -s "$LOGR_DIR" "./$LOGCHECK_DIR/pkg/logcheck/testdata/src/github.com/go-logr/logr"
-fi
-if [ ! -h "./$LOGCHECK_DIR/pkg/logcheck/testdata/src/sigs.k8s.io/controller-runtime/pkg/log" ]; then
-  ln -s "$CONTROLLER_RUNTIME_LOGR_DIR" "./$LOGCHECK_DIR/pkg/logcheck/testdata/src/sigs.k8s.io/controller-runtime/pkg/log"
-fi
+rm -f "./$LOGCHECK_DIR/pkg/logcheck/testdata/src/github.com/go-logr/logr" "./$LOGCHECK_DIR/pkg/logcheck/testdata/src/sigs.k8s.io/controller-runtime/pkg/log"
+
+ln -s "$LOGR_DIR" "./$LOGCHECK_DIR/pkg/logcheck/testdata/src/github.com/go-logr/logr"
+ln -s "$CONTROLLER_RUNTIME_LOGR_DIR" "./$LOGCHECK_DIR/pkg/logcheck/testdata/src/sigs.k8s.io/controller-runtime/pkg/log"
