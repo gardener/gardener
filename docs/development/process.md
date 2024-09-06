@@ -30,9 +30,9 @@ v1.104  | Week 37-38  | September 9, 2024      | September 22, 2024 | [@ialidzhi
 v1.105  | Week 39-40  | September 23, 2024     | October 6, 2024    | [@acumino](https://github.com/acumino)             |
 v1.106  | Week 41-42  | October 7, 2024        | October 20, 2024   | [@timuthy](https://github.com/timuthy)             |
 v1.107  | Week 43-44  | October 21, 2024       | November 3, 2024   | [@LucaBernstein](https://github.com/LucaBernstein) |
-v1.108  | Week 45-46  | November 4, 2024       | November 17, 2024  | [@ScheererJ](https://github.com/ScheererJ)         |
+v1.108  | Week 45-46  | November 4, 2024       | November 17, 2024  | [@shafeeqes](https://github.com/shafeeqes)         |
 v1.109  | Week 47-48  | November 18, 2024      | December 1, 2024   | [@ary1992](https://github.com/ary1992)             |
-v1.110  | Week 48-49  | December 2, 2024       | December 15, 2024  | [@shafeeqes](https://github.com/shafeeqes)         |
+v1.110  | Week 48-49  | December 2, 2024       | December 15, 2024  | [@ScheererJ](https://github.com/ScheererJ)         |
 v1.111  | Week 50-51  | December 30, 2024      | January 26, 2025   | [@oliver-goetz](https://github.com/oliver-goetz)   |
 v1.112  | Week 01-04  | January 27, 2025       | February 9, 2025   | [@tobschli](https://github.com/tobschli)           |
 v1.113  | Week 05-06  | February 10, 2025      | February 23, 2025  | [@plkokanov](https://github.com/plkokanov)         |
