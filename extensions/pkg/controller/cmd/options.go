@@ -58,6 +58,9 @@ const (
 	// a rest.Config of a manager.Manager.
 	MasterURLFlag = "master"
 
+	// ControllersFlag is the name of the command line flag to enable individual controllers.
+	ControllersFlag = "controllers"
+
 	// DisableFlag is the name of the command line flag to disable individual controllers.
 	DisableFlag = "disable-controllers"
 
@@ -385,6 +388,7 @@ func (r *RESTOptions) AddFlags(fs *pflag.FlagSet) {
 
 // SwitchOptions are options to build an AddToManager function that filters the disabled controllers.
 type SwitchOptions struct {
+	Enabled  []string
 	Disabled []string
 
 	nameToAddToManager  map[string]func(context.Context, manager.Manager) error
@@ -425,12 +429,24 @@ func (d *SwitchOptions) AddFlags(fs *pflag.FlagSet) {
 	for name := range d.nameToAddToManager {
 		controllerNames = append(controllerNames, name)
 	}
+	fs.StringSliceVar(&d.Enabled, ControllersFlag, controllerNames, fmt.Sprintf("List of controllers to enable %v", controllerNames))
 	fs.StringSliceVar(&d.Disabled, DisableFlag, d.Disabled, fmt.Sprintf("List of controllers to disable %v", controllerNames))
 }
 
 // Complete implements Option.
 func (d *SwitchOptions) Complete() error {
-	disabled := sets.New[string]()
+	var (
+		enabled  = sets.New[string]()
+		disabled = sets.New[string]()
+	)
+
+	for _, enabledName := range d.Enabled {
+		if _, ok := d.nameToAddToManager[enabledName]; !ok {
+			return fmt.Errorf("cannot enable unknown controller %q", enabledName)
+		}
+		enabled.Insert(enabledName)
+	}
+
 	for _, disabledName := range d.Disabled {
 		if _, ok := d.nameToAddToManager[disabledName]; !ok {
 			return fmt.Errorf("cannot disable unknown controller %q", disabledName)
@@ -439,7 +455,7 @@ func (d *SwitchOptions) Complete() error {
 	}
 
 	for name, addToManager := range d.nameToAddToManager {
-		if !disabled.Has(name) {
+		if enabled.Has(name) && !disabled.Has(name) {
 			d.addToManagerBuilder.Register(addToManager)
 		}
 	}

@@ -660,21 +660,22 @@ var _ = Describe("Options", func() {
 		const commandName = "test"
 
 		Describe("#AddFlags", func() {
-			It("should correctly parse the flags", func() {
-				var (
-					name1    = "foo"
-					name2    = "bar"
-					switches = NewSwitchOptions(
-						Switch(name1, nil),
-						Switch(name2, nil),
-					)
+			var (
+				name1    = "foo"
+				name2    = "bar"
+				switches = NewSwitchOptions(
+					Switch(name1, nil),
+					Switch(name2, nil),
 				)
+			)
 
+			It("should correctly parse the flags", func() {
 				fs := pflag.NewFlagSet(commandName, pflag.ContinueOnError)
 				switches.AddFlags(fs)
 
 				err := fs.Parse(test.NewCommandBuilder(commandName).
 					Flags(
+						test.StringSliceFlag(ControllersFlag, name1),
 						test.StringSliceFlag(DisableFlag, name1, name2),
 					).
 					Command().
@@ -683,12 +684,11 @@ var _ = Describe("Options", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(switches.Complete()).To(Succeed())
 
+				Expect(switches.Enabled).To(Equal([]string{name1}))
 				Expect(switches.Disabled).To(Equal([]string{name1, name2}))
 			})
 
-			It("should error on an unknown controller", func() {
-				switches := NewSwitchOptions()
-
+			It("should error on an unknown controller to disable", func() {
 				fs := pflag.NewFlagSet(commandName, pflag.ContinueOnError)
 				switches.AddFlags(fs)
 
@@ -700,7 +700,22 @@ var _ = Describe("Options", func() {
 					Slice())
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(switches.Complete()).To(HaveOccurred())
+				Expect(switches.Complete()).To(MatchError(`cannot disable unknown controller "unknown"`))
+			})
+
+			It("should error on an unknown controller to enable", func() {
+				fs := pflag.NewFlagSet(commandName, pflag.ContinueOnError)
+				switches.AddFlags(fs)
+
+				err := fs.Parse(test.NewCommandBuilder(commandName).
+					Flags(
+						test.StringSliceFlag(ControllersFlag, "unknown"),
+					).
+					Command().
+					Slice())
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(switches.Complete()).To(MatchError(`cannot enable unknown controller "unknown"`))
 			})
 		})
 
@@ -721,6 +736,7 @@ var _ = Describe("Options", func() {
 
 				f1.EXPECT().Do(nil, nil)
 
+				switches.Enabled = []string{name1, name2}
 				switches.Disabled = []string{name2}
 
 				Expect(switches.Complete()).To(Succeed())
