@@ -138,12 +138,18 @@ func (g *gardenerDashboard) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	var sessionSecretPreviousName string
+	sessionSecretPrevious, previousExists := g.getPreviousSessionSecret()
+	if previousExists {
+		sessionSecretPreviousName = sessionSecretPrevious.Name
+	}
+
 	configMap, err := g.configMap(ctx)
 	if err != nil {
 		return err
 	}
 
-	deployment, err := g.deployment(ctx, secretGenericTokenKubeconfig.Name, virtualGardenAccessSecret.Secret.Name, sessionSecret.Name, configMap.Name)
+	deployment, err := g.deployment(ctx, secretGenericTokenKubeconfig.Name, virtualGardenAccessSecret.Secret.Name, sessionSecret.Name, sessionSecretPreviousName, configMap.Name)
 	if err != nil {
 		return err
 	}

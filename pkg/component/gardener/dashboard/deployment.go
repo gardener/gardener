@@ -28,7 +28,8 @@ import (
 )
 
 const (
-	dataKeySessionSecret = "sessionSecret"
+	dataKeySessionSecret         = "sessionSecret"
+	dataKeySessionSecretPrevious = "sessionSecretPrevious"
 
 	portNameServer  = "http"
 	portNameMetrics = "metrics"
@@ -41,16 +42,21 @@ const (
 	volumeMountPathConfig      = "/etc/gardener-dashboard/config"
 	volumeMountPathLoginConfig = "/app/public/" + dataKeyLoginConfig
 	volumeMountPathAssets      = "/app/public/static/assets"
-	volumeMountPathSession     = "/etc/gardener-dashboard/secrets/session"
-	volumeMountPathOIDC        = "/etc/gardener-dashboard/secrets/oidc"
-	volumeMountPathGithub      = "/etc/gardener-dashboard/secrets/github"
 
-	volumeNameConfig       = "gardener-dashboard-config"
-	volumeNameLoginConfig  = "gardener-dashboard-login-config"
-	volumeNameConfigAssets = "gardener-dashboard-assets"
-	volumeNameSession      = "gardener-dashboard-sessionsecret"
-	volumeNameOIDC         = "gardener-dashboard-oidc"
-	volumeNameGithub       = "gardener-dashboard-github"
+	volumeSubPathSession           = "sessionSecret"
+	volumeMountPathSession         = "/etc/gardener-dashboard/secrets/session/sessionSecret"
+	volumeSubPathSessionPrevious   = "sessionSecretPrevious"
+	volumeMountPathSessionPrevious = "/etc/gardener-dashboard/secrets/session/sessionSecretPrevious"
+	volumeMountPathOIDC            = "/etc/gardener-dashboard/secrets/oidc"
+	volumeMountPathGithub          = "/etc/gardener-dashboard/secrets/github"
+
+	volumeNameConfig          = "gardener-dashboard-config"
+	volumeNameLoginConfig     = "gardener-dashboard-login-config"
+	volumeNameConfigAssets    = "gardener-dashboard-assets"
+	volumeNameSession         = "gardener-dashboard-sessionsecret"
+	volumeNameSessionPrevious = "gardener-dashboard-sessionsecret-previous"
+	volumeNameOIDC            = "gardener-dashboard-oidc"
+	volumeNameGithub          = "gardener-dashboard-github"
 )
 
 func (g *gardenerDashboard) deployment(
@@ -58,6 +64,7 @@ func (g *gardenerDashboard) deployment(
 	secretNameGenericTokenKubeconfig string,
 	secretNameVirtualGardenAccess string,
 	secretNameSession string,
+	secretNameSessionPrevious string,
 	configMapName string,
 ) (
 	*appsv1.Deployment,
@@ -184,6 +191,7 @@ func (g *gardenerDashboard) deployment(
 								{
 									Name:      volumeNameSession,
 									MountPath: volumeMountPathSession,
+									SubPath:   volumeSubPathSession,
 								},
 								{
 									Name:      volumeNameConfig,
@@ -239,6 +247,27 @@ func (g *gardenerDashboard) deployment(
 				},
 			},
 		},
+	}
+
+	if secretNameSessionPrevious != "" {
+		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+			Name: volumeNameSessionPrevious,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName:  secretNameSessionPrevious,
+					DefaultMode: ptr.To[int32](0640),
+					Items: []corev1.KeyToPath{{
+						Key:  secretsutils.DataKeyPassword,
+						Path: dataKeySessionSecretPrevious,
+					}},
+				},
+			},
+		})
+		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+			Name:      volumeNameSessionPrevious,
+			MountPath: volumeMountPathSessionPrevious,
+			SubPath:   volumeSubPathSessionPrevious,
+		})
 	}
 
 	if g.values.OIDC != nil {

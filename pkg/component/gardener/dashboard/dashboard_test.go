@@ -83,6 +83,7 @@ var _ = Describe("GardenerDashboard", func() {
 
 		virtualGardenAccessSecret *corev1.Secret
 		sessionSecret             *corev1.Secret
+		sessionSecretPrevious     *corev1.Secret
 		configMap                 *corev1.ConfigMap
 		deployment                *appsv1.Deployment
 		service                   *corev1.Service
@@ -108,6 +109,7 @@ var _ = Describe("GardenerDashboard", func() {
 		gitHub = nil
 		frontendConfigMapName = nil
 		assetsConfigMapName = nil
+		sessionSecretPrevious = nil
 
 		ctx = context.Background()
 
@@ -171,7 +173,7 @@ var _ = Describe("GardenerDashboard", func() {
 				Labels: map[string]string{
 					"manager-identity":              "fake",
 					"name":                          "gardener-dashboard-session-secret",
-					"rotation-strategy":             "inplace",
+					"rotation-strategy":             "keepold",
 					"checksum-of-config":            "5743303071195020433",
 					"last-rotation-initiation-time": "",
 					"managed-by":                    "secrets-manager",
@@ -440,7 +442,8 @@ frontend:
 									VolumeMounts: []corev1.VolumeMount{
 										{
 											Name:      "gardener-dashboard-sessionsecret",
-											MountPath: "/etc/gardener-dashboard/secrets/session",
+											MountPath: "/etc/gardener-dashboard/secrets/session/sessionSecret",
+											SubPath:   "sessionSecret",
 										},
 										{
 											Name:      "gardener-dashboard-config",
@@ -496,6 +499,27 @@ frontend:
 						},
 					},
 				},
+			}
+
+			if sessionSecretPrevious != nil {
+				obj.Spec.Template.Spec.Volumes = append(obj.Spec.Template.Spec.Volumes, corev1.Volume{
+					Name: "gardener-dashboard-sessionsecret-previous",
+					VolumeSource: corev1.VolumeSource{
+						Secret: &corev1.SecretVolumeSource{
+							SecretName:  sessionSecretPrevious.Name,
+							DefaultMode: ptr.To[int32](0640),
+							Items: []corev1.KeyToPath{{
+								Key:  "password",
+								Path: "sessionSecretPrevious",
+							}},
+						},
+					},
+				})
+				obj.Spec.Template.Spec.Containers[0].VolumeMounts = append(obj.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+					Name:      "gardener-dashboard-sessionsecret-previous",
+					MountPath: "/etc/gardener-dashboard/secrets/session/sessionSecretPrevious",
+					SubPath:   "sessionSecretPrevious",
+				})
 			}
 
 			if oidc != nil {
@@ -986,6 +1010,38 @@ frontend:
 			It("should successfully deploy all resources", func() {
 				Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
 				Expect(managedResourceVirtual).To(consistOf(expectedVirtualObjects...))
+			})
+
+			When("previous session secret found", func() {
+				BeforeEach(func() {
+					sessionSecretPrevious = &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "gardener-dashboard-session-secret-old",
+							Namespace: namespace,
+							Labels: map[string]string{
+								"manager-identity":              "fake",
+								"name":                          "gardener-dashboard-session-secret",
+								"rotation-strategy":             "keepold",
+								"checksum-of-config":            "5743303071195020433",
+								"last-rotation-initiation-time": "",
+								"managed-by":                    "secrets-manager",
+							},
+						},
+						Type:      corev1.SecretTypeOpaque,
+						Immutable: ptr.To(true),
+						Data: map[string][]byte{
+							"password": []byte("________________________________"),
+							"username": []byte("admin"),
+							"auth":     []byte("admin:$2y$05$VV/caJeJ0XEza7sc5hHib.uppkej805AYCGAKbSCbZwPz6INJy07G"),
+						},
+					}
+					Expect(fakeClient.Create(ctx, sessionSecretPrevious)).To(Succeed())
+				})
+
+				It("should successfully deploy all resources", func() {
+					Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
+					Expect(managedResourceVirtual).To(consistOf(expectedVirtualObjects...))
+				})
 			})
 
 			When("token login is disabled", func() {
