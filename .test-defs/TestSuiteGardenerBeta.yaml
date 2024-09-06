@@ -20,4 +20,4 @@ spec:
       -ginkgo.focus="\[BETA\]"
       -ginkgo.skip="\[SERIAL\]|\[DISRUPTIVE\]"
 
-  image: golang:1.23.0
+  image: golang:1.23.1
