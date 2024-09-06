@@ -131,6 +131,8 @@ type Values struct {
 	HighAvailabilityNumberOfSeedServers int
 	// HighAvailabilityNumberOfShootClients is the number of VPN shoot clients used for HA
 	HighAvailabilityNumberOfShootClients int
+	// VPAUpdateDisabled indicates whether the vertical pod autoscaler update should be disabled.
+	VPAUpdateDisabled bool
 }
 
 // New creates a new instance of DeployWaiter for the vpn-seed-server.
@@ -874,6 +876,10 @@ func (v *vpnSeedServer) deployVPA(ctx context.Context) error {
 	targetRefKind := "Deployment"
 	if v.values.HighAvailabilityEnabled {
 		targetRefKind = "StatefulSet"
+	}
+
+	if v.values.VPAUpdateDisabled {
+		vpaUpdateMode = vpaautoscalingv1.UpdateModeOff
 	}
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, vpa, func() error {
