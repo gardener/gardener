@@ -23,6 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
 	gardenprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -159,10 +160,15 @@ func (r *Reconciler) delete(
 			destroyKubeControllerManager,
 		)
 
+		ensureNoVirtualGardenManagedResourcesExistAnymore = g.Add(flow.Task{
+			Name:         "Ensuring no virtual garden ManagedResources exist anymore",
+			Fn:           r.checkIfVirtualGardenManagedResourcesExist(),
+			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenManagedResourcesDestroyed),
+		})
 		destroyVirtualGardenGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Destroying gardener-resource-manager for virtual garden",
 			Fn:           component.OpDestroyAndWait(c.virtualGardenGardenerResourceManager).Destroy,
-			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenManagedResourcesDestroyed),
+			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenManagedResourcesDestroyed, ensureNoVirtualGardenManagedResourcesExistAnymore),
 		})
 		destroyKubeAPIServerSNI = g.Add(flow.Task{
 			Name:         "Destroying Kubernetes API server service SNI",
@@ -349,6 +355,29 @@ func (r *Reconciler) delete(
 	}
 
 	return reconcile.Result{}, nil
+}
+
+func (r *Reconciler) checkIfVirtualGardenManagedResourcesExist() func(context.Context) error {
+	return func(ctx context.Context) error {
+		managedResourcesStillExist, err := managedresources.CheckIfManagedResourcesExist(
+			ctx,
+			r.RuntimeClientSet.Client(),
+			nil,
+			resourcemanager.ManagedResourceName,
+		)
+		if err != nil {
+			return err
+		}
+
+		if !managedResourcesStillExist {
+			return nil
+		}
+
+		return &reconcilerutils.RequeueAfterError{
+			RequeueAfter: 5 * time.Second,
+			Cause:        errors.New("at least one ManagedResource still exists"),
+		}
+	}
 }
 
 func (r *Reconciler) checkIfManagedResourcesExist() func(context.Context) error {

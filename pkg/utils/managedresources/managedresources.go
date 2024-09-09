@@ -15,6 +15,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -417,14 +418,16 @@ func checkConfigurationError(err error) []gardencorev1beta1.ErrorCode {
 }
 
 // CheckIfManagedResourcesExist checks if some ManagedResources of the given class still exist. If yes it returns true.
-func CheckIfManagedResourcesExist(ctx context.Context, c client.Client, class *string) (bool, error) {
+func CheckIfManagedResourcesExist(ctx context.Context, c client.Client, class *string, excludeNames ...string) (bool, error) {
 	managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
 	if err := c.List(ctx, managedResourceList); err != nil {
 		return false, err
 	}
 
+	excludes := sets.New(excludeNames...)
+
 	for _, managedResource := range managedResourceList.Items {
-		if ptr.Equal(managedResource.Spec.Class, class) {
+		if ptr.Equal(managedResource.Spec.Class, class) && !excludes.Has(managedResource.Name) {
 			return true, nil
 		}
 	}
