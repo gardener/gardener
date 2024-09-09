@@ -37,6 +37,7 @@ func RegisterConversions(s *runtime.Scheme) error {
 
 func autoConvert_v1alpha1_Configuration_To_shootresourcereservation_Configuration(in *Configuration, out *shootresourcereservation.Configuration, s conversion.Scope) error {
 	out.UseGKEFormula = in.UseGKEFormula
+	out.LabelSelector = in.LabelSelector
 	return nil
 }
 
@@ -47,6 +48,7 @@ func Convert_v1alpha1_Configuration_To_shootresourcereservation_Configuration(in
 
 func autoConvert_shootresourcereservation_Configuration_To_v1alpha1_Configuration(in *shootresourcereservation.Configuration, out *Configuration, s conversion.Scope) error {
 	out.UseGKEFormula = in.UseGKEFormula
+	out.LabelSelector = in.LabelSelector
 	return nil
 }
 
