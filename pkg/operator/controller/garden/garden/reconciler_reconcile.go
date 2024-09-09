@@ -173,6 +173,10 @@ func (r *Reconciler) reconcile(
 			Name: "Deploying custom resource definitions for prometheus-operator",
 			Fn:   c.prometheusCRD.Deploy,
 		})
+		deployExtensionCRD = g.Add(flow.Task{
+			Name: "Deploying custom resource definitions for extensions",
+			Fn:   c.extensionCRD.Deploy,
+		})
 
 		_ = g.Add(flow.Task{
 			Name: "Deploying VPA for gardener-operator",
@@ -222,6 +226,7 @@ func (r *Reconciler) reconcile(
 			deployRuntimeSystemResources,
 			deployFluentCRD,
 			deployPrometheusCRD,
+			deployExtensionCRD,
 			deployVPA,
 			deployHVPA,
 			deployEtcdDruid,

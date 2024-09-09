@@ -43,6 +43,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
 	"github.com/gardener/gardener/pkg/component/certmanagement"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
+	extensioncrds "github.com/gardener/gardener/pkg/component/extensions/crds"
 	runtimegardensystem "github.com/gardener/gardener/pkg/component/garden/system/runtime"
 	virtualgardensystem "github.com/gardener/gardener/pkg/component/garden/system/virtual"
 	gardeneraccess "github.com/gardener/gardener/pkg/component/gardener/access"
@@ -91,6 +92,7 @@ type components struct {
 	istioCRD      component.Deployer
 	fluentCRD     component.Deployer
 	prometheusCRD component.Deployer
+	extensionCRD  component.Deployer
 
 	gardenerResourceManager component.DeployWaiter
 	runtimeSystem           component.DeployWaiter
@@ -167,6 +169,7 @@ func (r *Reconciler) instantiateComponents(
 	c.fluentCRD = fluentoperator.NewCRDs(applier)
 	c.prometheusCRD = prometheusoperator.NewCRDs(applier)
 	c.certManagementCRD = certmanagement.NewCRDs(applier)
+	c.extensionCRD = extensioncrds.NewCRD(applier, false, true)
 
 	// garden system components
 	c.gardenerResourceManager, err = r.newGardenerResourceManager(garden, secretsManager)

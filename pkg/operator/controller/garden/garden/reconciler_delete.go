@@ -289,6 +289,11 @@ func (r *Reconciler) delete(
 			Dependencies: flow.NewTaskIDs(ensureNoManagedResourcesExistAnymore),
 		})
 		_ = g.Add(flow.Task{
+			Name:         "Destroying custom resource definition for extensions",
+			Fn:           c.extensionCRD.Destroy,
+			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
+		})
+		_ = g.Add(flow.Task{
 			Name:         "Destroying custom resource definition for prometheus-operator",
 			Fn:           c.prometheusCRD.Destroy,
 			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
