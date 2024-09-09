@@ -100,6 +100,17 @@ var _ = Describe("CloudProfile", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
+		It("returns the CloudProfile from the cloudProfile reference with empty kind field", func() {
+			Expect(fakeClient.Create(ctx, cloudProfile)).To(Succeed())
+
+			shoot.Spec.CloudProfile = &gardencorev1beta1.CloudProfileReference{
+				Name: cloudProfileName,
+			}
+			res, err := gardenerutils.GetCloudProfile(ctx, fakeClient, shoot)
+			Expect(res).To(Equal(cloudProfile))
+			Expect(err).NotTo(HaveOccurred())
+		})
+
 		It("returns NamespacedCloudProfile", func() {
 			Expect(fakeClient.Create(ctx, namespacedCloudProfile)).To(Succeed())
 
