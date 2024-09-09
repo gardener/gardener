@@ -696,7 +696,7 @@ var _ = Describe("VpnSeedServer", func() {
 			return svc
 		}
 
-		expectedVPAFor = func(highAvailabilityEnabled bool, udpateMode *vpaautoscalingv1.UpdateMode) *vpaautoscalingv1.VerticalPodAutoscaler {
+		expectedVPAFor = func(highAvailabilityEnabled bool, updateMode *vpaautoscalingv1.UpdateMode) *vpaautoscalingv1.VerticalPodAutoscaler {
 			targetKindRef := "Deployment"
 			if highAvailabilityEnabled {
 				targetKindRef = "StatefulSet"
@@ -715,7 +715,7 @@ var _ = Describe("VpnSeedServer", func() {
 						Name:       "vpn-seed-server",
 					},
 					UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-						UpdateMode: udpateMode,
+						UpdateMode: updateMode,
 					},
 					ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 						ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
