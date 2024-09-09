@@ -35,6 +35,10 @@ At the moment, only the necessary APIs and validations exist to allow for extens
 When a shoot is created or updated, the cloudprofile reference can be set to point to a directly descendant `NamespacedCloudProfile`.
 Updates from one `CloudProfile` to another `CloudProfile` or from one `NamespacedCloudProfile` to another `NamespacedCloudProfile` or even to another `CloudProfile` are not allowed.
 
+Project viewers have the permission to see `NamespacedCloudProfile`s associated with a particular project.
+Project members can edit the `NamespacedCloudProfile` spec, except for the special fields `.spec.kubernetes` and `.spec.machineImages`.
+In order to make changes to these special fields, a user needs to be granted the custom RBAC verbs `modify-spec-kubernetes` and `modify-spec-machineimages` respectively.
+
 ## `InternalSecret`s
 
 End-users can read and/or write `Secret`s in their project namespaces in the garden cluster. This prevents Gardener components from storing such "Gardener-internal" secrets in the respective project namespace.

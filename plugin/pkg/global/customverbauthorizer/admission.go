@@ -32,12 +32,12 @@ const (
 	// groups subjects in the `.spec.members` field in `Project` resources.
 	CustomVerbProjectManageMembers = "manage-members"
 
-	// CustomVerbNscpflModifyKubernetes is a constant for the custom verb that allows modifying the
+	// CustomVerbNamespacedCloudProfileModifyKubernetes is a constant for the custom verb that allows modifying the
 	// `.spec.kubernetes` field in `NamespacedCloudProfile` resources.
-	CustomVerbNscpflModifyKubernetes = "modify-spec-kubernetes"
-	// CustomVerbNscpflModifyMachineImages is a constant for the custom verb that allows modifying the
+	CustomVerbNamespacedCloudProfileModifyKubernetes = "modify-spec-kubernetes"
+	// CustomVerbNamespacedCloudProfileModifyMachineImages is a constant for the custom verb that allows modifying the
 	// `.spec.machineImages` field in `NamespacedCloudProfile` resources.
-	CustomVerbNscpflModifyMachineImages = "modify-spec-machineimages"
+	CustomVerbNamespacedCloudProfileModifyMachineImages = "modify-spec-machineimages"
 )
 
 // Register registers a plugin.
@@ -138,15 +138,15 @@ func (c *CustomVerbAuthorizer) admitNamespacedCloudProfiles(ctx context.Context,
 		}
 	}
 
-	if mustCheckNscpflKubernetes(oldObj.Spec.Kubernetes, obj.Spec.Kubernetes) {
-		err := c.authorize(ctx, a, CustomVerbNscpflModifyKubernetes, "modify .spec.kubernetes")
+	if mustCheckKubernetes(oldObj.Spec.Kubernetes, obj.Spec.Kubernetes) {
+		err := c.authorize(ctx, a, CustomVerbNamespacedCloudProfileModifyKubernetes, "modify .spec.kubernetes")
 		if err != nil {
 			return err
 		}
 	}
 
-	if mustCheckNscpflMachineImages(oldObj.Spec.MachineImages, obj.Spec.MachineImages) {
-		err := c.authorize(ctx, a, CustomVerbNscpflModifyMachineImages, "modify .spec.machineImages")
+	if mustCheckMachineImages(oldObj.Spec.MachineImages, obj.Spec.MachineImages) {
+		err := c.authorize(ctx, a, CustomVerbNamespacedCloudProfileModifyMachineImages, "modify .spec.machineImages")
 		if err != nil {
 			return err
 		}
@@ -259,10 +259,10 @@ func userIsOwner(userInfo user.Info, owner *rbacv1.Subject) bool {
 	return false
 }
 
-func mustCheckNscpflKubernetes(oldKubernetes, kubernetes *core.KubernetesSettings) bool {
+func mustCheckKubernetes(oldKubernetes, kubernetes *core.KubernetesSettings) bool {
 	return !apiequality.Semantic.DeepEqual(oldKubernetes, kubernetes)
 }
 
-func mustCheckNscpflMachineImages(oldMachineImages, machineImages []core.MachineImage) bool {
+func mustCheckMachineImages(oldMachineImages, machineImages []core.MachineImage) bool {
 	return !apiequality.Semantic.DeepEqual(oldMachineImages, machineImages)
 }

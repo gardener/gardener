@@ -540,9 +540,9 @@ var _ = Describe("Project controller tests", func() {
 
 		Describe("NamespacedCloudProfile access", func() {
 			var (
-				parentCloudProfile     *gardencorev1beta1.CloudProfile
-				namespacedCloudProfile *gardencorev1beta1.NamespacedCloudProfile
-				nscpflKey              client.ObjectKey
+				parentCloudProfile        *gardencorev1beta1.CloudProfile
+				namespacedCloudProfile    *gardencorev1beta1.NamespacedCloudProfile
+				namespacedCloudProfileKey client.ObjectKey
 
 				futureExpirationDate *metav1.Time
 			)
@@ -610,13 +610,13 @@ var _ = Describe("Project controller tests", func() {
 				DeferCleanup(func() {
 					Expect(testClient.Delete(ctx, namespacedCloudProfile)).To(Succeed())
 				})
-				nscpflKey = client.ObjectKeyFromObject(namespacedCloudProfile)
+				namespacedCloudProfileKey = client.ObjectKeyFromObject(namespacedCloudProfile)
 			})
 
 			It("should not allow users not associated to a project to read its NamespacedCloudProfiles", func() {
 				By("Ensure non-members don't have access to NamespacedCloudProfiles")
 				Consistently(func(g Gomega) {
-					g.Expect(testUserClient.Get(ctx, nscpflKey, &gardencorev1beta1.NamespacedCloudProfile{})).To(BeForbiddenError())
+					g.Expect(testUserClient.Get(ctx, namespacedCloudProfileKey, &gardencorev1beta1.NamespacedCloudProfile{})).To(BeForbiddenError())
 				}).Should(Succeed())
 			})
 
@@ -654,7 +654,7 @@ var _ = Describe("Project controller tests", func() {
 
 				By("Ensure new admin has access to NamespacedCloudProfile")
 				Eventually(func(g Gomega) {
-					g.Expect(testUserClient.Get(ctx, nscpflKey, &gardencorev1beta1.NamespacedCloudProfile{})).To(Succeed())
+					g.Expect(testUserClient.Get(ctx, namespacedCloudProfileKey, &gardencorev1beta1.NamespacedCloudProfile{})).To(Succeed())
 				}).Should(Succeed())
 
 				By("Ensure viewer cannot update NamespacedCloudProfile")
@@ -698,7 +698,7 @@ var _ = Describe("Project controller tests", func() {
 
 				By("Ensure new admin has access to NamespacedCloudProfile")
 				Eventually(func(g Gomega) {
-					g.Expect(testUserClient.Get(ctx, nscpflKey, &gardencorev1beta1.NamespacedCloudProfile{})).To(Succeed())
+					g.Expect(testUserClient.Get(ctx, namespacedCloudProfileKey, &gardencorev1beta1.NamespacedCloudProfile{})).To(Succeed())
 				}).Should(Succeed())
 
 				By("Ensure admin without proper role can update NamespacedCloudProfile.Spec.{MachineTypes,VolumeTypes}")
