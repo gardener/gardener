@@ -63,7 +63,6 @@ var _ = Describe("VpnSeedServer", func() {
 		istioNamespaceFunc = func() string { return istioNamespace }
 
 		vpaUpdateMode    = vpaautoscalingv1.UpdateModeAuto
-		vpaUpdateModeOff = vpaautoscalingv1.UpdateModeOff
 		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		namespaceUID     = types.UID("123456")
 
@@ -819,7 +818,7 @@ var _ = Describe("VpnSeedServer", func() {
 				actualVPA := &vpaautoscalingv1.VerticalPodAutoscaler{}
 				updateMode := vpaUpdateMode
 				if values.VPAUpdateDisabled {
-					updateMode = vpaUpdateModeOff
+					updateMode = vpaautoscalingv1.UpdateModeOff
 				}
 				expectedVPA := expectedVPAFor(values.HighAvailabilityEnabled, &updateMode)
 				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedVPA.Namespace, Name: expectedVPA.Name}, actualVPA)).To(Succeed())
@@ -891,7 +890,7 @@ var _ = Describe("VpnSeedServer", func() {
 
 				It("should successfully deploy vpa with update mode set to off", func() {
 					actualVPA := &vpaautoscalingv1.VerticalPodAutoscaler{}
-					expectedVPA := expectedVPAFor(values.HighAvailabilityEnabled, &vpaUpdateModeOff)
+					expectedVPA := expectedVPAFor(values.HighAvailabilityEnabled, ptr.To(vpaautoscalingv1.UpdateModeOff))
 					Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedVPA.Namespace, Name: expectedVPA.Name}, actualVPA)).To(Succeed())
 					Expect(actualVPA).To(DeepEqual(expectedVPA))
 				})
@@ -951,7 +950,7 @@ var _ = Describe("VpnSeedServer", func() {
 				actualVPA := &vpaautoscalingv1.VerticalPodAutoscaler{}
 				updateMode := vpaUpdateMode
 				if values.VPAUpdateDisabled {
-					updateMode = vpaUpdateModeOff
+					updateMode = vpaautoscalingv1.UpdateModeOff
 				}
 				expectedVPA := expectedVPAFor(values.HighAvailabilityEnabled, &updateMode)
 				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedVPA.Namespace, Name: expectedVPA.Name}, actualVPA)).To(Succeed())
@@ -1001,7 +1000,7 @@ var _ = Describe("VpnSeedServer", func() {
 
 				It("should successfully deploy vpa with update mode set to off", func() {
 					actualVPA := &vpaautoscalingv1.VerticalPodAutoscaler{}
-					expectedVPA := expectedVPAFor(values.HighAvailabilityEnabled, &vpaUpdateModeOff)
+					expectedVPA := expectedVPAFor(values.HighAvailabilityEnabled, ptr.To(vpaautoscalingv1.UpdateModeOff))
 					Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedVPA.Namespace, Name: expectedVPA.Name}, actualVPA)).To(Succeed())
 					Expect(actualVPA).To(DeepEqual(expectedVPA))
 				})
