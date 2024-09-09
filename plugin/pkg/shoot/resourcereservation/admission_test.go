@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/utils/ptr"
@@ -21,6 +22,12 @@ import (
 )
 
 var _ = Describe("resourcereservation", func() {
+	var parsedLabelSelector labels.Selector
+	var labelSelectorString string
+
+	BeforeEach(func() {
+		parsedLabelSelector, _ = labels.Parse(labelSelectorString)
+	})
 	Describe("#Register", func() {
 		It("should register the plugin", func() {
 			plugins := admission.NewPlugins()
@@ -35,7 +42,7 @@ var _ = Describe("resourcereservation", func() {
 	Describe("#Handles", func() {
 		DescribeTable("should only handle CREATE and UPDATE operation",
 			func(typeDependentReservations bool) {
-				plugin := New(typeDependentReservations)
+				plugin := New(typeDependentReservations, parsedLabelSelector)
 				Expect(plugin.Handles(admission.Create)).To(BeTrue())
 				Expect(plugin.Handles(admission.Update)).To(BeTrue())
 				Expect(plugin.Handles(admission.Connect)).NotTo(BeTrue())
@@ -107,8 +114,8 @@ var _ = Describe("resourcereservation", func() {
 			cloudProfile = *cloudProfileBase.DeepCopy()
 		})
 
-		setupProfile := func(typeDependentReservations bool) {
-			plugin = New(typeDependentReservations).(*ResourceReservation)
+		setupProfile := func(typeDependentReservations bool, selector labels.Selector) {
+			plugin = New(typeDependentReservations, selector).(*ResourceReservation)
 			plugin.AssignReadyFunc(func() bool { return true })
 			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
 			plugin.SetCoreInformerFactory(coreInformerFactory)
@@ -117,7 +124,7 @@ var _ = Describe("resourcereservation", func() {
 
 		Context("with type dependent resource reservations", func() {
 			BeforeEach(func() {
-				setupProfile(true)
+				setupProfile(true, parsedLabelSelector)
 			})
 
 			Context("inject resource reservation", func() {
@@ -140,6 +147,52 @@ var _ = Describe("resourcereservation", func() {
 					attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					Expect(plugin.Admit(ctx, attrs, nil)).To(Succeed())
 					Expect(shoot).To(Equal(expectedShoot))
+				})
+
+				Context("with a label selector configured", func() {
+					JustBeforeEach(func() {
+						labelSelectorString = "add.reserved.resources=true"
+					})
+
+					Context("when the Shoot label matches the label selector", func() {
+						BeforeEach(func() {
+							//metav1.SetMetaDataLabel(&shoot.ObjectMeta, "add.reserved.resources", "true")
+						})
+
+						It("should inject resource reservations", func() {
+							expectedShoot := shoot.DeepCopy()
+							worker := &expectedShoot.Spec.Provider.Workers[0]
+							cpu := resource.NewMilliQuantity(70, resource.BinarySI)
+							memory := resource.NewQuantity(1288490188, resource.BinarySI)
+							pid := resource.MustParse("20k")
+							worker.Kubernetes = &core.WorkerKubernetes{
+								Kubelet: &core.KubeletConfig{
+									KubeReserved: &core.KubeletConfigReserved{
+										CPU:    cpu,
+										Memory: memory,
+										PID:    &pid,
+									},
+								},
+							}
+
+							attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+							Expect(plugin.Admit(ctx, attrs, nil)).To(Succeed())
+							Expect(shoot).To(Equal(expectedShoot))
+						})
+					})
+
+					Context("when the Shoot label doesn't match the label selector", func() {
+						BeforeEach(func() {
+							metav1.SetMetaDataLabel(&shoot.ObjectMeta, "add.reserved.resources", "false")
+						})
+
+						It("should not inject resource reservations when the Shoot label doesn't match", func() {
+							expectedShoot := shoot.DeepCopy()
+							attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+							Expect(plugin.Admit(ctx, attrs, nil)).To(Succeed())
+							Expect(shoot).To(Equal(expectedShoot))
+						})
+					})
 				})
 			})
 
@@ -186,7 +239,7 @@ var _ = Describe("resourcereservation", func() {
 
 		Context("with static resource reservations", func() {
 			BeforeEach(func() {
-				setupProfile(false)
+				setupProfile(false, parsedLabelSelector)
 			})
 
 			It("should inject default shoot global resource reservations", func() {

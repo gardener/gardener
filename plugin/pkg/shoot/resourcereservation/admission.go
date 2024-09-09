@@ -12,6 +12,7 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
 
@@ -39,7 +40,12 @@ func Register(plugins *admission.Plugins) {
 			return nil, err
 		}
 
-		return New(cfg.UseGKEFormula), nil
+		parsedLabelSelector, err := labels.Parse(cfg.LabelSelector)
+		if err != nil {
+			return nil, err
+		}
+
+		return New(cfg.UseGKEFormula, parsedLabelSelector), nil
 	})
 }
 
@@ -51,6 +57,7 @@ type ResourceReservation struct {
 	readyFunc                    admission.ReadyFunc
 
 	useGKEFormula bool
+	labelSelector labels.Selector
 }
 
 var (
@@ -60,10 +67,11 @@ var (
 )
 
 // New creates a new ResourceReservation admission plugin.
-func New(useGKEFormula bool) admission.MutationInterface {
+func New(useGKEFormula bool, labelSelector labels.Selector) admission.MutationInterface {
 	return &ResourceReservation{
 		Handler:       admission.NewHandler(admission.Create, admission.Update),
 		useGKEFormula: useGKEFormula,
+		labelSelector: labelSelector,
 	}
 }
 
@@ -135,6 +143,11 @@ func (c *ResourceReservation) Admit(_ context.Context, a admission.Attributes, _
 
 	if !c.useGKEFormula {
 		setStaticResourceReservationDefaults(shoot)
+		return nil
+	}
+
+	// Pass if the Shoot doesn't match the label selector
+	if !c.labelSelector.Matches(labels.Set(shoot.Labels)) {
 		return nil
 	}
 
