@@ -21,6 +21,7 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	gardensecurity "github.com/gardener/gardener/pkg/apis/security"
 )
 
 var _ = Describe("Predicate", func() {
@@ -405,6 +406,55 @@ var _ = Describe("Predicate", func() {
 
 		It("the predicate should return false for different providerType", func() {
 			predicate := GardenCoreProviderType("other-extension")
+
+			Expect(predicate.Create(createEvent)).To(BeFalse())
+			Expect(predicate.Update(updateEvent)).To(BeFalse())
+			Expect(predicate.Delete(deleteEvent)).To(BeFalse())
+			Expect(predicate.Generic(genericEvent)).To(BeFalse())
+		})
+	})
+
+	Describe("#GardenSecurityProviderType", func() {
+		var (
+			object       client.Object
+			createEvent  event.CreateEvent
+			updateEvent  event.UpdateEvent
+			deleteEvent  event.DeleteEvent
+			genericEvent event.GenericEvent
+		)
+
+		BeforeEach(func() {
+			object = &gardensecurity.CredentialsBinding{
+				Provider: gardensecurity.CredentialsBindingProvider{
+					Type: providerType,
+				},
+			}
+			createEvent = event.CreateEvent{
+				Object: object,
+			}
+			updateEvent = event.UpdateEvent{
+				ObjectOld: object,
+				ObjectNew: object,
+			}
+			deleteEvent = event.DeleteEvent{
+				Object: object,
+			}
+			genericEvent = event.GenericEvent{
+				Object: object,
+			}
+		})
+
+		It("the predicate should return true for the same providerType", func() {
+			predicate := GardenSecurityProviderType(providerType)
+
+			Expect(predicate.Create(createEvent)).To(BeTrue())
+			Expect(predicate.Update(updateEvent)).To(BeTrue())
+			Expect(predicate.Delete(deleteEvent)).To(BeTrue())
+			Expect(predicate.Generic(genericEvent)).To(BeTrue())
+		})
+
+		It("the predicate should return false for different providerType", func() {
+			predicate := GardenSecurityProviderType("other-type")
 
 			Expect(predicate.Create(createEvent)).To(BeFalse())
 			Expect(predicate.Update(updateEvent)).To(BeFalse())
