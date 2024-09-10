@@ -24,11 +24,14 @@ spec:
           ln -s ~/.cache/apk /etc/apk/cache
           apk add apache2-utils bash bash-completion bat bind-tools conntrack-tools coreutils curl \
                   diffutils dnsmasq docker-bash-completion findutils fzf g++ gawk gcompat git      \
-                  git-prompt go grep helm inotify-tools jq k9s less lsof make mandoc mc moreutils  \
+                  git-prompt grep helm inotify-tools jq k9s less lsof make mandoc mc moreutils     \
                   mount ncurses neovim parallel procps sed strace tar tcpdump tmux tmux-doc tzdata \
                   util-linux vim wget yq
           mkdir -p ~/.cache/wget
           cd ~/.cache/wget
+          echo golang          && wget -N "https://go.dev/dl/$(curl -sL https://golang.org/VERSION?m=text | awk 'NR==1{print}').linux-amd64.tar.gz" && tar -C /usr/local -xzf go1.*.linux-amd64.tar.gz \
+                               && ln -s /usr/local/go/bin/go /usr/local/bin/go \
+                               && ln -s /usr/local/go/bin/gofmt /usr/local/bin/gofmt
           echo gardenlogin     && wget -N "https://github.com/gardener/gardenlogin/releases/download/$(curl -sL https://raw.githubusercontent.com/gardener/gardenlogin/master/LATEST)/gardenlogin_linux_amd64" && mv gardenlogin_linux_amd64 /usr/local/bin/gardenlogin && chmod +x /usr/local/bin/gardenlogin \
                                && ln -s "$(which gardenlogin)" /usr/local/bin/kubectl-gardenlogin
           echo gardenctl       && wget -N "https://github.com/gardener/gardenctl-v2/releases/download/$(curl -sL https://raw.githubusercontent.com/gardener/gardenctl-v2/master/LATEST)/gardenctl_v2_linux_amd64" && mv gardenctl_v2_linux_amd64 /usr/local/bin/gardenctl && chmod +x /usr/local/bin/gardenctl \
