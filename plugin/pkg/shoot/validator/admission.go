@@ -576,7 +576,7 @@ func authorize(ctx context.Context, a admission.Attributes, auth authorizer.Auth
 	})
 
 	if err != nil {
-		return err
+		return apierrors.NewInternalError(fmt.Errorf("could not authorize update request for shoot binding subresource: %+v", err.Error()))
 	}
 
 	if decision != authorizer.DecisionAllow {
@@ -716,7 +716,9 @@ func (c *validationContext) validateCredentialsBindingChange(
 			return admission.NewForbidden(a, err)
 		}
 
-		if decision, _, _ := auth.Authorize(ctx, oldCredentialsBindingAttributesRecord); decision != authorizer.DecisionAllow {
+		if decision, _, err := auth.Authorize(ctx, oldCredentialsBindingAttributesRecord); err != nil {
+			return apierrors.NewInternalError(fmt.Errorf("could not authorize read request for old credentials: %+v", err.Error()))
+		} else if decision != authorizer.DecisionAllow {
 			return admission.NewForbidden(a, fmt.Errorf("user %q is not allowed to read the previously referenced %s %q", a.GetUserInfo().GetName(), oldCredentialsBinding.CredentialsRef.Kind, oldCredentialsBinding.CredentialsRef.Namespace+"/"+oldCredentialsBinding.CredentialsRef.Name))
 		}
 
@@ -730,7 +732,9 @@ func (c *validationContext) validateCredentialsBindingChange(
 			return admission.NewForbidden(a, err)
 		}
 
-		if decision, _, _ := auth.Authorize(ctx, newCredentialsBindingAttributesRecord); decision != authorizer.DecisionAllow {
+		if decision, _, err := auth.Authorize(ctx, newCredentialsBindingAttributesRecord); err != nil {
+			return apierrors.NewInternalError(fmt.Errorf("could not authorize read request for new credentials: %+v", err.Error()))
+		} else if decision != authorizer.DecisionAllow {
 			return admission.NewForbidden(a, fmt.Errorf("user %q is not allowed to read the newly referenced %s %q", a.GetUserInfo().GetName(), newCredentialsBinding.CredentialsRef.Kind, newCredentialsBinding.CredentialsRef.Namespace+"/"+newCredentialsBinding.CredentialsRef.Name))
 		}
 	}

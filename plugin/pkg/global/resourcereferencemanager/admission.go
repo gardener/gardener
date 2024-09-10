@@ -706,7 +706,9 @@ func (r *ReferenceManager) ensureBindingReferences(ctx context.Context, attribut
 		Name:            credentialsName,
 		ResourceRequest: true,
 	}
-	if decision, _, _ := r.authorizer.Authorize(ctx, readAttributes); decision != authorizer.DecisionAllow {
+	if decision, _, err := r.authorizer.Authorize(ctx, readAttributes); err != nil {
+		return fmt.Errorf("could not authorize read request for credentials: %w", err)
+	} else if decision != authorizer.DecisionAllow {
 		return fmt.Errorf("%s cannot reference a %s you are not allowed to read", binding.GetObjectKind().GroupVersionKind().Kind, credentialsKind)
 	}
 
@@ -742,7 +744,9 @@ func (r *ReferenceManager) ensureBindingReferences(ctx context.Context, attribut
 			ResourceRequest: true,
 			Path:            "",
 		}
-		if decision, _, _ := r.authorizer.Authorize(ctx, readAttributes); decision != authorizer.DecisionAllow {
+		if decision, _, err := r.authorizer.Authorize(ctx, readAttributes); err != nil {
+			return fmt.Errorf("could not authorize read request for quota: %w", err)
+		} else if decision != authorizer.DecisionAllow {
 			return fmt.Errorf("%s cannot reference a quota you are not allowed to read", binding.GetObjectKind().GroupVersionKind().Kind)
 		}
 
@@ -836,7 +840,9 @@ func (r *ReferenceManager) ensureShootReferences(ctx context.Context, attributes
 				Name:            resource.ResourceRef.Name,
 				ResourceRequest: true,
 			}
-			if decision, _, _ := r.authorizer.Authorize(ctx, readAttributes); decision != authorizer.DecisionAllow {
+			if decision, _, err := r.authorizer.Authorize(ctx, readAttributes); err != nil {
+				return fmt.Errorf("could not authorize read request for shoot resource reference: %w", err)
+			} else if decision != authorizer.DecisionAllow {
 				return errors.New("shoot cannot reference a resource you are not allowed to read")
 			}
 
