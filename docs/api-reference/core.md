@@ -2053,8 +2053,7 @@ string
 <td>
 <em>(Optional)</em>
 <p>CredentialsBindingName is the name of the a CredentialsBinding that has a reference to the provider credentials.
-The credentials will be used to create the shoot in the respective account. The field is mutually exclusive with SecretBindingName.
-This field is immutable.</p>
+The credentials will be used to create the shoot in the respective account. The field is mutually exclusive with SecretBindingName.</p>
 </td>
 </tr>
 </table>
@@ -11969,8 +11968,7 @@ string
 <td>
 <em>(Optional)</em>
 <p>CredentialsBindingName is the name of the a CredentialsBinding that has a reference to the provider credentials.
-The credentials will be used to create the shoot in the respective account. The field is mutually exclusive with SecretBindingName.
-This field is immutable.</p>
+The credentials will be used to create the shoot in the respective account. The field is mutually exclusive with SecretBindingName.</p>
 </td>
 </tr>
 </tbody>
@@ -12669,8 +12667,7 @@ string
 <td>
 <em>(Optional)</em>
 <p>CredentialsBindingName is the name of the a CredentialsBinding that has a reference to the provider credentials.
-The credentials will be used to create the shoot in the respective account. The field is mutually exclusive with SecretBindingName.
-This field is immutable.</p>
+The credentials will be used to create the shoot in the respective account. The field is mutually exclusive with SecretBindingName.</p>
 </td>
 </tr>
 </table>

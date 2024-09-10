@@ -321,14 +321,17 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Region, oldSpec.Region, fldPath.Child("region"))...)
 	allErrs = append(allErrs, ValidateCloudProfileReference(newSpec.CloudProfile, oldSpec.CloudProfile, newSpec.CloudProfileName, oldSpec.CloudProfileName, fldPath.Child("cloudProfile"))...)
+
+	if oldSpec.CredentialsBindingName != nil && len(ptr.Deref(newSpec.CredentialsBindingName, "")) == 0 {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("credentialsBindingName"), "the field cannot be unset"))
+	}
+
 	// allow removing the value of SecretBindingName when
 	// old secret binding existed, but new is set to nil
 	// and new credentials binding also exists
 	migrationFromSecBindingToCredBinding := oldSpec.SecretBindingName != nil && newSpec.SecretBindingName == nil && len(ptr.Deref(newSpec.CredentialsBindingName, "")) > 0
-	migrationFromCredBindingToSecBinding := oldSpec.CredentialsBindingName != nil && newSpec.CredentialsBindingName == nil && len(ptr.Deref(newSpec.SecretBindingName, "")) > 0
-	if !migrationFromSecBindingToCredBinding && !migrationFromCredBindingToSecBinding {
+	if !migrationFromSecBindingToCredBinding {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.SecretBindingName, oldSpec.SecretBindingName, fldPath.Child("secretBindingName"))...)
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.CredentialsBindingName, oldSpec.CredentialsBindingName, fldPath.Child("credentialsBindingName"))...)
 	}
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.ExposureClassName, oldSpec.ExposureClassName, fldPath.Child("exposureClassName"))...)
 

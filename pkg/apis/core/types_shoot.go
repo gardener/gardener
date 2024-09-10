@@ -106,7 +106,6 @@ type ShootSpec struct {
 	CloudProfile *CloudProfileReference
 	// CredentialsBindingName is the name of the a CredentialsBinding that has a reference to the provider credentials.
 	// The credentials will be used to create the shoot in the respective account. The field is mutually exclusive with SecretBindingName.
-	// This field is immutable.
 	CredentialsBindingName *string
 }
 

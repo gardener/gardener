@@ -135,7 +135,6 @@ type ShootSpec struct {
 	CloudProfile *CloudProfileReference `json:"cloudProfile,omitempty" protobuf:"bytes,22,opt,name=cloudProfile"`
 	// CredentialsBindingName is the name of the a CredentialsBinding that has a reference to the provider credentials.
 	// The credentials will be used to create the shoot in the respective account. The field is mutually exclusive with SecretBindingName.
-	// This field is immutable.
 	// +optional
 	CredentialsBindingName *string `json:"credentialsBindingName,omitempty" protobuf:"bytes,23,opt,name=credentialsBindingName"`
 }

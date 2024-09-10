@@ -315,6 +315,12 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, _ adm
 	if err := validationContext.validateShootHibernation(a); err != nil {
 		return err
 	}
+	if err := validationContext.validateSecretBindingToCredentialsBindingMigration(a, v.secretBindingLister, v.credentialsBindingLister); err != nil {
+		return err
+	}
+	if err := validationContext.validateCredentialsBindingChange(ctx, a, v.authorizer, v.credentialsBindingLister); err != nil {
+		return err
+	}
 	if allErrs = validationContext.ensureMachineImages(); len(allErrs) > 0 {
 		return admission.NewForbidden(a, fmt.Errorf("%+v", allErrs))
 	}
@@ -566,7 +572,7 @@ func authorize(ctx context.Context, a admission.Attributes, auth authorizer.Auth
 	})
 
 	if err != nil {
-		return err
+		return apierrors.NewInternalError(fmt.Errorf("could not authorize update request for shoot binding subresource: %+v", err.Error()))
 	}
 
 	if decision != authorizer.DecisionAllow {
@@ -621,6 +627,113 @@ func (c *validationContext) validateShootHibernation(a admission.Attributes) err
 		addDNSRecordDeploymentTasks(c.shoot)
 	}
 
+	return nil
+}
+
+func (c *validationContext) validateSecretBindingToCredentialsBindingMigration(
+	a admission.Attributes,
+	secretBindingLister gardencorev1beta1listers.SecretBindingLister,
+	credentialsBindingLister securityv1alpha1listers.CredentialsBindingLister,
+) error {
+	secretBindingNameProgressedToEmpty := c.oldShoot.Spec.SecretBindingName != nil && c.shoot.Spec.SecretBindingName == nil
+	credentialsBindingNameProgressedToSet := c.oldShoot.Spec.CredentialsBindingName == nil && c.shoot.Spec.CredentialsBindingName != nil
+
+	if secretBindingNameProgressedToEmpty && credentialsBindingNameProgressedToSet {
+		secretBinding, err := secretBindingLister.SecretBindings(c.oldShoot.Namespace).Get(*c.oldShoot.Spec.SecretBindingName)
+		if err != nil {
+			return apierrors.NewInternalError(fmt.Errorf("could not retrieve previously referenced secret binding: %+v", err.Error()))
+		}
+		credentialsBinding, err := credentialsBindingLister.CredentialsBindings(c.shoot.Namespace).Get(*c.shoot.Spec.CredentialsBindingName)
+		if err != nil {
+			return apierrors.NewInternalError(fmt.Errorf("could not retrieve newly referenced credentials binding: %+v", err.Error()))
+		}
+
+		// during migration the newly referenced credential should be
+		// the exact same one that was referenced by the secret binding
+		if credentialsBinding.CredentialsRef.Kind != "Secret" ||
+			credentialsBinding.CredentialsRef.APIVersion != corev1.SchemeGroupVersion.String() ||
+			credentialsBinding.CredentialsRef.Name != secretBinding.SecretRef.Name ||
+			credentialsBinding.CredentialsRef.Namespace != secretBinding.SecretRef.Namespace {
+			return admission.NewForbidden(a, errors.New("it is not allowed to change the referenced Secret when migrating from SecretBindingName to CredentialsBindingName"))
+		}
+	}
+
+	return nil
+}
+
+func (c *validationContext) validateCredentialsBindingChange(
+	ctx context.Context,
+	a admission.Attributes,
+	auth authorizer.Authorizer,
+	credentialsBindingLister securityv1alpha1listers.CredentialsBindingLister,
+) error {
+	getAttributesRecord := func(credentialsBinding *securityv1alpha1.CredentialsBinding) (authorizer.AttributesRecord, error) {
+		var (
+			credentialsAPIGroup   string
+			credentialsAPIVersion string
+			credentialsResource   string
+		)
+		if credentialsBinding.CredentialsRef.APIVersion == corev1.SchemeGroupVersion.String() {
+			credentialsAPIGroup = corev1.SchemeGroupVersion.Group
+			credentialsAPIVersion = corev1.SchemeGroupVersion.Version
+			credentialsResource = "secrets"
+		} else if credentialsBinding.CredentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() {
+			credentialsAPIGroup = securityv1alpha1.SchemeGroupVersion.Group
+			credentialsAPIVersion = securityv1alpha1.SchemeGroupVersion.Version
+			credentialsResource = "workloadidentities"
+		} else {
+			return authorizer.AttributesRecord{}, errors.New("unknown credentials ref: CredentialsBinding is referencing neither a Secret nor a WorkloadIdentity")
+		}
+		return authorizer.AttributesRecord{
+			User:            a.GetUserInfo(),
+			Verb:            "get",
+			APIGroup:        credentialsAPIGroup,
+			APIVersion:      credentialsAPIVersion,
+			Resource:        credentialsResource,
+			Namespace:       credentialsBinding.CredentialsRef.Namespace,
+			Name:            credentialsBinding.CredentialsRef.Name,
+			ResourceRequest: true,
+		}, nil
+	}
+
+	// Prevent users from changing the credentials binding unless they have read permissions for both old and new credentials.
+	// This ensures that if a user has access to a shoot that references a binding in another namespace controlled by another party
+	// the said user cannot reference another binding and potentially change the underlying cloud provider account
+	// and leave orphaned resources in the other party's account.
+	if c.oldShoot.Spec.CredentialsBindingName != nil && c.shoot.Spec.CredentialsBindingName != nil &&
+		*c.oldShoot.Spec.CredentialsBindingName != *c.shoot.Spec.CredentialsBindingName {
+		oldCredentialsBinding, err := credentialsBindingLister.CredentialsBindings(c.oldShoot.Namespace).Get(*c.oldShoot.Spec.CredentialsBindingName)
+		if err != nil {
+			return apierrors.NewInternalError(fmt.Errorf("could not retrieve previously referenced credentials binding: %+v", err.Error()))
+		}
+
+		oldCredentialsBindingAttributesRecord, err := getAttributesRecord(oldCredentialsBinding)
+		if err != nil {
+			return admission.NewForbidden(a, err)
+		}
+
+		if decision, _, err := auth.Authorize(ctx, oldCredentialsBindingAttributesRecord); err != nil {
+			return apierrors.NewInternalError(fmt.Errorf("could not authorize read request for old credentials: %+v", err.Error()))
+		} else if decision != authorizer.DecisionAllow {
+			return admission.NewForbidden(a, fmt.Errorf("user %q is not allowed to read the previously referenced %s %q", a.GetUserInfo().GetName(), oldCredentialsBinding.CredentialsRef.Kind, oldCredentialsBinding.CredentialsRef.Namespace+"/"+oldCredentialsBinding.CredentialsRef.Name))
+		}
+
+		newCredentialsBinding, err := credentialsBindingLister.CredentialsBindings(c.shoot.Namespace).Get(*c.shoot.Spec.CredentialsBindingName)
+		if err != nil {
+			return apierrors.NewInternalError(fmt.Errorf("could not retrieve newly referenced credentials binding: %+v", err.Error()))
+		}
+
+		newCredentialsBindingAttributesRecord, err := getAttributesRecord(newCredentialsBinding)
+		if err != nil {
+			return admission.NewForbidden(a, err)
+		}
+
+		if decision, _, err := auth.Authorize(ctx, newCredentialsBindingAttributesRecord); err != nil {
+			return apierrors.NewInternalError(fmt.Errorf("could not authorize read request for new credentials: %+v", err.Error()))
+		} else if decision != authorizer.DecisionAllow {
+			return admission.NewForbidden(a, fmt.Errorf("user %q is not allowed to read the newly referenced %s %q", a.GetUserInfo().GetName(), newCredentialsBinding.CredentialsRef.Kind, newCredentialsBinding.CredentialsRef.Namespace+"/"+newCredentialsBinding.CredentialsRef.Name))
+		}
+	}
 	return nil
 }
 
