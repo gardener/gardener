@@ -71,7 +71,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 	r.GardenClientMap = gardenClientMap
 
 	r.admission = admission.New(r.RuntimeClientSet, r.Recorder, r.GardenNamespace, r.HelmRegistry)
-	r.controllerRegistration = controllerregistration.New(r.Recorder)
+	r.controllerRegistration = controllerregistration.New(r.RuntimeClientSet.Client(), r.Recorder, r.GardenNamespace)
 	r.runtime = runtime.New(r.RuntimeClientSet, r.Recorder, r.GardenNamespace, r.HelmRegistry)
 
 	return builder.

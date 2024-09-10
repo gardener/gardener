@@ -64,7 +64,8 @@ var (
 		client.PropagationPolicy(metav1.DeletePropagationBackground),
 		client.GracePeriodSeconds(0),
 	}
-
+	// GardenSerializer is a YAML serializer using the Garden scheme.
+	GardenSerializer = json.NewSerializerWithOptions(json.DefaultMetaFactory, GardenScheme, GardenScheme, json.SerializerOptions{Yaml: true, Pretty: false, Strict: false})
 	// GardenCodec is a codec factory using the Garden scheme.
 	GardenCodec = serializer.NewCodecFactory(GardenScheme)
 

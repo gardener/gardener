@@ -23,7 +23,6 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	"github.com/gardener/gardener/pkg/operator/controller/extension/admission"
@@ -90,22 +89,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		gardenObj = &gardenList.Items[0]
 	}
 
-	var (
-		virtualClusterClientSet kubernetes.Interface
-		garden                  = newGardenInfo(gardenObj)
-	)
-
-	var err error
-	virtualClusterClientSet, err = r.GardenClientMap.GetClient(ctx, keys.ForGarden(garden.garden))
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("error retrieving virtual cluster client set: %w", err)
-	}
+	var garden = newGardenInfo(gardenObj)
 
 	if extension.DeletionTimestamp != nil || garden.deleting {
-		return r.delete(ctx, log, virtualClusterClientSet, extension)
+		return r.delete(ctx, log, extension)
 	}
 
-	return r.reconcile(ctx, log, virtualClusterClientSet, garden, extension)
+	return r.reconcile(ctx, log, garden, extension)
 }
 
 func (r *Reconciler) updateExtensionStatus(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension, updatedConditions Conditions) error {

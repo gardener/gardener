@@ -18,6 +18,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 )
@@ -25,7 +26,6 @@ import (
 func (r *Reconciler) reconcile(
 	ctx context.Context,
 	log logr.Logger,
-	virtualClusterClientSet kubernetes.Interface,
 	garden *gardenInfo,
 	extension *operatorv1alpha1.Extension,
 ) (
@@ -55,8 +55,9 @@ func (r *Reconciler) reconcile(
 	}
 
 	var (
-		reconcileResult reconcile.Result
-		g               = flow.NewGraph("Extension reconciliation")
+		virtualClusterClientSet kubernetes.Interface
+		reconcileResult         reconcile.Result
+		g                       = flow.NewGraph("Extension reconciliation")
 
 		deployExtensionInRuntime = g.Add(flow.Task{
 			Name: "Deploying extension in runtime cluster",
@@ -78,6 +79,20 @@ func (r *Reconciler) reconcile(
 			Dependencies: flow.NewTaskIDs(deployExtensionInRuntime),
 		})
 
+		createVirtualGardenClientSet = g.Add(flow.Task{
+			Name: "Creating virtual garden-client",
+			Fn: func(ctx context.Context) error {
+				clientSet, err := r.GardenClientMap.GetClient(ctx, keys.ForGarden(garden.garden))
+				if err != nil {
+					return fmt.Errorf("error retrieving virtual cluster client set: %w", err)
+				}
+
+				virtualClusterClientSet = clientSet
+				return nil
+			},
+			Dependencies: flow.NewTaskIDs(checkGarden),
+		})
+
 		_ = g.Add(flow.Task{
 			Name: "Deploying Admission Controller",
 			Fn: func(ctx context.Context) error {
@@ -86,12 +101,13 @@ func (r *Reconciler) reconcile(
 				}
 				return r.admission.Reconcile(ctx, log, virtualClusterClientSet, *garden.genericTokenKubeconfigSecretName, extension)
 			},
+			Dependencies: flow.NewTaskIDs(createVirtualGardenClientSet),
 		})
 
 		_ = g.Add(flow.Task{
 			Name: "Deploying ControllerRegistration and ControllerDeployment",
 			Fn: func(ctx context.Context) error {
-				return r.controllerRegistration.Reconcile(ctx, log, virtualClusterClientSet.Client(), extension)
+				return r.controllerRegistration.Reconcile(ctx, log, extension)
 			},
 			Dependencies: flow.NewTaskIDs(checkGarden),
 		})

@@ -14,7 +14,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 )
@@ -22,7 +21,6 @@ import (
 func (r *Reconciler) delete(
 	ctx context.Context,
 	log logr.Logger,
-	virtualClusterClientSet kubernetes.Interface,
 	extension *operatorv1alpha1.Extension,
 ) (
 	reconcile.Result,
@@ -37,7 +35,7 @@ func (r *Reconciler) delete(
 		_ = g.Add(flow.Task{
 			Name: "Deleting ControllerRegistration and ControllerDeployment",
 			Fn: func(ctx context.Context) error {
-				return r.controllerRegistration.Delete(ctx, log, virtualClusterClientSet.Client(), extension)
+				return r.controllerRegistration.Delete(ctx, log, extension)
 			},
 		})
 
