@@ -28,6 +28,8 @@ type SecretBinding struct {
 	Provider *SecretBindingProvider
 }
 
+var _ Object = (*SecretBinding)(nil)
+
 // GetProviderType gets the type of the provider.
 func (sb *SecretBinding) GetProviderType() string {
 	if sb.Provider == nil {

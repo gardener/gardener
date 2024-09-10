@@ -7,6 +7,8 @@ package v1alpha1
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	gardensecurity "github.com/gardener/gardener/pkg/apis/security"
 )
 
 // +genclient
@@ -29,6 +31,8 @@ type CredentialsBinding struct {
 	// +optional
 	Quotas []corev1.ObjectReference `json:"quotas,omitempty" protobuf:"bytes,4,rep,name=quotas"`
 }
+
+var _ gardensecurity.Object = (*CredentialsBinding)(nil)
 
 // GetProviderType gets the type of the provider.
 func (cb *CredentialsBinding) GetProviderType() string {
