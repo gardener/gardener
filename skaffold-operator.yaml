@@ -234,6 +234,8 @@ build:
             - pkg/operator/controller
             - pkg/operator/controller/controllerregistrar
             - pkg/operator/controller/extension
+            - pkg/operator/controller/extension/admission
+            - pkg/operator/controller/extension/controllerregistration
             - pkg/operator/controller/garden
             - pkg/operator/controller/garden/care
             - pkg/operator/controller/garden/garden

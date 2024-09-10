@@ -28,7 +28,8 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/operator/controller/extension/admission"
+	"github.com/gardener/gardener/pkg/operator/controller/extension/controllerregistration"
 	"github.com/gardener/gardener/pkg/utils/oci"
 )
 
@@ -49,14 +50,18 @@ const (
 
 // Reconciler reconciles Extensions.
 type Reconciler struct {
-	RuntimeClientSet kubernetes.Interface
-	Config           config.OperatorConfiguration
-	Clock            clock.Clock
-	Recorder         record.EventRecorder
-	GardenNamespace  string
 	// GardenClientMap is the ClientMap used to communicate with the virtual garden cluster. It should be set by AddToManager function but the field is still public for usage in tests.
-	GardenClientMap clientmap.ClientMap
+	GardenClientMap  clientmap.ClientMap
+	RuntimeClientSet kubernetes.Interface
+
+	Config          config.OperatorConfiguration
+	Clock           clock.Clock
+	Recorder        record.EventRecorder
+	GardenNamespace string
 	HelmRegistry    oci.Interface
+
+	admission              admission.Interface
+	controllerRegistration controllerregistration.Interface
 }
 
 // Reconcile performs the main reconciliation logic.
@@ -156,20 +161,12 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, virtualClus
 		}
 	}
 
-	log.Info("Reconciling extension virtual resources")
-	if err := r.reconcileExtensionVirtualClusterResources(reconcileCtx, log, virtualClusterClientSet.Client(), extension); err != nil {
+	if err := r.controllerRegistration.Reconcile(reconcileCtx, log, virtualClusterClientSet.Client(), extension); err != nil {
 		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionFalse, ConditionReconcileFailed, err.Error())
 		return errors.Join(err, r.updateExtensionStatus(ctx, log, extension, conditions))
 	}
 
-	log.Info("Reconciling admission virtual resources")
-	if err := r.reconcileAdmissionVirtualClusterResources(reconcileCtx, log, virtualClusterClientSet, extension); err != nil {
-		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionFalse, ConditionReconcileFailed, err.Error())
-		return errors.Join(err, r.updateExtensionStatus(ctx, log, extension, conditions))
-	}
-
-	log.Info("Reconciling admission runtime resources")
-	if err := r.reconcileAdmissionRuntimeClusterResources(reconcileCtx, log, genericTokenKubeconfigSecretName, extension); err != nil {
+	if err := r.admission.Reconcile(reconcileCtx, log, virtualClusterClientSet, genericTokenKubeconfigSecretName, extension); err != nil {
 		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionFalse, ConditionReconcileFailed, err.Error())
 		return errors.Join(err, r.updateExtensionStatus(ctx, log, extension, conditions))
 	}
@@ -184,17 +181,12 @@ func (r *Reconciler) delete(ctx context.Context, log logr.Logger, virtualCluster
 
 	conditions := NewConditions(r.Clock, extension.Status)
 
-	if err := r.deleteExtensionVirtualClusterResources(deleteCtx, log, virtualClusterClient, extension); err != nil {
+	if err := r.controllerRegistration.Delete(deleteCtx, log, virtualClusterClient, extension); err != nil {
 		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionFalse, ConditionDeleteFailed, err.Error())
 		return errors.Join(err, r.updateExtensionStatus(ctx, log, extension, conditions))
 	}
 
-	if err := r.deleteAdmissionVirtualClusterResources(deleteCtx, log, extension); err != nil {
-		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionFalse, ConditionDeleteFailed, err.Error())
-		return errors.Join(err, r.updateExtensionStatus(ctx, log, extension, conditions))
-	}
-
-	if err := r.deleteAdmissionRuntimeClusterResources(deleteCtx, log, extension); err != nil {
+	if err := r.admission.Delete(deleteCtx, log, extension); err != nil {
 		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionFalse, ConditionDeleteFailed, err.Error())
 		return errors.Join(err, r.updateExtensionStatus(ctx, log, extension, conditions))
 	}
@@ -205,10 +197,6 @@ func (r *Reconciler) delete(ctx context.Context, log logr.Logger, virtualCluster
 	}
 
 	return r.removeFinalizer(ctx, log, extension)
-}
-
-func (r *Reconciler) getVirtualClusterAccessSecret(name string) *gardenerutils.AccessSecret {
-	return gardenerutils.NewShootAccessSecret(name, r.GardenNamespace)
 }
 
 func (r *Reconciler) removeFinalizer(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension) error {
