@@ -280,9 +280,8 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	}
 	shoot.VPNHighAvailabilityNumberOfSeedServers = vpnseedserver.HighAvailabilityReplicaCount
 	shoot.VPNHighAvailabilityNumberOfShootClients = vpnseedserver.HighAvailabilityReplicaCount
-	shoot.VPNVPAUpdateEnabled = true
-	if vpnVPAUpdateEnabled, err := strconv.ParseBool(shoot.GetInfo().GetAnnotations()[v1beta1constants.ShootAlphaControlPlaneVPNVPAUpdateEnabled]); err == nil {
-		shoot.VPNVPAUpdateEnabled = vpnVPAUpdateEnabled
+	if vpnVPAUpdateDisabled, err := strconv.ParseBool(shoot.GetInfo().GetAnnotations()[v1beta1constants.ShootAlphaControlPlaneVPNVPAUpdateDisabled]); err == nil {
+		shoot.VPNVPAUpdateDisabled = vpnVPAUpdateDisabled
 	}
 
 	needsClusterAutoscaler, err := v1beta1helper.ShootWantsClusterAutoscaler(shootObject)
