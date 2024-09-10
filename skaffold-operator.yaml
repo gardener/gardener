@@ -984,6 +984,7 @@ build:
             - imagevector/containers.yaml
             - pkg/api/core
             - pkg/api/extensions
+            - pkg/api/security
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1
