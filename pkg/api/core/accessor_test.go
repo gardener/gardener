@@ -17,14 +17,14 @@ var _ = Describe("Accessor", func() {
 	Describe("#Accessor", func() {
 		It("Should succeed to create an accessor", func() {
 			shoot := &core.Shoot{}
-			shootAcessor, err := Accessor(shoot)
+			shootAccessor, err := Accessor(shoot)
 			Expect(err).To(Not(HaveOccurred()))
-			Expect(shoot).To(Equal(shootAcessor))
+			Expect(shoot).To(Equal(shootAccessor))
 		})
 
 		It("Should fail to create an accessor because of the missing implementation", func() {
-			secretBinding := &corev1.Secret{}
-			_, err := Accessor(secretBinding)
+			secret := &corev1.Secret{}
+			_, err := Accessor(secret)
 			Expect(err).To(HaveOccurred())
 		})
 	})
