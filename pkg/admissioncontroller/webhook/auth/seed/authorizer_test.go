@@ -710,11 +710,10 @@ var _ = Describe("Seed", func() {
 					}
 				})
 
-				DescribeTable("should return correct result if path exists",
+				DescribeTable("should return correct result for always allowed verbs",
 					func(verb string) {
 						attrs.Verb = verb
 
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeNamespacedCloudProfile, namespace, namespacedCloudProfileName, graphpkg.VertexTypeSeed, "", seedName).Return(true)
 						decision, reason, err := authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionAllow))
