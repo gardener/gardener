@@ -675,7 +675,7 @@ var _ = Describe("Project controller tests", func() {
 						{
 							APIGroups: []string{"core.gardener.cloud"},
 							Resources: []string{"namespacedcloudprofiles"},
-							Verbs:     []string{"get", "list", "watch", "patch", "update"},
+							Verbs:     []string{"get", "list", "watch", "create", "patch", "update", "delete"},
 						},
 					},
 				}
@@ -738,7 +738,7 @@ var _ = Describe("Project controller tests", func() {
 						{
 							APIGroups: []string{"core.gardener.cloud"},
 							Resources: []string{"namespacedcloudprofiles"},
-							Verbs:     []string{"get", "list", "watch", "patch", "update"},
+							Verbs:     []string{"get", "list", "watch", "create", "patch", "update", "delete"},
 						},
 						{
 							APIGroups: []string{"core.gardener.cloud"},

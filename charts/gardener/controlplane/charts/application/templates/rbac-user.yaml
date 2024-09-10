@@ -509,8 +509,10 @@ rules:
   - get
   - list
   - watch
+  - create
   - patch
   - update
+  - delete
 
 # Cluster role setting the permissions for a project service account manager. It gets bound by a RoleBinding
 # in a respective project namespace.
