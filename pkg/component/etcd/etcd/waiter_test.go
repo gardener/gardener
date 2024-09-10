@@ -6,6 +6,7 @@ package etcd_test
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
@@ -125,10 +126,13 @@ var _ = Describe("#Wait", func() {
 			&TimeNow, mockNow.Do,
 		)()
 		mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
-		expected.Status.LastError = ptr.To("some error")
+		delete(expected.Annotations, v1beta1constants.GardenerOperation)
+		expected.Status.LastErrors = []druidv1alpha1.LastError{}
+		expected.Status.ObservedGeneration = ptr.To[int64](expected.Generation)
+		expected.Status.Ready = ptr.To(false)
 
 		Expect(c.Create(ctx, expected)).To(Succeed(), "creating etcd succeeds")
-		Expect(etcd.Wait(ctx)).To(MatchError(ContainSubstring("some error")))
+		Expect(etcd.Wait(ctx)).To(MatchError(ContainSubstring("is not ready yet")))
 	})
 
 	It("should return error if we haven't observed the latest timestamp annotation", func() {
@@ -143,7 +147,7 @@ var _ = Describe("#Wait", func() {
 
 		By("Patch object")
 		patch := client.MergeFrom(expected.DeepCopy())
-		expected.Status.LastError = nil
+		expected.Status.LastErrors = nil
 		// remove operation annotation, add old timestamp annotation
 		expected.ObjectMeta.Annotations = map[string]string{
 			v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().Format(time.RFC3339Nano),
@@ -169,7 +173,7 @@ var _ = Describe("#Wait", func() {
 		delete(expected.Annotations, v1beta1constants.GardenerTimestamp)
 		patch := client.MergeFrom(expected.DeepCopy())
 		expected.Status.ObservedGeneration = ptr.To[int64](0)
-		expected.Status.LastError = nil
+		expected.Status.LastErrors = nil
 		// remove operation annotation, add up-to-date timestamp annotation
 		expected.ObjectMeta.Annotations = map[string]string{
 			v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
@@ -196,9 +200,9 @@ var _ = Describe("#CheckEtcdObject", func() {
 	})
 
 	It("should return error if reconciliation failed", func() {
-		obj.Status.LastError = ptr.To("foo")
+		obj.Status.LastErrors = []druidv1alpha1.LastError{{Code: "ERROR_FOO", Description: "foo", ObservedAt: metav1.Now()}}
 		err := CheckEtcdObject(obj)
-		Expect(err).To(MatchError("error during reconciliation: foo"))
+		Expect(err).To(MatchError(fmt.Sprintf("errors during reconciliation: %+v", obj.Status.LastErrors)))
 		Expect(retry.IsRetriable(err)).To(BeTrue())
 	})
 
@@ -243,7 +247,6 @@ var _ = Describe("#CheckEtcdObject", func() {
 		obj.Status.ObservedGeneration = ptr.To[int64](1)
 		obj.Status.Ready = ptr.To(true)
 		obj.Status.Replicas = 3
-		obj.Status.UpdatedReplicas = 3
 		Expect(CheckEtcdObject(obj)).To(Succeed())
 	})
 })
