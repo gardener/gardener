@@ -21,6 +21,6 @@ func Accessor(obj runtime.Object) (gardensecurity.Object, error) {
 	case gardensecurity.Object:
 		return v, nil
 	default:
-		return nil, fmt.Errorf("value of type %T does not implement Object", obj)
+		return nil, fmt.Errorf("value of type %T does not implement gardensecurity.Object", obj)
 	}
 }
