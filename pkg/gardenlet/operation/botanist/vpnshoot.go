@@ -20,8 +20,9 @@ func (b *Botanist) DefaultVPNShoot() (component.DeployWaiter, error) {
 	}
 
 	values := vpnshoot.Values{
-		Image:      image.String(),
-		VPAEnabled: b.Shoot.WantsVerticalPodAutoscaler,
+		Image:             image.String(),
+		VPAEnabled:        b.Shoot.WantsVerticalPodAutoscaler,
+		VPAUpdateDisabled: b.Shoot.VPNVPAUpdateDisabled,
 		ReversedVPN: vpnshoot.ReversedVPNValues{
 			Header:      "outbound|1194||" + vpnseedserver.ServiceName + "." + b.Shoot.SeedNamespace + ".svc.cluster.local",
 			Endpoint:    b.outOfClusterAPIServerFQDN(),

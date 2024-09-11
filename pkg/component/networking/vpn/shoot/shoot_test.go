@@ -880,6 +880,28 @@ var _ = Describe("VPNShoot", func() {
 						deploymentFor(secretNameCA, secretNameClient, secretNameTLSAuth, values.VPAEnabled),
 					))
 				})
+
+				Context("w/ VPA update mode set to off", func() {
+					BeforeEach(func() {
+						values.VPAUpdateDisabled = true
+					})
+
+					It("should successfully deploy all resources", func() {
+						var (
+							secretNameClient  = expectVPNShootSecret(manifests)
+							secretNameCA      = expectCASecret(manifests)
+							secretNameTLSAuth = expectTLSAuthSecret(manifests)
+						)
+
+						vpaWithUpdateDisabled := vpa.DeepCopy()
+						vpaWithUpdateDisabled.Spec.UpdatePolicy.UpdateMode = ptr.To(vpaautoscalingv1.UpdateModeOff)
+
+						Expect(managedResource).To(contain(
+							vpaWithUpdateDisabled,
+							deploymentFor(secretNameCA, secretNameClient, secretNameTLSAuth, values.VPAEnabled),
+						))
+					})
+				})
 			})
 
 			Context("w/ VPA and high availability", func() {
@@ -898,8 +920,13 @@ var _ = Describe("VPNShoot", func() {
 						secretNameTLSAuth = expectTLSAuthSecret(manifests)
 					)
 
+					vpaCopy := vpaHA.DeepCopy()
+					if values.VPAUpdateDisabled {
+						vpaCopy.Spec.UpdatePolicy.UpdateMode = ptr.To(vpaautoscalingv1.UpdateModeOff)
+					}
+
 					Expect(managedResource).To(contain(
-						vpaHA,
+						vpaCopy,
 						statefulSetFor(3, 2, []string{secretNameClient0, secretNameClient1}, secretNameCA, secretNameTLSAuth, values.VPAEnabled),
 					))
 				})
@@ -917,6 +944,29 @@ var _ = Describe("VPNShoot", func() {
 
 					It("should successfully deploy all resources", func() {
 						Expect(managedResource).To(contain(pdbFor(true)))
+					})
+				})
+
+				Context("w/ VPA update mode set to off", func() {
+					BeforeEach(func() {
+						values.VPAUpdateDisabled = true
+					})
+
+					It("should successfully deploy all resources", func() {
+						var (
+							secretNameClient0 = expectVPNShootSecret(manifests, "-0")
+							secretNameClient1 = expectVPNShootSecret(manifests, "-1")
+							secretNameCA      = expectCASecret(manifests)
+							secretNameTLSAuth = expectTLSAuthSecret(manifests)
+						)
+
+						vpaCopy := vpaHA.DeepCopy()
+						vpaCopy.Spec.UpdatePolicy.UpdateMode = ptr.To(vpaautoscalingv1.UpdateModeOff)
+
+						Expect(managedResource).To(contain(
+							vpaCopy,
+							statefulSetFor(3, 2, []string{secretNameClient0, secretNameClient1}, secretNameCA, secretNameTLSAuth, values.VPAEnabled),
+						))
 					})
 				})
 

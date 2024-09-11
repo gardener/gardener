@@ -86,6 +86,8 @@ type Values struct {
 	PodAnnotations map[string]string
 	// VPAEnabled marks whether VerticalPodAutoscaler is enabled for the shoot.
 	VPAEnabled bool
+	// VPAUpdateDisabled indicates whether the vertical pod autoscaler update should be disabled.
+	VPAUpdateDisabled bool
 	// ReversedVPN contains the configuration values for the ReversedVPN.
 	ReversedVPN ReversedVPNValues
 	// HighAvailabilityEnabled marks whether HA is enabled for VPN.
@@ -459,6 +461,9 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 
 	if v.values.VPAEnabled {
 		vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
+		if v.values.VPAUpdateDisabled {
+			vpaUpdateMode = vpaautoscalingv1.UpdateModeOff
+		}
 		controlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		kind := "Deployment"
 		if _, ok := deploymentOrStatefulSet.(*appsv1.StatefulSet); ok {
