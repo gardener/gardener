@@ -653,8 +653,8 @@ var _ = Describe("Project controller tests", func() {
 				Expect(testClient.Patch(ctx, project, patch)).To(Succeed())
 
 				By("Ensure new admin has access to NamespacedCloudProfile")
-				Eventually(func(g Gomega) {
-					g.Expect(testUserClient.Get(ctx, namespacedCloudProfileKey, &gardencorev1beta1.NamespacedCloudProfile{})).To(Succeed())
+				Eventually(func() error {
+					return testUserClient.Get(ctx, namespacedCloudProfileKey, &gardencorev1beta1.NamespacedCloudProfile{})
 				}).Should(Succeed())
 
 				By("Ensure viewer cannot update NamespacedCloudProfile")
@@ -697,8 +697,8 @@ var _ = Describe("Project controller tests", func() {
 				Expect(testClient.Patch(ctx, project, patch)).To(Succeed())
 
 				By("Ensure new admin has access to NamespacedCloudProfile")
-				Eventually(func(g Gomega) {
-					g.Expect(testUserClient.Get(ctx, namespacedCloudProfileKey, &gardencorev1beta1.NamespacedCloudProfile{})).To(Succeed())
+				Eventually(func() error {
+					return testUserClient.Get(ctx, namespacedCloudProfileKey, &gardencorev1beta1.NamespacedCloudProfile{})
 				}).Should(Succeed())
 
 				By("Ensure admin without proper role can update NamespacedCloudProfile.Spec.{MachineTypes,VolumeTypes}")
@@ -773,8 +773,8 @@ var _ = Describe("Project controller tests", func() {
 						{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.1.1", ExpirationDate: futureExpirationDate}},
 					}},
 				}
-				Eventually(func(g Gomega) {
-					g.Expect(testUserClient.Update(ctx, namespacedCloudProfile)).To(Succeed())
+				Eventually(func() error {
+					return testUserClient.Update(ctx, namespacedCloudProfile)
 				}).Should(Succeed())
 				Eventually(func(g Gomega) {
 					Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
