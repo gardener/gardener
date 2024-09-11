@@ -13,7 +13,7 @@ require (
 	github.com/fluent/fluent-operator/v2 v2.9.0
 	github.com/gardener/cert-management v0.15.0
 	github.com/gardener/dependency-watchdog v1.2.3
-	github.com/gardener/etcd-druid v0.22.5
+	github.com/gardener/etcd-druid v0.23.0
 	github.com/gardener/hvpa-controller/api v0.16.0
 	github.com/gardener/machine-controller-manager v0.53.1
 	github.com/gardener/terminal-controller-manager v0.33.0
