@@ -755,22 +755,6 @@ func (e *etcd) Deploy(ctx context.Context) error {
 								"description": "Etcd3 cluster " + e.values.Role + " has no leader. Possible network partition in the etcd cluster.",
 							},
 						},
-						// etcd proposal alerts
-						// alert if there are several failed proposals within an hour
-						{
-							Alert: "KubeEtcd3" + role + "HighNumberOfFailedProposals",
-							Expr:  intstr.FromString(`increase(etcd_server_proposals_failed_total{job="` + serviceMonitorJobNameEtcd + `"}[1h]) > 5`),
-							Labels: map[string]string{
-								"service":    "etcd",
-								"severity":   "warning",
-								"type":       "seed",
-								"visibility": "operator",
-							},
-							Annotations: map[string]string{
-								"summary":     "High number of failed etcd proposals",
-								"description": "Etcd3 " + e.values.Role + " pod {{ $labels.pod }} has seen {{ $value }} proposal failures within the last hour.",
-							},
-						},
 						{
 							Alert: "KubeEtcd3" + role + "HighMemoryConsumption",
 							Expr:  intstr.FromString(`sum(container_memory_working_set_bytes{pod="etcd-` + e.values.Role + `-0",container="` + containerNameEtcd + `"}) / sum(kube_verticalpodautoscaler_spec_resourcepolicy_container_policies_maxallowed{container="` + containerNameEtcd + `", targetName="etcd-` + e.values.Role + `", resource="memory"}) > .5`),
