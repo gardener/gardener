@@ -977,7 +977,7 @@ var _ = Describe("VPNShoot", func() {
 
 						Expect(managedResource).To(contain(
 							vpaWithUpdateDisabled,
-							deploymentFor(secretNameCA, secretNameClient, secretNameTLSAuth, values.VPAEnabled),
+							deploymentFor(secretNameCA, secretNameClient, secretNameTLSAuth),
 						))
 					})
 				})
@@ -1044,7 +1044,7 @@ var _ = Describe("VPNShoot", func() {
 
 						Expect(managedResource).To(contain(
 							vpaCopy,
-							statefulSetFor(3, 2, []string{secretNameClient0, secretNameClient1}, secretNameCA, secretNameTLSAuth, values.VPAEnabled),
+							statefulSetFor(3, 2, []string{secretNameClient0, secretNameClient1}, secretNameCA, secretNameTLSAuth),
 						))
 					})
 				})
@@ -1063,7 +1063,7 @@ var _ = Describe("VPNShoot", func() {
 					values.DisableNewVPN = true
 				})
 
-				JustBeforeEach(func() {
+				It("should successfully deploy all resources", func() {
 					var (
 						secretNameClient0 = expectVPNShootSecret(manifests, "-0")
 						secretNameClient1 = expectVPNShootSecret(manifests, "-1")
@@ -1071,14 +1071,13 @@ var _ = Describe("VPNShoot", func() {
 						secretNameTLSAuth = expectTLSAuthSecret(manifests)
 					)
 
+					vpaCopy := vpaHA.DeepCopy()
+					vpaCopy.Spec.UpdatePolicy.UpdateMode = ptr.To(vpaautoscalingv1.UpdateModeOff)
+
 					Expect(managedResource).To(contain(
-						vpaHA,
+						vpaCopy,
 						statefulSetFor(3, 2, []string{secretNameClient0, secretNameClient1}, secretNameCA, secretNameTLSAuth),
 					))
-				})
-
-				It("should successfully deploy all resources", func() {
-					// nothing to check additionally
 				})
 
 				AfterEach(func() {

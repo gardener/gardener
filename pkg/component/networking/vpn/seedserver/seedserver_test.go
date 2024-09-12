@@ -1064,11 +1064,6 @@ var _ = Describe("VpnSeedServer", func() {
 				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedConfigMap.Namespace, Name: expectedConfigMap.Name}, actualConfigMap)).To(Succeed())
 				Expect(actualConfigMap).To(DeepEqual(expectedConfigMap))
 
-				actualVpa := &vpaautoscalingv1.VerticalPodAutoscaler{}
-				expectedVpa := expectedVPAFor(values.HighAvailabilityEnabled)
-				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedVpa.Namespace, Name: expectedVpa.Name}, actualVpa)).To(Succeed())
-				Expect(actualVpa).To(DeepEqual(expectedVpa))
-
 				actualStatefulSet := &appsv1.StatefulSet{}
 				expectedStatefulSet := statefulSet(values.Network.NodeCIDRs, true)
 				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedStatefulSet.Namespace, Name: expectedStatefulSet.Name}, actualStatefulSet)).To(Succeed())
@@ -1094,6 +1089,11 @@ var _ = Describe("VpnSeedServer", func() {
 				})
 
 				It("should successfully deploy all resources", func() {
+					actualVpa := &vpaautoscalingv1.VerticalPodAutoscaler{}
+					expectedVpa := expectedVPAFor(values.HighAvailabilityEnabled, &vpaUpdateMode)
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedVpa.Namespace, Name: expectedVpa.Name}, actualVpa)).To(Succeed())
+					Expect(actualVpa).To(DeepEqual(expectedVpa))
+
 					actualPodDisruptionBudget := &policyv1.PodDisruptionBudget{}
 					expectedPDB := expectedPodDisruptionBudgetFor(true)
 					Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedPDB.Namespace, Name: expectedPDB.Name}, actualPodDisruptionBudget)).To(Succeed())
