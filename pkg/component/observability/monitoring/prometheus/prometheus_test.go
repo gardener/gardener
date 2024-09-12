@@ -939,7 +939,7 @@ tls_config:
 							SourceLabels: []monitoringv1.LabelName{"project", "name"},
 							Regex:        "(.+);(.+)",
 							Action:       "replace",
-							Replacement:  ptr.To("https://dashboard.ingress.gardener.cloud/namespace/garden-$1/shoots/$2"),
+							Replacement:  ptr.To("https://dashboard.gardener.cloud/namespace/garden-$1/shoots/$2"),
 							TargetLabel:  "shoot_dashboard_url",
 						}}
 					})
@@ -958,7 +958,7 @@ tls_config:
 								SourceLabels: []monitoringv1.LabelName{"project", "name"},
 								Regex:        "(.+);(.+)",
 								Action:       "replace",
-								Replacement:  ptr.To("https://dashboard.ingress.gardener.cloud/namespace/garden-$1/shoots/$2"),
+								Replacement:  ptr.To("https://dashboard.gardener.cloud/namespace/garden-$1/shoots/$2"),
 								TargetLabel:  "shoot_dashboard_url",
 							},
 						)
