@@ -146,6 +146,8 @@ If `useGKEFormula: true` is set, then the plugin injects resource reservations b
 Already existing resource reservations are not modified; this also means that resource reservations are not automatically updated if the machine type for a worker pool is changed.
 If a shoot contains global resource reservations, then no per worker pool resource reservations are injected.
 
+By default, `useGKEFormula: true` applies to all Shoots. Operators can use the optional configuration `labelSelector` to limit which Shoots get worker specific resource reservations injected.
+
 ## `ShootVPAEnabledByDefault`
 
 _(disabled by default)_
