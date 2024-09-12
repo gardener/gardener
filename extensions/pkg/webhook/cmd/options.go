@@ -146,11 +146,12 @@ func (w *SwitchOptions) Complete() error {
 
 // Completed returns the completed SwitchConfig. Call this only after successfully calling `Completed`.
 func (w *SwitchOptions) Completed() *SwitchConfig {
-	return &SwitchConfig{WebhooksFactory: w.webhookFactoryAggregator.Webhooks}
+	return &SwitchConfig{Disabled: len(w.webhookFactoryAggregator) == 0, WebhooksFactory: w.webhookFactoryAggregator.Webhooks}
 }
 
 // SwitchConfig is the completed configuration of SwitchOptions.
 type SwitchConfig struct {
+	Disabled        bool
 	WebhooksFactory func(manager.Manager) ([]*extensionswebhook.Webhook, error)
 }
 

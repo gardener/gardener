@@ -89,3 +89,5 @@ gardener:
     featureGates: {}
   seed:
     provider: local
+  runtimeCluster:
+    enabled: false
