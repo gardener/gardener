@@ -190,6 +190,10 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 				Name: parentCloudProfile.Name,
 			}
 			Expect(testClient.Create(ctx, namespacedCloudProfile)).To(Succeed())
+			Eventually(func(g Gomega) {
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
+				g.Expect(namespacedCloudProfile.Status.ObservedGeneration).To(Equal(namespacedCloudProfile.Generation))
+			}).Should(Succeed())
 			log.Info("Created NamespacedCloudProfile for test", "namespacedCloudProfile", client.ObjectKeyFromObject(namespacedCloudProfile))
 
 			if shoot != nil {
@@ -293,8 +297,7 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 			log.Info("Created NamespacedCloudProfile for test", "namespacedCloudProfile", client.ObjectKeyFromObject(namespacedCloudProfile))
 
 			Eventually(func(g Gomega) {
-				err := testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)
-				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
 				g.Expect(namespacedCloudProfile.Status.ObservedGeneration).To(Equal(namespacedCloudProfile.Generation))
 			}).Should(Succeed())
 
@@ -317,6 +320,8 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 		})
 
 		It("should update the NamespacedCloudProfile status on NamespacedCloudProfile spec update", func() {
+			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
+
 			namespacedCloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{}
 			namespacedCloudProfile.ResourceVersion = ""
 
@@ -339,6 +344,7 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 		})
 
 		It("should update the NamespacedCloudProfile status on CloudProfile spec update", func() {
+			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(parentCloudProfile), parentCloudProfile)).To(Succeed())
 			parentCloudProfile.Spec.Kubernetes.Versions = append(parentCloudProfile.Spec.Kubernetes.Versions, gardencorev1beta1.ExpirableVersion{Version: "1.4.0"})
 
 			err := testClient.Update(ctx, parentCloudProfile)
