@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gardener/machine-controller-manager/pkg/util/provider/machineutils"
 	"github.com/go-logr/logr"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -38,7 +39,6 @@ import (
 
 	"github.com/gardener/gardener/cmd/gardener-node-agent/app/bootstrappers"
 	"github.com/gardener/gardener/cmd/utils"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -421,9 +421,9 @@ func fetchMachineNameFromNode(ctx context.Context, restConfig *rest.Config, fs a
 	if err := c.Get(ctx, client.ObjectKey{Name: nodeName}, node); err != nil {
 		return "", fmt.Errorf("unable to fetch node %q: %w", nodeName, err)
 	}
-	machineName, found := node.Labels[v1beta1constants.LabelMachineName]
+	machineName, found := node.Labels[machineutils.MachineLabelKey]
 	if !found {
-		return "", fmt.Errorf("unable to get machine name. No %q label on node %q", v1beta1constants.LabelMachineName, node.Name)
+		return "", fmt.Errorf("unable to get machine name. No %q label on node %q", machineutils.MachineLabelKey, node.Name)
 	}
 
 	if err := fs.WriteFile(nodeagentv1alpha1.MachineNameFilePath, []byte(machineName), 0600); err != nil {

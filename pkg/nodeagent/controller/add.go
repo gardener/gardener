@@ -35,7 +35,7 @@ func AddToManager(ctx context.Context, cancel context.CancelFunc, mgr manager.Ma
 		if err := (&certificate.Reconciler{
 			Cancel:      cancel,
 			MachineName: machineName,
-		}).AddToManager(mgr, nodePredicate); err != nil {
+		}).AddToManager(mgr); err != nil {
 			return fmt.Errorf("failed adding certificate controller: %w", err)
 		}
 	}

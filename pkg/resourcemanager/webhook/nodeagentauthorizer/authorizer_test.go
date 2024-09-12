@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	"github.com/gardener/machine-controller-manager/pkg/util/provider/machineutils"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -106,7 +107,7 @@ var _ = Describe("Authorizer", func() {
 		node = &corev1.Node{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   nodeName,
-				Labels: map[string]string{v1beta1constants.LabelMachineName: machineName},
+				Labels: map[string]string{machineutils.MachineLabelKey: machineName},
 			},
 		}
 		Expect(targetClient.Create(ctx, node)).To(Succeed())
