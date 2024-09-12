@@ -25,7 +25,6 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
-	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/seed"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -79,7 +78,7 @@ func (v *vpa) recommenderResourceConfigs() component.ResourceConfigs {
 		service                           = v.emptyService(recommender)
 		deployment                        = v.emptyDeployment(recommender)
 		podDisruptionBudget               = v.emptyPodDisruptionBudget(recommender)
-		podMonitor                        = v.emptyPodMonitor(recommender)
+		serviceMonitor                    = v.emptyServiceMonitor(recommender)
 	)
 
 	configs := component.ResourceConfigs{
@@ -100,6 +99,7 @@ func (v *vpa) recommenderResourceConfigs() component.ResourceConfigs {
 			v.reconcileRecommenderRoleBindingLeaderLocking(roleBindingLeaderLocking, roleLeaderLocking, recommender)
 		}},
 		{Obj: service, Class: component.Runtime, MutateFn: func() { v.reconcileRecommenderService(service) }},
+		{Obj: serviceMonitor, Class: component.Runtime, MutateFn: func() { v.reconcileRecommenderServiceMonitor(serviceMonitor) }},
 	}
 
 	if v.values.ClusterType == component.ClusterTypeSeed {
@@ -112,7 +112,6 @@ func (v *vpa) recommenderResourceConfigs() component.ResourceConfigs {
 		configs = append(configs,
 			component.ResourceConfig{Obj: serviceAccount, Class: component.Application, MutateFn: func() { v.reconcileRecommenderServiceAccount(serviceAccount) }},
 			component.ResourceConfig{Obj: deployment, Class: component.Runtime, MutateFn: func() { v.reconcileRecommenderDeployment(deployment, &serviceAccount.Name) }},
-			component.ResourceConfig{Obj: podMonitor, Class: component.Runtime, MutateFn: func() { v.reconcileRecommenderPodMonitor(podMonitor) }},
 			component.ResourceConfig{Obj: podDisruptionBudget, Class: component.Runtime, MutateFn: func() { v.reconcilePodDisruptionBudget(podDisruptionBudget, deployment) }},
 		)
 	} else {
@@ -335,38 +334,34 @@ func (v *vpa) computeRecommenderCommands() []string {
 }
 
 func (v *vpa) reconcileRecommenderService(service *corev1.Service) {
-	switch v.values.ClusterType {
-	case component.ClusterTypeSeed:
-		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, networkingv1.NetworkPolicyPort{
-			Port:     ptr.To(intstr.FromInt32(recommenderPortMetrics)),
-			Protocol: ptr.To(corev1.ProtocolTCP),
-		}))
-
-	// TODO: For whatever reasons, the seed-prometheus also scrapes vpa-recommenders in all shoot namespaces.
-	//  Conceptually, this is wrong and should be improved (seed-prometheus should only scrape vpa-recommenders in
-	//  garden namespace, and prometheis in shoot namespaces should scrape their vpa-recommenders, respectively).
-	case component.ClusterTypeShoot:
-		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(service, metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}}))
-		metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
+	metricsNetworkPolicyPort := networkingv1.NetworkPolicyPort{
+		Port:     ptr.To(intstr.FromInt32(recommenderPortMetrics)),
+		Protocol: ptr.To(corev1.ProtocolTCP),
 	}
 
+	switch v.values.ClusterType {
+	case component.ClusterTypeSeed:
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, metricsNetworkPolicyPort))
+
+	case component.ClusterTypeShoot:
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, metricsNetworkPolicyPort))
+	}
+
+	service.Labels = getAppLabel(recommender)
 	service.Spec.Selector = getAppLabel(recommender)
 	desiredPorts := []corev1.ServicePort{{
 		Port:       recommenderPortMetrics,
 		TargetPort: intstr.FromInt32(recommenderPortMetrics),
+		Name:       metricsPortName,
 	}}
 	service.Spec.Ports = kubernetesutils.ReconcileServicePorts(service.Spec.Ports, desiredPorts, "")
 }
 
-func (v *vpa) reconcileRecommenderPodMonitor(podMonitor *monitoringv1.PodMonitor) {
-	// TODO: For whatever reasons, the seed-prometheus also scrapes vpa-recommenders in all shoot namespaces.
-	//  Conceptually, this is wrong and should be improved (seed-prometheus should only scrape vpa-recommenders in
-	//  garden namespace, and prometheis in shoot namespaces should scrape their vpa-recommenders, respectively).
-	podMonitor.Labels = monitoringutils.Labels(seed.Label)
-	podMonitor.Spec = monitoringv1.PodMonitorSpec{
-		Selector:          metav1.LabelSelector{MatchLabels: getAppLabel(recommender)},
-		NamespaceSelector: monitoringv1.NamespaceSelector{Any: true},
-		PodMetricsEndpoints: []monitoringv1.PodMetricsEndpoint{{
+func (v *vpa) reconcileRecommenderServiceMonitor(serviceMonitor *monitoringv1.ServiceMonitor) {
+	serviceMonitor.Labels = monitoringutils.Labels(v.getPrometheusLabel())
+	serviceMonitor.Spec = monitoringv1.ServiceMonitorSpec{
+		Selector: metav1.LabelSelector{MatchLabels: getAppLabel(recommender)},
+		Endpoints: []monitoringv1.Endpoint{{
 			Port: metricsPortName,
 			RelabelConfigs: []monitoringv1.RelabelConfig{
 				{
