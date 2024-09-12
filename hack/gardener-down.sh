@@ -36,3 +36,4 @@ kubectl delete ns \
 
 # cleanup namespaces that don't get deleted automatically
 kubectl delete ns gardener-system-seed-lease --ignore-not-found
+kubectl delete ns gardener-system-shoot-issuer --ignore-not-found

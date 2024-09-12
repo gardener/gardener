@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gardener-discovery-server
+  namespace: gardener-discovery-server
+  labels:
+    app: gardener-discovery-server
+spec:
+  revisionHistoryLimit: 2
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gardener-discovery-server
+  template:
+    metadata:
+      labels:
+        networking.gardener.cloud/to-dns: allowed
+        app: gardener-discovery-server
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: gardener-discovery-server
+      automountServiceAccountToken: false
+      containers:
+      - name: gardener-discovery-server
+        image: europe-docker.pkg.dev/gardener-project/releases/gardener/gardener-discovery-server:v0.1.0
+        imagePullPolicy: IfNotPresent
+        args:
+        - --kubeconfig=/etc/gardener-discovery-server/kubeconfig/kubeconfig
+        - --tls-cert-file=/var/run/secrets/gardener.cloud/gardener-discovery-server/tls/tls.crt
+        - --tls-private-key-file=/var/run/secrets/gardener.cloud/gardener-discovery-server/tls/tls.key
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: healthz
+            scheme: HTTP
+          initialDelaySeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 3
+          successThreshold: 1
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: healthz
+            scheme: HTTP
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+          failureThreshold: 3
+          successThreshold: 1
+          periodSeconds: 10
+        ports:
+        - name: https
+          containerPort: 10443
+          protocol: TCP
+        - name: metrics
+          containerPort: 8080
+          protocol: TCP
+        - name: healthz
+          containerPort: 8081
+          protocol: TCP
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "64Mi"
+        volumeMounts:
+        - name: gardener-discovery-server-tls
+          mountPath: /var/run/secrets/gardener.cloud/gardener-discovery-server/tls
+          readOnly: true
+        - name: gardener-discovery-server-kubeconfig
+          mountPath: /etc/gardener-discovery-server/kubeconfig
+          readOnly: true
+      volumes:
+      - name: gardener-discovery-server-tls
+        secret:
+          secretName: tls
+          defaultMode: 420
+      - name: gardener-discovery-server-kubeconfig
+        secret:
+          secretName: gardener-discovery-server-kubeconfig
+          defaultMode: 420

@@ -36,6 +36,7 @@ IPFAMILY                                   ?= ipv4
 PARALLEL_E2E_TESTS                         := 5
 GARDENER_RELEASE_DOWNLOAD_PATH             := $(REPO_ROOT)/dev
 DEV_SETUP_WITH_LPP_RESIZE_SUPPORT          ?= false
+DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT   ?= false
 PRINT_HELP ?=
 
 ifneq ($(SEED_NAME),provider-extensions)
@@ -356,7 +357,7 @@ gardener-down gardener-ha-single-zone-down gardener-ha-multi-zone-down: $(SKAFFO
 gardener-extensions-%: export SKAFFOLD_LABEL = skaffold.dev/run-id=gardener-extensions
 
 gardener-extensions-up: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
-	./hack/gardener-extensions-up.sh --path-garden-kubeconfig $(REPO_ROOT)/example/provider-extensions/garden/kubeconfig --path-seed-kubeconfig $(SEED_KUBECONFIG) --seed-name $(SEED_NAME)
+	./hack/gardener-extensions-up.sh --path-garden-kubeconfig $(REPO_ROOT)/example/provider-extensions/garden/kubeconfig --path-seed-kubeconfig $(SEED_KUBECONFIG) --seed-name $(SEED_NAME) --with-workload-identity-support $(DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT)
 gardener-extensions-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	./hack/gardener-extensions-down.sh --path-garden-kubeconfig $(REPO_ROOT)/example/provider-extensions/garden/kubeconfig --path-seed-kubeconfig $(SEED_KUBECONFIG) --seed-name $(SEED_NAME)
 
