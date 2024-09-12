@@ -41,7 +41,6 @@ type deployment struct {
 // If the extension doesn't define an extension deployment for the runtime cluster, the deployment is deleted.
 func (d *deployment) Reconcile(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension) error {
 	if extensionDeploymentSpecified(extension) {
-		log.Info("Deploying extension resources in garden runtime cluster")
 		if err := d.createOrUpdateResources(ctx, extension); err != nil {
 			return err
 		}
@@ -72,7 +71,7 @@ func (d *deployment) createOrUpdateResources(ctx context.Context, extension *ope
 	gardenerValues := map[string]any{
 		"gardener": map[string]any{
 			"runtimeCluster": map[string]any{
-				// TODO(timuthy): Add values here
+				"enabled": "true",
 			},
 		},
 	}

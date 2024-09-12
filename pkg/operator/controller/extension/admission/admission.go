@@ -142,11 +142,12 @@ func (d *deployment) createOrUpdateAdmissionRuntimeClusterResources(ctx context.
 		return fmt.Errorf("failed to inject garden access secrets: %w", err)
 	}
 
+	managedResourceName := runtimeManagedResourceName(extension)
 	if err := managedresources.CreateForSeedWithLabels(
 		ctx,
 		d.runtimeClientSet.Client(),
 		d.gardenNamespace,
-		runtimeManagedResourceName(extension),
+		managedResourceName,
 		false,
 		map[string]string{managedresources.LabelKeyOrigin: managedresources.LabelValueOperator},
 		secretData,
@@ -154,7 +155,7 @@ func (d *deployment) createOrUpdateAdmissionRuntimeClusterResources(ctx context.
 		return fmt.Errorf("failed creating ManagedResource: %w", err)
 	}
 
-	if err := managedresources.WaitUntilHealthyAndNotProgressing(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, runtimeManagedResourceName(extension)); err != nil {
+	if err := managedresources.WaitUntilHealthyAndNotProgressing(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, managedResourceName); err != nil {
 		return fmt.Errorf("failed waiting for ManagedResource to be healthy: %w", err)
 	}
 	return nil
@@ -168,7 +169,7 @@ func (d *deployment) deleteAdmissionRuntimeClusterResources(ctx context.Context,
 		return fmt.Errorf("failed deleting ManagedResource: %w", err)
 	}
 
-	if err := managedresources.WaitUntilDeleted(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, runtimeManagedResourceName(extension)); err != nil {
+	if err := managedresources.WaitUntilDeleted(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, managedResourceName); err != nil {
 		return fmt.Errorf("failed waiting for ManagedResource to be deleted: %w", err)
 	}
 
@@ -213,11 +214,12 @@ func (d *deployment) createOrUpdateAdmissionVirtualClusterResources(ctx context.
 		return fmt.Errorf("failed rendering Helm chart: %w", err)
 	}
 
-	if err := managedresources.CreateForShoot(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, admissionVirtualManagedResourceName(extension), managedresources.LabelValueOperator, false, renderedChart.AsSecretData()); err != nil {
+	managedResourceName := admissionVirtualManagedResourceName(extension)
+	if err := managedresources.CreateForShoot(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, managedResourceName, managedresources.LabelValueOperator, false, renderedChart.AsSecretData()); err != nil {
 		return fmt.Errorf("failed creating ManagedResource: %w", err)
 	}
 
-	if err := managedresources.WaitUntilHealthyAndNotProgressing(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, admissionVirtualManagedResourceName(extension)); err != nil {
+	if err := managedresources.WaitUntilHealthyAndNotProgressing(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, managedResourceName); err != nil {
 		return fmt.Errorf("failed waiting for ManagedResource to be healthy: %w", err)
 	}
 	return nil
