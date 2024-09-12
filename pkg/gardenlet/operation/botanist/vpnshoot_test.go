@@ -15,6 +15,7 @@ import (
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
+	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 )
 
@@ -54,6 +55,8 @@ var _ = Describe("VPNShoot", func() {
 					},
 				},
 			})
+			botanist.Seed = &seedpkg.Seed{}
+			botanist.Seed.SetInfo(&gardencorev1beta1.Seed{})
 		})
 
 		It("should successfully create a vpnShoot interface for ReversedVPN", func() {

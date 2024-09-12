@@ -2811,116 +2811,104 @@ kind: AuthenticationConfiguration
 				Expect(deployment.Spec.Template.Spec.InitContainers).To(BeEmpty())
 			})
 
-			It("should have one init container and three vpn-seed-client sidecar containers when VPN high availability are enabled", func() {
-				values := Values{
-					Values: apiserver.Values{
-						RuntimeVersion: runtimeVersion,
+			haVPNClientContainerFor := func(index int, disableNewVPN bool) corev1.Container {
+				container := corev1.Container{
+					Name:            fmt.Sprintf("vpn-client-%d", index),
+					Image:           "vpn-client-image:really-latest",
+					ImagePullPolicy: corev1.PullIfNotPresent,
+					Env: []corev1.EnvVar{
+						{
+							Name:  "ENDPOINT",
+							Value: fmt.Sprintf("vpn-seed-server-%d", index),
+						},
+						{
+							Name:  "SERVICE_NETWORK",
+							Value: values.ServiceNetworkCIDRs[0].String(),
+						},
+						{
+							Name:  "POD_NETWORK",
+							Value: values.VPN.PodNetworkCIDRs[0].String(),
+						},
+						{
+							Name:  "NODE_NETWORK",
+							Value: values.VPN.NodeNetworkCIDRs[0].String(),
+						},
+						{
+							Name:  "VPN_SERVER_INDEX",
+							Value: strconv.Itoa(index),
+						},
+						{
+							Name:  "IS_HA",
+							Value: "true",
+						},
+						{
+							Name:  "HA_VPN_SERVERS",
+							Value: "2",
+						},
+						{
+							Name:  "HA_VPN_CLIENTS",
+							Value: "3",
+						},
+						{
+							Name:  "OPENVPN_PORT",
+							Value: "1194",
+						},
+						{
+							Name:  "IP_FAMILIES",
+							Value: "IPv4",
+						},
 					},
-					Images:              Images{VPNClient: "vpn-client-image:really-latest"},
-					ServiceNetworkCIDRs: []net.IPNet{{IP: net.ParseIP("4.5.6.0"), Mask: net.CIDRMask(24, 32)}},
-					VPN: VPNConfig{
-						Enabled:                              true,
-						HighAvailabilityEnabled:              true,
-						HighAvailabilityNumberOfSeedServers:  2,
-						HighAvailabilityNumberOfShootClients: 3,
-						PodNetworkCIDRs:                      []net.IPNet{{IP: net.ParseIP("1.2.3.0"), Mask: net.CIDRMask(24, 32)}},
-						NodeNetworkCIDRs:                     []net.IPNet{{IP: net.ParseIP("7.8.9.0"), Mask: net.CIDRMask(24, 32)}},
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("20m"),
+							corev1.ResourceMemory: resource.MustParse("10Mi"),
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceMemory: resource.MustParse("100Mi"),
+						},
 					},
-					Version: version,
-				}
-				kapi = New(kubernetesInterface, namespace, sm, values)
-				deployAndRead()
-
-				haVPNClientContainerFor := func(index int) corev1.Container {
-					return corev1.Container{
-						Name:            fmt.Sprintf("vpn-client-%d", index),
-						Image:           "vpn-client-image:really-latest",
-						ImagePullPolicy: corev1.PullIfNotPresent,
-						Env: []corev1.EnvVar{
-							{
-								Name:  "ENDPOINT",
-								Value: fmt.Sprintf("vpn-seed-server-%d", index),
-							},
-							{
-								Name:  "SERVICE_NETWORK",
-								Value: values.ServiceNetworkCIDRs[0].String(),
-							},
-							{
-								Name:  "POD_NETWORK",
-								Value: values.VPN.PodNetworkCIDRs[0].String(),
-							},
-							{
-								Name:  "NODE_NETWORK",
-								Value: values.VPN.NodeNetworkCIDRs[0].String(),
-							},
-							{
-								Name:  "VPN_SERVER_INDEX",
-								Value: strconv.Itoa(index),
-							},
-							{
-								Name:  "HA_VPN_SERVERS",
-								Value: "2",
-							},
-							{
-								Name:  "HA_VPN_CLIENTS",
-								Value: "3",
-							},
-							{
-								Name:  "OPENVPN_PORT",
-								Value: "1194",
-							},
-							{
-								Name:  "DO_NOT_CONFIGURE_KERNEL_SETTINGS",
-								Value: "true",
-							},
+					SecurityContext: &corev1.SecurityContext{
+						RunAsNonRoot: ptr.To(false),
+						RunAsUser:    ptr.To[int64](0),
+						Capabilities: &corev1.Capabilities{
+							Add: []corev1.Capability{"NET_ADMIN"},
 						},
-						Resources: corev1.ResourceRequirements{
-							Requests: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("20m"),
-								corev1.ResourceMemory: resource.MustParse("10Mi"),
-							},
-							Limits: corev1.ResourceList{
-								corev1.ResourceMemory: resource.MustParse("100Mi"),
-							},
+					},
+					TerminationMessagePath:   "/dev/termination-log",
+					TerminationMessagePolicy: corev1.TerminationMessageReadFile,
+					VolumeMounts: []corev1.VolumeMount{
+						{
+							Name:      "vpn-seed-client",
+							MountPath: "/srv/secrets/vpn-client",
 						},
-						SecurityContext: &corev1.SecurityContext{
-							RunAsNonRoot: ptr.To(false),
-							RunAsUser:    ptr.To[int64](0),
-							Capabilities: &corev1.Capabilities{
-								Add: []corev1.Capability{"NET_ADMIN"},
-							},
+						{
+							Name:      "vpn-seed-tlsauth",
+							MountPath: "/srv/secrets/tlsauth",
 						},
-						TerminationMessagePath:   "/dev/termination-log",
-						TerminationMessagePolicy: corev1.TerminationMessageReadFile,
-						VolumeMounts: []corev1.VolumeMount{
-							{
-								Name:      "vpn-seed-client",
-								MountPath: "/srv/secrets/vpn-client",
-							},
-							{
-								Name:      "vpn-seed-tlsauth",
-								MountPath: "/srv/secrets/tlsauth",
-							},
-							{
-								Name:      "dev-net-tun",
-								MountPath: "/dev/net/tun",
-							},
+						{
+							Name:      "dev-net-tun",
+							MountPath: "/dev/net/tun",
 						},
-					}
+					},
 				}
 
-				initContainer := haVPNClientContainerFor(0)
+				if disableNewVPN {
+					container.Env = append(container.Env,
+						corev1.EnvVar{
+							Name:  "DO_NOT_CONFIGURE_KERNEL_SETTINGS",
+							Value: "true",
+						},
+					)
+				}
+				return container
+			}
+
+			haVPNInitClientContainer := func(disableNewVPN bool) corev1.Container {
+				initContainer := haVPNClientContainerFor(0, disableNewVPN)
 				initContainer.Name = "vpn-client-init"
 				initContainer.LivenessProbe = nil
+				initContainer.Command = []string{"/bin/vpn-client", "setup"}
 				initContainer.Env = append(initContainer.Env, []corev1.EnvVar{
-					{
-						Name:  "CONFIGURE_BONDING",
-						Value: "true",
-					},
-					{
-						Name:  "EXIT_AFTER_CONFIGURING_KERNEL_SETTINGS",
-						Value: "true",
-					},
 					{
 						Name: "POD_NAME",
 						ValueFrom: &corev1.EnvVarSource{
@@ -2943,18 +2931,57 @@ kind: AuthenticationConfiguration
 					MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
 					ReadOnly:  true,
 				})
+				if disableNewVPN {
+					initContainer.Command = nil
+					initContainer.Env = append(initContainer.Env,
+						corev1.EnvVar{
+							Name:  "EXIT_AFTER_CONFIGURING_KERNEL_SETTINGS",
+							Value: "true",
+						},
+						corev1.EnvVar{
+							Name:  "CONFIGURE_BONDING",
+							Value: "true",
+						},
+					)
+				}
+				return initContainer
+			}
+
+			testHAVPN := func(disableNewVPN bool) {
+				values = Values{
+					Values: apiserver.Values{
+						RuntimeVersion: runtimeVersion,
+					},
+					Images:              Images{VPNClient: "vpn-client-image:really-latest"},
+					ServiceNetworkCIDRs: []net.IPNet{{IP: net.ParseIP("4.5.6.0"), Mask: net.CIDRMask(24, 32)}},
+					VPN: VPNConfig{
+						Enabled:                              true,
+						HighAvailabilityEnabled:              true,
+						HighAvailabilityNumberOfSeedServers:  2,
+						HighAvailabilityNumberOfShootClients: 3,
+						PodNetworkCIDRs:                      []net.IPNet{{IP: net.ParseIP("1.2.3.0"), Mask: net.CIDRMask(24, 32)}},
+						NodeNetworkCIDRs:                     []net.IPNet{{IP: net.ParseIP("7.8.9.0"), Mask: net.CIDRMask(24, 32)}},
+						IPFamilies:                           []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
+						DisableNewVPN:                        disableNewVPN,
+					},
+					Version: version,
+				}
+				kapi = New(kubernetesInterface, namespace, sm, values)
+				deployAndRead()
+
+				initContainer := haVPNInitClientContainer(disableNewVPN)
 				Expect(deployment.Spec.Template.Spec.InitContainers).To(DeepEqual([]corev1.Container{initContainer}))
 				Expect(deployment.Spec.Template.Spec.Containers).To(HaveLen(values.VPN.HighAvailabilityNumberOfSeedServers + 2))
 				for i := 0; i < values.VPN.HighAvailabilityNumberOfSeedServers; i++ {
 					labelKey := fmt.Sprintf("networking.resources.gardener.cloud/to-vpn-seed-server-%d-tcp-1194", i)
 					Expect(deployment.Spec.Template.Labels).To(HaveKeyWithValue(labelKey, "allowed"))
-					Expect(deployment.Spec.Template.Spec.Containers[i+1]).To(DeepEqual(haVPNClientContainerFor(i)))
+					Expect(deployment.Spec.Template.Spec.Containers[i+1]).To(DeepEqual(haVPNClientContainerFor(i, disableNewVPN)))
 				}
-				Expect(deployment.Spec.Template.Spec.Containers[values.VPN.HighAvailabilityNumberOfSeedServers+1]).To(DeepEqual(corev1.Container{
+				pathControllerContainer := corev1.Container{
 					Name:            "vpn-path-controller",
 					Image:           "vpn-client-image:really-latest",
 					ImagePullPolicy: corev1.PullIfNotPresent,
-					Command:         []string{"/path-controller.sh"},
+					Command:         []string{"/bin/vpn-client", "path-controller"},
 					Env: []corev1.EnvVar{
 						{
 							Name:  "SERVICE_NETWORK",
@@ -2969,8 +2996,16 @@ kind: AuthenticationConfiguration
 							Value: values.VPN.NodeNetworkCIDRs[0].String(),
 						},
 						{
+							Name:  "IS_HA",
+							Value: "true",
+						},
+						{
 							Name:  "HA_VPN_CLIENTS",
 							Value: "3",
+						},
+						{
+							Name:      "POD_IP",
+							ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "status.podIP"}},
 						},
 					},
 					Resources: corev1.ResourceRequirements{
@@ -2984,6 +3019,7 @@ kind: AuthenticationConfiguration
 					},
 					SecurityContext: &corev1.SecurityContext{
 						RunAsNonRoot: ptr.To(false),
+						RunAsGroup:   ptr.To[int64](0),
 						RunAsUser:    ptr.To[int64](0),
 						Capabilities: &corev1.Capabilities{
 							Add: []corev1.Capability{"NET_ADMIN"},
@@ -2991,7 +3027,12 @@ kind: AuthenticationConfiguration
 					},
 					TerminationMessagePath:   "/dev/termination-log",
 					TerminationMessagePolicy: corev1.TerminationMessageReadFile,
-				}))
+				}
+				if disableNewVPN {
+					pathControllerContainer.Command = nil
+					pathControllerContainer.Args = []string{"/path-controller.sh"}
+				}
+				Expect(deployment.Spec.Template.Spec.Containers[values.VPN.HighAvailabilityNumberOfSeedServers+1]).To(DeepEqual(pathControllerContainer))
 
 				Expect(deployment.Spec.Template.Spec.Containers[0].Args).NotTo(ContainElement(ContainSubstring("--egress-selector-config-file=")))
 				Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("http-proxy")})))
@@ -3056,6 +3097,14 @@ kind: AuthenticationConfiguration
 						},
 					},
 				))
+			}
+
+			It("should have one init container and three vpn-seed-client sidecar containers when VPN high availability are enabled", func() {
+				testHAVPN(false)
+			})
+
+			It("should have one init container and three vpn-seed-client sidecar containers when VPN high availability are enabled and GO VPN rewrite disabled", func() {
+				testHAVPN(true)
 			})
 
 			Context("kube-apiserver container", func() {

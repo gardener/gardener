@@ -115,24 +115,27 @@ type NetworkValues struct {
 type Values struct {
 	// RuntimeKubernetesVersion is the Kubernetes version of the runtime cluster.
 	RuntimeKubernetesVersion *semver.Version
-	// ImageAPIServerProxy is the image name of the apiserver-proxy
+	// ImageAPIServerProxy is the image name of the apiserver-proxy.
 	ImageAPIServerProxy string
-	// ImageVPNSeedServer is the image name of the vpn-seed-server
+	// ImageVPNSeedServer is the image name of the vpn-seed-server.
 	ImageVPNSeedServer string
-	// KubeAPIServerHost is the FQDN of the kube-apiserver
+	// KubeAPIServerHost is the FQDN of the kube-apiserver.
 	KubeAPIServerHost *string
 	// Network contains the configuration values for the network.
 	Network NetworkValues
-	// Replicas is the number of deployment replicas
+	// Replicas is the number of deployment replicas.
 	Replicas int32
 	// HighAvailabilityEnabled marks whether HA is enabled for VPN.
 	HighAvailabilityEnabled bool
-	// HighAvailabilityNumberOfSeedServers is the number of VPN seed servers used for HA
+	// HighAvailabilityNumberOfSeedServers is the number of VPN seed servers used for HA.
 	HighAvailabilityNumberOfSeedServers int
-	// HighAvailabilityNumberOfShootClients is the number of VPN shoot clients used for HA
+	// HighAvailabilityNumberOfShootClients is the number of VPN shoot clients used for HA.
 	HighAvailabilityNumberOfShootClients int
 	// VPAUpdateDisabled indicates whether the vertical pod autoscaler update should be disabled.
 	VPAUpdateDisabled bool
+	// DisableNewVPN disable new VPN implementation.
+	// TODO(MartinWeindel) Remove after feature gate `NewVPN` gets promoted to GA.
+	DisableNewVPN bool
 }
 
 // New creates a new instance of DeployWaiter for the vpn-seed-server.
@@ -492,17 +495,59 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 			},
 		})
 	} else {
-		statusPath := filepath.Join(volumeMountPathStatusDir, "openvpn.status")
-		template.Spec.Containers = append(template.Spec.Containers, corev1.Container{
+		template.Spec.Containers[0].Env = append(
+			template.Spec.Containers[0].Env,
+			[]corev1.EnvVar{
+				{
+					Name:  "OPENVPN_STATUS_PATH",
+					Value: filepath.Join(volumeMountPathStatusDir, "openvpn.status"),
+				},
+				{
+					Name: "POD_NAME",
+					ValueFrom: &corev1.EnvVarSource{
+						FieldRef: &corev1.ObjectFieldSelector{
+							FieldPath: "metadata.name",
+						},
+					},
+				},
+				{
+					Name:  "IS_HA",
+					Value: "true",
+				},
+				{
+					Name:  "HA_VPN_CLIENTS",
+					Value: strconv.Itoa(v.values.HighAvailabilityNumberOfShootClients),
+				},
+			}...)
+		template.Spec.Containers[0].Ports = append(template.Spec.Containers[0].Ports, corev1.ContainerPort{
+			Name:          metricsPortName,
+			ContainerPort: metricsPort,
+			Protocol:      corev1.ProtocolTCP,
+		})
+		template.Spec.Containers[0].VolumeMounts = append(template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+			Name:      volumeNameStatusDir,
+			MountPath: volumeMountPathStatusDir,
+		})
+		template.Spec.Volumes = append(template.Spec.Volumes, corev1.Volume{
+			Name: volumeNameStatusDir,
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
+			},
+		})
+
+		exporterContainer := corev1.Container{
 			Name:            "openvpn-exporter",
 			Image:           v.values.ImageVPNSeedServer,
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			Command: []string{
-				"/openvpn-exporter",
-				"-openvpn.status_paths",
-				statusPath,
-				"-web.listen-address",
-				fmt.Sprintf(":%d", metricsPort),
+				"/bin/vpn-server",
+				"exporter",
+			},
+			Env: []corev1.EnvVar{
+				{
+					Name:  "OPENVPN_STATUS_PATH",
+					Value: filepath.Join(volumeMountPathStatusDir, "openvpn.status"),
+				},
 			},
 			Ports: []corev1.ContainerPort{
 				{
@@ -534,11 +579,11 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 			},
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("20m"),
-					corev1.ResourceMemory: resource.MustParse("50Mi"),
+					corev1.ResourceCPU:    resource.MustParse("10m"),
+					corev1.ResourceMemory: resource.MustParse("10Mi"),
 				},
 				Limits: corev1.ResourceList{
-					corev1.ResourceMemory: resource.MustParse("100Mi"),
+					corev1.ResourceMemory: resource.MustParse("20Mi"),
 				},
 			},
 			VolumeMounts: []corev1.VolumeMount{
@@ -547,44 +592,21 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 					MountPath: volumeMountPathStatusDir,
 				},
 			},
-		})
-		template.Spec.Containers[0].Env = append(template.Spec.Containers[0].Env, corev1.EnvVar{
-			Name:  "OPENVPN_STATUS_PATH",
-			Value: statusPath,
-		})
-		template.Spec.Containers[0].VolumeMounts = append(template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-			Name:      volumeNameStatusDir,
-			MountPath: volumeMountPathStatusDir,
-		})
-		template.Spec.Volumes = append(template.Spec.Volumes, corev1.Volume{
-			Name: volumeNameStatusDir,
-			VolumeSource: corev1.VolumeSource{
-				EmptyDir: &corev1.EmptyDirVolumeSource{},
-			},
-		})
-	}
+		}
 
-	if v.values.HighAvailabilityEnabled {
-		template.Spec.Containers[0].Env = append(
-			template.Spec.Containers[0].Env,
-			[]corev1.EnvVar{
-				{
-					Name:  "CLIENT_TO_CLIENT",
-					Value: "true",
-				},
-				{
-					Name: "POD_NAME",
-					ValueFrom: &corev1.EnvVarSource{
-						FieldRef: &corev1.ObjectFieldSelector{
-							FieldPath: "metadata.name",
-						},
-					},
-				},
-				{
-					Name:  "HA_VPN_CLIENTS",
-					Value: strconv.Itoa(v.values.HighAvailabilityNumberOfShootClients),
-				},
-			}...)
+		if v.values.DisableNewVPN {
+			statusPath := filepath.Join(volumeMountPathStatusDir, "openvpn.status")
+			exporterContainer.Command = []string{
+				"/openvpn-exporter",
+				"-openvpn.status_paths",
+				statusPath,
+				"-web.listen-address",
+				fmt.Sprintf(":%d", metricsPort),
+			}
+			exporterContainer.Env = nil
+		}
+
+		template.Spec.Containers = append(template.Spec.Containers, exporterContainer)
 	}
 
 	return template

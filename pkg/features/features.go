@@ -85,6 +85,11 @@ const (
 	// owner: @MichaelEischer
 	// alpha: v1.98.0
 	NewWorkerPoolHash featuregate.Feature = "NewWorkerPoolHash"
+
+	// NewVPN enables the new implementation of the VPN (go rewrite) using an IPv6 transfer network.
+	// owner: @MartinWeindel @ScheererJ @axel7born @DockToFuture
+	// alpha: v1.104.0
+	NewVPN featuregate.Feature = "NewVPN"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -123,6 +128,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	VPAAndHPAForAPIServer:     {Default: true, PreRelease: featuregate.Beta},
 	ShootCredentialsBinding:   {Default: false, PreRelease: featuregate.Alpha},
 	NewWorkerPoolHash:         {Default: false, PreRelease: featuregate.Alpha},
+	NewVPN:                    {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.

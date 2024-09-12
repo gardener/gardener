@@ -27,5 +27,6 @@ func GetFeatures() []featuregate.Feature {
 		features.ShootManagedIssuer,
 		features.VPAAndHPAForAPIServer,
 		features.NewWorkerPoolHash,
+		features.NewVPN,
 	}
 }

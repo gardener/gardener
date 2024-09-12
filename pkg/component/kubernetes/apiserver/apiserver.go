@@ -168,10 +168,15 @@ type VPNConfig struct {
 	NodeNetworkCIDRs []net.IPNet
 	// HighAvailabilityEnabled states if VPN uses HA configuration.
 	HighAvailabilityEnabled bool
-	// HighAvailabilityNumberOfSeedServers is the number of VPN seed servers used for HA
+	// HighAvailabilityNumberOfSeedServers is the number of VPN seed servers used for HA.
 	HighAvailabilityNumberOfSeedServers int
-	// HighAvailabilityNumberOfShootClients is the number of VPN shoot clients used for HA
+	// HighAvailabilityNumberOfShootClients is the number of VPN shoot clients used for HA.
 	HighAvailabilityNumberOfShootClients int
+	// DisableNewVPN disable new VPN implementation.
+	// TODO(MartinWeindel) Remove after feature gate `NewVPN` gets promoted to GA.
+	DisableNewVPN bool
+	// IPFamilies are the IPFamilies of the shoot.
+	IPFamilies []gardencorev1beta1.IPFamily
 }
 
 // ServerCertificateConfig contains configuration for the server certificate.

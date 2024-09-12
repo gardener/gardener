@@ -51,10 +51,27 @@ vpn-seed-server pods can be rolled without disrupting open connections.
 With bonding, there are 2 possible routing paths, ensuring that there is at least one routing path intact even if
 one `vpn-seed-server` pod and one `vpn-shoot` pod are unavailable at the same time.
 
-As it is not possible to use multi-path routing, one routing path must be configured explicitly.
-For this purpose, the `path-controller` script is running in another side-car of the kube-apiserver pod.
+As multi-path routing is not available on the worker nodes, one routing path must be configured explicitly.
+For this purpose, the `path-controller` app is running in another side-car of the kube-apiserver pod.
 It pings all shoot-side VPN clients regularly every few seconds. If the active routing path is not responsive anymore,
 the routing is switched to the other responsive routing path.
+
+Using an IPv6 transport network for communication between the bonding devices of the VPN clients, additional
+tunnel devices are needed on both ends to allow transport of both IPv4 and IPv6 packets.
+For this purpose, `ip6tnl` type tunnel devices are in place (an IPv4/IPv6 over IPv6 tunnel interface).
+
+The connection establishment with a reversed tunnel in HA case is:
+
+`APIServer[k] --> ip6tnl-device[j] --> bond-device --> tap-device[i] | VPN-Seed-Server[i] <-- Istio/Envoy-Proxy <-- SNI API Server Endpoint <-- LB (one for all clusters of a seed) <--- internet <--- VPN-Shoot-Client[j] --> tap-device[i] --> bond-device -->  ip6tnl-device[k] --> Pods | Nodes | Services`
+
+Here, `[k]` is the index of the kube-apiserver instance, `[j]` of the VPN shoot instance, and `[i]` of VPN seed server.
+
+For each kube-apiserver instance, an own `ip6tnl` tunnel device is needed on the shoot side.
+Additionally, the back routes from the VPN shoot to any new kube-apiserver instance must be set dynamically. 
+Both tasks are managed by the `tunnel-controller` running in each VPN shoot client.
+It listens for `UDP6` packets sent periodically from the `path-controller` running in the kube-apiserver pods.
+These `UDP6` packets contain the `IPv6` address of the bond device.
+If the tunnel controller detects a new kube-apiserver this way, it creates a new tunnel device and route to it.
 
 ![Four possible routing paths](images/vpn-ha-routing-paths.png)
 

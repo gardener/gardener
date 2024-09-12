@@ -76,7 +76,7 @@ var _ = Describe("VpnSeedServer", func() {
 	)
 
 	var (
-		template = func(nodeNetworks []net.IPNet, highAvailability bool) *corev1.PodTemplateSpec {
+		template = func(nodeNetworks []net.IPNet, highAvailability, disableNewVPN bool) *corev1.PodTemplateSpec {
 			hostPathCharDev := corev1.HostPathCharDev
 			nodes := ""
 			if len(nodeNetworks) > 0 {
@@ -253,10 +253,6 @@ var _ = Describe("VpnSeedServer", func() {
 						Value: "/srv/status/openvpn.status",
 					},
 					{
-						Name:  "CLIENT_TO_CLIENT",
-						Value: "true",
-					},
-					{
 						Name: "POD_NAME",
 						ValueFrom: &corev1.EnvVarSource{
 							FieldRef: &corev1.ObjectFieldSelector{
@@ -265,27 +261,41 @@ var _ = Describe("VpnSeedServer", func() {
 						},
 					},
 					{
+						Name:  "IS_HA",
+						Value: "true",
+					},
+					{
 						Name:  "HA_VPN_CLIENTS",
 						Value: "2",
 					},
 				}...)
 				template.Spec.Containers[0].VolumeMounts = append(template.Spec.Containers[0].VolumeMounts, mount)
-				template.Spec.Containers = append(template.Spec.Containers, corev1.Container{
+				exporterContainer := corev1.Container{
 					Name:            "openvpn-exporter",
 					Image:           vpnSeedServerImage,
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					Command: []string{
-						"/openvpn-exporter",
-						"-openvpn.status_paths",
-						"/srv/status/openvpn.status",
-						"-web.listen-address",
-						":15000",
+						"/bin/vpn-server",
+						"exporter",
+					},
+					Env: []corev1.EnvVar{
+						{
+							Name:  "OPENVPN_STATUS_PATH",
+							Value: "/srv/status/openvpn.status",
+						},
 					},
 					Ports: []corev1.ContainerPort{
 						{
 							Name:          "metrics",
 							ContainerPort: 15000,
 							Protocol:      corev1.ProtocolTCP,
+						},
+					},
+					SecurityContext: &corev1.SecurityContext{
+						Capabilities: &corev1.Capabilities{
+							Drop: []corev1.Capability{
+								"all",
+							},
 						},
 					},
 					ReadinessProbe: &corev1.Probe{
@@ -302,23 +312,32 @@ var _ = Describe("VpnSeedServer", func() {
 							},
 						},
 					},
-					SecurityContext: &corev1.SecurityContext{
-						Capabilities: &corev1.Capabilities{
-							Drop: []corev1.Capability{
-								"all",
-							},
-						},
-					},
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("20m"),
-							corev1.ResourceMemory: resource.MustParse("50Mi"),
+							corev1.ResourceCPU:    resource.MustParse("10m"),
+							corev1.ResourceMemory: resource.MustParse("10Mi"),
 						},
 						Limits: corev1.ResourceList{
-							corev1.ResourceMemory: resource.MustParse("100Mi"),
+							corev1.ResourceMemory: resource.MustParse("20Mi"),
 						},
 					},
 					VolumeMounts: []corev1.VolumeMount{mount},
+				}
+				if disableNewVPN {
+					exporterContainer.Command = []string{
+						"/openvpn-exporter",
+						"-openvpn.status_paths",
+						"/srv/status/openvpn.status",
+						"-web.listen-address",
+						":15000",
+					}
+					exporterContainer.Env = nil
+				}
+				template.Spec.Containers = append(template.Spec.Containers, exporterContainer)
+				template.Spec.Containers[0].Ports = append(template.Spec.Containers[0].Ports, corev1.ContainerPort{
+					Name:          "metrics",
+					ContainerPort: 15000,
+					Protocol:      corev1.ProtocolTCP,
 				})
 				template.Spec.Volumes = append(template.Spec.Volumes, corev1.Volume{
 					Name: "openvpn-status",
@@ -420,7 +439,7 @@ var _ = Describe("VpnSeedServer", func() {
 						},
 						Type: appsv1.RollingUpdateDeploymentStrategyType,
 					},
-					Template: *template(nodeNetworks, false),
+					Template: *template(nodeNetworks, false, false),
 				},
 			}
 
@@ -428,7 +447,7 @@ var _ = Describe("VpnSeedServer", func() {
 			return deploy
 		}
 
-		statefulSet = func(nodeNetworks []net.IPNet) *appsv1.StatefulSet {
+		statefulSet = func(nodeNetworks []net.IPNet, disableNewVPN bool) *appsv1.StatefulSet {
 			sts := &appsv1.StatefulSet{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "vpn-seed-server",
@@ -449,7 +468,7 @@ var _ = Describe("VpnSeedServer", func() {
 					UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
 						Type: appsv1.RollingUpdateStatefulSetStrategyType,
 					},
-					Template: *template(nodeNetworks, true),
+					Template: *template(nodeNetworks, true, disableNewVPN),
 				},
 			}
 
@@ -776,7 +795,7 @@ var _ = Describe("VpnSeedServer", func() {
 	Describe("#Deploy", func() {
 		Context("secret information available", func() {
 			JustBeforeEach(func() {
-				statefulSet := statefulSet(values.Network.NodeCIDRs)
+				statefulSet := statefulSet(values.Network.NodeCIDRs, false)
 				statefulSet.ResourceVersion = ""
 				Expect(c.Create(ctx, statefulSet)).To(Succeed())
 
@@ -962,7 +981,7 @@ var _ = Describe("VpnSeedServer", func() {
 				Expect(actualScrapeConfig).To(DeepEqual(expectedScrapeConfig))
 
 				actualStatefulSet := &appsv1.StatefulSet{}
-				expectedStatefulSet := statefulSet(values.Network.NodeCIDRs)
+				expectedStatefulSet := statefulSet(values.Network.NodeCIDRs, false)
 				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedStatefulSet.Namespace, Name: expectedStatefulSet.Name}, actualStatefulSet)).To(Succeed())
 				Expect(actualStatefulSet).To(DeepEqual(expectedStatefulSet))
 
@@ -992,6 +1011,95 @@ var _ = Describe("VpnSeedServer", func() {
 					Expect(actualPodDisruptionBudget).To(DeepEqual(expectedPDB))
 				})
 			})
+		})
+
+		Context("High availability (w/o node network) - disable VPN rewrite", func() {
+			BeforeEach(func() {
+				values.Network.NodeCIDRs = nil
+				values.Replicas = 3
+				values.HighAvailabilityEnabled = true
+				values.HighAvailabilityNumberOfSeedServers = 3
+				values.HighAvailabilityNumberOfShootClients = 2
+				values.DisableNewVPN = true
+			})
+
+			JustBeforeEach(func() {
+				deployment := deployment(values.Network.NodeCIDRs)
+				deployment.ResourceVersion = ""
+				Expect(c.Create(ctx, deployment)).To(Succeed())
+
+				dr := destinationRule()
+				dr.ResourceVersion = ""
+				Expect(c.Create(ctx, dr)).To(Succeed())
+
+				svc := expectedService.DeepCopy()
+				svc.ResourceVersion = ""
+				Expect(c.Create(ctx, svc)).To(Succeed())
+
+				Expect(vpnSeedServer.Deploy(ctx)).To(Succeed())
+
+				actualSecretServer := &corev1.Secret{}
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpn-seed-server"}, actualSecretServer)).To(Succeed())
+				Expect(actualSecretServer.Immutable).To(PointTo(BeTrue()))
+				Expect(actualSecretServer.Data).NotTo(BeEmpty())
+
+				actualSecretTLSAuth := &corev1.Secret{}
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: secretNameTLSAuth}, actualSecretTLSAuth)).To(Succeed())
+				Expect(actualSecretTLSAuth.Immutable).To(PointTo(BeTrue()))
+				Expect(actualSecretTLSAuth.Data).NotTo(BeEmpty())
+
+				for i := 0; i < 2; i++ {
+					actualDestinationRule := &istionetworkingv1beta1.DestinationRule{}
+					expectedDestinationRule := indexedDestinationRule(i)
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedDestinationRule.Namespace, Name: expectedDestinationRule.Name}, actualDestinationRule)).To(Succeed())
+					Expect(actualDestinationRule).To(BeComparableTo(expectedDestinationRule, comptest.CmpOptsForDestinationRule()))
+
+					actualService := &corev1.Service{}
+					expectedService := indexedService(i)
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedService.Namespace, Name: expectedService.Name}, actualService)).To(Succeed())
+					Expect(actualService).To(DeepEqual(expectedService))
+				}
+
+				actualConfigMap := &corev1.ConfigMap{}
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedConfigMap.Namespace, Name: expectedConfigMap.Name}, actualConfigMap)).To(Succeed())
+				Expect(actualConfigMap).To(DeepEqual(expectedConfigMap))
+
+				actualStatefulSet := &appsv1.StatefulSet{}
+				expectedStatefulSet := statefulSet(values.Network.NodeCIDRs, true)
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedStatefulSet.Namespace, Name: expectedStatefulSet.Name}, actualStatefulSet)).To(Succeed())
+				Expect(actualStatefulSet).To(DeepEqual(expectedStatefulSet))
+
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpn-seed-server"}, &appsv1.Deployment{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(destinationRule()), &istionetworkingv1beta1.DestinationRule{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedService), &corev1.Service{})).To(BeNotFoundError())
+			})
+
+			Context("Kubernetes versions < 1.26", func() {
+				It("should successfully deploy all resources", func() {
+					actualPodDisruptionBudget := &policyv1.PodDisruptionBudget{}
+					expectedPDB := expectedPodDisruptionBudgetFor(false)
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedPDB.Namespace, Name: expectedPDB.Name}, actualPodDisruptionBudget)).To(Succeed())
+					Expect(actualPodDisruptionBudget).To(DeepEqual(expectedPDB))
+				})
+			})
+
+			Context("Kubernetes versions >= 1.26", func() {
+				BeforeEach(func() {
+					runtimeKubernetesVersion = semver.MustParse("1.26.0")
+				})
+
+				It("should successfully deploy all resources", func() {
+					actualVpa := &vpaautoscalingv1.VerticalPodAutoscaler{}
+					expectedVpa := expectedVPAFor(values.HighAvailabilityEnabled, &vpaUpdateMode)
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedVpa.Namespace, Name: expectedVpa.Name}, actualVpa)).To(Succeed())
+					Expect(actualVpa).To(DeepEqual(expectedVpa))
+
+					actualPodDisruptionBudget := &policyv1.PodDisruptionBudget{}
+					expectedPDB := expectedPodDisruptionBudgetFor(true)
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedPDB.Namespace, Name: expectedPDB.Name}, actualPodDisruptionBudget)).To(Succeed())
+					Expect(actualPodDisruptionBudget).To(DeepEqual(expectedPDB))
+				})
+			})
 
 			Context("With VPA update mode set to off", func() {
 				BeforeEach(func() {
@@ -1010,7 +1118,7 @@ var _ = Describe("VpnSeedServer", func() {
 
 	Describe("#Destroy", func() {
 		JustBeforeEach(func() {
-			statefulSet := statefulSet(values.Network.NodeCIDRs)
+			statefulSet := statefulSet(values.Network.NodeCIDRs, false)
 			statefulSet.ResourceVersion = ""
 			Expect(c.Create(ctx, statefulSet)).To(Succeed())
 

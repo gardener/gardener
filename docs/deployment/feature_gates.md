@@ -18,22 +18,23 @@ The following tables are a summary of the feature gates that you can set on diff
 
 ## Feature Gates for Alpha or Beta Features
 
-| Feature                         | Default | Stage   | Since   | Until   |
-|---------------------------------|---------|---------|---------|---------|
-| HVPA                            | `false` | `Alpha` | `0.31`  |         |
-| HVPAForShootedSeed              | `false` | `Alpha` | `0.32`  |         |
-| DefaultSeccompProfile           | `false` | `Alpha` | `1.54`  |         |
-| IPv6SingleStack                 | `false` | `Alpha` | `1.63`  |         |
-| ShootForceDeletion              | `false` | `Alpha` | `1.81`  | `1.90`  |
-| ShootForceDeletion              | `true`  | `Beta`  | `1.91`  |         |
-| UseNamespacedCloudProfile       | `false` | `Alpha` | `1.92`  |         |
-| ShootManagedIssuer              | `false` | `Alpha` | `1.93`  |         |
-| VPAForETCD                      | `false` | `Alpha` | `1.94`  | `1.96`  |
-| VPAForETCD                      | `true`  | `Beta`  | `1.97`  |         |
-| VPAAndHPAForAPIServer           | `false` | `Alpha` | `1.95`  | `1.100` |
-| VPAAndHPAForAPIServer           | `true`  | `Beta`  | `1.101` |         |
-| ShootCredentialsBinding         | `false` | `Alpha` | `1.98`  |         |
-| NewWorkerPoolHash               | `false` | `Alpha` | `1.98`  |         |
+| Feature                   | Default | Stage   | Since   | Until   |
+|---------------------------|---------|---------|---------|---------|
+| HVPA                      | `false` | `Alpha` | `0.31`  |         |
+| HVPAForShootedSeed        | `false` | `Alpha` | `0.32`  |         |
+| DefaultSeccompProfile     | `false` | `Alpha` | `1.54`  |         |
+| IPv6SingleStack           | `false` | `Alpha` | `1.63`  |         |
+| ShootForceDeletion        | `false` | `Alpha` | `1.81`  | `1.90`  |
+| ShootForceDeletion        | `true`  | `Beta`  | `1.91`  |         |
+| UseNamespacedCloudProfile | `false` | `Alpha` | `1.92`  |         |
+| ShootManagedIssuer        | `false` | `Alpha` | `1.93`  |         |
+| VPAForETCD                | `false` | `Alpha` | `1.94`  | `1.96`  |
+| VPAForETCD                | `true`  | `Beta`  | `1.97`  |         |
+| VPAAndHPAForAPIServer     | `false` | `Alpha` | `1.95`  | `1.100` |
+| VPAAndHPAForAPIServer     | `true`  | `Beta`  | `1.101` |         |
+| ShootCredentialsBinding   | `false` | `Alpha` | `1.98`  |         |
+| NewWorkerPoolHash         | `false` | `Alpha` | `1.98`  |         |
+| NewVPN                    | `false` | `Alpha` | `1.104` |         |
 
 ## Feature Gates for Graduated or Deprecated Features
 
@@ -213,4 +214,5 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 | VPAForETCD                      | `gardenlet`, `gardener-operator`  | Enables VPA for `etcd-main` and `etcd-events`, regardless of HVPA enablement.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | VPAAndHPAForAPIServer           | `gardenlet`, `gardener-operator`  | Enables an autoscaling mechanism for `kube-apiserver` of shoot or virtual garden clusters, and the `gardener-apiserver`. They are scaled simultaneously by VPA and HPA on the same metric (CPU and memory usage). The pod-trashing cycle between VPA and HPA scaling on the same metric is avoided by configuring the HPA to scale on average usage (not on average utilization) and by picking the target average utilization values in sync with VPA's allowed maximums. The feature gate takes precedence over the `HVPA` feature gate when they are both enabled. |
 | ShootCredentialsBinding         | `gardener-apiserver`              | Enables usage of `CredentialsBindingName` in `Shoot`s.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| NewWorkerPoolHash               | `gardenlet`                       | Enables usage of the new worker pool hash calculation. The new calculation supports rolling worker pools if `kubeReserved`, `systemReserved`, `evicitonHard` or `cpuManagerPolicy` in the `kubelet` configuration are changed. All provider extensions must be upgraded to support this feature first. Existing worker pools are not immediately migrated to the new hash variant, since this would trigger the replacement of all nodes. The migration happens when a rolling update is triggered according to the old or new hash version calculation. |
+| NewWorkerPoolHash               | `gardenlet`                       | Enables usage of the new worker pool hash calculation. The new calculation supports rolling worker pools if `kubeReserved`, `systemReserved`, `evicitonHard` or `cpuManagerPolicy` in the `kubelet` configuration are changed. All provider extensions must be upgraded to support this feature first. Existing worker pools are not immediately migrated to the new hash variant, since this would trigger the replacement of all nodes. The migration happens when a rolling update is triggered according to the old or new hash version calculation.              |
+| NewVPN                          | `gardenlet`                       | Enables usage of the new implementation of the VPN (go rewrite) using an IPv6 transfer network.                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
