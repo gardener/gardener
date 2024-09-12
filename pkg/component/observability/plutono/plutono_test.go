@@ -547,6 +547,27 @@ status:
 			}
 		)
 
+		checkDeployedResources := func(dashboardConfigMapName string, dashboardCount int) {
+			deployment := deploymentYAMLFor(values)
+			utilruntime.Must(references.InjectAnnotations(deployment))
+
+			Expect(manifests).To(ConsistOf(
+				testruntime.Serialize(plutonoConfigSecret, c.Scheme()),
+				testruntime.Serialize(serviceAccount, c.Scheme()),
+				testruntime.Serialize(role, c.Scheme()),
+				testruntime.Serialize(roleBinding, c.Scheme()),
+				testruntime.Serialize(deployment, c.Scheme()),
+				providerConfigMapYAML,
+				dataSourceConfigMapYAMLFor(values),
+				serviceYAMLFor(values),
+				ingressYAMLFor(values),
+			))
+
+			dashboardsConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: dashboardConfigMapName, Namespace: namespace}}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardsConfigMap), dashboardsConfigMap)).To(Succeed())
+			testDashboardConfigMap(dashboardsConfigMap, dashboardCount, values)
+		}
+
 		JustBeforeEach(func() {
 			component = New(c, namespace, fakeSecretManager, values)
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
@@ -600,24 +621,17 @@ status:
 				})
 
 				It("should successfully deploy all resources", func() {
-					deployment := deploymentYAMLFor(values)
-					utilruntime.Must(references.InjectAnnotations(deployment))
+					checkDeployedResources("plutono-dashboards", 20)
+				})
 
-					Expect(manifests).To(ConsistOf(
-						testruntime.Serialize(plutonoConfigSecret, c.Scheme()),
-						testruntime.Serialize(serviceAccount, c.Scheme()),
-						testruntime.Serialize(role, c.Scheme()),
-						testruntime.Serialize(roleBinding, c.Scheme()),
-						testruntime.Serialize(deployment, c.Scheme()),
-						providerConfigMapYAML,
-						dataSourceConfigMapYAMLFor(values),
-						serviceYAMLFor(values),
-						ingressYAMLFor(values),
-					))
+				Context("w/ enabled vpa", func() {
+					BeforeEach(func() {
+						values.VPAEnabled = true
+					})
 
-					dashboardsConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "plutono-dashboards", Namespace: namespace}}
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardsConfigMap), dashboardsConfigMap)).To(Succeed())
-					testDashboardConfigMap(dashboardsConfigMap, 22, values)
+					It("should successfully deploy all resources", func() {
+						checkDeployedResources("plutono-dashboards", 22)
+					})
 				})
 			})
 
@@ -627,24 +641,7 @@ status:
 				})
 
 				It("should successfully deploy all resources", func() {
-					deployment := deploymentYAMLFor(values)
-					utilruntime.Must(references.InjectAnnotations(deployment))
-
-					Expect(manifests).To(ConsistOf(
-						testruntime.Serialize(plutonoConfigSecret, c.Scheme()),
-						testruntime.Serialize(serviceAccount, c.Scheme()),
-						testruntime.Serialize(role, c.Scheme()),
-						testruntime.Serialize(roleBinding, c.Scheme()),
-						testruntime.Serialize(deployment, c.Scheme()),
-						providerConfigMapYAML,
-						dataSourceConfigMapYAMLFor(values),
-						serviceYAMLFor(values),
-						ingressYAMLFor(values),
-					))
-
-					dashboardsConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "plutono-dashboards-garden", Namespace: namespace}}
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardsConfigMap), dashboardsConfigMap)).To(Succeed())
-					testDashboardConfigMap(dashboardsConfigMap, 23, values)
+					checkDeployedResources("plutono-dashboards-garden", 23)
 				})
 			})
 		})
@@ -656,24 +653,7 @@ status:
 			})
 
 			It("should successfully deploy all resources", func() {
-				deployment := deploymentYAMLFor(values)
-				utilruntime.Must(references.InjectAnnotations(deployment))
-
-				Expect(manifests).To(ConsistOf(
-					testruntime.Serialize(plutonoConfigSecret, c.Scheme()),
-					testruntime.Serialize(serviceAccount, c.Scheme()),
-					testruntime.Serialize(role, c.Scheme()),
-					testruntime.Serialize(roleBinding, c.Scheme()),
-					testruntime.Serialize(deployment, c.Scheme()),
-					providerConfigMapYAML,
-					dataSourceConfigMapYAMLFor(values),
-					serviceYAMLFor(values),
-					ingressYAMLFor(values),
-				))
-
-				dashboardsConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "plutono-dashboards", Namespace: namespace}}
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardsConfigMap), dashboardsConfigMap)).To(Succeed())
-				testDashboardConfigMap(dashboardsConfigMap, 33, values)
+				checkDeployedResources("plutono-dashboards", 33)
 			})
 
 			Context("w/ include istio, mcm, ha-vpn, vpa", func() {
@@ -684,24 +664,7 @@ status:
 				})
 
 				It("should successfully deploy all resources", func() {
-					deployment := deploymentYAMLFor(values)
-					utilruntime.Must(references.InjectAnnotations(deployment))
-
-					Expect(manifests).To(ConsistOf(
-						testruntime.Serialize(plutonoConfigSecret, c.Scheme()),
-						testruntime.Serialize(serviceAccount, c.Scheme()),
-						testruntime.Serialize(role, c.Scheme()),
-						testruntime.Serialize(roleBinding, c.Scheme()),
-						testruntime.Serialize(deployment, c.Scheme()),
-						providerConfigMapYAML,
-						dataSourceConfigMapYAMLFor(values),
-						serviceYAMLFor(values),
-						ingressYAMLFor(values),
-					))
-
-					dashboardsConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "plutono-dashboards", Namespace: namespace}}
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardsConfigMap), dashboardsConfigMap)).To(Succeed())
-					testDashboardConfigMap(dashboardsConfigMap, 35, values)
+					checkDeployedResources("plutono-dashboards", 36)
 				})
 			})
 
@@ -711,24 +674,7 @@ status:
 				})
 
 				It("should successfully deploy all resources", func() {
-					deployment := deploymentYAMLFor(values)
-					utilruntime.Must(references.InjectAnnotations(deployment))
-
-					Expect(manifests).To(ConsistOf(
-						testruntime.Serialize(plutonoConfigSecret, c.Scheme()),
-						testruntime.Serialize(serviceAccount, c.Scheme()),
-						testruntime.Serialize(role, c.Scheme()),
-						testruntime.Serialize(roleBinding, c.Scheme()),
-						testruntime.Serialize(deployment, c.Scheme()),
-						providerConfigMapYAML,
-						dataSourceConfigMapYAMLFor(values),
-						serviceYAMLFor(values),
-						ingressYAMLFor(values),
-					))
-
-					dashboardsConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "plutono-dashboards", Namespace: namespace}}
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardsConfigMap), dashboardsConfigMap)).To(Succeed())
-					testDashboardConfigMap(dashboardsConfigMap, 25, values)
+					checkDeployedResources("plutono-dashboards", 25)
 				})
 			})
 		})
