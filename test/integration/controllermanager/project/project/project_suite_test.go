@@ -138,6 +138,8 @@ var _ = BeforeSuite(func() {
 		RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), 100*time.Millisecond),
 	}).AddToManager(mgr)).To(Succeed())
 
+	// The registration of the CloudProfile and NamespacedCloudProfile controllers allows for the validation of
+	// project member authorizations to interact with NamespacedCloudProfiles within a Project.
 	By("Register CloudProfile controller")
 	Expect((&cloudprofile.Reconciler{
 		Config: config.CloudProfileControllerConfiguration{
