@@ -251,6 +251,7 @@ var _ = Describe("Virtual", func() {
 						"backupbuckets",
 						"backupentries",
 						"cloudprofiles",
+						"namespacedcloudprofiles",
 						"controllerinstallations",
 						"quotas",
 						"projects",
@@ -458,6 +459,11 @@ var _ = Describe("Virtual", func() {
 					},
 					Verbs: []string{"create"},
 				},
+				{
+					APIGroups: []string{"core.gardener.cloud"},
+					Resources: []string{"namespacedcloudprofiles"},
+					Verbs:     []string{"get", "list", "watch", "create", "patch", "update", "delete"},
+				},
 			},
 		}
 		clusterRoleProjectMemberAggregated = &rbacv1.ClusterRole{
@@ -527,6 +533,7 @@ var _ = Describe("Virtual", func() {
 						"shoots",
 						"secretbindings",
 						"quotas",
+						"namespacedcloudprofiles",
 					},
 					Verbs: []string{"get", "list", "watch"},
 				},

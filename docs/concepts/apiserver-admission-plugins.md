@@ -31,9 +31,12 @@ This prevents misconfiguration by the Gardener administrator/operator.
 
 _(enabled by default)_
 
-This admission controller reacts on `CREATE` and `UPDATE` operations for `Project`s.
-It validates whether the user is bound to a RBAC role with the `modify-spec-tolerations-whitelist` verb in case the user tries to change the `.spec.tolerations.whitelist` field of the respective `Project` resource.
+This admission controller reacts on `CREATE` and `UPDATE` operations for `Project`s and `NamespacedCloudProfile`s.
+
+For `Project`s it validates whether the user is bound to an RBAC role with the `modify-spec-tolerations-whitelist` verb in case the user tries to change the `.spec.tolerations.whitelist` field of the respective `Project` resource.
 Usually, regular project members are not bound to this custom verb, allowing the Gardener administrator to manage certain toleration whitelists on `Project` basis.
+
+For `NamespacedCloudProfile`s it validates whether the user is assigned an RBAC role with the `modify-spec-kubernetes` verb when attempting to change the `.spec.kubernetes` field, or the `modify-spec-machineimages` verb when attempting to change the `.spec.machineImages` field of the respective `NamespacedCloudProfile` resource.
 
 ## `DeletionConfirmation`
 

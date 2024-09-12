@@ -231,6 +231,7 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 						"backupbuckets",
 						"backupentries",
 						"cloudprofiles",
+						"namespacedcloudprofiles",
 						"controllerinstallations",
 						"quotas",
 						"projects",
@@ -439,6 +440,11 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 					},
 					Verbs: []string{"create"},
 				},
+				{
+					APIGroups: []string{gardencorev1beta1.GroupName},
+					Resources: []string{"namespacedcloudprofiles"},
+					Verbs:     []string{"get", "list", "watch", "create", "patch", "update", "delete"},
+				},
 			},
 		}
 		clusterRoleProjectMemberAggregated = &rbacv1.ClusterRole{
@@ -510,6 +516,7 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 						"shoots",
 						"secretbindings",
 						"quotas",
+						"namespacedcloudprofiles",
 					},
 					Verbs: []string{"get", "list", "watch"},
 				},

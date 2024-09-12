@@ -189,7 +189,13 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 				Kind: "CloudProfile",
 				Name: parentCloudProfile.Name,
 			}
-			Expect(testClient.Create(ctx, namespacedCloudProfile)).To(Succeed())
+			Eventually(func() error {
+				return testClient.Create(ctx, namespacedCloudProfile)
+			}).Should(Succeed())
+			Eventually(func(g Gomega) {
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
+				g.Expect(namespacedCloudProfile.Status.ObservedGeneration).To(Equal(namespacedCloudProfile.Generation))
+			}).Should(Succeed())
 			log.Info("Created NamespacedCloudProfile for test", "namespacedCloudProfile", client.ObjectKeyFromObject(namespacedCloudProfile))
 
 			if shoot != nil {
@@ -289,12 +295,13 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 				Kind: "CloudProfile",
 				Name: parentCloudProfile.Name,
 			}
-			Expect(testClient.Create(ctx, namespacedCloudProfile)).To(Succeed())
+			Eventually(func() error {
+				return testClient.Create(ctx, namespacedCloudProfile)
+			}).Should(Succeed())
 			log.Info("Created NamespacedCloudProfile for test", "namespacedCloudProfile", client.ObjectKeyFromObject(namespacedCloudProfile))
 
 			Eventually(func(g Gomega) {
-				err := testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)
-				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
 				g.Expect(namespacedCloudProfile.Status.ObservedGeneration).To(Equal(namespacedCloudProfile.Generation))
 			}).Should(Succeed())
 
@@ -317,6 +324,7 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 		})
 
 		It("should update the NamespacedCloudProfile status on NamespacedCloudProfile spec update", func() {
+			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
 			namespacedCloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{}
 			namespacedCloudProfile.ResourceVersion = ""
 
@@ -339,6 +347,7 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 		})
 
 		It("should update the NamespacedCloudProfile status on CloudProfile spec update", func() {
+			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(parentCloudProfile), parentCloudProfile)).To(Succeed())
 			parentCloudProfile.Spec.Kubernetes.Versions = append(parentCloudProfile.Spec.Kubernetes.Versions, gardencorev1beta1.ExpirableVersion{Version: "1.4.0"})
 
 			err := testClient.Update(ctx, parentCloudProfile)
@@ -393,7 +402,9 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 				{Version: "1.2.3", ExpirationDate: &expirationDatePast},
 			}
 
-			Expect(testClient.Create(ctx, namespacedCloudProfile)).To(Succeed())
+			Eventually(func() error {
+				return testClient.Create(ctx, namespacedCloudProfile)
+			}).Should(Succeed())
 			log.Info("Created NamespacedCloudProfile for test", "namespacedCloudProfile", client.ObjectKeyFromObject(namespacedCloudProfile))
 
 			expectedKubernetesVersions := gardencorev1beta1.KubernetesSettings{
@@ -422,7 +433,9 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 				},
 			}
 
-			Expect(testClient.Create(ctx, namespacedCloudProfile)).To(Succeed())
+			Eventually(func() error {
+				return testClient.Create(ctx, namespacedCloudProfile)
+			}).Should(Succeed())
 			log.Info("Created NamespacedCloudProfile for test", "namespacedCloudProfile", client.ObjectKeyFromObject(namespacedCloudProfile))
 
 			expectedMachineImages := []gardencorev1beta1.MachineImage{
@@ -445,7 +458,9 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 		})
 
 		It("should not allow update with an already expired Kubernetes version", func() {
-			Expect(testClient.Create(ctx, namespacedCloudProfile)).To(Succeed())
+			Eventually(func() error {
+				return testClient.Create(ctx, namespacedCloudProfile)
+			}).Should(Succeed())
 			log.Info("Created NamespacedCloudProfile for test", "namespacedCloudProfile", client.ObjectKeyFromObject(namespacedCloudProfile))
 			Eventually(func(g Gomega) {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
@@ -461,7 +476,9 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 		})
 
 		It("should not allow update with an already expired MachineImage version", func() {
-			Expect(testClient.Create(ctx, namespacedCloudProfile)).To(Succeed())
+			Eventually(func() error {
+				return testClient.Create(ctx, namespacedCloudProfile)
+			}).Should(Succeed())
 			log.Info("Created NamespacedCloudProfile for test", "namespacedCloudProfile", client.ObjectKeyFromObject(namespacedCloudProfile))
 			Eventually(func(g Gomega) {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())

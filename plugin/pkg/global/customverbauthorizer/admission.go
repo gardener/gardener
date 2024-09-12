@@ -31,6 +31,13 @@ const (
 	// CustomVerbProjectManageMembers is a constant for the custom verb that allows to manage human users or
 	// groups subjects in the `.spec.members` field in `Project` resources.
 	CustomVerbProjectManageMembers = "manage-members"
+
+	// CustomVerbNamespacedCloudProfileModifyKubernetes is a constant for the custom verb that allows modifying the
+	// `.spec.kubernetes` field in `NamespacedCloudProfile` resources.
+	CustomVerbNamespacedCloudProfileModifyKubernetes = "modify-spec-kubernetes"
+	// CustomVerbNamespacedCloudProfileModifyMachineImages is a constant for the custom verb that allows modifying the
+	// `.spec.machineImages` field in `NamespacedCloudProfile` resources.
+	CustomVerbNamespacedCloudProfileModifyMachineImages = "modify-spec-machineimages"
 )
 
 // Register registers a plugin.
@@ -75,6 +82,8 @@ func (c *CustomVerbAuthorizer) Validate(ctx context.Context, a admission.Attribu
 	switch a.GetKind().GroupKind() {
 	case core.Kind("Project"):
 		return c.admitProjects(ctx, a)
+	case core.Kind("NamespacedCloudProfile"):
+		return c.admitNamespacedCloudProfiles(ctx, a)
 	}
 
 	return nil
@@ -105,6 +114,42 @@ func (c *CustomVerbAuthorizer) admitProjects(ctx context.Context, a admission.At
 
 	if mustCheckProjectMembers(oldObj.Spec.Members, obj.Spec.Members, obj.Spec.Owner, a.GetUserInfo()) {
 		return c.authorize(ctx, a, CustomVerbProjectManageMembers, "manage human users or groups in .spec.members")
+	}
+
+	return nil
+}
+
+func (c *CustomVerbAuthorizer) admitNamespacedCloudProfiles(ctx context.Context, a admission.Attributes) error {
+	var (
+		oldObj = &core.NamespacedCloudProfile{}
+		obj    *core.NamespacedCloudProfile
+		ok     bool
+	)
+
+	obj, ok = a.GetObject().(*core.NamespacedCloudProfile)
+	if !ok {
+		return apierrors.NewBadRequest("could not convert resource into NamespacedCloudProfile object")
+	}
+
+	if a.GetOperation() == admission.Update {
+		oldObj, ok = a.GetOldObject().(*core.NamespacedCloudProfile)
+		if !ok {
+			return apierrors.NewBadRequest("could not convert old resource into NamespacedCloudProfile object")
+		}
+	}
+
+	if mustCheckKubernetes(oldObj.Spec.Kubernetes, obj.Spec.Kubernetes) {
+		err := c.authorize(ctx, a, CustomVerbNamespacedCloudProfileModifyKubernetes, "modify .spec.kubernetes")
+		if err != nil {
+			return err
+		}
+	}
+
+	if mustCheckMachineImages(oldObj.Spec.MachineImages, obj.Spec.MachineImages) {
+		err := c.authorize(ctx, a, CustomVerbNamespacedCloudProfileModifyMachineImages, "modify .spec.machineImages")
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -156,7 +201,7 @@ func mustCheckProjectMembers(oldMembers, members []core.ProjectMember, owner *rb
 	}
 
 	// If the user submitting this admission request is the owner then it will be/is bound to the `manage-members`
-	// custom verb anyways, so let's allow him to add/remove human users.
+	// custom verb anyway, so let's allow him to add/remove human users.
 	if userIsOwner(userInfo, owner) {
 		return false
 	}
@@ -212,4 +257,12 @@ func userIsOwner(userInfo user.Info, owner *rbacv1.Subject) bool {
 	}
 
 	return false
+}
+
+func mustCheckKubernetes(oldKubernetes, kubernetes *core.KubernetesSettings) bool {
+	return !apiequality.Semantic.DeepEqual(oldKubernetes, kubernetes)
+}
+
+func mustCheckMachineImages(oldMachineImages, machineImages []core.MachineImage) bool {
+	return !apiequality.Semantic.DeepEqual(oldMachineImages, machineImages)
 }

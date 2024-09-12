@@ -6,6 +6,7 @@ package customverbauthorizer_test
 
 import (
 	"context"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -16,6 +17,7 @@ import (
 	servieaccount "k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/plugin/pkg/global/customverbauthorizer"
@@ -32,8 +34,7 @@ var _ = Describe("customverbauthorizer", func() {
 
 	Describe("#Validate", func() {
 		var (
-			ctx     = context.TODO()
-			project *core.Project
+			ctx = context.TODO()
 
 			attrs            admission.Attributes
 			admissionHandler *CustomVerbAuthorizer
@@ -45,31 +46,35 @@ var _ = Describe("customverbauthorizer", func() {
 		BeforeEach(func() {
 			admissionHandler, _ = New()
 			admissionHandler.SetAuthorizer(auth)
-
-			project = &core.Project{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "dummy",
-				},
-			}
-
-			authorizeAttributes = authorizer.AttributesRecord{
-				User:            userInfo,
-				APIGroup:        "core.gardener.cloud",
-				Namespace:       project.Namespace,
-				Name:            project.Name,
-				ResourceRequest: true,
-			}
-		})
-
-		It("should do nothing because the resource is not Project", func() {
-			attrs = admission.NewAttributesRecord(nil, nil, core.Kind("Foo").WithVersion("version"), project.Namespace, project.Name, core.Resource("foos").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-			err := admissionHandler.Validate(context.TODO(), attrs, nil)
-			Expect(err).NotTo(HaveOccurred())
 		})
 
 		Context("Projects", func() {
+			var (
+				project *core.Project
+			)
+
 			BeforeEach(func() {
+				project = &core.Project{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "dummy",
+					},
+				}
+
+				authorizeAttributes = authorizer.AttributesRecord{
+					User:            userInfo,
+					APIGroup:        "core.gardener.cloud",
+					Namespace:       project.Namespace,
+					Name:            project.Name,
+					ResourceRequest: true,
+				}
+
 				authorizeAttributes.Resource = "projects"
+			})
+
+			It("should do nothing because the resource is not Project", func() {
+				attrs = admission.NewAttributesRecord(nil, nil, core.Kind("Foo").WithVersion("version"), project.Namespace, project.Name, core.Resource("foos").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			Context("modify-spec-tolerations-whitelist verb", func() {
@@ -344,6 +349,231 @@ var _ = Describe("customverbauthorizer", func() {
 							attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
 							Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).NotTo(Succeed())
 						})
+					})
+				})
+			})
+		})
+
+		Context("NamespacedCloudProfiles", func() {
+			var (
+				namespacedCloudProfile *core.NamespacedCloudProfile
+			)
+
+			BeforeEach(func() {
+				namespacedCloudProfile = &core.NamespacedCloudProfile{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "dummy",
+						Namespace: "dummy-namespace",
+					},
+				}
+
+				authorizeAttributes = authorizer.AttributesRecord{
+					User:            userInfo,
+					APIGroup:        "core.gardener.cloud",
+					Namespace:       namespacedCloudProfile.Namespace,
+					Name:            namespacedCloudProfile.Name,
+					ResourceRequest: true,
+				}
+
+				authorizeAttributes.Resource = "namespacedcloudprofiles"
+			})
+
+			It("should do nothing because the resource is not NamespacedCloudProfile", func() {
+				attrs = admission.NewAttributesRecord(nil, nil, core.Kind("Foo").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("foos").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			Context("modify-spec-kubernetes verb", func() {
+				BeforeEach(func() {
+					authorizeAttributes.Verb = CustomVerbNamespacedCloudProfileModifyKubernetes
+				})
+
+				It("should always allow creating a NamespacedCloudProfile without kubernetes settings", func() {
+					attrs = admission.NewAttributesRecord(namespacedCloudProfile, nil, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("namespacedcloudprofiles").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+				})
+
+				Describe("permissions granted", func() {
+					BeforeEach(func() {
+						auth.EXPECT().Authorize(ctx, authorizeAttributes).Return(authorizer.DecisionAllow, "", nil)
+					})
+
+					It("should allow creating a NamespacedCloudProfile with kubernetes section", func() {
+						namespacedCloudProfile.Spec.Kubernetes = &core.KubernetesSettings{Versions: []core.ExpirableVersion{
+							{Version: "1.29.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(24 * time.Hour)})},
+						}}
+
+						attrs = admission.NewAttributesRecord(namespacedCloudProfile, nil, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("namespacedcloudprofiles").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+					})
+
+					It("should allow updating a NamespacedCloudProfile's kubernetes section", func() {
+						namespacedCloudProfile.Spec.Kubernetes = &core.KubernetesSettings{Versions: []core.ExpirableVersion{
+							{Version: "1.29.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(24 * time.Hour)})},
+						}}
+						oldNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
+						namespacedCloudProfile.Spec.Kubernetes = &core.KubernetesSettings{Versions: []core.ExpirableVersion{
+							{Version: "1.29.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(48 * time.Hour)})},
+						}}
+
+						attrs = admission.NewAttributesRecord(namespacedCloudProfile, oldNamespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("namespacedcloudprofiles").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+					})
+
+					It("should allow removing a NamespacedCloudProfile's kubernetes section", func() {
+						namespacedCloudProfile.Spec.Kubernetes = &core.KubernetesSettings{Versions: []core.ExpirableVersion{
+							{Version: "1.29.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(24 * time.Hour)})},
+						}}
+						oldNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
+						namespacedCloudProfile.Spec.Kubernetes = nil
+
+						attrs = admission.NewAttributesRecord(namespacedCloudProfile, oldNamespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("namespacedcloudprofiles").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+					})
+				})
+
+				Describe("permissions not granted", func() {
+					BeforeEach(func() {
+						auth.EXPECT().Authorize(ctx, authorizeAttributes).Return(authorizer.DecisionDeny, "", nil)
+					})
+
+					It("should forbid creating a NamespacedCloudProfile with kubernetes section", func() {
+						namespacedCloudProfile.Spec.Kubernetes = &core.KubernetesSettings{Versions: []core.ExpirableVersion{
+							{Version: "1.29.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(24 * time.Hour)})},
+						}}
+
+						attrs = admission.NewAttributesRecord(namespacedCloudProfile, nil, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("namespacedcloudprofiles").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).NotTo(Succeed())
+					})
+
+					It("should forbid updating a NamespacedCloudProfile's kubernetes section", func() {
+						namespacedCloudProfile.Spec.Kubernetes = &core.KubernetesSettings{Versions: []core.ExpirableVersion{
+							{Version: "1.29.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(24 * time.Hour)})},
+						}}
+						oldNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
+						namespacedCloudProfile.Spec.Kubernetes = &core.KubernetesSettings{Versions: []core.ExpirableVersion{
+							{Version: "1.29.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(48 * time.Hour)})},
+						}}
+
+						attrs = admission.NewAttributesRecord(namespacedCloudProfile, oldNamespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("namespacedcloudprofiles").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).NotTo(Succeed())
+					})
+
+					It("should forbid removing a NamespacedCloudProfile's kubernetes section", func() {
+						namespacedCloudProfile.Spec.Kubernetes = &core.KubernetesSettings{Versions: []core.ExpirableVersion{
+							{Version: "1.29.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(24 * time.Hour)})},
+						}}
+						oldNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
+						namespacedCloudProfile.Spec.Kubernetes = nil
+
+						attrs = admission.NewAttributesRecord(namespacedCloudProfile, oldNamespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("namespacedcloudprofiles").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).NotTo(Succeed())
+					})
+				})
+			})
+
+			Context("modify-spec-machineimages verb", func() {
+				BeforeEach(func() {
+					authorizeAttributes.Verb = CustomVerbNamespacedCloudProfileModifyMachineImages
+				})
+
+				It("should always allow creating a NamespacedCloudProfile without machineImages settings", func() {
+					attrs = admission.NewAttributesRecord(namespacedCloudProfile, nil, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("namespacedcloudprofiles").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+				})
+
+				Describe("permissions granted", func() {
+					BeforeEach(func() {
+						auth.EXPECT().Authorize(ctx, authorizeAttributes).Return(authorizer.DecisionAllow, "", nil)
+					})
+
+					It("should allow creating a NamespacedCloudProfile with machineImages section", func() {
+						namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
+							{Name: "dummy-image", Versions: []core.MachineImageVersion{
+								{ExpirableVersion: core.ExpirableVersion{Version: "1.0.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(24 * time.Hour)})}},
+							}},
+						}
+
+						attrs = admission.NewAttributesRecord(namespacedCloudProfile, nil, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("namespacedcloudprofiles").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+					})
+
+					It("should allow updating a NamespacedCloudProfile's machineImages section", func() {
+						namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
+							{Name: "dummy-image", Versions: []core.MachineImageVersion{
+								{ExpirableVersion: core.ExpirableVersion{Version: "1.0.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(24 * time.Hour)})}},
+							}},
+						}
+						oldNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
+						namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
+							{Name: "dummy-image", Versions: []core.MachineImageVersion{
+								{ExpirableVersion: core.ExpirableVersion{Version: "1.0.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(48 * time.Hour)})}},
+							}},
+						}
+
+						attrs = admission.NewAttributesRecord(namespacedCloudProfile, oldNamespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("namespacedcloudprofiles").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+					})
+
+					It("should allow removing a NamespacedCloudProfile's machineImages section", func() {
+						namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
+							{Name: "dummy-image", Versions: []core.MachineImageVersion{
+								{ExpirableVersion: core.ExpirableVersion{Version: "1.0.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(24 * time.Hour)})}},
+							}},
+						}
+						oldNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
+						namespacedCloudProfile.Spec.MachineImages = nil
+
+						attrs = admission.NewAttributesRecord(namespacedCloudProfile, oldNamespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("namespacedcloudprofiles").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+					})
+				})
+
+				Describe("permissions not granted", func() {
+					BeforeEach(func() {
+						auth.EXPECT().Authorize(ctx, authorizeAttributes).Return(authorizer.DecisionDeny, "", nil)
+					})
+
+					It("should forbid creating a NamespacedCloudProfile with machineImages section", func() {
+						namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
+							{Name: "dummy-image", Versions: []core.MachineImageVersion{
+								{ExpirableVersion: core.ExpirableVersion{Version: "1.0.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(24 * time.Hour)})}},
+							}},
+						}
+
+						attrs = admission.NewAttributesRecord(namespacedCloudProfile, nil, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("namespacedcloudprofiles").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).NotTo(Succeed())
+					})
+
+					It("should forbid updating a NamespacedCloudProfile's machineImages section", func() {
+						namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
+							{Name: "dummy-image", Versions: []core.MachineImageVersion{
+								{ExpirableVersion: core.ExpirableVersion{Version: "1.0.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(24 * time.Hour)})}},
+							}},
+						}
+						oldNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
+						namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
+							{Name: "dummy-image", Versions: []core.MachineImageVersion{
+								{ExpirableVersion: core.ExpirableVersion{Version: "1.0.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(48 * time.Hour)})}},
+							}},
+						}
+
+						attrs = admission.NewAttributesRecord(namespacedCloudProfile, oldNamespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("namespacedcloudprofiles").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).NotTo(Succeed())
+					})
+
+					It("should forbid removing a NamespacedCloudProfile's machineImages section", func() {
+						namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
+							{Name: "dummy-image", Versions: []core.MachineImageVersion{
+								{ExpirableVersion: core.ExpirableVersion{Version: "1.0.0", ExpirationDate: ptr.To(metav1.Time{Time: time.Now().Add(24 * time.Hour)})}},
+							}},
+						}
+						oldNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
+						namespacedCloudProfile.Spec.MachineImages = nil
+
+						attrs = admission.NewAttributesRecord(namespacedCloudProfile, oldNamespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("namespacedcloudprofiles").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).NotTo(Succeed())
 					})
 				})
 			})

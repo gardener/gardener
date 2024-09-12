@@ -31,9 +31,13 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/cloudprofile"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/namespacedcloudprofile"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/project/project"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/test"
 	gardenerenvtest "github.com/gardener/gardener/test/envtest"
 	"github.com/gardener/gardener/test/utils/namespacefinalizer"
 )
@@ -107,8 +111,9 @@ var _ = BeforeSuite(func() {
 
 	By("Setup field indexes")
 	Expect(indexer.AddProjectNamespace(ctx, mgr.GetFieldIndexer())).To(Succeed())
+	Expect(indexer.AddNamespacedCloudProfileParentRefName(ctx, mgr.GetFieldIndexer())).To(Succeed())
 
-	By("Register controller")
+	By("Register Project controller")
 	defaultResourceQuota = &corev1.ResourceQuota{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:      map[string]string{"foo": testRunID},
@@ -132,6 +137,24 @@ var _ = BeforeSuite(func() {
 		// limit exponential backoff in tests
 		RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), 100*time.Millisecond),
 	}).AddToManager(mgr)).To(Succeed())
+
+	// The registration of the CloudProfile and NamespacedCloudProfile controllers allows for the validation of
+	// project member authorizations to interact with NamespacedCloudProfiles within a Project.
+	By("Register CloudProfile controller")
+	Expect((&cloudprofile.Reconciler{
+		Config: config.CloudProfileControllerConfiguration{
+			ConcurrentSyncs: ptr.To(5),
+		},
+	}).AddToManager(mgr)).To(Succeed())
+
+	By("Register NamespacedCloudProfile controller")
+	Expect((&namespacedcloudprofile.Reconciler{
+		Config: config.NamespacedCloudProfileControllerConfiguration{
+			ConcurrentSyncs: ptr.To(5),
+		},
+	}).AddToManager(ctx, mgr)).To(Succeed())
+
+	DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, true))
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)

@@ -223,7 +223,6 @@ rules:
   - core.gardener.cloud
   resources:
   - cloudprofiles
-  - namespacedcloudprofiles
   - exposureclasses
   - seeds
   verbs:
@@ -502,6 +501,18 @@ rules:
   - shoots/viewerkubeconfig
   verbs:
   - create
+- apiGroups:
+  - core.gardener.cloud
+  resources:
+  - namespacedcloudprofiles
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - patch
+  - update
+  - delete
 
 # Cluster role setting the permissions for a project service account manager. It gets bound by a RoleBinding
 # in a respective project namespace.
@@ -608,6 +619,7 @@ rules:
   - shoots
   - secretbindings
   - quotas
+  - namespacedcloudprofiles
   verbs:
   - get
   - list

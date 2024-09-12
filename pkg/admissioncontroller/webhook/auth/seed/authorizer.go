@@ -126,7 +126,11 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 		case cloudProfileResource:
 			return a.authorizeRead(requestLog, seedName, graph.VertexTypeCloudProfile, attrs)
 		case namespacedCloudProfileResource:
-			return a.authorizeRead(requestLog, seedName, graph.VertexTypeNamespacedCloudProfile, attrs)
+			return a.authorize(requestLog, seedName, graph.VertexTypeNamespacedCloudProfile, attrs,
+				nil,
+				[]string{"get", "list", "watch"},
+				nil,
+			)
 		case clusterRoleBindingResource:
 			if userType == seedidentity.UserTypeExtension {
 				// We don't use authorizeRead here, as it would also grant list and watch permissions, which gardenlet doesn't
