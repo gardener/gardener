@@ -28,7 +28,6 @@ GARDENER_PREVIOUS_RELEASE                  := ""
 GARDENER_NEXT_RELEASE                      := $(VERSION)
 LOCAL_GARDEN_LABEL                         := local-garden
 REMOTE_GARDEN_LABEL                        := remote-garden
-ACTIVATE_SEEDAUTHORIZER                    := false
 SEED_NAME                                  := provider-extensions
 SEED_KUBECONFIG                            := $(REPO_ROOT)/example/provider-extensions/seed/kubeconfig
 DEV_SETUP_WITH_WEBHOOKS                    := false
