@@ -55,10 +55,6 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 			ctx, cancel = context.WithTimeout(parentCtx, 5*time.Minute)
 			defer cancel()
 
-			// TODO(timuthy): Remove this special handling as soon as extensions provider a proper deletion procedure, i.e cleaning up extension resources when garden resource is deleted. Planned for release v1.103 or v1.104.
-			By("Remove admission from provider-local")
-			removeAdmissionControllerFromExtension(ctx, client.ObjectKeyFromObject(extensionProviderLocal))
-
 			By("Delete Garden")
 			Expect(gardenerutils.ConfirmDeletion(ctx, runtimeClient, garden)).To(Succeed())
 			Expect(runtimeClient.Delete(ctx, garden)).To(Succeed())
@@ -82,6 +78,9 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 			Expect(crdList.Items).To(ContainElement(MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gardens.operator.gardener.cloud")})})))
 
 			Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: v1beta1constants.DeploymentNameGardenerResourceManager, Namespace: namespace}, &appsv1.Deployment{})).To(BeNotFoundError())
+
+			By("Wait until extension reports a successful uninstallation")
+			waitForExtensionToReportDeletion(ctx, "provider-local")
 		})
 
 		By("Verify creation")
@@ -126,6 +125,8 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 				healthyManagedResource("gardener-metrics-exporter-virtual"),
 				healthyManagedResource("extension-admission-runtime-provider-local"),
 				healthyManagedResource("extension-admission-virtual-provider-local"),
+				healthyManagedResource("extension-provider-local-garden"),
+				healthyManagedResource("extension-registration-provider-local"),
 				healthyManagedResource("cert-management-controller"),
 				healthyManagedResource("cert-management-issuers"),
 			))

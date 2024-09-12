@@ -20,6 +20,7 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	extensioncontroller "github.com/gardener/gardener/pkg/operator/controller/extension"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -27,17 +28,16 @@ import (
 
 var _ = Describe("Extension controller tests", func() {
 	var (
-		garden                    *operatorv1alpha1.Garden
-		extensionBar              *operatorv1alpha1.Extension
-		extensionFoo              *operatorv1alpha1.Extension
-		controllerDeploymentBar   *gardencorev1.ControllerDeployment
-		controllerRegistrationBar *gardencorev1beta1.ControllerRegistration
-		controllerDeploymentFoo   *gardencorev1.ControllerDeployment
-		controllerRegistrationFoo *gardencorev1beta1.ControllerRegistration
+		garden             *operatorv1alpha1.Garden
+		extensionBar       *operatorv1alpha1.Extension
+		extensionFoo       *operatorv1alpha1.Extension
+		managedResourceBar *resourcesv1alpha1.ManagedResource
+		managedResourceFoo *resourcesv1alpha1.ManagedResource
 	)
 
 	BeforeEach(func() {
 		DeferCleanup(test.WithVar(&managedresources.IntervalWait, 100*time.Millisecond))
+		DeferCleanup(test.WithVar(&extensioncontroller.RequeueGardenResourceNotReady, 100*time.Millisecond))
 
 		garden = &operatorv1alpha1.Garden{
 			ObjectMeta: metav1.ObjectMeta{
@@ -160,25 +160,17 @@ var _ = Describe("Extension controller tests", func() {
 			},
 		}
 
-		controllerDeploymentBar = &gardencorev1.ControllerDeployment{
+		managedResourceBar = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "provider-bar",
-			},
-		}
-		controllerRegistrationBar = &gardencorev1beta1.ControllerRegistration{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "provider-bar",
+				Name:      "extension-registration-provider-bar",
+				Namespace: testNamespace.Name,
 			},
 		}
 
-		controllerDeploymentFoo = &gardencorev1.ControllerDeployment{
+		managedResourceFoo = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "provider-foo",
-			},
-		}
-		controllerRegistrationFoo = &gardencorev1beta1.ControllerRegistration{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "provider-foo",
+				Name:      "extension-registration-provider-foo",
+				Namespace: testNamespace.Name,
 			},
 		}
 	})
@@ -190,7 +182,6 @@ var _ = Describe("Extension controller tests", func() {
 		DeferCleanup(func() {
 			By("Delete extension")
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, extensionBar))).To(Succeed())
-			Expect(client.IgnoreNotFound(controllerutils.RemoveAllFinalizers(ctx, testClient, extensionBar))).To(Succeed())
 			By("Ensure extension is gone")
 			Eventually(func() error { return mgrClient.Get(ctx, client.ObjectKeyFromObject(extensionBar), extensionBar) }).Should(BeNotFoundError())
 		})
@@ -221,17 +212,15 @@ var _ = Describe("Extension controller tests", func() {
 				return mgrClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)
 			}).Should(BeNotFoundError())
 
-			By("Delete controller-{registration,deployment} for provider-local")
+			By("Delete extension registration for provider-bar")
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, extensionBar))).To(Succeed())
-			Expect(client.IgnoreNotFound(controllerutils.RemoveAllFinalizers(ctx, testClient, extensionFoo))).To(Succeed())
-			Expect(client.IgnoreNotFound(testClient.Delete(ctx, controllerRegistrationBar))).To(Succeed())
-			Expect(client.IgnoreNotFound(testClient.Delete(ctx, controllerDeploymentBar))).To(Succeed())
+			Expect(client.IgnoreNotFound(controllerutils.RemoveAllFinalizers(ctx, testClient, extensionBar))).To(Succeed())
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, managedResourceBar))).To(Succeed())
 
-			By("Delete controller-{registration,deployment} for provider-foo")
+			By("Delete extension registration for provider-foo")
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, extensionFoo))).To(Succeed())
 			Expect(client.IgnoreNotFound(controllerutils.RemoveAllFinalizers(ctx, testClient, extensionFoo))).To(Succeed())
-			Expect(client.IgnoreNotFound(testClient.Delete(ctx, controllerRegistrationFoo))).To(Succeed())
-			Expect(client.IgnoreNotFound(testClient.Delete(ctx, controllerDeploymentFoo))).To(Succeed())
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, managedResourceFoo))).To(Succeed())
 		})
 
 		By("Update Garden to ready state")
@@ -239,7 +228,7 @@ var _ = Describe("Extension controller tests", func() {
 			LastOperation: &gardencorev1beta1.LastOperation{
 				LastUpdateTime: metav1.Now(),
 				State:          gardencorev1beta1.LastOperationStateProcessing,
-				Type:           gardencorev1beta1.LastOperationTypeCreate,
+				Type:           gardencorev1beta1.LastOperationTypeReconcile,
 			},
 		}
 		Expect(testClient.Status().Update(ctx, garden)).To(Succeed())
@@ -247,7 +236,8 @@ var _ = Describe("Extension controller tests", func() {
 			LastOperation: &gardencorev1beta1.LastOperation{
 				LastUpdateTime: metav1.Now(),
 				State:          gardencorev1beta1.LastOperationStateSucceeded,
-				Type:           gardencorev1beta1.LastOperationTypeCreate,
+				Type:           gardencorev1beta1.LastOperationTypeReconcile,
+				Progress:       100,
 			},
 		}
 		Expect(testClient.Status().Update(ctx, garden)).To(Succeed())
@@ -263,8 +253,7 @@ var _ = Describe("Extension controller tests", func() {
 			WithReason("ReconcileSuccessful"),
 		), fmt.Sprintf("Failed conditions expected to be healthy:%+v", extensionBar.Status.Conditions))
 
-		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerRegistrationBar), controllerRegistrationBar)).To(Succeed())
-		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerDeploymentBar), controllerDeploymentBar)).To(Succeed())
+		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceBar), managedResourceBar)).To(Succeed())
 
 		By("Create extension foo with admission controller")
 		Expect(testClient.Create(ctx, extensionFoo)).To(Succeed())
@@ -298,17 +287,13 @@ var _ = Describe("Extension controller tests", func() {
 			WithReason("ReconcileSuccessful"),
 		), fmt.Sprintf("Failed conditions expected to be healthy:%+v", extensionFoo.Status.Conditions))
 
-		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerRegistrationFoo), controllerRegistrationFoo)).To(Succeed())
-		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerDeploymentFoo), controllerDeploymentFoo)).To(Succeed())
+		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceFoo), managedResourceFoo)).To(Succeed())
 
 		By("Delete extension foo")
 		Expect(testClient.Delete(ctx, extensionFoo)).To(Succeed())
 
 		Eventually(func() error {
-			return testClient.Get(ctx, client.ObjectKeyFromObject(controllerRegistrationFoo), controllerRegistrationFoo)
-		}).Should(BeNotFoundError())
-		Eventually(func() error {
-			return testClient.Get(ctx, client.ObjectKeyFromObject(controllerDeploymentFoo), controllerDeploymentFoo)
+			return testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceFoo), managedResourceFoo)
 		}).Should(BeNotFoundError())
 		Eventually(func() error {
 			return testClient.Get(ctx, client.ObjectKey{Namespace: testNamespace.Name, Name: "extension-admission-virtual-provider-foo"}, &resourcesv1alpha1.ManagedResource{})
@@ -325,15 +310,6 @@ var _ = Describe("Extension controller tests", func() {
 		Eventually(func() error {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)
 		}).Should(BeNotFoundError())
-
-		By("Verify extension bar has no finalizers")
-		Eventually(func() ([]string, error) {
-			err := mgrClient.Get(ctx, client.ObjectKeyFromObject(extensionBar), extensionBar)
-			if err != nil {
-				return nil, err
-			}
-			return extensionBar.Finalizers, nil
-		}).Should(BeEmpty())
 	})
 })
 

@@ -45,10 +45,6 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 			ctx, cancel = context.WithTimeout(parentCtx, 5*time.Minute)
 			defer cancel()
 
-			// TODO(timuthy): Remove this special handling as soon as extensions provider a proper deletion procedure, i.e cleaning up extension resources when garden resource is deleted. Planned for release v1.103 or v1.104.
-			By("Remove admission from provider-local")
-			removeAdmissionControllerFromExtension(ctx, client.ObjectKeyFromObject(extensionProviderLocal))
-
 			By("Delete Garden")
 			Expect(gardenerutils.ConfirmDeletion(ctx, runtimeClient, garden)).To(Succeed())
 			Expect(runtimeClient.Delete(ctx, garden)).To(Succeed())
@@ -57,6 +53,9 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 			cleanupVolumes(ctx)
 			Expect(runtimeClient.DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(namespace), client.MatchingLabels{"role": "kube-apiserver-etcd-encryption-configuration"})).To(Succeed())
 			Expect(runtimeClient.DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(namespace), client.MatchingLabels{"role": "gardener-apiserver-etcd-encryption-configuration"})).To(Succeed())
+
+			By("Wait until extension reports a successful uninstallation")
+			waitForExtensionToReportDeletion(ctx, "provider-local")
 		})
 
 		v := rotationutils.Verifiers{

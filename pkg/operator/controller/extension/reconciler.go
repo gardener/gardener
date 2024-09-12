@@ -7,7 +7,6 @@ package extension
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -40,12 +39,8 @@ const (
 	ConditionNoGardenFound = "NoGardenFound"
 	// ConditionReconcileSuccess is the condition type for when the virtual cluster resources successfully reconcile.
 	ConditionReconcileSuccess = "ReconcileSuccessful"
-	// ReconcileProgressing is the condition type for when the extension is progressing.
-	ConditionReconcileProgressing = "ReconcileProgressing"
 	// ConditionDeleteSuccessful is the condition type for when the virtual cluster resources successfully delete.
 	ConditionDeleteSuccessful = "DeleteSuccessful"
-	// requeueGardenResourceNotReady is the time after which an extension will be requeued, if the Garden resource was not ready during its reconciliation.
-	requeueGardenResourceNotReady = 10 * time.Second
 )
 
 // Reconciler reconciles Extensions.

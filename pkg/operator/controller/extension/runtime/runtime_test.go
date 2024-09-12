@@ -97,7 +97,7 @@ var _ = Describe("Deployment", func() {
 			Expect(runtime.Reconcile(ctx, log, extension)).To(MatchError(`failed pulling Helm chart from OCI repository: not found`))
 		})
 
-		FIt("should succeed reconciling the extension resources", func() {
+		It("should succeed reconciling the extension resources", func() {
 			extension.Spec.Deployment.ExtensionDeployment.RuntimeClusterValues = &apiextensionsv1.JSON{
 				Raw: []byte(`{"foo": "bar"}`),
 			}

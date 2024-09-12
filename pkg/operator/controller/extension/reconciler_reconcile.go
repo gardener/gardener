@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"time"
 
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -22,6 +23,9 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 )
+
+// RequeueGardenResourceNotReady is the time after which an extension will be requeued, if the Garden resource was not ready during its reconciliation. Exposed for testing.
+var RequeueGardenResourceNotReady = 10 * time.Second
 
 func (r *Reconciler) reconcile(
 	ctx context.Context,
@@ -68,10 +72,10 @@ func (r *Reconciler) reconcile(
 
 		checkGarden = g.Add(flow.Task{
 			Name: "Checking if garden is reconciled",
-			Fn: func(ctx context.Context) error {
+			Fn: func(_ context.Context) error {
 				if !garden.reconciled {
-					log.Info("Garden is not yet in 'Reconcile Succeeded' state, re-queueing", "requeueAfter", requeueGardenResourceNotReady)
-					reconcileResult = reconcile.Result{RequeueAfter: requeueGardenResourceNotReady}
+					log.Info("Garden is not yet in 'Reconcile Succeeded' state, re-queueing", "requeueAfter", RequeueGardenResourceNotReady)
+					reconcileResult = reconcile.Result{RequeueAfter: RequeueGardenResourceNotReady}
 					return fmt.Errorf("garden is not yet successfully reconciled")
 				}
 				return nil

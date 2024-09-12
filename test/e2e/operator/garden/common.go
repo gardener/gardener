@@ -35,8 +35,6 @@ const namespace = "garden"
 var (
 	parentCtx     context.Context
 	runtimeClient client.Client
-
-	extensionProviderLocal *operatorv1alpha1.Extension
 )
 
 var _ = BeforeSuite(func() {
@@ -47,26 +45,10 @@ var _ = BeforeSuite(func() {
 
 	runtimeClient, err = client.New(restConfig, client.Options{Scheme: operatorclient.RuntimeScheme})
 	Expect(err).NotTo(HaveOccurred())
-
-	// TODO(timuthy): Remove this special handling as soon as extensions provider a proper deletion procedure, i.e cleaning up extension resources when garden resource is deleted. Planned for release v1.103 or v1.104.
-	extensionProviderLocal = &operatorv1alpha1.Extension{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "provider-local",
-		},
-	}
-	Expect(runtimeClient.Get(context.Background(), client.ObjectKeyFromObject(extensionProviderLocal), extensionProviderLocal)).To(Succeed())
 })
 
 var _ = BeforeEach(func() {
 	parentCtx = context.Background()
-
-	// Revert extension to state that was originally deployed through Skaffold.
-	// TODO(timuthy): Remove this special handling as soon as extensions provider a proper deletion procedure, i.e cleaning up extension resources when garden resource is deleted. Planned for release v1.103 or v1.104.
-	extension := &operatorv1alpha1.Extension{}
-	Expect(runtimeClient.Get(parentCtx, client.ObjectKeyFromObject(extensionProviderLocal), extension)).To(Succeed())
-	patch := client.MergeFrom(extension.DeepCopy())
-	extension.Spec = extensionProviderLocal.Spec
-	Expect(runtimeClient.Patch(parentCtx, extension, patch)).To(Succeed())
 })
 
 func defaultBackupSecret() *corev1.Secret {
@@ -207,18 +189,20 @@ func waitForGardenToBeDeleted(ctx context.Context, garden *operatorv1alpha1.Gard
 	}).WithPolling(2 * time.Second).Should(BeNotFoundError())
 }
 
-func removeAdmissionControllerFromExtension(ctx context.Context, objectKey client.ObjectKey) {
-	extension := &operatorv1alpha1.Extension{}
-	ExpectWithOffset(1, runtimeClient.Get(ctx, objectKey, extension)).To(Succeed())
-	patch := client.MergeFrom(extension.DeepCopy())
-	ExpectWithOffset(1, extension.Spec.Deployment).NotTo(BeNil())
-	extension.Spec.Deployment.AdmissionDeployment = nil
-	ExpectWithOffset(1, runtimeClient.Patch(ctx, extension, patch)).To(Succeed())
+func waitForExtensionToReportDeletion(ctx context.Context, name string) {
+	extension := &operatorv1alpha1.Extension{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+	}
 
 	CEventually(ctx, func(g Gomega) {
 		g.Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(extension), extension)).To(Succeed())
-		g.Expect(extension.Generation).To(Equal(extension.Status.ObservedGeneration))
-		g.Expect(extension.Status.Conditions).To(ContainCondition(OfType(operatorv1alpha1.ExtensionInstalled), WithStatus(gardencorev1beta1.ConditionTrue)))
+		g.Expect(extension.Status.Conditions).Should(ContainCondition(
+			OfType(operatorv1alpha1.ExtensionInstalled),
+			WithStatus(gardencorev1beta1.ConditionFalse),
+			WithReason("DeleteSuccessful"),
+		))
 	}).WithPolling(2 * time.Second).Should(Succeed())
 }
 
