@@ -167,6 +167,7 @@ Besides the values configure in `.spec.deployment.extension.runtimeValues`, a ru
 gardener:
   runtimeCluster:
     enabled: true # indicates the extension deployment is responsible for the Garden cluster, e.g. for handling `BackupBucket`, `DNSRecord` and `Extension` objects.
+    priorityClassName: gardener-garden-system-100
 ```
 
 As soon as a `garden` object is created and `runtimeValues` are configured, the extension is deployed in the runtime cluster. 

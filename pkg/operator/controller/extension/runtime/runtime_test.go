@@ -108,7 +108,8 @@ var _ = Describe("Deployment", func() {
 				"foo": "bar",
 				"gardener": map[string]any{
 					"runtimeCluster": map[string]any{
-						"enabled": "true",
+						"enabled":           "true",
+						"priorityClassName": "gardener-garden-system-100",
 					},
 				},
 			}

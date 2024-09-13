@@ -14,6 +14,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
@@ -71,7 +72,8 @@ func (d *deployment) createOrUpdateResources(ctx context.Context, extension *ope
 	gardenerValues := map[string]any{
 		"gardener": map[string]any{
 			"runtimeCluster": map[string]any{
-				"enabled": "true",
+				"enabled":           "true",
+				"priorityClassName": v1beta1constants.PriorityClassNameGardenSystem100,
 			},
 		},
 	}

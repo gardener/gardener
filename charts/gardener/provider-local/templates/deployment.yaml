@@ -40,7 +40,9 @@ spec:
         {{- end }}
 {{ include "labels" . | indent 8 }}
     spec:
-      {{- if not .Values.gardener.runtimeCluster.enabled }}
+      {{- if .Values.gardener.runtimeCluster.enabled }}
+      priorityClassName: {{ .Values.gardener.runtimeCluster.priorityClassName }}
+      {{- else }}
       priorityClassName: gardener-system-900
       {{- end }}
       serviceAccountName: {{ include "name" . }}
