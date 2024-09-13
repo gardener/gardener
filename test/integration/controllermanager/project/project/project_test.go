@@ -601,10 +601,12 @@ var _ = Describe("Project controller tests", func() {
 
 				By("Create NamespacedCloudProfile")
 				namespacedCloudProfile.Spec.Parent.Name = parentCloudProfile.Name
-				Expect(testClient.Create(ctx, namespacedCloudProfile)).To(Succeed())
+				Eventually(func() error {
+					return testClient.Create(ctx, namespacedCloudProfile)
+				}).Should(Succeed())
 				By("Wait until NamespacedCloudProfile is reconciled")
 				Eventually(func(g Gomega) {
-					Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
 					g.Expect(namespacedCloudProfile.Status.ObservedGeneration).To(Equal(namespacedCloudProfile.Generation))
 				}).Should(Succeed())
 				DeferCleanup(func() {
@@ -652,7 +654,7 @@ var _ = Describe("Project controller tests", func() {
 				})
 				Expect(testClient.Patch(ctx, project, patch)).To(Succeed())
 
-				By("Ensure new admin has access to NamespacedCloudProfile")
+				By("Ensure viewer has access to NamespacedCloudProfile")
 				Eventually(func() error {
 					return testUserClient.Get(ctx, namespacedCloudProfileKey, &gardencorev1beta1.NamespacedCloudProfile{})
 				}).Should(Succeed())
@@ -710,7 +712,7 @@ var _ = Describe("Project controller tests", func() {
 				}
 				Expect(testUserClient.Update(ctx, namespacedCloudProfile)).To(Succeed())
 				Eventually(func(g Gomega) {
-					Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
 					g.Expect(namespacedCloudProfile.Status.ObservedGeneration).To(Equal(namespacedCloudProfile.Generation))
 				}).Should(Succeed())
 
@@ -777,7 +779,7 @@ var _ = Describe("Project controller tests", func() {
 					return testUserClient.Update(ctx, namespacedCloudProfile)
 				}).Should(Succeed())
 				Eventually(func(g Gomega) {
-					Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
 					g.Expect(namespacedCloudProfile.Status.ObservedGeneration).To(Equal(namespacedCloudProfile.Generation))
 				}).Should(Succeed())
 			})
