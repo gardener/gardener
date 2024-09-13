@@ -127,6 +127,7 @@ You can find out more about Gardener's extensions and how they can be used [here
 The `Extension` resource is intended to automate the installation and management of extensions in a Gardener landscape.
 It contains configuration for the following scenarios:
 
+- The deployment of the extension chart in the garden runtime cluster.
 - The deployment of `ControllerRegistration` and `ControllerDeployment` resources in the (virtual) garden cluster.
 - The deployment of [admission controllers](../extensions/admission.md) in the runtime cluster.
 
@@ -153,9 +154,28 @@ Each one is described in more details below.
 - `.spec.deployment.extension.helm` and `.spec.deployment.extension.values` are used when creating the `ControllerDeployment` in the garden cluster.
 - `.spec.deployment.extension.policy` and `.spec.deployment.extension.seedSelector` define the extension's installation policy as per the [`ControllerDeployment's` respective fields](../extensions/controllerregistration.md#deployment-configuration-options)
 
-The extension controller can also be deployed in the runtime cluster to manage resources required by the `Garden` resource.
+##### Runtime
+
+The `extension` controller can be deployed in the runtime cluster to manage resources required by the `Garden` resource (e.g. `BackupBucket`, `DNSRecord`, `Extension`).
 Since the environment in the runtime cluster may differ from that of a `Seed`, the extension is installed in the runtime cluster with a distinct set of Helm chart values specified in `.spec.deployment.extension.runtimeValues`.
+If no `runtimeValues` are not given, the extension deployment for the runtime garden is considered superfluous and the deployment is skipped or uninstalled.
 This configuration allows for precise control over various extension parameters, such as requested resources, [priority classes](../development/priority-classes.md), and more.
+
+Besides the values configure in `.spec.deployment.extension.runtimeValues`, a runtime deployment indicator is merged into the values:
+
+```yaml
+gardener:
+  runtimeCluster:
+    enabled: true # indicates the extension deployment is responsible for the Garden cluster, e.g. for handling `BackupBucket`, `DNSRecord` and `Extension` objects.
+```
+
+As soon as a `garden` object is created and `runtimeValues` are configured, the extension is deployed in the runtime cluster. 
+
+##### Extension Registration
+
+Registering extensions for shoot clusters, e.g. cloud provider extensions, is mainly implemented through `ControllerRegistration`/`ControllerDeployment` resources.
+However, the `extension` controller helps to transform the information from an `Extension` object into these registration resources, so that `Extension`s become the single point of contact to enable such in the entire Garden landscape.
+The controller automatically applies the corresponding `ControllerRegistration` and `ControllerDeployment` objects, once the virtual garden cluster is available.
 
 #### Configuration for Admission Deployment
 
