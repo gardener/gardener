@@ -67,8 +67,10 @@ const (
 	metricsPortName = "metrics"
 	metricsPort     = 8080
 
-	webhookServerPortName = "webhooks"
-	webhookServerPort     = 9443
+	webhookServerPortName          = "webhooks"
+	webhookServerPort              = 9443
+	webhookServerTLSCertVolumeName = "webhook-server-tls-cert"
+	webhookServerTLSCertMountPath  = "/etc/webhook-server-tls"
 
 	druidConfigMapImageVectorOverwriteDataKey          = "images_overwrite.yaml"
 	druidDeploymentVolumeMountPathImageVectorOverwrite = "/imagevector_overwrite"
@@ -424,9 +426,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 			},
 		}
 
-		webhookServerTLSSecretVolumeName = "webhook-server-tls-cert"
-		webhookServerTLSMountPath        = "/etc/webhook-server-tls"
-		deployment                       = &appsv1.Deployment{
+		deployment = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      druidDeploymentName,
 				Namespace: b.namespace,
@@ -455,7 +455,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 								Name:            Druid,
 								Image:           b.image,
 								ImagePullPolicy: corev1.PullIfNotPresent,
-								Args:            getDruidDeployArgs(b.etcdConfig, webhookServerTLSMountPath),
+								Args:            getDruidDeployArgs(b.etcdConfig, webhookServerTLSCertMountPath),
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{
 										corev1.ResourceCPU:    resource.MustParse("50m"),
@@ -470,8 +470,8 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 								}},
 								VolumeMounts: []corev1.VolumeMount{
 									{
-										Name:      webhookServerTLSSecretVolumeName,
-										MountPath: webhookServerTLSMountPath,
+										Name:      webhookServerTLSCertVolumeName,
+										MountPath: webhookServerTLSCertMountPath,
 										ReadOnly:  true,
 									},
 								},
@@ -479,7 +479,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 						},
 						Volumes: []corev1.Volume{
 							{
-								Name: webhookServerTLSSecretVolumeName,
+								Name: webhookServerTLSCertVolumeName,
 								VolumeSource: corev1.VolumeSource{
 									Secret: &corev1.SecretVolumeSource{
 										SecretName:  serverSecret.Name,
