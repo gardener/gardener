@@ -601,6 +601,8 @@ var _ = Describe("Project controller tests", func() {
 
 				By("Create NamespacedCloudProfile")
 				namespacedCloudProfile.Spec.Parent.Name = parentCloudProfile.Name
+				// Create the NamespacedCloudProfile using Eventually, as it may take time for the client and cache to
+				// have the parent CloudProfile available for reading.
 				Eventually(func() error {
 					return testClient.Create(ctx, namespacedCloudProfile)
 				}).Should(Succeed())
