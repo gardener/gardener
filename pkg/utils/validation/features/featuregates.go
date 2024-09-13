@@ -47,6 +47,7 @@ var featureGateVersionRanges = map[string]*FeatureGateVersionRange{
 	"ClusterTrustBundleProjection":                   {VersionRange: versionutils.VersionRange{AddedInVersion: "1.29"}},
 	"ComponentSLIs":                                  {VersionRange: versionutils.VersionRange{AddedInVersion: "1.26"}},
 	"ContainerCheckpoint":                            {},
+	"ContextualLogging":                              {Default: true, LockedToDefaultInVersion: "1.30"},
 	"ControllerManagerLeaderMigration":               {Default: true, LockedToDefaultInVersion: "1.24", VersionRange: versionutils.VersionRange{RemovedInVersion: "1.27"}}, // Missing from docu?
 	"ConsistentHTTPGetHandlers":                      {Default: true, LockedToDefaultInVersion: "1.30", VersionRange: versionutils.VersionRange{AddedInVersion: "1.26"}},
 	"ConsistentListFromCache":                        {VersionRange: versionutils.VersionRange{AddedInVersion: "1.28"}},
@@ -111,14 +112,14 @@ var featureGateVersionRanges = map[string]*FeatureGateVersionRange{
 	"IdentifyPodOS":                                  {Default: true, LockedToDefaultInVersion: "1.25", VersionRange: versionutils.VersionRange{RemovedInVersion: "1.27"}},
 	"ImageMaximumGCAge":                              {VersionRange: versionutils.VersionRange{AddedInVersion: "1.29"}},
 	"InPlacePodVerticalScaling":                      {VersionRange: versionutils.VersionRange{AddedInVersion: "1.27"}},
-	"InTreePluginAWSUnregister":                      {}, // Missing from docu?
-	"InTreePluginAzureDiskUnregister":                {}, // Missing from docu?
-	"InTreePluginAzureFileUnregister":                {}, // Missing from docu?
-	"InTreePluginGCEUnregister":                      {}, // Missing from docu?
-	"InTreePluginOpenStackUnregister":                {}, // Missing from docu?
+	"InTreePluginAWSUnregister":                      {},
+	"InTreePluginAzureDiskUnregister":                {},
+	"InTreePluginAzureFileUnregister":                {},
+	"InTreePluginGCEUnregister":                      {},
+	"InTreePluginOpenStackUnregister":                {},
 	"InTreePluginPortworxUnregister":                 {},
 	"InTreePluginRBDUnregister":                      {},
-	"InTreePluginvSphereUnregister":                  {}, // Missing from docu?
+	"InTreePluginvSphereUnregister":                  {},
 	"IndexedJob":                                     {Default: true, LockedToDefaultInVersion: "1.24", VersionRange: versionutils.VersionRange{RemovedInVersion: "1.26"}},
 	"InformerResourceVersion":                        {VersionRange: versionutils.VersionRange{AddedInVersion: "1.30"}},
 	"JobBackoffLimitPerIndex":                        {VersionRange: versionutils.VersionRange{AddedInVersion: "1.28"}},
@@ -152,7 +153,7 @@ var featureGateVersionRanges = map[string]*FeatureGateVersionRange{
 	"MatchLabelKeysInPodAffinity":                    {VersionRange: versionutils.VersionRange{AddedInVersion: "1.29"}},
 	"MatchLabelKeysInPodTopologySpread":              {},
 	"MaxUnavailableStatefulSet":                      {},
-	"MemoryManager":                                  {}, // Missing from docu?
+	"MemoryManager":                                  {},
 	"MemoryQoS":                                      {},
 	"MinDomainsInPodTopologySpread":                  {Default: true, LockedToDefaultInVersion: "1.30"},
 	"MinimizeIPTablesRestore":                        {Default: true, LockedToDefaultInVersion: "1.28", VersionRange: versionutils.VersionRange{AddedInVersion: "1.26", RemovedInVersion: "1.30"}},
