@@ -45,6 +45,7 @@ var featureGateVersionRanges = map[string]*FeatureGateVersionRange{
 	"CloudDualStackNodeIPs":                          {Default: true, LockedToDefaultInVersion: "1.30", VersionRange: versionutils.VersionRange{AddedInVersion: "1.27"}},
 	"ClusterTrustBundle":                             {VersionRange: versionutils.VersionRange{AddedInVersion: "1.27"}},
 	"ClusterTrustBundleProjection":                   {VersionRange: versionutils.VersionRange{AddedInVersion: "1.29"}},
+	"ComponentSLIs":                                  {VersionRange: versionutils.VersionRange{AddedInVersion: "1.26"}},
 	"ContainerCheckpoint":                            {},
 	"ControllerManagerLeaderMigration":               {Default: true, LockedToDefaultInVersion: "1.24", VersionRange: versionutils.VersionRange{RemovedInVersion: "1.27"}}, // Missing from docu?
 	"ConsistentHTTPGetHandlers":                      {Default: true, LockedToDefaultInVersion: "1.30", VersionRange: versionutils.VersionRange{AddedInVersion: "1.26"}},
