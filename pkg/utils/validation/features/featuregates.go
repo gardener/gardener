@@ -246,6 +246,7 @@ var featureGateVersionRanges = map[string]*FeatureGateVersionRange{
 	"VolumeAttributesClass":                          {VersionRange: versionutils.VersionRange{AddedInVersion: "1.29"}},
 	"VolumeCapacityPriority":                         {},
 	"WatchBookmark":                                  {Default: true, LockedToDefaultInVersion: "1.17"},
+	"WatchFromStorageWithoutResourceVersion":         {VersionRange: versionutils.VersionRange{AddedInVersion: "1.27"}},
 	"WatchList":                                      {VersionRange: versionutils.VersionRange{AddedInVersion: "1.27"}},
 	"WinDSR":                                         {},
 	"WinOverlay":                                     {},
