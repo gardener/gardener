@@ -15,7 +15,7 @@ require (
 	github.com/gardener/dependency-watchdog v1.2.3
 	github.com/gardener/etcd-druid v0.22.5
 	github.com/gardener/hvpa-controller/api v0.17.0
-	github.com/gardener/machine-controller-manager v0.53.1
+	github.com/gardener/machine-controller-manager v0.54.0
 	github.com/gardener/terminal-controller-manager v0.33.0
 	github.com/go-jose/go-jose/v4 v4.0.3
 	github.com/go-logr/logr v1.4.2
