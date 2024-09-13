@@ -56,6 +56,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 		return nil
 	})
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	log.V(1).Info("Heartbeat Lease", "lease", client.ObjectKeyFromObject(lease), "operation", op)
-	return reconcile.Result{RequeueAfter: time.Duration(r.LeaseDurationSeconds) * time.Second / 4}, err
+	return reconcile.Result{RequeueAfter: time.Duration(r.LeaseDurationSeconds) * time.Second / 4}, nil
 }
