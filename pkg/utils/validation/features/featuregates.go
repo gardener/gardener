@@ -204,6 +204,7 @@ var featureGateVersionRanges = map[string]*FeatureGateVersionRange{
 	"SecurityContextDeny":                            {VersionRange: versionutils.VersionRange{AddedInVersion: "1.27", RemovedInVersion: "1.30"}},
 	"SELinuxMount":                                   {VersionRange: versionutils.VersionRange{AddedInVersion: "1.30"}},
 	"SELinuxMountReadWriteOncePod":                   {Default: true, LockedToDefaultInVersion: "1.29"},
+	"SeparateCacheWatchRPC":                          {VersionRange: versionutils.VersionRange{AddedInVersion: "1.28"}},
 	"SeparateTaintEvictionController":                {VersionRange: versionutils.VersionRange{AddedInVersion: "1.29"}},
 	"ServerSideApply":                                {Default: true, LockedToDefaultInVersion: "1.26"},
 	"ServerSideFieldValidation":                      {Default: true, LockedToDefaultInVersion: "1.27"},
