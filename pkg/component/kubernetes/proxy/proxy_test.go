@@ -485,7 +485,7 @@ done
 				},
 			}
 
-			configMapCleanupScriptName = "kube-proxy-cleanup-script-a4263ada"
+			configMapCleanupScriptName = "kube-proxy-cleanup-script-1797a990"
 			configMapCleanupScript     = &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      configMapCleanupScriptName,
@@ -501,7 +501,9 @@ done
 				Immutable: ptr.To(true),
 				Data: map[string]string{
 					"cleanup.sh": `#!/bin/sh -e
-OLD_KUBE_PROXY_MODE="$(cat "$1")"
+if [ -f "$1" ]; then
+  OLD_KUBE_PROXY_MODE="$(cat "$1")"
+fi
 if [ -z "${OLD_KUBE_PROXY_MODE}" ] || [ "${OLD_KUBE_PROXY_MODE}" = "${KUBE_PROXY_MODE}" ]; then
   echo "${KUBE_PROXY_MODE}" >"$1"
   echo "Nothing to cleanup - the mode didn't change."
@@ -649,7 +651,6 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 											{MountPath: "/script", Name: "kube-proxy-cleanup-script"},
 											{MountPath: "/lib/modules", Name: "kernel-modules"},
 											{MountPath: "/var/lib/kube-proxy", Name: "kube-proxy-dir"},
-											{MountPath: "/var/lib/kube-proxy/mode", Name: "kube-proxy-mode"},
 											{MountPath: "/var/lib/kube-proxy-kubeconfig", Name: "kubeconfig"},
 											{MountPath: "/var/lib/kube-proxy-config", Name: "kube-proxy-config"},
 										},
@@ -730,15 +731,6 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 											HostPath: &corev1.HostPathVolumeSource{
 												Path: "/var/lib/kube-proxy",
 												Type: ptr.To(corev1.HostPathDirectoryOrCreate),
-											},
-										},
-									},
-									{
-										Name: "kube-proxy-mode",
-										VolumeSource: corev1.VolumeSource{
-											HostPath: &corev1.HostPathVolumeSource{
-												Path: "/var/lib/kube-proxy/mode",
-												Type: ptr.To(corev1.HostPathFileOrCreate),
 											},
 										},
 									},

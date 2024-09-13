@@ -49,11 +49,11 @@ const (
 	dataKeyConfig             = "config.yaml"
 	dataKeyConntrackFixScript = "conntrack_fix.sh"
 	dataKeyCleanupScript      = "cleanup.sh"
+	filenameMode              = "mode"
 
 	volumeMountPathKubeconfig         = "/var/lib/kube-proxy-kubeconfig"
 	volumeMountPathConfig             = "/var/lib/kube-proxy-config"
 	volumeMountPathDir                = "/var/lib/kube-proxy"
-	volumeMountPathMode               = "/var/lib/kube-proxy/mode"
 	volumeMountPathCleanupScript      = "/script"
 	volumeMountPathConntrackFixScript = "/script"
 	volumeMountPathKernelModules      = "/lib/modules"
@@ -63,7 +63,6 @@ const (
 	volumeNameKubeconfig         = "kubeconfig"
 	volumeNameConfig             = "kube-proxy-config"
 	volumeNameDir                = "kube-proxy-dir"
-	volumeNameMode               = "kube-proxy-mode"
 	volumeNameCleanupScript      = "kube-proxy-cleanup-script"
 	volumeNameConntrackFixScript = "conntrack-fix-script"
 	volumeNameKernelModules      = "kernel-modules"
@@ -199,7 +198,6 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
 		directoryOrCreate  = corev1.HostPathDirectoryOrCreate
-		fileOrCreate       = corev1.HostPathFileOrCreate
 		k8sGreaterEqual129 = versionutils.ConstraintK8sGreaterEqual129.Check(pool.KubernetesVersion)
 
 		daemonSet = &appsv1.DaemonSet{
@@ -334,15 +332,6 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 									HostPath: &corev1.HostPathVolumeSource{
 										Path: hostPathDir,
 										Type: &directoryOrCreate,
-									},
-								},
-							},
-							{
-								Name: volumeNameMode,
-								VolumeSource: corev1.VolumeSource{
-									HostPath: &corev1.HostPathVolumeSource{
-										Path: hostPathDir + "/mode",
-										Type: &fileOrCreate,
 									},
 								},
 							},
@@ -487,7 +476,7 @@ func (k *kubeProxy) getInitContainers(kubernetesVersion *semver.Version, image s
 			Command: []string{
 				"sh",
 				"-c",
-				fmt.Sprintf("%s/%s %s", volumeMountPathCleanupScript, dataKeyCleanupScript, volumeMountPathMode),
+				fmt.Sprintf("%s/%s %s/%s", volumeMountPathCleanupScript, dataKeyCleanupScript, volumeMountPathDir, filenameMode),
 			},
 			Env: []corev1.EnvVar{
 				{
@@ -510,10 +499,6 @@ func (k *kubeProxy) getInitContainers(kubernetesVersion *semver.Version, image s
 				{
 					Name:      volumeNameDir,
 					MountPath: volumeMountPathDir,
-				},
-				{
-					Name:      volumeNameMode,
-					MountPath: volumeMountPathMode,
 				},
 				{
 					Name:      volumeNameKubeconfig,

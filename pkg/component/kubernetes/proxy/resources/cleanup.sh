@@ -1,5 +1,7 @@
 #!/bin/sh -e
-OLD_KUBE_PROXY_MODE="$(cat "$1")"
+if [ -f "$1" ]; then
+  OLD_KUBE_PROXY_MODE="$(cat "$1")"
+fi
 if [ -z "${OLD_KUBE_PROXY_MODE}" ] || [ "${OLD_KUBE_PROXY_MODE}" = "${KUBE_PROXY_MODE}" ]; then
   echo "${KUBE_PROXY_MODE}" >"$1"
   echo "Nothing to cleanup - the mode didn't change."
