@@ -29,6 +29,8 @@ type CredentialsBinding struct {
 	Quotas []corev1.ObjectReference
 }
 
+var _ Object = (*CredentialsBinding)(nil)
+
 // GetProviderType gets the type of the provider.
 func (cb *CredentialsBinding) GetProviderType() string {
 	return cb.Provider.Type

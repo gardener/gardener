@@ -63,6 +63,8 @@ type CloudProfileSpec struct {
 	Bastion *Bastion
 }
 
+var _ Object = (*CloudProfile)(nil)
+
 // GetProviderType gets the type of the provider.
 func (c *CloudProfile) GetProviderType() string {
 	return c.Spec.Type

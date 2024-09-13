@@ -109,6 +109,8 @@ type ShootSpec struct {
 	CredentialsBindingName *string
 }
 
+var _ Object = (*Shoot)(nil)
+
 // GetProviderType gets the type of the provider.
 func (s *Shoot) GetProviderType() string {
 	return s.Spec.Provider.Type

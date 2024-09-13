@@ -27,7 +27,7 @@ func Accessor(obj runtime.Object) (extensionsv1alpha1.Object, error) {
 	case *unstructured.Unstructured:
 		return UnstructuredAccessor(v), nil
 	default:
-		return nil, fmt.Errorf("value of type %T does not implement Object", obj)
+		return nil, fmt.Errorf("value of type %T does not implement extensionsv1alpha1.Object", obj)
 	}
 }
 

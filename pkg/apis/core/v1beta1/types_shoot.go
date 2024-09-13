@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
@@ -138,6 +139,8 @@ type ShootSpec struct {
 	// +optional
 	CredentialsBindingName *string `json:"credentialsBindingName,omitempty" protobuf:"bytes,23,opt,name=credentialsBindingName"`
 }
+
+var _ gardencore.Object = (*Shoot)(nil)
 
 // GetProviderType gets the type of the provider.
 func (s *Shoot) GetProviderType() string {
