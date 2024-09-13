@@ -13,6 +13,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -420,6 +421,11 @@ spec:
 		By("Verify that VPA was created for gardener-operator")
 		Eventually(func() error {
 			return testClient.Get(ctx, client.ObjectKey{Name: "gardener-operator-vpa", Namespace: testNamespace.Name}, &vpaautoscalingv1.VerticalPodAutoscaler{})
+		}).Should(Succeed())
+
+		By("Verify that ServiceMonitor was created for gardener-operator")
+		Eventually(func() error {
+			return testClient.Get(ctx, client.ObjectKey{Name: "garden-gardener-operator", Namespace: testNamespace.Name}, &monitoringv1.ServiceMonitor{})
 		}).Should(Succeed())
 
 		// The garden controller waits for the gardener-resource-manager Deployment to be healthy, so let's fake this here.

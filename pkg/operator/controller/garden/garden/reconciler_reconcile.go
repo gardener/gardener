@@ -13,6 +13,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -46,6 +47,7 @@ import (
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
 	gardenprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
+	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -180,6 +182,13 @@ func (r *Reconciler) reconcile(
 				return gardenerutils.ReconcileVPAForGardenerComponent(ctx, r.RuntimeClientSet.Client(), v1beta1constants.DeploymentNameGardenerOperator, r.GardenNamespace)
 			},
 			Dependencies: flow.NewTaskIDs(deployVPACRD),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Deploying ServiceMonitor for gardener-operator",
+			Fn: func(ctx context.Context) error {
+				return r.deployOperatorServiceMonitor(ctx)
+			},
+			Dependencies: flow.NewTaskIDs(deployPrometheusCRD),
 		})
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Deploying and waiting for gardener-resource-manager to be healthy",
@@ -764,6 +773,33 @@ func (r *Reconciler) deployGardenPrometheus(ctx context.Context, log logr.Logger
 
 	prometheus.SetCentralScrapeConfigs(gardenprometheus.CentralScrapeConfigs(prometheusAggregateTargets, globalMonitoringSecretRuntime))
 	return prometheus.Deploy(ctx)
+}
+
+func (r *Reconciler) deployOperatorServiceMonitor(ctx context.Context) error {
+	sm := &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{
+		Name:      gardenprometheus.Label + "-" + v1beta1constants.DeploymentNameGardenerOperator,
+		Namespace: r.GardenNamespace,
+	}}
+
+	_, err := controllerutils.CreateOrGetAndMergePatch(ctx, r.RuntimeClientSet.Client(), sm, func() error {
+		sm.Labels = utils.MergeStringMaps(sm.Labels, monitoringutils.Labels(gardenprometheus.Label))
+
+		sm.Spec.Endpoints = []monitoringv1.Endpoint{{
+			Port: "metrics",
+			MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
+				"rest_client_.+",
+				"controller_runtime_.+",
+				"workqueue_.+",
+				"go_.+",
+			)},
+		}
+		sm.Spec.Selector = metav1.LabelSelector{MatchLabels: map[string]string{
+			v1beta1constants.LabelApp:  v1beta1constants.LabelGardener,
+			v1beta1constants.LabelRole: "operator",
+		}}
+		return nil
+	})
+	return err
 }
 
 func (r *Reconciler) deployGardenerDashboard(ctx context.Context, dashboard gardenerdashboard.Interface, garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, virtualGardenClient client.Client) error {
