@@ -59,23 +59,23 @@ require (
 	istio.io/api v1.22.4
 	istio.io/client-go v1.22.0
 	k8s.io/api v0.29.9
-	k8s.io/apiextensions-apiserver v0.29.8
+	k8s.io/apiextensions-apiserver v0.29.9
 	k8s.io/apimachinery v0.29.9
-	k8s.io/apiserver v0.29.8
+	k8s.io/apiserver v0.29.9
 	k8s.io/autoscaler/vertical-pod-autoscaler v1.2.1
 	k8s.io/client-go v0.29.9
-	k8s.io/cluster-bootstrap v0.29.8
-	k8s.io/code-generator v0.29.8
-	k8s.io/component-base v0.29.8
+	k8s.io/cluster-bootstrap v0.29.9
+	k8s.io/code-generator v0.29.9
+	k8s.io/component-base v0.29.9
 	k8s.io/component-helpers v0.29.9
 	k8s.io/klog/v2 v2.120.1
-	k8s.io/kube-aggregator v0.29.8
+	k8s.io/kube-aggregator v0.29.9
 	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00
-	k8s.io/kube-proxy v0.29.8
+	k8s.io/kube-proxy v0.29.9
 	k8s.io/kube-state-metrics/v2 v2.11.0
-	k8s.io/kubelet v0.29.8
-	k8s.io/metrics v0.29.8
-	k8s.io/pod-security-admission v0.29.8
+	k8s.io/kubelet v0.29.9
+	k8s.io/metrics v0.29.9
+	k8s.io/pod-security-admission v0.29.9
 	k8s.io/utils v0.0.0-20240902221715-702e33fdd3c3
 	sigs.k8s.io/controller-runtime v0.17.6
 	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20231015215740-bf15e44028f9 // v0.16.3
@@ -249,7 +249,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	k8s.io/gengo v0.0.0-20230829151522-9cce18d56c01 // indirect
 	k8s.io/klog v1.0.0 // indirect
-	k8s.io/kms v0.29.8 // indirect
+	k8s.io/kms v0.29.9 // indirect
 	k8s.io/sample-controller v0.28.4 // indirect
 	oras.land/oras-go v1.2.6 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.29.0 // indirect
