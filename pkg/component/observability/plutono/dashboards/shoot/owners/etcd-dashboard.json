@@ -953,7 +953,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(container_fs_reads_bytes_total{namespace=\"kube-system\", pod=~\"etcd-(${role:pipe}).*\"}[$__rate_interval])) by(pod, container)",
+          "expr": "sum(rate(container_fs_reads_bytes_total{namespace=\"shoot-control-plane\", pod=~\"etcd-(${role:pipe}).*\"}[$__rate_interval])) by(pod, container)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -1053,7 +1053,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(container_fs_writes_bytes_total{namespace=\"kube-system\", pod=~\"etcd-(${role:pipe}).*\"}[$__rate_interval])) by(pod, container)",
+          "expr": "sum(rate(container_fs_writes_bytes_total{namespace=\"shoot-control-plane\", pod=~\"etcd-(${role:pipe}).*\"}[$__rate_interval])) by(pod, container)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
