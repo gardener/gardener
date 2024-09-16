@@ -208,3 +208,25 @@ func getKeyID(publicKey crypto.PublicKey) (string, error) {
 
 	return id, nil
 }
+
+func getAlg(publicKey crypto.PublicKey) (jose.SignatureAlgorithm, error) {
+	switch pk := publicKey.(type) {
+	case *rsa.PublicKey:
+		return jose.RS256, nil
+	case *ecdsa.PublicKey:
+		switch pk.Curve {
+		case elliptic.P256():
+			return jose.ES256, nil
+		case elliptic.P384():
+			return jose.ES384, nil
+		case elliptic.P521():
+			return jose.ES512, nil
+		default:
+			return "", fmt.Errorf("unknown ecdsa key curve, must be 256, 384, or 521")
+		}
+	case jose.OpaqueSigner:
+		return jose.SignatureAlgorithm(pk.Public().Algorithm), nil
+	default:
+		return "", fmt.Errorf("unknown public key type, must be *rsa.PublicKey, *ecdsa.PublicKey, or jose.OpaqueSigner")
+	}
+}

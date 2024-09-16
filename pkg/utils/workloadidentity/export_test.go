@@ -9,6 +9,7 @@ import "time"
 // Functions exported for testing.
 
 var (
+	GetAlg         = getAlg
 	GetKeyID       = getKeyID
 	GetSigner      = getSigner
 	GetRSASigner   = getRSASigner
@@ -22,3 +23,6 @@ func SetNow(n func() time.Time) {
 func Now() func() time.Time {
 	return now
 }
+
+// Types exported for testing.
+type OpenIDMetadata openIDMetadata
