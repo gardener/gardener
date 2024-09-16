@@ -28,7 +28,6 @@ type ShootCreationConfig struct {
 	GardenerConfig *GardenerConfig
 
 	shootKubeconfigPath          string
-	seedKubeconfigPath           string
 	testShootName                string
 	testShootPrefix              string
 	shootMachineImageName        string
@@ -183,10 +182,6 @@ func mergeShootCreationConfig(base, overwrite *ShootCreationConfig) *ShootCreati
 		base.shootKubeconfigPath = overwrite.shootKubeconfigPath
 	}
 
-	if StringSet(overwrite.seedKubeconfigPath) {
-		base.seedKubeconfigPath = overwrite.seedKubeconfigPath
-	}
-
 	if StringSet(overwrite.testShootName) {
 		base.testShootName = overwrite.testShootName
 	}
@@ -305,7 +300,6 @@ func RegisterShootCreationFrameworkFlags() *ShootCreationConfig {
 	newCfg := &ShootCreationConfig{}
 
 	flag.StringVar(&newCfg.shootKubeconfigPath, "shoot-kubecfg-path", "", "the path to where the Kubeconfig of the Shoot cluster will be downloaded to. The kubeconfig expires in 6 hours.")
-	flag.StringVar(&newCfg.seedKubeconfigPath, "seed-kubecfg-path", "", "the path to where the Kubeconfig of the Seed cluster will be downloaded to.")
 	flag.StringVar(&newCfg.testShootName, "shoot-name", "", "unique name to use for test shoots. Used by test-machinery.")
 	flag.StringVar(&newCfg.testShootPrefix, "prefix", "", "prefix for generated shoot name. Usually used locally to auto generate a unique name.")
 	flag.StringVar(&newCfg.shootAnnotations, "annotations", "", "annotations to be added to the test shoot. Expected format is key1=val1,key2=val2 (similar to kubectl --selector).")
