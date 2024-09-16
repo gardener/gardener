@@ -47,7 +47,7 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddresses []string, clu
 				CacheUnauthorizedTTL: metav1.Duration{Duration: 30 * time.Second},
 			},
 		},
-		CgroupDriver:                     getCgroupDriver(params),
+		CgroupDriver:                     getCgroupDriver(),
 		CgroupRoot:                       "/",
 		CgroupsPerQOS:                    ptr.To(true),
 		ClusterDNS:                       clusterDNSAddresses,
@@ -152,15 +152,14 @@ func ShouldProtectKernelDefaultsBeEnabled(kubeletConfigParameters *components.Co
 	return kubernetesVersion != nil && version.ConstraintK8sGreaterEqual126.Check(kubernetesVersion)
 }
 
-func getCgroupDriver(kubeletConfigParameters components.ConfigurableKubeletConfigParameters) string {
-	cgroupDriver := "cgroupfs"
-
-	// When KubeletCgroupDriverFromCRI feature gate is active CgroupDriver does not have to be specified: https://github.com/kubernetes/kubernetes/pull/118770
-	if kubeletConfigParameters.FeatureGates["KubeletCgroupDriverFromCRI"] {
-		cgroupDriver = ""
-	}
-
-	return cgroupDriver
+// TODO: Consider NOT specifying the cgroup driver when the KubeletCgroupDriverFromCRI feature gate is GA and every OS runs containerd 2.0+.
+// The implementation of KubeletCgroupDriverFromCRI requires a new CRI API that will be available only in containerd 2.0+.
+//
+// Upstream docs: https://kubernetes.io/docs/setup/production-environment/container-runtimes/#systemd-cgroup-driver
+// Kubernetes feature implementation: https://github.com/kubernetes/kubernetes/pull/118770
+// containerd implementation of the new CRI API: https://github.com/containerd/containerd/pull/8722
+func getCgroupDriver() string {
+	return "cgroupfs"
 }
 
 func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters, kubernetesVersion *semver.Version) {

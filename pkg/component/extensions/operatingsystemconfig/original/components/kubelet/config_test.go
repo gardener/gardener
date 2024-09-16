@@ -373,21 +373,5 @@ var _ = Describe("Config", func() {
 				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
 			},
 		),
-		Entry(
-			"kubernetes 1.28 w/ KubeletCgroupDriverFromCRI feature gate",
-			"1.28.1",
-			clusterDNSAddresses,
-			clusterDomain,
-			components.ConfigurableKubeletConfigParameters{FeatureGates: map[string]bool{"KubeletCgroupDriverFromCRI": true}},
-			kubeletConfigWithDefaults,
-			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
-				cfg.CgroupDriver = ""
-				cfg.FeatureGates = map[string]bool{"KubeletCgroupDriverFromCRI": true}
-				cfg.RotateCertificates = true
-				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
-				cfg.ProtectKernelDefaults = true
-				cfg.StreamingConnectionIdleTimeout = metav1.Duration{Duration: time.Minute * 5}
-			},
-		),
 	)
 })
