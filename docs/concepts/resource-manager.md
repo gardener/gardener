@@ -1218,3 +1218,25 @@ When this webhook is activated, it reacts for most of the custom resources in th
 It also reacts for the `druid.gardener.cloud/v1alpha1.Etcd` resources.
 
 The webhook validates the resources specifications for `CREATE` and `UPDATE` requests.
+
+### Authorization Webhooks
+
+#### `node-agent-authorizer` webhook
+
+`gardener-resource-manager` serves an authorization webhook for shoot `kube-apiserver` in order to grant access to `gardener-node-agent`.
+It works similar to [`SeedAuthorizer`](https://github.com/gardener/gardener/blob/master/docs/deployment/gardenlet_api_access.md), but decisions are much simpler so it does not need to implement a decision graph.
+In many cases, the objects `gardener-node-agent` is allowed to access, depend on the `Node` it is running on.
+
+`Machine.Name` is used as unique username of `gardener-node-agent`. It follows this pattern `gardener.cloud:node-agent:machine:<machine-name>`.
+The reference to a `Node` is determined from `node` label of the `Machine`.
+All users are assigned to `gardener.cloud:node-agents` group. Extensions could use this group to grant permissions to all `gardener-node-agents`.
+
+Today, these rules are implemented: 
+
+| Resource                     | Verbs                                      | Description                                                                                                                                                                      |
+|------------------------------|--------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `CertificateSigningRequests` | `get`, `create`                            | Allow `create` requests for all `CertificateSigningRequests`s. Allow `get` requests for `CertificateSigningRequests`s requested by the same user.                                |
+| `Events`                     | `create`, `patch`                          | Allow to `create` and `patch` all `Event`s.                                                                                                                                      |
+| `Leases`                     | `get`, `list`, `watch`, `create`, `update` | Allow `get`, `list`, `watch`, `create`, `update` requests for `Leases` with the name `gardener-node-agent-<node.name>` in `kube-system` namespace.                               |
+| `Nodes`                      | `get`, `list`, `watch`, `patch`, `update`  | Allow `get`, `watch`, `patch`, `update` requests for the `Node` where `gardener-node-agent` is running. Allow `list` requests for all nodes.                                     |
+| `Secrets`                    | `get`, `list`, `watch`                     | Allow `get`, `list`, `watch` request to `gardener-valitail` secret and the gardener-node-agent-secret of the worker group of the `Node` where `gardener-node-agent` is running.  |
