@@ -349,6 +349,14 @@ If applicable, adjustments can be implemented through mutating webhooks, acting 
 
 If CRI configurations are not supported, it is recommended to create a validating webhook running in the garden cluster that prevents specifying the `.spec.providers.workers[].cri` section in the `Shoot` objects.
 
+### cgroup driver
+
+For Shoot clusters using Kubernetes < 1.31, Gardener is setting the kubelet's cgroup driver to [`cgroupfs`](https://kubernetes.io/docs/setup/production-environment/container-runtimes/#cgroupfs-cgroup-driver) and containerd's cgroup driver is unmanaged. For Shoot clusters using Kubernetes 1.31+, Gardener is setting both kubelet's and containerd's cgroup driver to [`systemd`](https://kubernetes.io/docs/setup/production-environment/container-runtimes/#systemd-cgroup-driver).
+
+The `systemd` cgroup driver is a requirement for operating systems using [cgroup v2](https://kubernetes.io/docs/concepts/architecture/cgroups/). It's important to ensure that both kubelet and the container runtime (containerd) are using the same cgroup driver to avoid potential issues.
+
+OS extensions might also overwrite the cgroup driver for containerd and kubelet.
+
 ## References and Additional Resources
 
 * [`OperatingSystemConfig` API (Golang Specification)](../../pkg/apis/extensions/v1alpha1/types_operatingsystemconfig.go)

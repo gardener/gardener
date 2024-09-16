@@ -373,5 +373,34 @@ var _ = Describe("Config", func() {
 				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
 			},
 		),
+
+		Entry(
+			"kubernetes 1.31 w/o defaults",
+			"1.31.1",
+			clusterDNSAddresses,
+			clusterDomain,
+			components.ConfigurableKubeletConfigParameters{},
+			kubeletConfigWithDefaults,
+			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
+				cfg.CgroupDriver = "systemd"
+				cfg.RotateCertificates = true
+				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
+				cfg.ProtectKernelDefaults = true
+				cfg.StreamingConnectionIdleTimeout = metav1.Duration{Duration: time.Minute * 5}
+			},
+		),
+		Entry(
+			"kubernetes 1.31 w/ defaults",
+			"1.31.1",
+			clusterDNSAddresses,
+			clusterDomain,
+			params,
+			kubeletConfigWithParams,
+			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
+				cfg.CgroupDriver = "systemd"
+				cfg.RotateCertificates = true
+				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
+			},
+		),
 	)
 })

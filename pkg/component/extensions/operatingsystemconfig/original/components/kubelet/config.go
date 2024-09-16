@@ -47,7 +47,7 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddresses []string, clu
 				CacheUnauthorizedTTL: metav1.Duration{Duration: 30 * time.Second},
 			},
 		},
-		CgroupDriver:                     getCgroupDriver(),
+		CgroupDriver:                     getCgroupDriver(kubernetesVersion),
 		CgroupRoot:                       "/",
 		CgroupsPerQOS:                    ptr.To(true),
 		ClusterDNS:                       clusterDNSAddresses,
@@ -158,8 +158,14 @@ func ShouldProtectKernelDefaultsBeEnabled(kubeletConfigParameters *components.Co
 // Upstream docs: https://kubernetes.io/docs/setup/production-environment/container-runtimes/#systemd-cgroup-driver
 // Kubernetes feature implementation: https://github.com/kubernetes/kubernetes/pull/118770
 // containerd implementation of the new CRI API: https://github.com/containerd/containerd/pull/8722
-func getCgroupDriver() string {
-	return "cgroupfs"
+func getCgroupDriver(kubernetesVersion *semver.Version) string {
+	cgroupDriver := "systemd"
+
+	if version.ConstraintK8sLess131.Check(kubernetesVersion) {
+		cgroupDriver = "cgroupfs"
+	}
+
+	return cgroupDriver
 }
 
 func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters, kubernetesVersion *semver.Version) {
