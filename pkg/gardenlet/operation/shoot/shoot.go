@@ -568,7 +568,7 @@ func ToNetworks(shoot *gardencorev1beta1.Shoot, workerless bool) (*Networks, err
 			return nil, fmt.Errorf("cannot parse shoot's node cidr %w", err)
 		}
 		nodes = append(nodes, *n)
-	} else if !workerless {
+	} else if !workerless && !gardencorev1beta1.IsIPv6SingleStack(shoot.Spec.Networking.IPFamilies) {
 		return nil, fmt.Errorf("shoot's node cidr is empty")
 	}
 
