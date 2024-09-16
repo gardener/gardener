@@ -25,6 +25,9 @@ files=(
   "staging/src/k8s.io/apiserver/pkg/features/kube_features.go"
   "staging/src/k8s.io/apiextensions-apiserver/pkg/features/kube_features.go"
   "staging/src/k8s.io/controller-manager/pkg/features/kube_features.go"
+  "staging/src/k8s.io/client-go/features/known_features.go"
+  "staging/src/k8s.io/component-base/logs/api/v1/kube_features.go"
+  "staging/src/k8s.io/component-base/metrics/features/kube_features.go"
 )
 
 out_dir=$(mktemp -d)
@@ -34,23 +37,28 @@ function cleanup_output {
 trap cleanup_output EXIT
 
 for version in "${versions[@]}"; do
-  rm -f "${out_dir}/featuregates-${version}.txt" "${out_dir}/locked-featuregates-${version}.txt"
-  touch "${out_dir}/featuregates-${version}.txt" "${out_dir}/locked-featuregates-${version}.txt"
+  rm -f "${out_dir}/featuregates-${version}.txt" "${out_dir}/locked-featuregates-${version}.txt" "${out_dir}/constants.txt" "${out_dir}/kube_features.go"
+  touch "${out_dir}/featuregates-${version}.txt" "${out_dir}/locked-featuregates-${version}.txt" "${out_dir}/constants.txt" "${out_dir}/kube_features.go"
 
   for file in "${files[@]}"; do
-    { wget -q -O - "https://raw.githubusercontent.com/kubernetes/kubernetes/release-${version}/${file}" || echo; } > "${out_dir}/kube_features.go"
-    grep -E '{Default: .*, PreRelease: .*},' "${out_dir}/kube_features.go" | awk '{print $1}' | { grep -Eo '[A-Z]\w+' || true; } > "${out_dir}/constants.txt"
-    while read -r constant; do
-      grep -E "${constant} featuregate.Feature = \".*\"" "${out_dir}/kube_features.go" | awk '{print $4}' | { grep -Eo '[A-Z]\w+' || true; } >> "${out_dir}/featuregates-${version}.txt"
+    { wget -q -O - "https://raw.githubusercontent.com/kubernetes/kubernetes/release-${version}/${file}" | grep -v '^\s*//' || echo; } >> "${out_dir}/kube_features.go"
+    grep -E '{Default: .*, PreRelease: .*},' "${out_dir}/kube_features.go" | awk '{print $1}' | { grep -Eo '[A-Z]\w+' || true; } >> "${out_dir}/constants.txt"
+  done
+
+  sort -u "${out_dir}/constants.txt" -o "${out_dir}/constants.txt"
+
+  for file in "${files[@]}"; do
+      while read -r constant; do
+      grep -E "${constant} (featuregate\.Feature = \".*\"|Feature = \".*\")" "${out_dir}/kube_features.go" | awk '{print $4}' | { grep -Eo '[A-Z]\w+' || true; } >> "${out_dir}/featuregates-${version}.txt"
     done < "${out_dir}/constants.txt"
 
     grep -E '{Default: .*, PreRelease: .*, LockToDefault: .*},' "${out_dir}/kube_features.go" | sed -En 's/([A-Z]\w+)(: +\{)(Default: (true|false)).*$/\1 \4/p' > "${out_dir}/locked_features.txt"
     while read -r feature; do
       name=$(echo "$feature" | awk '{print $1}' )
       default="$(echo "$feature" | awk '{print $2}')"
-      grep -E "${name} featuregate.Feature = \".*\"" "${out_dir}/kube_features.go" | sed -En 's/^.*\"([A-Z]\w+)\".*$/\1 \tDefault: '"$default"'/p' >> "${out_dir}/locked-featuregates-${version}.txt"
+      grep -E "${name} (featuregate\.Feature = \".*\"|Feature = \".*\")" "${out_dir}/kube_features.go" | sed -En 's/^.*\"([A-Z]\w+)\".*$/\1 \tDefault: '"$default"'/p' >> "${out_dir}/locked-featuregates-${version}.txt"
     done < "${out_dir}/locked_features.txt"
-    rm -f "${out_dir}/kube_features.go" "${out_dir}/constants.txt" "${out_dir}/locked_features.txt"
+    rm -f "${out_dir}/locked_features.txt"
   done
 
   sort -u -o "${out_dir}/featuregates-${version}.txt" "${out_dir}/featuregates-${version}.txt"
