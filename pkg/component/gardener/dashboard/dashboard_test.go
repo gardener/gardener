@@ -203,7 +203,6 @@ logFormat: text
 logLevel: ` + logLevel + `
 apiServerUrl: https://` + apiServerURL + `
 maxRequestBodySize: 500kb
-experimentalUseWatchCacheForListShoots: "yes"
 readinessProbe:
   periodSeconds: 10
 unreachableSeeds:
