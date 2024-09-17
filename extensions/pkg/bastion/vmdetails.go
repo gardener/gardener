@@ -12,7 +12,7 @@ import (
 )
 
 // VmDetails define all bastion vm details derived from the CloudProfile
-type VmDetails struct {
+type VMDetails struct {
 	MachineName   string
 	Architecture  string
 	ImageBaseName string
