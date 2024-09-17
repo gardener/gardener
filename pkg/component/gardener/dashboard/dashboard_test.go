@@ -763,11 +763,6 @@ frontend:
 					Resources: []string{"resourcequotas"},
 					Verbs:     []string{"list", "watch"},
 				},
-				{
-					APIGroups: []string{""},
-					Resources: []string{"secrets"},
-					Verbs:     []string{"get"},
-				},
 			},
 		}
 		clusterRoleBinding = &rbacv1.ClusterRoleBinding{

@@ -61,12 +61,6 @@ func (g *gardenerDashboard) clusterRole() *rbacv1.ClusterRole {
 				Resources: []string{"resourcequotas"},
 				Verbs:     []string{"list", "watch"},
 			},
-			// TODO: Remove once https://github.com/gardener/monitoring/issues/11 is resolved.
-			{
-				APIGroups: []string{corev1.GroupName},
-				Resources: []string{"secrets"},
-				Verbs:     []string{"get"},
-			},
 		},
 	}
 }
