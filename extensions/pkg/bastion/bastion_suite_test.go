@@ -13,5 +13,5 @@ import (
 
 func TestBastion(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Extensions Utils Suite")
+	RunSpecs(t, "Extensions Bastion Suite")
 }
