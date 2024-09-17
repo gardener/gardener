@@ -9,7 +9,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/extensions/pkg/bastion"
-	core "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
