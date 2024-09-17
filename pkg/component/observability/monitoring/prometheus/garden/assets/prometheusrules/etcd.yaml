@@ -100,23 +100,6 @@ spec:
         description: >-
           Virtual garden etcd events has no leader. Possible network partition in the etcd cluster.
 
-    - alert: EtcdHighNumberOfFailedProposals
-      expr: |
-        increase(
-          etcd_server_proposals_failed_total{job="virtual-garden-etcd"}[1h]
-        ) > 80
-      labels:
-        severity: info
-        topology: garden
-        service: VirtualGardenEtcd
-      annotations:
-        summary: >-
-          High number of failed virtual garden etcd {{$labels.role}} proposals in
-          landscape {{$externalLabels.landscape}}.
-        description: >-
-          Virtual garden etcd {{$labels.role}} has seen {{$value}} proposal
-          failures within the last hour.
-
     - record: virtual_garden:apiserver_storage_objects:max_by_resource
       expr: |
         max by (resource) (

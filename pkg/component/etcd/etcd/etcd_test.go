@@ -670,20 +670,6 @@ var _ = Describe("Etcd", func() {
 								},
 							},
 							{
-								Alert: "KubeEtcd3" + testROLE + "HighNumberOfFailedProposals",
-								Expr:  intstr.FromString(`increase(etcd_server_proposals_failed_total{job="` + jobNameEtcd + `"}[1h]) > 5`),
-								Labels: map[string]string{
-									"service":    "etcd",
-									"severity":   "warning",
-									"type":       "seed",
-									"visibility": "operator",
-								},
-								Annotations: map[string]string{
-									"summary":     "High number of failed etcd proposals",
-									"description": "Etcd3 " + testRole + " pod {{ $labels.pod }} has seen {{ $value }} proposal failures within the last hour.",
-								},
-							},
-							{
 								Alert: "KubeEtcd3" + testROLE + "HighMemoryConsumption",
 								Expr:  intstr.FromString(`sum(container_memory_working_set_bytes{pod="etcd-` + testRole + `-0",container="etcd"}) / sum(kube_verticalpodautoscaler_spec_resourcepolicy_container_policies_maxallowed{container="etcd", targetName="etcd-` + testRole + `", resource="memory"}) > .5`),
 								For:   ptr.To(monitoringv1.Duration("15m")),

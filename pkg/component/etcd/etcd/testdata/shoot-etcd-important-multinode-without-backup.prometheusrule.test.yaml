@@ -12,9 +12,6 @@ tests:
   # KubeEtcd3MainNoLeader
   - series: 'etcd_server_has_leader{job="kube-etcd3-main"}'
     values: '0+0x20'
-  # KubeEtcd3MainHighNumberOfFailedProposals
-  - series: 'etcd_server_proposals_failed_total{job="kube-etcd3-main", pod="etcd"}'
-    values: '0+1x6 6+0x115'
   # KubeEtcd3MainDbSizeLimitApproaching
   # KubeEtcd3MainDbSizeLimitCrossed
   - series: 'etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3-main"}'
@@ -42,19 +39,6 @@ tests:
       exp_annotations:
         description: Etcd3 cluster main has no leader. Possible network partition in the etcd cluster.
         summary: Etcd3 main has no leader.
-  - eval_time: 1h
-    alertname: KubeEtcd3MainHighNumberOfFailedProposals
-    exp_alerts:
-    - exp_labels:
-        service: etcd
-        severity: warning
-        type: seed
-        visibility: operator
-        pod: etcd
-        job: kube-etcd3-main
-      exp_annotations:
-        description: Etcd3 main pod etcd has seen 6 proposal failures within the last hour.
-        summary: High number of failed etcd proposals
   - eval_time: 5m
     alertname: KubeEtcd3MainDbSizeLimitApproaching
     exp_alerts:
