@@ -31,14 +31,17 @@ const (
 	portMetrics = 8080
 	portHealthz = 8081
 
-	volumeNameTLS      = "gardener-discovery-server-tls"
-	volumeMountPathTLS = "/var/run/secrets/gardener.cloud/gardener-discovery-server/tls"
+	volumeNameTLS                   = "gardener-discovery-server-tls"
+	volumeMountPathTLS              = "/var/run/secrets/gardener.cloud/gardener-discovery-server/tls"
+	volumeNameWorkloadIdentity      = "garden-workload-identity"
+	volumeMountPathWorkloadIdentity = "/etc/gardener-discovery-server/garden/workload-identity"
 )
 
 func (g *gardenerDiscoveryServer) deployment(
 	secretNameGenericTokenKubeconfig string,
 	secretNameVirtualGardenAccess string,
 	secretNameTLS string,
+	secretNameWorkloadIdentity string,
 ) *appsv1.Deployment {
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -154,8 +157,39 @@ func (g *gardenerDiscoveryServer) deployment(
 		},
 	}
 
+	injectWorkloadIdentity(deployment, secretNameWorkloadIdentity)
 	utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, secretNameGenericTokenKubeconfig, secretNameVirtualGardenAccess))
 	utilruntime.Must(references.InjectAnnotations(deployment))
 
 	return deployment
+}
+
+func injectWorkloadIdentity(deployment *appsv1.Deployment, secretName string) {
+	deployment.Spec.Template.Spec.Containers[0].Args = append(
+		deployment.Spec.Template.Spec.Containers[0].Args,
+		"--workload-identity-openid-configuration-file="+volumeMountPathWorkloadIdentity+"/"+openIDConfigDataKey,
+		"--workload-identity-jwks-file="+volumeMountPathWorkloadIdentity+"/"+jwksDataKey,
+	)
+
+	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+		deployment.Spec.Template.Spec.Containers[0].VolumeMounts,
+		corev1.VolumeMount{
+			Name:      volumeNameWorkloadIdentity,
+			MountPath: volumeMountPathWorkloadIdentity,
+			ReadOnly:  true,
+		},
+	)
+
+	deployment.Spec.Template.Spec.Volumes = append(
+		deployment.Spec.Template.Spec.Volumes,
+		corev1.Volume{
+			Name: volumeNameWorkloadIdentity,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName:  secretName,
+					DefaultMode: ptr.To[int32](0400),
+				},
+			},
+		},
+	)
 }

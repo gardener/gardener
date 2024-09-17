@@ -53,6 +53,8 @@ type Values struct {
 	// TLSSecretName is the name of the secret that will be used by the discovery server to handle TLS.
 	// If not provided then self-signed certificate will be generated.
 	TLSSecretName *string
+	// WorkloadIdentityTokenIssuer is the issuer URL of the workload identity token issuer.
+	WorkloadIdentityTokenIssuer string
 }
 
 // New creates a new [component.DeployWaiter] capable of deploying gardener-discovery-server.
@@ -91,6 +93,11 @@ func (g *gardenerDiscoveryServer) Deploy(ctx context.Context) error {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
 	}
 
+	secretWorkloadIdentityDiscoveryDocuments, err := g.workloadIdentitySecret()
+	if err != nil {
+		return fmt.Errorf("failed to get the secret with the workload identity discovery documents: %w", err)
+	}
+
 	tlsSecretName := ptr.Deref(g.values.TLSSecretName, "")
 	if tlsSecretName == "" {
 		ingressTLSSecret, err := g.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
@@ -108,12 +115,13 @@ func (g *gardenerDiscoveryServer) Deploy(ctx context.Context) error {
 	}
 
 	runtimeResources, err := runtimeRegistry.AddAllAndSerialize(
-		g.deployment(secretGenericTokenKubeconfig.Name, virtualGardenAccessSecret.Secret.Name, tlsSecretName),
+		g.deployment(secretGenericTokenKubeconfig.Name, virtualGardenAccessSecret.Secret.Name, tlsSecretName, secretWorkloadIdentityDiscoveryDocuments.GetName()),
 		g.service(),
 		g.podDisruptionBudget(),
 		g.verticalPodAutoscaler(),
 		g.ingress(),
 		g.serviceMonitor(),
+		secretWorkloadIdentityDiscoveryDocuments,
 	)
 	if err != nil {
 		return err
