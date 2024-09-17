@@ -77,7 +77,7 @@ var _ = Describe("Bastion VM Details", func() {
 		spec.MachineImages[machineIndex].Versions = append(spec.MachineImages[machineIndex].Versions, newVersion)
 	}
 
-	Context("DetermineVmDetails", func() {
+	Describe("#DetermineVmDetails", func() {
 		It("should succeed without setting bastion image version", func() {
 			details, err := bastion.DetermineVmDetails(spec)
 			Expect(err).NotTo(HaveOccurred())
