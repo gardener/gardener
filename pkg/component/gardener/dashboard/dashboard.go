@@ -10,8 +10,6 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	coordinationv1 "k8s.io/api/coordination/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -184,15 +182,6 @@ func (g *gardenerDashboard) Deploy(ctx context.Context) error {
 		if err := virtualRegistry.Add(
 			g.role(),
 			g.roleBinding(virtualGardenAccessSecret.ServiceAccountName),
-			// TODO(rfranzke): Remove this `Lease` once https://github.com/gardener/dashboard/issues/1806 is fixed.
-			&coordinationv1.Lease{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "gardener-dashboard-github-webhook",
-					// Must be in 'garden' namespace, see https://github.com/gardener/gardener/pull/9583#discussion_r1572529328
-					Namespace: v1beta1constants.GardenNamespace,
-					Labels:    GetLabels(),
-				},
-			},
 		); err != nil {
 			return err
 		}

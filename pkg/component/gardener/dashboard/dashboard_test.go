@@ -18,7 +18,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
-	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
@@ -99,7 +98,6 @@ var _ = Describe("GardenerDashboard", func() {
 		clusterRoleBindingTerminal       *rbacv1.ClusterRoleBinding
 		roleGitHub                       *rbacv1.Role
 		roleBindingGitHub                *rbacv1.RoleBinding
-		leaseGitHub                      *coordinationv1.Lease
 	)
 
 	BeforeEach(func() {
@@ -871,16 +869,6 @@ frontend:
 				Namespace: "kube-system",
 			}},
 		}
-		leaseGitHub = &coordinationv1.Lease{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "gardener-dashboard-github-webhook",
-				Namespace: "garden",
-				Labels: map[string]string{
-					"app":  "gardener",
-					"role": "dashboard",
-				},
-			},
-		}
 
 		values = Values{
 			LogLevel:              logLevel,
@@ -1112,7 +1100,6 @@ frontend:
 					expectedVirtualObjects = append(expectedVirtualObjects,
 						roleGitHub,
 						roleBindingGitHub,
-						leaseGitHub,
 					)
 				})
 
