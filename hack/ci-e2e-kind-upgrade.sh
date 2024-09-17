@@ -14,6 +14,11 @@ VERSION="$(cat VERSION)"
 CLUSTER_NAME=""
 SEED_NAME=""
 
+# If running in prow, we need to ensure that garden.local.gardener.cloud resolves to localhost
+if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
+    printf "\n127.0.0.1 garden.local.gardener.cloud\n" >> /etc/hosts
+fi
+
 # copy_kubeconfig_from_kubeconfig_env_var copies the kubeconfig to apporiate location based on kind setup
 function copy_kubeconfig_from_kubeconfig_env_var() {
   case "$SHOOT_FAILURE_TOLERANCE_TYPE" in

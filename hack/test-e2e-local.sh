@@ -40,6 +40,11 @@ if [[ "${IPFAMILY:-}" == "ipv6" ]]; then
   local_address_operator="::3"
 fi
 
+# If running in prow, we need to ensure that garden.local.gardener.cloud resolves to localhost
+if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
+    printf "\n127.0.0.1 garden.local.gardener.cloud\n" >> /etc/hosts
+fi
+
 # If we are running the gardener-operator tests then we have to make the virtual garden domains accessible.
 if [[ "$TYPE" == "operator" ]] || [[ "$TYPE" == "operator-seed" ]]; then
   if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
