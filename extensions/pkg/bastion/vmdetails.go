@@ -8,7 +8,7 @@ import (
 	"golang.org/x/exp/maps"
 	"k8s.io/utils/ptr"
 
-	core "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 // VmDetails define all bastion vm details derived from the CloudProfile
