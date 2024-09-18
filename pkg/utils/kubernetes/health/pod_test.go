@@ -47,6 +47,7 @@ var _ = Describe("Pod", func() {
 		Entry("OutOfMemory", "OutOfMemory", BeTrue()),
 		Entry("OutOfDisk", "OutOfDisk", BeTrue()),
 		Entry("NodeAffinity", "NodeAffinity", BeTrue()),
+		Entry("NodeLost", "NodeLost", BeTrue()),
 		Entry("Foo", "Foo", BeFalse()),
 	)
 })

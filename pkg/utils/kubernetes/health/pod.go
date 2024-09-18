@@ -64,5 +64,6 @@ func CheckPod(pod *corev1.Pod) error {
 func IsPodStale(reason string) bool {
 	return strings.Contains(reason, "Evicted") ||
 		strings.HasPrefix(reason, "OutOf") ||
-		strings.Contains(reason, "NodeAffinity")
+		strings.Contains(reason, "NodeAffinity") ||
+		strings.Contains(reason, "NodeLost")
 }
