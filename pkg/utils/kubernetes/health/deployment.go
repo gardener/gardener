@@ -11,7 +11,6 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -140,11 +139,17 @@ func IsDeploymentUpdated(reader client.Reader, deployment *appsv1.Deployment) fu
 // DeploymentHasExactNumberOfPods returns true when there are exactly as many pods as the .spec.replicas field of the
 // deployment mandates.
 func DeploymentHasExactNumberOfPods(ctx context.Context, reader client.Reader, deployment *appsv1.Deployment) (bool, error) {
-	podList := &metav1.PartialObjectMetadataList{}
-	podList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("PodList"))
+	podList := &corev1.PodList{}
 	if err := reader.List(ctx, podList, client.InNamespace(deployment.Namespace), client.MatchingLabels(deployment.Spec.Selector.MatchLabels)); err != nil {
 		return false, err
 	}
 
-	return int32(len(podList.Items)) == ptr.Deref(deployment.Spec.Replicas, 1), nil
+	var numberOfRelevantPods int32
+	for _, pod := range podList.Items {
+		if !IsPodStale(pod.Status.Reason) {
+			numberOfRelevantPods++
+		}
+	}
+
+	return numberOfRelevantPods == ptr.Deref(deployment.Spec.Replicas, 1), nil
 }
