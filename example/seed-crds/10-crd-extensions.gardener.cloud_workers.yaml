@@ -287,22 +287,10 @@ spec:
                         - key
                         type: object
                       type: array
-                    userData:
-                      description: |-
-                        UserData is a base64-encoded string that contains the data that is sent to the provider's APIs
-                        when a new machine/VM that is part of this worker pool shall be spawned.
-                        Either this or UserDataSecretRef must be provided.
-
-
-                        Deprecated: This field will be removed in future release.
-                        TODO(rfranzke): Remove this field after v1.104 has been released.
-                      format: byte
-                      type: string
                     userDataSecretRef:
                       description: |-
                         UserDataSecretRef references a Secret and a data key containing the data that is sent to the provider's APIs when
                         a new machine/VM that is part of this worker pool shall be spawned.
-                        Either this or UserData must be provided.
                       properties:
                         key:
                           description: The key of the secret to select from.  Must
@@ -355,6 +343,7 @@ spec:
                   - maximum
                   - minimum
                   - name
+                  - userDataSecretRef
                   type: object
                 type: array
               providerConfig:
