@@ -888,7 +888,7 @@ func (c *validationContext) validateShootNetworks(a admission.Attributes, worker
 	}
 
 	if c.seed != nil {
-		if c.shoot.Spec.Networking.Pods == nil && !workerless {
+		if c.shoot.Spec.Networking.Pods == nil && !workerless && slices.Contains(c.shoot.Spec.Networking.IPFamilies, core.IPFamilyIPv4) {
 			if c.seed.Spec.Networks.ShootDefaults != nil {
 				c.shoot.Spec.Networking.Pods = c.seed.Spec.Networks.ShootDefaults.Pods
 			} else {
@@ -896,7 +896,7 @@ func (c *validationContext) validateShootNetworks(a admission.Attributes, worker
 			}
 		}
 
-		if c.shoot.Spec.Networking.Services == nil {
+		if c.shoot.Spec.Networking.Services == nil && slices.Contains(c.shoot.Spec.Networking.IPFamilies, core.IPFamilyIPv4) {
 			if c.seed.Spec.Networks.ShootDefaults != nil {
 				c.shoot.Spec.Networking.Services = c.seed.Spec.Networks.ShootDefaults.Services
 			} else {
@@ -904,39 +904,41 @@ func (c *validationContext) validateShootNetworks(a admission.Attributes, worker
 			}
 		}
 
-		// validate network disjointedness within shoot network
-		allErrs = append(allErrs, cidrvalidation.ValidateShootNetworkDisjointedness(
-			path,
-			c.shoot.Spec.Networking.Nodes,
-			c.shoot.Spec.Networking.Pods,
-			c.shoot.Spec.Networking.Services,
-			workerless,
-		)...)
-
-		// validate network disjointedness with seed networks if shoot is being (re)scheduled
-		if !apiequality.Semantic.DeepEqual(c.oldShoot.Spec.SeedName, c.shoot.Spec.SeedName) {
-			allErrs = append(allErrs, cidrvalidation.ValidateNetworkDisjointedness(
+		if slices.Contains(c.shoot.Spec.Networking.IPFamilies, core.IPFamilyIPv4) {
+			// validate network disjointedness within shoot network
+			allErrs = append(allErrs, cidrvalidation.ValidateShootNetworkDisjointedness(
 				path,
 				c.shoot.Spec.Networking.Nodes,
 				c.shoot.Spec.Networking.Pods,
 				c.shoot.Spec.Networking.Services,
-				c.seed.Spec.Networks.Nodes,
-				c.seed.Spec.Networks.Pods,
-				c.seed.Spec.Networks.Services,
 				workerless,
 			)...)
 
-			if c.shoot.Status.Networking != nil {
-				allErrs = append(allErrs, cidrvalidation.ValidateMultiNetworkDisjointedness(
-					field.NewPath("status", "networking"),
-					c.shoot.Status.Networking.Nodes,
-					c.shoot.Status.Networking.Pods,
-					c.shoot.Status.Networking.Services,
+			// validate network disjointedness with seed networks if shoot is being (re)scheduled
+			if !apiequality.Semantic.DeepEqual(c.oldShoot.Spec.SeedName, c.shoot.Spec.SeedName) {
+				allErrs = append(allErrs, cidrvalidation.ValidateNetworkDisjointedness(
+					path,
+					c.shoot.Spec.Networking.Nodes,
+					c.shoot.Spec.Networking.Pods,
+					c.shoot.Spec.Networking.Services,
 					c.seed.Spec.Networks.Nodes,
 					c.seed.Spec.Networks.Pods,
 					c.seed.Spec.Networks.Services,
 					workerless,
 				)...)
+
+				if c.shoot.Status.Networking != nil {
+					allErrs = append(allErrs, cidrvalidation.ValidateMultiNetworkDisjointedness(
+						field.NewPath("status", "networking"),
+						c.shoot.Status.Networking.Nodes,
+						c.shoot.Status.Networking.Pods,
+						c.shoot.Status.Networking.Services,
+						c.seed.Spec.Networks.Nodes,
+						c.seed.Spec.Networks.Pods,
+						c.seed.Spec.Networks.Services,
+						workerless,
+					)...)
+				}
 			}
 		}
 	}

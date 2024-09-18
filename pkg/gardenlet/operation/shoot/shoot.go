@@ -557,19 +557,19 @@ func ToNetworks(shoot *gardencorev1beta1.Shoot, workerless bool) (*Networks, err
 			return nil, fmt.Errorf("cannot parse shoot's pod cidr %w", err)
 		}
 		pods = append(pods, *p)
-	} else if !workerless {
+	} else if !workerless && !gardencorev1beta1.IsIPv6SingleStack(shoot.Spec.Networking.IPFamilies) {
 		return nil, fmt.Errorf("shoot's pods cidr is empty")
 	}
 
-	if shoot.Spec.Networking.Services == nil {
+	if shoot.Spec.Networking.Services != nil {
+		_, s, err := net.ParseCIDR(*shoot.Spec.Networking.Services)
+		if err != nil {
+			return nil, fmt.Errorf("cannot parse shoot's network cidr %w", err)
+		}
+		services = append(services, *s)
+	} else if !gardencorev1beta1.IsIPv6SingleStack(shoot.Spec.Networking.IPFamilies) {
 		return nil, fmt.Errorf("shoot's service cidr is empty")
 	}
-
-	_, s, err := net.ParseCIDR(*shoot.Spec.Networking.Services)
-	if err != nil {
-		return nil, fmt.Errorf("cannot parse shoot's network cidr %w", err)
-	}
-	services = append(services, *s)
 
 	if shoot.Spec.Networking.Nodes != nil {
 		_, n, err := net.ParseCIDR(*shoot.Spec.Networking.Nodes)
