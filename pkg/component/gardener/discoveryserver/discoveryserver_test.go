@@ -6,10 +6,13 @@ package discoveryserver_test
 
 import (
 	"context"
+	"crypto"
+	"crypto/rand"
 
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/format"
 	"github.com/onsi/gomega/types"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -23,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/client-go/util/keyutil"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -34,10 +36,12 @@ import (
 	"github.com/gardener/gardener/pkg/component/gardener/discoveryserver"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -55,8 +59,9 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 
 		image                      = "gardener-discovery-server-image:latest"
 		workloadIdentityPrivateKey []byte
-		workloadIdentityPublicKey  []byte
-		workloadIdentityIssuer     string
+		workloadIdentityPublicKey  crypto.PublicKey
+
+		workloadIdentityIssuer string
 
 		fakeClient        client.Client
 		fakeSecretManager secretsmanager.Interface
@@ -91,44 +96,11 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 
-		workloadIdentityPrivateKey = []byte(`-----BEGIN PRIVATE KEY-----
-MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDzLfo0QwNR1eAB
-pEnyCtcTQBFY5kDT9D0U1dMJ3XV1G2HUhCuJbNn+CYpsVlpvopVEwAgPTmfXqd4t
-CXSmIOJoKyOx80toPItTWX3aq6/O4vpZYxUBvaP02qPHC7CZOaUhue8FFatllDKD
-I8Fuhem2kQ6tW/cQeDNx4Nnkk6NSaWbCxPmFkEpdXBZP9fSEyIK6ZCOQYTSyaAxP
-clMwTaHNeHIy4sC2DVA4f7kRhgHP68DoVg5Wi8EW4+C+8aLrHkJlG1XspImmAVmp
-xn69KSOlpd22PYz+hzjTdNQY3aTC/9NevI8R0hhF9ysS8N8nzi5YqeELljyHRkvN
-dyzxsn6rAgMBAAECggEAIYsmCC92NcOasp9G0+xK3ozn16trJdF623TjN2kk2pJ8
-XCQfHUW2jCQkw+zlbKCwllsmwXW/PTBhRTUYshG3KUdKFTHKJQa08TpW8eLczVzh
-y5KvQx41j4DZNouWQIyDCrPrFHh4u/pFPXGhLO2r31MDA0a8PblW3050v+LdlHBQ
-tlA4NqIqVZCuuoyfE7BOdcFpMgqzlg0RH8OyLOYAXZL0ZEosA65uX+tO7nqj3MpR
-l0BU83s7R85LhCEJhDew9w0B9KN9XbP4EeRrFcb4gwIxh2ANqoEg0C7Je5HgEKu0
-DzktumaY5/RP1rJPC9OaYmFlRoY8O4wmSP7dihlTAQKBgQD7p+wOChpF9ggmmWIu
-DW5BKk3+tcKstB4uXItSWn+ice72C4WQKZ0fkudkWBoL6M/k/CUjBgE7ETpY1aEI
-bDUdMQ2XDsFh14tfgx2WhyGMK9lR0+XYGolc6dPXXL6Ia9tLwUt/b6BoIQnY90vj
-xONW4i2CJhJ4VdhcYxY1zdDfOQKBgQD3YJkTKSgOmx9BZ963gVaSCuEpSYSLmMa3
-+nfwgcAHaX0yF//XzWNx8Ij1S/RGy/l4Ml3iJQnhAjgpmTbX99p/28HSwaQeQfZ+
-ShnQXHwWD3iYTMaSm/u55Kf2jSF/8yDFYUIGeGL7ZkB4TzybYe+mW99h2AyGEXmp
-8imAoL3pAwKBgD6vvKBeqd7Fg5BB4u//zngTFqydECo/D8mSqe3Qtzx6zwChLBsW
-Epqb2GHphEt1KdwrZwDLbSEOkI8yX9OeSLjF0FHRjiBWNdSL76HgdV3aSl8UvotP
-SOpJIMjjxF5tJ4o+UxUidD2cBTzzlQbes5af7qAd5bnuAGA7Gnw6kY4ZAoGANtpQ
-lxMVMsfq0lH57K7dR1zqOIF4xouF5N3BIq9iqUIW5Li1nmCIoIc5l0rUS66HDsP8
-VVzpJ9+aHH9AzfrDlH5iKB2QCrWNtssvligry6h6kSrVDUVROBMfu2fn+bsrlRjP
-zyd6q0wtF4BabAn3XegZTFTf0gql860izsbV1YkCgYEAvLpyIm47Gb2CcNWcXAjK
-tZELJcHkXtFuJsc5Ev32dR4HEI0g7GdznkM6kv2p2pH/yk2DbMraOILkEdC1xY/5
-XVrdl0kTxGjQM6R2RsK0gESB9iCirOzCDNEXUXfOnUO0ziXelKK84QECWziFt6zS
-uausRLUkvz9lfTrjgOHldP0=
------END PRIVATE KEY-----`)
+		privateKey, err := secretsutils.FakeGenerateKey(rand.Reader, 2048)
+		Expect(err).ToNot(HaveOccurred())
 
-		workloadIdentityPublicKey = []byte(`-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA8y36NEMDUdXgAaRJ8grX
-E0ARWOZA0/Q9FNXTCd11dRth1IQriWzZ/gmKbFZab6KVRMAID05n16neLQl0piDi
-aCsjsfNLaDyLU1l92quvzuL6WWMVAb2j9NqjxwuwmTmlIbnvBRWrZZQygyPBboXp
-tpEOrVv3EHgzceDZ5JOjUmlmwsT5hZBKXVwWT/X0hMiCumQjkGE0smgMT3JTME2h
-zXhyMuLAtg1QOH+5EYYBz+vA6FYOVovBFuPgvvGi6x5CZRtV7KSJpgFZqcZ+vSkj
-paXdtj2M/oc403TUGN2kwv/TXryPEdIYRfcrEvDfJ84uWKnhC5Y8h0ZLzXcs8bJ+
-qwIDAQAB
------END PUBLIC KEY-----`)
+		workloadIdentityPrivateKey = utils.EncodePrivateKey(privateKey)
+		workloadIdentityPublicKey = privateKey.Public()
 		workloadIdentityIssuer = "https://local.gardener.cloud/garden/workload-identity/issuer"
 
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).Build()
@@ -185,13 +157,10 @@ qwIDAQAB
 			Type: corev1.SecretTypeOpaque,
 		}
 
-		keys, err := keyutil.ParsePublicKeysPEM(workloadIdentityPublicKey)
+		openidConfig, err := workloadidentity.OpenIDConfig(workloadIdentityIssuer, workloadIdentityPublicKey)
 		Expect(err).ToNot(HaveOccurred())
 
-		openidConfig, err := workloadidentity.OpenIDConfig(workloadIdentityIssuer, keys...)
-		Expect(err).ToNot(HaveOccurred())
-
-		jwks, err := workloadidentity.JWKS(keys...)
+		jwks, err := workloadidentity.JWKS(workloadIdentityPublicKey)
 		Expect(err).ToNot(HaveOccurred())
 
 		workloadIdentitySecret = &corev1.Secret{
@@ -315,6 +284,7 @@ qwIDAQAB
 									{
 										Name:      "gardener-discovery-server-tls",
 										MountPath: "/var/run/secrets/gardener.cloud/gardener-discovery-server/tls",
+										ReadOnly:  true,
 									},
 									{
 										Name:      "garden-workload-identity",
@@ -329,7 +299,8 @@ qwIDAQAB
 								Name: "gardener-discovery-server-tls",
 								VolumeSource: corev1.VolumeSource{
 									Secret: &corev1.SecretVolumeSource{
-										SecretName: "gardener-discovery-server-tls",
+										SecretName:  "gardener-discovery-server-tls",
+										DefaultMode: ptr.To[int32](0400),
 									},
 								},
 							},
@@ -720,6 +691,7 @@ qwIDAQAB
 			})
 
 			It("should successfully deploy all resources", func() {
+				format.MaxLength = 0
 				Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
 				Expect(managedResourceVirtual).To(consistOf(expectedVirtualObjects...))
 			})

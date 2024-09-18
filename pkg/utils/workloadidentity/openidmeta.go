@@ -5,6 +5,10 @@
 package workloadidentity
 
 import (
+	"crypto"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rsa"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -21,10 +25,10 @@ type openIDMetadata struct {
 }
 
 // OpenIDConfig builds the content for the openid configuration discovery document
-// from the provided issuer URL and keys.
-func OpenIDConfig(issuerURL string, keys ...any) ([]byte, error) {
-	algs := make([]string, 0, len(keys))
-	for _, k := range keys {
+// from the provided issuer URL and public keys.
+func OpenIDConfig(issuerURL string, publicKeys ...any) ([]byte, error) {
+	algs := make([]string, 0, len(publicKeys))
+	for _, k := range publicKeys {
 		alg, err := getAlg(k)
 		if err != nil {
 			return nil, err
@@ -44,17 +48,17 @@ func OpenIDConfig(issuerURL string, keys ...any) ([]byte, error) {
 }
 
 // JWKS builds the content for the JWKS discovery document
-// from the provided keys.
-func JWKS(keys ...any) ([]byte, error) {
+// from the provided public keys.
+func JWKS(publicKeys ...any) ([]byte, error) {
 	jwks := jose.JSONWebKeySet{}
 
-	for _, key := range keys {
+	for _, key := range publicKeys {
 		jwk := jose.JSONWebKey{
 			Key: key,
 			Use: "sig",
 		}
 		if !jwk.IsPublic() {
-			return nil, errors.New("JWKS supports only public keys")
+			return nil, errors.New("all keys must be public")
 		}
 
 		kid, err := getKeyID(key)
@@ -73,4 +77,26 @@ func JWKS(keys ...any) ([]byte, error) {
 	}
 
 	return json.Marshal(jwks)
+}
+
+func getAlg(publicKey crypto.PublicKey) (jose.SignatureAlgorithm, error) {
+	switch pk := publicKey.(type) {
+	case *rsa.PublicKey:
+		return jose.RS256, nil
+	case *ecdsa.PublicKey:
+		switch pk.Curve {
+		case elliptic.P256():
+			return jose.ES256, nil
+		case elliptic.P384():
+			return jose.ES384, nil
+		case elliptic.P521():
+			return jose.ES512, nil
+		default:
+			return "", fmt.Errorf("unknown ecdsa key curve, must be 256, 384, or 521")
+		}
+	case jose.OpaqueSigner:
+		return jose.SignatureAlgorithm(pk.Public().Algorithm), nil
+	default:
+		return "", fmt.Errorf("unknown public key type, must be *rsa.PublicKey, *ecdsa.PublicKey, or jose.OpaqueSigner")
+	}
 }

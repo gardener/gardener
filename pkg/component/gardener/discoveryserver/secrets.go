@@ -9,6 +9,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/util/keyutil"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -74,8 +75,8 @@ func (g *gardenerDiscoveryServer) workloadIdentitySecret() (*corev1.Secret, erro
 
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: g.namespace,
 			Name:      deploymentName + "-garden-workload-identity",
+			Namespace: g.namespace,
 			Labels:    labels(),
 		},
 		Type: corev1.SecretTypeOpaque,
@@ -85,9 +86,6 @@ func (g *gardenerDiscoveryServer) workloadIdentitySecret() (*corev1.Secret, erro
 		},
 	}
 
-	if err := kubernetes.MakeUnique(secret); err != nil {
-		return nil, err
-	}
-
+	utilruntime.Must(kubernetes.MakeUnique(secret))
 	return secret, nil
 }

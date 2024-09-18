@@ -6,7 +6,6 @@ package workloadidentity_test
 
 import (
 	"crypto"
-	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -117,48 +116,6 @@ wQIDAQAB
 			keyID, err := workloadidentity.GetKeyID(u)
 			Expect(err).To(HaveOccurred())
 			Expect(keyID).To(BeEmpty())
-		})
-	})
-
-	Context("#getAlg", func() {
-		It("should get correct algorithm", func() {
-			privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-			Expect(err).ToNot(HaveOccurred())
-			alg, err := workloadidentity.GetAlg(privateKey.Public())
-			Expect(err).ToNot(HaveOccurred())
-			Expect(alg).To(Equal(jose.RS256))
-
-			ecdsaPrivateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-			Expect(err).ToNot(HaveOccurred())
-			alg, err = workloadidentity.GetAlg(ecdsaPrivateKey.Public())
-			Expect(err).ToNot(HaveOccurred())
-			Expect(alg).To(Equal(jose.ES256))
-
-			ecdsaPrivateKey, err = ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-			Expect(err).ToNot(HaveOccurred())
-			alg, err = workloadidentity.GetAlg(ecdsaPrivateKey.Public())
-			Expect(err).ToNot(HaveOccurred())
-			Expect(alg).To(Equal(jose.ES384))
-
-			ecdsaPrivateKey, err = ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
-			Expect(err).ToNot(HaveOccurred())
-			alg, err = workloadidentity.GetAlg(ecdsaPrivateKey.Public())
-			Expect(err).ToNot(HaveOccurred())
-			Expect(alg).To(Equal(jose.ES512))
-		})
-
-		It("should return error for unknown ECDSA curve", func() {
-			key, err := ecdsa.GenerateKey(elliptic.P224(), rand.Reader)
-			Expect(err).ToNot(HaveOccurred())
-			_, err = workloadidentity.GetAlg(key.Public())
-			Expect(err).To(MatchError("unknown ecdsa key curve, must be 256, 384, or 521"))
-		})
-
-		It("should return error for unknown key type", func() {
-			key, err := ecdh.P256().GenerateKey(rand.Reader)
-			Expect(err).ToNot(HaveOccurred())
-			_, err = workloadidentity.GetAlg(key.Public())
-			Expect(err).To(MatchError("unknown public key type, must be *rsa.PublicKey, *ecdsa.PublicKey, or jose.OpaqueSigner"))
 		})
 	})
 
