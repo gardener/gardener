@@ -697,12 +697,6 @@ func (e *etcd) Deploy(ctx context.Context) error {
 
 	// etcd deployed for shoot cluster
 	if e.values.NamePrefix == "" {
-		// TODO(rickardsjp, chrkl, istvanballok): Remove after v1.102
-		err := kubernetesutils.DeleteObject(ctx, e.client, e.emptyScrapeConfig())
-		if client.IgnoreNotFound(err) != nil {
-			return fmt.Errorf("could not delete etcd scrape config in namespace %v: %w", e.namespace, err)
-		}
-
 		// TODO: The PrometheusRules for the garden cluster case are maintained in a separate file located here:
 		//  pkg/component/observability/monitoring/prometheus/garden/assets/prometheusrules/etcd.yaml
 		//  These rules highly overlap with those for the shoots maintained here. They should be merged in the future.
