@@ -7,7 +7,6 @@ package care
 import (
 	"context"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
@@ -24,6 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 
 // GarbageCollection contains required information for shoot and seed garbage collection.
@@ -147,10 +147,8 @@ func (g *GarbageCollection) deleteStalePods(ctx context.Context, c client.Client
 	for _, pod := range podList.Items {
 		log := g.log.WithValues("pod", client.ObjectKeyFromObject(&pod))
 
-		if strings.Contains(pod.Status.Reason, "Evicted") ||
-			strings.HasPrefix(pod.Status.Reason, "OutOf") ||
-			strings.Contains(pod.Status.Reason, "NodeAffinity") {
-			log.V(1).Info("Deleting pod", "reason", pod.Status.Reason)
+		if health.IsPodStale(pod.Status.Reason) {
+			log.V(1).Info("Deleting stale pod", "reason", pod.Status.Reason)
 			if err := c.Delete(ctx, &pod, kubernetes.DefaultDeleteOptions...); client.IgnoreNotFound(err) != nil {
 				result = multierror.Append(result, err)
 			}
