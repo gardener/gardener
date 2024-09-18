@@ -47,11 +47,6 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 		r.HelmRegistry = helmRegisty
 	}
 
-	predicates := []predicate.Predicate{
-		r.ControllerInstallationPredicate(),
-		r.HelmTypePredicate(ctx, gardenCluster.GetClient()),
-	}
-
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
@@ -62,7 +57,8 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 			source.Kind[client.Object](gardenCluster.GetCache(),
 				&gardencorev1beta1.ControllerInstallation{},
 				&handler.EnqueueRequestForObject{},
-				predicates...),
+				r.ControllerInstallationPredicate(),
+				r.HelmTypePredicate(ctx, gardenCluster.GetClient())),
 		).
 		Complete(r)
 }

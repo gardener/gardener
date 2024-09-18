@@ -35,8 +35,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 		r.Clock = clock.RealClock{}
 	}
 
-	predicates := []predicate.Predicate{r.SeedNameChangedPredicate()}
-
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
@@ -45,7 +43,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 			source.Kind[client.Object](gardenCluster.GetCache(),
 				&gardencorev1beta1.Shoot{},
 				&handler.EnqueueRequestForObject{},
-				predicates...),
+				r.SeedNameChangedPredicate()),
 		).
 		Complete(r)
 }

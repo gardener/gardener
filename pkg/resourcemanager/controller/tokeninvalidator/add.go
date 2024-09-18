@@ -42,9 +42,6 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, targ
 	secret := &metav1.PartialObjectMetadata{}
 	secret.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Secret"))
 
-	predicates := []predicate.Predicate{
-		r.SecretPredicate(),
-	}
 	c, err := builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
@@ -56,7 +53,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, targ
 			source.Kind[client.Object](targetCluster.GetCache(),
 				secret,
 				&handler.EnqueueRequestForObject{},
-				predicates...),
+				r.SecretPredicate()),
 		).
 		Build(r)
 	if err != nil {

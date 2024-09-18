@@ -53,11 +53,6 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 		r.Extractor = registry.NewExtractor()
 	}
 
-	predicates := []predicate.Predicate{
-		r.SecretPredicate(),
-		predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
-	}
-
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
@@ -65,7 +60,8 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 			source.Kind[client.Object](mgr.GetCache(),
 				&corev1.Secret{},
 				r.EnqueueWithJitterDelay(ctx, mgr.GetLogger().WithValues("controller", ControllerName).WithName("reconciliation-delayer")),
-				predicates...),
+				r.SecretPredicate(),
+				predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update)),
 		).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
 		Complete(r)

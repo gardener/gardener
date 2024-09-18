@@ -66,11 +66,6 @@ func (r *Reconciler) AddToManager(
 		r.GardenNamespaceShoot = v1beta1constants.GardenNamespace
 	}
 
-	predicates := []predicate.Predicate{
-		r.ManagedSeedPredicate(ctx, r.Config.SeedConfig.SeedTemplate.Name),
-		&predicate.GenerationChangedPredicate{},
-	}
-
 	c, err := builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
@@ -81,7 +76,8 @@ func (r *Reconciler) AddToManager(
 			source.Kind[client.Object](gardenCluster.GetCache(),
 				&seedmanagementv1alpha1.ManagedSeed{},
 				r.EnqueueWithJitterDelay(),
-				predicates...),
+				r.ManagedSeedPredicate(ctx, r.Config.SeedConfig.SeedTemplate.Name),
+				&predicate.GenerationChangedPredicate{}),
 		).
 		Build(r)
 	if err != nil {

@@ -146,7 +146,10 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("error getting authentication configuration from configmap %s: %w", client.ObjectKeyFromObject(authenticationConfigurationConfigMap), err))
 	}
 
-	disallowedIssuers := getDisallowedIssuers(shoot.Spec.Kubernetes.KubeAPIServer)
+	disallowedIssuers, err := getDisallowedIssuers(shoot.Spec.Kubernetes.KubeAPIServer)
+	if err != nil {
+		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("error getting disallowed issuers: %w", err))
+	}
 
 	if errCode, err := validateAuthenticationConfigurationSemantics(authenticationConfiguration, disallowedIssuers); err != nil {
 		return admission.Errored(errCode, err)
@@ -178,6 +181,7 @@ func (h *Handler) admitConfigMap(ctx context.Context, request admission.Request)
 	var (
 		configMapIsReferenced bool
 		disallowedIssuers     []string
+		err                   error
 	)
 
 	for _, shoot := range shootList.Items {
@@ -187,7 +191,10 @@ func (h *Handler) admitConfigMap(ctx context.Context, request admission.Request)
 			if err := gardencorev1beta1.Convert_v1beta1_KubeAPIServerConfig_To_core_KubeAPIServerConfig(shoot.Spec.Kubernetes.KubeAPIServer, coreKubeAPIServerConfig, nil); err != nil {
 				return admission.Errored(http.StatusUnprocessableEntity, err)
 			}
-			disallowedIssuers = getDisallowedIssuers(coreKubeAPIServerConfig)
+			disallowedIssuers, err = getDisallowedIssuers(coreKubeAPIServerConfig)
+			if err != nil {
+				return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("error getting disallowed issuers: %w", err))
+			}
 			break
 		}
 	}
@@ -250,9 +257,17 @@ func getAuthenticationConfiguration(cm *corev1.ConfigMap) (string, error) {
 	return authenticationConfigurationRaw, nil
 }
 
-func getDisallowedIssuers(kubeAPIServerConfig *gardencore.KubeAPIServerConfig) []string {
-	issuer := kubeAPIServerConfig.ServiceAccountConfig.Issuer
-	acceptedIssuers := kubeAPIServerConfig.ServiceAccountConfig.AcceptedIssuers
+func getDisallowedIssuers(kubeAPIServerConfig *gardencore.KubeAPIServerConfig) ([]string, error) {
+	var issuer string
+	if kubeAPIServerConfig.ServiceAccountConfig.Issuer != nil {
+		issuer = *kubeAPIServerConfig.ServiceAccountConfig.Issuer
+	}
 
-	return append(acceptedIssuers, *issuer)
+	acceptedIssuers := kubeAPIServerConfig.ServiceAccountConfig.AcceptedIssuers
+	disallowedIssuers := append(acceptedIssuers, issuer)
+	if len(disallowedIssuers) == 0 {
+		return nil, errors.New("no disallowed issuers found")
+	}
+
+	return disallowedIssuers, nil
 }

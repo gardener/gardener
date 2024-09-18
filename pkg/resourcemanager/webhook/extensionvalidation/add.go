@@ -59,7 +59,7 @@ func AddToManager(mgr manager.Manager) error {
 		&extensionsv1alpha1.OperatingSystemConfig{}: &operatingSystemConfigValidator{},
 		&extensionsv1alpha1.Worker{}:                &workerValidator{},
 	} {
-		// RecoverPanic is defaulted to true is not set in the manager.
+		// RecoverPanic is defaulted to true.
 		if err := builder.
 			WebhookManagedBy(mgr).
 			WithValidator(validator).

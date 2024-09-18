@@ -65,12 +65,16 @@ require (
 	k8s.io/autoscaler/vertical-pod-autoscaler v1.2.1
 	k8s.io/client-go v0.31.1
 	k8s.io/cluster-bootstrap v0.31.1
+	k8s.io/code-generator v0.31.1
 	k8s.io/component-base v0.31.1
 	k8s.io/component-helpers v0.31.1
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/kube-aggregator v0.31.1
 	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340
 	k8s.io/kube-proxy v0.31.1
+	k8s.io/kube-state-metrics/v2 v2.13.0
+	k8s.io/kubelet v0.31.1
+	k8s.io/metrics v0.31.1
 	k8s.io/pod-security-admission v0.31.1
 	k8s.io/utils v0.0.0-20240921022957-49e7df575cb6
 	sigs.k8s.io/controller-runtime v0.19.0
@@ -80,16 +84,8 @@ require (
 	sigs.k8s.io/yaml v1.4.0
 )
 
-require dario.cat/mergo v1.0.1 // indirect
-
 require (
-	k8s.io/code-generator v0.31.1
-	k8s.io/kube-state-metrics/v2 v2.13.0
-	k8s.io/kubelet v0.29.5
-	k8s.io/metrics v0.29.5
-)
-
-require (
+	dario.cat/mergo v1.0.1 // indirect
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230811130428-ced1acdcaa24 // indirect
 	github.com/AdamKorcz/go-118-fuzz-build v0.0.0-20230306123547-8075edf89bb0 // indirect
 	github.com/BurntSushi/toml v1.3.2 // indirect

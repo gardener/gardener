@@ -43,12 +43,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, seedCluster cluster.Clust
 		return fmt.Errorf("failed computing label selector predicate for eviction requirements managed by controller: %w", err)
 	}
 
-	predicates := []predicate.Predicate{
-		vpaEvictionRequirementsManagedByControllerPredicate,
-		predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
-		predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}),
-	}
-
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
@@ -58,7 +52,10 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, seedCluster cluster.Clust
 		WatchesRawSource(
 			source.Kind[client.Object](seedCluster.GetCache(),
 				&vpaautoscalingv1.VerticalPodAutoscaler{},
-				&handler.EnqueueRequestForObject{}, predicates...),
+				&handler.EnqueueRequestForObject{},
+				vpaEvictionRequirementsManagedByControllerPredicate,
+				predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
+				predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})),
 		).
 		Complete(r)
 }

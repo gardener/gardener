@@ -44,11 +44,6 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 		r.Clock = clock.RealClock{}
 	}
 
-	predicates := []predicate.Predicate{
-		predicateutils.HasName(r.SeedName),
-		r.SeedPredicate(),
-	}
-
 	c, err := builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
@@ -61,7 +56,8 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 			source.Kind[client.Object](gardenCluster.GetCache(),
 				&gardencorev1beta1.Seed{},
 				&handler.EnqueueRequestForObject{},
-				predicates...),
+				predicateutils.HasName(r.SeedName),
+				r.SeedPredicate()),
 		).Build(r)
 	if err != nil {
 		return err
