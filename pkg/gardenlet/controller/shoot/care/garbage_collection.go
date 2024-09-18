@@ -8,22 +8,18 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/hashicorp/go-multierror"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 
 // GarbageCollection contains required information for shoot and seed garbage collection.
@@ -79,7 +75,7 @@ func (g *GarbageCollection) Collect(ctx context.Context) {
 
 // PerformGarbageCollectionSeed performs garbage collection in the Shoot namespace in the Seed cluster
 func (g *GarbageCollection) performGarbageCollectionSeed(ctx context.Context) error {
-	return g.deleteStalePods(ctx, g.seedClient, g.shoot.SeedNamespace)
+	return kubernetesutils.DeleteStalePods(ctx, g.log, g.seedClient, client.InNamespace(g.shoot.SeedNamespace))
 }
 
 // PerformGarbageCollectionShoot performs garbage collection in the kube-system namespace in the Shoot
@@ -94,7 +90,7 @@ func (g *GarbageCollection) performGarbageCollectionShoot(ctx context.Context, s
 		namespace = metav1.NamespaceAll
 	}
 
-	return g.deleteStalePods(ctx, shootClient, namespace)
+	return kubernetesutils.DeleteStalePods(ctx, g.log, shootClient, client.InNamespace(namespace))
 }
 
 // See https://github.com/gardener/gardener/issues/8749 and https://github.com/kubernetes/kubernetes/issues/109777.
@@ -131,52 +127,4 @@ func (g *GarbageCollection) deleteOrphanedNodeLeases(ctx context.Context, c clie
 	}
 
 	return flow.ParallelN(100, taskFns...)(ctx)
-}
-
-// GardenerDeletionGracePeriod is the default grace period for Gardener's force deletion methods.
-const GardenerDeletionGracePeriod = 5 * time.Minute
-
-func (g *GarbageCollection) deleteStalePods(ctx context.Context, c client.Client, namespace string) error {
-	podList := &corev1.PodList{}
-	if err := c.List(ctx, podList, client.InNamespace(namespace)); err != nil {
-		return err
-	}
-
-	var result error
-
-	for _, pod := range podList.Items {
-		log := g.log.WithValues("pod", client.ObjectKeyFromObject(&pod))
-
-		if health.IsPodStale(pod.Status.Reason) {
-			log.V(1).Info("Deleting stale pod", "reason", pod.Status.Reason)
-			if err := c.Delete(ctx, &pod, kubernetes.DefaultDeleteOptions...); client.IgnoreNotFound(err) != nil {
-				result = multierror.Append(result, err)
-			}
-
-			continue
-		}
-
-		if shouldObjectBeRemoved(&pod, GardenerDeletionGracePeriod) {
-			g.log.V(1).Info("Deleting stuck terminating pod")
-			if err := c.Delete(ctx, &pod, kubernetes.ForceDeleteOptions...); client.IgnoreNotFound(err) != nil {
-				result = multierror.Append(result, err)
-			}
-		}
-	}
-
-	return result
-}
-
-// shouldObjectBeRemoved determines whether the given object should be gone now.
-// This is calculated by first checking the deletion timestamp of an object: If the deletion timestamp
-// is unset, the object should not be removed - i.e. this returns false.
-// Otherwise, it is checked whether the deletionTimestamp is before the current time minus the
-// grace period.
-func shouldObjectBeRemoved(obj metav1.Object, gracePeriod time.Duration) bool {
-	deletionTimestamp := obj.GetDeletionTimestamp()
-	if deletionTimestamp == nil {
-		return false
-	}
-
-	return deletionTimestamp.Time.Before(time.Now().Add(-gracePeriod))
 }
