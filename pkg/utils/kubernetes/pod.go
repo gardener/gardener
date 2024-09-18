@@ -195,20 +195,15 @@ func GetDeploymentForPod(ctx context.Context, reader client.Reader, namespace st
 }
 
 // DeleteStalePods deletes stale pods.
-func DeleteStalePods(ctx context.Context, log logr.Logger, c client.Client, listOptions ...client.ListOption) error {
-	podList := &corev1.PodList{}
-	if err := c.List(ctx, podList, listOptions...); err != nil {
-		return err
-	}
-
+func DeleteStalePods(ctx context.Context, log logr.Logger, c client.Client, pods []corev1.Pod) error {
 	var result error
 
-	for _, pod := range podList.Items {
+	for _, pod := range pods {
 		logger := log.WithValues("pod", client.ObjectKeyFromObject(&pod))
 
 		if health.IsPodStale(pod.Status.Reason) {
 			logger.V(1).Info("Deleting stale pod", "reason", pod.Status.Reason)
-			if err := c.Delete(ctx, &pod, kubernetes.DefaultDeleteOptions...); client.IgnoreNotFound(err) != nil {
+			if err := c.Delete(ctx, &pod); client.IgnoreNotFound(err) != nil {
 				result = multierror.Append(result, err)
 			}
 

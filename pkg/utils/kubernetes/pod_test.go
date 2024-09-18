@@ -495,12 +495,13 @@ var _ = Describe("Pod Utils", func() {
 		It("should delete the stale pods", func() {
 			var (
 				normalPod = &corev1.Pod{
-					ObjectMeta: metav1.ObjectMeta{GenerateName: "pod-", Namespace: "default"},
+					ObjectMeta: metav1.ObjectMeta{Name: "normal", Namespace: "default"},
 				}
 				stalePod = &corev1.Pod{
-					ObjectMeta: metav1.ObjectMeta{GenerateName: "pod-", Namespace: "default"},
+					ObjectMeta: metav1.ObjectMeta{Name: "stale", Namespace: "default"},
 					Status:     corev1.PodStatus{Reason: "Evicted"},
 				}
+				pods = []corev1.Pod{*normalPod, *stalePod}
 				// There is no good way with the fake client to test the deletion of the pods stuck in termination
 				// We'd have to use a mock client, but we actually want to avoid its usage.
 			)
@@ -508,7 +509,7 @@ var _ = Describe("Pod Utils", func() {
 			Expect(fakeClient.Create(ctx, normalPod)).To(Succeed())
 			Expect(fakeClient.Create(ctx, stalePod)).To(Succeed())
 
-			Expect(DeleteStalePods(ctx, logr.Discard(), fakeClient)).To(Succeed())
+			Expect(DeleteStalePods(ctx, logr.Discard(), fakeClient, pods)).To(Succeed())
 
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(normalPod), &corev1.Pod{})).To(Succeed())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(stalePod), &corev1.Pod{})).To(BeNotFoundError())

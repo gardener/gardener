@@ -571,6 +571,7 @@ build:
             - pkg/utils/flow
             - pkg/utils/gardener
             - pkg/utils/kubernetes
+            - pkg/utils/kubernetes/health
             - pkg/utils/retry
             - pkg/utils/secrets
             - pkg/utils/time
@@ -798,6 +799,7 @@ build:
             - pkg/utils/flow
             - pkg/utils/gardener
             - pkg/utils/kubernetes
+            - pkg/utils/kubernetes/health
             - pkg/utils/retry
             - pkg/utils/secrets
             - pkg/utils/timewindow
@@ -879,6 +881,7 @@ build:
             - pkg/utils/gardener
             - pkg/utils/kubernetes
             - pkg/utils/kubernetes/bootstraptoken
+            - pkg/utils/kubernetes/health
             - pkg/utils/retry
             - pkg/utils/secrets
             - pkg/utils/timewindow

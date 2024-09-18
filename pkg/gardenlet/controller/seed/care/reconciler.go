@@ -9,7 +9,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -19,6 +22,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // NewHealthCheck is used to create a new Health check instance.
@@ -87,6 +91,11 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 		}
 	}
 
+	// Trigger garbage collection
+	if err := r.performGarbageCollection(ctx, log); err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed performing garbage collection: %w", err)
+	}
+
 	return reconcile.Result{RequeueAfter: r.Config.SyncPeriod.Duration}, nil
 }
 
@@ -96,4 +105,19 @@ func (r *Reconciler) conditionThresholdsToProgressingMapping() map[gardencorev1b
 		out[gardencorev1beta1.ConditionType(threshold.Type)] = threshold.Duration.Duration
 	}
 	return out
+}
+
+func (r *Reconciler) performGarbageCollection(ctx context.Context, log logr.Logger) error {
+	podList := &corev1.PodList{}
+	if err := r.SeedClient.List(ctx, podList); err != nil {
+		return fmt.Errorf("failed listing pods: %w", err)
+	}
+
+	for i := len(podList.Items) - 1; i >= 0; i-- {
+		if podList.Items[i].Namespace == metav1.NamespaceSystem {
+			podList.Items = append(podList.Items[:i], podList.Items[i+1:]...)
+		}
+	}
+
+	return kubernetesutils.DeleteStalePods(ctx, log, r.SeedClient, podList.Items)
 }

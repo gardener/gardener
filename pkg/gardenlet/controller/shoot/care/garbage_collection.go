@@ -7,7 +7,6 @@ package care
 import (
 	"context"
 	"fmt"
-	"sync"
 
 	"github.com/go-logr/logr"
 	coordinationv1 "k8s.io/api/coordination/v1"
@@ -43,39 +42,17 @@ func NewGarbageCollection(op *operation.Operation, shootClientInit ShootClientIn
 // Collect cleans the Seed and the Shoot cluster from no longer required
 // objects. It receives a botanist object <botanist> which stores the Shoot object.
 func (g *GarbageCollection) Collect(ctx context.Context) {
-	var wg sync.WaitGroup
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		if err := g.performGarbageCollectionSeed(ctx); err != nil {
-			g.log.Error(err, "Error during seed garbage collection")
+	shootClient, apiServerRunning, err := g.initializeShootClients()
+	if err != nil || !apiServerRunning {
+		if err != nil {
+			g.log.Error(err, "Could not initialize Shoot client for garbage collection")
 		}
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-
-		shootClient, apiServerRunning, err := g.initializeShootClients()
-		if err != nil || !apiServerRunning {
-			if err != nil {
-				g.log.Error(err, "Could not initialize Shoot client for garbage collection")
-			}
-			return
-		}
-		if err := g.performGarbageCollectionShoot(ctx, shootClient.Client()); err != nil {
-			g.log.Error(err, "Error during shoot garbage collection")
-		}
-	}()
-
-	wg.Wait()
+		return
+	}
+	if err := g.performGarbageCollectionShoot(ctx, shootClient.Client()); err != nil {
+		g.log.Error(err, "Error during shoot garbage collection")
+	}
 	g.log.V(1).Info("Successfully performed full garbage collection")
-}
-
-// PerformGarbageCollectionSeed performs garbage collection in the Shoot namespace in the Seed cluster
-func (g *GarbageCollection) performGarbageCollectionSeed(ctx context.Context) error {
-	return kubernetesutils.DeleteStalePods(ctx, g.log, g.seedClient, client.InNamespace(g.shoot.SeedNamespace))
 }
 
 // PerformGarbageCollectionShoot performs garbage collection in the kube-system namespace in the Shoot
@@ -90,7 +67,11 @@ func (g *GarbageCollection) performGarbageCollectionShoot(ctx context.Context, s
 		namespace = metav1.NamespaceAll
 	}
 
-	return kubernetesutils.DeleteStalePods(ctx, g.log, shootClient, client.InNamespace(namespace))
+	podList := &corev1.PodList{}
+	if err := shootClient.List(ctx, podList, client.InNamespace(namespace)); err != nil {
+		return err
+	}
+	return kubernetesutils.DeleteStalePods(ctx, g.log, shootClient, podList.Items)
 }
 
 // See https://github.com/gardener/gardener/issues/8749 and https://github.com/kubernetes/kubernetes/issues/109777.
