@@ -212,7 +212,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		metrics             = druidv1alpha1.Basic
 		volumeClaimTemplate = e.etcd.Name
 		minAllowed          = corev1.ResourceList{
-			corev1.ResourceMemory: resource.MustParse("200M"),
+			corev1.ResourceMemory: resource.MustParse("60M"),
 		}
 	)
 
@@ -220,10 +220,16 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		if !e.values.HighAvailabilityEnabled {
 			annotations = map[string]string{"cluster-autoscaler.kubernetes.io/safe-to-evict": "false"}
 		}
+		resourcesBackupRestore = &corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("20m"),
+				corev1.ResourceMemory: resource.MustParse("80Mi"),
+			},
+		}
 		metrics = druidv1alpha1.Extensive
 		volumeClaimTemplate = e.values.Role + "-" + strings.TrimSuffix(e.etcd.Name, "-"+e.values.Role)
 		minAllowed = corev1.ResourceList{
-			corev1.ResourceMemory: resource.MustParse("700M"),
+			corev1.ResourceMemory: resource.MustParse("300M"),
 		}
 	}
 
@@ -1142,8 +1148,8 @@ func (e *etcd) computeContainerResources(existingSts *appsv1.StatefulSet) (*core
 		}
 		resourcesBackupRestore = &corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("23m"),
-				corev1.ResourceMemory: resource.MustParse("128Mi"),
+				corev1.ResourceCPU:    resource.MustParse("10m"),
+				corev1.ResourceMemory: resource.MustParse("40Mi"),
 			},
 		}
 	)

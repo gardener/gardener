@@ -153,8 +153,8 @@ var _ = Describe("Etcd", func() {
 
 			resourcesContainerBackupRestore := &corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("23m"),
-					corev1.ResourceMemory: resource.MustParse("128Mi"),
+					corev1.ResourceCPU:    resource.MustParse("10m"),
+					corev1.ResourceMemory: resource.MustParse("40Mi"),
 				},
 			}
 			if existingResourcesContainerBackupRestore != nil {
@@ -269,6 +269,12 @@ var _ = Describe("Etcd", func() {
 			if class == ClassImportant {
 				if replicas == 1 {
 					obj.Spec.Annotations = map[string]string{"cluster-autoscaler.kubernetes.io/safe-to-evict": "false"}
+				}
+				obj.Spec.Backup.Resources = &corev1.ResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("20m"),
+						corev1.ResourceMemory: resource.MustParse("80Mi"),
+					},
 				}
 				obj.Spec.Etcd.Metrics = &metricsExtensive
 				obj.Spec.VolumeClaimTemplate = ptr.To(testRole + "-etcd")
@@ -456,7 +462,7 @@ var _ = Describe("Etcd", func() {
 										{
 											ContainerName: "etcd",
 											MinAllowed: corev1.ResourceList{
-												corev1.ResourceMemory: resource.MustParse("200M"),
+												corev1.ResourceMemory: resource.MustParse("60M"),
 											},
 											ControlledValues: &controlledValues,
 										},
@@ -487,7 +493,7 @@ var _ = Describe("Etcd", func() {
 
 			if class == ClassImportant {
 				obj.Spec.Vpa.Template.Spec.ResourcePolicy.ContainerPolicies[0].MinAllowed = corev1.ResourceList{
-					corev1.ResourceMemory: resource.MustParse("700M"),
+					corev1.ResourceMemory: resource.MustParse("300M"),
 				}
 			}
 
@@ -512,7 +518,7 @@ var _ = Describe("Etcd", func() {
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
 							ContainerName:    "etcd",
-							MinAllowed:       corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("200M")},
+							MinAllowed:       corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("60M")},
 							ControlledValues: &controlledValues,
 							Mode:             &containerPolicyAuto,
 						},

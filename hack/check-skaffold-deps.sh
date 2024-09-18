@@ -8,7 +8,7 @@ set -e
 
 operation="${1:-check}"
 
-echo "> ${operation^} Skaffold Dependencies"
+echo "> ${operation} Skaffold Dependencies"
 
 success=true
 repo_root="$(git rev-parse --show-toplevel)"
