@@ -183,12 +183,12 @@ func (r *Reconciler) mustApproveKubeletServing(ctx context.Context, csr *certifi
 		if apierrors.IsNotFound(err) {
 			return fmt.Sprintf("could not find node object with name %q", node.Name), false, nil
 		}
-		return "", false, err
+		return "", false, fmt.Errorf("error getting node object with name %q: %w", nodeName, err)
 	}
 
 	machineList := &machinev1alpha1.MachineList{}
 	if err := r.SourceClient.List(ctx, machineList, client.InNamespace(r.Config.MachineNamespace), client.MatchingLabels{"node": node.Name}); err != nil {
-		return "", false, err
+		return "", false, fmt.Errorf("failed to list machine objects: %w", err)
 	}
 
 	if length := len(machineList.Items); length != 1 {
@@ -237,7 +237,7 @@ func (r *Reconciler) mustApproveKubeAPIServerClient(ctx context.Context, csr *ce
 		if apierrors.IsNotFound(err) {
 			return fmt.Sprintf("machine %q does not exist", machineName), csrDenied, nil
 		}
-		return "", csrNoOpinion, err
+		return "", csrNoOpinion, fmt.Errorf("error getting machine object with name %q: %w", machineName, err)
 	}
 
 	switch {

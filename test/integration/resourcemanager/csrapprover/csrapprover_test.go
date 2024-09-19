@@ -96,7 +96,7 @@ var _ = Describe("CertificateSigningRequest Approver Controller tests", func() {
 		csr.Spec.Request = csrData
 	})
 
-	Context("non kubelet server & non gardener-node-agent client certificate", func() {
+	Context("unhandled CSR signer", func() {
 		BeforeEach(func() {
 			csr.Spec.SignerName = certificatesv1.KubeAPIServerClientSignerName
 		})
