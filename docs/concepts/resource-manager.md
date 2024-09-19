@@ -563,7 +563,9 @@ Please see the graphic below:
 > In order to differentiate which instance of the controller is responsible for a `Secret`, it can be labeled with `resources.gardener.cloud/class=<class>`.
 > The `<class>` must be configured in the respective controller, otherwise it will be responsible for all `Secret`s no matter whether they have the label or not.
 
-### [Kubelet Server `CertificateSigningRequest` Approver](../../pkg/resourcemanager/controller/csrapprover)
+### [`CertificateSigningRequest` Approver](../../pkg/resourcemanager/controller/csrapprover)
+
+#### Kubelet Server
 
 Gardener configures the kubelets such that they request two certificates via the `CertificateSigningRequest` API:
 
@@ -590,6 +592,39 @@ It watches `CertificateSigningRequest`s with the `kubernetes.io/kubelet-serving`
 
 If any one of these requirements is violated, the `CertificateSigningRequest` will be denied.
 Otherwise, once approved, the `kube-controller-manager`'s `csrsigner` controller will issue the requested certificate. 
+
+#### Gardener Node Agent
+
+There is a second use case for `CSR Approver`, because [Gardener Node Agent](node-agent.md) is able to use client certificates for communication with `kube-apiserver`.
+These certificates are requested via the `CertificateSigningRequest` API. They are using the `kubernetes.io/kube-apiserver-client` signer.
+Three use cases are covered:
+- Bootstrap a new `node`.
+- Renew certificates.
+- Migrate nodes using `gardener-node-agent` service account.
+
+There is no auto-approve for these `CertificateSigningRequest`s either.
+As there are more users of `kubernetes.io/kube-apiserver-client` signer this controller handles only `CertificateSigningRequest`s when the common name in the CSR is prefixed with `gardener.cloud:node-agent:machine:`.
+The prefix is followed by the `username` which must be equal to the `machine.Name`. 
+It auto-approves them when the following conditions are met.
+
+Bootstrapping:
+- The `.spec.username` is prefixed with `system:node:`.
+- A `Machine` for common name pattern `gardener.cloud:node-agent:machine:<machine-name>` in the CSR exists.
+- The `Machine` does not have a `label` with key `node`.
+
+Certificate renewal:
+- The `.spec.username` is prefixed with `gardener.cloud:node-agent:machine:`.
+- A `Machine` for common name pattern `gardener.cloud:node-agent:machine:<machine-name>` in the CSR exists.
+- The common name in the CSR must match the `.spec.username`.
+
+Migration:
+- The `.spec.username` is equal to `system:serviceaccount:kube-system:gardener-node-agent`.
+- A `Machine` for common name pattern `gardener.cloud:node-agent:machine:<machine-name>` in the CSR exists.
+- The `Machine` has a `label` with key `node`.
+
+If the common name in the CSR is not prefixed with `gardener.cloud:node-agent:machine:`, the `CertificateSigningRequest` will be ignored.
+If any one of these requirements is violated, the `CertificateSigningRequest` will be denied.
+Otherwise, once approved, the `kube-controller-manager`'s `csrsigner` controller will issue the requested certificate.
 
 ### [`NetworkPolicy` Controller](../../pkg/resourcemanager/controller/networkpolicy)
 
