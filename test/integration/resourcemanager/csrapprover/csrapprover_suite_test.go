@@ -49,16 +49,23 @@ var (
 	ctx = context.Background()
 	log logr.Logger
 
-	restConfig *rest.Config
-	testEnv    *envtest.Environment
-	testClient client.Client
-	mgrClient  client.Client
+	restConfig            *rest.Config
+	testEnv               *envtest.Environment
+	testClientKubelet     client.Client
+	testClientNodeAgent   client.Client
+	testClientBootstrap   client.Client
+	testClientNodeAgentSA client.Client
+	mgrClient             client.Client
 
 	testNamespace *corev1.Namespace
 	testRunID     string
 
-	nodeName string
-	userName string
+	machineName         string
+	nodeName            string
+	userNameKubelet     string
+	userNameNodeAgent   string
+	userNameBootstrap   string
+	userNameNodeAgentSA string
 )
 
 var _ = BeforeSuite(func() {
@@ -87,21 +94,33 @@ var _ = BeforeSuite(func() {
 	testRunID = utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:16]
 	log.Info("Using test run ID for test", "testRunID", testRunID)
 
+	machineName = "machine-" + testRunID
 	nodeName = "node-" + testRunID
-	userName = "system:node:" + nodeName
+	userNameKubelet = "system:node:" + nodeName
+	userNameNodeAgent = "gardener.cloud:node-agent:machine:" + machineName
+	userNameBootstrap = "system:bootstrap:" + testRunID
+	userNameNodeAgentSA = "system:serviceaccount:kube-system:gardener-node-agent"
 
-	// We have to "fake" that our test client is the kubelet user because the .spec.username field in CSRs will also be
-	// overwritten by the kube-apiserver to the user who created it. This would always fail the constraints of this
-	// controller.
-	user, err := testEnv.AddUser(
-		envtest.User{Name: userName, Groups: []string{userpkg.SystemPrivilegedGroup}},
-		&rest.Config{QPS: 1000.0, Burst: 2000.0},
-	)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(user).NotTo(BeNil())
+	createClient := func(userName string) client.Client {
+		// We have to "fake" that our test client is the kubelet or gardener-node-agent user because the .spec.username
+		// field in CSRs will also be overwritten by the kube-apiserver to the user who created it. This would always
+		// fail the constraints of this controller.
+		user, err := testEnv.AddUser(
+			envtest.User{Name: userName, Groups: []string{userpkg.SystemPrivilegedGroup}},
+			&rest.Config{QPS: 1000.0, Burst: 2000.0},
+		)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(user).NotTo(BeNil())
 
-	testClient, err = client.New(user.Config(), client.Options{Scheme: resourcemanagerclient.CombinedScheme})
-	Expect(err).NotTo(HaveOccurred())
+		testClient, err := client.New(user.Config(), client.Options{Scheme: resourcemanagerclient.CombinedScheme})
+		Expect(err).NotTo(HaveOccurred())
+		return testClient
+	}
+
+	testClientKubelet = createClient(userNameKubelet)
+	testClientNodeAgent = createClient(userNameNodeAgent)
+	testClientBootstrap = createClient(userNameBootstrap)
+	testClientNodeAgentSA = createClient(userNameNodeAgentSA)
 
 	By("Create test Namespace")
 	testNamespace = &corev1.Namespace{
@@ -110,12 +129,12 @@ var _ = BeforeSuite(func() {
 			GenerateName: testID + "-",
 		},
 	}
-	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
+	Expect(testClientKubelet.Create(ctx, testNamespace)).To(Succeed())
 	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
 
 	DeferCleanup(func() {
 		By("Delete test Namespace")
-		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
+		Expect(testClientKubelet.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
 	By("Setup manager")

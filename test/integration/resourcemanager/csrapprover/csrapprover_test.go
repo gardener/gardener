@@ -26,7 +26,7 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-var _ = Describe("Kubelet Server CertificateSigningRequest Approver Controller tests", func() {
+var _ = Describe("CertificateSigningRequest Approver Controller tests", func() {
 	var (
 		privateKey         *rsa.PrivateKey
 		certificateSubject *pkix.Name
@@ -49,7 +49,7 @@ var _ = Describe("Kubelet Server CertificateSigningRequest Approver Controller t
 	BeforeEach(func() {
 		privateKey, _ = secretsutils.FakeGenerateKey(rand.Reader, 4096)
 		certificateSubject = &pkix.Name{
-			CommonName:   userName,
+			CommonName:   userNameKubelet,
 			Organization: []string{user.NodesGroup},
 		}
 
@@ -68,7 +68,6 @@ var _ = Describe("Kubelet Server CertificateSigningRequest Approver Controller t
 					certificatesv1.UsageKeyEncipherment,
 					certificatesv1.UsageClientAuth,
 				},
-				SignerName: certificatesv1.KubeletServingSignerName,
 			},
 		}
 
@@ -81,11 +80,10 @@ var _ = Describe("Kubelet Server CertificateSigningRequest Approver Controller t
 
 		machine = &machinev1alpha1.Machine{
 			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: "machine-",
-				Namespace:    testNamespace.Name,
+				Name:      machineName,
+				Namespace: testNamespace.Name,
 				Labels: map[string]string{
 					testID: testRunID,
-					"node": node.Name,
 				},
 			},
 		}
@@ -96,35 +94,52 @@ var _ = Describe("Kubelet Server CertificateSigningRequest Approver Controller t
 		csrData, err := certutil.MakeCSR(privateKey, certificateSubject, dnsNames, ips)
 		Expect(err).NotTo(HaveOccurred())
 		csr.Spec.Request = csrData
-
-		By("Create CertificateSigningRequest")
-		Expect(testClient.Create(ctx, csr)).To(Succeed())
-		log.Info("Created CertificateSigningRequest for test", "certificateSigningRequest", client.ObjectKeyFromObject(csr))
-
-		DeferCleanup(func() {
-			By("Delete CertificateSigningRequest")
-			Expect(client.IgnoreNotFound(testClient.Delete(ctx, csr))).To(Succeed())
-		})
 	})
 
-	Context("non kubelet server certificate", func() {
+	Context("non kubelet server & non gardener-node-agent client certificate", func() {
 		BeforeEach(func() {
 			csr.Spec.SignerName = certificatesv1.KubeAPIServerClientSignerName
 		})
 
+		JustBeforeEach(func() {
+			By("Create CertificateSigningRequest")
+			Expect(testClientKubelet.Create(ctx, csr)).To(Succeed())
+			log.Info("Created CertificateSigningRequest for test", "certificateSigningRequest", client.ObjectKeyFromObject(csr))
+
+			DeferCleanup(func() {
+				By("Delete CertificateSigningRequest")
+				Expect(client.IgnoreNotFound(testClientKubelet.Delete(ctx, csr))).To(Succeed())
+			})
+		})
+
 		It("should ignore the CSR and do nothing", func() {
 			Consistently(func(g Gomega) {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(Succeed())
+				g.Expect(testClientKubelet.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(Succeed())
 				g.Expect(csr.Status.Conditions).To(BeEmpty())
 			}).Should(Succeed())
 		})
 	})
 
 	Context("kubelet server certificate", func() {
+		BeforeEach(func() {
+			csr.Spec.SignerName = certificatesv1.KubeletServingSignerName
+		})
+
+		JustBeforeEach(func() {
+			By("Create CertificateSigningRequest")
+			Expect(testClientKubelet.Create(ctx, csr)).To(Succeed())
+			log.Info("Created CertificateSigningRequest for test", "certificateSigningRequest", client.ObjectKeyFromObject(csr))
+
+			DeferCleanup(func() {
+				By("Delete CertificateSigningRequest")
+				Expect(client.IgnoreNotFound(testClientKubelet.Delete(ctx, csr))).To(Succeed())
+			})
+		})
+
 		Context("constraints fulfilled", func() {
 			BeforeEach(func() {
 				createNode(node)
-				createMachine(machine)
+				createMachine(machine, true)
 				patchNodeAddresses(node,
 					corev1.NodeAddress{Type: corev1.NodeHostName, Address: dnsName1},
 					corev1.NodeAddress{Type: corev1.NodeHostName, Address: dnsName2},
@@ -138,7 +153,7 @@ var _ = Describe("Kubelet Server CertificateSigningRequest Approver Controller t
 
 			It("should approve the CSR", func() {
 				Eventually(func(g Gomega) {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(Succeed())
+					g.Expect(testClientKubelet.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(Succeed())
 					g.Expect(csr.Status.Conditions).To(ContainElement(And(
 						HaveField("Type", certificatesv1.CertificateApproved),
 						HaveField("Reason", "RequestApproved"),
@@ -152,7 +167,7 @@ var _ = Describe("Kubelet Server CertificateSigningRequest Approver Controller t
 			runTest := func(expectedReason string) {
 				It("should deny the CSR", func() {
 					EventuallyWithOffset(1, func(g Gomega) {
-						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(Succeed())
+						g.Expect(testClientKubelet.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(Succeed())
 						g.Expect(csr.Status.Conditions).To(ContainElement(And(
 							HaveField("Type", certificatesv1.CertificateDenied),
 							HaveField("Reason", "RequestDenied"),
@@ -170,7 +185,7 @@ var _ = Describe("Kubelet Server CertificateSigningRequest Approver Controller t
 					clientWithAdminUsername, err := client.New(restConfig, client.Options{Scheme: resourcemanagerclient.CombinedScheme})
 					Expect(err).NotTo(HaveOccurred())
 
-					DeferCleanup(test.WithVar(&testClient, clientWithAdminUsername))
+					DeferCleanup(test.WithVar(&testClientKubelet, clientWithAdminUsername))
 				})
 
 				runTest("is not prefixed with")
@@ -231,10 +246,11 @@ var _ = Describe("Kubelet Server CertificateSigningRequest Approver Controller t
 			Context("too many machine objects found", func() {
 				BeforeEach(func() {
 					machine2 := machine.DeepCopy()
+					machine2.Name = machine2.Name + "-2"
 
 					createNode(node)
-					createMachine(machine)
-					createMachine(machine2)
+					createMachine(machine, true)
+					createMachine(machine2, true)
 				})
 
 				runTest("Expected exactly one machine in namespace")
@@ -243,7 +259,7 @@ var _ = Describe("Kubelet Server CertificateSigningRequest Approver Controller t
 			Context("DNS names do not match addresses", func() {
 				BeforeEach(func() {
 					createNode(node)
-					createMachine(machine)
+					createMachine(machine, true)
 				})
 
 				runTest("DNS names in CSR do not match addresses of type 'Hostname' or 'InternalDNS' or 'ExternalDNS' in node object")
@@ -252,7 +268,7 @@ var _ = Describe("Kubelet Server CertificateSigningRequest Approver Controller t
 			Context("IP addresses do not match addresses", func() {
 				BeforeEach(func() {
 					createNode(node)
-					createMachine(machine)
+					createMachine(machine, true)
 					patchNodeAddresses(node,
 						corev1.NodeAddress{Type: corev1.NodeHostName, Address: dnsName1},
 						corev1.NodeAddress{Type: corev1.NodeHostName, Address: dnsName2},
@@ -265,11 +281,265 @@ var _ = Describe("Kubelet Server CertificateSigningRequest Approver Controller t
 			})
 		})
 	})
+
+	Context("gardener-node-agent client certificate", func() {
+		BeforeEach(func() {
+			csr.Spec.SignerName = certificatesv1.KubeAPIServerClientSignerName
+			certificateSubject = &pkix.Name{
+				CommonName: userNameNodeAgent,
+			}
+		})
+
+		Context("gardener-node-agent user", func() {
+			JustBeforeEach(func() {
+				By("Create CertificateSigningRequest")
+				Expect(testClientNodeAgent.Create(ctx, csr)).To(Succeed())
+				log.Info("Created CertificateSigningRequest for test", "certificateSigningRequest", client.ObjectKeyFromObject(csr))
+
+				DeferCleanup(func() {
+					By("Delete CertificateSigningRequest")
+					Expect(client.IgnoreNotFound(testClientNodeAgent.Delete(ctx, csr))).To(Succeed())
+				})
+			})
+
+			Context("constraints fulfilled", func() {
+				BeforeEach(func() {
+					createMachine(machine, false)
+				})
+
+				It("should approve the CSR", func() {
+					Eventually(func(g Gomega) {
+						g.Expect(testClientNodeAgent.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(Succeed())
+						g.Expect(csr.Status.Conditions).To(ContainElement(And(
+							HaveField("Type", certificatesv1.CertificateApproved),
+							HaveField("Reason", "RequestApproved"),
+							HaveField("Message", "Approving gardener-node-agent certificate CSR (all checks passed)"),
+						)))
+					}).Should(Succeed())
+				})
+			})
+
+			Context("constraints violated", func() {
+				runTest := func(expectedReason string, argPtrs ...*string) {
+					It("should deny the CSR", func() {
+						var args []interface{}
+						for _, arg := range argPtrs {
+							args = append(args, *arg)
+						}
+						EventuallyWithOffset(1, func(g Gomega) {
+							g.Expect(testClientNodeAgent.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(Succeed())
+							g.Expect(csr.Status.Conditions).To(ContainElement(And(
+								HaveField("Type", certificatesv1.CertificateDenied),
+								HaveField("Reason", "RequestDenied"),
+								HaveField("Message", And(
+									ContainSubstring("Denying gardener-node-agent certificate CSR"),
+									ContainSubstring(expectedReason, args...),
+								)),
+							)))
+						}).Should(Succeed())
+					})
+				}
+
+				Context("no machine", func() {
+					runTest("machine %q does not exist", &machineName)
+				})
+
+				Context("a certificate for a different machine is requested", func() {
+					var otherMachineName string
+
+					BeforeEach(func() {
+						machine2 := machine.DeepCopy()
+						machine2.Name = "foo-bar-machine"
+						otherMachineName = "gardener.cloud:node-agent:machine:" + machine2.Name
+						certificateSubject = &pkix.Name{
+							CommonName: otherMachineName,
+						}
+						createMachine(machine, false)
+						createMachine(machine2, false)
+					})
+
+					runTest("username %q and commonName %q do not match", &userNameNodeAgent, &otherMachineName)
+				})
+			})
+		})
+
+		Context("bootstrap user", func() {
+			JustBeforeEach(func() {
+				By("Create CertificateSigningRequest")
+				Expect(testClientBootstrap.Create(ctx, csr)).To(Succeed())
+				log.Info("Created CertificateSigningRequest for test", "certificateSigningRequest", client.ObjectKeyFromObject(csr))
+
+				DeferCleanup(func() {
+					By("Delete CertificateSigningRequest")
+					Expect(client.IgnoreNotFound(testClientBootstrap.Delete(ctx, csr))).To(Succeed())
+				})
+			})
+
+			Context("constraints fulfilled", func() {
+				BeforeEach(func() {
+					createMachine(machine, false)
+				})
+
+				It("should approve the CSR", func() {
+					Eventually(func(g Gomega) {
+						g.Expect(testClientBootstrap.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(Succeed())
+						g.Expect(csr.Status.Conditions).To(ContainElement(And(
+							HaveField("Type", certificatesv1.CertificateApproved),
+							HaveField("Reason", "RequestApproved"),
+							HaveField("Message", "Approving gardener-node-agent certificate CSR (all checks passed)"),
+						)))
+					}).Should(Succeed())
+				})
+			})
+
+			Context("constraints violated", func() {
+				runTest := func(expectedReason string, argPtrs ...*string) {
+					It("should deny the CSR", func() {
+						var args []interface{}
+						for _, arg := range argPtrs {
+							args = append(args, *arg)
+						}
+						EventuallyWithOffset(1, func(g Gomega) {
+							g.Expect(testClientBootstrap.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(Succeed())
+							g.Expect(csr.Status.Conditions).To(ContainElement(And(
+								HaveField("Type", certificatesv1.CertificateDenied),
+								HaveField("Reason", "RequestDenied"),
+								HaveField("Message", And(
+									ContainSubstring("Denying gardener-node-agent certificate CSR"),
+									ContainSubstring(expectedReason, args...),
+								)),
+							)))
+						}).Should(Succeed())
+					})
+				}
+
+				Context("no machine", func() {
+					runTest("machine %q does not exist", &machineName)
+				})
+
+				Context("node already registered", func() {
+					BeforeEach(func() {
+						createNode(node)
+						createMachine(machine, true)
+					})
+
+					runTest("Cannot use bootstrap token since gardener-node-agent for machine %q is already bootstrapped", &machineName)
+				})
+			})
+		})
+
+		// TODO(oliver-goetz): remove this context when NodeAgentAuthorizer feature gate is removed. Remove "testClientNodeAgentSA" and "userNameNodeAgentSA" from test suite too.
+		Context("gardener-node-agent service account", func() {
+			JustBeforeEach(func() {
+				By("Create CertificateSigningRequest")
+				Expect(testClientNodeAgentSA.Create(ctx, csr)).To(Succeed())
+				log.Info("Created CertificateSigningRequest for test", "certificateSigningRequest", client.ObjectKeyFromObject(csr))
+
+				DeferCleanup(func() {
+					By("Delete CertificateSigningRequest")
+					Expect(client.IgnoreNotFound(testClientNodeAgentSA.Delete(ctx, csr))).To(Succeed())
+				})
+			})
+
+			Context("constraints fulfilled", func() {
+				BeforeEach(func() {
+					createNode(node)
+					createMachine(machine, true)
+				})
+
+				It("should approve the CSR", func() {
+					Eventually(func(g Gomega) {
+						g.Expect(testClientBootstrap.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(Succeed())
+						g.Expect(csr.Status.Conditions).To(ContainElement(And(
+							HaveField("Type", certificatesv1.CertificateApproved),
+							HaveField("Reason", "RequestApproved"),
+							HaveField("Message", "Approving gardener-node-agent certificate CSR (all checks passed)"),
+						)))
+					}).Should(Succeed())
+				})
+			})
+
+			Context("constraints violated", func() {
+				runTest := func(expectedReason string, argPtrs ...*string) {
+					It("should deny the CSR", func() {
+						var args []interface{}
+						for _, arg := range argPtrs {
+							args = append(args, *arg)
+						}
+						EventuallyWithOffset(1, func(g Gomega) {
+							g.Expect(testClientBootstrap.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(Succeed())
+							g.Expect(csr.Status.Conditions).To(ContainElement(And(
+								HaveField("Type", certificatesv1.CertificateDenied),
+								HaveField("Reason", "RequestDenied"),
+								HaveField("Message", And(
+									ContainSubstring("Denying gardener-node-agent certificate CSR"),
+									ContainSubstring(expectedReason, args...),
+								)),
+							)))
+						}).Should(Succeed())
+					})
+				}
+
+				Context("no machine", func() {
+					runTest("machine %q does not exist", &machineName)
+				})
+
+				Context("node not registered yet", func() {
+					BeforeEach(func() {
+						createMachine(machine, false)
+					})
+
+					runTest("gardener-node-agent service account is allowed to create CSRs for machines with existing nodes only")
+				})
+			})
+		})
+
+		Context("kubelet user tries to get gardener-node-agent certificate", func() {
+			BeforeEach(func() {
+				createNode(node)
+				createMachine(machine, true)
+				patchNodeAddresses(node,
+					corev1.NodeAddress{Type: corev1.NodeHostName, Address: dnsName1},
+					corev1.NodeAddress{Type: corev1.NodeHostName, Address: dnsName2},
+					corev1.NodeAddress{Type: corev1.NodeInternalDNS, Address: dnsName3},
+					corev1.NodeAddress{Type: corev1.NodeExternalDNS, Address: dnsName4},
+					corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: ip1},
+					corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: ip2},
+					corev1.NodeAddress{Type: corev1.NodeExternalIP, Address: ip3},
+				)
+			})
+
+			JustBeforeEach(func() {
+				By("Create CertificateSigningRequest")
+				Expect(testClientKubelet.Create(ctx, csr)).To(Succeed())
+				log.Info("Created CertificateSigningRequest for test", "certificateSigningRequest", client.ObjectKeyFromObject(csr))
+
+				DeferCleanup(func() {
+					By("Delete CertificateSigningRequest")
+					Expect(client.IgnoreNotFound(testClientKubelet.Delete(ctx, csr))).To(Succeed())
+				})
+			})
+
+			It("should deny the CSR", func() {
+				Eventually(func(g Gomega) {
+					g.Expect(testClientBootstrap.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(Succeed())
+					g.Expect(csr.Status.Conditions).To(ContainElement(And(
+						HaveField("Type", certificatesv1.CertificateDenied),
+						HaveField("Reason", "RequestDenied"),
+						HaveField("Message", And(
+							ContainSubstring("Denying gardener-node-agent certificate CSR"),
+							ContainSubstring("username %q is not allowed to create CSRs for a gardener-node-agent", userNameKubelet),
+						)),
+					)))
+				}).Should(Succeed())
+			})
+		})
+	})
 })
 
 func createNode(node *corev1.Node) {
 	By("Create Node")
-	ExpectWithOffset(1, testClient.Create(ctx, node)).To(Succeed())
+	ExpectWithOffset(1, mgrClient.Create(ctx, node)).To(Succeed())
 	log.Info("Created Node for test", "node", client.ObjectKeyFromObject(node))
 
 	By("Wait until manager has observed Node")
@@ -279,7 +549,7 @@ func createNode(node *corev1.Node) {
 
 	DeferCleanup(func() {
 		By("Delete Node")
-		ExpectWithOffset(1, client.IgnoreNotFound(testClient.Delete(ctx, node))).To(Succeed())
+		ExpectWithOffset(1, client.IgnoreNotFound(mgrClient.Delete(ctx, node))).To(Succeed())
 
 		By("Wait until manager has observed Node deletion")
 		EventuallyWithOffset(1, func() error {
@@ -288,9 +558,12 @@ func createNode(node *corev1.Node) {
 	})
 }
 
-func createMachine(machine *machinev1alpha1.Machine) {
+func createMachine(machine *machinev1alpha1.Machine, withNodeLabel bool) {
 	By("Create Machine")
-	ExpectWithOffset(1, testClient.Create(ctx, machine)).To(Succeed())
+	if withNodeLabel {
+		machine.Labels["node"] = nodeName
+	}
+	ExpectWithOffset(1, mgrClient.Create(ctx, machine)).To(Succeed())
 	log.Info("Created Machine for test", "machine", client.ObjectKeyFromObject(machine))
 
 	By("Wait until manager has observed Machine")
@@ -300,7 +573,7 @@ func createMachine(machine *machinev1alpha1.Machine) {
 
 	DeferCleanup(func() {
 		By("Delete Machine")
-		ExpectWithOffset(1, client.IgnoreNotFound(testClient.Delete(ctx, machine))).To(Succeed())
+		ExpectWithOffset(1, client.IgnoreNotFound(mgrClient.Delete(ctx, machine))).To(Succeed())
 
 		By("Wait until manager has observed Machine deletion")
 		EventuallyWithOffset(1, func() error {
@@ -313,7 +586,7 @@ func patchNodeAddresses(node *corev1.Node, addresses ...corev1.NodeAddress) {
 	By("Patch node's addresses in status")
 	patch := client.MergeFrom(node.DeepCopy())
 	node.Status.Addresses = addresses
-	ExpectWithOffset(1, testClient.Status().Patch(ctx, node, patch)).To(Succeed())
+	ExpectWithOffset(1, mgrClient.Status().Patch(ctx, node, patch)).To(Succeed())
 
 	By("Wait until manager has observed node status")
 	EventuallyWithOffset(1, func(g Gomega) []corev1.NodeAddress {
