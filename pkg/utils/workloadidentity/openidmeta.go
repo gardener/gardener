@@ -12,8 +12,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/go-jose/go-jose/v4"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 type openIDMetadata struct {
@@ -27,21 +29,24 @@ type openIDMetadata struct {
 // OpenIDConfig builds the content for the openid configuration discovery document
 // from the provided issuer URL and public keys.
 func OpenIDConfig(issuerURL string, publicKeys ...any) ([]byte, error) {
-	algs := make([]string, 0, len(publicKeys))
+	algs := sets.New[string]()
 	for _, k := range publicKeys {
 		alg, err := getAlg(k)
 		if err != nil {
 			return nil, err
 		}
-		algs = append(algs, string(alg))
+		algs.Insert(string(alg))
 	}
+
+	algsList := algs.UnsortedList()
+	slices.Sort(algsList)
 
 	config := openIDMetadata{
 		Issuer:        issuerURL,
 		JWKSURI:       issuerURL + "/jwks",
 		ResponseTypes: []string{"id_token"},
 		SubjectTypes:  []string{"public"},
-		SigningAlgs:   algs,
+		SigningAlgs:   algsList,
 	}
 
 	return json.Marshal(config)

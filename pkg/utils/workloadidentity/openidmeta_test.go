@@ -24,10 +24,12 @@ var _ = Describe("#OpenIDMeta", func() {
 	Describe("#OpenIDConfig", func() {
 		It("should correctly build the openid configuration document", func() {
 			const issuerURL = "https://test.gardener.cloud/workload-identity"
-			key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+			rsaKey, err := secretsutils.FakeGenerateKey(rand.Reader, 2048)
+			Expect(err).ToNot(HaveOccurred())
+			ecdsaKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 			Expect(err).ToNot(HaveOccurred())
 
-			openedIDConfig, err := workloadidentity.OpenIDConfig(issuerURL, key.Public())
+			openIDConfig, err := workloadidentity.OpenIDConfig(issuerURL, rsaKey.Public(), ecdsaKey.Public())
 			Expect(err).ToNot(HaveOccurred())
 
 			expectedOpenIDConfig := workloadidentity.OpenIDMetadata{
@@ -35,11 +37,31 @@ var _ = Describe("#OpenIDMeta", func() {
 				JWKSURI:       issuerURL + "/jwks",
 				ResponseTypes: []string{"id_token"},
 				SubjectTypes:  []string{"public"},
-				SigningAlgs:   []string{"ES256"},
+				SigningAlgs:   []string{"ES256", "RS256"},
 			}
 			expectedOpenIDConfigMarshaled, err := json.Marshal(expectedOpenIDConfig)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(openedIDConfig).To(Equal(expectedOpenIDConfigMarshaled))
+			Expect(openIDConfig).To(MatchJSON(expectedOpenIDConfigMarshaled))
+		})
+
+		It("should not duplicate algs in the openid configuration document", func() {
+			const issuerURL = "https://test.gardener.cloud/workload-identity"
+			rsaKey, err := secretsutils.FakeGenerateKey(rand.Reader, 2048)
+			Expect(err).ToNot(HaveOccurred())
+
+			openIDConfig, err := workloadidentity.OpenIDConfig(issuerURL, rsaKey.Public(), rsaKey.Public())
+			Expect(err).ToNot(HaveOccurred())
+
+			expectedOpenIDConfig := workloadidentity.OpenIDMetadata{
+				Issuer:        issuerURL,
+				JWKSURI:       issuerURL + "/jwks",
+				ResponseTypes: []string{"id_token"},
+				SubjectTypes:  []string{"public"},
+				SigningAlgs:   []string{"RS256"},
+			}
+			expectedOpenIDConfigMarshaled, err := json.Marshal(expectedOpenIDConfig)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(openIDConfig).To(MatchJSON(expectedOpenIDConfigMarshaled))
 		})
 	})
 
