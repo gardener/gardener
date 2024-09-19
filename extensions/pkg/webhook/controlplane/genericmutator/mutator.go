@@ -82,6 +82,9 @@ type Ensurer interface {
 	// EnsureAdditionalProvisionFiles ensures additional systemd files for the 'provision' OSC
 	// "old" might be "nil" and must always be checked.
 	EnsureAdditionalProvisionFiles(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *[]extensionsv1alpha1.File) error
+	// EnsureAdditionalProvisionDropIns ensures additional systemd files for the 'provision' OSC
+	// "old" might be "nil" and must always be checked.
+	EnsureAdditionalProvisionDropIns(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *[]extensionsv1alpha1.DropIn) error
 	// EnsureCRIConfig ensures the CRI config.
 	// "old" might be "nil" and must always be checked.
 	EnsureCRIConfig(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *extensionsv1alpha1.CRIConfig) error
