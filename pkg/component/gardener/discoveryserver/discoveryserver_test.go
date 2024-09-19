@@ -12,7 +12,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/format"
 	"github.com/onsi/gomega/types"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -691,7 +690,6 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 			})
 
 			It("should successfully deploy all resources", func() {
-				format.MaxLength = 0
 				Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
 				Expect(managedResourceVirtual).To(consistOf(expectedVirtualObjects...))
 			})
