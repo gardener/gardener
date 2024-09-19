@@ -228,7 +228,8 @@ func (r *Reconciler) instantiateComponents(
 	c.virtualGardenGardenerAccess = r.newGardenerAccess(garden, secretsManager)
 
 	// gardener control plane components
-	c.gardenerAPIServer, err = r.newGardenerAPIServer(ctx, garden, secretsManager)
+	workloadIdentityTokenIssuer := "https://" + garden.Spec.RuntimeCluster.Ingress.Domains[0] + "/garden/workload-identity/issuer"
+	c.gardenerAPIServer, err = r.newGardenerAPIServer(ctx, garden, secretsManager, workloadIdentityTokenIssuer)
 	if err != nil {
 		return
 	}
@@ -263,7 +264,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.gardenerDiscoveryServer, err = r.newGardenerDiscoveryServer(secretsManager, garden.Spec.RuntimeCluster.Ingress.Domains[0], wildcardCertSecretName)
+	c.gardenerDiscoveryServer, err = r.newGardenerDiscoveryServer(secretsManager, garden.Spec.RuntimeCluster.Ingress.Domains[0], wildcardCertSecretName, workloadIdentityTokenIssuer)
 	if err != nil {
 		return
 	}
@@ -933,7 +934,7 @@ func (r *Reconciler) newVirtualSystem(enableSeedAuthorizer bool) component.Deplo
 	return virtualgardensystem.New(r.RuntimeClientSet.Client(), r.GardenNamespace, virtualgardensystem.Values{SeedAuthorizerEnabled: enableSeedAuthorizer})
 }
 
-func (r *Reconciler) newGardenerAPIServer(ctx context.Context, garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (gardenerapiserver.Interface, error) {
+func (r *Reconciler) newGardenerAPIServer(ctx context.Context, garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, workloadIdentityTokenIssuer string) (gardenerapiserver.Interface, error) {
 	var (
 		err                error
 		apiServerConfig    *operatorv1alpha1.GardenerAPIServerConfig
@@ -948,8 +949,6 @@ func (r *Reconciler) newGardenerAPIServer(ctx context.Context, garden *operatorv
 			return nil, err
 		}
 	}
-
-	workloadIdentityTokenIssuer := "https://" + garden.Spec.RuntimeCluster.Ingress.Domains[0] + "/garden/workload-identity/issuer"
 
 	return sharedcomponent.NewGardenerAPIServer(
 		ctx,
@@ -1342,6 +1341,7 @@ func (r *Reconciler) newGardenerDiscoveryServer(
 	secretsManager secretsmanager.Interface,
 	domain string,
 	wildcardCertSecretName *string,
+	workloadIdentityTokenIssuer string,
 ) (component.DeployWaiter, error) {
 	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameGardenerDiscoveryServer)
 	if err != nil {
@@ -1353,10 +1353,11 @@ func (r *Reconciler) newGardenerDiscoveryServer(
 		r.GardenNamespace,
 		secretsManager,
 		gardenerdiscoveryserver.Values{
-			Image:          image.String(),
-			RuntimeVersion: r.RuntimeVersion,
-			Domain:         domain,
-			TLSSecretName:  wildcardCertSecretName,
+			Image:                       image.String(),
+			RuntimeVersion:              r.RuntimeVersion,
+			Domain:                      domain,
+			TLSSecretName:               wildcardCertSecretName,
+			WorkloadIdentityTokenIssuer: workloadIdentityTokenIssuer,
 		},
 	), nil
 }

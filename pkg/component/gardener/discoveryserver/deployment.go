@@ -5,6 +5,8 @@
 package discoveryserver
 
 import (
+	"fmt"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -31,14 +33,17 @@ const (
 	portMetrics = 8080
 	portHealthz = 8081
 
-	volumeNameTLS      = "gardener-discovery-server-tls"
-	volumeMountPathTLS = "/var/run/secrets/gardener.cloud/gardener-discovery-server/tls"
+	volumeNameTLS                   = "gardener-discovery-server-tls"
+	volumeMountPathTLS              = "/var/run/secrets/gardener.cloud/gardener-discovery-server/tls"
+	volumeNameWorkloadIdentity      = "garden-workload-identity"
+	volumeMountPathWorkloadIdentity = "/etc/gardener-discovery-server/garden/workload-identity"
 )
 
 func (g *gardenerDiscoveryServer) deployment(
 	secretNameGenericTokenKubeconfig string,
 	secretNameVirtualGardenAccess string,
 	secretNameTLS string,
+	secretNameWorkloadIdentity string,
 ) *appsv1.Deployment {
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -79,6 +84,8 @@ func (g *gardenerDiscoveryServer) deployment(
 								"--tls-cert-file=" + volumeMountPathTLS + "/" + secretsutils.DataKeyCertificate,
 								"--tls-private-key-file=" + volumeMountPathTLS + "/" + secretsutils.DataKeyPrivateKey,
 								"--kubeconfig=" + gardenerutils.PathGenericKubeconfig,
+								fmt.Sprintf("--workload-identity-openid-configuration-file=%s/%s", volumeMountPathWorkloadIdentity, openIDConfigDataKey),
+								fmt.Sprintf("--workload-identity-jwks-file=%s/%s", volumeMountPathWorkloadIdentity, jwksDataKey),
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: map[corev1.ResourceName]resource.Quantity{
@@ -135,6 +142,12 @@ func (g *gardenerDiscoveryServer) deployment(
 								{
 									Name:      volumeNameTLS,
 									MountPath: volumeMountPathTLS,
+									ReadOnly:  true,
+								},
+								{
+									Name:      volumeNameWorkloadIdentity,
+									MountPath: volumeMountPathWorkloadIdentity,
+									ReadOnly:  true,
 								},
 							},
 						},
@@ -144,7 +157,17 @@ func (g *gardenerDiscoveryServer) deployment(
 							Name: volumeNameTLS,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: secretNameTLS,
+									SecretName:  secretNameTLS,
+									DefaultMode: ptr.To[int32](0400),
+								},
+							},
+						},
+						{
+							Name: volumeNameWorkloadIdentity,
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName:  secretNameWorkloadIdentity,
+									DefaultMode: ptr.To[int32](0400),
 								},
 							},
 						},

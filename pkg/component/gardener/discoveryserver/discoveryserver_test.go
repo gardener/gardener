@@ -6,6 +6,8 @@ package discoveryserver_test
 
 import (
 	"context"
+	"crypto"
+	"crypto/rand"
 
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
@@ -33,13 +35,17 @@ import (
 	"github.com/gardener/gardener/pkg/component/gardener/discoveryserver"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	"github.com/gardener/gardener/pkg/utils/workloadidentity"
 )
 
 var _ = Describe("GardenerDiscoveryServer", func() {
@@ -50,7 +56,11 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 		managedResourceNameVirtual = "gardener-discovery-server-virtual"
 		namespace                  = "some-namespace"
 
-		image = "gardener-discovery-server-image:latest"
+		image                      = "gardener-discovery-server-image:latest"
+		workloadIdentityPrivateKey []byte
+		workloadIdentityPublicKey  crypto.PublicKey
+
+		workloadIdentityIssuer string
 
 		fakeClient        client.Client
 		fakeSecretManager secretsmanager.Interface
@@ -72,6 +82,7 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 		vpa                       *vpaautoscalingv1.VerticalPodAutoscaler
 		ingress                   *networkingv1.Ingress
 		serviceMonitor            *monitoringv1.ServiceMonitor
+		workloadIdentitySecret    *corev1.Secret
 
 		secretConfig *corev1.Secret
 
@@ -83,6 +94,13 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 
 	BeforeEach(func() {
 		ctx = context.Background()
+
+		privateKey, err := secretsutils.FakeGenerateKey(rand.Reader, 2048)
+		Expect(err).ToNot(HaveOccurred())
+
+		workloadIdentityPrivateKey = utils.EncodePrivateKey(privateKey)
+		workloadIdentityPublicKey = privateKey.Public()
+		workloadIdentityIssuer = "https://local.gardener.cloud/garden/workload-identity/issuer"
 
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).Build()
 		fakeSecretManager = fakesecretsmanager.New(fakeClient, namespace)
@@ -138,6 +156,29 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 			Type: corev1.SecretTypeOpaque,
 		}
 
+		openidConfig, err := workloadidentity.OpenIDConfig(workloadIdentityIssuer, workloadIdentityPublicKey)
+		Expect(err).ToNot(HaveOccurred())
+
+		jwks, err := workloadidentity.JWKS(workloadIdentityPublicKey)
+		Expect(err).ToNot(HaveOccurred())
+
+		workloadIdentitySecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: namespace,
+				Name:      "gardener-discovery-server-garden-workload-identity",
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "discovery-server",
+				},
+			},
+			Data: map[string][]byte{
+				"openid-configuration.json": openidConfig,
+				"jwks.json":                 jwks,
+			},
+			Type: corev1.SecretTypeOpaque,
+		}
+		Expect(kubernetesutils.MakeUnique(workloadIdentitySecret)).To(Succeed())
+
 		deployment = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "gardener-discovery-server",
@@ -184,6 +225,8 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 									"--tls-cert-file=/var/run/secrets/gardener.cloud/gardener-discovery-server/tls/tls.crt",
 									"--tls-private-key-file=/var/run/secrets/gardener.cloud/gardener-discovery-server/tls/tls.key",
 									"--kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
+									"--workload-identity-openid-configuration-file=/etc/gardener-discovery-server/garden/workload-identity/openid-configuration.json",
+									"--workload-identity-jwks-file=/etc/gardener-discovery-server/garden/workload-identity/jwks.json",
 								},
 								Resources: corev1.ResourceRequirements{
 									Requests: map[corev1.ResourceName]resource.Quantity{
@@ -240,6 +283,12 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 									{
 										Name:      "gardener-discovery-server-tls",
 										MountPath: "/var/run/secrets/gardener.cloud/gardener-discovery-server/tls",
+										ReadOnly:  true,
+									},
+									{
+										Name:      "garden-workload-identity",
+										MountPath: "/etc/gardener-discovery-server/garden/workload-identity",
+										ReadOnly:  true,
 									},
 								},
 							},
@@ -249,7 +298,17 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 								Name: "gardener-discovery-server-tls",
 								VolumeSource: corev1.VolumeSource{
 									Secret: &corev1.SecretVolumeSource{
-										SecretName: "gardener-discovery-server-tls",
+										SecretName:  "gardener-discovery-server-tls",
+										DefaultMode: ptr.To[int32](0400),
+									},
+								},
+							},
+							{
+								Name: "garden-workload-identity",
+								VolumeSource: corev1.VolumeSource{
+									Secret: &corev1.SecretVolumeSource{
+										SecretName:  workloadIdentitySecret.GetName(),
+										DefaultMode: ptr.To[int32](0400),
 									},
 								},
 							},
@@ -496,14 +555,32 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 		}
 
 		values = discoveryserver.Values{
-			RuntimeVersion: semver.MustParse("1.26.4"),
-			Image:          image,
-			Domain:         "local.gardener.cloud",
+			RuntimeVersion:              semver.MustParse("1.26.4"),
+			Image:                       image,
+			Domain:                      "local.gardener.cloud",
+			WorkloadIdentityTokenIssuer: workloadIdentityIssuer,
 		}
 		deployer = discoveryserver.New(fakeClient, namespace, fakeSecretManager, values)
 
 		By("Create secrets managed outside of this package for which secretsmanager.Get() will be called")
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
+
+		workloadIdentityBundleSecret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener-apiserver-workload-identity-signing-key-bundle",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"bundle-for":       "gardener-apiserver-workload-identity-signing-key",
+					"managed-by":       "secrets-manager",
+					"manager-identity": "gardener-operator",
+					"name":             "gardener-apiserver-workload-identity-signing-key-bundle",
+				},
+			},
+			Data: map[string][]byte{
+				"bundle.key": workloadIdentityPrivateKey,
+			},
+		}
+		Expect(fakeClient.Create(ctx, workloadIdentityBundleSecret)).To(Succeed())
 	})
 
 	Describe("#Deploy", func() {
@@ -591,6 +668,7 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 					vpa,
 					ingress,
 					serviceMonitor,
+					workloadIdentitySecret,
 				}
 				expectedVirtualObjects = []client.Object{
 					clusterRole,
