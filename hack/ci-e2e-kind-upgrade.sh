@@ -204,13 +204,6 @@ set_seed_name
 $(dirname "${0}")/download_gardener_source_code.sh --gardener-version $GARDENER_PREVIOUS_RELEASE --download-path $GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases
 export GARDENER_PREVIOUS_VERSION="$(cat $GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases/$GARDENER_PREVIOUS_RELEASE/VERSION)"
 
-# TODO(MartinWeindel): Temporary fix of addresses in previous release for e2e upgrade tests (remove this after v1.102 has been released).
-sed -i -e 's/hostIP: "127.0.0.1"/hostIP: "172.18.255.1"/' $GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases/$GARDENER_PREVIOUS_RELEASE/charts/gardener/provider-local/values.yaml
-sed -i -e 's/zone0IP: "127.0.0.10"/zone0IP: "172.18.255.10"/' $GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases/$GARDENER_PREVIOUS_RELEASE/charts/gardener/provider-local/values.yaml
-sed -i -e 's/zone1IP: "127.0.0.11"/zone1IP: "172.18.255.11"/' $GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases/$GARDENER_PREVIOUS_RELEASE/charts/gardener/provider-local/values.yaml
-sed -i -e 's/zone2IP: "127.0.0.12"/zone2IP: "172.18.255.12"/' $GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases/$GARDENER_PREVIOUS_RELEASE/charts/gardener/provider-local/values.yaml
-sed -i -e 's/- 127.0.0./- 172.18.255./' $GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases/$GARDENER_PREVIOUS_RELEASE/example/gardener-local/kind/ha-multi-zone/values.yaml
-
 # test setup
 kind_up
 

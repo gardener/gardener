@@ -963,13 +963,11 @@ var _ = Describe("OperatingSystemConfig", func() {
 				exp := map[string]*OperatingSystemConfigs{
 					worker1Name: {
 						Init: Data{
-							Content:                     "foobar-gardener-node-agent-" + worker1Name + "-77ac3-type1-init",
 							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker1Name + "-77ac3",
 							SecretName:                  ptr.To("cc-" + expected[0].Name),
 							Object:                      worker1OSCDownloader,
 						},
 						Original: Data{
-							Content:                     "foobar-gardener-node-agent-" + worker1Name + "-77ac3-type1-original",
 							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker1Name + "-77ac3",
 							SecretName:                  ptr.To("cc-" + expected[1].Name),
 							Object:                      worker1OSCOriginal,
@@ -977,13 +975,11 @@ var _ = Describe("OperatingSystemConfig", func() {
 					},
 					worker2Name: {
 						Init: Data{
-							Content:                     "foobar-gardener-node-agent-" + worker2Name + "-d9e53-type2-init",
 							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker2Name + "-d9e53",
 							SecretName:                  ptr.To("cc-" + expected[2].Name),
 							Object:                      worker2OSCDownloader,
 						},
 						Original: Data{
-							Content:                     "foobar-gardener-node-agent-" + worker2Name + "-d9e53-type2-original",
 							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker2Name + "-d9e53",
 							SecretName:                  ptr.To("cc-" + expected[3].Name),
 							Object:                      worker2OSCOriginal,

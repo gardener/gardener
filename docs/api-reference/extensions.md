@@ -4584,22 +4584,6 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 </tr>
 <tr>
 <td>
-<code>userData</code></br>
-<em>
-[]byte
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>UserData is a base64-encoded string that contains the data that is sent to the provider&rsquo;s APIs
-when a new machine/VM that is part of this worker pool shall be spawned.
-Either this or UserDataSecretRef must be provided.</p>
-<p>Deprecated: This field will be removed in future release.
-TODO(rfranzke): Remove this field after v1.104 has been released.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>userDataSecretRef</code></br>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#secretkeyselector-v1-core">
@@ -4608,10 +4592,8 @@ Kubernetes core/v1.SecretKeySelector
 </em>
 </td>
 <td>
-<em>(Optional)</em>
 <p>UserDataSecretRef references a Secret and a data key containing the data that is sent to the provider&rsquo;s APIs when
-a new machine/VM that is part of this worker pool shall be spawned.
-Either this or UserData must be provided.</p>
+a new machine/VM that is part of this worker pool shall be spawned.</p>
 </td>
 </tr>
 <tr>
