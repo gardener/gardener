@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"reflect"
 	"slices"
 	"strconv"
@@ -877,6 +878,11 @@ func (c *validationContext) validateReferencedSecret(secretLister kubecorev1list
 	return nil
 }
 
+func cidrMatchesIPFamily(cidr string, ipfamilies []core.IPFamily) bool {
+	ip, _, _ := net.ParseCIDR(cidr)
+	return ip != nil && (ip.To4() != nil && slices.Contains(ipfamilies, core.IPFamilyIPv4) || ip.To4() == nil && slices.Contains(ipfamilies, core.IPFamilyIPv6))
+}
+
 func (c *validationContext) validateShootNetworks(a admission.Attributes, workerless bool) field.ErrorList {
 	var (
 		allErrs field.ErrorList
@@ -890,53 +896,59 @@ func (c *validationContext) validateShootNetworks(a admission.Attributes, worker
 	if c.seed != nil {
 		if c.shoot.Spec.Networking.Pods == nil && !workerless {
 			if c.seed.Spec.Networks.ShootDefaults != nil {
-				c.shoot.Spec.Networking.Pods = c.seed.Spec.Networks.ShootDefaults.Pods
-			} else {
+				if cidrMatchesIPFamily(*c.seed.Spec.Networks.ShootDefaults.Pods, c.shoot.Spec.Networking.IPFamilies) {
+					c.shoot.Spec.Networking.Pods = c.seed.Spec.Networks.ShootDefaults.Pods
+				}
+			} else if slices.Contains(c.shoot.Spec.Networking.IPFamilies, core.IPFamilyIPv4) {
 				allErrs = append(allErrs, field.Required(path.Child("pods"), "pods is required"))
 			}
 		}
 
 		if c.shoot.Spec.Networking.Services == nil {
 			if c.seed.Spec.Networks.ShootDefaults != nil {
-				c.shoot.Spec.Networking.Services = c.seed.Spec.Networks.ShootDefaults.Services
-			} else {
+				if cidrMatchesIPFamily(*c.seed.Spec.Networks.ShootDefaults.Services, c.shoot.Spec.Networking.IPFamilies) {
+					c.shoot.Spec.Networking.Services = c.seed.Spec.Networks.ShootDefaults.Services
+				}
+			} else if slices.Contains(c.shoot.Spec.Networking.IPFamilies, core.IPFamilyIPv4) {
 				allErrs = append(allErrs, field.Required(path.Child("services"), "services is required"))
 			}
 		}
 
-		// validate network disjointedness within shoot network
-		allErrs = append(allErrs, cidrvalidation.ValidateShootNetworkDisjointedness(
-			path,
-			c.shoot.Spec.Networking.Nodes,
-			c.shoot.Spec.Networking.Pods,
-			c.shoot.Spec.Networking.Services,
-			workerless,
-		)...)
-
-		// validate network disjointedness with seed networks if shoot is being (re)scheduled
-		if !apiequality.Semantic.DeepEqual(c.oldShoot.Spec.SeedName, c.shoot.Spec.SeedName) {
-			allErrs = append(allErrs, cidrvalidation.ValidateNetworkDisjointedness(
+		if slices.Contains(c.shoot.Spec.Networking.IPFamilies, core.IPFamilyIPv4) {
+			// validate network disjointedness within shoot network
+			allErrs = append(allErrs, cidrvalidation.ValidateShootNetworkDisjointedness(
 				path,
 				c.shoot.Spec.Networking.Nodes,
 				c.shoot.Spec.Networking.Pods,
 				c.shoot.Spec.Networking.Services,
-				c.seed.Spec.Networks.Nodes,
-				c.seed.Spec.Networks.Pods,
-				c.seed.Spec.Networks.Services,
 				workerless,
 			)...)
 
-			if c.shoot.Status.Networking != nil {
-				allErrs = append(allErrs, cidrvalidation.ValidateMultiNetworkDisjointedness(
-					field.NewPath("status", "networking"),
-					c.shoot.Status.Networking.Nodes,
-					c.shoot.Status.Networking.Pods,
-					c.shoot.Status.Networking.Services,
+			// validate network disjointedness with seed networks if shoot is being (re)scheduled
+			if !apiequality.Semantic.DeepEqual(c.oldShoot.Spec.SeedName, c.shoot.Spec.SeedName) {
+				allErrs = append(allErrs, cidrvalidation.ValidateNetworkDisjointedness(
+					path,
+					c.shoot.Spec.Networking.Nodes,
+					c.shoot.Spec.Networking.Pods,
+					c.shoot.Spec.Networking.Services,
 					c.seed.Spec.Networks.Nodes,
 					c.seed.Spec.Networks.Pods,
 					c.seed.Spec.Networks.Services,
 					workerless,
 				)...)
+
+				if c.shoot.Status.Networking != nil {
+					allErrs = append(allErrs, cidrvalidation.ValidateMultiNetworkDisjointedness(
+						field.NewPath("status", "networking"),
+						c.shoot.Status.Networking.Nodes,
+						c.shoot.Status.Networking.Pods,
+						c.shoot.Status.Networking.Services,
+						c.seed.Spec.Networks.Nodes,
+						c.seed.Spec.Networks.Pods,
+						c.seed.Spec.Networks.Services,
+						workerless,
+					)...)
+				}
 			}
 		}
 	}
