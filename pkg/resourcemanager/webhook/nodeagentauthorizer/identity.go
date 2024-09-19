@@ -13,7 +13,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
-// GetNodeAgentIdentity returns the node name and a boolean which indicates whether the user is a gardener-node-agent
+// GetNodeAgentIdentity returns the node name and a boolean which indicates whether the user is a gardener-node-agent.
 func GetNodeAgentIdentity(u user.Info) (string, bool) {
 	if u == nil {
 		return "", false

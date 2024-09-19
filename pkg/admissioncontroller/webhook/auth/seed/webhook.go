@@ -10,7 +10,7 @@ import (
 	"github.com/go-logr/logr"
 )
 
-// Webhook represents the webhook of Seed Authorizer
+// Webhook represents the webhook of Seed Authorizer.
 type Webhook struct {
 	Logger  logr.Logger
 	Handler http.Handler

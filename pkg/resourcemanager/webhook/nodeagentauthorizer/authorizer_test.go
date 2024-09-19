@@ -207,7 +207,7 @@ var _ = Describe("Authorizer", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionNoOpinion))
-				Expect(reason).To(Equal("gardener-node-agent is only allowed to get CSRs for its own user"))
+				Expect(reason).To(Equal(fmt.Sprintf("gardener-node-agent is only allowed to read or request CSRs for its own user %q", nodeAgentUser.GetName())))
 			})
 
 			DescribeTable("should have no opinion because no allowed verb", func(verb string) {

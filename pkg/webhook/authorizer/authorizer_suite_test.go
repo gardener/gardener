@@ -13,5 +13,5 @@ import (
 
 func TestAuthorizer(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Authorizer Suite")
+	RunSpecs(t, "Webhook Authorizer Suite")
 }

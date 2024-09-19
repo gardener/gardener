@@ -52,9 +52,9 @@ type authorizer struct {
 	machineNamespace string
 }
 
-var _ = auth.Authorizer(&authorizer{})
+var _ auth.Authorizer = (*authorizer)(nil)
 
-// TODO(oliver-goetz): Revisit all `DecisionNoOpinion` later. Today we cannot deny the request for backwards compatibility
+// TODO(oliver-goetz): Revisit all `DecisionNoOpinion` when the NodeAgentAuthorizer feature gate is promoted to GA and locked to `true`. Today we cannot deny the request for backwards compatibility
 // when the NodeAgentAuthorizer feature gate is switched off again.
 // With `DecisionNoOpinion`, RBAC will be respected in the authorization chain afterwards.
 
@@ -113,7 +113,7 @@ func (a *authorizer) authorizeCertificateSigningRequest(ctx context.Context, log
 
 	if csr.Spec.Username != attrs.GetUser().GetName() {
 		log.Info("Denying authorization because the CSR is for a different user", "csrUsername", csr.Spec.Username)
-		return auth.DecisionNoOpinion, "gardener-node-agent is only allowed to get CSRs for its own user", nil
+		return auth.DecisionNoOpinion, fmt.Sprintf("gardener-node-agent is only allowed to read or request CSRs for its own user %q", attrs.GetUser().GetName()), nil
 	}
 
 	return auth.DecisionAllow, "", nil
@@ -143,18 +143,18 @@ func (a *authorizer) authorizeLease(ctx context.Context, log logr.Logger, machin
 
 	machine := &machinev1alpha1.Machine{}
 	if err := a.sourceClient.Get(ctx, client.ObjectKey{Name: machineName, Namespace: a.machineNamespace}, machine); err != nil {
-		return auth.DecisionNoOpinion, "", err
+		return auth.DecisionNoOpinion, "", fmt.Errorf("error getting machine %q: %w", machineName, err)
 	}
 
 	node := machine.Labels[machinev1alpha1.NodeLabelKey]
 	if node == "" {
-		log.Info("Denying authorization for machine to the lease because the machine does not have a \"node\" label", "machine", machineName)
-		return auth.DecisionNoOpinion, fmt.Sprintf("expecting \"node\" label on machine %q", machineName), nil
+		log.Info(`Denying request because the machine does not have a "node" label`, "machineName", machineName)
+		return auth.DecisionNoOpinion, fmt.Sprintf(`expecting "node" label on machine %q`, machineName), nil
 	}
 
 	allowedLease := "gardener-node-agent-" + node
 	if (attrs.GetVerb() != "create" && attrs.GetName() != allowedLease) || attrs.GetNamespace() != metav1.NamespaceSystem {
-		log.Info("Denying authorization because gardener-node-agent is not allowed to access the lease", "node", node, "machine", machineName, "lease", attrs.GetName())
+		log.Info("Denying authorization because gardener-node-agent is not allowed to access the lease", "nodeName", node, "machineName", machineName, "leaseName", attrs.GetName())
 		return auth.DecisionNoOpinion, fmt.Sprintf("this gardener-node-agent can only access lease %q in %q namespace", allowedLease, metav1.NamespaceSystem), nil
 	}
 
@@ -171,8 +171,8 @@ func (a *authorizer) authorizeNode(ctx context.Context, log logr.Logger, machine
 		return auth.DecisionNoOpinion, reason, nil
 	}
 
-	// Listing nodes must be allowed unconditionally, because gardener-node-agent only knows its hostname, but not its node. Kubelet
-	// creates the latter when gardener-node-agent is already running.
+	// Listing nodes must be allowed unconditionally, because gardener-node-agent only knows its hostname, but not its node name.
+	// Kubelet creates the latter when gardener-node-agent is already running.
 	if attrs.GetVerb() == "list" || attrs.GetVerb() == "watch" {
 		return auth.DecisionAllow, "", nil
 	}
@@ -183,7 +183,7 @@ func (a *authorizer) authorizeNode(ctx context.Context, log logr.Logger, machine
 	}
 
 	if machine.Labels[machinev1alpha1.NodeLabelKey] != attrs.GetName() {
-		log.Info("Denying authorization for node because it belongs to a different machine", "node", attrs.GetName(), "machine", machineName)
+		log.Info("Denying request because node belongs to a different machine", "nodeName", attrs.GetName(), "machineName", machineName)
 		return auth.DecisionNoOpinion, fmt.Sprintf("node %q does not belong to machine %q", attrs.GetName(), machineName), nil
 	}
 
@@ -202,7 +202,7 @@ func (a *authorizer) authorizeSecret(ctx context.Context, log logr.Logger, machi
 
 	machine := &machinev1alpha1.Machine{}
 	if err := a.sourceClient.Get(ctx, client.ObjectKey{Name: machineName, Namespace: a.machineNamespace}, machine); err != nil {
-		return auth.DecisionNoOpinion, "", err
+		return auth.DecisionNoOpinion, "", fmt.Errorf("error getting machine %q: %w", machineName, err)
 	}
 
 	validSecrets := []string{machine.Spec.NodeTemplateSpec.Labels[v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName], valitailTokenSecretName}
