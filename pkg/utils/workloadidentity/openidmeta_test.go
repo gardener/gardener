@@ -16,6 +16,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/workloadidentity"
 )
 
@@ -44,7 +45,7 @@ var _ = Describe("#OpenIDMeta", func() {
 
 	Describe("#JWKS", func() {
 		It("should fail to build JWKS document with private key", func() {
-			key, err := rsa.GenerateKey(rand.Reader, 2048)
+			key, err := secretsutils.FakeGenerateKey(rand.Reader, 2048)
 			Expect(err).ToNot(HaveOccurred())
 
 			jwks, err := workloadidentity.JWKS(key)
@@ -53,7 +54,7 @@ var _ = Describe("#OpenIDMeta", func() {
 		})
 
 		It("should correctly build jwks document", func() {
-			privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+			privateKey, err := secretsutils.FakeGenerateKey(rand.Reader, 2048)
 			Expect(err).ToNot(HaveOccurred())
 			publicKey := privateKey.Public()
 			rsaPublicKey, ok := publicKey.(*rsa.PublicKey)
@@ -83,7 +84,7 @@ var _ = Describe("#OpenIDMeta", func() {
 
 	Describe("#getAlg", func() {
 		It("should get correct algorithm", func() {
-			privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+			privateKey, err := secretsutils.FakeGenerateKey(rand.Reader, 2048)
 			Expect(err).ToNot(HaveOccurred())
 			alg, err := workloadidentity.GetAlg(privateKey.Public())
 			Expect(err).ToNot(HaveOccurred())
