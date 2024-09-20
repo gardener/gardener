@@ -18,7 +18,6 @@ import (
 	"github.com/spf13/cobra"
 	"k8s.io/component-base/version/verflag"
 	"k8s.io/utils/ptr"
-	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -97,9 +96,6 @@ func run(ctx context.Context, log logr.Logger, cfg *config.AdmissionControllerCo
 			Port:    cfg.Server.Webhooks.Port,
 			CertDir: cfg.Server.Webhooks.TLS.ServerCertDir,
 		}),
-		Controller: controllerconfig.Controller{
-			SkipNameValidation: ptr.To(true),
-		},
 	})
 	if err != nil {
 		return err
