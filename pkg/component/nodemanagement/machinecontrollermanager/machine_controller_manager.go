@@ -106,9 +106,6 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 		vpa                 = m.emptyVPA()
 		prometheusRule      = m.emptyPrometheusRule()
 		serviceMonitor      = m.emptyServiceMonitor()
-
-		vpaUpdateMode       = vpaautoscalingv1.UpdateModeAuto
-		vpaControlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 	)
 
 	genericTokenKubeconfigSecret, found := m.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
@@ -285,18 +282,11 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 			Kind:       "Deployment",
 			Name:       deployment.Name,
 		}
-		vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: &vpaUpdateMode}
+		vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto)}
 		vpa.Spec.ResourcePolicy = &vpaautoscalingv1.PodResourcePolicy{
 			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
 				ContainerName:    containerName,
-				ControlledValues: &vpaControlledValues,
-				MinAllowed: corev1.ResourceList{
-					corev1.ResourceMemory: resource.MustParse("70Mi"),
-				},
-				MaxAllowed: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("2"),
-					corev1.ResourceMemory: resource.MustParse("5G"),
-				},
+				ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 			}},
 		}
 		return nil

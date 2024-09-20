@@ -295,13 +295,6 @@ var _ = Describe("MachineControllerManager", func() {
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
 						ContainerName:    "machine-controller-manager",
 						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
-						MinAllowed: corev1.ResourceList{
-							corev1.ResourceMemory: resource.MustParse("70Mi"),
-						},
-						MaxAllowed: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("2"),
-							corev1.ResourceMemory: resource.MustParse("5G"),
-						},
 					}},
 				},
 			},
