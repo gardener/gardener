@@ -201,7 +201,6 @@ spec:
           protocol: TCP
         resources:
           requests:
-            cpu: 10m
             memory: 25Mi
         volumeMounts:
         - mountPath: /etc/blackbox_exporter
