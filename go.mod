@@ -56,7 +56,7 @@ require (
 	google.golang.org/protobuf v1.34.2
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.14.4
-	istio.io/api v1.22.4
+	istio.io/api v1.22.5
 	istio.io/client-go v1.22.0
 	k8s.io/api v0.29.9
 	k8s.io/apiextensions-apiserver v0.29.9
