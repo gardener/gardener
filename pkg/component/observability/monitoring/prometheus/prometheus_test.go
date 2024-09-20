@@ -336,7 +336,7 @@ honor_labels: true`
 						{
 							ContainerName: "prometheus",
 							MinAllowed: corev1.ResourceList{
-								corev1.ResourceMemory: resource.MustParse("1000M"),
+								corev1.ResourceMemory: resource.MustParse("100M"),
 							},
 							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 						},

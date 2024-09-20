@@ -110,10 +110,6 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		podDisruptionBudget = c.emptyPodDisruptionBudget()
 		serviceMonitor      = c.emptyServiceMonitor()
 		prometheusRule      = c.emptyPrometheusRule()
-
-		vpaUpdateMode    = vpaautoscalingv1.UpdateModeAuto
-		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-		command          = c.computeCommand()
 	)
 
 	genericTokenKubeconfigSecret, found := c.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
@@ -205,7 +201,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 						Name:            containerName,
 						Image:           c.image,
 						ImagePullPolicy: corev1.PullIfNotPresent,
-						Command:         command,
+						Command:         c.computeCommand(),
 						Ports: []corev1.ContainerPort{
 							{
 								Name:          portNameMetrics,
@@ -225,8 +221,8 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 						},
 						Resources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("100m"),
-								corev1.ResourceMemory: resource.MustParse("300Mi"),
+								corev1.ResourceCPU:    resource.MustParse("5m"),
+								corev1.ResourceMemory: resource.MustParse("30M"),
 							},
 						},
 					},
@@ -263,18 +259,13 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 			Name:       v1beta1constants.DeploymentNameClusterAutoscaler,
 		}
 		vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
-			UpdateMode: &vpaUpdateMode,
+			UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
 		}
 		vpa.Spec.ResourcePolicy = &vpaautoscalingv1.PodResourcePolicy{
-			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
-				{
-					ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-					MinAllowed: corev1.ResourceList{
-						corev1.ResourceMemory: resource.MustParse("50Mi"),
-					},
-					ControlledValues: &controlledValues,
-				},
-			},
+			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
+				ContainerName:    vpaautoscalingv1.DefaultContainerResourcePolicy,
+				ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+			}},
 		}
 		return nil
 	}); err != nil {

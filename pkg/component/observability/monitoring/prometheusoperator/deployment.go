@@ -52,9 +52,9 @@ func (p *prometheusOperator) deployment() *appsv1.Deployment {
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Args: []string{
 								fmt.Sprintf("--prometheus-config-reloader=%s", p.values.ImageConfigReloader),
-								"--config-reloader-cpu-request=10m",
+								"--config-reloader-cpu-request=0",
 								"--config-reloader-cpu-limit=0",
-								"--config-reloader-memory-request=25Mi",
+								"--config-reloader-memory-request=20M",
 								"--config-reloader-memory-limit=0",
 								"--enable-config-reloader-probes=false",
 							},

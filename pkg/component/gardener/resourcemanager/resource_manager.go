@@ -298,8 +298,6 @@ type Values struct {
 	WatchedNamespace *string
 	// RuntimeKubernetesVersion is the Kubernetes version of the runtime cluster.
 	RuntimeKubernetesVersion *semver.Version
-	// VPA contains information for configuring VerticalPodAutoscaler settings for the gardener-resource-manager deployment.
-	VPA *VPAConfig
 	// SchedulingProfile is the kube-scheduler profile configured for the Shoot.
 	SchedulingProfile *gardencorev1beta1.SchedulingProfile
 	// DefaultSeccompProfileEnabled specifies if the defaulting seccomp profile webhook of GRM should be enabled or not.
@@ -324,13 +322,6 @@ type Values struct {
 	// operating system configs on nodes. When this is provided, the respective controller is enabled in
 	// resource-manager.
 	NodeAgentReconciliationMaxDelay *metav1.Duration
-}
-
-// VPAConfig contains information for configuring VerticalPodAutoscaler settings for the gardener-resource-manager deployment.
-type VPAConfig struct {
-	// MinAllowed specifies the minimal amount of resources that will be recommended
-	// for the container.
-	MinAllowed corev1.ResourceList
 }
 
 func (r *resourceManager) Deploy(ctx context.Context) error {
@@ -846,8 +837,8 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 						},
 						Resources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("23m"),
-								corev1.ResourceMemory: resource.MustParse("47Mi"),
+								corev1.ResourceCPU:    resource.MustParse("5m"),
+								corev1.ResourceMemory: resource.MustParse("30M"),
 							},
 						},
 						LivenessProbe: &corev1.Probe{
@@ -1059,8 +1050,6 @@ func (r *resourceManager) emptyServiceAccount() *corev1.ServiceAccount {
 
 func (r *resourceManager) ensureVPA(ctx context.Context) error {
 	vpa := r.emptyVPA()
-	vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
-	controlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, vpa, func() error {
 		vpa.Labels = r.getLabels()
@@ -1070,20 +1059,13 @@ func (r *resourceManager) ensureVPA(ctx context.Context) error {
 			Name:       r.values.NamePrefix + v1beta1constants.DeploymentNameGardenerResourceManager,
 		}
 		vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
-			UpdateMode: &vpaUpdateMode,
+			UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
 		}
 		vpa.Spec.ResourcePolicy = &vpaautoscalingv1.PodResourcePolicy{
-			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
-				{
-					ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-					MinAllowed:    r.values.VPA.MinAllowed,
-					MaxAllowed: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("4"),
-						corev1.ResourceMemory: resource.MustParse("10G"),
-					},
-					ControlledValues: &controlledValues,
-				},
-			},
+			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
+				ContainerName:    vpaautoscalingv1.DefaultContainerResourcePolicy,
+				ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+			}},
 		}
 		return nil
 	})

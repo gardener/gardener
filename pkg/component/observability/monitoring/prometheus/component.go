@@ -104,6 +104,8 @@ type Values struct {
 	AdditionalAlertRelabelConfigs []monitoringv1.RelabelConfig
 	// RestrictToNamespace controls whether the Prometheus instance should only scrape its targets in its own namespace.
 	RestrictToNamespace bool
+	// ResourceRequests defines the initial resource requests
+	ResourceRequests *corev1.ResourceList
 }
 
 // CentralConfigs contains configuration for this Prometheus instance that is created together with it. This should

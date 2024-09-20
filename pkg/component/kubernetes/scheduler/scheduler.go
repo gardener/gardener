@@ -169,12 +169,10 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		serviceMonitor      = k.emptyServiceMonitor()
 		prometheusRule      = k.emptyPrometheusRule()
 
-		vpaUpdateMode          = vpaautoscalingv1.UpdateModeAuto
-		controlledValues       = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-		port             int32 = 10259
-		probeURIScheme         = corev1.URISchemeHTTPS
-		env                    = k.computeEnvironmentVariables()
-		command                = k.computeCommand(port)
+		port           int32 = 10259
+		probeURIScheme       = corev1.URISchemeHTTPS
+		env                  = k.computeEnvironmentVariables()
+		command              = k.computeCommand(port)
 	)
 
 	if err := k.client.Create(ctx, configMap); client.IgnoreAlreadyExists(err) != nil {
@@ -265,8 +263,8 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 						Env: env,
 						Resources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("23m"),
-								corev1.ResourceMemory: resource.MustParse("64Mi"),
+								corev1.ResourceCPU:    resource.MustParse("5m"),
+								corev1.ResourceMemory: resource.MustParse("30M"),
 							},
 						},
 						VolumeMounts: []corev1.VolumeMount{
@@ -359,22 +357,13 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 			Name:       v1beta1constants.DeploymentNameKubeScheduler,
 		}
 		vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
-			UpdateMode: &vpaUpdateMode,
+			UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
 		}
 		vpa.Spec.ResourcePolicy = &vpaautoscalingv1.PodResourcePolicy{
-			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
-				{
-					ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-					MinAllowed: corev1.ResourceList{
-						corev1.ResourceMemory: resource.MustParse("50Mi"),
-					},
-					MaxAllowed: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("4"),
-						corev1.ResourceMemory: resource.MustParse("10G"),
-					},
-					ControlledValues: &controlledValues,
-				},
-			},
+			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
+				ContainerName:    vpaautoscalingv1.DefaultContainerResourcePolicy,
+				ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+			}},
 		}
 		return nil
 	}); err != nil {

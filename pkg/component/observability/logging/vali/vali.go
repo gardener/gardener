@@ -297,14 +297,7 @@ func (v *vali) getVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 					{
-						ContainerName: valiName,
-						MinAllowed: corev1.ResourceList{
-							corev1.ResourceMemory: resource.MustParse("200M"),
-						},
-						MaxAllowed: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("800m"),
-							corev1.ResourceMemory: resource.MustParse("3Gi"),
-						},
+						ContainerName:    valiName,
 						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 					},
 					{
@@ -582,11 +575,8 @@ func (v *vali) getStatefulSet(valiConfigMapName, telegrafConfigMapName, genericT
 								},
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{
-										corev1.ResourceCPU:    resource.MustParse("20m"),
-										corev1.ResourceMemory: resource.MustParse("300Mi"),
-									},
-									Limits: corev1.ResourceList{
-										corev1.ResourceMemory: resource.MustParse("3Gi"),
+										corev1.ResourceCPU:    resource.MustParse("10m"),
+										corev1.ResourceMemory: resource.MustParse("100M"),
 									},
 								},
 								SecurityContext: &corev1.SecurityContext{
@@ -620,9 +610,6 @@ func (v *vali) getStatefulSet(valiConfigMapName, telegrafConfigMapName, genericT
 									Requests: corev1.ResourceList{
 										corev1.ResourceCPU:    resource.MustParse("5m"),
 										corev1.ResourceMemory: resource.MustParse("15Mi"),
-									},
-									Limits: corev1.ResourceList{
-										corev1.ResourceMemory: resource.MustParse("700Mi"),
 									},
 								},
 								SecurityContext: &corev1.SecurityContext{
@@ -688,9 +675,6 @@ func (v *vali) getStatefulSet(valiConfigMapName, telegrafConfigMapName, genericT
 						corev1.ResourceCPU:    resource.MustParse("5m"),
 						corev1.ResourceMemory: resource.MustParse("30Mi"),
 					},
-					Limits: corev1.ResourceList{
-						corev1.ResourceMemory: resource.MustParse("150Mi"),
-					},
 				},
 				Ports: []corev1.ContainerPort{{
 					Name:          kubeRBACProxyName,
@@ -720,9 +704,6 @@ wait
 					Requests: corev1.ResourceList{
 						corev1.ResourceCPU:    resource.MustParse("5m"),
 						corev1.ResourceMemory: resource.MustParse("45Mi"),
-					},
-					Limits: corev1.ResourceList{
-						corev1.ResourceMemory: resource.MustParse("350Mi"),
 					},
 				},
 				SecurityContext: &corev1.SecurityContext{

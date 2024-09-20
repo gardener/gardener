@@ -130,8 +130,6 @@ var _ = Describe("ResourceManager", func() {
 		secret                              *corev1.Secret
 		service                             *corev1.Service
 		serviceAccount                      *corev1.ServiceAccount
-		updateMode                          = vpaautoscalingv1.UpdateModeAuto
-		controlledValues                    = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		pdb                                 *policyv1.PodDisruptionBudget
 		serviceMonitorFor                   func(string) *monitoringv1.ServiceMonitor
 		vpa                                 *vpaautoscalingv1.VerticalPodAutoscaler
@@ -330,14 +328,9 @@ var _ = Describe("ResourceManager", func() {
 				{Key: "b"},
 				{Key: "c"},
 			},
-			TargetDiffersFromSourceCluster: true,
-			TargetDisableCache:             &targetDisableCache,
-			WatchedNamespace:               &watchedNamespace,
-			VPA: &VPAConfig{
-				MinAllowed: corev1.ResourceList{
-					corev1.ResourceMemory: resource.MustParse("30Mi"),
-				},
-			},
+			TargetDiffersFromSourceCluster:      true,
+			TargetDisableCache:                  &targetDisableCache,
+			WatchedNamespace:                    &watchedNamespace,
 			SchedulingProfile:                   &binPackingSchedulingProfile,
 			DefaultSeccompProfileEnabled:        false,
 			EndpointSliceHintsEnabled:           false,
@@ -594,8 +587,8 @@ var _ = Describe("ResourceManager", func() {
 									},
 									Resources: corev1.ResourceRequirements{
 										Requests: corev1.ResourceList{
-											corev1.ResourceCPU:    resource.MustParse("23m"),
-											corev1.ResourceMemory: resource.MustParse("47Mi"),
+											corev1.ResourceCPU:    resource.MustParse("5m"),
+											corev1.ResourceMemory: resource.MustParse("30M"),
 										},
 									},
 									VolumeMounts: []corev1.VolumeMount{
@@ -821,22 +814,13 @@ var _ = Describe("ResourceManager", func() {
 					Name:       "gardener-resource-manager",
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: &updateMode,
+					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
-						{
-							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-							MinAllowed: corev1.ResourceList{
-								corev1.ResourceMemory: resource.MustParse("30Mi"),
-							},
-							MaxAllowed: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("4"),
-								corev1.ResourceMemory: resource.MustParse("10G"),
-							},
-							ControlledValues: &controlledValues,
-						},
-					},
+					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
+						ContainerName:    vpaautoscalingv1.DefaultContainerResourcePolicy,
+						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+					}},
 				},
 			},
 		}

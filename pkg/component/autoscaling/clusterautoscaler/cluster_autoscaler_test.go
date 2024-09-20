@@ -112,9 +112,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 		deploymentName                   = "cluster-autoscaler"
 		managedResourceName              = "shoot-core-cluster-autoscaler"
 
-		vpaUpdateMode    = vpaautoscalingv1.UpdateModeAuto
-		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-		vpa              = &vpaautoscalingv1.VerticalPodAutoscaler{
+		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{Name: vpaName, Namespace: namespace, ResourceVersion: "1"},
 			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 				TargetRef: &autoscalingv1.CrossVersionObjectReference{
@@ -123,18 +121,13 @@ var _ = Describe("ClusterAutoscaler", func() {
 					Name:       deploymentName,
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: &vpaUpdateMode,
+					UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
-						{
-							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-							MinAllowed: corev1.ResourceList{
-								corev1.ResourceMemory: resource.MustParse("50Mi"),
-							},
-							ControlledValues: &controlledValues,
-						},
-					},
+					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
+						ContainerName:    vpaautoscalingv1.DefaultContainerResourcePolicy,
+						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+					}},
 				},
 			},
 		}
@@ -353,8 +346,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 									},
 									Resources: corev1.ResourceRequirements{
 										Requests: corev1.ResourceList{
-											corev1.ResourceCPU:    resource.MustParse("100m"),
-											corev1.ResourceMemory: resource.MustParse("300Mi"),
+											corev1.ResourceCPU:    resource.MustParse("5m"),
+											corev1.ResourceMemory: resource.MustParse("30M"),
 										},
 									},
 								},

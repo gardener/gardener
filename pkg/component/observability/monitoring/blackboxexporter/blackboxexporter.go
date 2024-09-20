@@ -246,8 +246,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 								ImagePullPolicy: corev1.PullIfNotPresent,
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{
-										corev1.ResourceCPU:    resource.MustParse("10m"),
-										corev1.ResourceMemory: resource.MustParse("25Mi"),
+										corev1.ResourceMemory: resource.MustParse("15M"),
 									},
 								},
 								Ports: []corev1.ContainerPort{
@@ -365,8 +364,9 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
-							ContainerName:    vpaautoscalingv1.DefaultContainerResourcePolicy,
-							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+							ContainerName:       vpaautoscalingv1.DefaultContainerResourcePolicy,
+							ControlledValues:    ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+							ControlledResources: &[]corev1.ResourceName{corev1.ResourceMemory},
 						},
 					},
 				},

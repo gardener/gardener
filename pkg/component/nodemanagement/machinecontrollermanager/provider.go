@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	"k8s.io/utils/ptr"
 
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -70,13 +71,10 @@ func ProviderSidecarContainer(namespace, providerName, image string) corev1.Cont
 // ProviderSidecarVPAContainerPolicy returns a vpaautoscalingv1.ContainerResourcePolicy object which can be injected
 // into the machine-controller-manager-vpa VPA managed by the gardenlet. This function can be used in provider-specific
 // control plane webhook implementations when the standard container policy for the sidecar is required.
-func ProviderSidecarVPAContainerPolicy(providerName string, minAllowed, maxAllowed corev1.ResourceList) vpaautoscalingv1.ContainerResourcePolicy {
-	ccv := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
+func ProviderSidecarVPAContainerPolicy(providerName string) vpaautoscalingv1.ContainerResourcePolicy {
 	return vpaautoscalingv1.ContainerResourcePolicy{
 		ContainerName:    providerSidecarContainerName(providerName),
-		ControlledValues: &ccv,
-		MinAllowed:       minAllowed,
-		MaxAllowed:       maxAllowed,
+		ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 	}
 }
 

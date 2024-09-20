@@ -201,8 +201,7 @@ spec:
           protocol: TCP
         resources:
           requests:
-            cpu: 10m
-            memory: 25Mi
+            memory: 15M
         volumeMounts:
         - mountPath: /etc/blackbox_exporter
           name: blackbox-exporter-config`
@@ -329,6 +328,8 @@ spec:
   resourcePolicy:
     containerPolicies:
     - containerName: '*'
+      controlledResources:
+      - memory
       controlledValues: RequestsOnly
   targetRef:
     apiVersion: apps/v1
