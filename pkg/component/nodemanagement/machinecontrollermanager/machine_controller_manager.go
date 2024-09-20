@@ -241,8 +241,8 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 					}},
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("31m"),
-							corev1.ResourceMemory: resource.MustParse("70Mi"),
+							corev1.ResourceCPU:    resource.MustParse("5m"),
+							corev1.ResourceMemory: resource.MustParse("20M"),
 						},
 						Limits: corev1.ResourceList{
 							corev1.ResourceMemory: resource.MustParse("1024Mi"),
