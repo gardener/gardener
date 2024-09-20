@@ -297,14 +297,7 @@ func (v *vali) getVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 					{
-						ContainerName: valiName,
-						MinAllowed: corev1.ResourceList{
-							corev1.ResourceMemory: resource.MustParse("200M"),
-						},
-						MaxAllowed: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("800m"),
-							corev1.ResourceMemory: resource.MustParse("3Gi"),
-						},
+						ContainerName:    valiName,
 						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 					},
 					{
