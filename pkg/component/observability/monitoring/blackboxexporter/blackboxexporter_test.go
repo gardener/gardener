@@ -328,6 +328,8 @@ spec:
   resourcePolicy:
     containerPolicies:
     - containerName: '*'
+      controlledResources:
+      - memory
       controlledValues: RequestsOnly
   targetRef:
     apiVersion: apps/v1

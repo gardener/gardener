@@ -364,8 +364,9 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
-							ContainerName:    vpaautoscalingv1.DefaultContainerResourcePolicy,
-							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+							ContainerName:       vpaautoscalingv1.DefaultContainerResourcePolicy,
+							ControlledValues:    ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+							ControlledResources: &[]corev1.ResourceName{corev1.ResourceMemory},
 						},
 					},
 				},
