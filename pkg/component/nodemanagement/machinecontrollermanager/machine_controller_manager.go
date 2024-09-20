@@ -244,9 +244,6 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 							corev1.ResourceCPU:    resource.MustParse("5m"),
 							corev1.ResourceMemory: resource.MustParse("20M"),
 						},
-						Limits: corev1.ResourceList{
-							corev1.ResourceMemory: resource.MustParse("1024Mi"),
-						},
 					}},
 				},
 				PriorityClassName:             v1beta1constants.PriorityClassNameShootControlPlane300,
