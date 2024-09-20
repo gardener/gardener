@@ -14,7 +14,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/component-base/version"
@@ -94,12 +93,7 @@ func NewRuntimeGardenerResourceManager(
 		SecretNameServerCA:                  secretNameServerCA,
 		SyncPeriod:                          &metav1.Duration{Duration: time.Hour},
 		RuntimeKubernetesVersion:            runtimeVersion,
-		VPA: &resourcemanager.VPAConfig{
-			MinAllowed: corev1.ResourceList{
-				corev1.ResourceMemory: resource.MustParse("64Mi"),
-			},
-		},
-		Zones: zones,
+		Zones:                               zones,
 	}), nil
 }
 
@@ -160,15 +154,10 @@ func NewTargetGardenerResourceManager(
 		TargetDiffersFromSourceCluster:       true,
 		TargetNamespaces:                     targetNamespaces,
 		RuntimeKubernetesVersion:             kubernetesVersion,
-		VPA: &resourcemanager.VPAConfig{
-			MinAllowed: corev1.ResourceList{
-				corev1.ResourceMemory: resource.MustParse("30Mi"),
-			},
-		},
-		WatchedNamespace:                &namespaceName,
-		TopologyAwareRoutingEnabled:     topologyAwareRoutingEnabled,
-		IsWorkerless:                    isWorkerless,
-		NodeAgentReconciliationMaxDelay: nodeAgentReconciliationMaxDelay,
+		WatchedNamespace:                     &namespaceName,
+		TopologyAwareRoutingEnabled:          topologyAwareRoutingEnabled,
+		IsWorkerless:                         isWorkerless,
+		NodeAgentReconciliationMaxDelay:      nodeAgentReconciliationMaxDelay,
 	}
 
 	return resourcemanager.New(
