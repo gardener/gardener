@@ -194,7 +194,9 @@ var _ = Describe("Seed Care controller tests", func() {
 			Expect(testClient.Create(ctx, pod2)).To(Succeed())
 
 			pod1.Status.Reason = "Evicted"
+			pod2.Status.Reason = "Evicted"
 			Expect(testClient.Status().Update(ctx, pod1)).To(Succeed())
+			Expect(testClient.Status().Update(ctx, pod2)).To(Succeed())
 
 			Eventually(func() error {
 				return testClient.Get(ctx, client.ObjectKeyFromObject(pod1), &corev1.Pod{})
