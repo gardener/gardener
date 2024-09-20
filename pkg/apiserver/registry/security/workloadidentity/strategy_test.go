@@ -18,9 +18,10 @@ import (
 
 var _ = Describe("Workload Identity Strategy Test", func() {
 
+	const tokenIssuerURL = "https://issuer.gardener.cloud.local"
 	var (
 		wi  *security.WorkloadIdentity
-		s   = workloadidentity.Strategy
+		s   = workloadidentity.NewStrategy(tokenIssuerURL)
 		ctx context.Context
 	)
 
@@ -93,6 +94,63 @@ var _ = Describe("Workload Identity Strategy Test", func() {
 			s.PrepareForCreate(ctx, wi)
 
 			Expect(wi.Status.Sub).To(Equal("foo"))
+		})
+
+		It("should set status.issuer value", func() {
+			s.PrepareForCreate(ctx, wi)
+			Expect(wi.Status.Issuer).To(Equal(tokenIssuerURL))
+		})
+
+		It("should reset status.issuer value", func() {
+			presetIssuer := tokenIssuerURL + ".preset"
+			wi.Status.Issuer = presetIssuer
+			s.PrepareForCreate(ctx, wi)
+			Expect(wi.Status.Issuer).To(Equal(tokenIssuerURL))
+			Expect(wi.Status.Issuer).ToNot(Equal(presetIssuer))
+		})
+
+		It("should overwrite status.issuer value", func() {
+			newIssuerURL := "new" + tokenIssuerURL
+			newStrategy := workloadidentity.NewStrategy(newIssuerURL)
+
+			s.PrepareForCreate(ctx, wi)
+			Expect(wi.Status.Issuer).To(Equal(tokenIssuerURL))
+
+			newStrategy.PrepareForCreate(ctx, wi)
+			Expect(wi.Status.Issuer).To(Equal(newIssuerURL))
+		})
+	})
+
+	Describe("#PrepareForUpdate", func() {
+		It("should set status.issuer value", func() {
+			s.PrepareForUpdate(ctx, wi, nil)
+			Expect(wi.Status.Issuer).To(Equal(tokenIssuerURL))
+		})
+
+		It("should reset status.issuer value", func() {
+			presetIssuer := tokenIssuerURL + ".preset"
+			wi.Status.Issuer = presetIssuer
+			s.PrepareForUpdate(ctx, wi, nil)
+			Expect(wi.Status.Issuer).To(Equal(tokenIssuerURL))
+			Expect(wi.Status.Issuer).ToNot(Equal(presetIssuer))
+		})
+
+		It("should overwrite status.issuer value", func() {
+			newIssuerURL := tokenIssuerURL + ".new"
+			newStrategy := workloadidentity.NewStrategy(newIssuerURL)
+
+			s.PrepareForUpdate(ctx, wi, nil)
+			Expect(wi.Status.Issuer).To(Equal(tokenIssuerURL))
+
+			newStrategy.PrepareForUpdate(ctx, wi, nil)
+			Expect(wi.Status.Issuer).To(Equal(newIssuerURL))
+		})
+
+		It("should update status.issuer value", func() {
+			wi.Status.Issuer = tokenIssuerURL + ".old"
+
+			s.PrepareForUpdate(ctx, wi, nil)
+			Expect(wi.Status.Issuer).To(Equal(tokenIssuerURL))
 		})
 	})
 })

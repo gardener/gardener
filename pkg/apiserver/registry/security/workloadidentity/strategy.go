@@ -21,10 +21,14 @@ import (
 type workloadIdentityStrategy struct {
 	runtime.ObjectTyper
 	names.NameGenerator
+
+	tokenIssuerURL string
 }
 
-// Strategy defines the storage strategy for WorkloadIdentity.
-var Strategy = workloadIdentityStrategy{api.Scheme, names.SimpleNameGenerator}
+// NewStrategy creates new storage strategy for WorkloadIdentity.
+func NewStrategy(tokenIssuerURL string) workloadIdentityStrategy {
+	return workloadIdentityStrategy{api.Scheme, names.SimpleNameGenerator, tokenIssuerURL}
+}
 
 func (workloadIdentityStrategy) NamespaceScoped() bool {
 	return true
@@ -49,10 +53,12 @@ func (s workloadIdentityStrategy) PrepareForCreate(_ context.Context, obj runtim
 	if wi.Status.Sub == "" {
 		wi.Status.Sub = strings.Join([]string{p, wi.GetNamespace(), wi.GetName(), string(wi.GetUID())}, d)
 	}
+	wi.Status.Issuer = s.tokenIssuerURL
 }
 
-func (workloadIdentityStrategy) PrepareForUpdate(_ context.Context, _, _ runtime.Object) {
-
+func (s workloadIdentityStrategy) PrepareForUpdate(_ context.Context, obj, _ runtime.Object) {
+	wi := obj.(*security.WorkloadIdentity)
+	wi.Status.Issuer = s.tokenIssuerURL
 }
 
 func (workloadIdentityStrategy) Validate(_ context.Context, obj runtime.Object) field.ErrorList {

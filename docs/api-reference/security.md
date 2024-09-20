@@ -606,6 +606,18 @@ string
 <p>Sub contains the computed value of the subject that is going to be set in JWTs &lsquo;sub&rsquo; claim.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>issuer</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Issuer is the issuer URL of the ID token.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <hr/>

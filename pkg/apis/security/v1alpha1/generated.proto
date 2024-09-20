@@ -155,5 +155,9 @@ message WorkloadIdentitySpec {
 message WorkloadIdentityStatus {
   // Sub contains the computed value of the subject that is going to be set in JWTs 'sub' claim.
   optional string sub = 1;
+
+  // Issuer is the issuer URL of the ID token.
+  // +optional
+  optional string issuer = 2;
 }
 

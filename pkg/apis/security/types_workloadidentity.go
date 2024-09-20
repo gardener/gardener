@@ -48,6 +48,8 @@ type TargetSystem struct {
 type WorkloadIdentityStatus struct {
 	// Sub contains the computed value of the subject that is going to be set in JWTs 'sub' claim.
 	Sub string
+	// Issuer is the issuer URL of the ID token.
+	Issuer string
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

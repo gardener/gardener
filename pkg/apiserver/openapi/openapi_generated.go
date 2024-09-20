@@ -10734,6 +10734,14 @@ func schema_pkg_apis_security_v1alpha1_WorkloadIdentityStatus(ref common.Referen
 							Format:      "",
 						},
 					},
+					"issuer": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Issuer is the issuer URL of the ID token.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 				Required: []string{"sub"},
 			},

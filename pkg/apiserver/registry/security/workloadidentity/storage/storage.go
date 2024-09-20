@@ -33,7 +33,11 @@ func NewStorage(
 	tokenIssuer workloadidentityutils.TokenIssuer,
 	coreInformerFactory gardencoreinformers.SharedInformerFactory,
 ) WorkloadIdentityStorage {
-	workloadIdentityRest := NewREST(optsGetter)
+	issuerURL := ""
+	if tokenIssuer != nil {
+		issuerURL = tokenIssuer.IssuerURL()
+	}
+	workloadIdentityRest := NewREST(optsGetter, issuerURL)
 
 	return WorkloadIdentityStorage{
 		WorkloadIdentity: workloadIdentityRest,
@@ -42,7 +46,9 @@ func NewStorage(
 }
 
 // NewREST returns a RESTStorage object that will work against WorkloadIdentity.
-func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
+func NewREST(optsGetter generic.RESTOptionsGetter, issuerURL string) *REST {
+	strategy := workloadidentity.NewStrategy(issuerURL)
+
 	store := &genericregistry.Store{
 		NewFunc:     func() runtime.Object { return &security.WorkloadIdentity{} },
 		NewListFunc: func() runtime.Object { return &security.WorkloadIdentityList{} },
@@ -51,9 +57,9 @@ func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
 		SingularQualifiedResource: security.Resource("workloadidentity"),
 		EnableGarbageCollection:   true,
 
-		CreateStrategy: workloadidentity.Strategy,
-		UpdateStrategy: workloadidentity.Strategy,
-		DeleteStrategy: workloadidentity.Strategy,
+		CreateStrategy: strategy,
+		UpdateStrategy: strategy,
+		DeleteStrategy: strategy,
 
 		TableConvertor: newTableConvertor(),
 	}
