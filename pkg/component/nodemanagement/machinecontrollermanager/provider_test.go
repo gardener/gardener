@@ -8,9 +8,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
 )
@@ -69,17 +69,9 @@ var _ = Describe("Provider", func() {
 	})
 
 	It("should return a default VPA container policy object for the provider-specific sidecar container", func() {
-		var (
-			ccv        = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-			minAllowed = corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("1M")}
-			maxAllowed = corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("5M")}
-		)
-
-		Expect(ProviderSidecarVPAContainerPolicy(provider, minAllowed, maxAllowed)).To(Equal(vpaautoscalingv1.ContainerResourcePolicy{
+		Expect(ProviderSidecarVPAContainerPolicy(provider)).To(Equal(vpaautoscalingv1.ContainerResourcePolicy{
 			ContainerName:    "machine-controller-manager-" + provider,
-			ControlledValues: &ccv,
-			MinAllowed:       minAllowed,
-			MaxAllowed:       maxAllowed,
+			ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 		}))
 	})
 })

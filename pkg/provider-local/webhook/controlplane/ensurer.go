@@ -12,8 +12,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"k8s.io/utils/ptr"
@@ -56,19 +54,9 @@ func (e *ensurer) EnsureMachineControllerManagerDeployment(_ context.Context, _ 
 
 // EnsureMachineControllerManagerVPA ensures that the machine-controller-manager VPA conforms to the provider requirements.
 func (e *ensurer) EnsureMachineControllerManagerVPA(_ context.Context, _ extensionscontextwebhook.GardenContext, newObj, _ *vpaautoscalingv1.VerticalPodAutoscaler) error {
-	var (
-		minAllowed = corev1.ResourceList{
-			corev1.ResourceMemory: resource.MustParse("64Mi"),
-		}
-		maxAllowed = corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse("2"),
-			corev1.ResourceMemory: resource.MustParse("5G"),
-		}
-	)
-
 	newObj.Spec.ResourcePolicy.ContainerPolicies = webhook.EnsureVPAContainerResourcePolicyWithName(
 		newObj.Spec.ResourcePolicy.ContainerPolicies,
-		machinecontrollermanager.ProviderSidecarVPAContainerPolicy(local.Name, minAllowed, maxAllowed),
+		machinecontrollermanager.ProviderSidecarVPAContainerPolicy(local.Name),
 	)
 	return nil
 }
