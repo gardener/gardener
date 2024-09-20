@@ -52,10 +52,10 @@ func (p *prometheus) prometheus(cortexConfigMap *corev1.ConfigMap) *monitoringv1
 				ImagePullPolicy:   corev1.PullIfNotPresent,
 				Version:           p.values.Version,
 				Resources: corev1.ResourceRequirements{
-					Requests: corev1.ResourceList{
+					Requests: ptr.Deref(p.values.ResourceRequests, corev1.ResourceList{
 						corev1.ResourceCPU:    resource.MustParse("300m"),
 						corev1.ResourceMemory: resource.MustParse("1000Mi"),
-					},
+					}),
 				},
 				ServiceAccountName: p.name(),
 				SecurityContext:    &corev1.PodSecurityContext{RunAsUser: ptr.To[int64](0)},
