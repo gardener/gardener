@@ -380,7 +380,7 @@ metadata:
 										Resources: corev1.ResourceRequirements{
 											Requests: corev1.ResourceList{
 												corev1.ResourceCPU:    resource.MustParse("5m"),
-												corev1.ResourceMemory: resource.MustParse("64Mi"),
+												corev1.ResourceMemory: resource.MustParse("85M"),
 											},
 										},
 									},
