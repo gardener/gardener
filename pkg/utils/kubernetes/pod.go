@@ -8,7 +8,10 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"time"
 
+	"github.com/go-logr/logr"
+	"github.com/hashicorp/go-multierror"
 	appsv1 "k8s.io/api/apps/v1"
 	appsv1beta1 "k8s.io/api/apps/v1beta1"
 	appsv1beta2 "k8s.io/api/apps/v1beta2"
@@ -19,6 +22,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 
 // VisitPodSpec calls the given visitor for the PodSpec contained in the given object. The visitor may mutate the
@@ -186,4 +192,48 @@ func GetDeploymentForPod(ctx context.Context, reader client.Reader, namespace st
 	}
 
 	return deployment, nil
+}
+
+// DeleteStalePods deletes stale pods.
+func DeleteStalePods(ctx context.Context, log logr.Logger, c client.Client, pods []corev1.Pod) error {
+	var result error
+
+	for _, pod := range pods {
+		logger := log.WithValues("pod", client.ObjectKeyFromObject(&pod))
+
+		if health.IsPodStale(pod.Status.Reason) {
+			logger.V(1).Info("Deleting stale pod", "reason", pod.Status.Reason)
+			if err := c.Delete(ctx, &pod); client.IgnoreNotFound(err) != nil {
+				result = multierror.Append(result, err)
+			}
+
+			continue
+		}
+
+		if shouldObjectBeRemoved(&pod) {
+			logger.V(1).Info("Deleting stuck terminating pod")
+			if err := c.Delete(ctx, &pod, kubernetes.ForceDeleteOptions...); client.IgnoreNotFound(err) != nil {
+				result = multierror.Append(result, err)
+			}
+		}
+	}
+
+	return result
+}
+
+// shouldObjectBeRemoved determines whether the given object should be gone now.
+// This is calculated by first checking the deletion timestamp of an object: If the deletion timestamp
+// is unset, the object should not be removed - i.e. this returns false.
+// Otherwise, it is checked whether the deletionTimestamp is before the current time minus the
+// grace period.
+func shouldObjectBeRemoved(obj metav1.Object) bool {
+	// gardenerDeletionGracePeriod is the default grace period for Gardener's force deletion methods.
+	const gardenerDeletionGracePeriod = 5 * time.Minute
+
+	deletionTimestamp := obj.GetDeletionTimestamp()
+	if deletionTimestamp == nil {
+		return false
+	}
+
+	return deletionTimestamp.Time.Before(time.Now().Add(-gardenerDeletionGracePeriod))
 }

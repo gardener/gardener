@@ -7,6 +7,7 @@ package kubernetes_test
 import (
 	"context"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -23,12 +24,20 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	. "github.com/gardener/gardener/pkg/utils/kubernetes"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("Pod Utils", func() {
-	var podSpec corev1.PodSpec
+	var (
+		ctx        = context.TODO()
+		fakeClient client.Client
+
+		podSpec corev1.PodSpec
+	)
 
 	BeforeEach(func() {
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
+
 		podSpec = corev1.PodSpec{
 			InitContainers: []corev1.Container{
 				{
@@ -434,16 +443,11 @@ var _ = Describe("Pod Utils", func() {
 
 	Describe("#GetDeploymentForPod", func() {
 		var (
-			ctx        = context.TODO()
-			fakeClient client.Client
-
 			deployment *appsv1.Deployment
 			replicaSet *appsv1.ReplicaSet
 		)
 
 		BeforeEach(func() {
-			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
-
 			deployment = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "deployment", Namespace: namespace}}
 			replicaSet = &appsv1.ReplicaSet{ObjectMeta: metav1.ObjectMeta{Name: "replicaset", Namespace: namespace, OwnerReferences: []metav1.OwnerReference{{APIVersion: "apps/v1", Kind: "Deployment", Name: deployment.Name}}}}
 		})
@@ -484,6 +488,31 @@ var _ = Describe("Pod Utils", func() {
 			deployment, err := GetDeploymentForPod(ctx, fakeClient, namespace, []metav1.OwnerReference{{APIVersion: "apps/v1", Kind: "ReplicaSet", Name: replicaSet.Name}})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(deployment).To(Equal(deployment))
+		})
+	})
+
+	Describe("#DeleteStalePods", func() {
+		It("should delete the stale pods", func() {
+			var (
+				normalPod = &corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{Name: "normal", Namespace: "default"},
+				}
+				stalePod = &corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{Name: "stale", Namespace: "default"},
+					Status:     corev1.PodStatus{Reason: "Evicted"},
+				}
+				pods = []corev1.Pod{*normalPod, *stalePod}
+				// There is no good way with the fake client to test the deletion of the pods stuck in termination
+				// We'd have to use a mock client, but we actually want to avoid its usage.
+			)
+
+			Expect(fakeClient.Create(ctx, normalPod)).To(Succeed())
+			Expect(fakeClient.Create(ctx, stalePod)).To(Succeed())
+
+			Expect(DeleteStalePods(ctx, logr.Discard(), fakeClient, pods)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(normalPod), &corev1.Pod{})).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(stalePod), &corev1.Pod{})).To(BeNotFoundError())
 		})
 	})
 })

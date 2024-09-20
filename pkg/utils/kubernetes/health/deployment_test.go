@@ -313,5 +313,18 @@ var _ = Describe("Deployment", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(ok).To(BeFalse())
 		})
+
+		It("should consider the deployment as updated even though there are still stale pods", func() {
+			p1 := pod.DeepCopy()
+			p1.Status.Reason = "Evicted"
+			Expect(fakeClient.Create(ctx, p1)).To(Succeed())
+
+			p2 := pod.DeepCopy()
+			Expect(fakeClient.Create(ctx, p2)).To(Succeed())
+
+			ok, err := health.DeploymentHasExactNumberOfPods(ctx, fakeClient, deployment)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ok).To(BeTrue())
+		})
 	})
 })

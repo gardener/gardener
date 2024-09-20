@@ -14,27 +14,40 @@ import (
 )
 
 var _ = Describe("Pod", func() {
-	Describe("#CheckPod", func() {
-		DescribeTable("pods",
-			func(pod *corev1.Pod, matcher types.GomegaMatcher) {
-				err := health.CheckPod(pod)
-				Expect(err).To(matcher)
+	DescribeTable("#CheckPod",
+		func(pod *corev1.Pod, matcher types.GomegaMatcher) {
+			err := health.CheckPod(pod)
+			Expect(err).To(matcher)
+		},
+
+		Entry("pending", &corev1.Pod{
+			Status: corev1.PodStatus{
+				Phase: corev1.PodPending,
 			},
-			Entry("pending", &corev1.Pod{
-				Status: corev1.PodStatus{
-					Phase: corev1.PodPending,
-				},
-			}, HaveOccurred()),
-			Entry("running", &corev1.Pod{
-				Status: corev1.PodStatus{
-					Phase: corev1.PodRunning,
-				},
-			}, BeNil()),
-			Entry("succeeded", &corev1.Pod{
-				Status: corev1.PodStatus{
-					Phase: corev1.PodSucceeded,
-				},
-			}, BeNil()),
-		)
-	})
+		}, HaveOccurred()),
+		Entry("running", &corev1.Pod{
+			Status: corev1.PodStatus{
+				Phase: corev1.PodRunning,
+			},
+		}, BeNil()),
+		Entry("succeeded", &corev1.Pod{
+			Status: corev1.PodStatus{
+				Phase: corev1.PodSucceeded,
+			},
+		}, BeNil()),
+	)
+
+	DescribeTable("#IsPodStale",
+		func(reason string, matcher types.GomegaMatcher) {
+			Expect(health.IsPodStale(reason)).To(matcher)
+		},
+
+		Entry("Evicted", "Evicted", BeTrue()),
+		Entry("OutOfCpu", "OutOfCpu", BeTrue()),
+		Entry("OutOfMemory", "OutOfMemory", BeTrue()),
+		Entry("OutOfDisk", "OutOfDisk", BeTrue()),
+		Entry("NodeAffinity", "NodeAffinity", BeTrue()),
+		Entry("NodeLost", "NodeLost", BeTrue()),
+		Entry("Foo", "Foo", BeFalse()),
+	)
 })

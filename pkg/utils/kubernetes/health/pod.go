@@ -8,6 +8,7 @@ package health
 
 import (
 	"fmt"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 )
@@ -57,4 +58,12 @@ func CheckPod(pod *corev1.Pod) error {
 	}
 
 	return fmt.Errorf("pod is in invalid phase %q (expected one of %q)", pod.Status.Phase, healthyPodPhases)
+}
+
+// IsPodStale returns true when the pod reason indicates staleness.
+func IsPodStale(reason string) bool {
+	return strings.Contains(reason, "Evicted") ||
+		strings.HasPrefix(reason, "OutOf") ||
+		strings.Contains(reason, "NodeAffinity") ||
+		strings.Contains(reason, "NodeLost")
 }
