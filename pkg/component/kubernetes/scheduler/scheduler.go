@@ -263,8 +263,8 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 						Env: env,
 						Resources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("23m"),
-								corev1.ResourceMemory: resource.MustParse("64Mi"),
+								corev1.ResourceCPU:    resource.MustParse("5m"),
+								corev1.ResourceMemory: resource.MustParse("30M"),
 							},
 						},
 						VolumeMounts: []corev1.VolumeMount{
