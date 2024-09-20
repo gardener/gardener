@@ -246,7 +246,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 								ImagePullPolicy: corev1.PullIfNotPresent,
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{
-										corev1.ResourceMemory: resource.MustParse("25Mi"),
+										corev1.ResourceMemory: resource.MustParse("15M"),
 									},
 								},
 								Ports: []corev1.ContainerPort{
