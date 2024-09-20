@@ -644,7 +644,7 @@ status:
 
 					dashboardsConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "plutono-dashboards-garden", Namespace: namespace}}
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardsConfigMap), dashboardsConfigMap)).To(Succeed())
-					testDashboardConfigMap(dashboardsConfigMap, 22, values)
+					testDashboardConfigMap(dashboardsConfigMap, 23, values)
 				})
 			})
 		})
