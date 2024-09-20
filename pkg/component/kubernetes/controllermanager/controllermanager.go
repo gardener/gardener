@@ -463,14 +463,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		}
 		vpa.Spec.ResourcePolicy = &vpaautoscalingv1.PodResourcePolicy{
 			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
-				ContainerName: containerName,
-				MinAllowed: corev1.ResourceList{
-					corev1.ResourceMemory: resource.MustParse("50Mi"),
-				},
-				MaxAllowed: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("4"),
-					corev1.ResourceMemory: resource.MustParse("10G"),
-				},
+				ContainerName:    containerName,
 				ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 			}},
 		}
