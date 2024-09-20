@@ -38,6 +38,7 @@ AVAILABLE_CODEGEN_OPTIONS=(
 source $(dirname $0)/vgopath-setup.sh
 
 CODE_GEN_DIR=$(go list -m -f '{{.Dir}}' k8s.io/code-generator)
+source "${CODE_GEN_DIR}/kube_codegen.sh"
 
 rm -f ${GOPATH}/bin/*-gen
 
@@ -71,8 +72,6 @@ parse_flags() {
 
 core_groups() {
   echo "Generating API groups for pkg/apis/core"
-
-  source "${CODE_GEN_DIR}/kube_codegen.sh"
   
   kube::codegen::gen_helpers \
     --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
@@ -92,8 +91,6 @@ export -f core_groups
 
 extensions_groups() {
   echo "Generating API groups for pkg/apis/extensions"
-
-  source "${CODE_GEN_DIR}/kube_codegen.sh"
   
   kube::codegen::gen_helpers \
     --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
@@ -105,8 +102,6 @@ export -f extensions_groups
 
 resources_groups() {
   echo "Generating API groups for pkg/apis/resources"
-
-  source "${CODE_GEN_DIR}/kube_codegen.sh"
   
   kube::codegen::gen_helpers \
     --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
@@ -118,8 +113,6 @@ export -f resources_groups
 
 operator_groups() {
   echo "Generating API groups for pkg/apis/operator"
-
-  source "${CODE_GEN_DIR}/kube_codegen.sh"
   
   kube::codegen::gen_helpers \
     --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
@@ -131,8 +124,6 @@ export -f operator_groups
 
 seedmanagement_groups() {
   echo "Generating API groups for pkg/apis/seedmanagement"
-
-  source "${CODE_GEN_DIR}/kube_codegen.sh"
   
   kube::codegen::gen_helpers \
     --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
@@ -152,8 +143,6 @@ export -f seedmanagement_groups
 
 settings_groups() {
   echo "Generating API groups for pkg/apis/settings"
-
-  source "${CODE_GEN_DIR}/kube_codegen.sh"
   
   kube::codegen::gen_helpers \
     --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
@@ -173,8 +162,6 @@ export -f settings_groups
 
 security_groups() {
   echo "Generating API groups for pkg/apis/security"
-
-  source "${CODE_GEN_DIR}/kube_codegen.sh"
   
   kube::codegen::gen_helpers \
     --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
@@ -194,8 +181,6 @@ export -f security_groups
 
 operations_groups() {
   echo "Generating API groups for pkg/apis/operations"
-
-  source "${CODE_GEN_DIR}/kube_codegen.sh"
   
   kube::codegen::gen_helpers \
     --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
@@ -207,8 +192,6 @@ export -f operations_groups
 
 authentication_groups() {
   echo "Generating API groups for pkg/apis/authentication"
-
-  source "${CODE_GEN_DIR}/kube_codegen.sh"
   
   kube::codegen::gen_helpers \
     --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
@@ -220,8 +203,6 @@ export -f authentication_groups
 
 operatorconfig_groups() {
   echo "Generating API groups for pkg/operator/apis/config"
-
-  source "${CODE_GEN_DIR}/kube_codegen.sh"
   
   kube::codegen::gen_helpers \
     --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
@@ -240,8 +221,6 @@ export -f operatorconfig_groups
 
 controllermanager_groups() {
   echo "Generating API groups for pkg/controllermanager/apis/config"
-
-  source "${CODE_GEN_DIR}/kube_codegen.sh"
   
   kube::codegen::gen_helpers \
     --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
@@ -260,8 +239,6 @@ export -f controllermanager_groups
 
 admissioncontroller_groups() {
   echo "Generating API groups for pkg/admissioncontroller/apis/config"
-
-  source "${CODE_GEN_DIR}/kube_codegen.sh"
   
   kube::codegen::gen_helpers \
     --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
@@ -279,8 +256,6 @@ export -f admissioncontroller_groups
 
 scheduler_groups() {
   echo "Generating API groups for pkg/scheduler/apis/config"
-
-  source "${CODE_GEN_DIR}/kube_codegen.sh"
   
   kube::codegen::gen_helpers \
     --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
@@ -299,8 +274,6 @@ export -f scheduler_groups
 
 gardenlet_groups() {
   echo "Generating API groups for pkg/gardenlet/apis/config"
-
-  source "${CODE_GEN_DIR}/kube_codegen.sh"
   
   kube::codegen::gen_helpers \
     --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
@@ -319,8 +292,6 @@ export -f gardenlet_groups
 
 resourcemanager_groups() {
   echo "Generating API groups for pkg/resourcemanager/apis/config"
-
-  source "${CODE_GEN_DIR}/kube_codegen.sh"
   
   kube::codegen::gen_helpers \
     --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
@@ -339,8 +310,6 @@ export -f resourcemanager_groups
 
 nodeagent_groups() {
   echo "Generating API groups for pkg/nodeagent/apis/config"
-
-  source "${CODE_GEN_DIR}/kube_codegen.sh"
   
   kube::codegen::gen_helpers \
     --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
@@ -359,8 +328,6 @@ export -f nodeagent_groups
 
 shoottolerationrestriction_groups() {
   echo "Generating API groups for plugin/pkg/shoot/tolerationrestriction/apis/shoottolerationrestriction"
-
-  source "${CODE_GEN_DIR}/kube_codegen.sh"
   
   kube::codegen::gen_helpers \
     --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
@@ -376,8 +343,6 @@ export -f shoottolerationrestriction_groups
 
 shootdnsrewriting_groups() {
   echo "Generating API groups for plugin/pkg/shoot/dnsrewriting/apis/shootdnsrewriting"
-
-  source "${CODE_GEN_DIR}/kube_codegen.sh"
   
   kube::codegen::gen_helpers \
     --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
@@ -393,8 +358,6 @@ export -f shootdnsrewriting_groups
 
 shootresourcereservation_groups() {
   echo "Generating API groups for plugin/pkg/shoot/resourcereservation/apis/shootresourcereservation"
-
-  source "${CODE_GEN_DIR}/kube_codegen.sh"
   
   kube::codegen::gen_helpers \
     --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
@@ -412,8 +375,6 @@ export -f shootresourcereservation_groups
 
 provider_local_groups() {
   echo "Generating API groups for pkg/provider-local/apis/local"
-
-  source "${CODE_GEN_DIR}/kube_codegen.sh"
   
   kube::codegen::gen_helpers \
     --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
@@ -430,8 +391,6 @@ export -f provider_local_groups
 
 extensions_config_groups() {
   echo "Generating API groups for extensions/pkg/apis/config"
-
-  source "${CODE_GEN_DIR}/kube_codegen.sh"
   
   kube::codegen::gen_helpers \
     --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
