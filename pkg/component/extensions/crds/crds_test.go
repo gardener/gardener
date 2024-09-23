@@ -50,9 +50,9 @@ var _ = Describe("#CRDs", func() {
 		Expect(crdDeployer.Deploy(ctx)).ToNot(HaveOccurred(), "extensions crds deploy succeeds")
 	})
 
-	When("shoot CRDs are not excluded", func() {
+	When("shoot CRDs are included", func() {
 		BeforeEach(func() {
-			crdDeployer = crds.NewCRD(applier, false, false)
+			crdDeployer = crds.NewCRD(applier, true, true)
 		})
 
 		DescribeTable("CRD is deployed",
@@ -97,9 +97,9 @@ var _ = Describe("#CRDs", func() {
 		)
 	})
 
-	When("shoot CRDs are excluded", func() {
+	When("shoot CRDs are not included", func() {
 		BeforeEach(func() {
-			crdDeployer = crds.NewCRD(applier, false, true)
+			crdDeployer = crds.NewCRD(applier, true, false)
 		})
 
 		DescribeTable("CRD is deployed",
@@ -144,9 +144,9 @@ var _ = Describe("#CRDs", func() {
 		)
 	})
 
-	When("general CRDs are excluded", func() {
+	When("general CRDs are not included", func() {
 		BeforeEach(func() {
-			crdDeployer = crds.NewCRD(applier, true, false)
+			crdDeployer = crds.NewCRD(applier, false, true)
 		})
 
 		DescribeTable("CRD is deployed",
@@ -189,5 +189,64 @@ var _ = Describe("#CRDs", func() {
 			Entry("OperatingSystemConfig", "operatingsystemconfigs.extensions.gardener.cloud", Succeed()),
 			Entry("Worker", "workers.extensions.gardener.cloud", Succeed()),
 		)
+	})
+
+	When("deleting CRDs", func() {
+		BeforeEach(func() {
+			crdDeployer = crds.NewCRD(applier, true, true)
+		})
+
+		It("should delete all CRDs", func() {
+			Expect(crdDeployer.Destroy(ctx)).To(Succeed(), "extensions crds deletion succeeds")
+
+			Expect(c.Get(ctx, client.ObjectKey{Name: "backupbuckets.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "backupentries.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "bastions.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "clusters.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "containerruntimes.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "controlplanes.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "dnsrecords.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "extensions.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "infrastructures.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "networks.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "operatingsystemconfigs.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "workers.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
+		})
+
+		It("should delete shoot CRDs only", func() {
+			crdDeployer = crds.NewCRD(applier, false, true)
+			Expect(crdDeployer.Destroy(ctx)).To(Succeed(), "extensions crds deletion succeeds")
+
+			Expect(c.Get(ctx, client.ObjectKey{Name: "backupbuckets.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "backupentries.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "bastions.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "clusters.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "containerruntimes.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "controlplanes.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "dnsrecords.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "extensions.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "infrastructures.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "networks.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "operatingsystemconfigs.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "workers.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
+		})
+
+		It("should delete general CRDs only", func() {
+			crdDeployer = crds.NewCRD(applier, true, false)
+			Expect(crdDeployer.Destroy(ctx)).To(Succeed(), "extensions crds deletion succeeds")
+
+			Expect(c.Get(ctx, client.ObjectKey{Name: "backupbuckets.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "backupentries.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "bastions.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "clusters.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "containerruntimes.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "controlplanes.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "dnsrecords.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "extensions.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "infrastructures.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "networks.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "operatingsystemconfigs.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKey{Name: "workers.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
+		})
 	})
 })

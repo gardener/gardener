@@ -429,7 +429,7 @@ func (d *SwitchOptions) AddFlags(fs *pflag.FlagSet) {
 	for name := range d.nameToAddToManager {
 		controllerNames = append(controllerNames, name)
 	}
-	fs.StringSliceVar(&d.Enabled, ControllersFlag, controllerNames, fmt.Sprintf("List of controllers to enable %v", controllerNames))
+	fs.StringSliceVar(&d.Enabled, ControllersFlag, controllerNames, fmt.Sprintf("List of controllers to enable. If not set, all controllers are enabled. %v", controllerNames))
 	fs.StringSliceVar(&d.Disabled, DisableFlag, d.Disabled, fmt.Sprintf("List of controllers to disable %v", controllerNames))
 }
 

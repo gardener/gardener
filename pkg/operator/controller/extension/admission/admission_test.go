@@ -112,7 +112,7 @@ var _ = Describe("Deployment", func() {
 		})
 
 		It("should fail when virtual OCI artifact is not found", func() {
-			Expect(admission.Reconcile(ctx, log, virtualClientSet, genericKubeconfigSecretName, extension)).To(MatchError(`failed pulling Helm chart from OCI repository: not found`))
+			Expect(admission.Reconcile(ctx, log, virtualClientSet, genericKubeconfigSecretName, extension)).To(MatchError(`failed pulling Helm chart from OCI repository "local-extension-virtual:v1.2.3": not found`))
 		})
 
 		It("should fail when runtime OCI artifact is not found", func() {
@@ -123,7 +123,7 @@ var _ = Describe("Deployment", func() {
 				return nil
 			})()
 
-			Expect(admission.Reconcile(ctx, log, virtualClientSet, genericKubeconfigSecretName, extension)).To(MatchError(`failed pulling Helm chart from OCI repository: not found`))
+			Expect(admission.Reconcile(ctx, log, virtualClientSet, genericKubeconfigSecretName, extension)).To(MatchError(`failed pulling Helm chart from OCI repository "local-extension-runtime:v1.2.3": not found`))
 			Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: "extension-admission-virtual-" + extensionName, Namespace: "garden"}, &resourcesv1alpha1.ManagedResource{})).To(Succeed())
 		})
 

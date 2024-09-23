@@ -117,17 +117,17 @@ func (r *Reconciler) reconcile(
 		})
 	)
 
-	if flowErr := g.Compile().Run(reconcileCtx, flow.Opts{
+	if err := g.Compile().Run(reconcileCtx, flow.Opts{
 		Log: log,
-	}); flowErr != nil {
-		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionFalse, ConditionReconcileFailed, flowErr.Error())
+	}); err != nil {
+		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionFalse, ConditionReconcileFailed, err.Error())
 		if err := r.updateExtensionStatus(ctx, log, extension, conditions); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to update extension status: %w", err)
 		}
 		if !reflect.DeepEqual(reconcileResult, reconcile.Result{}) {
 			return reconcileResult, nil
 		}
-		return reconcile.Result{}, errors.Join(flowErr, r.updateExtensionStatus(ctx, log, extension, conditions))
+		return reconcile.Result{}, errors.Join(err, r.updateExtensionStatus(ctx, log, extension, conditions))
 	}
 
 	conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionTrue, ConditionReconcileSuccess, "Extension has been reconciled successfully")

@@ -369,14 +369,14 @@ func (r *Reconciler) checkIfVirtualGardenManagedResourcesExist() func(context.Co
 			return err
 		}
 
-		if !managedResourcesStillExist {
-			return nil
+		if managedResourcesStillExist {
+			return &reconcilerutils.RequeueAfterError{
+				RequeueAfter: 5 * time.Second,
+				Cause:        errors.New("at least one ManagedResource still exists"),
+			}
 		}
 
-		return &reconcilerutils.RequeueAfterError{
-			RequeueAfter: 5 * time.Second,
-			Cause:        errors.New("at least one ManagedResource still exists"),
-		}
+		return nil
 	}
 }
 

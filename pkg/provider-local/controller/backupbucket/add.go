@@ -17,7 +17,7 @@ import (
 )
 
 // ControllerName is the name of the controller.
-const ControllerName = "backupbucket_controller"
+const ControllerName = "backupbucket"
 
 var (
 	// DefaultAddOptions are the default AddOptions for AddToManager.

@@ -424,10 +424,8 @@ func CheckIfManagedResourcesExist(ctx context.Context, c client.Client, class *s
 		return false, err
 	}
 
-	excludes := sets.New(excludeNames...)
-
 	for _, managedResource := range managedResourceList.Items {
-		if ptr.Equal(managedResource.Spec.Class, class) && !excludes.Has(managedResource.Name) {
+		if ptr.Equal(managedResource.Spec.Class, class) && !sets.New(excludeNames...).Has(managedResource.Name) {
 			return true, nil
 		}
 	}

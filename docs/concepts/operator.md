@@ -156,27 +156,26 @@ Each one is described in more details below.
 
 ##### Runtime
 
-The `extension` controller can be deployed in the runtime cluster to manage resources required by the `Garden` resource (e.g. `BackupBucket`, `DNSRecord`, `Extension`).
+The `extension` controller can manage resources required by the `Garden` resource (e.g. `BackupBucket`, `DNSRecord`, `Extension`) in the runtime cluster.
 Since the environment in the runtime cluster may differ from that of a `Seed`, the extension is installed in the runtime cluster with a distinct set of Helm chart values specified in `.spec.deployment.extension.runtimeValues`.
-If no `runtimeValues` are not given, the extension deployment for the runtime garden is considered superfluous and the deployment is skipped or uninstalled.
-This configuration allows for precise control over various extension parameters, such as requested resources, [priority classes](../development/priority-classes.md), and more.
+If no `runtimeValues` are provided, the extension deployment for the runtime garden is considered superfluous and the deployment is uninstalled.
+The configuration allows for precise control over various extension parameters, such as requested resources, [priority classes](../development/priority-classes.md), and more.
 
-Besides the values configure in `.spec.deployment.extension.runtimeValues`, a runtime deployment indicator is merged into the values:
+Besides the values configured in `.spec.deployment.extension.runtimeValues`, a runtime deployment flag and a priority class are merged into the values:
 
 ```yaml
 gardener:
   runtimeCluster:
-    enabled: true # indicates the extension deployment is responsible for the Garden cluster, e.g. for handling `BackupBucket`, `DNSRecord` and `Extension` objects.
-    priorityClassName: gardener-garden-system-100
+    enabled: true # indicates the extension is enabled for the Garden cluster, e.g. for handling `BackupBucket`, `DNSRecord` and `Extension` objects.
+    priorityClassName: gardener-garden-system-200
 ```
 
-As soon as a `garden` object is created and `runtimeValues` are configured, the extension is deployed in the runtime cluster. 
+As soon as a `Garden` object is created and `runtimeValues` are configured, the extension is deployed in the runtime cluster. 
 
 ##### Extension Registration
 
-Registering extensions for shoot clusters, e.g. cloud provider extensions, is mainly implemented through `ControllerRegistration`/`ControllerDeployment` resources.
-However, the `extension` controller helps to transform the information from an `Extension` object into these registration resources, so that `Extension`s become the single point of contact to enable such in the entire Garden landscape.
-The controller automatically applies the corresponding `ControllerRegistration` and `ControllerDeployment` objects, once the virtual garden cluster is available.
+When the virtual garden cluster is available, the `extension` controller manages [`ControllerRegistration`/`ControllerDeployment` resources](../extensions/controllerregistration.md#registering-extension-controllers)
+to register extensions for shoots.  The fields of `.spec.deployment.extension` include their configuration options. 
 
 #### Configuration for Admission Deployment
 

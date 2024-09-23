@@ -51,6 +51,7 @@ func (r *registration) Reconcile(ctx context.Context, log logr.Logger, extension
 		return nil
 	}
 
+	log.Info("Deploying ControllerRegistration and ControllerDeployment")
 	if err := r.createOrUpdateControllerRegistration(ctx, extension); err != nil {
 		return fmt.Errorf("failed to reconcile ControllerRegistration: %w", err)
 	}

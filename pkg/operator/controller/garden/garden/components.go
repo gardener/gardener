@@ -169,7 +169,7 @@ func (r *Reconciler) instantiateComponents(
 	c.fluentCRD = fluentoperator.NewCRDs(applier)
 	c.prometheusCRD = prometheusoperator.NewCRDs(applier)
 	c.certManagementCRD = certmanagement.NewCRDs(applier)
-	c.extensionCRD = extensioncrds.NewCRD(applier, false, true)
+	c.extensionCRD = extensioncrds.NewCRD(applier, true, false)
 
 	// garden system components
 	c.gardenerResourceManager, err = r.newGardenerResourceManager(garden, secretsManager)

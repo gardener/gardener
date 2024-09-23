@@ -56,11 +56,11 @@ func (r *Reconciler) delete(
 
 	conditions := NewConditions(r.Clock, extension.Status)
 
-	if flowErr := g.Compile().Run(deleteCtx, flow.Opts{
+	if err := g.Compile().Run(deleteCtx, flow.Opts{
 		Log: log,
-	}); flowErr != nil {
-		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionFalse, ConditionDeleteFailed, flowErr.Error())
-		return reconcile.Result{}, errors.Join(flowErr, r.updateExtensionStatus(ctx, log, extension, conditions))
+	}); err != nil {
+		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionFalse, ConditionDeleteFailed, err.Error())
+		return reconcile.Result{}, errors.Join(err, r.updateExtensionStatus(ctx, log, extension, conditions))
 	}
 
 	conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionFalse, ConditionDeleteSuccessful, "Extension has been deleted successfully")

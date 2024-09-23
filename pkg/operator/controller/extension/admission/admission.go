@@ -96,7 +96,7 @@ func runtimeManagedResourceName(extension *operatorv1alpha1.Extension) string {
 func (d *deployment) createOrUpdateAdmissionRuntimeClusterResources(ctx context.Context, genericTokenKubeconfigSecretName string, extension *operatorv1alpha1.Extension) error {
 	archive, err := d.helmRegistry.Pull(ctx, extension.Spec.Deployment.AdmissionDeployment.RuntimeCluster.Helm.OCIRepository)
 	if err != nil {
-		return fmt.Errorf("failed pulling Helm chart from OCI repository: %w", err)
+		return fmt.Errorf("failed pulling Helm chart from OCI repository %q: %w", extension.Spec.Deployment.AdmissionDeployment.RuntimeCluster.Helm.OCIRepository.GetURL(), err)
 	}
 
 	accessSecret := d.getVirtualClusterAccessSecret(resourceName(extension))
@@ -121,7 +121,7 @@ func (d *deployment) createOrUpdateAdmissionRuntimeClusterResources(ctx context.
 
 	renderedChart, err := d.runtimeClientSet.ChartRenderer().RenderArchive(archive, extension.Name, v1beta1constants.GardenNamespace, utils.MergeMaps(helmValues, gardenerValues))
 	if err != nil {
-		return fmt.Errorf("failed rendering Helm chart: %w", err)
+		return fmt.Errorf("failed rendering Helm chart %q: %w", extension.Spec.Deployment.AdmissionDeployment.RuntimeCluster.Helm.OCIRepository.GetURL(), err)
 	}
 
 	secretData := renderedChart.AsSecretData()
@@ -186,7 +186,7 @@ func admissionVirtualManagedResourceName(extension *operatorv1alpha1.Extension) 
 func (d *deployment) createOrUpdateAdmissionVirtualClusterResources(ctx context.Context, virtualClusterClientSet kubernetes.Interface, extension *operatorv1alpha1.Extension) error {
 	archive, err := d.helmRegistry.Pull(ctx, extension.Spec.Deployment.AdmissionDeployment.VirtualCluster.Helm.OCIRepository)
 	if err != nil {
-		return fmt.Errorf("failed pulling Helm chart from OCI repository: %w", err)
+		return fmt.Errorf("failed pulling Helm chart from OCI repository %q: %w", extension.Spec.Deployment.AdmissionDeployment.VirtualCluster.Helm.OCIRepository.GetURL(), err)
 	}
 
 	accessSecret := d.getVirtualClusterAccessSecret(resourceName(extension))
@@ -211,7 +211,7 @@ func (d *deployment) createOrUpdateAdmissionVirtualClusterResources(ctx context.
 
 	renderedChart, err := virtualClusterClientSet.ChartRenderer().RenderArchive(archive, extension.Name, v1beta1constants.GardenNamespace, utils.MergeMaps(helmValues, gardenerValues))
 	if err != nil {
-		return fmt.Errorf("failed rendering Helm chart: %w", err)
+		return fmt.Errorf("failed rendering Helm chart %q: %w", extension.Spec.Deployment.AdmissionDeployment.VirtualCluster.Helm.OCIRepository.GetURL(), err)
 	}
 
 	managedResourceName := admissionVirtualManagedResourceName(extension)

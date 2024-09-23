@@ -8,6 +8,8 @@ import (
 	"context"
 	_ "embed"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -65,16 +67,16 @@ func init() {
 
 type crd struct {
 	applier            kubernetes.Applier
-	excludeGeneralCRDs bool
-	excludeShootCRDs   bool
+	includeGeneralCRDs bool
+	includeShootCRDs   bool
 }
 
 // NewCRD can be used to deploy extensions CRDs.
-func NewCRD(a kubernetes.Applier, excludeGeneralCRDs, excludeShootCRDs bool) component.DeployWaiter {
+func NewCRD(a kubernetes.Applier, includeGeneralCRDs, includeShootCRDs bool) component.DeployWaiter {
 	return &crd{
 		applier:            a,
-		excludeGeneralCRDs: excludeGeneralCRDs,
-		excludeShootCRDs:   excludeShootCRDs,
+		includeGeneralCRDs: includeGeneralCRDs,
+		includeShootCRDs:   includeShootCRDs,
 	}
 }
 
@@ -83,10 +85,10 @@ func (c *crd) Deploy(ctx context.Context) error {
 	var fns []flow.TaskFn
 
 	var resources []string
-	if !c.excludeGeneralCRDs {
+	if c.includeGeneralCRDs {
 		resources = append(resources, generalCRDs...)
 	}
-	if !c.excludeShootCRDs {
+	if c.includeShootCRDs {
 		resources = append(resources, shootCRDs...)
 	}
 
@@ -101,8 +103,25 @@ func (c *crd) Deploy(ctx context.Context) error {
 }
 
 // Destroy does nothing
-func (c *crd) Destroy(_ context.Context) error {
-	return nil
+func (c *crd) Destroy(ctx context.Context) error {
+	var fns []flow.TaskFn
+
+	var resources []string
+	if c.includeGeneralCRDs {
+		resources = append(resources, generalCRDs...)
+	}
+	if c.includeShootCRDs {
+		resources = append(resources, shootCRDs...)
+	}
+
+	for _, resource := range resources {
+		r := resource
+		fns = append(fns, func(ctx context.Context) error {
+			return client.IgnoreNotFound(c.applier.DeleteManifest(ctx, kubernetes.NewManifestReader([]byte(r))))
+		})
+	}
+
+	return flow.Parallel(fns...)(ctx)
 }
 
 // Wait does nothing

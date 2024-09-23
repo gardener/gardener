@@ -94,7 +94,7 @@ var _ = Describe("Deployment", func() {
 
 	Describe("#Reconcile", func() {
 		It("should fail when OCI artifact is not found", func() {
-			Expect(runtime.Reconcile(ctx, log, extension)).To(MatchError(`failed pulling Helm chart from OCI repository: not found`))
+			Expect(runtime.Reconcile(ctx, log, extension)).To(MatchError(`failed pulling Helm chart from OCI repository "local-extension-runtime:v1.2.3": not found`))
 		})
 
 		It("should succeed reconciling the extension resources", func() {
@@ -109,7 +109,7 @@ var _ = Describe("Deployment", func() {
 				"gardener": map[string]any{
 					"runtimeCluster": map[string]any{
 						"enabled":           "true",
-						"priorityClassName": "gardener-garden-system-100",
+						"priorityClassName": "gardener-garden-system-200",
 					},
 				},
 			}
