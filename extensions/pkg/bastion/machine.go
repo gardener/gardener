@@ -58,6 +58,10 @@ func getMachine(bastion *gardencorev1beta1.Bastion, machineTypes []gardencorev1b
 		}
 
 		machine := machineTypes[machineIndex]
+		if machine.Architecture == nil {
+			return "", "",
+				fmt.Errorf("architecture for specified bastion machine type %s is <nil>", bastion.MachineType.Name)
+		}
 		return machine.Name, *machine.Architecture, nil
 	}
 
