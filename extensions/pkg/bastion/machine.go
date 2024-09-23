@@ -15,29 +15,32 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
-// VMDetails define all bastion vm details derived from the CloudProfile
-type VMDetails struct {
+// MachineSpec define all bastion vm details derived from the CloudProfile
+type MachineSpec struct {
 	MachineName   string
 	Architecture  string
 	ImageBaseName string
 	ImageVersion  string
 }
 
-// DetermineVmDetails determines the bastion vm details based on information in the cloud profile
-func DetermineVmDetails(spec gardencorev1beta1.CloudProfileSpec) (vm VMDetails, err error) {
-	imageArchs, err := getArchitectures(spec.Bastion, spec.MachineImages)
-	if err != nil {
-		return VMDetails{}, err
+// GetMachineSpecFromCloudProfile determines the bastion vm details based on information in the cloud profile
+func GetMachineSpecFromCloudProfile(profile *gardencorev1beta1.CloudProfile) (vm MachineSpec, err error) {
+	if profile == nil {
+		return MachineSpec{}, fmt.Errorf("cloudprofile is nil")
 	}
-	vm.MachineName, vm.Architecture, err = getMachine(spec.Bastion, spec.MachineTypes, imageArchs)
+	imageArchs, err := getArchitectures(profile.Spec.Bastion, profile.Spec.MachineImages)
 	if err != nil {
-		return VMDetails{}, err
+		return MachineSpec{}, err
 	}
-	vm.ImageBaseName, err = getImageName(spec.Bastion, spec.MachineImages, vm.Architecture)
+	vm.MachineName, vm.Architecture, err = getMachine(profile.Spec.Bastion, profile.Spec.MachineTypes, imageArchs)
 	if err != nil {
-		return VMDetails{}, err
+		return MachineSpec{}, err
 	}
-	vm.ImageVersion, err = getImageVersion(vm.ImageBaseName, vm.Architecture, spec.Bastion, spec.MachineImages)
+	vm.ImageBaseName, err = getImageName(profile.Spec.Bastion, profile.Spec.MachineImages, vm.Architecture)
+	if err != nil {
+		return MachineSpec{}, err
+	}
+	vm.ImageVersion, err = getImageVersion(vm.ImageBaseName, vm.Architecture, profile.Spec.Bastion, profile.Spec.MachineImages)
 	return vm, err
 }
 
