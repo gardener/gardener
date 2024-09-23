@@ -29,7 +29,7 @@ func GetMachineSpecFromCloudProfile(profile *gardencorev1beta1.CloudProfile) (vm
 	if profile == nil {
 		return MachineSpec{}, fmt.Errorf("cloudprofile is nil")
 	}
-	imageArchs, err := getArchitectures(profile.Spec.Bastion, profile.Spec.MachineImages)
+	imageArchs, err := getImageArchitectures(profile.Spec.Bastion, profile.Spec.MachineImages)
 	if err != nil {
 		return MachineSpec{}, err
 	}
@@ -85,47 +85,45 @@ func getMachine(bastion *gardencorev1beta1.Bastion, machineTypes []gardencorev1b
 	return
 }
 
-// getArchitectures finds the supported architectures of the cloudProfiles images
+// getImageArchitectures finds the supported architectures of the cloudProfile images
 // returning an empty array means all architectures are allowed
-func getArchitectures(bastion *gardencorev1beta1.Bastion, images []gardencorev1beta1.MachineImage) ([]string, error) {
-	archs := sets.New[string]()
+func getImageArchitectures(bastion *gardencorev1beta1.Bastion, images []gardencorev1beta1.MachineImage) ([]string, error) {
+	architectures := sets.New[string]()
 
 	findSupportedArchs := func(versions []gardencorev1beta1.MachineImageVersion, bastionVersion *string) {
 		for _, version := range versions {
 			if bastionVersion != nil && version.Version == *bastionVersion {
-				archs = sets.New[string]()
+				architectures = sets.New[string]()
 				for _, arch := range version.Architectures {
-					archs.Insert(arch)
+					architectures.Insert(arch)
 				}
 				return
 			}
 
 			if version.Classification != nil && *version.Classification == gardencorev1beta1.ClassificationSupported {
 				for _, arch := range version.Architectures {
-					archs.Insert(arch)
+					architectures.Insert(arch)
 				}
 			}
 		}
 	}
 
-	// if no bastion or only bastion.MachineType is set: find all supported archs of all images
+	// if bastion or bastion.Image is nil: find all supported architectures of all images
 	if bastion == nil || bastion.MachineImage == nil {
 		for _, image := range images {
 			findSupportedArchs(image.Versions, nil)
 		}
-		return maps.Keys(archs), nil
+		return maps.Keys(architectures), nil
 	}
 
-	// if only machineImage is set: find all supported versions if no version is set otherwise return arch of version
+	// find architectures of the specified image
 	if bastion.MachineImage != nil && bastion.MachineType == nil {
 		image, err := findImageByName(images, bastion.MachineImage.Name)
 		if err != nil {
 			return nil, err
 		}
-
 		findSupportedArchs(image.Versions, bastion.MachineImage.Version)
-
-		return maps.Keys(archs), nil
+		return maps.Keys(architectures), nil
 	}
 
 	return nil, nil
