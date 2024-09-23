@@ -16,6 +16,7 @@ type Configuration struct {
 	// UseGKEFormula enables the calculation of resource reservations based on
 	// the CPU and memory resources available for a machine type.
 	UseGKEFormula bool `json:"useGKEFormula"`
-	// LabelSelector optionally defines a label selector for which the GKE formula should be applied
-	LabelSelector string `json:"labelSelector,omitempty"`
+	// Selector optionally defines a label selector for which the GKE formula should be applied
+	// +optional
+	Selector *metav1.LabelSelector `json:"selector,omitempty"`
 }

@@ -24,4 +24,6 @@ plugins:
    apiVersion: shootresourcereservation.admission.gardener.cloud/v1alpha1
    kind: Configuration
    useGKEFormula: false
-#   labelSelector: shootresources.gardener.cloud/workerspecificreservations=true
+#  selector:
+#    matchLabels:
+#      shoot.gardener.cloud/worker-specific-reservations: "true"

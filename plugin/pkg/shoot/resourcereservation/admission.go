@@ -12,6 +12,7 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
@@ -40,12 +41,12 @@ func Register(plugins *admission.Plugins) {
 			return nil, err
 		}
 
-		parsedLabelSelector, err := labels.Parse(cfg.LabelSelector)
+		selector, err := metav1.LabelSelectorAsSelector(cfg.Selector)
 		if err != nil {
 			return nil, err
 		}
 
-		return New(cfg.UseGKEFormula, parsedLabelSelector), nil
+		return New(cfg.UseGKEFormula, selector), nil
 	})
 }
 
