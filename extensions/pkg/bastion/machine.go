@@ -90,9 +90,9 @@ func getMachine(bastion *gardencorev1beta1.Bastion, machineTypes []gardencorev1b
 func getImageArchitectures(bastion *gardencorev1beta1.Bastion, images []gardencorev1beta1.MachineImage) ([]string, error) {
 	architectures := sets.New[string]()
 
-	findSupportedArchs := func(versions []gardencorev1beta1.MachineImageVersion, bastionVersion *string) {
+	findSupportedArchs := func(versions []gardencorev1beta1.MachineImageVersion, bastionImageVersion *string) {
 		for _, version := range versions {
-			if bastionVersion != nil && version.Version == *bastionVersion {
+			if bastionImageVersion != nil && version.Version == *bastionImageVersion {
 				architectures = sets.New[string]()
 				for _, arch := range version.Architectures {
 					architectures.Insert(arch)
