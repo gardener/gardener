@@ -10,6 +10,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"golang.org/x/exp/maps"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -87,21 +88,21 @@ func getMachine(bastion *gardencorev1beta1.Bastion, machineTypes []gardencorev1b
 // getArchitectures finds the supported architectures of the cloudProfiles images
 // returning an empty array means all architectures are allowed
 func getArchitectures(bastion *gardencorev1beta1.Bastion, images []gardencorev1beta1.MachineImage) ([]string, error) {
-	archs := make(map[string]bool)
+	archs := sets.New[string]()
 
 	findSupportedArchs := func(versions []gardencorev1beta1.MachineImageVersion, bastionVersion *string) {
 		for _, version := range versions {
 			if bastionVersion != nil && version.Version == *bastionVersion {
-				archs = make(map[string]bool)
+				archs = sets.New[string]()
 				for _, arch := range version.Architectures {
-					archs[arch] = true
+					archs.Insert(arch)
 				}
 				return
 			}
 
 			if version.Classification != nil && *version.Classification == gardencorev1beta1.ClassificationSupported {
 				for _, arch := range version.Architectures {
-					archs[arch] = true
+					archs.Insert(arch)
 				}
 			}
 		}
