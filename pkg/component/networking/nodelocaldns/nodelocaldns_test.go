@@ -538,11 +538,6 @@ spec:
   resourcePolicy:
     containerPolicies:
     - containerName: '*'
-      maxAllowed:
-        cpu: 100m
-        memory: 200Mi
-      minAllowed:
-        memory: 20Mi
   targetRef:
     apiVersion: apps/v1
     kind: DaemonSet
