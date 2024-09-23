@@ -65,28 +65,7 @@ func getMachine(bastion *gardencorev1beta1.Bastion, machineTypes []gardencorev1b
 		return machine.Name, *machine.Architecture, nil
 	}
 
-	// find the machine in cloud profile with the lowest amount of cpus
-	var minCpu *int64
-
-	for _, machine := range machineTypes {
-		if machine.Architecture == nil {
-			continue
-		}
-
-		arch := *machine.Architecture
-		if minCpu == nil || machine.CPU.Value() < *minCpu &&
-			(supportedArchs == nil || slices.Contains(supportedArchs, arch)) {
-			minCpu = ptr.To(machine.CPU.Value())
-			machineName = machine.Name
-			machineArch = arch
-		}
-	}
-
-	if minCpu == nil {
-		return "", "", fmt.Errorf("no suitable machine found")
-	}
-
-	return
+	return findMostSuitableMachineType(machineTypes, supportedArchs)
 }
 
 // getImageArchitectures finds the supported architectures of the cloudProfile images
@@ -207,6 +186,32 @@ func getImageVersion(imageName, machineArch string, bastion *gardencorev1beta1.B
 		return "", fmt.Errorf("could not find any supported image version for %s and arch %s", imageName, machineArch)
 	}
 	return greatest.String(), nil
+}
+
+// findMostSuitableMachineType searches for the machine type that satisfies certain criteria
+// currently we try to find the machine with the lowest amount of cpus
+func findMostSuitableMachineType(machineTypes []gardencorev1beta1.MachineType, supportedArchs []string) (machineName string, machineArch string, err error) {
+	var minCpu *int64
+
+	for _, machine := range machineTypes {
+		if machine.Architecture == nil {
+			continue
+		}
+
+		arch := *machine.Architecture
+		if minCpu == nil || machine.CPU.Value() < *minCpu &&
+			(supportedArchs == nil || slices.Contains(supportedArchs, arch)) {
+			minCpu = ptr.To(machine.CPU.Value())
+			machineName = machine.Name
+			machineArch = arch
+		}
+	}
+
+	if minCpu == nil {
+		return "", "", fmt.Errorf("no suitable machine found")
+	}
+
+	return
 }
 
 // findImageByName returns image object found by name in the cloudProfile
