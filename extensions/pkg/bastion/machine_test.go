@@ -23,10 +23,10 @@ var _ = Describe("Bastion VM Details", func() {
 
 	BeforeEach(func() {
 		desired = MachineSpec{
-			MachineName:   "small_machine",
-			Architecture:  "amd64",
-			ImageBaseName: "gardenlinux",
-			ImageVersion:  "1.2.3",
+			MachineTypeName: "small_machine",
+			Architecture:    "amd64",
+			ImageBaseName:   "gardenlinux",
+			ImageVersion:    "1.2.3",
 		}
 		cloudProfile = &gardencorev1beta1.CloudProfile{
 			Spec: gardencorev1beta1.CloudProfileSpec{
@@ -35,12 +35,12 @@ var _ = Describe("Bastion VM Details", func() {
 						Name: desired.ImageBaseName,
 					},
 					MachineType: &gardencorev1beta1.BastionMachineType{
-						Name: desired.MachineName,
+						Name: desired.MachineTypeName,
 					},
 				},
 				MachineTypes: []gardencorev1beta1.MachineType{{
 					CPU:          resource.MustParse("4"),
-					Name:         desired.MachineName,
+					Name:         desired.MachineTypeName,
 					Architecture: ptr.To(desired.Architecture),
 				}},
 				MachineImages: []gardencorev1beta1.MachineImage{{
@@ -154,7 +154,7 @@ var _ = Describe("Bastion VM Details", func() {
 			})
 			details, err := GetMachineSpecFromCloudProfile(cloudProfile)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(details.MachineName).To(DeepEqual("smallerMachine"))
+			Expect(details.MachineTypeName).To(DeepEqual("smallerMachine"))
 		})
 
 		It("should only use supported version", func() {

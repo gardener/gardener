@@ -18,10 +18,10 @@ import (
 
 // MachineSpec define all bastion vm details derived from the CloudProfile
 type MachineSpec struct {
-	MachineName   string
-	Architecture  string
-	ImageBaseName string
-	ImageVersion  string
+	MachineTypeName string
+	Architecture    string
+	ImageBaseName   string
+	ImageVersion    string
 }
 
 // GetMachineSpecFromCloudProfile determines the bastion vm details based on information in the cloud profile
@@ -33,7 +33,7 @@ func GetMachineSpecFromCloudProfile(profile *gardencorev1beta1.CloudProfile) (vm
 	if err != nil {
 		return MachineSpec{}, err
 	}
-	vm.MachineName, vm.Architecture, err = getMachine(profile.Spec.Bastion, profile.Spec.MachineTypes, imageArchs)
+	vm.MachineTypeName, vm.Architecture, err = getMachine(profile.Spec.Bastion, profile.Spec.MachineTypes, imageArchs)
 	if err != nil {
 		return MachineSpec{}, err
 	}
