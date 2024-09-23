@@ -117,7 +117,7 @@ func getImageArchitectures(bastion *gardencorev1beta1.Bastion, images []gardenco
 	}
 
 	// find architectures of the specified image
-	if bastion.MachineImage != nil && bastion.MachineType == nil {
+	if bastion.MachineType == nil {
 		image, err := findImageByName(images, bastion.MachineImage.Name)
 		if err != nil {
 			return nil, err
