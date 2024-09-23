@@ -54,27 +54,7 @@ func NewApplierForConfig(config *rest.Config) (Applier, error) {
 }
 
 func (a *defaultApplier) applyObject(ctx context.Context, desired *unstructured.Unstructured, options MergeFuncs) error {
-	// look up scope of objects' kind to check, if we should default the namespace field
-	mapping, err := a.restMapper.RESTMapping(desired.GroupVersionKind().GroupKind(), desired.GroupVersionKind().Version)
-	if err != nil || mapping == nil {
-		// Don't reset RESTMapper in case of cache misses. Most probably indicates, that the corresponding CRD is not yet applied.
-		// CRD might be applied later as part of the same chart
-
-		// default namespace on a best effort basis
-		if desired.GetKind() != "Namespace" && desired.GetNamespace() == "" {
-			desired.SetNamespace(metav1.NamespaceDefault)
-		}
-	} else {
-		if mapping.Scope.Name() == meta.RESTScopeNameNamespace {
-			// default namespace field to `default` in case of namespaced kinds
-			if desired.GetNamespace() == "" {
-				desired.SetNamespace(metav1.NamespaceDefault)
-			}
-		} else {
-			// unset namespace field in case of non-namespaced kinds
-			desired.SetNamespace("")
-		}
-	}
+	a.setNamespace(desired)
 
 	key := client.ObjectKeyFromObject(desired)
 	if len(key.Name) == 0 {
@@ -83,7 +63,7 @@ func (a *defaultApplier) applyObject(ctx context.Context, desired *unstructured.
 
 	current := &unstructured.Unstructured{}
 	current.SetGroupVersionKind(desired.GroupVersionKind())
-	if err = a.client.Get(ctx, key, current); err != nil {
+	if err := a.client.Get(ctx, key, current); err != nil {
 		if apierrors.IsNotFound(err) {
 			return a.client.Create(ctx, desired)
 		}
@@ -98,9 +78,8 @@ func (a *defaultApplier) applyObject(ctx context.Context, desired *unstructured.
 }
 
 func (a *defaultApplier) deleteObject(ctx context.Context, desired *unstructured.Unstructured, opts *DeleteManifestOptions) error {
-	if desired.GetNamespace() == "" {
-		desired.SetNamespace(metav1.NamespaceDefault)
-	}
+	a.setNamespace(desired)
+
 	if len(desired.GetName()) == 0 {
 		return fmt.Errorf("missing 'metadata.name' in: %+v", desired)
 	}
@@ -292,6 +271,30 @@ func (a *defaultApplier) mergeObjects(newObj, oldObj *unstructured.Unstructured,
 	}
 
 	return nil
+}
+
+// setNamespace looks up scope of objects' kind to check if we should default the namespace field
+func (a *defaultApplier) setNamespace(desired *unstructured.Unstructured) {
+	mapping, err := a.restMapper.RESTMapping(desired.GroupVersionKind().GroupKind(), desired.GroupVersionKind().Version)
+	if err != nil || mapping == nil {
+		// Don't reset RESTMapper in case of cache misses. Most probably indicates, that the corresponding CRD is not yet applied.
+		// CRD might be applied later as part of the same chart
+
+		// default namespace on a best effort basis
+		if desired.GetKind() != "Namespace" && desired.GetNamespace() == "" {
+			desired.SetNamespace(metav1.NamespaceDefault)
+		}
+	} else {
+		if mapping.Scope.Name() == meta.RESTScopeNameNamespace {
+			// default namespace field to `default` in case of namespaced kinds
+			if desired.GetNamespace() == "" {
+				desired.SetNamespace(metav1.NamespaceDefault)
+			}
+		} else {
+			// unset namespace field in case of non-namespaced kinds
+			desired.SetNamespace("")
+		}
+	}
 }
 
 // ApplyManifest is a function which does the same like `kubectl apply -f <file>`. It takes a bunch of manifests <m>,
