@@ -10,7 +10,10 @@
 package v1alpha1
 
 import (
+	unsafe "unsafe"
+
 	shootresourcereservation "github.com/gardener/gardener/plugin/pkg/shoot/resourcereservation/apis/shootresourcereservation"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -37,7 +40,7 @@ func RegisterConversions(s *runtime.Scheme) error {
 
 func autoConvert_v1alpha1_Configuration_To_shootresourcereservation_Configuration(in *Configuration, out *shootresourcereservation.Configuration, s conversion.Scope) error {
 	out.UseGKEFormula = in.UseGKEFormula
-	out.LabelSelector = in.LabelSelector
+	out.Selector = (*v1.LabelSelector)(unsafe.Pointer(in.Selector))
 	return nil
 }
 
@@ -48,7 +51,7 @@ func Convert_v1alpha1_Configuration_To_shootresourcereservation_Configuration(in
 
 func autoConvert_shootresourcereservation_Configuration_To_v1alpha1_Configuration(in *shootresourcereservation.Configuration, out *Configuration, s conversion.Scope) error {
 	out.UseGKEFormula = in.UseGKEFormula
-	out.LabelSelector = in.LabelSelector
+	out.Selector = (*v1.LabelSelector)(unsafe.Pointer(in.Selector))
 	return nil
 }
 
