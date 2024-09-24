@@ -412,7 +412,7 @@ status:
 										Image: values.Image,
 										Resources: corev1.ResourceRequirements{
 											Limits: corev1.ResourceList{
-												corev1.ResourceMemory: resource.MustParse("100Mi"),
+												corev1.ResourceMemory: resource.MustParse("200Mi"),
 											},
 											Requests: corev1.ResourceList{
 												corev1.ResourceCPU:    resource.MustParse("25m"),
@@ -538,6 +538,7 @@ spec:
   resourcePolicy:
     containerPolicies:
     - containerName: '*'
+      controlledValues: RequestsOnly
   targetRef:
     apiVersion: apps/v1
     kind: DaemonSet

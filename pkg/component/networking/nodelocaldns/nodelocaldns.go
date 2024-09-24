@@ -361,7 +361,7 @@ ip6.arpa:53 {
 										corev1.ResourceMemory: resource.MustParse("25Mi"),
 									},
 									Limits: corev1.ResourceList{
-										corev1.ResourceMemory: resource.MustParse("100Mi"),
+										corev1.ResourceMemory: resource.MustParse("200Mi"),
 									},
 								},
 								Args: []string{
@@ -494,7 +494,8 @@ ip6.arpa:53 {
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
-						ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+						ContainerName:    vpaautoscalingv1.DefaultContainerResourcePolicy,
+						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 					}},
 				},
 			},
