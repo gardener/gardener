@@ -222,8 +222,8 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 	if v.values.ClusterType == component.ClusterTypeShoot {
 		// The recommender in the shoot control plane is subject to autoscaling. Use small values and rely on the
 		// autoscaler to adjust them.
-		cpuRequest = "30m"
-		memoryRequest = "200Mi"
+		cpuRequest = "10m"
+		memoryRequest = "15Mi"
 	} else {
 		// Seed recommenders are not subject to autoscaling. Use values which would suffice for large seeds and soil clusters
 		cpuRequest = "200m"
@@ -285,9 +285,6 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 							corev1.ResourceCPU:    resource.MustParse(cpuRequest),
 							corev1.ResourceMemory: resource.MustParse(memoryRequest),
 						},
-						Limits: corev1.ResourceList{
-							corev1.ResourceMemory: resource.MustParse("4Gi"),
-						},
 					},
 				}},
 			},
@@ -310,24 +307,18 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 }
 
 func (v *vpa) reconcileRecommenderVPA(vpa *vpaautoscalingv1.VerticalPodAutoscaler, deployment *appsv1.Deployment) {
-	updateMode := vpaautoscalingv1.UpdateModeAuto
-	controlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-
 	vpa.Spec = vpaautoscalingv1.VerticalPodAutoscalerSpec{
 		TargetRef: &autoscalingv1.CrossVersionObjectReference{
 			APIVersion: "apps/v1",
 			Kind:       "Deployment",
 			Name:       deployment.Name,
 		},
-		UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: &updateMode},
+		UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto)},
 		ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 				{
 					ContainerName:    "*",
-					ControlledValues: &controlledValues,
-					MinAllowed: corev1.ResourceList{
-						corev1.ResourceMemory: resource.MustParse("40Mi"),
-					},
+					ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 				},
 			},
 		},

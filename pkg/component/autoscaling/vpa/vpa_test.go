@@ -385,11 +385,8 @@ var _ = Describe("VPA", func() {
 								},
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{
-										corev1.ResourceCPU:    resource.MustParse("30m"),
-										corev1.ResourceMemory: resource.MustParse("200Mi"),
-									},
-									Limits: corev1.ResourceList{
-										corev1.ResourceMemory: resource.MustParse("4Gi"),
+										corev1.ResourceCPU:    resource.MustParse("10m"),
+										corev1.ResourceMemory: resource.MustParse("15Mi"),
 									},
 								},
 							}},
@@ -450,9 +447,6 @@ var _ = Describe("VPA", func() {
 						{
 							ContainerName:    "*",
 							ControlledValues: &vpaControlledValues,
-							MinAllowed: corev1.ResourceList{
-								corev1.ResourceMemory: resource.MustParse("50Mi"),
-							},
 						},
 					},
 				},
@@ -684,8 +678,8 @@ var _ = Describe("VPA", func() {
 			var cpuRequest string
 			var memoryRequest string
 			if clusterType == component.ClusterTypeShoot {
-				cpuRequest = "30m"
-				memoryRequest = "200Mi"
+				cpuRequest = "10m"
+				memoryRequest = "15Mi"
 			} else {
 				cpuRequest = "200m"
 				memoryRequest = "800M"
@@ -760,9 +754,6 @@ var _ = Describe("VPA", func() {
 										corev1.ResourceCPU:    resource.MustParse(cpuRequest),
 										corev1.ResourceMemory: resource.MustParse(memoryRequest),
 									},
-									Limits: corev1.ResourceList{
-										corev1.ResourceMemory: resource.MustParse("4Gi"),
-									},
 								},
 							}},
 						},
@@ -814,9 +805,6 @@ var _ = Describe("VPA", func() {
 						{
 							ContainerName:    "*",
 							ControlledValues: &vpaControlledValues,
-							MinAllowed: corev1.ResourceList{
-								corev1.ResourceMemory: resource.MustParse("40Mi"),
-							},
 						},
 					},
 				},
@@ -1032,11 +1020,8 @@ var _ = Describe("VPA", func() {
 								LivenessProbe: livenessProbeVpa,
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{
-										corev1.ResourceCPU:    resource.MustParse("30m"),
-										corev1.ResourceMemory: resource.MustParse("200Mi"),
-									},
-									Limits: corev1.ResourceList{
-										corev1.ResourceMemory: resource.MustParse("3Gi"),
+										corev1.ResourceCPU:    resource.MustParse("10m"),
+										corev1.ResourceMemory: resource.MustParse("30Mi"),
 									},
 								},
 								Ports: []corev1.ContainerPort{
@@ -1150,9 +1135,6 @@ var _ = Describe("VPA", func() {
 						{
 							ContainerName:    "*",
 							ControlledValues: &vpaControlledValues,
-							MinAllowed: corev1.ResourceList{
-								corev1.ResourceMemory: resource.MustParse("100Mi"),
-							},
 						},
 					},
 				},

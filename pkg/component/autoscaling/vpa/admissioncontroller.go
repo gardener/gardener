@@ -216,11 +216,8 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 					LivenessProbe: newDefaultLivenessProbe(),
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("30m"),
-							corev1.ResourceMemory: resource.MustParse("200Mi"),
-						},
-						Limits: corev1.ResourceList{
-							corev1.ResourceMemory: resource.MustParse("3Gi"),
+							corev1.ResourceCPU:    resource.MustParse("10m"),
+							corev1.ResourceMemory: resource.MustParse("30Mi"),
 						},
 					},
 					Ports: []corev1.ContainerPort{
@@ -297,24 +294,18 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 }
 
 func (v *vpa) reconcileAdmissionControllerVPA(vpa *vpaautoscalingv1.VerticalPodAutoscaler, deployment *appsv1.Deployment) {
-	updateMode := vpaautoscalingv1.UpdateModeAuto
-	controlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-
 	vpa.Spec = vpaautoscalingv1.VerticalPodAutoscalerSpec{
 		TargetRef: &autoscalingv1.CrossVersionObjectReference{
 			APIVersion: "apps/v1",
 			Kind:       "Deployment",
 			Name:       deployment.Name,
 		},
-		UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: &updateMode},
+		UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto)},
 		ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 				{
 					ContainerName:    "*",
-					ControlledValues: &controlledValues,
-					MinAllowed: corev1.ResourceList{
-						corev1.ResourceMemory: resource.MustParse("100Mi"),
-					},
+					ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 				},
 			},
 		},
