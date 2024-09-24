@@ -89,7 +89,6 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 			managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
 			g.Expect(runtimeClient.List(ctx, managedResourceList, client.InNamespace(namespace))).To(Succeed())
 			g.Expect(managedResourceList.Items).To(ConsistOf(
-				healthyManagedResource("hvpa"),
 				healthyManagedResource("vpa"),
 				healthyManagedResource("etcd-druid"),
 				healthyManagedResource("kube-state-metrics-runtime"),
