@@ -90,32 +90,32 @@ func (d *deployer) createOrUpdateResources(ctx context.Context, extension *opera
 		return fmt.Errorf("failed rendering Helm chart %q: %w", extension.Spec.Deployment.ExtensionDeployment.Helm.OCIRepository.GetURL(), err)
 	}
 
-	managedResourceName := extensionManagedResourceName(extension)
-	if err := managedresources.CreateForSeed(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, managedResourceName, false, renderedChart.AsSecretData()); err != nil {
+	mrName := managedResourceName(extension)
+	if err := managedresources.CreateForSeed(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, mrName, false, renderedChart.AsSecretData()); err != nil {
 		return fmt.Errorf("failed creating ManagedResource: %w", err)
 	}
 
-	if err := managedresources.WaitUntilHealthyAndNotProgressing(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, managedResourceName); err != nil {
+	if err := managedresources.WaitUntilHealthyAndNotProgressing(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, mrName); err != nil {
 		return fmt.Errorf("failed waiting for ManagedResource to be healthy: %w", err)
 	}
 	return nil
 }
 
 func (d *deployer) deleteResources(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension) error {
-	managedResourceName := extensionManagedResourceName(extension)
+	mrName := managedResourceName(extension)
 
-	log.Info("Deleting extension ManagedResource for runtime cluster if present", "managedResource", client.ObjectKey{Name: managedResourceName, Namespace: d.gardenNamespace})
-	if err := managedresources.DeleteForSeed(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, managedResourceName); err != nil {
+	log.Info("Deleting extension ManagedResource for runtime cluster if present", "managedResource", client.ObjectKey{Name: mrName, Namespace: d.gardenNamespace})
+	if err := managedresources.DeleteForSeed(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, mrName); err != nil {
 		return fmt.Errorf("failed deleting ManagedResource: %w", err)
 	}
 
-	if err := managedresources.WaitUntilDeleted(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, managedResourceName); err != nil {
+	if err := managedresources.WaitUntilDeleted(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, mrName); err != nil {
 		return fmt.Errorf("failed waiting for ManagedResource to be deleted: %w", err)
 	}
 	return nil
 }
 
-func extensionManagedResourceName(extension *operatorv1alpha1.Extension) string {
+func managedResourceName(extension *operatorv1alpha1.Extension) string {
 	return fmt.Sprintf("extension-%s-garden", extension.Name)
 }
 

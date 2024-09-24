@@ -85,14 +85,6 @@ func (d *deployment) Delete(ctx context.Context, log logr.Logger, extension *ope
 	return d.deleteAdmissionVirtualClusterResources(ctx, log, extension)
 }
 
-func resourceName(extension *operatorv1alpha1.Extension) string {
-	return fmt.Sprintf("extension-admission-%s", extension.Name)
-}
-
-func runtimeManagedResourceName(extension *operatorv1alpha1.Extension) string {
-	return fmt.Sprintf("extension-admission-runtime-%s", extension.Name)
-}
-
 func (d *deployment) createOrUpdateAdmissionRuntimeClusterResources(ctx context.Context, genericTokenKubeconfigSecretName string, extension *operatorv1alpha1.Extension) error {
 	archive, err := d.helmRegistry.Pull(ctx, extension.Spec.Deployment.AdmissionDeployment.RuntimeCluster.Helm.OCIRepository)
 	if err != nil {
@@ -179,10 +171,6 @@ func (d *deployment) deleteAdmissionRuntimeClusterResources(ctx context.Context,
 	return kubernetesutils.DeleteObjects(ctx, d.runtimeClientSet.Client(), accessSecret)
 }
 
-func admissionVirtualManagedResourceName(extension *operatorv1alpha1.Extension) string {
-	return fmt.Sprintf("extension-admission-virtual-%s", extension.Name)
-}
-
 func (d *deployment) createOrUpdateAdmissionVirtualClusterResources(ctx context.Context, virtualClusterClientSet kubernetes.Interface, extension *operatorv1alpha1.Extension) error {
 	archive, err := d.helmRegistry.Pull(ctx, extension.Spec.Deployment.AdmissionDeployment.VirtualCluster.Helm.OCIRepository)
 	if err != nil {
@@ -214,7 +202,7 @@ func (d *deployment) createOrUpdateAdmissionVirtualClusterResources(ctx context.
 		return fmt.Errorf("failed rendering Helm chart %q: %w", extension.Spec.Deployment.AdmissionDeployment.VirtualCluster.Helm.OCIRepository.GetURL(), err)
 	}
 
-	managedResourceName := admissionVirtualManagedResourceName(extension)
+	managedResourceName := virtualManagedResourceName(extension)
 	if err := managedresources.CreateForShoot(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, managedResourceName, managedresources.LabelValueOperator, false, renderedChart.AsSecretData()); err != nil {
 		return fmt.Errorf("failed creating ManagedResource: %w", err)
 	}
@@ -226,18 +214,30 @@ func (d *deployment) createOrUpdateAdmissionVirtualClusterResources(ctx context.
 }
 
 func (d *deployment) deleteAdmissionVirtualClusterResources(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension) error {
-	managedResourceName := admissionVirtualManagedResourceName(extension)
+	managedResourceName := virtualManagedResourceName(extension)
 
 	log.Info("Deleting admission ManagedResource for virtual cluster", "managedResource", client.ObjectKey{Name: managedResourceName, Namespace: d.gardenNamespace})
 	if err := managedresources.DeleteForShoot(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, managedResourceName); err != nil {
 		return fmt.Errorf("failed deleting ManagedResource: %w", err)
 	}
 
-	return managedresources.WaitUntilDeleted(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, admissionVirtualManagedResourceName(extension))
+	return managedresources.WaitUntilDeleted(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, virtualManagedResourceName(extension))
 }
 
 func (d *deployment) getVirtualClusterAccessSecret(name string) *gardenerutils.AccessSecret {
 	return gardenerutils.NewShootAccessSecret(name, d.gardenNamespace)
+}
+
+func resourceName(extension *operatorv1alpha1.Extension) string {
+	return fmt.Sprintf("extension-admission-%s", extension.Name)
+}
+
+func runtimeManagedResourceName(extension *operatorv1alpha1.Extension) string {
+	return fmt.Sprintf("extension-admission-runtime-%s", extension.Name)
+}
+
+func virtualManagedResourceName(extension *operatorv1alpha1.Extension) string {
+	return fmt.Sprintf("extension-admission-virtual-%s", extension.Name)
 }
 
 func runtimeDeploymentSpecified(extension *operatorv1alpha1.Extension) bool {

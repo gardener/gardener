@@ -116,7 +116,7 @@ func (r *registration) Delete(ctx context.Context, log logr.Logger, extension *o
 		return fmt.Errorf("failed deleting ManagedResource: %w", err)
 	}
 
-	return managedresources.WaitUntilDeleted(ctx, r.runtimeClient, r.gardenNamespace, managedResourceName(extension))
+	return managedresources.WaitUntilDeleted(ctx, r.runtimeClient, r.gardenNamespace, mrName)
 }
 
 func managedResourceName(extension *operatorv1alpha1.Extension) string {
