@@ -443,8 +443,6 @@ spec:
         concurrentSyncs: 0
     featureGates:
       DefaultSeccompProfile: true
-      HVPA: true
-      HVPAForShootedSeed: true
       IPv6SingleStack: true
       ShootManagedIssuer: true
     etcdConfig:
