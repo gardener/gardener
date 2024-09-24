@@ -22,12 +22,7 @@ import (
 )
 
 var _ = Describe("resourcereservation", func() {
-	var parsedLabelSelector labels.Selector
-	var labelSelectorString string
 
-	BeforeEach(func() {
-		parsedLabelSelector, _ = labels.Parse(labelSelectorString)
-	})
 	Describe("#Register", func() {
 		It("should register the plugin", func() {
 			plugins := admission.NewPlugins()
@@ -42,7 +37,7 @@ var _ = Describe("resourcereservation", func() {
 	Describe("#Handles", func() {
 		DescribeTable("should only handle CREATE and UPDATE operation",
 			func(typeDependentReservations bool) {
-				plugin := New(typeDependentReservations, parsedLabelSelector)
+				plugin := New(typeDependentReservations, nil)
 				Expect(plugin.Handles(admission.Create)).To(BeTrue())
 				Expect(plugin.Handles(admission.Update)).To(BeTrue())
 				Expect(plugin.Handles(admission.Connect)).NotTo(BeTrue())
@@ -107,12 +102,9 @@ var _ = Describe("resourcereservation", func() {
 			}
 		)
 
-		BeforeEach(func() {
-			ctx = context.Background()
-			userInfo = &user.DefaultInfo{Name: "foo"}
-			shoot = shootBase.DeepCopy()
-			cloudProfile = *cloudProfileBase.DeepCopy()
-		})
+		var parsedLabelSelector labels.Selector
+		var labelSelectorString string
+		var typeDependentReservations bool
 
 		setupProfile := func(typeDependentReservations bool, selector labels.Selector) {
 			plugin = New(typeDependentReservations, selector).(*ResourceReservation)
@@ -122,9 +114,21 @@ var _ = Describe("resourcereservation", func() {
 			Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 		}
 
+		JustBeforeEach(func() {
+			parsedLabelSelector, _ = labels.Parse(labelSelectorString)
+			setupProfile(typeDependentReservations, parsedLabelSelector)
+		})
+
+		BeforeEach(func() {
+			ctx = context.Background()
+			userInfo = &user.DefaultInfo{Name: "foo"}
+			shoot = shootBase.DeepCopy()
+			cloudProfile = *cloudProfileBase.DeepCopy()
+		})
+
 		Context("with type dependent resource reservations", func() {
 			BeforeEach(func() {
-				setupProfile(true, parsedLabelSelector)
+				typeDependentReservations = true
 			})
 
 			Context("inject resource reservation", func() {
@@ -150,16 +154,16 @@ var _ = Describe("resourcereservation", func() {
 				})
 
 				Context("with a label selector configured", func() {
-					JustBeforeEach(func() {
-						labelSelectorString = "add.reserved.resources=true"
+					BeforeEach(func() {
+						labelSelectorString = "shoot.gardener.cloud/worker-specific-reservations=true"
 					})
 
 					Context("when the Shoot label matches the label selector", func() {
 						BeforeEach(func() {
-							//metav1.SetMetaDataLabel(&shoot.ObjectMeta, "add.reserved.resources", "true")
+							metav1.SetMetaDataLabel(&shoot.ObjectMeta, "shoot.gardener.cloud/worker-specific-reservations", "true")
 						})
 
-						It("should inject resource reservations", func() {
+						It("should inject worker specific resource reservations", func() {
 							expectedShoot := shoot.DeepCopy()
 							worker := &expectedShoot.Spec.Provider.Workers[0]
 							cpu := resource.NewMilliQuantity(70, resource.BinarySI)
@@ -183,81 +187,97 @@ var _ = Describe("resourcereservation", func() {
 
 					Context("when the Shoot label doesn't match the label selector", func() {
 						BeforeEach(func() {
-							metav1.SetMetaDataLabel(&shoot.ObjectMeta, "add.reserved.resources", "false")
+							metav1.SetMetaDataLabel(&shoot.ObjectMeta, "shoot.gardener.cloud/worker-specific-reservations", "false")
 						})
 
-						It("should not inject resource reservations when the Shoot label doesn't match", func() {
+						It("should not inject resource reservations and use default static reservations instead", func() {
 							expectedShoot := shoot.DeepCopy()
+							cpu := resource.MustParse("80m")
+							memory := resource.MustParse("1Gi")
+							pid := resource.MustParse("20k")
+							expectedShoot.Spec.Kubernetes.Kubelet = &core.KubeletConfig{
+								KubeReserved: &core.KubeletConfigReserved{
+									CPU:    &cpu,
+									Memory: &memory,
+									PID:    &pid,
+								},
+							}
 							attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 							Expect(plugin.Admit(ctx, attrs, nil)).To(Succeed())
 							Expect(shoot).To(Equal(expectedShoot))
 						})
 					})
 				})
+
+				Context("with no label selector configured", func() {
+					BeforeEach(func() {
+						labelSelectorString = ""
+					})
+
+					It("should not overwrite worker pool resource reservations", func() {
+						cpu := resource.MustParse("42m")
+						memory := resource.MustParse("512Mi")
+						pid := resource.MustParse("31k")
+						shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{
+							Kubelet: &core.KubeletConfig{
+								KubeReserved: &core.KubeletConfigReserved{
+									CPU:    &cpu,
+									Memory: &memory,
+									PID:    &pid,
+								},
+							},
+						}
+
+						expectedShoot := shoot.DeepCopy()
+
+						attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						Expect(plugin.Admit(ctx, attrs, nil)).To(Succeed())
+						Expect(shoot).To(Equal(expectedShoot))
+					})
+
+					It("should skip shoots with shoot global resource reservations", func() {
+						cpu := resource.MustParse("42m")
+						memory := resource.MustParse("512Mi")
+						pid := resource.MustParse("31k")
+						shoot.Spec.Kubernetes.Kubelet = &core.KubeletConfig{
+							KubeReserved: &core.KubeletConfigReserved{
+								CPU:    &cpu,
+								Memory: &memory,
+								PID:    &pid,
+							},
+						}
+
+						expectedShoot := shoot.DeepCopy()
+
+						attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						Expect(plugin.Admit(ctx, attrs, nil)).To(Succeed())
+						Expect(shoot).To(Equal(expectedShoot))
+					})
+				})
 			})
 
-			It("should not overwrite worker pool resource reservations", func() {
-				cpu := resource.MustParse("42m")
-				memory := resource.MustParse("512Mi")
-				pid := resource.MustParse("31k")
-				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{
-					Kubelet: &core.KubeletConfig{
+			Context("with static resource reservations", func() {
+				BeforeEach(func() {
+					typeDependentReservations = false
+				})
+
+				It("should inject default shoot global resource reservations", func() {
+					expectedShoot := shoot.DeepCopy()
+					cpu := resource.MustParse("80m")
+					memory := resource.MustParse("1Gi")
+					pid := resource.MustParse("20k")
+					expectedShoot.Spec.Kubernetes.Kubelet = &core.KubeletConfig{
 						KubeReserved: &core.KubeletConfigReserved{
 							CPU:    &cpu,
 							Memory: &memory,
 							PID:    &pid,
 						},
-					},
-				}
+					}
 
-				expectedShoot := shoot.DeepCopy()
-
-				attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-				Expect(plugin.Admit(ctx, attrs, nil)).To(Succeed())
-				Expect(shoot).To(Equal(expectedShoot))
-			})
-
-			It("should skip shoots with shoot global resource reservations", func() {
-				cpu := resource.MustParse("42m")
-				memory := resource.MustParse("512Mi")
-				pid := resource.MustParse("31k")
-				shoot.Spec.Kubernetes.Kubelet = &core.KubeletConfig{
-					KubeReserved: &core.KubeletConfigReserved{
-						CPU:    &cpu,
-						Memory: &memory,
-						PID:    &pid,
-					},
-				}
-
-				expectedShoot := shoot.DeepCopy()
-
-				attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-				Expect(plugin.Admit(ctx, attrs, nil)).To(Succeed())
-				Expect(shoot).To(Equal(expectedShoot))
-			})
-		})
-
-		Context("with static resource reservations", func() {
-			BeforeEach(func() {
-				setupProfile(false, parsedLabelSelector)
-			})
-
-			It("should inject default shoot global resource reservations", func() {
-				expectedShoot := shoot.DeepCopy()
-				cpu := resource.MustParse("80m")
-				memory := resource.MustParse("1Gi")
-				pid := resource.MustParse("20k")
-				expectedShoot.Spec.Kubernetes.Kubelet = &core.KubeletConfig{
-					KubeReserved: &core.KubeletConfigReserved{
-						CPU:    &cpu,
-						Memory: &memory,
-						PID:    &pid,
-					},
-				}
-
-				attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-				Expect(plugin.Admit(ctx, attrs, nil)).To(Succeed())
-				Expect(shoot).To(Equal(expectedShoot))
+					attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					Expect(plugin.Admit(ctx, attrs, nil)).To(Succeed())
+					Expect(shoot).To(Equal(expectedShoot))
+				})
 			})
 		})
 	})

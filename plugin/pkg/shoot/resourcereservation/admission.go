@@ -142,13 +142,8 @@ func (c *ResourceReservation) Admit(_ context.Context, a admission.Attributes, _
 		return nil
 	}
 
-	if !c.useGKEFormula {
+	if !c.useGKEFormula || !c.labelSelector.Matches(labels.Set(shoot.Labels)) {
 		setStaticResourceReservationDefaults(shoot)
-		return nil
-	}
-
-	// Pass if the Shoot doesn't match the label selector
-	if !c.labelSelector.Matches(labels.Set(shoot.Labels)) {
 		return nil
 	}
 
