@@ -36,8 +36,6 @@ config:
     shootState:
       concurrentSyncs: 0 # we don't need the shootstate controller locally, and enabling it would even distort the results of CPM e2e tests
   featureGates:
-    HVPA: true
-    HVPAForShootedSeed: true
     DefaultSeccompProfile: true
     # Enable IPv6SingleStack to allow creating IPv6 seed clusters without changing the config.
     # This feature gate doesn't change gardenlet's default behavior, it only allows setting `ipFamilies=[IPv6]` in the
