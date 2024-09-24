@@ -154,6 +154,9 @@ if kubectl get configmaps -n kube-system shoot-info --kubeconfig "$seed_kubeconf
     .config.seedConfig.spec.provider.region = \"$region\" |
     .config.seedConfig.spec.provider.type = \"$type\"
   " "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values"
+
+  gardener_issuer=https://issuer.$(yq -e '.data.domain' "$temp_shoot_info")/garden/workload-identity/issuer
+  yq -e -i ".global.apiserver.workloadIdentity.token.issuer = \"$gardener_issuer\"" "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/workload-identity-issuer.yaml
 else
   echo "######################################################################################"
   echo "Please enter domain names for registry and relay domains on the seed"

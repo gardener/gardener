@@ -31,7 +31,7 @@ cleanup-shoot-info() {
 }
 trap cleanup-shoot-info EXIT
 
-ensure-gardener-dns-annotations() {
+ensure-gardener-dns-and-cert-annotations() {
   local namespace=$1
   local name=$2
   local domain=$3
@@ -54,7 +54,7 @@ if kubectl get configmaps -n kube-system shoot-info --kubeconfig "$seed_kubeconf
   gardener_issuer_domain=issuer.$(yq -e '.data.domain' "$temp_shoot_info")
 else
   echo "######################################################################################"
-  echo "Please enter domain names for gardener issuer domain on the seed"
+  echo "Please enter domain name for gardener issuer domain on the seed"
   echo "######################################################################################"
   echo "Gardener Issuer domain:"
   read -er gardener_issuer_domain
@@ -65,7 +65,7 @@ echo "Deploying load-balancer service for Gardener Discovery Server"
 kubectl --server-side=true --kubeconfig "$seed_kubeconfig" apply -k "$SCRIPT_DIR"/../gardener-discovery-server/load-balancer
 
 if [[ $use_shoot_info == "true" ]]; then
-  ensure-gardener-dns-annotations gardener-discovery-server gardener-discovery-server "$gardener_issuer_domain"
+  ensure-gardener-dns-and-cert-annotations gardener-discovery-server gardener-discovery-server "$gardener_issuer_domain"
 else
   echo "######################################################################################"
   echo "Please create DNS entries and generate TLS certificates for gardener workload identity issuer domain"
