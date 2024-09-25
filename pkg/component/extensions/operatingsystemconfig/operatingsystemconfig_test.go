@@ -78,9 +78,13 @@ var _ = Describe("OperatingSystemConfig", func() {
 				"pause-container":     {Repository: ptr.To("registry.k8s.io/pause"), Tag: ptr.To("latest")},
 			}
 			evictionHardMemoryAvailable = "100Mi"
+			evictionSoftMemoryAvailable = "500Mi"
 			kubeletConfig               = &gardencorev1beta1.KubeletConfig{
 				EvictionHard: &gardencorev1beta1.KubeletConfigEviction{
 					MemoryAvailable: &evictionHardMemoryAvailable,
+				},
+				EvictionSoft: &gardencorev1beta1.KubeletConfigEviction{
+					MemoryAvailable: &evictionSoftMemoryAvailable,
 				},
 			}
 			kubeletDataVolumeName   = "foo"
@@ -130,6 +134,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 			worker1Name = "worker1"
 			worker2Name = "worker2"
+			worker3Name = "worker3"
 			workers     = []gardencorev1beta1.Worker{
 				{
 					Name: worker1Name,
@@ -160,10 +165,80 @@ var _ = Describe("OperatingSystemConfig", func() {
 						Version: &workerKubernetesVersion,
 					},
 				},
+				{
+					Name: worker3Name,
+					Machine: gardencorev1beta1.Machine{
+						Architecture: ptr.To(v1beta1constants.ArchitectureAMD64),
+						Image: &gardencorev1beta1.ShootMachineImage{
+							Name:    "type2",
+							Version: ptr.To("12.34"),
+						},
+					},
+					CRI: &gardencorev1beta1.CRI{
+						Name: gardencorev1beta1.CRINameContainerD,
+					},
+					KubeletDataVolumeName: &kubeletDataVolumeName,
+					Kubernetes: &gardencorev1beta1.WorkerKubernetes{
+						Version: &workerKubernetesVersion,
+						Kubelet: &gardencorev1beta1.KubeletConfig{
+							KubeReserved: &gardencorev1beta1.KubeletConfigReserved{
+								CPU:    ptr.To(resource.MustParse("100m")),
+								Memory: ptr.To(resource.MustParse("100Mi")),
+								PID:    ptr.To(resource.MustParse("20k")),
+							},
+							EvictionHard: &gardencorev1beta1.KubeletConfigEviction{
+								MemoryAvailable: ptr.To("300Mi"),
+							},
+						},
+					},
+				},
 			}
 			empty    *extensionsv1alpha1.OperatingSystemConfig
 			expected []*extensionsv1alpha1.OperatingSystemConfig
 		)
+
+		computeKubeletConfigParametersForWorker := func(workerName string) components.ConfigurableKubeletConfigParameters {
+			switch workerName {
+			case worker1Name:
+				return components.ConfigurableKubeletConfigParameters{
+					EvictionHard: map[string]string{
+						"memory.available": evictionHardMemoryAvailable,
+					},
+					EvictionSoft: map[string]string{
+						"memory.available": evictionSoftMemoryAvailable,
+					},
+				}
+			case worker2Name:
+				return components.ConfigurableKubeletConfigParameters{
+					EvictionHard: map[string]string{
+						"memory.available": evictionHardMemoryAvailable,
+					},
+					EvictionSoft: map[string]string{
+						"memory.available": evictionSoftMemoryAvailable,
+					},
+				}
+				// worker 3 has 3 expected kubelet settings:
+				// * worker-specific kubeReserved
+				// * worker-specific override for the globally defined evictionHard
+				// * globally defined evictionSoft
+			case worker3Name:
+				return components.ConfigurableKubeletConfigParameters{
+					EvictionHard: map[string]string{
+						"memory.available": "300Mi",
+					},
+					KubeReserved: map[string]string{
+						"cpu":    "100m",
+						"memory": "100Mi",
+						"pid":    "20k",
+					},
+					EvictionSoft: map[string]string{
+						"memory.available": evictionSoftMemoryAvailable,
+					},
+				}
+			default:
+				return components.ConfigurableKubeletConfigParameters{}
+			}
+		}
 
 		computeExpectedOperatingSystemConfigs := func(sshAccessEnabled bool) []*extensionsv1alpha1.OperatingSystemConfig {
 			expected := make([]*extensionsv1alpha1.OperatingSystemConfig, 0, 2*len(workers))
@@ -209,22 +284,18 @@ var _ = Describe("OperatingSystemConfig", func() {
 					}},
 				)
 				componentsContext := components.Context{
-					Key:                 key,
-					CABundle:            caBundle,
-					ClusterDNSAddresses: clusterDNSAddresses,
-					ClusterDomain:       clusterDomain,
-					CRIName:             criName,
-					Images:              imagesCopy,
-					KubeletConfigParameters: components.ConfigurableKubeletConfigParameters{
-						EvictionHard: map[string]string{
-							"memory.available": evictionHardMemoryAvailable,
-						},
-					},
-					KubeletDataVolumeName: &kubeletDataVolumeName,
-					KubernetesVersion:     k8sVersion,
-					SSHAccessEnabled:      true,
-					SSHPublicKeys:         sshPublicKeys,
-					ValitailEnabled:       valitailEnabled,
+					Key:                     key,
+					CABundle:                caBundle,
+					ClusterDNSAddresses:     clusterDNSAddresses,
+					ClusterDomain:           clusterDomain,
+					CRIName:                 criName,
+					Images:                  imagesCopy,
+					KubeletConfigParameters: computeKubeletConfigParametersForWorker(worker.Name),
+					KubeletDataVolumeName:   &kubeletDataVolumeName,
+					KubernetesVersion:       k8sVersion,
+					SSHAccessEnabled:        true,
+					SSHPublicKeys:           sshPublicKeys,
+					ValitailEnabled:         valitailEnabled,
 				}
 				originalUnits, originalFiles, _ := originalConfigFn(componentsContext)
 
@@ -358,6 +429,10 @@ var _ = Describe("OperatingSystemConfig", func() {
       currentVersion: 1
       hashVersionToOSCKey:
         1: gardener-node-agent-worker2-d9e53
+    - name: worker3
+      currentVersion: 1
+      hashVersionToOSCKey:
+        1: gardener-node-agent-worker3-d9e53
 `)},
 			}
 
@@ -413,6 +488,10 @@ var _ = Describe("OperatingSystemConfig", func() {
       currentVersion: 1
       hashVersionToOSCKey:
         1: gardener-node-agent-worker2-d9e53
+    - name: worker3
+      currentVersion: 1
+      hashVersionToOSCKey:
+        1: gardener-node-agent-worker3-d9e53
 `))
 			})
 
@@ -466,6 +545,10 @@ var _ = Describe("OperatingSystemConfig", func() {
       currentVersion: 2
       hashVersionToOSCKey:
         2: worker2-version2
+    - name: worker3
+      currentVersion: 2
+      hashVersionToOSCKey:
+        2: worker3-version2
 `))
 
 			})
@@ -495,6 +578,10 @@ var _ = Describe("OperatingSystemConfig", func() {
       currentVersion: 2
       hashVersionToOSCKey:
         2: worker2-version2
+    - name: worker3
+      currentVersion: 2
+      hashVersionToOSCKey:
+        2: worker3-version2
 `))
 			})
 
@@ -542,6 +629,11 @@ var _ = Describe("OperatingSystemConfig", func() {
       hashVersionToOSCKey:
         1: gardener-node-agent-worker2-d9e53
         2: worker2-version2
+    - name: worker3
+      currentVersion: 1
+      hashVersionToOSCKey:
+        1: gardener-node-agent-worker3-d9e53
+        2: worker3-version2
 `))
 			})
 
@@ -956,6 +1048,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 				worker1OSCOriginal := expected[1]
 				worker2OSCDownloader := expected[2]
 				worker2OSCOriginal := expected[3]
+				worker3OSCDownloader := expected[4]
+				worker3OSCOriginal := expected[5]
 
 				Expect(defaultDepWaiter.Wait(ctx)).To(Succeed())
 
@@ -983,6 +1077,18 @@ var _ = Describe("OperatingSystemConfig", func() {
 							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker2Name + "-d9e53",
 							SecretName:                  ptr.To("cc-" + expected[3].Name),
 							Object:                      worker2OSCOriginal,
+						},
+					},
+					worker3Name: {
+						Init: Data{
+							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker3Name + "-d9e53",
+							SecretName:                  ptr.To("cc-" + expected[4].Name),
+							Object:                      worker3OSCDownloader,
+						},
+						Original: Data{
+							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker3Name + "-d9e53",
+							SecretName:                  ptr.To("cc-" + expected[5].Name),
+							Object:                      worker3OSCOriginal,
 						},
 					},
 				}

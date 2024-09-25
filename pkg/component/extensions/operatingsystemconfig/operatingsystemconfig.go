@@ -7,6 +7,7 @@ package operatingsystemconfig
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -662,6 +663,21 @@ func (o *operatingSystemConfig) SetClusterDNSAddresses(clusterDNSAddresses []str
 	o.values.ClusterDNSAddresses = clusterDNSAddresses
 }
 
+// mergeKubeletConfiguration merges the worker KubeletConfig into the global KubeletCondfig by converting them into json
+// and then using json.Unmarshal to patch the global KubeletConfig with the values from the worker config
+func mergeKubeletConfiguration(globalConfig, workerConfig *gardencorev1beta1.KubeletConfig) (*gardencorev1beta1.KubeletConfig, error) {
+	mergedConfig := globalConfig.DeepCopy()
+	marshalledWorkerConfig, err := json.Marshal(workerConfig)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(marshalledWorkerConfig, mergedConfig)
+	if err != nil {
+		return nil, err
+	}
+	return mergedConfig, nil
+}
+
 func (o *operatingSystemConfig) newDeployer(version int, osc *extensionsv1alpha1.OperatingSystemConfig, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) (deployer, error) {
 	criName := extensionsv1alpha1.CRINameContainerD
 	if worker.CRI != nil {
@@ -690,8 +706,12 @@ func (o *operatingSystemConfig) newDeployer(version int, osc *extensionsv1alpha1
 	kubeletConfigParameters := components.KubeletConfigParametersFromCoreV1beta1KubeletConfig(o.values.KubeletConfig)
 	kubeletCLIFlags := components.KubeletCLIFlagsFromCoreV1beta1KubeletConfig(o.values.KubeletConfig)
 	if worker.Kubernetes != nil && worker.Kubernetes.Kubelet != nil {
-		kubeletConfigParameters = components.KubeletConfigParametersFromCoreV1beta1KubeletConfig(worker.Kubernetes.Kubelet)
-		kubeletCLIFlags = components.KubeletCLIFlagsFromCoreV1beta1KubeletConfig(worker.Kubernetes.Kubelet)
+		mergedKubeletConfiguration, err := mergeKubeletConfiguration(o.values.KubeletConfig, worker.Kubernetes.Kubelet)
+		if err != nil {
+			return deployer{}, err
+		}
+		kubeletConfigParameters = components.KubeletConfigParametersFromCoreV1beta1KubeletConfig(mergedKubeletConfiguration)
+		kubeletCLIFlags = components.KubeletCLIFlagsFromCoreV1beta1KubeletConfig(mergedKubeletConfiguration)
 	}
 	setDefaultEvictionMemoryAvailable(kubeletConfigParameters.EvictionHard, kubeletConfigParameters.EvictionSoft, o.values.MachineTypes, worker.Machine.Type)
 
