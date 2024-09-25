@@ -807,7 +807,7 @@ images:
     name: apiserver-proxy
   sourceRepository: github.com/gardener/apiserver-proxy
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/apiserver-proxy
-  tag: "v0.17.0"
+  tag: "v0.18.0"
 - name: cert-management
   sourceRepository: github.com/gardener/cert-management
   repository: europe-docker.pkg.dev/gardener-project/releases/cert-controller-manager
