@@ -11,7 +11,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
-// ObjectPredicate returns true for 'create' and 'update' events. For updates, it only returns true when the extension
+// ObjectPredicate returns true for 'create' and 'delete' events. For updates, it only returns true when the extension
 // type has changed.
 func ObjectPredicate() predicate.Predicate {
 	return predicate.Funcs{
@@ -39,6 +39,8 @@ func ObjectPredicate() predicate.Predicate {
 		DeleteFunc: func(_ event.DeleteEvent) bool {
 			return true
 		},
-		GenericFunc: func(_ event.GenericEvent) bool { return false },
+		GenericFunc: func(_ event.GenericEvent) bool {
+			return false
+		},
 	}
 }

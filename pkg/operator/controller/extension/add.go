@@ -44,13 +44,13 @@ import (
 // ControllerName is the name of this controller.
 const ControllerName = "extension"
 
-type extensionKind struct {
+type extension struct {
 	objectKind        string
 	object            client.Object
 	newObjectListFunc func() client.ObjectList
 }
 
-var extensionKinds = []extensionKind{
+var runtimeClusterExtensions = []extension{
 	{extensionsv1alpha1.BackupBucketResource, &extensionsv1alpha1.BackupBucket{}, func() client.ObjectList { return &extensionsv1alpha1.BackupBucketList{} }},
 	{extensionsv1alpha1.DNSRecordResource, &extensionsv1alpha1.DNSRecord{}, func() client.ObjectList { return &extensionsv1alpha1.DNSRecordList{} }},
 	{extensionsv1alpha1.ExtensionResource, &extensionsv1alpha1.Extension{}, func() client.ObjectList { return &extensionsv1alpha1.ExtensionList{} }},
@@ -121,7 +121,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 	}
 
 	r.registerExtensionResourceWatchesFunc = func() error {
-		for _, extension := range extensionKinds {
+		for _, extension := range runtimeClusterExtensions {
 			if r.registeredExtensionResourceWatches.Has(extension.objectKind) {
 				continue
 			}

@@ -103,7 +103,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	// to avoid that extension deployments are unnecessarily deleted from the runtime cluster.
 	if r.extensionResourceWatchesRegistered() {
 		r.lock.RLock()
-		for _, extensionKind := range extensionKinds {
+		for _, extensionKind := range runtimeClusterExtensions {
 			if _, ok := r.kindToRequiredTypes[extensionKind.objectKind]; !ok {
 				// Do not reconcile until it is calculated which extension kinds are required in runtime cluster
 				log.V(1).Info("Not all required extension kinds calculated, requeue")
@@ -185,7 +185,7 @@ func (r *Reconciler) isDeploymentInRuntimeRequired(log logr.Logger, extension *o
 }
 
 func (r *Reconciler) extensionResourceWatchesRegistered() bool {
-	return len(r.registeredExtensionResourceWatches) == len(extensionKinds)
+	return len(r.registeredExtensionResourceWatches) == len(runtimeClusterExtensions)
 }
 
 // Conditions contains all conditions of the extension status subresource.

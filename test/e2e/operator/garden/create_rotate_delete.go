@@ -189,7 +189,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 
 		v.Before(ctx)
 
-		// TODO(oliver-goetz): Remove this step when gardener-operator isi able to create its backup bucket and DNS record by itself.
+		// TODO(oliver-goetz): Remove this step when gardener-operator is able to create its backup bucket and DNS record by itself.
 		By("Deploy extension in runtime cluster by creating a backup bucket")
 		backupBucket := &extensionsv1alpha1.BackupBucket{
 			ObjectMeta: metav1.ObjectMeta{
