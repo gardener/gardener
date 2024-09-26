@@ -10,9 +10,9 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 usage() {
   echo "Usage:"
-  echo "> configure-discovery-server.sh [ -h | <garden-kubeconfig> <seed-kubeconfig> ]"
+  echo "> ${0} [ -h | <garden-kubeconfig> <seed-kubeconfig> ]"
   echo
-  echo ">> For example: configure-discovery-server.sh ~/.kube/garden-kubeconfig.yaml ~/.kube/seed-kubeconfig.yaml"
+  echo ">> For example: ${0} ~/.kube/garden-kubeconfig.yaml ~/.kube/seed-kubeconfig.yaml"
 
   exit 0
 }
