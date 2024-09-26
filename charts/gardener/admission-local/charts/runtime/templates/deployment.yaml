@@ -33,6 +33,9 @@ spec:
         - --webhook-config-mode=url
         - --webhook-config-url={{ printf "%s.%s" (include "name" .) (.Release.Namespace) }}
         - --webhook-config-namespace={{ .Release.Namespace }}
+{{- if .Values.webhookConfig.ownerNamespace }}
+        - --webhook-config-owner-namespace={{ .Values.webhookConfig.ownerNamespace }}
+{{- end }}
         - --health-bind-address=:{{ .Values.healthPort }}
         - --leader-election-id={{ include "leaderelectionid" . }}
         env:

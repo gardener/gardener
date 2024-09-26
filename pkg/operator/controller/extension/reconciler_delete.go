@@ -7,6 +7,7 @@ package extension
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -14,6 +15,8 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 )
@@ -21,6 +24,7 @@ import (
 func (r *Reconciler) delete(
 	ctx context.Context,
 	log logr.Logger,
+	garden *gardenInfo,
 	extension *operatorv1alpha1.Extension,
 ) (
 	reconcile.Result,
@@ -30,7 +34,22 @@ func (r *Reconciler) delete(
 	defer cancel()
 
 	var (
-		g = flow.NewGraph("Extension deletion")
+		virtualClusterClientSet kubernetes.Interface
+		g                       = flow.NewGraph("Extension deletion")
+
+		createVirtualGardenClientSet = g.Add(flow.Task{
+			Name: "Creating virtual garden-client",
+			Fn: func(ctx context.Context) error {
+				clientSet, err := r.GardenClientMap.GetClient(ctx, keys.ForGarden(garden.garden))
+				if err != nil {
+					return fmt.Errorf("error retrieving virtual cluster client set: %w", err)
+				}
+
+				virtualClusterClientSet = clientSet
+				return nil
+			},
+			SkipIf: garden.garden == nil,
+		})
 
 		_ = g.Add(flow.Task{
 			Name: "Deleting ControllerRegistration and ControllerDeployment",
@@ -42,8 +61,9 @@ func (r *Reconciler) delete(
 		_ = g.Add(flow.Task{
 			Name: "Deleting Admission Controller",
 			Fn: func(ctx context.Context) error {
-				return r.admission.Delete(ctx, log, extension)
+				return r.admission.Delete(ctx, log, virtualClusterClientSet, extension)
 			},
+			Dependencies: flow.NewTaskIDs(createVirtualGardenClientSet),
 		})
 
 		_ = g.Add(flow.Task{

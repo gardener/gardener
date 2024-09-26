@@ -116,7 +116,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	garden := newGardenInfo(gardenObj)
 
 	if extension.DeletionTimestamp != nil || garden.deleting {
-		return r.delete(ctx, log, extension)
+		return r.delete(ctx, log, garden, extension)
 	}
 
 	return r.reconcile(ctx, log, garden, extension)

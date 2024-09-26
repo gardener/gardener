@@ -21,6 +21,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -33,7 +34,7 @@ type Interface interface {
 	// Reconcile creates or updates admission resources.
 	Reconcile(context.Context, logr.Logger, kubernetes.Interface, string, *operatorv1alpha1.Extension) error
 	// Delete deletes all admission resources.
-	Delete(context.Context, logr.Logger, *operatorv1alpha1.Extension) error
+	Delete(context.Context, logr.Logger, kubernetes.Interface, *operatorv1alpha1.Extension) error
 }
 
 type deployment struct {
@@ -54,7 +55,7 @@ func (d *deployment) Reconcile(ctx context.Context, log logr.Logger, virtualClus
 		}
 		d.recorder.Event(extension, corev1.EventTypeNormal, "Reconciliation", "Admission deployment applied successfully in virtual cluster")
 	} else {
-		if err := d.deleteAdmissionVirtualClusterResources(ctx, log, extension); err != nil {
+		if err := d.deleteAdmissionVirtualClusterResources(ctx, log, virtualClusterClientSet.Client(), extension); err != nil {
 			return err
 		}
 		d.recorder.Event(extension, corev1.EventTypeNormal, "Deletion", "Admission deployment deleted successfully in virtual cluster")
@@ -77,12 +78,15 @@ func (d *deployment) Reconcile(ctx context.Context, log logr.Logger, virtualClus
 }
 
 // Delete deletes all admission resources.
-func (d *deployment) Delete(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension) error {
+func (d *deployment) Delete(ctx context.Context, log logr.Logger, virtualClusterClientSet kubernetes.Interface, extension *operatorv1alpha1.Extension) error {
 	log.Info("Deleting admission deployment")
 	if err := d.deleteAdmissionRuntimeClusterResources(ctx, log, extension); err != nil {
 		return err
 	}
-	return d.deleteAdmissionVirtualClusterResources(ctx, log, extension)
+	if virtualClusterClientSet == nil {
+		return nil
+	}
+	return d.deleteAdmissionVirtualClusterResources(ctx, log, virtualClusterClientSet.Client(), extension)
 }
 
 func (d *deployment) createOrUpdateAdmissionRuntimeClusterResources(ctx context.Context, genericTokenKubeconfigSecretName string, extension *operatorv1alpha1.Extension) error {
@@ -101,6 +105,9 @@ func (d *deployment) createOrUpdateAdmissionRuntimeClusterResources(ctx context.
 			"runtimeCluster": map[string]any{
 				"priorityClassName": v1beta1constants.PriorityClassNameGardenSystem400,
 			},
+		},
+		"webhookConfig": map[string]any{
+			"ownerNamespace": virtualNamespace(extension).GetName(),
 		},
 	}
 
@@ -197,9 +204,17 @@ func (d *deployment) createOrUpdateAdmissionVirtualClusterResources(ctx context.
 		}
 	}
 
-	renderedChart, err := virtualClusterClientSet.ChartRenderer().RenderArchive(archive, extension.Name, v1beta1constants.GardenNamespace, utils.MergeMaps(helmValues, gardenerValues))
+	namespace := virtualNamespace(extension)
+	renderedChart, err := virtualClusterClientSet.ChartRenderer().RenderArchive(archive, extension.Name, namespace.Name, utils.MergeMaps(helmValues, gardenerValues))
 	if err != nil {
 		return fmt.Errorf("failed rendering Helm chart %q: %w", extension.Spec.Deployment.AdmissionDeployment.VirtualCluster.Helm.OCIRepository.GetURL(), err)
+	}
+
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, virtualClusterClientSet.Client(), namespace, func() error {
+		metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.GardenRole, v1beta1constants.GardenRoleExtension)
+		return nil
+	}); err != nil {
+		return fmt.Errorf("failed creating namespace %q in virtual cluster: %w", namespace.Name, err)
 	}
 
 	managedResourceName := virtualManagedResourceName(extension)
@@ -213,12 +228,20 @@ func (d *deployment) createOrUpdateAdmissionVirtualClusterResources(ctx context.
 	return nil
 }
 
-func (d *deployment) deleteAdmissionVirtualClusterResources(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension) error {
+func (d *deployment) deleteAdmissionVirtualClusterResources(ctx context.Context, log logr.Logger, virtualClusterClient client.Client, extension *operatorv1alpha1.Extension) error {
 	managedResourceName := virtualManagedResourceName(extension)
 
 	log.Info("Deleting admission ManagedResource for virtual cluster", "managedResource", client.ObjectKey{Name: managedResourceName, Namespace: d.gardenNamespace})
 	if err := managedresources.DeleteForShoot(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, managedResourceName); err != nil {
 		return fmt.Errorf("failed deleting ManagedResource: %w", err)
+	}
+	if err := managedresources.WaitUntilDeleted(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, managedResourceName); err != nil {
+		return fmt.Errorf("failed waiting for ManagedResource to be deleted: %w", err)
+	}
+
+	namespace := virtualNamespace(extension)
+	if err := client.IgnoreNotFound(virtualClusterClient.Delete(ctx, namespace)); err != nil {
+		return fmt.Errorf("failed deleting namespace %q in virtual cluster: %w", namespace.Name, err)
 	}
 
 	return managedresources.WaitUntilDeleted(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, virtualManagedResourceName(extension))
@@ -252,6 +275,14 @@ func virtualDeploymentSpecified(extension *operatorv1alpha1.Extension) bool {
 		extension.Spec.Deployment.AdmissionDeployment != nil &&
 		extension.Spec.Deployment.AdmissionDeployment.VirtualCluster != nil &&
 		extension.Spec.Deployment.AdmissionDeployment.VirtualCluster.Helm != nil
+}
+
+func virtualNamespace(extension *operatorv1alpha1.Extension) *corev1.Namespace {
+	return &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: fmt.Sprintf("extension-%s", extension.Name),
+		},
+	}
 }
 
 // New creates a new admission deployer.

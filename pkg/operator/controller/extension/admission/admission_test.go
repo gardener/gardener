@@ -6,6 +6,7 @@ package admission_test
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -117,7 +118,7 @@ var _ = Describe("Deployment", func() {
 
 		It("should fail when runtime OCI artifact is not found", func() {
 			ociRegistry.AddArtifact(&gardencorev1.OCIRepository{Ref: &ociRefApplication}, []byte(""))
-			chartRenderer.EXPECT().RenderArchive(gomock.Any(), extension.Name, "garden", gomock.Any()).Return(&chartrenderer.RenderedChart{}, nil)
+			chartRenderer.EXPECT().RenderArchive(gomock.Any(), extension.Name, fmt.Sprintf("extension-%s", extension.Name), gomock.Any()).Return(&chartrenderer.RenderedChart{}, nil)
 
 			defer test.WithVar(&retry.Until, func(_ context.Context, _ time.Duration, _ retry.Func) error {
 				return nil
@@ -153,9 +154,12 @@ var _ = Describe("Deployment", func() {
 						"priorityClassName": "gardener-garden-system-400",
 					},
 				},
+				"webhookConfig": map[string]any{
+					"ownerNamespace": "extension-" + extensionName,
+				},
 			}
 
-			chartRenderer.EXPECT().RenderArchive([]byte("virtual-chart"), extension.Name, "garden", expectedVirtualValues).Return(&chartrenderer.RenderedChart{}, nil)
+			chartRenderer.EXPECT().RenderArchive([]byte("virtual-chart"), extension.Name, fmt.Sprintf("extension-%s", extension.Name), expectedVirtualValues).Return(&chartrenderer.RenderedChart{}, nil)
 			chartRenderer.EXPECT().RenderArchive([]byte("runtime-chart"), extension.Name, "garden", expectedRuntimeValues).Return(&chartrenderer.RenderedChart{}, nil)
 
 			defer test.WithVar(&retry.Until, func(_ context.Context, _ time.Duration, _ retry.Func) error {
@@ -226,7 +230,7 @@ var _ = Describe("Deployment", func() {
 
 		It("should only delete the managed resource for the runtime cluster", func() {
 			ociRegistry.AddArtifact(&gardencorev1.OCIRepository{Ref: &ociRefApplication}, []byte("virtual-chart"))
-			chartRenderer.EXPECT().RenderArchive([]byte("virtual-chart"), extension.Name, "garden", gomock.Any()).Return(&chartrenderer.RenderedChart{}, nil)
+			chartRenderer.EXPECT().RenderArchive([]byte("virtual-chart"), extension.Name, fmt.Sprintf("extension-%s", extension.Name), gomock.Any()).Return(&chartrenderer.RenderedChart{}, nil)
 			defer test.WithVar(&retry.Until, func(_ context.Context, _ time.Duration, _ retry.Func) error {
 				return nil
 			})()
@@ -255,7 +259,7 @@ var _ = Describe("Deployment", func() {
 
 	Describe("#Delete", func() {
 		It("should succeed if extension was not deployed before", func() {
-			Expect(admission.Delete(ctx, log, extension)).To(Succeed())
+			Expect(admission.Delete(ctx, log, virtualClientSet, extension)).To(Succeed())
 
 			mrList := &resourcesv1alpha1.ManagedResourceList{}
 			Expect(runtimeClient.List(ctx, mrList)).To(Succeed())
@@ -269,7 +273,7 @@ var _ = Describe("Deployment", func() {
 			Expect(runtimeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "extension-admission-runtime-" + extensionName, Namespace: "garden"}})).To(Succeed())
 			Expect(runtimeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "extension-admission-runtime-" + extensionName, Namespace: "garden"}, Spec: resourcesv1alpha1.ManagedResourceSpec{SecretRefs: []corev1.LocalObjectReference{{Name: "extension-admission-runtime-" + extensionName}}}})).To(Succeed())
 
-			Expect(admission.Delete(ctx, log, extension)).To(Succeed())
+			Expect(admission.Delete(ctx, log, virtualClientSet, extension)).To(Succeed())
 
 			mrList := &resourcesv1alpha1.ManagedResourceList{}
 			Expect(runtimeClient.List(ctx, mrList)).To(Succeed())
