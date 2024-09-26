@@ -32,6 +32,14 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - persistentvolumes
+  verbs:
+  # This is currently necessary to migrate deprecated topology labels on PVs, ref: https://github.com/gardener/gardener/blob/e542bc4794473fcec1742ed751a2d420169c8326/cmd/gardenlet/app/migration.go#L27-L30.
+  # TODO(plkokanov): Remove this RBAC rule when the requiring code is removed (when Kubernetes 1.27 support gets dropped).
+  - patch
+- apiGroups:
+  - ""
+  resources:
   - nodes
   verbs:
   - list
