@@ -18,6 +18,13 @@ rules:
   verbs:
   - '*'
 - apiGroups:
+  - security.gardener.cloud
+  resources:
+  - credentialsbindings
+  - workloadidentities
+  verbs:
+  - '*'
+- apiGroups:
   - ""
   resources:
   - events
@@ -112,6 +119,15 @@ rules:
   - projects
   - seeds
   - shoots
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - security.gardener.cloud
+  resources:
+  - credentialsbindings
+  - workloadidentities
   verbs:
   - get
   - list
@@ -445,6 +461,7 @@ rules:
   - security.gardener.cloud
   resources:
   - credentialsbindings
+  - workloadidentities
   verbs:
   - create
   - delete
@@ -628,6 +645,7 @@ rules:
   - security.gardener.cloud
   resources:
   - credentialsbindings
+  - workloadidentities
   verbs:
   - get
   - list
