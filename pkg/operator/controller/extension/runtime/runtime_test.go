@@ -133,23 +133,6 @@ var _ = Describe("Deployment", func() {
 			Expect(runtimeClient.List(ctx, mrList)).To(Succeed())
 			Expect(mrList.Items).To(BeEmpty())
 		})
-
-		It("should delete the deployment", func() {
-			Expect(runtimeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("extension-%s-garden", extensionName), Namespace: "garden"}})).To(Succeed())
-			Expect(runtimeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("extension-%s-garden", extensionName), Namespace: "garden"}, Spec: resourcesv1alpha1.ManagedResourceSpec{SecretRefs: []corev1.LocalObjectReference{{Name: fmt.Sprintf("extension-%s-garden", extensionName)}}}})).To(Succeed())
-
-			extension.Spec.Deployment.ExtensionDeployment.RuntimeClusterValues = nil
-
-			Expect(runtime.Reconcile(ctx, log, extension)).To(Succeed())
-
-			mrList := &resourcesv1alpha1.ManagedResourceList{}
-			Expect(runtimeClient.List(ctx, mrList)).To(Succeed())
-			Expect(mrList.Items).To(BeEmpty())
-
-			secretList := &corev1.SecretList{}
-			Expect(runtimeClient.List(ctx, secretList)).To(Succeed())
-			Expect(secretList.Items).To(BeEmpty())
-		})
 	})
 
 	Describe("#Delete", func() {

@@ -39,7 +39,6 @@ type deployer struct {
 }
 
 // Reconcile creates or updates the extension deployment in the garden runtime cluster.
-// If the extension doesn't define an extension deployment for the runtime cluster, the deployment is deleted.
 func (d *deployer) Reconcile(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension) error {
 	if !extensionDeploymentSpecified(extension) {
 		return d.Delete(ctx, log, extension)
@@ -122,8 +121,7 @@ func managedResourceName(extension *operatorv1alpha1.Extension) string {
 func extensionDeploymentSpecified(extension *operatorv1alpha1.Extension) bool {
 	return extension.Spec.Deployment != nil &&
 		extension.Spec.Deployment.ExtensionDeployment != nil &&
-		extension.Spec.Deployment.ExtensionDeployment.Helm != nil &&
-		extension.Spec.Deployment.ExtensionDeployment.RuntimeClusterValues != nil
+		extension.Spec.Deployment.ExtensionDeployment.Helm != nil
 }
 
 // New creates a new runtime deployer.

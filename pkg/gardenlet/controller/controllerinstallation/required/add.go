@@ -18,18 +18,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"github.com/gardener/gardener/pkg/api/extensions"
+	apiextensions "github.com/gardener/gardener/pkg/api/extensions"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
+	"github.com/gardener/gardener/pkg/extensions"
 )
 
 // ControllerName is the name of this controller.
@@ -98,44 +97,12 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 			return err
 		}
 
-		if err := c.Watch(source.Kind(seedCluster.GetCache(), extension.object), eventHandler, r.ObjectPredicate()); err != nil {
+		if err := c.Watch(source.Kind(seedCluster.GetCache(), extension.object), eventHandler, extensions.ObjectPredicate()); err != nil {
 			return err
 		}
 	}
 
 	return nil
-}
-
-// ObjectPredicate returns true for 'create' and 'update' events. For updates, it only returns true when the extension
-// type has changed.
-func (r *Reconciler) ObjectPredicate() predicate.Predicate {
-	return predicate.Funcs{
-		CreateFunc: func(_ event.CreateEvent) bool {
-			return true
-		},
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			// enqueue on periodic cache resyncs
-			if e.ObjectOld.GetResourceVersion() == e.ObjectNew.GetResourceVersion() {
-				return true
-			}
-
-			extensionObj, ok := e.ObjectNew.(extensionsv1alpha1.Object)
-			if !ok {
-				return false
-			}
-
-			oldExtensionObj, ok := e.ObjectOld.(extensionsv1alpha1.Object)
-			if !ok {
-				return false
-			}
-
-			return oldExtensionObj.GetExtensionSpec().GetExtensionType() != extensionObj.GetExtensionSpec().GetExtensionType()
-		},
-		DeleteFunc: func(_ event.DeleteEvent) bool {
-			return true
-		},
-		GenericFunc: func(_ event.GenericEvent) bool { return false },
-	}
 }
 
 // MapObjectKindToControllerInstallations returns a mapper function for the given extension kind that lists all existing
@@ -162,7 +129,7 @@ func (r *Reconciler) MapObjectKindToControllerInstallations(objectKind string, n
 		newRequiredTypes := sets.New[string]()
 
 		if err := meta.EachListItem(listObj, func(o runtime.Object) error {
-			obj, err := extensions.Accessor(o)
+			obj, err := apiextensions.Accessor(o)
 			if err != nil {
 				return err
 			}

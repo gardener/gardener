@@ -7,9 +7,11 @@ package extension
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -55,6 +57,11 @@ type Reconciler struct {
 	GardenNamespace string
 	HelmRegistry    oci.Interface
 
+	lock                                 *sync.RWMutex
+	kindToRequiredTypes                  map[string]sets.Set[string]
+	registerExtensionResourceWatchesFunc func() error
+	registeredExtensionResourceWatches   sets.Set[string]
+
 	admission              admission.Interface
 	controllerRegistration controllerregistration.Interface
 	runtime                runtime.Interface
@@ -82,6 +89,28 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	var gardenObj *operatorv1alpha1.Garden
 	if len(gardenList.Items) != 0 {
 		gardenObj = &gardenList.Items[0]
+		// Operator creates extension CRDs, so we cannot watch them until a garden resource was created.
+		// Otherwise, operator will crash after a while.
+		if !r.extensionResourceWatchesRegistered() && r.registerExtensionResourceWatchesFunc != nil {
+			if err := r.registerExtensionResourceWatchesFunc(); err != nil {
+				return reconcile.Result{}, fmt.Errorf("error registering watch for extension resources: %w", err)
+			}
+		}
+	}
+
+	// kindToRequiredTypes is not calculated when the extension resources are not watched yet.
+	// When there is a Garden and the watch was started, Reconciler should wait until the calculations are finished
+	// to avoid that extension deployments are unnecessarily deleted from the runtime cluster.
+	if r.extensionResourceWatchesRegistered() {
+		r.lock.RLock()
+		for _, extensionKind := range extensionKinds {
+			if _, ok := r.kindToRequiredTypes[extensionKind.objectKind]; !ok {
+				// Do not reconcile until it is calculated which extension kinds are required in runtime cluster
+				log.V(1).Info("Not all required extension kinds calculated, requeue")
+				return reconcile.Result{Requeue: true}, nil
+			}
+		}
+		r.lock.RUnlock()
 	}
 
 	garden := newGardenInfo(gardenObj)
@@ -126,6 +155,37 @@ func (r *Reconciler) removeFinalizer(ctx context.Context, log logr.Logger, exten
 		return fmt.Errorf("failed to remove finalizer: %w", err)
 	}
 	return nil
+}
+
+func (r *Reconciler) isDeploymentInRuntimeRequired(log logr.Logger, extension *operatorv1alpha1.Extension) bool {
+	var required bool
+
+	requiredKindTypes := sets.New[string]()
+	r.lock.RLock()
+	for _, resource := range extension.Spec.Resources {
+		requiredTypes, ok := r.kindToRequiredTypes[resource.Kind]
+		if !ok {
+			continue
+		}
+
+		if requiredTypes.Has(resource.Type) {
+			required = true
+			requiredKindTypes.Insert(fmt.Sprintf("%s/%s", resource.Kind, resource.Type))
+		}
+	}
+	r.lock.RUnlock()
+
+	if required {
+		log.V(1).Info("Deployment in runtime cluster required by these kinds", "kinds", requiredKindTypes)
+	} else {
+		log.V(1).Info("Deployment in runtime cluster not required")
+	}
+
+	return required
+}
+
+func (r *Reconciler) extensionResourceWatchesRegistered() bool {
+	return len(r.registeredExtensionResourceWatches) == len(extensionKinds)
 }
 
 // Conditions contains all conditions of the extension status subresource.

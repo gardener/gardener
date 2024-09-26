@@ -66,7 +66,7 @@ func (r *Reconciler) reconcile(
 		deployExtensionInRuntime = g.Add(flow.Task{
 			Name: "Deploying extension in runtime cluster",
 			Fn: func(ctx context.Context) error {
-				return r.runtime.Reconcile(ctx, log, extension)
+				return r.deployExtensionInRuntime(ctx, log, extension)
 			},
 		})
 
@@ -132,4 +132,11 @@ func (r *Reconciler) reconcile(
 
 	conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionTrue, ConditionReconcileSuccess, "Extension has been reconciled successfully")
 	return reconcileResult, r.updateExtensionStatus(ctx, log, extension, conditions)
+}
+
+func (r *Reconciler) deployExtensionInRuntime(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension) error {
+	if !r.isDeploymentInRuntimeRequired(log, extension) {
+		return r.runtime.Delete(ctx, log, extension)
+	}
+	return r.runtime.Reconcile(ctx, log, extension)
 }
