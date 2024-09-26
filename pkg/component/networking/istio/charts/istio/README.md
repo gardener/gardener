@@ -15,7 +15,7 @@ helm template istio pkg/component/networking/istio/charts/istio/istio-ingress -n
 
 Clone istio github repository and checkout desired release tag:
 ```console
-ISTIO_VERSION=1.21.5
+ISTIO_VERSION=1.21.6
 git clone https://github.com/istio/istio.git
 cd istio
 git checkout $ISTIO_VERSION
