@@ -20,7 +20,6 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 const (
@@ -174,7 +173,7 @@ func ReconcileSeedWebhookConfig(ctx context.Context, c client.Client, webhookCon
 
 	if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, c, webhookConfig, func() error {
 		if ownerReference != nil {
-			webhookConfig.SetOwnerReferences(kubernetes.MergeOwnerReferences(webhookConfig.GetOwnerReferences(), *ownerReference))
+			webhookConfig.SetOwnerReferences([]metav1.OwnerReference{*ownerReference})
 		}
 
 		if len(caBundle) == 0 {

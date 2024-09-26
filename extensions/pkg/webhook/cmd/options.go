@@ -33,6 +33,8 @@ const (
 	ServicePortFlag = "webhook-config-service-port"
 	// NamespaceFlag is the name of the command line flag to specify the webhook config namespace for 'service' mode.
 	NamespaceFlag = "webhook-config-namespace"
+	// OwnerNamespaceFlag is the name of the command line flag to specify the namespace which used as the owner reference for the webhook registration.
+	OwnerNamespaceFlag = "webhook-config-owner-namespace"
 )
 
 // ServerOptions are command line options that can be set for ServerConfig.
@@ -45,6 +47,8 @@ type ServerOptions struct {
 	ServicePort int
 	// Namespace is the webhook config namespace for 'service' mode.
 	Namespace string
+	// OwnerNamespace is namespace which used as the owner reference for the webhook registration.
+	OwnerNamespace string
 
 	config *ServerConfig
 }
@@ -59,15 +63,21 @@ type ServerConfig struct {
 	ServicePort int
 	// Namespace is the webhook config namespace for 'service' mode.
 	Namespace string
+	// OwnerNamespace is namespace which used as the owner reference for the webhook registration.
+	OwnerNamespace string
 }
 
 // Complete implements Completer.Complete.
 func (w *ServerOptions) Complete() error {
+	if w.OwnerNamespace == "" {
+		w.OwnerNamespace = w.Namespace
+	}
 	w.config = &ServerConfig{
-		Mode:        w.Mode,
-		URL:         w.URL,
-		ServicePort: w.ServicePort,
-		Namespace:   w.Namespace,
+		Mode:           w.Mode,
+		URL:            w.URL,
+		ServicePort:    w.ServicePort,
+		Namespace:      w.Namespace,
+		OwnerNamespace: w.OwnerNamespace,
 	}
 
 	if len(w.Mode) == 0 {
@@ -88,6 +98,7 @@ func (w *ServerOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&w.URL, URLFlag, w.URL, "The webhook URL when running outside of the cluster it is serving.")
 	fs.IntVar(&w.ServicePort, ServicePortFlag, w.ServicePort, "The service port that exposes the webhook server.  If not specified it will fallback to the webhook server port.")
 	fs.StringVar(&w.Namespace, NamespaceFlag, w.Namespace, "The webhook config namespace for 'service' mode.")
+	fs.StringVar(&w.OwnerNamespace, OwnerNamespaceFlag, w.OwnerNamespace, fmt.Sprintf("The namespace used for owner reference of the webhook registration. Defaults to %q flag if not set", NamespaceFlag))
 }
 
 const (
@@ -349,7 +360,7 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 func (c *AddToManagerConfig) reconcileSeedWebhookConfig(mgr manager.Manager, webhookConfigs extensionswebhook.Configs, caBundle []byte) func(ctx context.Context) error {
 	return func(ctx context.Context) error {
 		for _, webhookConfig := range webhookConfigs.GetWebhookConfigs() {
-			if err := extensionswebhook.ReconcileSeedWebhookConfig(ctx, mgr.GetClient(), webhookConfig, c.Server.Namespace, caBundle); err != nil {
+			if err := extensionswebhook.ReconcileSeedWebhookConfig(ctx, mgr.GetClient(), webhookConfig, c.Server.OwnerNamespace, caBundle); err != nil {
 				return fmt.Errorf("error reconciling seed webhook config: %w", err)
 			}
 		}
