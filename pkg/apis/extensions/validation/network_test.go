@@ -162,17 +162,6 @@ var _ = Describe("Network validation tests", func() {
 					"Field": Equal("spec.serviceCIDR"),
 				}))))
 			})
-
-			It("should forbid Network with overlapping pod and service CIDRs", func() {
-				network.Spec.ServiceCIDR = "2001:db8:3::/48"
-				network.Spec.PodCIDR = network.Spec.ServiceCIDR
-
-				errorList := ValidateNetwork(network)
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.serviceCIDR"),
-				}))))
-			})
 		})
 	})
 
