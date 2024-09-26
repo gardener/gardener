@@ -311,10 +311,10 @@ var _ = Describe("Extension controller tests", func() {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(controllerDeploymentFoo), controllerDeploymentFoo)
 		}).Should(BeNotFoundError())
 		Eventually(func() error {
-			return testClient.Get(ctx, client.ObjectKey{Namespace: testNamespace.Name, Name: "extension-admission-virtual-provider-foo"}, &resourcesv1alpha1.ManagedResource{})
+			return testClient.Get(ctx, client.ObjectKey{Namespace: testNamespace.Name, Name: "extension-admission-runtime-provider-foo"}, &resourcesv1alpha1.ManagedResource{})
 		}).Should(BeNotFoundError())
 		Eventually(func() error {
-			return testClient.Get(ctx, client.ObjectKey{Namespace: testNamespace.Name, Name: "extension-admission-runtime-provider-foo"}, &resourcesv1alpha1.ManagedResource{})
+			return testClient.Get(ctx, client.ObjectKey{Namespace: testNamespace.Name, Name: "extension-admission-virtual-provider-foo"}, &resourcesv1alpha1.ManagedResource{})
 		}).Should(BeNotFoundError())
 		Eventually(func() error {
 			return mgrClient.Get(ctx, client.ObjectKeyFromObject(extensionFoo), extensionFoo)
