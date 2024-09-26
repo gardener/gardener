@@ -32,6 +32,14 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - persistentvolumes
+  verbs:
+  # This is currently necessary to migrate deprecated topology labels on PVs, ref: https://github.com/gardener/gardener/blob/e542bc4794473fcec1742ed751a2d420169c8326/cmd/gardenlet/app/migration.go#L27-L30.
+  # TODO(plkokanov): It can potentially be dropped once the requiring code is removed.
+  - patch
+- apiGroups:
+  - ""
+  resources:
   - nodes
   verbs:
   - list
