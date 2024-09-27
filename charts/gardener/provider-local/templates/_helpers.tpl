@@ -1,5 +1,9 @@
 {{- define "name" -}}
+{{- if .Values.gardener.runtimeCluster.enabled -}}
+gardener-extension-provider-local-runtime
+{{- else -}}
 gardener-extension-provider-local
+{{- end }}
 {{- end -}}
 
 {{- define "labels.app.key" -}}
@@ -16,4 +20,12 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 
 {{- define "poddisruptionbudgetversion" -}}
 policy/v1
+{{- end -}}
+
+{{- define "coredns.enabled" -}}
+{{- if .Values.gardener.runtimeCluster.enabled -}}
+false
+{{- else -}}
+{{ .Values.coredns.enabled }}
+{{- end }}
 {{- end -}}

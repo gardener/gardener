@@ -36,3 +36,18 @@ func GardenCreatedOrReconciledSuccessfully() predicate.Predicate {
 		GenericFunc: func(event.GenericEvent) bool { return false },
 	}
 }
+
+// GardenDeletionTriggered is a predicate which returns 'true' for update events,
+// if the deletion of the Garden resource was initiated.
+func GardenDeletionTriggered() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc: func(event.CreateEvent) bool {
+			return false
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			return e.ObjectNew.GetDeletionTimestamp() != nil && e.ObjectOld.GetDeletionTimestamp() == nil
+		},
+		DeleteFunc:  func(event.DeleteEvent) bool { return false },
+		GenericFunc: func(event.GenericEvent) bool { return false },
+	}
+}

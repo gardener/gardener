@@ -10,44 +10,59 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	gardencoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
-	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	. "github.com/gardener/gardener/pkg/operator/controller/extension/controllerregistration"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("ControllerRegistration", func() {
 	var (
 		ctx                    context.Context
 		log                    logr.Logger
-		virtualClient          client.Client
+		c                      client.Client
 		controllerRegistration Interface
 
-		extensionName string
-		ociRef        string
-		extensionKind string
+		gardenNamespace string
+		extensionName   string
+		ociRef          string
+		extensionKind   string
+		extension       *operatorv1alpha1.Extension
 
-		extension *operatorv1alpha1.Extension
+		scheme    *runtime.Scheme
+		consistOf func(...client.Object) types.GomegaMatcher
 	)
 
 	BeforeEach(func() {
+		scheme = runtime.NewScheme()
+		Expect(resourcesv1alpha1.AddToScheme(scheme)).To(Succeed())
+		Expect(gardencoreinstall.AddToScheme(scheme)).To(Succeed())
+		Expect(kubernetesscheme.AddToScheme(scheme)).To(Succeed())
+
 		ctx = context.Background()
 		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
-		virtualClient = fakeclient.NewClientBuilder().WithScheme(operatorclient.VirtualScheme).Build()
-		controllerRegistration = New(&record.FakeRecorder{})
+		c = fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
+		gardenNamespace = "garden-test"
 		extensionName = "test-extension"
 		ociRef = "test-extension:v1.2.3"
 		extensionKind = "worker"
+
+		controllerRegistration = New(c, &record.FakeRecorder{}, gardenNamespace)
 
 		extension = &operatorv1alpha1.Extension{
 			ObjectMeta: metav1.ObjectMeta{
@@ -70,114 +85,92 @@ var _ = Describe("ControllerRegistration", func() {
 				},
 			},
 		}
+
+		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
 	})
 
 	Describe("#Reconcile", func() {
 		It("should create the expected ControllerRegistration and ControllerInstallation resources", func() {
-			Expect(controllerRegistration.Reconcile(ctx, log, virtualClient, extension)).To(Succeed())
+			Expect(controllerRegistration.Reconcile(ctx, log, extension)).To(Succeed())
 
-			var controllerDeploymentList gardencorev1.ControllerDeploymentList
-			Expect(virtualClient.List(ctx, &controllerDeploymentList)).To(Succeed())
-			Expect(controllerDeploymentList.Items).To(ConsistOf(gardencorev1.ControllerDeployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:            extensionName,
-					ResourceVersion: "1",
-				},
-				Helm: &gardencorev1.HelmControllerDeployment{
-					OCIRepository: &gardencorev1.OCIRepository{
-						Ref: ptr.To(ociRef),
-					},
-				},
-			}))
+			managedResource := &resourcesv1alpha1.ManagedResource{}
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: "extension-registration-" + extensionName}, managedResource)).To(Succeed())
 
-			var controllerRegistrationList gardencorev1beta1.ControllerRegistrationList
-			Expect(virtualClient.List(ctx, &controllerRegistrationList)).To(Succeed())
-			Expect(controllerRegistrationList.Items).To(ConsistOf(gardencorev1beta1.ControllerRegistration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:            extensionName,
-					ResourceVersion: "1",
-				},
-				Spec: gardencorev1beta1.ControllerRegistrationSpec{
-					Resources: []gardencorev1beta1.ControllerResource{
-						{Kind: extensionKind},
+			Expect(managedResource).To(consistOf(
+				&gardencorev1.ControllerDeployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: extensionName,
 					},
-					Deployment: &gardencorev1beta1.ControllerRegistrationDeployment{
-						DeploymentRefs: []gardencorev1beta1.DeploymentRef{
-							{Name: extensionName},
+					Helm: &gardencorev1.HelmControllerDeployment{
+						OCIRepository: &gardencorev1.OCIRepository{
+							Ref: ptr.To(ociRef),
 						},
 					},
 				},
-			}))
+				&gardencorev1beta1.ControllerRegistration{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: extensionName,
+					},
+					Spec: gardencorev1beta1.ControllerRegistrationSpec{
+						Resources: []gardencorev1beta1.ControllerResource{
+							{Kind: extensionKind},
+						},
+						Deployment: &gardencorev1beta1.ControllerRegistrationDeployment{
+							DeploymentRefs: []gardencorev1beta1.DeploymentRef{
+								{Name: extensionName},
+							},
+						},
+					},
+				},
+			))
 		})
 
 		It("should succeed if extension deployment is not defined", func() {
 			extension.Spec.Deployment = nil
 
-			Expect(controllerRegistration.Reconcile(ctx, log, virtualClient, extension)).To(Succeed())
+			Expect(controllerRegistration.Reconcile(ctx, log, extension)).To(Succeed())
 
-			var controllerDeploymentList gardencorev1.ControllerDeploymentList
-			Expect(virtualClient.List(ctx, &controllerDeploymentList)).To(Succeed())
-			Expect(controllerDeploymentList.Items).To(BeEmpty())
-
-			var controllerRegistrationList gardencorev1beta1.ControllerRegistrationList
-			Expect(virtualClient.List(ctx, &controllerRegistrationList)).To(Succeed())
-			Expect(controllerRegistrationList.Items).To(BeEmpty())
+			mrList := &resourcesv1alpha1.ManagedResourceList{}
+			Expect(c.List(ctx, mrList)).To(Succeed())
+			Expect(mrList.Items).To(BeEmpty())
 		})
 
 		It("should delete the extension", func() {
-			Expect(controllerRegistration.Reconcile(ctx, log, virtualClient, extension)).To(Succeed())
+			Expect(controllerRegistration.Reconcile(ctx, log, extension)).To(Succeed())
 
-			var controllerDeploymentList gardencorev1.ControllerDeploymentList
-			Expect(virtualClient.List(ctx, &controllerDeploymentList)).To(Succeed())
-			Expect(controllerDeploymentList.Items).To(HaveLen(1))
-
-			var controllerRegistrationList gardencorev1beta1.ControllerRegistrationList
-			Expect(virtualClient.List(ctx, &controllerRegistrationList)).To(Succeed())
-			Expect(controllerRegistrationList.Items).To(HaveLen(1))
+			managedResource := &resourcesv1alpha1.ManagedResource{}
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: "extension-registration-" + extensionName}, managedResource)).To(Succeed())
 
 			extension.Spec.Deployment = nil
 
-			Expect(controllerRegistration.Reconcile(ctx, log, virtualClient, extension)).To(Succeed())
+			Expect(controllerRegistration.Reconcile(ctx, log, extension)).To(Succeed())
 
-			Expect(virtualClient.List(ctx, &controllerDeploymentList)).To(Succeed())
-			Expect(controllerDeploymentList.Items).To(BeEmpty())
-
-			Expect(virtualClient.List(ctx, &controllerRegistrationList)).To(Succeed())
-			Expect(controllerRegistrationList.Items).To(BeEmpty())
+			mrList := &resourcesv1alpha1.ManagedResourceList{}
+			Expect(c.List(ctx, mrList)).To(Succeed())
+			Expect(mrList.Items).To(BeEmpty())
 		})
 	})
 
 	Describe("#Delete", func() {
 		It("should succeed if extension was not deployed before", func() {
-			Expect(controllerRegistration.Delete(ctx, log, virtualClient, extension)).To(Succeed())
+			Expect(controllerRegistration.Delete(ctx, log, extension)).To(Succeed())
 
-			var controllerDeploymentList gardencorev1.ControllerDeploymentList
-			Expect(virtualClient.List(ctx, &controllerDeploymentList)).To(Succeed())
-			Expect(controllerDeploymentList.Items).To(BeEmpty())
-
-			var controllerRegistrationList gardencorev1beta1.ControllerRegistrationList
-			Expect(virtualClient.List(ctx, &controllerRegistrationList)).To(Succeed())
-			Expect(controllerRegistrationList.Items).To(BeEmpty())
+			mrList := &resourcesv1alpha1.ManagedResourceList{}
+			Expect(c.List(ctx, mrList)).To(Succeed())
+			Expect(mrList.Items).To(BeEmpty())
 		})
 
 		It("should succeed if extension was deployed before", func() {
-			Expect(controllerRegistration.Reconcile(ctx, log, virtualClient, extension)).To(Succeed())
+			Expect(controllerRegistration.Reconcile(ctx, log, extension)).To(Succeed())
 
-			var controllerDeploymentList gardencorev1.ControllerDeploymentList
-			Expect(virtualClient.List(ctx, &controllerDeploymentList)).To(Succeed())
-			Expect(controllerDeploymentList.Items).To(HaveLen(1))
+			managedResource := &resourcesv1alpha1.ManagedResource{}
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: "extension-registration-" + extensionName}, managedResource)).To(Succeed())
 
-			var controllerRegistrationList gardencorev1beta1.ControllerRegistrationList
-			Expect(virtualClient.List(ctx, &controllerRegistrationList)).To(Succeed())
-			Expect(controllerRegistrationList.Items).To(HaveLen(1))
+			Expect(controllerRegistration.Delete(ctx, log, extension)).To(Succeed())
 
-			Expect(controllerRegistration.Delete(ctx, log, virtualClient, extension)).To(Succeed())
-
-			Expect(virtualClient.List(ctx, &controllerDeploymentList)).To(Succeed())
-			Expect(controllerDeploymentList.Items).To(BeEmpty())
-
-			Expect(virtualClient.List(ctx, &controllerRegistrationList)).To(Succeed())
-			Expect(controllerRegistrationList.Items).To(BeEmpty())
+			mrList := &resourcesv1alpha1.ManagedResourceList{}
+			Expect(c.List(ctx, mrList)).To(Succeed())
+			Expect(mrList.Items).To(BeEmpty())
 		})
 	})
 })

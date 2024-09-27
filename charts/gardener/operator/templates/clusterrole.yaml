@@ -173,7 +173,10 @@ rules:
 - apiGroups:
   - extensions.gardener.cloud
   resources:
+  - backupbuckets
   - clusters
+  - dnsrecords
+  - extensions
   verbs:
   - get
   - list

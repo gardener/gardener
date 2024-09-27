@@ -16,25 +16,23 @@ import (
 	operatorpredicate "github.com/gardener/gardener/pkg/operator/predicate"
 )
 
-const (
-	gardenName = "garden"
-)
-
-var _ = Describe("Add", func() {
+var _ = Describe("Garden", func() {
 	var (
 		garden *operatorv1alpha1.Garden
+		p      predicate.Predicate
 	)
 
-	Describe("#GardenCreatedOrReconciledSuccessfully", func() {
-		var p predicate.Predicate
+	BeforeEach(func() {
+		garden = &operatorv1alpha1.Garden{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "garden",
+			},
+		}
+	})
 
+	Describe("#GardenCreatedOrReconciledSuccessfully", func() {
 		BeforeEach(func() {
 			p = operatorpredicate.GardenCreatedOrReconciledSuccessfully()
-			garden = &operatorv1alpha1.Garden{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: gardenName,
-				},
-			}
 		})
 
 		Describe("#Create", func() {
@@ -100,6 +98,47 @@ var _ = Describe("Add", func() {
 				oldShoot := garden.DeepCopy()
 				oldShoot.Status.LastOperation.State = gardencorev1beta1.LastOperationStateProcessing
 				Expect(p.Update(event.UpdateEvent{ObjectOld: oldShoot, ObjectNew: garden})).To(BeTrue())
+			})
+		})
+
+		Describe("#Delete", func() {
+			It("should return false", func() {
+				Expect(p.Delete(event.DeleteEvent{})).To(BeFalse())
+			})
+		})
+
+		Describe("#Generic", func() {
+			It("should return false", func() {
+				Expect(p.Generic(event.GenericEvent{})).To(BeFalse())
+			})
+		})
+	})
+
+	Describe("#GardenDeletionTriggered", func() {
+		BeforeEach(func() {
+			p = operatorpredicate.GardenDeletionTriggered()
+		})
+
+		Describe("#Create", func() {
+			It("should return false", func() {
+				Expect(p.Create(event.CreateEvent{})).To(BeFalse())
+			})
+		})
+
+		Describe("#Update", func() {
+			It("should return false when deletion timestamp is not set", func() {
+				Expect(p.Update(event.UpdateEvent{ObjectNew: garden, ObjectOld: garden})).To(BeFalse())
+			})
+
+			It("should return false when deletion timestamp is already set", func() {
+				garden.DeletionTimestamp = &metav1.Time{}
+				Expect(p.Update(event.UpdateEvent{ObjectNew: garden, ObjectOld: garden})).To(BeFalse())
+			})
+
+			It("should return true when deletion timestamp was just set", func() {
+				gardenOld := garden.DeepCopy()
+				garden.DeletionTimestamp = &metav1.Time{}
+				Expect(p.Update(event.UpdateEvent{ObjectNew: garden, ObjectOld: gardenOld})).To(BeTrue())
 			})
 		})
 

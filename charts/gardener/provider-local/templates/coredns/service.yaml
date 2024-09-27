@@ -1,4 +1,4 @@
-{{- if .Values.coredns.enabled -}}
+{{- if eq (include "coredns.enabled" .) "true" -}}
 apiVersion: v1
 kind: Service
 metadata:

@@ -62,7 +62,7 @@ This can be relevant in case the runtime cluster runs on an infrastructure that 
 #### Cert-Management
 
 The operator can deploy the Gardener [cert-management](https://github.com/gardener/cert-management) component optionally.
-A default issuer has to be specified and will be deployed, too. Please note that the `cert-controller-manager` is configured to use `DNSRecords` for ACME DNS challenges on certificate requests. A suitable provider extension must be deployed in this case, e.g. using an operator extension resource.
+A default issuer has to be specified and will be deployed, too. Please note that the `cert-controller-manager` is configured to use `DNSRecords` for ACME DNS challenges on certificate requests. A suitable provider extension must be deployed in this case, e.g. using an operator `Extension` resource.
 The default issuer must be set at `.spec.runtimeCluster.certManagement.defaultIssuer` either specifying an ACME or CA issuer.
 
 If the `cert-controller-manager` should make requests to any ACME servers running with self-signed TLS certificates, the related CA can be provided using a secret with data field `bundle.crt` referenced with `.spec.runtimeCluster.certManagement.config.caCertificatesSecretRef`.
@@ -121,14 +121,15 @@ The `spec.virtualCluster.kubernetes.kubeAPIServer.encryptionConfig` field in the
 
 ## `Extension` Resource
 
-A Gardener installation relies on extension controllers to provide support for new cloud providers or to add new capabilities.
-You can find out more about Gardener's extensions and how they can be used [here](../extensions/extension.md#contract-extension-resource).
+A Gardener installation relies on extensions to provide support for new cloud providers or to add new capabilities.
+You can find out more about Gardener extensions and how they can be used [here](../extensions/extension.md#contract-extension-resource).
 
 The `Extension` resource is intended to automate the installation and management of extensions in a Gardener landscape.
 It contains configuration for the following scenarios:
 
+- The deployment of the extension chart in the garden runtime cluster.
 - The deployment of `ControllerRegistration` and `ControllerDeployment` resources in the (virtual) garden cluster.
-- The deployment of [admission controllers](../extensions/admission.md) in the runtime cluster.
+- The deployment of [extension admissions charts](../extensions/admission.md) in runtime and virtual clusters.
 
 In the near future, the `Extension` will be used by the `gardener-operator` to automate the management of the backup bucket for ETCD and DNS records required by the garden cluster.
 To do that, `gardener-operator` will leverage extensions that support `DNSRecord` and `BackupBucket` resources.
@@ -141,27 +142,46 @@ Please find an exemplary `Extension` resource [here](../../example/operator/15-e
 
 The `.spec.deployment` specifies how an extension can be installed for a Gardener landscape and consists of the following parts:
 
-- `.spec.deployment.extension` contains the deployment specification of an extension controller.
-- `.spec.deployment.admission` contains the deployment specification of an admission controller.
+- `.spec.deployment.extension` contains the deployment specification of an extension.
+- `.spec.deployment.admission` contains the deployment specification of an extension admission.
 
 Each one is described in more details below.
 
 #### Configuration for Extension Deployment
 
-`.spec.deployment.extension` contains configuration for the registration of an extension controller in the garden cluster.
+`.spec.deployment.extension` contains configuration for the registration of an extension in the garden cluster.
 `gardener-operator` follows the same principles described by [this document](../extensions/controllerregistration.md#registering-extension-controllers):
 - `.spec.deployment.extension.helm` and `.spec.deployment.extension.values` are used when creating the `ControllerDeployment` in the garden cluster.
 - `.spec.deployment.extension.policy` and `.spec.deployment.extension.seedSelector` define the extension's installation policy as per the [`ControllerDeployment's` respective fields](../extensions/controllerregistration.md#deployment-configuration-options)
 
-The extension controller can also be deployed in the runtime cluster to manage resources required by the `Garden` resource.
+##### Runtime
+
+Extensions can manage resources required by the `Garden` resource (e.g. `BackupBucket`, `DNSRecord`, `Extension`) in the runtime cluster.
 Since the environment in the runtime cluster may differ from that of a `Seed`, the extension is installed in the runtime cluster with a distinct set of Helm chart values specified in `.spec.deployment.extension.runtimeValues`.
-This configuration allows for precise control over various extension parameters, such as requested resources, [priority classes](../development/priority-classes.md), and more.
+If no `runtimeValues` are provided, the extension deployment for the runtime garden is considered superfluous and the deployment is uninstalled.
+The configuration allows for precise control over various extension parameters, such as requested resources, [priority classes](../development/priority-classes.md), and more.
+
+Besides the values configured in `.spec.deployment.extension.runtimeValues`, a runtime deployment flag and a priority class are merged into the values:
+
+```yaml
+gardener:
+  runtimeCluster:
+    enabled: true # indicates the extension is enabled for the Garden cluster, e.g. for handling `BackupBucket`, `DNSRecord` and `Extension` objects.
+    priorityClassName: gardener-garden-system-200
+```
+
+As soon as a `Garden` object is created and `runtimeValues` are configured, the extension is deployed in the runtime cluster. 
+
+##### Extension Registration
+
+When the virtual garden cluster is available, the `Extension` controller manages [`ControllerRegistration`/`ControllerDeployment` resources](../extensions/controllerregistration.md#registering-extension-controllers)
+to register extensions for shoots.  The fields of `.spec.deployment.extension` include their configuration options. 
 
 #### Configuration for Admission Deployment
 
-The `.spec.deployment.admission` defines how an extension's admission controller may be deployed by the `gardener-operator`.
-The deployment of an admission controller is optional and may be omitted.
-Typically, the admission controllers are split in two parts:
+The `.spec.deployment.admission` defines how an extension admission may be deployed by the `gardener-operator`.
+This deployment is optional and may be omitted.
+Typically, the admission are split in two parts:
 
 ##### Runtime
 
@@ -171,7 +191,7 @@ The following values are passed to the chart during reconciliation:
 ```yaml
 gardener:
   runtimeCluster:
-    priorityClassName: <Class to be used for admission controller>
+    priorityClassName: <Class to be used for extension admission>
 ```
 
 ##### Virtual
@@ -187,7 +207,7 @@ gardener:
       namespace: <Namespace of the service account>
 ```
 
-Admission controllers often need to retrieve additional context from the garden cluster in order to process validating or mutating requests.
+Extension admissions often need to retrieve additional context from the garden cluster in order to process validating or mutating requests.
 
 For example, the corresponding `CloudProfile` might be needed to perform a provider specific shoot validation.
 Therefore, Gardener automatically injects a kubeconfig into the admission deployment to interact with the (virtual) garden cluster (see [this document](https://github.com/gardener/gardener/blob/master/docs/extensions/garden-api-access.md) for more information).
@@ -584,7 +604,8 @@ Gardener relies on extensions to provide various capabilities, such as supportin
 This controller automates the management of extensions by managing all necessary resources in the runtime and virtual garden clusters.
 
 Currently, this controller handles the following scenarios:
-- Admission controller deployment for the virtual garden cluster.
+- Extension deployment in the runtime cluster
+- Extension admission deployment for the virtual garden cluster.
 - `ControllerDeployment` and `ControllerRegistration` reconciliation in the virtual garden cluster.
 
 ### [`Gardenlet` Controller](../../pkg/operator/controller/gardenlet)

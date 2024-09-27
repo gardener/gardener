@@ -10,16 +10,18 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	extensioncontroller "github.com/gardener/gardener/pkg/operator/controller/extension"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -27,17 +29,20 @@ import (
 
 var _ = Describe("Extension controller tests", func() {
 	var (
-		garden                    *operatorv1alpha1.Garden
-		extensionBar              *operatorv1alpha1.Extension
-		extensionFoo              *operatorv1alpha1.Extension
-		controllerDeploymentBar   *gardencorev1.ControllerDeployment
-		controllerRegistrationBar *gardencorev1beta1.ControllerRegistration
-		controllerDeploymentFoo   *gardencorev1.ControllerDeployment
-		controllerRegistrationFoo *gardencorev1beta1.ControllerRegistration
+		garden                         *operatorv1alpha1.Garden
+		extensionBar                   *operatorv1alpha1.Extension
+		extensionFoo                   *operatorv1alpha1.Extension
+		managedResourceRuntimeBar      *resourcesv1alpha1.ManagedResource
+		managedResourceRuntimeFoo      *resourcesv1alpha1.ManagedResource
+		managedResourceRegistrationBar *resourcesv1alpha1.ManagedResource
+		managedResourceRegistrationFoo *resourcesv1alpha1.ManagedResource
+		dnsRecordFoo                   *extensionsv1alpha1.DNSRecord
+		backupBucketBar                *extensionsv1alpha1.BackupBucket
 	)
 
 	BeforeEach(func() {
 		DeferCleanup(test.WithVar(&managedresources.IntervalWait, 100*time.Millisecond))
+		DeferCleanup(test.WithVar(&extensioncontroller.RequeueGardenResourceNotReady, 100*time.Millisecond))
 
 		garden = &operatorv1alpha1.Garden{
 			ObjectMeta: metav1.ObjectMeta{
@@ -96,6 +101,10 @@ var _ = Describe("Extension controller tests", func() {
 			Spec: operatorv1alpha1.ExtensionSpec{
 				Resources: []gardencorev1beta1.ControllerResource{
 					{
+						Kind: "BackupBucket",
+						Type: "bar",
+					},
+					{
 						Kind: "Worker",
 						Type: "bar",
 					},
@@ -108,9 +117,7 @@ var _ = Describe("Extension controller tests", func() {
 					ExtensionDeployment: &operatorv1alpha1.ExtensionDeploymentSpec{
 						DeploymentSpec: operatorv1alpha1.DeploymentSpec{
 							Helm: &operatorv1alpha1.ExtensionHelm{
-								OCIRepository: &gardencorev1.OCIRepository{
-									Ref: ptr.To("bar"),
-								},
+								OCIRepository: &ociRepositoryProviderLocalChart,
 							},
 						},
 					},
@@ -125,6 +132,10 @@ var _ = Describe("Extension controller tests", func() {
 			},
 			Spec: operatorv1alpha1.ExtensionSpec{
 				Resources: []gardencorev1beta1.ControllerResource{
+					{
+						Kind: "DNSRecord",
+						Type: "foo",
+					},
 					{
 						Kind: "Worker",
 						Type: "foo",
@@ -150,9 +161,7 @@ var _ = Describe("Extension controller tests", func() {
 					ExtensionDeployment: &operatorv1alpha1.ExtensionDeploymentSpec{
 						DeploymentSpec: operatorv1alpha1.DeploymentSpec{
 							Helm: &operatorv1alpha1.ExtensionHelm{
-								OCIRepository: &gardencorev1.OCIRepository{
-									Ref: ptr.To("foo"),
-								},
+								OCIRepository: &ociRepositoryProviderLocalChart,
 							},
 						},
 					},
@@ -160,37 +169,75 @@ var _ = Describe("Extension controller tests", func() {
 			},
 		}
 
-		controllerDeploymentBar = &gardencorev1.ControllerDeployment{
+		managedResourceRuntimeBar = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "provider-bar",
-			},
-		}
-		controllerRegistrationBar = &gardencorev1beta1.ControllerRegistration{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "provider-bar",
+				Name:      "extension-provider-bar-garden",
+				Namespace: testNamespace.Name,
 			},
 		}
 
-		controllerDeploymentFoo = &gardencorev1.ControllerDeployment{
+		managedResourceRuntimeFoo = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "provider-foo",
+				Name:      "extension-provider-foo-garden",
+				Namespace: testNamespace.Name,
 			},
 		}
-		controllerRegistrationFoo = &gardencorev1beta1.ControllerRegistration{
+
+		managedResourceRegistrationBar = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "provider-foo",
+				Name:      "extension-registration-provider-bar",
+				Namespace: testNamespace.Name,
+			},
+		}
+
+		managedResourceRegistrationFoo = &resourcesv1alpha1.ManagedResource{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "extension-registration-provider-foo",
+				Namespace: testNamespace.Name,
+			},
+		}
+
+		dnsRecordFoo = &extensionsv1alpha1.DNSRecord{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo-dns",
+				Namespace: testNamespace.Name,
+			},
+			Spec: extensionsv1alpha1.DNSRecordSpec{
+				DefaultSpec: extensionsv1alpha1.DefaultSpec{
+					Type: "foo",
+				},
+				SecretRef: corev1.SecretReference{
+					Name: "test-foo-dns",
+				},
+				Name:       "test.example.com",
+				RecordType: extensionsv1alpha1.DNSRecordTypeA,
+				Values:     []string{"1.2.3.4"},
+			},
+		}
+
+		backupBucketBar = &extensionsv1alpha1.BackupBucket{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "bar-bucket",
+			},
+			Spec: extensionsv1alpha1.BackupBucketSpec{
+				DefaultSpec: extensionsv1alpha1.DefaultSpec{
+					Type: "bar",
+				},
+				Region: "region",
+				SecretRef: corev1.SecretReference{
+					Name: "test-bar-bucket",
+				},
 			},
 		}
 	})
 
-	It("should reconcile virtual cluster resources", func() {
+	It("should reconcile virtual and runtime cluster resources", func() {
 		By("Create extension bar")
 		Expect(testClient.Create(ctx, extensionBar)).To(Succeed())
 		log.Info("Created extension for test", "garden", extensionBar.Name)
 		DeferCleanup(func() {
 			By("Delete extension")
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, extensionBar))).To(Succeed())
-			Expect(client.IgnoreNotFound(controllerutils.RemoveAllFinalizers(ctx, testClient, extensionBar))).To(Succeed())
 			By("Ensure extension is gone")
 			Eventually(func() error { return mgrClient.Get(ctx, client.ObjectKeyFromObject(extensionBar), extensionBar) }).Should(BeNotFoundError())
 		})
@@ -221,17 +268,15 @@ var _ = Describe("Extension controller tests", func() {
 				return mgrClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)
 			}).Should(BeNotFoundError())
 
-			By("Delete controller-{registration,deployment} for provider-local")
+			By("Delete extension registration for provider-bar")
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, extensionBar))).To(Succeed())
-			Expect(client.IgnoreNotFound(controllerutils.RemoveAllFinalizers(ctx, testClient, extensionFoo))).To(Succeed())
-			Expect(client.IgnoreNotFound(testClient.Delete(ctx, controllerRegistrationBar))).To(Succeed())
-			Expect(client.IgnoreNotFound(testClient.Delete(ctx, controllerDeploymentBar))).To(Succeed())
+			Expect(client.IgnoreNotFound(controllerutils.RemoveAllFinalizers(ctx, testClient, extensionBar))).To(Succeed())
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, managedResourceRegistrationBar))).To(Succeed())
 
-			By("Delete controller-{registration,deployment} for provider-foo")
+			By("Delete extension registration for provider-foo")
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, extensionFoo))).To(Succeed())
 			Expect(client.IgnoreNotFound(controllerutils.RemoveAllFinalizers(ctx, testClient, extensionFoo))).To(Succeed())
-			Expect(client.IgnoreNotFound(testClient.Delete(ctx, controllerRegistrationFoo))).To(Succeed())
-			Expect(client.IgnoreNotFound(testClient.Delete(ctx, controllerDeploymentFoo))).To(Succeed())
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, managedResourceRegistrationFoo))).To(Succeed())
 		})
 
 		By("Update Garden to ready state")
@@ -239,7 +284,7 @@ var _ = Describe("Extension controller tests", func() {
 			LastOperation: &gardencorev1beta1.LastOperation{
 				LastUpdateTime: metav1.Now(),
 				State:          gardencorev1beta1.LastOperationStateProcessing,
-				Type:           gardencorev1beta1.LastOperationTypeCreate,
+				Type:           gardencorev1beta1.LastOperationTypeReconcile,
 			},
 		}
 		Expect(testClient.Status().Update(ctx, garden)).To(Succeed())
@@ -247,7 +292,8 @@ var _ = Describe("Extension controller tests", func() {
 			LastOperation: &gardencorev1beta1.LastOperation{
 				LastUpdateTime: metav1.Now(),
 				State:          gardencorev1beta1.LastOperationStateSucceeded,
-				Type:           gardencorev1beta1.LastOperationTypeCreate,
+				Type:           gardencorev1beta1.LastOperationTypeReconcile,
+				Progress:       100,
 			},
 		}
 		Expect(testClient.Status().Update(ctx, garden)).To(Succeed())
@@ -263,8 +309,7 @@ var _ = Describe("Extension controller tests", func() {
 			WithReason("ReconcileSuccessful"),
 		), fmt.Sprintf("Failed conditions expected to be healthy:%+v", extensionBar.Status.Conditions))
 
-		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerRegistrationBar), controllerRegistrationBar)).To(Succeed())
-		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerDeploymentBar), controllerDeploymentBar)).To(Succeed())
+		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRegistrationBar), managedResourceRegistrationBar)).To(Succeed())
 
 		By("Create extension foo with admission controller")
 		Expect(testClient.Create(ctx, extensionFoo)).To(Succeed())
@@ -298,17 +343,94 @@ var _ = Describe("Extension controller tests", func() {
 			WithReason("ReconcileSuccessful"),
 		), fmt.Sprintf("Failed conditions expected to be healthy:%+v", extensionFoo.Status.Conditions))
 
-		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerRegistrationFoo), controllerRegistrationFoo)).To(Succeed())
-		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerDeploymentFoo), controllerDeploymentFoo)).To(Succeed())
+		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRegistrationFoo), managedResourceRegistrationFoo)).To(Succeed())
+
+		By("Validate that extensions are not deployed in runtime cluster yet")
+		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntimeFoo), &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
+		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntimeBar), &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
+
+		By("Deploy extension in runtime cluster by creating a backup bucket")
+		Expect(testClient.Create(ctx, backupBucketBar)).To(Succeed())
+		DeferCleanup(func() {
+			By("Delete backup bucket")
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, backupBucketBar))).To(Succeed())
+		})
+
+		By("Wait for runtime managed resource and set it as applied, healthy and not progressing")
+		Eventually(func() error {
+			return patchManagedResourceAsHealthyAndComplete(managedResourceRuntimeBar.Name)
+		}).Should(Succeed())
+
+		By("Wait until extension is successfully reconciled")
+		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionBar), extensionBar)).To(Succeed())
+			g.Expect(extensionBar.Finalizers).To(ConsistOf("gardener.cloud/operator"))
+			return extensionBar.Status.Conditions
+		}).Should(ContainCondition(
+			OfType(operatorv1alpha1.ExtensionInstalled),
+			WithStatus(gardencorev1beta1.ConditionTrue),
+			WithReason("ReconcileSuccessful"),
+		), fmt.Sprintf("Failed conditions expected to be healthy:%+v", extensionBar.Status.Conditions))
+
+		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntimeFoo), &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
+		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntimeBar), &resourcesv1alpha1.ManagedResource{})).To(Succeed())
+
+		By("Deploy extensions in runtime cluster by creating a dns record")
+		Expect(testClient.Create(ctx, dnsRecordFoo)).To(Succeed())
+		DeferCleanup(func() {
+			By("Delete dns record")
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, dnsRecordFoo))).To(Succeed())
+		})
+
+		By("Wait for runtime managed resource and set it as applied, healthy and not progressing")
+		Eventually(func() error {
+			return patchManagedResourceAsHealthyAndComplete(managedResourceRuntimeFoo.Name)
+		}).Should(Succeed())
+
+		By("Wait until extension is successfully reconciled")
+		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionFoo), extensionFoo)).To(Succeed())
+			g.Expect(extensionFoo.Finalizers).To(ConsistOf("gardener.cloud/operator"))
+			return extensionFoo.Status.Conditions
+		}).Should(ContainCondition(
+			OfType(operatorv1alpha1.ExtensionInstalled),
+			WithStatus(gardencorev1beta1.ConditionTrue),
+			WithReason("ReconcileSuccessful"),
+		), fmt.Sprintf("Failed conditions expected to be healthy:%+v", extensionFoo.Status.Conditions))
+
+		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntimeFoo), &resourcesv1alpha1.ManagedResource{})).To(Succeed())
+		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntimeBar), &resourcesv1alpha1.ManagedResource{})).To(Succeed())
+
+		By("Delete extension in runtime cluster by deleting its last reference")
+		Expect(testClient.Delete(ctx, backupBucketBar)).To(Succeed())
+
+		By("Wait for runtime managed resource to be deleted")
+		Eventually(func() error {
+			return testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntimeBar), &resourcesv1alpha1.ManagedResource{})
+		}).Should(BeNotFoundError())
+
+		By("Wait until extension is successfully reconciled")
+		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionBar), extensionBar)).To(Succeed())
+			g.Expect(extensionBar.Finalizers).To(ConsistOf("gardener.cloud/operator"))
+			return extensionBar.Status.Conditions
+		}).Should(ContainCondition(
+			OfType(operatorv1alpha1.ExtensionInstalled),
+			WithStatus(gardencorev1beta1.ConditionTrue),
+			WithReason("ReconcileSuccessful"),
+		), fmt.Sprintf("Failed conditions expected to be healthy:%+v", extensionBar.Status.Conditions))
+
+		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntimeFoo), &resourcesv1alpha1.ManagedResource{})).To(Succeed())
+		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntimeBar), &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
 
 		By("Delete extension foo")
 		Expect(testClient.Delete(ctx, extensionFoo)).To(Succeed())
 
 		Eventually(func() error {
-			return testClient.Get(ctx, client.ObjectKeyFromObject(controllerRegistrationFoo), controllerRegistrationFoo)
+			return testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRegistrationFoo), &resourcesv1alpha1.ManagedResource{})
 		}).Should(BeNotFoundError())
 		Eventually(func() error {
-			return testClient.Get(ctx, client.ObjectKeyFromObject(controllerDeploymentFoo), controllerDeploymentFoo)
+			return testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntimeFoo), &resourcesv1alpha1.ManagedResource{})
 		}).Should(BeNotFoundError())
 		Eventually(func() error {
 			return testClient.Get(ctx, client.ObjectKey{Namespace: testNamespace.Name, Name: "extension-admission-runtime-provider-foo"}, &resourcesv1alpha1.ManagedResource{})
@@ -325,15 +447,6 @@ var _ = Describe("Extension controller tests", func() {
 		Eventually(func() error {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)
 		}).Should(BeNotFoundError())
-
-		By("Verify extension bar has no finalizers")
-		Eventually(func() ([]string, error) {
-			err := mgrClient.Get(ctx, client.ObjectKeyFromObject(extensionBar), extensionBar)
-			if err != nil {
-				return nil, err
-			}
-			return extensionBar.Finalizers, nil
-		}).Should(BeEmpty())
 	})
 })
 

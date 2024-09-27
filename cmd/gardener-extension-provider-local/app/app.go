@@ -215,23 +215,32 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			metav1.AddToGroupVersion(scheme, machinev1alpha1.SchemeGroupVersion)
 
 			log.Info("Getting rest config for garden")
-			gardenRESTConfig, err := kubernetes.RESTConfigFromKubeconfigFile(os.Getenv("GARDEN_KUBECONFIG"), kubernetes.AuthTokenFile)
-			if err != nil {
-				return err
-			}
+			var gardenCluster cluster.Cluster
+			if gardenKubeconfigPath := os.Getenv("GARDEN_KUBECONFIG"); gardenKubeconfigPath != "" {
+				gardenRESTConfig, err := kubernetes.RESTConfigFromKubeconfigFile(os.Getenv("GARDEN_KUBECONFIG"), kubernetes.AuthTokenFile)
+				if err != nil {
+					return err
+				}
 
-			log.Info("Setting up cluster object for garden")
-			gardenCluster, err := cluster.New(gardenRESTConfig, func(opts *cluster.Options) {
-				opts.Scheme = kubernetes.GardenScheme
-				opts.Logger = log
-			})
-			if err != nil {
-				return fmt.Errorf("failed creating garden cluster object: %w", err)
-			}
+				log.Info("Setting up cluster object for garden")
+				gardenCluster, err = cluster.New(gardenRESTConfig, func(opts *cluster.Options) {
+					opts.Scheme = kubernetes.GardenScheme
+					opts.Logger = log
+				})
+				if err != nil {
+					return fmt.Errorf("failed creating garden cluster object: %w", err)
+				}
 
-			log.Info("Adding garden cluster to manager")
-			if err := mgr.Add(gardenCluster); err != nil {
-				return fmt.Errorf("failed adding garden cluster to manager: %w", err)
+				log.Info("Adding garden cluster to manager")
+				if err := mgr.Add(gardenCluster); err != nil {
+					return fmt.Errorf("failed adding garden cluster to manager: %w", err)
+				}
+
+				if err := mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
+					return verifyGardenAccess(ctx, log, gardenCluster.GetClient(), seedName)
+				})); err != nil {
+					return fmt.Errorf("could not add garden runnable to manager: %w", err)
+				}
 			}
 
 			log.Info("Adding controllers to manager")
@@ -274,18 +283,14 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			localcontrolplane.DefaultAddOptions.WebhookServerNamespace = webhookOptions.Server.Namespace
 
 			// Send empty patches on start-up to trigger webhooks
-			if err := mgr.Add(&webhookTriggerer{client: mgr.GetClient()}); err != nil {
-				return fmt.Errorf("error adding runnable for triggering DNS config webhook: %w", err)
+			if !webhookSwitches.Completed().Disabled {
+				if err := mgr.Add(&webhookTriggerer{client: mgr.GetClient()}); err != nil {
+					return fmt.Errorf("error adding runnable for triggering DNS config webhook: %w", err)
+				}
 			}
 
 			if err := controllerSwitches.Completed().AddToManager(ctx, mgr); err != nil {
 				return fmt.Errorf("could not add controllers to manager: %w", err)
-			}
-
-			if err := mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
-				return verifyGardenAccess(ctx, log, gardenCluster.GetClient(), seedName)
-			})); err != nil {
-				return fmt.Errorf("could not add garden runnable to manager: %w", err)
 			}
 
 			log.Info("Started with", "hostIP", serviceCtrlOpts.HostIP)

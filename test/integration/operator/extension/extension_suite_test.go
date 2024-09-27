@@ -66,6 +66,7 @@ var (
 	gardenName    string
 
 	fakeRegistry                           *ocifake.Registry
+	ociRepositoryProviderLocalChart        gardencorev1.OCIRepository
 	ociRepositoryAdmissionApplicationChart gardencorev1.OCIRepository
 	ociRepositoryAdmissionRuntimeChart     gardencorev1.OCIRepository
 )
@@ -84,6 +85,9 @@ var _ = BeforeSuite(func() {
 					filepath.Join("..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_gardens.yaml"),
 					filepath.Join("..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_extensions.yaml"),
 					filepath.Join("..", "..", "..", "..", "example", "resource-manager", "10-crd-resources.gardener.cloud_managedresources.yaml"),
+					filepath.Join("..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_backupbuckets.yaml"),
+					filepath.Join("..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_dnsrecords.yaml"),
+					filepath.Join("..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_extensions.yaml"),
 				},
 			},
 			ErrorIfCRDPathMissing: true,
@@ -161,6 +165,20 @@ var _ = BeforeSuite(func() {
 
 	gardenClientMap := fakeclientmap.NewClientMapBuilder().WithClientSetForKey(keys.ForGarden(&operatorv1alpha1.Garden{ObjectMeta: metav1.ObjectMeta{Name: gardenName}}), testClientSet).Build()
 
+	By("Setup fake OCI registry with provider-local chart")
+	fakeRegistry = ocifake.NewRegistry()
+
+	ociRepositoryProviderLocalChart = gardencorev1.OCIRepository{Repository: ptr.To("provider-local"), Tag: ptr.To("test")}
+
+	Expect(exec.Command("helm", "package", filepath.Join("..", "..", "..", "..", "charts", "gardener", "provider-local"), "--destination", ".").Run()).To(Succeed())
+	DeferCleanup(func() {
+		Expect(os.Remove("gardener-extension-provider-local-v0.1.0.tgz")).To(Succeed())
+	})
+	providerLocalChart, err := os.ReadFile("gardener-extension-provider-local-v0.1.0.tgz")
+	Expect(err).NotTo(HaveOccurred())
+
+	fakeRegistry.AddArtifact(&ociRepositoryProviderLocalChart, providerLocalChart)
+
 	By("Setup fake OCI registry with admission-local charts")
 	ociRepositoryAdmissionApplicationChart = gardencorev1.OCIRepository{Repository: ptr.To("admission-local-application"), Tag: ptr.To("test")}
 	ociRepositoryAdmissionRuntimeChart = gardencorev1.OCIRepository{Repository: ptr.To("admission-local-runtime"), Tag: ptr.To("test")}
@@ -179,7 +197,6 @@ var _ = BeforeSuite(func() {
 	admissionLocalRuntimeChart, err := os.ReadFile("admission-local-runtime-0.1.0.tgz")
 	Expect(err).NotTo(HaveOccurred())
 
-	fakeRegistry = ocifake.NewRegistry()
 	fakeRegistry.AddArtifact(&ociRepositoryAdmissionApplicationChart, admissionLocalApplicationChart)
 	fakeRegistry.AddArtifact(&ociRepositoryAdmissionRuntimeChart, admissionLocalRuntimeChart)
 

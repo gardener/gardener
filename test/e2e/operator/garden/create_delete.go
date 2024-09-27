@@ -15,11 +15,13 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -55,10 +57,6 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 			ctx, cancel = context.WithTimeout(parentCtx, 5*time.Minute)
 			defer cancel()
 
-			// TODO(timuthy): Remove this special handling as soon as extensions provider a proper deletion procedure, i.e cleaning up extension resources when garden resource is deleted. Planned for release v1.103 or v1.104.
-			By("Remove admission from provider-local")
-			removeAdmissionControllerFromExtension(ctx, client.ObjectKeyFromObject(extensionProviderLocal))
-
 			By("Delete Garden")
 			Expect(gardenerutils.ConfirmDeletion(ctx, runtimeClient, garden)).To(Succeed())
 			Expect(runtimeClient.Delete(ctx, garden)).To(Succeed())
@@ -82,6 +80,9 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 			Expect(crdList.Items).To(ContainElement(MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gardens.operator.gardener.cloud")})})))
 
 			Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: v1beta1constants.DeploymentNameGardenerResourceManager, Namespace: namespace}, &appsv1.Deployment{})).To(BeNotFoundError())
+
+			By("Wait until extension reports a successful uninstallation")
+			waitForExtensionToReportDeletion(ctx, "provider-local")
 		})
 
 		By("Verify creation")
@@ -126,6 +127,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 				healthyManagedResource("gardener-metrics-exporter-virtual"),
 				healthyManagedResource("extension-admission-runtime-provider-local"),
 				healthyManagedResource("extension-admission-virtual-provider-local"),
+				healthyManagedResource("extension-registration-provider-local"),
 				healthyManagedResource("cert-management-controller"),
 				healthyManagedResource("cert-management-issuers"),
 			))
@@ -134,6 +136,31 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 			g.Expect(managedResourceList.Items).To(ConsistOf(
 				healthyManagedResource("istio-system"),
 				healthyManagedResource("virtual-garden-istio"),
+			))
+		}).WithPolling(2 * time.Second).Should(Succeed())
+
+		// TODO(oliver-goetz): Remove this step when gardener-operator is able to create its backup bucket and DNS record by itself.
+		By("Deploy extension in runtime cluster by creating a backup bucket")
+		backupBucket := &extensionsv1alpha1.BackupBucket{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test-bucket",
+			},
+			Spec: extensionsv1alpha1.BackupBucketSpec{
+				DefaultSpec: extensionsv1alpha1.DefaultSpec{
+					Type: "local",
+				},
+				Region: "region",
+				SecretRef: corev1.SecretReference{
+					Name: "test-backup-bucket",
+				},
+			},
+		}
+		Expect(runtimeClient.Create(ctx, backupBucket)).To(Succeed())
+		CEventually(ctx, func(g Gomega) {
+			managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
+			g.Expect(runtimeClient.List(ctx, managedResourceList, client.InNamespace(namespace))).To(Succeed())
+			g.Expect(managedResourceList.Items).To(ContainElement(
+				healthyManagedResource("extension-provider-local-garden"),
 			))
 		}).WithPolling(2 * time.Second).Should(Succeed())
 

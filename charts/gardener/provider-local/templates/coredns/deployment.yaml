@@ -1,4 +1,4 @@
-{{- if .Values.coredns.enabled -}}
+{{- if eq (include "coredns.enabled" .) "true" -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:

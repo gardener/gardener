@@ -8,6 +8,8 @@ import (
 	"context"
 	_ "embed"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -39,40 +41,56 @@ var (
 	//go:embed assets/crd-extensions.gardener.cloud_workers.yaml
 	workerCRD string
 
-	resources []string
+	generalCRDs []string
+	shootCRDs   []string
 )
 
 func init() {
-	resources = append(resources,
+	generalCRDs = []string{
 		backupBucketCRD,
+		dnsRecordCRD,
+		extensionCRD,
+	}
+
+	shootCRDs = []string{
 		backupEntryCRD,
 		bastionCRD,
 		clusterCRD,
 		containerRuntimeCRD,
 		controlPlaneCRD,
-		dnsRecordCRD,
-		extensionCRD,
 		infrastructureCRD,
 		networkCRD,
 		operatingSystemConfigCRD,
 		workerCRD,
-	)
+	}
 }
 
 type crd struct {
-	applier kubernetes.Applier
+	applier            kubernetes.Applier
+	includeGeneralCRDs bool
+	includeShootCRDs   bool
 }
 
 // NewCRD can be used to deploy extensions CRDs.
-func NewCRD(a kubernetes.Applier) component.DeployWaiter {
+func NewCRD(a kubernetes.Applier, includeGeneralCRDs, includeShootCRDs bool) component.DeployWaiter {
 	return &crd{
-		applier: a,
+		applier:            a,
+		includeGeneralCRDs: includeGeneralCRDs,
+		includeShootCRDs:   includeShootCRDs,
 	}
 }
 
 // Deploy creates and updates the CRD definitions for the gardener extensions.
 func (c *crd) Deploy(ctx context.Context) error {
 	var fns []flow.TaskFn
+
+	var resources []string
+	if c.includeGeneralCRDs {
+		resources = append(resources, generalCRDs...)
+	}
+	if c.includeShootCRDs {
+		resources = append(resources, shootCRDs...)
+	}
 
 	for _, resource := range resources {
 		r := resource
@@ -85,8 +103,25 @@ func (c *crd) Deploy(ctx context.Context) error {
 }
 
 // Destroy does nothing
-func (c *crd) Destroy(_ context.Context) error {
-	return nil
+func (c *crd) Destroy(ctx context.Context) error {
+	var fns []flow.TaskFn
+
+	var resources []string
+	if c.includeGeneralCRDs {
+		resources = append(resources, generalCRDs...)
+	}
+	if c.includeShootCRDs {
+		resources = append(resources, shootCRDs...)
+	}
+
+	for _, resource := range resources {
+		r := resource
+		fns = append(fns, func(ctx context.Context) error {
+			return client.IgnoreNotFound(c.applier.DeleteManifest(ctx, kubernetes.NewManifestReader([]byte(r))))
+		})
+	}
+
+	return flow.Parallel(fns...)(ctx)
 }
 
 // Wait does nothing
