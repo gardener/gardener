@@ -197,7 +197,7 @@ func gardenPrometheusRule(isGardenerDiscoveryServerEnabled bool) *monitoringv1.P
 			},
 		},
 		{
-			Alert:  "GardenConditionNotTrue",
+			Alert:  "GardenConditionStatusNotTrue",
 			Expr:   intstr.FromString(`garden_garden_condition{status!="True"} == 1`),
 			For:    ptr.To(monitoringv1.Duration("10m")),
 			Labels: getLabels("critical"),
@@ -209,7 +209,7 @@ func gardenPrometheusRule(isGardenerDiscoveryServerEnabled bool) *monitoringv1.P
 			},
 		},
 		{
-			Alert:  "GardenKubeStateMetricsUnavailable",
+			Alert:  "GardenKubeStateMetricsDown",
 			Expr:   intstr.FromString(`absent(up{job="kube-state-metrics"} == 1)`),
 			For:    ptr.To(monitoringv1.Duration("10m")),
 			Labels: getLabels("critical"),
