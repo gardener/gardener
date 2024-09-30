@@ -251,11 +251,8 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 				},
 				{
 					APIGroups: []string{securityv1alpha1.GroupName},
-					Resources: []string{
-						"credentialsbindings",
-						"workloadidentities",
-					},
-					Verbs: []string{"get", "list", "watch"},
+					Resources: []string{"credentialsbindings"},
+					Verbs:     []string{"get", "list", "watch"},
 				},
 				{
 					APIGroups: []string{
@@ -547,11 +544,8 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 				},
 				{
 					APIGroups: []string{securityv1alpha1.GroupName},
-					Resources: []string{
-						"credentialsbindings",
-						"workloadidentities",
-					},
-					Verbs: []string{"get", "list", "watch"},
+					Resources: []string{"credentialsbindings"},
+					Verbs:     []string{"get", "list", "watch"},
 				},
 				{
 					APIGroups: []string{settingsv1alpha1.GroupName},

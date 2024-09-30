@@ -127,7 +127,6 @@ rules:
   - security.gardener.cloud
   resources:
   - credentialsbindings
-  - workloadidentities
   verbs:
   - get
   - list
@@ -645,7 +644,6 @@ rules:
   - security.gardener.cloud
   resources:
   - credentialsbindings
-  - workloadidentities
   verbs:
   - get
   - list

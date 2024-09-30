@@ -269,11 +269,8 @@ var _ = Describe("Virtual", func() {
 				},
 				{
 					APIGroups: []string{"security.gardener.cloud"},
-					Resources: []string{
-						"credentialsbindings",
-						"workloadidentities",
-					},
-					Verbs: []string{"get", "list", "watch"},
+					Resources: []string{"credentialsbindings"},
+					Verbs:     []string{"get", "list", "watch"},
 				},
 				{
 					APIGroups: []string{
@@ -562,11 +559,8 @@ var _ = Describe("Virtual", func() {
 				},
 				{
 					APIGroups: []string{"security.gardener.cloud"},
-					Resources: []string{
-						"credentialsbindings",
-						"workloadidentities",
-					},
-					Verbs: []string{"get", "list", "watch"},
+					Resources: []string{"credentialsbindings"},
+					Verbs:     []string{"get", "list", "watch"},
 				},
 				{
 					APIGroups: []string{"settings.gardener.cloud"},
