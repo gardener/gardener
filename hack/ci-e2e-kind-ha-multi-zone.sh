@@ -14,6 +14,7 @@ source $(dirname "${0}")/ci-common.sh
 # If running in prow, we need to ensure that garden.local.gardener.cloud resolves to localhost
 if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
     printf "\n127.0.0.1 garden.local.gardener.cloud\n" >> /etc/hosts
+    printf "\n::1 garden.local.gardener.cloud\n" >> /etc/hosts
 fi
 
 clamp_mss_to_pmtu
