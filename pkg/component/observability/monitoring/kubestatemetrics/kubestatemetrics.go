@@ -155,19 +155,6 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 		registry          = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 	)
 
-	// TODO(chrkl): Remove after release v1.103
-	if k.values.ClusterType == component.ClusterTypeSeed && k.values.NameSuffix != "" {
-		if err := component.DestroyResourceConfigs(ctx, k.client, k.namespace, k.values.ClusterType, managedResourceName, nil); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-
-		timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
-		defer cancel()
-		if err := managedresources.WaitUntilDeleted(timeoutCtx, k.client, k.namespace, managedResourceName); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-	}
-
 	if k.values.ClusterType == component.ClusterTypeShoot {
 		// TODO(vicwicker): Remove after release v1.104
 		mr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceNameShoot, Namespace: k.namespace}}
