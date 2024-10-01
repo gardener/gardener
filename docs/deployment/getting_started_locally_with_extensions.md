@@ -102,6 +102,14 @@ This will first prepare the basic configuration of your KinD and Gardener cluste
 Afterwards, the images for the Garden cluster are built and deployed into the KinD cluster.
 Finally, the images for the Seed cluster are built, pushed to a container registry on the Seed, and the `gardenlet` is started.
 
+If support for workload identity is required you can invoke the top command with `DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT` variable set to `true`.
+This will cause the Gardener Discovery Server to be deployed and exposed through the seed cluster.
+External systems can be then configured to trust the workload identity issuer of the local Garden cluster.
+
+```bash
+DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT=true make gardener-extensions-up
+```
+
 ### Adding Additional Seeds
 
 Additional seed(s) can be added by running
