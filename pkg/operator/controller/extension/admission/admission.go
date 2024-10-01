@@ -212,6 +212,7 @@ func (d *deployment) createOrUpdateAdmissionVirtualClusterResources(ctx context.
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, virtualClusterClientSet.Client(), namespace, func() error {
 		metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.GardenRole, v1beta1constants.GardenRoleExtension)
+		metav1.SetMetaDataLabel(&namespace.ObjectMeta, "extensions.operator.gardener.cloud/name", extension.Name)
 		return nil
 	}); err != nil {
 		return fmt.Errorf("failed creating namespace %q in virtual cluster: %w", namespace.Name, err)
