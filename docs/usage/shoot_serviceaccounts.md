@@ -29,13 +29,14 @@ According to the [upstream specification](https://kubernetes.io/docs/reference/c
 By default, Gardener uses the internal cluster domain as issuer (e.g., `https://api.foo.bar.example.com`).
 If you specify the `issuer`, then this default issuer will always be part of the list of accepted issuers (you don't need to specify it yourself).
 
-⚠️ Caution: If you change from the default issuer to a custom `issuer`, all previously issued tokens will still be valid/accepted.
-However, if you change from a custom `issuer` `A` to another `issuer` `B` (custom or default), then you have to add `A` to the `acceptedIssuers` so that previously issued tokens are not invalidated.
-Otherwise, the control plane components as well as system components and your workload pods might fail.
-You can remove `A` from the `acceptedIssuers` when all currently active tokens have been issued solely by `B`.
-This can be ensured by using [projected token volumes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#service-account-token-volume-projection) with a short validity, or by rolling out all pods.
-Additionally, all [`ServiceAccount` token secrets](https://kubernetes.io/docs/concepts/configuration/secret/#service-account-token-secrets) should be recreated.
-Apart from this, you should wait for at least `12h` to make sure the control plane and system components have received a new token from Gardener.
+> [!CAUTION]
+> If you change from the default issuer to a custom `issuer`, all previously issued tokens will still be valid/accepted.
+> However, if you change from a custom `issuer` `A` to another `issuer` `B` (custom or default), then you have to add `A` to the `acceptedIssuers` so that previously issued tokens are not invalidated.
+> Otherwise, the control plane components as well as system components and your workload pods might fail.
+> You can remove `A` from the `acceptedIssuers` when all currently active tokens have been issued solely by `B`.
+> This can be ensured by using [projected token volumes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#service-account-token-volume-projection) with a short validity, or by rolling out all pods.
+> Additionally, all [`ServiceAccount` token secrets](https://kubernetes.io/docs/concepts/configuration/secret/#service-account-token-secrets) should be recreated.
+> Apart from this, you should wait for at least `12h` to make sure the control plane and system components have received a new token from Gardener.
 
 ## Token Expirations
 
@@ -49,21 +50,27 @@ It has the following specification:
 
 > The maximum validity duration of a token created by the service account token issuer. If an otherwise valid TokenRequest with a validity duration larger than this value is requested, a token will be issued with a validity duration of this value.
 
-⚠️ Note that the value for this field must be in the `[30d,90d]` range.
-The background for this limitation is that all Gardener components rely on the `TokenRequest` API and the Kubernetes service account token projection feature with short-lived, auto-rotating tokens.
-Any values lower than `30d` risk impacting the SLO for shoot clusters, and any values above `90d` violate security best practices with respect to maximum validity of credentials before they must be rotated.
-Given that the field just specifies the upper bound, end-users can still use lower values for their individual workload by specifying the `.spec.volumes[].projected.sources[].serviceAccountToken.expirationSeconds` in the `PodSpec`s.
+> [!NOTE]
+> The value for this field must be in the `[30d,90d]` range.
+> The background for this limitation is that all Gardener components rely on the `TokenRequest` API and the Kubernetes service account token projection feature with short-lived, auto-rotating tokens.
+> Any values lower than `30d` risk impacting the SLO for shoot clusters, and any values above `90d` violate security best practices with respect to maximum validity of credentials before they must be rotated.
+> Given that the field just specifies the upper bound, end-users can still use lower values for their individual workload by specifying the `.spec.volumes[].projected.sources[].serviceAccountToken.expirationSeconds` in the `PodSpec`s.
 
 ## Managed Service Account Issuer
 
+Gardener also provides a way to manage the service account issuer of a shoot cluster as well as serving its OIDC discovery documents from a centrally managed server called [Gardener Discovery Server](https://github.com/gardener/gardener-discovery-server).
+This ability removes the need for changing the `.spec.kubernetes.kubeAPIServer.serviceAccountConfig.issuer` and exposing it separately.
+
 ### Prerequisites
 
-Gardener also provides a way to manage the service account issuer of a shoot cluster as well as serving its OIDC discovery documents from a centrally managed server called [Gardener Discovery Server](https://github.com/gardener/gardener-discovery-server). This ability removes the need for changing the `.spec.kubernetes.kubeAPIServer.serviceAccountConfig.issuer` and exposing it separately. The feature has the following prerequisites:
+> [!NOTE]
+> The following prerequisites are responsibility of the Gardener Administrators and are not something that end users can configure by themselves.
+> If uncertain that these requirements are met, please contact your Gardener Administrator.
+
+Prerequisites:
 - The Garden Cluster should have the Gardener Discovery Server deployed and configured.
   The easiest way to handle this is by using the [gardener-operator](../concepts/operator.md#gardener-discovery-server).
 - The [`ShootManagedIssuer`](../deployment/feature_gates.md#list-of-feature-gates) feature gate should be enabled.
-
-If uncertain that these prerequisites are met, please contact your Gardener Administrator.
 
 ### Enablement
 
