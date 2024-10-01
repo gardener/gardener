@@ -23,10 +23,11 @@ However, there are two supported autoscaling modes for the Garden or Shoot clust
 
    In `VPA` mode, the etcd is scaled by a native `VPA` resource.
 
-   The `VPA` mode is the used autoscaling mode when the `VPAForETCD` feature gate is enabled (takes precedence over the `HVPA` feature gate). 
+   The `VPA` mode is the used autoscaling mode when the `VPAForETCD` feature gate is enabled (takes precedence over the `HVPA` feature gate).
 
 > [!NOTE]
 > Starting with release `v1.97`, the `VPAForETCD` feature gate is enabled by default.
+> Starting with release `v1.105`, the `VPAForETCD` feature gate is promoted to GA and locked to true.
 
 For both of the autoscaling modes downscaling is handled more pessimistically to prevent many subsequent etcd restarts. Thus, for `production` and `infrastructure` Shoot clusters (or all Garden clusters), downscaling is deactivated for the main etcd. For all other Shoot clusters, lower advertised requests/limits are only applied during the Shoot's maintenance time window.
 
@@ -77,6 +78,7 @@ There are three supported autoscaling modes for the Shoot Kubernetes API server.
 
 > [!NOTE]
 > Starting with release `v1.101`, the `VPAAndHPAForAPIServer` feature gate is enabled by default.
+> Starting with release `v1.105`, the `VPAAndHPAForAPIServer` feature gate is promoted to GA and locked to true.
 
 In all scaling modes the min replicas count of 2 is imposed by the [High Availability of Shoot Control Plane Components](../development/high-availability.md#control-plane-components).
 

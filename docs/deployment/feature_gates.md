@@ -29,9 +29,11 @@ The following tables are a summary of the feature gates that you can set on diff
 | UseNamespacedCloudProfile | `false` | `Alpha` | `1.92`  |         |
 | ShootManagedIssuer        | `false` | `Alpha` | `1.93`  |         |
 | VPAForETCD                | `false` | `Alpha` | `1.94`  | `1.96`  |
-| VPAForETCD                | `true`  | `Beta`  | `1.97`  |         |
+| VPAForETCD                | `true`  | `Beta`  | `1.97`  | `1.104` |
+| VPAForETCD                | `true`  | `GA`    | `1.105` |         |
 | VPAAndHPAForAPIServer     | `false` | `Alpha` | `1.95`  | `1.100` |
-| VPAAndHPAForAPIServer     | `true`  | `Beta`  | `1.101` |         |
+| VPAAndHPAForAPIServer     | `true`  | `Beta`  | `1.101` | `1.104` |
+| VPAAndHPAForAPIServer     | `true`  | `GA`    | `1.105` |         |
 | ShootCredentialsBinding   | `false` | `Alpha` | `1.98`  |         |
 | NewWorkerPoolHash         | `false` | `Alpha` | `1.98`  |         |
 | NewVPN                    | `false` | `Alpha` | `1.104` |         |
