@@ -61,8 +61,9 @@ This ability removes the need for changing the `.spec.kubernetes.kubeAPIServer.s
 
 ### Prerequisites
 
-⚠️ Note: The following prerequisites are responsibility of the Gardener Administrators and are not something that end users can configure by themselves.
-If uncertain that these requirements are met, please contact your Gardener Administrator.
+> [!NOTE]
+> The following prerequisites are responsibility of the Gardener Administrators and are not something that end users can configure by themselves.
+> If uncertain that these requirements are met, please contact your Gardener Administrator.
 
 Prerequisites:
 - The Garden Cluster should have the Gardener Discovery Server deployed and configured.
