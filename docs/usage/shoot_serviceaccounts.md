@@ -29,7 +29,8 @@ According to the [upstream specification](https://kubernetes.io/docs/reference/c
 By default, Gardener uses the internal cluster domain as issuer (e.g., `https://api.foo.bar.example.com`).
 If you specify the `issuer`, then this default issuer will always be part of the list of accepted issuers (you don't need to specify it yourself).
 
-> [!CAUTION] If you change from the default issuer to a custom `issuer`, all previously issued tokens will still be valid/accepted.
+> [!CAUTION]
+> If you change from the default issuer to a custom `issuer`, all previously issued tokens will still be valid/accepted.
 > However, if you change from a custom `issuer` `A` to another `issuer` `B` (custom or default), then you have to add `A` to the `acceptedIssuers` so that previously issued tokens are not invalidated.
 > Otherwise, the control plane components as well as system components and your workload pods might fail.
 > You can remove `A` from the `acceptedIssuers` when all currently active tokens have been issued solely by `B`.
@@ -49,7 +50,8 @@ It has the following specification:
 
 > The maximum validity duration of a token created by the service account token issuer. If an otherwise valid TokenRequest with a validity duration larger than this value is requested, a token will be issued with a validity duration of this value.
 
-> [!NOTE] The value for this field must be in the `[30d,90d]` range.
+> [!NOTE]
+> The value for this field must be in the `[30d,90d]` range.
 > The background for this limitation is that all Gardener components rely on the `TokenRequest` API and the Kubernetes service account token projection feature with short-lived, auto-rotating tokens.
 > Any values lower than `30d` risk impacting the SLO for shoot clusters, and any values above `90d` violate security best practices with respect to maximum validity of credentials before they must be rotated.
 > Given that the field just specifies the upper bound, end-users can still use lower values for their individual workload by specifying the `.spec.volumes[].projected.sources[].serviceAccountToken.expirationSeconds` in the `PodSpec`s.
