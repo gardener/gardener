@@ -51,4 +51,6 @@ config:
         scheduling:
           visible: true
         verticalPodAutoscaler:
-          enabled: true
+          # If using a Gardener shoot, make sure that the shoot cluster has VPA enabled. Otherwise, enable VPA below in the seed spec.
+          # Don't enable VPA for both the shoot control plane and the seed. 2 VPA deployments acting on the same cluster cause endless VPA eviction loops.
+          enabled: false
