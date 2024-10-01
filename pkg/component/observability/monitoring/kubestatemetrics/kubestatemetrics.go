@@ -15,10 +15,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -156,28 +154,6 @@ func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 	)
 
 	if k.values.ClusterType == component.ClusterTypeShoot {
-		// TODO(vicwicker): Remove after release v1.104
-		mr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceNameShoot, Namespace: k.namespace}}
-		if err := k.client.Get(ctx, client.ObjectKeyFromObject(mr), mr); client.IgnoreNotFound(err) != nil {
-			return err
-		} else if err == nil && mr.Spec.Class == nil {
-			// spec.class nil means shoot
-
-			// remove the finalizer to prevent deleting the cluster role and cluster role binding in the shoot even when the GRM is not running
-			// in a hibernated control-plane. It is similar to "mr.Spec.KeepObjects = true", but it supports hibernated shoots as well.
-			// The cluster role and cluster role binding are going to be adopted by the new managed resource with the "-target" suffix.
-			if err := controllerutils.RemoveAllFinalizers(ctx, k.client, mr); err != nil {
-				return err
-			}
-
-			if err := managedresources.DeleteForShoot(ctx, k.client, k.namespace, managedResourceNameShoot); err != nil {
-				return err
-			}
-			if err := managedresources.WaitUntilDeleted(ctx, k.client, k.namespace, managedResourceNameShoot); err != nil {
-				return err
-			}
-		}
-
 		genericTokenKubeconfigSecret, found := k.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
 		if !found {
 			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
