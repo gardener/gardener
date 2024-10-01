@@ -44,6 +44,7 @@ PROMTOOL                   := $(TOOLS_BIN_DIR)/promtool
 PROTOC                     := $(TOOLS_BIN_DIR)/protoc
 PROTOC_GEN_GOGO            := $(TOOLS_BIN_DIR)/protoc-gen-gogo
 REPORT_COLLECTOR           := $(TOOLS_BIN_DIR)/report-collector
+OIDC_METADATA              := $(TOOLS_BIN_DIR)/oidcmeta
 SETUP_ENVTEST              := $(TOOLS_BIN_DIR)/setup-envtest
 SKAFFOLD                   := $(TOOLS_BIN_DIR)/skaffold
 YQ                         := $(TOOLS_BIN_DIR)/yq
@@ -222,6 +223,14 @@ $(REPORT_COLLECTOR): $(TOOLS_PKG_PATH)/report-collector/*.go
 else
 $(REPORT_COLLECTOR): go.mod
 	go build -o $(REPORT_COLLECTOR) github.com/gardener/gardener/hack/tools/report-collector
+endif
+
+ifeq ($(strip $(shell go list -m 2>/dev/null)),github.com/gardener/gardener)
+$(OIDC_METADATA): $(TOOLS_PKG_PATH)/oidcmeta/*.go
+	go build -o $(OIDC_METADATA) $(TOOLS_PKG_PATH)/oidcmeta
+else
+$(OIDC_METADATA): go.mod
+	go build -o $(OIDC_METADATA) github.com/gardener/gardener/hack/tools/oidcmeta
 endif
 
 $(SETUP_ENVTEST): $(call tool_version_file,$(SETUP_ENVTEST),$(CONTROLLER_RUNTIME_VERSION))

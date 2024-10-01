@@ -28,12 +28,14 @@ spec:
       automountServiceAccountToken: false
       containers:
       - name: gardener-discovery-server
-        image: europe-docker.pkg.dev/gardener-project/releases/gardener/gardener-discovery-server:v0.1.0
+        image: europe-docker.pkg.dev/gardener-project/releases/gardener/gardener-discovery-server:v0.2.0
         imagePullPolicy: IfNotPresent
         args:
         - --kubeconfig=/etc/gardener-discovery-server/kubeconfig/kubeconfig
         - --tls-cert-file=/var/run/secrets/gardener.cloud/gardener-discovery-server/tls/tls.crt
         - --tls-private-key-file=/var/run/secrets/gardener.cloud/gardener-discovery-server/tls/tls.key
+        - --workload-identity-openid-configuration-file=/etc/gardener-discovery-server/workload-identity/openid-configuration.json
+        - --workload-identity-jwks-file=/etc/gardener-discovery-server/workload-identity/jwks.json
         livenessProbe:
           httpGet:
             path: /healthz
@@ -75,6 +77,9 @@ spec:
         - name: gardener-discovery-server-kubeconfig
           mountPath: /etc/gardener-discovery-server/kubeconfig
           readOnly: true
+        - name: workload-identity
+          mountPath: /etc/gardener-discovery-server/workload-identity
+          readOnly: true
       volumes:
       - name: gardener-discovery-server-tls
         secret:
@@ -83,4 +88,8 @@ spec:
       - name: gardener-discovery-server-kubeconfig
         secret:
           secretName: gardener-discovery-server-kubeconfig
+          defaultMode: 420
+      - name: workload-identity
+        configMap:
+          name: gardener-discovery-server-workload-identity
           defaultMode: 420

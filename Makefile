@@ -355,7 +355,7 @@ gardener-down gardener-ha-single-zone-down gardener-ha-multi-zone-down: $(SKAFFO
 
 gardener-extensions-%: export SKAFFOLD_LABEL = skaffold.dev/run-id=gardener-extensions
 
-gardener-extensions-up: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
+gardener-extensions-up: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ) $(OIDC_METADATA)
 	./hack/gardener-extensions-up.sh --path-garden-kubeconfig $(REPO_ROOT)/example/provider-extensions/garden/kubeconfig --path-seed-kubeconfig $(SEED_KUBECONFIG) --seed-name $(SEED_NAME) --with-workload-identity-support $(DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT)
 gardener-extensions-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	./hack/gardener-extensions-down.sh --path-garden-kubeconfig $(REPO_ROOT)/example/provider-extensions/garden/kubeconfig --path-seed-kubeconfig $(SEED_KUBECONFIG) --seed-name $(SEED_NAME)
