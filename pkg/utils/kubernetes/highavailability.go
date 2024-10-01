@@ -60,12 +60,31 @@ func GetTopologySpreadConstraints(
 	}
 
 	var (
+		// Enforcing a spread over zones is required when there are:
+		// - multiple zones
+		// - AND
+		// - the failure tolerance type is 'nil' (seed/shoot system component case) or 'zone' (shoot control-plane case)
+		zoneSpreadRequired = numberOfZones > 1 && (failureToleranceType == nil || *failureToleranceType == gardencorev1beta1.FailureToleranceTypeZone)
+
+		// Enforcing a spread over hosts is required when:
+		// - it is explicitly requested via 'enforceSpreadAcrossHosts' argument
+		// - OR
+		// - a failure tolerance type is set
+		hostSpreadRequired = enforceSpreadAcrossHosts || ptr.Deref(failureToleranceType, "") != ""
+
 		minDomainsHosts   *int32
-		whenUnsatisfiable = corev1.ScheduleAnyway
+		whenUnsatisfiable corev1.UnsatisfiableConstraintAction
 	)
-	if ptr.Deref(failureToleranceType, "") != "" || enforceSpreadAcrossHosts {
+
+	if hostSpreadRequired {
 		whenUnsatisfiable = corev1.DoNotSchedule
 		minDomainsHosts = calculateMinDomains(3, maxReplicas)
+	}
+
+	// Zone and host spreads in combination can only work when the number of replicas don't exceed twice the number of zones.
+	// A resulting deadlock must be prevented by soften the host constraint to 'ScheduleAnyway', see https://github.com/kubernetes/kubernetes/issues/109364.
+	if !hostSpreadRequired || (zoneSpreadRequired && maxReplicas >= 2*numberOfZones) {
+		whenUnsatisfiable = corev1.ScheduleAnyway
 	}
 
 	topologySpreadConstraints := []corev1.TopologySpreadConstraint{{
@@ -76,21 +95,11 @@ func GetTopologySpreadConstraints(
 		LabelSelector:     &labelSelector,
 	}}
 
-	// We only want to enforce a spread over zones when there are:
-	// - multiple zones
-	// - AND
-	// - the failure tolerance type is 'nil' (seed/shoot system component case) or 'zone' (shoot control-plane case)
-	if numberOfZones > 1 && (failureToleranceType == nil || *failureToleranceType == gardencorev1beta1.FailureToleranceTypeZone) {
-		maxSkew := int32(1)
-		// Increase maxSkew if there are >= 2*numberOfZones maxReplicas, see https://github.com/kubernetes/kubernetes/issues/109364.
-		if maxReplicas >= 2*numberOfZones {
-			maxSkew = 2
-		}
-
+	if zoneSpreadRequired {
 		topologySpreadConstraints = append(topologySpreadConstraints, corev1.TopologySpreadConstraint{
 			TopologyKey:       corev1.LabelTopologyZone,
 			MinDomains:        calculateMinDomains(numberOfZones, maxReplicas),
-			MaxSkew:           maxSkew,
+			MaxSkew:           1,
 			WhenUnsatisfiable: corev1.DoNotSchedule,
 			LabelSelector:     &labelSelector,
 		})
