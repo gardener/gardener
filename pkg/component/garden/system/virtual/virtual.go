@@ -155,7 +155,7 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 					APIGroups: []string{securityv1alpha1.GroupName},
 					Resources: []string{
 						"credentialsbindings",
-						"workloadidentities",
+						"workloadidentities", // Do not use wildcard here to avoid granting users with permissions to send `create workloadidentity/token` requests.
 					},
 					Verbs: []string{"*"},
 				},
@@ -432,7 +432,7 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 					APIGroups: []string{securityv1alpha1.GroupName},
 					Resources: []string{
 						"credentialsbindings",
-						"workloadidentities",
+						"workloadidentities", // Do not use wildcard here to avoid granting users with permissions to send `create workloadidentity/token` requests.
 					},
 					Verbs: []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
 				},

@@ -21,7 +21,7 @@ rules:
   - security.gardener.cloud
   resources:
   - credentialsbindings
-  - workloadidentities
+  - workloadidentities # Do not use wildcard here to avoid granting users with permissions to send `create workloadidentity/token` requests.
   verbs:
   - '*'
 - apiGroups:
@@ -460,7 +460,7 @@ rules:
   - security.gardener.cloud
   resources:
   - credentialsbindings
-  - workloadidentities
+  - workloadidentities # Do not use wildcard here to avoid granting users with permissions to send `create workloadidentity/token` requests.
   verbs:
   - create
   - delete
