@@ -17,10 +17,11 @@ var (
 	// apiGroupVersionRanges contains the version ranges for all Kubernetes API GroupVersions.
 	// Extracted from https://raw.githubusercontent.com/kubernetes/kubernetes/release-${version}/staging/src/k8s.io/client-go/informers/generic.go
 	// To maintain this list for each new Kubernetes version, refer https://github.com/gardener/gardener/blob/master/docs/development/new-kubernetes-version.md#adapting-gardener
+	// Keep the list ordered alphabetically.
 	apiGroupVersionRanges = map[string]*APIVersionRange{
 		"admissionregistration.k8s.io/v1":       {Required: true},
-		"admissionregistration.k8s.io/v1beta1":  {},
 		"admissionregistration.k8s.io/v1alpha1": {VersionRange: versionutils.VersionRange{AddedInVersion: "1.26"}},
+		"admissionregistration.k8s.io/v1beta1":  {},
 		"apps/v1":                               {Required: true},
 		"apps/v1beta1":                          {},
 		"apps/v1beta2":                          {},
@@ -48,8 +49,8 @@ var (
 		"flowcontrol.apiserver.k8s.io/v1beta3":  {VersionRange: versionutils.VersionRange{AddedInVersion: "1.26"}},
 		"internal.apiserver.k8s.io/v1alpha1":    {},
 		"networking.k8s.io/v1":                  {Required: true, RequiredForWorkerless: true},
-		"networking.k8s.io/v1beta1":             {},
 		"networking.k8s.io/v1alpha1":            {},
+		"networking.k8s.io/v1beta1":             {},
 		"node.k8s.io/v1":                        {},
 		"node.k8s.io/v1alpha1":                  {},
 		"node.k8s.io/v1beta1":                   {},
@@ -71,6 +72,7 @@ var (
 		"v1":                                    {Required: true, RequiredForWorkerless: true},
 	}
 
+	// Keep the list ordered alphabetically.
 	apiGVRVersionRanges = map[string]*APIVersionRange{
 		"admissionregistration.k8s.io/v1/mutatingwebhookconfigurations":           {Required: true},
 		"admissionregistration.k8s.io/v1/validatingadmissionpolicies":             {VersionRange: versionutils.VersionRange{AddedInVersion: "1.30"}},
@@ -118,6 +120,8 @@ var (
 		"extensions/v1beta1/networkpolicies":                                      {},
 		"extensions/v1beta1/podsecuritypolicies":                                  {VersionRange: versionutils.VersionRange{RemovedInVersion: "1.27"}},
 		"extensions/v1beta1/replicasets":                                          {},
+		"flowcontrol.apiserver.k8s.io/v1/flowschemas":                             {VersionRange: versionutils.VersionRange{AddedInVersion: "1.29"}},
+		"flowcontrol.apiserver.k8s.io/v1/prioritylevelconfigurations":             {VersionRange: versionutils.VersionRange{AddedInVersion: "1.29"}},
 		"flowcontrol.apiserver.k8s.io/v1alpha1/flowschemas":                       {VersionRange: versionutils.VersionRange{RemovedInVersion: "1.29"}},
 		"flowcontrol.apiserver.k8s.io/v1alpha1/prioritylevelconfigurations":       {VersionRange: versionutils.VersionRange{RemovedInVersion: "1.29"}},
 		"flowcontrol.apiserver.k8s.io/v1beta1/flowschemas":                        {},
@@ -126,19 +130,17 @@ var (
 		"flowcontrol.apiserver.k8s.io/v1beta2/prioritylevelconfigurations":        {},
 		"flowcontrol.apiserver.k8s.io/v1beta3/flowschemas":                        {VersionRange: versionutils.VersionRange{AddedInVersion: "1.26"}},
 		"flowcontrol.apiserver.k8s.io/v1beta3/prioritylevelconfigurations":        {VersionRange: versionutils.VersionRange{AddedInVersion: "1.26"}},
-		"flowcontrol.apiserver.k8s.io/v1/flowschemas":                             {VersionRange: versionutils.VersionRange{AddedInVersion: "1.29"}},
-		"flowcontrol.apiserver.k8s.io/v1/prioritylevelconfigurations":             {VersionRange: versionutils.VersionRange{AddedInVersion: "1.29"}},
 		"internal.apiserver.k8s.io/v1alpha1/storageversions":                      {},
 		"networking.k8s.io/v1/ingressclasses":                                     {},
 		"networking.k8s.io/v1/ingresses":                                          {},
 		"networking.k8s.io/v1/networkpolicies":                                    {},
+		"networking.k8s.io/v1alpha1/clustercidrs":                                 {VersionRange: versionutils.VersionRange{RemovedInVersion: "1.29"}},
+		"networking.k8s.io/v1alpha1/ipaddresses":                                  {VersionRange: versionutils.VersionRange{AddedInVersion: "1.27"}},
+		"networking.k8s.io/v1alpha1/servicecidrs":                                 {VersionRange: versionutils.VersionRange{AddedInVersion: "1.29"}},
 		"networking.k8s.io/v1beta1/ingressclasses":                                {},
 		"networking.k8s.io/v1beta1/ingresses":                                     {},
 		"networking.k8s.io/v1beta1/ipaddresses":                                   {VersionRange: versionutils.VersionRange{RemovedInVersion: "1.31"}},
 		"networking.k8s.io/v1beta1/servicecidrs":                                  {VersionRange: versionutils.VersionRange{RemovedInVersion: "1.31"}},
-		"networking.k8s.io/v1alpha1/clustercidrs":                                 {VersionRange: versionutils.VersionRange{RemovedInVersion: "1.29"}},
-		"networking.k8s.io/v1alpha1/ipaddresses":                                  {VersionRange: versionutils.VersionRange{AddedInVersion: "1.27"}},
-		"networking.k8s.io/v1alpha1/servicecidrs":                                 {VersionRange: versionutils.VersionRange{AddedInVersion: "1.29"}},
 		"node.k8s.io/v1/runtimeclasses":                                           {Required: true},
 		"node.k8s.io/v1alpha1/runtimeclasses":                                     {},
 		"node.k8s.io/v1beta1/runtimeclasses":                                      {},
