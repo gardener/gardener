@@ -37,8 +37,6 @@ In these cases, you might want to check out one of the following options that ru
 
 ```bash
 make kind-up
-```
-
 > If you want to setup an IPv6 KinD cluster, use `make kind-up IPFAMILY=ipv6` instead.
 
 This command sets up a new KinD cluster named `gardener-local` and stores the kubeconfig in the `./example/gardener-local/kind/local/kubeconfig` file.
@@ -62,10 +60,10 @@ Furthermore, it deploys the [metrics-server](https://github.com/kubernetes-sigs/
 
 ## Setting Up IPv6 Single-Stack Networking (optional)
 
-First, ensure that your `/etc/hosts` file contains an entry resolving `localhost` to the IPv6 loopback address:
+First, ensure that your `/etc/hosts` file contains an entry resolving `garden.local.gardener.cloud` to the IPv6 loopback address:
 
 ```text
-::1 localhost
+::1 garden.local.gardener.cloud
 ```
 
 Typically, only `ip6-localhost` is mapped to `::1` on linux machines.
