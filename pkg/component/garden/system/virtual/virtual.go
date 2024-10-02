@@ -28,6 +28,7 @@ import (
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -151,6 +152,14 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 					Verbs:     []string{"*"},
 				},
 				{
+					APIGroups: []string{securityv1alpha1.GroupName},
+					Resources: []string{
+						"credentialsbindings",
+						"workloadidentities", // Do not use wildcard here to avoid granting users with permissions to send `create workloadidentity/token` requests.
+					},
+					Verbs: []string{"*"},
+				},
+				{
 					APIGroups: []string{corev1.GroupName},
 					Resources: []string{"events", "namespaces", "resourcequotas"},
 					Verbs:     []string{"*"},
@@ -239,6 +248,11 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 						"shoots",
 					},
 					Verbs: []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{securityv1alpha1.GroupName},
+					Resources: []string{"credentialsbindings"},
+					Verbs:     []string{"get", "list", "watch"},
 				},
 				{
 					APIGroups: []string{
@@ -415,6 +429,14 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 					Verbs: []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
 				},
 				{
+					APIGroups: []string{securityv1alpha1.GroupName},
+					Resources: []string{
+						"credentialsbindings",
+						"workloadidentities", // Do not use wildcard here to avoid granting users with permissions to send `create workloadidentity/token` requests.
+					},
+					Verbs: []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
+				},
+				{
 					APIGroups: []string{settingsv1alpha1.GroupName},
 					Resources: []string{"openidconnectpresets"},
 					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
@@ -519,6 +541,11 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 						"namespacedcloudprofiles",
 					},
 					Verbs: []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{securityv1alpha1.GroupName},
+					Resources: []string{"credentialsbindings"},
+					Verbs:     []string{"get", "list", "watch"},
 				},
 				{
 					APIGroups: []string{settingsv1alpha1.GroupName},

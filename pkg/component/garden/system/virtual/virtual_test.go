@@ -171,6 +171,13 @@ var _ = Describe("Virtual", func() {
 					Verbs:     []string{"*"},
 				},
 				{
+					APIGroups: []string{"security.gardener.cloud"},
+					Resources: []string{
+						"credentialsbindings",
+						"workloadidentities"},
+					Verbs: []string{"*"},
+				},
+				{
 					APIGroups: []string{""},
 					Resources: []string{"events", "namespaces", "resourcequotas"},
 					Verbs:     []string{"*"},
@@ -259,6 +266,11 @@ var _ = Describe("Virtual", func() {
 						"shoots",
 					},
 					Verbs: []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{"security.gardener.cloud"},
+					Resources: []string{"credentialsbindings"},
+					Verbs:     []string{"get", "list", "watch"},
 				},
 				{
 					APIGroups: []string{
@@ -434,6 +446,14 @@ var _ = Describe("Virtual", func() {
 					Verbs: []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
 				},
 				{
+					APIGroups: []string{"security.gardener.cloud"},
+					Resources: []string{
+						"credentialsbindings",
+						"workloadidentities",
+					},
+					Verbs: []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
+				},
+				{
 					APIGroups: []string{"settings.gardener.cloud"},
 					Resources: []string{"openidconnectpresets"},
 					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
@@ -536,6 +556,11 @@ var _ = Describe("Virtual", func() {
 						"namespacedcloudprofiles",
 					},
 					Verbs: []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{"security.gardener.cloud"},
+					Resources: []string{"credentialsbindings"},
+					Verbs:     []string{"get", "list", "watch"},
 				},
 				{
 					APIGroups: []string{"settings.gardener.cloud"},

@@ -18,6 +18,13 @@ rules:
   verbs:
   - '*'
 - apiGroups:
+  - security.gardener.cloud
+  resources:
+  - credentialsbindings
+  - workloadidentities # Do not use wildcard here to avoid granting users with permissions to send `create workloadidentity/token` requests.
+  verbs:
+  - '*'
+- apiGroups:
   - ""
   resources:
   - events
@@ -112,6 +119,14 @@ rules:
   - projects
   - seeds
   - shoots
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - security.gardener.cloud
+  resources:
+  - credentialsbindings
   verbs:
   - get
   - list
@@ -445,6 +460,7 @@ rules:
   - security.gardener.cloud
   resources:
   - credentialsbindings
+  - workloadidentities # Do not use wildcard here to avoid granting users with permissions to send `create workloadidentity/token` requests.
   verbs:
   - create
   - delete
