@@ -7,6 +7,7 @@ package gardenlet
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -20,6 +21,8 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -29,6 +32,10 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/oci"
 )
+
+// RequeueDurationSeedIsNotYetRegistered is the duration after which the Seed registration is checked
+// when gardenlet was just deployed. Exposed for testing.
+var RequeueDurationSeedIsNotYetRegistered = 30 * time.Second
 
 // Reconciler reconciles the Gardenlet.
 type Reconciler struct {
@@ -60,13 +67,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	if !r.seedDoesNotExist(ctx, gardenlet) {
-		return reconcile.Result{}, r.cleanupKubeconfigSecret(ctx, log, gardenlet)
-	}
-
 	// Deletion is not implemented - once gardenlet got deployed by gardener-operator, it doesn't care about it ever
 	// again. Gardenlet will perform self-upgrades. Seed deprovisioning must be handled by human operators.
-	return reconcile.Result{}, r.reconcile(ctx, log, gardenlet, r.newActuator(gardenlet))
+	return r.reconcile(ctx, log, gardenlet, r.newActuator(gardenlet))
 }
 
 func (r *Reconciler) newActuator(gardenlet *seedmanagementv1alpha1.Gardenlet) gardenletdeployer.Interface {
@@ -130,26 +133,42 @@ func (r *Reconciler) reconcile(
 	gardenlet *seedmanagementv1alpha1.Gardenlet,
 	actuator gardenletdeployer.Interface,
 ) (
+	result reconcile.Result,
 	err error,
 ) {
 	status := gardenlet.Status.DeepCopy()
 	status.ObservedGeneration = gardenlet.Generation
 
 	log.V(1).Info("Reconciling")
+	if !r.seedDoesNotExist(ctx, gardenlet) {
+		if err := r.cleanupKubeconfigSecret(ctx, log, gardenlet); err != nil {
+			status.Conditions = updateCondition(r.Clock, status.Conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventReconcileError, err.Error())
+		} else {
+			log.Info("Gardenlet deployment handling completed successfully")
+			status.Conditions = updateCondition(r.Clock, status.Conditions, gardencorev1beta1.ConditionTrue, gardencorev1beta1.EventReconciled, fmt.Sprintf("Gardenlet deployed and Seed %q registered", gardenlet.Name))
+		}
+
+		return result, r.updateStatus(ctx, gardenlet, status)
+	}
+
 	status.Conditions, err = actuator.Reconcile(ctx, log, gardenlet, status.Conditions, &gardenlet.Spec.Deployment.GardenletDeployment, &gardenlet.Spec.Config, seedmanagementv1alpha1.BootstrapToken, false)
 	if err != nil {
 		if updateErr := r.updateStatus(ctx, gardenlet, status); updateErr != nil {
 			log.Error(updateErr, "Could not update status", "status", status)
 		}
-		return fmt.Errorf("could not reconcile Gardenlet %s creation: %w", client.ObjectKeyFromObject(gardenlet), err)
+		return result, fmt.Errorf("could not reconcile Gardenlet %s creation: %w", client.ObjectKeyFromObject(gardenlet), err)
 	}
 
-	log.Info("Reconciliation finished")
-	if err := r.cleanupKubeconfigSecret(ctx, log, gardenlet); err != nil {
-		return err
-	}
+	status.Conditions = updateCondition(r.Clock, status.Conditions, gardencorev1beta1.ConditionProgressing, gardencorev1beta1.EventReconcileError, "Waiting for seed registration")
 
-	return r.updateStatus(ctx, gardenlet, status)
+	log.Info("Gardenlet deployment finished successfully. Request is requeued to check seed registration")
+	return reconcile.Result{RequeueAfter: RequeueDurationSeedIsNotYetRegistered}, r.updateStatus(ctx, gardenlet, status)
+}
+
+func updateCondition(clock clock.Clock, conditions []gardencorev1beta1.Condition, cs gardencorev1beta1.ConditionStatus, reason, message string) []gardencorev1beta1.Condition {
+	condition := v1beta1helper.GetOrInitConditionWithClock(clock, conditions, seedmanagementv1alpha1.SeedRegistered)
+	condition = v1beta1helper.UpdatedConditionWithClock(clock, condition, cs, reason, message)
+	return v1beta1helper.MergeConditions(conditions, condition)
 }
 
 func (r *Reconciler) updateStatus(ctx context.Context, gardenlet *seedmanagementv1alpha1.Gardenlet, status *seedmanagementv1alpha1.GardenletStatus) error {
