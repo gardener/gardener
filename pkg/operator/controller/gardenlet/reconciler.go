@@ -7,6 +7,7 @@ package gardenlet
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -62,6 +63,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	if !r.seedDoesNotExist(ctx, gardenlet) {
 		return reconcile.Result{}, r.cleanupKubeconfigSecret(ctx, log, gardenlet)
+	}
+
+	kubeConfigExists, err := r.kubeconfigSecretExists(ctx, gardenlet)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("error checking if kubeconfig secret exists: %w", err)
+	}
+	if !kubeConfigExists {
+		log.Info("Kubeconfig secret does not exist. This might be a transient state that until Gardenlet registered the seed - request is re-queued", "secretName", gardenlet.Spec.KubeconfigSecretRef.Name)
+		return reconcile.Result{RequeueAfter: 2 * time.Second}, nil
 	}
 
 	// Deletion is not implemented - once gardenlet got deployed by gardener-operator, it doesn't care about it ever
@@ -166,16 +176,32 @@ func (r *Reconciler) cleanupKubeconfigSecret(ctx context.Context, log logr.Logge
 		return nil
 	}
 
-	log.Info("Deleting kubeconfig secret and removing reference in spec")
-	if err := kubernetesutils.DeleteObject(ctx, r.VirtualClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: gardenlet.Spec.KubeconfigSecretRef.Name, Namespace: gardenlet.Namespace}}); err != nil {
-		return fmt.Errorf("could not delete kubeconfig secret: %w", err)
+	kubeConfigExists, err := r.kubeconfigSecretExists(ctx, gardenlet)
+	if err != nil {
+		return fmt.Errorf("error checking if kubeconfigSecret exists: %w", err)
 	}
 
-	patch := client.MergeFrom(gardenlet.DeepCopy())
-	gardenlet.Spec.KubeconfigSecretRef = nil
-	if err := r.VirtualClient.Patch(ctx, gardenlet, patch); err != nil {
-		return fmt.Errorf("could not remove kubeconfig secret ref: %w", err)
+	if kubeConfigExists {
+		log.Info("Deleting kubeconfig secret")
+		return kubernetesutils.DeleteObject(ctx, r.VirtualClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: gardenlet.Spec.KubeconfigSecretRef.Name, Namespace: gardenlet.Namespace}})
 	}
 
 	return nil
+}
+
+func (r *Reconciler) kubeconfigSecretExists(ctx context.Context, gardenlet *seedmanagementv1alpha1.Gardenlet) (bool, error) {
+	if gardenlet.Spec.KubeconfigSecretRef == nil {
+		return true, nil
+	}
+
+	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: gardenlet.Spec.KubeconfigSecretRef.Name, Namespace: gardenlet.Namespace}}
+	if err := r.VirtualClient.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+
+		return false, err
+	}
+
+	return true, nil
 }

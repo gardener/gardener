@@ -127,5 +127,5 @@ spec:
 # ...
 ```
 
-After successful deployment of gardenlet, `gardener-operator` will delete the `remote-cluster-kubeconfig` `Secret` and set `.spec.kubeconfigSecretRef` to `nil`.
+After successful deployment of gardenlet and registration of the expected seed cluster, `gardener-operator` will delete the `remote-cluster-kubeconfig` `Secret`.
 This is because the kubeconfig will never ever be needed anymore (`gardener-operator` is only responsible for initial deployment, and gardenlet updates itself with an in-cluster kubeconfig).

@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -85,13 +86,24 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, virt
 // OperatorResponsiblePredicate is a predicate for checking whether the Seed object has already been created for the
 // Gardenlet resource, and whether the kubeconfig secret ref has been removed.
 func (r *Reconciler) OperatorResponsiblePredicate(ctx context.Context) predicate.Predicate {
-	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		gardenlet, ok := obj.(*seedmanagementv1alpha1.Gardenlet)
-		if !ok {
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			return true
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			gardenlet, ok := e.ObjectNew.(*seedmanagementv1alpha1.Gardenlet)
+			if !ok {
+				return false
+			}
+			return r.seedDoesNotExist(ctx, gardenlet)
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
 			return false
-		}
-		return r.seedDoesNotExist(ctx, gardenlet) || gardenlet.Spec.KubeconfigSecretRef != nil
-	})
+		},
+		GenericFunc: func(e event.GenericEvent) bool {
+			return false
+		},
+	}
 }
 
 func (r *Reconciler) seedDoesNotExist(ctx context.Context, gardenlet *seedmanagementv1alpha1.Gardenlet) bool {
