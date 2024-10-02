@@ -105,9 +105,9 @@ func (d *deployment) createOrUpdateAdmissionRuntimeClusterResources(ctx context.
 			"runtimeCluster": map[string]any{
 				"priorityClassName": v1beta1constants.PriorityClassNameGardenSystem400,
 			},
-		},
-		"webhookConfig": map[string]any{
-			"ownerNamespace": virtualNamespace(extension).GetName(),
+			"virtualCluster": map[string]any{
+				"namespace": virtualNamespace(extension).GetName(),
+			},
 		},
 	}
 

@@ -1,6 +1,7 @@
 gardener:
   runtimeCluster:
     priorityClassName: gardener-garden-system-400
+  virtualCluster: {}
 
 image: local-skaffold/gardener-extension-admission-local:latest
 imagePullPolicy: IfNotPresent

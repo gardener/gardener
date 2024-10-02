@@ -153,9 +153,9 @@ var _ = Describe("Deployment", func() {
 					"runtimeCluster": map[string]any{
 						"priorityClassName": "gardener-garden-system-400",
 					},
-				},
-				"webhookConfig": map[string]any{
-					"ownerNamespace": "extension-" + extensionName,
+					"virtualCluster": map[string]any{
+						"namespace": "extension-" + extensionName,
+					},
 				},
 			}
 
