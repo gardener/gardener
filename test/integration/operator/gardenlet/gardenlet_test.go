@@ -116,15 +116,21 @@ var _ = Describe("Gardenlet controller test", func() {
 		})
 	})
 
-	verifyGardenletDeployment := func() {
+	verifyGardenletDeployment := func(seedRegistered bool) {
 		By("Gardenlet status should reflect successful reconciliation")
+
 		EventuallyWithOffset(1, func(g Gomega) {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(gardenlet), gardenlet)).To(Succeed())
 			g.Expect(gardenlet.Status.ObservedGeneration).To(Equal(gardenlet.Generation))
 			condition := v1beta1helper.GetCondition(gardenlet.Status.Conditions, seedmanagementv1alpha1.SeedRegistered)
 			g.Expect(condition).NotTo(BeNil())
-			g.Expect(condition.Status).To(Equal(gardencorev1beta1.ConditionTrue))
-			g.Expect(condition.Reason).To(Equal(gardencorev1beta1.EventReconciled))
+			if seedRegistered {
+				g.Expect(condition.Status).To(Equal(gardencorev1beta1.ConditionTrue))
+				g.Expect(condition.Reason).To(Equal(gardencorev1beta1.EventReconciled))
+			} else {
+				g.Expect(condition.Status).To(Equal(gardencorev1beta1.ConditionProgressing))
+				g.Expect(condition.Reason).To(Equal(gardencorev1beta1.EventReconcileError))
+			}
 		}).Should(Succeed())
 
 		By("Verify that gardenlet is deployed")
@@ -147,7 +153,7 @@ var _ = Describe("Gardenlet controller test", func() {
 
 	When("Seed object does not exist yet", func() {
 		It("should deploy gardenlet and update it on request", func() {
-			verifyGardenletDeployment()
+			verifyGardenletDeployment(false)
 
 			By("Update some value")
 			patch := client.MergeFrom(gardenlet.DeepCopy())
@@ -165,11 +171,11 @@ var _ = Describe("Gardenlet controller test", func() {
 
 	When("Seed object gets created", func() {
 		It("should deploy gardenlet and no longer touch it when Seed object got created", func() {
-			verifyGardenletDeployment()
-
 			By("Create Seed") // gardenlet would do this typically, but it doesn't run in this setup
 			seed.Name = gardenlet.Name
 			Expect(testClient.Create(ctx, seed)).To(Succeed())
+
+			verifyGardenletDeployment(true)
 
 			By("Update some value")
 			patch := client.MergeFrom(gardenlet.DeepCopy())
