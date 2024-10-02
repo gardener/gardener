@@ -49,5 +49,6 @@ func NewEtcdDruid(
 		imageVectorOverwrite,
 		secretsManager,
 		secretNameServerCA,
-		priorityClassName), nil
+		priorityClassName,
+	), nil
 }
