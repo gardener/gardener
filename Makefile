@@ -301,9 +301,9 @@ kind-down kind2-down kind-ha-single-zone-down kind2-ha-single-zone-down kind-ha-
 
 kind-extensions-up: $(KIND) $(KUBECTL)
 	REPO_ROOT=$(REPO_ROOT) ./hack/kind-extensions-up.sh
-kind-extensions-down: $(KIND)
+kind-extensions-down:
 	docker stop gardener-extensions-control-plane
-kind-extensions-clean:
+kind-extensions-clean: $(KIND)
 	./hack/kind-down.sh --cluster-name gardener-extensions --path-kubeconfig $(REPO_ROOT)/example/provider-extensions/garden/kubeconfig
 
 kind-operator-up: $(KIND) $(KUBECTL) $(HELM) $(YQ) $(KUSTOMIZE)
