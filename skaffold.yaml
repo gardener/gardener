@@ -21,7 +21,6 @@ requires:
 build:
   insecureRegistries:
     - garden.local.gardener.cloud:5001
-    - localhost:5001
   tagPolicy:
     customTemplate:
       template: "{{.version}}-{{.sha}}"
@@ -600,7 +599,6 @@ metadata:
 build:
   insecureRegistries:
     - garden.local.gardener.cloud:5001
-    - localhost:5001
   tagPolicy:
     customTemplate:
       template: "{{.version}}-{{.sha}}"
@@ -915,7 +913,6 @@ metadata:
 build:
   insecureRegistries:
     - garden.local.gardener.cloud:5001
-    - localhost:5001
   tagPolicy:
     customTemplate:
       template: "{{.version}}-{{.sha}}"

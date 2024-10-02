@@ -28,7 +28,6 @@ metadata:
 build:
   insecureRegistries:
     - garden.local.gardener.cloud:5001
-    - localhost:5001
   artifacts:
     - image: local-skaffold/gardener-extension-provider-local-node
       context: pkg/provider-local/node
