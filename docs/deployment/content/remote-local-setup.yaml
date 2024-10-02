@@ -29,7 +29,9 @@ spec:
                   util-linux vim wget yq
           mkdir -p ~/.cache/wget
           cd ~/.cache/wget
-          echo golang          && wget -N "https://go.dev/dl/$(curl -sL https://golang.org/VERSION?m=text | awk 'NR==1{print}').linux-amd64.tar.gz" && tar -C /usr/local -xzf go1.*.linux-amd64.tar.gz \
+          echo golang          && VERSION=$(curl -sL https://golang.org/VERSION?m=text | awk 'NR==1{print}') \
+                               && wget -N "https://go.dev/dl/$VERSION.linux-amd64.tar.gz" \
+                               && tar -C /usr/local -xzf "$VERSION.linux-amd64.tar.gz" \
                                && ln -s /usr/local/go/bin/go /usr/local/bin/go \
                                && ln -s /usr/local/go/bin/gofmt /usr/local/bin/gofmt
           echo gardenlogin     && wget -N "https://github.com/gardener/gardenlogin/releases/download/$(curl -sL https://raw.githubusercontent.com/gardener/gardenlogin/master/LATEST)/gardenlogin_linux_amd64" && mv gardenlogin_linux_amd64 /usr/local/bin/gardenlogin && chmod +x /usr/local/bin/gardenlogin \
