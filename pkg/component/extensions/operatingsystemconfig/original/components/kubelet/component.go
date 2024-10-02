@@ -73,7 +73,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		},
 		{
 			Path:        PathKubeletConfig,
-			Permissions: ptr.To[int32](0644),
+			Permissions: ptr.To[int32](0600),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: fileContentKubeletConfig,
 			},
