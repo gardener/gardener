@@ -300,10 +300,6 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 			},
 		}
 
-		failurePolicy     = admissionregistrationv1.Fail
-		matchPolicy       = admissionregistrationv1.Exact
-		sideEffects       = admissionregistrationv1.SideEffectClassNone
-		scope             = admissionregistrationv1.AllScopes
 		opUpdateAndDelete = []admissionregistrationv1.OperationType{admissionregistrationv1.Update, admissionregistrationv1.Delete}
 		opDelete          = []admissionregistrationv1.OperationType{admissionregistrationv1.Delete}
 		clientConfig      = admissionregistrationv1.WebhookClientConfig{
@@ -325,9 +321,9 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 				{
 					Name:                    "etcdcomponents.webhooks.druid.gardener.cloud",
 					ClientConfig:            clientConfig,
-					FailurePolicy:           &failurePolicy,
-					MatchPolicy:             &matchPolicy,
-					SideEffects:             &sideEffects,
+					FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
+					MatchPolicy:             ptr.To(admissionregistrationv1.Exact),
+					SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
 					TimeoutSeconds:          ptr.To[int32](10),
 					AdmissionReviewVersions: []string{"v1", "v1beta1"},
 					ObjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
@@ -339,7 +335,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 								APIGroups:   []string{""},
 								APIVersions: []string{"v1"},
 								Resources:   []string{"serviceaccounts", "services", "configmaps"},
-								Scope:       &scope,
+								Scope:       ptr.To(admissionregistrationv1.AllScopes),
 							},
 							Operations: opUpdateAndDelete,
 						},
@@ -348,7 +344,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 								APIGroups:   []string{""},
 								APIVersions: []string{"v1"},
 								Resources:   []string{"persistentvolumeclaims"},
-								Scope:       &scope,
+								Scope:       ptr.To(admissionregistrationv1.AllScopes),
 							},
 							Operations: opDelete,
 						},
@@ -357,7 +353,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 								APIGroups:   []string{"rbac.authorization.k8s.io"},
 								APIVersions: []string{"v1"},
 								Resources:   []string{"roles", "rolebindings"},
-								Scope:       &scope,
+								Scope:       ptr.To(admissionregistrationv1.AllScopes),
 							},
 							Operations: opUpdateAndDelete,
 						},
@@ -366,7 +362,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 								APIGroups:   []string{"apps"},
 								APIVersions: []string{"v1"},
 								Resources:   []string{"statefulsets"},
-								Scope:       &scope,
+								Scope:       ptr.To(admissionregistrationv1.AllScopes),
 							},
 							Operations: opUpdateAndDelete,
 						},
@@ -375,7 +371,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 								APIGroups:   []string{"policy"},
 								APIVersions: []string{"v1"},
 								Resources:   []string{"poddisruptionbudgets"},
-								Scope:       &scope,
+								Scope:       ptr.To(admissionregistrationv1.AllScopes),
 							},
 							Operations: opUpdateAndDelete,
 						},
@@ -384,7 +380,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 								APIGroups:   []string{"batch"},
 								APIVersions: []string{"v1"},
 								Resources:   []string{"jobs"},
-								Scope:       &scope,
+								Scope:       ptr.To(admissionregistrationv1.AllScopes),
 							},
 							Operations: opUpdateAndDelete,
 						},
@@ -393,7 +389,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 								APIGroups:   []string{"coordination.k8s.io"},
 								APIVersions: []string{"v1"},
 								Resources:   []string{"leases"},
-								Scope:       &scope,
+								Scope:       ptr.To(admissionregistrationv1.AllScopes),
 							},
 							Operations: opUpdateAndDelete,
 						},
@@ -406,9 +402,9 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 				{
 					Name:                    "stsscale.etcdcomponents.webhooks.druid.gardener.cloud",
 					ClientConfig:            clientConfig,
-					FailurePolicy:           &failurePolicy,
-					MatchPolicy:             &matchPolicy,
-					SideEffects:             &sideEffects,
+					FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
+					MatchPolicy:             ptr.To(admissionregistrationv1.Exact),
+					SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
 					TimeoutSeconds:          ptr.To[int32](10),
 					AdmissionReviewVersions: []string{"v1", "v1beta1"},
 					Rules: []admissionregistrationv1.RuleWithOperations{
@@ -417,7 +413,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 								APIGroups:   []string{"apps"},
 								APIVersions: []string{"v1"},
 								Resources:   []string{"statefulsets/scale"},
-								Scope:       &scope,
+								Scope:       ptr.To(admissionregistrationv1.AllScopes),
 							},
 							Operations: opUpdateAndDelete,
 						},
