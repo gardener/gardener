@@ -28,12 +28,6 @@ The following tables are a summary of the feature gates that you can set on diff
 | ShootForceDeletion        | `true`  | `Beta`  | `1.91`  |         |
 | UseNamespacedCloudProfile | `false` | `Alpha` | `1.92`  |         |
 | ShootManagedIssuer        | `false` | `Alpha` | `1.93`  |         |
-| VPAForETCD                | `false` | `Alpha` | `1.94`  | `1.96`  |
-| VPAForETCD                | `true`  | `Beta`  | `1.97`  | `1.104` |
-| VPAForETCD                | `true`  | `GA`    | `1.105` |         |
-| VPAAndHPAForAPIServer     | `false` | `Alpha` | `1.95`  | `1.100` |
-| VPAAndHPAForAPIServer     | `true`  | `Beta`  | `1.101` | `1.104` |
-| VPAAndHPAForAPIServer     | `true`  | `GA`    | `1.105` |         |
 | ShootCredentialsBinding   | `false` | `Alpha` | `1.98`  |         |
 | NewWorkerPoolHash         | `false` | `Alpha` | `1.98`  |         |
 | NewVPN                    | `false` | `Alpha` | `1.104` |         |
@@ -42,9 +36,9 @@ The following tables are a summary of the feature gates that you can set on diff
 
 | Feature                                      | Default | Stage        | Since   | Until   |
 |----------------------------------------------|---------|--------------|---------|---------|
-| NodeLocalDNS                                 | `false` | `Alpha`      | `1.7`   |         |
+| NodeLocalDNS                                 | `false` | `Alpha`      | `1.7`   | `1.25`  |
 | NodeLocalDNS                                 |         | `Removed`    | `1.26`  |         |
-| KonnectivityTunnel                           | `false` | `Alpha`      | `1.6`   |         |
+| KonnectivityTunnel                           | `false` | `Alpha`      | `1.6`   | `1.26`  |
 | KonnectivityTunnel                           |         | `Removed`    | `1.27`  |         |
 | MountHostCADirectories                       | `false` | `Alpha`      | `1.11`  | `1.25`  |
 | MountHostCADirectories                       | `true`  | `Beta`       | `1.26`  | `1.27`  |
@@ -52,7 +46,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | MountHostCADirectories                       |         | `Removed`    | `1.30`  |         |
 | DisallowKubeconfigRotationForShootInDeletion | `false` | `Alpha`      | `1.28`  | `1.31`  |
 | DisallowKubeconfigRotationForShootInDeletion | `true`  | `Beta`       | `1.32`  | `1.35`  |
-| DisallowKubeconfigRotationForShootInDeletion | `true`  | `GA`         | `1.36`  |         |
+| DisallowKubeconfigRotationForShootInDeletion | `true`  | `GA`         | `1.36`  | `1.37`  |
 | DisallowKubeconfigRotationForShootInDeletion |         | `Removed`    | `1.38`  |         |
 | Logging                                      | `false` | `Alpha`      | `0.13`  | `1.40`  |
 | Logging                                      |         | `Removed`    | `1.41`  |         |
@@ -146,7 +140,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | ContainerdRegistryHostsDir                   |         | `Removed`    | `1.88`  |         |
 | WorkerlessShoots                             | `false` | `Alpha`      | `1.70`  | `1.78`  |
 | WorkerlessShoots                             | `true`  | `Beta`       | `1.79`  | `1.85`  |
-| WorkerlessShoots                             | `true`  | `GA`         | `1.86`  |         |
+| WorkerlessShoots                             | `true`  | `GA`         | `1.86`  | `1.87`  |
 | WorkerlessShoots                             |         | `Removed`    | `1.88`  |         |
 | MachineControllerManagerDeployment           | `false` | `Alpha`      | `1.73`  |         |
 | MachineControllerManagerDeployment           | `true`  | `Beta`       | `1.81`  | `1.81`  |
@@ -156,7 +150,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | APIServerFastRollout                         | `true`  | `GA`         | `1.90`  | `1.91`  |
 | APIServerFastRollout                         |         | `Removed`    | `1.92`  |         |
 | UseGardenerNodeAgent                         | `false` | `Alpha`      | `1.82`  | `1.88`  |
-| UseGardenerNodeAgent                         | `true`  | `Beta`       | `1.89`  |         |
+| UseGardenerNodeAgent                         | `true`  | `Beta`       | `1.89`  | `1.89`  |
 | UseGardenerNodeAgent                         | `true`  | `GA`         | `1.90`  | `1.91`  |
 | UseGardenerNodeAgent                         |         | `Removed`    | `1.92`  |         |
 | CoreDNSQueryRewriting                        | `false` | `Alpha`      | `1.55`  | `1.95`  |
@@ -167,6 +161,12 @@ The following tables are a summary of the feature gates that you can set on diff
 | MutableShootSpecNetworkingNodes              | `true`  | `Beta`       | `1.96`  | `1.96`  |
 | MutableShootSpecNetworkingNodes              | `true`  | `GA`         | `1.97`  | `1.100` |
 | MutableShootSpecNetworkingNodes              |         | `Removed`    | `1.101` |         |
+| VPAForETCD                                   | `false` | `Alpha`      | `1.94`  | `1.96`  |
+| VPAForETCD                                   | `true`  | `Beta`       | `1.97`  | `1.104` |
+| VPAForETCD                                   | `true`  | `GA`         | `1.105` |         |
+| VPAAndHPAForAPIServer                        | `false` | `Alpha`      | `1.95`  | `1.100` |
+| VPAAndHPAForAPIServer                        | `true`  | `Beta`       | `1.101` | `1.104` |
+| VPAAndHPAForAPIServer                        | `true`  | `GA`         | `1.105` |         |
 
 ## Using a Feature
 
