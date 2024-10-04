@@ -1117,6 +1117,22 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 						"Field": Equal("spec.bastion.machineImage.version"),
 					}))))
 				})
+
+				It("should allow any image architecture if machineType is nil", func() {
+					cloudProfile.Spec.Bastion = &core.Bastion{
+						MachineType: nil,
+						MachineImage: &core.BastionMachineImage{
+							Name:    "some-machineimage",
+							Version: ptr.To("1.2.3"),
+						},
+					}
+					cloudProfile.Spec.MachineImages[0].Versions[0].Classification = &supportedClassification
+					// architectures must be one of arm64 or amd64
+					cloudProfile.Spec.MachineImages[0].Versions[0].Architectures = []string{"arm64"}
+
+					errorList := ValidateCloudProfile(cloudProfile)
+					Expect(errorList).To(BeEmpty())
+				})
 			})
 
 			It("should forbid unsupported seed selectors", func() {
