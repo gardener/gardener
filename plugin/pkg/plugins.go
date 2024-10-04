@@ -133,7 +133,8 @@ func DefaultOnPlugins() sets.Set[string] {
 		PluginNameBastion,                         // Bastion
 		mutatingwebhook.PluginName,                // MutatingAdmissionWebhook
 		validatingwebhook.PluginName,              // ValidatingAdmissionWebhook
-		validating.PluginName,                     // ValidatingAdmissionPolicy
-		resourcequota.PluginName,                  // ResourceQuota
+		// TODO(ary1992): Ennable the plugin once our base clusters are updated to k8s >= 1.30
+		// validating.PluginName,                     // ValidatingAdmissionPolicy
+		resourcequota.PluginName, // ResourceQuota
 	)
 }
