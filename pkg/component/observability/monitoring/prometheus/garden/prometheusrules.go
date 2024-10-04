@@ -196,6 +196,29 @@ func gardenPrometheusRule(isGardenerDiscoveryServerEnabled bool) *monitoringv1.P
 					"last hour. The pod is running on the garden cluster.",
 			},
 		},
+		{
+			Alert:  "GardenConditionStatusNotTrue",
+			Expr:   intstr.FromString(`garden_garden_condition{status!="True"} == 1`),
+			For:    ptr.To(monitoringv1.Duration("10m")),
+			Labels: getLabels("critical"),
+			Annotations: map[string]string{
+				"summary": "Garden runtime condition {{$labels.condition}} is in state {{$labels.status}}",
+				"description": "Garden {{$labels.name}} in landscape " +
+					"{{$externalLabels.landscape}} has condition {{$labels.condition}} unequal to True" +
+					" for 10 minutes.",
+			},
+		},
+		{
+			Alert:  "GardenKubeStateMetricsDown",
+			Expr:   intstr.FromString(`absent(up{job="kube-state-metrics"} == 1)`),
+			For:    ptr.To(monitoringv1.Duration("10m")),
+			Labels: getLabels("critical"),
+			Annotations: map[string]string{
+				"summary": "Garden runtime kube-state-metrics is down",
+				"description": "Garden runtime kube-state-metrics in landscape " +
+					"{{$externalLabels.landscape}} has not been scraped for 10 minutes.",
+			},
+		},
 	}
 
 	if isGardenerDiscoveryServerEnabled {
