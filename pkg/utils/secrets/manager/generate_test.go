@@ -405,7 +405,7 @@ var _ = Describe("Generate", func() {
 
 				By("Verify labels")
 				Expect(foundSecret.Labels).To(And(
-					HaveKeyWithValue("issued-at-time", strconv.FormatInt(fakeClock.Now().Unix(), 10)),
+					HaveKeyWithValue("issued-at-time", strconv.FormatInt(secretsutils.AdjustToClockSkew(fakeClock.Now()).Unix(), 10)),
 					HaveKeyWithValue("valid-until-time", strconv.FormatInt(fakeClock.Now().AddDate(10, 0, 0).Unix(), 10)),
 				))
 			})
@@ -423,7 +423,7 @@ var _ = Describe("Generate", func() {
 
 				By("Verify labels")
 				Expect(foundSecret.Labels).To(And(
-					HaveKeyWithValue("issued-at-time", strconv.FormatInt(fakeClock.Now().Unix(), 10)),
+					HaveKeyWithValue("issued-at-time", strconv.FormatInt(secretsutils.AdjustToClockSkew(fakeClock.Now()).Unix(), 10)),
 					HaveKeyWithValue("valid-until-time", strconv.FormatInt(fakeClock.Now().AddDate(10, 0, 0).Unix(), 10)),
 				))
 			})
@@ -613,7 +613,7 @@ var _ = Describe("Generate", func() {
 
 				By("Verify labels")
 				Expect(foundSecret.Labels).To(And(
-					HaveKeyWithValue("issued-at-time", strconv.FormatInt(fakeClock.Now().Unix(), 10)),
+					HaveKeyWithValue("issued-at-time", strconv.FormatInt(secretsutils.AdjustToClockSkew(fakeClock.Now()).Unix(), 10)),
 					HaveKeyWithValue("valid-until-time", strconv.FormatInt(fakeClock.Now().AddDate(10, 0, 0).Unix(), 10)),
 				))
 			})
@@ -637,7 +637,7 @@ var _ = Describe("Generate", func() {
 
 				By("Verify labels")
 				Expect(foundSecret.Labels).To(And(
-					HaveKeyWithValue("issued-at-time", strconv.FormatInt(fakeClock.Now().Unix(), 10)),
+					HaveKeyWithValue("issued-at-time", strconv.FormatInt(secretsutils.AdjustToClockSkew(fakeClock.Now()).Unix(), 10)),
 					HaveKeyWithValue("valid-until-time", strconv.FormatInt(fakeClock.Now().AddDate(10, 0, 0).Unix(), 10)),
 				))
 			})
@@ -783,7 +783,7 @@ var _ = Describe("Generate", func() {
 
 				By("Verify labels")
 				Expect(serverSecret.Labels).To(And(
-					HaveKeyWithValue("issued-at-time", strconv.FormatInt(fakeClock.Now().Unix(), 10)),
+					HaveKeyWithValue("issued-at-time", strconv.FormatInt(secretsutils.AdjustToClockSkew(fakeClock.Now()).Unix(), 10)),
 					HaveKeyWithValue("valid-until-time", strconv.FormatInt(fakeClock.Now().Add(*serverConfig.Validity).Unix(), 10)),
 				))
 			})

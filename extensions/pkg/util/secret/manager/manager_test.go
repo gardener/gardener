@@ -241,9 +241,9 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 				Expect(sm.Cleanup(ctx)).To(Succeed())
 
 				expectSecrets(fakeClient,
-					"my-extension-ca-013c464d", "my-extension-ca-bundle-d563c0b7",
-					"my-extension-ca-2-673cf9ab", "my-extension-ca-2-bundle-086fe2a7",
-					"some-server-7388feb3", "some-secret-4b8f9d51")
+					"my-extension-ca-013c464d", "my-extension-ca-bundle-d9cdd23a",
+					"my-extension-ca-2-673cf9ab", "my-extension-ca-2-bundle-d54d5be6",
+					"some-server-fb949f01", "some-secret-4b8f9d51")
 			})
 		})
 
@@ -265,9 +265,9 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 					Expect(sm.Cleanup(ctx)).To(Succeed())
 
 					expectSecrets(fakeClient,
-						"my-extension-ca-013c464d", "my-extension-ca-bundle-7c9e4d64",
-						"my-extension-ca-2-673cf9ab", "my-extension-ca-2-bundle-97af5249",
-						"some-server-70ec0461", "some-secret-4b8f9d51")
+						"my-extension-ca-013c464d", "my-extension-ca-bundle-857457c0",
+						"my-extension-ca-2-673cf9ab", "my-extension-ca-2-bundle-42155530",
+						"some-server-2a71a28a", "some-secret-4b8f9d51")
 				})
 			})
 
@@ -290,9 +290,9 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 					Expect(sm.Cleanup(ctx)).To(Succeed())
 
 					expectSecrets(fakeClient,
-						"my-extension-ca-013c464d", "my-extension-ca-013c464d-431ab", "my-extension-ca-bundle-e595315e",
-						"my-extension-ca-2-673cf9ab", "my-extension-ca-2-673cf9ab-431ab", "my-extension-ca-2-bundle-fb324296",
-						"some-server-70ec0461", "some-secret-4b8f9d51")
+						"my-extension-ca-013c464d", "my-extension-ca-013c464d-431ab", "my-extension-ca-bundle-d0017688",
+						"my-extension-ca-2-673cf9ab", "my-extension-ca-2-673cf9ab-431ab", "my-extension-ca-2-bundle-d904c5b9",
+						"some-server-2a71a28a", "some-secret-4b8f9d51")
 				})
 			})
 
@@ -315,9 +315,9 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 					Expect(sm.Cleanup(ctx)).To(Succeed())
 
 					expectSecrets(fakeClient,
-						"my-extension-ca-013c464d-431ab", "my-extension-ca-bundle-0efe4bf3",
-						"my-extension-ca-2-673cf9ab-431ab", "my-extension-ca-2-bundle-11a56f33",
-						"some-server-bbe4c0f9", "some-secret-4b8f9d51")
+						"my-extension-ca-013c464d-431ab", "my-extension-ca-bundle-3455131c",
+						"my-extension-ca-2-673cf9ab-431ab", "my-extension-ca-2-bundle-8ceaf6ac",
+						"some-server-58b5baa2", "some-secret-4b8f9d51")
 				})
 			})
 		})

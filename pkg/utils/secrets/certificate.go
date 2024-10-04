@@ -48,6 +48,11 @@ const (
 	PKCS8
 )
 
+const (
+	// allowedClockSkew is the offset to allow with regards to certificate creation/usage difference.
+	allowedClockSkew = 1 * time.Minute
+)
+
 // CertificateSecretConfig contains the specification a to-be-generated CA, server, or client certificate.
 // It always contains a 3072-bit RSA private key.
 type CertificateSecretConfig struct {
@@ -219,7 +224,7 @@ func (s *CertificateSecretConfig) generateCertificateTemplate() *x509.Certificat
 			BasicConstraintsValid: true,
 			IsCA:                  isCA,
 			SerialNumber:          serialNumber,
-			NotBefore:             now,
+			NotBefore:             AdjustToClockSkew(now),
 			NotAfter:              expiration,
 			KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
 			Subject: pkix.Name{
@@ -308,4 +313,9 @@ func SelfGenerateTLSServerCertificate(name string, dnsNames []string, ips []net.
 	}
 
 	return certificate, caCertificate, tempDir, nil
+}
+
+// AdjustToClockSkew adjusts the given time by the maximum allowed clock skew as clock skew can cause non-trivial errors.
+func AdjustToClockSkew(t time.Time) time.Time {
+	return t.Add(-1 * allowedClockSkew)
 }
