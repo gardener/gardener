@@ -587,6 +587,43 @@ status:
 			Expect(err).NotTo(HaveOccurred())
 		})
 
+		checkDeployedResources := func(dashboardConfigMapName string, dashboardCount int) {
+			GinkgoHelper()
+
+			deployment := deploymentYAMLFor(values)
+			utilruntime.Must(references.InjectAnnotations(deployment))
+
+			Expect(manifests).To(ConsistOf(
+				testruntime.Serialize(plutonoConfigSecret, c.Scheme()),
+				testruntime.Serialize(serviceAccount, c.Scheme()),
+				testruntime.Serialize(role, c.Scheme()),
+				testruntime.Serialize(roleBinding, c.Scheme()),
+				testruntime.Serialize(deployment, c.Scheme()),
+				providerConfigMapYAML,
+				dataSourceConfigMapYAMLFor(values),
+				serviceYAMLFor(values),
+				ingressYAMLFor(values),
+			), "Resource manifests do not match the expected ones")
+
+			dashboardsConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: dashboardConfigMapName, Namespace: namespace}}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardsConfigMap), dashboardsConfigMap)).To(Succeed(), "Could not successfully get dashboards configMap")
+
+			labelKey := "seed"
+			if values.ClusterType == comp.ClusterTypeShoot {
+				labelKey = "shoot"
+			}
+			if values.IsGardenCluster {
+				labelKey = "garden"
+			}
+			Expect(dashboardsConfigMap.Labels).To(HaveKeyWithValue("dashboard.monitoring.gardener.cloud/"+labelKey, "true"), "Dashboards configMap does not contain expected key")
+
+			availableDashboards := sets.Set[string]{}
+			for key := range dashboardsConfigMap.Data {
+				availableDashboards.Insert(key)
+			}
+			Expect(availableDashboards).To(HaveLen(dashboardCount), "The number of deployed dashboards differs from the expected one")
+		}
+
 		Context("Cluster type is seed", func() {
 			BeforeEach(func() {
 				values.ClusterType = comp.ClusterTypeSeed
@@ -600,24 +637,17 @@ status:
 				})
 
 				It("should successfully deploy all resources", func() {
-					deployment := deploymentYAMLFor(values)
-					utilruntime.Must(references.InjectAnnotations(deployment))
+					checkDeployedResources("plutono-dashboards", 20)
+				})
 
-					Expect(manifests).To(ConsistOf(
-						testruntime.Serialize(plutonoConfigSecret, c.Scheme()),
-						testruntime.Serialize(serviceAccount, c.Scheme()),
-						testruntime.Serialize(role, c.Scheme()),
-						testruntime.Serialize(roleBinding, c.Scheme()),
-						testruntime.Serialize(deployment, c.Scheme()),
-						providerConfigMapYAML,
-						dataSourceConfigMapYAMLFor(values),
-						serviceYAMLFor(values),
-						ingressYAMLFor(values),
-					))
+				Context("w/ enabled vpa", func() {
+					BeforeEach(func() {
+						values.VPAEnabled = true
+					})
 
-					dashboardsConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "plutono-dashboards", Namespace: namespace}}
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardsConfigMap), dashboardsConfigMap)).To(Succeed())
-					testDashboardConfigMap(dashboardsConfigMap, 22, values)
+					It("should successfully deploy all resources", func() {
+						checkDeployedResources("plutono-dashboards", 22)
+					})
 				})
 			})
 
@@ -627,24 +657,7 @@ status:
 				})
 
 				It("should successfully deploy all resources", func() {
-					deployment := deploymentYAMLFor(values)
-					utilruntime.Must(references.InjectAnnotations(deployment))
-
-					Expect(manifests).To(ConsistOf(
-						testruntime.Serialize(plutonoConfigSecret, c.Scheme()),
-						testruntime.Serialize(serviceAccount, c.Scheme()),
-						testruntime.Serialize(role, c.Scheme()),
-						testruntime.Serialize(roleBinding, c.Scheme()),
-						testruntime.Serialize(deployment, c.Scheme()),
-						providerConfigMapYAML,
-						dataSourceConfigMapYAMLFor(values),
-						serviceYAMLFor(values),
-						ingressYAMLFor(values),
-					))
-
-					dashboardsConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "plutono-dashboards-garden", Namespace: namespace}}
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardsConfigMap), dashboardsConfigMap)).To(Succeed())
-					testDashboardConfigMap(dashboardsConfigMap, 23, values)
+					checkDeployedResources("plutono-dashboards-garden", 23)
 				})
 			})
 		})
@@ -656,24 +669,7 @@ status:
 			})
 
 			It("should successfully deploy all resources", func() {
-				deployment := deploymentYAMLFor(values)
-				utilruntime.Must(references.InjectAnnotations(deployment))
-
-				Expect(manifests).To(ConsistOf(
-					testruntime.Serialize(plutonoConfigSecret, c.Scheme()),
-					testruntime.Serialize(serviceAccount, c.Scheme()),
-					testruntime.Serialize(role, c.Scheme()),
-					testruntime.Serialize(roleBinding, c.Scheme()),
-					testruntime.Serialize(deployment, c.Scheme()),
-					providerConfigMapYAML,
-					dataSourceConfigMapYAMLFor(values),
-					serviceYAMLFor(values),
-					ingressYAMLFor(values),
-				))
-
-				dashboardsConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "plutono-dashboards", Namespace: namespace}}
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardsConfigMap), dashboardsConfigMap)).To(Succeed())
-				testDashboardConfigMap(dashboardsConfigMap, 33, values)
+				checkDeployedResources("plutono-dashboards", 33)
 			})
 
 			Context("w/ include istio, mcm, ha-vpn, vpa", func() {
@@ -684,24 +680,7 @@ status:
 				})
 
 				It("should successfully deploy all resources", func() {
-					deployment := deploymentYAMLFor(values)
-					utilruntime.Must(references.InjectAnnotations(deployment))
-
-					Expect(manifests).To(ConsistOf(
-						testruntime.Serialize(plutonoConfigSecret, c.Scheme()),
-						testruntime.Serialize(serviceAccount, c.Scheme()),
-						testruntime.Serialize(role, c.Scheme()),
-						testruntime.Serialize(roleBinding, c.Scheme()),
-						testruntime.Serialize(deployment, c.Scheme()),
-						providerConfigMapYAML,
-						dataSourceConfigMapYAMLFor(values),
-						serviceYAMLFor(values),
-						ingressYAMLFor(values),
-					))
-
-					dashboardsConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "plutono-dashboards", Namespace: namespace}}
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardsConfigMap), dashboardsConfigMap)).To(Succeed())
-					testDashboardConfigMap(dashboardsConfigMap, 35, values)
+					checkDeployedResources("plutono-dashboards", 36)
 				})
 			})
 
@@ -711,24 +690,7 @@ status:
 				})
 
 				It("should successfully deploy all resources", func() {
-					deployment := deploymentYAMLFor(values)
-					utilruntime.Must(references.InjectAnnotations(deployment))
-
-					Expect(manifests).To(ConsistOf(
-						testruntime.Serialize(plutonoConfigSecret, c.Scheme()),
-						testruntime.Serialize(serviceAccount, c.Scheme()),
-						testruntime.Serialize(role, c.Scheme()),
-						testruntime.Serialize(roleBinding, c.Scheme()),
-						testruntime.Serialize(deployment, c.Scheme()),
-						providerConfigMapYAML,
-						dataSourceConfigMapYAMLFor(values),
-						serviceYAMLFor(values),
-						ingressYAMLFor(values),
-					))
-
-					dashboardsConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "plutono-dashboards", Namespace: namespace}}
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardsConfigMap), dashboardsConfigMap)).To(Succeed())
-					testDashboardConfigMap(dashboardsConfigMap, 25, values)
+					checkDeployedResources("plutono-dashboards", 25)
 				})
 			})
 		})
@@ -837,25 +799,6 @@ status:
 		})
 	})
 })
-
-func testDashboardConfigMap(configMap *corev1.ConfigMap, dashboardCount int, values Values) {
-	availableDashboards := sets.Set[string]{}
-
-	labelKey := "seed"
-	if values.ClusterType == comp.ClusterTypeShoot {
-		labelKey = "shoot"
-	}
-	if values.IsGardenCluster {
-		labelKey = "garden"
-	}
-
-	ExpectWithOffset(1, configMap.Labels).To(HaveKeyWithValue("dashboard.monitoring.gardener.cloud/"+labelKey, "true"))
-
-	for key := range configMap.Data {
-		availableDashboards.Insert(key)
-	}
-	ExpectWithOffset(1, availableDashboards).To(HaveLen(dashboardCount))
-}
 
 func getLabels() map[string]string {
 	return map[string]string{

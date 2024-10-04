@@ -236,10 +236,6 @@ func (v *vpa) emptyPodDisruptionBudget(name string) *policyv1.PodDisruptionBudge
 	return &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: v.namespace}}
 }
 
-func (v *vpa) emptyPodMonitor(name string) *monitoringv1.PodMonitor {
-	return &monitoringv1.PodMonitor{ObjectMeta: monitoringutils.ConfigObjectMeta(name, v.namespace, seed.Label)}
-}
-
 func (v *vpa) emptyServiceMonitor(name string) *monitoringv1.ServiceMonitor {
 	return &monitoringv1.ServiceMonitor{ObjectMeta: monitoringutils.ConfigObjectMeta(name, v.namespace, v.getPrometheusLabel())}
 }

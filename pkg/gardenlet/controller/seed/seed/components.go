@@ -528,7 +528,7 @@ func (r *Reconciler) newPlutono(seed *seedpkg.Seed, secretsManager secretsmanage
 		false,
 		false,
 		false,
-		false,
+		v1beta1helper.SeedSettingVerticalPodAutoscalerEnabled(seed.GetInfo().Spec.Settings),
 		wildcardCertName,
 	)
 }

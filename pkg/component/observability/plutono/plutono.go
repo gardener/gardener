@@ -390,6 +390,9 @@ func (p *plutono) getDashboardConfigMap(suffix string) (*corev1.ConfigMap, error
 		if !p.values.IncludeIstioDashboards {
 			ignorePaths.Insert("istio")
 		}
+		if !p.values.VPAEnabled {
+			ignorePaths.Insert("vpa")
+		}
 	} else if p.values.ClusterType == component.ClusterTypeShoot {
 		requiredDashboards = map[string]embed.FS{
 			shootDashboardsPath:          shootDashboards,
