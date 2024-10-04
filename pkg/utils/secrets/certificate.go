@@ -315,7 +315,7 @@ func SelfGenerateTLSServerCertificate(name string, dnsNames []string, ips []net.
 	return certificate, caCertificate, tempDir, nil
 }
 
-// AdjustToClockSkew adjusts the given time by the maximum allowed clock skew.
+// AdjustToClockSkew adjusts the given time by the maximum allowed clock skew as clock skew can cause non-trivial errors.
 func AdjustToClockSkew(t time.Time) time.Time {
 	return t.Add(-1 * allowedClockSkew)
 }
