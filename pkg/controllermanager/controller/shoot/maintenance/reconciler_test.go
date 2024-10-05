@@ -50,7 +50,7 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 	})
 
-	Describe("#MaintainMachineImages", func() {
+	Describe("#maintainMachineImages", func() {
 		var (
 			shootCurrentImage        *gardencorev1beta1.ShootMachineImage
 			cloudProfile             *gardencorev1beta1.CloudProfile
@@ -1213,7 +1213,7 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 	})
 
-	Describe("#EnsureSufficientMaxWorkers", func() {
+	Describe("#ensureSufficientMaxWorkers", func() {
 		var (
 			shoot *gardencorev1beta1.Shoot
 		)
@@ -1265,7 +1265,7 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 	})
 
-	Describe("#MaintainFeatureGatesForShoot", func() {
+	Describe("#maintainFeatureGatesForShoot", func() {
 		var (
 			shoot                   *gardencorev1beta1.Shoot
 			supportedfeatureGate1   = "featureGate1"
@@ -1416,7 +1416,7 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 	})
 
-	Describe("#MaintainAdmissionPlugins", func() {
+	Describe("#maintainAdmissionPlugins", func() {
 		var (
 			shoot                       *gardencorev1beta1.Shoot
 			supportedAdmissionPlugin1   = "admissionPlugin1"

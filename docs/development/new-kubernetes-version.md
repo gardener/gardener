@@ -101,8 +101,11 @@ There is a CI/CD job that runs periodically and releases a new `hyperkube` image
   - The final Kubernetes version for a shoot is determined in the [Shoot Validator Admission Plugin](https://github.com/gardener/gardener/blob/17dfefaffed6c5e125e35b6614c8dcad801839f1/plugin/pkg/shoot/validator/admission.go).
   - Any defaulting logic that depends on the version should be placed in this admission plugin ([example](https://github.com/gardener/gardener/blob/f754c071e6cf8e45f7ac7bc5924acaf81b96dc06/plugin/pkg/shoot/validator/admission.go#L782)).
 - Ensure that [maintenance-controller](../../pkg/controllermanager/controller/shoot/maintenance) is able to auto-update shoots to the new Kubernetes version. Changes to the shoot spec required for the Kubernetes update should be enforced in such cases ([examples](https://github.com/gardener/gardener/blob/bdfc06dc5cb4e5764800fd31ba1dd07727ad78bf/pkg/controllermanager/controller/shoot/maintenance/reconciler.go#L146-L162)).
-- Bump the used Kubernetes version for local e2e test.
-  - See [this](https://github.com/gardener/gardener/pull/5255/commits/5707c4c7a4fd265b176387178b755cabeea89ffe) example commit.
+- Add the new Kubernetes version to the CloudProfile in local setup.
+  - See [this](https://github.com/gardener/gardener/pull/9689/commits/b067a468285a570d5950b62dd99d679ffa4a8bae) example commit.
+- In the next Gardener release, file a PR that bumps the used Kubernetes version for local e2e test.
+  - This step must be performed in a PR that targets the next Gardener release because of the e2e upgrade tests. The e2e upgrade tests deploy the previous Gardener version where the new Kubernetes version is not present in the CloudProfile. If the e2e tests are adapted in the same PR that adds the support for the Kubernetes version, then the e2e upgrade tests for that PR will fail because the newly added Kubernetes version in missing in the local CloudProfile from the old release.
+  - See [this](https://github.com/gardener/gardener/pull/9745) example commit PR.
 
 #### Filing the Pull Request
 
@@ -121,10 +124,19 @@ After the PR in `gardener/gardener` for the support of the new version has been 
 
 #### Maintaining the `cloud-controller-manager` Images
 
-Some of the cloud providers are not yet using upstream `cloud-controller-manager` images.
-Instead, we build and maintain them ourselves:
+Provider extensions are using upstream `cloud-controller-manager` images.
+Make sure to adopt the new `cloud-controller-manager` release for the new Kubernetes minor version ([example PR](https://github.com/gardener/gardener-extension-provider-aws/pull/1055)).
+
+Some of the cloud providers are not using upstream `cloud-controller-manager` images for some of the supported Kubernetes versions.
+Instead, we build and maintain the images ourselves:
 
 - [cloud-provider-gcp](https://github.com/gardener/cloud-provider-gcp)
+
+Use the instructions below in case you need to maintain a release branch for such `cloud-controller-manager` image:
+
+<details>
+
+<summary>Expand the instructions!</summary>
 
 Until we switch to upstream images, you need to update the Kubernetes dependencies and release a new image.
 The required steps are as follows:
@@ -139,6 +151,25 @@ The required steps are as follows:
 In this case, you need to checkout the `release-vX.{Y-{1,2,3}}` branches and only perform the last three steps ([example branch](https://github.com/gardener/cloud-provider-gcp/commits/release-v1.20), [example commit](https://github.com/gardener/cloud-provider-gcp/commit/372aa43fbacdeb76b3da9f6fad6cfd924d916227)).
 
 Now you need to update the new releases in the `imagevector/images.yaml` of the respective provider extension so that they are used (see this [example commit](https://github.com/gardener/gardener-extension-provider-aws/pull/942/commits/7e5c0d95ff95d65459d13ae7f79a030049322c71) for reference).
+
+</details>
+
+#### Maintaining Additional Images
+
+Provider extensions might also deploy additional images other than `cloud-controller-manager` that are specific for a given Kubernetes minor version.
+
+Make sure to use a new image for the following components:
+- The `ecr-credential-provider` image for the provider-aws extension.
+
+  We are building the `ecr-credential-provider` image ourselves because the upstream community does not provide an OCI image for the corresponding component. For more details, see this [upstream issue](https://github.com/kubernetes/cloud-provider-aws/issues/823).
+
+  Use the following steps to prepare a release of the `ecr-credential-provider` image for the new Kubernetes minor version:
+  - Update the `VERSION` file in the [gardener/ecr-credential-provider](https://github.com/gardener/ecr-credential-provider) repository ([example PR](https://github.com/gardener/ecr-credential-provider/pull/2)).
+  - Once the PR is merged, trigger a new release from the CI/CD.
+
+- The `csi-driver-cinder` and `csi-driver-manila` images for the provider-openstack extension.
+
+  The upstream community is providing `csi-driver-cinder` and `csi-driver-manila` releases per Kubernetes minor version. Make sure to adopt the new `csi-driver-cinder` and `csi-driver-manila` releases for the new Kubernetes minor version ([example PR](https://github.com/gardener/gardener-extension-provider-openstack/pull/856)).
 
 #### Filing the Pull Request
 

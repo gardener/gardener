@@ -38,7 +38,7 @@ for p in $(yq '. | select(.kind == "ControllerDeployment") | select(.metadata.na
     if [ "$ADMISSION_NAME" == "networking-cilium" ]; then
       ADMISSION_NAME="admission-cilium"
     fi
-    echo "Identified $LATEST_RELEASE as latest release of $ADMISSION_NAME. Trying to deploy it..."
+    echo "Identified $LATEST_RELEASE as latest release of $ADMISSION_NAME. Trying to $command it..."
     ADMISSION_GIT_ROOT=$(mktemp -d)
     ADMISSION_FILE=$(mktemp)
     curl --fail -L -o "$ADMISSION_FILE" "https://github.com/gardener/gardener-extension-$p/archive/refs/tags/$LATEST_RELEASE.tar.gz"

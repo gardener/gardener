@@ -45,6 +45,7 @@ import (
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	"github.com/gardener/gardener/pkg/utils/version"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 	mocktime "github.com/gardener/gardener/third_party/mock/go/time"
 )
@@ -174,6 +175,11 @@ var _ = Describe("OperatingSystemConfig", func() {
 					criConfigProvisioning *extensionsv1alpha1.CRIConfig
 				)
 
+				k8sVersion := values.KubernetesVersion
+				if worker.Kubernetes != nil && worker.Kubernetes.Version != nil {
+					k8sVersion = semver.MustParse(*worker.Kubernetes.Version)
+				}
+
 				if worker.CRI != nil {
 					criName = extensionsv1alpha1.CRIName(worker.CRI.Name)
 					criConfig = &extensionsv1alpha1.CRIConfig{
@@ -182,14 +188,13 @@ var _ = Describe("OperatingSystemConfig", func() {
 							SandboxImage: "registry.k8s.io/pause:latest",
 						},
 					}
+					if version.ConstraintK8sGreaterEqual131.Check(k8sVersion) {
+						criConfig.CgroupDriver = ptr.To(extensionsv1alpha1.CgroupDriverSystemd)
+					}
+
 					criConfigProvisioning = &extensionsv1alpha1.CRIConfig{
 						Name: extensionsv1alpha1.CRIName(worker.CRI.Name),
 					}
-				}
-
-				k8sVersion := values.KubernetesVersion
-				if worker.Kubernetes != nil && worker.Kubernetes.Version != nil {
-					k8sVersion = semver.MustParse(*worker.Kubernetes.Version)
 				}
 
 				key := KeyV1(worker.Name, k8sVersion, worker.CRI)

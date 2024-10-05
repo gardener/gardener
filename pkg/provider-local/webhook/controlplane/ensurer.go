@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/provider-local/imagevector"
 	"github.com/gardener/gardener/pkg/provider-local/local"
+	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 // NewEnsurer creates a new controlplane ensurer.
@@ -61,9 +62,15 @@ func (e *ensurer) EnsureMachineControllerManagerVPA(_ context.Context, _ extensi
 	return nil
 }
 
-func (e *ensurer) EnsureKubeletConfiguration(_ context.Context, _ extensionscontextwebhook.GardenContext, _ *semver.Version, newObj, _ *kubeletconfigv1beta1.KubeletConfiguration) error {
+func (e *ensurer) EnsureKubeletConfiguration(_ context.Context, _ extensionscontextwebhook.GardenContext, kubeletVersion *semver.Version, newObj, _ *kubeletconfigv1beta1.KubeletConfiguration) error {
 	newObj.FailSwapOn = ptr.To(false)
-	newObj.CgroupDriver = "systemd"
+
+	// kubelet's cgroup driver defaults to systemd already for Shoots with K8s version 1.31+.
+	// No need to set the cgroup driver explicitly for 1.31+.
+	if version.ConstraintK8sLess131.Check(kubeletVersion) {
+		newObj.CgroupDriver = "systemd"
+	}
+
 	return nil
 }
 

@@ -56,7 +56,7 @@ var (
 		"NodeRestriction":                      {Required: true},
 		"OwnerReferencesPermissionEnforcement": {},
 		"PersistentVolumeClaimResize":          {},
-		"PersistentVolumeLabel":                {},
+		"PersistentVolumeLabel":                {VersionRange: versionutils.VersionRange{RemovedInVersion: "1.31"}},
 		"PodNodeSelector":                      {},
 		"PodSecurity":                          {Required: true},
 		"PodTolerationRestriction":             {},
