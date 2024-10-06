@@ -96,7 +96,7 @@ var _ = Describe("CertificateSigningRequest Approver Controller tests", func() {
 		csr.Spec.Request = csrData
 	})
 
-	Context("unhandled CSR signer", func() {
+	Context("unhandled CSR", func() {
 		BeforeEach(func() {
 			csr.Spec.SignerName = certificatesv1.KubeAPIServerClientSignerName
 		})
@@ -320,28 +320,10 @@ var _ = Describe("CertificateSigningRequest Approver Controller tests", func() {
 			})
 
 			Context("constraints violated", func() {
-				runTest := func(expectedReason string, argPtrs ...*string) {
-					It("should deny the CSR", func() {
-						var args []interface{}
-						for _, arg := range argPtrs {
-							args = append(args, *arg)
-						}
-						EventuallyWithOffset(1, func(g Gomega) {
-							g.Expect(testClientNodeAgent.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(Succeed())
-							g.Expect(csr.Status.Conditions).To(ContainElement(And(
-								HaveField("Type", certificatesv1.CertificateDenied),
-								HaveField("Reason", "RequestDenied"),
-								HaveField("Message", And(
-									ContainSubstring("Denying gardener-node-agent certificate CSR"),
-									ContainSubstring(expectedReason, args...),
-								)),
-							)))
-						}).Should(Succeed())
-					})
-				}
-
 				Context("no machine", func() {
-					runTest("machine %q does not exist", &machineName)
+					It("should deny the CSR", func() {
+						runDenyNodeAgentCSRTest(testClientNodeAgent, csr, "machine %q does not exist", &machineName)
+					})
 				})
 
 				Context("a certificate for a different machine is requested", func() {
@@ -358,7 +340,9 @@ var _ = Describe("CertificateSigningRequest Approver Controller tests", func() {
 						createMachine(machine2, false)
 					})
 
-					runTest("username %q and commonName %q do not match", &userNameNodeAgent, &otherMachineName)
+					It("should deny the CSR", func() {
+						runDenyNodeAgentCSRTest(testClientNodeAgent, csr, "username %q and commonName %q do not match", &userNameNodeAgent, &otherMachineName)
+					})
 				})
 			})
 		})
@@ -393,28 +377,10 @@ var _ = Describe("CertificateSigningRequest Approver Controller tests", func() {
 			})
 
 			Context("constraints violated", func() {
-				runTest := func(expectedReason string, argPtrs ...*string) {
-					It("should deny the CSR", func() {
-						var args []interface{}
-						for _, arg := range argPtrs {
-							args = append(args, *arg)
-						}
-						EventuallyWithOffset(1, func(g Gomega) {
-							g.Expect(testClientBootstrap.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(Succeed())
-							g.Expect(csr.Status.Conditions).To(ContainElement(And(
-								HaveField("Type", certificatesv1.CertificateDenied),
-								HaveField("Reason", "RequestDenied"),
-								HaveField("Message", And(
-									ContainSubstring("Denying gardener-node-agent certificate CSR"),
-									ContainSubstring(expectedReason, args...),
-								)),
-							)))
-						}).Should(Succeed())
-					})
-				}
-
 				Context("no machine", func() {
-					runTest("machine %q does not exist", &machineName)
+					It("should deny the CSR", func() {
+						runDenyNodeAgentCSRTest(testClientBootstrap, csr, "machine %q does not exist", &machineName)
+					})
 				})
 
 				Context("node already registered", func() {
@@ -423,7 +389,9 @@ var _ = Describe("CertificateSigningRequest Approver Controller tests", func() {
 						createMachine(machine, true)
 					})
 
-					runTest("Cannot use bootstrap token since gardener-node-agent for machine %q is already bootstrapped", &machineName)
+					It("should deny the CSR", func() {
+						runDenyNodeAgentCSRTest(testClientBootstrap, csr, "Cannot use bootstrap token since gardener-node-agent for machine %q is already bootstrapped", &machineName)
+					})
 				})
 			})
 		})
@@ -460,28 +428,10 @@ var _ = Describe("CertificateSigningRequest Approver Controller tests", func() {
 			})
 
 			Context("constraints violated", func() {
-				runTest := func(expectedReason string, argPtrs ...*string) {
-					It("should deny the CSR", func() {
-						var args []interface{}
-						for _, arg := range argPtrs {
-							args = append(args, *arg)
-						}
-						EventuallyWithOffset(1, func(g Gomega) {
-							g.Expect(testClientBootstrap.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(Succeed())
-							g.Expect(csr.Status.Conditions).To(ContainElement(And(
-								HaveField("Type", certificatesv1.CertificateDenied),
-								HaveField("Reason", "RequestDenied"),
-								HaveField("Message", And(
-									ContainSubstring("Denying gardener-node-agent certificate CSR"),
-									ContainSubstring(expectedReason, args...),
-								)),
-							)))
-						}).Should(Succeed())
-					})
-				}
-
 				Context("no machine", func() {
-					runTest("machine %q does not exist", &machineName)
+					It("should deny the CSR", func() {
+						runDenyNodeAgentCSRTest(testClientBootstrap, csr, "machine %q does not exist", &machineName)
+					})
 				})
 
 				Context("node not registered yet", func() {
@@ -489,7 +439,9 @@ var _ = Describe("CertificateSigningRequest Approver Controller tests", func() {
 						createMachine(machine, false)
 					})
 
-					runTest("gardener-node-agent service account is allowed to create CSRs for machines with existing nodes only")
+					It("should deny the CSR", func() {
+						runDenyNodeAgentCSRTest(testClientBootstrap, csr, "gardener-node-agent service account is allowed to create CSRs for machines with existing nodes only")
+					})
 				})
 			})
 		})
@@ -521,17 +473,7 @@ var _ = Describe("CertificateSigningRequest Approver Controller tests", func() {
 			})
 
 			It("should deny the CSR", func() {
-				Eventually(func(g Gomega) {
-					g.Expect(testClientBootstrap.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(Succeed())
-					g.Expect(csr.Status.Conditions).To(ContainElement(And(
-						HaveField("Type", certificatesv1.CertificateDenied),
-						HaveField("Reason", "RequestDenied"),
-						HaveField("Message", And(
-							ContainSubstring("Denying gardener-node-agent certificate CSR"),
-							ContainSubstring("username %q is not allowed to create CSRs for a gardener-node-agent", userNameKubelet),
-						)),
-					)))
-				}).Should(Succeed())
+				runDenyNodeAgentCSRTest(testClientBootstrap, csr, "username %q is not allowed to create CSRs for a gardener-node-agent", &userNameKubelet)
 			})
 		})
 	})
@@ -593,4 +535,22 @@ func patchNodeAddresses(node *corev1.Node, addresses ...corev1.NodeAddress) {
 		g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
 		return node.Status.Addresses
 	}).ShouldNot(BeEmpty())
+}
+
+func runDenyNodeAgentCSRTest(c client.Client, csr *certificatesv1.CertificateSigningRequest, expectedReason string, argPtrs ...*string) {
+	var args []interface{}
+	for _, arg := range argPtrs {
+		args = append(args, *arg)
+	}
+	EventuallyWithOffset(1, func(g Gomega) {
+		g.Expect(c.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(Succeed())
+		g.Expect(csr.Status.Conditions).To(ContainElement(And(
+			HaveField("Type", certificatesv1.CertificateDenied),
+			HaveField("Reason", "RequestDenied"),
+			HaveField("Message", And(
+				ContainSubstring("Denying gardener-node-agent certificate CSR"),
+				ContainSubstring(expectedReason, args...),
+			)),
+		)))
+	}).Should(Succeed())
 }
