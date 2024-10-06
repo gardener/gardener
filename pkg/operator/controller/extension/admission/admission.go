@@ -20,8 +20,8 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -34,7 +34,7 @@ type Interface interface {
 	// Reconcile creates or updates admission resources.
 	Reconcile(context.Context, logr.Logger, kubernetes.Interface, string, *operatorv1alpha1.Extension) error
 	// Delete deletes all admission resources.
-	Delete(context.Context, logr.Logger, kubernetes.Interface, *operatorv1alpha1.Extension) error
+	Delete(context.Context, logr.Logger, *operatorv1alpha1.Extension) error
 }
 
 type deployment struct {
@@ -55,7 +55,7 @@ func (d *deployment) Reconcile(ctx context.Context, log logr.Logger, virtualClus
 		}
 		d.recorder.Event(extension, corev1.EventTypeNormal, "Reconciliation", "Admission deployment applied successfully in virtual cluster")
 	} else {
-		if err := d.deleteAdmissionVirtualClusterResources(ctx, log, virtualClusterClientSet.Client(), extension); err != nil {
+		if err := d.deleteAdmissionVirtualClusterResources(ctx, log, extension); err != nil {
 			return err
 		}
 		d.recorder.Event(extension, corev1.EventTypeNormal, "Deletion", "Admission deployment deleted successfully in virtual cluster")
@@ -78,15 +78,12 @@ func (d *deployment) Reconcile(ctx context.Context, log logr.Logger, virtualClus
 }
 
 // Delete deletes all admission resources.
-func (d *deployment) Delete(ctx context.Context, log logr.Logger, virtualClusterClientSet kubernetes.Interface, extension *operatorv1alpha1.Extension) error {
+func (d *deployment) Delete(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension) error {
 	log.Info("Deleting admission deployment")
 	if err := d.deleteAdmissionRuntimeClusterResources(ctx, log, extension); err != nil {
 		return err
 	}
-	if virtualClusterClientSet == nil {
-		return nil
-	}
-	return d.deleteAdmissionVirtualClusterResources(ctx, log, virtualClusterClientSet.Client(), extension)
+	return d.deleteAdmissionVirtualClusterResources(ctx, log, extension)
 }
 
 func (d *deployment) createOrUpdateAdmissionRuntimeClusterResources(ctx context.Context, genericTokenKubeconfigSecretName string, extension *operatorv1alpha1.Extension) error {
@@ -203,23 +200,24 @@ func (d *deployment) createOrUpdateAdmissionVirtualClusterResources(ctx context.
 			return err
 		}
 	}
-
 	namespace := virtualNamespace(extension)
+	registry := managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+	if err := registry.Add(namespace); err != nil {
+		return fmt.Errorf("failed adding namespace to registry: %w", err)
+	}
+
 	renderedChart, err := virtualClusterClientSet.ChartRenderer().RenderArchive(archive, extension.Name, namespace.Name, utils.MergeMaps(helmValues, gardenerValues))
 	if err != nil {
 		return fmt.Errorf("failed rendering Helm chart %q: %w", extension.Spec.Deployment.AdmissionDeployment.VirtualCluster.Helm.OCIRepository.GetURL(), err)
 	}
 
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, virtualClusterClientSet.Client(), namespace, func() error {
-		metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.GardenRole, v1beta1constants.GardenRoleExtension)
-		metav1.SetMetaDataLabel(&namespace.ObjectMeta, "extensions.operator.gardener.cloud/name", extension.Name)
-		return nil
-	}); err != nil {
-		return fmt.Errorf("failed creating namespace %q in virtual cluster: %w", namespace.Name, err)
+	serializedObjects, err := serializeRenderedChartAndRegistry(renderedChart, registry)
+	if err != nil {
+		return err
 	}
 
 	managedResourceName := virtualManagedResourceName(extension)
-	if err := managedresources.CreateForShoot(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, managedResourceName, managedresources.LabelValueOperator, false, renderedChart.AsSecretData()); err != nil {
+	if err := managedresources.CreateForShoot(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, managedResourceName, managedresources.LabelValueOperator, false, serializedObjects); err != nil {
 		return fmt.Errorf("failed creating ManagedResource: %w", err)
 	}
 
@@ -229,7 +227,7 @@ func (d *deployment) createOrUpdateAdmissionVirtualClusterResources(ctx context.
 	return nil
 }
 
-func (d *deployment) deleteAdmissionVirtualClusterResources(ctx context.Context, log logr.Logger, virtualClusterClient client.Client, extension *operatorv1alpha1.Extension) error {
+func (d *deployment) deleteAdmissionVirtualClusterResources(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension) error {
 	managedResourceName := virtualManagedResourceName(extension)
 
 	log.Info("Deleting admission ManagedResource for virtual cluster", "managedResource", client.ObjectKey{Name: managedResourceName, Namespace: d.gardenNamespace})
@@ -238,11 +236,6 @@ func (d *deployment) deleteAdmissionVirtualClusterResources(ctx context.Context,
 	}
 	if err := managedresources.WaitUntilDeleted(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, managedResourceName); err != nil {
 		return fmt.Errorf("failed waiting for ManagedResource to be deleted: %w", err)
-	}
-
-	namespace := virtualNamespace(extension)
-	if err := client.IgnoreNotFound(virtualClusterClient.Delete(ctx, namespace)); err != nil {
-		return fmt.Errorf("failed deleting namespace %q in virtual cluster: %w", namespace.Name, err)
 	}
 
 	return managedresources.WaitUntilDeleted(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, virtualManagedResourceName(extension))
@@ -258,6 +251,14 @@ func resourceName(extension *operatorv1alpha1.Extension) string {
 
 func runtimeManagedResourceName(extension *operatorv1alpha1.Extension) string {
 	return fmt.Sprintf("extension-admission-runtime-%s", extension.Name)
+}
+
+func serializeRenderedChartAndRegistry(chart *chartrenderer.RenderedChart, registry *managedresources.Registry) (map[string][]byte, error) {
+	for name, data := range chart.AsSecretData() {
+		registry.AddSerialized(name, data)
+	}
+
+	return registry.SerializedObjects()
 }
 
 func virtualManagedResourceName(extension *operatorv1alpha1.Extension) string {
@@ -282,6 +283,10 @@ func virtualNamespace(extension *operatorv1alpha1.Extension) *corev1.Namespace {
 	return &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: fmt.Sprintf("extension-%s", extension.Name),
+			Annotations: map[string]string{
+				v1beta1constants.GardenRole:               v1beta1constants.GardenRoleExtension,
+				"extensions.operator.gardener.cloud/name": extension.Name,
+			},
 		},
 	}
 }

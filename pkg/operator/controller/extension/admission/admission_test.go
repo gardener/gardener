@@ -259,7 +259,7 @@ var _ = Describe("Deployment", func() {
 
 	Describe("#Delete", func() {
 		It("should succeed if extension was not deployed before", func() {
-			Expect(admission.Delete(ctx, log, virtualClientSet, extension)).To(Succeed())
+			Expect(admission.Delete(ctx, log, extension)).To(Succeed())
 
 			mrList := &resourcesv1alpha1.ManagedResourceList{}
 			Expect(runtimeClient.List(ctx, mrList)).To(Succeed())
@@ -273,7 +273,7 @@ var _ = Describe("Deployment", func() {
 			Expect(runtimeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "extension-admission-runtime-" + extensionName, Namespace: "garden"}})).To(Succeed())
 			Expect(runtimeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "extension-admission-runtime-" + extensionName, Namespace: "garden"}, Spec: resourcesv1alpha1.ManagedResourceSpec{SecretRefs: []corev1.LocalObjectReference{{Name: "extension-admission-runtime-" + extensionName}}}})).To(Succeed())
 
-			Expect(admission.Delete(ctx, log, virtualClientSet, extension)).To(Succeed())
+			Expect(admission.Delete(ctx, log, extension)).To(Succeed())
 
 			mrList := &resourcesv1alpha1.ManagedResourceList{}
 			Expect(runtimeClient.List(ctx, mrList)).To(Succeed())
