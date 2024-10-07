@@ -29,7 +29,7 @@ var _ = Describe("Warnings", func() {
 			shoot = &core.Shoot{
 				Spec: core.ShootSpec{
 					Kubernetes: core.Kubernetes{
-						Version: "1.26.5",
+						Version: "1.31.1",
 					},
 					Provider: core.Provider{
 						Workers: []core.Worker{{Name: "test"}},

@@ -66,7 +66,7 @@ var _ = Describe("VPA", func() {
 		genericTokenKubeconfigSecretName = "generic-token-kubeconfig"
 		pathGenericKubeconfig            = "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig"
 
-		runtimeKubernetesVersion = semver.MustParse("1.25.0")
+		runtimeKubernetesVersion = semver.MustParse("1.28.0")
 		values                   = Values{
 			SecretNameServerCA:       secretNameCA,
 			RuntimeKubernetesVersion: runtimeKubernetesVersion,
