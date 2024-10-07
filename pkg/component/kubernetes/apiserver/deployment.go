@@ -859,6 +859,7 @@ func (k *kubeAPIServer) vpnSeedClientContainer(index int) *corev1.Container {
 
 	if len(k.values.VPN.IPFamilies) > 0 {
 		container.Env = append(container.Env, corev1.EnvVar{
+			// IP_FAMILIES of seed
 			Name:  "IP_FAMILIES",
 			Value: string(k.values.VPN.IPFamilies[0]),
 		})
