@@ -9,9 +9,7 @@ import (
 	"fmt"
 	"time"
 
-	appsv1 "k8s.io/api/apps/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -134,23 +132,6 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		deployNamespace = g.Add(flow.Task{
 			Name: "Deploying Shoot namespace in Seed",
 			Fn:   flow.TaskFn(botanist.DeploySeedNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
-		})
-		// TODO(vicwicker): Remove after Gardener v1.104 got released.
-		_ = g.Add(flow.Task{
-			Name: "Reconciling kube-state-metrics for Shoot in Seed for the monitoring stack as part of the kube-state-metrics upgrade migration",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				// return nil if the 'kube-state-metrics' deployment does not exist in the shoot namespace in the seed
-				ksmDeployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-state-metrics", Namespace: botanist.Shoot.SeedNamespace}}
-				if err := r.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(ksmDeployment), ksmDeployment); err != nil {
-					if apierrors.IsNotFound(err) {
-						return nil
-					}
-					return fmt.Errorf("failed reading kube-state-metrics deployment: %w", err)
-				}
-				return botanist.DeployKubeStateMetrics(ctx)
-			}).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			SkipIf:       o.Shoot.IsWorkerless,
-			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
 		ensureShootClusterIdentity = g.Add(flow.Task{
 			Name:         "Ensuring Shoot cluster identity",

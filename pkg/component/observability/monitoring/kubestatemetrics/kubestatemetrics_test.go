@@ -787,22 +787,6 @@ var _ = Describe("KubeStateMetrics", func() {
 					Record: "shoot:node_operating_system:sum",
 					Expr:   intstr.FromString(`sum(kube_node_info) by (os_image, kernel_version)`),
 				},
-				{
-					Record: "kube_pod_container_resource_limits_cpu_cores",
-					Expr:   intstr.FromString(`kube_pod_container_resource_limits{resource="cpu", unit="core"}`),
-				},
-				{
-					Record: "kube_pod_container_resource_requests_cpu_cores",
-					Expr:   intstr.FromString(`kube_pod_container_resource_requests{resource="cpu", unit="core"}`),
-				},
-				{
-					Record: "kube_pod_container_resource_limits_memory_bytes",
-					Expr:   intstr.FromString(`kube_pod_container_resource_limits{resource="memory", unit="byte"}`),
-				},
-				{
-					Record: "kube_pod_container_resource_requests_memory_bytes",
-					Expr:   intstr.FromString(`kube_pod_container_resource_requests{resource="memory", unit="byte"}`),
-				},
 			}
 
 			return &monitoringv1.PrometheusRule{
