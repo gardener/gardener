@@ -1023,35 +1023,6 @@ func performKubernetesDefaulting(newShoot, oldShoot *core.Shoot) {
 			newShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(false)
 		}
 	}
-
-	if len(newShoot.Spec.Provider.Workers) > 0 {
-		// Error is ignored here because we cannot do anything meaningful with them - variables will default to `false`.
-		k8sLess127, _ := versionutils.CheckVersionMeetsConstraint(newShoot.Spec.Kubernetes.Version, "< 1.27")
-		if newShoot.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod == nil {
-			if k8sLess127 {
-				newShoot.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod = &metav1.Duration{Duration: 2 * time.Minute}
-			} else {
-				newShoot.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod = &metav1.Duration{Duration: 40 * time.Second}
-			}
-		} else if upgradeToKubernetes127(newShoot, oldShoot) && defaultNodeGracePeriod(oldShoot) {
-			newShoot.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod = &metav1.Duration{Duration: 40 * time.Second}
-		}
-	}
-}
-
-func defaultNodeGracePeriod(shoot *core.Shoot) bool {
-	return shoot.Spec.Kubernetes.KubeControllerManager != nil &&
-		reflect.DeepEqual(shoot.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod, &metav1.Duration{Duration: 2 * time.Minute})
-}
-
-func upgradeToKubernetes127(newShoot, oldShoot *core.Shoot) bool {
-	var oldShootK8sLess127 bool
-	if oldShoot.Spec.Kubernetes.Version != "" {
-		oldShootK8sLess127, _ = versionutils.CheckVersionMeetsConstraint(oldShoot.Spec.Kubernetes.Version, "< 1.27")
-	}
-	newShootK8sGreaterEqual127, _ := versionutils.CheckVersionMeetsConstraint(newShoot.Spec.Kubernetes.Version, ">= 1.27")
-
-	return oldShootK8sLess127 && newShootK8sGreaterEqual127
 }
 
 func (c *validationContext) validateProvider(a admission.Attributes) field.ErrorList {

@@ -11,7 +11,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
 	"github.com/onsi/gomega/types"
 	"go.uber.org/mock/gomock"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -3209,103 +3208,6 @@ var _ = Describe("validator", func() {
 
 					Expect(err).NotTo(HaveOccurred())
 					Expect(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(PointTo(Equal(false)))
-				})
-			})
-
-			Context("kubernetes kube-controller-manager's node monitor grace period defaulting", func() {
-				BeforeEach(func() {
-					cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
-						{Version: "1.26.0"},
-						{Version: "1.26.9"},
-						{Version: "1.27.0"},
-					}
-
-					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-					Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
-				})
-
-				It("should not overwrite the kube-controller-manager's node monitor grace period", func() {
-					nodeMonitorGracePeriod := &metav1.Duration{Duration: time.Minute}
-					shoot.Spec.Kubernetes.Version = "1.27.0"
-					shoot.Spec.Kubernetes.KubeControllerManager = &core.KubeControllerManagerConfig{NodeMonitorGracePeriod: nodeMonitorGracePeriod}
-
-					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-					Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
-
-					Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod).To(Equal(nodeMonitorGracePeriod))
-				})
-
-				It("should not default the kube-controller-manager's node monitor grace period when shoot is in deletion", func() {
-					oldShoot := shoot.DeepCopy()
-					shoot.Spec.Kubernetes.Version = "1.26.0"
-					shoot.Spec.Kubernetes.KubeControllerManager = &core.KubeControllerManagerConfig{}
-					shoot.SetDeletionTimestamp(&metav1.Time{})
-
-					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
-					Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
-
-					Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod).To(BeNil())
-				})
-
-				It("should default the kube-controller-manager's node monitor grace period to 2 minutes for Shoot cluster with k8s version < 1.27", func() {
-					shoot.Spec.Kubernetes.Version = "1.26.0"
-					shoot.Spec.Kubernetes.KubeControllerManager = &core.KubeControllerManagerConfig{}
-
-					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-					Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
-
-					Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod).To(Equal(&metav1.Duration{Duration: 2 * time.Minute}))
-				})
-
-				It("should default the kube-controller-manager's node monitor grace period to 40 seconds for Shoot cluster with k8s version >= 1.27", func() {
-					shoot.Spec.Kubernetes.Version = "1.27.0"
-					shoot.Spec.Kubernetes.KubeControllerManager = &core.KubeControllerManagerConfig{}
-
-					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-					Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
-
-					Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod).To(Equal(&metav1.Duration{Duration: 40 * time.Second}))
-				})
-
-				It("should overwrite the  kube-controller-manager's nodeMonitorGracePeriod field if the value is set to 2m, when shoot is upgraded to k8s version 1.27", func() {
-					shoot.Spec.Kubernetes.KubeControllerManager = &core.KubeControllerManagerConfig{NodeMonitorGracePeriod: &metav1.Duration{Duration: 2 * time.Minute}}
-					shoot.Spec.Kubernetes.Version = "1.27.0"
-					oldShoot := shoot.DeepCopy()
-					oldShoot.Spec.Kubernetes.Version = "1.26.0"
-
-					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-					Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
-
-					Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod).To(Equal(&metav1.Duration{Duration: 40 * time.Second}))
-				})
-
-				It("should not overwrite the  kube-controller-manager's nodeMonitorGracePeriod field if the value is set to 2m, when shoot is not upgraded to k8s version 1.27", func() {
-					nodeMonitorGracePeriod := &metav1.Duration{Duration: 2 * time.Minute}
-					shoot.Spec.Kubernetes.KubeControllerManager = &core.KubeControllerManagerConfig{NodeMonitorGracePeriod: nodeMonitorGracePeriod}
-					shoot.Spec.Kubernetes.Version = "1.26.9"
-					oldShoot := shoot.DeepCopy()
-					oldShoot.Spec.Kubernetes.Version = "1.26.0"
-
-					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-					Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
-
-					Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod).To(Equal(nodeMonitorGracePeriod))
-				})
-
-				It("should not overwrite the  kube-controller-manager's nodeMonitorGracePeriod field if the value is not set to 2m, when shoot is upgraded to k8s version 1.27", func() {
-					nodeMonitorGracePeriod := &metav1.Duration{Duration: 121 * time.Second}
-					shoot.Spec.Kubernetes.KubeControllerManager = &core.KubeControllerManagerConfig{NodeMonitorGracePeriod: nodeMonitorGracePeriod}
-					shoot.Spec.Kubernetes.Version = "1.27.0"
-					oldShoot := shoot.DeepCopy()
-					oldShoot.Spec.Kubernetes.Version = "1.26.0"
-
-					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-					Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
-
-					Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod).To(Equal(nodeMonitorGracePeriod))
 				})
 			})
 

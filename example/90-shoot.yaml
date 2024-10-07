@@ -225,7 +225,7 @@ spec:
   #     - customresource.fancyoperator.io # requires Kubernetes version >= 1.26
   # kubeControllerManager:
   #   nodeCIDRMaskSize: 24
-  #   podEvictionTimeout: 2m0s
+  #   podEvictionTimeout: 2m0s # This field is no-op and will be removed in gardener v1.112
   #   nodeMonitorGracePeriod: 40s
   #   featureGates:
   #     SomeKubernetesFeature: true

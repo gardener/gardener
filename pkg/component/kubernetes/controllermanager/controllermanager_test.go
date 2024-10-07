@@ -44,7 +44,6 @@ import (
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 var _ = Describe("KubeControllerManager", func() {
@@ -294,7 +293,7 @@ var _ = Describe("KubeControllerManager", func() {
 		}
 
 		replicas      int32 = 1
-		deploymentFor       = func(version string, config *gardencorev1beta1.KubeControllerManagerConfig, isWorkerless bool, controllerWorkers ControllerWorkers) *appsv1.Deployment {
+		deploymentFor       = func(config *gardencorev1beta1.KubeControllerManagerConfig, isWorkerless bool, controllerWorkers ControllerWorkers) *appsv1.Deployment {
 			deploy := &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      v1beta1constants.DeploymentNameKubeControllerManager,
@@ -342,10 +341,9 @@ var _ = Describe("KubeControllerManager", func() {
 									Name:            "kube-controller-manager",
 									Image:           image,
 									ImagePullPolicy: corev1.PullIfNotPresent,
-									Command: commandForKubernetesVersion(version,
+									Command: commandForKubernetesVersion(
 										10257,
 										config.NodeCIDRMaskSize,
-										config.PodEvictionTimeout,
 										config.NodeMonitorGracePeriod,
 										namespace,
 										isWorkerless,
@@ -596,7 +594,7 @@ namespace: kube-system
 
 			actualDeployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: namespace}}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(actualDeployment), actualDeployment)).To(Succeed())
-			Expect(actualDeployment).To(Equal(deploymentFor(version, config, isWorkerless, controllerWorkers)))
+			Expect(actualDeployment).To(Equal(deploymentFor(config, isWorkerless, controllerWorkers)))
 
 			actualService := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: serviceName, Namespace: namespace}}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(actualService), actualService)).To(Succeed())
@@ -972,10 +970,8 @@ namespace: kube-system
 // Utility functions
 
 func commandForKubernetesVersion(
-	version string,
 	port int32,
 	nodeCIDRMaskSize *int32,
-	podEvictionTimeout *metav1.Duration,
 	nodeMonitorGracePeriod *metav1.Duration,
 	clusterName string,
 	isWorkerless bool,
@@ -987,19 +983,11 @@ func commandForKubernetesVersion(
 	controllerSyncPeriods ControllerSyncPeriods,
 ) []string {
 	var (
-		command     []string
-		controllers = []string{"*", "bootstrapsigner", "tokencleaner"}
+		command                       []string
+		controllers                   = []string{"*", "bootstrapsigner", "tokencleaner"}
+		nodeMonitorGracePeriodSetting = "40s"
 	)
 
-	podEvictionTimeoutSetting := "2m0s"
-	if podEvictionTimeout != nil {
-		podEvictionTimeoutSetting = podEvictionTimeout.Duration.String()
-	}
-
-	nodeMonitorGracePeriodSetting := "2m0s"
-	if versionutils.ConstraintK8sGreaterEqual127.Check(semver.MustParse(version)) {
-		nodeMonitorGracePeriodSetting = "40s"
-	}
 	if nodeMonitorGracePeriod != nil {
 		nodeMonitorGracePeriodSetting = nodeMonitorGracePeriod.Duration.String()
 	}
@@ -1033,10 +1021,6 @@ func commandForKubernetesVersion(
 			"--leader-elect=true",
 			fmt.Sprintf("--node-monitor-grace-period=%s", nodeMonitorGracePeriodSetting),
 		)
-
-		if versionutils.ConstraintK8sLess127.Check(semver.MustParse(version)) {
-			command = append(command, fmt.Sprintf("--pod-eviction-timeout=%s", podEvictionTimeoutSetting))
-		}
 
 		if v := controllerWorkers.Deployment; v == nil {
 			command = append(command, "--concurrent-deployment-syncs=50")

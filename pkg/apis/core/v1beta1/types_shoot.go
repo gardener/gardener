@@ -1110,14 +1110,14 @@ type KubeControllerManagerConfig struct {
 	// +optional
 	NodeCIDRMaskSize *int32 `json:"nodeCIDRMaskSize,omitempty" protobuf:"varint,3,opt,name=nodeCIDRMaskSize"`
 	// PodEvictionTimeout defines the grace period for deleting pods on failed nodes. Defaults to 2m.
+	// +optional
 	//
 	// Deprecated: The corresponding kube-controller-manager flag `--pod-eviction-timeout` is deprecated
 	// in favor of the kube-apiserver flags `--default-not-ready-toleration-seconds` and `--default-unreachable-toleration-seconds`.
 	// The `--pod-eviction-timeout` flag does not have effect when the taint based eviction is enabled. The taint
 	// based eviction is beta (enabled by default) since Kubernetes 1.13 and GA since Kubernetes 1.18. Hence,
 	// instead of setting this field, set the `spec.kubernetes.kubeAPIServer.defaultNotReadyTolerationSeconds` and
-	// `spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds`.
-	// +optional
+	// `spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds`. This field will be removed in gardener v1.112.
 	PodEvictionTimeout *metav1.Duration `json:"podEvictionTimeout,omitempty" protobuf:"bytes,4,opt,name=podEvictionTimeout"`
 	// NodeMonitorGracePeriod defines the grace period before an unresponsive node is marked unhealthy.
 	// +optional

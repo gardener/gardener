@@ -36,58 +36,147 @@ var _ = Describe("Shoot defaulting", func() {
 	})
 
 	Describe("Kubernetes defaulting", func() {
-		It("should not default the kubeScheduler field for workerless Shoot", func() {
-			obj.Spec.Provider.Workers = nil
-			SetObjectDefaults_Shoot(obj)
+		Describe("KubeControllerManager settings defaulting", func() {
+			Describe("KubeControllerManager", func() {
+				It("should not default KubeControllerManager field for workerless Shoot", func() {
+					obj.Spec.Provider.Workers = nil
 
-			Expect(obj.Spec.Kubernetes.KubeScheduler).To(BeNil())
+					SetObjectDefaults_Shoot(obj)
+
+					Expect(obj.Spec.Kubernetes.KubeControllerManager).To(BeNil())
+				})
+			})
+
+			Describe("NodeCIDRMaskSize", func() {
+				Context("IPv4", func() {
+					It("should make nodeCIDRMaskSize big enough for 2*maxPods", func() {
+						obj.Spec.Provider.Workers = []Worker{{}}
+						obj.Spec.Kubernetes.Kubelet = &KubeletConfig{
+							MaxPods: ptr.To[int32](250),
+						}
+
+						SetObjectDefaults_Shoot(obj)
+
+						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(ptr.To[int32](23)))
+					})
+
+					It("should make nodeCIDRMaskSize big enough for 2*maxPods (consider worker pool settings)", func() {
+						obj.Spec.Kubernetes.Kubelet = &KubeletConfig{
+							MaxPods: ptr.To[int32](64),
+						}
+						obj.Spec.Provider.Workers = []Worker{{
+							Name: "1",
+							Kubernetes: &WorkerKubernetes{
+								Kubelet: &KubeletConfig{
+									MaxPods: ptr.To[int32](100),
+								},
+							},
+						}, {
+							Name: "2",
+							Kubernetes: &WorkerKubernetes{
+								Kubelet: &KubeletConfig{
+									MaxPods: ptr.To[int32](260),
+								},
+							},
+						}}
+
+						SetObjectDefaults_Shoot(obj)
+
+						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(ptr.To[int32](22)))
+					})
+				})
+
+				Context("IPv6", func() {
+					BeforeEach(func() {
+						obj.Spec.Provider.Workers = []Worker{{}}
+						obj.Spec.Networking = &Networking{}
+						obj.Spec.Networking.IPFamilies = []IPFamily{IPFamilyIPv6}
+					})
+
+					It("should default nodeCIDRMaskSize to 64", func() {
+						SetObjectDefaults_Shoot(obj)
+
+						Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(PointTo(Equal(int32(64))))
+					})
+				})
+			})
+
+			Describe("NodeMonitorGracePeriod", func() {
+				It("should default the nodeMonitorGracePeriod field", func() {
+					SetObjectDefaults_Shoot(obj)
+
+					Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod).To(PointTo(Equal(metav1.Duration{Duration: 40 * time.Second})))
+				})
+
+				It("should not overwrite the already set values for nodeMonitorGracePeriod field", func() {
+					duration := metav1.Duration{Duration: 2 * time.Minute}
+					obj.Spec.Kubernetes.KubeControllerManager = &KubeControllerManagerConfig{
+						NodeMonitorGracePeriod: &duration,
+					}
+
+					SetObjectDefaults_Shoot(obj)
+
+					Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod).To(PointTo(Equal(duration)))
+				})
+			})
 		})
 
-		It("should default the kubeScheduler field", func() {
-			obj.Spec.Kubernetes.KubeScheduler = &KubeSchedulerConfig{}
+		Describe("KubeScheduler defaulting", func() {
+			It("should not default the kubeScheduler field for workerless Shoot", func() {
+				obj.Spec.Provider.Workers = nil
+				SetObjectDefaults_Shoot(obj)
 
-			SetObjectDefaults_Shoot(obj)
+				Expect(obj.Spec.Kubernetes.KubeScheduler).To(BeNil())
+			})
 
-			Expect(obj.Spec.Kubernetes.KubeScheduler.Profile).To(PointTo(Equal(SchedulingProfileBalanced)))
+			It("should default the kubeScheduler field", func() {
+				obj.Spec.Kubernetes.KubeScheduler = &KubeSchedulerConfig{}
+
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Kubernetes.KubeScheduler.Profile).To(PointTo(Equal(SchedulingProfileBalanced)))
+			})
+
+			It("should not overwrite the already set values for kubeScheduler profile field", func() {
+				profile := SchedulingProfileBinPacking
+				obj.Spec.Kubernetes.KubeScheduler = &KubeSchedulerConfig{
+					Profile: &profile,
+				}
+
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Kubernetes.KubeScheduler.Profile).To(PointTo(Equal(SchedulingProfileBinPacking)))
+			})
 		})
 
-		It("should not overwrite the already set values for kubeScheduler profile field", func() {
-			profile := SchedulingProfileBinPacking
-			obj.Spec.Kubernetes.KubeScheduler = &KubeSchedulerConfig{
-				Profile: &profile,
-			}
+		Describe("KubeProxy defaulting", func() {
+			It("should not default the kubeProxy field for workerless Shoot", func() {
+				obj.Spec.Provider.Workers = nil
+				SetObjectDefaults_Shoot(obj)
 
-			SetObjectDefaults_Shoot(obj)
+				Expect(obj.Spec.Kubernetes.KubeProxy).To(BeNil())
+			})
 
-			Expect(obj.Spec.Kubernetes.KubeScheduler.Profile).To(PointTo(Equal(SchedulingProfileBinPacking)))
-		})
+			It("should default the kubeProxy field for Shoot with workers", func() {
+				SetObjectDefaults_Shoot(obj)
 
-		It("should not default the kubeProxy field for workerless Shoot", func() {
-			obj.Spec.Provider.Workers = nil
-			SetObjectDefaults_Shoot(obj)
+				Expect(obj.Spec.Kubernetes.KubeProxy).NotTo(BeNil())
+				Expect(obj.Spec.Kubernetes.KubeProxy.Mode).To(PointTo(Equal(ProxyModeIPTables)))
+				Expect(obj.Spec.Kubernetes.KubeProxy.Enabled).To(PointTo(BeTrue()))
+			})
 
-			Expect(obj.Spec.Kubernetes.KubeProxy).To(BeNil())
-		})
+			It("should not overwrite the already set values for kubeProxy field", func() {
+				mode := ProxyModeIPVS
+				obj.Spec.Kubernetes.KubeProxy = &KubeProxyConfig{
+					Mode:    &mode,
+					Enabled: ptr.To(false),
+				}
+				SetObjectDefaults_Shoot(obj)
 
-		It("should default the kubeProxy field for Shoot with workers", func() {
-			SetObjectDefaults_Shoot(obj)
-
-			Expect(obj.Spec.Kubernetes.KubeProxy).NotTo(BeNil())
-			Expect(obj.Spec.Kubernetes.KubeProxy.Mode).To(PointTo(Equal(ProxyModeIPTables)))
-			Expect(obj.Spec.Kubernetes.KubeProxy.Enabled).To(PointTo(BeTrue()))
-		})
-
-		It("should not overwrite the already set values for kubeProxy field", func() {
-			mode := ProxyModeIPVS
-			obj.Spec.Kubernetes.KubeProxy = &KubeProxyConfig{
-				Mode:    &mode,
-				Enabled: ptr.To(false),
-			}
-			SetObjectDefaults_Shoot(obj)
-
-			Expect(obj.Spec.Kubernetes.KubeProxy).NotTo(BeNil())
-			Expect(obj.Spec.Kubernetes.KubeProxy.Mode).To(PointTo(Equal(ProxyModeIPVS)))
-			Expect(obj.Spec.Kubernetes.KubeProxy.Enabled).To(PointTo(BeFalse()))
+				Expect(obj.Spec.Kubernetes.KubeProxy).NotTo(BeNil())
+				Expect(obj.Spec.Kubernetes.KubeProxy.Mode).To(PointTo(Equal(ProxyModeIPVS)))
+				Expect(obj.Spec.Kubernetes.KubeProxy.Enabled).To(PointTo(BeFalse()))
+			})
 		})
 
 		Describe("Kubelet defaulting", func() {
@@ -325,72 +414,6 @@ var _ = Describe("Shoot defaulting", func() {
 			SetObjectDefaults_Shoot(obj)
 
 			Expect(obj.Spec.SchedulerName).To(PointTo(Equal("foo-scheduler")))
-		})
-	})
-
-	Describe("KubeControllerManager settings defaulting", func() {
-		Describe("KubeControllerManager", func() {
-			It("should not default KubeControllerManager field for workerless Shoot", func() {
-				obj.Spec.Provider.Workers = nil
-
-				SetObjectDefaults_Shoot(obj)
-
-				Expect(obj.Spec.Kubernetes.KubeControllerManager).To(BeNil())
-			})
-		})
-
-		Describe("NodeCIDRMaskSize", func() {
-			Context("IPv4", func() {
-				It("should make nodeCIDRMaskSize big enough for 2*maxPods", func() {
-					obj.Spec.Provider.Workers = []Worker{{}}
-					obj.Spec.Kubernetes.Kubelet = &KubeletConfig{
-						MaxPods: ptr.To[int32](250),
-					}
-
-					SetObjectDefaults_Shoot(obj)
-
-					Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(ptr.To[int32](23)))
-				})
-
-				It("should make nodeCIDRMaskSize big enough for 2*maxPods (consider worker pool settings)", func() {
-					obj.Spec.Kubernetes.Kubelet = &KubeletConfig{
-						MaxPods: ptr.To[int32](64),
-					}
-					obj.Spec.Provider.Workers = []Worker{{
-						Name: "1",
-						Kubernetes: &WorkerKubernetes{
-							Kubelet: &KubeletConfig{
-								MaxPods: ptr.To[int32](100),
-							},
-						},
-					}, {
-						Name: "2",
-						Kubernetes: &WorkerKubernetes{
-							Kubelet: &KubeletConfig{
-								MaxPods: ptr.To[int32](260),
-							},
-						},
-					}}
-
-					SetObjectDefaults_Shoot(obj)
-
-					Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(Equal(ptr.To[int32](22)))
-				})
-			})
-
-			Context("IPv6", func() {
-				BeforeEach(func() {
-					obj.Spec.Provider.Workers = []Worker{{}}
-					obj.Spec.Networking = &Networking{}
-					obj.Spec.Networking.IPFamilies = []IPFamily{IPFamilyIPv6}
-				})
-
-				It("should default nodeCIDRMaskSize to 64", func() {
-					SetObjectDefaults_Shoot(obj)
-
-					Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize).To(PointTo(Equal(int32(64))))
-				})
-			})
 		})
 	})
 
