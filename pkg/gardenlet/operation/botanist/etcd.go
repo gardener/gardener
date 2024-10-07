@@ -47,6 +47,7 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 		hvpaEnabled = features.DefaultFeatureGate.Enabled(features.HVPAForShootedSeed)
 	}
 
+	haEnabled := v1beta1helper.IsHAControlPlaneConfigured(b.Shoot.GetInfo())
 	e := NewEtcd(
 		b.Logger,
 		b.SeedClientSet.Client(),
@@ -62,9 +63,9 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 			RuntimeKubernetesVersion:    b.Seed.KubernetesVersion,
 			HVPAEnabled:                 hvpaEnabled,
 			MaintenanceTimeWindow:       *b.Shoot.GetInfo().Spec.Maintenance.TimeWindow,
-			ScaleDownUpdateMode:         getScaleDownUpdateMode(class, b.Shoot),
+			ScaleDownUpdateMode:         getScaleDownUpdateMode(class, b.Shoot, haEnabled),
 			PriorityClassName:           v1beta1constants.PriorityClassNameShootControlPlane500,
-			HighAvailabilityEnabled:     v1beta1helper.IsHAControlPlaneConfigured(b.Shoot.GetInfo()),
+			HighAvailabilityEnabled:     haEnabled,
 			TopologyAwareRoutingEnabled: b.Shoot.TopologyAwareRoutingEnabled,
 			VPAEnabled:                  features.DefaultFeatureGate.Enabled(features.VPAForETCD),
 		},
@@ -73,7 +74,10 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 	return e, nil
 }
 
-func getScaleDownUpdateMode(c etcd.Class, s *shoot.Shoot) *string {
+func getScaleDownUpdateMode(c etcd.Class, s *shoot.Shoot, haEnabled bool) *string {
+	if haEnabled {
+		return ptr.To(hvpav1alpha1.UpdateModeAuto)
+	}
 	if c == etcd.ClassImportant && (s.Purpose == gardencorev1beta1.ShootPurposeProduction || s.Purpose == gardencorev1beta1.ShootPurposeInfrastructure) {
 		return ptr.To(hvpav1alpha1.UpdateModeOff)
 	}

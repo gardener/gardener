@@ -88,8 +88,9 @@ var _ = Describe("Etcd", func() {
 
 	Describe("#DefaultEtcd", func() {
 		var hvpaEnabled = true
+		var controlPlaneHAMode *gardencorev1beta1.HighAvailability
 
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			botanist.SecretsManager = sm
 			botanist.SeedClientSet = kubernetesClient
 			botanist.Seed = &seedpkg.Seed{}
@@ -105,6 +106,7 @@ var _ = Describe("Etcd", func() {
 					Maintenance: &gardencorev1beta1.Maintenance{
 						TimeWindow: &maintenanceTimeWindow,
 					},
+					ControlPlane: &gardencorev1beta1.ControlPlane{HighAvailability: controlPlaneHAMode},
 				},
 			})
 		})
@@ -223,6 +225,74 @@ var _ = Describe("Etcd", func() {
 				etcd, err := botanist.DefaultEtcd(role, class)
 				Expect(etcd).NotTo(BeNil())
 				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+
+		Context("VPAForETCD feature gate enabled", func() {
+			vpaForETCDEnabled := true
+
+			Context("running in non-HA mode", func() {
+				It("should allow VPA to downscale in maintenance window only", func() {
+					defer test.WithFeatureGate(features.DefaultFeatureGate, features.VPAForETCD, vpaForETCDEnabled)()
+
+					validator := &newEtcdValidator{
+						expectedClient:                  Equal(c),
+						expectedLogger:                  BeAssignableToTypeOf(logr.Logger{}),
+						expectedNamespace:               Equal(namespace),
+						expectedSecretsManager:          Equal(sm),
+						expectedRole:                    Equal(role),
+						expectedClass:                   Equal(class),
+						expectedReplicas:                PointTo(Equal(int32(1))),
+						expectedStorageCapacity:         Equal("10Gi"),
+						expectedDefragmentationSchedule: Equal(ptr.To("34 12 */3 * *")),
+						expectedHVPAEnabled:             Equal(hvpaEnabled),
+						expectedMaintenanceTimeWindow:   Equal(maintenanceTimeWindow),
+						expectedScaleDownUpdateMode:     Equal(ptr.To(hvpav1alpha1.UpdateModeMaintenanceWindow)),
+						expectedHighAvailabilityEnabled: Equal(v1beta1helper.IsHAControlPlaneConfigured(botanist.Shoot.GetInfo())),
+					}
+
+					oldNewEtcd := NewEtcd
+					defer func() { NewEtcd = oldNewEtcd }()
+					NewEtcd = validator.NewEtcd
+
+					etcd, err := botanist.DefaultEtcd(role, class)
+					Expect(etcd).NotTo(BeNil())
+					Expect(err).NotTo(HaveOccurred())
+				})
+			})
+
+			Context("running in HA mode", func() {
+				BeforeEach(func() {
+					// just using any failure tolerance type here that's not 'nil'
+					controlPlaneHAMode = &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeNode}}
+				})
+				It("should allow VPA to downscale always", func() {
+					defer test.WithFeatureGate(features.DefaultFeatureGate, features.VPAForETCD, vpaForETCDEnabled)()
+
+					validator := &newEtcdValidator{
+						expectedClient:                  Equal(c),
+						expectedLogger:                  BeAssignableToTypeOf(logr.Logger{}),
+						expectedNamespace:               Equal(namespace),
+						expectedSecretsManager:          Equal(sm),
+						expectedRole:                    Equal(role),
+						expectedClass:                   Equal(class),
+						expectedReplicas:                PointTo(Equal(int32(3))),
+						expectedStorageCapacity:         Equal("10Gi"),
+						expectedDefragmentationSchedule: Equal(ptr.To("34 12 */3 * *")),
+						expectedHVPAEnabled:             Equal(hvpaEnabled),
+						expectedMaintenanceTimeWindow:   Equal(maintenanceTimeWindow),
+						expectedScaleDownUpdateMode:     Equal(ptr.To(hvpav1alpha1.UpdateModeAuto)),
+						expectedHighAvailabilityEnabled: Equal(v1beta1helper.IsHAControlPlaneConfigured(botanist.Shoot.GetInfo())),
+					}
+
+					oldNewEtcd := NewEtcd
+					defer func() { NewEtcd = oldNewEtcd }()
+					NewEtcd = validator.NewEtcd
+
+					etcd, err := botanist.DefaultEtcd(role, class)
+					Expect(etcd).NotTo(BeNil())
+					Expect(err).NotTo(HaveOccurred())
+				})
 			})
 		})
 
