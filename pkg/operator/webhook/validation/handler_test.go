@@ -51,7 +51,7 @@ var _ = Describe("Handler", func() {
 						Domains: []operatorv1alpha1.DNSDomain{{Name: "virtual-garden.local.gardener.cloud"}},
 					},
 					Kubernetes: operatorv1alpha1.Kubernetes{
-						Version: "1.26.3",
+						Version: "1.27.3",
 					},
 					Networking: operatorv1alpha1.Networking{
 						Services: []string{"100.64.0.0/13"},

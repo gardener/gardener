@@ -1011,7 +1011,7 @@ type KubeletConfig struct {
 	// SeccompDefault enables the use of `RuntimeDefault` as the default seccomp profile for all workloads.
 	SeccompDefault *bool
 	// ProtectKernelDefaults ensures that the kernel tunables are equal to the kubelet defaults.
-	// Defaults to true for Kubernetes v1.26 or later.
+	// Defaults to true.
 	ProtectKernelDefaults *bool
 	// StreamingConnectionIdleTimeout is the maximum time a streaming connection can be idle before the connection is automatically closed.
 	// This field cannot be set lower than "30s" or greater than "4h".

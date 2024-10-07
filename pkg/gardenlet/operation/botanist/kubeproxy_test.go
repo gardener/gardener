@@ -51,8 +51,8 @@ var _ = Describe("KubeProxy", func() {
 		poolName1                     = "pool1"
 		poolName2                     = "pool2"
 		poolName3                     = "pool3"
-		kubernetesVersionControlPlane = semver.MustParse("1.27.3")
-		kubernetesVersionPool2        = semver.MustParse("1.26.4")
+		kubernetesVersionControlPlane = semver.MustParse("1.31.1")
+		kubernetesVersionPool2        = semver.MustParse("1.30.4")
 		kubernetesVersionPool3        = kubernetesVersionControlPlane
 	)
 

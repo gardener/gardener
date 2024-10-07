@@ -67,8 +67,8 @@ var _ = Describe("KubeControllerManager", func() {
 		namespace                = "shoot--foo--bar"
 		version                  = "1.27.3"
 		semverVersion, _         = semver.NewVersion(version)
-		runtimeKubernetesVersion = semver.MustParse("1.26.3")
-		image                    = "registry.k8s.io/kube-controller-manager:v1.25.3"
+		runtimeKubernetesVersion = semver.MustParse("1.31.1")
+		image                    = "registry.k8s.io/kube-controller-manager:v1.31.1"
 		isWorkerless             = false
 		priorityClassName        = v1beta1constants.PriorityClassNameShootControlPlane300
 
@@ -653,8 +653,7 @@ namespace: kube-system
 				verifyDeployment(config, isScaleDownDisabled, controllerWorkers)
 			},
 
-			Entry("w/o config k8s >=1.26", emptyConfig, false, runtimeKubernetesVersion),
-			Entry("w/o config k8s < 1.26", emptyConfig, false, semver.MustParse("1.25.0")),
+			Entry("w/o config k8s", emptyConfig, false, runtimeKubernetesVersion),
 			Entry("with scale-down disabled", emptyConfig, true, runtimeKubernetesVersion),
 			Entry("with non-default autoscaler config", configWithAutoscalerConfig, false, runtimeKubernetesVersion),
 			Entry("with feature flags", configWithFeatureFlags, false, runtimeKubernetesVersion),
@@ -920,7 +919,7 @@ namespace: kube-system
 
 		It("should successfully wait for the deployment to be updated", func() {
 			values = Values{
-				RuntimeVersion: semver.MustParse("1.25.0"),
+				RuntimeVersion: semver.MustParse("1.31.1"),
 				IsWorkerless:   isWorkerless,
 			}
 			kubeControllerManager = New(testLogger, fakeInterface, namespace, nil, values)

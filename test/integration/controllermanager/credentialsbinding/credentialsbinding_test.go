@@ -96,7 +96,7 @@ var _ = Describe("CredentialsBinding controller test", func() {
 						},
 					},
 				},
-				Kubernetes: gardencorev1beta1.Kubernetes{Version: "1.26.1"},
+				Kubernetes: gardencorev1beta1.Kubernetes{Version: "1.31.1"},
 				Networking: &gardencorev1beta1.Networking{Type: ptr.To("foo-networking")},
 			},
 		}

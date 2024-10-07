@@ -47,7 +47,7 @@ var _ = Describe("ShootSystem", func() {
 		shootName         = "bar"
 		region            = "test-region"
 		providerType      = "test-provider"
-		kubernetesVersion = "1.25.1"
+		kubernetesVersion = "1.31.1"
 		maintenanceBegin  = "123456+0100"
 		maintenanceEnd    = "134502+0100"
 		domain            = "my-shoot.example.com"
@@ -212,9 +212,9 @@ var _ = Describe("ShootSystem", func() {
 				}
 			)
 
-			Context("k8s >= 1.26", func() {
+			Context("k8s >= 1.27", func() {
 				BeforeEach(func() {
-					values.KubernetesVersion = semver.MustParse("1.26.4")
+					values.KubernetesVersion = semver.MustParse("1.27.4")
 				})
 
 				It("should successfully deploy all resources", func() {

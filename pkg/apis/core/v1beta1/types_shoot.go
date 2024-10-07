@@ -1325,7 +1325,7 @@ type KubeletConfig struct {
 	// +optional
 	ContainerLogMaxFiles *int32 `json:"containerLogMaxFiles,omitempty" protobuf:"bytes,23,opt,name=containerLogMaxFiles"`
 	// ProtectKernelDefaults ensures that the kernel tunables are equal to the kubelet defaults.
-	// Defaults to true for Kubernetes v1.26 or later.
+	// Defaults to true.
 	// +optional
 	ProtectKernelDefaults *bool `json:"protectKernelDefaults,omitempty" protobuf:"varint,24,opt,name=protectKernelDefaults"`
 	// StreamingConnectionIdleTimeout is the maximum time a streaming connection can be idle before the connection is automatically closed.

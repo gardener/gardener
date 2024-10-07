@@ -22,8 +22,6 @@ func (b *Botanist) DefaultKubeScheduler() (component.DeployWaiter, error) {
 		b.SeedClientSet.Client(),
 		b.Shoot.ControlPlaneNamespace,
 		b.SecretsManager,
-		b.Seed.KubernetesVersion,
-		b.Shoot.KubernetesVersion,
 		image.String(),
 		b.Shoot.GetReplicas(1),
 		b.Shoot.GetInfo().Spec.Kubernetes.KubeScheduler,

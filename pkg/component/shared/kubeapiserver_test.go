@@ -87,8 +87,8 @@ var _ = Describe("KubeAPIServer", func() {
 		BeforeEach(func() {
 			name = "bar"
 			objectMeta = metav1.ObjectMeta{Namespace: namespace, Name: name}
-			runtimeVersion = semver.MustParse("1.25.0")
-			targetVersion = semver.MustParse("1.25.0")
+			runtimeVersion = semver.MustParse("1.31.0")
+			targetVersion = semver.MustParse("1.31.0")
 			namePrefix = ""
 			autoscalingConfig = apiserver.AutoscalingConfig{}
 			vpnConfig = kubeapiserver.VPNConfig{}
@@ -416,7 +416,7 @@ defaults:
   enforce-version: "latest"
   audit-version: "latest"
   warn: "baseline"
-  warn-version: "v1.25"
+  warn-version: "v1.31"
 exemptions:
   usernames: ["admin"]
   runtimeClasses: ["random"]
@@ -438,7 +438,7 @@ exemptions:
 								// This field is defaulted by kubernetes
 								"Audit":       Equal("privileged"),
 								"Warn":        Equal("baseline"),
-								"WarnVersion": Equal("v1.25"),
+								"WarnVersion": Equal("v1.31"),
 							}))
 							Expect(admConfig.Exemptions.Usernames).To(ContainElement("admin"))
 							Expect(admConfig.Exemptions.Namespaces).To(ContainElements("kube-system", "random"))
@@ -457,7 +457,7 @@ defaults:
   enforce-version: "latest"
   audit-version: "latest"
   warn: "baseline"
-  warn-version: "v1.25"
+  warn-version: "v1.31"
 exemptions:
   usernames: ["admin"]
   runtimeClasses: ["random"]
@@ -479,7 +479,7 @@ exemptions:
 								// This field is defaulted by kubernetes
 								"Audit":       Equal("privileged"),
 								"Warn":        Equal("baseline"),
-								"WarnVersion": Equal("v1.25"),
+								"WarnVersion": Equal("v1.31"),
 							}))
 							Expect(admConfig.Exemptions.Usernames).To(ContainElement("admin"))
 							Expect(admConfig.Exemptions.Namespaces).To(ContainElements("kube-system", "random"))
@@ -498,7 +498,7 @@ defaults:
   enforce-version: "latest"
   audit-version: "latest"
   warn: "baseline"
-  warn-version: "v1.25"
+  warn-version: "v1.31"
 exemptions:
   usernames: ["admin"]
   runtimeClasses: ["random"]
@@ -520,7 +520,7 @@ exemptions:
 								// This field is defaulted by kubernetes
 								"Audit":       Equal("privileged"),
 								"Warn":        Equal("baseline"),
-								"WarnVersion": Equal("v1.25"),
+								"WarnVersion": Equal("v1.31"),
 							}))
 							Expect(admConfig.Exemptions.Usernames).To(ContainElement("admin"))
 							Expect(admConfig.Exemptions.Namespaces).To(ContainElements("kube-system", "random"))

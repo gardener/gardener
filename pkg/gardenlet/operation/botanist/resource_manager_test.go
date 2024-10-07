@@ -61,7 +61,7 @@ var _ = Describe("ResourceManager", func() {
 		)
 
 		BeforeEach(func() {
-			k8sSeedClient = kubernetesfake.NewClientSetBuilder().WithVersion("v1.26.1").Build()
+			k8sSeedClient = kubernetesfake.NewClientSetBuilder().WithVersion("v1.30.1").Build()
 			botanist.SeedClientSet = k8sSeedClient
 
 			botanist.Seed = &seedpkg.Seed{}

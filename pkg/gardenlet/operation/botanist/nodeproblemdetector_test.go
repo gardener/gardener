@@ -30,7 +30,7 @@ var _ = Describe("NodeProblemDetector", func() {
 		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 			Spec: gardencorev1beta1.ShootSpec{
 				Kubernetes: gardencorev1beta1.Kubernetes{
-					Version: "1.26.1",
+					Version: "1.30.1",
 				},
 			},
 		})

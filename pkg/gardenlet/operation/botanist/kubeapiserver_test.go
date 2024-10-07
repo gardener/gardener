@@ -63,7 +63,7 @@ var _ = Describe("KubeAPIServer", func() {
 		podNetworks           []net.IPNet
 		serviceNetwork        *net.IPNet
 		serviceNetworks       []net.IPNet
-		seedVersion           = "1.26.0"
+		seedVersion           = "1.31.1"
 		apiServerNetwork      = []net.IP{net.ParseIP("10.0.4.1")}
 		podNetworkCIDR        = "10.0.1.0/24"
 		serviceNetworkCIDR    = "10.0.2.0/24"
@@ -117,7 +117,7 @@ var _ = Describe("KubeAPIServer", func() {
 						Pods:      podNetworks,
 						Services:  serviceNetworks,
 					},
-					KubernetesVersion: semver.MustParse("1.26.1"),
+					KubernetesVersion: semver.MustParse("1.31.1"),
 				},
 				APIServerAddress:   apiServerAddress,
 				APIServerClusterIP: apiServerClusterIP,
@@ -137,7 +137,7 @@ var _ = Describe("KubeAPIServer", func() {
 					Nodes: &nodeNetworkCIDR,
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{
-					Version: "1.26.0",
+					Version: "1.31.1",
 				},
 				Provider: gardencorev1beta1.Provider{
 					Workers: []gardencorev1beta1.Worker{

@@ -107,7 +107,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 		mapper.Add(rbacv1.SchemeGroupVersion.WithKind("ClusterRoleBinding"), meta.RESTScopeRoot)
 
 		// set the git version required for rendering of the Gardenlet chart -  chart helpers determine resource API versions based on that
-		renderer := chartrenderer.NewWithServerVersion(&version.Info{GitVersion: "1.25.0"})
+		renderer := chartrenderer.NewWithServerVersion(&version.Info{GitVersion: "1.28.0"})
 
 		chartApplier = kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(c, mapper))
 		Expect(chartApplier).NotTo(BeNil(), "should return chart applier")
