@@ -6297,9 +6297,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Kubelet: &core.KubeletConfig{
 						KubernetesConfig: core.KubernetesConfig{
 							FeatureGates: map[string]bool{
-								"AnyVolumeDataSource":  true,
-								"DynamicKubeletConfig": true,
-								"Foo":                  true,
+								"AnyVolumeDataSource": true,
+								"Foo":                 true,
 							},
 						},
 					},
@@ -6307,10 +6306,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 			}
 			errList := ValidateWorker(worker, core.Kubernetes{Version: "1.27.3"}, nil, false)
 			Expect(errList).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("kubernetes.kubelet.featureGates.DynamicKubeletConfig"),
-				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("kubernetes.kubelet.featureGates.Foo"),
