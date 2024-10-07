@@ -26,7 +26,7 @@ var _ = Describe("Shoot defaulting", func() {
 		obj = &Shoot{
 			Spec: ShootSpec{
 				Kubernetes: Kubernetes{
-					Version: "1.26.1",
+					Version: "1.31.1",
 				},
 				Provider: Provider{
 					Workers: []Worker{{}},
