@@ -28,8 +28,8 @@ require (
 	github.com/ironcore-dev/vgopath v0.1.5
 	github.com/kubernetes-csi/external-snapshotter/client/v4 v4.2.0
 	github.com/mitchellh/hashstructure/v2 v2.0.2
-	github.com/onsi/ginkgo/v2 v2.20.0
-	github.com/onsi/gomega v1.34.1
+	github.com/onsi/ginkgo/v2 v2.20.1
+	github.com/onsi/gomega v1.34.2
 	github.com/opencontainers/image-spec v1.1.0
 	github.com/pelletier/go-toml v1.9.5
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.74.0
@@ -79,7 +79,7 @@ require (
 	k8s.io/utils v0.0.0-20240921022957-49e7df575cb6
 	sigs.k8s.io/controller-runtime v0.19.0
 	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20231015215740-bf15e44028f9 // v0.16.3
-	sigs.k8s.io/controller-tools v0.16.1
+	sigs.k8s.io/controller-tools v0.16.3
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1
 	sigs.k8s.io/yaml v1.4.0
 )
@@ -146,7 +146,7 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/cel-go v0.20.1 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/google/pprof v0.0.0-20240727154555-813a5fbdbec8 // indirect
+	github.com/google/pprof v0.0.0-20240827171923-fa2c70bbbfe5 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/handlers v1.5.2 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
