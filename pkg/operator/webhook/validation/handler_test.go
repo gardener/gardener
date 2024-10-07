@@ -53,7 +53,7 @@ var _ = Describe("Handler", func() {
 						},
 					},
 					Kubernetes: operatorv1alpha1.Kubernetes{
-						Version: "1.26.3",
+						Version: "1.27.3",
 					},
 					Networking: operatorv1alpha1.Networking{
 						Services: "100.64.0.0/13",
