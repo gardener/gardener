@@ -76,7 +76,7 @@ var APIGroupControllerMap = map[string]map[string]versionutils.VersionRange{
 		"clusterrole-aggregation": {},
 	},
 	"resource/v1alpha2": {
-		"resource-claim-controller": {AddedInVersion: "1.27", RemovedInVersion: "1.31"},
+		"resource-claim-controller": {RemovedInVersion: "1.31"},
 	},
 	"resource/v1alpha3": {
 		"resource-claim-controller": {AddedInVersion: "1.31"},
@@ -112,7 +112,7 @@ var APIGroupControllerMap = map[string]map[string]versionutils.VersionRange{
 		"pvc-protection":                       {},
 		"replicaset":                           {},
 		"replicationcontroller":                {},
-		"resource-claim-controller":            {AddedInVersion: "1.27"},
+		"resource-claim-controller":            {},
 		"resourcequota":                        {},
 		"root-ca-cert-publisher":               {},
 		"route":                                {},
