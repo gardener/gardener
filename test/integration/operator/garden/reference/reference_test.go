@@ -102,7 +102,7 @@ var _ = Describe("Garden Reference controller tests", func() {
 						},
 					},
 					Kubernetes: operatorv1alpha1.Kubernetes{
-						Version: "1.26.3",
+						Version: "1.31.1",
 						KubeAPIServer: &operatorv1alpha1.KubeAPIServerConfig{
 							KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{
 								AdmissionPlugins: []gardencorev1beta1.AdmissionPlugin{{Name: "ValidatingWebhook", KubeconfigSecretName: &secret2.Name}},

@@ -94,7 +94,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 					},
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{
-					Version: "1.25.1",
+					Version: "1.31.1",
 				},
 				Networking: &gardencorev1beta1.Networking{
 					Type:     ptr.To("foo-networking"),

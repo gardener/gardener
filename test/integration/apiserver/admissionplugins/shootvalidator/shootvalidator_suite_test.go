@@ -224,7 +224,7 @@ var _ = BeforeSuite(func() {
 		},
 		Spec: gardencorev1beta1.CloudProfileSpec{
 			Kubernetes: gardencorev1beta1.KubernetesSettings{
-				Versions: []gardencorev1beta1.ExpirableVersion{{Version: "1.26.1"}},
+				Versions: []gardencorev1beta1.ExpirableVersion{{Version: "1.31.1"}},
 			},
 			MachineImages: []gardencorev1beta1.MachineImage{
 				{

@@ -40,7 +40,7 @@ var _ = Describe("OpenID Connect Preset", func() {
 				},
 				Spec: core.ShootSpec{
 					Kubernetes: core.Kubernetes{
-						Version: "1.25.0",
+						Version: "1.31.0",
 					},
 				},
 			}

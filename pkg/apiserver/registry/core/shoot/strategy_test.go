@@ -43,7 +43,7 @@ var _ = Describe("Strategy", func() {
 					CloudProfileName: ptr.To("aws-profile"),
 					Region:           "eu-west-1",
 					Kubernetes: core.Kubernetes{
-						Version: "1.25.2",
+						Version: "1.31.2",
 					},
 					Provider: core.Provider{
 						Type:    "provider",
