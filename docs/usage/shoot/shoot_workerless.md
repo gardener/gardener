@@ -22,7 +22,7 @@ spec:
   provider:
     type: local
   kubernetes:
-    version: 1.26.0
+    version: 1.31.1
 ```
 
 > :warning: It's important to note that a workerless `Shoot` cannot be converted to a `Shoot` with workers or vice versa.
