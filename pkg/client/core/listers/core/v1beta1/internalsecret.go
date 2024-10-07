@@ -8,8 +8,8 @@ package v1beta1
 
 import (
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -26,25 +26,17 @@ type InternalSecretLister interface {
 
 // internalSecretLister implements the InternalSecretLister interface.
 type internalSecretLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1beta1.InternalSecret]
 }
 
 // NewInternalSecretLister returns a new InternalSecretLister.
 func NewInternalSecretLister(indexer cache.Indexer) InternalSecretLister {
-	return &internalSecretLister{indexer: indexer}
-}
-
-// List lists all InternalSecrets in the indexer.
-func (s *internalSecretLister) List(selector labels.Selector) (ret []*v1beta1.InternalSecret, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1beta1.InternalSecret))
-	})
-	return ret, err
+	return &internalSecretLister{listers.New[*v1beta1.InternalSecret](indexer, v1beta1.Resource("internalsecret"))}
 }
 
 // InternalSecrets returns an object that can list and get InternalSecrets.
 func (s *internalSecretLister) InternalSecrets(namespace string) InternalSecretNamespaceLister {
-	return internalSecretNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return internalSecretNamespaceLister{listers.NewNamespaced[*v1beta1.InternalSecret](s.ResourceIndexer, namespace)}
 }
 
 // InternalSecretNamespaceLister helps list and get InternalSecrets.
@@ -62,26 +54,5 @@ type InternalSecretNamespaceLister interface {
 // internalSecretNamespaceLister implements the InternalSecretNamespaceLister
 // interface.
 type internalSecretNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all InternalSecrets in the indexer for a given namespace.
-func (s internalSecretNamespaceLister) List(selector labels.Selector) (ret []*v1beta1.InternalSecret, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1beta1.InternalSecret))
-	})
-	return ret, err
-}
-
-// Get retrieves the InternalSecret from the indexer for a given namespace and name.
-func (s internalSecretNamespaceLister) Get(name string) (*v1beta1.InternalSecret, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1beta1.Resource("internalsecret"), name)
-	}
-	return obj.(*v1beta1.InternalSecret), nil
+	listers.ResourceIndexer[*v1beta1.InternalSecret]
 }

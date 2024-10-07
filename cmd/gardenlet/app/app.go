@@ -37,7 +37,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
-	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -141,9 +140,6 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		LeaseDuration:                 &cfg.LeaderElection.LeaseDuration.Duration,
 		RenewDeadline:                 &cfg.LeaderElection.RenewDeadline.Duration,
 		RetryPeriod:                   &cfg.LeaderElection.RetryPeriod.Duration,
-		Controller: controllerconfig.Controller{
-			RecoverPanic: ptr.To(true),
-		},
 
 		MapperProvider: apiutil.NewDynamicRESTMapper,
 		Client: client.Options{

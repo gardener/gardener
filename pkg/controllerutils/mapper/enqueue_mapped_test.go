@@ -36,7 +36,7 @@ var _ = Describe("EnqueueMapped", func() {
 			mgr     *mockmanager.MockManager
 			cache   *mockcache.MockCache
 
-			queue   workqueue.RateLimitingInterface
+			queue   workqueue.TypedRateLimitingInterface[reconcile.Request]
 			secret1 *corev1.Secret
 			secret2 *corev1.Secret
 		)
@@ -55,7 +55,7 @@ var _ = Describe("EnqueueMapped", func() {
 			mgr = mockmanager.NewMockManager(ctrl)
 			mgr.EXPECT().GetCache().Return(cache)
 
-			queue = workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
+			queue = workqueue.NewTypedRateLimitingQueue(workqueue.DefaultTypedControllerRateLimiter[reconcile.Request]())
 			secret1 = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "secret1", Namespace: "namespace"}}
 			secret2 = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "secret2", Namespace: "namespace"}}
 		})
@@ -166,7 +166,7 @@ var _ = Describe("EnqueueMapped", func() {
 	})
 })
 
-func expectItems(queue workqueue.RateLimitingInterface, objects ...client.Object) {
+func expectItems(queue workqueue.TypedRateLimitingInterface[reconcile.Request], objects ...client.Object) {
 	ExpectWithOffset(1, queue.Len()).To(Equal(len(objects) * 2))
 
 	for _, obj := range objects {

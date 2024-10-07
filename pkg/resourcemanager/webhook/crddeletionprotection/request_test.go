@@ -29,7 +29,7 @@ var _ = Describe("admission", func() {
 	var (
 		ctx     = context.Background()
 		request admission.Request
-		decoder *admission.Decoder
+		decoder admission.Decoder
 
 		ctrl *gomock.Controller
 		c    *mockclient.MockClient

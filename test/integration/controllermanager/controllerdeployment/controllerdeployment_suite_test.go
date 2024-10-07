@@ -20,10 +20,12 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -105,6 +107,9 @@ var _ = BeforeSuite(func() {
 			DefaultNamespaces:    map[string]cache.Config{testNamespace.Name: {}},
 			DefaultLabelSelector: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 		},
+		Controller: controllerconfig.Controller{
+			SkipNameValidation: ptr.To(true),
+		},
 	})
 	mgrClient = mgr.GetClient()
 	Expect(err).NotTo(HaveOccurred())
@@ -115,7 +120,7 @@ var _ = BeforeSuite(func() {
 			ConcurrentSyncs: ptr.To(5),
 		},
 		// limit exponential backoff in tests
-		RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), 100*time.Millisecond),
+		RateLimiter: workqueue.NewTypedWithMaxWaitRateLimiter(workqueue.DefaultTypedControllerRateLimiter[reconcile.Request](), 100*time.Millisecond),
 	}).AddToManager(mgr)).To(Succeed())
 
 	By("Start manager")

@@ -51,7 +51,7 @@ var _ = Describe("Add", func() {
 	Describe("#EventHandler", func() {
 		var (
 			hdlr  handler.EventHandler
-			queue *mockworkqueue.MockRateLimitingInterface
+			queue *mockworkqueue.MockTypedRateLimitingInterface[reconcile.Request]
 			obj   *gardencorev1beta1.Shoot
 			req   reconcile.Request
 		)
@@ -61,7 +61,7 @@ var _ = Describe("Add", func() {
 				Config: cfg,
 				Clock:  cl,
 			}).EventHandler(log)
-			queue = mockworkqueue.NewMockRateLimitingInterface(gomock.NewController(GinkgoT()))
+			queue = mockworkqueue.NewMockTypedRateLimitingInterface[reconcile.Request](gomock.NewController(GinkgoT()))
 			obj = &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: "shoot", Namespace: "namespace"}}
 			req = reconcile.Request{NamespacedName: types.NamespacedName{Name: obj.Name, Namespace: obj.Namespace}}
 		})

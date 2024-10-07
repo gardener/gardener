@@ -22,11 +22,13 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
@@ -111,6 +113,9 @@ var _ = BeforeSuite(func() {
 		Cache: cache.Options{
 			DefaultNamespaces: map[string]cache.Config{testNamespace.Name: {}},
 		},
+		Controller: controllerconfig.Controller{
+			SkipNameValidation: ptr.To(true),
+		},
 	})
 	Expect(err).NotTo(HaveOccurred())
 
@@ -120,7 +125,7 @@ var _ = BeforeSuite(func() {
 			ConcurrentSyncs: ptr.To(5),
 		},
 		// limit exponential backoff in tests
-		RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), 100*time.Millisecond),
+		RateLimiter: workqueue.NewTypedWithMaxWaitRateLimiter(workqueue.DefaultTypedControllerRateLimiter[reconcile.Request](), 100*time.Millisecond),
 	}).AddToManager(ctx, mgr, mgr)).To(Succeed())
 
 	Expect((&tokeninvalidatorwebhook.Handler{

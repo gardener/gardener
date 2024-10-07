@@ -38,14 +38,13 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
 		}).
 		WatchesRawSource(
-			source.Kind(targetCluster.GetCache(), &certificatesv1.CertificateSigningRequest{}),
-			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(
+			source.Kind[client.Object](targetCluster.GetCache(),
+				&certificatesv1.CertificateSigningRequest{},
+				&handler.EnqueueRequestForObject{},
 				predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
 				predicate.NewPredicateFuncs(func(obj client.Object) bool {
 					csr, ok := obj.(*certificatesv1.CertificateSigningRequest)
 					return ok && csr.Spec.SignerName == certificatesv1.KubeletServingSignerName
-				}),
-			),
+				})),
 		).Complete(r)
 }

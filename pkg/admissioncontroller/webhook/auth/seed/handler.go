@@ -47,7 +47,7 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		if r := recover(); r != nil {
 			for _, fn := range utilruntime.PanicHandlers {
-				fn(r)
+				fn(nil, r)
 			}
 			h.writeResponse(w, nil, Errored(http.StatusInternalServerError, fmt.Errorf("panic: %v [recovered]", r)))
 			return

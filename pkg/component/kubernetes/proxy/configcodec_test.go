@@ -71,6 +71,8 @@ logging:
   options:
     json:
       infoBufferSize: "0"
+    text:
+      infoBufferSize: "0"
   verbosity: 0
 metricsBindAddress: ""
 mode: ""

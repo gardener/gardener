@@ -50,13 +50,13 @@ var _ = Describe("Add", func() {
 		var (
 			ctx   = context.TODO()
 			hdlr  handler.EventHandler
-			queue *mockworkqueue.MockRateLimitingInterface
+			queue *mockworkqueue.MockTypedRateLimitingInterface[reconcile.Request]
 			req   reconcile.Request
 		)
 
 		BeforeEach(func() {
 			hdlr = reconciler.EventHandler()
-			queue = mockworkqueue.NewMockRateLimitingInterface(gomock.NewController(GinkgoT()))
+			queue = mockworkqueue.NewMockTypedRateLimitingInterface[reconcile.Request](gomock.NewController(GinkgoT()))
 			req = reconcile.Request{NamespacedName: types.NamespacedName{Name: shoot.Name, Namespace: shoot.Namespace}}
 		})
 

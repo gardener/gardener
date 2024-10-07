@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -194,15 +195,16 @@ func add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
 	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
 	predicates = append(predicates, extensionspredicate.HasClass(args.ExtensionClass))
 
-	if err := ctrl.Watch(source.Kind(mgr.GetCache(), args.registeredExtension.getExtensionObjFunc()), &handler.EnqueueRequestForObject{}, predicates...); err != nil {
+	if err := ctrl.Watch(source.Kind[client.Object](mgr.GetCache(), args.registeredExtension.getExtensionObjFunc(), &handler.EnqueueRequestForObject{}, predicates...)); err != nil {
 		return err
 	}
 
 	// watch Cluster of Shoot provider type (e.g. aws)
 	// this is to be notified when the Shoot is being hibernated (stop health checks) and wakes up (start health checks again)
 	return ctrl.Watch(
-		source.Kind(mgr.GetCache(), &extensionsv1alpha1.Cluster{}),
-		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.ClusterToObjectMapper(mgr, args.GetExtensionObjListFunc, predicates), mapper.UpdateWithNew, ctrl.GetLogger()),
+		source.Kind[client.Object](mgr.GetCache(),
+			&extensionsv1alpha1.Cluster{},
+			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.ClusterToObjectMapper(mgr, args.GetExtensionObjListFunc, predicates), mapper.UpdateWithNew, ctrl.GetLogger())),
 	)
 }
 

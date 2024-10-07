@@ -15,6 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -43,7 +44,7 @@ func NewHandlerWithShootClient(mgr manager.Manager, types []Type, mutator Mutato
 				decoder:  serializer.NewCodecFactory(mgr.GetScheme()).UniversalDecoder(),
 				logger:   logger.WithName("handlerShootClient"),
 			},
-			RecoverPanic: true,
+			RecoverPanic: ptr.To(true),
 		},
 	}, nil
 }

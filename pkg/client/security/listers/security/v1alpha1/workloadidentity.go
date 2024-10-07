@@ -8,8 +8,8 @@ package v1alpha1
 
 import (
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -26,25 +26,17 @@ type WorkloadIdentityLister interface {
 
 // workloadIdentityLister implements the WorkloadIdentityLister interface.
 type workloadIdentityLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1alpha1.WorkloadIdentity]
 }
 
 // NewWorkloadIdentityLister returns a new WorkloadIdentityLister.
 func NewWorkloadIdentityLister(indexer cache.Indexer) WorkloadIdentityLister {
-	return &workloadIdentityLister{indexer: indexer}
-}
-
-// List lists all WorkloadIdentities in the indexer.
-func (s *workloadIdentityLister) List(selector labels.Selector) (ret []*v1alpha1.WorkloadIdentity, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1alpha1.WorkloadIdentity))
-	})
-	return ret, err
+	return &workloadIdentityLister{listers.New[*v1alpha1.WorkloadIdentity](indexer, v1alpha1.Resource("workloadidentity"))}
 }
 
 // WorkloadIdentities returns an object that can list and get WorkloadIdentities.
 func (s *workloadIdentityLister) WorkloadIdentities(namespace string) WorkloadIdentityNamespaceLister {
-	return workloadIdentityNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return workloadIdentityNamespaceLister{listers.NewNamespaced[*v1alpha1.WorkloadIdentity](s.ResourceIndexer, namespace)}
 }
 
 // WorkloadIdentityNamespaceLister helps list and get WorkloadIdentities.
@@ -62,26 +54,5 @@ type WorkloadIdentityNamespaceLister interface {
 // workloadIdentityNamespaceLister implements the WorkloadIdentityNamespaceLister
 // interface.
 type workloadIdentityNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all WorkloadIdentities in the indexer for a given namespace.
-func (s workloadIdentityNamespaceLister) List(selector labels.Selector) (ret []*v1alpha1.WorkloadIdentity, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1alpha1.WorkloadIdentity))
-	})
-	return ret, err
-}
-
-// Get retrieves the WorkloadIdentity from the indexer for a given namespace and name.
-func (s workloadIdentityNamespaceLister) Get(name string) (*v1alpha1.WorkloadIdentity, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1alpha1.Resource("workloadidentity"), name)
-	}
-	return obj.(*v1alpha1.WorkloadIdentity), nil
+	listers.ResourceIndexer[*v1alpha1.WorkloadIdentity]
 }

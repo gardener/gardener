@@ -8,6 +8,7 @@ import (
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -39,9 +40,10 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 		Named(ControllerName).
 		WithOptions(controller.Options{MaxConcurrentReconciles: *r.Config.ConcurrentSyncs}).
 		WatchesRawSource(
-			source.Kind(gardenCluster.GetCache(), &gardencorev1beta1.Shoot{}),
-			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(r.SeedNameChangedPredicate()),
+			source.Kind[client.Object](gardenCluster.GetCache(),
+				&gardencorev1beta1.Shoot{},
+				&handler.EnqueueRequestForObject{},
+				r.SeedNameChangedPredicate()),
 		).
 		Complete(r)
 }

@@ -5,7 +5,7 @@ metadata:
   labels:
     gardener.cloud/deletion-protected: "true"
   annotations:
-    controller-gen.kubebuilder.io/version: v0.14.0
+    controller-gen.kubebuilder.io/version: v0.16.1
   name: backupentries.extensions.gardener.cloud
 spec:
   group: extensions.gardener.cloud

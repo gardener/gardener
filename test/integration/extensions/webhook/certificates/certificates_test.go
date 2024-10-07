@@ -27,6 +27,7 @@ import (
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -208,6 +209,9 @@ var _ = Describe("Certificates tests", func() {
 			mgr, err = manager.New(restConfig, manager.Options{
 				Scheme:  kubernetes.SeedScheme,
 				Metrics: metricsserver.Options{BindAddress: "0"},
+				Controller: controllerconfig.Controller{
+					SkipNameValidation: ptr.To(true),
+				},
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -399,6 +403,9 @@ var _ = Describe("Certificates tests", func() {
 			mgr, err = manager.New(restConfig, manager.Options{
 				Scheme:  kubernetes.SeedScheme,
 				Metrics: metricsserver.Options{BindAddress: "0"},
+				Controller: controllerconfig.Controller{
+					SkipNameValidation: ptr.To(true),
+				},
 			})
 			Expect(err).NotTo(HaveOccurred())
 

@@ -29,22 +29,24 @@ var openidconnectpresetsKind = v1alpha1.SchemeGroupVersion.WithKind("OpenIDConne
 
 // Get takes name of the openIDConnectPreset, and returns the corresponding openIDConnectPreset object, and an error if there is any.
 func (c *FakeOpenIDConnectPresets) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.OpenIDConnectPreset, err error) {
+	emptyResult := &v1alpha1.OpenIDConnectPreset{}
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(openidconnectpresetsResource, c.ns, name), &v1alpha1.OpenIDConnectPreset{})
+		Invokes(testing.NewGetActionWithOptions(openidconnectpresetsResource, c.ns, name, options), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.OpenIDConnectPreset), err
 }
 
 // List takes label and field selectors, and returns the list of OpenIDConnectPresets that match those selectors.
 func (c *FakeOpenIDConnectPresets) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.OpenIDConnectPresetList, err error) {
+	emptyResult := &v1alpha1.OpenIDConnectPresetList{}
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(openidconnectpresetsResource, openidconnectpresetsKind, c.ns, opts), &v1alpha1.OpenIDConnectPresetList{})
+		Invokes(testing.NewListActionWithOptions(openidconnectpresetsResource, openidconnectpresetsKind, c.ns, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -63,28 +65,30 @@ func (c *FakeOpenIDConnectPresets) List(ctx context.Context, opts v1.ListOptions
 // Watch returns a watch.Interface that watches the requested openIDConnectPresets.
 func (c *FakeOpenIDConnectPresets) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(openidconnectpresetsResource, c.ns, opts))
+		InvokesWatch(testing.NewWatchActionWithOptions(openidconnectpresetsResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a openIDConnectPreset and creates it.  Returns the server's representation of the openIDConnectPreset, and an error, if there is any.
 func (c *FakeOpenIDConnectPresets) Create(ctx context.Context, openIDConnectPreset *v1alpha1.OpenIDConnectPreset, opts v1.CreateOptions) (result *v1alpha1.OpenIDConnectPreset, err error) {
+	emptyResult := &v1alpha1.OpenIDConnectPreset{}
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(openidconnectpresetsResource, c.ns, openIDConnectPreset), &v1alpha1.OpenIDConnectPreset{})
+		Invokes(testing.NewCreateActionWithOptions(openidconnectpresetsResource, c.ns, openIDConnectPreset, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.OpenIDConnectPreset), err
 }
 
 // Update takes the representation of a openIDConnectPreset and updates it. Returns the server's representation of the openIDConnectPreset, and an error, if there is any.
 func (c *FakeOpenIDConnectPresets) Update(ctx context.Context, openIDConnectPreset *v1alpha1.OpenIDConnectPreset, opts v1.UpdateOptions) (result *v1alpha1.OpenIDConnectPreset, err error) {
+	emptyResult := &v1alpha1.OpenIDConnectPreset{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(openidconnectpresetsResource, c.ns, openIDConnectPreset), &v1alpha1.OpenIDConnectPreset{})
+		Invokes(testing.NewUpdateActionWithOptions(openidconnectpresetsResource, c.ns, openIDConnectPreset, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.OpenIDConnectPreset), err
 }
@@ -99,7 +103,7 @@ func (c *FakeOpenIDConnectPresets) Delete(ctx context.Context, name string, opts
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeOpenIDConnectPresets) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(openidconnectpresetsResource, c.ns, listOpts)
+	action := testing.NewDeleteCollectionActionWithOptions(openidconnectpresetsResource, c.ns, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.OpenIDConnectPresetList{})
 	return err
@@ -107,11 +111,12 @@ func (c *FakeOpenIDConnectPresets) DeleteCollection(ctx context.Context, opts v1
 
 // Patch applies the patch and returns the patched openIDConnectPreset.
 func (c *FakeOpenIDConnectPresets) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.OpenIDConnectPreset, err error) {
+	emptyResult := &v1alpha1.OpenIDConnectPreset{}
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(openidconnectpresetsResource, c.ns, name, pt, data, subresources...), &v1alpha1.OpenIDConnectPreset{})
+		Invokes(testing.NewPatchSubresourceActionWithOptions(openidconnectpresetsResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.OpenIDConnectPreset), err
 }

@@ -24,11 +24,13 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/gardener/gardener/pkg/api/indexer"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
@@ -221,6 +223,9 @@ var _ = BeforeSuite(func() {
 				},
 			},
 		},
+		Controller: controllerconfig.Controller{
+			SkipNameValidation: ptr.To(true),
+		},
 	})
 	Expect(err).NotTo(HaveOccurred())
 	mgrClient = mgr.GetClient()
@@ -241,7 +246,7 @@ var _ = BeforeSuite(func() {
 		SeedName:        seed.Name,
 		GardenNamespace: seedGardenNamespace.Name,
 		// limit exponential backoff in tests
-		RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), 100*time.Millisecond),
+		RateLimiter: workqueue.NewTypedWithMaxWaitRateLimiter(workqueue.DefaultTypedControllerRateLimiter[reconcile.Request](), 100*time.Millisecond),
 	}).AddToManager(ctx, mgr, mgr, mgr)).To(Succeed())
 
 	By("Start manager")

@@ -123,7 +123,7 @@ type ExtensionStatus struct {
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	// +optional
-	Conditions []gardencorev1beta1.Condition `json:"conditions,omitempty"`
+	Conditions []gardencorev1beta1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 	// ProviderStatus contains type-specific status.
 	// +optional
 	ProviderStatus *runtime.RawExtension `json:"providerStatus,omitempty"`

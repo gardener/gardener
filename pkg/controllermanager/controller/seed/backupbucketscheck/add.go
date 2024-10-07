@@ -45,7 +45,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 			Reconciler:              r,
 			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
 			// if going into exponential backoff, wait at most the configured sync period
-			RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), r.Config.SyncPeriod.Duration),
+			RateLimiter: workqueue.NewTypedWithMaxWaitRateLimiter(workqueue.DefaultTypedControllerRateLimiter[reconcile.Request](), r.Config.SyncPeriod.Duration),
 		},
 	)
 	if err != nil {
@@ -53,10 +53,11 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 
 	return c.Watch(
-		source.Kind(mgr.GetCache(), &gardencorev1beta1.BackupBucket{}),
-		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapBackupBucketToSeed), mapper.UpdateWithNew, c.GetLogger()),
-		r.BackupBucketPredicate(),
-	)
+		source.Kind[client.Object](mgr.GetCache(),
+			&gardencorev1beta1.BackupBucket{},
+			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapBackupBucketToSeed), mapper.UpdateWithNew, c.GetLogger()),
+			r.BackupBucketPredicate(),
+		))
 }
 
 // BackupBucketPredicate reacts only on 'CREATE' and 'UPDATE' events. It returns false if .spec.seedName == nil. For

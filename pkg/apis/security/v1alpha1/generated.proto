@@ -39,7 +39,7 @@ message ContextObject {
 message CredentialsBinding {
   // Standard object metadata.
   // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   // Provider defines the provider type of the CredentialsBinding.
   // This field is immutable.
@@ -48,19 +48,19 @@ message CredentialsBinding {
   // CredentialsRef is a reference to a resource holding the credentials.
   // Accepted resources are core/v1.Secret and security.gardener.cloud/v1alpha1.WorkloadIdentity
   // This field is immutable.
-  optional k8s.io.api.core.v1.ObjectReference credentialsRef = 3;
+  optional .k8s.io.api.core.v1.ObjectReference credentialsRef = 3;
 
   // Quotas is a list of references to Quota objects in the same or another namespace.
   // This field is immutable.
   // +optional
-  repeated k8s.io.api.core.v1.ObjectReference quotas = 4;
+  repeated .k8s.io.api.core.v1.ObjectReference quotas = 4;
 }
 
 // CredentialsBindingList is a collection of CredentialsBindings.
 message CredentialsBindingList {
   // Standard list object metadata.
   // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
 
   // Items is the list of CredentialsBindings.
   repeated CredentialsBinding items = 2;
@@ -79,13 +79,13 @@ message TargetSystem {
 
   // ProviderConfig is the configuration passed to extension resource.
   // +optional
-  optional k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 2;
+  optional .k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 2;
 }
 
 // TokenRequest is a resource that is used to request WorkloadIdentity tokens.
 message TokenRequest {
   // Standard object metadata.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   // Spec holds configuration settings for the requested token.
   optional TokenRequestSpec spec = 2;
@@ -111,7 +111,7 @@ message TokenRequestStatus {
   optional string token = 1;
 
   // ExpirationTimestamp is the time of expiration of the returned token.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time expirationTimestamp = 2;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time expirationTimestamp = 2;
 }
 
 // WorkloadIdentity is resource that allows workloads to be presented before external systems
@@ -122,7 +122,7 @@ message TokenRequestStatus {
 message WorkloadIdentity {
   // Standard object metadata.
   // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   // Spec configures the JSON Web Token issued by the Gardener API server.
   optional WorkloadIdentitySpec spec = 2;
@@ -135,7 +135,7 @@ message WorkloadIdentity {
 message WorkloadIdentityList {
   // Standard list object metadata.
   // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
 
   // Items is the list of WorkloadIdentities.
   repeated WorkloadIdentity items = 2;

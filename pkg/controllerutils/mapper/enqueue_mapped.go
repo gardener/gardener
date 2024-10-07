@@ -76,11 +76,11 @@ const (
 	UpdateWithNew
 )
 
-func (e *enqueueRequestsFromMapFunc) Create(_ context.Context, evt event.CreateEvent, q workqueue.RateLimitingInterface) {
+func (e *enqueueRequestsFromMapFunc) Create(_ context.Context, evt event.CreateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 	e.mapAndEnqueue(q, evt.Object)
 }
 
-func (e *enqueueRequestsFromMapFunc) Update(_ context.Context, evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
+func (e *enqueueRequestsFromMapFunc) Update(_ context.Context, evt event.UpdateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 	switch e.updateBehavior {
 	case UpdateWithOldAndNew:
 		e.mapAndEnqueue(q, evt.ObjectOld)
@@ -92,15 +92,15 @@ func (e *enqueueRequestsFromMapFunc) Update(_ context.Context, evt event.UpdateE
 	}
 }
 
-func (e *enqueueRequestsFromMapFunc) Delete(_ context.Context, evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
+func (e *enqueueRequestsFromMapFunc) Delete(_ context.Context, evt event.DeleteEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 	e.mapAndEnqueue(q, evt.Object)
 }
 
-func (e *enqueueRequestsFromMapFunc) Generic(_ context.Context, evt event.GenericEvent, q workqueue.RateLimitingInterface) {
+func (e *enqueueRequestsFromMapFunc) Generic(_ context.Context, evt event.GenericEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 	e.mapAndEnqueue(q, evt.Object)
 }
 
-func (e *enqueueRequestsFromMapFunc) mapAndEnqueue(q workqueue.RateLimitingInterface, object client.Object) {
+func (e *enqueueRequestsFromMapFunc) mapAndEnqueue(q workqueue.TypedRateLimitingInterface[reconcile.Request], object client.Object) {
 	for _, req := range e.mapper.Map(e.ctx, e.log, e.reader, object) {
 		q.Add(req)
 	}

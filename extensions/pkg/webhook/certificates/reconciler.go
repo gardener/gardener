@@ -133,13 +133,13 @@ func (r *reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 		Reconciler:   r,
 		RecoverPanic: ptr.To(true),
 		// if going into exponential backoff, wait at most the configured sync period
-		RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), r.SyncPeriod),
+		RateLimiter: workqueue.NewTypedWithMaxWaitRateLimiter(workqueue.DefaultTypedControllerRateLimiter[reconcile.Request](), r.SyncPeriod),
 	})
 	if err != nil {
 		return err
 	}
 
-	return ctrl.Watch(controllerutils.EnqueueOnce, nil)
+	return ctrl.Watch(controllerutils.EnqueueOnce)
 }
 
 // Reconcile generates new certificates if needed and updates all webhook configurations.

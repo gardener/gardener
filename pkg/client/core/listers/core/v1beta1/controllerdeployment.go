@@ -8,8 +8,8 @@ package v1beta1
 
 import (
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -27,30 +27,10 @@ type ControllerDeploymentLister interface {
 
 // controllerDeploymentLister implements the ControllerDeploymentLister interface.
 type controllerDeploymentLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1beta1.ControllerDeployment]
 }
 
 // NewControllerDeploymentLister returns a new ControllerDeploymentLister.
 func NewControllerDeploymentLister(indexer cache.Indexer) ControllerDeploymentLister {
-	return &controllerDeploymentLister{indexer: indexer}
-}
-
-// List lists all ControllerDeployments in the indexer.
-func (s *controllerDeploymentLister) List(selector labels.Selector) (ret []*v1beta1.ControllerDeployment, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1beta1.ControllerDeployment))
-	})
-	return ret, err
-}
-
-// Get retrieves the ControllerDeployment from the index for a given name.
-func (s *controllerDeploymentLister) Get(name string) (*v1beta1.ControllerDeployment, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1beta1.Resource("controllerdeployment"), name)
-	}
-	return obj.(*v1beta1.ControllerDeployment), nil
+	return &controllerDeploymentLister{listers.New[*v1beta1.ControllerDeployment](indexer, v1beta1.Resource("controllerdeployment"))}
 }

@@ -11,9 +11,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/ratelimiter"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -28,7 +28,7 @@ type Reconciler struct {
 	Config       config.TokenInvalidatorControllerConfig
 
 	// RateLimiter allows limiting exponential backoff for testing purposes
-	RateLimiter ratelimiter.RateLimiter
+	RateLimiter workqueue.TypedRateLimiter[reconcile.Request]
 }
 
 // Reconcile labels secrets whose tokens should be invalidated.

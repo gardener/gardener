@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"k8s.io/kube-state-metrics/v2/pkg/customresourcestate"
+	"k8s.io/kube-state-metrics/v2/pkg/metric"
 )
 
 const (
@@ -36,7 +37,7 @@ func newCustomResourceStateGaugeMetricForVPA(path, valueFrom []string, help, uni
 			},
 		},
 		Each: customresourcestate.Metric{
-			Type: "Gauge",
+			Type: metric.Gauge,
 			Gauge: &customresourcestate.MetricGauge{
 				MetricMeta: customresourcestate.MetricMeta{
 					Path: path,
@@ -112,7 +113,7 @@ func newCustomResourceStateMetricsForVPA() customresourcestate.Resource {
 		Name: newCustomResourceStateMetricNameForVPA(path, nil),
 		Help: "Update mode of the VerticalPodAutoscaler.",
 		Each: customresourcestate.Metric{
-			Type: "StateSet",
+			Type: metric.StateSet,
 			StateSet: &customresourcestate.MetricStateSet{
 				MetricMeta: customresourcestate.MetricMeta{
 					Path: path,
@@ -147,7 +148,7 @@ func newGardenCustomResourceStateMetrics() customresourcestate.Resource {
 		Name: "garden_condition",
 		Help: "represents a condition of a Garden object",
 		Each: customresourcestate.Metric{
-			Type: customresourcestate.MetricTypeStateSet,
+			Type: metric.StateSet,
 			StateSet: &customresourcestate.MetricStateSet{
 				LabelName: "status",
 				List:      []string{"Progressing", "True", "False", "Unknown"},
@@ -166,7 +167,7 @@ func newGardenCustomResourceStateMetrics() customresourcestate.Resource {
 		Name: "garden_last_operation",
 		Help: "denotes the last operation performed on a Garden object",
 		Each: customresourcestate.Metric{
-			Type: customresourcestate.MetricTypeStateSet,
+			Type: metric.StateSet,
 			StateSet: &customresourcestate.MetricStateSet{
 				LabelName: "last_operation",
 				List:      []string{"Create", "Reconcile", "Delete", "Migrate", "Restore"},

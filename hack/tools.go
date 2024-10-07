@@ -16,7 +16,6 @@ import (
 	_ "golang.org/x/tools/cmd/goimports"
 	_ "k8s.io/code-generator"
 	_ "k8s.io/code-generator/cmd/go-to-protobuf/protoc-gen-gogo"
-	_ "k8s.io/code-generator/cmd/import-boss"
 	_ "k8s.io/kube-openapi/cmd/openapi-gen"
 	_ "sigs.k8s.io/controller-runtime/tools/setup-envtest"
 	_ "sigs.k8s.io/controller-tools/cmd/controller-gen"

@@ -8,8 +8,8 @@ package v1beta1
 
 import (
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -26,25 +26,17 @@ type ShootStateLister interface {
 
 // shootStateLister implements the ShootStateLister interface.
 type shootStateLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1beta1.ShootState]
 }
 
 // NewShootStateLister returns a new ShootStateLister.
 func NewShootStateLister(indexer cache.Indexer) ShootStateLister {
-	return &shootStateLister{indexer: indexer}
-}
-
-// List lists all ShootStates in the indexer.
-func (s *shootStateLister) List(selector labels.Selector) (ret []*v1beta1.ShootState, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1beta1.ShootState))
-	})
-	return ret, err
+	return &shootStateLister{listers.New[*v1beta1.ShootState](indexer, v1beta1.Resource("shootstate"))}
 }
 
 // ShootStates returns an object that can list and get ShootStates.
 func (s *shootStateLister) ShootStates(namespace string) ShootStateNamespaceLister {
-	return shootStateNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return shootStateNamespaceLister{listers.NewNamespaced[*v1beta1.ShootState](s.ResourceIndexer, namespace)}
 }
 
 // ShootStateNamespaceLister helps list and get ShootStates.
@@ -62,26 +54,5 @@ type ShootStateNamespaceLister interface {
 // shootStateNamespaceLister implements the ShootStateNamespaceLister
 // interface.
 type shootStateNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all ShootStates in the indexer for a given namespace.
-func (s shootStateNamespaceLister) List(selector labels.Selector) (ret []*v1beta1.ShootState, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1beta1.ShootState))
-	})
-	return ret, err
-}
-
-// Get retrieves the ShootState from the indexer for a given namespace and name.
-func (s shootStateNamespaceLister) Get(name string) (*v1beta1.ShootState, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1beta1.Resource("shootstate"), name)
-	}
-	return obj.(*v1beta1.ShootState), nil
+	listers.ResourceIndexer[*v1beta1.ShootState]
 }

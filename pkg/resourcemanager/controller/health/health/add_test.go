@@ -25,13 +25,13 @@ var _ = Describe("Add", func() {
 		var (
 			ctx   = context.TODO()
 			hdlr  handler.EventHandler
-			queue workqueue.RateLimitingInterface
+			queue workqueue.TypedRateLimitingInterface[reconcile.Request]
 			obj   *corev1.Secret
 		)
 
 		BeforeEach(func() {
 			hdlr = (&Reconciler{}).EnqueueCreateAndUpdate()
-			queue = workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
+			queue = workqueue.NewTypedRateLimitingQueue(workqueue.DefaultTypedControllerRateLimiter[reconcile.Request]())
 			obj = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "secret", Namespace: "namespace"}}
 		})
 

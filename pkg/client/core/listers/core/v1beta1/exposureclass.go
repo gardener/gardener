@@ -8,8 +8,8 @@ package v1beta1
 
 import (
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -27,30 +27,10 @@ type ExposureClassLister interface {
 
 // exposureClassLister implements the ExposureClassLister interface.
 type exposureClassLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1beta1.ExposureClass]
 }
 
 // NewExposureClassLister returns a new ExposureClassLister.
 func NewExposureClassLister(indexer cache.Indexer) ExposureClassLister {
-	return &exposureClassLister{indexer: indexer}
-}
-
-// List lists all ExposureClasses in the indexer.
-func (s *exposureClassLister) List(selector labels.Selector) (ret []*v1beta1.ExposureClass, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1beta1.ExposureClass))
-	})
-	return ret, err
-}
-
-// Get retrieves the ExposureClass from the index for a given name.
-func (s *exposureClassLister) Get(name string) (*v1beta1.ExposureClass, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1beta1.Resource("exposureclass"), name)
-	}
-	return obj.(*v1beta1.ExposureClass), nil
+	return &exposureClassLister{listers.New[*v1beta1.ExposureClass](indexer, v1beta1.Resource("exposureclass"))}
 }

@@ -21,6 +21,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
-		WatchesRawSource(controllerutils.EnqueueOnce, nil).
+		WatchesRawSource(controllerutils.EnqueueOnce).
 		Complete(r)
 }

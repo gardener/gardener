@@ -12,6 +12,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -55,9 +56,10 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 	}
 
 	return c.Watch(
-		source.Kind(gardenCluster.GetCache(), &gardencorev1beta1.Shoot{}),
-		r.EventHandler(c.GetLogger()),
-		&predicate.GenerationChangedPredicate{},
+		source.Kind[client.Object](gardenCluster.GetCache(),
+			&gardencorev1beta1.Shoot{},
+			r.EventHandler(c.GetLogger()),
+			&predicate.GenerationChangedPredicate{}),
 	)
 }
 
@@ -67,7 +69,7 @@ var CalculateControllerInfos = helper.CalculateControllerInfos
 // EventHandler returns an event handler.
 func (r *Reconciler) EventHandler(log logr.Logger) handler.EventHandler {
 	return &handler.Funcs{
-		CreateFunc: func(_ context.Context, e event.CreateEvent, q workqueue.RateLimitingInterface) {
+		CreateFunc: func(_ context.Context, e event.CreateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 			shoot, ok := e.Object.(*gardencorev1beta1.Shoot)
 			if !ok {
 				return
@@ -85,7 +87,7 @@ func (r *Reconciler) EventHandler(log logr.Logger) handler.EventHandler {
 				Namespace: e.Object.GetNamespace(),
 			}}, enqueueAfter)
 		},
-		UpdateFunc: func(_ context.Context, e event.UpdateEvent, q workqueue.RateLimitingInterface) {
+		UpdateFunc: func(_ context.Context, e event.UpdateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 			req := reconcile.Request{NamespacedName: types.NamespacedName{
 				Name:      e.ObjectNew.GetName(),
 				Namespace: e.ObjectNew.GetNamespace(),

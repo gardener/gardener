@@ -28,20 +28,22 @@ var cloudprofilesKind = v1beta1.SchemeGroupVersion.WithKind("CloudProfile")
 
 // Get takes name of the cloudProfile, and returns the corresponding cloudProfile object, and an error if there is any.
 func (c *FakeCloudProfiles) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.CloudProfile, err error) {
+	emptyResult := &v1beta1.CloudProfile{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(cloudprofilesResource, name), &v1beta1.CloudProfile{})
+		Invokes(testing.NewRootGetActionWithOptions(cloudprofilesResource, name, options), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.CloudProfile), err
 }
 
 // List takes label and field selectors, and returns the list of CloudProfiles that match those selectors.
 func (c *FakeCloudProfiles) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.CloudProfileList, err error) {
+	emptyResult := &v1beta1.CloudProfileList{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(cloudprofilesResource, cloudprofilesKind, opts), &v1beta1.CloudProfileList{})
+		Invokes(testing.NewRootListActionWithOptions(cloudprofilesResource, cloudprofilesKind, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -60,25 +62,27 @@ func (c *FakeCloudProfiles) List(ctx context.Context, opts v1.ListOptions) (resu
 // Watch returns a watch.Interface that watches the requested cloudProfiles.
 func (c *FakeCloudProfiles) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewRootWatchAction(cloudprofilesResource, opts))
+		InvokesWatch(testing.NewRootWatchActionWithOptions(cloudprofilesResource, opts))
 }
 
 // Create takes the representation of a cloudProfile and creates it.  Returns the server's representation of the cloudProfile, and an error, if there is any.
 func (c *FakeCloudProfiles) Create(ctx context.Context, cloudProfile *v1beta1.CloudProfile, opts v1.CreateOptions) (result *v1beta1.CloudProfile, err error) {
+	emptyResult := &v1beta1.CloudProfile{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(cloudprofilesResource, cloudProfile), &v1beta1.CloudProfile{})
+		Invokes(testing.NewRootCreateActionWithOptions(cloudprofilesResource, cloudProfile, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.CloudProfile), err
 }
 
 // Update takes the representation of a cloudProfile and updates it. Returns the server's representation of the cloudProfile, and an error, if there is any.
 func (c *FakeCloudProfiles) Update(ctx context.Context, cloudProfile *v1beta1.CloudProfile, opts v1.UpdateOptions) (result *v1beta1.CloudProfile, err error) {
+	emptyResult := &v1beta1.CloudProfile{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(cloudprofilesResource, cloudProfile), &v1beta1.CloudProfile{})
+		Invokes(testing.NewRootUpdateActionWithOptions(cloudprofilesResource, cloudProfile, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.CloudProfile), err
 }
@@ -92,7 +96,7 @@ func (c *FakeCloudProfiles) Delete(ctx context.Context, name string, opts v1.Del
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeCloudProfiles) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(cloudprofilesResource, listOpts)
+	action := testing.NewRootDeleteCollectionActionWithOptions(cloudprofilesResource, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1beta1.CloudProfileList{})
 	return err
@@ -100,10 +104,11 @@ func (c *FakeCloudProfiles) DeleteCollection(ctx context.Context, opts v1.Delete
 
 // Patch applies the patch and returns the patched cloudProfile.
 func (c *FakeCloudProfiles) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.CloudProfile, err error) {
+	emptyResult := &v1beta1.CloudProfile{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(cloudprofilesResource, name, pt, data, subresources...), &v1beta1.CloudProfile{})
+		Invokes(testing.NewRootPatchSubresourceActionWithOptions(cloudprofilesResource, name, pt, data, opts, subresources...), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.CloudProfile), err
 }

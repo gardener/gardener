@@ -12,6 +12,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -72,9 +73,10 @@ func AddToManager(
 
 	reconciler.WatchRegisterers = append(reconciler.WatchRegisterers, func(c controller.Controller) error {
 		return c.Watch(
-			source.Kind(seedCluster.GetCache(), &extensionsv1alpha1.Cluster{}),
-			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(reconciler.MapObjectToName), mapper.UpdateWithNew, mgr.GetLogger()),
-			ClusterPredicate(),
+			source.Kind[client.Object](seedCluster.GetCache(),
+				&extensionsv1alpha1.Cluster{},
+				mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(reconciler.MapObjectToName), mapper.UpdateWithNew, mgr.GetLogger()),
+				ClusterPredicate()),
 		)
 	})
 

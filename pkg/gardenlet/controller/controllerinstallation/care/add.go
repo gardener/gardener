@@ -54,12 +54,13 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
 			// if going into exponential backoff, wait at most the configured sync period
-			RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), r.Config.SyncPeriod.Duration),
+			RateLimiter: workqueue.NewTypedWithMaxWaitRateLimiter(workqueue.DefaultTypedControllerRateLimiter[reconcile.Request](), r.Config.SyncPeriod.Duration),
 		}).
 		WatchesRawSource(
-			source.Kind(gardenCluster.GetCache(), &gardencorev1beta1.ControllerInstallation{}),
-			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create)),
+			source.Kind[client.Object](gardenCluster.GetCache(),
+				&gardencorev1beta1.ControllerInstallation{},
+				&handler.EnqueueRequestForObject{},
+				predicateutils.ForEventTypes(predicateutils.Create)),
 		).
 		Build(r)
 	if err != nil {
@@ -67,10 +68,11 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 	}
 
 	return c.Watch(
-		source.Kind(seedCluster.GetCache(), &resourcesv1alpha1.ManagedResource{}),
-		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapManagedResourceToControllerInstallation), mapper.UpdateWithNew, c.GetLogger()),
-		r.IsExtensionDeployment(),
-		predicateutils.ManagedResourceConditionsChanged(),
+		source.Kind[client.Object](seedCluster.GetCache(),
+			&resourcesv1alpha1.ManagedResource{},
+			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapManagedResourceToControllerInstallation), mapper.UpdateWithNew, c.GetLogger()),
+			r.IsExtensionDeployment(),
+			predicateutils.ManagedResourceConditionsChanged()),
 	)
 }
 

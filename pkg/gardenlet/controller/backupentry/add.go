@@ -60,12 +60,11 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 			RateLimiter:             r.RateLimiter,
 		}).
 		WatchesRawSource(
-			source.Kind(gardenCluster.GetCache(), &gardencorev1beta1.BackupEntry{}),
-			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(
+			source.Kind[client.Object](gardenCluster.GetCache(),
+				&gardencorev1beta1.BackupEntry{},
+				&handler.EnqueueRequestForObject{},
 				&predicate.GenerationChangedPredicate{},
-				predicateutils.SeedNamePredicate(r.SeedName, gardenerutils.GetBackupEntrySeedNames),
-			),
+				predicateutils.SeedNamePredicate(r.SeedName, gardenerutils.GetBackupEntrySeedNames)),
 		).
 		Build(r)
 	if err != nil {
@@ -73,17 +72,19 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 	}
 
 	if err := c.Watch(
-		source.Kind(gardenCluster.GetCache(), &gardencorev1beta1.BackupBucket{}),
-		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapBackupBucketToBackupEntry), mapper.UpdateWithNew, c.GetLogger()),
-		predicateutils.LastOperationChanged(getBackupBucketLastOperation),
+		source.Kind[client.Object](gardenCluster.GetCache(),
+			&gardencorev1beta1.BackupBucket{},
+			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapBackupBucketToBackupEntry), mapper.UpdateWithNew, c.GetLogger()),
+			predicateutils.LastOperationChanged(getBackupBucketLastOperation)),
 	); err != nil {
 		return err
 	}
 
 	return c.Watch(
-		source.Kind(seedCluster.GetCache(), &extensionsv1alpha1.BackupEntry{}),
-		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapExtensionBackupEntryToCoreBackupEntry), mapper.UpdateWithNew, c.GetLogger()),
-		predicateutils.LastOperationChanged(predicateutils.GetExtensionLastOperation),
+		source.Kind[client.Object](seedCluster.GetCache(),
+			&extensionsv1alpha1.BackupEntry{},
+			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapExtensionBackupEntryToCoreBackupEntry), mapper.UpdateWithNew, c.GetLogger()),
+			predicateutils.LastOperationChanged(predicateutils.GetExtensionLastOperation)),
 	)
 }
 

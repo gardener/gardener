@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
@@ -99,6 +100,9 @@ var _ = Describe("Seed controller tests", func() {
 						Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 					},
 				},
+			},
+			Controller: controllerconfig.Controller{
+				SkipNameValidation: ptr.To(true),
 			},
 		})
 		Expect(err).NotTo(HaveOccurred())

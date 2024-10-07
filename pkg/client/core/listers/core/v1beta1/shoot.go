@@ -8,8 +8,8 @@ package v1beta1
 
 import (
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -26,25 +26,17 @@ type ShootLister interface {
 
 // shootLister implements the ShootLister interface.
 type shootLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1beta1.Shoot]
 }
 
 // NewShootLister returns a new ShootLister.
 func NewShootLister(indexer cache.Indexer) ShootLister {
-	return &shootLister{indexer: indexer}
-}
-
-// List lists all Shoots in the indexer.
-func (s *shootLister) List(selector labels.Selector) (ret []*v1beta1.Shoot, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1beta1.Shoot))
-	})
-	return ret, err
+	return &shootLister{listers.New[*v1beta1.Shoot](indexer, v1beta1.Resource("shoot"))}
 }
 
 // Shoots returns an object that can list and get Shoots.
 func (s *shootLister) Shoots(namespace string) ShootNamespaceLister {
-	return shootNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return shootNamespaceLister{listers.NewNamespaced[*v1beta1.Shoot](s.ResourceIndexer, namespace)}
 }
 
 // ShootNamespaceLister helps list and get Shoots.
@@ -62,26 +54,5 @@ type ShootNamespaceLister interface {
 // shootNamespaceLister implements the ShootNamespaceLister
 // interface.
 type shootNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all Shoots in the indexer for a given namespace.
-func (s shootNamespaceLister) List(selector labels.Selector) (ret []*v1beta1.Shoot, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1beta1.Shoot))
-	})
-	return ret, err
-}
-
-// Get retrieves the Shoot from the indexer for a given namespace and name.
-func (s shootNamespaceLister) Get(name string) (*v1beta1.Shoot, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1beta1.Resource("shoot"), name)
-	}
-	return obj.(*v1beta1.Shoot), nil
+	listers.ResourceIndexer[*v1beta1.Shoot]
 }

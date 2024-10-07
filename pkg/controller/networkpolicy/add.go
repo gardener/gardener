@@ -72,9 +72,10 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, runt
 			MaxConcurrentReconciles: ptr.Deref(r.ConcurrentSyncs, 0),
 		}).
 		WatchesRawSource(
-			source.Kind(runtimeCluster.GetCache(), &corev1.Namespace{}),
-			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update)),
+			source.Kind[client.Object](runtimeCluster.GetCache(),
+				&corev1.Namespace{},
+				&handler.EnqueueRequestForObject{},
+				predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update)),
 		).
 		Build(r)
 	if err != nil {
@@ -82,17 +83,19 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, runt
 	}
 
 	if err := c.Watch(
-		source.Kind(runtimeCluster.GetCache(), &corev1.Endpoints{}),
-		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapToNamespaces), mapper.UpdateWithNew, c.GetLogger()),
-		r.IsKubernetesEndpoint(),
+		source.Kind[client.Object](runtimeCluster.GetCache(),
+			&corev1.Endpoints{},
+			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapToNamespaces), mapper.UpdateWithNew, c.GetLogger()),
+			r.IsKubernetesEndpoint()),
 	); err != nil {
 		return err
 	}
 
 	if err := c.Watch(
-		source.Kind(runtimeCluster.GetCache(), &networkingv1.NetworkPolicy{}),
-		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapObjectToNamespace), mapper.UpdateWithNew, c.GetLogger()),
-		r.NetworkPolicyPredicate(),
+		source.Kind[client.Object](runtimeCluster.GetCache(),
+			&networkingv1.NetworkPolicy{},
+			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapObjectToNamespace), mapper.UpdateWithNew, c.GetLogger()),
+			r.NetworkPolicyPredicate()),
 	); err != nil {
 		return err
 	}
@@ -104,8 +107,8 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, runt
 	}
 
 	return c.Watch(
-		&source.Channel{Source: r.ResolverUpdate},
-		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapToNamespaces), mapper.UpdateWithNew, c.GetLogger()),
+		source.Channel(r.ResolverUpdate,
+			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapToNamespaces), mapper.UpdateWithNew, c.GetLogger())),
 	)
 }
 

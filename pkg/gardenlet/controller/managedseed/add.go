@@ -73,12 +73,11 @@ func (r *Reconciler) AddToManager(
 			MaxConcurrentReconciles: ptr.Deref(r.Config.Controllers.ManagedSeed.ConcurrentSyncs, 0),
 		}).
 		WatchesRawSource(
-			source.Kind(gardenCluster.GetCache(), &seedmanagementv1alpha1.ManagedSeed{}),
-			r.EnqueueWithJitterDelay(),
-			builder.WithPredicates(
+			source.Kind[client.Object](gardenCluster.GetCache(),
+				&seedmanagementv1alpha1.ManagedSeed{},
+				r.EnqueueWithJitterDelay(),
 				r.ManagedSeedPredicate(ctx, r.Config.SeedConfig.SeedTemplate.Name),
-				&predicate.GenerationChangedPredicate{},
-			),
+				&predicate.GenerationChangedPredicate{}),
 		).
 		Build(r)
 	if err != nil {
@@ -86,9 +85,10 @@ func (r *Reconciler) AddToManager(
 	}
 
 	return c.Watch(
-		source.Kind(gardenCluster.GetCache(), &gardencorev1beta1.Seed{}),
-		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapSeedToManagedSeed), mapper.UpdateWithNew, c.GetLogger()),
-		r.SeedOfManagedSeedPredicate(ctx, r.Config.SeedConfig.SeedTemplate.Name),
+		source.Kind[client.Object](gardenCluster.GetCache(),
+			&gardencorev1beta1.Seed{},
+			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapSeedToManagedSeed), mapper.UpdateWithNew, c.GetLogger()),
+			r.SeedOfManagedSeedPredicate(ctx, r.Config.SeedConfig.SeedTemplate.Name)),
 	)
 }
 
@@ -214,7 +214,7 @@ var RandomDurationWithMetaDuration = utils.RandomDurationWithMetaDuration
 // All other events are normally enqueued.
 func (r *Reconciler) EnqueueWithJitterDelay() handler.EventHandler {
 	return &handler.Funcs{
-		CreateFunc: func(_ context.Context, evt event.CreateEvent, q workqueue.RateLimitingInterface) {
+		CreateFunc: func(_ context.Context, evt event.CreateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 			managedSeed, ok := evt.Object.(*seedmanagementv1alpha1.ManagedSeed)
 			if !ok {
 				return
@@ -242,7 +242,7 @@ func (r *Reconciler) EnqueueWithJitterDelay() handler.EventHandler {
 			// roughly at the same time.
 			q.AddAfter(reconcileRequest(evt.Object), RandomDurationWithMetaDuration(r.Config.Controllers.ManagedSeed.SyncJitterPeriod))
 		},
-		UpdateFunc: func(_ context.Context, evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
+		UpdateFunc: func(_ context.Context, evt event.UpdateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 			managedSeed, ok := evt.ObjectNew.(*seedmanagementv1alpha1.ManagedSeed)
 			if !ok {
 				return
@@ -265,7 +265,7 @@ func (r *Reconciler) EnqueueWithJitterDelay() handler.EventHandler {
 				q.Add(reconcileRequest(evt.ObjectNew))
 			}
 		},
-		DeleteFunc: func(_ context.Context, evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
+		DeleteFunc: func(_ context.Context, evt event.DeleteEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 			if evt.Object == nil {
 				return
 			}

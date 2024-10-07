@@ -7,6 +7,7 @@ package operatingsystemconfig
 import (
 	"context"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -62,5 +63,5 @@ func add(mgr manager.Manager, options controller.Options, predicates []predicate
 		return err
 	}
 
-	return ctrl.Watch(source.Kind(mgr.GetCache(), &extensionsv1alpha1.OperatingSystemConfig{}), &handler.EnqueueRequestForObject{}, predicates...)
+	return ctrl.Watch(source.Kind[client.Object](mgr.GetCache(), &extensionsv1alpha1.OperatingSystemConfig{}, &handler.EnqueueRequestForObject{}, predicates...))
 }

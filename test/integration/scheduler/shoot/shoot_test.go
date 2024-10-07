@@ -17,6 +17,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
@@ -532,6 +533,9 @@ func createAndStartManager(config *config.ShootSchedulerConfiguration) {
 		Metrics: metricsserver.Options{BindAddress: "0"},
 		Cache: cache.Options{
 			DefaultNamespaces: map[string]cache.Config{testNamespace.Name: {}},
+		},
+		Controller: controllerconfig.Controller{
+			SkipNameValidation: ptr.To(true),
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())

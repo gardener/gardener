@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.14.0
+    controller-gen.kubebuilder.io/version: v0.16.1
   name: probes.monitoring.coreos.com
 spec:
   group: monitoring.coreos.com
@@ -56,10 +56,13 @@ spec:
                           a valid secret key.
                         type: string
                       name:
+                        default: ""
                         description: |-
                           Name of the referent.
+                          This field is effectively required, but due to backwards compatibility is
+                          allowed to be empty. Instances of this type with an empty value here are
+                          almost certainly wrong.
                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                          TODO: Add other useful fields. apiVersion, kind, uid?
                         type: string
                       optional:
                         description: Specify whether the Secret or its key must be
@@ -73,9 +76,7 @@ spec:
                     description: |-
                       Defines the authentication type. The value is case-insensitive.
 
-
                       "Basic" is not a supported value.
-
 
                       Default: "Bearer"
                     type: string
@@ -95,10 +96,13 @@ spec:
                           a valid secret key.
                         type: string
                       name:
+                        default: ""
                         description: |-
                           Name of the referent.
+                          This field is effectively required, but due to backwards compatibility is
+                          allowed to be empty. Instances of this type with an empty value here are
+                          almost certainly wrong.
                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                          TODO: Add other useful fields. apiVersion, kind, uid?
                         type: string
                       optional:
                         description: Specify whether the Secret or its key must be
@@ -118,10 +122,13 @@ spec:
                           a valid secret key.
                         type: string
                       name:
+                        default: ""
                         description: |-
                           Name of the referent.
+                          This field is effectively required, but due to backwards compatibility is
+                          allowed to be empty. Instances of this type with an empty value here are
+                          almost certainly wrong.
                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                          TODO: Add other useful fields. apiVersion, kind, uid?
                         type: string
                       optional:
                         description: Specify whether the Secret or its key must be
@@ -143,10 +150,13 @@ spec:
                       valid secret key.
                     type: string
                   name:
+                    default: ""
                     description: |-
                       Name of the referent.
+                      This field is effectively required, but due to backwards compatibility is
+                      allowed to be empty. Instances of this type with an empty value here are
+                      almost certainly wrong.
                       More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                      TODO: Add other useful fields. apiVersion, kind, uid?
                     type: string
                   optional:
                     description: Specify whether the Secret or its key must be defined
@@ -168,7 +178,6 @@ spec:
                 description: |-
                   Per-scrape limit on the number of targets dropped by relabeling
                   that will be kept in memory. 0 means no limit.
-
 
                   It requires Prometheus >= v2.47.0.
                 format: int64
@@ -198,7 +207,6 @@ spec:
                     RelabelConfig allows dynamic rewriting of the label set for targets, alerts,
                     scraped samples and remote write samples.
 
-
                     More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config
                   properties:
                     action:
@@ -206,10 +214,8 @@ spec:
                       description: |-
                         Action to perform based on the regex matching.
 
-
                         `Uppercase` and `Lowercase` actions require Prometheus >= v2.36.0.
                         `DropEqual` and `KeepEqual` actions require Prometheus >= v2.41.0.
-
 
                         Default: "Replace"
                       enum:
@@ -240,7 +246,6 @@ spec:
                       description: |-
                         Modulus to take of the hash of the source label values.
 
-
                         Only applicable when the action is `HashMod`.
                       format: int64
                       type: integer
@@ -252,7 +257,6 @@ spec:
                       description: |-
                         Replacement value against which a Replace action is performed if the
                         regular expression matches.
-
 
                         Regex capture groups are available.
                       type: string
@@ -275,10 +279,8 @@ spec:
                       description: |-
                         Label to which the resulting string is written in a replacement.
 
-
                         It is mandatory for `Replace`, `HashMod`, `Lowercase`, `Uppercase`,
                         `KeepEqual` and `DropEqual` actions.
-
 
                         Regex capture groups are available.
                       type: string
@@ -306,10 +308,13 @@ spec:
                             description: The key to select.
                             type: string
                           name:
+                            default: ""
                             description: |-
                               Name of the referent.
+                              This field is effectively required, but due to backwards compatibility is
+                              allowed to be empty. Instances of this type with an empty value here are
+                              almost certainly wrong.
                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                              TODO: Add other useful fields. apiVersion, kind, uid?
                             type: string
                           optional:
                             description: Specify whether the ConfigMap or its key
@@ -327,10 +332,13 @@ spec:
                               be a valid secret key.
                             type: string
                           name:
+                            default: ""
                             description: |-
                               Name of the referent.
+                              This field is effectively required, but due to backwards compatibility is
+                              allowed to be empty. Instances of this type with an empty value here are
+                              almost certainly wrong.
                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                              TODO: Add other useful fields. apiVersion, kind, uid?
                             type: string
                           optional:
                             description: Specify whether the Secret or its key must
@@ -351,10 +359,13 @@ spec:
                           a valid secret key.
                         type: string
                       name:
+                        default: ""
                         description: |-
                           Name of the referent.
+                          This field is effectively required, but due to backwards compatibility is
+                          allowed to be empty. Instances of this type with an empty value here are
+                          almost certainly wrong.
                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                          TODO: Add other useful fields. apiVersion, kind, uid?
                         type: string
                       optional:
                         description: Specify whether the Secret or its key must be
@@ -430,9 +441,7 @@ spec:
                   `scrapeProtocols` defines the protocols to negotiate during a scrape. It tells clients the
                   protocols supported by Prometheus in order of preference (from most to least preferred).
 
-
                   If unset, Prometheus uses its default value.
-
 
                   It requires Prometheus >= v2.49.0.
                 items:
@@ -500,7 +509,6 @@ spec:
                             RelabelConfig allows dynamic rewriting of the label set for targets, alerts,
                             scraped samples and remote write samples.
 
-
                             More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config
                           properties:
                             action:
@@ -508,10 +516,8 @@ spec:
                               description: |-
                                 Action to perform based on the regex matching.
 
-
                                 `Uppercase` and `Lowercase` actions require Prometheus >= v2.36.0.
                                 `DropEqual` and `KeepEqual` actions require Prometheus >= v2.41.0.
-
 
                                 Default: "Replace"
                               enum:
@@ -542,7 +548,6 @@ spec:
                               description: |-
                                 Modulus to take of the hash of the source label values.
 
-
                                 Only applicable when the action is `HashMod`.
                               format: int64
                               type: integer
@@ -554,7 +559,6 @@ spec:
                               description: |-
                                 Replacement value against which a Replace action is performed if the
                                 regular expression matches.
-
 
                                 Regex capture groups are available.
                               type: string
@@ -578,10 +582,8 @@ spec:
                               description: |-
                                 Label to which the resulting string is written in a replacement.
 
-
                                 It is mandatory for `Replace`, `HashMod`, `Lowercase`, `Uppercase`,
                                 `KeepEqual` and `DropEqual` actions.
-
 
                                 Regex capture groups are available.
                               type: string
@@ -616,11 +618,13 @@ spec:
                                   items:
                                     type: string
                                   type: array
+                                  x-kubernetes-list-type: atomic
                               required:
                               - key
                               - operator
                               type: object
                             type: array
+                            x-kubernetes-list-type: atomic
                           matchLabels:
                             additionalProperties:
                               type: string
@@ -655,7 +659,6 @@ spec:
                             RelabelConfig allows dynamic rewriting of the label set for targets, alerts,
                             scraped samples and remote write samples.
 
-
                             More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config
                           properties:
                             action:
@@ -663,10 +666,8 @@ spec:
                               description: |-
                                 Action to perform based on the regex matching.
 
-
                                 `Uppercase` and `Lowercase` actions require Prometheus >= v2.36.0.
                                 `DropEqual` and `KeepEqual` actions require Prometheus >= v2.41.0.
-
 
                                 Default: "Replace"
                               enum:
@@ -697,7 +698,6 @@ spec:
                               description: |-
                                 Modulus to take of the hash of the source label values.
 
-
                                 Only applicable when the action is `HashMod`.
                               format: int64
                               type: integer
@@ -709,7 +709,6 @@ spec:
                               description: |-
                                 Replacement value against which a Replace action is performed if the
                                 regular expression matches.
-
 
                                 Regex capture groups are available.
                               type: string
@@ -733,10 +732,8 @@ spec:
                               description: |-
                                 Label to which the resulting string is written in a replacement.
 
-
                                 It is mandatory for `Replace`, `HashMod`, `Lowercase`, `Uppercase`,
                                 `KeepEqual` and `DropEqual` actions.
-
 
                                 Regex capture groups are available.
                               type: string
@@ -763,10 +760,13 @@ spec:
                             description: The key to select.
                             type: string
                           name:
+                            default: ""
                             description: |-
                               Name of the referent.
+                              This field is effectively required, but due to backwards compatibility is
+                              allowed to be empty. Instances of this type with an empty value here are
+                              almost certainly wrong.
                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                              TODO: Add other useful fields. apiVersion, kind, uid?
                             type: string
                           optional:
                             description: Specify whether the ConfigMap or its key
@@ -784,10 +784,13 @@ spec:
                               be a valid secret key.
                             type: string
                           name:
+                            default: ""
                             description: |-
                               Name of the referent.
+                              This field is effectively required, but due to backwards compatibility is
+                              allowed to be empty. Instances of this type with an empty value here are
+                              almost certainly wrong.
                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                              TODO: Add other useful fields. apiVersion, kind, uid?
                             type: string
                           optional:
                             description: Specify whether the Secret or its key must
@@ -808,10 +811,13 @@ spec:
                             description: The key to select.
                             type: string
                           name:
+                            default: ""
                             description: |-
                               Name of the referent.
+                              This field is effectively required, but due to backwards compatibility is
+                              allowed to be empty. Instances of this type with an empty value here are
+                              almost certainly wrong.
                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                              TODO: Add other useful fields. apiVersion, kind, uid?
                             type: string
                           optional:
                             description: Specify whether the ConfigMap or its key
@@ -829,10 +835,13 @@ spec:
                               be a valid secret key.
                             type: string
                           name:
+                            default: ""
                             description: |-
                               Name of the referent.
+                              This field is effectively required, but due to backwards compatibility is
+                              allowed to be empty. Instances of this type with an empty value here are
+                              almost certainly wrong.
                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                              TODO: Add other useful fields. apiVersion, kind, uid?
                             type: string
                           optional:
                             description: Specify whether the Secret or its key must
@@ -854,10 +863,13 @@ spec:
                           a valid secret key.
                         type: string
                       name:
+                        default: ""
                         description: |-
                           Name of the referent.
+                          This field is effectively required, but due to backwards compatibility is
+                          allowed to be empty. Instances of this type with an empty value here are
+                          almost certainly wrong.
                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                          TODO: Add other useful fields. apiVersion, kind, uid?
                         type: string
                       optional:
                         description: Specify whether the Secret or its key must be

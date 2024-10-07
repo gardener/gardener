@@ -8,8 +8,8 @@ package v1alpha1
 
 import (
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -26,25 +26,17 @@ type CredentialsBindingLister interface {
 
 // credentialsBindingLister implements the CredentialsBindingLister interface.
 type credentialsBindingLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1alpha1.CredentialsBinding]
 }
 
 // NewCredentialsBindingLister returns a new CredentialsBindingLister.
 func NewCredentialsBindingLister(indexer cache.Indexer) CredentialsBindingLister {
-	return &credentialsBindingLister{indexer: indexer}
-}
-
-// List lists all CredentialsBindings in the indexer.
-func (s *credentialsBindingLister) List(selector labels.Selector) (ret []*v1alpha1.CredentialsBinding, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1alpha1.CredentialsBinding))
-	})
-	return ret, err
+	return &credentialsBindingLister{listers.New[*v1alpha1.CredentialsBinding](indexer, v1alpha1.Resource("credentialsbinding"))}
 }
 
 // CredentialsBindings returns an object that can list and get CredentialsBindings.
 func (s *credentialsBindingLister) CredentialsBindings(namespace string) CredentialsBindingNamespaceLister {
-	return credentialsBindingNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return credentialsBindingNamespaceLister{listers.NewNamespaced[*v1alpha1.CredentialsBinding](s.ResourceIndexer, namespace)}
 }
 
 // CredentialsBindingNamespaceLister helps list and get CredentialsBindings.
@@ -62,26 +54,5 @@ type CredentialsBindingNamespaceLister interface {
 // credentialsBindingNamespaceLister implements the CredentialsBindingNamespaceLister
 // interface.
 type credentialsBindingNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all CredentialsBindings in the indexer for a given namespace.
-func (s credentialsBindingNamespaceLister) List(selector labels.Selector) (ret []*v1alpha1.CredentialsBinding, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1alpha1.CredentialsBinding))
-	})
-	return ret, err
-}
-
-// Get retrieves the CredentialsBinding from the indexer for a given namespace and name.
-func (s credentialsBindingNamespaceLister) Get(name string) (*v1alpha1.CredentialsBinding, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1alpha1.Resource("credentialsbinding"), name)
-	}
-	return obj.(*v1alpha1.CredentialsBinding), nil
+	listers.ResourceIndexer[*v1alpha1.CredentialsBinding]
 }

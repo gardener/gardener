@@ -8,8 +8,8 @@ package v1alpha1
 
 import (
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -27,30 +27,10 @@ type ClusterOpenIDConnectPresetLister interface {
 
 // clusterOpenIDConnectPresetLister implements the ClusterOpenIDConnectPresetLister interface.
 type clusterOpenIDConnectPresetLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1alpha1.ClusterOpenIDConnectPreset]
 }
 
 // NewClusterOpenIDConnectPresetLister returns a new ClusterOpenIDConnectPresetLister.
 func NewClusterOpenIDConnectPresetLister(indexer cache.Indexer) ClusterOpenIDConnectPresetLister {
-	return &clusterOpenIDConnectPresetLister{indexer: indexer}
-}
-
-// List lists all ClusterOpenIDConnectPresets in the indexer.
-func (s *clusterOpenIDConnectPresetLister) List(selector labels.Selector) (ret []*v1alpha1.ClusterOpenIDConnectPreset, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1alpha1.ClusterOpenIDConnectPreset))
-	})
-	return ret, err
-}
-
-// Get retrieves the ClusterOpenIDConnectPreset from the index for a given name.
-func (s *clusterOpenIDConnectPresetLister) Get(name string) (*v1alpha1.ClusterOpenIDConnectPreset, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1alpha1.Resource("clusteropenidconnectpreset"), name)
-	}
-	return obj.(*v1alpha1.ClusterOpenIDConnectPreset), nil
+	return &clusterOpenIDConnectPresetLister{listers.New[*v1alpha1.ClusterOpenIDConnectPreset](indexer, v1alpha1.Resource("clusteropenidconnectpreset"))}
 }

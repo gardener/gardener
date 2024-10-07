@@ -23,6 +23,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apiserver/pkg/apis/apiserver"
 	apiserverv1alpha1 "k8s.io/apiserver/pkg/apis/apiserver/v1alpha1"
+	apiserverv1beta1 "k8s.io/apiserver/pkg/apis/apiserver/v1beta1"
 	apiservervalidation "k8s.io/apiserver/pkg/apis/apiserver/validation"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -48,7 +49,7 @@ var (
 func init() {
 	authenticationConfigScheme := runtime.NewScheme()
 	schemeBuilder := runtime.NewSchemeBuilder(
-		// TODO(AleksandarSavchev): add v1beta1 when kubernetes packages are updated to version >= v1.30
+		apiserverv1beta1.AddToScheme,
 		apiserverv1alpha1.AddToScheme,
 		apiserver.AddToScheme,
 	)
@@ -68,7 +69,7 @@ type Handler struct {
 	Logger    logr.Logger
 	APIReader client.Reader
 	Client    client.Reader
-	Decoder   *admission.Decoder
+	Decoder   admission.Decoder
 }
 
 // Handle validates authentication configurations.
@@ -145,7 +146,12 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("error getting authentication configuration from configmap %s: %w", client.ObjectKeyFromObject(authenticationConfigurationConfigMap), err))
 	}
 
-	if errCode, err := validateAuthenticationConfigurationSemantics(authenticationConfiguration); err != nil {
+	disallowedIssuers, err := getDisallowedIssuers(shoot.Spec.Kubernetes.KubeAPIServer)
+	if err != nil {
+		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("error getting disallowed issuers: %w", err))
+	}
+
+	if errCode, err := validateAuthenticationConfigurationSemantics(authenticationConfiguration, disallowedIssuers); err != nil {
 		return admission.Errored(errCode, err)
 	}
 
@@ -172,10 +178,23 @@ func (h *Handler) admitConfigMap(ctx context.Context, request admission.Request)
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
-	var configMapIsReferenced bool
+	var (
+		configMapIsReferenced bool
+		disallowedIssuers     []string
+		err                   error
+	)
+
 	for _, shoot := range shootList.Items {
 		if v1beta1helper.GetShootAuthenticationConfigurationConfigMapName(shoot.Spec.Kubernetes.KubeAPIServer) == request.Name {
 			configMapIsReferenced = true
+			coreKubeAPIServerConfig := &gardencore.KubeAPIServerConfig{}
+			if err := gardencorev1beta1.Convert_v1beta1_KubeAPIServerConfig_To_core_KubeAPIServerConfig(shoot.Spec.Kubernetes.KubeAPIServer, coreKubeAPIServerConfig, nil); err != nil {
+				return admission.Errored(http.StatusUnprocessableEntity, err)
+			}
+			disallowedIssuers, err = getDisallowedIssuers(coreKubeAPIServerConfig)
+			if err != nil {
+				return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("error getting disallowed issuers: %w", err))
+			}
 			break
 		}
 	}
@@ -197,7 +216,7 @@ func (h *Handler) admitConfigMap(ctx context.Context, request admission.Request)
 		return admissionwebhook.Allowed("authentication configuration not changed")
 	}
 
-	if errCode, err := validateAuthenticationConfigurationSemantics(authenticationConfiguration); err != nil {
+	if errCode, err := validateAuthenticationConfigurationSemantics(authenticationConfiguration, disallowedIssuers); err != nil {
 		return admission.Errored(errCode, err)
 	}
 
@@ -211,7 +230,7 @@ func (h *Handler) getOldObject(request admission.Request, oldObj runtime.Object)
 	return errors.New("could not find old object")
 }
 
-func validateAuthenticationConfigurationSemantics(authenticationConfiguration string) (errCode int32, err error) {
+func validateAuthenticationConfigurationSemantics(authenticationConfiguration string, disallowedIssuers []string) (errCode int32, err error) {
 	authConfigObj, schemaVersion, err := configDecoder.Decode([]byte(authenticationConfiguration), nil, nil)
 	if err != nil {
 		return http.StatusUnprocessableEntity, fmt.Errorf("failed to decode the provided authentication configuration: %w", err)
@@ -220,7 +239,7 @@ func validateAuthenticationConfigurationSemantics(authenticationConfiguration st
 	if !ok {
 		return http.StatusInternalServerError, fmt.Errorf("failure to cast to authentication configuration type: %v", schemaVersion)
 	}
-	if errList := apiservervalidation.ValidateAuthenticationConfiguration(authConfig); len(errList) != 0 {
+	if errList := apiservervalidation.ValidateAuthenticationConfiguration(authConfig, disallowedIssuers); len(errList) != 0 {
 		return http.StatusUnprocessableEntity, fmt.Errorf("provided invalid authentication configuration: %v", errList)
 	}
 
@@ -236,4 +255,19 @@ func getAuthenticationConfiguration(cm *corev1.ConfigMap) (string, error) {
 		return "", errors.New("empty authentication configuration. Provide non-empty authentication configuration")
 	}
 	return authenticationConfigurationRaw, nil
+}
+
+func getDisallowedIssuers(kubeAPIServerConfig *gardencore.KubeAPIServerConfig) ([]string, error) {
+	var issuer string
+	if kubeAPIServerConfig.ServiceAccountConfig.Issuer != nil {
+		issuer = *kubeAPIServerConfig.ServiceAccountConfig.Issuer
+	}
+
+	acceptedIssuers := kubeAPIServerConfig.ServiceAccountConfig.AcceptedIssuers
+	disallowedIssuers := append(acceptedIssuers, issuer)
+	if len(disallowedIssuers) == 0 {
+		return nil, errors.New("no disallowed issuers found")
+	}
+
+	return disallowedIssuers, nil
 }

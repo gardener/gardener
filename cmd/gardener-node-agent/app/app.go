@@ -29,7 +29,6 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -188,9 +187,6 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 			&coordinationv1.Lease{}: leaseCacheOptions,
 		}},
 		LeaderElection: false,
-		Controller: controllerconfig.Controller{
-			RecoverPanic: ptr.To(true),
-		},
 	})
 	if err != nil {
 		return err

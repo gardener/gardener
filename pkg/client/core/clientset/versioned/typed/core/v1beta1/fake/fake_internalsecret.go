@@ -29,22 +29,24 @@ var internalsecretsKind = v1beta1.SchemeGroupVersion.WithKind("InternalSecret")
 
 // Get takes name of the internalSecret, and returns the corresponding internalSecret object, and an error if there is any.
 func (c *FakeInternalSecrets) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.InternalSecret, err error) {
+	emptyResult := &v1beta1.InternalSecret{}
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(internalsecretsResource, c.ns, name), &v1beta1.InternalSecret{})
+		Invokes(testing.NewGetActionWithOptions(internalsecretsResource, c.ns, name, options), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.InternalSecret), err
 }
 
 // List takes label and field selectors, and returns the list of InternalSecrets that match those selectors.
 func (c *FakeInternalSecrets) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.InternalSecretList, err error) {
+	emptyResult := &v1beta1.InternalSecretList{}
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(internalsecretsResource, internalsecretsKind, c.ns, opts), &v1beta1.InternalSecretList{})
+		Invokes(testing.NewListActionWithOptions(internalsecretsResource, internalsecretsKind, c.ns, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -63,28 +65,30 @@ func (c *FakeInternalSecrets) List(ctx context.Context, opts v1.ListOptions) (re
 // Watch returns a watch.Interface that watches the requested internalSecrets.
 func (c *FakeInternalSecrets) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(internalsecretsResource, c.ns, opts))
+		InvokesWatch(testing.NewWatchActionWithOptions(internalsecretsResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a internalSecret and creates it.  Returns the server's representation of the internalSecret, and an error, if there is any.
 func (c *FakeInternalSecrets) Create(ctx context.Context, internalSecret *v1beta1.InternalSecret, opts v1.CreateOptions) (result *v1beta1.InternalSecret, err error) {
+	emptyResult := &v1beta1.InternalSecret{}
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(internalsecretsResource, c.ns, internalSecret), &v1beta1.InternalSecret{})
+		Invokes(testing.NewCreateActionWithOptions(internalsecretsResource, c.ns, internalSecret, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.InternalSecret), err
 }
 
 // Update takes the representation of a internalSecret and updates it. Returns the server's representation of the internalSecret, and an error, if there is any.
 func (c *FakeInternalSecrets) Update(ctx context.Context, internalSecret *v1beta1.InternalSecret, opts v1.UpdateOptions) (result *v1beta1.InternalSecret, err error) {
+	emptyResult := &v1beta1.InternalSecret{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(internalsecretsResource, c.ns, internalSecret), &v1beta1.InternalSecret{})
+		Invokes(testing.NewUpdateActionWithOptions(internalsecretsResource, c.ns, internalSecret, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.InternalSecret), err
 }
@@ -99,7 +103,7 @@ func (c *FakeInternalSecrets) Delete(ctx context.Context, name string, opts v1.D
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeInternalSecrets) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(internalsecretsResource, c.ns, listOpts)
+	action := testing.NewDeleteCollectionActionWithOptions(internalsecretsResource, c.ns, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1beta1.InternalSecretList{})
 	return err
@@ -107,11 +111,12 @@ func (c *FakeInternalSecrets) DeleteCollection(ctx context.Context, opts v1.Dele
 
 // Patch applies the patch and returns the patched internalSecret.
 func (c *FakeInternalSecrets) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.InternalSecret, err error) {
+	emptyResult := &v1beta1.InternalSecret{}
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(internalsecretsResource, c.ns, name, pt, data, subresources...), &v1beta1.InternalSecret{})
+		Invokes(testing.NewPatchSubresourceActionWithOptions(internalsecretsResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.InternalSecret), err
 }

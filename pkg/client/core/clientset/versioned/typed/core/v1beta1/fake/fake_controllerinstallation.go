@@ -28,20 +28,22 @@ var controllerinstallationsKind = v1beta1.SchemeGroupVersion.WithKind("Controlle
 
 // Get takes name of the controllerInstallation, and returns the corresponding controllerInstallation object, and an error if there is any.
 func (c *FakeControllerInstallations) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.ControllerInstallation, err error) {
+	emptyResult := &v1beta1.ControllerInstallation{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(controllerinstallationsResource, name), &v1beta1.ControllerInstallation{})
+		Invokes(testing.NewRootGetActionWithOptions(controllerinstallationsResource, name, options), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.ControllerInstallation), err
 }
 
 // List takes label and field selectors, and returns the list of ControllerInstallations that match those selectors.
 func (c *FakeControllerInstallations) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.ControllerInstallationList, err error) {
+	emptyResult := &v1beta1.ControllerInstallationList{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(controllerinstallationsResource, controllerinstallationsKind, opts), &v1beta1.ControllerInstallationList{})
+		Invokes(testing.NewRootListActionWithOptions(controllerinstallationsResource, controllerinstallationsKind, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -60,36 +62,39 @@ func (c *FakeControllerInstallations) List(ctx context.Context, opts v1.ListOpti
 // Watch returns a watch.Interface that watches the requested controllerInstallations.
 func (c *FakeControllerInstallations) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewRootWatchAction(controllerinstallationsResource, opts))
+		InvokesWatch(testing.NewRootWatchActionWithOptions(controllerinstallationsResource, opts))
 }
 
 // Create takes the representation of a controllerInstallation and creates it.  Returns the server's representation of the controllerInstallation, and an error, if there is any.
 func (c *FakeControllerInstallations) Create(ctx context.Context, controllerInstallation *v1beta1.ControllerInstallation, opts v1.CreateOptions) (result *v1beta1.ControllerInstallation, err error) {
+	emptyResult := &v1beta1.ControllerInstallation{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(controllerinstallationsResource, controllerInstallation), &v1beta1.ControllerInstallation{})
+		Invokes(testing.NewRootCreateActionWithOptions(controllerinstallationsResource, controllerInstallation, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.ControllerInstallation), err
 }
 
 // Update takes the representation of a controllerInstallation and updates it. Returns the server's representation of the controllerInstallation, and an error, if there is any.
 func (c *FakeControllerInstallations) Update(ctx context.Context, controllerInstallation *v1beta1.ControllerInstallation, opts v1.UpdateOptions) (result *v1beta1.ControllerInstallation, err error) {
+	emptyResult := &v1beta1.ControllerInstallation{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(controllerinstallationsResource, controllerInstallation), &v1beta1.ControllerInstallation{})
+		Invokes(testing.NewRootUpdateActionWithOptions(controllerinstallationsResource, controllerInstallation, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.ControllerInstallation), err
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeControllerInstallations) UpdateStatus(ctx context.Context, controllerInstallation *v1beta1.ControllerInstallation, opts v1.UpdateOptions) (*v1beta1.ControllerInstallation, error) {
+func (c *FakeControllerInstallations) UpdateStatus(ctx context.Context, controllerInstallation *v1beta1.ControllerInstallation, opts v1.UpdateOptions) (result *v1beta1.ControllerInstallation, err error) {
+	emptyResult := &v1beta1.ControllerInstallation{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateSubresourceAction(controllerinstallationsResource, "status", controllerInstallation), &v1beta1.ControllerInstallation{})
+		Invokes(testing.NewRootUpdateSubresourceActionWithOptions(controllerinstallationsResource, "status", controllerInstallation, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.ControllerInstallation), err
 }
@@ -103,7 +108,7 @@ func (c *FakeControllerInstallations) Delete(ctx context.Context, name string, o
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeControllerInstallations) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(controllerinstallationsResource, listOpts)
+	action := testing.NewRootDeleteCollectionActionWithOptions(controllerinstallationsResource, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1beta1.ControllerInstallationList{})
 	return err
@@ -111,10 +116,11 @@ func (c *FakeControllerInstallations) DeleteCollection(ctx context.Context, opts
 
 // Patch applies the patch and returns the patched controllerInstallation.
 func (c *FakeControllerInstallations) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.ControllerInstallation, err error) {
+	emptyResult := &v1beta1.ControllerInstallation{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(controllerinstallationsResource, name, pt, data, subresources...), &v1beta1.ControllerInstallation{})
+		Invokes(testing.NewRootPatchSubresourceActionWithOptions(controllerinstallationsResource, name, pt, data, opts, subresources...), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.ControllerInstallation), err
 }

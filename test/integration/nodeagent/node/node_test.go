@@ -12,8 +12,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -35,6 +37,9 @@ var _ = Describe("Node controller tests", func() {
 			Metrics: metricsserver.Options{BindAddress: "0"},
 			Cache: cache.Options{
 				DefaultLabelSelector: labels.SelectorFromSet(labels.Set{testID: testRunID}),
+			},
+			Controller: controllerconfig.Controller{
+				SkipNameValidation: ptr.To(true),
 			},
 		})
 		Expect(err).NotTo(HaveOccurred())

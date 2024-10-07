@@ -280,7 +280,7 @@ var _ = Describe("Add", func() {
 	Describe("#EnqueueWithJitterDelay", func() {
 		var (
 			hdlr           handler.EventHandler
-			queue          *mockworkqueue.MockRateLimitingInterface
+			queue          *mockworkqueue.MockTypedRateLimitingInterface[reconcile.Request]
 			obj            *seedmanagementv1alpha1.ManagedSeed
 			req            reconcile.Request
 			cfg            config.GardenletConfiguration
@@ -297,7 +297,7 @@ var _ = Describe("Add", func() {
 			}
 
 			hdlr = (&Reconciler{Config: cfg}).EnqueueWithJitterDelay()
-			queue = mockworkqueue.NewMockRateLimitingInterface(gomock.NewController(GinkgoT()))
+			queue = mockworkqueue.NewMockTypedRateLimitingInterface[reconcile.Request](gomock.NewController(GinkgoT()))
 			obj = &seedmanagementv1alpha1.ManagedSeed{ObjectMeta: metav1.ObjectMeta{Name: "managedseed", Namespace: "namespace"}}
 			req = reconcile.Request{NamespacedName: types.NamespacedName{Name: obj.Name, Namespace: obj.Namespace}}
 

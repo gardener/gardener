@@ -7,8 +7,8 @@ package pkg
 import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission/plugin/namespace/lifecycle"
+	"k8s.io/apiserver/pkg/admission/plugin/policy/validating"
 	"k8s.io/apiserver/pkg/admission/plugin/resourcequota"
-	"k8s.io/apiserver/pkg/admission/plugin/validatingadmissionpolicy"
 	mutatingwebhook "k8s.io/apiserver/pkg/admission/plugin/webhook/mutating"
 	validatingwebhook "k8s.io/apiserver/pkg/admission/plugin/webhook/validating"
 )
@@ -96,9 +96,9 @@ func AllPluginNames() []string {
 		// new admission plugins should generally be inserted above here
 		// webhook, and resourcequota plugins must go at the end
 
-		mutatingwebhook.PluginName,           // MutatingAdmissionWebhook
-		validatingadmissionpolicy.PluginName, // ValidatingAdmissionPolicy
-		validatingwebhook.PluginName,         // ValidatingAdmissionWebhook
+		mutatingwebhook.PluginName,   // MutatingAdmissionWebhook
+		validating.PluginName,        // ValidatingAdmissionPolicy
+		validatingwebhook.PluginName, // ValidatingAdmissionWebhook
 
 		// This plugin must remain the last one in the list since it updates the quota usage
 		// which can only happen reliably if previous plugins permitted the request.
@@ -133,7 +133,8 @@ func DefaultOnPlugins() sets.Set[string] {
 		PluginNameBastion,                         // Bastion
 		mutatingwebhook.PluginName,                // MutatingAdmissionWebhook
 		validatingwebhook.PluginName,              // ValidatingAdmissionWebhook
-		validatingadmissionpolicy.PluginName,      // ValidatingAdmissionPolicy
-		resourcequota.PluginName,                  // ResourceQuota
+		// TODO(ary1992): Ennable the plugin once our base clusters are updated to k8s >= 1.30
+		// validating.PluginName,                     // ValidatingAdmissionPolicy
+		resourcequota.PluginName, // ResourceQuota
 	)
 }

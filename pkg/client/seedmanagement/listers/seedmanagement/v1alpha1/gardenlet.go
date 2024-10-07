@@ -8,8 +8,8 @@ package v1alpha1
 
 import (
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -26,25 +26,17 @@ type GardenletLister interface {
 
 // gardenletLister implements the GardenletLister interface.
 type gardenletLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1alpha1.Gardenlet]
 }
 
 // NewGardenletLister returns a new GardenletLister.
 func NewGardenletLister(indexer cache.Indexer) GardenletLister {
-	return &gardenletLister{indexer: indexer}
-}
-
-// List lists all Gardenlets in the indexer.
-func (s *gardenletLister) List(selector labels.Selector) (ret []*v1alpha1.Gardenlet, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1alpha1.Gardenlet))
-	})
-	return ret, err
+	return &gardenletLister{listers.New[*v1alpha1.Gardenlet](indexer, v1alpha1.Resource("gardenlet"))}
 }
 
 // Gardenlets returns an object that can list and get Gardenlets.
 func (s *gardenletLister) Gardenlets(namespace string) GardenletNamespaceLister {
-	return gardenletNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return gardenletNamespaceLister{listers.NewNamespaced[*v1alpha1.Gardenlet](s.ResourceIndexer, namespace)}
 }
 
 // GardenletNamespaceLister helps list and get Gardenlets.
@@ -62,26 +54,5 @@ type GardenletNamespaceLister interface {
 // gardenletNamespaceLister implements the GardenletNamespaceLister
 // interface.
 type gardenletNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all Gardenlets in the indexer for a given namespace.
-func (s gardenletNamespaceLister) List(selector labels.Selector) (ret []*v1alpha1.Gardenlet, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1alpha1.Gardenlet))
-	})
-	return ret, err
-}
-
-// Get retrieves the Gardenlet from the indexer for a given namespace and name.
-func (s gardenletNamespaceLister) Get(name string) (*v1alpha1.Gardenlet, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1alpha1.Resource("gardenlet"), name)
-	}
-	return obj.(*v1alpha1.Gardenlet), nil
+	listers.ResourceIndexer[*v1alpha1.Gardenlet]
 }

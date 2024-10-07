@@ -28,20 +28,22 @@ var controllerdeploymentsKind = v1beta1.SchemeGroupVersion.WithKind("ControllerD
 
 // Get takes name of the controllerDeployment, and returns the corresponding controllerDeployment object, and an error if there is any.
 func (c *FakeControllerDeployments) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.ControllerDeployment, err error) {
+	emptyResult := &v1beta1.ControllerDeployment{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(controllerdeploymentsResource, name), &v1beta1.ControllerDeployment{})
+		Invokes(testing.NewRootGetActionWithOptions(controllerdeploymentsResource, name, options), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.ControllerDeployment), err
 }
 
 // List takes label and field selectors, and returns the list of ControllerDeployments that match those selectors.
 func (c *FakeControllerDeployments) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.ControllerDeploymentList, err error) {
+	emptyResult := &v1beta1.ControllerDeploymentList{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(controllerdeploymentsResource, controllerdeploymentsKind, opts), &v1beta1.ControllerDeploymentList{})
+		Invokes(testing.NewRootListActionWithOptions(controllerdeploymentsResource, controllerdeploymentsKind, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -60,25 +62,27 @@ func (c *FakeControllerDeployments) List(ctx context.Context, opts v1.ListOption
 // Watch returns a watch.Interface that watches the requested controllerDeployments.
 func (c *FakeControllerDeployments) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewRootWatchAction(controllerdeploymentsResource, opts))
+		InvokesWatch(testing.NewRootWatchActionWithOptions(controllerdeploymentsResource, opts))
 }
 
 // Create takes the representation of a controllerDeployment and creates it.  Returns the server's representation of the controllerDeployment, and an error, if there is any.
 func (c *FakeControllerDeployments) Create(ctx context.Context, controllerDeployment *v1beta1.ControllerDeployment, opts v1.CreateOptions) (result *v1beta1.ControllerDeployment, err error) {
+	emptyResult := &v1beta1.ControllerDeployment{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(controllerdeploymentsResource, controllerDeployment), &v1beta1.ControllerDeployment{})
+		Invokes(testing.NewRootCreateActionWithOptions(controllerdeploymentsResource, controllerDeployment, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.ControllerDeployment), err
 }
 
 // Update takes the representation of a controllerDeployment and updates it. Returns the server's representation of the controllerDeployment, and an error, if there is any.
 func (c *FakeControllerDeployments) Update(ctx context.Context, controllerDeployment *v1beta1.ControllerDeployment, opts v1.UpdateOptions) (result *v1beta1.ControllerDeployment, err error) {
+	emptyResult := &v1beta1.ControllerDeployment{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(controllerdeploymentsResource, controllerDeployment), &v1beta1.ControllerDeployment{})
+		Invokes(testing.NewRootUpdateActionWithOptions(controllerdeploymentsResource, controllerDeployment, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.ControllerDeployment), err
 }
@@ -92,7 +96,7 @@ func (c *FakeControllerDeployments) Delete(ctx context.Context, name string, opt
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeControllerDeployments) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(controllerdeploymentsResource, listOpts)
+	action := testing.NewRootDeleteCollectionActionWithOptions(controllerdeploymentsResource, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1beta1.ControllerDeploymentList{})
 	return err
@@ -100,10 +104,11 @@ func (c *FakeControllerDeployments) DeleteCollection(ctx context.Context, opts v
 
 // Patch applies the patch and returns the patched controllerDeployment.
 func (c *FakeControllerDeployments) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.ControllerDeployment, err error) {
+	emptyResult := &v1beta1.ControllerDeployment{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(controllerdeploymentsResource, name, pt, data, subresources...), &v1beta1.ControllerDeployment{})
+		Invokes(testing.NewRootPatchSubresourceActionWithOptions(controllerdeploymentsResource, name, pt, data, opts, subresources...), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1beta1.ControllerDeployment), err
 }

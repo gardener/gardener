@@ -12,6 +12,7 @@ import (
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -49,12 +50,12 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, seedCluster cluster.Clust
 			MaxConcurrentReconciles: ptr.Deref(r.ConcurrentSyncs, 0),
 		}).
 		WatchesRawSource(
-			source.Kind(seedCluster.GetCache(), &vpaautoscalingv1.VerticalPodAutoscaler{}),
-			&handler.EnqueueRequestForObject{}, builder.WithPredicates(
+			source.Kind[client.Object](seedCluster.GetCache(),
+				&vpaautoscalingv1.VerticalPodAutoscaler{},
+				&handler.EnqueueRequestForObject{},
 				vpaEvictionRequirementsManagedByControllerPredicate,
 				predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
-				predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}),
-			),
+				predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})),
 		).
 		Complete(r)
 }

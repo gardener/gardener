@@ -29,22 +29,24 @@ var workloadidentitiesKind = v1alpha1.SchemeGroupVersion.WithKind("WorkloadIdent
 
 // Get takes name of the workloadIdentity, and returns the corresponding workloadIdentity object, and an error if there is any.
 func (c *FakeWorkloadIdentities) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.WorkloadIdentity, err error) {
+	emptyResult := &v1alpha1.WorkloadIdentity{}
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(workloadidentitiesResource, c.ns, name), &v1alpha1.WorkloadIdentity{})
+		Invokes(testing.NewGetActionWithOptions(workloadidentitiesResource, c.ns, name, options), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.WorkloadIdentity), err
 }
 
 // List takes label and field selectors, and returns the list of WorkloadIdentities that match those selectors.
 func (c *FakeWorkloadIdentities) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.WorkloadIdentityList, err error) {
+	emptyResult := &v1alpha1.WorkloadIdentityList{}
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(workloadidentitiesResource, workloadidentitiesKind, c.ns, opts), &v1alpha1.WorkloadIdentityList{})
+		Invokes(testing.NewListActionWithOptions(workloadidentitiesResource, workloadidentitiesKind, c.ns, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -63,40 +65,43 @@ func (c *FakeWorkloadIdentities) List(ctx context.Context, opts v1.ListOptions) 
 // Watch returns a watch.Interface that watches the requested workloadIdentities.
 func (c *FakeWorkloadIdentities) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(workloadidentitiesResource, c.ns, opts))
+		InvokesWatch(testing.NewWatchActionWithOptions(workloadidentitiesResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a workloadIdentity and creates it.  Returns the server's representation of the workloadIdentity, and an error, if there is any.
 func (c *FakeWorkloadIdentities) Create(ctx context.Context, workloadIdentity *v1alpha1.WorkloadIdentity, opts v1.CreateOptions) (result *v1alpha1.WorkloadIdentity, err error) {
+	emptyResult := &v1alpha1.WorkloadIdentity{}
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(workloadidentitiesResource, c.ns, workloadIdentity), &v1alpha1.WorkloadIdentity{})
+		Invokes(testing.NewCreateActionWithOptions(workloadidentitiesResource, c.ns, workloadIdentity, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.WorkloadIdentity), err
 }
 
 // Update takes the representation of a workloadIdentity and updates it. Returns the server's representation of the workloadIdentity, and an error, if there is any.
 func (c *FakeWorkloadIdentities) Update(ctx context.Context, workloadIdentity *v1alpha1.WorkloadIdentity, opts v1.UpdateOptions) (result *v1alpha1.WorkloadIdentity, err error) {
+	emptyResult := &v1alpha1.WorkloadIdentity{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(workloadidentitiesResource, c.ns, workloadIdentity), &v1alpha1.WorkloadIdentity{})
+		Invokes(testing.NewUpdateActionWithOptions(workloadidentitiesResource, c.ns, workloadIdentity, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.WorkloadIdentity), err
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeWorkloadIdentities) UpdateStatus(ctx context.Context, workloadIdentity *v1alpha1.WorkloadIdentity, opts v1.UpdateOptions) (*v1alpha1.WorkloadIdentity, error) {
+func (c *FakeWorkloadIdentities) UpdateStatus(ctx context.Context, workloadIdentity *v1alpha1.WorkloadIdentity, opts v1.UpdateOptions) (result *v1alpha1.WorkloadIdentity, err error) {
+	emptyResult := &v1alpha1.WorkloadIdentity{}
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(workloadidentitiesResource, "status", c.ns, workloadIdentity), &v1alpha1.WorkloadIdentity{})
+		Invokes(testing.NewUpdateSubresourceActionWithOptions(workloadidentitiesResource, "status", c.ns, workloadIdentity, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.WorkloadIdentity), err
 }
@@ -111,7 +116,7 @@ func (c *FakeWorkloadIdentities) Delete(ctx context.Context, name string, opts v
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeWorkloadIdentities) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(workloadidentitiesResource, c.ns, listOpts)
+	action := testing.NewDeleteCollectionActionWithOptions(workloadidentitiesResource, c.ns, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.WorkloadIdentityList{})
 	return err
@@ -119,22 +124,24 @@ func (c *FakeWorkloadIdentities) DeleteCollection(ctx context.Context, opts v1.D
 
 // Patch applies the patch and returns the patched workloadIdentity.
 func (c *FakeWorkloadIdentities) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.WorkloadIdentity, err error) {
+	emptyResult := &v1alpha1.WorkloadIdentity{}
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(workloadidentitiesResource, c.ns, name, pt, data, subresources...), &v1alpha1.WorkloadIdentity{})
+		Invokes(testing.NewPatchSubresourceActionWithOptions(workloadidentitiesResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.WorkloadIdentity), err
 }
 
 // CreateToken takes the representation of a tokenRequest and creates it.  Returns the server's representation of the tokenRequest, and an error, if there is any.
 func (c *FakeWorkloadIdentities) CreateToken(ctx context.Context, workloadIdentityName string, tokenRequest *v1alpha1.TokenRequest, opts v1.CreateOptions) (result *v1alpha1.TokenRequest, err error) {
+	emptyResult := &v1alpha1.TokenRequest{}
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateSubresourceAction(workloadidentitiesResource, workloadIdentityName, "token", c.ns, tokenRequest), &v1alpha1.TokenRequest{})
+		Invokes(testing.NewCreateSubresourceActionWithOptions(workloadidentitiesResource, workloadIdentityName, "token", c.ns, tokenRequest, opts), emptyResult)
 
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.TokenRequest), err
 }

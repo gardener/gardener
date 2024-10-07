@@ -29,7 +29,7 @@ spec:
     - name: verticalpodautoscaler_status_recommendation_containerrecommendations_target_cpu
       help: Target cpu the VerticalPodAutoscaler recommends for the container.
       each:
-        type: Gauge
+        type: gauge
         gauge:
           labelsFromPath:
             container:
@@ -53,7 +53,7 @@ spec:
       help: Maximum cpu the container can use before the VerticalPodAutoscaler updater
         evicts it.
       each:
-        type: Gauge
+        type: gauge
         gauge:
           labelsFromPath:
             container:
@@ -77,7 +77,7 @@ spec:
       help: Minimum cpu the container can use before the VerticalPodAutoscaler updater
         evicts it.
       each:
-        type: Gauge
+        type: gauge
         gauge:
           labelsFromPath:
             container:
@@ -101,7 +101,7 @@ spec:
       help: Target cpu the VerticalPodAutoscaler recommends for the container ignoring
         bounds.
       each:
-        type: Gauge
+        type: gauge
         gauge:
           labelsFromPath:
             container:
@@ -125,7 +125,7 @@ spec:
       help: Minimum cpu the VerticalPodAutoscaler can set for containers matching
         the name.
       each:
-        type: Gauge
+        type: gauge
         gauge:
           labelsFromPath:
             container:
@@ -149,7 +149,7 @@ spec:
       help: Maximum cpu the VerticalPodAutoscaler can set for containers matching
         the name.
       each:
-        type: Gauge
+        type: gauge
         gauge:
           labelsFromPath:
             container:
@@ -172,7 +172,7 @@ spec:
     - name: verticalpodautoscaler_status_recommendation_containerrecommendations_target_memory
       help: Target memory the VerticalPodAutoscaler recommends for the container.
       each:
-        type: Gauge
+        type: gauge
         gauge:
           labelsFromPath:
             container:
@@ -196,7 +196,7 @@ spec:
       help: Maximum memory the container can use before the VerticalPodAutoscaler
         updater evicts it.
       each:
-        type: Gauge
+        type: gauge
         gauge:
           labelsFromPath:
             container:
@@ -220,7 +220,7 @@ spec:
       help: Minimum memory the container can use before the VerticalPodAutoscaler
         updater evicts it.
       each:
-        type: Gauge
+        type: gauge
         gauge:
           labelsFromPath:
             container:
@@ -244,7 +244,7 @@ spec:
       help: Target memory the VerticalPodAutoscaler recommends for the container ignoring
         bounds.
       each:
-        type: Gauge
+        type: gauge
         gauge:
           labelsFromPath:
             container:
@@ -268,7 +268,7 @@ spec:
       help: Minimum memory the VerticalPodAutoscaler can set for containers matching
         the name.
       each:
-        type: Gauge
+        type: gauge
         gauge:
           labelsFromPath:
             container:
@@ -292,7 +292,7 @@ spec:
       help: Maximum memory the VerticalPodAutoscaler can set for containers matching
         the name.
       each:
-        type: Gauge
+        type: gauge
         gauge:
           labelsFromPath:
             container:
@@ -315,7 +315,7 @@ spec:
     - name: verticalpodautoscaler_spec_updatepolicy_updatemode
       help: Update mode of the VerticalPodAutoscaler.
       each:
-        type: StateSet
+        type: stateset
         gauge: null
         stateSet:
           labelsFromPath: {}

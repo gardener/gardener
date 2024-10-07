@@ -10,6 +10,7 @@ import (
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -113,7 +114,7 @@ func New(mgr manager.Manager, args Args) (*Webhook, error) {
 		ObjectSelector:    args.ObjectSelector,
 		Path:              args.Path,
 		Target:            args.Target,
-		Webhook:           &admission.Webhook{Handler: handler, RecoverPanic: true},
+		Webhook:           &admission.Webhook{Handler: handler, RecoverPanic: ptr.To(true)},
 		Types:             objTypes,
 	}, nil
 }

@@ -5,7 +5,7 @@ metadata:
   labels:
     gardener.cloud/deletion-protected: "true"
   annotations:
-    controller-gen.kubebuilder.io/version: v0.14.0
+    controller-gen.kubebuilder.io/version: v0.16.1
   name: bastions.extensions.gardener.cloud
 spec:
   group: extensions.gardener.cloud
@@ -89,6 +89,7 @@ spec:
                           items:
                             type: string
                           type: array
+                          x-kubernetes-list-type: atomic
                       required:
                       - cidr
                       type: object
@@ -200,8 +201,6 @@ spec:
                               CamelCase names
                             - cloud provider specific error values must have names that comply with the
                               format foo.example.com/CamelCase.
-                            ---
-                            The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
                           maxLength: 316
                           pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                           type: string
@@ -211,12 +210,12 @@ spec:
                           format: int32
                           type: integer
                         protocol:
-                          default: TCP
                           description: |-
                             Protocol is the protocol of the service port of which status is recorded here
                             The supported values are: "TCP", "UDP", "SCTP"
                           type: string
                       required:
+                      - error
                       - port
                       - protocol
                       type: object

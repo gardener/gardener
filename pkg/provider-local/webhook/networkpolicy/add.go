@@ -7,6 +7,7 @@ package networkpolicy
 import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -54,7 +55,7 @@ func AddToManagerWithOptions(mgr manager.Manager, _ AddOptions) (*extensionswebh
 		Types:    types,
 		Target:   extensionswebhook.TargetSeed,
 		Path:     name,
-		Webhook:  &admission.Webhook{Handler: handler, RecoverPanic: true},
+		Webhook:  &admission.Webhook{Handler: handler, RecoverPanic: ptr.To(true)},
 		NamespaceSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
 			{Key: v1beta1constants.LabelSeedProvider, Operator: metav1.LabelSelectorOpIn, Values: []string{provider}},
 		}},

@@ -137,7 +137,7 @@ func NewOptions() *Options {
 		schema.GroupKind{Group: gardencorev1beta1.GroupName},
 	)
 	apiserver.RegisterAllAdmissionPlugins(o.Recommended.Admission.Plugins)
-	o.Recommended.Admission.DefaultOffPlugins = sets.NewString(sets.List(sets.New(plugin.AllPluginNames()...).Difference(plugin.DefaultOnPlugins()))...)
+	o.Recommended.Admission.DefaultOffPlugins = sets.New(sets.List(sets.New(plugin.AllPluginNames()...).Difference(plugin.DefaultOnPlugins()))...)
 	o.Recommended.Admission.RecommendedPluginOrder = plugin.AllPluginNames()
 
 	return o
@@ -383,7 +383,6 @@ func (o *Options) ApplyTo(config *apiserver.Config, kubeClient kubernetes.Interf
 	gardenerAPIServerConfig := config.GenericConfig
 
 	gardenerVersion := version.Get()
-	gardenerAPIServerConfig.Version = &gardenerVersion
 	gardenerAPIServerConfig.OpenAPIV3Config = genericapiserver.DefaultOpenAPIV3Config(openapi.GetOpenAPIDefinitions, openapinamer.NewDefinitionNamer(api.Scheme))
 	gardenerAPIServerConfig.OpenAPIV3Config.Info.Title = "Gardener"
 	gardenerAPIServerConfig.OpenAPIV3Config.Info.Version = gardenerVersion.GitVersion

@@ -45,7 +45,7 @@ var _ = Describe("handler", func() {
 			log logr.Logger
 
 			request admission.Request
-			decoder *admission.Decoder
+			decoder admission.Decoder
 			handler admission.Handler
 
 			ctrl *gomock.Controller

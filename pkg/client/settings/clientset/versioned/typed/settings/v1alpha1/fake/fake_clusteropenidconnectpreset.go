@@ -28,20 +28,22 @@ var clusteropenidconnectpresetsKind = v1alpha1.SchemeGroupVersion.WithKind("Clus
 
 // Get takes name of the clusterOpenIDConnectPreset, and returns the corresponding clusterOpenIDConnectPreset object, and an error if there is any.
 func (c *FakeClusterOpenIDConnectPresets) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ClusterOpenIDConnectPreset, err error) {
+	emptyResult := &v1alpha1.ClusterOpenIDConnectPreset{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(clusteropenidconnectpresetsResource, name), &v1alpha1.ClusterOpenIDConnectPreset{})
+		Invokes(testing.NewRootGetActionWithOptions(clusteropenidconnectpresetsResource, name, options), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.ClusterOpenIDConnectPreset), err
 }
 
 // List takes label and field selectors, and returns the list of ClusterOpenIDConnectPresets that match those selectors.
 func (c *FakeClusterOpenIDConnectPresets) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.ClusterOpenIDConnectPresetList, err error) {
+	emptyResult := &v1alpha1.ClusterOpenIDConnectPresetList{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(clusteropenidconnectpresetsResource, clusteropenidconnectpresetsKind, opts), &v1alpha1.ClusterOpenIDConnectPresetList{})
+		Invokes(testing.NewRootListActionWithOptions(clusteropenidconnectpresetsResource, clusteropenidconnectpresetsKind, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -60,25 +62,27 @@ func (c *FakeClusterOpenIDConnectPresets) List(ctx context.Context, opts v1.List
 // Watch returns a watch.Interface that watches the requested clusterOpenIDConnectPresets.
 func (c *FakeClusterOpenIDConnectPresets) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewRootWatchAction(clusteropenidconnectpresetsResource, opts))
+		InvokesWatch(testing.NewRootWatchActionWithOptions(clusteropenidconnectpresetsResource, opts))
 }
 
 // Create takes the representation of a clusterOpenIDConnectPreset and creates it.  Returns the server's representation of the clusterOpenIDConnectPreset, and an error, if there is any.
 func (c *FakeClusterOpenIDConnectPresets) Create(ctx context.Context, clusterOpenIDConnectPreset *v1alpha1.ClusterOpenIDConnectPreset, opts v1.CreateOptions) (result *v1alpha1.ClusterOpenIDConnectPreset, err error) {
+	emptyResult := &v1alpha1.ClusterOpenIDConnectPreset{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(clusteropenidconnectpresetsResource, clusterOpenIDConnectPreset), &v1alpha1.ClusterOpenIDConnectPreset{})
+		Invokes(testing.NewRootCreateActionWithOptions(clusteropenidconnectpresetsResource, clusterOpenIDConnectPreset, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.ClusterOpenIDConnectPreset), err
 }
 
 // Update takes the representation of a clusterOpenIDConnectPreset and updates it. Returns the server's representation of the clusterOpenIDConnectPreset, and an error, if there is any.
 func (c *FakeClusterOpenIDConnectPresets) Update(ctx context.Context, clusterOpenIDConnectPreset *v1alpha1.ClusterOpenIDConnectPreset, opts v1.UpdateOptions) (result *v1alpha1.ClusterOpenIDConnectPreset, err error) {
+	emptyResult := &v1alpha1.ClusterOpenIDConnectPreset{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(clusteropenidconnectpresetsResource, clusterOpenIDConnectPreset), &v1alpha1.ClusterOpenIDConnectPreset{})
+		Invokes(testing.NewRootUpdateActionWithOptions(clusteropenidconnectpresetsResource, clusterOpenIDConnectPreset, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.ClusterOpenIDConnectPreset), err
 }
@@ -92,7 +96,7 @@ func (c *FakeClusterOpenIDConnectPresets) Delete(ctx context.Context, name strin
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeClusterOpenIDConnectPresets) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(clusteropenidconnectpresetsResource, listOpts)
+	action := testing.NewRootDeleteCollectionActionWithOptions(clusteropenidconnectpresetsResource, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.ClusterOpenIDConnectPresetList{})
 	return err
@@ -100,10 +104,11 @@ func (c *FakeClusterOpenIDConnectPresets) DeleteCollection(ctx context.Context, 
 
 // Patch applies the patch and returns the patched clusterOpenIDConnectPreset.
 func (c *FakeClusterOpenIDConnectPresets) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ClusterOpenIDConnectPreset, err error) {
+	emptyResult := &v1alpha1.ClusterOpenIDConnectPreset{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(clusteropenidconnectpresetsResource, name, pt, data, subresources...), &v1alpha1.ClusterOpenIDConnectPreset{})
+		Invokes(testing.NewRootPatchSubresourceActionWithOptions(clusteropenidconnectpresetsResource, name, pt, data, opts, subresources...), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v1alpha1.ClusterOpenIDConnectPreset), err
 }

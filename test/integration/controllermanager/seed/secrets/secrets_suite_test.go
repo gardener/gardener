@@ -15,8 +15,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -100,6 +102,9 @@ var _ = BeforeSuite(func() {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 				},
 			},
+		},
+		Controller: controllerconfig.Controller{
+			SkipNameValidation: ptr.To(true),
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())

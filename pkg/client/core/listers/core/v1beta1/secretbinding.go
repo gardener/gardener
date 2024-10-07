@@ -8,8 +8,8 @@ package v1beta1
 
 import (
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -26,25 +26,17 @@ type SecretBindingLister interface {
 
 // secretBindingLister implements the SecretBindingLister interface.
 type secretBindingLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1beta1.SecretBinding]
 }
 
 // NewSecretBindingLister returns a new SecretBindingLister.
 func NewSecretBindingLister(indexer cache.Indexer) SecretBindingLister {
-	return &secretBindingLister{indexer: indexer}
-}
-
-// List lists all SecretBindings in the indexer.
-func (s *secretBindingLister) List(selector labels.Selector) (ret []*v1beta1.SecretBinding, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1beta1.SecretBinding))
-	})
-	return ret, err
+	return &secretBindingLister{listers.New[*v1beta1.SecretBinding](indexer, v1beta1.Resource("secretbinding"))}
 }
 
 // SecretBindings returns an object that can list and get SecretBindings.
 func (s *secretBindingLister) SecretBindings(namespace string) SecretBindingNamespaceLister {
-	return secretBindingNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return secretBindingNamespaceLister{listers.NewNamespaced[*v1beta1.SecretBinding](s.ResourceIndexer, namespace)}
 }
 
 // SecretBindingNamespaceLister helps list and get SecretBindings.
@@ -62,26 +54,5 @@ type SecretBindingNamespaceLister interface {
 // secretBindingNamespaceLister implements the SecretBindingNamespaceLister
 // interface.
 type secretBindingNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all SecretBindings in the indexer for a given namespace.
-func (s secretBindingNamespaceLister) List(selector labels.Selector) (ret []*v1beta1.SecretBinding, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1beta1.SecretBinding))
-	})
-	return ret, err
-}
-
-// Get retrieves the SecretBinding from the indexer for a given namespace and name.
-func (s secretBindingNamespaceLister) Get(name string) (*v1beta1.SecretBinding, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1beta1.Resource("secretbinding"), name)
-	}
-	return obj.(*v1beta1.SecretBinding), nil
+	listers.ResourceIndexer[*v1beta1.SecretBinding]
 }

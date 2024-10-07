@@ -13,7 +13,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	. "github.com/gardener/gardener/pkg/controllerutils"
@@ -22,35 +21,16 @@ import (
 var _ = Describe("Source", func() {
 	var (
 		ctx   = context.Background()
-		queue workqueue.RateLimitingInterface
+		queue workqueue.TypedRateLimitingInterface[reconcile.Request]
 	)
 
 	BeforeEach(func() {
-		queue = workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
+		queue = workqueue.NewTypedRateLimitingQueue(workqueue.DefaultTypedControllerRateLimiter[reconcile.Request]())
 	})
 
 	Describe("#EnqueueOnce", func() {
 		It("should enqueue an empty request", func() {
-			Expect(EnqueueOnce(ctx, nil, queue)).To(Succeed())
-			Expect(queue.Len()).To(Equal(1))
-
-			item, v := queue.Get()
-			Expect(item).To(Equal(reconcile.Request{}))
-			Expect(v).To(BeFalse())
-		})
-	})
-
-	Describe("#HandleOnce", func() {
-		var (
-			eventHandler = handler.Funcs{
-				CreateFunc: func(_ context.Context, _ event.CreateEvent, queue workqueue.RateLimitingInterface) {
-					queue.Add(reconcile.Request{})
-				},
-			}
-		)
-
-		It("should enqueue an empty request", func() {
-			Expect(HandleOnce(ctx, eventHandler, queue)).To(Succeed())
+			Expect(EnqueueOnce(ctx, queue)).To(Succeed())
 			Expect(queue.Len()).To(Equal(1))
 
 			item, v := queue.Get()

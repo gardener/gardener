@@ -44,7 +44,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 			Reconciler:              r,
 			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
 			// if going into exponential backoff, wait at most the configured sync period
-			RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), r.Config.SyncPeriod.Duration),
+			RateLimiter: workqueue.NewTypedWithMaxWaitRateLimiter(workqueue.DefaultTypedControllerRateLimiter[reconcile.Request](), r.Config.SyncPeriod.Duration),
 		},
 	)
 	if err != nil {
@@ -52,19 +52,20 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 
 	return c.Watch(
-		source.Kind(mgr.GetCache(), &gardencorev1beta1.ControllerInstallation{}),
-		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapControllerInstallationToSeed), mapper.UpdateWithNew, c.GetLogger()),
-		predicateutils.RelevantConditionsChanged(
-			func(obj client.Object) []gardencorev1beta1.Condition {
-				controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
-				if !ok {
-					return nil
-				}
-				return controllerInstallation.Status.Conditions
-			},
-			conditionsToCheck...,
-		),
-	)
+		source.Kind[client.Object](mgr.GetCache(),
+			&gardencorev1beta1.ControllerInstallation{},
+			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapControllerInstallationToSeed), mapper.UpdateWithNew, c.GetLogger()),
+			predicateutils.RelevantConditionsChanged(
+				func(obj client.Object) []gardencorev1beta1.Condition {
+					controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
+					if !ok {
+						return nil
+					}
+					return controllerInstallation.Status.Conditions
+				},
+				conditionsToCheck...,
+			),
+		))
 }
 
 // MapControllerInstallationToSeed is a mapper.MapFunc for mapping a ControllerInstallation to the referenced Seed.
