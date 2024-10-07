@@ -1315,8 +1315,6 @@ type KubeletConfig struct {
 	// +optional
 	RegistryBurst *int32 `json:"registryBurst,omitempty" protobuf:"varint,20,opt,name=registryBurst"`
 	// SeccompDefault enables the use of `RuntimeDefault` as the default seccomp profile for all workloads.
-	// This requires the corresponding SeccompDefault feature gate to be enabled as well.
-	// This field is only available for Kubernetes v1.25 or later.
 	// +optional
 	SeccompDefault *bool `json:"seccompDefault,omitempty" protobuf:"varint,21,opt,name=seccompDefault"`
 	// A quantity defines the maximum size of the container log file before it is rotated. For example: "5Mi" or "256Ki".

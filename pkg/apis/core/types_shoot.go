@@ -1009,8 +1009,6 @@ type KubeletConfig struct {
 	// Only used if registryPullQPS is greater than 0.
 	RegistryBurst *int32
 	// SeccompDefault enables the use of `RuntimeDefault` as the default seccomp profile for all workloads.
-	// This requires the corresponding SeccompDefault feature gate to be enabled as well.
-	// This field is only available for Kubernetes v1.25 or later.
 	SeccompDefault *bool
 	// ProtectKernelDefaults ensures that the kernel tunables are equal to the kubelet defaults.
 	// Defaults to true for Kubernetes v1.26 or later.

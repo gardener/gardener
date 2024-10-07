@@ -2767,7 +2767,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Mode:             &mode,
 				}
 				shoot.Spec.Kubernetes.KubeProxy = &config
-				shoot.Spec.Kubernetes.Version = "1.25.1"
+				shoot.Spec.Kubernetes.Version = "1.28.1"
 				oldMode := core.ProxyMode("IPTables")
 				oldConfig := core.KubeProxyConfig{
 					KubernetesConfig: kubernetesConfig,
@@ -6852,30 +6852,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errList).To(BeEmpty())
 			})
 		})
-
-		DescribeTable("SeccompDefault",
-			func(version string, SeccompDefaultEnabled bool, SeccompDefaultFeatureGate *bool, matcher gomegatypes.GomegaMatcher) {
-				kubeletConfig := core.KubeletConfig{
-					SeccompDefault: &SeccompDefaultEnabled,
-				}
-				if SeccompDefaultFeatureGate != nil {
-					kubeletConfig.FeatureGates = make(map[string]bool)
-					kubeletConfig.FeatureGates["SeccompDefault"] = *SeccompDefaultFeatureGate
-				}
-
-				errList := ValidateKubeletConfig(kubeletConfig, version, nil)
-
-				Expect(errList).To(matcher)
-			},
-
-			Entry("valid configuration", "1.25", true, nil, BeEmpty()),
-			Entry("valid configuration with set feature gate", "1.25", true, ptr.To(true), BeEmpty()),
-			Entry("do not allow to set SeccompDefault to true when feature gate is disabled", "1.25", true, ptr.To(false), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal(field.ErrorTypeForbidden),
-				"Field":  Equal("seccompDefault"),
-				"Detail": Equal("seccomp defaulting is not available when kubelet's 'SeccompDefault' feature gate is disabled"),
-			})))),
-		)
 
 		validResourceQuantity := resource.MustParse(validResourceQuantityValueMi)
 		invalidResourceQuantity := resource.MustParse(invalidResourceQuantityValue)

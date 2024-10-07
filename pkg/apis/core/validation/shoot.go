@@ -1943,11 +1943,6 @@ func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, version string, fld
 	if v := kubeletConfig.RegistryBurst; v != nil {
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*v), fldPath.Child("registryBurst"))...)
 	}
-	if v := kubeletConfig.SeccompDefault; v != nil {
-		if featureGateEnabled, ok := kubeletConfig.FeatureGates["SeccompDefault"]; ok && !featureGateEnabled && *v {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("seccompDefault"), "seccomp defaulting is not available when kubelet's 'SeccompDefault' feature gate is disabled"))
-		}
-	}
 	if v := kubeletConfig.ContainerLogMaxFiles; v != nil {
 		if *v < 2 {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("containerLogMaxFiles"), *v, "value must be >= 2."))
