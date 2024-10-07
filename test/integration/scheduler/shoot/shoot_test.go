@@ -656,7 +656,7 @@ func createCloudProfile(region string) *gardencorev1beta1.CloudProfile {
 		},
 		Spec: gardencorev1beta1.CloudProfileSpec{
 			Kubernetes: gardencorev1beta1.KubernetesSettings{
-				Versions: []gardencorev1beta1.ExpirableVersion{{Version: "1.25.1"}},
+				Versions: []gardencorev1beta1.ExpirableVersion{{Version: "1.31.1"}},
 			},
 			MachineImages: []gardencorev1beta1.MachineImage{
 				{
@@ -721,7 +721,7 @@ func createShoot(cloudProfile, region string, schedulerName, dnsDomain *string, 
 				Nodes:    ptr.To("10.5.0.0/16"),
 				Type:     ptr.To("some-type"),
 			},
-			Kubernetes:         gardencorev1beta1.Kubernetes{Version: "1.25.1"},
+			Kubernetes:         gardencorev1beta1.Kubernetes{Version: "1.30.1"},
 			SecretBindingName:  ptr.To(testSecretBinding.Name),
 			SchedulerName:      schedulerName,
 			DNS:                &gardencorev1beta1.DNS{Domain: dnsDomain},
