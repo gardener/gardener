@@ -278,7 +278,7 @@ This section highlights the most prominent fields:
   This section allows you to define a few specific settings for the dashboard.
   `sessionLifetime` is the duration after which a session is terminated (i.e., after which a user is automatically logged out).
   `additionalScopes` allows to extend the list of scopes of the JWT token that are to be recognized.
-  You must reference a `Secret` in the `garden` namespace containing the client ID/secret for the dashboard:
+  You must reference a `Secret` in the `garden` namespace containing the client and, if applicable, the client secret for the dashboard:
   ```yaml
   apiVersion: v1
   kind: Secret
@@ -287,9 +287,10 @@ This section highlights the most prominent fields:
     namespace: garden
   type: Opaque
   stringData:
-    client_id: <secret>
-    client_secret: <secret>
+    client_id: <client_id>
+    client_secret: <optional>
   ```
+  If using a public client, a client secret is not required. The dashboard can function as a public OIDC client, allowing for improved flexibility in environments where secret storage is not feasible.
 - `enableTokenLogin`: This is enabled by default and allows logging into the dashboard with a JWT token.
   You can disable it in case you want to only allow OIDC-based login.
   However, at least one of the both login methods must be enabled.

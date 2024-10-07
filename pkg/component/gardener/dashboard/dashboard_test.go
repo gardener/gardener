@@ -1012,9 +1012,9 @@ frontend:
 						Type:      corev1.SecretTypeOpaque,
 						Immutable: ptr.To(true),
 						Data: map[string][]byte{
-							"password": []byte("________________________________"),
+							"password": []byte("____________previous____________"),
 							"username": []byte("admin"),
-							"auth":     []byte("admin:$2y$05$VV/caJeJ0XEza7sc5hHib.uppkej805AYCGAKbSCbZwPz6INJy07G"),
+							"auth":     []byte("admin:$2a$12$nufeOsvYvptwZo4y3SIbmeBKnrBK/w5aBy6HtFAd6VCepQvJ4BNdG"),
 						},
 					}
 					Expect(fakeClient.Create(ctx, sessionSecretPrevious)).To(Succeed())
