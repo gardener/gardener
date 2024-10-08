@@ -55,7 +55,7 @@ However, the most important section is the `.spec.providerConfig` and the `.spec
 The first one contains an embedded declaration of the provider specific configuration for the control plane (that cannot be known by Gardener itself).
 You are responsible for designing how this configuration looks like.
 Gardener does not evaluate it but just copies this part from what has been provided by the end-user in the `Shoot` resource.
-The second one contains the output of the [`Infrastructure` resource](infrastructure.md) (that might be relevant for the CCM config).
+The second one contains the output of the [`Infrastructure` resource](./extension-resources/infrastructure.md) (that might be relevant for the CCM config).
 
 In order to support a new control plane provider, you need to write a controller that watches all `ControlPlane`s with `.spec.type=<my-provider-name>`.
 You can take a look at the below referenced example implementation for the Alicloud provider.
