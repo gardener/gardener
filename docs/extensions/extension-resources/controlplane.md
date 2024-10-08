@@ -75,5 +75,5 @@ They are part of the [`Cluster` extension resource](cluster.md) and can be used 
 
 ## References and Additional Resources
 
-* [`ControlPlane` API (Golang Specification)](../../pkg/apis/extensions/v1alpha1/types_controlplane.go)
+* [`ControlPlane` API (Golang Specification)](../../../pkg/apis/extensions/v1alpha1/types_controlplane.go)
 * [Exemplary Implementation for the Alicloud Provider](https://github.com/gardener/gardener-extension-provider-alicloud/tree/master/pkg/controller/controlplane)

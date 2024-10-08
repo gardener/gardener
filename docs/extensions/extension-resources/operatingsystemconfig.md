@@ -38,11 +38,11 @@ This way we can extend the "original" user-data without any size restrictions (e
 The high-level flow is as follows:
 
 1. For every worker pool `X` in the `Shoot` specification, Gardener creates a `Secret` named `cloud-config-<X>` in the `kube-system` namespace of the shoot cluster. The secret contains the "original" `OperatingSystemConfig` (i.e., systemd units and files for `kubelet`, etc.).
-2. Gardener generates a kubeconfig with minimal permissions just allowing reading these secrets. It is used by the `gardener-node-agent` later.
-3. Gardener provides the `gardener-node-init.sh` bash script and the machine image stated in the `Shoot` specification to the machine-controller-manager.
-4. Based on this information, the machine-controller-manager creates the VM.
-5. After the VM has been provisioned, the `gardener-node-init.sh` script starts, fetches the `gardener-node-agent` binary, and starts it.
-6. The `gardener-node-agent` will read the `gardener-node-agent-<X>` `Secret` for its worker pool (containing the "original" `OperatingSystemConfig`), and reconciles it.
+1. Gardener generates a kubeconfig with minimal permissions just allowing reading these secrets. It is used by the `gardener-node-agent` later.
+1. Gardener provides the `gardener-node-init.sh` bash script and the machine image stated in the `Shoot` specification to the machine-controller-manager.
+1. Based on this information, the machine-controller-manager creates the VM.
+1. After the VM has been provisioned, the `gardener-node-init.sh` script starts, fetches the `gardener-node-agent` binary, and starts it.
+1. The `gardener-node-agent` will read the `gardener-node-agent-<X>` `Secret` for its worker pool (containing the "original" `OperatingSystemConfig`), and reconciles it.
 
 The `gardener-node-agent` can update itself in case of newer Gardener versions, and it performs a continuous reconciliation of the systemd units and files in the provided `OperatingSystemConfig` (just like any other Kubernetes controller).
 
@@ -111,7 +111,7 @@ It contains the `gardener-node-init.sh` script and systemd unit.
 The OS controller has to translate the `.spec.units` and `.spec.files` into configuration that fits to the operating system.
 For example, a Flatcar controller might generate a [CoreOS cloud-config](https://github.com/flatcar/coreos-cloudinit/blob/flatcar-master/Documentation/cloud-config-examples.md) or [Ignition](https://coreos.com/ignition/docs/latest/what-is-ignition.html), SLES might generate [cloud-init](https://cloudinit.readthedocs.io/en/latest/), and others might simply generate a bash script translating the `.spec.units` into `systemd` units, and `.spec.files` into real files on the disk.
 
-> ⚠️ Please avoid mixing in additional systemd units or files - this step should just translate what `gardenlet` put into `.spec.units` and `.spec.files`. 
+> ⚠️ Please avoid mixing in additional systemd units or files - this step should just translate what `gardenlet` put into `.spec.units` and `.spec.files`.
 
 After generation, extension controllers are asked to store their OS config inside a `Secret` (as it might contain confidential data) in the same namespace.
 The secret's `.data` could look like this:
@@ -190,9 +190,10 @@ You can find an example implementation [here](../../pkg/provider-local/controlle
 `gardenlet` adds a file with the content `<<BOOTSTRAP_TOKEN>>` to the `OperatingSystemConfig` with purpose `provision` and sets `transmitUnencoded=true`.
 This instructs the responsible OS extension to pass this file (with its content in clear-text) to the corresponding `Worker` resource.
 
-`machine-controller-manager` makes sure that
+`machine-controller-manager` makes sure that:
+
 - a bootstrap token gets created per machine
-- the `<<BOOTSTRAP_TOKEN>>` string in the user data of the machine gets replaced by the generated token.
+- the `<<BOOTSTRAP_TOKEN>>` string in the user data of the machine gets replaced by the generated token
 
 After the machine has been bootstrapped, the token secret in the shoot cluster gets deleted again.
 
@@ -256,8 +257,8 @@ For example, a CoreOS controller might generate a [CoreOS cloud-config](https://
 
 `OperatingSystemConfig`s can have two purposes which can be used (or ignored) by the extension controllers: either `provision` or `reconcile`.
 
-* The `provision` purpose is used by Gardener for the user-data that it later passes to the machine-controller-manager (and then to the provider's API) when creating new VMs. It contains the `gardener-node-init` unit.
-* The `reconcile` purpose contains the "original" user-data (that is then stored in `Secret`s in the shoot's `kube-system` namespace (see step 1). This is downloaded and applies late (see step 5).
+- The `provision` purpose is used by Gardener for the user-data that it later passes to the machine-controller-manager (and then to the provider's API) when creating new VMs. It contains the `gardener-node-init` unit.
+- The `reconcile` purpose contains the "original" user-data (that is then stored in `Secret`s in the shoot's `kube-system` namespace (see step 1)). This is downloaded and applies late (see step 5).
 
 As described above, the "original" user-data must be re-applicable to allow in-place updates.
 The way how this is done is specific to the generated operating system config (e.g., for CoreOS cloud-init the command is `/usr/bin/coreos-cloudinit --from-file=<path>`, whereas SLES would run `cloud-init --file <path> single -n write_files --frequency=once`).
@@ -339,6 +340,7 @@ spec:
 ```
 
 To support `containerd`, an OS extension must satisfy the following criteria:
+
 1. The operating system must have built-in [containerd](https://containerd.io/) and [ctr (client CLI)](https://github.com/projectatomic/containerd/blob/master/docs/cli.md/).
 1. `containerd` must listen on its default socket path: `unix:///run/containerd/containerd.sock`
 1. `containerd` must be configured to work with the default configuration file in: `/etc/containerd/config.toml` (Created by Gardener).
@@ -359,5 +361,5 @@ OS extensions might also overwrite the cgroup driver for containerd and kubelet.
 
 ## References and Additional Resources
 
-* [`OperatingSystemConfig` API (Golang Specification)](../../pkg/apis/extensions/v1alpha1/types_operatingsystemconfig.go)
-* [Gardener Node Agent](../concepts/node-agent.md)
+- [`OperatingSystemConfig` API (Golang Specification)](../../../pkg/apis/extensions/v1alpha1/types_operatingsystemconfig.go)
+- [Gardener Node Agent](../../concepts/node-agent.md)

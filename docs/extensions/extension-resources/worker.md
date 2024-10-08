@@ -336,7 +336,7 @@ They are part of the [`Cluster` extension resource](cluster.md) and can be used 
 
 ## References and Additional Resources
 
-* [`Worker` API (Golang Specification)](../../pkg/apis/extensions/v1alpha1/types_worker.go)
-* [Extension Controller Library](../../extensions/)
-* [Generic Worker Controller](../../extensions/pkg/controller/worker)
+* [`Worker` API (Golang Specification)](../../../pkg/apis/extensions/v1alpha1/types_worker.go)
+* [Extension Controller Library](../../../extensions/)
+* [Generic Worker Controller](../../../extensions/pkg/controller/worker)
 * [Exemplary Implementation for the AWS Provider](https://github.com/gardener/gardener-extension-provider-aws/tree/master/pkg/controller/worker)

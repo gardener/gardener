@@ -47,6 +47,6 @@ The `Validate` method returns a list of errors. If this list is non-empty, the g
 
 ## References and Additional Resources
 
-* [`Bastion` API Reference](../api-reference/extensions.md#bastion)
+* [`Bastion` API Reference](../../api-reference/extensions.md#bastion)
 * [Exemplary Implementation for the AWS Provider](https://github.com/gardener/gardener-extension-provider-aws/tree/master/pkg/controller/bastion)
-* [GEP-15](../proposals/15-manage-bastions-and-ssh-key-pair-rotation.md)
+* [GEP-15](../../proposals/15-manage-bastions-and-ssh-key-pair-rotation.md)
