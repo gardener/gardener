@@ -1180,8 +1180,8 @@ func validateShootWorkersForRemovedMachineImageVersions(channel chan error, shoo
 		}
 
 		if removedMachineImageVersions[worker.Machine.Image.Name].Has(*worker.Machine.Image.Version) {
-			parentVersion := parentCloudProfileMachineImageVersions[worker.Machine.Image.Name][*worker.Machine.Image.Version]
-			if parentVersion.ExpirationDate != nil && parentVersion.ExpirationDate.Before(&metav1.Time{Time: time.Now()}) {
+			parentVersion, exists := parentCloudProfileMachineImageVersions[worker.Machine.Image.Name][*worker.Machine.Image.Version]
+			if !exists || parentVersion.ExpirationDate != nil && parentVersion.ExpirationDate.Before(&metav1.Time{Time: time.Now()}) {
 				channel <- fmt.Errorf("unable to delete Machine image version '%s/%s' from NamespacedCloudProfile '%s/%s' - version is still in use by shoot '%s/%s' by worker %q", worker.Machine.Image.Name, *worker.Machine.Image.Version, namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, shoot.Namespace, shoot.Name, worker.Name)
 			}
 		}
