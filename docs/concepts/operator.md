@@ -122,7 +122,7 @@ The `spec.virtualCluster.kubernetes.kubeAPIServer.encryptionConfig` field in the
 ## `Extension` Resource
 
 A Gardener installation relies on extensions to provide support for new cloud providers or to add new capabilities.
-You can find out more about Gardener extensions and how they can be used [here](../extensions/extension.md#contract-extension-resource).
+You can find out more about Gardener extensions and how they can be used [here](../extensions/extension-resources/extension.md#contract-extension-resource).
 
 The `Extension` resource is intended to automate the installation and management of extensions in a Gardener landscape.
 It contains configuration for the following scenarios:

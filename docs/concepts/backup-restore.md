@@ -12,7 +12,7 @@ Kubernetes uses [etcd](https://etcd.io/) as the key-value store for its resource
 Gardener uses an [etcd-backup-restore](https://github.com/gardener/etcd-backup-restore) component to backup the etcd backing the Shoot cluster regularly and restore it in case of disaster. It is deployed as sidecar via [etcd-druid](https://github.com/gardener/etcd-druid). This doc mainly focuses on the backup and restore configuration used by Gardener when deploying these components. For more details on the design and internal implementation details, please refer to [GEP-06](../proposals/06-etcd-druid.md) and the documentation on individual repositories.
 
 ## Bucket Provisioning
-Refer to the [backup bucket extension document](../extensions/backupbucket.md) to find out details about configuring the backup bucket.
+Refer to the [backup bucket extension document](../extensions/extension-resources/backupbucket.md) to find out details about configuring the backup bucket.
 
 ## Backup Policy
 etcd-backup-restore supports full snapshot and delta snapshots over full snapshot. In Gardener, this configuration is currently hard-coded to the following parameters:
