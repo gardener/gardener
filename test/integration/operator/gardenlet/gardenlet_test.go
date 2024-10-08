@@ -26,8 +26,9 @@ import (
 
 var _ = Describe("Gardenlet controller test", func() {
 	var (
-		gardenlet *seedmanagementv1alpha1.Gardenlet
-		seed      *gardencorev1beta1.Seed
+		gardenlet           *seedmanagementv1alpha1.Gardenlet
+		gardenletDeployment *appsv1.Deployment
+		seed                *gardencorev1beta1.Seed
 	)
 
 	BeforeEach(func() {
@@ -98,6 +99,8 @@ var _ = Describe("Gardenlet controller test", func() {
 				Config: *gardenletConfig,
 			},
 		}
+
+		gardenletDeployment = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardenlet", Namespace: testNamespace.Name}}
 	})
 
 	JustBeforeEach(func() {
@@ -113,6 +116,12 @@ var _ = Describe("Gardenlet controller test", func() {
 			Eventually(func() error {
 				return mgrClient.Get(ctx, client.ObjectKeyFromObject(gardenlet), gardenlet)
 			}).Should(BeNotFoundError())
+
+			By("Delete and wait for Gardenlet deployment to be gone")
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Delete(ctx, gardenletDeployment)).To(Or(Succeed(), BeNotFoundError()))
+				g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(gardenletDeployment), gardenletDeployment)).Should(BeNotFoundError())
+			}).Should(Succeed())
 		})
 	})
 
@@ -162,9 +171,8 @@ var _ = Describe("Gardenlet controller test", func() {
 
 			By("Verify that value change was rolled out")
 			Eventually(func(g Gomega) *int32 {
-				deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardenlet", Namespace: testNamespace.Name}}
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
-				return deployment.Spec.RevisionHistoryLimit
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(gardenletDeployment), gardenletDeployment)).To(Succeed())
+				return gardenletDeployment.Spec.RevisionHistoryLimit
 			}).Should(PointTo(Equal(int32(1337))))
 		})
 	})
@@ -184,9 +192,8 @@ var _ = Describe("Gardenlet controller test", func() {
 
 			By("Verify that value change was not rolled out")
 			Eventually(func(g Gomega) *int32 {
-				deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardenlet", Namespace: testNamespace.Name}}
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
-				return deployment.Spec.RevisionHistoryLimit
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(gardenletDeployment), gardenletDeployment)).To(Succeed())
+				return gardenletDeployment.Spec.RevisionHistoryLimit
 			}).Should(PointTo(Equal(int32(3))))
 		})
 	})
