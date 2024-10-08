@@ -167,17 +167,19 @@ They can then be provided locally (that's why `gardenadm discover` and `gardenad
 The high-level steps executed by the command are as follows:
 
 1. Generate certificate authorities, certificates and keys using the [secrets manager](../development/secrets_management.md).
-2. Create [`OperatingSystemConfig` resource](../extensions/operatingsystemconfig.md) containing `systemd` units and files.
+2. Generate [`OperatingSystemConfig` resource](../extensions/operatingsystemconfig.md) (in memory) containing `systemd` units and files.
    This includes the files for the minimal standard Kubernetes control plane, i.e., `kubelet`, `etcd`, `kube-apiserver`, `kube-controller-manager`, and `kube-scheduler`.
-3. Apply the `OperatingSystemConfig` resource to the node using the [`gardener-node-agent`](../concepts/node-agent.md).
+   Also, it should be OS-agnostic (since there is no operating system config extension running anywhere yet).
+3. Reconcile the `OperatingSystemConfig` resource using the controller logic of [`gardener-node-agent`](../concepts/node-agent.md).
 4. `kubelet` starts and runs the static pods for the minimal standard Kubernetes control plane (`etcd`, `kube-apiserver`, `kube-controller-manager` and `kube-scheduler`).
 5. Deploy [`gardener-resource-manager`](../concepts/resource-manager.md) in [host network mode](#host-network-vs-pod-network).
 6. Apply the corresponding provider and networking extensions in [host network mode](#host-network-vs-pod-network).
 7. Deploy `kube-proxy` and CoreDNS for service routing and domain name resolution.
 8. Create a [`Network` resource](../extensions/network.md) and apply it to generate `ManagedResource` associated with the pod network.
 9. Apply the corresponding provider and networking extensions in [pod network mode](#host-network-vs-pod-network).
+   Also deploy the operating system config extensions.
 10. Redeploy `gardener-resource-manager` in [pod network mode](#host-network-vs-pod-network).
-11. Regenerate `OperatingSystemConfig` and activate `gardener-node-agent`.
+11. Create the [`OperatingSystemConfig` resource](../extensions/operatingsystemconfig.md) now in the cluster and activate the `gardener-node-agent` process via its `systemd` unit.
 12. Apply [`ControlPlane` resource](../extensions/controlplane.md).
 
 ##### Problems & Solutions
