@@ -132,6 +132,6 @@ The `Validate` method returns a list of errors. If this list is non-empty, the g
 
 ## References and additional resources
 
-* [`Infrastructure` API (Golang specification)](../../pkg/apis/extensions/v1alpha1/types_infrastructure.go)
+* [`Infrastructure` API (Golang specification)](../../../pkg/apis/extensions/v1alpha1/types_infrastructure.go)
 * [Sample implementation for the Azure provider](https://github.com/gardener/gardener-extension-provider-azure/tree/master/pkg/controller/infrastructure)
 * [Sample ConfigValidator implementation](https://github.com/gardener/gardener-extension-provider-aws/tree/master/pkg/controller/infrastructure/configvalidator.go)

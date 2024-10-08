@@ -7,7 +7,7 @@ title: DNS Record
 Every shoot cluster requires external DNS records that are publicly resolvable.
 The management of these DNS records requires provider-specific knowledge which is to be developed outside the Gardener's core repository.
 
-Currently, Gardener uses `DNSProvider` and `DNSEntry` resources. However, this introduces undesired coupling of Gardener to a controller that does not adhere to the Gardener extension contracts. Because of this, we plan to stop using `DNSProvider` and `DNSEntry` resources for Gardener DNS records in the future and use the `DNSRecord` resources described here instead. 
+Currently, Gardener uses `DNSProvider` and `DNSEntry` resources. However, this introduces undesired coupling of Gardener to a controller that does not adhere to the Gardener extension contracts. Because of this, we plan to stop using `DNSProvider` and `DNSEntry` resources for Gardener DNS records in the future and use the `DNSRecord` resources described here instead.
 
 ## What does Gardener create DNS records for?
 
@@ -132,8 +132,7 @@ They are part of the [`Cluster` extension resource](cluster.md) and can be used 
 gardenlet manages `DNSRecord` resources for all three DNS records mentioned above (internal, external, and ingress).
 In order to successfully reconcile a shoot with the feature gate enabled, extension controllers for `DNSRecord` resources for types used in the default, internal, and custom domain secrets should be registered via `ControllerRegistration` resources.
 
-> **Note:** For compatibility reasons, the `spec.dns.providers` section is still used to specify additional providers. Only the one marked as `primary: true` will be used for `DNSRecord`. All others are considered by the `shoot-dns-service` extension only (if deployed). 
-
+> **Note:** For compatibility reasons, the `spec.dns.providers` section is still used to specify additional providers. Only the one marked as `primary: true` will be used for `DNSRecord`. All others are considered by the `shoot-dns-service` extension only (if deployed).
 
 ### Support for `DNSRecord` Resources in the Provider Extensions
 
@@ -170,5 +169,5 @@ The following table contains information about the provider extension version th
 
 ## References and Additional Resources
 
-* [`DNSRecord` API (Golang specification)](../../pkg/apis/extensions/v1alpha1/types_dnsrecord.go)
+* [`DNSRecord` API (Golang specification)](../../../pkg/apis/extensions/v1alpha1/types_dnsrecord.go)
 * [Sample Implementation for the AWS Route53 Provider](https://github.com/gardener/gardener-extension-provider-aws/tree/master/pkg/controller/dnsrecord)

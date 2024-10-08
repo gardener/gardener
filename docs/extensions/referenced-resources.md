@@ -26,7 +26,7 @@ spec:
       name: my-foobar-secret
 ```
 
-Gardener expects to find these referenced resources in the project namespace (e.g. `garden-dev`) and will copy them to the Shoot namespace in the Seed cluster when reconciling a Shoot, adding a prefix to their names to avoid naming collisions with Gardener's own resources. 
+Gardener expects to find these referenced resources in the project namespace (e.g., `garden-dev`) and will copy them to the Shoot namespace in the Seed cluster when reconciling a Shoot, adding a prefix to their names to avoid naming collisions with Gardener's own resources.
 
 Extension controllers can resolve the references to these resources by accessing the Shoot via the `Cluster` resource. To properly read a referenced resources, extension controllers should use the utility function `GetObjectByReference` from the `extensions/pkg/controller` package, for example:
 

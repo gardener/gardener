@@ -4,8 +4,8 @@ title: ContainerRuntime
 
 # Gardener Container Runtime Extension
 
-At the lowest layers of a Kubernetes node is the software that, among other things, starts and stops containers. It is called “Container Runtime”. 
-The most widely known container runtime is Docker, but it is not alone in this space. In fact, the container runtime space has been rapidly evolving. 
+At the lowest layers of a Kubernetes node is the software that, among other things, starts and stops containers. It is called “Container Runtime”.
+The most widely known container runtime is Docker, but it is not alone in this space. In fact, the container runtime space has been rapidly evolving.
 
 Kubernetes supports different container runtimes using Container Runtime Interface (CRI) – a plugin interface which enables kubelet to use a wide variety of container runtimes.
 
@@ -36,6 +36,7 @@ spec:
       matchLabels:
         worker.gardener.cloud/pool: worker-ubuntu
 ```
+
 Gardener deploys one `ContainerRuntime` resource per worker pool per CRI.
 To exemplify this, consider a Shoot having two worker pools (`worker-one`, `worker-two`) using `containerd` as the CRI as well as `gvisor` and `kata` as enabled container runtimes.
 Gardener would deploy four `ContainerRuntime` resources. For `worker-one`: one `ContainerRuntime` for type `gvisor` and one for type `kata`. The same resource are being deployed for `worker-two`.

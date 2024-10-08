@@ -53,6 +53,6 @@ They are part of the [`Cluster` extension resource](cluster.md) and can be used 
 
 ## References and Additional Resources
 
-* [`ControlPlane` API (Golang Specification)](../../pkg/apis/extensions/v1alpha1/types_controlplane.go)
-* [Exemplary Implementation for the AWS Provider](https://github.com/gardener/gardener-extension-provider-aws/tree/master/pkg/controller/controlplane)
-* [AWS Load Balancer Readvertiser](https://github.com/gardener/aws-lb-readvertiser)
+- [`ControlPlane` API (Golang Specification)](../../../pkg/apis/extensions/v1alpha1/types_controlplane.go)
+- [Exemplary Implementation for the AWS Provider](https://github.com/gardener/gardener-extension-provider-aws/tree/master/pkg/controller/controlplane)
+- [AWS Load Balancer Readvertiser](https://github.com/gardener/aws-lb-readvertiser)

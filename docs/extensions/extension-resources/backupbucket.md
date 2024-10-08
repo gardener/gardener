@@ -48,7 +48,7 @@ In order to support a new infrastructure provider, you need to write a controlle
 
 ## References and Additional Resources
 
-* [`BackupBucket` API Reference](../api-reference/extensions.md#backupbucket)
+* [`BackupBucket` API Reference](../../api-reference/extensions.md#backupbucket)
 * [Exemplary Implementation for the Azure Provider](https://github.com/gardener/gardener-extension-provider-azure/tree/master/pkg/controller/backupbucket)
 * [`BackupEntry` Resource Documentation](./backupentry.md)
-* [Shared Bucket Proposal](../proposals/02-backupinfra.md)
+* [Shared Bucket Proposal](../../proposals/02-backupinfra.md)
