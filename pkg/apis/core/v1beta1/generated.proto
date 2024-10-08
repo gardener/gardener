@@ -1918,6 +1918,10 @@ message NamespacedCloudProfileSpec {
 
   // Parent contains a reference to a CloudProfile it inherits from.
   optional CloudProfileReference parent = 7;
+
+  // ProviderConfig contains provider-specific configuration for the profile.
+  // +optional
+  optional k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 8;
 }
 
 // NamespacedCloudProfileStatus holds the most recently observed status of the NamespacedCloudProfile.

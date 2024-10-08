@@ -1082,6 +1082,20 @@ CloudProfileReference
 <p>Parent contains a reference to a CloudProfile it inherits from.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>providerConfig</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderConfig contains provider-specific configuration for the profile.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -8386,6 +8400,20 @@ CloudProfileReference
 </td>
 <td>
 <p>Parent contains a reference to a CloudProfile it inherits from.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>providerConfig</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderConfig contains provider-specific configuration for the profile.</p>
 </td>
 </tr>
 </tbody>

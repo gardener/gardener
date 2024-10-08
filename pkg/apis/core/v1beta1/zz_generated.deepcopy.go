@@ -3251,6 +3251,11 @@ func (in *NamespacedCloudProfileSpec) DeepCopyInto(out *NamespacedCloudProfileSp
 		}
 	}
 	out.Parent = in.Parent
+	if in.ProviderConfig != nil {
+		in, out := &in.ProviderConfig, &out.ProviderConfig
+		*out = new(runtime.RawExtension)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 
