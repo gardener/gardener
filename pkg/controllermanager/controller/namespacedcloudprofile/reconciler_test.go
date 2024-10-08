@@ -327,15 +327,15 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 			}
 		})
 
-		It("should ignore versions specified only in NamespacedCloudProfile", func() {
+		It("should add machine images specified only in NamespacedCloudProfile", func() {
 			namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 				{
 					Name: "test-image-namespaced",
 					Versions: []gardencorev1beta1.MachineImageVersion{{
-						ExpirableVersion:         gardencorev1beta1.ExpirableVersion{Version: "1.0.0"},
+						ExpirableVersion:         gardencorev1beta1.ExpirableVersion{Version: "1.1.2"},
 						CRI:                      []gardencorev1beta1.CRI{{Name: "containerd"}},
-						Architectures:            []string{"amd64"},
-						KubeletVersionConstraint: ptr.To("==1.30.0"),
+						Architectures:            []string{"arm64"},
+						KubeletVersionConstraint: ptr.To("==1.29.0"),
 					}},
 					UpdateStrategy: ptr.To(gardencorev1beta1.UpdateStrategyMajor),
 				},
@@ -354,7 +354,15 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 			})
 
 			c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
-				Expect(patch.Data(o)).To(BeEquivalentTo(`{"status":{"cloudProfileSpec":{"machineImages":[{"name":"test-image","updateStrategy":"major","versions":[{"architectures":["amd64"],"cri":[{"name":"containerd"}],"kubeletVersionConstraint":"==1.30.0","version":"1.0.0"}]}],"machineTypes":[]}}}`))
+				machineImageParent := `{"name":"test-image","updateStrategy":"major","versions":[{"architectures":["amd64"],"cri":[{"name":"containerd"}],"kubeletVersionConstraint":"==1.30.0","version":"1.0.0"}]}`
+				machineImageNamespacedCloudProfile := `{"name":"test-image-namespaced","updateStrategy":"major","versions":[{"architectures":["arm64"],"cri":[{"name":"containerd"}],"kubeletVersionConstraint":"==1.29.0","version":"1.1.2"}]}`
+				Expect(patch.Data(o)).To(And(
+					// The order is (currently) indeterministic.
+					ContainSubstring(`{"status":{"cloudProfileSpec":{"machineImages":[`),
+					ContainSubstring(machineImageParent),
+					ContainSubstring(machineImageNamespacedCloudProfile),
+					ContainSubstring(`],"machineTypes":[]}}}`),
+				))
 				return nil
 			})
 
@@ -368,9 +376,12 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 			namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 				{
 					Name: "test-image",
-					Versions: []gardencorev1beta1.MachineImageVersion{{
-						ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.0.0", ExpirationDate: &newExpiryDate},
-					}},
+					Versions: []gardencorev1beta1.MachineImageVersion{
+						// override existing version with new expiration date
+						{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.0.0", ExpirationDate: &newExpiryDate}},
+						// add new version
+						{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.1.2"}},
+					},
 				},
 			}
 
@@ -387,7 +398,15 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 			})
 
 			c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
-				Expect(patch.Data(o)).To(BeEquivalentTo(fmt.Sprintf(`{"status":{"cloudProfileSpec":{"machineImages":[{"name":"test-image","updateStrategy":"major","versions":[{"architectures":["amd64"],"cri":[{"name":"containerd"}],"expirationDate":"%s","kubeletVersionConstraint":"==1.30.0","version":"1.0.0"}]}],"machineTypes":[]}}}`, newExpiryDate.UTC().Format(time.RFC3339))))
+				versionOverride := fmt.Sprintf(`{"architectures":["amd64"],"cri":[{"name":"containerd"}],"expirationDate":"%s","kubeletVersionConstraint":"==1.30.0","version":"1.0.0"}`, newExpiryDate.UTC().Format(time.RFC3339))
+				versionAdded := `{"version":"1.1.2"}`
+				Expect(patch.Data(o)).To(And(
+					// The order is (currently) indeterministic.
+					ContainSubstring(`{"status":{"cloudProfileSpec":{"machineImages":[{"name":"test-image","updateStrategy":"major","versions":[`),
+					ContainSubstring(versionOverride),
+					ContainSubstring(versionAdded),
+					ContainSubstring(`]}],"machineTypes":[]}}}`),
+				))
 				return nil
 			})
 

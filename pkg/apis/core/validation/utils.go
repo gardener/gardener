@@ -196,8 +196,8 @@ func validateKubernetesVersions(versions []core.ExpirableVersion, fldPath *field
 	return allErrs
 }
 
-// validateMachineImages validates the given list of machine images for valid values and combinations.
-func validateMachineImages(machineImages []core.MachineImage, fldPath *field.Path) field.ErrorList {
+// ValidateMachineImages validates the given list of machine images for valid values and combinations.
+func ValidateMachineImages(machineImages []core.MachineImage, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(machineImages) == 0 {

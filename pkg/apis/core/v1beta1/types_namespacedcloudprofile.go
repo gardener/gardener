@@ -6,6 +6,7 @@ package v1beta1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // +genclient
@@ -59,6 +60,9 @@ type NamespacedCloudProfileSpec struct {
 	VolumeTypes []VolumeType `json:"volumeTypes,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,6,opt,name=volumeTypes"`
 	// Parent contains a reference to a CloudProfile it inherits from.
 	Parent CloudProfileReference `json:"parent" protobuf:"bytes,7,req,name=parent"`
+	// ProviderConfig contains provider-specific configuration for the profile.
+	// +optional
+	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty" protobuf:"bytes,8,opt,name=providerConfig"`
 }
 
 // NamespacedCloudProfileStatus holds the most recently observed status of the NamespacedCloudProfile.

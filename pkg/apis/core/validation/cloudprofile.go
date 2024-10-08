@@ -65,7 +65,7 @@ func ValidateCloudProfileSpec(spec *core.CloudProfileSpec, fldPath *field.Path) 
 	}
 
 	allErrs = append(allErrs, validateCloudProfileKubernetesSettings(spec.Kubernetes, fldPath.Child("kubernetes"))...)
-	allErrs = append(allErrs, validateCloudProfileMachineImages(spec.MachineImages, fldPath.Child("machineImages"))...)
+	allErrs = append(allErrs, ValidateCloudProfileMachineImages(spec.MachineImages, fldPath.Child("machineImages"))...)
 	allErrs = append(allErrs, validateCloudProfileMachineTypes(spec.MachineTypes, fldPath.Child("machineTypes"))...)
 	allErrs = append(allErrs, validateVolumeTypes(spec.VolumeTypes, fldPath.Child("volumeTypes"))...)
 	allErrs = append(allErrs, validateCloudProfileRegions(spec.Regions, fldPath.Child("regions"))...)
@@ -143,21 +143,31 @@ func validateCloudProfileMachineTypes(machineTypes []core.MachineType, fldPath *
 	return allErrs
 }
 
-func validateCloudProfileMachineImages(machineImages []core.MachineImage, fldPath *field.Path) field.ErrorList {
+// ValidateCloudProfileMachineImages validates the machine images of a CloudProfile object.
+func ValidateCloudProfileMachineImages(machineImages []core.MachineImage, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(machineImages) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath, "must provide at least one machine image"))
 	}
 
-	allErrs = append(allErrs, validateMachineImages(machineImages, fldPath)...)
+	allErrs = append(allErrs, ValidateMachineImages(machineImages, fldPath)...)
 
 	for i, image := range machineImages {
 		idxPath := fldPath.Index(i)
+
+		if image.UpdateStrategy == nil {
+			allErrs = append(allErrs, field.Required(idxPath.Child("updateStrategy"), "must provide an update strategy"))
+		}
+
 		for index, machineVersion := range image.Versions {
 			versionsPath := idxPath.Child("versions").Index(index)
 			allErrs = append(allErrs, validateContainerRuntimesInterfaces(machineVersion.CRI, versionsPath.Child("cri"))...)
 			allErrs = append(allErrs, validateSupportedVersionsConfiguration(machineVersion.ExpirableVersion, helper.ToExpirableVersions(image.Versions), versionsPath)...)
+
+			if len(machineVersion.Architectures) == 0 {
+				allErrs = append(allErrs, field.Required(versionsPath.Child("architectures"), "must provide at least one architecture"))
+			}
 		}
 	}
 

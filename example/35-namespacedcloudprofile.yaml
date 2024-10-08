@@ -9,7 +9,10 @@ spec:
   parent:
     kind: CloudProfile
     name: local # could be any CloudProfile
-# kubernetes: # overwrite kubernetes versions if necessary
+  kubernetes:
+    versions:
+    - version: 1.29.0
+      expirationDate: "2025-02-28T23:59:59Z"
   machineImages:
   - name: suse-chost-1
     versions:
@@ -25,9 +28,5 @@ spec:
     gpu: "0"
     memory: 16Gi
     usable: true
-# volumeTypes: # add additional volume types if necessary
-# CA bundle that will be installed onto every shoot machine that is using this provider profile.
-# caBundle: |
-#   -----BEGIN CERTIFICATE-----
-#   ...
-#   -----END CERTIFICATE-----
+  # volumeTypes: # add additional volume types if necessary
+  # providerConfig: # add provider specific configuration if necessary, especially for custom machine images
