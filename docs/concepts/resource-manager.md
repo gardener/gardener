@@ -1202,7 +1202,7 @@ If the above-mentioned issue gets resolved and there is a native support for det
 #### Unconfirmed Deletion Prevention For Custom Resources And Definitions
 
 As part of Gardener's [extensibility concepts](../extensions/overview.md), a lot of `CustomResourceDefinition`s are deployed to the seed clusters that serve as extension points for provider-specific controllers.
-For example, the [`Infrastructure` CRD](../extensions/infrastructure.md) triggers the provider extension to prepare the IaaS infrastructure of the underlying cloud provider for a to-be-created shoot cluster.
+For example, the [`Infrastructure` CRD](../extensions/extension-resources/infrastructure.md) triggers the provider extension to prepare the IaaS infrastructure of the underlying cloud provider for a to-be-created shoot cluster.
 Consequently, these extension CRDs have a lot of power and control large portions of the end-user's shoot cluster.
 Accidental or undesired deletions of those resource can cause tremendous and hard-to-recover-from outages and should be prevented.
 

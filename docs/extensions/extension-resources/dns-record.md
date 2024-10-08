@@ -98,7 +98,7 @@ You can take a look at the below referenced example implementation for the AWS r
 For compatibility with existing setups, extension controllers shall support two different namings of keys in secrets containing provider-specific credentials:
 
 * The naming used by the [external-dns-management DNS controller](https://github.com/gardener/external-dns-management). For example, on AWS the key names are `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_REGION`.
-* The naming used by other provider-specific extension controllers, e.g. for [infrastructure](infrastructure.md). For example, on AWS the key names are `accessKeyId`, `secretAccessKey`, and `region`.
+* The naming used by other provider-specific extension controllers, e.g., for [infrastructure](./extension-resources/infrastructure.md). For example, on AWS the key names are `accessKeyId`, `secretAccessKey`, and `region`.
 
 ## Avoiding Reading the DNS Hosted Zones
 
