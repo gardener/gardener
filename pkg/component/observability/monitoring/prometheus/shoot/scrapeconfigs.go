@@ -277,7 +277,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 						{
 							SourceLabels: []monitoringv1.LabelName{"__name__", "container", "interface", "id"},
 							Action:       "keep",
-							Regex:        `container_network.+;;(eth0;/.+|(ens.+|tunl0|eth0);/)|.+;.+;.*;.*`,
+							Regex:        `container_network.+;;(eth0;/.+|(en.+|tunl0|eth0);/)|.+;.+;.*;.*`,
 						},
 						{
 							SourceLabels: []monitoringv1.LabelName{"__name__", "container", "interface"},
