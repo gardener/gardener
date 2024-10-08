@@ -13,6 +13,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
@@ -38,6 +39,9 @@ const (
 	// CustomVerbNamespacedCloudProfileModifyMachineImages is a constant for the custom verb that allows modifying the
 	// `.spec.machineImages` field in `NamespacedCloudProfile` resources.
 	CustomVerbNamespacedCloudProfileModifyMachineImages = "modify-spec-machineimages"
+	// CustomVerbNamespacedCloudProfileModifyProviderConfig is a constant for the custom verb that allows modifying the
+	// `.spec.providerConfig` field in `NamespacedCloudProfile` resources.
+	CustomVerbNamespacedCloudProfileModifyProviderConfig = "modify-spec-providerconfig"
 )
 
 // Register registers a plugin.
@@ -147,6 +151,13 @@ func (c *CustomVerbAuthorizer) admitNamespacedCloudProfiles(ctx context.Context,
 
 	if mustCheckMachineImages(oldObj.Spec.MachineImages, obj.Spec.MachineImages) {
 		err := c.authorize(ctx, a, CustomVerbNamespacedCloudProfileModifyMachineImages, "modify .spec.machineImages")
+		if err != nil {
+			return err
+		}
+	}
+
+	if mustCheckProviderConfig(oldObj.Spec.ProviderConfig, obj.Spec.ProviderConfig) {
+		err := c.authorize(ctx, a, CustomVerbNamespacedCloudProfileModifyProviderConfig, "modify .spec.providerConfig")
 		if err != nil {
 			return err
 		}
@@ -265,4 +276,8 @@ func mustCheckKubernetes(oldKubernetes, kubernetes *core.KubernetesSettings) boo
 
 func mustCheckMachineImages(oldMachineImages, machineImages []core.MachineImage) bool {
 	return !apiequality.Semantic.DeepEqual(oldMachineImages, machineImages)
+}
+
+func mustCheckProviderConfig(oldProviderConfig, providerConfig *runtime.RawExtension) bool {
+	return !apiequality.Semantic.DeepEqual(oldProviderConfig, providerConfig)
 }

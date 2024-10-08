@@ -37,6 +37,7 @@ For `Project`s it validates whether the user is bound to an RBAC role with the `
 Usually, regular project members are not bound to this custom verb, allowing the Gardener administrator to manage certain toleration whitelists on `Project` basis.
 
 For `NamespacedCloudProfile`s it validates whether the user is assigned an RBAC role with the `modify-spec-kubernetes` verb when attempting to change the `.spec.kubernetes` field, or the `modify-spec-machineimages` verb when attempting to change the `.spec.machineImages` field of the respective `NamespacedCloudProfile` resource.
+There is also a `modify-spec-providerconfig` verb to allow users to modify the `.spec.providerConfig` field of the `NamespacedCloudProfile` resource.
 
 ## `DeletionConfirmation`
 
