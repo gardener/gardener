@@ -10,7 +10,7 @@ Now, Gardener commissions an external, provider-specific controller to take over
 
 ## Which control plane resources are required?
 
-As mentioned in the [controlplane](controlplane.md) document, Gardener shall not deploy any other provider-specific component.
+As mentioned in the [controlplane](./controlplane.md) document, Gardener shall not deploy any other provider-specific component.
 Instead, it creates a `ControlPlane` CRD with purpose `exposure` that should be picked up by provider extensions.
 Its purpose is to trigger the deployment of such provider-specific components in the shoot namespace in the seed cluster that are needed to expose the kube-apiserver.
 
@@ -42,7 +42,7 @@ It is most likely not needed, however, still added for some potential corner cas
 If you don't need it, then just ignore it.
 The `.spec.region` contains the region of the seed cluster.
 
-In order to support a control plane provider with purpose `exposure`, you need to write a controller or expand the existing [controlplane controller](controlplane.md) that watches all `ControlPlane`s with `.spec.type=<my-provider-name>` and purpose `exposure`.
+In order to support a control plane provider with purpose `exposure`, you need to write a controller or expand the existing [controlplane controller](./controlplane.md) that watches all `ControlPlane`s with `.spec.type=<my-provider-name>` and purpose `exposure`.
 You can take a look at the below referenced example implementation for the AWS provider.
 
 ## Non-Provider Specific Information Required for Infrastructure Creation

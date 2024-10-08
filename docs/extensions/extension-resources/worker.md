@@ -108,7 +108,7 @@ spec:
 ```
 
 The `.spec.secretRef` contains a reference to the provider secret pointing to the account that shall be used to create the needed virtual machines.
-Also, as you can see, Gardener copies the output of the infrastructure creation (`.spec.infrastructureProviderStatus`, see [`Infrastructure` resource](infrastructure.md)), into the `.spec`.
+Also, as you can see, Gardener copies the output of the infrastructure creation (`.spec.infrastructureProviderStatus`, see [`Infrastructure` resource](./extension-resources/infrastructure.md)), into the `.spec`.
 
 In the `.spec.pools[]` field, the desired worker pools are listed.
 In the above example, one pool with machine type `m4.large` and `min=3`, `max=5` machines shall be spread over two availability zones (`eu-west-1b`, `eu-west-1c`).

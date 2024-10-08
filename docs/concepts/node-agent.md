@@ -13,7 +13,7 @@ It effectively is a Kubernetes controller deployed onto the worker node.
 
 ![Design](./images/gardener-nodeagent-architecture.svg)
 
-This figure visualizes the overall architecture of the `gardener-node-agent`. On the left side, it starts with an [`OperatingSystemConfig`](../extensions/operatingsystemconfig.md) resource (`OSC`) with a corresponding worker pool specific `cloud-config-<worker-pool>` secret being passed by reference through the userdata to a machine by the `machine-controller-manager` (MCM).
+This figure visualizes the overall architecture of the `gardener-node-agent`. On the left side, it starts with an [`OperatingSystemConfig`](../extensions/extension-resources/operatingsystemconfig.md) resource (`OSC`) with a corresponding worker pool specific `cloud-config-<worker-pool>` secret being passed by reference through the userdata to a machine by the `machine-controller-manager` (MCM).
 
 On the right side, the `cloud-config` secret will be extracted and used by the `gardener-node-agent` after being installed. Details on this can be found in the next section.
 
@@ -57,7 +57,7 @@ After restarting all units, the annotation is removed.
 ### [Operating System Config Controller](../../pkg/nodeagent/controller/operatingsystemconfig)
 
 This controller contains the main logic of `gardener-node-agent`.
-It watches `Secret`s whose `data` map contains the [`OperatingSystemConfig`](../extensions/operatingsystemconfig.md#reconcile-purpose) which consists of all systemd units and files that are relevant for the node configuration.
+It watches `Secret`s whose `data` map contains the [`OperatingSystemConfig`](../extensions/extension-resources/operatingsystemconfig.md#reconcile-purpose) which consists of all systemd units and files that are relevant for the node configuration.
 Amongst others, a prominent example is the configuration file for `kubelet` and its unit file for the `kubelet.service`.
 
 The controller decodes the configuration and computes the files and units that have changed since its last reconciliation.
