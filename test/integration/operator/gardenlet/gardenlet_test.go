@@ -26,8 +26,9 @@ import (
 
 var _ = Describe("Gardenlet controller test", func() {
 	var (
-		gardenlet *seedmanagementv1alpha1.Gardenlet
-		seed      *gardencorev1beta1.Seed
+		gardenlet           *seedmanagementv1alpha1.Gardenlet
+		gardenletDeployment *appsv1.Deployment
+		seed                *gardencorev1beta1.Seed
 	)
 
 	BeforeEach(func() {
@@ -98,6 +99,8 @@ var _ = Describe("Gardenlet controller test", func() {
 				Config: *gardenletConfig,
 			},
 		}
+
+		gardenletDeployment = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardenlet", Namespace: testNamespace.Name}}
 	})
 
 	JustBeforeEach(func() {
@@ -113,18 +116,30 @@ var _ = Describe("Gardenlet controller test", func() {
 			Eventually(func() error {
 				return mgrClient.Get(ctx, client.ObjectKeyFromObject(gardenlet), gardenlet)
 			}).Should(BeNotFoundError())
+
+			By("Delete and wait for Gardenlet deployment to be gone")
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Delete(ctx, gardenletDeployment)).To(Or(Succeed(), BeNotFoundError()))
+				g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(gardenletDeployment), gardenletDeployment)).Should(BeNotFoundError())
+			}).Should(Succeed())
 		})
 	})
 
-	verifyGardenletDeployment := func() {
+	verifyGardenletDeployment := func(seedRegistered bool) {
 		By("Gardenlet status should reflect successful reconciliation")
+
 		EventuallyWithOffset(1, func(g Gomega) {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(gardenlet), gardenlet)).To(Succeed())
 			g.Expect(gardenlet.Status.ObservedGeneration).To(Equal(gardenlet.Generation))
 			condition := v1beta1helper.GetCondition(gardenlet.Status.Conditions, seedmanagementv1alpha1.SeedRegistered)
 			g.Expect(condition).NotTo(BeNil())
-			g.Expect(condition.Status).To(Equal(gardencorev1beta1.ConditionTrue))
-			g.Expect(condition.Reason).To(Equal(gardencorev1beta1.EventReconciled))
+			if seedRegistered {
+				g.Expect(condition.Status).To(Equal(gardencorev1beta1.ConditionTrue))
+				g.Expect(condition.Reason).To(Equal(gardencorev1beta1.EventReconciled))
+			} else {
+				g.Expect(condition.Status).To(Equal(gardencorev1beta1.ConditionProgressing))
+				g.Expect(condition.Reason).To(Equal(gardencorev1beta1.EventReconcileError))
+			}
 		}).Should(Succeed())
 
 		By("Verify that gardenlet is deployed")
@@ -147,7 +162,7 @@ var _ = Describe("Gardenlet controller test", func() {
 
 	When("Seed object does not exist yet", func() {
 		It("should deploy gardenlet and update it on request", func() {
-			verifyGardenletDeployment()
+			verifyGardenletDeployment(false)
 
 			By("Update some value")
 			patch := client.MergeFrom(gardenlet.DeepCopy())
@@ -156,20 +171,19 @@ var _ = Describe("Gardenlet controller test", func() {
 
 			By("Verify that value change was rolled out")
 			Eventually(func(g Gomega) *int32 {
-				deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardenlet", Namespace: testNamespace.Name}}
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
-				return deployment.Spec.RevisionHistoryLimit
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(gardenletDeployment), gardenletDeployment)).To(Succeed())
+				return gardenletDeployment.Spec.RevisionHistoryLimit
 			}).Should(PointTo(Equal(int32(1337))))
 		})
 	})
 
 	When("Seed object gets created", func() {
 		It("should deploy gardenlet and no longer touch it when Seed object got created", func() {
-			verifyGardenletDeployment()
-
 			By("Create Seed") // gardenlet would do this typically, but it doesn't run in this setup
 			seed.Name = gardenlet.Name
 			Expect(testClient.Create(ctx, seed)).To(Succeed())
+
+			verifyGardenletDeployment(true)
 
 			By("Update some value")
 			patch := client.MergeFrom(gardenlet.DeepCopy())
@@ -178,9 +192,8 @@ var _ = Describe("Gardenlet controller test", func() {
 
 			By("Verify that value change was not rolled out")
 			Eventually(func(g Gomega) *int32 {
-				deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardenlet", Namespace: testNamespace.Name}}
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
-				return deployment.Spec.RevisionHistoryLimit
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(gardenletDeployment), gardenletDeployment)).To(Succeed())
+				return gardenletDeployment.Spec.RevisionHistoryLimit
 			}).Should(PointTo(Equal(int32(3))))
 		})
 	})
