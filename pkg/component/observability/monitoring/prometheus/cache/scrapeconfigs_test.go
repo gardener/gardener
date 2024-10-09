@@ -61,7 +61,7 @@ metric_relabel_configs:
   regex: POD;(container_cpu_cfs_periods_total|container_cpu_cfs_throttled_periods_total|container_cpu_cfs_throttled_seconds_total|container_cpu_usage_seconds_total|container_fs_inodes_total|container_fs_limit_bytes|container_fs_reads_bytes_total|container_fs_usage_bytes|container_fs_writes_bytes_total|container_last_seen|container_memory_cache|container_memory_mapped_file|container_memory_rss|container_memory_usage_bytes|container_memory_working_set_bytes|container_oom_events_total)
   action: drop
 - source_labels: [ __name__, container, interface, id ]
-  regex: container_network.+;;(eth0;/.+|(ens.+|tunl0|eth0);/)|.+;.+;.*;.*
+  regex: container_network.+;;(eth0;/.+|(en.+|tunl0|eth0);/)|.+;.+;.*;.*
   action: keep
 - source_labels: [ __name__, container, interface ]
   regex: container_network.+;POD;(.{5,}|tun0|en.+)
@@ -157,7 +157,7 @@ metric_relabel_configs:
   regex: POD;(container_cpu_cfs_periods_total|container_cpu_cfs_throttled_periods_total|container_cpu_cfs_throttled_seconds_total|container_cpu_usage_seconds_total|container_fs_inodes_total|container_fs_limit_bytes|container_fs_reads_bytes_total|container_fs_usage_bytes|container_fs_writes_bytes_total|container_last_seen|container_memory_cache|container_memory_mapped_file|container_memory_rss|container_memory_usage_bytes|container_memory_working_set_bytes|container_oom_events_total)
   action: drop
 - source_labels: [ __name__, container, interface, id ]
-  regex: container_network.+;;(eth0;/.+|(ens.+|tunl0|eth0);/)|.+;.+;.*;.*
+  regex: container_network.+;;(eth0;/.+|(en.+|tunl0|eth0);/)|.+;.+;.*;.*
   action: keep
 - source_labels: [ __name__, container, interface ]
   regex: container_network.+;POD;(.{5,}|tun0|en.+)
