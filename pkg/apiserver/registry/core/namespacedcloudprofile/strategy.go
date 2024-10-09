@@ -56,6 +56,7 @@ func (namespacedCloudProfileStrategy) PrepareForUpdate(_ context.Context, newObj
 
 	if mustIncreaseGeneration(oldNamespacedCloudProfile, newNamespacedCloudProfile) {
 		newNamespacedCloudProfile.Generation = oldNamespacedCloudProfile.Generation + 1
+		newNamespacedCloudProfile.Status = core.NamespacedCloudProfileStatus{}
 	}
 }
 

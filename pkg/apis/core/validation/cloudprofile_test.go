@@ -1106,6 +1106,9 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.bastion.machineImage.name"),
+					})), PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.machineImages[0].versions[0].architectures"),
 					}))))
 				})
 
