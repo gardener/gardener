@@ -126,6 +126,18 @@ config.yaml: |
       concurrentSyncs: {{ .Values.config.controllers.vpaEvictionRequirements.concurrentSyncs }}
       {{- end }}
     {{- end }}
+    {{- if .Values.config.controllers.extension }}
+    extension:
+      {{- if .Values.config.controllers.extension.concurrentSyncs }}
+      concurrentSyncs: {{ .Values.config.controllers.extension.concurrentSyncs }}
+      {{- end }}
+    {{- end }}
+    {{- if .Values.config.controllers.extensionRequired }}
+    extensionRequired:
+      {{- if .Values.config.controllers.extensionRequired.concurrentSyncs }}
+      concurrentSyncs: {{ .Values.config.controllers.extensionRequired.concurrentSyncs }}
+      {{- end }}
+    {{- end }}
   {{- if .Values.nodeToleration }}
   nodeToleration:
 {{ toYaml .Values.nodeToleration | indent 4 }}
