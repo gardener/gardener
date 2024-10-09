@@ -5858,6 +5858,11 @@ func schema_pkg_apis_core_v1beta1_NamespacedCloudProfileSpec(ref common.Referenc
 						},
 					},
 					"providerConfig": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-patch-strategy": "json",
+							},
+						},
 						SchemaProps: spec.SchemaProps{
 							Description: "ProviderConfig contains provider-specific configuration for the profile.",
 							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),

@@ -17,8 +17,10 @@ import (
 )
 
 const (
-	// Name is a name for a validation webhook.
+	// Name is a name for a mutation webhook.
 	Name = "mutator"
+	// NamespacedCloudProfileName is the name for the NamespacedCloudProfile mutator.
+	NamespacedCloudProfileName = "namespacedcloudprofile." + Name
 )
 
 var logger = log.Log.WithName("local-mutator-webhook")
@@ -34,6 +36,24 @@ func New(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
 		Predicates: []predicate.Predicate{extensionspredicate.GardenCoreProviderType(local.Type)},
 		Mutators: map[extensionswebhook.Mutator][]extensionswebhook.Type{
 			NewShootMutator(mgr): {{Obj: &gardencorev1beta1.Shoot{}}},
+		},
+		Target: extensionswebhook.TargetSeed,
+		ObjectSelector: &metav1.LabelSelector{
+			MatchLabels: map[string]string{"provider.extensions.gardener.cloud/local": "true"},
+		},
+	})
+}
+
+// NewNamespacedCloudProfileWebhook creates a new webhook that mutates NamespacedCloudProfile resources.
+func NewNamespacedCloudProfileWebhook(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
+	logger.Info("Setting up webhook", "name", Name)
+
+	return extensionswebhook.New(mgr, extensionswebhook.Args{
+		Provider: local.Type,
+		Name:     NamespacedCloudProfileName,
+		Path:     "/webhooks/mutate/namespacedcloudprofiles",
+		Mutators: map[extensionswebhook.Mutator][]extensionswebhook.Type{
+			NewNamespacedCloudProfileMutator(mgr): {{Obj: &gardencorev1beta1.NamespacedCloudProfile{}}},
 		},
 		Target: extensionswebhook.TargetSeed,
 		ObjectSelector: &metav1.LabelSelector{
