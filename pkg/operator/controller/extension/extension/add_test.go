@@ -27,11 +27,9 @@ var _ = Describe("Add", func() {
 		log                    logr.Logger
 		fakeClient             client.Client
 		extension1, extension2 *operatorv1alpha1.Extension
-		reconciler             *Reconciler
 	)
 
 	BeforeEach(func() {
-		reconciler = &Reconciler{}
 		log = logr.Discard()
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).Build()
 
@@ -44,7 +42,7 @@ var _ = Describe("Add", func() {
 
 	Describe("#MapToAllExtensions", func() {
 		It("should map to all extensions", func() {
-			Expect(reconciler.MapToAllExtensions(ctx, log, fakeClient, nil)).To(ConsistOf(
+			Expect(MapToAllExtensions(ctx, log, fakeClient, nil)).To(ConsistOf(
 				reconcile.Request{NamespacedName: types.NamespacedName{Name: "extension1"}},
 				reconcile.Request{NamespacedName: types.NamespacedName{Name: "extension2"}},
 			))
