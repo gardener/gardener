@@ -60,45 +60,42 @@ var runtimeClusterExtensions = []extension{
 func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gardenClientMap clientmap.ClientMap) error {
 	var err error
 
-	if r.RuntimeClientSet == nil {
-		r.RuntimeClientSet, err = kubernetes.NewWithConfig(
-			kubernetes.WithRESTConfig(mgr.GetConfig()),
-			kubernetes.WithRuntimeAPIReader(mgr.GetAPIReader()),
-			kubernetes.WithRuntimeClient(mgr.GetClient()),
-			kubernetes.WithRuntimeCache(mgr.GetCache()),
-		)
-		if err != nil {
-			return fmt.Errorf("failed creating runtime clientset: %w", err)
-		}
+	r.runtimeClientSet, err = kubernetes.NewWithConfig(
+		kubernetes.WithRESTConfig(mgr.GetConfig()),
+		kubernetes.WithRuntimeAPIReader(mgr.GetAPIReader()),
+		kubernetes.WithRuntimeClient(mgr.GetClient()),
+		kubernetes.WithRuntimeCache(mgr.GetCache()),
+	)
+	if err != nil {
+		return fmt.Errorf("failed creating runtime clientset: %w", err)
 	}
+
+	if gardenClientMap == nil {
+		return fmt.Errorf("GardenClientMap must not be nil")
+	}
+	r.gardenClientMap = gardenClientMap
+
+	r.clock = clock.RealClock{}
+	r.recorder = mgr.GetEventRecorderFor(ControllerName + "-controller")
+
 	if r.HelmRegistry == nil {
 		r.HelmRegistry, err = oci.NewHelmRegistry()
 		if err != nil {
 			return fmt.Errorf("failed creating Helm registry: %w", err)
 		}
 	}
-	if r.Clock == nil {
-		r.Clock = clock.RealClock{}
-	}
-	if r.Recorder == nil {
-		r.Recorder = mgr.GetEventRecorderFor(ControllerName + "-controller")
-	}
+
 	if r.GardenNamespace == "" {
 		r.GardenNamespace = v1beta1constants.GardenNamespace
 	}
-
-	if gardenClientMap == nil {
-		return fmt.Errorf("GardenClientMap must not be nil")
-	}
-	r.GardenClientMap = gardenClientMap
 
 	r.lock = &sync.RWMutex{}
 	r.kindToRequiredTypes = make(map[string]sets.Set[string])
 	r.registeredExtensionResourceWatches = make(sets.Set[string])
 
-	r.admission = admission.New(r.RuntimeClientSet, r.Recorder, r.GardenNamespace, r.HelmRegistry)
-	r.controllerRegistration = controllerregistration.New(r.RuntimeClientSet.Client(), r.Recorder, r.GardenNamespace)
-	r.runtime = extensionruntime.New(r.RuntimeClientSet, r.Recorder, r.GardenNamespace, r.HelmRegistry)
+	r.admission = admission.New(r.runtimeClientSet, r.recorder, r.GardenNamespace, r.HelmRegistry)
+	r.controllerRegistration = controllerregistration.New(r.runtimeClientSet.Client(), r.recorder, r.GardenNamespace)
+	r.runtime = extensionruntime.New(r.runtimeClientSet, r.recorder, r.GardenNamespace, r.HelmRegistry)
 
 	c, err := builder.
 		ControllerManagedBy(mgr).
@@ -162,7 +159,7 @@ func (r *Reconciler) MapObjectKindToExtensions(objectKind string, newObjectListF
 		log = log.WithValues("extensionKind", objectKind)
 
 		listObj := newObjectListFunc()
-		if err := r.RuntimeClientSet.Client().List(ctx, listObj); err != nil && !meta.IsNoMatchError(err) {
+		if err := r.runtimeClientSet.Client().List(ctx, listObj); err != nil && !meta.IsNoMatchError(err) {
 			// Let's ignore bootstrap situations where extension CRDs were not yet applied. They will be deployed
 			// eventually by the garden controller.
 			log.Error(err, "Failed to list extension objects")
@@ -199,7 +196,7 @@ func (r *Reconciler) MapObjectKindToExtensions(objectKind string, newObjectListF
 		// List all extensions and queue those that are supporting resources for the
 		// extension kind this particular reconciler is responsible for.
 		extensionList := &operatorv1alpha1.ExtensionList{}
-		if err := r.RuntimeClientSet.Client().List(ctx, extensionList); err != nil {
+		if err := r.runtimeClientSet.Client().List(ctx, extensionList); err != nil {
 			log.Error(err, "Failed to list Extensions")
 			return nil
 		}
