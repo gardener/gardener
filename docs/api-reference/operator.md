@@ -319,7 +319,22 @@ string
 </em>
 </td>
 <td>
-<p>BucketName is the name of the backup bucket.</p>
+<em>(Optional)</em>
+<p>BucketName is the name of the backup bucket. If not provided, gardener-operator attempts to manage a new bucket.
+In this case, the cloud provider credentials provided in the SecretRef must have enough privileges for creating
+and deleting buckets.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>providerConfig</code></br>
+<em>
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderConfig is the provider-specific configuration passed to BackupBucket resource.</p>
 </td>
 </tr>
 <tr>
@@ -2579,6 +2594,18 @@ Defaults to empty LabelSelector, which matches all projects.</p>
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+<code>region</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Region is the region the cluster is deployed to.</p>
+</td>
+</tr>
 <tr>
 <td>
 <code>zones</code></br>
