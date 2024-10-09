@@ -18,7 +18,7 @@ import (
 
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
-	. "github.com/gardener/gardener/pkg/operator/controller/extension"
+	. "github.com/gardener/gardener/pkg/operator/controller/extension/extension"
 )
 
 var _ = Describe("Add", func() {

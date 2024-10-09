@@ -13,5 +13,5 @@ import (
 
 func TestControllerRegistration(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Operator Controller Extension ControllerRegistration Suite")
+	RunSpecs(t, "Operator Controller Extension Main ControllerRegistration Suite")
 }
