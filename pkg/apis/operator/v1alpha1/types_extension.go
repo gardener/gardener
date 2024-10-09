@@ -132,4 +132,6 @@ type ExtensionStatus struct {
 const (
 	// ExtensionInstalled is a condition type for indicating whether the extension has been installed.
 	ExtensionInstalled gardencorev1beta1.ConditionType = "Installed"
+	// ExtensionRequiredRuntime is a condition type for indicating whether the extension is required in the garden runtime cluster.
+	ExtensionRequiredRuntime gardencorev1beta1.ConditionType = "RequiredRuntime"
 )
