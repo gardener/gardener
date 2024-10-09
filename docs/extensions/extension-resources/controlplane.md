@@ -10,7 +10,7 @@ Now, Gardener commissions an external, provider-specific controller to take over
 
 ## Which control plane resources are required?
 
-As mentioned in the [controlplane customization webhooks](controlplane-webhooks.md) document, Gardener shall not deploy any `cloud-controller-manager` or any other provider-specific component.
+As mentioned in the [controlplane customization webhooks](../controlplane-webhooks.md) document, Gardener shall not deploy any `cloud-controller-manager` or any other provider-specific component.
 Instead, it creates a `ControlPlane` CRD that should be picked up by provider extensions.
 Its purpose is to trigger the deployment of such provider-specific components in the shoot namespace in the seed cluster.
 
@@ -55,7 +55,7 @@ However, the most important section is the `.spec.providerConfig` and the `.spec
 The first one contains an embedded declaration of the provider specific configuration for the control plane (that cannot be known by Gardener itself).
 You are responsible for designing how this configuration looks like.
 Gardener does not evaluate it but just copies this part from what has been provided by the end-user in the `Shoot` resource.
-The second one contains the output of the [`Infrastructure` resource](./extension-resources/infrastructure.md) (that might be relevant for the CCM config).
+The second one contains the output of the [`Infrastructure` resource](./infrastructure.md) (that might be relevant for the CCM config).
 
 In order to support a new control plane provider, you need to write a controller that watches all `ControlPlane`s with `.spec.type=<my-provider-name>`.
 You can take a look at the below referenced example implementation for the Alicloud provider.
@@ -71,7 +71,7 @@ For more information, see [`NetworkPolicy`s In Garden, Seed, Shoot Clusters](../
 Most providers might require further information that is not provider specific but already part of the shoot resource.
 One example for this is the [GCP control plane controller](https://github.com/gardener/gardener-extension-provider-gcp/tree/master/pkg/controller/controlplane), which needs the Kubernetes version of the shoot cluster (because it already uses the in-tree Kubernetes cloud-controller-manager).
 As Gardener cannot know which information is required by providers, it simply mirrors the `Shoot`, `Seed`, and `CloudProfile` resources into the seed.
-They are part of the [`Cluster` extension resource](cluster.md) and can be used to extract information that is not part of the `Infrastructure` resource itself.
+They are part of the [`Cluster` extension resource](../cluster.md) and can be used to extract information that is not part of the `Infrastructure` resource itself.
 
 ## References and Additional Resources
 
