@@ -6,7 +6,7 @@ This procedure is the preferred way to add additional seed clusters, because sho
 
 ## Prerequisites
 
-The only prerequisite is to register an initial cluster as a seed cluster that already has a manually deployed gardenlet (for a step-by-step manual installation guide, see [Deploy a Gardenlet Manually](deploy_gardenlet_manually.md)).
+The only prerequisite is to register an initial cluster as a seed cluster that already has a deployed gardenlet (for available options see [Deploying Gardenlets](deploy_gardenlet.md)).
 
 > [!TIP]
 > The initial seed cluster can be the garden cluster itself, but for better separation of concerns, it is recommended to only register other clusters as seeds.
