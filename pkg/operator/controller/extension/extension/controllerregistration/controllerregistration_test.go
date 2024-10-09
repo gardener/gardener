@@ -26,7 +26,7 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
-	. "github.com/gardener/gardener/pkg/operator/controller/extension/controllerregistration"
+	. "github.com/gardener/gardener/pkg/operator/controller/extension/extension/controllerregistration"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 

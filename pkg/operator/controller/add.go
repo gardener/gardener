@@ -38,10 +38,8 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 		return err
 	}
 
-	if err := (&extension.Reconciler{
-		Config: *cfg,
-	}).AddToManager(ctx, mgr, gardenClientMap); err != nil {
-		return fmt.Errorf("failed adding Extension controller: %w", err)
+	if err := extension.AddToManager(ctx, mgr, cfg, gardenClientMap); err != nil {
+		return err
 	}
 
 	if err := (&controllerregistrar.Reconciler{

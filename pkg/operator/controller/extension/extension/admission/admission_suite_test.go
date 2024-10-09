@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package extension_test
+package admission_test
 
 import (
 	"testing"
@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestExtension(t *testing.T) {
+func TestAdmission(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Operator Controller Extension Suite")
+	RunSpecs(t, "Operator Controller Extension Main Admission Suite")
 }
