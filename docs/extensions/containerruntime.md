@@ -9,7 +9,7 @@ The most widely known container runtime is Docker, but it is not alone in this s
 
 Kubernetes supports different container runtimes using Container Runtime Interface (CRI) – a plugin interface which enables kubelet to use a wide variety of container runtimes.
 
-Gardener supports creation of Worker machines using CRI. For more information, see [CRI Support](./extension-resources/operatingsystemconfig.md#cri-support).
+Gardener supports creation of Worker machines using CRI. For more information, see [CRI Support](./resources/operatingsystemconfig.md#cri-support).
 
 ## Motivation
 

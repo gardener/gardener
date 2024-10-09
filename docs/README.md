@@ -178,25 +178,25 @@
     * [Health Check Library](extensions/healthcheck-library.md)
   * [CA Rotation in Extensions](extensions/ca-rotation.md)
   * Blob storage providers
-    * [`BackupBucket` resource](extensions/extension-resources/backupbucket.md)
-    * [`BackupEntry` resource](extensions/extension-resources/backupentry.md)
+    * [`BackupBucket` resource](extensions/resources/backupbucket.md)
+    * [`BackupEntry` resource](extensions/resources/backupentry.md)
   * DNS providers
     * [`DNSRecord` resources](extensions/dnsrecord.md)
   * IaaS/Cloud providers
     * [Control plane customization webhooks](extensions/controlplane-webhooks.md)
-    * [`Bastion` resource](extensions/extension-resources/bastion.md)
-    * [`ControlPlane` resource](extensions/extension-resources/controlplane.md)
-    * [`ControlPlane` exposure resource](extensions/extension-resources/controlplane-exposure.md)
-    * [`Infrastructure` resource](extensions/extension-resources/infrastructure.md)
-    * [`Worker` resource](extensions/extension-resources/worker.md)
+    * [`Bastion` resource](extensions/resources/bastion.md)
+    * [`ControlPlane` resource](extensions/resources/controlplane.md)
+    * [`ControlPlane` exposure resource](extensions/resources/controlplane-exposure.md)
+    * [`Infrastructure` resource](extensions/resources/infrastructure.md)
+    * [`Worker` resource](extensions/resources/worker.md)
   * Network plugin providers
     * [`Network` resource](extensions/network.md)
   * Operating systems
-    * [`OperatingSystemConfig` resource](extensions/extension-resources/operatingsystemconfig.md)
+    * [`OperatingSystemConfig` resource](extensions/resources/operatingsystemconfig.md)
   * Container runtimes
     * [`ContainerRuntime` resource](extensions/containerruntime.md)
   * Generic (non-essential) extensions
-    * [`Extension` resource](extensions/extension-resources/extension.md)
+    * [`Extension` resource](extensions/resources/extension.md)
   * [Extension Admission](extensions/admission.md)
   * [Heartbeat controller](extensions/heartbeat.md)
 * [Provider Local](extensions/provider-local.md)
