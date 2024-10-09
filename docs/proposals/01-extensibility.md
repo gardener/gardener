@@ -226,7 +226,7 @@ spec:
       email: john.doe@example.com
 ```
 
-:information: The specifications for the other cloud providers Gardener already has an implementation for looks similar.
+:information_source: The specifications for the other cloud providers Gardener already has an implementation for looks similar.
 
 ### CRD Definitions and Workflow Adaptation
 
@@ -451,7 +451,7 @@ status:
           ...
 ```
 
-:information: The cloud-config-downloader script does not only download the cloud-config initially, but does so at regular intervals, e.g., every `30s`.
+:information_source: The cloud-config-downloader script does not only download the cloud-config initially, but does so at regular intervals, e.g., every `30s`.
 If it sees an updated cloud-config, then it applies it again by reloading and restarting all systemd units in order to reflect the changes.
 The way how this reloading of the cloud-config happens is OS-specific as well and not known to Gardener anymore, however, it must be part of the script already.
 On CoreOS you have to execute `/usr/bin/coreos-cloudinit --from-file=<path>`, whereas on SLES you have to execute `cloud-init --file <path> single -n write_files --frequency=once`.
@@ -661,7 +661,7 @@ state:
   <other fields required to keep track of>
 ```
 
-:information: **Every controller must be capable of reconstructing its own environment based on both the state it has written before and on the real world's conditions/state.**
+:information_source: **Every controller must be capable of reconstructing its own environment based on both the state it has written before and on the real world's conditions/state.**
 
 We cannot assume that Gardener is always online to observe the most recent states the controllers have written to their resources.
 Consequently, the information stored here must not be used as "single point of truth", but the controllers must potentially check the real world's status to reconstruct themselves.
@@ -707,7 +707,7 @@ We are now examining the current Shoot creation/reconciliation flow and describi
 | botanist.DeploySeedMonitoring | Unchanged, Gardener deploys the monitoring stack into the Seed. |
 | botanist.DeployClusterAutoscaler | Unchanged, Gardener deploys the cluster-autoscaler into the Seed. |
 
-:information: We can easily lift the contract later and allow dynamic network plugins or not using the VPN solution at all.
+:information_source: We can easily lift the contract later and allow dynamic network plugins or not using the VPN solution at all.
 We could also introduce a dedicated `ControlPlane` CRD and leave the complete responsibility of deploying kube-apiserver, kube-controller-manager, etc., to other controllers (if we need it at some point in time).
 
 #### Deletion Flow
@@ -779,7 +779,7 @@ leadership:
 Before every operation, the CRD-controllers check this DNS record (based on the `.spec.leadership.leaseSeconds` configuration) and verify that its result is equal to the `.spec.leadership.value` field.
 If both match, they know that they should act on the resource, otherwise they stop doing anything.
 
-:information: We will provide an easy-to-use framework for the controllers containing all of these features out-of-the-box in order to allow the developers to focus on writing the actual controller logic.
+:information_source: We will provide an easy-to-use framework for the controllers containing all of these features out-of-the-box in order to allow the developers to focus on writing the actual controller logic.
 
 When a Seed control plane move is triggered, the `.spec.cloud.seed` field of the respective `Shoot` is changed.
 Gardener will change the respective DNS record's value (`aws-01.core.garden.example.com`) to contain the new Seed name.
@@ -867,7 +867,7 @@ This operator watches `ControllerInstallation` resources and reacts on those it 
 Gardener is responsible for writing the `.spec` field, the operator is responsible for providing information in the `.status` indicating whether the controller was successfully deployed and is ready to be used.
 Gardener will be also able to ask for deletion of controllers from Seeds when they are not needed there anymore by deleting the corresponding `ControllerInstallation` object.
 
-:information: The provided easy-to-use framework for the controllers will also contain these needed features to implement corresponding operators.
+:information_source: The provided easy-to-use framework for the controllers will also contain these needed features to implement corresponding operators.
 
 For most cases, the controller deployment is very simple (just deploying it into the seed with some static configuration).
 In these cases, it would produce unnecessary effort to ask for providing another component (the operator) that deploys the controller.
@@ -876,7 +876,7 @@ The controller would be registered with the `ControllerRegistration` resources t
 Gardener would render the Helm chart and deploy the resources into the seed.
 It will not react if `.spec.registration.deployment.type!=helm`, which allows it to also use any other deployment mechanism. Controllers that are getting deployed by operators would not specify the `.spec.deployment` section in the `ControllerRegistration` at all.
 
-:information: Any controller requiring dynamic configuration values (e.g., based on the cloud provider or the region of the seed) must be installed with the operator approach.
+:information_source: Any controller requiring dynamic configuration values (e.g., based on the cloud provider or the region of the seed) must be installed with the operator approach.
 
 ## Other Cloud-Specific Parts
 
