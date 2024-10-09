@@ -105,3 +105,17 @@ func SetDefaults_GardenletDeployerControllerConfig(obj *GardenletDeployerControl
 		obj.ConcurrentSyncs = ptr.To(1)
 	}
 }
+
+// SetDefaults_ExtensionControllerConfiguration sets defaults for the ExtensionControllerConfiguration object.
+func SetDefaults_ExtensionControllerConfiguration(obj *ExtensionControllerConfiguration) {
+	if obj.ConcurrentSyncs == nil {
+		obj.ConcurrentSyncs = ptr.To(5)
+	}
+}
+
+// SetDefaults_ExtensionRequiredControllerConfiguration sets defaults for the ExtensionRequiredControllerConfiguration object.
+func SetDefaults_ExtensionRequiredControllerConfiguration(obj *ExtensionRequiredControllerConfiguration) {
+	if obj.ConcurrentSyncs == nil {
+		obj.ConcurrentSyncs = ptr.To(5)
+	}
+}
