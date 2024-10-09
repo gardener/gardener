@@ -260,5 +260,49 @@ var _ = Describe("Defaults", func() {
 				Expect(obj.Controllers.GardenCare.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Second})))
 			})
 		})
+
+		Describe("Extension controller defaulting", func() {
+			It("should default the Extension controller config", func() {
+				SetObjectDefaults_OperatorConfiguration(obj)
+
+				Expect(obj.Controllers.Extension.ConcurrentSyncs).To(PointTo(Equal(5)))
+			})
+
+			It("should not overwrite already set values for GardenCare controller config", func() {
+				obj = &OperatorConfiguration{
+					Controllers: ControllerConfiguration{
+						Extension: ExtensionControllerConfiguration{
+							ConcurrentSyncs: ptr.To(2),
+						},
+					},
+				}
+
+				SetObjectDefaults_OperatorConfiguration(obj)
+
+				Expect(obj.Controllers.Extension.ConcurrentSyncs).To(PointTo(Equal(2)))
+			})
+		})
+
+		Describe("ExtensionRequired controller defaulting", func() {
+			It("should default the ExtensionRequired controller config", func() {
+				SetObjectDefaults_OperatorConfiguration(obj)
+
+				Expect(obj.Controllers.ExtensionRequired.ConcurrentSyncs).To(PointTo(Equal(5)))
+			})
+
+			It("should not overwrite already set values for GardenCare controller config", func() {
+				obj = &OperatorConfiguration{
+					Controllers: ControllerConfiguration{
+						ExtensionRequired: ExtensionRequiredControllerConfiguration{
+							ConcurrentSyncs: ptr.To(2),
+						},
+					},
+				}
+
+				SetObjectDefaults_OperatorConfiguration(obj)
+
+				Expect(obj.Controllers.ExtensionRequired.ConcurrentSyncs).To(PointTo(Equal(2)))
+			})
+		})
 	})
 })

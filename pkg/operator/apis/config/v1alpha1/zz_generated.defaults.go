@@ -30,4 +30,6 @@ func SetObjectDefaults_OperatorConfiguration(in *OperatorConfiguration) {
 	SetDefaults_GardenControllerConfig(&in.Controllers.Garden)
 	SetDefaults_GardenCareControllerConfiguration(&in.Controllers.GardenCare)
 	SetDefaults_GardenletDeployerControllerConfig(&in.Controllers.GardenletDeployer)
+	SetDefaults_ExtensionControllerConfiguration(&in.Controllers.Extension)
+	SetDefaults_ExtensionRequiredControllerConfiguration(&in.Controllers.ExtensionRequired)
 }
