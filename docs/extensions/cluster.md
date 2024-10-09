@@ -1,7 +1,7 @@
 # `Cluster` Resource
 
 As part of the extensibility epic, a lot of responsibility that was previously taken over by Gardener directly has now been shifted to extension controllers running in the seed clusters.
-These extensions often serve a well-defined purpose (e.g., the management of [DNS records](dnsrecord.md), [infrastructure](./extension-resources/infrastructure.md)).
+These extensions often serve a well-defined purpose (e.g., the management of [DNS records](dnsrecord.md), [infrastructure](./resources/infrastructure.md)).
 We have introduced a couple of extension CRDs in the seeds whose specification is written by Gardener, and which are acted up by the extensions.
 
 However, the extensions sometimes require more information that is not directly part of the specification.
