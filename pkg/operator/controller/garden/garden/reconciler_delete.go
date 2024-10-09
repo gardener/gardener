@@ -218,7 +218,7 @@ func (r *Reconciler) delete(
 			invalidateClient,
 		)
 
-		_ = g.Add(flow.Task{
+		destroyMainETCDBackupBucket = g.Add(flow.Task{
 			Name: "Destroying main ETCD backup bucket",
 			Fn: func(ctx context.Context) error {
 				backupBucket := &extensionsv1alpha1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: etcdMainBackupBucketName(garden)}}
@@ -238,6 +238,13 @@ func (r *Reconciler) delete(
 			},
 			SkipIf:       garden.Spec.VirtualCluster.ETCD == nil || garden.Spec.VirtualCluster.ETCD.Main == nil || garden.Spec.VirtualCluster.ETCD.Main.Backup == nil || garden.Spec.VirtualCluster.ETCD.Main.Backup.BucketName != nil,
 			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
+		})
+		markExtensionResourcesCleanedUp = g.Add(flow.Task{
+			Name: "Mark extension resources as cleaned up",
+			Fn: func(ctx context.Context) error {
+				return kubernetesutils.SetAnnotationAndUpdate(ctx, r.RuntimeClientSet.Client(), garden, operatorv1alpha1.AnnotationKeyExtensionResourcesCleanedUp, "true")
+			},
+			Dependencies: flow.NewTaskIDs(destroyMainETCDBackupBucket),
 		})
 		destroyEtcdDruid = g.Add(flow.Task{
 			Name:         "Destroying ETCD Druid",
@@ -289,6 +296,7 @@ func (r *Reconciler) delete(
 			Dependencies: flow.NewTaskIDs(destroyFluentOperatorCustomResources),
 		})
 		syncPointCleanedUp = flow.NewTaskIDs(
+			markExtensionResourcesCleanedUp,
 			destroyEtcdDruid,
 			destroyIstio,
 			destroyHVPAController,

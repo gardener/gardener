@@ -85,7 +85,7 @@ func defaultRootCASecret() *corev1.Secret {
 	}
 }
 
-func defaultGarden(backupSecret, certManagementRootCA *corev1.Secret) *operatorv1alpha1.Garden {
+func defaultGarden(backupSecret, certManagementRootCA *corev1.Secret, specifyBackupBucket bool) *operatorv1alpha1.Garden {
 	randomSuffix, err := utils.GenerateRandomStringFromCharset(5, "0123456789abcdefghijklmnopqrstuvwxyz")
 	Expect(err).NotTo(HaveOccurred())
 	name := "garden-" + randomSuffix
@@ -99,6 +99,11 @@ func defaultGarden(backupSecret, certManagementRootCA *corev1.Secret) *operatorv
 				},
 			},
 		}
+	}
+
+	var bucketName *string
+	if specifyBackupBucket {
+		bucketName = ptr.To("gardener-operator/" + name)
 	}
 
 	return &operatorv1alpha1.Garden{
@@ -142,7 +147,7 @@ func defaultGarden(backupSecret, certManagementRootCA *corev1.Secret) *operatorv
 					Main: &operatorv1alpha1.ETCDMain{
 						Backup: &operatorv1alpha1.Backup{
 							Provider:   "local",
-							BucketName: ptr.To("gardener-operator/" + name),
+							BucketName: bucketName,
 							SecretRef: corev1.LocalObjectReference{
 								Name: backupSecret.Name,
 							},
