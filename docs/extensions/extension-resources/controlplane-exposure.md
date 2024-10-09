@@ -49,7 +49,7 @@ You can take a look at the below referenced example implementation for the AWS p
 
 Most providers might require further information that is not provider specific but already part of the shoot resource.
 As Gardener cannot know which information is required by providers, it simply mirrors the `Shoot`, `Seed`, and `CloudProfile` resources into the seed.
-They are part of the [`Cluster` extension resource](cluster.md) and can be used to extract information.
+They are part of the [`Cluster` extension resource](../cluster.md) and can be used to extract information.
 
 ## References and Additional Resources
 

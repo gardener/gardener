@@ -21,23 +21,23 @@ The reasons for that will become evident later.
 
 Gardener installs a few components onto every worker machine in order to allow it to join the shoot cluster.
 There is the `kubelet` process, some scripts for continuously checking the health of `kubelet` and `containerd`, but also configuration for log rotation, CA certificates, etc.
-You can find the complete configuration [at the components folder](../../pkg/component/extensions/operatingsystemconfig/original/components). We are calling this the "original" user-data.
+You can find the complete configuration [at the components folder](../../../pkg/component/extensions/operatingsystemconfig/original/components). We are calling this the "original" user-data.
 
 ## How does Gardener bootstrap the machines?
 
 `gardenlet` makes use of `gardener-node-agent` to perform the bootstrapping and reconciliation of systemd units and files on the machine.
-Please refer to [this document](../concepts/node-agent.md#installation-and-bootstrapping) for a first overview.
+Please refer to [this document](../../concepts/node-agent.md#installation-and-bootstrapping) for a first overview.
 
 Usually, you would submit all the components you want to install onto the machine as part of the user-data during creation time.
 However, some providers do have a size limitation (around ~16KB) for that user-data.
 That's why we do not send the "original" user-data to the machine-controller-manager (who then forwards it to the provider's API).
-Instead, we only send a small "init" script that bootstrap the [`gardener-node-agent`](../concepts/node-agent.md).
+Instead, we only send a small "init" script that bootstrap the [`gardener-node-agent`](../../concepts/node-agent.md).
 It fetches the "original" content from a `Secret` and applies it on the machine directly.
 This way we can extend the "original" user-data without any size restrictions (except for the `1 MB` limit for `Secret`s).
 
 The high-level flow is as follows:
 
-1. For every worker pool `X` in the `Shoot` specification, Gardener creates a `Secret` named `cloud-config-<X>` in the `kube-system` namespace of the shoot cluster. The secret contains the "original" `OperatingSystemConfig` (i.e., systemd units and files for `kubelet`, etc.).
+1. For every worker pool `X` in the `Shoot` specification, Gardener creates a `Secret` named `cloud-config-<X>` in the `kube-system` namespace of the shoot cluster. The secret contains the "original" `OperatingSystemConfig` (i.e., systemd units and files for `kubelet`).
 1. Gardener generates a kubeconfig with minimal permissions just allowing reading these secrets. It is used by the `gardener-node-agent` later.
 1. Gardener provides the `gardener-node-init.sh` bash script and the machine image stated in the `Shoot` specification to the machine-controller-manager.
 1. Based on this information, the machine-controller-manager creates the VM.
@@ -48,7 +48,7 @@ The `gardener-node-agent` can update itself in case of newer Gardener versions, 
 
 ## What needs to be implemented to support a new operating system?
 
-As part of the [`Shoot` reconciliation flow](../concepts/gardenlet.md#shoot-controller), `gardenlet` will create a special CRD in the seed cluster that needs to be reconciled by an extension controller, for example:
+As part of the [`Shoot` reconciliation flow](../../concepts/gardenlet.md#shoot-controller), `gardenlet` will create a special CRD in the seed cluster that needs to be reconciled by an extension controller, for example:
 
 ```yaml
 ---
@@ -183,7 +183,7 @@ status:
 
 The `gardener-node-agent` will merge `.spec.units` and `.status.extensionUnits` as well as `.spec.files` and `.status.extensionFiles` when applying.
 
-You can find an example implementation [here](../../pkg/provider-local/controller/operatingsystemconfig/actuator.go).
+You can find an example implementation [here](../../../pkg/provider-local/controller/operatingsystemconfig/actuator.go).
 
 ### Bootstrap Tokens
 
@@ -197,7 +197,7 @@ This instructs the responsible OS extension to pass this file (with its content 
 
 After the machine has been bootstrapped, the token secret in the shoot cluster gets deleted again.
 
-The token is used to bootstrap [Gardener Node Agent](../concepts/node-agent.md) and `kubelet`.
+The token is used to bootstrap [Gardener Node Agent](../../concepts/node-agent.md) and `kubelet`.
 
 ## What needs to be implemented to support a new operating system?
 
@@ -345,7 +345,7 @@ To support `containerd`, an OS extension must satisfy the following criteria:
 1. `containerd` must listen on its default socket path: `unix:///run/containerd/containerd.sock`
 1. `containerd` must be configured to work with the default configuration file in: `/etc/containerd/config.toml` (Created by Gardener).
 
-For a convenient handling, [gardener-node-agent](../concepts/node-agent.md) can manage various aspects of containerd's config, e.g. the registry configuration, if given in the `OperatingSystemConfig`.
+For a convenient handling, [gardener-node-agent](../../concepts/node-agent.md) can manage various aspects of containerd's config, e.g. the registry configuration, if given in the `OperatingSystemConfig`.
 Any Gardener extension which needs to modify the config, should check the functionality exposed through this API first.
 If applicable, adjustments can be implemented through mutating webhooks, acting on the created or updated `OperatingSystemConfig` resource.
 
