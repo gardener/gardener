@@ -27,7 +27,3 @@ func (g *gardenerDashboard) reconcileSessionSecret(ctx context.Context) (*corev1
 		PasswordLength: 32,
 	}, secretsmanager.Rotate(secretsmanager.KeepOld), secretsmanager.Validity(30*24*time.Hour), secretsmanager.IgnoreOldSecretsAfter(24*time.Hour))
 }
-
-func (g *gardenerDashboard) getPreviousSessionSecret() (*corev1.Secret, bool) {
-	return g.secretsManager.Get("gardener-dashboard-session-secret", secretsmanager.Old)
-}

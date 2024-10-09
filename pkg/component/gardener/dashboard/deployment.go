@@ -64,7 +64,7 @@ func (g *gardenerDashboard) deployment(
 	secretNameGenericTokenKubeconfig string,
 	secretNameVirtualGardenAccess string,
 	secretNameSession string,
-	secretNameSessionPrevious string,
+	secretSessionPrevious *corev1.Secret,
 	configMapName string,
 ) (
 	*appsv1.Deployment,
@@ -249,12 +249,12 @@ func (g *gardenerDashboard) deployment(
 		},
 	}
 
-	if secretNameSessionPrevious != "" {
+	if secretSessionPrevious != nil {
 		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
 			Name: volumeNameSessionPrevious,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName:  secretNameSessionPrevious,
+					SecretName:  secretSessionPrevious.Name,
 					DefaultMode: ptr.To[int32](0640),
 					Items: []corev1.KeyToPath{{
 						Key:  secretsutils.DataKeyPassword,
