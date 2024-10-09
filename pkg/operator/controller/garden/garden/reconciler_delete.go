@@ -13,12 +13,14 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
@@ -31,6 +33,7 @@ import (
 	gardenprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
+	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -229,6 +232,27 @@ func (r *Reconciler) delete(
 			invalidateClient,
 		)
 
+		destroyMainETCDBackupBucket = g.Add(flow.Task{
+			Name: "Destroying main ETCD backup bucket",
+			Fn: func(ctx context.Context) error {
+				backupBucket := &extensionsv1alpha1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: etcdMainBackupBucketName(garden)}}
+				if err := extensions.DeleteExtensionObject(ctx, r.RuntimeClientSet.Client(), backupBucket); err != nil {
+					return err
+				}
+
+				return extensions.WaitUntilExtensionObjectDeleted(
+					ctx,
+					r.RuntimeClientSet.Client(),
+					log,
+					backupBucket,
+					extensionsv1alpha1.BackupBucketResource,
+					2*time.Second,
+					time.Minute,
+				)
+			},
+			SkipIf:       garden.Spec.VirtualCluster.ETCD == nil || garden.Spec.VirtualCluster.ETCD.Main == nil || garden.Spec.VirtualCluster.ETCD.Main.Backup == nil || garden.Spec.VirtualCluster.ETCD.Main.Backup.BucketName != nil,
+			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
+		})
 		destroyEtcdDruid = g.Add(flow.Task{
 			Name:         "Destroying ETCD Druid",
 			Fn:           component.OpDestroyAndWait(c.etcdDruid).Destroy,
@@ -280,6 +304,8 @@ func (r *Reconciler) delete(
 			Dependencies: flow.NewTaskIDs(destroyFluentOperatorCustomResources),
 		})
 		syncPointCleanedUp = flow.NewTaskIDs(
+			destroyDNSRecords,
+			destroyMainETCDBackupBucket,
 			destroyEtcdDruid,
 			destroyIstio,
 			destroyHVPAController,

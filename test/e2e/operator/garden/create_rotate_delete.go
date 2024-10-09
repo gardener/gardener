@@ -32,7 +32,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 	var (
 		backupBucket = defaultBackupBucket()
 		backupSecret = defaultBackupSecret()
-		garden       = defaultGarden(backupSecret, nil)
+		garden       = defaultGarden(backupSecret, nil, false)
 	)
 
 	It("Create Garden, Rotate Credentials and Delete Garden", Label("credentials-rotation"), func() {
