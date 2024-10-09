@@ -47,13 +47,12 @@ const (
 
 // Reconciler reconciles Extensions.
 type Reconciler struct {
-	// GardenClientMap is the ClientMap used to communicate with the virtual garden cluster. It should be set by AddToManager function but the field is still public for usage in tests.
-	GardenClientMap  clientmap.ClientMap
-	RuntimeClientSet kubernetes.Interface
+	gardenClientMap  clientmap.ClientMap
+	runtimeClientSet kubernetes.Interface
+	clock            clock.Clock
+	recorder         record.EventRecorder
 
 	Config          config.OperatorConfiguration
-	Clock           clock.Clock
-	Recorder        record.EventRecorder
 	GardenNamespace string
 	HelmRegistry    oci.Interface
 
@@ -72,7 +71,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	log := logf.FromContext(ctx)
 
 	extension := &operatorv1alpha1.Extension{}
-	if err := r.RuntimeClientSet.Client().Get(ctx, request.NamespacedName, extension); err != nil {
+	if err := r.runtimeClientSet.Client().Get(ctx, request.NamespacedName, extension); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -82,7 +81,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	gardenList := &operatorv1alpha1.GardenList{}
 	// We limit one result because we expect only a single Garden object to be there.
-	if err := r.RuntimeClientSet.Client().List(ctx, gardenList, client.Limit(1)); err != nil {
+	if err := r.runtimeClientSet.Client().List(ctx, gardenList, client.Limit(1)); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error retrieving Garden object: %w", err)
 	}
 
@@ -123,7 +122,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 }
 
 func (r *Reconciler) updateExtensionStatus(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension, updatedConditions Conditions) error {
-	currentConditions := NewConditions(r.Clock, extension.Status)
+	currentConditions := NewConditions(r.clock, extension.Status)
 	if extension.Generation == extension.Status.ObservedGeneration && !v1beta1helper.ConditionsNeedUpdate(currentConditions.ConvertToSlice(), updatedConditions.ConvertToSlice()) {
 		return nil
 	}
@@ -142,7 +141,7 @@ func (r *Reconciler) updateExtensionStatus(ctx context.Context, log logr.Logger,
 	}
 
 	log.V(1).Info("Updating Extension status")
-	if err := r.RuntimeClientSet.Client().Status().Patch(ctx, extension, patch); err != nil {
+	if err := r.runtimeClientSet.Client().Status().Patch(ctx, extension, patch); err != nil {
 		return fmt.Errorf("could not update Extension status: %w", err)
 	}
 
@@ -151,7 +150,7 @@ func (r *Reconciler) updateExtensionStatus(ctx context.Context, log logr.Logger,
 
 func (r *Reconciler) removeFinalizer(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension) error {
 	log.Info("Removing finalizer")
-	if err := controllerutils.RemoveFinalizers(ctx, r.RuntimeClientSet.Client(), extension, operatorv1alpha1.FinalizerName); err != nil {
+	if err := controllerutils.RemoveFinalizers(ctx, r.runtimeClientSet.Client(), extension, operatorv1alpha1.FinalizerName); err != nil {
 		return fmt.Errorf("failed to remove finalizer: %w", err)
 	}
 	return nil
