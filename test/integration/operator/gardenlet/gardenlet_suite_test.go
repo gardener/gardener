@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -31,6 +32,7 @@ import (
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/operator/controller/gardenlet"
 	ocifake "github.com/gardener/gardener/pkg/utils/oci/fake"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	gardenerenvtest "github.com/gardener/gardener/test/envtest"
 )
@@ -123,6 +125,8 @@ var _ = BeforeSuite(func() {
 
 	fakeRegistry = ocifake.NewRegistry()
 	fakeRegistry.AddArtifact(&ociRepository, gardenletChart)
+
+	DeferCleanup(test.WithVar(&gardenlet.RequeueDurationSeedIsNotYetRegistered, 10*time.Millisecond))
 
 	By("Register controller")
 	Expect((&gardenlet.Reconciler{
