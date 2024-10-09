@@ -22,7 +22,6 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -85,9 +84,6 @@ var _ = BeforeSuite(func() {
 					filepath.Join("..", "..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_gardens.yaml"),
 					filepath.Join("..", "..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_extensions.yaml"),
 					filepath.Join("..", "..", "..", "..", "..", "example", "resource-manager", "10-crd-resources.gardener.cloud_managedresources.yaml"),
-					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_backupbuckets.yaml"),
-					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_dnsrecords.yaml"),
-					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_extensions.yaml"),
 				},
 			},
 			ErrorIfCRDPathMissing: true,
@@ -130,16 +126,10 @@ var _ = BeforeSuite(func() {
 	})
 
 	By("Setup manager")
-	httpClient, err := rest.HTTPClientFor(restConfig)
-	Expect(err).NotTo(HaveOccurred())
-	mapper, err := apiutil.NewDynamicRESTMapper(restConfig, httpClient)
-	Expect(err).NotTo(HaveOccurred())
-
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:  scheme,
 		Metrics: metricsserver.Options{BindAddress: "0"},
 		Cache: cache.Options{
-			Mapper: mapper,
 			ByObject: map[client.Object]cache.ByObject{
 				&operatorv1alpha1.Garden{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
