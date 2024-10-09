@@ -118,7 +118,8 @@ func defaultGarden(backupSecret, certManagementRootCA *corev1.Secret) *operatorv
 					},
 				},
 				Provider: operatorv1alpha1.Provider{
-					Zones: []string{"0", "1", "2"},
+					Region: ptr.To("local"),
+					Zones:  []string{"0", "1", "2"},
 				},
 				Settings: &operatorv1alpha1.Settings{
 					VerticalPodAutoscaler: &operatorv1alpha1.SettingVerticalPodAutoscaler{
@@ -141,7 +142,7 @@ func defaultGarden(backupSecret, certManagementRootCA *corev1.Secret) *operatorv
 					Main: &operatorv1alpha1.ETCDMain{
 						Backup: &operatorv1alpha1.Backup{
 							Provider:   "local",
-							BucketName: "gardener-operator/" + name,
+							BucketName: ptr.To("gardener-operator/" + name),
 							SecretRef: corev1.LocalObjectReference{
 								Name: backupSecret.Name,
 							},
