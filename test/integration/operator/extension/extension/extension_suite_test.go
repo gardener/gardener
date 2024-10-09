@@ -37,7 +37,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
-	"github.com/gardener/gardener/pkg/operator/controller/extension"
+	"github.com/gardener/gardener/pkg/operator/controller/extension/extension"
 	"github.com/gardener/gardener/pkg/operator/features"
 	ocifake "github.com/gardener/gardener/pkg/utils/oci/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -82,12 +82,12 @@ var _ = BeforeSuite(func() {
 		Environment: &envtest.Environment{
 			CRDInstallOptions: envtest.CRDInstallOptions{
 				Paths: []string{
-					filepath.Join("..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_gardens.yaml"),
-					filepath.Join("..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_extensions.yaml"),
-					filepath.Join("..", "..", "..", "..", "example", "resource-manager", "10-crd-resources.gardener.cloud_managedresources.yaml"),
-					filepath.Join("..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_backupbuckets.yaml"),
-					filepath.Join("..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_dnsrecords.yaml"),
-					filepath.Join("..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_extensions.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_gardens.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_extensions.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "example", "resource-manager", "10-crd-resources.gardener.cloud_managedresources.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_backupbuckets.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_dnsrecords.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_extensions.yaml"),
 				},
 			},
 			ErrorIfCRDPathMissing: true,
@@ -170,7 +170,7 @@ var _ = BeforeSuite(func() {
 
 	ociRepositoryProviderLocalChart = gardencorev1.OCIRepository{Repository: ptr.To("provider-local"), Tag: ptr.To("test")}
 
-	Expect(exec.Command("helm", "package", filepath.Join("..", "..", "..", "..", "charts", "gardener", "provider-local"), "--destination", ".").Run()).To(Succeed())
+	Expect(exec.Command("helm", "package", filepath.Join("..", "..", "..", "..", "..", "charts", "gardener", "provider-local"), "--destination", ".").Run()).To(Succeed())
 	DeferCleanup(func() {
 		Expect(os.Remove("gardener-extension-provider-local-v0.1.0.tgz")).To(Succeed())
 	})
@@ -183,14 +183,14 @@ var _ = BeforeSuite(func() {
 	ociRepositoryAdmissionApplicationChart = gardencorev1.OCIRepository{Repository: ptr.To("admission-local-application"), Tag: ptr.To("test")}
 	ociRepositoryAdmissionRuntimeChart = gardencorev1.OCIRepository{Repository: ptr.To("admission-local-runtime"), Tag: ptr.To("test")}
 
-	Expect(exec.Command("helm", "package", filepath.Join("..", "..", "..", "..", "charts", "gardener", "admission-local", "charts", "application"), "--destination", ".").Run()).To(Succeed())
+	Expect(exec.Command("helm", "package", filepath.Join("..", "..", "..", "..", "..", "charts", "gardener", "admission-local", "charts", "application"), "--destination", ".").Run()).To(Succeed())
 	DeferCleanup(func() {
 		Expect(os.Remove("admission-local-application-0.1.0.tgz")).To(Succeed())
 	})
 	admissionLocalApplicationChart, err := os.ReadFile("admission-local-application-0.1.0.tgz")
 	Expect(err).NotTo(HaveOccurred())
 
-	Expect(exec.Command("helm", "package", filepath.Join("..", "..", "..", "..", "charts", "gardener", "admission-local", "charts", "runtime"), "--destination", ".").Run()).To(Succeed())
+	Expect(exec.Command("helm", "package", filepath.Join("..", "..", "..", "..", "..", "charts", "gardener", "admission-local", "charts", "runtime"), "--destination", ".").Run()).To(Succeed())
 	DeferCleanup(func() {
 		Expect(os.Remove("admission-local-runtime-0.1.0.tgz")).To(Succeed())
 	})

@@ -26,9 +26,9 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
-	"github.com/gardener/gardener/pkg/operator/controller/extension/admission"
-	"github.com/gardener/gardener/pkg/operator/controller/extension/controllerregistration"
-	"github.com/gardener/gardener/pkg/operator/controller/extension/runtime"
+	"github.com/gardener/gardener/pkg/operator/controller/extension/extension/admission"
+	"github.com/gardener/gardener/pkg/operator/controller/extension/extension/controllerregistration"
+	"github.com/gardener/gardener/pkg/operator/controller/extension/extension/runtime"
 	"github.com/gardener/gardener/pkg/utils/oci"
 )
 

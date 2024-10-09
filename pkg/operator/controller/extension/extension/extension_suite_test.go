@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package runtime_test
+package extension_test
 
 import (
 	"testing"
@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestRuntime(t *testing.T) {
+func TestExtension(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Operator Controller Extension Runtime Suite")
+	RunSpecs(t, "Operator Controller Extension Main Suite")
 }
