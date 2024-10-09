@@ -190,6 +190,7 @@
 * [Deploying Gardenlets](deployment/deploy_gardenlet.md)
   * [Automatic Deployment of Gardenlets](deployment/deploy_gardenlet_automatically.md)
   * [Deploy a Gardenlet Manually](deployment/deploy_gardenlet_manually.md)
+  * [Deploy a Gardenlet via Gardener Operator](deployment/deploy_gardenlet_via_operator.md)
   * [Scoped API Access for Gardenlets](deployment/gardenlet_api_access.md)
 * [Overwrite image vector](deployment/image_vector.md)
 * [Migration from Gardener `v0` to `v1`](deployment/migration_v0_to_v1.md)
