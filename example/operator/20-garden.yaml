@@ -8,6 +8,13 @@ type: Opaque
 stringData:
   hostPath: "/etc/gardener/local-backupbuckets"
 ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: garden-dns-local
+  namespace: garden
+type: Opaque
+---
 apiVersion: operator.gardener.cloud/v1alpha1
 kind: Garden
 metadata:

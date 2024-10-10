@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/extensions/dnsrecord"
 	"github.com/gardener/gardener/pkg/component/garden/system/virtual"
 	gardeneraccess "github.com/gardener/gardener/pkg/component/gardener/access"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
@@ -231,6 +232,13 @@ func (r *Reconciler) delete(
 			destroyEtcd,
 			invalidateClient,
 		)
+
+		destroyDNSRecords = g.Add(flow.Task{
+			Name:         "Destroying DNSRecords for virtual garden cluster and ingress controller",
+			Fn:           func(ctx context.Context) error { return r.destroyDNSRecords(ctx, log, garden) },
+			SkipIf:       garden.Spec.VirtualCluster.DNS.Provider == nil || garden.Spec.VirtualCluster.DNS.SecretRef == nil,
+			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
+		})
 
 		destroyMainETCDBackupBucket = g.Add(flow.Task{
 			Name: "Destroying main ETCD backup bucket",
@@ -457,4 +465,35 @@ func (r *Reconciler) destroyGardenPrometheus(ctx context.Context, prometheus pro
 	}
 
 	return r.RuntimeClientSet.Client().DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(r.GardenNamespace), client.MatchingLabels{v1beta1constants.GardenerPurpose: gardenerutils.LabelPurposeGlobalMonitoringSecret})
+}
+
+func (r *Reconciler) destroyDNSRecords(ctx context.Context, log logr.Logger, garden *operatorv1alpha1.Garden) error {
+	if garden.Spec.VirtualCluster.DNS.Provider == nil || garden.Spec.VirtualCluster.DNS.SecretRef == nil {
+		return fmt.Errorf("no DNS provider or DNS secret configuration found in Garden resource")
+	}
+
+	dnsRecordList := &extensionsv1alpha1.DNSRecordList{}
+	if err := r.RuntimeClientSet.Client().List(ctx, dnsRecordList, client.InNamespace(r.GardenNamespace)); err != nil {
+		return fmt.Errorf("failed listing DNS records: %w", err)
+	}
+
+	var taskFns []flow.TaskFn
+
+	for _, dnsRecord := range dnsRecordList.Items {
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			return component.OpDestroyAndWait(dnsrecord.New(
+				log,
+				r.RuntimeClientSet.Client(),
+				&dnsrecord.Values{
+					Name:      dnsRecord.Name,
+					Namespace: dnsRecord.Namespace,
+				},
+				dnsrecord.DefaultInterval,
+				dnsrecord.DefaultSevereThreshold,
+				dnsrecord.DefaultTimeout,
+			)).Destroy(ctx)
+		})
+	}
+
+	return flow.Parallel(taskFns...)(ctx)
 }
