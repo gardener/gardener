@@ -37,6 +37,8 @@ In these cases, you might want to check out one of the following options that ru
 
 ```bash
 make kind-up
+```
+
 > If you want to setup an IPv6 KinD cluster, use `make kind-up IPFAMILY=ipv6` instead.
 
 This command sets up a new KinD cluster named `gardener-local` and stores the kubeconfig in the `./example/gardener-local/kind/local/kubeconfig` file.
