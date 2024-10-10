@@ -519,7 +519,7 @@ var _ = Describe("CertManagement", func() {
 		})
 
 		It("should successfully destroy all resources of CRDs", func() {
-			comp := NewCRDs(applier)
+			comp := NewCRDs(c, applier)
 
 			Expect(comp.Destroy(ctx)).To(Succeed())
 

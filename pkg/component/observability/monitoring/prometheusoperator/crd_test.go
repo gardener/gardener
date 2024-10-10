@@ -23,9 +23,9 @@ import (
 
 var _ = Describe("CRD", func() {
 	var (
-		ctx      = context.TODO()
-		c        client.Client
-		deployer component.Deployer
+		ctx          = context.TODO()
+		c            client.Client
+		deployWaiter component.DeployWaiter
 	)
 
 	BeforeEach(func() {
@@ -35,12 +35,12 @@ var _ = Describe("CRD", func() {
 		mapper.Add(apiextensionsv1.SchemeGroupVersion.WithKind("CustomResourceDefinition"), meta.RESTScopeRoot)
 		applier := kubernetes.NewApplier(c, mapper)
 
-		deployer = NewCRDs(applier)
+		deployWaiter = NewCRDs(c, applier)
 	})
 
 	Describe("#Deploy", func() {
 		It("should deploy the CRD", func() {
-			Expect(deployer.Deploy(ctx)).To(Succeed())
+			Expect(deployWaiter.Deploy(ctx)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKey{Name: "alertmanagerconfigs.monitoring.coreos.com"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKey{Name: "alertmanagers.monitoring.coreos.com"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKey{Name: "podmonitors.monitoring.coreos.com"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
@@ -56,7 +56,7 @@ var _ = Describe("CRD", func() {
 
 	Describe("#Destroy", func() {
 		It("should delete the CRD", func() {
-			Expect(deployer.Destroy(ctx)).To(Succeed())
+			Expect(deployWaiter.Destroy(ctx)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKey{Name: "alertmanagerconfigs.monitoring.coreos.com"}, &apiextensionsv1.CustomResourceDefinition{})).To(matchers.BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKey{Name: "alertmanagers.monitoring.coreos.com"}, &apiextensionsv1.CustomResourceDefinition{})).To(matchers.BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKey{Name: "podmonitors.monitoring.coreos.com"}, &apiextensionsv1.CustomResourceDefinition{})).To(matchers.BeNotFoundError())

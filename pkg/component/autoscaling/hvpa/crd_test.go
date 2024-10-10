@@ -35,7 +35,7 @@ var _ = Describe("CRD", func() {
 		mapper.Add(apiextensionsv1.SchemeGroupVersion.WithKind("CustomResourceDefinition"), meta.RESTScopeRoot)
 		applier := kubernetes.NewApplier(c, mapper)
 
-		crdDeployer = NewCRD(applier)
+		crdDeployer = NewCRD(c, applier)
 	})
 
 	Describe("#Deploy", func() {
