@@ -63,7 +63,8 @@ func (a *actuator) updateCoreDNSRewritingRules(
 	mutateCorednsRules func(corednsConfig *corev1.ConfigMap, dnsRecord *extensionsv1alpha1.DNSRecord, zone *string),
 ) error {
 	// Only handle dns records for kube-apiserver
-	if dnsRecord == nil || !strings.HasPrefix(dnsRecord.Spec.Name, "api.") || !strings.HasSuffix(dnsRecord.Spec.Name, ".local.gardener.cloud") {
+	if dnsRecord == nil || !strings.HasPrefix(dnsRecord.Spec.Name, "api.") || !strings.HasSuffix(dnsRecord.Spec.Name, ".local.gardener.cloud") ||
+		(dnsRecord.Spec.Class != nil && *dnsRecord.Spec.Class == extensionsv1alpha1.ExtensionClassGarden) {
 		return nil
 	}
 
