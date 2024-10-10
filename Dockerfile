@@ -63,3 +63,9 @@ FROM distroless-static AS gardener-extension-provider-local
 COPY --from=builder /go/bin/gardener-extension-provider-local /gardener-extension-provider-local
 WORKDIR /
 ENTRYPOINT ["/gardener-extension-provider-local"]
+
+# gardener-extension-admission-local
+FROM distroless-static AS gardener-extension-admission-local
+COPY --from=builder /go/bin/gardener-extension-admission-local /gardener-extension-admission-local
+WORKDIR /
+ENTRYPOINT ["/gardener-extension-admission-local"]

@@ -1681,3 +1681,140 @@ profiles:
           name: timestamp
           dateTime:
             format: "20060102150405"
+---
+apiVersion: skaffold/v4beta7
+kind: Config
+metadata:
+  name: admission-local
+build:
+  tagPolicy:
+    customTemplate:
+      template: "{{.version}}-{{.sha}}"
+      components:
+        - name: version
+          envTemplate:
+            template: "{{.GARDENER_VERSION}}"
+        - name: sha
+          gitCommit:
+            variant: AbbrevCommitSha
+  artifacts:
+    - image: local-skaffold/gardener-extension-admission-local
+      ko:
+        dependencies:
+          paths:
+            - cmd/gardener-extension-admission-local
+            - cmd/gardener-extension-admission-local/app
+            - cmd/utils
+            - extensions/pkg/apis/config
+            - extensions/pkg/controller
+            - extensions/pkg/controller/cmd
+            - extensions/pkg/predicate
+            - extensions/pkg/util
+            - extensions/pkg/webhook
+            - extensions/pkg/webhook/certificates
+            - extensions/pkg/webhook/cmd
+            - extensions/pkg/webhook/shoot
+            - pkg/api/core
+            - pkg/api/extensions
+            - pkg/api/security
+            - pkg/apis/core
+            - pkg/apis/core/install
+            - pkg/apis/core/v1
+            - pkg/apis/core/v1beta1
+            - pkg/apis/core/v1beta1/constants
+            - pkg/apis/core/v1beta1/helper
+            - pkg/apis/extensions
+            - pkg/apis/extensions/v1alpha1
+            - pkg/apis/operations
+            - pkg/apis/operations/install
+            - pkg/apis/operations/v1alpha1
+            - pkg/apis/operator
+            - pkg/apis/operator/v1alpha1
+            - pkg/apis/resources
+            - pkg/apis/resources/v1alpha1
+            - pkg/apis/security
+            - pkg/apis/security/install
+            - pkg/apis/security/v1alpha1
+            - pkg/apis/seedmanagement
+            - pkg/apis/seedmanagement/encoding
+            - pkg/apis/seedmanagement/install
+            - pkg/apis/seedmanagement/v1alpha1
+            - pkg/apis/settings
+            - pkg/apis/settings/install
+            - pkg/apis/settings/v1alpha1
+            - pkg/chartrenderer
+            - pkg/client/kubernetes
+            - pkg/client/kubernetes/cache
+            - pkg/controllerutils
+            - pkg/controllerutils/predicate
+            - pkg/extensions
+            - pkg/gardenlet/apis/config
+            - pkg/gardenlet/apis/config/v1alpha1
+            - pkg/healthz
+            - pkg/logger
+            - pkg/provider-local/admission/cmd
+            - pkg/provider-local/admission/mutator
+            - pkg/provider-local/admission/validator
+            - pkg/provider-local/apis/local
+            - pkg/provider-local/apis/local/install
+            - pkg/provider-local/apis/local/v1alpha1
+            - pkg/provider-local/local
+            - pkg/resourcemanager/controller/garbagecollector/references
+            - pkg/utils
+            - pkg/utils/chart
+            - pkg/utils/context
+            - pkg/utils/errors
+            - pkg/utils/flow
+            - pkg/utils/gardener
+            - pkg/utils/imagevector
+            - pkg/utils/kubernetes
+            - pkg/utils/kubernetes/health
+            - pkg/utils/kubernetes/unstructured
+            - pkg/utils/managedresources
+            - pkg/utils/managedresources/builder
+            - pkg/utils/retry
+            - pkg/utils/secrets
+            - pkg/utils/secrets/manager
+            - pkg/utils/timewindow
+            - pkg/utils/validation/kubernetesversion
+            - pkg/utils/version
+            - third_party/gopkg.in/yaml.v2
+            - VERSION
+        ldflags:
+          - '{{.LD_FLAGS}}'
+        main: ./cmd/gardener-extension-admission-local
+    - image: local-skaffold/gardener-extension-admission-local/charts/runtime
+      custom:
+        buildCommand: |
+          ./hack/push-helm.sh charts/gardener/admission-local/charts/runtime .image
+        dependencies:
+          paths:
+            - charts/gardener/admission-local/charts/runtime
+      requires:
+        - image: local-skaffold/gardener-extension-admission-local
+          alias: IMG
+    - image: local-skaffold/gardener-extension-admission-local/charts/application
+      custom:
+        buildCommand: |
+          ./hack/push-helm.sh charts/gardener/admission-local/charts/application .image
+        dependencies:
+          paths:
+            - charts/gardener/admission-local/charts/application
+deploy:
+  helm:
+    releases:
+      - name: gardener-extension-admission-local-application
+        chartPath: charts/gardener/admission-local/charts/application
+        namespace: garden
+        setValueTemplates:
+          gardener.virtualCluster.serviceAccount.name: gardener-extension-admission-local
+          gardener.virtualCluster.serviceAccount.namespace: garden
+        createNamespace: true
+        wait: true
+      - name: gardener-extension-admission-local-runtime
+        chartPath: charts/gardener/admission-local/charts/runtime
+        namespace: garden
+        setValueTemplates:
+          gardener.runtimeCluster.priorityClassName: gardener-system-400
+        createNamespace: true
+        wait: true
