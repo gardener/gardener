@@ -174,7 +174,6 @@ rules:
   - extensions.gardener.cloud
   resources:
   - clusters
-  - dnsrecords
   - extensions
   verbs:
   - get
@@ -184,6 +183,7 @@ rules:
   - extensions.gardener.cloud
   resources:
   - backupbuckets
+  - dnsrecords
   verbs:
   - get
   - list

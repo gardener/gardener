@@ -12,6 +12,9 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
+	"github.com/gardener/gardener/pkg/component/extensions/dnsrecord"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
@@ -22,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/component-base/version"
 	podsecurityadmissionapi "k8s.io/pod-security-admission/api"
 	"k8s.io/utils/ptr"
@@ -230,6 +234,12 @@ func (r *Reconciler) reconcile(
 			Name:         "Deploying Istio",
 			Fn:           component.OpWait(c.istio).Deploy,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Reconciling DNSRecords for virtual garden cluster and ingress controller",
+			Fn:           func(ctx context.Context) error { return r.reconcileDNSRecords(ctx, log, garden) },
+			SkipIf:       garden.Spec.VirtualCluster.DNS.Provider == nil || garden.Spec.VirtualCluster.DNS.SecretRef == nil,
+			Dependencies: flow.NewTaskIDs(deployIstio),
 		})
 		syncPointSystemComponents = flow.NewTaskIDs(
 			generateGenericTokenKubeconfig,
@@ -948,6 +958,74 @@ func (r *Reconciler) updateHelmChartRefForGardenlets(ctx context.Context, log lo
 	}
 
 	return nil
+}
+
+func (r *Reconciler) reconcileDNSRecords(ctx context.Context, log logr.Logger, garden *operatorv1alpha1.Garden) error {
+	if garden.Spec.VirtualCluster.DNS.Provider == nil || garden.Spec.VirtualCluster.DNS.SecretRef == nil {
+		return fmt.Errorf("no DNS provider or DNS secret configuration found in Garden resource")
+	}
+
+	dnsRecordList := &extensionsv1alpha1.DNSRecordList{}
+	if err := r.RuntimeClientSet.Client().List(ctx, dnsRecordList, client.InNamespace(r.GardenNamespace)); err != nil {
+		return fmt.Errorf("failed listing DNS records: %w", err)
+	}
+
+	staleDNSRecordNames := sets.New[string]()
+	for _, dnsRecord := range dnsRecordList.Items {
+		staleDNSRecordNames.Insert(dnsRecord.Name)
+	}
+
+	istioIngressGatewayLoadBalancerAddress, err := kubernetesutils.WaitUntilLoadBalancerIsReady(ctx, log, r.RuntimeClientSet.Client(), namePrefix+v1beta1constants.DefaultSNIIngressNamespace, v1beta1constants.DefaultSNIIngressServiceName, time.Minute)
+	if err != nil {
+		return fmt.Errorf("failed waiting until %s/%s is ready: %w", namePrefix+v1beta1constants.DefaultSNIIngressNamespace, v1beta1constants.DefaultSNIIngressServiceName, err)
+	}
+
+	var taskFns []flow.TaskFn
+
+	for _, dnsName := range append(getAPIServerDomains(garden.Spec.VirtualCluster.DNS.Domains), getIngressWildcardDomains(garden.Spec.RuntimeCluster.Ingress.Domains)...) {
+		recordName := strings.ReplaceAll(strings.ReplaceAll(dnsName, ".", "-"), "*", "wildcard")
+		staleDNSRecordNames.Delete(recordName)
+
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			return component.OpWait(dnsrecord.New(
+				log,
+				r.RuntimeClientSet.Client(),
+				&dnsrecord.Values{
+					Name:                         recordName,
+					Namespace:                    r.GardenNamespace,
+					DNSName:                      dnsName,
+					Values:                       []string{istioIngressGatewayLoadBalancerAddress},
+					RecordType:                   extensionsv1alpha1helper.GetDNSRecordType(istioIngressGatewayLoadBalancerAddress),
+					Type:                         *garden.Spec.VirtualCluster.DNS.Provider,
+					Class:                        ptr.To(extensionsv1alpha1.ExtensionClassGarden),
+					SecretName:                   garden.Spec.VirtualCluster.DNS.SecretRef.Name,
+					ReconcileOnlyOnChangeOrError: true,
+				},
+				dnsrecord.DefaultInterval,
+				dnsrecord.DefaultSevereThreshold,
+				dnsrecord.DefaultTimeout,
+			)).Deploy(ctx)
+		})
+	}
+
+	// cleanup no longer needed DNS records
+	for _, staleDNSRecordName := range staleDNSRecordNames.UnsortedList() {
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			return component.OpDestroyAndWait(dnsrecord.New(
+				log,
+				r.RuntimeClientSet.Client(),
+				&dnsrecord.Values{
+					Name:      staleDNSRecordName,
+					Namespace: r.GardenNamespace,
+				},
+				dnsrecord.DefaultInterval,
+				dnsrecord.DefaultSevereThreshold,
+				dnsrecord.DefaultTimeout,
+			)).Destroy(ctx)
+		})
+	}
+
+	return flow.Parallel(taskFns...)(ctx)
 }
 
 func getKubernetesResourcesForEncryption(garden *operatorv1alpha1.Garden) []string {

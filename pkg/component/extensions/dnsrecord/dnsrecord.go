@@ -64,6 +64,8 @@ type Values struct {
 	AnnotateOperation bool
 	// Type is the type of the DNSRecord provider.
 	Type string
+	// Class holds the extension class used to control the responsibility for multiple provider extensions.
+	Class *extensionsv1alpha1.ExtensionClass
 	// SecretData is the secret data of the DNSRecord (containing provider credentials, etc.). If not provided, the
 	// secret in the Namespace with name SecretName will be referenced in the DNSRecord object.
 	SecretData map[string][]byte
@@ -161,7 +163,8 @@ func (d *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1a
 
 		d.dnsRecord.Spec = extensionsv1alpha1.DNSRecordSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
-				Type: d.values.Type,
+				Type:  d.values.Type,
+				Class: d.values.Class,
 			},
 			SecretRef:  secretRef,
 			Zone:       d.values.Zone,
