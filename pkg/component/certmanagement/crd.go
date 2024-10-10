@@ -7,12 +7,16 @@ package certmanagement
 import (
 	"context"
 	_ "embed"
+	"time"
 
+	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
 var (
@@ -31,12 +35,16 @@ func init() {
 }
 
 type crdDeployer struct {
+	client  client.Client
 	applier kubernetes.Applier
 }
 
 // NewCRDs can be used to deploy the CRD definitions for the cert-management.
-func NewCRDs(applier kubernetes.Applier) component.Deployer {
-	return &crdDeployer{applier: applier}
+func NewCRDs(client client.Client, applier kubernetes.Applier) component.DeployWaiter {
+	return &crdDeployer{
+		client:  client,
+		applier: applier,
+	}
 }
 
 func (c *crdDeployer) Deploy(ctx context.Context) error {
@@ -63,4 +71,47 @@ func (c *crdDeployer) Destroy(ctx context.Context) error {
 	}
 
 	return flow.Parallel(fns...)(ctx)
+}
+
+var (
+	// IntervalWaitForCRD is the interval used while waiting for the CRDs to become healthy
+	// or deleted.
+	IntervalWaitForCRD = 1 * time.Second
+	// TimeoutWaitForCRD is the timeout used while waiting for the CRDs to become healthy
+	// or deleted.
+	TimeoutWaitForCRD = 15 * time.Second
+	// Until is an alias for retry.Until. Exposed for tests.
+	Until = retry.Until
+)
+
+// Wait signals whether a CRD is ready or needs more time to be deployed.
+func (c *crdDeployer) Wait(ctx context.Context) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForCRD)
+	defer cancel()
+
+	return retry.Until(timeoutCtx, IntervalWaitForCRD, func(ctx context.Context) (done bool, err error) {
+		for _, resource := range resources {
+			r := resource
+			crd := &v1.CustomResourceDefinition{}
+
+			obj, err := kubernetes.NewManifestReader([]byte(r)).Read()
+			if err != nil {
+				return retry.SevereError(err)
+			}
+
+			if err := c.client.Get(ctx, client.ObjectKeyFromObject(obj), crd); client.IgnoreNotFound(err) != nil {
+				return retry.SevereError(err)
+			}
+
+			if err := health.CheckCustomResourceDefinition(crd); err != nil {
+				return retry.MinorError(err)
+			}
+		}
+		return retry.Ok()
+	})
+}
+
+// WaitCleanup for destruction to finish and component to be fully removed. crdDeployer does not need to wait for cleanup.
+func (c *crdDeployer) WaitCleanup(_ context.Context) error {
+	return nil
 }
