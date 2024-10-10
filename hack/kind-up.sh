@@ -68,7 +68,7 @@ check_local_dns_records() {
     return 0
   fi
     
-  if ! echo "$glgc_ip_address" | grep "127.0.0.1" ; then
+  if ! echo "$glgc_ip_address" | grep -q "127.0.0.1" ; then
       echo "Error: garden.local.gardener.cloud does not resolve to 127.0.0.1. Please add a line for it in /etc/hosts"
       exit 1
   fi
