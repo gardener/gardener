@@ -88,13 +88,13 @@ import (
 )
 
 type components struct {
-	etcdCRD       component.Deployer
-	vpaCRD        component.Deployer
-	hvpaCRD       component.Deployer
-	istioCRD      component.Deployer
-	fluentCRD     component.Deployer
-	prometheusCRD component.Deployer
-	extensionCRD  component.Deployer
+	etcdCRD       component.DeployWaiter
+	vpaCRD        component.DeployWaiter
+	hvpaCRD       component.DeployWaiter
+	istioCRD      component.DeployWaiter
+	fluentCRD     component.DeployWaiter
+	prometheusCRD component.DeployWaiter
+	extensionCRD  component.DeployWaiter
 
 	gardenerResourceManager component.DeployWaiter
 	runtimeSystem           component.DeployWaiter
@@ -121,7 +121,7 @@ type components struct {
 
 	gardenerDiscoveryServer component.DeployWaiter
 
-	certManagementCRD        component.Deployer
+	certManagementCRD        component.DeployWaiter
 	certManagementController component.DeployWaiter
 	certManagementIssuer     component.DeployWaiter
 

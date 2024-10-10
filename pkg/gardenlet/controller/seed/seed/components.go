@@ -73,14 +73,14 @@ import (
 )
 
 type components struct {
-	machineCRD    component.Deployer
-	extensionCRD  component.Deployer
-	etcdCRD       component.Deployer
-	istioCRD      component.Deployer
-	vpaCRD        component.Deployer
-	hvpaCRD       component.Deployer
-	fluentCRD     component.Deployer
-	prometheusCRD component.Deployer
+	machineCRD    component.DeployWaiter
+	extensionCRD  component.DeployWaiter
+	etcdCRD       component.DeployWaiter
+	istioCRD      component.DeployWaiter
+	vpaCRD        component.DeployWaiter
+	hvpaCRD       component.DeployWaiter
+	fluentCRD     component.DeployWaiter
+	prometheusCRD component.DeployWaiter
 
 	clusterIdentity          component.DeployWaiter
 	gardenerResourceManager  component.DeployWaiter
