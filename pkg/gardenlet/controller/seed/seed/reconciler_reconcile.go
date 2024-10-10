@@ -206,40 +206,40 @@ func (r *Reconciler) runReconcileSeedFlow(
 
 		deployMachineCRD = g.Add(flow.Task{
 			Name: "Deploying machine-related custom resource definitions",
-			Fn:   c.machineCRD.Deploy,
+			Fn:   component.OpWait(c.machineCRD).Deploy,
 		})
 		deployExtensionCRD = g.Add(flow.Task{
 			Name: "Deploying extensions-related custom resource definitions",
-			Fn:   c.extensionCRD.Deploy,
+			Fn:   component.OpWait(c.extensionCRD).Deploy,
 		})
 		deployEtcdCRD = g.Add(flow.Task{
 			Name:   "Deploying ETCD-related custom resource definitions",
-			Fn:     c.etcdCRD.Deploy,
+			Fn:     component.OpWait(c.etcdCRD).Deploy,
 			SkipIf: seedIsGarden,
 		})
 		deployIstioCRD = g.Add(flow.Task{
 			Name:   "Deploying Istio-related custom resource definitions",
-			Fn:     c.istioCRD.Deploy,
+			Fn:     component.OpWait(c.istioCRD).Deploy,
 			SkipIf: seedIsGarden,
 		})
 		deployVPACRD = g.Add(flow.Task{
 			Name:   "Deploying VPA-related custom resource definitions",
-			Fn:     c.vpaCRD.Deploy,
+			Fn:     component.OpWait(c.vpaCRD).Deploy,
 			SkipIf: seedIsGarden || !vpaEnabled(seed.GetInfo().Spec.Settings),
 		})
 		reconcileHVPACRD = g.Add(flow.Task{
 			Name:   "Reconciling HVPA-related custom resource definitions",
-			Fn:     c.hvpaCRD.Deploy,
+			Fn:     component.OpWait(c.hvpaCRD).Deploy,
 			SkipIf: seedIsGarden,
 		})
 		deployFluentCRD = g.Add(flow.Task{
 			Name:   "Deploying logging-related custom resource definitions",
-			Fn:     c.fluentCRD.Deploy,
+			Fn:     component.OpWait(c.fluentCRD).Deploy,
 			SkipIf: seedIsGarden,
 		})
 		deployPrometheusCRD = g.Add(flow.Task{
 			Name:   "Deploying monitoring-related custom resource definitions",
-			Fn:     c.prometheusCRD.Deploy,
+			Fn:     component.OpWait(c.prometheusCRD).Deploy,
 			SkipIf: seedIsGarden,
 		})
 		syncPointCRDs = flow.NewTaskIDs(

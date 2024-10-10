@@ -152,32 +152,32 @@ func (r *Reconciler) reconcile(
 
 		deployEtcdCRD = g.Add(flow.Task{
 			Name: "Deploying ETCD-related custom resource definitions",
-			Fn:   c.etcdCRD.Deploy,
+			Fn:   component.OpWait(c.etcdCRD).Deploy,
 		})
 		deployVPACRD = g.Add(flow.Task{
 			Name:   "Deploying custom resource definitions for VPA",
-			Fn:     c.vpaCRD.Deploy,
+			Fn:     component.OpWait(c.vpaCRD).Deploy,
 			SkipIf: !vpaEnabled(garden.Spec.RuntimeCluster.Settings),
 		})
 		reconcileHVPACRD = g.Add(flow.Task{
 			Name: "Reconciling custom resource definitions for HVPA",
-			Fn:   c.hvpaCRD.Deploy,
+			Fn:   component.OpWait(c.hvpaCRD).Deploy,
 		})
 		deployIstioCRD = g.Add(flow.Task{
 			Name: "Deploying custom resource definitions for Istio",
-			Fn:   c.istioCRD.Deploy,
+			Fn:   component.OpWait(c.istioCRD).Deploy,
 		})
 		deployFluentCRD = g.Add(flow.Task{
 			Name: "Deploying custom resource definitions for fluent-operator",
-			Fn:   c.fluentCRD.Deploy,
+			Fn:   component.OpWait(c.fluentCRD).Deploy,
 		})
 		deployPrometheusCRD = g.Add(flow.Task{
 			Name: "Deploying custom resource definitions for prometheus-operator",
-			Fn:   c.prometheusCRD.Deploy,
+			Fn:   component.OpWait(c.prometheusCRD).Deploy,
 		})
 		deployExtensionCRD = g.Add(flow.Task{
 			Name: "Deploying custom resource definitions for extensions",
-			Fn:   c.extensionCRD.Deploy,
+			Fn:   component.OpWait(c.extensionCRD).Deploy,
 		})
 
 		_ = g.Add(flow.Task{
@@ -551,7 +551,7 @@ func (r *Reconciler) reconcile(
 
 	certManagementCRDs := g.Add(flow.Task{
 		Name:         "Deploying Cert-Management CRDs",
-		Fn:           c.certManagementCRD.Deploy,
+		Fn:           component.OpWait(c.certManagementCRD).Deploy,
 		Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 	})
 	_ = g.Add(flow.Task{
