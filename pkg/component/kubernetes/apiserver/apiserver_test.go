@@ -2234,7 +2234,7 @@ rules:
 							UsernamePrefix: ptr.To("some-username-prefix"),
 						}
 						version              = semver.MustParse("1.30.0")
-						authenticationConfig = `apiVersion: apiserver.config.k8s.io/v1alpha1
+						authenticationConfig = `apiVersion: apiserver.config.k8s.io/v1beta1
 jwt:
 - claimMappings:
     groups:
@@ -2294,7 +2294,7 @@ kind: AuthenticationConfiguration
 						IssuerURL:   ptr.To("https://issuer.url.com"),
 					}
 					version              = semver.MustParse("1.30.0")
-					authenticationConfig = `apiVersion: apiserver.config.k8s.io/v1alpha1
+					authenticationConfig = `apiVersion: apiserver.config.k8s.io/v1beta1
 jwt:
 - claimMappings:
     groups:
@@ -2349,7 +2349,7 @@ kind: AuthenticationConfiguration
 						UsernamePrefix: ptr.To("-"),
 					}
 					version              = semver.MustParse("1.30.0")
-					authenticationConfig = `apiVersion: apiserver.config.k8s.io/v1alpha1
+					authenticationConfig = `apiVersion: apiserver.config.k8s.io/v1beta1
 jwt:
 - claimMappings:
     groups: {}
@@ -3818,7 +3818,7 @@ kind: AuthenticationConfiguration
 							IssuerURL: ptr.To("https://issuer.url.com"),
 						}
 						version              = semver.MustParse("1.30.0")
-						authenticationConfig = `apiVersion: apiserver.config.k8s.io/v1alpha1
+						authenticationConfig = `apiVersion: apiserver.config.k8s.io/v1beta1
 jwt:
 - claimMappings:
     groups: {}
