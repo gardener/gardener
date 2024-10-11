@@ -103,8 +103,8 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 		newAuthenticationConfigurationConfigMapName string
 		oldShootKubernetesVersion                   string
 		newShootKubernetesVersion                   string
-		oldServiceAccountConfigIssuer               *string
-		newServiceAccountConfigIssuer               *string
+		oldServiceAccountIssuer                     *string
+		newServiceAccountIssuer                     *string
 		oldServiceAccountAcceptedIssuers            []string
 		newServiceAccountAcceptedIssuers            []string
 	)
@@ -123,12 +123,12 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 
 		oldShootKubernetesVersion = oldShoot.Spec.Kubernetes.Version
 		oldAuthenticationConfigurationConfigMapName = gardencorehelper.GetShootAuthenticationConfigurationConfigMapName(oldShoot.Spec.Kubernetes.KubeAPIServer)
-		oldServiceAccountConfigIssuer = gardencorehelper.GetShootServiceAccountConfigIssuer(oldShoot.Spec.Kubernetes.KubeAPIServer)
+		oldServiceAccountIssuer = gardencorehelper.GetShootServiceAccountConfigIssuer(oldShoot.Spec.Kubernetes.KubeAPIServer)
 		oldServiceAccountAcceptedIssuers = gardencorehelper.GetShootServiceAccountConfigAcceptedIssuers(oldShoot.Spec.Kubernetes.KubeAPIServer)
 	}
 	newShootKubernetesVersion = shoot.Spec.Kubernetes.Version
 	newAuthenticationConfigurationConfigMapName = gardencorehelper.GetShootAuthenticationConfigurationConfigMapName(shoot.Spec.Kubernetes.KubeAPIServer)
-	newServiceAccountConfigIssuer = gardencorehelper.GetShootServiceAccountConfigIssuer(shoot.Spec.Kubernetes.KubeAPIServer)
+	newServiceAccountIssuer = gardencorehelper.GetShootServiceAccountConfigIssuer(shoot.Spec.Kubernetes.KubeAPIServer)
 	newServiceAccountAcceptedIssuers = gardencorehelper.GetShootServiceAccountConfigAcceptedIssuers(shoot.Spec.Kubernetes.KubeAPIServer)
 
 	if newAuthenticationConfigurationConfigMapName == "" {
@@ -141,7 +141,7 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 	// disallowed for the authentication configuration
 	if oldAuthenticationConfigurationConfigMapName == newAuthenticationConfigurationConfigMapName &&
 		oldShootKubernetesVersion == newShootKubernetesVersion &&
-		equalOrNil(oldServiceAccountConfigIssuer, newServiceAccountConfigIssuer) &&
+		equalOrNil(oldServiceAccountIssuer, newServiceAccountIssuer) &&
 		slices.Equal(oldServiceAccountAcceptedIssuers, newServiceAccountAcceptedIssuers) {
 		return admissionwebhook.Allowed("authentication configuration configmap was not changed")
 	}
