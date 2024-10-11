@@ -160,7 +160,7 @@ $(GOLANGCI_LINT): $(call tool_version_file,$(GOLANGCI_LINT),$(GOLANGCI_LINT_VERS
 	GOBIN=$(abspath $(TOOLS_BIN_DIR)) CGO_ENABLED=1 go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 
 $(GOSEC): $(call tool_version_file,$(GOSEC),$(GOSEC_VERSION))
-	@GOSEC_VERSION=$(GOSEC_VERSION) $(TOOLS_PKG_PATH)/install-gosec.sh
+	@GOSEC_VERSION=$(GOSEC_VERSION) bash $(TOOLS_PKG_PATH)/install-gosec.sh
 
 $(GO_ADD_LICENSE):  $(call tool_version_file,$(GO_ADD_LICENSE),$(GO_ADD_LICENSE_VERSION))
 	GOBIN=$(abspath $(TOOLS_BIN_DIR)) go install github.com/google/addlicense@$(GO_ADD_LICENSE_VERSION)
@@ -211,10 +211,10 @@ $(OPENAPI_GEN): $(call tool_version_file,$(OPENAPI_GEN),$(OPENAPI_GEN_VERSION))
 	go build -o $(OPENAPI_GEN) k8s.io/kube-openapi/cmd/openapi-gen
 
 $(PROMTOOL): $(call tool_version_file,$(PROMTOOL),$(PROMTOOL_VERSION))
-	@PROMTOOL_VERSION=$(PROMTOOL_VERSION) $(TOOLS_PKG_PATH)/install-promtool.sh
+	@PROMTOOL_VERSION=$(PROMTOOL_VERSION) bash $(TOOLS_PKG_PATH)/install-promtool.sh
 
 $(PROTOC): $(call tool_version_file,$(PROTOC),$(PROTOC_VERSION))
-	@PROTOC_VERSION=$(PROTOC_VERSION) $(TOOLS_PKG_PATH)/install-protoc.sh
+	@PROTOC_VERSION=$(PROTOC_VERSION) bash $(TOOLS_PKG_PATH)/install-protoc.sh
 
 $(PROTOC_GEN_GOGO): $(call tool_version_file,$(PROTOC_GEN_GOGO),$(CODE_GENERATOR_VERSION))
 	go build -o $(PROTOC_GEN_GOGO) k8s.io/code-generator/cmd/go-to-protobuf/protoc-gen-gogo
