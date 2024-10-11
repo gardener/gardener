@@ -24,49 +24,76 @@
 * [Relation between Gardener API and Cluster API](concepts/cluster-api.md)
 
 ## Usage
-* [Audit a Kubernetes cluster](usage/security/shoot_auditpolicy.md)
-* [Cleanup of Shoot clusters in deletion](usage/advanced/shoot_cleanup.md)
-* [`containerd` Registry Configuration](usage/advanced/containerd-registry-configuration.md)
-* [Custom `containerd` configuration](usage/advanced/custom-containerd-config.md)
-* [Custom `CoreDNS` configuration](usage/networking/custom-dns-config.md)
-* [(Custom) CSI components](usage/advanced/csi_components.md)
-* [Default Seccomp Profile](usage/security/default_seccomp_profile.md)
-* [DNS Autoscaling](usage/autoscaling/dns-autoscaling.md)
-* [DNS Search Path Optimization](usage/networking/dns-search-path-optimization.md)
-* [Endpoints and Ports of a Shoot Control-Plane](usage/advanced/control-plane-endpoints-and-ports.md)
-* [ETCD Encryption Config](usage/security/etcd_encryption_config.md)
-* [ExposureClasses](usage/networking/exposureclasses.md)
-* [Hibernate a Cluster](usage/shoot-basics/shoot_hibernate.md)
-* [Logging](usage/observability/logging.md)
-* [`NodeLocalDNS` feature](usage/networking/node-local-dns.md)
-* [OpenIDConnect presets](usage/security/openidconnect-presets.md)
+
+### Project
+
 * [Projects](usage/project/projects.md)
 * [Service Account Manager](usage/project/service-account-manager.md)
-* [Readiness of Shoot Worker Nodes](usage/advanced/node-readiness.md)
+
+### Shoot Basics 
+
+* [Accessing Shoot Clusters](usage/shoot-basics/shoot_access.md)
+* [Hibernate a Cluster](usage/shoot-basics/shoot_hibernate.md)
+* [Shoot Info `ConfigMap`](usage/shoot-basics/shoot_info_configmap.md)
+* [Shoot Maintenance](usage/shoot-basics/shoot_maintenance.md)
 * [Shoot Cluster Purposes](usage/shoot-basics/shoot_purposes.md)
 * [Shoot Scheduling Profiles](usage/shoot-basics/shoot_scheduling_profiles.md)
-* [Shoot Credentials Rotation](usage/shoot-operations/shoot_credentials_rotation.md)
-* [Shoot Kubernetes and Operating System Versioning](usage/shoot-operations/shoot_versions.md)
-* [Shoot `KUBERNETES_SERVICE_HOST` Environment Variable Injection](usage/networking/shoot_kubernetes_service_host_injection.md)
-* [Shoot Networking](usage/networking/shoot_networking.md)
-* [Shoot Maintenance](usage/shoot-basics/shoot_maintenance.md)
-* [Shoot `ServiceAccount` Configurations](usage/security/shoot_serviceaccounts.md)
 * [Shoot Status](usage/shoot-basics/shoot_status.md)
-* [Shoot Info `ConfigMap`](usage/shoot-basics/shoot_info_configmap.md)
-* [Shoot Updates and Upgrades](usage/shoot-operations/shoot_updates.md)
-* [Shoot Auto-Scaling Configuration](usage/autoscaling/shoot_autoscaling.md)
-* [Shoot Pod Auto-Scaling Best Practices](usage/autoscaling/shoot_pod_autoscaling_best_practices.md)
-* [Shoot High-Availability Control Plane](usage/high-avaliability/shoot_high_availability.md)
-* [Shoot High-Availability Best Practices](usage/high-avaliability/shoot_high_availability_best_practices.md)
-* [Shoot Workers Settings](usage/shoot-basics/shoot_workers_settings.md)
-* [Accessing Shoot Clusters](usage/shoot-basics/shoot_access.md)
-* [Supported Kubernetes versions](usage/shoot-operations/supported_k8s_versions.md)
-* [Tolerations](usage/advanced/tolerations.md)
-* [Trigger shoot operations](usage/shoot-operations/shoot_operations.md)
-* [Controlling the Kubernetes versions for specific worker pools](usage/shoot-operations/worker_pool_k8s_versions.md)
-* [Admission Configuration for the `PodSecurity` Admission Plugin](usage/security/pod-security.md)
 * [Supported CPU Architectures for Shoot Worker Nodes](usage/shoot-basics/shoot_supported_architectures.md)
 * [Workerless `Shoot`s](usage/shoot-basics/shoot_workerless.md)
+* [Shoot Workers Settings](usage/shoot-basics/shoot_workers_settings.md)
+
+### Shoot Operations
+
+* [Shoot Credentials Rotation](usage/shoot-operations/shoot_credentials_rotation.md)
+* [Trigger shoot operations](usage/shoot-operations/shoot_operations.md)
+* [Shoot Updates and Upgrades](usage/shoot-operations/shoot_updates.md)
+* [Shoot Kubernetes and Operating System Versioning](usage/shoot-operations/shoot_versions.md)
+* [Supported Kubernetes versions](usage/shoot-operations/supported_k8s_versions.md)
+* [Controlling the Kubernetes versions for specific worker pools](usage/shoot-operations/worker_pool_k8s_versions.md)
+
+### High Avaliability
+
+* [Shoot High-Availability Control Plane](usage/high-avaliability/shoot_high_availability.md)
+* [Shoot High-Availability Best Practices](usage/high-avaliability/shoot_high_availability_best_practices.md)
+
+### Security
+
+* [Default Seccomp Profile](usage/security/default_seccomp_profile.md)
+* [ETCD Encryption Config](usage/security/etcd_encryption_config.md)
+* [OpenIDConnect presets](usage/security/openidconnect-presets.md)
+* [Admission Configuration for the `PodSecurity` Admission Plugin](usage/security/pod-security.md)
+* [Audit a Kubernetes cluster](usage/security/shoot_auditpolicy.md)
+* [Shoot `ServiceAccount` Configurations](usage/security/shoot_serviceaccounts.md)
+
+### Networking
+
+* [Custom `CoreDNS` configuration](usage/networking/custom-dns-config.md)
+* [DNS Search Path Optimization](usage/networking/dns-search-path-optimization.md)
+* [ExposureClasses](usage/networking/exposureclasses.md)
+* [`NodeLocalDNS` feature](usage/networking/node-local-dns.md)
+* [Shoot `KUBERNETES_SERVICE_HOST` Environment Variable Injection](usage/networking/shoot_kubernetes_service_host_injection.md)
+* [Shoot Networking](usage/networking/shoot_networking.md)
+
+### Autoscaling
+
+* [DNS Autoscaling](usage/autoscaling/dns-autoscaling.md)
+* [Shoot Auto-Scaling Configuration](usage/autoscaling/shoot_autoscaling.md)
+* [Shoot Pod Auto-Scaling Best Practices](usage/autoscaling/shoot_pod_autoscaling_best_practices.md)
+
+### Observability
+
+* [Logging](usage/observability/logging.md)
+
+### Advanced
+
+* [`containerd` Registry Configuration](usage/advanced/containerd-registry-configuration.md)
+* [Endpoints and Ports of a Shoot Control-Plane](usage/advanced/control-plane-endpoints-and-ports.md)
+* [(Custom) CSI components](usage/advanced/csi_components.md)
+* [Custom `containerd` configuration](usage/advanced/custom-containerd-config.md)
+* [Readiness of Shoot Worker Nodes](usage/advanced/node-readiness.md)
+* [Cleanup of Shoot clusters in deletion](usage/advanced/shoot_cleanup.md)
+* [Tolerations](usage/advanced/tolerations.md)
 
 ## [API Reference](api-reference/README.md)
 
@@ -133,6 +160,7 @@
 * [High Availability Of Deployed Components](development/high-availability.md)
 * [Checklist For Adding New Components](development/component-checklist.md)
 * [Defaulting Strategy and Developer Guideline](development/defaulting.md)
+* [Autoscaling Specifics for Components](development/autoscaling-specifics-for-components.md)
 
 ## Extensions
 

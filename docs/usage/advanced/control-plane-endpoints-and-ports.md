@@ -13,7 +13,7 @@ The load balancer of the Istio ingress-gateway service exposes the following TCP
 
 ## `kube-apiserver` via SNI 
 
-![kube-apiserver via SNI](../images/api-server-sni.png)
+![kube-apiserver via SNI](./images/api-server-sni.png)
 
 DNS entries for `api.<external-domain>` and `api.<shoot>.<project>.<internal-domain>` point to the load balancer of an Istio ingress-gateway service.
 The Kubernetes client sets the server name to `api.<external-domain>` or `api.<shoot>.<project>.<internal-domain>`.
@@ -23,7 +23,7 @@ Details can be found in [GEP-08](../../proposals/08-shoot-apiserver-via-sni.md).
 
 ## `kube-apiserver` via `apiserver-proxy`
 
-![apiserver-proxy](../images/api-server-proxy.png)
+![apiserver-proxy](./images/api-server-proxy.png)
 
 Inside the shoot cluster, the API Server can also be reached by the cluster internal name `kubernetes.default.svc.cluster.local`. 
 The pods `apiserver-proxy` are deployed in the host network as daemonset and intercept connections to the Kubernetes service IP address.
@@ -36,7 +36,7 @@ Details can be found in [GEP-11](../../proposals/11-apiserver-network-proxy.md).
 
 ## Reversed VPN Tunnel
 
-![Reversed VPN](../images/reversed-vpn.png)
+![Reversed VPN](./images/reversed-vpn.png)
 
 As the API Server has to be able to connect to endpoints in the shoot cluster, a VPN connection is established.
 This VPN connection is initiated from a VPN client in the shoot cluster. 

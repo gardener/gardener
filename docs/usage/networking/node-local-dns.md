@@ -21,7 +21,7 @@ To workaround the issues described above, `node-local-dns` was introduced. The a
 - For new queries, the connection is upgraded from UDP to TCP and forwarded towards the cluster IP for the original CoreDNS server.
 - For previously resolved queries, an immediate response from the same node where the requester workload / pod resides is provided.
 
-![node-local-dns-architecture](../images/node-local-dns.png)
+![node-local-dns-architecture](./images/node-local-dns.png)
 
 ## Configuring NodeLocalDNS
 
