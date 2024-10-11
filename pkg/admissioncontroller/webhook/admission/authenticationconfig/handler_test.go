@@ -63,7 +63,7 @@ var _ = Describe("handler", func() {
 
 		validAuthenticationConfiguration = `
 ---
-apiVersion: apiserver.config.k8s.io/v1alpha1
+apiVersion: apiserver.config.k8s.io/v1beta1
 kind: AuthenticationConfiguration
 jwt:
 - issuer:
@@ -77,7 +77,7 @@ jwt:
 `
 		anotherValidAuthenticationConfiguration = `
 ---
-apiVersion: apiserver.config.k8s.io/v1alpha1
+apiVersion: apiserver.config.k8s.io/v1beta1
 kind: AuthenticationConfiguration
 jwt:
 - issuer:
@@ -99,7 +99,7 @@ jwt:
 `
 		missingKeyConfiguration = `
 ---
-apiVersion: apiserver.config.k8s.io/v1alpha1
+apiVersion: apiserver.config.k8s.io/v1beta1
 kind: AuthenticationConfiguration
 jwt:
 - issuer:
@@ -113,7 +113,7 @@ jwt:
 `
 		invalidAuthenticationConfiguration = `
 ---
-apiVersion: apiserver.config.k8s.io/v1alpha1
+apiVersion: apiserver.config.k8s.io/v1beta1
 kind: AuthenticationConfiguration
 jwt:
 - issuer:
@@ -126,7 +126,7 @@ jwt:
 
 		invalidIssuerUrl = `
 ---
-apiVersion: apiserver.config.k8s.io/v1alpha1
+apiVersion: apiserver.config.k8s.io/v1beta1
 kind: AuthenticationConfiguration
 jwt:
 - issuer:
@@ -269,6 +269,19 @@ jwt:
 				test(admissionv1.Update, shootv1beta1, newShoot, true, statusCodeAllowed, "referenced authentication configuration is valid", "")
 			})
 
+			It("serviceAccountConfig is nil (UPDATE)", func() {
+				returnedCm := corev1.ConfigMap{
+					Data: map[string]string{"config.yaml": validAuthenticationConfiguration},
+				}
+				newShoot := shootv1beta1.DeepCopy()
+				newShoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = nil
+				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: shootNamespace, Name: cmName}, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
+					*cm = returnedCm
+					return nil
+				})
+				test(admissionv1.Update, shootv1beta1, newShoot, true, statusCodeAllowed, "referenced authentication configuration is valid", "")
+			})
+
 			It("referenced authenticationConfiguration name was changed (UPDATE)", func() {
 				returnedCm := corev1.ConfigMap{
 					Data: map[string]string{"config.yaml": validAuthenticationConfiguration},
@@ -360,15 +373,13 @@ jwt:
 
 			It("contains disallowed issuers in the service account config", func() {
 				returnedCm := corev1.ConfigMap{
-					Data: map[string]string{"config.yaml": validAuthenticationConfiguration},
+					Data: map[string]string{"config.yaml": invalidIssuerUrl},
 				}
-				newShoot := shootv1beta1.DeepCopy()
-				newShoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.Issuer = ptr.To("https://foo.com")
 				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: shootNamespace, Name: cmName}, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
 					*cm = returnedCm
 					return nil
 				})
-				test(admissionv1.Create, nil, newShoot, false, statusCodeInvalid, "provided invalid authentication configuration: [jwt[0].issuer.url: Invalid value: \"https://foo.com\": URL must not overlap with disallowed issuers:", "")
+				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInvalid, "provided invalid authentication configuration: [jwt[0].issuer.url: Invalid value: \"https://abc.com\": URL must not overlap with disallowed issuers:", "")
 			})
 		})
 	})

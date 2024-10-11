@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 
 	"github.com/go-logr/logr"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -102,6 +103,10 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 		newAuthenticationConfigurationConfigMapName string
 		oldShootKubernetesVersion                   string
 		newShootKubernetesVersion                   string
+		oldServiceAccountConfigIssuer               *string
+		newServiceAccountConfigIssuer               *string
+		oldServiceAccountAcceptedIssuers            []string
+		newServiceAccountAcceptedIssuers            []string
 	)
 
 	if request.Operation == admissionv1.Update {
@@ -118,9 +123,13 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 
 		oldShootKubernetesVersion = oldShoot.Spec.Kubernetes.Version
 		oldAuthenticationConfigurationConfigMapName = gardencorehelper.GetShootAuthenticationConfigurationConfigMapName(oldShoot.Spec.Kubernetes.KubeAPIServer)
+		oldServiceAccountConfigIssuer = gardencorehelper.GetShootServiceAccountConfigIssuer(oldShoot.Spec.Kubernetes.KubeAPIServer)
+		oldServiceAccountAcceptedIssuers = gardencorehelper.GetShootServiceAccountConfigAcceptedIssuers(oldShoot.Spec.Kubernetes.KubeAPIServer)
 	}
 	newShootKubernetesVersion = shoot.Spec.Kubernetes.Version
 	newAuthenticationConfigurationConfigMapName = gardencorehelper.GetShootAuthenticationConfigurationConfigMapName(shoot.Spec.Kubernetes.KubeAPIServer)
+	newServiceAccountConfigIssuer = gardencorehelper.GetShootServiceAccountConfigIssuer(shoot.Spec.Kubernetes.KubeAPIServer)
+	newServiceAccountAcceptedIssuers = gardencorehelper.GetShootServiceAccountConfigAcceptedIssuers(shoot.Spec.Kubernetes.KubeAPIServer)
 
 	if newAuthenticationConfigurationConfigMapName == "" {
 		return admissionwebhook.Allowed("shoot resource is not specifying any authentication configuration")
@@ -128,8 +137,12 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 
 	// oldAuthenticationConfigurationConfigMapName is empty for CREATE shoot requests that specify authentication configuration reference
 	// if Kubernetes version is changed we need to revalidate if the authentication configuration API version is compatible with
-	// new Kubernetes version
-	if oldAuthenticationConfigurationConfigMapName == newAuthenticationConfigurationConfigMapName && oldShootKubernetesVersion == newShootKubernetesVersion {
+	// new Kubernetes version. We also need to revalidate when the ServiceAccountConfig allowed issuers have changes since they are
+	// disallowed for the authentication configuration
+	if oldAuthenticationConfigurationConfigMapName == newAuthenticationConfigurationConfigMapName &&
+		oldShootKubernetesVersion == newShootKubernetesVersion &&
+		equalOrNil(oldServiceAccountConfigIssuer, newServiceAccountConfigIssuer) &&
+		slices.Equal(oldServiceAccountAcceptedIssuers, newServiceAccountAcceptedIssuers) {
 		return admissionwebhook.Allowed("authentication configuration configmap was not changed")
 	}
 
@@ -146,10 +159,7 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("error getting authentication configuration from configmap %s: %w", client.ObjectKeyFromObject(authenticationConfigurationConfigMap), err))
 	}
 
-	disallowedIssuers, err := getDisallowedIssuers(shoot.Spec.Kubernetes.KubeAPIServer)
-	if err != nil {
-		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("error getting disallowed issuers: %w", err))
-	}
+	disallowedIssuers := getDisallowedIssuers(shoot.Spec.Kubernetes.KubeAPIServer)
 
 	if errCode, err := validateAuthenticationConfigurationSemantics(authenticationConfiguration, disallowedIssuers); err != nil {
 		return admission.Errored(errCode, err)
@@ -191,10 +201,7 @@ func (h *Handler) admitConfigMap(ctx context.Context, request admission.Request)
 			if err := gardencorev1beta1.Convert_v1beta1_KubeAPIServerConfig_To_core_KubeAPIServerConfig(shoot.Spec.Kubernetes.KubeAPIServer, coreKubeAPIServerConfig, nil); err != nil {
 				return admission.Errored(http.StatusUnprocessableEntity, err)
 			}
-			disallowedIssuers, err = getDisallowedIssuers(coreKubeAPIServerConfig)
-			if err != nil {
-				return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("error getting disallowed issuers: %w", err))
-			}
+			disallowedIssuers = getDisallowedIssuers(coreKubeAPIServerConfig)
 			break
 		}
 	}
@@ -257,17 +264,19 @@ func getAuthenticationConfiguration(cm *corev1.ConfigMap) (string, error) {
 	return authenticationConfigurationRaw, nil
 }
 
-func getDisallowedIssuers(kubeAPIServerConfig *gardencore.KubeAPIServerConfig) ([]string, error) {
-	var issuer string
-	if kubeAPIServerConfig.ServiceAccountConfig.Issuer != nil {
-		issuer = *kubeAPIServerConfig.ServiceAccountConfig.Issuer
+func getDisallowedIssuers(kubeAPIServerConfig *gardencore.KubeAPIServerConfig) []string {
+	disallowedIssuers := gardencorehelper.GetShootServiceAccountConfigAcceptedIssuers(kubeAPIServerConfig)
+	issuer := gardencorehelper.GetShootServiceAccountConfigIssuer(kubeAPIServerConfig)
+	if issuer != nil {
+		disallowedIssuers = append(disallowedIssuers, *issuer)
 	}
 
-	acceptedIssuers := kubeAPIServerConfig.ServiceAccountConfig.AcceptedIssuers
-	disallowedIssuers := append(acceptedIssuers, issuer)
-	if len(disallowedIssuers) == 0 {
-		return nil, errors.New("no disallowed issuers found")
-	}
+	return disallowedIssuers
+}
 
-	return disallowedIssuers, nil
+func equalOrNil(s1, s2 *string) bool {
+	if s1 == nil && s2 == nil {
+		return true
+	}
+	return s1 != nil && s2 != nil && *s1 == *s2
 }
