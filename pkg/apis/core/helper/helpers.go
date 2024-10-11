@@ -352,6 +352,24 @@ func GetShootAuthenticationConfigurationConfigMapName(apiServerConfig *core.Kube
 	return ""
 }
 
+// GetShootServiceAccountConfigIssuer returns the Shoot's ServiceAccountConfig Issuer.
+func GetShootServiceAccountConfigIssuer(apiServerConfig *core.KubeAPIServerConfig) *string {
+	if apiServerConfig != nil &&
+		apiServerConfig.ServiceAccountConfig != nil {
+		return apiServerConfig.ServiceAccountConfig.Issuer
+	}
+	return nil
+}
+
+// GetShootServiceAccountConfigAcceptedIssuers returns the Shoot's ServiceAccountConfig AcceptedIssuers.
+func GetShootServiceAccountConfigAcceptedIssuers(apiServerConfig *core.KubeAPIServerConfig) []string {
+	if apiServerConfig != nil &&
+		apiServerConfig.ServiceAccountConfig != nil {
+		return apiServerConfig.ServiceAccountConfig.AcceptedIssuers
+	}
+	return nil
+}
+
 // HibernationIsEnabled checks if the given shoot's desired state is hibernated.
 func HibernationIsEnabled(shoot *core.Shoot) bool {
 	return shoot.Spec.Hibernation != nil && ptr.Deref(shoot.Spec.Hibernation.Enabled, false)
