@@ -594,6 +594,29 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 			},
 		}
 
+		if !v.values.DisableNewVPN {
+			template.Spec.InitContainers = []corev1.Container{
+				{
+					Name:            "setup",
+					Image:           v.values.ImageVPNSeedServer,
+					ImagePullPolicy: corev1.PullIfNotPresent,
+					Command: []string{
+						"/bin/vpn-server",
+						"setup",
+					},
+					Env: []corev1.EnvVar{
+						{
+							Name:  "IS_HA",
+							Value: "true",
+						},
+					},
+					SecurityContext: &corev1.SecurityContext{
+						Privileged: ptr.To(true),
+					},
+				},
+			}
+		}
+
 		if v.values.DisableNewVPN {
 			statusPath := filepath.Join(volumeMountPathStatusDir, "openvpn.status")
 			exporterContainer.Command = []string{
