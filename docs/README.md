@@ -30,7 +30,7 @@
 * [Projects](usage/project/projects.md)
 * [Service Account Manager](usage/project/service-account-manager.md)
 
-### Shoot Basics 
+### Shoot Basics
 
 * [Accessing Shoot Clusters](usage/shoot-basics/shoot_access.md)
 * [Hibernate a Cluster](usage/shoot-basics/shoot_hibernate.md)
