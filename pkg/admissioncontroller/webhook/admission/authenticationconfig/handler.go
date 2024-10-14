@@ -97,10 +97,6 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 		return admissionwebhook.Allowed("shoot is already marked for deletion")
 	}
 
-	var (
-		authenticationConfigurationConfigMapName string
-	)
-
 	if request.Operation == admissionv1.Update {
 		oldShoot := &gardencore.Shoot{}
 		if err := runtime.DecodeInto(internalDecoder, request.OldObject.Raw, oldShoot); err != nil {
@@ -113,8 +109,8 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 			return admissionwebhook.Allowed("shoot spec was not changed")
 		}
 	}
-	authenticationConfigurationConfigMapName = gardencorehelper.GetShootAuthenticationConfigurationConfigMapName(shoot.Spec.Kubernetes.KubeAPIServer)
 
+	authenticationConfigurationConfigMapName := gardencorehelper.GetShootAuthenticationConfigurationConfigMapName(shoot.Spec.Kubernetes.KubeAPIServer)
 	if authenticationConfigurationConfigMapName == "" {
 		return admissionwebhook.Allowed("shoot resource is not specifying any authentication configuration")
 	}
