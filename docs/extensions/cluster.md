@@ -1,7 +1,7 @@
 # `Cluster` Resource
 
 As part of the extensibility epic, a lot of responsibility that was previously taken over by Gardener directly has now been shifted to extension controllers running in the seed clusters.
-These extensions often serve a well-defined purpose (e.g., the management of [DNS records](dnsrecord.md), [infrastructure](./resources/infrastructure.md)).
+These extensions often serve a well-defined purpose (e.g., the management of [DNS records](./resources/dnsrecord.md), [infrastructure](./resources/infrastructure.md)).
 We have introduced a couple of extension CRDs in the seeds whose specification is written by Gardener, and which are acted up by the extensions.
 
 However, the extensions sometimes require more information that is not directly part of the specification.
@@ -52,7 +52,7 @@ There are some fields in the `Shoot` specification that might be interesting to 
 
 In some cases, Gardener may create extension resources that are not associated with a shoot, but are needed to support some functionality internal to Gardener. Such resources will be created in the `garden` namespace of a seed cluster.
 
-For example, if the [managed ingress controller](../deployment/deploy_gardenlet_manually.md) is active on the seed, Gardener will create a [DNSRecord](dnsrecord.md) resource(s) in the `garden` namespace of the seed cluster for the ingress DNS record.
+For example, if the [managed ingress controller](../deployment/deploy_gardenlet_manually.md) is active on the seed, Gardener will create a [DNSRecord](./resources/dnsrecord.md) resource(s) in the `garden` namespace of the seed cluster for the ingress DNS record.
 
 Extension controllers that may be expected to reconcile extension resources in the `garden` namespace should make sure that they can tolerate the absence of a cluster resource. This means that they should not attempt to read the cluster resource in such cases, or if they do they should ignore the "not found" error.
 

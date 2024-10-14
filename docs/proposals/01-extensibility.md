@@ -14,7 +14,7 @@
       - [Shoots](#shoots)
     - [CRD Definitions and Workflow Adaptation](#crd-definitions-and-workflow-adaptation)
       - [Custom Resource Definitions](#custom-resource-definitions)
-        - [DNS Records](#dns-records)
+        - [DNS Records](#dnsrecords)
         - [Infrastructure Provisioning](#infrastructure-provisioning)
         - [Backup Infrastructure Provisioning](#backup-infrastructure-provisioning)
         - [Cloud Config (User-Data) for Bootstrapping Machines](#cloud-config-user-data-for-bootstrapping-machines)
