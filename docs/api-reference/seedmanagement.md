@@ -227,7 +227,6 @@ GardenletConfig
 </em>
 </td>
 <td>
-<em>(Optional)</em>
 <p>Gardenlet specifies that the ManagedSeed controller should deploy a gardenlet into the cluster
 with the given deployment parameters and GardenletConfiguration.</p>
 </td>
@@ -1239,7 +1238,6 @@ GardenletConfig
 </em>
 </td>
 <td>
-<em>(Optional)</em>
 <p>Gardenlet specifies that the ManagedSeed controller should deploy a gardenlet into the cluster
 with the given deployment parameters and GardenletConfiguration.</p>
 </td>
@@ -1364,7 +1362,6 @@ GardenletConfig
 </em>
 </td>
 <td>
-<em>(Optional)</em>
 <p>Gardenlet specifies that the ManagedSeed controller should deploy a gardenlet into the cluster
 with the given deployment parameters and GardenletConfiguration.</p>
 </td>

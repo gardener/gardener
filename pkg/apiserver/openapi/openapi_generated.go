@@ -11436,6 +11436,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSpec(ref common.Referenc
 					"gardenlet": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Gardenlet specifies that the ManagedSeed controller should deploy a gardenlet into the cluster with the given deployment parameters and GardenletConfiguration.",
+							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletConfig"),
 						},
 					},

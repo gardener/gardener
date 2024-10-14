@@ -89,55 +89,53 @@ func SetObjectDefaults_GardenletList(in *GardenletList) {
 
 func SetObjectDefaults_ManagedSeed(in *ManagedSeed) {
 	SetDefaults_ManagedSeed(in)
-	if in.Spec.Gardenlet != nil {
-		if in.Spec.Gardenlet.Deployment != nil {
-			SetDefaults_GardenletDeployment(in.Spec.Gardenlet.Deployment)
-			if in.Spec.Gardenlet.Deployment.Image != nil {
-				SetDefaults_Image(in.Spec.Gardenlet.Deployment.Image)
+	if in.Spec.Gardenlet.Deployment != nil {
+		SetDefaults_GardenletDeployment(in.Spec.Gardenlet.Deployment)
+		if in.Spec.Gardenlet.Deployment.Image != nil {
+			SetDefaults_Image(in.Spec.Gardenlet.Deployment.Image)
+		}
+		for i := range in.Spec.Gardenlet.Deployment.AdditionalVolumes {
+			a := &in.Spec.Gardenlet.Deployment.AdditionalVolumes[i]
+			if a.VolumeSource.ISCSI != nil {
+				if a.VolumeSource.ISCSI.ISCSIInterface == "" {
+					a.VolumeSource.ISCSI.ISCSIInterface = "default"
+				}
 			}
-			for i := range in.Spec.Gardenlet.Deployment.AdditionalVolumes {
-				a := &in.Spec.Gardenlet.Deployment.AdditionalVolumes[i]
-				if a.VolumeSource.ISCSI != nil {
-					if a.VolumeSource.ISCSI.ISCSIInterface == "" {
-						a.VolumeSource.ISCSI.ISCSIInterface = "default"
-					}
+			if a.VolumeSource.RBD != nil {
+				if a.VolumeSource.RBD.RBDPool == "" {
+					a.VolumeSource.RBD.RBDPool = "rbd"
 				}
-				if a.VolumeSource.RBD != nil {
-					if a.VolumeSource.RBD.RBDPool == "" {
-						a.VolumeSource.RBD.RBDPool = "rbd"
-					}
-					if a.VolumeSource.RBD.RadosUser == "" {
-						a.VolumeSource.RBD.RadosUser = "admin"
-					}
-					if a.VolumeSource.RBD.Keyring == "" {
-						a.VolumeSource.RBD.Keyring = "/etc/ceph/keyring"
-					}
+				if a.VolumeSource.RBD.RadosUser == "" {
+					a.VolumeSource.RBD.RadosUser = "admin"
 				}
-				if a.VolumeSource.AzureDisk != nil {
-					if a.VolumeSource.AzureDisk.CachingMode == nil {
-						ptrVar1 := v1.AzureDataDiskCachingMode(v1.AzureDataDiskCachingReadWrite)
-						a.VolumeSource.AzureDisk.CachingMode = &ptrVar1
-					}
-					if a.VolumeSource.AzureDisk.FSType == nil {
-						var ptrVar1 string = "ext4"
-						a.VolumeSource.AzureDisk.FSType = &ptrVar1
-					}
-					if a.VolumeSource.AzureDisk.ReadOnly == nil {
-						var ptrVar1 bool = false
-						a.VolumeSource.AzureDisk.ReadOnly = &ptrVar1
-					}
-					if a.VolumeSource.AzureDisk.Kind == nil {
-						ptrVar1 := v1.AzureDataDiskKind(v1.AzureSharedBlobDisk)
-						a.VolumeSource.AzureDisk.Kind = &ptrVar1
-					}
+				if a.VolumeSource.RBD.Keyring == "" {
+					a.VolumeSource.RBD.Keyring = "/etc/ceph/keyring"
 				}
-				if a.VolumeSource.ScaleIO != nil {
-					if a.VolumeSource.ScaleIO.StorageMode == "" {
-						a.VolumeSource.ScaleIO.StorageMode = "ThinProvisioned"
-					}
-					if a.VolumeSource.ScaleIO.FSType == "" {
-						a.VolumeSource.ScaleIO.FSType = "xfs"
-					}
+			}
+			if a.VolumeSource.AzureDisk != nil {
+				if a.VolumeSource.AzureDisk.CachingMode == nil {
+					ptrVar1 := v1.AzureDataDiskCachingMode(v1.AzureDataDiskCachingReadWrite)
+					a.VolumeSource.AzureDisk.CachingMode = &ptrVar1
+				}
+				if a.VolumeSource.AzureDisk.FSType == nil {
+					var ptrVar1 string = "ext4"
+					a.VolumeSource.AzureDisk.FSType = &ptrVar1
+				}
+				if a.VolumeSource.AzureDisk.ReadOnly == nil {
+					var ptrVar1 bool = false
+					a.VolumeSource.AzureDisk.ReadOnly = &ptrVar1
+				}
+				if a.VolumeSource.AzureDisk.Kind == nil {
+					ptrVar1 := v1.AzureDataDiskKind(v1.AzureSharedBlobDisk)
+					a.VolumeSource.AzureDisk.Kind = &ptrVar1
+				}
+			}
+			if a.VolumeSource.ScaleIO != nil {
+				if a.VolumeSource.ScaleIO.StorageMode == "" {
+					a.VolumeSource.ScaleIO.StorageMode = "ThinProvisioned"
+				}
+				if a.VolumeSource.ScaleIO.FSType == "" {
+					a.VolumeSource.ScaleIO.FSType = "xfs"
 				}
 			}
 		}
@@ -153,55 +151,53 @@ func SetObjectDefaults_ManagedSeedList(in *ManagedSeedList) {
 
 func SetObjectDefaults_ManagedSeedSet(in *ManagedSeedSet) {
 	SetDefaults_ManagedSeedSet(in)
-	if in.Spec.Template.Spec.Gardenlet != nil {
-		if in.Spec.Template.Spec.Gardenlet.Deployment != nil {
-			SetDefaults_GardenletDeployment(in.Spec.Template.Spec.Gardenlet.Deployment)
-			if in.Spec.Template.Spec.Gardenlet.Deployment.Image != nil {
-				SetDefaults_Image(in.Spec.Template.Spec.Gardenlet.Deployment.Image)
+	if in.Spec.Template.Spec.Gardenlet.Deployment != nil {
+		SetDefaults_GardenletDeployment(in.Spec.Template.Spec.Gardenlet.Deployment)
+		if in.Spec.Template.Spec.Gardenlet.Deployment.Image != nil {
+			SetDefaults_Image(in.Spec.Template.Spec.Gardenlet.Deployment.Image)
+		}
+		for i := range in.Spec.Template.Spec.Gardenlet.Deployment.AdditionalVolumes {
+			a := &in.Spec.Template.Spec.Gardenlet.Deployment.AdditionalVolumes[i]
+			if a.VolumeSource.ISCSI != nil {
+				if a.VolumeSource.ISCSI.ISCSIInterface == "" {
+					a.VolumeSource.ISCSI.ISCSIInterface = "default"
+				}
 			}
-			for i := range in.Spec.Template.Spec.Gardenlet.Deployment.AdditionalVolumes {
-				a := &in.Spec.Template.Spec.Gardenlet.Deployment.AdditionalVolumes[i]
-				if a.VolumeSource.ISCSI != nil {
-					if a.VolumeSource.ISCSI.ISCSIInterface == "" {
-						a.VolumeSource.ISCSI.ISCSIInterface = "default"
-					}
+			if a.VolumeSource.RBD != nil {
+				if a.VolumeSource.RBD.RBDPool == "" {
+					a.VolumeSource.RBD.RBDPool = "rbd"
 				}
-				if a.VolumeSource.RBD != nil {
-					if a.VolumeSource.RBD.RBDPool == "" {
-						a.VolumeSource.RBD.RBDPool = "rbd"
-					}
-					if a.VolumeSource.RBD.RadosUser == "" {
-						a.VolumeSource.RBD.RadosUser = "admin"
-					}
-					if a.VolumeSource.RBD.Keyring == "" {
-						a.VolumeSource.RBD.Keyring = "/etc/ceph/keyring"
-					}
+				if a.VolumeSource.RBD.RadosUser == "" {
+					a.VolumeSource.RBD.RadosUser = "admin"
 				}
-				if a.VolumeSource.AzureDisk != nil {
-					if a.VolumeSource.AzureDisk.CachingMode == nil {
-						ptrVar1 := v1.AzureDataDiskCachingMode(v1.AzureDataDiskCachingReadWrite)
-						a.VolumeSource.AzureDisk.CachingMode = &ptrVar1
-					}
-					if a.VolumeSource.AzureDisk.FSType == nil {
-						var ptrVar1 string = "ext4"
-						a.VolumeSource.AzureDisk.FSType = &ptrVar1
-					}
-					if a.VolumeSource.AzureDisk.ReadOnly == nil {
-						var ptrVar1 bool = false
-						a.VolumeSource.AzureDisk.ReadOnly = &ptrVar1
-					}
-					if a.VolumeSource.AzureDisk.Kind == nil {
-						ptrVar1 := v1.AzureDataDiskKind(v1.AzureSharedBlobDisk)
-						a.VolumeSource.AzureDisk.Kind = &ptrVar1
-					}
+				if a.VolumeSource.RBD.Keyring == "" {
+					a.VolumeSource.RBD.Keyring = "/etc/ceph/keyring"
 				}
-				if a.VolumeSource.ScaleIO != nil {
-					if a.VolumeSource.ScaleIO.StorageMode == "" {
-						a.VolumeSource.ScaleIO.StorageMode = "ThinProvisioned"
-					}
-					if a.VolumeSource.ScaleIO.FSType == "" {
-						a.VolumeSource.ScaleIO.FSType = "xfs"
-					}
+			}
+			if a.VolumeSource.AzureDisk != nil {
+				if a.VolumeSource.AzureDisk.CachingMode == nil {
+					ptrVar1 := v1.AzureDataDiskCachingMode(v1.AzureDataDiskCachingReadWrite)
+					a.VolumeSource.AzureDisk.CachingMode = &ptrVar1
+				}
+				if a.VolumeSource.AzureDisk.FSType == nil {
+					var ptrVar1 string = "ext4"
+					a.VolumeSource.AzureDisk.FSType = &ptrVar1
+				}
+				if a.VolumeSource.AzureDisk.ReadOnly == nil {
+					var ptrVar1 bool = false
+					a.VolumeSource.AzureDisk.ReadOnly = &ptrVar1
+				}
+				if a.VolumeSource.AzureDisk.Kind == nil {
+					ptrVar1 := v1.AzureDataDiskKind(v1.AzureSharedBlobDisk)
+					a.VolumeSource.AzureDisk.Kind = &ptrVar1
+				}
+			}
+			if a.VolumeSource.ScaleIO != nil {
+				if a.VolumeSource.ScaleIO.StorageMode == "" {
+					a.VolumeSource.ScaleIO.StorageMode = "ThinProvisioned"
+				}
+				if a.VolumeSource.ScaleIO.FSType == "" {
+					a.VolumeSource.ScaleIO.FSType = "xfs"
 				}
 			}
 		}
