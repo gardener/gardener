@@ -18,7 +18,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
-	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
@@ -83,6 +82,7 @@ var _ = Describe("GardenerDashboard", func() {
 
 		virtualGardenAccessSecret *corev1.Secret
 		sessionSecret             *corev1.Secret
+		sessionSecretPrevious     *corev1.Secret
 		configMap                 *corev1.ConfigMap
 		deployment                *appsv1.Deployment
 		service                   *corev1.Service
@@ -98,7 +98,6 @@ var _ = Describe("GardenerDashboard", func() {
 		clusterRoleBindingTerminal       *rbacv1.ClusterRoleBinding
 		roleGitHub                       *rbacv1.Role
 		roleBindingGitHub                *rbacv1.RoleBinding
-		leaseGitHub                      *coordinationv1.Lease
 	)
 
 	BeforeEach(func() {
@@ -108,6 +107,7 @@ var _ = Describe("GardenerDashboard", func() {
 		gitHub = nil
 		frontendConfigMapName = nil
 		assetsConfigMapName = nil
+		sessionSecretPrevious = nil
 
 		ctx = context.Background()
 
@@ -171,7 +171,7 @@ var _ = Describe("GardenerDashboard", func() {
 				Labels: map[string]string{
 					"manager-identity":              "fake",
 					"name":                          "gardener-dashboard-session-secret",
-					"rotation-strategy":             "inplace",
+					"rotation-strategy":             "keepold",
 					"checksum-of-config":            "5743303071195020433",
 					"last-rotation-initiation-time": "",
 					"managed-by":                    "secrets-manager",
@@ -203,7 +203,6 @@ logFormat: text
 logLevel: ` + logLevel + `
 apiServerUrl: https://` + apiServerURL + `
 maxRequestBodySize: 500kb
-experimentalUseWatchCacheForListShoots: "yes"
 readinessProbe:
   periodSeconds: 10
 unreachableSeeds:
@@ -440,7 +439,8 @@ frontend:
 									VolumeMounts: []corev1.VolumeMount{
 										{
 											Name:      "gardener-dashboard-sessionsecret",
-											MountPath: "/etc/gardener-dashboard/secrets/session",
+											MountPath: "/etc/gardener-dashboard/secrets/session/sessionSecret",
+											SubPath:   "sessionSecret",
 										},
 										{
 											Name:      "gardener-dashboard-config",
@@ -496,6 +496,27 @@ frontend:
 						},
 					},
 				},
+			}
+
+			if sessionSecretPrevious != nil {
+				obj.Spec.Template.Spec.Volumes = append(obj.Spec.Template.Spec.Volumes, corev1.Volume{
+					Name: "gardener-dashboard-sessionsecret-previous",
+					VolumeSource: corev1.VolumeSource{
+						Secret: &corev1.SecretVolumeSource{
+							SecretName:  sessionSecretPrevious.Name,
+							DefaultMode: ptr.To[int32](0640),
+							Items: []corev1.KeyToPath{{
+								Key:  "password",
+								Path: "sessionSecretPrevious",
+							}},
+						},
+					},
+				})
+				obj.Spec.Template.Spec.Containers[0].VolumeMounts = append(obj.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+					Name:      "gardener-dashboard-sessionsecret-previous",
+					MountPath: "/etc/gardener-dashboard/secrets/session/sessionSecretPrevious",
+					SubPath:   "sessionSecretPrevious",
+				})
 			}
 
 			if oidc != nil {
@@ -741,11 +762,6 @@ frontend:
 					Resources: []string{"resourcequotas"},
 					Verbs:     []string{"list", "watch"},
 				},
-				{
-					APIGroups: []string{""},
-					Resources: []string{"secrets"},
-					Verbs:     []string{"get"},
-				},
 			},
 		}
 		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
@@ -846,16 +862,6 @@ frontend:
 				Name:      "gardener-dashboard",
 				Namespace: "kube-system",
 			}},
-		}
-		leaseGitHub = &coordinationv1.Lease{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "gardener-dashboard-github-webhook",
-				Namespace: "garden",
-				Labels: map[string]string{
-					"app":  "gardener",
-					"role": "dashboard",
-				},
-			},
 		}
 
 		values = Values{
@@ -988,6 +994,38 @@ frontend:
 				Expect(managedResourceVirtual).To(consistOf(expectedVirtualObjects...))
 			})
 
+			When("previous session secret found", func() {
+				BeforeEach(func() {
+					sessionSecretPrevious = &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "gardener-dashboard-session-secret-old",
+							Namespace: namespace,
+							Labels: map[string]string{
+								"manager-identity":              "fake",
+								"name":                          "gardener-dashboard-session-secret",
+								"rotation-strategy":             "keepold",
+								"checksum-of-config":            "5743303071195020433",
+								"last-rotation-initiation-time": "",
+								"managed-by":                    "secrets-manager",
+							},
+						},
+						Type:      corev1.SecretTypeOpaque,
+						Immutable: ptr.To(true),
+						Data: map[string][]byte{
+							"password": []byte("____________previous____________"),
+							"username": []byte("admin"),
+							"auth":     []byte("admin:$2a$12$nufeOsvYvptwZo4y3SIbmeBKnrBK/w5aBy6HtFAd6VCepQvJ4BNdG"),
+						},
+					}
+					Expect(fakeClient.Create(ctx, sessionSecretPrevious)).To(Succeed())
+				})
+
+				It("should successfully deploy all resources", func() {
+					Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
+					Expect(managedResourceVirtual).To(consistOf(expectedVirtualObjects...))
+				})
+			})
+
 			When("token login is disabled", func() {
 				BeforeEach(func() {
 					enableTokenLogin = false
@@ -1056,7 +1094,6 @@ frontend:
 					expectedVirtualObjects = append(expectedVirtualObjects,
 						roleGitHub,
 						roleBindingGitHub,
-						leaseGitHub,
 					)
 				})
 

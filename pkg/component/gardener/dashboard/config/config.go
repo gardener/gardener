@@ -10,20 +10,20 @@ import (
 
 // Config is the dashboard config structure.
 type Config struct {
-	Port                                   int32                  `yaml:"port"`
-	LogFormat                              string                 `yaml:"logFormat"`
-	LogLevel                               string                 `yaml:"logLevel"`
-	APIServerURL                           string                 `yaml:"apiServerUrl"`
-	APIServerCAData                        *string                `yaml:"apiServerCaData,omitempty"`
-	MaxRequestBodySize                     string                 `yaml:"maxRequestBodySize"`
-	ExperimentalUseWatchCacheForListShoots string                 `yaml:"experimentalUseWatchCacheForListShoots"`
-	ReadinessProbe                         ReadinessProbe         `yaml:"readinessProbe"`
-	UnreachableSeeds                       UnreachableSeeds       `yaml:"unreachableSeeds"`
-	ContentSecurityPolicy                  *ContentSecurityPolicy `yaml:"contentSecurityPolicy,omitempty"`
-	Terminal                               *Terminal              `yaml:"terminal,omitempty"`
-	OIDC                                   *OIDC                  `yaml:"oidc,omitempty"`
-	GitHub                                 *GitHub                `yaml:"gitHub,omitempty"`
-	Frontend                               map[string]any         `yaml:"frontend,omitempty"`
+	Port               int32   `yaml:"port"`
+	LogFormat          string  `yaml:"logFormat"`
+	LogLevel           string  `yaml:"logLevel"`
+	APIServerURL       string  `yaml:"apiServerUrl"`
+	APIServerCAData    *string `yaml:"apiServerCaData,omitempty"`
+	MaxRequestBodySize string  `yaml:"maxRequestBodySize"`
+
+	ReadinessProbe        ReadinessProbe         `yaml:"readinessProbe"`
+	UnreachableSeeds      UnreachableSeeds       `yaml:"unreachableSeeds"`
+	ContentSecurityPolicy *ContentSecurityPolicy `yaml:"contentSecurityPolicy,omitempty"`
+	Terminal              *Terminal              `yaml:"terminal,omitempty"`
+	OIDC                  *OIDC                  `yaml:"oidc,omitempty"`
+	GitHub                *GitHub                `yaml:"gitHub,omitempty"`
+	Frontend              map[string]any         `yaml:"frontend,omitempty"`
 }
 
 // ReadinessProbe is the readiness probe configuration.

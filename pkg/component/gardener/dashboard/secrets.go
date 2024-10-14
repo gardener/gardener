@@ -6,6 +6,7 @@ package dashboard
 
 import (
 	"context"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -19,11 +20,10 @@ func (g *gardenerDashboard) newVirtualGardenAccessSecret() *gardenerutils.Access
 }
 
 func (g *gardenerDashboard) reconcileSessionSecret(ctx context.Context) (*corev1.Secret, error) {
-	// TODO(rfranzke): Auto-rotate this secret after https://github.com/gardener/dashboard/issues/1790 is implemented.
 	return g.secretsManager.Generate(ctx, &secretsutils.BasicAuthSecretConfig{
 		Name:           "gardener-dashboard-session-secret",
 		Format:         secretsutils.BasicAuthFormatNormal,
 		Username:       "admin",
 		PasswordLength: 32,
-	}, secretsmanager.Rotate(secretsmanager.InPlace))
+	}, secretsmanager.Rotate(secretsmanager.KeepOld), secretsmanager.Validity(30*24*time.Hour), secretsmanager.IgnoreOldSecretsAfter(24*time.Hour))
 }
