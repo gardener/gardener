@@ -1662,6 +1662,20 @@ Ingress
 <p>Ingress configures Ingress specific settings of the Seed cluster. This field is immutable.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>accessRestrictions</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.AccessRestriction">
+[]AccessRestriction
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AccessRestriction describe a list of access restriction for this seed cluster.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -1914,7 +1928,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret.
+<p>SecretBindingName is the name of a SecretBinding that has a reference to the provider secret.
 The credentials inside the provider secret will be used to create the shoot in the respective account.
 The field is mutually exclusive with CredentialsBindingName.
 This field is immutable.</p>
@@ -2052,8 +2066,22 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>CredentialsBindingName is the name of the a CredentialsBinding that has a reference to the provider credentials.
+<p>CredentialsBindingName is the name of a CredentialsBinding that has a reference to the provider credentials.
 The credentials will be used to create the shoot in the respective account. The field is mutually exclusive with SecretBindingName.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>accessRestrictions</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.AccessRestrictionWithOptions">
+[]AccessRestrictionWithOptions
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AccessRestriction describe a list of access restriction for this shoot cluster.</p>
 </td>
 </tr>
 </table>
@@ -2268,6 +2296,85 @@ int32
 <em>(Optional)</em>
 <p>MaxMutatingInflight is the maximum number of mutating requests in flight at a given time. When the server
 exceeds this, it rejects requests.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.AccessRestriction">AccessRestriction
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.AccessRestrictionWithOptions">AccessRestrictionWithOptions</a>, 
+<a href="#core.gardener.cloud/v1beta1.Region">Region</a>, 
+<a href="#core.gardener.cloud/v1beta1.SeedSpec">SeedSpec</a>)
+</p>
+<p>
+<p>AccessRestriction describes an access restriction for a Kubernetes cluster (e.g., EU access-only).</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name is the name of the restriction.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.AccessRestrictionWithOptions">AccessRestrictionWithOptions
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ShootSpec">ShootSpec</a>)
+</p>
+<p>
+<p>AccessRestrictionWithOptions describes an access restriction for a Kubernetes cluster (e.g., EU access-only) and
+allows to specify additional options.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>AccessRestriction</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.AccessRestriction">
+AccessRestriction
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>AccessRestriction</code> are embedded into this type.)
+</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>options</code></br>
+<em>
+map[string]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Options is a map of additional options for the access restriction.</p>
 </td>
 </tr>
 </tbody>
@@ -9433,7 +9540,21 @@ map[string]string
 <em>(Optional)</em>
 <p>Labels is an optional set of key-value pairs that contain certain administrator-controlled labels for this region.
 It can be used by Gardener administrators/operators to provide additional information about a region, e.g. wrt
-quality, reliability, access restrictions, etc.</p>
+quality, reliability, etc.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>accessRestrictions</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.AccessRestriction">
+[]AccessRestriction
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AccessRestriction describe a list of access restrictions that can be used for Shoots using this region.</p>
 </td>
 </tr>
 </tbody>
@@ -10668,6 +10789,20 @@ Ingress
 <p>Ingress configures Ingress specific settings of the Seed cluster. This field is immutable.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>accessRestrictions</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.AccessRestriction">
+[]AccessRestriction
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AccessRestriction describe a list of access restriction for this seed cluster.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.SeedStatus">SeedStatus
@@ -11007,6 +11142,20 @@ Ingress
 <td>
 <em>(Optional)</em>
 <p>Ingress configures Ingress specific settings of the Seed cluster. This field is immutable.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>accessRestrictions</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.AccessRestriction">
+[]AccessRestriction
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AccessRestriction describe a list of access restriction for this seed cluster.</p>
 </td>
 </tr>
 </table>
@@ -11843,7 +11992,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret.
+<p>SecretBindingName is the name of a SecretBinding that has a reference to the provider secret.
 The credentials inside the provider secret will be used to create the shoot in the respective account.
 The field is mutually exclusive with CredentialsBindingName.
 This field is immutable.</p>
@@ -11981,8 +12130,22 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>CredentialsBindingName is the name of the a CredentialsBinding that has a reference to the provider credentials.
+<p>CredentialsBindingName is the name of a CredentialsBinding that has a reference to the provider credentials.
 The credentials will be used to create the shoot in the respective account. The field is mutually exclusive with SecretBindingName.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>accessRestrictions</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.AccessRestrictionWithOptions">
+[]AccessRestrictionWithOptions
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AccessRestriction describe a list of access restriction for this shoot cluster.</p>
 </td>
 </tr>
 </tbody>
@@ -12542,7 +12705,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret.
+<p>SecretBindingName is the name of a SecretBinding that has a reference to the provider secret.
 The credentials inside the provider secret will be used to create the shoot in the respective account.
 The field is mutually exclusive with CredentialsBindingName.
 This field is immutable.</p>
@@ -12680,8 +12843,22 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>CredentialsBindingName is the name of the a CredentialsBinding that has a reference to the provider credentials.
+<p>CredentialsBindingName is the name of a CredentialsBinding that has a reference to the provider credentials.
 The credentials will be used to create the shoot in the respective account. The field is mutually exclusive with SecretBindingName.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>accessRestrictions</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.AccessRestrictionWithOptions">
+[]AccessRestrictionWithOptions
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AccessRestriction describe a list of access restriction for this shoot cluster.</p>
 </td>
 </tr>
 </table>

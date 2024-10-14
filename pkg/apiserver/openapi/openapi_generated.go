@@ -33,6 +33,8 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1.OCIRepository":                                   schema_pkg_apis_core_v1_OCIRepository(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerLogging":                           schema_pkg_apis_core_v1beta1_APIServerLogging(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerRequests":                          schema_pkg_apis_core_v1beta1_APIServerRequests(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.AccessRestriction":                          schema_pkg_apis_core_v1beta1_AccessRestriction(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.AccessRestrictionWithOptions":               schema_pkg_apis_core_v1beta1_AccessRestrictionWithOptions(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Addon":                                      schema_pkg_apis_core_v1beta1_Addon(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Addons":                                     schema_pkg_apis_core_v1beta1_Addons(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.AdmissionPlugin":                            schema_pkg_apis_core_v1beta1_AdmissionPlugin(ref),
@@ -1054,6 +1056,66 @@ func schema_pkg_apis_core_v1beta1_APIServerRequests(ref common.ReferenceCallback
 						},
 					},
 				},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_AccessRestriction(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "AccessRestriction describes an access restriction for a Kubernetes cluster (e.g., EU access-only).",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is the name of the restriction.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"name"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_AccessRestrictionWithOptions(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "AccessRestrictionWithOptions describes an access restriction for a Kubernetes cluster (e.g., EU access-only) and allows to specify additional options.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is the name of the restriction.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"options": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Options is a map of additional options for the access restriction.",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"name"},
 			},
 		},
 	}
@@ -6830,7 +6892,7 @@ func schema_pkg_apis_core_v1beta1_Region(ref common.ReferenceCallback) common.Op
 					},
 					"labels": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Labels is an optional set of key-value pairs that contain certain administrator-controlled labels for this region. It can be used by Gardener administrators/operators to provide additional information about a region, e.g. wrt quality, reliability, access restrictions, etc.",
+							Description: "Labels is an optional set of key-value pairs that contain certain administrator-controlled labels for this region. It can be used by Gardener administrators/operators to provide additional information about a region, e.g. wrt quality, reliability, etc.",
 							Type:        []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
 								Allows: true,
@@ -6844,12 +6906,26 @@ func schema_pkg_apis_core_v1beta1_Region(ref common.ReferenceCallback) common.Op
 							},
 						},
 					},
+					"accessRestrictions": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AccessRestriction describe a list of access restrictions that can be used for Shoots using this region.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.AccessRestriction"),
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"name"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.AvailabilityZone"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.AccessRestriction", "github.com/gardener/gardener/pkg/apis/core/v1beta1.AvailabilityZone"},
 	}
 }
 
@@ -7947,12 +8023,26 @@ func schema_pkg_apis_core_v1beta1_SeedSpec(ref common.ReferenceCallback) common.
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Ingress"),
 						},
 					},
+					"accessRestrictions": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AccessRestriction describe a list of access restriction for this seed cluster.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.AccessRestriction"),
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"dns", "networks", "provider"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Ingress", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedBackup", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedNetworks", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedProvider", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedTaint", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedVolume"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.AccessRestriction", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Ingress", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedBackup", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedNetworks", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedProvider", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedTaint", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedVolume"},
 	}
 }
 
@@ -8701,7 +8791,7 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 					},
 					"secretBindingName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret. The credentials inside the provider secret will be used to create the shoot in the respective account. The field is mutually exclusive with CredentialsBindingName. This field is immutable.",
+							Description: "SecretBindingName is the name of a SecretBinding that has a reference to the provider secret. The credentials inside the provider secret will be used to create the shoot in the respective account. The field is mutually exclusive with CredentialsBindingName. This field is immutable.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -8787,9 +8877,23 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 					},
 					"credentialsBindingName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "CredentialsBindingName is the name of the a CredentialsBinding that has a reference to the provider credentials. The credentials will be used to create the shoot in the respective account. The field is mutually exclusive with SecretBindingName.",
+							Description: "CredentialsBindingName is the name of a CredentialsBinding that has a reference to the provider credentials. The credentials will be used to create the shoot in the respective account. The field is mutually exclusive with SecretBindingName.",
 							Type:        []string{"string"},
 							Format:      "",
+						},
+					},
+					"accessRestrictions": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AccessRestriction describe a list of access restriction for this shoot cluster.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.AccessRestrictionWithOptions"),
+									},
+								},
+							},
 						},
 					},
 				},
@@ -8797,7 +8901,7 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Addons", "github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileReference", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ControlPlane", "github.com/gardener/gardener/pkg/apis/core/v1beta1.DNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Extension", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Hibernation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Kubernetes", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Maintenance", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Monitoring", "github.com/gardener/gardener/pkg/apis/core/v1beta1.NamedResourceReference", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Networking", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Provider", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SystemComponents", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Toleration"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.AccessRestrictionWithOptions", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Addons", "github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileReference", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ControlPlane", "github.com/gardener/gardener/pkg/apis/core/v1beta1.DNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Extension", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Hibernation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Kubernetes", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Maintenance", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Monitoring", "github.com/gardener/gardener/pkg/apis/core/v1beta1.NamedResourceReference", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Networking", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Provider", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SystemComponents", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Toleration"},
 	}
 }
 
