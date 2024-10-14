@@ -403,3 +403,8 @@ spec:
 #   highAvailability:
 #     failureTolerance:
 #       type: zone # {node,zone}
+# accessRestrictions:
+# - name: eu-access-only
+#   options:
+#     support.gardener.cloud/eu-access-for-cluster-addons: "false"
+#     support.gardener.cloud/eu-access-for-cluster-nodes: "true"

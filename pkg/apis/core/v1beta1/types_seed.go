@@ -78,6 +78,9 @@ type SeedSpec struct {
 	// Ingress configures Ingress specific settings of the Seed cluster. This field is immutable.
 	// +optional
 	Ingress *Ingress `json:"ingress,omitempty" protobuf:"bytes,9,opt,name=ingress"`
+	// AccessRestriction describe a list of access restriction for this seed cluster.
+	// +optional
+	AccessRestrictions []AccessRestriction `json:"accessRestrictions,omitempty" protobuf:"bytes,10,rep,name=accessRestrictions"`
 }
 
 // SeedStatus is the status of a Seed.

@@ -163,8 +163,10 @@ type Region struct {
 	Zones []AvailabilityZone
 	// Labels is an optional set of key-value pairs that contain certain administrator-controlled labels for this region.
 	// It can be used by Gardener administrators/operators to provide additional information about a region, e.g. wrt
-	// quality, reliability, access restrictions, etc.
+	// quality, reliability, etc.
 	Labels map[string]string
+	// AccessRestriction describe a list of access restrictions that can be used for Shoots using this region.
+	AccessRestrictions []AccessRestriction
 }
 
 // AvailabilityZone is an availability zone.

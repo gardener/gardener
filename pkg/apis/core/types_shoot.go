@@ -78,7 +78,7 @@ type ShootSpec struct {
 	Purpose *ShootPurpose
 	// Region is a name of a region. This field is immutable.
 	Region string
-	// SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret.
+	// SecretBindingName is the name of a SecretBinding that has a reference to the provider secret.
 	// The credentials inside the provider secret will be used to create the shoot in the respective account.
 	// The field is mutually exclusive with CredentialsBindingName.
 	// This field is immutable.
@@ -104,9 +104,11 @@ type ShootSpec struct {
 	SchedulerName *string
 	// CloudProfile is a reference to a CloudProfile or a NamespacedCloudProfile.
 	CloudProfile *CloudProfileReference
-	// CredentialsBindingName is the name of the a CredentialsBinding that has a reference to the provider credentials.
+	// CredentialsBindingName is the name of a CredentialsBinding that has a reference to the provider credentials.
 	// The credentials will be used to create the shoot in the respective account. The field is mutually exclusive with SecretBindingName.
 	CredentialsBindingName *string
+	// AccessRestriction describe a list of access restriction for this shoot cluster.
+	AccessRestrictions []AccessRestrictionWithOptions
 }
 
 var _ Object = (*Shoot)(nil)

@@ -85,7 +85,9 @@ spec:
   #   unavailableVolumeTypes: # optional, list of volume types defined above that are not available in this zone
   #   - io1
   # labels: # optional, arbitrary key-value pairs to provide additional (meta) information about this region
-  #   seed.gardener.cloud/eu-access: "true"
+  #   seed.gardener.cloud/reliability: high
+  # accessRestrictions:
+  # - name: eu-access-only
 # CA bundle that will be installed onto every shoot machine that is using this provider profile.
 # caBundle: |
 #   -----BEGIN CERTIFICATE-----

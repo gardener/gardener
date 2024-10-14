@@ -66,6 +66,8 @@ type SeedSpec struct {
 	Volume *SeedVolume
 	// Ingress configures Ingress specific settings of the Seed cluster. This field is immutable.
 	Ingress *Ingress
+	// AccessRestriction describe a list of access restriction for this seed cluster.
+	AccessRestrictions []AccessRestriction
 }
 
 var _ Object = (*Seed)(nil)
