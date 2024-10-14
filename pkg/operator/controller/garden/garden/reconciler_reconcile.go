@@ -255,8 +255,8 @@ func (r *Reconciler) reconcile(
 			deployNginxIngressController,
 		)
 
-		backupBucket              = &extensionsv1alpha1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: etcdMainBackupBucketName(garden)}}
-		reconcileEtcdBackupBucket = g.Add(flow.Task{
+		backupBucket           = &extensionsv1alpha1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: etcdMainBackupBucketName(garden)}}
+		deployEtcdBackupBucket = g.Add(flow.Task{
 			Name: "Reconciling main ETCD backup bucket",
 			Fn: func(ctx context.Context) error {
 				if err := r.deployEtcdMainBackupBucket(ctx, garden, backupBucket); err != nil {
@@ -281,7 +281,7 @@ func (r *Reconciler) reconcile(
 		deployEtcds = g.Add(flow.Task{
 			Name:         "Deploying main and events ETCDs of virtual garden",
 			Fn:           r.deployEtcdsFunc(garden, c.etcdMain, c.etcdEvents, backupBucket),
-			Dependencies: flow.NewTaskIDs(syncPointSystemComponents, reconcileEtcdBackupBucket),
+			Dependencies: flow.NewTaskIDs(syncPointSystemComponents, deployEtcdBackupBucket),
 		})
 		waitUntilEtcdsReady = g.Add(flow.Task{
 			Name:         "Waiting until main and event ETCDs report readiness",
@@ -966,7 +966,7 @@ func (r *Reconciler) reconcileDNSRecords(ctx context.Context, log logr.Logger, g
 	}
 
 	dnsRecordList := &extensionsv1alpha1.DNSRecordList{}
-	if err := r.RuntimeClientSet.Client().List(ctx, dnsRecordList, client.InNamespace(r.GardenNamespace)); err != nil {
+	if err := r.listManagedDNSRecords(ctx, dnsRecordList); err != nil {
 		return fmt.Errorf("failed listing DNS records: %w", err)
 	}
 
@@ -993,6 +993,7 @@ func (r *Reconciler) reconcileDNSRecords(ctx context.Context, log logr.Logger, g
 				&dnsrecord.Values{
 					Name:                         recordName,
 					Namespace:                    r.GardenNamespace,
+					Labels:                       map[string]string{labelKeyOrigin: labelValueOperator},
 					DNSName:                      dnsName,
 					Values:                       []string{istioIngressGatewayLoadBalancerAddress},
 					RecordType:                   extensionsv1alpha1helper.GetDNSRecordType(istioIngressGatewayLoadBalancerAddress),
@@ -1026,6 +1027,13 @@ func (r *Reconciler) reconcileDNSRecords(ctx context.Context, log logr.Logger, g
 	}
 
 	return flow.Parallel(taskFns...)(ctx)
+}
+
+func (r *Reconciler) listManagedDNSRecords(ctx context.Context, dnsRecordList *extensionsv1alpha1.DNSRecordList) error {
+	if err := r.RuntimeClientSet.Client().List(ctx, dnsRecordList, client.InNamespace(r.GardenNamespace), client.MatchingLabels{labelKeyOrigin: labelValueOperator}); err != nil {
+		return fmt.Errorf("failed listing DNS records: %w", err)
+	}
+	return nil
 }
 
 func getKubernetesResourcesForEncryption(garden *operatorv1alpha1.Garden) []string {

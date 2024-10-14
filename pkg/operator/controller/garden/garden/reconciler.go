@@ -42,6 +42,11 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
+const (
+	labelKeyOrigin     = "origin"
+	labelValueOperator = "gardener-operator"
+)
+
 // Reconciler reconciles Gardens.
 type Reconciler struct {
 	Manager               manager.Manager

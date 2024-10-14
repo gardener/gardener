@@ -81,6 +81,8 @@ type Values struct {
 	TTL *int64
 	// IPStack is the indication of the IP stack used for the DNSRecord. It can be ipv4, ipv6 or dual-stack.
 	IPStack string
+	// Labels is a set of labels that should be applied to the DNSRecord resource.
+	Labels map[string]string
 }
 
 // New creates a new instance that implements component.DeployMigrateWaiter.
@@ -159,6 +161,13 @@ func (d *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1a
 		secretRef := corev1.SecretReference{Name: d.values.SecretName, Namespace: d.values.Namespace}
 		if d.secret != nil {
 			secretRef = corev1.SecretReference{Name: d.secret.Name, Namespace: d.secret.Namespace}
+		}
+
+		for k, v := range d.values.Labels {
+			if d.dnsRecord.Labels == nil {
+				d.dnsRecord.Labels = make(map[string]string)
+			}
+			d.dnsRecord.Labels[k] = v
 		}
 
 		d.dnsRecord.Spec = extensionsv1alpha1.DNSRecordSpec{

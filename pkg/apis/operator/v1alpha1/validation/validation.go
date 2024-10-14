@@ -112,6 +112,12 @@ func validateVirtualClusterUpdate(oldGarden, newGarden *operatorv1alpha1.Garden)
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldVirtualCluster.DNS.Domains[0], newVirtualCluster.DNS.Domains[0], fldPath.Child("dns", "domains").Index(0))...)
 	}
 
+	if oldVirtualCluster.ETCD != nil && oldVirtualCluster.ETCD.Main != nil && oldVirtualCluster.ETCD.Main.Backup != nil && oldVirtualCluster.ETCD.Main.Backup.BucketName == nil {
+		if newVirtualCluster.ETCD != nil && newVirtualCluster.ETCD.Main != nil && newVirtualCluster.ETCD.Main.Backup != nil && newVirtualCluster.ETCD.Main.Backup.BucketName != nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("etcd", "main", "backup", "bucketName"), "bucket name must not be set if it was not set before"))
+		}
+	}
+
 	if oldVirtualCluster.ControlPlane != nil && oldVirtualCluster.ControlPlane.HighAvailability != nil &&
 		(newVirtualCluster.ControlPlane == nil || newVirtualCluster.ControlPlane.HighAvailability == nil) {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldVirtualCluster.ControlPlane, newVirtualCluster.ControlPlane, fldPath.Child("controlPlane", "highAvailability"))...)
@@ -174,6 +180,18 @@ func validateVirtualCluster(virtualCluster operatorv1alpha1.VirtualCluster, runt
 			allErrs = append(allErrs, field.Duplicate(fldPath.Child("dns", "domains").Index(i), domain))
 		}
 		domains.Insert(domain)
+	}
+
+	if virtualCluster.DNS.Provider != nil && virtualCluster.DNS.SecretRef == nil {
+		allErrs = append(allErrs, field.Required(fldPath.Child("dns", "secretRef"), "must provide a secret reference when DNS provider is set"))
+	}
+
+	if virtualCluster.ETCD != nil && virtualCluster.ETCD.Main != nil && virtualCluster.ETCD.Main.Backup != nil {
+		if virtualCluster.ETCD.Main.Backup.BucketName != nil {
+			if virtualCluster.ETCD.Main.Backup.ProviderConfig != nil {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("etcd", "main", "backup", "providerConfig"), "provider must not be set when bucket name is set"))
+			}
+		}
 	}
 
 	if err := kubernetesversion.CheckIfSupported(virtualCluster.Kubernetes.Version); err != nil {
