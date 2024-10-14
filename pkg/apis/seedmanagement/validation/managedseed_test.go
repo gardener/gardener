@@ -195,19 +195,6 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 			))
 		})
 
-		// It("should forbid nil gardenlet", func() {
-		// 	managedSeed.Spec.Gardenlet = nil
-
-		// 	errorList := ValidateManagedSeed(managedSeed)
-
-		// 	Expect(errorList).To(ConsistOf(
-		// 		PointTo(MatchFields(IgnoreExtras, Fields{
-		// 			"Type":  Equal(field.ErrorTypeRequired),
-		// 			"Field": Equal("spec.gardenlet"),
-		// 		})),
-		// 	))
-		// })
-
 		Context("gardenlet", func() {
 			var (
 				seedx *gardencorev1beta1.Seed
