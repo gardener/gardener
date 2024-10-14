@@ -94,11 +94,7 @@ func ValidateManagedSeedSpec(spec *seedmanagement.ManagedSeedSpec, fldPath *fiel
 		allErrs = append(allErrs, validateShoot(spec.Shoot, fldPath.Child("shoot"), inTemplate)...)
 	}
 
-	if spec.Gardenlet == nil {
-		allErrs = append(allErrs, field.Required(fldPath.Child("gardenlet"), "gardenlet is required"))
-	} else {
-		allErrs = append(allErrs, validateGardenlet(spec.Gardenlet, fldPath.Child("gardenlet"), inTemplate)...)
-	}
+	allErrs = append(allErrs, validateGardenlet(spec.Gardenlet, fldPath.Child("gardenlet"), inTemplate)...)
 
 	return allErrs
 }
@@ -110,9 +106,7 @@ func ValidateManagedSeedSpecUpdate(newSpec, oldSpec *seedmanagement.ManagedSeedS
 	// Ensure shoot is not changed
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Shoot, oldSpec.Shoot, fldPath.Child("shoot"))...)
 
-	if newSpec.Gardenlet != nil && oldSpec.Gardenlet != nil {
-		allErrs = append(allErrs, validateGardenletUpdate(newSpec.Gardenlet, oldSpec.Gardenlet, fldPath.Child("gardenlet"))...)
-	}
+	allErrs = append(allErrs, validateGardenletUpdate(newSpec.Gardenlet, oldSpec.Gardenlet, fldPath.Child("gardenlet"))...)
 
 	return allErrs
 }
@@ -138,7 +132,7 @@ func validateShoot(shoot *seedmanagement.Shoot, fldPath *field.Path, inTemplate 
 	return allErrs
 }
 
-func validateGardenlet(gardenlet *seedmanagement.GardenletConfig, fldPath *field.Path, inTemplate bool) field.ErrorList {
+func validateGardenlet(gardenlet seedmanagement.GardenletConfig, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if gardenlet.Deployment != nil {
@@ -175,7 +169,7 @@ func validateGardenletConfig(config runtime.Object, bootstrap seedmanagement.Boo
 	return allErrs
 }
 
-func validateGardenletUpdate(newGardenlet, oldGardenlet *seedmanagement.GardenletConfig, fldPath *field.Path) field.ErrorList {
+func validateGardenletUpdate(newGardenlet, oldGardenlet seedmanagement.GardenletConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateGardenletConfigUpdate(newGardenlet.Config, oldGardenlet.Config, fldPath.Child("config"))...)

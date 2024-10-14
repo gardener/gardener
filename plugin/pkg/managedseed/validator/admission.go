@@ -231,15 +231,13 @@ func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, _ admis
 		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, fmt.Sprintf("shoot %s already registered as seed by managed seed %s", client.ObjectKeyFromObject(shoot), client.ObjectKeyFromObject(ms)))))
 	}
 
-	if managedSeed.Spec.Gardenlet != nil {
-		// Admit gardenlet against shoot
-		errs, err := v.admitGardenlet(managedSeed.Spec.Gardenlet, shoot, field.NewPath("spec", "gardenlet"))
-		if err != nil {
-			return err
-		}
-
-		allErrs = append(allErrs, errs...)
+	// Admit gardenlet against shoot
+	errs, err := v.admitGardenlet(&managedSeed.Spec.Gardenlet, shoot, field.NewPath("spec", "gardenlet"))
+	if err != nil {
+		return err
 	}
+
+	allErrs = append(allErrs, errs...)
 
 	switch a.GetOperation() {
 	case admission.Create:

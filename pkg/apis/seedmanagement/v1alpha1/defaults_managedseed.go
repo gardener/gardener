@@ -18,9 +18,7 @@ import (
 
 // SetDefaults_ManagedSeed sets default values for ManagedSeed objects.
 func SetDefaults_ManagedSeed(obj *ManagedSeed) {
-	if obj.Spec.Gardenlet != nil {
-		setDefaultsGardenlet(obj.Spec.Gardenlet, obj.Name, obj.Namespace)
-	}
+	setDefaultsGardenlet(&obj.Spec.Gardenlet, obj.Name, obj.Namespace)
 }
 
 // SetDefaults_GardenletDeployment sets default values for GardenletDeployment objects.
