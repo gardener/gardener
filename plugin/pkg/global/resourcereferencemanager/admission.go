@@ -495,32 +495,10 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 			// getting Kubernetes versions that have been removed from the CloudProfile
 			removedKubernetesVersions := sets.StringKeySet(helper.GetRemovedVersions(oldCloudProfile.Spec.Kubernetes.Versions, cloudProfile.Spec.Kubernetes.Versions))
 
-			// getting Machine image versions that have been removed from the CloudProfile
-			removedMachineImageVersions := map[string]sets.Set[string]{}
-			for _, oldImage := range oldCloudProfile.Spec.MachineImages {
-				imageFound := false
-				for _, newImage := range cloudProfile.Spec.MachineImages {
-					if oldImage.Name == newImage.Name {
-						imageFound = true
-						removedMachineImageVersions[oldImage.Name] = sets.KeySet(
-							helper.GetRemovedVersions(
-								helper.ToExpirableVersions(oldImage.Versions),
-								helper.ToExpirableVersions(newImage.Versions),
-							),
-						)
-					}
-				}
-				if !imageFound {
-					for _, version := range oldImage.Versions {
-						if removedMachineImageVersions[oldImage.Name] == nil {
-							removedMachineImageVersions[oldImage.Name] = sets.New[string]()
-						}
-						removedMachineImageVersions[oldImage.Name] = removedMachineImageVersions[oldImage.Name].Insert(version.Version)
-					}
-				}
-			}
+			// getting Machine image versions that have been removed from or added to the CloudProfile
+			removedMachineImages, removedMachineImageVersions, addedMachineImages, addedMachineImageVersions := helper.GetMachineImageDiff(oldCloudProfile.Spec.MachineImages, cloudProfile.Spec.MachineImages)
 
-			if len(removedKubernetesVersions) > 0 || len(removedMachineImageVersions) > 0 {
+			if len(removedKubernetesVersions) > 0 || len(removedMachineImageVersions) > 0 || len(addedMachineImageVersions) > 0 {
 				shootList, err1 := r.shootLister.List(labels.Everything())
 				if err1 != nil {
 					return apierrors.NewInternalError(fmt.Errorf("could not list shoots to verify that Kubernetes and/or Machine image version can be removed: %v", err1))
@@ -563,6 +541,12 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 						}
 
 						for _, machineImage := range nscpfl.Spec.MachineImages {
+							if removedMachineImages.Has(machineImage.Name) {
+								channel <- fmt.Errorf("unable to delete MachineImage %q from CloudProfile %q - MachineImage is still in use by NamespacedCloudProfile %q", machineImage.Name, cloudProfile.Name, ncpNamespacedName.String())
+							}
+							if addedMachineImages.Has(machineImage.Name) {
+								channel <- fmt.Errorf("unable to add MachineImage %q to CloudProfile %q - MachineImage is already defined by NamespacedCloudProfile %q", machineImage.Name, cloudProfile.Name, ncpNamespacedName.String())
+							}
 							if removedVersions, exists := removedMachineImageVersions[machineImage.Name]; exists {
 								for _, imageVersion := range machineImage.Versions {
 									if removedVersions.Has(imageVersion.Version) {

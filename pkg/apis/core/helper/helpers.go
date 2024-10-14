@@ -21,6 +21,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 // GetConditionIndex returns the index of the condition with the given <conditionType> out of the list of <conditions>.
@@ -315,6 +316,53 @@ func getVersionDiff(v1, v2 []core.ExpirableVersion) map[string]int {
 		}
 	}
 	return diff
+}
+
+// GetMachineImageDiff returns the removed and added machine images and versions from the diff of two slices.
+func GetMachineImageDiff(old, new []core.MachineImage) (removedMachineImages sets.Set[string], removedMachineImageVersions map[string]sets.Set[string], addedMachineImages sets.Set[string], addedMachineImageVersions map[string]sets.Set[string]) {
+	removedMachineImages = sets.Set[string]{}
+	removedMachineImageVersions = map[string]sets.Set[string]{}
+	addedMachineImages = sets.Set[string]{}
+	addedMachineImageVersions = map[string]sets.Set[string]{}
+
+	oldImages := utils.CreateMapFromSlice(old, func(image core.MachineImage) string { return image.Name })
+	newImages := utils.CreateMapFromSlice(new, func(image core.MachineImage) string { return image.Name })
+
+	for imageName, oldImage := range oldImages {
+		oldImageVersions := utils.CreateMapFromSlice(oldImage.Versions, func(version core.MachineImageVersion) string { return version.Version })
+		oldImageVersionsSet := sets.KeySet(oldImageVersions)
+		newImage, exists := newImages[imageName]
+		if !exists {
+			// Completely removed images.
+			removedMachineImages.Insert(imageName)
+			removedMachineImageVersions[imageName] = oldImageVersionsSet
+		} else {
+			// Check for image versions diff.
+			newImageVersions := utils.CreateMapFromSlice(newImage.Versions, func(version core.MachineImageVersion) string { return version.Version })
+			newImageVersionsSet := sets.KeySet(newImageVersions)
+
+			removedDiff := oldImageVersionsSet.Difference(newImageVersionsSet)
+			if removedDiff.Len() > 0 {
+				removedMachineImageVersions[imageName] = removedDiff
+			}
+			addedDiff := newImageVersionsSet.Difference(oldImageVersionsSet)
+			if addedDiff.Len() > 0 {
+				addedMachineImageVersions[imageName] = addedDiff
+			}
+		}
+	}
+
+	for imageName, newImage := range newImages {
+		if _, exists := oldImages[imageName]; !exists {
+			// Completely new image.
+			newImageVersions := utils.CreateMapFromSlice(newImage.Versions, func(version core.MachineImageVersion) string { return version.Version })
+			newImageVersionsSet := sets.KeySet(newImageVersions)
+
+			addedMachineImages.Insert(imageName)
+			addedMachineImageVersions[imageName] = newImageVersionsSet
+		}
+	}
+	return
 }
 
 // FilterVersionsWithClassification filters versions for a classification

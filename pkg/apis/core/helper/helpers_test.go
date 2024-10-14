@@ -1110,4 +1110,59 @@ var _ = Describe("helper", func() {
 			Expect(DeterminePrimaryIPFamily([]core.IPFamily{core.IPFamilyIPv6, core.IPFamilyIPv4})).To(Equal(core.IPFamilyIPv6))
 		})
 	})
+
+	Describe("#GetMachineImageDiff", func() {
+		It("should return the diff between two machine image version slices", func() {
+			versions1 := []core.MachineImage{
+				{
+					Name: "image-1",
+					Versions: []core.MachineImageVersion{
+						{ExpirableVersion: core.ExpirableVersion{Version: "version-1"}},
+						{ExpirableVersion: core.ExpirableVersion{Version: "version-2"}},
+					},
+				},
+				{
+					Name: "image-2",
+					Versions: []core.MachineImageVersion{
+						{ExpirableVersion: core.ExpirableVersion{Version: "version-1"}},
+						{ExpirableVersion: core.ExpirableVersion{Version: "version-2"}},
+					},
+				},
+			}
+
+			versions2 := []core.MachineImage{
+				{
+					Name: "image-2",
+					Versions: []core.MachineImageVersion{
+						{ExpirableVersion: core.ExpirableVersion{Version: "version-2"}},
+						{ExpirableVersion: core.ExpirableVersion{Version: "version-3"}},
+					},
+				},
+				{
+					Name: "image-3",
+					Versions: []core.MachineImageVersion{
+						{ExpirableVersion: core.ExpirableVersion{Version: "version-1"}},
+						{ExpirableVersion: core.ExpirableVersion{Version: "version-2"}},
+					},
+				},
+			}
+
+			removedImages, removedVersions, addedImages, addedVersions := GetMachineImageDiff(versions1, versions2)
+
+			Expect(removedImages.UnsortedList()).To(ConsistOf("image-1"))
+			Expect(removedVersions).To(Equal(
+				map[string]sets.Set[string]{
+					"image-1": sets.New[string]("version-1", "version-2"),
+					"image-2": sets.New[string]("version-1"),
+				},
+			))
+			Expect(addedImages.UnsortedList()).To(ConsistOf("image-3"))
+			Expect(addedVersions).To(Equal(
+				map[string]sets.Set[string]{
+					"image-2": sets.New[string]("version-3"),
+					"image-3": sets.New[string]("version-1", "version-2"),
+				},
+			))
+		})
+	})
 })
