@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"slices"
 
 	"github.com/go-logr/logr"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -99,14 +98,7 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 	}
 
 	var (
-		oldAuthenticationConfigurationConfigMapName string
-		newAuthenticationConfigurationConfigMapName string
-		oldShootKubernetesVersion                   string
-		newShootKubernetesVersion                   string
-		oldServiceAccountIssuer                     *string
-		newServiceAccountIssuer                     *string
-		oldServiceAccountAcceptedIssuers            []string
-		newServiceAccountAcceptedIssuers            []string
+		authenticationConfigurationConfigMapName string
 	)
 
 	if request.Operation == admissionv1.Update {
@@ -120,33 +112,14 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 		if apiequality.Semantic.DeepEqual(oldShoot.Spec, shoot.Spec) {
 			return admissionwebhook.Allowed("shoot spec was not changed")
 		}
-
-		oldShootKubernetesVersion = oldShoot.Spec.Kubernetes.Version
-		oldAuthenticationConfigurationConfigMapName = gardencorehelper.GetShootAuthenticationConfigurationConfigMapName(oldShoot.Spec.Kubernetes.KubeAPIServer)
-		oldServiceAccountIssuer = gardencorehelper.GetShootServiceAccountConfigIssuer(oldShoot.Spec.Kubernetes.KubeAPIServer)
-		oldServiceAccountAcceptedIssuers = gardencorehelper.GetShootServiceAccountConfigAcceptedIssuers(oldShoot.Spec.Kubernetes.KubeAPIServer)
 	}
-	newShootKubernetesVersion = shoot.Spec.Kubernetes.Version
-	newAuthenticationConfigurationConfigMapName = gardencorehelper.GetShootAuthenticationConfigurationConfigMapName(shoot.Spec.Kubernetes.KubeAPIServer)
-	newServiceAccountIssuer = gardencorehelper.GetShootServiceAccountConfigIssuer(shoot.Spec.Kubernetes.KubeAPIServer)
-	newServiceAccountAcceptedIssuers = gardencorehelper.GetShootServiceAccountConfigAcceptedIssuers(shoot.Spec.Kubernetes.KubeAPIServer)
+	authenticationConfigurationConfigMapName = gardencorehelper.GetShootAuthenticationConfigurationConfigMapName(shoot.Spec.Kubernetes.KubeAPIServer)
 
-	if newAuthenticationConfigurationConfigMapName == "" {
+	if authenticationConfigurationConfigMapName == "" {
 		return admissionwebhook.Allowed("shoot resource is not specifying any authentication configuration")
 	}
 
-	// oldAuthenticationConfigurationConfigMapName is empty for CREATE shoot requests that specify authentication configuration reference
-	// if Kubernetes version is changed we need to revalidate if the authentication configuration API version is compatible with
-	// new Kubernetes version. We also need to revalidate when the ServiceAccountConfig allowed issuers have changes since they are
-	// disallowed for the authentication configuration
-	if oldAuthenticationConfigurationConfigMapName == newAuthenticationConfigurationConfigMapName &&
-		oldShootKubernetesVersion == newShootKubernetesVersion &&
-		equalOrNil(oldServiceAccountIssuer, newServiceAccountIssuer) &&
-		slices.Equal(oldServiceAccountAcceptedIssuers, newServiceAccountAcceptedIssuers) {
-		return admissionwebhook.Allowed("authentication configuration configmap was not changed")
-	}
-
-	authenticationConfigurationConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: shoot.Namespace, Name: newAuthenticationConfigurationConfigMapName}}
+	authenticationConfigurationConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: shoot.Namespace, Name: authenticationConfigurationConfigMapName}}
 	if err := h.APIReader.Get(ctx, client.ObjectKeyFromObject(authenticationConfigurationConfigMap), authenticationConfigurationConfigMap); err != nil {
 		status := http.StatusInternalServerError
 		if apierrors.IsNotFound(err) {
@@ -272,11 +245,4 @@ func getDisallowedIssuers(kubeAPIServerConfig *gardencore.KubeAPIServerConfig) [
 	}
 
 	return disallowedIssuers
-}
-
-func equalOrNil(s1, s2 *string) bool {
-	if s1 == nil && s2 == nil {
-		return true
-	}
-	return s1 != nil && s2 != nil && *s1 == *s2
 }

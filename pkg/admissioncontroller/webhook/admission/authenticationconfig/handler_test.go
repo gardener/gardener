@@ -248,12 +248,6 @@ jwt:
 				test(admissionv1.Create, nil, shootv1beta1, true, statusCodeAllowed, "referenced authentication configuration is valid", "")
 			})
 
-			It("referenced authenticationConfiguration name was not changed (UPDATE)", func() {
-				newShoot := shootv1beta1.DeepCopy()
-				newShoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{{Name: "some-plugin"}}
-				test(admissionv1.Update, shootv1beta1, newShoot, true, statusCodeAllowed, "authentication configuration configmap was not changed", "")
-			})
-
 			It("authenticationConfiguration name was added (UPDATE)", func() {
 				returnedCm := corev1.ConfigMap{
 					Data: map[string]string{"config.yaml": validAuthenticationConfiguration},
