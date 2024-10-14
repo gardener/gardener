@@ -18,7 +18,6 @@ import (
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
@@ -31,6 +30,7 @@ import (
 
 var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 	var (
+		backupBucket = defaultBuckupBucket()
 		backupSecret = defaultBackupSecret()
 		garden       = defaultGarden(backupSecret, nil)
 	)
@@ -47,6 +47,11 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 		DeferCleanup(func() {
 			ctx, cancel = context.WithTimeout(parentCtx, 5*time.Minute)
 			defer cancel()
+
+			// TODO(oliver-goetz): Remove this step when gardener-operator is able to create its backup bucket and DNS record by itself.
+			By("Delete BackupBucket")
+			Expect(gardenerutils.ConfirmDeletion(ctx, runtimeClient, backupBucket)).To(Succeed())
+			Expect(runtimeClient.Delete(ctx, backupBucket)).To(Succeed())
 
 			By("Delete Garden")
 			Expect(gardenerutils.ConfirmDeletion(ctx, runtimeClient, garden)).To(Succeed())
@@ -191,20 +196,6 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 
 		// TODO(oliver-goetz): Remove this step when gardener-operator is able to create its backup bucket and DNS record by itself.
 		By("Deploy extension in runtime cluster by creating a backup bucket")
-		backupBucket := &extensionsv1alpha1.BackupBucket{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "test-bucket",
-			},
-			Spec: extensionsv1alpha1.BackupBucketSpec{
-				DefaultSpec: extensionsv1alpha1.DefaultSpec{
-					Type: "local",
-				},
-				Region: "region",
-				SecretRef: corev1.SecretReference{
-					Name: "test-backup-bucket",
-				},
-			},
-		}
 		Expect(runtimeClient.Create(ctx, backupBucket)).To(Succeed())
 		CEventually(ctx, func(g Gomega) {
 			managedResourceList := &resourcesv1alpha1.ManagedResourceList{}

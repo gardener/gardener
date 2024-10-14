@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
@@ -81,6 +82,23 @@ func defaultRootCASecret() *corev1.Secret {
 		Data: map[string][]byte{
 			secretsutils.DataKeyCertificate: certificate.CertificatePEM,
 			secretsutils.DataKeyPrivateKey:  certificate.PrivateKeyPEM,
+		},
+	}
+}
+
+func defaultBuckupBucket() *extensionsv1alpha1.BackupBucket {
+	return &extensionsv1alpha1.BackupBucket{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-bucket",
+		},
+		Spec: extensionsv1alpha1.BackupBucketSpec{
+			DefaultSpec: extensionsv1alpha1.DefaultSpec{
+				Type: "local",
+			},
+			Region: "region",
+			SecretRef: corev1.SecretReference{
+				Name: "test-backup-bucket",
+			},
 		},
 	}
 }
