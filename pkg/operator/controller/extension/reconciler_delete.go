@@ -51,7 +51,7 @@ func (r *Reconciler) delete(
 			},
 		})
 
-		cleanedUp = g.Add(flow.Task{
+		cleanUpExtensionResources = g.Add(flow.Task{
 			Name: "Wait for Extension Resources Cleanup",
 			Fn: func(ctx context.Context) error {
 				if err := retry.UntilTimeout(ctx, 5*time.Second, 120*time.Second, func(ctx context.Context) (done bool, err error) {
@@ -77,7 +77,7 @@ func (r *Reconciler) delete(
 			Fn: func(ctx context.Context) error {
 				return r.runtime.Delete(ctx, log, extension)
 			},
-			Dependencies: flow.NewTaskIDs(cleanedUp),
+			Dependencies: flow.NewTaskIDs(cleanUpExtensionResources),
 		})
 	)
 

@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/component-base/featuregate"
@@ -1165,6 +1166,40 @@ var _ = Describe("Validation Tests", func() {
 						})),
 					))
 				})
+
+				It("should complain about missing secret reference for provider", func() {
+					garden.Spec.VirtualCluster.DNS.Provider = ptr.To("foo")
+
+					Expect(ValidateGarden(garden)).To(ContainElements(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeRequired),
+							"Field": Equal("spec.virtualCluster.dns.secretRef"),
+						})),
+					))
+				})
+			})
+
+			Context("ETCD", func() {
+				It("should complain if both bucket name and provider config are set", func() {
+					garden.Spec.VirtualCluster.ETCD = &operatorv1alpha1.ETCD{
+						Main: &operatorv1alpha1.ETCDMain{
+							Backup: &operatorv1alpha1.Backup{
+								BucketName: ptr.To("foo"),
+								Provider:   "foo-provider",
+								ProviderConfig: &runtime.RawExtension{
+									Raw: []byte(`{"foo":"bar"}`),
+								},
+							},
+						},
+					}
+
+					Expect(ValidateGarden(garden)).To(ContainElements(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeForbidden),
+							"Field": Equal("spec.virtualCluster.etcd.main.backup.providerConfig"),
+						})),
+					))
+				})
 			})
 
 			Context("Networking", func() {
@@ -2033,6 +2068,34 @@ var _ = Describe("Validation Tests", func() {
 							"Field": Equal("spec.virtualCluster.dns.domains[0]"),
 						}))))
 					})
+				})
+			})
+
+			Context("ETCD", func() {
+				It("should not be possible to set the backup bucket name if it was unset initially", func() {
+					oldGarden.Spec.VirtualCluster.ETCD = &operatorv1alpha1.ETCD{
+						Main: &operatorv1alpha1.ETCDMain{
+							Backup: &operatorv1alpha1.Backup{
+								Provider: "foo-provider",
+								ProviderConfig: &runtime.RawExtension{
+									Raw: []byte(`{"foo":"bar"}`),
+								},
+							},
+						},
+					}
+					newGarden.Spec.VirtualCluster.ETCD = &operatorv1alpha1.ETCD{
+						Main: &operatorv1alpha1.ETCDMain{
+							Backup: &operatorv1alpha1.Backup{
+								BucketName: ptr.To("foo-bucket"),
+								Provider:   "foo-provider",
+							},
+						},
+					}
+
+					Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.virtualCluster.etcd.main.backup.bucketName"),
+					}))))
 				})
 			})
 

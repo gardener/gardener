@@ -64,19 +64,19 @@ spec:
       domains:
       - virtual-garden.local.gardener.cloud
       provider: local
-      # providerConfig:
-      #   <some-provider-specific-config-for-the-dns-records>
+    # providerConfig:
+    #   <some-provider-specific-config-for-the-dns-records>
       secretRef:
         name: garden-dns-local
     etcd:
       main:
         backup:
           provider: local
-          # providerConfig:
-          #   <some-provider-specific-config-for-the-backup-buckets>
+        # providerConfig:
+        #   <some-provider-specific-config-for-the-backup-buckets>
           secretRef:
             name: virtual-garden-etcd-main-backup-local
-          # bucketName: gardener-operator # if not provided, gardener-operator attempts to create the bucket
+        # bucketName: gardener-operator # if not provided, gardener-operator attempts to create the bucket
         storage:
           capacity: 25Gi
         # className: default

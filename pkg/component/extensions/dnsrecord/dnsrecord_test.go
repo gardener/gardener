@@ -445,6 +445,33 @@ var _ = Describe("DNSRecord", func() {
 			}))
 		})
 
+		It("should deploy the DNSRecord resource with extensionClassName and labels", func() {
+			values.Class = ptr.To(extensionsv1alpha1.ExtensionClassGarden)
+			values.Labels = map[string]string{"foo": "bar"}
+
+			expectedSpec := dns.Spec
+			expectedSpec.Class = ptr.To(extensionsv1alpha1.ExtensionClassGarden)
+
+			Expect(dnsRecord.Deploy(ctx)).To(Succeed())
+
+			deployedDNS := &extensionsv1alpha1.DNSRecord{}
+			err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(deployedDNS).To(DeepEqual(&extensionsv1alpha1.DNSRecord{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+					Annotations: map[string]string{
+						v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
+						v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
+					},
+					Labels:          map[string]string{"foo": "bar"},
+					ResourceVersion: "1",
+				},
+				Spec: expectedSpec,
+			}))
+		})
+
 		It("should fail if creating the DNSRecord resource failed", func() {
 			mc := mockclient.NewMockClient(ctrl)
 			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(secret), gomock.AssignableToTypeOf(&corev1.Secret{})).
