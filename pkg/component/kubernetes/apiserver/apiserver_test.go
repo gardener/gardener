@@ -2931,6 +2931,9 @@ kind: AuthenticationConfiguration
 					MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
 					ReadOnly:  true,
 				})
+				if !disableNewVPN {
+					initContainer.SecurityContext.Privileged = ptr.To(true)
+				}
 				if disableNewVPN {
 					initContainer.Command = nil
 					initContainer.Env = append(initContainer.Env,

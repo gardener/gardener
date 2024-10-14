@@ -753,6 +753,11 @@ func (k *kubeAPIServer) vpnSeedClientInitContainer() *corev1.Container {
 		},
 	}...)
 
+	if !k.values.VPN.DisableNewVPN {
+		// may need to enable IPv6 in pod network (e.g. for GKE clusters)
+		container.SecurityContext.Privileged = ptr.To(true)
+	}
+
 	if k.values.VPN.DisableNewVPN {
 		container.Command = nil
 		container.Env = append(container.Env,
