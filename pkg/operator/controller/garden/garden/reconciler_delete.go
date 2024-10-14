@@ -473,7 +473,7 @@ func (r *Reconciler) destroyDNSRecords(ctx context.Context, log logr.Logger, gar
 	}
 
 	dnsRecordList := &extensionsv1alpha1.DNSRecordList{}
-	if err := r.RuntimeClientSet.Client().List(ctx, dnsRecordList, client.InNamespace(r.GardenNamespace)); err != nil {
+	if err := r.listManagedDNSRecords(ctx, dnsRecordList); err != nil {
 		return fmt.Errorf("failed listing DNS records: %w", err)
 	}
 
