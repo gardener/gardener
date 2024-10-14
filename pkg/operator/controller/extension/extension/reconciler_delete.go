@@ -47,9 +47,9 @@ func (r *Reconciler) delete(
 		})
 
 		_ = g.Add(flow.Task{
-			Name: "Deleting Extension in runtime cluster",
+			Name: "Handling Extension in runtime cluster",
 			Fn: func(ctx context.Context) error {
-				return r.runtime.Delete(ctx, log, extension)
+				return r.deployExtensionInRuntime(ctx, log, extension)
 			},
 		})
 	)
@@ -59,11 +59,16 @@ func (r *Reconciler) delete(
 	if err := g.Compile().Run(deleteCtx, flow.Opts{
 		Log: log,
 	}); err != nil {
-		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.clock, conditions.installed, gardencorev1beta1.ConditionFalse, ConditionDeleteFailed, err.Error())
+		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.clock, conditions.installed, gardencorev1beta1.ConditionFalse, ReasonDeleteFailed, err.Error())
 		return reconcile.Result{}, errors.Join(err, r.updateExtensionStatus(ctx, log, extension, conditions))
 	}
 
-	conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.clock, conditions.installed, gardencorev1beta1.ConditionFalse, ConditionDeleteSuccessful, "Extension has been deleted successfully")
+	if r.isDeploymentInRuntimeRequired(extension) {
+		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.clock, conditions.installed, gardencorev1beta1.ConditionTrue, ReasonInstalledInRuntime, "Extension is still required in runtime cluster")
+		return reconcile.Result{}, r.updateExtensionStatus(ctx, log, extension, conditions)
+	}
+
+	conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.clock, conditions.installed, gardencorev1beta1.ConditionFalse, ReasonDeleteSuccessful, "Extension has been deleted successfully")
 	if err := r.updateExtensionStatus(ctx, log, extension, conditions); err != nil {
 		return reconcile.Result{}, err
 	}

@@ -428,13 +428,37 @@ var _ = Describe("Extension controller tests", func() {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRegistrationFoo), &resourcesv1alpha1.ManagedResource{})
 		}).Should(BeNotFoundError())
 		Eventually(func() error {
-			return testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntimeFoo), &resourcesv1alpha1.ManagedResource{})
-		}).Should(BeNotFoundError())
-		Eventually(func() error {
 			return testClient.Get(ctx, client.ObjectKey{Namespace: testNamespace.Name, Name: "extension-admission-runtime-provider-foo"}, &resourcesv1alpha1.ManagedResource{})
 		}).Should(BeNotFoundError())
 		Eventually(func() error {
 			return testClient.Get(ctx, client.ObjectKey{Namespace: testNamespace.Name, Name: "extension-admission-virtual-provider-foo"}, &resourcesv1alpha1.ManagedResource{})
+		}).Should(BeNotFoundError())
+
+		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionFoo), extensionFoo)).To(Succeed())
+			g.Expect(extensionFoo.Finalizers).To(ConsistOf("gardener.cloud/operator"))
+			return extensionFoo.Status.Conditions
+		}).Should(ContainCondition(
+			OfType(operatorv1alpha1.ExtensionInstalled),
+			WithStatus(gardencorev1beta1.ConditionTrue),
+			WithReason("InstalledInRuntime"),
+		), fmt.Sprintf("Failed conditions expected to be healthy:%+v", extensionFoo.Status.Conditions))
+
+		By("Mark extension foo in runtime cluster as not required")
+		Eventually(func() error {
+			extensionFoo.Status.Conditions = v1beta1helper.MergeConditions(extensionFoo.Status.Conditions, gardencorev1beta1.Condition{
+				LastUpdateTime:     metav1.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+				LastTransitionTime: metav1.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+				Type:               "RequiredRuntime",
+				Status:             "Flase",
+			})
+
+			return testClient.Status().Update(ctx, extensionFoo)
+		}).Should(Succeed())
+
+		By("Wait for extension to be gone")
+		Eventually(func() error {
+			return testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntimeFoo), &resourcesv1alpha1.ManagedResource{})
 		}).Should(BeNotFoundError())
 		Eventually(func() error {
 			return mgrClient.Get(ctx, client.ObjectKeyFromObject(extensionFoo), extensionFoo)

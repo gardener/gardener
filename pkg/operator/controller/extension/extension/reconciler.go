@@ -31,16 +31,18 @@ import (
 )
 
 const (
-	// ConditionReconcileFailed is the condition type for when the virtual cluster resources fail to be reconciled.
-	ConditionReconcileFailed = "ReconcileFailed"
-	// ConditionDeleteFailed is the condition type for when the virtual cluster resources fail to be deleted.
-	ConditionDeleteFailed = "DeleteFailed"
-	// ConditionNoGardenFound is the condition type for when no Garden resource exists.
-	ConditionNoGardenFound = "NoGardenFound"
-	// ConditionReconcileSuccess is the condition type for when the virtual cluster resources successfully reconcile.
-	ConditionReconcileSuccess = "ReconcileSuccessful"
-	// ConditionDeleteSuccessful is the condition type for when the virtual cluster resources successfully delete.
-	ConditionDeleteSuccessful = "DeleteSuccessful"
+	// ReasonReconcileFailed indicates the reconciliation failed.
+	ReasonReconcileFailed = "ReconcileFailed"
+	// ReasonReconcileSuccess indicates the reconciliation succeeded.
+	ReasonReconcileSuccess = "ReconcileSuccessful"
+	// ReasonDeleteFailed indicates the deletion failed.
+	ReasonDeleteFailed = "DeleteFailed"
+	// ReasonDeleteSuccessful indicates the deletion failed.
+	ReasonDeleteSuccessful = "DeleteSuccessful"
+	// ReasonNoGardenFound indicates no Garden resource exists.
+	ReasonNoGardenFound = "NoGardenFound"
+	// ReasonInstalledInRuntime indicates the extension is installed in the garden runtime cluster.
+	ReasonInstalledInRuntime = "InstalledInRuntime"
 )
 
 // Reconciler reconciles Extensions.
@@ -127,16 +129,9 @@ func (r *Reconciler) removeFinalizer(ctx context.Context, log logr.Logger, exten
 	return nil
 }
 
-func (r *Reconciler) isDeploymentInRuntimeRequired(log logr.Logger, extension *operatorv1alpha1.Extension) bool {
+func (r *Reconciler) isDeploymentInRuntimeRequired(extension *operatorv1alpha1.Extension) bool {
 	requiredCondition := v1beta1helper.GetCondition(extension.Status.Conditions, operatorv1alpha1.ExtensionRequiredRuntime)
-
-	if requiredCondition != nil && requiredCondition.Status == gardencorev1beta1.ConditionTrue {
-		log.V(1).Info("Deployment in runtime cluster required")
-		return true
-	}
-
-	log.V(1).Info("Deployment in runtime cluster not required")
-	return false
+	return requiredCondition != nil && requiredCondition.Status == gardencorev1beta1.ConditionTrue
 }
 
 // Conditions contains all conditions of the extension status subresource.
