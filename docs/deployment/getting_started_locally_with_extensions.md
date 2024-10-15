@@ -192,7 +192,7 @@ gcp         gcp            gcp        europe-west1   1.24.3        Awake        
 
 Your shoot clusters will have a public DNS entries for their API servers, so that they could be reached via the Internet via `kubectl` after you have created their `kubeconfig`.
 
-We encourage you to use the [adminkubeconfig subresource](../proposals/16-adminkubeconfig-subresource.md) for accessing your shoot cluster. You can find an example how to use it in [Accessing Shoot Clusters](../usage/shoot-basics/shoot_access.md#shootsadminkubeconfig-subresource).
+We encourage you to use the [adminkubeconfig subresource](../proposals/16-adminkubeconfig-subresource.md) for accessing your shoot cluster. You can find an example how to use it in [Accessing Shoot Clusters](../usage/shoot/shoot_access.md#shootsadminkubeconfig-subresource).
 
 ## Deleting the `Shoot` Clusters
 

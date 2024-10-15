@@ -25,7 +25,7 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 	var warnings []string
 
 	if ptr.Deref(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, true) {
-		warnings = append(warnings, "you should consider disabling the static token kubeconfig, see https://github.com/gardener/gardener/blob/master/docs/usage/shoot-basics/shoot_access.md for details")
+		warnings = append(warnings, "you should consider disabling the static token kubeconfig, see https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_access.md for details")
 	}
 
 	if oldShoot != nil {

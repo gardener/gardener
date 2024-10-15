@@ -34,4 +34,4 @@ spec:
   - If it was not specified before, then no downgrade is possible (you cannot set it to `1.26.8` while `.spec.kubernetes.version` is already `1.27.4`). The "two minor version skew" is only possible if the worker pool version is set to the control plane version and then the control plane was updated gradually by two minor versions.
   - If the version is removed from the worker pool, only one minor version difference is allowed to the control plane (you cannot upgrade a pool from version `1.25.0` to `1.27.0` in one go).
 
-Automatic updates of Kubernetes versions (see [Shoot Maintenance](../shoot-basics/shoot_maintenance.md#automatic-version-updates)) also apply to worker pool Kubernetes versions.
+Automatic updates of Kubernetes versions (see [Shoot Maintenance](../shoot/shoot_maintenance.md#automatic-version-updates)) also apply to worker pool Kubernetes versions.

@@ -235,7 +235,7 @@ In some scenarios it might be beneficial to not immediately delete the `BackupEn
 In this case you can configure the `.controllers.backupEntry.deletionGracePeriodHours` field in the component configuration of the gardenlet.
 For example, if you set it to `48`, then the `BackupEntry`s for deleted `Shoot`s will only be deleted `48` hours after the `Shoot` was deleted.
 
-Additionally, you can limit the [shoot purposes](../usage/shoot-basics/shoot_purposes.md) for which this applies by setting `.controllers.backupEntry.deletionGracePeriodShootPurposes[]`.
+Additionally, you can limit the [shoot purposes](../usage/shoot/shoot_purposes.md) for which this applies by setting `.controllers.backupEntry.deletionGracePeriodShootPurposes[]`.
 For example, if you set it to `[production]` then only the `BackupEntry`s for `Shoot`s with `.spec.purpose=production` will be deleted after the configured grace period. All others will be deleted immediately after the `Shoot` deletion.
 
 In case a `BackupEntry` is scheduled for future deletion but you want to delete it immediately, add the annotation `backupentry.core.gardener.cloud/force-deletion=true`.
@@ -419,8 +419,8 @@ This is important for several reasons, e.g., to not overload the seed API server
 The gardenlet performs shoot reconciliations according to the following rules:
 
 - If `status.observedGeneration` is less than `metadata.generation`: this is the case, e.g., when the spec was changed, a [manual reconciliation operation](../usage/shoot-operations/shoot_operations.md) was triggered, or the shoot was deleted.
-- If the [last operation](../usage/shoot-basics/shoot_status.md) was not successful.
-- If the shoot is in a [failed state](../usage/shoot-basics/shoot_status.md), the gardenlet does not perform any reconciliation on the shoot (unless the retry operation was triggered). However, it syncs the `Cluster` resource to the seed in order to inform the extension controllers about the failed state.
+- If the [last operation](../usage/shoot/shoot_status.md) was not successful.
+- If the shoot is in a [failed state](../usage/shoot/shoot_status.md), the gardenlet does not perform any reconciliation on the shoot (unless the retry operation was triggered). However, it syncs the `Cluster` resource to the seed in order to inform the extension controllers about the failed state.
 - Regular reconciliations are performed with every `GardenletConfiguration.controllers.shoot.syncPeriod` (defaults to `1h`).
 - Shoot reconciliations are not performed if the assigned seed cluster is not healthy or has not been reconciled by the current gardenlet version yet (determined by the `Seed.status.gardener` section). This is done to make sure that shoots are reconciled with fully rolled out seed system components after a Gardener upgrade. Otherwise, the gardenlet might perform operations of the new version that doesn't match the old version of the deployed seed system components, which might lead to unspecified behavior.
 
@@ -428,8 +428,8 @@ There are a few special cases that overwrite or confine how often and under whic
 
 - In case the gardenlet config allows it (`controllers.shoot.respectSyncPeriodOverwrite`, disabled by default), the sync period for a shoot can be increased individually by setting the `shoot.gardener.cloud/sync-period` annotation. This is always allowed for shoots in the `garden` namespace. Shoots are not reconciled with a higher frequency than specified in `GardenletConfiguration.controllers.shoot.syncPeriod`.
 - In case the gardenlet config allows it (`controllers.shoot.respectSyncPeriodOverwrite`, disabled by default), shoots can be marked as "ignored" by setting the `shoot.gardener.cloud/ignore` annotation. In this case, the gardenlet does not perform any reconciliation for the shoot.
-- In case `GardenletConfiguration.controllers.shoot.reconcileInMaintenanceOnly` is enabled (disabled by default), the gardenlet performs regular shoot reconciliations only once in the respective maintenance time window (`GardenletConfiguration.controllers.shoot.syncPeriod` is ignored). The gardenlet randomly distributes shoot reconciliations over the maintenance time window to avoid high bursts of reconciliations (see [Shoot Maintenance](../usage/shoot-basics/shoot_maintenance.md#cluster-reconciliation)).
-- In case `Shoot.spec.maintenance.confineSpecUpdateRollout` is enabled (disabled by default), changes to the shoot specification are not rolled out immediately but only during the respective maintenance time window (see [Shoot Maintenance](../usage/shoot-basics/shoot_maintenance.md)).
+- In case `GardenletConfiguration.controllers.shoot.reconcileInMaintenanceOnly` is enabled (disabled by default), the gardenlet performs regular shoot reconciliations only once in the respective maintenance time window (`GardenletConfiguration.controllers.shoot.syncPeriod` is ignored). The gardenlet randomly distributes shoot reconciliations over the maintenance time window to avoid high bursts of reconciliations (see [Shoot Maintenance](../usage/shoot/shoot_maintenance.md#cluster-reconciliation)).
+- In case `Shoot.spec.maintenance.confineSpecUpdateRollout` is enabled (disabled by default), changes to the shoot specification are not rolled out immediately but only during the respective maintenance time window (see [Shoot Maintenance](../usage/shoot/shoot_maintenance.md)).
 
 #### ["Care" Reconciler](../../pkg/gardenlet/controller/shoot/care)
 
@@ -447,7 +447,7 @@ It maintains the following conditions:
 
 Sometimes, `ManagedResource`s can have both `Healthy` and `Progressing` conditions set to `True` (e.g., when a `DaemonSet` rolls out one-by-one on a large cluster with many nodes) while this is not reflected in the `Shoot` status. In order to catch issues where the rollout gets stuck, one can set `.controllers.shootCare.managedResourceProgressingThreshold` in the `gardenlet`'s component configuration. If the `Progressing` condition is still `True` for more than the configured duration, the `SystemComponentsHealthy` condition in the `Shoot` is set to `False`, eventually.
 
-Each condition can optionally also have error `codes` in order to indicate which type of issue was detected (see [Shoot Status](../usage/shoot-basics/shoot_status.md) for more details).
+Each condition can optionally also have error `codes` in order to indicate which type of issue was detected (see [Shoot Status](../usage/shoot/shoot_status.md) for more details).
 
 Apart from the above, extension controllers can also contribute to the `status` or error `codes` of these conditions (see [Contributing to Shoot Health Status Conditions](../extensions/shoot-health-status-conditions.md) for more details).
 
@@ -474,7 +474,7 @@ The following table explains which `ManagedResource`s are considered for which c
 
 ##### Constraints And Automatic Webhook Remediation
 
-Please see [Shoot Status](../usage/shoot-basics/shoot_status.md#constraints) for more details.
+Please see [Shoot Status](../usage/shoot/shoot_status.md#constraints) for more details.
 
 ##### Garbage Collection
 

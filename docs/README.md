@@ -32,16 +32,16 @@
 
 ### Shoot Basics
 
-* [Accessing Shoot Clusters](usage/shoot-basics/shoot_access.md)
-* [Hibernate a Cluster](usage/shoot-basics/shoot_hibernate.md)
-* [Shoot Info `ConfigMap`](usage/shoot-basics/shoot_info_configmap.md)
-* [Shoot Maintenance](usage/shoot-basics/shoot_maintenance.md)
-* [Shoot Cluster Purposes](usage/shoot-basics/shoot_purposes.md)
-* [Shoot Scheduling Profiles](usage/shoot-basics/shoot_scheduling_profiles.md)
-* [Shoot Status](usage/shoot-basics/shoot_status.md)
-* [Supported CPU Architectures for Shoot Worker Nodes](usage/shoot-basics/shoot_supported_architectures.md)
-* [Workerless `Shoot`s](usage/shoot-basics/shoot_workerless.md)
-* [Shoot Workers Settings](usage/shoot-basics/shoot_workers_settings.md)
+* [Accessing Shoot Clusters](usage/shoot/shoot_access.md)
+* [Hibernate a Cluster](usage/shoot/shoot_hibernate.md)
+* [Shoot Info `ConfigMap`](usage/shoot/shoot_info_configmap.md)
+* [Shoot Maintenance](usage/shoot/shoot_maintenance.md)
+* [Shoot Cluster Purposes](usage/shoot/shoot_purposes.md)
+* [Shoot Scheduling Profiles](usage/shoot/shoot_scheduling_profiles.md)
+* [Shoot Status](usage/shoot/shoot_status.md)
+* [Supported CPU Architectures for Shoot Worker Nodes](usage/shoot/shoot_supported_architectures.md)
+* [Workerless `Shoot`s](usage/shoot/shoot_workerless.md)
+* [Shoot Workers Settings](usage/shoot/shoot_workers_settings.md)
 
 ### Shoot Operations
 

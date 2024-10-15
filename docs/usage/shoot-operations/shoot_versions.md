@@ -95,7 +95,7 @@ spec:
 ## Automatic Version Upgrades 
 
 There are two ways, the Kubernetes version of the control plane as well as the Kubernetes and machine image version of a worker pool can be upgraded: `auto update` and `forceful` update.
-See [Automatic Version Updates](../shoot-basics/shoot_maintenance.md#automatic-version-updates) for how to enable `auto updates` for Kubernetes or machine image versions on the Shoot cluster.
+See [Automatic Version Updates](../shoot/shoot_maintenance.md#automatic-version-updates) for how to enable `auto updates` for Kubernetes or machine image versions on the Shoot cluster.
 
 If a Shoot is running a version after its expiration date has passed, it will be forcefully updated during its maintenance time.
 This happens **even if the owner has opted out of automatic cluster updates!**

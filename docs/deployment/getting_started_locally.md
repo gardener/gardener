@@ -260,7 +260,7 @@ cat <<EOF | sudo tee -a /etc/hosts
 EOF
 ```
 
-To access the `Shoot`, you can acquire a `kubeconfig` by using the [`shoots/adminkubeconfig` subresource](../usage/shoot-basics/shoot_access.md#shootsadminkubeconfig-subresource).
+To access the `Shoot`, you can acquire a `kubeconfig` by using the [`shoots/adminkubeconfig` subresource](../usage/shoot/shoot_access.md#shootsadminkubeconfig-subresource).
 
 For convenience a [helper script](../../hack/usage/generate-admin-kubeconf.sh) is provided in the `hack` directory. By default the script will generate a kubeconfig for a `Shoot` named "local" in the `garden-local` namespace valid for one hour.
 
