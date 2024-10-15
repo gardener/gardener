@@ -14,7 +14,9 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -70,6 +72,13 @@ var _ = Describe("Shoot Conditions controller tests", func() {
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot))).To(Succeed())
 		})
 
+		gardenletConfig := &gardenletv1alpha1.GardenletConfiguration{
+			SeedConfig: &gardenletv1alpha1.SeedConfig{},
+		}
+
+		rawGardenletConfig, err := encoding.EncodeGardenletConfiguration(gardenletConfig)
+		Expect(err).NotTo(HaveOccurred())
+
 		managedSeed = &seedmanagementv1alpha1.ManagedSeed{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      shoot.Name,
@@ -80,7 +89,9 @@ var _ = Describe("Shoot Conditions controller tests", func() {
 				Shoot: &seedmanagementv1alpha1.Shoot{
 					Name: shoot.Name,
 				},
-				Gardenlet: seedmanagementv1alpha1.GardenletConfig{},
+				Gardenlet: &seedmanagementv1alpha1.GardenletConfig{
+					Config: *rawGardenletConfig,
+				},
 			},
 		}
 
