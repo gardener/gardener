@@ -34,7 +34,7 @@ var _ = Describe("Authentication", func() {
 				},
 				UsernameClaim:  ptr.To("some-user-claim"),
 				UsernamePrefix: ptr.To("some-user-prefix"),
-			}, `apiVersion: apiserver.config.k8s.io/v1alpha1
+			}, `apiVersion: apiserver.config.k8s.io/v1beta1
 jwt:
 - claimMappings:
     groups:
@@ -57,7 +57,7 @@ kind: AuthenticationConfiguration
 			Entry("should retrun configuration with defaulted username values", &gardencorev1beta1.OIDCConfig{
 				ClientID:  ptr.To("some-client-id"),
 				IssuerURL: ptr.To("https://issuer.url.com"),
-			}, `apiVersion: apiserver.config.k8s.io/v1alpha1
+			}, `apiVersion: apiserver.config.k8s.io/v1beta1
 jwt:
 - claimMappings:
     groups: {}
@@ -76,7 +76,7 @@ kind: AuthenticationConfiguration
 				IssuerURL:      ptr.To("https://issuer.url.com"),
 				UsernameClaim:  ptr.To("claim"),
 				UsernamePrefix: ptr.To("-"),
-			}, `apiVersion: apiserver.config.k8s.io/v1alpha1
+			}, `apiVersion: apiserver.config.k8s.io/v1beta1
 jwt:
 - claimMappings:
     groups: {}
@@ -95,7 +95,7 @@ kind: AuthenticationConfiguration
 				IssuerURL:      ptr.To("https://issuer.url.com"),
 				UsernameClaim:  ptr.To("email"),
 				UsernamePrefix: ptr.To(""),
-			}, `apiVersion: apiserver.config.k8s.io/v1alpha1
+			}, `apiVersion: apiserver.config.k8s.io/v1beta1
 jwt:
 - claimMappings:
     groups: {}
@@ -113,7 +113,7 @@ kind: AuthenticationConfiguration
 				ClientID:    ptr.To("some-client-id"),
 				IssuerURL:   ptr.To("https://issuer.url.com"),
 				GroupsClaim: ptr.To("some-groups-claim"),
-			}, `apiVersion: apiserver.config.k8s.io/v1alpha1
+			}, `apiVersion: apiserver.config.k8s.io/v1beta1
 jwt:
 - claimMappings:
     groups:

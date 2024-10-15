@@ -501,6 +501,42 @@ var _ = Describe("helper", func() {
 		}, "foo"),
 	)
 
+	DescribeTable("#GetShootServiceAccountConfigIssuer",
+		func(kubeAPIServerConfig *core.KubeAPIServerConfig, expectedIssuer *string) {
+			Issuer := GetShootServiceAccountConfigIssuer(kubeAPIServerConfig)
+			Expect(Issuer).To(Equal(expectedIssuer))
+		},
+
+		Entry("KubeAPIServerConfig = nil", nil, nil),
+		Entry("ServiceAccountConfig = nil", &core.KubeAPIServerConfig{}, nil),
+		Entry("Issuer not set", &core.KubeAPIServerConfig{
+			ServiceAccountConfig: &core.ServiceAccountConfig{},
+		}, nil),
+		Entry("Issuer set", &core.KubeAPIServerConfig{
+			ServiceAccountConfig: &core.ServiceAccountConfig{
+				Issuer: ptr.To("foo"),
+			},
+		}, ptr.To("foo")),
+	)
+
+	DescribeTable("#GetShootServiceAccountConfigAcceptedIssuers",
+		func(kubeAPIServerConfig *core.KubeAPIServerConfig, expectedAcceptedIssuers []string) {
+			AcceptedIssuers := GetShootServiceAccountConfigAcceptedIssuers(kubeAPIServerConfig)
+			Expect(AcceptedIssuers).To(Equal(expectedAcceptedIssuers))
+		},
+
+		Entry("KubeAPIServerConfig = nil", nil, nil),
+		Entry("ServiceAccountConfig = nil", &core.KubeAPIServerConfig{}, nil),
+		Entry("AcceptedIssuers not set", &core.KubeAPIServerConfig{
+			ServiceAccountConfig: &core.ServiceAccountConfig{},
+		}, nil),
+		Entry("AcceptedIssuers set", &core.KubeAPIServerConfig{
+			ServiceAccountConfig: &core.ServiceAccountConfig{
+				AcceptedIssuers: []string{"foo", "bar"},
+			},
+		}, []string{"foo", "bar"}),
+	)
+
 	DescribeTable("#HibernationIsEnabled",
 		func(shoot *core.Shoot, hibernated bool) {
 			Expect(HibernationIsEnabled(shoot)).To(Equal(hibernated))

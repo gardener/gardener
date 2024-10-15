@@ -160,7 +160,7 @@ metadata:
   namespace: garden-my-project
 data:
   config.yaml: |
-    apiVersion: apiserver.config.k8s.io/v1alpha1
+    apiVersion: apiserver.config.k8s.io/v1beta1
     kind: AuthenticationConfiguration
     jwt:
     - issuer:
@@ -180,8 +180,7 @@ data:
         message: "the hosted domain name must be example.com"
 ```
 
-Currently, only `apiVersion: apiserver.config.k8s.io/v1alpha1` is supported.
-The user is resposible for the validity of the configured `JWTAuthenticator`s.
+The user is responsible for the validity of the configured `JWTAuthenticator`s.
 
 ## Static Token kubeconfig
 

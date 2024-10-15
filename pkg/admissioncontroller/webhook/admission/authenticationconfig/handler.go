@@ -97,13 +97,6 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 		return admissionwebhook.Allowed("shoot is already marked for deletion")
 	}
 
-	var (
-		oldAuthenticationConfigurationConfigMapName string
-		newAuthenticationConfigurationConfigMapName string
-		oldShootKubernetesVersion                   string
-		newShootKubernetesVersion                   string
-	)
-
 	if request.Operation == admissionv1.Update {
 		oldShoot := &gardencore.Shoot{}
 		if err := runtime.DecodeInto(internalDecoder, request.OldObject.Raw, oldShoot); err != nil {
@@ -115,25 +108,14 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 		if apiequality.Semantic.DeepEqual(oldShoot.Spec, shoot.Spec) {
 			return admissionwebhook.Allowed("shoot spec was not changed")
 		}
-
-		oldShootKubernetesVersion = oldShoot.Spec.Kubernetes.Version
-		oldAuthenticationConfigurationConfigMapName = gardencorehelper.GetShootAuthenticationConfigurationConfigMapName(oldShoot.Spec.Kubernetes.KubeAPIServer)
 	}
-	newShootKubernetesVersion = shoot.Spec.Kubernetes.Version
-	newAuthenticationConfigurationConfigMapName = gardencorehelper.GetShootAuthenticationConfigurationConfigMapName(shoot.Spec.Kubernetes.KubeAPIServer)
 
-	if newAuthenticationConfigurationConfigMapName == "" {
+	authenticationConfigurationConfigMapName := gardencorehelper.GetShootAuthenticationConfigurationConfigMapName(shoot.Spec.Kubernetes.KubeAPIServer)
+	if authenticationConfigurationConfigMapName == "" {
 		return admissionwebhook.Allowed("shoot resource is not specifying any authentication configuration")
 	}
 
-	// oldAuthenticationConfigurationConfigMapName is empty for CREATE shoot requests that specify authentication configuration reference
-	// if Kubernetes version is changed we need to revalidate if the authentication configuration API version is compatible with
-	// new Kubernetes version
-	if oldAuthenticationConfigurationConfigMapName == newAuthenticationConfigurationConfigMapName && oldShootKubernetesVersion == newShootKubernetesVersion {
-		return admissionwebhook.Allowed("authentication configuration configmap was not changed")
-	}
-
-	authenticationConfigurationConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: shoot.Namespace, Name: newAuthenticationConfigurationConfigMapName}}
+	authenticationConfigurationConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: shoot.Namespace, Name: authenticationConfigurationConfigMapName}}
 	if err := h.APIReader.Get(ctx, client.ObjectKeyFromObject(authenticationConfigurationConfigMap), authenticationConfigurationConfigMap); err != nil {
 		status := http.StatusInternalServerError
 		if apierrors.IsNotFound(err) {
@@ -146,10 +128,7 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("error getting authentication configuration from configmap %s: %w", client.ObjectKeyFromObject(authenticationConfigurationConfigMap), err))
 	}
 
-	disallowedIssuers, err := getDisallowedIssuers(shoot.Spec.Kubernetes.KubeAPIServer)
-	if err != nil {
-		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("error getting disallowed issuers: %w", err))
-	}
+	disallowedIssuers := getDisallowedIssuers(shoot.Spec.Kubernetes.KubeAPIServer)
 
 	if errCode, err := validateAuthenticationConfigurationSemantics(authenticationConfiguration, disallowedIssuers); err != nil {
 		return admission.Errored(errCode, err)
@@ -191,10 +170,7 @@ func (h *Handler) admitConfigMap(ctx context.Context, request admission.Request)
 			if err := gardencorev1beta1.Convert_v1beta1_KubeAPIServerConfig_To_core_KubeAPIServerConfig(shoot.Spec.Kubernetes.KubeAPIServer, coreKubeAPIServerConfig, nil); err != nil {
 				return admission.Errored(http.StatusUnprocessableEntity, err)
 			}
-			disallowedIssuers, err = getDisallowedIssuers(coreKubeAPIServerConfig)
-			if err != nil {
-				return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("error getting disallowed issuers: %w", err))
-			}
+			disallowedIssuers = getDisallowedIssuers(coreKubeAPIServerConfig)
 			break
 		}
 	}
@@ -257,17 +233,12 @@ func getAuthenticationConfiguration(cm *corev1.ConfigMap) (string, error) {
 	return authenticationConfigurationRaw, nil
 }
 
-func getDisallowedIssuers(kubeAPIServerConfig *gardencore.KubeAPIServerConfig) ([]string, error) {
-	var issuer string
-	if kubeAPIServerConfig.ServiceAccountConfig.Issuer != nil {
-		issuer = *kubeAPIServerConfig.ServiceAccountConfig.Issuer
+func getDisallowedIssuers(kubeAPIServerConfig *gardencore.KubeAPIServerConfig) []string {
+	disallowedIssuers := gardencorehelper.GetShootServiceAccountConfigAcceptedIssuers(kubeAPIServerConfig)
+	issuer := gardencorehelper.GetShootServiceAccountConfigIssuer(kubeAPIServerConfig)
+	if issuer != nil {
+		disallowedIssuers = append(disallowedIssuers, *issuer)
 	}
 
-	acceptedIssuers := kubeAPIServerConfig.ServiceAccountConfig.AcceptedIssuers
-	disallowedIssuers := append(acceptedIssuers, issuer)
-	if len(disallowedIssuers) == 0 {
-		return nil, errors.New("no disallowed issuers found")
-	}
-
-	return disallowedIssuers, nil
+	return disallowedIssuers
 }

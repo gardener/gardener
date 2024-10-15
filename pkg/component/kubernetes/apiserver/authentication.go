@@ -14,7 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	apiserverv1alpha1 "k8s.io/apiserver/pkg/apis/apiserver/v1alpha1"
+	apiserverv1beta1 "k8s.io/apiserver/pkg/apis/apiserver/v1beta1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
@@ -66,13 +66,12 @@ func (k *kubeAPIServer) reconcileConfigMapAuthenticationConfig(ctx context.Conte
 
 // ComputeAuthenticationConfigRawConfig computes a AuthenticationConfiguration from oidcConfiguration.
 func ComputeAuthenticationConfigRawConfig(oidc *gardencorev1beta1.OIDCConfig) (string, error) {
-	authenticationConfiguration := &apiserverv1alpha1.AuthenticationConfiguration{
+	authenticationConfiguration := &apiserverv1beta1.AuthenticationConfiguration{
 		TypeMeta: metav1.TypeMeta{
-			// TODO(AleksandarSavchev): use v1beta1 when kubernetes packages are updated to version >= v1.30
-			APIVersion: apiserverv1alpha1.ConfigSchemeGroupVersion.String(),
+			APIVersion: apiserverv1beta1.ConfigSchemeGroupVersion.String(),
 			Kind:       "AuthenticationConfiguration",
 		},
-		JWT: []apiserverv1alpha1.JWTAuthenticator{{}},
+		JWT: []apiserverv1beta1.JWTAuthenticator{{}},
 	}
 
 	if v := oidc.CABundle; v != nil {
@@ -108,7 +107,7 @@ func ComputeAuthenticationConfigRawConfig(oidc *gardencorev1beta1.OIDCConfig) (s
 	}
 
 	for key, value := range oidc.RequiredClaims {
-		claimValidationRule := apiserverv1alpha1.ClaimValidationRule{
+		claimValidationRule := apiserverv1beta1.ClaimValidationRule{
 			Claim:         key,
 			RequiredValue: value,
 		}
