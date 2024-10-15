@@ -113,4 +113,41 @@ var _ = Describe("Strategy", func() {
 			})
 		})
 	})
+
+	Describe("#Canonicalize", func() {
+		It("should add the access restriction if the legacy label is present", func() {
+			seed := &core.Seed{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{"seed.gardener.cloud/eu-access": "true"},
+				},
+			}
+
+			strategy.Canonicalize(seed)
+
+			Expect(seed.Spec.AccessRestrictions).To(HaveExactElements(core.AccessRestriction{Name: "eu-access-only"}))
+		})
+
+		It("should not add the access restriction again if it is already present", func() {
+			seed := &core.Seed{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{"seed.gardener.cloud/eu-access": "true"},
+				},
+				Spec: core.SeedSpec{
+					AccessRestrictions: []core.AccessRestriction{{Name: "eu-access-only"}},
+				},
+			}
+
+			strategy.Canonicalize(seed)
+
+			Expect(seed.Spec.AccessRestrictions).To(HaveExactElements(core.AccessRestriction{Name: "eu-access-only"}))
+		})
+
+		It("should not add the access restriction because the legacy label is not present", func() {
+			seed := &core.Seed{}
+
+			strategy.Canonicalize(seed)
+
+			Expect(seed.Spec.AccessRestrictions).To(BeEmpty())
+		})
+	})
 })

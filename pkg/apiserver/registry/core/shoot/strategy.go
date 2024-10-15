@@ -7,6 +7,7 @@ package shoot
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -173,6 +174,7 @@ func (shootStrategy) Canonicalize(obj runtime.Object) {
 	shoot := obj.(*core.Shoot)
 
 	gardenerutils.MaintainSeedNameLabels(shoot, shoot.Spec.SeedName, shoot.Status.SeedName)
+	translateLegacyAccessRestrictionConfig(shoot)
 }
 
 func (shootStrategy) AllowCreateOnUpdate() bool {
@@ -319,4 +321,30 @@ func getStatusSeedName(shoot *core.Shoot) string {
 		return ""
 	}
 	return *shoot.Status.SeedName
+}
+
+func translateLegacyAccessRestrictionConfig(shoot *core.Shoot) {
+	if shoot.Spec.SeedSelector != nil && shoot.Spec.SeedSelector.MatchLabels["seed.gardener.cloud/eu-access"] == "true" {
+		if !slices.ContainsFunc(shoot.Spec.AccessRestrictions, func(accessRestriction core.AccessRestrictionWithOptions) bool {
+			return accessRestriction.Name == "eu-access-only"
+		}) {
+			shoot.Spec.AccessRestrictions = append(shoot.Spec.AccessRestrictions, core.AccessRestrictionWithOptions{AccessRestriction: core.AccessRestriction{Name: "eu-access-only"}})
+		}
+	}
+
+	if i := slices.IndexFunc(shoot.Spec.AccessRestrictions, func(accessRestriction core.AccessRestrictionWithOptions) bool {
+		return accessRestriction.Name == "eu-access-only"
+	}); i != -1 {
+		for _, key := range []string{
+			"support.gardener.cloud/eu-access-for-cluster-addons",
+			"support.gardener.cloud/eu-access-for-cluster-nodes",
+		} {
+			if v, ok := shoot.Annotations[key]; ok {
+				if shoot.Spec.AccessRestrictions[i].Options == nil {
+					shoot.Spec.AccessRestrictions[i].Options = make(map[string]string)
+				}
+				shoot.Spec.AccessRestrictions[i].Options[key] = v
+			}
+		}
+	}
 }

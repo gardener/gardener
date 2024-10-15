@@ -6,6 +6,7 @@ package seed
 
 import (
 	"context"
+	"slices"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -96,7 +97,10 @@ func (Strategy) Validate(_ context.Context, obj runtime.Object) field.ErrorList 
 // form for things like comparison.  Canonicalize is invoked after
 // validation has succeeded but before the object has been persisted.
 // This method may mutate the object.
-func (Strategy) Canonicalize(_ runtime.Object) {
+func (Strategy) Canonicalize(obj runtime.Object) {
+	seed := obj.(*core.Seed)
+
+	translateLegacyAccessRestrictionLabels(seed)
 }
 
 // AllowCreateOnUpdate returns true if the object can be created by a PUT.
@@ -150,4 +154,14 @@ func (s StatusStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Obj
 // ValidateUpdate validates the update on the given old and new object.
 func (StatusStrategy) ValidateUpdate(_ context.Context, obj, old runtime.Object) field.ErrorList {
 	return validation.ValidateSeedStatusUpdate(obj.(*core.Seed), old.(*core.Seed))
+}
+
+func translateLegacyAccessRestrictionLabels(seed *core.Seed) {
+	if seed.Labels["seed.gardener.cloud/eu-access"] == "true" {
+		if !slices.ContainsFunc(seed.Spec.AccessRestrictions, func(accessRestriction core.AccessRestriction) bool {
+			return accessRestriction.Name == "eu-access-only"
+		}) {
+			seed.Spec.AccessRestrictions = append(seed.Spec.AccessRestrictions, core.AccessRestriction{Name: "eu-access-only"})
+		}
+	}
 }
