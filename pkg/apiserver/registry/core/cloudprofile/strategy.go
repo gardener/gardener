@@ -6,6 +6,7 @@ package cloudprofile
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -30,17 +31,20 @@ func (cloudProfileStrategy) NamespaceScoped() bool {
 }
 
 func (cloudProfileStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
-	cloudprofile := obj.(*core.CloudProfile)
+	cloudProfile := obj.(*core.CloudProfile)
 
-	dropExpiredVersions(cloudprofile)
+	dropExpiredVersions(cloudProfile)
 }
 
 func (cloudProfileStrategy) Validate(_ context.Context, obj runtime.Object) field.ErrorList {
-	cloudprofile := obj.(*core.CloudProfile)
-	return validation.ValidateCloudProfile(cloudprofile)
+	cloudProfile := obj.(*core.CloudProfile)
+	return validation.ValidateCloudProfile(cloudProfile)
 }
 
-func (cloudProfileStrategy) Canonicalize(_ runtime.Object) {
+func (cloudProfileStrategy) Canonicalize(obj runtime.Object) {
+	cloudProfile := obj.(*core.CloudProfile)
+
+	translateLegacyAccessRestrictionLabels(cloudProfile)
 }
 
 func (cloudProfileStrategy) AllowCreateOnUpdate() bool {
@@ -94,5 +98,17 @@ func dropExpiredVersions(cloudProfile *core.CloudProfile) {
 		}
 
 		cloudProfile.Spec.MachineImages[i].Versions = validMachineImageVersions
+	}
+}
+
+func translateLegacyAccessRestrictionLabels(cloudProfile *core.CloudProfile) {
+	for i, region := range cloudProfile.Spec.Regions {
+		if region.Labels["seed.gardener.cloud/eu-access"] == "true" {
+			if !slices.ContainsFunc(region.AccessRestrictions, func(accessRestriction core.AccessRestriction) bool {
+				return accessRestriction.Name == "eu-access-only"
+			}) {
+				cloudProfile.Spec.Regions[i].AccessRestrictions = append(cloudProfile.Spec.Regions[i].AccessRestrictions, core.AccessRestriction{Name: "eu-access-only"})
+			}
+		}
 	}
 }

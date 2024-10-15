@@ -682,6 +682,75 @@ var _ = Describe("Strategy", func() {
 				}))
 			})
 		})
+
+		Context("access restriction config", func() {
+			BeforeEach(func() {
+				shoot = &core.Shoot{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							"support.gardener.cloud/eu-access-for-cluster-addons": "true",
+							"support.gardener.cloud/eu-access-for-cluster-nodes":  "true",
+						},
+					},
+					Spec: core.ShootSpec{
+						SeedSelector: &core.SeedSelector{
+							LabelSelector: metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"seed.gardener.cloud/eu-access": "true",
+								},
+							},
+						},
+					},
+				}
+			})
+
+			It("should add eu-access-only access restriction if not present", func() {
+				strategy.Canonicalize(shoot)
+
+				Expect(shoot.Spec.AccessRestrictions).To(HaveExactElements(core.AccessRestrictionWithOptions{
+					AccessRestriction: core.AccessRestriction{Name: "eu-access-only"},
+					Options: map[string]string{
+						"support.gardener.cloud/eu-access-for-cluster-addons": "true",
+						"support.gardener.cloud/eu-access-for-cluster-nodes":  "true",
+					},
+				}))
+			})
+
+			It("should not add eu-access-only access restriction if already present, but it should augment the options", func() {
+				shoot.Spec.AccessRestrictions = append(shoot.Spec.AccessRestrictions, core.AccessRestrictionWithOptions{
+					AccessRestriction: core.AccessRestriction{Name: "eu-access-only"},
+				})
+
+				strategy.Canonicalize(shoot)
+
+				Expect(shoot.Spec.AccessRestrictions).To(HaveExactElements(core.AccessRestrictionWithOptions{
+					AccessRestriction: core.AccessRestriction{Name: "eu-access-only"},
+					Options: map[string]string{
+						"support.gardener.cloud/eu-access-for-cluster-addons": "true",
+						"support.gardener.cloud/eu-access-for-cluster-nodes":  "true",
+					},
+				}))
+			})
+
+			It("should add options to existing eu-access-only access restriction", func() {
+				shoot.Spec.AccessRestrictions = append(shoot.Spec.AccessRestrictions, core.AccessRestrictionWithOptions{
+					AccessRestriction: core.AccessRestriction{Name: "eu-access-only"},
+				})
+
+				strategy.Canonicalize(shoot)
+
+				Expect(shoot.Spec.AccessRestrictions[0].Options).To(HaveKeyWithValue("support.gardener.cloud/eu-access-for-cluster-addons", "true"))
+				Expect(shoot.Spec.AccessRestrictions[0].Options).To(HaveKeyWithValue("support.gardener.cloud/eu-access-for-cluster-nodes", "true"))
+			})
+
+			It("should not add options if access restriction is not present", func() {
+				shoot.Spec.SeedSelector = nil
+
+				strategy.Canonicalize(shoot)
+
+				Expect(shoot.Spec.AccessRestrictions).To(BeEmpty())
+			})
+		})
 	})
 })
 
