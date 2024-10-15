@@ -96,7 +96,7 @@ The health check library will automatically transition the status to `False` if 
 
 ## Additional Considerations
 
-It is up to the extension to decide how to conduct health checks, though it is recommended to make use of the build-in health check functionality of `managed-resources` for trivial checks.
+It is up to the extension to decide how to conduct health checks, though it is recommended to make use of the build-in health check functionality of `managedresources` for trivial checks.
 By [deploying the depending resources via managed resources](../../extensions/pkg/controller/worker/genericactuator/machine_controller_manager.go), the [gardener resource manager](https://github.com/gardener/gardener-resource-manager) conducts basic checks for different API objects out-of-the-box (e.g `Deployments`, `DaemonSets`, ...) - and writes health conditions.
 
 By default, Gardener performs health checks for all the `ManagedResource`s created in the shoot namespaces.

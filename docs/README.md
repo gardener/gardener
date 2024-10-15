@@ -61,7 +61,7 @@
 * [Shoot Pod Auto-Scaling Best Practices](usage/shoot_pod_autoscaling_best_practices.md)
 * [Shoot High-Availability Control Plane](usage/shoot_high_availability.md)
 * [Shoot High-Availability Best Practices](usage/shoot_high_availability_best_practices.md)
-* [Shoot Workers Settings](usage/shoot_workers_settings.md)
+* [Shoot Workers Settings](usage/shoot-workers-settings.md)
 * [Accessing Shoot Clusters](usage/shoot_access.md)
 * [Supported Kubernetes versions](usage/supported_k8s_versions.md)
 * [Tolerations](usage/tolerations.md)
@@ -152,25 +152,25 @@
     * [Health Check Library](extensions/healthcheck-library.md)
   * [CA Rotation in Extensions](extensions/ca-rotation.md)
   * Blob storage providers
-    * [`BackupBucket` resource](extensions/backupbucket.md)
-    * [`BackupEntry` resource](extensions/backupentry.md)
+    * [`BackupBucket` resource](extensions/resources/backupbucket.md)
+    * [`BackupEntry` resource](extensions/resources/backupentry.md)
   * DNS providers
     * [`DNSRecord` resources](extensions/dnsrecord.md)
   * IaaS/Cloud providers
     * [Control plane customization webhooks](extensions/controlplane-webhooks.md)
-    * [`Bastion` resource](extensions/bastion.md)
-    * [`ControlPlane` resource](extensions/controlplane.md)
-    * [`ControlPlane` exposure resource](extensions/controlplane-exposure.md)
-    * [`Infrastructure` resource](extensions/infrastructure.md)
-    * [`Worker` resource](extensions/worker.md)
+    * [`Bastion` resource](extensions/resources/bastion.md)
+    * [`ControlPlane` resource](extensions/resources/controlplane.md)
+    * [`ControlPlane` exposure resource](extensions/resources/controlplane-exposure.md)
+    * [`Infrastructure` resource](extensions/resources/infrastructure.md)
+    * [`Worker` resource](extensions/resources/worker.md)
   * Network plugin providers
     * [`Network` resource](extensions/network.md)
   * Operating systems
-    * [`OperatingSystemConfig` resource](extensions/operatingsystemconfig.md)
+    * [`OperatingSystemConfig` resource](extensions/resources/operatingsystemconfig.md)
   * Container runtimes
     * [`ContainerRuntime` resource](extensions/containerruntime.md)
   * Generic (non-essential) extensions
-    * [`Extension` resource](extensions/extension.md)
+    * [`Extension` resource](extensions/resources/extension.md)
   * [Extension Admission](extensions/admission.md)
   * [Heartbeat controller](extensions/heartbeat.md)
 * [Provider Local](extensions/provider-local.md)

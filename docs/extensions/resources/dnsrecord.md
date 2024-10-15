@@ -7,7 +7,7 @@ title: DNS Record
 Every shoot cluster requires external DNS records that are publicly resolvable.
 The management of these DNS records requires provider-specific knowledge which is to be developed outside the Gardener's core repository.
 
-Currently, Gardener uses `DNSProvider` and `DNSEntry` resources. However, this introduces undesired coupling of Gardener to a controller that does not adhere to the Gardener extension contracts. Because of this, we plan to stop using `DNSProvider` and `DNSEntry` resources for Gardener DNS records in the future and use the `DNSRecord` resources described here instead. 
+Currently, Gardener uses `DNSProvider` and `DNSEntry` resources. However, this introduces undesired coupling of Gardener to a controller that does not adhere to the Gardener extension contracts. Because of this, we plan to stop using `DNSProvider` and `DNSEntry` resources for Gardener DNS records in the future and use the `DNSRecord` resources described here instead.
 
 ## What does Gardener create DNS records for?
 
@@ -28,7 +28,7 @@ Gardener supports that by creating another DNS record, named *external domain na
 The kubeconfig handed out to end-users does contain this *external domain name*, i.e., users can access their clusters with the DNS name they like to.
 
 As not every end-user has an own domain, it is possible for Gardener administrators to configure so-called *default domains*.
-If configured, shoots that do not specify a domain explicitly get an *external domain name* based on a default domain (unless explicitly stated that this shoot should not get an external domain name (`.spec.dns.provider=unmanaged`).
+If configured, shoots that do not specify a domain explicitly get an *external domain name* based on a default domain (unless explicitly stated that this shoot should not get an external domain name (`.spec.dns.provider=unmanaged`)).
 
 ### Ingress Domain Name (Deprecated)
 
@@ -39,7 +39,7 @@ Gardener creates a wildcard DNS record pointing to this load balancer.
 
 ### Seed Ingress
 
-If `.spec.ingress` is configured in the Seed, Gardener deploys the ingress controller mentioned in `.spec.ingress.controller.kind` to the seed cluster. Currently, the only supported kind is "nginx". If the ingress field is set, then `.spec.dns.provider` must also be set. Gardener creates a wildcard DNS record pointing to the load balancer of the ingress controller. The `Ingress` resources of components like Plutono and Prometheus in the `garden` namespace and the shoot namespaces use this wildcard DNS record to expose their underlying applications. 
+If `.spec.ingress` is configured in the Seed, Gardener deploys the ingress controller mentioned in `.spec.ingress.controller.kind` to the seed cluster. Currently, the only supported kind is "nginx". If the ingress field is set, then `.spec.dns.provider` must also be set. Gardener creates a wildcard DNS record pointing to the load balancer of the ingress controller. The `Ingress` resources of components like Plutono and Prometheus in the `garden` namespace and the shoot namespaces use this wildcard DNS record to expose their underlying applications.
 
 ## What needs to be implemented to support a new DNS provider?
 
@@ -98,7 +98,7 @@ You can take a look at the below referenced example implementation for the AWS r
 For compatibility with existing setups, extension controllers shall support two different namings of keys in secrets containing provider-specific credentials:
 
 * The naming used by the [external-dns-management DNS controller](https://github.com/gardener/external-dns-management). For example, on AWS the key names are `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_REGION`.
-* The naming used by other provider-specific extension controllers, e.g. for [infrastructure](infrastructure.md). For example, on AWS the key names are `accessKeyId`, `secretAccessKey`, and `region`.
+* The naming used by other provider-specific extension controllers, e.g., for [infrastructure](./infrastructure.md). For example, on AWS the key names are `accessKeyId`, `secretAccessKey`, and `region`.
 
 ## Avoiding Reading the DNS Hosted Zones
 
@@ -125,15 +125,14 @@ If the `DNSRecord` resource specifies a zone in `.spec.zone` and the extension c
 
 Some providers might require further information that is not provider specific but already part of the shoot resource.
 As Gardener cannot know which information is required by providers, it simply mirrors the `Shoot`, `Seed`, and `CloudProfile` resources into the seed.
-They are part of the [`Cluster` extension resource](cluster.md) and can be used to extract information that is not part of the `DNSRecord` resource itself.
+They are part of the [`Cluster` extension resource](../cluster.md) and can be used to extract information that is not part of the `DNSRecord` resource itself.
 
 ## Using `DNSRecord` Resources
 
 gardenlet manages `DNSRecord` resources for all three DNS records mentioned above (internal, external, and ingress).
 In order to successfully reconcile a shoot with the feature gate enabled, extension controllers for `DNSRecord` resources for types used in the default, internal, and custom domain secrets should be registered via `ControllerRegistration` resources.
 
-> **Note:** For compatibility reasons, the `spec.dns.providers` section is still used to specify additional providers. Only the one marked as `primary: true` will be used for `DNSRecord`. All others are considered by the `shoot-dns-service` extension only (if deployed). 
-
+> **Note:** For compatibility reasons, the `spec.dns.providers` section is still used to specify additional providers. Only the one marked as `primary: true` will be used for `DNSRecord`. All others are considered by the `shoot-dns-service` extension only (if deployed).
 
 ### Support for `DNSRecord` Resources in the Provider Extensions
 
@@ -170,5 +169,5 @@ The following table contains information about the provider extension version th
 
 ## References and Additional Resources
 
-* [`DNSRecord` API (Golang specification)](../../pkg/apis/extensions/v1alpha1/types_dnsrecord.go)
+* [`DNSRecord` API (Golang specification)](../../../pkg/apis/extensions/v1alpha1/types_dnsrecord.go)
 * [Sample Implementation for the AWS Route53 Provider](https://github.com/gardener/gardener-extension-provider-aws/tree/master/pkg/controller/dnsrecord)
