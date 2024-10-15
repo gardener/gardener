@@ -48,7 +48,14 @@ spec:
     name: v1
     schema:
       openAPIV3Schema:
-        description: Prometheus defines a Prometheus deployment.
+        description: |-
+          The `Prometheus` custom resource definition (CRD) defines a desired [Prometheus](https://prometheus.io/docs/prometheus) setup to run in a Kubernetes cluster. It allows to specify many options such as the number of replicas, persistent storage, and Alertmanagers where firing alerts should be sent and many more.
+
+          For each `Prometheus` resource, the Operator deploys one or several `StatefulSet` objects in the same namespace. The number of StatefulSets is equal to the number of shards which is 1 by default.
+
+          The resource defines via label and namespace selectors which `ServiceMonitor`, `PodMonitor`, `Probe` and `PrometheusRule` objects should be associated to the deployed Prometheus instances.
+
+          The Operator continuously reconciles the scrape and rules configuration and a sidecar container running in the Prometheus pods triggers a reload of the configuration when needed.
         properties:
           apiVersion:
             description: |-
@@ -1131,8 +1138,8 @@ spec:
                 description: Defines the settings related to Alertmanager.
                 properties:
                   alertmanagers:
-                    description: AlertmanagerEndpoints Prometheus should fire alerts
-                      against.
+                    description: Alertmanager endpoints where Prometheus should send
+                      alerts to.
                     items:
                       description: |-
                         AlertmanagerEndpoints defines a selection of a single Endpoints object
@@ -1344,9 +1351,15 @@ spec:
                           type: boolean
                         name:
                           description: Name of the Endpoints object in the namespace.
+                          minLength: 1
                           type: string
                         namespace:
-                          description: Namespace of the Endpoints object.
+                          description: |-
+                            Namespace of the Endpoints object.
+
+                            If not set, the object will be discovered in the namespace of the
+                            Prometheus object.
+                          minLength: 1
                           type: string
                         pathPrefix:
                           description: Prefix for the HTTP path alerts are pushed
@@ -1678,13 +1691,34 @@ spec:
                               - key
                               type: object
                               x-kubernetes-map-type: atomic
+                            maxVersion:
+                              description: |-
+                                Maximum acceptable TLS version.
+
+                                It requires Prometheus >= v2.41.0.
+                              enum:
+                              - TLS10
+                              - TLS11
+                              - TLS12
+                              - TLS13
+                              type: string
+                            minVersion:
+                              description: |-
+                                Minimum acceptable TLS version.
+
+                                It requires Prometheus >= v2.35.0.
+                              enum:
+                              - TLS10
+                              - TLS11
+                              - TLS12
+                              - TLS13
+                              type: string
                             serverName:
                               description: Used to verify the hostname for the targets.
                               type: string
                           type: object
                       required:
                       - name
-                      - namespace
                       - port
                       type: object
                     type: array
@@ -1979,6 +2013,28 @@ spec:
                         - key
                         type: object
                         x-kubernetes-map-type: atomic
+                      maxVersion:
+                        description: |-
+                          Maximum acceptable TLS version.
+
+                          It requires Prometheus >= v2.41.0.
+                        enum:
+                        - TLS10
+                        - TLS11
+                        - TLS12
+                        - TLS13
+                        type: string
+                      minVersion:
+                        description: |-
+                          Minimum acceptable TLS version.
+
+                          It requires Prometheus >= v2.35.0.
+                        enum:
+                        - TLS10
+                        - TLS11
+                        - TLS12
+                        - TLS13
+                        type: string
                       serverName:
                         description: Used to verify the hostname for the targets.
                         type: string
@@ -2017,6 +2073,9 @@ spec:
                 description: |-
                   BodySizeLimit defines per-scrape on response body size.
                   Only valid in Prometheus versions 2.45.0 and newer.
+
+                  Note that the global limit only applies to scrape objects that don't specify an explicit limit value.
+                  If you want to enforce a maximum limit for all scrape objects, refer to enforcedBodySizeLimit.
                 pattern: (^0|([0-9]*[.])?[0-9]+((K|M|G|T|E|P)i?)?B)$
                 type: string
               configMaps:
@@ -3512,6 +3571,12 @@ spec:
                   the scrape to fail.
 
                   It requires Prometheus >= v2.28.0.
+
+                  When both `enforcedBodySizeLimit` and `bodySizeLimit` are defined and greater than zero, the following rules apply:
+                  * Scrape objects without a defined bodySizeLimit value will inherit the global bodySizeLimit value (Prometheus >= 2.45.0) or the enforcedBodySizeLimit value (Prometheus < v2.45.0).
+                    If Prometheus version is >= 2.45.0 and the `enforcedBodySizeLimit` is greater than the `bodySizeLimit`, the `bodySizeLimit` will be set to `enforcedBodySizeLimit`.
+                  * Scrape objects with a bodySizeLimit value less than or equal to enforcedBodySizeLimit keep their specific value.
+                  * Scrape objects with a bodySizeLimit value greater than enforcedBodySizeLimit are set to enforcedBodySizeLimit.
                 pattern: (^0|([0-9]*[.])?[0-9]+((K|M|G|T|E|P)i?)?B)$
                 type: string
               enforcedKeepDroppedTargets:
@@ -3523,6 +3588,12 @@ spec:
                   greater than zero and less than `spec.enforcedKeepDroppedTargets`.
 
                   It requires Prometheus >= v2.47.0.
+
+                  When both `enforcedKeepDroppedTargets` and `keepDroppedTargets` are defined and greater than zero, the following rules apply:
+                  * Scrape objects without a defined keepDroppedTargets value will inherit the global keepDroppedTargets value (Prometheus >= 2.45.0) or the enforcedKeepDroppedTargets value (Prometheus < v2.45.0).
+                    If Prometheus version is >= 2.45.0 and the `enforcedKeepDroppedTargets` is greater than the `keepDroppedTargets`, the `keepDroppedTargets` will be set to `enforcedKeepDroppedTargets`.
+                  * Scrape objects with a keepDroppedTargets value less than or equal to enforcedKeepDroppedTargets keep their specific value.
+                  * Scrape objects with a keepDroppedTargets value greater than enforcedKeepDroppedTargets are set to enforcedKeepDroppedTargets.
                 format: int64
                 type: integer
               enforcedLabelLimit:
@@ -3533,6 +3604,12 @@ spec:
                   greater than zero and less than `spec.enforcedLabelLimit`.
 
                   It requires Prometheus >= v2.27.0.
+
+                  When both `enforcedLabelLimit` and `labelLimit` are defined and greater than zero, the following rules apply:
+                  * Scrape objects without a defined labelLimit value will inherit the global labelLimit value (Prometheus >= 2.45.0) or the enforcedLabelLimit value (Prometheus < v2.45.0).
+                    If Prometheus version is >= 2.45.0 and the `enforcedLabelLimit` is greater than the `labelLimit`, the `labelLimit` will be set to `enforcedLabelLimit`.
+                  * Scrape objects with a labelLimit value less than or equal to enforcedLabelLimit keep their specific value.
+                  * Scrape objects with a labelLimit value greater than enforcedLabelLimit are set to enforcedLabelLimit.
                 format: int64
                 type: integer
               enforcedLabelNameLengthLimit:
@@ -3543,6 +3620,12 @@ spec:
                   greater than zero and less than `spec.enforcedLabelNameLengthLimit`.
 
                   It requires Prometheus >= v2.27.0.
+
+                  When both `enforcedLabelNameLengthLimit` and `labelNameLengthLimit` are defined and greater than zero, the following rules apply:
+                  * Scrape objects without a defined labelNameLengthLimit value will inherit the global labelNameLengthLimit value (Prometheus >= 2.45.0) or the enforcedLabelNameLengthLimit value (Prometheus < v2.45.0).
+                    If Prometheus version is >= 2.45.0 and the `enforcedLabelNameLengthLimit` is greater than the `labelNameLengthLimit`, the `labelNameLengthLimit` will be set to `enforcedLabelNameLengthLimit`.
+                  * Scrape objects with a labelNameLengthLimit value less than or equal to enforcedLabelNameLengthLimit keep their specific value.
+                  * Scrape objects with a labelNameLengthLimit value greater than enforcedLabelNameLengthLimit are set to enforcedLabelNameLengthLimit.
                 format: int64
                 type: integer
               enforcedLabelValueLengthLimit:
@@ -3553,6 +3636,12 @@ spec:
                   greater than zero and less than `spec.enforcedLabelValueLengthLimit`.
 
                   It requires Prometheus >= v2.27.0.
+
+                  When both `enforcedLabelValueLengthLimit` and `labelValueLengthLimit` are defined and greater than zero, the following rules apply:
+                  * Scrape objects without a defined labelValueLengthLimit value will inherit the global labelValueLengthLimit value (Prometheus >= 2.45.0) or the enforcedLabelValueLengthLimit value (Prometheus < v2.45.0).
+                    If Prometheus version is >= 2.45.0 and the `enforcedLabelValueLengthLimit` is greater than the `labelValueLengthLimit`, the `labelValueLengthLimit` will be set to `enforcedLabelValueLengthLimit`.
+                  * Scrape objects with a labelValueLengthLimit value less than or equal to enforcedLabelValueLengthLimit keep their specific value.
+                  * Scrape objects with a labelValueLengthLimit value greater than enforcedLabelValueLengthLimit are set to enforcedLabelValueLengthLimit.
                 format: int64
                 type: integer
               enforcedNamespaceLabel:
@@ -3580,6 +3669,12 @@ spec:
 
                   It is meant to be used by admins to keep the overall number of
                   samples/series under a desired limit.
+
+                  When both `enforcedSampleLimit` and `sampleLimit` are defined and greater than zero, the following rules apply:
+                  * Scrape objects without a defined sampleLimit value will inherit the global sampleLimit value (Prometheus >= 2.45.0) or the enforcedSampleLimit value (Prometheus < v2.45.0).
+                    If Prometheus version is >= 2.45.0 and the `enforcedSampleLimit` is greater than the `sampleLimit`, the `sampleLimit` will be set to `enforcedSampleLimit`.
+                  * Scrape objects with a sampleLimit value less than or equal to enforcedSampleLimit keep their specific value.
+                  * Scrape objects with a sampleLimit value greater than enforcedSampleLimit are set to enforcedSampleLimit.
                 format: int64
                 type: integer
               enforcedTargetLimit:
@@ -3591,6 +3686,12 @@ spec:
 
                   It is meant to be used by admins to to keep the overall number of
                   targets under a desired limit.
+
+                  When both `enforcedTargetLimit` and `targetLimit` are defined and greater than zero, the following rules apply:
+                  * Scrape objects without a defined targetLimit value will inherit the global targetLimit value (Prometheus >= 2.45.0) or the enforcedTargetLimit value (Prometheus < v2.45.0).
+                    If Prometheus version is >= 2.45.0 and the `enforcedTargetLimit` is greater than the `targetLimit`, the `targetLimit` will be set to `enforcedTargetLimit`.
+                  * Scrape objects with a targetLimit value less than or equal to enforcedTargetLimit keep their specific value.
+                  * Scrape objects with a targetLimit value greater than enforcedTargetLimit are set to enforcedTargetLimit.
                 format: int64
                 type: integer
               evaluationInterval:
@@ -5199,24 +5300,36 @@ spec:
                   that will be kept in memory. 0 means no limit.
 
                   It requires Prometheus >= v2.47.0.
+
+                  Note that the global limit only applies to scrape objects that don't specify an explicit limit value.
+                  If you want to enforce a maximum limit for all scrape objects, refer to enforcedKeepDroppedTargets.
                 format: int64
                 type: integer
               labelLimit:
                 description: |-
                   Per-scrape limit on number of labels that will be accepted for a sample.
                   Only valid in Prometheus versions 2.45.0 and newer.
+
+                  Note that the global limit only applies to scrape objects that don't specify an explicit limit value.
+                  If you want to enforce a maximum limit for all scrape objects, refer to enforcedLabelLimit.
                 format: int64
                 type: integer
               labelNameLengthLimit:
                 description: |-
                   Per-scrape limit on length of labels name that will be accepted for a sample.
                   Only valid in Prometheus versions 2.45.0 and newer.
+
+                  Note that the global limit only applies to scrape objects that don't specify an explicit limit value.
+                  If you want to enforce a maximum limit for all scrape objects, refer to enforcedLabelNameLengthLimit.
                 format: int64
                 type: integer
               labelValueLengthLimit:
                 description: |-
                   Per-scrape limit on length of labels value that will be accepted for a sample.
                   Only valid in Prometheus versions 2.45.0 and newer.
+
+                  Note that the global limit only applies to scrape objects that don't specify an explicit limit value.
+                  If you want to enforce a maximum limit for all scrape objects, refer to enforcedLabelValueLengthLimit.
                 format: int64
                 type: integer
               listenLocal:
@@ -5263,12 +5376,28 @@ spec:
                   type: string
                 description: Defines on which Nodes the Pods are scheduled.
                 type: object
+              otlp:
+                description: |-
+                  Settings related to the OTLP receiver feature.
+                  It requires Prometheus >= v2.54.0.
+                properties:
+                  promoteResourceAttributes:
+                    description: List of OpenTelemetry Attributes that should be promoted
+                      to metric labels, defaults to none.
+                    items:
+                      minLength: 1
+                      type: string
+                    minItems: 1
+                    type: array
+                    x-kubernetes-list-type: set
+                type: object
               overrideHonorLabels:
                 description: |-
-                  When true, Prometheus resolves label conflicts by renaming the labels in
-                  the scraped data to "exported_<label value>" for all targets created
-                  from service and pod monitors.
-                  Otherwise the HonorLabels field of the service or pod monitor applies.
+                  When true, Prometheus resolves label conflicts by renaming the labels in the scraped data
+                   to “exported_” for all targets created from ServiceMonitor, PodMonitor and
+                  ScrapeConfig objects. Otherwise the HonorLabels field of the service or pod monitor applies.
+                  In practice,`overrideHonorLaels:true` enforces `honorLabels:false`
+                  for all ServiceMonitor, PodMonitor and ScrapeConfig objects.
                 type: boolean
               overrideHonorTimestamps:
                 description: |-
@@ -5349,7 +5478,7 @@ spec:
               podMonitorNamespaceSelector:
                 description: |-
                   Namespaces to match for PodMonitors discovery. An empty label selector
-                  matches all namespaces. A null label selector matches the current
+                  matches all namespaces. A null label selector (default value) matches the current
                   namespace only.
                 properties:
                   matchExpressions:
@@ -5805,6 +5934,14 @@ spec:
 
                         It requires Prometheus >= v2.15.0.
                       type: string
+                    noProxy:
+                      description: |-
+                        `noProxy` is a comma-separated string that can contain IPs, CIDR notation, domain names
+                        that should be excluded from proxying. IP and domain names can
+                        contain port numbers.
+
+                        It requires Prometheus >= v2.43.0 or Alertmanager >= 0.25.0.
+                      type: string
                     oauth2:
                       description: |-
                         OAuth2 configuration for the URL.
@@ -5900,12 +6037,232 @@ spec:
                             `endpointParams` configures the HTTP parameters to append to the token
                             URL.
                           type: object
+                        noProxy:
+                          description: |-
+                            `noProxy` is a comma-separated string that can contain IPs, CIDR notation, domain names
+                            that should be excluded from proxying. IP and domain names can
+                            contain port numbers.
+
+                            It requires Prometheus >= v2.43.0 or Alertmanager >= 0.25.0.
+                          type: string
+                        proxyConnectHeader:
+                          additionalProperties:
+                            items:
+                              description: SecretKeySelector selects a key of a Secret.
+                              properties:
+                                key:
+                                  description: The key of the secret to select from.  Must
+                                    be a valid secret key.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the Secret or its key
+                                    must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            type: array
+                          description: |-
+                            ProxyConnectHeader optionally specifies headers to send to
+                            proxies during CONNECT requests.
+
+                            It requires Prometheus >= v2.43.0 or Alertmanager >= 0.25.0.
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        proxyFromEnvironment:
+                          description: |-
+                            Whether to use the proxy configuration defined by environment variables (HTTP_PROXY, HTTPS_PROXY, and NO_PROXY).
+
+                            It requires Prometheus >= v2.43.0 or Alertmanager >= 0.25.0.
+                          type: boolean
+                        proxyUrl:
+                          description: '`proxyURL` defines the HTTP proxy server to
+                            use.'
+                          pattern: ^http(s)?://.+$
+                          type: string
                         scopes:
                           description: '`scopes` defines the OAuth2 scopes used for
                             the token request.'
                           items:
                             type: string
                           type: array
+                        tlsConfig:
+                          description: |-
+                            TLS configuration to use when connecting to the OAuth2 server.
+                            It requires Prometheus >= v2.43.0.
+                          properties:
+                            ca:
+                              description: Certificate authority used when verifying
+                                server certificates.
+                              properties:
+                                configMap:
+                                  description: ConfigMap containing data to use for
+                                    the targets.
+                                  properties:
+                                    key:
+                                      description: The key to select.
+                                      type: string
+                                    name:
+                                      default: ""
+                                      description: |-
+                                        Name of the referent.
+                                        This field is effectively required, but due to backwards compatibility is
+                                        allowed to be empty. Instances of this type with an empty value here are
+                                        almost certainly wrong.
+                                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                      type: string
+                                    optional:
+                                      description: Specify whether the ConfigMap or
+                                        its key must be defined
+                                      type: boolean
+                                  required:
+                                  - key
+                                  type: object
+                                  x-kubernetes-map-type: atomic
+                                secret:
+                                  description: Secret containing data to use for the
+                                    targets.
+                                  properties:
+                                    key:
+                                      description: The key of the secret to select
+                                        from.  Must be a valid secret key.
+                                      type: string
+                                    name:
+                                      default: ""
+                                      description: |-
+                                        Name of the referent.
+                                        This field is effectively required, but due to backwards compatibility is
+                                        allowed to be empty. Instances of this type with an empty value here are
+                                        almost certainly wrong.
+                                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                      type: string
+                                    optional:
+                                      description: Specify whether the Secret or its
+                                        key must be defined
+                                      type: boolean
+                                  required:
+                                  - key
+                                  type: object
+                                  x-kubernetes-map-type: atomic
+                              type: object
+                            cert:
+                              description: Client certificate to present when doing
+                                client-authentication.
+                              properties:
+                                configMap:
+                                  description: ConfigMap containing data to use for
+                                    the targets.
+                                  properties:
+                                    key:
+                                      description: The key to select.
+                                      type: string
+                                    name:
+                                      default: ""
+                                      description: |-
+                                        Name of the referent.
+                                        This field is effectively required, but due to backwards compatibility is
+                                        allowed to be empty. Instances of this type with an empty value here are
+                                        almost certainly wrong.
+                                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                      type: string
+                                    optional:
+                                      description: Specify whether the ConfigMap or
+                                        its key must be defined
+                                      type: boolean
+                                  required:
+                                  - key
+                                  type: object
+                                  x-kubernetes-map-type: atomic
+                                secret:
+                                  description: Secret containing data to use for the
+                                    targets.
+                                  properties:
+                                    key:
+                                      description: The key of the secret to select
+                                        from.  Must be a valid secret key.
+                                      type: string
+                                    name:
+                                      default: ""
+                                      description: |-
+                                        Name of the referent.
+                                        This field is effectively required, but due to backwards compatibility is
+                                        allowed to be empty. Instances of this type with an empty value here are
+                                        almost certainly wrong.
+                                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                      type: string
+                                    optional:
+                                      description: Specify whether the Secret or its
+                                        key must be defined
+                                      type: boolean
+                                  required:
+                                  - key
+                                  type: object
+                                  x-kubernetes-map-type: atomic
+                              type: object
+                            insecureSkipVerify:
+                              description: Disable target certificate validation.
+                              type: boolean
+                            keySecret:
+                              description: Secret containing the client key file for
+                                the targets.
+                              properties:
+                                key:
+                                  description: The key of the secret to select from.  Must
+                                    be a valid secret key.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the Secret or its key
+                                    must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            maxVersion:
+                              description: |-
+                                Maximum acceptable TLS version.
+
+                                It requires Prometheus >= v2.41.0.
+                              enum:
+                              - TLS10
+                              - TLS11
+                              - TLS12
+                              - TLS13
+                              type: string
+                            minVersion:
+                              description: |-
+                                Minimum acceptable TLS version.
+
+                                It requires Prometheus >= v2.35.0.
+                              enum:
+                              - TLS10
+                              - TLS11
+                              - TLS12
+                              - TLS13
+                              type: string
+                            serverName:
+                              description: Used to verify the hostname for the targets.
+                              type: string
+                          type: object
                         tokenUrl:
                           description: '`tokenURL` configures the URL to fetch the
                             token from.'
@@ -5916,8 +6273,49 @@ spec:
                       - clientSecret
                       - tokenUrl
                       type: object
+                    proxyConnectHeader:
+                      additionalProperties:
+                        items:
+                          description: SecretKeySelector selects a key of a Secret.
+                          properties:
+                            key:
+                              description: The key of the secret to select from.  Must
+                                be a valid secret key.
+                              type: string
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                            optional:
+                              description: Specify whether the Secret or its key must
+                                be defined
+                              type: boolean
+                          required:
+                          - key
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        type: array
+                      description: |-
+                        ProxyConnectHeader optionally specifies headers to send to
+                        proxies during CONNECT requests.
+
+                        It requires Prometheus >= v2.43.0 or Alertmanager >= 0.25.0.
+                      type: object
+                      x-kubernetes-map-type: atomic
+                    proxyFromEnvironment:
+                      description: |-
+                        Whether to use the proxy configuration defined by environment variables (HTTP_PROXY, HTTPS_PROXY, and NO_PROXY).
+
+                        It requires Prometheus >= v2.43.0 or Alertmanager >= 0.25.0.
+                      type: boolean
                     proxyUrl:
-                      description: Optional ProxyURL.
+                      description: '`proxyURL` defines the HTTP proxy server to use.'
+                      pattern: ^http(s)?://.+$
                       type: string
                     readRecent:
                       description: |-
@@ -6083,6 +6481,28 @@ spec:
                           - key
                           type: object
                           x-kubernetes-map-type: atomic
+                        maxVersion:
+                          description: |-
+                            Maximum acceptable TLS version.
+
+                            It requires Prometheus >= v2.41.0.
+                          enum:
+                          - TLS10
+                          - TLS11
+                          - TLS12
+                          - TLS13
+                          type: string
+                        minVersion:
+                          description: |-
+                            Minimum acceptable TLS version.
+
+                            It requires Prometheus >= v2.35.0.
+                          enum:
+                          - TLS10
+                          - TLS11
+                          - TLS12
+                          - TLS13
+                          type: string
                         serverName:
                           description: Used to verify the hostname for the targets.
                           type: string
@@ -6316,6 +6736,12 @@ spec:
                     enableHTTP2:
                       description: Whether to enable HTTP2.
                       type: boolean
+                    followRedirects:
+                      description: |-
+                        Configure whether HTTP requests follow HTTP 3xx redirects.
+
+                        It requires Prometheus >= v2.26.0.
+                      type: boolean
                     headers:
                       additionalProperties:
                         type: string
@@ -6345,6 +6771,14 @@ spec:
                         name is used in metrics and logging in order to differentiate queues.
 
                         It requires Prometheus >= v2.15.0.
+                      type: string
+                    noProxy:
+                      description: |-
+                        `noProxy` is a comma-separated string that can contain IPs, CIDR notation, domain names
+                        that should be excluded from proxying. IP and domain names can
+                        contain port numbers.
+
+                        It requires Prometheus >= v2.43.0 or Alertmanager >= 0.25.0.
                       type: string
                     oauth2:
                       description: |-
@@ -6441,12 +6875,232 @@ spec:
                             `endpointParams` configures the HTTP parameters to append to the token
                             URL.
                           type: object
+                        noProxy:
+                          description: |-
+                            `noProxy` is a comma-separated string that can contain IPs, CIDR notation, domain names
+                            that should be excluded from proxying. IP and domain names can
+                            contain port numbers.
+
+                            It requires Prometheus >= v2.43.0 or Alertmanager >= 0.25.0.
+                          type: string
+                        proxyConnectHeader:
+                          additionalProperties:
+                            items:
+                              description: SecretKeySelector selects a key of a Secret.
+                              properties:
+                                key:
+                                  description: The key of the secret to select from.  Must
+                                    be a valid secret key.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the Secret or its key
+                                    must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            type: array
+                          description: |-
+                            ProxyConnectHeader optionally specifies headers to send to
+                            proxies during CONNECT requests.
+
+                            It requires Prometheus >= v2.43.0 or Alertmanager >= 0.25.0.
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        proxyFromEnvironment:
+                          description: |-
+                            Whether to use the proxy configuration defined by environment variables (HTTP_PROXY, HTTPS_PROXY, and NO_PROXY).
+
+                            It requires Prometheus >= v2.43.0 or Alertmanager >= 0.25.0.
+                          type: boolean
+                        proxyUrl:
+                          description: '`proxyURL` defines the HTTP proxy server to
+                            use.'
+                          pattern: ^http(s)?://.+$
+                          type: string
                         scopes:
                           description: '`scopes` defines the OAuth2 scopes used for
                             the token request.'
                           items:
                             type: string
                           type: array
+                        tlsConfig:
+                          description: |-
+                            TLS configuration to use when connecting to the OAuth2 server.
+                            It requires Prometheus >= v2.43.0.
+                          properties:
+                            ca:
+                              description: Certificate authority used when verifying
+                                server certificates.
+                              properties:
+                                configMap:
+                                  description: ConfigMap containing data to use for
+                                    the targets.
+                                  properties:
+                                    key:
+                                      description: The key to select.
+                                      type: string
+                                    name:
+                                      default: ""
+                                      description: |-
+                                        Name of the referent.
+                                        This field is effectively required, but due to backwards compatibility is
+                                        allowed to be empty. Instances of this type with an empty value here are
+                                        almost certainly wrong.
+                                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                      type: string
+                                    optional:
+                                      description: Specify whether the ConfigMap or
+                                        its key must be defined
+                                      type: boolean
+                                  required:
+                                  - key
+                                  type: object
+                                  x-kubernetes-map-type: atomic
+                                secret:
+                                  description: Secret containing data to use for the
+                                    targets.
+                                  properties:
+                                    key:
+                                      description: The key of the secret to select
+                                        from.  Must be a valid secret key.
+                                      type: string
+                                    name:
+                                      default: ""
+                                      description: |-
+                                        Name of the referent.
+                                        This field is effectively required, but due to backwards compatibility is
+                                        allowed to be empty. Instances of this type with an empty value here are
+                                        almost certainly wrong.
+                                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                      type: string
+                                    optional:
+                                      description: Specify whether the Secret or its
+                                        key must be defined
+                                      type: boolean
+                                  required:
+                                  - key
+                                  type: object
+                                  x-kubernetes-map-type: atomic
+                              type: object
+                            cert:
+                              description: Client certificate to present when doing
+                                client-authentication.
+                              properties:
+                                configMap:
+                                  description: ConfigMap containing data to use for
+                                    the targets.
+                                  properties:
+                                    key:
+                                      description: The key to select.
+                                      type: string
+                                    name:
+                                      default: ""
+                                      description: |-
+                                        Name of the referent.
+                                        This field is effectively required, but due to backwards compatibility is
+                                        allowed to be empty. Instances of this type with an empty value here are
+                                        almost certainly wrong.
+                                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                      type: string
+                                    optional:
+                                      description: Specify whether the ConfigMap or
+                                        its key must be defined
+                                      type: boolean
+                                  required:
+                                  - key
+                                  type: object
+                                  x-kubernetes-map-type: atomic
+                                secret:
+                                  description: Secret containing data to use for the
+                                    targets.
+                                  properties:
+                                    key:
+                                      description: The key of the secret to select
+                                        from.  Must be a valid secret key.
+                                      type: string
+                                    name:
+                                      default: ""
+                                      description: |-
+                                        Name of the referent.
+                                        This field is effectively required, but due to backwards compatibility is
+                                        allowed to be empty. Instances of this type with an empty value here are
+                                        almost certainly wrong.
+                                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                      type: string
+                                    optional:
+                                      description: Specify whether the Secret or its
+                                        key must be defined
+                                      type: boolean
+                                  required:
+                                  - key
+                                  type: object
+                                  x-kubernetes-map-type: atomic
+                              type: object
+                            insecureSkipVerify:
+                              description: Disable target certificate validation.
+                              type: boolean
+                            keySecret:
+                              description: Secret containing the client key file for
+                                the targets.
+                              properties:
+                                key:
+                                  description: The key of the secret to select from.  Must
+                                    be a valid secret key.
+                                  type: string
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the Secret or its key
+                                    must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            maxVersion:
+                              description: |-
+                                Maximum acceptable TLS version.
+
+                                It requires Prometheus >= v2.41.0.
+                              enum:
+                              - TLS10
+                              - TLS11
+                              - TLS12
+                              - TLS13
+                              type: string
+                            minVersion:
+                              description: |-
+                                Minimum acceptable TLS version.
+
+                                It requires Prometheus >= v2.35.0.
+                              enum:
+                              - TLS10
+                              - TLS11
+                              - TLS12
+                              - TLS13
+                              type: string
+                            serverName:
+                              description: Used to verify the hostname for the targets.
+                              type: string
+                          type: object
                         tokenUrl:
                           description: '`tokenURL` configures the URL to fetch the
                             token from.'
@@ -6457,8 +7111,49 @@ spec:
                       - clientSecret
                       - tokenUrl
                       type: object
+                    proxyConnectHeader:
+                      additionalProperties:
+                        items:
+                          description: SecretKeySelector selects a key of a Secret.
+                          properties:
+                            key:
+                              description: The key of the secret to select from.  Must
+                                be a valid secret key.
+                              type: string
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                            optional:
+                              description: Specify whether the Secret or its key must
+                                be defined
+                              type: boolean
+                          required:
+                          - key
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        type: array
+                      description: |-
+                        ProxyConnectHeader optionally specifies headers to send to
+                        proxies during CONNECT requests.
+
+                        It requires Prometheus >= v2.43.0 or Alertmanager >= 0.25.0.
+                      type: object
+                      x-kubernetes-map-type: atomic
+                    proxyFromEnvironment:
+                      description: |-
+                        Whether to use the proxy configuration defined by environment variables (HTTP_PROXY, HTTPS_PROXY, and NO_PROXY).
+
+                        It requires Prometheus >= v2.43.0 or Alertmanager >= 0.25.0.
+                      type: boolean
                     proxyUrl:
-                      description: Optional ProxyURL.
+                      description: '`proxyURL` defines the HTTP proxy server to use.'
+                      pattern: ^http(s)?://.+$
                       type: string
                     queueConfig:
                       description: QueueConfig allows tuning of the remote write queue
@@ -6751,6 +7446,28 @@ spec:
                           - key
                           type: object
                           x-kubernetes-map-type: atomic
+                        maxVersion:
+                          description: |-
+                            Maximum acceptable TLS version.
+
+                            It requires Prometheus >= v2.41.0.
+                          enum:
+                          - TLS10
+                          - TLS11
+                          - TLS12
+                          - TLS13
+                          type: string
+                        minVersion:
+                          description: |-
+                            Minimum acceptable TLS version.
+
+                            It requires Prometheus >= v2.35.0.
+                          enum:
+                          - TLS10
+                          - TLS11
+                          - TLS12
+                          - TLS13
+                          type: string
                         serverName:
                           description: Used to verify the hostname for the targets.
                           type: string
@@ -7076,6 +7793,9 @@ spec:
                 description: |-
                   SampleLimit defines per-scrape limit on number of scraped samples that will be accepted.
                   Only valid in Prometheus versions 2.45.0 and newer.
+
+                  Note that the global limit only applies to scrape objects that don't specify an explicit limit value.
+                  If you want to enforce a maximum limit for all scrape objects, refer to enforcedSampleLimit.
                 format: int64
                 type: integer
               scrapeClasses:
@@ -7087,6 +7807,21 @@ spec:
                   in a breaking way.
                 items:
                   properties:
+                    attachMetadata:
+                      description: |-
+                        AttachMetadata configures additional metadata to the discovered targets.
+                        When the scrape object defines its own configuration, it takes
+                        precedence over the scrape class configuration.
+                      properties:
+                        node:
+                          description: |-
+                            When set to true, Prometheus attaches node metadata to the discovered
+                            targets.
+
+                            The Prometheus service account must have the `list` and `watch`
+                            permissions on the `Nodes` objects.
+                          type: boolean
+                      type: object
                     default:
                       description: |-
                         Default indicates that the scrape applies to all scrape objects that
@@ -7094,6 +7829,100 @@ spec:
 
                         Only one scrape class can be set as the default.
                       type: boolean
+                    metricRelabelings:
+                      description: |-
+                        MetricRelabelings configures the relabeling rules to apply to all samples before ingestion.
+
+                        The Operator adds the scrape class metric relabelings defined here.
+                        Then the Operator adds the target-specific metric relabelings defined in ServiceMonitors, PodMonitors, Probes and ScrapeConfigs.
+                        Then the Operator adds namespace enforcement relabeling rule, specified in '.spec.enforcedNamespaceLabel'.
+
+                        More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#metric_relabel_configs
+                      items:
+                        description: |-
+                          RelabelConfig allows dynamic rewriting of the label set for targets, alerts,
+                          scraped samples and remote write samples.
+
+                          More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config
+                        properties:
+                          action:
+                            default: replace
+                            description: |-
+                              Action to perform based on the regex matching.
+
+                              `Uppercase` and `Lowercase` actions require Prometheus >= v2.36.0.
+                              `DropEqual` and `KeepEqual` actions require Prometheus >= v2.41.0.
+
+                              Default: "Replace"
+                            enum:
+                            - replace
+                            - Replace
+                            - keep
+                            - Keep
+                            - drop
+                            - Drop
+                            - hashmod
+                            - HashMod
+                            - labelmap
+                            - LabelMap
+                            - labeldrop
+                            - LabelDrop
+                            - labelkeep
+                            - LabelKeep
+                            - lowercase
+                            - Lowercase
+                            - uppercase
+                            - Uppercase
+                            - keepequal
+                            - KeepEqual
+                            - dropequal
+                            - DropEqual
+                            type: string
+                          modulus:
+                            description: |-
+                              Modulus to take of the hash of the source label values.
+
+                              Only applicable when the action is `HashMod`.
+                            format: int64
+                            type: integer
+                          regex:
+                            description: Regular expression against which the extracted
+                              value is matched.
+                            type: string
+                          replacement:
+                            description: |-
+                              Replacement value against which a Replace action is performed if the
+                              regular expression matches.
+
+                              Regex capture groups are available.
+                            type: string
+                          separator:
+                            description: Separator is the string between concatenated
+                              SourceLabels.
+                            type: string
+                          sourceLabels:
+                            description: |-
+                              The source labels select values from existing labels. Their content is
+                              concatenated using the configured Separator and matched against the
+                              configured regular expression.
+                            items:
+                              description: |-
+                                LabelName is a valid Prometheus label name which may only contain ASCII
+                                letters, numbers, as well as underscores.
+                              pattern: ^[a-zA-Z_][a-zA-Z0-9_]*$
+                              type: string
+                            type: array
+                          targetLabel:
+                            description: |-
+                              Label to which the resulting string is written in a replacement.
+
+                              It is mandatory for `Replace`, `HashMod`, `Lowercase`, `Uppercase`,
+                              `KeepEqual` and `DropEqual` actions.
+
+                              Regex capture groups are available.
+                            type: string
+                        type: object
+                      type: array
                     name:
                       description: Name of the scrape class.
                       minLength: 1
@@ -7346,6 +8175,28 @@ spec:
                           - key
                           type: object
                           x-kubernetes-map-type: atomic
+                        maxVersion:
+                          description: |-
+                            Maximum acceptable TLS version.
+
+                            It requires Prometheus >= v2.41.0.
+                          enum:
+                          - TLS10
+                          - TLS11
+                          - TLS12
+                          - TLS13
+                          type: string
+                        minVersion:
+                          description: |-
+                            Minimum acceptable TLS version.
+
+                            It requires Prometheus >= v2.35.0.
+                          enum:
+                          - TLS10
+                          - TLS11
+                          - TLS12
+                          - TLS13
+                          type: string
                         serverName:
                           description: Used to verify the hostname for the targets.
                           type: string
@@ -7513,6 +8364,7 @@ spec:
                 items:
                   type: string
                 type: array
+                x-kubernetes-list-type: set
               securityContext:
                 description: |-
                   SecurityContext holds pod-level security attributes and common container settings.
@@ -7726,10 +8578,21 @@ spec:
                   ServiceAccountName is the name of the ServiceAccount to use to run the
                   Prometheus Pods.
                 type: string
+              serviceDiscoveryRole:
+                description: |-
+                  Defines the service discovery role used to discover targets from
+                  `ServiceMonitor` objects and Alertmanager endpoints.
+
+                  If set, the value should be either "Endpoints" or "EndpointSlice".
+                  If unset, the operator assumes the "Endpoints" role.
+                enum:
+                - Endpoints
+                - EndpointSlice
+                type: string
               serviceMonitorNamespaceSelector:
                 description: |-
                   Namespaces to match for ServicedMonitors discovery. An empty label selector
-                  matches all namespaces. A null label selector matches the current
+                  matches all namespaces. A null label selector (default value) matches the current
                   namespace only.
                 properties:
                   matchExpressions:
@@ -8583,6 +9446,9 @@ spec:
                 description: |-
                   TargetLimit defines a limit on the number of scraped targets that will be accepted.
                   Only valid in Prometheus versions 2.45.0 and newer.
+
+                  Note that the global limit only applies to scrape objects that don't specify an explicit limit value.
+                  If you want to enforce a maximum limit for all scrape objects, refer to enforcedTargetLimit.
                 format: int64
                 type: integer
               thanos:
@@ -8794,6 +9660,28 @@ spec:
                         - key
                         type: object
                         x-kubernetes-map-type: atomic
+                      maxVersion:
+                        description: |-
+                          Maximum acceptable TLS version.
+
+                          It requires Prometheus >= v2.41.0.
+                        enum:
+                        - TLS10
+                        - TLS11
+                        - TLS12
+                        - TLS13
+                        type: string
+                      minVersion:
+                        description: |-
+                          Minimum acceptable TLS version.
+
+                          It requires Prometheus >= v2.35.0.
+                        enum:
+                        - TLS10
+                        - TLS11
+                        - TLS12
+                        - TLS13
+                        type: string
                       serverName:
                         description: Used to verify the hostname for the targets.
                         type: string
@@ -9491,6 +10379,28 @@ spec:
                         - key
                         type: object
                         x-kubernetes-map-type: atomic
+                      maxVersion:
+                        description: |-
+                          Maximum acceptable TLS version.
+
+                          It requires Prometheus >= v2.41.0.
+                        enum:
+                        - TLS10
+                        - TLS11
+                        - TLS12
+                        - TLS13
+                        type: string
+                      minVersion:
+                        description: |-
+                          Minimum acceptable TLS version.
+
+                          It requires Prometheus >= v2.35.0.
+                        enum:
+                        - TLS10
+                        - TLS11
+                        - TLS12
+                        - TLS13
+                        type: string
                       serverName:
                         description: Used to verify the hostname for the targets.
                         type: string
@@ -9500,8 +10410,8 @@ spec:
                 type: object
               tsdb:
                 description: |-
-                  Defines the runtime reloadable configuration of the timeseries database
-                  (TSDB).
+                  Defines the runtime reloadable configuration of the timeseries database(TSDB).
+                  It requires Prometheus >= v2.39.0 or PrometheusAgent >= v2.54.0.
                 properties:
                   outOfOrderTimeWindow:
                     description: |-
@@ -9514,7 +10424,7 @@ spec:
                       This is an *experimental feature*, it may change in any upcoming release
                       in a breaking way.
 
-                      It requires Prometheus >= v2.39.0.
+                      It requires Prometheus >= v2.39.0 or PrometheusAgent >= v2.54.0.
                     pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
                     type: string
                 type: object
@@ -11489,6 +12399,11 @@ spec:
                             type: object
                             x-kubernetes-map-type: atomic
                         type: object
+                      certFile:
+                        description: |-
+                          Path to the TLS certificate file in the Prometheus container for the server.
+                          Mutually exclusive with `cert`.
+                        type: string
                       cipherSuites:
                         description: |-
                           List of supported cipher suites for TLS versions up to TLS 1.2. If empty,
@@ -11556,6 +12471,11 @@ spec:
                           For more detail on clientAuth options:
                           https://golang.org/pkg/crypto/tls/#ClientAuthType
                         type: string
+                      clientCAFile:
+                        description: |-
+                          Path to the CA certificate file for client certificate authentication to the server.
+                          Mutually exclusive with `client_ca`.
+                        type: string
                       curvePreferences:
                         description: |-
                           Elliptic curves that will be used in an ECDHE handshake, in preference
@@ -11564,6 +12484,11 @@ spec:
                         items:
                           type: string
                         type: array
+                      keyFile:
+                        description: |-
+                          Path to the TLS key file in the Prometheus container for the server.
+                          Mutually exclusive with `keySecret`.
+                        type: string
                       keySecret:
                         description: Secret containing the TLS key for the server.
                         properties:
@@ -11603,9 +12528,6 @@ spec:
                           cipher suite. If true then the server's preference, as expressed in
                           the order of elements in cipherSuites, is used.
                         type: boolean
-                    required:
-                    - cert
-                    - keySecret
                     type: object
                 type: object
             type: object
