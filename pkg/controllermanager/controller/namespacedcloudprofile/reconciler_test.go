@@ -22,10 +22,15 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/gardener/gardener/pkg/api/indexer"
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	namespacedcloudprofilecontroller "github.com/gardener/gardener/pkg/controllermanager/controller/namespacedcloudprofile"
+	"github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
@@ -554,6 +559,139 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
 			Expect(result).To(Equal(reconcile.Result{}))
 			Expect(err).ToNot(HaveOccurred())
+		})
+	})
+
+	Describe("#Reconcile", func() {
+		var (
+			ctx        = context.Background()
+			fakeClient client.Client
+
+			reconciler *namespacedcloudprofilecontroller.Reconciler
+
+			namespaceName string
+
+			cloudProfile           *gardencorev1beta1.CloudProfile
+			namespacedCloudProfile *gardencorev1beta1.NamespacedCloudProfile
+		)
+
+		BeforeEach(func() {
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithIndex(
+				&gardencorev1beta1.NamespacedCloudProfile{},
+				core.NamespacedCloudProfileParentRefName,
+				indexer.NamespacedCloudProfileParentRefNameIndexerFunc,
+			).Build()
+			reconciler = &namespacedcloudprofilecontroller.Reconciler{Client: fakeClient, Recorder: &record.FakeRecorder{}}
+
+			namespaceName = "garden-test"
+
+			cloudProfile = &gardencorev1beta1.CloudProfile{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-profile",
+				},
+				Spec: gardencorev1beta1.CloudProfileSpec{},
+			}
+
+			namespacedCloudProfile = &gardencorev1beta1.NamespacedCloudProfile{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "n-profile-1",
+					Namespace:  namespaceName,
+					Generation: 1,
+				},
+				Spec: gardencorev1beta1.NamespacedCloudProfileSpec{
+					Parent: gardencorev1beta1.CloudProfileReference{
+						Kind: "CloudProfile",
+						Name: cloudProfile.Name,
+					},
+				},
+			}
+		})
+
+		Describe("machineImages and providerConfig with versioned rawExtension object", func() {
+			BeforeEach(func() {
+				cloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
+					{Name: "machine-image-1", Versions: []gardencorev1beta1.MachineImageVersion{
+						{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.0.0"}},
+					}},
+				}
+				cloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Object: &v1alpha1.CloudProfileConfig{MachineImages: []v1alpha1.MachineImages{
+					{Name: "machine-image-1", Versions: []v1alpha1.MachineImageVersion{{Version: "1.0.0", Image: "local-dev:1.0.0"}}},
+				}}}
+				Expect(fakeClient.Create(ctx, cloudProfile)).To(Succeed())
+
+				namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
+					{Name: "machine-image-2", Versions: []gardencorev1beta1.MachineImageVersion{
+						{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "2.0.0"}},
+					}},
+				}
+				namespacedCloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Object: &v1alpha1.CloudProfileConfig{MachineImages: []v1alpha1.MachineImages{
+					{Name: "machine-image-2", Versions: []v1alpha1.MachineImageVersion{{Version: "2.0.0", Image: "local-dev:2.0.0"}}},
+				}}}
+				Expect(fakeClient.Create(ctx, namespacedCloudProfile)).To(Succeed())
+			})
+
+			It("should successfully reconcile the NamespacedCloudProfile", func() {
+				_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfile.Name, Namespace: namespaceName}})
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
+				Expect(namespacedCloudProfile.Status.CloudProfileSpec.MachineImages).To(ConsistOf(
+					gardencorev1beta1.MachineImage{Name: "machine-image-1", Versions: []gardencorev1beta1.MachineImageVersion{
+						{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.0.0"}},
+					}},
+					gardencorev1beta1.MachineImage{Name: "machine-image-2", Versions: []gardencorev1beta1.MachineImageVersion{
+						{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "2.0.0"}},
+					}},
+				))
+				Expect(namespacedCloudProfile.Status.CloudProfileSpec.ProviderConfig.Raw).To(Equal(
+					[]byte(`{"machineImages":[{"name":"machine-image-1","versions":[{"image":"local-dev:1.0.0","version":"1.0.0"}]}]}`)))
+
+				// Simulate a status update by the provider extension.
+				namespacedCloudProfile.Status.CloudProfileSpec.ProviderConfig = &runtime.RawExtension{Object: &v1alpha1.CloudProfileConfig{MachineImages: []v1alpha1.MachineImages{
+					{Name: "machine-image-1", Versions: []v1alpha1.MachineImageVersion{{Version: "1.0.0", Image: "local-dev:1.0.0"}}},
+					{Name: "machine-image-2", Versions: []v1alpha1.MachineImageVersion{{Version: "2.0.0", Image: "local-dev:2.0.0"}}},
+				}}}
+				Expect(fakeClient.Update(ctx, namespacedCloudProfile)).To(Succeed())
+				Expect(namespacedCloudProfile.Status.CloudProfileSpec.ProviderConfig.Object).To(BeEquivalentTo(&v1alpha1.CloudProfileConfig{MachineImages: []v1alpha1.MachineImages{
+					{Name: "machine-image-1", Versions: []v1alpha1.MachineImageVersion{{Version: "1.0.0", Image: "local-dev:1.0.0"}}},
+					{Name: "machine-image-2", Versions: []v1alpha1.MachineImageVersion{{Version: "2.0.0", Image: "local-dev:2.0.0"}}},
+				}}))
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
+				Expect(namespacedCloudProfile.Status.CloudProfileSpec.ProviderConfig.Raw).To(SatisfyAll(
+					ContainSubstring(`{"machineImages":[{"`),
+					ContainSubstring(`{"name":"machine-image-1","versions":[`),
+					ContainSubstring(`{"name":"machine-image-2","versions":[`),
+					ContainSubstring(`"}]}]}`),
+				))
+
+				// Update NamespacedCloudProfile spec.
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
+				namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
+					{Name: "machine-image-2", Versions: []gardencorev1beta1.MachineImageVersion{
+						{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "3.0.0"}},
+					}},
+				}
+				namespacedCloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Object: &v1alpha1.CloudProfileConfig{MachineImages: []v1alpha1.MachineImages{
+					{Name: "machine-image-2", Versions: []v1alpha1.MachineImageVersion{{Version: "3.0.0", Image: "local-dev:3.0.0"}}},
+				}}}
+				Expect(fakeClient.Update(ctx, namespacedCloudProfile)).To(Succeed())
+
+				_, err = reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfile.Name, Namespace: namespaceName}})
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
+				Expect(namespacedCloudProfile.Status.CloudProfileSpec.MachineImages).To(ConsistOf(
+					gardencorev1beta1.MachineImage{Name: "machine-image-1", Versions: []gardencorev1beta1.MachineImageVersion{
+						{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.0.0"}},
+					}},
+					gardencorev1beta1.MachineImage{Name: "machine-image-2", Versions: []gardencorev1beta1.MachineImageVersion{
+						{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "3.0.0"}},
+					}},
+				))
+				// Make sure that status providerConfig is set to cloudProfile providerConfig again.
+				Expect(namespacedCloudProfile.Status.CloudProfileSpec.ProviderConfig.Raw).To(Equal(
+					[]byte(`{"machineImages":[{"name":"machine-image-1","versions":[{"image":"local-dev:1.0.0","version":"1.0.0"}]}]}`)))
+			})
 		})
 	})
 })
