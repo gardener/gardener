@@ -20,7 +20,7 @@ Also remember that HA is costly - you need to balance it against the cost of an 
 
 ## Control Plane
 
-The Kubernetes cluster control plane is managed by Gardener (as pods in separate infrastructure clusters to which you have no direct access) and can be set up with no failure tolerance (control plane pods will be recreated best-effort when resources are available) or one of the [failure tolerance types `node` or `zone`](/docs/usage/high-avaliability/shoot_high_availability.md).
+The Kubernetes cluster control plane is managed by Gardener (as pods in separate infrastructure clusters to which you have no direct access) and can be set up with no failure tolerance (control plane pods will be recreated best-effort when resources are available) or one of the [failure tolerance types `node` or `zone`](/docs/usage/high-availability/shoot_high_availability.md).
 
 Strictly speaking, static workload does not depend on the (high) availability of the control plane, but static workload doesn't rhyme with Cloud and Kubernetes and also means, that when you possibly need it the most, e.g. during a zone outage, critical self-healing or auto-scaling functionality won't be available to you and your workload, if your control plane is down as well. That's why, even though the resource consumption is significantly higher, we generally recommend to use the failure tolerance type `zone` for the control planes of productive clusters, at least in all regions that have 3+ zones. Regions that have only 1 or 2 zones don't support the failure tolerance type `zone` and then your second best option is the failure tolerance type `node`, which means a zone outage can still take down your control plane, but individual node outages won't.
 
@@ -342,7 +342,7 @@ spec:
 
 #### On `spec.controlPlane.highAvailability.failureTolerance.type`
 
-If set, determines the degree of failure tolerance for your control plane. `zone` is preferred, but only available if your control plane resides in a region with 3+ zones. See [above](#control-plane) and the [docs](/docs/usage/high-avaliability/shoot_high_availability.md).
+If set, determines the degree of failure tolerance for your control plane. `zone` is preferred, but only available if your control plane resides in a region with 3+ zones. See [above](#control-plane) and the [docs](/docs/usage/high-availability/shoot_high_availability.md).
 
 #### On `spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds` and `defaultNotReadyTolerationSeconds`
 

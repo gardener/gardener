@@ -1029,7 +1029,7 @@ The webhook performs the following actions:
    Tolerations for taints `node.kubernetes.io/not-ready` and `node.kubernetes.io/unreachable` are added to the handled `Deployment` and `StatefulSet` if their `podTemplate`s do not already specify them.
    The `TolerationSeconds` are taken from the respective configuration section of the webhook's configuration (see [example](../../example/resource-manager/10-componentconfig.yaml))).
    
-   We consider fine-tuned values for those tolerations a matter of high-availability because they often help to reduce recovery times in case of node or zone outages, also see [High-Availability Best Practices](../usage/high-avaliability/shoot_high_availability_best_practices.md).
+   We consider fine-tuned values for those tolerations a matter of high-availability because they often help to reduce recovery times in case of node or zone outages, also see [High-Availability Best Practices](../usage/high-availability/shoot_high_availability_best_practices.md).
    In addition, this webhook handling helps to set defaults for many but not all workload components in a cluster. For instance, Gardener can use this webhook to set defaults for nearly every component in seed clusters but only for the system components in shoot clusters. Any customer workload remains unchanged.
 
 #### Kubernetes Service Host Injection

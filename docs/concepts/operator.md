@@ -255,7 +255,7 @@ The virtual garden control plane components are:
 
 If the `.spec.virtualCluster.controlPlane.highAvailability={}` is set then these components will be deployed in a "highly available" mode.
 For ETCD, this means that there will be 3 replicas each.
-This works similar like for `Shoot`s (see [this document](../usage/high-avaliability/shoot_high_availability.md)) except for the fact that there is no failure tolerance type configurability.
+This works similar like for `Shoot`s (see [this document](../usage/high-availability/shoot_high_availability.md)) except for the fact that there is no failure tolerance type configurability.
 The `gardener-resource-manager`'s [HighAvailabilityConfig webhook](resource-manager.md#high-availability-config) makes sure that all pods with multiple replicas are spread on nodes, and if there are at least two zones in `.spec.runtimeCluster.provider.zones` then they also get spread across availability zones.
 
 > If once set, removing `.spec.virtualCluster.controlPlane.highAvailability` again is not supported.

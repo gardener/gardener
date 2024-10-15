@@ -205,7 +205,7 @@ Furthermore, if an annotation is removed from the `seedConfig`, gardenlet does *
 
 ### Optional: Enable HA Mode
 
-You may consider running `gardenlet` with multiple replicas, especially if the seed cluster is configured to host [HA shoot control planes](../usage/high-avaliability/shoot_high_availability.md).
+You may consider running `gardenlet` with multiple replicas, especially if the seed cluster is configured to host [HA shoot control planes](../usage/high-availability/shoot_high_availability.md).
 Therefore, the following Helm chart values define the degree of high availability you want to achieve for the `gardenlet` deployment.
 
 ```yaml

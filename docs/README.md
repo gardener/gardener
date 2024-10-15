@@ -54,8 +54,8 @@
 
 ### High Avaliability
 
-* [Shoot High-Availability Control Plane](usage/high-avaliability/shoot_high_availability.md)
-* [Shoot High-Availability Best Practices](usage/high-avaliability/shoot_high_availability_best_practices.md)
+* [Shoot High-Availability Control Plane](usage/high-availability/shoot_high_availability.md)
+* [Shoot High-Availability Best Practices](usage/high-availability/shoot_high_availability_best_practices.md)
 
 ### Security
 
