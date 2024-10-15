@@ -309,7 +309,7 @@ func validateOperation(operation string, availableOperations sets.Set[string], f
 		return allErrs
 	}
 
-	if operation != "" && !availableOperations.Has(operation) {
+	if !availableOperations.Has(operation) {
 		allErrs = append(allErrs, field.NotSupported(fldPath, operation, sets.List(availableOperations)))
 	}
 
