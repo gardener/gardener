@@ -221,9 +221,9 @@ var _ = Describe("Alertmanager", func() {
 			},
 			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 				TargetRef: &autoscalingv1.CrossVersionObjectReference{
-					APIVersion: "apps/v1",
-					Kind:       "StatefulSet",
-					Name:       "alertmanager-" + name,
+					APIVersion: "monitoring.coreos.com/v1",
+					Kind:       "Alertmanager",
+					Name:       name,
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
 					UpdateMode: &vpaUpdateMode,
