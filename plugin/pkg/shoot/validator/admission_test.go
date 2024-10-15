@@ -1521,6 +1521,121 @@ var _ = Describe("validator", func() {
 
 				Expect(err).ToNot(HaveOccurred())
 			})
+
+			It("should reject creation because shoot access restrictions are not supported in this region", func() {
+				shoot.Spec.SeedName = nil
+				shoot.Spec.AccessRestrictions = []core.AccessRestrictionWithOptions{{AccessRestriction: core.AccessRestriction{Name: "foo"}}}
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.UpdateOptions{}, false, nil)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(BeForbiddenError())
+				Expect(err.Error()).To(ContainSubstring("spec.accessRestrictions[0]: Unsupported value: \"foo\""))
+			})
+
+			It("should reject creation because shoot access restrictions are supported in this region, but not supported by the seed", func() {
+				cloudProfile.Spec.Regions[0].AccessRestrictions = []gardencorev1beta1.AccessRestriction{{Name: "foo"}}
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Update(&cloudProfile)).To(Succeed())
+
+				shoot.Spec.AccessRestrictions = []core.AccessRestrictionWithOptions{{AccessRestriction: core.AccessRestriction{Name: "foo"}}}
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.UpdateOptions{}, false, nil)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(BeForbiddenError())
+				Expect(err.Error()).To(ContainSubstring("forbidden to use a seed which doesn't support the access restrictions of the shoot"))
+			})
+
+			It("should allow creation because shoot access restrictions are supported in this region and by the seed", func() {
+				cloudProfile.Spec.Regions[0].AccessRestrictions = []gardencorev1beta1.AccessRestriction{{Name: "foo"}}
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Update(&cloudProfile)).To(Succeed())
+
+				seed.Spec.AccessRestrictions = []gardencorev1beta1.AccessRestriction{{Name: "foo"}}
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Update(&seed)).To(Succeed())
+
+				shoot.Spec.AccessRestrictions = []core.AccessRestrictionWithOptions{{AccessRestriction: core.AccessRestriction{Name: "foo"}}}
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.UpdateOptions{}, false, nil)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should reject update because shoot access restrictions are not supported in this region", func() {
+				shoot.Spec.AccessRestrictions = []core.AccessRestrictionWithOptions{{AccessRestriction: core.AccessRestriction{Name: "foo"}}}
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(BeForbiddenError())
+				Expect(err.Error()).To(ContainSubstring("spec.accessRestrictions[0]: Unsupported value: \"foo\""))
+			})
+
+			It("should reject update because shoot access restrictions are supported in this region, but not supported by the seed", func() {
+				cloudProfile.Spec.Regions[0].AccessRestrictions = []gardencorev1beta1.AccessRestriction{{Name: "foo"}}
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Update(&cloudProfile)).To(Succeed())
+
+				shoot.Spec.AccessRestrictions = []core.AccessRestrictionWithOptions{{AccessRestriction: core.AccessRestriction{Name: "foo"}}}
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(BeForbiddenError())
+				Expect(err.Error()).To(ContainSubstring("spec.accessRestrictions[0]: Forbidden: access restriction \"foo\" is not supported by the seed"))
+			})
+
+			It("should allow update because shoot access restrictions are supported in this region and by the seed", func() {
+				cloudProfile.Spec.Regions[0].AccessRestrictions = []gardencorev1beta1.AccessRestriction{{Name: "foo"}}
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Update(&cloudProfile)).To(Succeed())
+
+				seed.Spec.AccessRestrictions = []gardencorev1beta1.AccessRestriction{{Name: "foo"}}
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Update(&seed)).To(Succeed())
+
+				shoot.Spec.AccessRestrictions = []core.AccessRestrictionWithOptions{{AccessRestriction: core.AccessRestriction{Name: "foo"}}}
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should reject seed migration because shoot access restrictions are not supported by the new seed", func() {
+				cloudProfile.Spec.Regions[0].AccessRestrictions = []gardencorev1beta1.AccessRestriction{{Name: "foo"}}
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Update(&cloudProfile)).To(Succeed())
+
+				seed.Spec.AccessRestrictions = []gardencorev1beta1.AccessRestriction{{Name: "foo"}}
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Update(&seed)).To(Succeed())
+
+				newSeed := seed.DeepCopy()
+				newSeed.Name = newSeedName
+				newSeed.Spec.AccessRestrictions = []gardencorev1beta1.AccessRestriction{{Name: "bar"}}
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(newSeed)).To(Succeed())
+
+				shoot.Spec.AccessRestrictions = []core.AccessRestrictionWithOptions{{AccessRestriction: core.AccessRestriction{Name: "foo"}}}
+				oldShoot.Spec.AccessRestrictions = shoot.Spec.AccessRestrictions
+				shoot.Spec.SeedName = &newSeedName
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(BeForbiddenError())
+				Expect(err.Error()).To(ContainSubstring("forbidden to use a seed which doesn't support the access restrictions of the shoot"))
+			})
+
+			It("should allow removing access restrictions", func() {
+				cloudProfile.Spec.Regions[0].AccessRestrictions = []gardencorev1beta1.AccessRestriction{{Name: "foo"}}
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Update(&cloudProfile)).To(Succeed())
+
+				shoot.Spec.AccessRestrictions = []core.AccessRestrictionWithOptions{{AccessRestriction: core.AccessRestriction{Name: "foo"}}}
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&shoot)).To(Succeed())
+
+				shoot.Spec.AccessRestrictions = nil
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
 		})
 
 		Context("tests for unknown provider", func() {
