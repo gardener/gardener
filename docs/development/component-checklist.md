@@ -39,7 +39,7 @@ This document provides a checklist for them that you can walk through.
 
 5. **Consider hibernation when calculating replica count** ([example](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/kubescheduler.go#L36))
 
-   Shoot clusters can be [hibernated](../usage/shoot_hibernate.md) meaning that all control plane components in the shoot namespace in the seed cluster are scaled down to zero and all worker nodes are terminated.
+   Shoot clusters can be [hibernated](../usage/shoot/shoot_hibernate.md) meaning that all control plane components in the shoot namespace in the seed cluster are scaled down to zero and all worker nodes are terminated.
    If your component runs in the seed cluster then you have to consider this case and provide the proper replica count.
    There is a utility function available (see example).
 
@@ -144,7 +144,7 @@ This document provides a checklist for them that you can walk through.
 
    To ensure user workload pods are only scheduled to `Nodes` where all node-critical components are ready, these components need to tolerate the `node.gardener.cloud/critical-components-not-ready` taint (`NoSchedule` effect).
    Also, such `DaemonSets` and the included `PodTemplates` need to be labelled with `node.gardener.cloud/critical-component=true`.
-   For more information, see [Readiness of Shoot Worker Nodes](../usage/node-readiness.md).
+   For more information, see [Readiness of Shoot Worker Nodes](../usage/advanced/node-readiness.md).
 
 6. **Consider making a `Service` topology-aware** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/vpa/admissioncontroller.go#L154))
 
@@ -169,7 +169,7 @@ This document provides a checklist for them that you can walk through.
    If your component is capable of scaling horizontally, you should consider defining a [`HorizontalPodAutoscaler`](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale).
 
 > [!NOTE]
-> For more information and concrete configuration hints, please see our [best practices guide for pod auto scaling](../usage/shoot_pod_autoscaling_best_practices.md) and especially the [summary](../usage/shoot_pod_autoscaling_best_practices.md#summary) and [recommendations](../usage/shoot_pod_autoscaling_best_practices.md#recommendations-in-a-box) sections.
+> For more information and concrete configuration hints, please see our [best practices guide for pod auto scaling](../usage/autoscaling/shoot_pod_autoscaling_best_practices.md) and especially the [summary](../usage/autoscaling/shoot_pod_autoscaling_best_practices.md#summary) and [recommendations](../usage/autoscaling/shoot_pod_autoscaling_best_practices.md#recommendations-in-a-box) sections.
 
 ## Observability / Operations Productivity
 
@@ -197,5 +197,5 @@ This document provides a checklist for them that you can walk through.
 
 5. **Configure automatic restarts in shoot maintenance time window** ([example 1](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/kubescheduler/kube_scheduler.go#L250), [example 2](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/coredns.go#L90-L107))
 
-   Gardener offers to restart components during the maintenance time window. For more information, see [Restart Control Plane Controllers](../usage/shoot_maintenance.md#restart-control-plane-controllers) and [Restart Some Core Addons](../usage/shoot_maintenance.md#restart-some-core-addons).
+   Gardener offers to restart components during the maintenance time window. For more information, see [Restart Control Plane Controllers](../usage/shoot/shoot_maintenance.md#restart-control-plane-controllers) and [Restart Some Core Addons](../usage/shoot/shoot_maintenance.md#restart-some-core-addons).
    You can consider adding the needed label to your control plane component to get this automatic restart (probably not needed for most components).

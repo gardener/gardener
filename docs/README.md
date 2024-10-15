@@ -25,53 +25,75 @@
 
 ## Usage
 
-* [Audit a Kubernetes cluster](usage/shoot_auditpolicy.md)
-* [Cleanup of Shoot clusters in deletion](usage/shoot_cleanup.md)
-* [`containerd` Registry Configuration](usage/containerd-registry-configuration.md)
-* [Custom `containerd` configuration](usage/custom-containerd-config.md)
-* [Custom `CoreDNS` configuration](usage/custom-dns-config.md)
-* [(Custom) CSI components](usage/csi_components.md)
-* [Default Seccomp Profile](usage/default_seccomp_profile.md)
-* [DNS Autoscaling](usage/dns-autoscaling.md)
-* [DNS Search Path Optimization](usage/dns-search-path-optimization.md)
-* [Endpoints and Ports of a Shoot Control-Plane](usage/control-plane-endpoints-and-ports.md)
-* [ETCD Encryption Config](usage/etcd_encryption_config.md)
-* [ExposureClasses](usage/exposureclasses.md)
-* [Hibernate a Cluster](usage/shoot_hibernate.md)
-* [IPv6 in Gardener Clusters](usage/ipv6.md)
-* [Logging](usage/logging.md)
-* [`NodeLocalDNS` feature](usage/node-local-dns.md)
-* [OpenIDConnect presets](usage/openidconnect-presets.md)
-* [Projects](usage/projects.md)
-* [Service Account Manager](usage/service-account-manager.md)
-* [Readiness of Shoot Worker Nodes](usage/node-readiness.md)
-* [Reversed Cluster VPN](usage/reversed-vpn-tunnel.md)
-* [Shoot Cluster Purposes](usage/shoot_purposes.md)
-* [Shoot Scheduling Profiles](usage/shoot_scheduling_profiles.md)
-* [Shoot Credentials Rotation](usage/shoot_credentials_rotation.md)
-* [Shoot Kubernetes and Operating System Versioning](usage/shoot_versions.md)
-* [Shoot `KUBERNETES_SERVICE_HOST` Environment Variable Injection](usage/shoot_kubernetes_service_host_injection.md)
-* [Shoot Networking](usage/shoot_networking.md)
-* [Shoot Maintenance](usage/shoot_maintenance.md)
-* [Shoot `ServiceAccount` Configurations](usage/shoot_serviceaccounts.md)
-* [Shoot Status](usage/shoot_status.md)
-* [Shoot Info `ConfigMap`](usage/shoot_info_configmap.md)
-* [Shoot Updates and Upgrades](usage/shoot_updates.md)
-* [Shoot Auto-Scaling Configuration](usage/shoot_autoscaling.md)
-* [Shoot Pod Auto-Scaling Best Practices](usage/shoot_pod_autoscaling_best_practices.md)
-* [Shoot High-Availability Control Plane](usage/shoot_high_availability.md)
-* [Shoot High-Availability Best Practices](usage/shoot_high_availability_best_practices.md)
-* [Shoot Workers Settings](usage/shoot_workers_settings.md)
-* [Accessing Shoot Clusters](usage/shoot_access.md)
-* [Supported Kubernetes versions](usage/supported_k8s_versions.md)
-* [Tolerations](usage/tolerations.md)
-* [Trigger shoot operations](usage/shoot_operations.md)
-* [Trusted TLS certificate for shoot control planes](usage/trusted-tls-for-control-planes.md)
-* [Trusted TLS certificate for garden runtime cluster](usage/trusted-tls-for-garden-runtime.md)
-* [Controlling the Kubernetes versions for specific worker pools](usage/worker_pool_k8s_versions.md)
-* [Admission Configuration for the `PodSecurity` Admission Plugin](usage/pod-security.md)
-* [Supported CPU Architectures for Shoot Worker Nodes](usage/shoot_supported_architectures.md)
-* [Workerless `Shoot`s](usage/shoot_workerless.md)
+### Project
+
+* [Projects](usage/project/projects.md)
+* [Service Account Manager](usage/project/service-account-manager.md)
+
+### Shoot
+
+* [Accessing Shoot Clusters](usage/shoot/shoot_access.md)
+* [Hibernate a Cluster](usage/shoot/shoot_hibernate.md)
+* [Shoot Info `ConfigMap`](usage/shoot/shoot_info_configmap.md)
+* [Shoot Maintenance](usage/shoot/shoot_maintenance.md)
+* [Shoot Cluster Purposes](usage/shoot/shoot_purposes.md)
+* [Shoot Scheduling Profiles](usage/shoot/shoot_scheduling_profiles.md)
+* [Shoot Status](usage/shoot/shoot_status.md)
+* [Supported CPU Architectures for Shoot Worker Nodes](usage/shoot/shoot_supported_architectures.md)
+* [Workerless `Shoot`s](usage/shoot/shoot_workerless.md)
+* [Shoot Workers Settings](usage/shoot/shoot_workers_settings.md)
+
+### Shoot Operations
+
+* [Shoot Credentials Rotation](usage/shoot-operations/shoot_credentials_rotation.md)
+* [Trigger shoot operations](usage/shoot-operations/shoot_operations.md)
+* [Shoot Updates and Upgrades](usage/shoot-operations/shoot_updates.md)
+* [Shoot Kubernetes and Operating System Versioning](usage/shoot-operations/shoot_versions.md)
+* [Supported Kubernetes versions](usage/shoot-operations/supported_k8s_versions.md)
+* [Controlling the Kubernetes versions for specific worker pools](usage/shoot-operations/worker_pool_k8s_versions.md)
+
+### High Avaliability
+
+* [Shoot High-Availability Control Plane](usage/high-availability/shoot_high_availability.md)
+* [Shoot High-Availability Best Practices](usage/high-availability/shoot_high_availability_best_practices.md)
+
+### Security
+
+* [Default Seccomp Profile](usage/security/default_seccomp_profile.md)
+* [ETCD Encryption Config](usage/security/etcd_encryption_config.md)
+* [OpenIDConnect presets](usage/security/openidconnect-presets.md)
+* [Admission Configuration for the `PodSecurity` Admission Plugin](usage/security/pod-security.md)
+* [Audit a Kubernetes cluster](usage/security/shoot_auditpolicy.md)
+* [Shoot `ServiceAccount` Configurations](usage/security/shoot_serviceaccounts.md)
+
+### Networking
+
+* [Custom `CoreDNS` configuration](usage/networking/custom-dns-config.md)
+* [DNS Search Path Optimization](usage/networking/dns-search-path-optimization.md)
+* [ExposureClasses](usage/networking/exposureclasses.md)
+* [`NodeLocalDNS` feature](usage/networking/node-local-dns.md)
+* [Shoot `KUBERNETES_SERVICE_HOST` Environment Variable Injection](usage/networking/shoot_kubernetes_service_host_injection.md)
+* [Shoot Networking](usage/networking/shoot_networking.md)
+
+### Autoscaling
+
+* [DNS Autoscaling](usage/autoscaling/dns-autoscaling.md)
+* [Shoot Auto-Scaling Configuration](usage/autoscaling/shoot_autoscaling.md)
+* [Shoot Pod Auto-Scaling Best Practices](usage/autoscaling/shoot_pod_autoscaling_best_practices.md)
+
+### Observability
+
+* [Logging](usage/observability/logging.md)
+
+### Advanced
+
+* [`containerd` Registry Configuration](usage/advanced/containerd-registry-configuration.md)
+* [Endpoints and Ports of a Shoot Control-Plane](usage/advanced/control-plane-endpoints-and-ports.md)
+* [(Custom) CSI components](usage/advanced/csi_components.md)
+* [Custom `containerd` configuration](usage/advanced/custom-containerd-config.md)
+* [Readiness of Shoot Worker Nodes](usage/advanced/node-readiness.md)
+* [Cleanup of Shoot clusters in deletion](usage/advanced/shoot_cleanup.md)
+* [Tolerations](usage/advanced/tolerations.md)
 
 ## [API Reference](api-reference/README.md)
 
@@ -127,7 +149,9 @@
 * [Logging in Gardener Components](development/logging.md)
 * [Changing the API](development/changing-the-api.md)
 * [Secrets Management for Seed and Shoot Clusters](development/secrets_management.md)
+* [IPv6 in Gardener Clusters](development/ipv6.md)
 * [Releases, Features, Hotfixes](development/process.md)
+* [Reversed Cluster VPN](development/reversed-vpn-tunnel.md)
 * [Adding New Cloud Providers](development/new-cloud-provider.md)
 * [Adding Support For A New Kubernetes Version](development/new-kubernetes-version.md)
 * [Extending the Monitoring Stack](development/monitoring-stack.md)
@@ -136,6 +160,7 @@
 * [High Availability Of Deployed Components](development/high-availability.md)
 * [Checklist For Adding New Components](development/component-checklist.md)
 * [Defaulting Strategy and Developer Guideline](development/defaulting.md)
+* [Autoscaling Specifics for Components](development/autoscaling-specifics-for-components.md)
 
 ## Extensions
 
@@ -208,6 +233,8 @@
 * [Seed Bootstrapping](operations/seed_bootstrapping.md)
 * [Seed Settings](operations/seed_settings.md)
 * [Topology-Aware Traffic Routing](operations/topology_aware_routing.md)
+* [Trusted TLS certificate for shoot control planes](operations/trusted-tls-for-control-planes.md)
+* [Trusted TLS certificate for garden runtime cluster](operations/trusted-tls-for-garden-runtime.md)
 
 ## Monitoring
 

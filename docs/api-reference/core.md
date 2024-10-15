@@ -4857,7 +4857,7 @@ triggered.</p>
 Each item is a Kubernetes resource name in plural (resource or resource.group) that should be encrypted.
 Note that configuring a custom resource is only supported for versions &gt;= 1.26.
 Wildcards are not supported for now.
-See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md">https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md</a> for more details.</p>
+See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md">https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md</a> for more details.</p>
 </td>
 </tr>
 </tbody>
@@ -8359,7 +8359,7 @@ string
 <td>
 <em>(Optional)</em>
 <p>IPFamilies specifies the IP protocol versions to use for shoot networking. This field is immutable.
-See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md">https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md</a>.
+See <a href="https://github.com/gardener/gardener/blob/master/docs/development/ipv6.md">https://github.com/gardener/gardener/blob/master/docs/development/ipv6.md</a>.
 Defaults to [&ldquo;IPv4&rdquo;].</p>
 </td>
 </tr>
@@ -9835,7 +9835,7 @@ in the seed cluster.</p>
 <td>
 <em>(Optional)</em>
 <p>IPFamilies specifies the IP protocol versions to use for seed networking. This field is immutable.
-See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md">https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md</a>.
+See <a href="https://github.com/gardener/gardener/blob/master/docs/development/ipv6.md">https://github.com/gardener/gardener/blob/master/docs/development/ipv6.md</a>.
 Defaults to [&ldquo;IPv4&rdquo;].</p>
 </td>
 </tr>
@@ -12293,7 +12293,7 @@ LastMaintenance
 <em>(Optional)</em>
 <p>EncryptedResources is the list of resources in the Shoot which are currently encrypted.
 Secrets are encrypted by default and are not part of the list.
-See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md">https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md</a> for more details.</p>
+See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md">https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md</a> for more details.</p>
 </td>
 </tr>
 <tr>

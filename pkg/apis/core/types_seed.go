@@ -158,7 +158,7 @@ type SeedNetworks struct {
 	// in the seed cluster.
 	BlockCIDRs []string
 	// IPFamilies specifies the IP protocol versions to use for seed networking. This field is immutable.
-	// See https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md.
+	// See https://github.com/gardener/gardener/blob/master/docs/development/ipv6.md.
 	// Defaults to ["IPv4"].
 	IPFamilies []IPFamily
 }

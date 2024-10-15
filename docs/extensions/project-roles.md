@@ -2,7 +2,7 @@
 
 The `Project` resource allows to specify a list of roles for every member (`.spec.members[*].roles`).
 There are a few standard roles defined by Gardener itself.
-Please consult [Projects](../usage/projects.md) for further information.
+Please consult [Projects](../usage/project/projects.md) for further information.
 
 However, extension controllers running in the garden cluster may also create `CustomResourceDefinition`s that project members might be able to CRUD.
 For this purpose, Gardener also allows to specify extension roles.

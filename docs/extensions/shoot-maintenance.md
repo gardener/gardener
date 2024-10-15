@@ -1,6 +1,6 @@
 # Shoot Maintenance
 
-There is a general [document about shoot maintenance](../usage/shoot_maintenance.md) that you might want to read.
+There is a general [document about shoot maintenance](../usage/shoot/shoot_maintenance.md) that you might want to read.
 Here, we describe how you can influence certain operations that happen during a shoot maintenance.
 
 ## Restart Control Plane Controllers

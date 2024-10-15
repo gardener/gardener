@@ -211,7 +211,7 @@ spec:
   #     httpAccessVerbosity: 3
   #   defaultNotReadyTolerationSeconds: 300
   #   defaultUnreachableTolerationSeconds: 300
-  #   encryptionConfig: # See https://github.com/gardener/gardener/blob/master/docs/usage/etcd_encryption_config.md
+  #   encryptionConfig: # See https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md
   #     resources: # secrets are always encrypted
   #     - configmaps
   #     - customresource.fancyoperator.io # requires Kubernetes version >= 1.26

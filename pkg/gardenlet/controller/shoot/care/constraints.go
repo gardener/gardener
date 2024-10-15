@@ -259,7 +259,7 @@ func (c *Constraint) checkIfCRDsWithProblematicConversionWebhooksPresent(ctx con
 	if crdsWithProblematicConversionWebhooks.Len() > 0 {
 		return gardencorev1beta1.ConditionFalse,
 			"CRDsWithProblematicConversionWebhooks",
-			fmt.Sprintf("Some CRDs in your cluster have multiple stored versions present and have a conversion webhook configured: %s. Please see https://github.com/gardener/gardener/blob/master/docs/usage/shoot_status.md#constraints for more details.",
+			fmt.Sprintf("Some CRDs in your cluster have multiple stored versions present and have a conversion webhook configured: %s. Please see https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_status.md#constraints for more details.",
 				strings.Join(sets.List(crdsWithProblematicConversionWebhooks), ", ")),
 			nil
 	}

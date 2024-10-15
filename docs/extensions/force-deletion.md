@@ -1,6 +1,6 @@
 # Force Deletion
 
-From `v1.81`, Gardener supports [Shoot Force Deletion](../usage/shoot_operations.md#force-deletion). All extension controllers should also properly support it. This document outlines some important points that extension maintainers should keep in mind to support force deletion in their extensions.
+From `v1.81`, Gardener supports [Shoot Force Deletion](../usage/shoot-operations/shoot_operations.md#force-deletion). All extension controllers should also properly support it. This document outlines some important points that extension maintainers should keep in mind to support force deletion in their extensions.
 
 ## Overall Principles
 

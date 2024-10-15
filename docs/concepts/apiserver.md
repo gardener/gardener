@@ -46,7 +46,7 @@ End-users can read and/or write `Secret`s in their project namespaces in the gar
 `InternalSecret`s are defined like plain Kubernetes `Secret`s, behave exactly like them, and can be used in the same manners. The only difference is, that the `InternalSecret` resource is a dedicated API resource (exposed by gardener-apiserver).
 This allows separating access to "normal" secrets and internal secrets by the usual RBAC means.
 
-Gardener uses an `InternalSecret` per Shoot for syncing the client CA to the project namespace in the garden cluster (named `<shoot-name>.ca-client`). The [`shoots/adminkubeconfig` subresource](../usage/shoot_access.md#shootsadminkubeconfig-subresource) signs short-lived client certificates by retrieving the CA from the `InternalSecret`.
+Gardener uses an `InternalSecret` per Shoot for syncing the client CA to the project namespace in the garden cluster (named `<shoot-name>.ca-client`). The [`shoots/adminkubeconfig` subresource](../usage/shoot/shoot_access.md#shootsadminkubeconfig-subresource) signs short-lived client certificates by retrieving the CA from the `InternalSecret`.
 
 Operators should configure `gardener-apiserver` to encrypt the `internalsecrets.core.gardener.cloud` resource in etcd.
 
@@ -100,7 +100,7 @@ Please see [this](../../example/90-shoot.yaml) example manifest and consult the 
 
 ## `(Cluster)OpenIDConnectPreset`s
 
-Please see [this](../usage/openidconnect-presets.md) separate documentation file.
+Please see [this](../usage/security/openidconnect-presets.md) separate documentation file.
 
 ## Overview Data Model
 

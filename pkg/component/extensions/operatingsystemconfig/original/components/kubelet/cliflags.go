@@ -68,7 +68,7 @@ func nodeLabelFlags(nodeLabels map[string]string) []string {
 		// If users specify prohibited worker pool labels (e.g., node-role.kubernetes.io/default) that are relevant for
 		// scheduling node-critical components (e.g., used in nodeSelectors of DaemonSets), they need to use different label
 		// keys. However, excluding those prohibited labels here doesn't make things worse than they are today for them.
-		// It only prevents them for making use of gardener's node readiness feature (see docs/usage/node-readiness.md).
+		// It only prevents them for making use of gardener's node readiness feature (see docs/usage/advanced/node-readiness.md).
 		if !kubernetesutils.IsNodeLabelAllowedForKubelet(key) {
 			continue
 		}

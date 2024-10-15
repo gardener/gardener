@@ -73,7 +73,7 @@ Concretely, all seed system components should respect the following conventions:
 
 ## Shoot Clusters
 
-The `Shoot` specification allows configuring "high availability" as well as the failure tolerance type for the control plane components, see [Highly Available Shoot Control Plane](../usage/shoot_high_availability.md) for details.
+The `Shoot` specification allows configuring "high availability" as well as the failure tolerance type for the control plane components, see [Highly Available Shoot Control Plane](../usage/high-availability/shoot_high_availability.md) for details.
 
 Regarding the seed cluster selection, the only constraint is that shoot clusters with failure tolerance type `zone` are only allowed to run on seed clusters with at least three zones.
 All other shoot clusters (non-HA or those with failure tolerance type `node`) can run on seed clusters with any number of zones.
