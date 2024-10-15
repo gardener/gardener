@@ -127,15 +127,5 @@ func ValidateIPFamilies(ipFamilies []extensionsv1alpha1.IPFamily, fldPath *field
 		}
 	}
 
-	if len(allErrs) > 0 {
-		// further validation doesn't make any sense, because there are unsupported or duplicate IP families
-		return allErrs
-	}
-
-	// validate: only supported single-stack/dual-stack combinations
-	if len(ipFamilies) > 1 {
-		allErrs = append(allErrs, field.Invalid(fldPath, ipFamilies, "dual-stack networking is not supported"))
-	}
-
 	return allErrs
 }
