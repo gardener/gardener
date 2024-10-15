@@ -93,7 +93,7 @@ var _ = Describe("VPNShoot", func() {
 				MetricsPath: ptr.To("/probe"),
 				Params:      map[string][]string{"module": {"http_apiserver"}},
 				KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
-					Role:       "pod",
+					Role:       "Pod",
 					APIServer:  ptr.To("https://kube-apiserver"),
 					Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{"kube-system"}},
 					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{

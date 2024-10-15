@@ -141,7 +141,7 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 			MetricsPath: ptr.To("/probe"),
 			Params:      map[string][]string{"module": {"http_apiserver"}},
 			KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
-				Role:       "pod",
+				Role:       monitoringv1alpha1.KubernetesRolePod,
 				APIServer:  ptr.To("https://" + v1beta1constants.DeploymentNameKubeAPIServer),
 				Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{metav1.NamespaceSystem}},
 				Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{

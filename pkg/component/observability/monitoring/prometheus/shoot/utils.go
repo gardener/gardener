@@ -19,16 +19,9 @@ import (
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 )
 
-const (
-	// RoleEndpoints is a constant for the 'endpoints' role.
-	RoleEndpoints monitoringv1alpha1.Role = "endpoints"
-	// RolePod is a constant for the 'pod' role.
-	RolePod monitoringv1alpha1.Role = "pod"
-)
-
 // KubernetesServiceDiscoveryConfig is the configuration for the Kubernetes service discovery.
 type KubernetesServiceDiscoveryConfig struct {
-	Role monitoringv1alpha1.Role
+	Role monitoringv1alpha1.KubernetesRole
 
 	// when 'Role' is 'pod'
 	PodNamePrefix     string
@@ -45,7 +38,7 @@ type KubernetesServiceDiscoveryConfig struct {
 func ClusterComponentScrapeConfigSpec(jobName string, sdConfig KubernetesServiceDiscoveryConfig, allowedMetrics ...string) monitoringv1alpha1.ScrapeConfigSpec {
 	var relabelConfigs []monitoringv1.RelabelConfig
 	switch sdConfig.Role {
-	case RolePod:
+	case monitoringv1alpha1.KubernetesRolePod:
 		relabelConfigs = []monitoringv1.RelabelConfig{
 			{
 				SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name"},
@@ -59,7 +52,7 @@ func ClusterComponentScrapeConfigSpec(jobName string, sdConfig KubernetesService
 			},
 		}
 
-	case RoleEndpoints:
+	case monitoringv1alpha1.KubernetesRoleEndpoint:
 		relabelConfigs = []monitoringv1.RelabelConfig{{
 			SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_name", "__meta_kubernetes_endpoint_port_name"},
 			Action:       "keep",
