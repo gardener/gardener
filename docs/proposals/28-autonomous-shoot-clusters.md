@@ -111,7 +111,7 @@ After a cluster has been set up with `gardenadm`, the next step is to deploy a s
 This `gardenlet` has coordinates for an existing Gardener system it can connect to such that it can register the `Shoot` resource (similar to how it registers the `Seed` resource today when running in a seed cluster).
 Any day-2 operations like updates or upgrades will be performed by the `gardenlet` and via the `Shoot` API.
 As a consequence, there will be no command in `gardenadm` similar to [`kubeadm upgrade`](https://kubernetes.io/docs/reference/setup-tools/kubeadm/kubeadm-upgrade/).
-It is explicitly out of scope to support cluster management without a `gardenlet` connected to a Gardener system (see [this section](#gardenadm-connect) for more details).
+It is explicitly out of scope to support cluster management without a `gardenlet` connected to a Gardener system (see [`gardenadm connect` section](#gardenadm-connect) for more details).
 
 ### Prerequisites
 
@@ -172,7 +172,7 @@ The high-level steps executed by the command are as follows:
    Also, it should be OS-agnostic (since there is no operating system config extension running anywhere yet).
 3. Reconcile the `OperatingSystemConfig` resource using the controller logic of [`gardener-node-agent`](../concepts/node-agent.md).
 4. `kubelet` starts and runs the static pods for the minimal standard Kubernetes control plane (`etcd`, `kube-apiserver`, `kube-controller-manager` and `kube-scheduler`).
-5. Deploy [`gardener-resource-manager`](../concepts/resource-manager.md) in [host network mode](#host-network-vs-pod-network).
+5. Deploy [`gardener-resource-manager`](../concepts/resource-manager.md) in [host network mode](#host-network-vs-pod-network) into the `kube-system` namespace.
 6. Apply the corresponding provider and networking extensions in [host network mode](#host-network-vs-pod-network).
 7. Deploy `kube-proxy` and CoreDNS for service routing and domain name resolution.
 8. Create a [`Network` resource](../extensions/network.md) and apply it to generate `ManagedResource` associated with the pod network.
@@ -255,7 +255,7 @@ This means that a [bootstrap token](https://kubernetes.io/docs/reference/access-
 We will provide commands to create and manage such bootstrap tokens:
 
 - `gardenadm token generate` will generate a random bootstrap token.
-- `gardenadm token create [token]` will create a bootstrap token.
+- `gardenadm token create [token]` will create a bootstrap token on the server.
   If no `[token]` is provided, the command will generate a random token instead.
 - `gardenadm token delete [token-id]` will delete a bootstrap token.
 - `gardenadm token list` will list all bootstrap tokens on the server.
@@ -327,7 +327,7 @@ We distinguish between two different scenarios (for now):
 
 - [High Touch](#high-touch), meaning that there is no programmable infrastructure available.
   We consider this the "bare metal" or "edge" use-case, where at first machines must be (often manually) prepared by human operators.
-  In this case, network setup or machine management is out of scope.
+  In this case, network setup (e.g., VPCs, subnets, route tables, etc.) and machine management are out of scope.
 - [Medium Touch](#medium-touch), meaning that there is programmable infrastructure available where we can leverage [provider extensions](../../extensions/README.md#infrastructure-provider) and [`machine-controller-manager`](https://github.com/gardener/machine-controller-manager) in order to manage the network setup and the machines.
 
 The general procedure of bootstrapping an autonomous shoot cluster is similar in both scenarios.
@@ -349,6 +349,12 @@ The challenge is that both Gardener provider extensions and `machine-controller-
 Hence, we propose to use a [KinD cluster](https://kind.sigs.k8s.io), deploy the needed components into it, and create the necessary `Infrastructure`, `MachineClass`, and `MachineDeployment` resources.
 This way, these components can be reused as-is, without big changes or re-wiring of these complex components to run in-process with a fake client (as we do during the `gardenadm init` flow for the simpler components).
 Once the controllers have reconciled successfully, we can export the created infrastructure state and the `Machine` resources, bootstrap the autonomous shoot cluster similar to the [general flow](#commands) also needed for the [High Touch scenario](#high-touch), and import the state again into the created cluster.
+
+There is no special assumption about the location of the KinD cluster.
+It should run somewhere where it can access the API of the target infrastructure.
+In a public cloud environment, that means anywhere with internet access.
+In a private cloud environment, e.g. with OpenStack, the KinD cluster should be in a network being able to access the corresponding API, e.g., by being in the same infrastructure or having a VPN tunnel.
+It can run on the laptop of the operator if the network connectivity is ensured, or it could be a virtual machine next to the target.
 
 > [!NOTE]
 > Since worker node management will be taken over by `machine-controller-manager`, [step 4](#commands) (joining worker nodes) from above list can be omitted.
@@ -444,7 +450,7 @@ Without this consideration, the feature may increase the operational complexity 
 ### Network Connectivity to Garden Cluster
 
 Another aspect that was only barely touched in this GEP is the reliability of the network connectivity between the autonomous shoot cluster and Gardener.
-In the section [`gardenadm connect`](#gardenadm-connect), it was mentioned that the cluster should function also when air-gapped/when it has limited or no network connectivity.
+In the [`gardenadm connect` section](#gardenadm-connect), it was mentioned that the cluster should function also when air-gapped/when it has limited or no network connectivity.
 However, we are deliberately vague what "limited network connectivity" means.
 Detailing this aspect out can be considered future work.
 As mentioned in the corresponding section, the [version skew](../deployment/version_skew_policy.md) plays an important role in this context, determining the maximum time the autonomous shoot cluster can be disconnected from Gardener.
@@ -454,7 +460,7 @@ Long term support of Gardener and associated components may also be considered f
 
 Due to the changed network layout of autonomous shoot clusters, the usage of some shoot components needs to be reconsidered.
 Examples are the VPN connection between control plane and data plane, the `apiserver-proxy` and the way metrics are scraped.
-This GEP does not cover these changes in detail, but they are important to be considered in the future.
+This GEP does not cover these changes in detail, but they are important to be considered when implementing it.
 The following examples are just used to illustrate the need for changes, but are not meant to be exhaustive:
 - The VPN connection between control plane and data plane is not needed anymore as the control plane runs on the same network as the data plane.
 Previously, the VPN connection was used to secure the communication between the control plane and the data plane.
