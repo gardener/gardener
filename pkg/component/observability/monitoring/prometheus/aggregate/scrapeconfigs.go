@@ -35,7 +35,7 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 					},
 				},
 				KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
-					Role:       "service",
+					Role:       monitoringv1alpha1.KubernetesRoleService,
 					Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{v1beta1constants.GardenNamespace}},
 				}},
 				RelabelConfigs: []monitoringv1.RelabelConfig{

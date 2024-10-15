@@ -828,7 +828,7 @@ func (v *vpnSeedServer) deployScrapeConfig(ctx context.Context) error {
 		metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", shoot.Label)
 		scrapeConfig.Spec = monitoringv1alpha1.ScrapeConfigSpec{
 			KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
-				Role:       "service",
+				Role:       monitoringv1alpha1.KubernetesRoleService,
 				Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{v.namespace}},
 			}},
 			RelabelConfigs: []monitoringv1.RelabelConfig{

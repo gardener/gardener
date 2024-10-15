@@ -127,7 +127,7 @@ func (c *coreDNS) Deploy(ctx context.Context) error {
 		scrapeConfig.Spec = shoot.ClusterComponentScrapeConfigSpec(
 			"coredns",
 			shoot.KubernetesServiceDiscoveryConfig{
-				Role:             "endpoints",
+				Role:             monitoringv1alpha1.KubernetesRoleEndpoint,
 				ServiceName:      serviceName,
 				EndpointPortName: portNameMetrics,
 			},

@@ -344,7 +344,7 @@ func (k *kubeStateMetrics) standardScrapeConfigSpec() monitoringv1alpha1.ScrapeC
 		KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
 			// Service is used, because we only care about metric from one kube-state-metrics instance and not multiple
 			// in HA setup.
-			Role:       "service",
+			Role:       monitoringv1alpha1.KubernetesRoleService,
 			Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{k.namespace}},
 		}},
 		RelabelConfigs: []monitoringv1.RelabelConfig{
@@ -530,7 +530,7 @@ func (k *kubeStateMetrics) scrapeConfigSeed() *monitoringv1alpha1.ScrapeConfig {
 	scrapeConfig.Labels = monitoringutils.Labels(seed.Label)
 	scrapeConfig.Spec = monitoringv1alpha1.ScrapeConfigSpec{
 		KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
-			Role:       "service",
+			Role:       monitoringv1alpha1.KubernetesRoleService,
 			Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{k.namespace}},
 		}},
 		RelabelConfigs: []monitoringv1.RelabelConfig{
@@ -567,7 +567,7 @@ func (k *kubeStateMetrics) scrapeConfigGarden() *monitoringv1alpha1.ScrapeConfig
 	scrapeConfig.Labels = monitoringutils.Labels(garden.Label)
 	scrapeConfig.Spec = monitoringv1alpha1.ScrapeConfigSpec{
 		KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
-			Role:       "service",
+			Role:       monitoringv1alpha1.KubernetesRoleService,
 			Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{k.namespace}},
 		}},
 		RelabelConfigs: []monitoringv1.RelabelConfig{

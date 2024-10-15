@@ -684,7 +684,7 @@ var _ = Describe("VpnSeedServer", func() {
 				},
 				Spec: monitoringv1alpha1.ScrapeConfigSpec{
 					KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
-						Role:       "service",
+						Role:       "Service",
 						Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{namespace}},
 					}},
 					RelabelConfigs: []monitoringv1.RelabelConfig{

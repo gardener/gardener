@@ -43,7 +43,7 @@ var _ = Describe("ScrapeConfig", func() {
 							Key:                  "token",
 						}},
 						KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
-							Role:       "service",
+							Role:       "Service",
 							Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{"kube-system"}},
 							APIServer:  ptr.To("https://kube-apiserver:443"),
 							TLSConfig:  &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},

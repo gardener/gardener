@@ -62,7 +62,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 			Spec: monitoringv1alpha1.ScrapeConfigSpec{
 				HonorLabels: ptr.To(false),
 				KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
-					Role:       "endpoints",
+					Role:       monitoringv1alpha1.KubernetesRoleEndpoint,
 					Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{namespace}},
 				}},
 				SampleLimit: ptr.To(uint64(500)),
@@ -195,7 +195,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 						Key:                  secretsutils.DataKeyCertificateBundle,
 					}}},
 					KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
-						Role:            "node",
+						Role:            monitoringv1alpha1.KubernetesRoleNode,
 						APIServer:       ptr.To("https://" + v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port)),
 						Namespaces:      &monitoringv1alpha1.NamespaceDiscovery{Names: []string{metav1.NamespaceSystem}},
 						FollowRedirects: ptr.To(false),
@@ -313,7 +313,7 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 						Key:                  secretsutils.DataKeyCertificateBundle,
 					}}},
 					KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
-						Role:            "node",
+						Role:            monitoringv1alpha1.KubernetesRoleNode,
 						APIServer:       ptr.To("https://" + v1beta1constants.DeploymentNameKubeAPIServer),
 						FollowRedirects: ptr.To(true),
 						Namespaces:      &monitoringv1alpha1.NamespaceDiscovery{Names: []string{metav1.NamespaceSystem}},

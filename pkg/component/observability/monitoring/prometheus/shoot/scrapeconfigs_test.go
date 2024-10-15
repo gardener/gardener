@@ -63,7 +63,7 @@ var _ = Describe("ScrapeConfigs", func() {
 					Spec: monitoringv1alpha1.ScrapeConfigSpec{
 						HonorLabels: ptr.To(false),
 						KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
-							Role:       "endpoints",
+							Role:       "Endpoints",
 							Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{namespace}},
 						}},
 						SampleLimit: ptr.To(uint64(500)),
@@ -183,7 +183,7 @@ var _ = Describe("ScrapeConfigs", func() {
 								Key:                  "bundle.crt",
 							}}},
 							KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
-								Role:            "node",
+								Role:            "Node",
 								APIServer:       ptr.To("https://kube-apiserver:443"),
 								Namespaces:      &monitoringv1alpha1.NamespaceDiscovery{Names: []string{"kube-system"}},
 								FollowRedirects: ptr.To(false),
@@ -289,7 +289,7 @@ var _ = Describe("ScrapeConfigs", func() {
 								Key:                  "bundle.crt",
 							}}},
 							KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
-								Role:            "node",
+								Role:            "Node",
 								APIServer:       ptr.To("https://kube-apiserver"),
 								FollowRedirects: ptr.To(true),
 								Namespaces:      &monitoringv1alpha1.NamespaceDiscovery{Names: []string{"kube-system"}},

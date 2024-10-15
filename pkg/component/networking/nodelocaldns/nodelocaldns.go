@@ -108,7 +108,7 @@ func (n *nodeLocalDNS) Deploy(ctx context.Context) error {
 		scrapeConfig.Spec = shoot.ClusterComponentScrapeConfigSpec(
 			"node-local-dns",
 			shoot.KubernetesServiceDiscoveryConfig{
-				Role:              "pod",
+				Role:              monitoringv1alpha1.KubernetesRolePod,
 				PodNamePrefix:     "node-local",
 				ContainerName:     containerName,
 				ContainerPortName: metricsPortName,
@@ -140,7 +140,7 @@ func (n *nodeLocalDNS) Deploy(ctx context.Context) error {
 		scrapeConfigErrors.Spec = shoot.ClusterComponentScrapeConfigSpec(
 			"node-local-dns-errors",
 			shoot.KubernetesServiceDiscoveryConfig{
-				Role:              "pod",
+				Role:              monitoringv1alpha1.KubernetesRolePod,
 				PodNamePrefix:     "node-local",
 				ContainerName:     containerName,
 				ContainerPortName: errorMetricsPortName,
