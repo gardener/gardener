@@ -25,7 +25,6 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/garden/system/virtual"
 	gardeneraccess "github.com/gardener/gardener/pkg/component/gardener/access"
-	gardenerapiserver "github.com/gardener/gardener/pkg/component/gardener/apiserver"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	"github.com/gardener/gardener/pkg/component/kubernetes/controllermanager"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
@@ -133,6 +132,15 @@ func (r *Reconciler) delete(
 			Name: "Destroying Gardener Admission Controller",
 			Fn:   component.OpDestroyAndWait(c.gardenerAdmissionController).Destroy,
 		})
+		destroyGardenerAPIServer = g.Add(flow.Task{
+			Name: "Destroying Gardener API Server",
+			Fn:   component.OpDestroyAndWait(c.gardenerAPIServer).Destroy,
+		})
+		destroyVirtualSystemResources = g.Add(flow.Task{
+			Name:         "Destroying virtual system resources",
+			Fn:           component.OpDestroyAndWait(c.virtualSystem).Destroy,
+			Dependencies: flow.NewTaskIDs(destroyGardenerAPIServer),
+		})
 		syncPointVirtualGardenManagedResourcesDestroyed = flow.NewTaskIDs(
 			destroyGardenerDiscoveryServer,
 			destroyTerminalControllerManager,
@@ -140,6 +148,8 @@ func (r *Reconciler) delete(
 			destroyGardenerScheduler,
 			destroyGardenerControllerManager,
 			destroyGardenerAdmissionController,
+			destroyGardenerAPIServer,
+			destroyVirtualSystemResources,
 		)
 
 		ensureOnlyCleanupRelevantVirtualManagedResourcesExist = g.Add(flow.Task{
@@ -148,16 +158,6 @@ func (r *Reconciler) delete(
 			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenManagedResourcesDestroyed),
 		})
 
-		destroyGardenerAPIServer = g.Add(flow.Task{
-			Name:         "Destroying Gardener API Server",
-			Fn:           component.OpDestroyAndWait(c.gardenerAPIServer).Destroy,
-			Dependencies: flow.NewTaskIDs(ensureOnlyCleanupRelevantVirtualManagedResourcesExist),
-		})
-		destroyVirtualSystemResources = g.Add(flow.Task{
-			Name:         "Destroying virtual system resources",
-			Fn:           component.OpDestroyAndWait(c.virtualSystem).Destroy,
-			Dependencies: flow.NewTaskIDs(destroyGardenerAPIServer),
-		})
 		destroyVirtualGardenGardenerAccess = g.Add(flow.Task{
 			Name:         "Destroying Gardener virtual garden access resources",
 			Fn:           component.OpDestroyAndWait(c.virtualGardenGardenerAccess).Destroy,
@@ -170,8 +170,6 @@ func (r *Reconciler) delete(
 		})
 
 		syncPointCleanupRelevantVirtualManagedResourcesDestroyed = flow.NewTaskIDs(
-			destroyGardenerAPIServer,
-			destroyVirtualSystemResources,
 			destroyVirtualGardenGardenerAccess,
 			destroyKubeControllerManager,
 		)
@@ -375,7 +373,7 @@ func (r *Reconciler) delete(
 }
 
 func (r *Reconciler) checkIfNonCleanupRelevantVirtualGardenManagedResourcesExist() func(context.Context) error {
-	return r.checkIfVirtualGardenManagedResourcesExist(gardenerapiserver.ManagedResourceNameVirtual, virtual.ManagedResourceName, gardeneraccess.ManagedResourceName, controllermanager.ManagedResourceName)
+	return r.checkIfVirtualGardenManagedResourcesExist(virtual.ManagedResourceName, gardeneraccess.ManagedResourceName, controllermanager.ManagedResourceName)
 }
 
 func (r *Reconciler) checkIfVirtualGardenManagedResourcesExist(excludedNames ...string) func(context.Context) error {
