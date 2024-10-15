@@ -90,8 +90,8 @@ func validateResourceManagerControllerConfiguration(conf config.ResourceManagerC
 		allErrs = append(allErrs, field.Required(fldPath.Child("resourceClass"), "must provide a resource class"))
 	}
 
-	if conf.KubeletCSRApprover.Enabled {
-		allErrs = append(allErrs, validateConcurrentSyncs(conf.KubeletCSRApprover.ConcurrentSyncs, fldPath.Child("kubeletCSRApprover"))...)
+	if conf.CSRApprover.Enabled {
+		allErrs = append(allErrs, validateConcurrentSyncs(conf.CSRApprover.ConcurrentSyncs, fldPath.Child("csrApprover"))...)
 	}
 
 	if conf.GarbageCollector.Enabled {

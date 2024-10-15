@@ -394,7 +394,7 @@ var _ = Describe("ResourceManager", func() {
 						ConcurrentSyncs: &maxConcurrentHealthWorkers,
 						SyncPeriod:      &healthSyncPeriod,
 					},
-					KubeletCSRApprover: resourcemanagerv1alpha1.KubeletCSRApproverControllerConfig{
+					CSRApprover: resourcemanagerv1alpha1.CSRApproverControllerConfig{
 						Enabled:         !isWorkerless,
 						ConcurrentSyncs: &maxConcurrentCSRApproverWorkers,
 					},
@@ -445,7 +445,7 @@ var _ = Describe("ResourceManager", func() {
 
 			if watchedNamespace != nil {
 				config.SourceClientConnection.Namespaces = []string{*watchedNamespace}
-				config.Controllers.KubeletCSRApprover.MachineNamespace = *watchedNamespace
+				config.Controllers.CSRApprover.MachineNamespace = *watchedNamespace
 			}
 
 			if targetKubeconfig != nil {

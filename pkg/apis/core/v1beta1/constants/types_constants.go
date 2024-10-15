@@ -933,6 +933,10 @@ const (
 	// should wait with reconciliation of the operating system config (to prevent too many node-agents from restarting
 	// kubelet or other critical units at the same time).
 	AnnotationNodeAgentReconciliationDelay = "node-agent.gardener.cloud/reconciliation-delay"
+	// NodeAgentsGroup is the identity group for node-agents when authenticating to the API server.
+	NodeAgentsGroup = "gardener.cloud:node-agents"
+	// NodeAgentUserNamePrefix is the identity username prefix for gardener-node-agent when authenticating to the API server.
+	NodeAgentUserNamePrefix = "gardener.cloud:node-agent:machine:"
 
 	// GardenPurposeMachineClass is a constant for the 'machineclass' value in a label.
 	GardenPurposeMachineClass = "machineclass"
