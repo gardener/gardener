@@ -238,7 +238,7 @@ func (d *deployment) deleteAdmissionVirtualClusterResources(ctx context.Context,
 		return fmt.Errorf("failed waiting for ManagedResource to be deleted: %w", err)
 	}
 
-	return managedresources.WaitUntilDeleted(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, virtualManagedResourceName(extension))
+	return nil
 }
 
 func (d *deployment) getVirtualClusterAccessSecret(name string) *gardenerutils.AccessSecret {

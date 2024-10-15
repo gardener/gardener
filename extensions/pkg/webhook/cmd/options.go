@@ -31,7 +31,7 @@ const (
 	// ServicePortFlag is the name of the command line flag to specify the service port that exposes the webhook server.
 	// If not specified it will fall back to the webhook server port.
 	ServicePortFlag = "webhook-config-service-port"
-	// NamespaceFlag is the name of the command line flag to specify the webhook config namespace for 'service' mode.
+	// NamespaceFlag is the name of the command line flag to specify the webhook config namespace where CA bundles, services etc. of the webhook are created.
 	NamespaceFlag = "webhook-config-namespace"
 	// OwnerNamespaceFlag is the name of the command line flag to specify the namespace which is used as the owner reference for the webhook registration.
 	OwnerNamespaceFlag = "webhook-config-owner-namespace"
@@ -45,7 +45,7 @@ type ServerOptions struct {
 	URL string
 	// ServicePort is the service port that exposes the webhook server.
 	ServicePort int
-	// Namespace is the webhook config namespace for 'service' mode.
+	// Namespace is the webhook config namespace where CA bundles, services etc. of the webhook are created.
 	Namespace string
 	// OwnerNamespace is the namespace which is used as the owner reference for the webhook registration.
 	OwnerNamespace string
@@ -61,7 +61,7 @@ type ServerConfig struct {
 	URL string
 	// ServicePort is the service port that exposes the webhook server.
 	ServicePort int
-	// Namespace is the webhook config namespace for 'service' mode.
+	// Namespace is the webhook config namespace where CA bundles, services etc. of the webhook are created.
 	Namespace string
 	// OwnerNamespace is the namespace which is used as the owner reference for the webhook registration.
 	OwnerNamespace string
@@ -97,7 +97,7 @@ func (w *ServerOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&w.Mode, ModeFlag, w.Mode, "The webhook mode - either 'url' (when running outside the cluster) or 'service' (when running inside the cluster).")
 	fs.StringVar(&w.URL, URLFlag, w.URL, "The webhook URL when running outside of the cluster it is serving.")
 	fs.IntVar(&w.ServicePort, ServicePortFlag, w.ServicePort, "The service port that exposes the webhook server.  If not specified it will fallback to the webhook server port.")
-	fs.StringVar(&w.Namespace, NamespaceFlag, w.Namespace, "The webhook config namespace for 'service' mode.")
+	fs.StringVar(&w.Namespace, NamespaceFlag, w.Namespace, "The webhook config namespace where CA bundles, services etc. of the webhook are created.")
 	fs.StringVar(&w.OwnerNamespace, OwnerNamespaceFlag, w.OwnerNamespace, fmt.Sprintf("The namespace used for owner reference of the webhook registration. Defaults to %q flag if not set.", NamespaceFlag))
 }
 
