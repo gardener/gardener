@@ -1150,14 +1150,14 @@ var _ = Describe("helper", func() {
 			removedImages, removedVersions, addedImages, addedVersions := GetMachineImageDiff(versions1, versions2)
 
 			Expect(removedImages.UnsortedList()).To(ConsistOf("image-1"))
-			Expect(removedVersions).To(Equal(
+			Expect(removedVersions).To(BeEquivalentTo(
 				map[string]sets.Set[string]{
 					"image-1": sets.New[string]("version-1", "version-2"),
 					"image-2": sets.New[string]("version-1"),
 				},
 			))
 			Expect(addedImages.UnsortedList()).To(ConsistOf("image-3"))
-			Expect(addedVersions).To(Equal(
+			Expect(addedVersions).To(BeEquivalentTo(
 				map[string]sets.Set[string]{
 					"image-2": sets.New[string]("version-3"),
 					"image-3": sets.New[string]("version-1", "version-2"),

@@ -61,9 +61,8 @@ type NamespacedCloudProfileSpec struct {
 	// Parent contains a reference to a CloudProfile it inherits from.
 	Parent CloudProfileReference `json:"parent" protobuf:"bytes,7,req,name=parent"`
 	// ProviderConfig contains provider-specific configuration for the profile.
-	// +patchStrategy=json
 	// +optional
-	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty" patchStrategy:"json" protobuf:"bytes,8,opt,name=providerConfig"`
+	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty" protobuf:"bytes,8,opt,name=providerConfig"`
 }
 
 // NamespacedCloudProfileStatus holds the most recently observed status of the NamespacedCloudProfile.

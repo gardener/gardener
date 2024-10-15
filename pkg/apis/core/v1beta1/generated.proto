@@ -1920,7 +1920,6 @@ message NamespacedCloudProfileSpec {
   optional CloudProfileReference parent = 7;
 
   // ProviderConfig contains provider-specific configuration for the profile.
-  // +patchStrategy=json
   // +optional
   optional .k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 8;
 }
