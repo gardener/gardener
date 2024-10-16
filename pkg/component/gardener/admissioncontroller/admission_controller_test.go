@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -96,7 +95,6 @@ var _ = Describe("GardenerAdmissionController", func() {
 
 			// These are typical configuration values set for the admission controller and serves as the base for the following tests.
 			testValues = Values{
-				RuntimeVersion: semver.MustParse("v1.27.0"),
 				ResourceAdmissionConfiguration: &admissioncontrollerconfigv1alpha1.ResourceAdmissionConfiguration{
 					Limits: []admissioncontrollerconfigv1alpha1.ResourceLimit{
 						{
@@ -729,11 +727,7 @@ func service(namespace string, testValues Values) *corev1.Service {
 
 	if testValues.TopologyAwareRoutingEnabled {
 		metav1.SetMetaDataLabel(&svc.ObjectMeta, "endpoint-slice-hints.resources.gardener.cloud/consider", "true")
-		if testValues.RuntimeVersion.LessThan(semver.MustParse("v1.27")) {
-			metav1.SetMetaDataAnnotation(&svc.ObjectMeta, "service.kubernetes.io/topology-aware-hints", "auto")
-		} else {
-			metav1.SetMetaDataAnnotation(&svc.ObjectMeta, "service.kubernetes.io/topology-mode", "auto")
-		}
+		metav1.SetMetaDataAnnotation(&svc.ObjectMeta, "service.kubernetes.io/topology-mode", "auto")
 	}
 
 	return svc
