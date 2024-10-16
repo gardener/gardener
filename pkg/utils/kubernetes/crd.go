@@ -16,9 +16,14 @@ import (
 	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
+var (
+	// CRDWaitTimeout specifies the total time to wait for CRDs to become ready.
+	CRDWaitTimeout = 15 * time.Second
+)
+
 // WaitUntilCRDManifestsReady takes CRD ObjectKeys and waits for them to get ready with a timeout of 15 seconds
 func WaitUntilCRDManifestsReady(ctx context.Context, c client.Client, crdObjectKeys []client.ObjectKey) error {
-	timeoutCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	timeoutCtx, cancel := context.WithTimeout(ctx, CRDWaitTimeout)
 	defer cancel()
 
 	return retry.Until(timeoutCtx, 1*time.Second, func(ctx context.Context) (done bool, err error) {
