@@ -172,6 +172,11 @@ spec:
   #       key: value
   #   structuredAuthentication: # requires Kubernetes version >= 1.30
   #     configMapName: name-of-configmap-containing-authentication-config
+  #   structuredAuthorization: # requires Kubernetes version >= 1.30
+  #     configMapName: name-of-configmap-containing-authorization-config
+  #     kubeconfigs:
+  #     - authorizerName: name-of-authorizer-in-authorization-config
+  #       secretName: name-of-a-secret-containing-kubeconfig-for-authorizer
   #   admissionPlugins:
   #   - name: PodNodeSelector
   #     disabled: false

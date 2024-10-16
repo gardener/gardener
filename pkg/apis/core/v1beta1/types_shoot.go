@@ -841,6 +841,10 @@ type KubeAPIServerConfig struct {
 	// This field is only available for Kubernetes v1.30 or later.
 	// +optional
 	StructuredAuthentication *StructuredAuthentication `json:"structuredAuthentication,omitempty" protobuf:"bytes,17,opt,name=structuredAuthentication"`
+	// StructuredAuthorization contains configuration settings for structured authorization to the kube-apiserver.
+	// This field is only available for Kubernetes v1.30 or later.
+	// +optional
+	StructuredAuthorization *StructuredAuthorization `json:"structuredAuthorization,omitempty" protobuf:"bytes,18,opt,name=structuredAuthorization"`
 }
 
 // APIServerLogging contains configuration for the logs level and http access logs
@@ -923,9 +927,26 @@ type AuditPolicy struct {
 
 // StructuredAuthentication contains authentication config for kube-apiserver.
 type StructuredAuthentication struct {
-	// ConfigMapName is the name of the ConfigMap in the project namespace
-	// which contains AuthenticationConfiguration for the kube-apiserver.
+	// ConfigMapName is the name of the ConfigMap in the project namespace which contains AuthenticationConfiguration
+	// for the kube-apiserver.
 	ConfigMapName string `json:"configMapName" protobuf:"bytes,1,opt,name=configMapName"`
+}
+
+// StructuredAuthorization contains authorization config for kube-apiserver.
+type StructuredAuthorization struct {
+	// ConfigMapName is the name of the ConfigMap in the project namespace which contains AuthorizationConfiguration for
+	// the kube-apiserver.
+	ConfigMapName string `json:"configMapName" protobuf:"bytes,1,opt,name=configMapName"`
+	// Kubeconfigs is a list of references for kubeconfigs for the authorization webhooks.
+	Kubeconfigs []AuthorizerKubeconfigReference `json:"kubeconfigs" protobuf:"bytes,2,rep,name=kubeconfigs"`
+}
+
+// AuthorizerKubeconfigReference is a reference for a kubeconfig for a authorization webhook.
+type AuthorizerKubeconfigReference struct {
+	// AuthorizerName is the name of a webhook authorizer.
+	AuthorizerName string `json:"authorizerName" protobuf:"bytes,1,opt,name=authorizerName"`
+	// SecretName is the name of a secret containing the kubeconfig.
+	SecretName string `json:"secretName" protobuf:"bytes,2,opt,name=secretName"`
 }
 
 // OIDCConfig contains configuration settings for the OIDC provider.
