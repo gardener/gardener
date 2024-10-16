@@ -107,7 +107,7 @@ type ShootSpec struct {
 	// CredentialsBindingName is the name of a CredentialsBinding that has a reference to the provider credentials.
 	// The credentials will be used to create the shoot in the respective account. The field is mutually exclusive with SecretBindingName.
 	CredentialsBindingName *string
-	// AccessRestriction describe a list of access restriction for this shoot cluster.
+	// AccessRestrictions describe a list of access restrictions for this shoot cluster.
 	AccessRestrictions []AccessRestrictionWithOptions
 }
 

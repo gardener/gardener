@@ -1673,7 +1673,7 @@ Ingress
 </td>
 <td>
 <em>(Optional)</em>
-<p>AccessRestriction describe a list of access restriction for this seed cluster.</p>
+<p>AccessRestrictions describe a list of access restrictions for this seed cluster.</p>
 </td>
 </tr>
 </table>
@@ -2081,7 +2081,7 @@ The credentials will be used to create the shoot in the respective account. The 
 </td>
 <td>
 <em>(Optional)</em>
-<p>AccessRestriction describe a list of access restriction for this shoot cluster.</p>
+<p>AccessRestrictions describe a list of access restrictions for this shoot cluster.</p>
 </td>
 </tr>
 </table>
@@ -9554,7 +9554,7 @@ quality, reliability, etc.</p>
 </td>
 <td>
 <em>(Optional)</em>
-<p>AccessRestriction describe a list of access restrictions that can be used for Shoots using this region.</p>
+<p>AccessRestrictions describe a list of access restrictions that can be used for Shoots using this region.</p>
 </td>
 </tr>
 </tbody>
@@ -10800,7 +10800,7 @@ Ingress
 </td>
 <td>
 <em>(Optional)</em>
-<p>AccessRestriction describe a list of access restriction for this seed cluster.</p>
+<p>AccessRestrictions describe a list of access restrictions for this seed cluster.</p>
 </td>
 </tr>
 </tbody>
@@ -11155,7 +11155,7 @@ Ingress
 </td>
 <td>
 <em>(Optional)</em>
-<p>AccessRestriction describe a list of access restriction for this seed cluster.</p>
+<p>AccessRestrictions describe a list of access restrictions for this seed cluster.</p>
 </td>
 </tr>
 </table>
@@ -12145,7 +12145,7 @@ The credentials will be used to create the shoot in the respective account. The 
 </td>
 <td>
 <em>(Optional)</em>
-<p>AccessRestriction describe a list of access restriction for this shoot cluster.</p>
+<p>AccessRestrictions describe a list of access restrictions for this shoot cluster.</p>
 </td>
 </tr>
 </tbody>
@@ -12858,7 +12858,7 @@ The credentials will be used to create the shoot in the respective account. The 
 </td>
 <td>
 <em>(Optional)</em>
-<p>AccessRestriction describe a list of access restriction for this shoot cluster.</p>
+<p>AccessRestrictions describe a list of access restrictions for this shoot cluster.</p>
 </td>
 </tr>
 </table>

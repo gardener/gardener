@@ -21,7 +21,7 @@ spec:
   - name: us-west-1
 ```
 
-This configurations means that `Shoot`s selecting the `europe-central-1` region **can** configure an `eu-access-only` access restrictions.
+This configuration means that `Shoot`s selecting the `europe-central-1` region **can** configure an `eu-access-only` access restriction.
 `Shoot`s running in other regions cannot configure this access restriction in their specification.
 
 ## `Seed`

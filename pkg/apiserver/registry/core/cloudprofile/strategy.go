@@ -101,6 +101,9 @@ func dropExpiredVersions(cloudProfile *core.CloudProfile) {
 	}
 }
 
+// TODO(rfranzke): Remove this function and the legacy access restriction label after
+// https://github.com/gardener/dashboard/issues/2120 has been merged and ~6 months have passed to make sure all clients
+// have adapted to the new fields in the specifications, and are rolled out.
 func translateLegacyAccessRestrictionLabels(cloudProfile *core.CloudProfile) {
 	for i, region := range cloudProfile.Spec.Regions {
 		if region.Labels["seed.gardener.cloud/eu-access"] == "true" {

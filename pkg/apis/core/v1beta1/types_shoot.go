@@ -138,7 +138,7 @@ type ShootSpec struct {
 	// The credentials will be used to create the shoot in the respective account. The field is mutually exclusive with SecretBindingName.
 	// +optional
 	CredentialsBindingName *string `json:"credentialsBindingName,omitempty" protobuf:"bytes,23,opt,name=credentialsBindingName"`
-	// AccessRestriction describe a list of access restriction for this shoot cluster.
+	// AccessRestrictions describe a list of access restrictions for this shoot cluster.
 	// +optional
 	AccessRestrictions []AccessRestrictionWithOptions `json:"accessRestrictions,omitempty" protobuf:"bytes,24,rep,name=accessRestrictions"`
 }

@@ -739,8 +739,10 @@ var _ = Describe("Strategy", func() {
 
 				strategy.Canonicalize(shoot)
 
-				Expect(shoot.Spec.AccessRestrictions[0].Options).To(HaveKeyWithValue("support.gardener.cloud/eu-access-for-cluster-addons", "true"))
-				Expect(shoot.Spec.AccessRestrictions[0].Options).To(HaveKeyWithValue("support.gardener.cloud/eu-access-for-cluster-nodes", "true"))
+				Expect(shoot.Spec.AccessRestrictions[0].Options).To(And(
+					HaveKeyWithValue("support.gardener.cloud/eu-access-for-cluster-addons", "true"),
+					HaveKeyWithValue("support.gardener.cloud/eu-access-for-cluster-nodes", "true"),
+				))
 			})
 
 			It("should not add options if access restriction is not present", func() {

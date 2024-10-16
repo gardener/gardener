@@ -165,7 +165,7 @@ type Region struct {
 	// It can be used by Gardener administrators/operators to provide additional information about a region, e.g. wrt
 	// quality, reliability, etc.
 	Labels map[string]string
-	// AccessRestriction describe a list of access restrictions that can be used for Shoots using this region.
+	// AccessRestrictions describe a list of access restrictions that can be used for Shoots using this region.
 	AccessRestrictions []AccessRestriction
 }
 

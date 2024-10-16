@@ -2295,7 +2295,7 @@ message Region {
   // +optional
   map<string, string> labels = 3;
 
-  // AccessRestriction describe a list of access restrictions that can be used for Shoots using this region.
+  // AccessRestrictions describe a list of access restrictions that can be used for Shoots using this region.
   // +optional
   repeated AccessRestriction accessRestrictions = 4;
 }
@@ -2667,7 +2667,7 @@ message SeedSpec {
   // +optional
   optional Ingress ingress = 9;
 
-  // AccessRestriction describe a list of access restriction for this seed cluster.
+  // AccessRestrictions describe a list of access restrictions for this seed cluster.
   // +optional
   repeated AccessRestriction accessRestrictions = 10;
 }
@@ -3032,7 +3032,7 @@ message ShootSpec {
   // +optional
   optional string credentialsBindingName = 23;
 
-  // AccessRestriction describe a list of access restriction for this shoot cluster.
+  // AccessRestrictions describe a list of access restrictions for this shoot cluster.
   // +optional
   repeated AccessRestrictionWithOptions accessRestrictions = 24;
 }
