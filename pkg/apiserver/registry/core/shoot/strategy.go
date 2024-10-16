@@ -323,6 +323,9 @@ func getStatusSeedName(shoot *core.Shoot) string {
 	return *shoot.Status.SeedName
 }
 
+// TODO(rfranzke): Remove this function and the legacy access restriction label after
+// https://github.com/gardener/dashboard/issues/2120 has been merged and ~6 months have passed to make sure all clients
+// have adapted to the new fields in the specifications, and are rolled out.
 func translateLegacyAccessRestrictionConfig(shoot *core.Shoot) {
 	if shoot.Spec.SeedSelector != nil && shoot.Spec.SeedSelector.MatchLabels["seed.gardener.cloud/eu-access"] == "true" {
 		if !slices.ContainsFunc(shoot.Spec.AccessRestrictions, func(accessRestriction core.AccessRestrictionWithOptions) bool {

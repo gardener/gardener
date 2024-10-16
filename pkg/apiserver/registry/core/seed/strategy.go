@@ -156,6 +156,9 @@ func (StatusStrategy) ValidateUpdate(_ context.Context, obj, old runtime.Object)
 	return validation.ValidateSeedStatusUpdate(obj.(*core.Seed), old.(*core.Seed))
 }
 
+// TODO(rfranzke): Remove this function and the legacy access restriction label after
+// https://github.com/gardener/dashboard/issues/2120 has been merged and ~6 months have passed to make sure all clients
+// have adapted to the new fields in the specifications, and are rolled out.
 func translateLegacyAccessRestrictionLabels(seed *core.Seed) {
 	if seed.Labels["seed.gardener.cloud/eu-access"] == "true" {
 		if !slices.ContainsFunc(seed.Spec.AccessRestrictions, func(accessRestriction core.AccessRestriction) bool {

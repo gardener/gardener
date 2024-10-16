@@ -6893,7 +6893,7 @@ func schema_pkg_apis_core_v1beta1_Region(ref common.ReferenceCallback) common.Op
 					},
 					"accessRestrictions": {
 						SchemaProps: spec.SchemaProps{
-							Description: "AccessRestriction describe a list of access restrictions that can be used for Shoots using this region.",
+							Description: "AccessRestrictions describe a list of access restrictions that can be used for Shoots using this region.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -8010,7 +8010,7 @@ func schema_pkg_apis_core_v1beta1_SeedSpec(ref common.ReferenceCallback) common.
 					},
 					"accessRestrictions": {
 						SchemaProps: spec.SchemaProps{
-							Description: "AccessRestriction describe a list of access restriction for this seed cluster.",
+							Description: "AccessRestrictions describe a list of access restrictions for this seed cluster.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -8869,7 +8869,7 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 					},
 					"accessRestrictions": {
 						SchemaProps: spec.SchemaProps{
-							Description: "AccessRestriction describe a list of access restriction for this shoot cluster.",
+							Description: "AccessRestrictions describe a list of access restrictions for this shoot cluster.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{

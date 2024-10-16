@@ -194,7 +194,7 @@ type Region struct {
 	// quality, reliability, etc.
 	// +optional
 	Labels map[string]string `json:"labels,omitempty" protobuf:"bytes,3,rep,name=labels"`
-	// AccessRestriction describe a list of access restrictions that can be used for Shoots using this region.
+	// AccessRestrictions describe a list of access restrictions that can be used for Shoots using this region.
 	// +optional
 	AccessRestrictions []AccessRestriction `json:"accessRestrictions,omitempty" protobuf:"bytes,4,rep,name=accessRestrictions"`
 }
