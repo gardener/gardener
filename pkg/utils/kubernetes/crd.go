@@ -16,21 +16,16 @@ import (
 	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
-// WaitUntilCRDManifestsReady takes manifests as strings and waits for them to get ready with a timeout of 15 seconds
-func WaitUntilCRDManifestsReady(ctx context.Context, c client.Client, manifests []string) error {
+// WaitUntilCRDManifestsReady takes CRD ObjectKeys and waits for them to get ready with a timeout of 15 seconds
+func WaitUntilCRDManifestsReady(ctx context.Context, c client.Client, crdObjectKeys []client.ObjectKey) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 
 	return retry.Until(timeoutCtx, 1*time.Second, func(ctx context.Context) (done bool, err error) {
-		for _, resource := range manifests {
+		for _, crdObjectKey := range crdObjectKeys {
 			crd := &apiextensionsv1.CustomResourceDefinition{}
 
-			obj, err := kubernetes.NewManifestReader([]byte(resource)).Read()
-			if err != nil {
-				return retry.SevereError(err)
-			}
-
-			if err := c.Get(ctx, client.ObjectKeyFromObject(obj), crd); client.IgnoreNotFound(err) != nil {
+			if err := c.Get(ctx, crdObjectKey, crd); client.IgnoreNotFound(err) != nil {
 				return retry.SevereError(err)
 			}
 
@@ -40,4 +35,14 @@ func WaitUntilCRDManifestsReady(ctx context.Context, c client.Client, manifests 
 		}
 		return retry.Ok()
 	})
+}
+
+// GetObjectKeyFromManifest takes a manifest and returns its corresponding ObjectKey
+func GetObjectKeyFromManifest(manifest string) (client.ObjectKey, error) {
+	object, err := kubernetes.NewManifestReader([]byte(manifest)).Read()
+	if err != nil {
+		return client.ObjectKey{}, err
+	}
+
+	return client.ObjectKeyFromObject(object), nil
 }
