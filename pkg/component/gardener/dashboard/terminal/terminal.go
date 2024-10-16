@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -44,8 +43,6 @@ var TimeoutWaitForManagedResource = 5 * time.Minute
 type Values struct {
 	// Image defines the container image of terminal-controller-manager.
 	Image string
-	// RuntimeVersion is the Kubernetes version of the runtime cluster.
-	RuntimeVersion *semver.Version
 	// TopologyAwareRoutingEnabled determines whether topology aware hints are intended.
 	TopologyAwareRoutingEnabled bool
 }
