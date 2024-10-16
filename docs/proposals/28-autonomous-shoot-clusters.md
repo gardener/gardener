@@ -46,6 +46,8 @@ authors:
     - [Autonomous Shoot Clusters for End-Users](#autonomous-shoot-clusters-for-end-users)
     - [Network Connectivity to Garden Cluster](#network-connectivity-to-garden-cluster)
     - [Changes to Shoot Components](#changes-to-shoot-components)
+    - [Air-Gapped Gardener Landscapes](#air-gapped-gardener-landscapes)
+    - [Scaling the Control Plane of Autonomous Shoot Clusters](#scaling-the-control-plane-of-autonomous-shoot-clusters)
   - [Alternatives](#alternatives)
     - [Using Existing Tools](#using-existing-tools)
     - [Using Existing Services](#using-existing-services)
@@ -359,6 +361,8 @@ It can run on the laptop of the operator if the network connectivity is ensured,
 > [!NOTE]
 > Since worker node management will be taken over by `machine-controller-manager`, [step 4](#commands) (joining worker nodes) from above list can be omitted.
 > `machine-controller-manager` will also take over the creation of the control plane nodes, however, bootstrapping and joining them must still be performed by the user (meaning that [step 3](#commands) remains).
+> It still needs to be investigated how much automation by `machine-controller-manager` is possible for the control plane nodes.
+> As bootstrapping/joining of control plane nodes is a manual process for now, `machine-controller-manager` should not roll control plane nodes automatically.
 
 Since we assume that this scenario will be the prominent one, we plan to add another command, `gardenadm bootstrap`, which shall simplify these steps.
 
@@ -478,6 +482,47 @@ The control plane can directly communicate with the data plane without the need 
   Therefore, the observability stack could also directly scrape metrics from the data plane components instead of going through the `kube-apiserver`.
 
 There may be other components, which are affected by the changed network layout and need to be adapted.
+
+### Air-Gapped Gardener Landscapes
+
+While it is already possible today to run a Gardener landscape in an air-gapped environment, the autonomous shoot cluster feature will make it easier to set up such a landscape.
+This is due to the fact that it removes the dependency on an external Kubernetes cluster to run the Garden and act as the initial seed cluster. 
+Therefore, it may be worthwhile to take a closer look at the requirements for air-gapped Gardener landscapes and document them properly.
+
+Topics to consider (without any claim of completeness) are:
+- OCI container registry for providing container images/binaries
+- Configuration of image vector overrides to consume only local images/binaries
+- Local DNS configuration for managing Gardener landscape domains
+- TLS certificate handling, e.g. for connections between components, but also for authentication
+
+The goal would be to provide a comprehensive guide on how to set up an air-gapped Gardener landscape, which can be applied on various infrastructures.
+It may also be useful for scenarios that are not fully air-gapped, but only desire selected parts of the sovereignty this provides.
+
+### Scaling the Control Plane of Autonomous Shoot Clusters
+
+The control plane components of ordinary Gardener shoot clusters are scaled horizontally and vertically in various way.
+Autoscaling is not covered in this GEP, but it is important in the long run to ensure efficient resource usage.
+
+As far as this GEP is concerned, the control plane of autonomous shoot clusters is scaled horizontally by adding more control plane nodes (see [`gardenadm join`](#gardenadm-join)).
+
+This approach can be problematic in various ways.
+As this GEP proposes to always deploy the full set of default control plane components on each control plane node, there may be more instances running for `kube-scheduler` and `kube-controller-manager` than practically necessary.
+While this may be a good approach in scaling `kube-apiserver` horizontally, it may cause additional synchronisation overhead for `etcd` where having more `etcd` cluster members automatically also means more replication.
+Furthermore, from `etcd`'s perspective the amount of control plane nodes should ideally be odd and no more than seven (see [etcd faq](https://etcd.io/docs/v3.4/faq/)).
+This further limits the scalability of the control plane.
+
+Therefore, it may be a good idea to investigate how node roles can help improve efficiency in a scale-out autonomous shoot cluster scenario.
+Some control plane nodes could include the full set of default control plane components while others may use a reduced set of components.
+This could be achieved by having roles for either individual components or different set of components.
+
+An alternative solution would be to expand for example `kube-apiserver` beyond the control plane nodes, i.e. deploy additional instances on ordinary worker nodes.
+This could provide true scaling via deployments with ordinary horizontal/vertical pod autoscaling, but it would remove the strict separation between control and data plane nodes.
+
+Yet another option in the contrary direction would be to allow non-control plane workloads to be deployed to control plane nodes.
+This would allow to use the control plane nodes to their full capacity, but it would also blur the separation between control and data plane nodes.
+While it may improve the resource utilisation of control plane nodes, it may also introduce security risks.
+
+In any case, revisiting the scaling problem is required to ensure efficient resource usage with growing control plane usage in the context of autonomous shoot clusters.
 
 ## Alternatives
 
