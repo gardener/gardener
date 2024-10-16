@@ -18,9 +18,7 @@ var _ = Describe("Version", func() {
 			Expect(CheckIfSupported(gitVersion)).To(matcher)
 		},
 
-		Entry("1.24", "1.24", MatchError(ContainSubstring("unsupported kubernetes version"))),
-		Entry("1.25", "1.25", Succeed()),
-		Entry("1.26", "1.26", Succeed()),
+		Entry("1.26", "1.26", MatchError(ContainSubstring("unsupported kubernetes version"))),
 		Entry("1.27", "1.27", Succeed()),
 		Entry("1.28", "1.28", Succeed()),
 		Entry("1.29", "1.29", Succeed()),
