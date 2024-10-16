@@ -755,7 +755,7 @@ var _ = Describe("Seed controller tests", func() {
 										Services: "10.2.0.0/16",
 									},
 									Ingress: operatorv1alpha1.Ingress{
-										Domains: []string{"ingress.dev.seed.example.com"},
+										Domains: []operatorv1alpha1.DNSDomain{{Name: "ingress.dev.seed.example.com"}},
 										Controller: gardencorev1beta1.IngressController{
 											Kind: "nginx",
 										},
@@ -763,7 +763,7 @@ var _ = Describe("Seed controller tests", func() {
 								},
 								VirtualCluster: operatorv1alpha1.VirtualCluster{
 									DNS: operatorv1alpha1.DNS{
-										Domains: []string{"virtual-garden.local.gardener.cloud"},
+										Domains: []operatorv1alpha1.DNSDomain{{Name: "virtual-garden.local.gardener.cloud"}},
 									},
 									Gardener: operatorv1alpha1.Gardener{
 										ClusterIdentity: "test",

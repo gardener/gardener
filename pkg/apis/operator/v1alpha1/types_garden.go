@@ -53,10 +53,35 @@ type GardenList struct {
 
 // GardenSpec contains the specification of a garden environment.
 type GardenSpec struct {
+	// DNS contains specifications of DNS providers.
+	// +optional
+	DNS *DNSManagement `json:"dns,omitempty"`
 	// RuntimeCluster contains configuration for the runtime cluster.
 	RuntimeCluster RuntimeCluster `json:"runtimeCluster"`
 	// VirtualCluster contains configuration for the virtual cluster.
 	VirtualCluster VirtualCluster `json:"virtualCluster"`
+}
+
+// DNSManagement contains specifications of DNS providers.
+type DNSManagement struct {
+	// Providers is a list of DNS providers.
+	// +kubebuilder:validation:MinItems=1
+	Providers []DNSProvider `json:"providers"`
+}
+
+// DNSProvider contains the configuration for a DNS provider.
+type DNSProvider struct {
+	// Name is the name of the DNS provider.
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+	// Type is the type of the DNS provider.
+	// +kubebuilder:validation:MinLength=1
+	Type string `json:"type"`
+	// Config is the provider-specific configuration passed to DNSRecord resources.
+	// +optional
+	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty"`
+	// SecretRef is a reference to a Secret object containing the DNS provider credentials.
+	SecretRef corev1.LocalObjectReference `json:"secretRef"`
 }
 
 // RuntimeCluster contains configuration for the runtime cluster.
@@ -85,9 +110,20 @@ type Ingress struct {
 	// to construct ingress URLs for system applications running in runtime cluster.
 	// +kubebuilder:validation:MinItems=1
 	// +optional
-	Domains []string `json:"domains,omitempty"`
+	Domains []DNSDomain `json:"domains,omitempty"`
 	// Controller configures a Gardener managed Ingress Controller listening on the ingressDomain.
 	Controller gardencorev1beta1.IngressController `json:"controller"`
+}
+
+// DNSDomain defines a DNS domain with optional provider.
+type DNSDomain struct {
+	// Name is the domain name.
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+	// Provider is the DNS provider as declared in the spec.DNS.providers configuration.
+	// If not set, the first provider in the list is used.
+	// +optional
+	Provider *string `json:"provider,omitempty"`
 }
 
 // RuntimeNetworking defines the networking configuration of the runtime cluster.
@@ -252,7 +288,7 @@ type DNS struct {
 	// The first given domain in this list is immutable.
 	// +kubebuilder:validation:MinItems=1
 	// +optional
-	Domains []string `json:"domains,omitempty"`
+	Domains []DNSDomain `json:"domains,omitempty"`
 }
 
 // ETCD contains configuration for the etcds of the virtual garden cluster.

@@ -238,7 +238,7 @@ func (r *Reconciler) reconcile(
 		_ = g.Add(flow.Task{
 			Name:         "Reconciling DNSRecords for virtual garden cluster and ingress controller",
 			Fn:           func(ctx context.Context) error { return r.reconcileDNSRecords(ctx, log, garden) },
-			SkipIf:       garden.Spec.VirtualCluster.DNS.Provider == nil || garden.Spec.VirtualCluster.DNS.SecretRef == nil,
+			SkipIf:       garden.Spec.DNS == nil,
 			Dependencies: flow.NewTaskIDs(deployIstio),
 		})
 		syncPointSystemComponents = flow.NewTaskIDs(
@@ -741,7 +741,8 @@ func (r *Reconciler) deployKubeAPIServerFunc(garden *operatorv1alpha1.Garden, ku
 		}
 		services = []net.IPNet{*cidr}
 
-		externalHostname := gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0])
+		domains, _ := getAPIServerDomains(garden.Spec.VirtualCluster.DNS.Domains)
+		externalHostname := domains[0]
 		return shared.DeployKubeAPIServer(
 			ctx,
 			r.RuntimeClientSet.Client(),
@@ -753,7 +754,7 @@ func (r *Reconciler) deployKubeAPIServerFunc(garden *operatorv1alpha1.Garden, ku
 				helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials),
 			),
 			kubeapiserver.ServerCertificateConfig{
-				ExtraDNSNames: getAPIServerDomains(garden.Spec.VirtualCluster.DNS.Domains),
+				ExtraDNSNames: domains,
 			},
 			sniConfig,
 			externalHostname,
@@ -961,8 +962,11 @@ func (r *Reconciler) updateHelmChartRefForGardenlets(ctx context.Context, log lo
 }
 
 func (r *Reconciler) reconcileDNSRecords(ctx context.Context, log logr.Logger, garden *operatorv1alpha1.Garden) error {
-	if garden.Spec.VirtualCluster.DNS.Provider == nil || garden.Spec.VirtualCluster.DNS.SecretRef == nil {
-		return fmt.Errorf("no DNS provider or DNS secret configuration found in Garden resource")
+	if garden.Spec.DNS == nil {
+		return fmt.Errorf("no DNS management configuration '.spec.dns' found in Garden resource")
+	}
+	if len(garden.Spec.DNS.Providers) == 0 {
+		return fmt.Errorf("no DNS providers specified at '.spec.dns.providers' in Garden resource")
 	}
 
 	dnsRecordList := &extensionsv1alpha1.DNSRecordList{}
@@ -982,10 +986,18 @@ func (r *Reconciler) reconcileDNSRecords(ctx context.Context, log logr.Logger, g
 
 	var taskFns []flow.TaskFn
 
-	for _, dnsName := range append(getAPIServerDomains(garden.Spec.VirtualCluster.DNS.Domains), getIngressWildcardDomains(garden.Spec.RuntimeCluster.Ingress.Domains)...) {
+	apiDomains, apiDomainProviders := getAPIServerDomains(garden.Spec.VirtualCluster.DNS.Domains)
+	ingressDomains, ingressDomainProviders := getIngressWildcardDomains(garden.Spec.RuntimeCluster.Ingress.Domains)
+
+	providers := append(apiDomainProviders, ingressDomainProviders...)
+	for i, dnsName := range append(apiDomains, ingressDomains...) {
 		recordName := strings.ReplaceAll(strings.ReplaceAll(dnsName, ".", "-"), "*", "wildcard")
 		staleDNSRecordNames.Delete(recordName)
 
+		provider := getDNSProvider(*garden.Spec.DNS, providers[i])
+		if provider == nil {
+			return fmt.Errorf("provider %q not found in DNS providers", *providers[i])
+		}
 		taskFns = append(taskFns, func(ctx context.Context) error {
 			return component.OpWait(dnsrecord.New(
 				log,
@@ -997,9 +1009,9 @@ func (r *Reconciler) reconcileDNSRecords(ctx context.Context, log logr.Logger, g
 					DNSName:                      dnsName,
 					Values:                       []string{istioIngressGatewayLoadBalancerAddress},
 					RecordType:                   extensionsv1alpha1helper.GetDNSRecordType(istioIngressGatewayLoadBalancerAddress),
-					Type:                         *garden.Spec.VirtualCluster.DNS.Provider,
+					Type:                         provider.Type,
 					Class:                        ptr.To(extensionsv1alpha1.ExtensionClassGarden),
-					SecretName:                   garden.Spec.VirtualCluster.DNS.SecretRef.Name,
+					SecretName:                   provider.SecretRef.Name,
 					ReconcileOnlyOnChangeOrError: true,
 				},
 				dnsrecord.DefaultInterval,
@@ -1054,4 +1066,20 @@ func getGardenerResourcesForEncryption(garden *operatorv1alpha1.Garden) []string
 	}
 
 	return shared.GetResourcesForEncryptionFromConfig(encryptionConfig)
+}
+
+func getDNSProvider(dns operatorv1alpha1.DNSManagement, providerName *string) *operatorv1alpha1.DNSProvider {
+	if len(dns.Providers) == 0 {
+		return nil
+	}
+	if providerName == nil {
+		return &dns.Providers[0]
+	}
+
+	for _, provider := range dns.Providers {
+		if provider.Name == *providerName {
+			return &provider
+		}
+	}
+	return nil
 }

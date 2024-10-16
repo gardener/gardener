@@ -235,8 +235,8 @@ func (r *Reconciler) delete(
 
 		destroyDNSRecords = g.Add(flow.Task{
 			Name:         "Destroying DNSRecords for virtual garden cluster and ingress controller",
-			Fn:           func(ctx context.Context) error { return r.destroyDNSRecords(ctx, log, garden) },
-			SkipIf:       garden.Spec.VirtualCluster.DNS.Provider == nil || garden.Spec.VirtualCluster.DNS.SecretRef == nil,
+			Fn:           func(ctx context.Context) error { return r.destroyDNSRecords(ctx, log) },
+			SkipIf:       garden.Spec.DNS == nil,
 			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
 		})
 
@@ -467,11 +467,7 @@ func (r *Reconciler) destroyGardenPrometheus(ctx context.Context, prometheus pro
 	return r.RuntimeClientSet.Client().DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(r.GardenNamespace), client.MatchingLabels{v1beta1constants.GardenerPurpose: gardenerutils.LabelPurposeGlobalMonitoringSecret})
 }
 
-func (r *Reconciler) destroyDNSRecords(ctx context.Context, log logr.Logger, garden *operatorv1alpha1.Garden) error {
-	if garden.Spec.VirtualCluster.DNS.Provider == nil || garden.Spec.VirtualCluster.DNS.SecretRef == nil {
-		return fmt.Errorf("no DNS provider or DNS secret configuration found in Garden resource")
-	}
-
+func (r *Reconciler) destroyDNSRecords(ctx context.Context, log logr.Logger) error {
 	dnsRecordList := &extensionsv1alpha1.DNSRecordList{}
 	if err := r.listManagedDNSRecords(ctx, dnsRecordList); err != nil {
 		return fmt.Errorf("failed listing DNS records: %w", err)

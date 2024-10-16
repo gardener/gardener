@@ -54,8 +54,9 @@ func ValidateGarden(garden *operatorv1alpha1.Garden) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateOperation(garden.Annotations[v1beta1constants.GardenerOperation], garden, field.NewPath("metadata", "annotations"))...)
-	allErrs = append(allErrs, validateRuntimeCluster(garden.Spec.RuntimeCluster, field.NewPath("spec", "runtimeCluster"))...)
-	allErrs = append(allErrs, validateVirtualCluster(garden.Spec.VirtualCluster, garden.Spec.RuntimeCluster, field.NewPath("spec", "virtualCluster"))...)
+	allErrs = append(allErrs, validateDNS(garden.Spec.DNS, field.NewPath("spec", "dns"))...)
+	allErrs = append(allErrs, validateRuntimeCluster(garden.Spec.DNS, garden.Spec.RuntimeCluster, field.NewPath("spec", "runtimeCluster"))...)
+	allErrs = append(allErrs, validateVirtualCluster(garden.Spec.DNS, garden.Spec.VirtualCluster, garden.Spec.RuntimeCluster, field.NewPath("spec", "virtualCluster"))...)
 
 	if helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings) {
 		if len(garden.Spec.RuntimeCluster.Provider.Zones) <= 1 {
@@ -109,7 +110,7 @@ func validateVirtualClusterUpdate(oldGarden, newGarden *operatorv1alpha1.Garden)
 	// First domain is immutable. Changing this would incompatibly change the service account issuer in the cluster, ref https://github.com/gardener/gardener/blob/17ff592e734131ef746560641bdcdec3bcfce0f1/pkg/component/kubeapiserver/deployment.go#L585C8-L585C8
 	// Note: We can consider supporting this scenario in the future but would need to re-issue all service account tokens during the reconcile run.
 	if len(oldVirtualCluster.DNS.Domains) > 0 && len(newVirtualCluster.DNS.Domains) > 0 {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldVirtualCluster.DNS.Domains[0], newVirtualCluster.DNS.Domains[0], fldPath.Child("dns", "domains").Index(0))...)
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldVirtualCluster.DNS.Domains[0], newVirtualCluster.DNS.Domains[0], fldPath.Child("dns", "domains").Index(0).Child("name"))...)
 	}
 
 	if oldVirtualCluster.ETCD != nil && oldVirtualCluster.ETCD.Main != nil && oldVirtualCluster.ETCD.Main.Backup != nil && oldVirtualCluster.ETCD.Main.Backup.BucketName == nil {
@@ -129,7 +130,23 @@ func validateVirtualClusterUpdate(oldGarden, newGarden *operatorv1alpha1.Garden)
 	return allErrs
 }
 
-func validateRuntimeCluster(runtimeCluster operatorv1alpha1.RuntimeCluster, fldPath *field.Path) field.ErrorList {
+func validateDNS(dns *operatorv1alpha1.DNSManagement, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if dns != nil {
+		names := sets.New[string]()
+		for i, provider := range dns.Providers {
+			if names.Has(provider.Name) {
+				allErrs = append(allErrs, field.Duplicate(fldPath.Child("providers").Index(i), provider.Name))
+			}
+			names.Insert()
+		}
+	}
+
+	return allErrs
+}
+
+func validateRuntimeCluster(dns *operatorv1alpha1.DNSManagement, runtimeCluster operatorv1alpha1.RuntimeCluster, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if cidrvalidation.NetworksIntersect(runtimeCluster.Networking.Pods, runtimeCluster.Networking.Services) {
@@ -144,17 +161,28 @@ func validateRuntimeCluster(runtimeCluster operatorv1alpha1.RuntimeCluster, fldP
 		}
 	}
 
-	domains := sets.New[string]()
-	for i, domain := range runtimeCluster.Ingress.Domains {
-		allErrs = append(allErrs, gardencorevalidation.ValidateDNS1123Subdomain(domain, fldPath.Child("ingress", "domains").Index(i))...)
-		if domains.Has(domain) {
-			allErrs = append(allErrs, field.Duplicate(fldPath.Child("ingress", "domains").Index(i), domain))
-		}
-		domains.Insert(domain)
-	}
+	allErrs = validateDomains(dns, runtimeCluster.Ingress.Domains, fldPath.Child("ingress", "domains"), allErrs)
 
 	if runtimeCluster.CertManagement != nil {
 		allErrs = append(allErrs, validateCertManagement(runtimeCluster.CertManagement, fldPath.Child("certManagement"))...)
+	}
+
+	return allErrs
+}
+
+func validateDomains(dns *operatorv1alpha1.DNSManagement, domains []operatorv1alpha1.DNSDomain, path *field.Path, allErrs field.ErrorList) field.ErrorList {
+	names := sets.New[string]()
+	for i, domain := range domains {
+		allErrs = append(allErrs, gardencorevalidation.ValidateDNS1123Subdomain(domain.Name, path.Index(i).Child("name"))...)
+		if names.Has(domain.Name) {
+			allErrs = append(allErrs, field.Duplicate(path.Index(i).Child("name"), domain.Name))
+		}
+		names.Insert(domain.Name)
+		if domain.Provider != nil {
+			if !hasProvider(dns, *domain.Provider) {
+				allErrs = append(allErrs, field.Invalid(path.Index(i).Child("provider"), *domain.Provider, "provider name not found in .spec.dns.providers"))
+			}
+		}
 	}
 
 	return allErrs
@@ -170,21 +198,10 @@ func validateCertManagement(certManagement *operatorv1alpha1.CertManagement, fld
 	return allErrs
 }
 
-func validateVirtualCluster(virtualCluster operatorv1alpha1.VirtualCluster, runtimeCluster operatorv1alpha1.RuntimeCluster, fldPath *field.Path) field.ErrorList {
+func validateVirtualCluster(dns *operatorv1alpha1.DNSManagement, virtualCluster operatorv1alpha1.VirtualCluster, runtimeCluster operatorv1alpha1.RuntimeCluster, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	domains := sets.New[string]()
-	for i, domain := range virtualCluster.DNS.Domains {
-		allErrs = append(allErrs, gardencorevalidation.ValidateDNS1123Subdomain(domain, fldPath.Child("dns", "domains").Index(i))...)
-		if domains.Has(domain) {
-			allErrs = append(allErrs, field.Duplicate(fldPath.Child("dns", "domains").Index(i), domain))
-		}
-		domains.Insert(domain)
-	}
-
-	if virtualCluster.DNS.Provider != nil && virtualCluster.DNS.SecretRef == nil {
-		allErrs = append(allErrs, field.Required(fldPath.Child("dns", "secretRef"), "must provide a secret reference when DNS provider is set"))
-	}
+	allErrs = validateDomains(dns, virtualCluster.DNS.Domains, fldPath.Child("dns", "domains"), allErrs)
 
 	if virtualCluster.ETCD != nil && virtualCluster.ETCD.Main != nil && virtualCluster.ETCD.Main.Backup != nil {
 		if virtualCluster.ETCD.Main.Backup.BucketName != nil {
@@ -601,4 +618,16 @@ func validateEncryptionConfigUpdate(oldGarden, newGarden *operatorv1alpha1.Garde
 	allErrs = append(allErrs, gardencorevalidation.ValidateEncryptionConfigUpdate(newGAPIServerEncryptionConfig, oldGAPIServerEncryptionConfig, sets.New(currentEncryptedGardenerResources...), etcdEncryptionKeyRotation, false, gAPIServerEncryptionConfigFldPath)...)
 
 	return allErrs
+}
+
+func hasProvider(dns *operatorv1alpha1.DNSManagement, provider string) bool {
+	if dns == nil {
+		return false
+	}
+	for _, p := range dns.Providers {
+		if p.Name == provider {
+			return true
+		}
+	}
+	return false
 }

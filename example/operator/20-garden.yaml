@@ -20,10 +20,19 @@ kind: Garden
 metadata:
   name: local
 spec:
+  dns:
+    providers:
+    - name: local
+      type: local
+    # providerConfig:
+    #   <some-provider-specific-config-for-the-dns-records>
+      secretRef:
+        name: garden-dns-local
   runtimeCluster:
     ingress:
       domains:
-      - ingress.runtime-garden.local.gardener.cloud
+      - name: ingress.runtime-garden.local.gardener.cloud
+      # provider: other-provider # needs to be specified in the `spec.dns.providers` section
       controller:
         kind: nginx
       # providerConfig:
@@ -62,7 +71,8 @@ spec:
   #   highAvailability: {}
     dns:
       domains:
-      - virtual-garden.local.gardener.cloud
+      - name: virtual-garden.local.gardener.cloud
+      # provider: other-provider # needs to be specified in the `spec.dns.providers` section
     etcd:
       main:
         backup:

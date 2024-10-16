@@ -25,6 +25,7 @@ var _ = Describe("Garden Reference controller tests", func() {
 		secret5    *corev1.Secret
 		secret6    *corev1.Secret
 		secret7    *corev1.Secret
+		secret8    *corev1.Secret
 		configMap1 *corev1.ConfigMap
 		configMap2 *corev1.ConfigMap
 		garden     *operatorv1alpha1.Garden
@@ -45,6 +46,7 @@ var _ = Describe("Garden Reference controller tests", func() {
 		secret5 = secret1.DeepCopy()
 		secret6 = secret1.DeepCopy()
 		secret7 = secret1.DeepCopy()
+		secret8 = secret1.DeepCopy()
 
 		configMap1 = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
@@ -55,7 +57,7 @@ var _ = Describe("Garden Reference controller tests", func() {
 		}
 		configMap2 = configMap1.DeepCopy()
 
-		for _, secret := range []*corev1.Secret{secret1, secret2, secret3, secret4, secret5, secret6, secret7} {
+		for _, secret := range []*corev1.Secret{secret1, secret2, secret3, secret4, secret5, secret6, secret7, secret8} {
 			By("Create Secret")
 			Expect(testClient.Create(ctx, secret)).To(Succeed())
 			log.Info("Created Secret for test", "secret", client.ObjectKeyFromObject(secret))
@@ -83,13 +85,22 @@ var _ = Describe("Garden Reference controller tests", func() {
 				Labels: map[string]string{testID: testRunID},
 			},
 			Spec: operatorv1alpha1.GardenSpec{
+				DNS: &operatorv1alpha1.DNSManagement{
+					Providers: []operatorv1alpha1.DNSProvider{
+						{
+							Name:      "primary",
+							Type:      "test",
+							SecretRef: corev1.LocalObjectReference{Name: secret8.Name},
+						},
+					},
+				},
 				RuntimeCluster: operatorv1alpha1.RuntimeCluster{
 					Networking: operatorv1alpha1.RuntimeNetworking{
 						Pods:     "10.1.0.0/16",
 						Services: "10.2.0.0/16",
 					},
 					Ingress: operatorv1alpha1.Ingress{
-						Domains: []string{"ingress.runtime-garden.local.gardener.cloud"},
+						Domains: []operatorv1alpha1.DNSDomain{{Name: "ingress.runtime-garden.local.gardener.cloud"}},
 						Controller: gardencorev1beta1.IngressController{
 							Kind: "nginx",
 						},
@@ -100,7 +111,7 @@ var _ = Describe("Garden Reference controller tests", func() {
 				},
 				VirtualCluster: operatorv1alpha1.VirtualCluster{
 					DNS: operatorv1alpha1.DNS{
-						Domains: []string{"virtual-garden.local.gardener.cloud"},
+						Domains: []operatorv1alpha1.DNSDomain{{Name: "virtual-garden.local.gardener.cloud"}},
 					},
 					ETCD: &operatorv1alpha1.ETCD{
 						Main: &operatorv1alpha1.ETCDMain{
@@ -188,6 +199,7 @@ var _ = Describe("Garden Reference controller tests", func() {
 			garden.Spec.VirtualCluster.ETCD = nil
 			garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = nil
 			garden.Spec.VirtualCluster.Gardener.APIServer = nil
+			garden.Spec.DNS = nil
 		})
 
 		It("should not add the finalizer to the garden", func() {
@@ -207,7 +219,7 @@ var _ = Describe("Garden Reference controller tests", func() {
 		})
 
 		It("should add finalizers to the referenced secrets and configmaps", func() {
-			for _, obj := range []client.Object{secret1, secret2, secret3, secret4, secret5, secret6, secret7, configMap1, configMap2} {
+			for _, obj := range []client.Object{secret1, secret2, secret3, secret4, secret5, secret6, secret7, secret8, configMap1, configMap2} {
 				Eventually(func(g Gomega) []string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
 					return obj.GetFinalizers()
@@ -220,9 +232,10 @@ var _ = Describe("Garden Reference controller tests", func() {
 			garden.Spec.VirtualCluster.ETCD = nil
 			garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = nil
 			garden.Spec.VirtualCluster.Gardener.APIServer = nil
+			garden.Spec.DNS = nil
 			Expect(testClient.Patch(ctx, garden, patch)).To(Succeed())
 
-			for _, obj := range []client.Object{garden, secret1, secret2, secret3, secret4, secret5, secret6, secret7, configMap1, configMap2} {
+			for _, obj := range []client.Object{garden, secret1, secret2, secret3, secret4, secret5, secret6, secret7, secret8, configMap1, configMap2} {
 				Eventually(func(g Gomega) []string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
 					return obj.GetFinalizers()

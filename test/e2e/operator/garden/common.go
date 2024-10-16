@@ -136,7 +136,7 @@ func defaultGarden(backupSecret, certManagementRootCA *corev1.Secret, specifyBac
 					Services: "10.2.0.0/16",
 				},
 				Ingress: operatorv1alpha1.Ingress{
-					Domains: []string{"ingress.runtime-garden.local.gardener.cloud"},
+					Domains: []operatorv1alpha1.DNSDomain{{Name: "ingress.runtime-garden.local.gardener.cloud"}},
 					Controller: gardencorev1beta1.IngressController{
 						Kind: "nginx",
 					},
@@ -160,7 +160,7 @@ func defaultGarden(backupSecret, certManagementRootCA *corev1.Secret, specifyBac
 					HighAvailability: &operatorv1alpha1.HighAvailability{},
 				},
 				DNS: operatorv1alpha1.DNS{
-					Domains: []string{"virtual-garden.local.gardener.cloud"},
+					Domains: []operatorv1alpha1.DNSDomain{{Name: "virtual-garden.local.gardener.cloud"}},
 				},
 				ETCD: &operatorv1alpha1.ETCD{
 					Main: &operatorv1alpha1.ETCDMain{
