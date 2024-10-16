@@ -982,7 +982,7 @@ The controller adds the `node-agent.gardener.cloud/reconciliation-delay` annotat
 #### High Availability Config
 
 This webhook is used to conveniently apply the configuration to make components deployed to seed or shoot clusters highly available.
-The details and scenarios are described in [High Availability Of Deployed Components](../development/high-availability.md).
+The details and scenarios are described in [High Availability Of Deployed Components](../development/high-availability-dev.md).
 
 The webhook reacts on creation/update of `Deployment`s, `StatefulSet`s, `HorizontalPodAutoscaler`s and `HVPA`s in namespaces labeled with `high-availability-config.resources.gardener.cloud/consider=true`.
 

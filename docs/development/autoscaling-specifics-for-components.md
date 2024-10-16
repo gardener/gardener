@@ -80,7 +80,7 @@ There are three supported autoscaling modes for the Shoot Kubernetes API server.
 > Starting with release `v1.101`, the `VPAAndHPAForAPIServer` feature gate is enabled by default.
 > Starting with release `v1.105`, the `VPAAndHPAForAPIServer` feature gate is promoted to GA and locked to true.
 
-In all scaling modes the min replicas count of 2 is imposed by the [High Availability of Shoot Control Plane Components](../development/high-availability.md#control-plane-components).
+In all scaling modes the min replicas count of 2 is imposed by the [High Availability of Shoot Control Plane Components](../development/high-availability-dev.md#control-plane-components).
 
 The gardenlet sets the initial API server resource requests only when the Deployment is not found. When the Deployment exists, it is not overwriting the kube-apiserver container resources.
 

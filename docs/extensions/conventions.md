@@ -18,7 +18,7 @@ In case a seed or shoot cluster is highly available, there are various failure t
 Accordingly, the `replicas`, `topologySpreadConstraints` or `affinity` settings of the deployed components might need to be adapted.
 
 Instead of doing this one-by-one for each and every component, extensions can rely on a mutating webhook provided by Gardener.
-Please refer to [High Availability of Deployed Components](../development/high-availability.md) for details.
+Please refer to [High Availability of Deployed Components](../development/high-availability-dev.md) for details.
 
 To reduce costs and to improve the network traffic latency in multi-zone clusters, extensions can make a Service topology-aware.
 Please refer to [this document](../operations/topology_aware_routing.md) for details.

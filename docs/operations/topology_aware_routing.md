@@ -114,7 +114,7 @@ spec:
 ```
 
 The topology-aware routing setting can be only enabled for a Seed cluster with more than one zone.
-gardenlet enables topology-aware Services only for Shoot control planes with failure tolerance type `zone` (`.spec.controlPlane.highAvailability.failureTolerance.type=zone`). Control plane Pods of non-HA Shoots and HA Shoots with failure tolerance type `node` are pinned to single zone. For more details, see [High Availability Of Deployed Components](../development/high-availability.md).
+gardenlet enables topology-aware Services only for Shoot control planes with failure tolerance type `zone` (`.spec.controlPlane.highAvailability.failureTolerance.type=zone`). Control plane Pods of non-HA Shoots and HA Shoots with failure tolerance type `node` are pinned to single zone. For more details, see [High Availability Of Deployed Components](../development/high-availability-dev.md).
 
 ## How to enable the topology-aware routing for a garden runtime cluster?
 

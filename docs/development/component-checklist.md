@@ -125,7 +125,7 @@ This document provides a checklist for them that you can walk through.
 1. **Specify the component type label for high availability** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/kubescheduler/kube_scheduler.go#L241))
 
    To support high-availability deployments, `gardener-resource-manager`s [HighAvailabilityConfig](../concepts/resource-manager.md#high-availability-config) webhook injects the proper specification like replica or topology spread constraints.
-   You only need to specify the type label. For more information, see [High Availability Of Deployed Components](high-availability.md).
+   You only need to specify the type label. For more information, see [High Availability Of Deployed Components](high-availability-dev.md).
 
 2. **Define a `PodDisruptionBudget`** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/metricsserver/metrics_server.go#L384-L408))
 
