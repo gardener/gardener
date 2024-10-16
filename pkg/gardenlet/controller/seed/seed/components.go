@@ -246,7 +246,6 @@ func (r *Reconciler) newGardenerResourceManager(seed *gardencorev1beta1.Seed, se
 	return sharedcomponent.NewRuntimeGardenerResourceManager(
 		r.SeedClientSet.Client(),
 		r.GardenNamespace,
-		r.SeedVersion,
 		secretsManager,
 		r.Config.LogLevel, r.Config.LogFormat,
 		v1beta1constants.SecretNameCASeed,
