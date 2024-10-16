@@ -6317,11 +6317,17 @@ spec:
                         Role `Endpointslice` requires Prometheus >= v2.21.0
                       enum:
                       - Pod
+                      - pod
                       - Endpoints
+                      - endpoints
                       - Ingress
+                      - ingress
                       - Service
+                      - service
                       - Node
+                      - node
                       - EndpointSlice
+                      - endpointslice
                       type: string
                     selectors:
                       description: |-
@@ -6348,11 +6354,17 @@ spec:
                               Accepted values are: Node, Pod, Endpoints, EndpointSlice, Service, Ingress.
                             enum:
                             - Pod
+                            - pod
                             - Endpoints
+                            - endpoints
                             - Ingress
+                            - ingress
                             - Service
+                            - service
                             - Node
+                            - node
                             - EndpointSlice
+                            - endpointslice
                             type: string
                         required:
                         - role
