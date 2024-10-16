@@ -1467,11 +1467,46 @@ spec:
                             properties:
                               configMapName:
                                 description: |-
-                                  ConfigMapName is the name of the ConfigMap in the project namespace
-                                  which contains AuthenticationConfiguration for the kube-apiserver.
+                                  ConfigMapName is the name of the ConfigMap in the project namespace which contains AuthenticationConfiguration
+                                  for the kube-apiserver.
                                 type: string
                             required:
                             - configMapName
+                            type: object
+                          structuredAuthorization:
+                            description: |-
+                              StructuredAuthorization contains configuration settings for structured authorization to the kube-apiserver.
+                              This field is only available for Kubernetes v1.30 or later.
+                            properties:
+                              configMapName:
+                                description: |-
+                                  ConfigMapName is the name of the ConfigMap in the project namespace which contains AuthorizationConfiguration for
+                                  the kube-apiserver.
+                                type: string
+                              kubeconfigs:
+                                description: Kubeconfigs is a list of references for
+                                  kubeconfigs for the authorization webhooks.
+                                items:
+                                  description: AuthorizerKubeconfigReference is a
+                                    reference for a kubeconfig for a authorization
+                                    webhook.
+                                  properties:
+                                    authorizerName:
+                                      description: AuthorizerName is the name of a
+                                        webhook authorizer.
+                                      type: string
+                                    secretName:
+                                      description: SecretName is the name of a secret
+                                        containing the kubeconfig.
+                                      type: string
+                                  required:
+                                  - authorizerName
+                                  - secretName
+                                  type: object
+                                type: array
+                            required:
+                            - configMapName
+                            - kubeconfigs
                             type: object
                           watchCacheSizes:
                             description: |-
