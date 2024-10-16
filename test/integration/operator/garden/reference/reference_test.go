@@ -28,6 +28,7 @@ var _ = Describe("Garden Reference controller tests", func() {
 		secret6 *corev1.Secret
 		secret7 *corev1.Secret
 		secret8 *corev1.Secret
+		secret9 *corev1.Secret
 
 		configMap1 *corev1.ConfigMap
 		configMap2 *corev1.ConfigMap
@@ -47,13 +48,14 @@ var _ = Describe("Garden Reference controller tests", func() {
 		secret6 = initializeObject("secret").(*corev1.Secret)
 		secret7 = initializeObject("secret").(*corev1.Secret)
 		secret8 = initializeObject("secret").(*corev1.Secret)
+		secret9 = initializeObject("secret").(*corev1.Secret)
 
 		configMap1 = initializeObject("configMap").(*corev1.ConfigMap)
 		configMap2 = initializeObject("configMap").(*corev1.ConfigMap)
 		configMap3 = initializeObject("configMap").(*corev1.ConfigMap)
 		configMap4 = initializeObject("configMap").(*corev1.ConfigMap)
 
-		allReferencedObjects = append([]client.Object{}, secret1, secret2, secret3, secret4, secret5, secret6, secret7, secret8)
+		allReferencedObjects = append([]client.Object{}, secret1, secret2, secret3, secret4, secret5, secret6, secret7, secret8, secret9)
 		allReferencedObjects = append(allReferencedObjects, configMap1, configMap2, configMap3, configMap4)
 
 		garden = &operatorv1alpha1.Garden{
@@ -62,13 +64,22 @@ var _ = Describe("Garden Reference controller tests", func() {
 				Labels: map[string]string{testID: testRunID},
 			},
 			Spec: operatorv1alpha1.GardenSpec{
+				DNS: &operatorv1alpha1.DNSManagement{
+					Providers: []operatorv1alpha1.DNSProvider{
+						{
+							Name:      "primary",
+							Type:      "test",
+							SecretRef: corev1.LocalObjectReference{Name: secret9.Name},
+						},
+					},
+				},
 				RuntimeCluster: operatorv1alpha1.RuntimeCluster{
 					Networking: operatorv1alpha1.RuntimeNetworking{
 						Pods:     "10.1.0.0/16",
 						Services: "10.2.0.0/16",
 					},
 					Ingress: operatorv1alpha1.Ingress{
-						Domains: []string{"ingress.runtime-garden.local.gardener.cloud"},
+						Domains: []operatorv1alpha1.DNSDomain{{Name: "ingress.runtime-garden.local.gardener.cloud"}},
 						Controller: gardencorev1beta1.IngressController{
 							Kind: "nginx",
 						},
@@ -79,7 +90,7 @@ var _ = Describe("Garden Reference controller tests", func() {
 				},
 				VirtualCluster: operatorv1alpha1.VirtualCluster{
 					DNS: operatorv1alpha1.DNS{
-						Domains: []string{"virtual-garden.local.gardener.cloud"},
+						Domains: []operatorv1alpha1.DNSDomain{{Name: "virtual-garden.local.gardener.cloud"}},
 					},
 					ETCD: &operatorv1alpha1.ETCD{
 						Main: &operatorv1alpha1.ETCDMain{
@@ -177,6 +188,7 @@ var _ = Describe("Garden Reference controller tests", func() {
 			garden.Spec.VirtualCluster.ETCD = nil
 			garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = nil
 			garden.Spec.VirtualCluster.Gardener.APIServer = nil
+			garden.Spec.DNS = nil
 		})
 
 		It("should not add the finalizer to the garden", func() {
@@ -209,6 +221,7 @@ var _ = Describe("Garden Reference controller tests", func() {
 			garden.Spec.VirtualCluster.ETCD = nil
 			garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = nil
 			garden.Spec.VirtualCluster.Gardener.APIServer = nil
+			garden.Spec.DNS = nil
 			Expect(testClient.Patch(ctx, garden, patch)).To(Succeed())
 
 			for _, obj := range append([]client.Object{garden}, allReferencedObjects...) {

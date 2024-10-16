@@ -229,11 +229,14 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
+
+	primaryIngressDomain := garden.Spec.RuntimeCluster.Ingress.Domains[0]
+
 	c.virtualSystem = r.newVirtualSystem(enableSeedAuthorizer)
 	c.virtualGardenGardenerAccess = r.newGardenerAccess(garden, secretsManager)
 
 	// gardener control plane components
-	workloadIdentityTokenIssuer := "https://" + garden.Spec.RuntimeCluster.Ingress.Domains[0] + "/garden/workload-identity/issuer"
+	workloadIdentityTokenIssuer := "https://" + primaryIngressDomain.Name + "/garden/workload-identity/issuer"
 	c.gardenerAPIServer, err = r.newGardenerAPIServer(ctx, garden, secretsManager, workloadIdentityTokenIssuer)
 	if err != nil {
 		return
@@ -269,7 +272,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.gardenerDiscoveryServer, err = r.newGardenerDiscoveryServer(secretsManager, garden.Spec.RuntimeCluster.Ingress.Domains[0], wildcardCertSecretName, workloadIdentityTokenIssuer)
+	c.gardenerDiscoveryServer, err = r.newGardenerDiscoveryServer(secretsManager, primaryIngressDomain.Name, wildcardCertSecretName, workloadIdentityTokenIssuer)
 	if err != nil {
 		return
 	}
@@ -299,7 +302,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.plutono, err = r.newPlutono(secretsManager, garden.Spec.RuntimeCluster.Ingress.Domains[0], wildcardCertSecretName)
+	c.plutono, err = r.newPlutono(secretsManager, primaryIngressDomain.Name, wildcardCertSecretName)
 	if err != nil {
 		return
 	}
@@ -307,15 +310,15 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.alertManager, err = r.newAlertmanager(log, garden, secretsManager, garden.Spec.RuntimeCluster.Ingress.Domains[0], wildcardCertSecretName)
+	c.alertManager, err = r.newAlertmanager(log, garden, secretsManager, primaryIngressDomain.Name, wildcardCertSecretName)
 	if err != nil {
 		return
 	}
-	c.prometheusGarden, err = r.newPrometheusGarden(log, garden, secretsManager, garden.Spec.RuntimeCluster.Ingress.Domains[0], wildcardCertSecretName)
+	c.prometheusGarden, err = r.newPrometheusGarden(log, garden, secretsManager, primaryIngressDomain.Name, wildcardCertSecretName)
 	if err != nil {
 		return
 	}
-	c.prometheusLongTerm, err = r.newPrometheusLongTerm(log, garden, secretsManager, garden.Spec.RuntimeCluster.Ingress.Domains[0], wildcardCertSecretName)
+	c.prometheusLongTerm, err = r.newPrometheusLongTerm(log, garden, secretsManager, primaryIngressDomain.Name, wildcardCertSecretName)
 	if err != nil {
 		return
 	}
@@ -820,13 +823,14 @@ func (r *Reconciler) newSNI(garden *operatorv1alpha1.Garden, ingressGatewayValue
 		return nil, fmt.Errorf("exactly one Istio Ingress Gateway is required for the SNI config")
 	}
 
+	domains, _ := getAPIServerDomains(garden.Spec.VirtualCluster.DNS.Domains)
 	return kubeapiserverexposure.NewSNI(
 		r.RuntimeClientSet.Client(),
 		namePrefix+v1beta1constants.DeploymentNameKubeAPIServer,
 		r.GardenNamespace,
 		func() *kubeapiserverexposure.SNIValues {
 			return &kubeapiserverexposure.SNIValues{
-				Hosts: getAPIServerDomains(garden.Spec.VirtualCluster.DNS.Domains),
+				Hosts: domains,
 				IstioIngressGateway: kubeapiserverexposure.IstioIngressGateway{
 					Namespace: ingressGatewayValues[0].Namespace,
 					Labels:    ingressGatewayValues[0].Labels,
@@ -843,7 +847,7 @@ func (r *Reconciler) newGardenerAccess(garden *operatorv1alpha1.Garden, secretsM
 		secretsManager,
 		gardeneraccess.Values{
 			ServerInCluster:       fmt.Sprintf("%s%s.%s.svc.cluster.local", namePrefix, v1beta1constants.DeploymentNameKubeAPIServer, r.GardenNamespace),
-			ServerOutOfCluster:    gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0]),
+			ServerOutOfCluster:    gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0].Name),
 			ManagedResourceLabels: map[string]string{v1beta1constants.LabelCareConditionType: string(operatorv1alpha1.VirtualComponentsHealthy)},
 		},
 	)
@@ -851,21 +855,25 @@ func (r *Reconciler) newGardenerAccess(garden *operatorv1alpha1.Garden, secretsM
 
 const gardenerDNSNamePrefix = "gardener."
 
-func getAPIServerDomains(domains []string) []string {
+func getAPIServerDomains(domains []operatorv1alpha1.DNSDomain) ([]string, []*string) {
 	apiServerDomains := make([]string, 0, len(domains)*2)
+	apiServerDomainProviders := make([]*string, 0, len(domains)*2)
 	for _, domain := range domains {
-		apiServerDomains = append(apiServerDomains, gardenerutils.GetAPIServerDomain(domain))
-		apiServerDomains = append(apiServerDomains, gardenerDNSNamePrefix+domain)
+		apiServerDomains = append(apiServerDomains, gardenerutils.GetAPIServerDomain(domain.Name))
+		apiServerDomains = append(apiServerDomains, gardenerDNSNamePrefix+domain.Name)
+		apiServerDomainProviders = append(apiServerDomainProviders, domain.Provider, domain.Provider)
 	}
-	return apiServerDomains
+	return apiServerDomains, apiServerDomainProviders
 }
 
-func getIngressWildcardDomains(domains []string) []string {
+func getIngressWildcardDomains(domains []operatorv1alpha1.DNSDomain) ([]string, []*string) {
 	wildcardDomains := make([]string, 0, len(domains))
+	domainProviders := make([]*string, 0, len(domains))
 	for _, domain := range domains {
-		wildcardDomains = append(wildcardDomains, "*."+domain)
+		wildcardDomains = append(wildcardDomains, "*."+domain.Name)
+		domainProviders = append(domainProviders, domain.Provider)
 	}
-	return wildcardDomains
+	return wildcardDomains, domainProviders
 }
 
 func (r *Reconciler) newNginxIngressController(garden *operatorv1alpha1.Garden, ingressGatewayValues []istio.IngressGatewayValues) (component.DeployWaiter, error) {
@@ -877,6 +885,8 @@ func (r *Reconciler) newNginxIngressController(garden *operatorv1alpha1.Garden, 
 	if len(ingressGatewayValues) != 1 {
 		return nil, fmt.Errorf("exactly one Istio Ingress Gateway is required for the SNI config")
 	}
+
+	ingressDomains, _ := getIngressWildcardDomains(garden.Spec.RuntimeCluster.Ingress.Domains)
 
 	return sharedcomponent.NewNginxIngress(
 		r.RuntimeClientSet.Client(),
@@ -891,7 +901,7 @@ func (r *Reconciler) newNginxIngressController(garden *operatorv1alpha1.Garden, 
 		component.ClusterTypeSeed,
 		"",
 		v1beta1constants.SeedNginxIngressClass,
-		getIngressWildcardDomains(garden.Spec.RuntimeCluster.Ingress.Domains),
+		ingressDomains,
 		ingressGatewayValues[0].Labels,
 	)
 }
@@ -1103,10 +1113,10 @@ func (r *Reconciler) newGardenerDashboard(garden *operatorv1alpha1.Garden, secre
 		Image:            image.String(),
 		LogLevel:         logger.InfoLevel,
 		RuntimeVersion:   r.RuntimeVersion,
-		APIServerURL:     gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0]),
+		APIServerURL:     gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0].Name),
 		EnableTokenLogin: true,
 		Ingress: gardenerdashboard.IngressValues{
-			Domains:                garden.Spec.RuntimeCluster.Ingress.Domains,
+			Domains:                domainNames(garden.Spec.RuntimeCluster.Ingress.Domains),
 			WildcardCertSecretName: wildcardCertSecretName,
 		},
 	}
@@ -1323,8 +1333,10 @@ func (r *Reconciler) newPrometheusLongTerm(log logr.Logger, garden *operatorv1al
 
 func (r *Reconciler) newBlackboxExporter(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, wildcardCertSecretName *string) (component.DeployWaiter, error) {
 	var (
-		kubeAPIServerTargets    = []monitoringv1alpha1.Target{monitoringv1alpha1.Target("https://" + gardenerDNSNamePrefix + garden.Spec.VirtualCluster.DNS.Domains[0] + "/healthz")}
-		gardenerDashboardTarget = monitoringv1alpha1.Target("https://dashboard." + garden.Spec.RuntimeCluster.Ingress.Domains[0] + "/healthz")
+		primaryVirtualDNSDomain = garden.Spec.VirtualCluster.DNS.Domains[0].Name
+		primaryIngressDomain    = garden.Spec.RuntimeCluster.Ingress.Domains[0].Name
+		kubeAPIServerTargets    = []monitoringv1alpha1.Target{monitoringv1alpha1.Target("https://" + gardenerDNSNamePrefix + primaryVirtualDNSDomain + "/healthz")}
+		gardenerDashboardTarget = monitoringv1alpha1.Target("https://dashboard." + primaryIngressDomain + "/healthz")
 	)
 
 	if garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer != nil && garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.SNI != nil {
@@ -1385,4 +1397,12 @@ func (r *Reconciler) newGardenerDiscoveryServer(
 			WorkloadIdentityTokenIssuer: workloadIdentityTokenIssuer,
 		},
 	), nil
+}
+
+func domainNames(domains []operatorv1alpha1.DNSDomain) []string {
+	names := make([]string, 0, len(domains))
+	for _, domain := range domains {
+		names = append(names, domain.Name)
+	}
+	return names
 }
