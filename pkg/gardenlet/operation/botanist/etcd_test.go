@@ -87,8 +87,6 @@ var _ = Describe("Etcd", func() {
 	})
 
 	Describe("#DefaultEtcd", func() {
-		var hvpaEnabled = true
-
 		BeforeEach(func() {
 			botanist.SecretsManager = sm
 			botanist.SeedClientSet = kubernetesClient
@@ -128,8 +126,6 @@ var _ = Describe("Etcd", func() {
 						purpose = shootPurpose
 					)
 					It(fmt.Sprintf("should successfully create an etcd interface: class = %q, purpose = %q", class, purpose), func() {
-						defer test.WithFeatureGate(features.DefaultFeatureGate, features.HVPA, hvpaEnabled)()
-
 						botanist.Shoot.Purpose = purpose
 
 						validator := &newEtcdValidator{
@@ -142,7 +138,6 @@ var _ = Describe("Etcd", func() {
 							expectedReplicas:                PointTo(Equal(int32(1))),
 							expectedStorageCapacity:         Equal("10Gi"),
 							expectedDefragmentationSchedule: Equal(ptr.To("34 12 */3 * *")),
-							expectedHVPAEnabled:             Equal(hvpaEnabled),
 							expectedMaintenanceTimeWindow:   Equal(maintenanceTimeWindow),
 							expectedScaleDownUpdateMode:     Equal(ptr.To(computeUpdateMode(class, purpose))),
 							expectedHighAvailabilityEnabled: Equal(v1beta1helper.IsHAControlPlaneConfigured(botanist.Shoot.GetInfo())),
@@ -180,7 +175,6 @@ var _ = Describe("Etcd", func() {
 					expectedReplicas:                PointTo(Equal(int32(1))),
 					expectedStorageCapacity:         Equal("10Gi"),
 					expectedDefragmentationSchedule: Equal(ptr.To("34 12 * * *")),
-					expectedHVPAEnabled:             Equal(hvpaEnabled),
 					expectedMaintenanceTimeWindow:   Equal(maintenanceTimeWindow),
 					expectedScaleDownUpdateMode:     Equal(ptr.To(hvpav1alpha1.UpdateModeMaintenanceWindow)),
 					expectedHighAvailabilityEnabled: Equal(v1beta1helper.IsHAControlPlaneConfigured(botanist.Shoot.GetInfo())),
@@ -198,8 +192,6 @@ var _ = Describe("Etcd", func() {
 			It("should successfully create an etcd interface (important class)", func() {
 				class := etcd.ClassImportant
 
-				defer test.WithFeatureGate(features.DefaultFeatureGate, features.HVPAForShootedSeed, hvpaForShootedSeedEnabled)()
-
 				validator := &newEtcdValidator{
 					expectedClient:                  Equal(c),
 					expectedLogger:                  BeAssignableToTypeOf(logr.Logger{}),
@@ -210,7 +202,6 @@ var _ = Describe("Etcd", func() {
 					expectedReplicas:                PointTo(Equal(int32(1))),
 					expectedStorageCapacity:         Equal("10Gi"),
 					expectedDefragmentationSchedule: Equal(ptr.To("34 12 * * *")),
-					expectedHVPAEnabled:             Equal(hvpaEnabled),
 					expectedMaintenanceTimeWindow:   Equal(maintenanceTimeWindow),
 					expectedScaleDownUpdateMode:     Equal(ptr.To(hvpav1alpha1.UpdateModeMaintenanceWindow)),
 					expectedHighAvailabilityEnabled: Equal(v1beta1helper.IsHAControlPlaneConfigured(botanist.Shoot.GetInfo())),
@@ -227,7 +218,6 @@ var _ = Describe("Etcd", func() {
 		})
 
 		It("should return an error because the maintenance time window cannot be parsed", func() {
-			defer test.WithFeatureGate(features.DefaultFeatureGate, features.HVPA, true)()
 			botanist.Shoot.GetInfo().Spec.Maintenance.TimeWindow = &gardencorev1beta1.MaintenanceTimeWindow{
 				Begin: "foobar",
 				End:   "barfoo",
@@ -536,7 +526,6 @@ type newEtcdValidator struct {
 	expectedStorageCapacity         gomegatypes.GomegaMatcher
 	expectedDefragmentationSchedule gomegatypes.GomegaMatcher
 	expectedHighAvailabilityEnabled gomegatypes.GomegaMatcher
-	expectedHVPAEnabled             gomegatypes.GomegaMatcher
 	expectedMaintenanceTimeWindow   gomegatypes.GomegaMatcher
 	expectedScaleDownUpdateMode     gomegatypes.GomegaMatcher
 }

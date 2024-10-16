@@ -19,6 +19,9 @@ However, there are two supported autoscaling modes for the Garden or Shoot clust
 
    The `HVPA` mode is the used autoscaling mode when the `HVPA` feature gate is enabled and the `VPAForETCD` feature gate is disabled.
 
+> [!NOTE]
+> Starting with release `v1.106`, the `HVPA` feature gate is deprecated and locked to false.
+
 - `VPA`
 
    In `VPA` mode, the etcd is scaled by a native `VPA` resource.
@@ -62,6 +65,9 @@ There are three supported autoscaling modes for the Shoot Kubernetes API server.
    The API server's min replicas count is 2, the max replicas count - 3.
 
    The `HVPA` mode is the used autoscaling mode when the `HVPA` feature gate is enabled (and the `VPAAndHPAForAPIServer` feature gate is disabled).
+
+> [!NOTE]
+> Starting with release `v1.106`, the `HVPA` feature gate is deprecated and locked to false.
 
 - `VPAAndHPA`
 

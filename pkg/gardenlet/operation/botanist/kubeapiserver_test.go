@@ -205,48 +205,6 @@ var _ = Describe("KubeAPIServer", func() {
 						ScaleDownDisabled:         false,
 					},
 				),
-				Entry("default behaviour, HVPA is enabled, VPAAndHPAForAPIServer is enabled",
-					nil,
-					map[featuregate.Feature]bool{
-						features.HVPA:                  true,
-						features.VPAAndHPAForAPIServer: true,
-					},
-					apiserver.AutoscalingConfig{
-						Mode: apiserver.AutoscalingModeVPAAndHPA,
-						APIServerResources: corev1.ResourceRequirements{
-							Requests: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("250m"),
-								corev1.ResourceMemory: resource.MustParse("500Mi"),
-							},
-						},
-						MinReplicas:               2,
-						MaxReplicas:               6,
-						UseMemoryMetricForHvpaHPA: false,
-						ScaleDownDisabled:         false,
-					},
-				),
-				Entry("shoot disables scale down, HVPA is enabled, VPAAndHPAForAPIServer is enabled",
-					func() {
-						botanist.Shoot.GetInfo().Annotations = map[string]string{"alpha.control-plane.scaling.shoot.gardener.cloud/scale-down-disabled": "true"}
-					},
-					map[featuregate.Feature]bool{
-						features.HVPA:                  true,
-						features.VPAAndHPAForAPIServer: true,
-					},
-					apiserver.AutoscalingConfig{
-						Mode: apiserver.AutoscalingModeVPAAndHPA,
-						APIServerResources: corev1.ResourceRequirements{
-							Requests: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("250m"),
-								corev1.ResourceMemory: resource.MustParse("500Mi"),
-							},
-						},
-						MinReplicas:               4,
-						MaxReplicas:               6,
-						UseMemoryMetricForHvpaHPA: false,
-						ScaleDownDisabled:         true,
-					},
-				),
 				Entry("shoot is a managed seed and HVPAForShootedSeed is disabled, VPAAndHPAForAPIServer is enabled",
 					func() {
 						botanist.ManagedSeed = &seedmanagementv1alpha1.ManagedSeed{}

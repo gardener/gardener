@@ -20,8 +20,6 @@ The following tables are a summary of the feature gates that you can set on diff
 
 | Feature                   | Default | Stage   | Since   | Until   |
 |---------------------------|---------|---------|---------|---------|
-| HVPA                      | `false` | `Alpha` | `0.31`  |         |
-| HVPAForShootedSeed        | `false` | `Alpha` | `0.32`  |         |
 | DefaultSeccompProfile     | `false` | `Alpha` | `1.54`  |         |
 | IPv6SingleStack           | `false` | `Alpha` | `1.63`  |         |
 | ShootForceDeletion        | `false` | `Alpha` | `1.81`  | `1.90`  |
@@ -167,6 +165,10 @@ The following tables are a summary of the feature gates that you can set on diff
 | VPAAndHPAForAPIServer                        | `false` | `Alpha`      | `1.95`  | `1.100` |
 | VPAAndHPAForAPIServer                        | `true`  | `Beta`       | `1.101` | `1.104` |
 | VPAAndHPAForAPIServer                        | `true`  | `GA`         | `1.105` |         |
+| HVPA                                         | `false` | `Alpha`      | `0.31`  | `1.105` |
+| HVPA                                         | `false` | `Deprecated` | `1.106` |         |
+| HVPAForShootedSeed                           | `false` | `Alpha`      | `0.32`  | `1.105` |
+| HVPAForShootedSeed                           | `false` | `Deprecated` | `1.106` |         |
 
 ## Using a Feature
 
