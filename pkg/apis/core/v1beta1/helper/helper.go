@@ -1136,27 +1136,25 @@ func GetShootAuditPolicyConfigMapName(apiServerConfig *gardencorev1beta1.KubeAPI
 
 // GetShootAuditPolicyConfigMapRef returns the Shoot's ConfigMap reference for the audit policy.
 func GetShootAuditPolicyConfigMapRef(apiServerConfig *gardencorev1beta1.KubeAPIServerConfig) *corev1.ObjectReference {
-	if apiServerConfig != nil &&
-		apiServerConfig.AuditConfig != nil &&
-		apiServerConfig.AuditConfig.AuditPolicy != nil {
+	if apiServerConfig != nil && apiServerConfig.AuditConfig != nil && apiServerConfig.AuditConfig.AuditPolicy != nil {
 		return apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef
 	}
 	return nil
 }
 
-// GetShootAuthenticationConfigurationConfigMapName returns the Shoot's ConfigMap reference name for the authentication configuration.
+// GetShootAuthenticationConfigurationConfigMapName returns the Shoot's ConfigMap reference name for the authentication
+// configuration.
 func GetShootAuthenticationConfigurationConfigMapName(apiServerConfig *gardencorev1beta1.KubeAPIServerConfig) string {
-	if apiServerConfig != nil &&
-		apiServerConfig.StructuredAuthentication != nil {
+	if apiServerConfig != nil && apiServerConfig.StructuredAuthentication != nil {
 		return apiServerConfig.StructuredAuthentication.ConfigMapName
 	}
 	return ""
 }
 
-// GetShootAuthorizationConfigurationConfigMapName returns the Shoot's ConfigMap reference name for the authorization configuration.
+// GetShootAuthorizationConfigurationConfigMapName returns the Shoot's ConfigMap reference name for the authorization
+// configuration.
 func GetShootAuthorizationConfigurationConfigMapName(apiServerConfig *gardencorev1beta1.KubeAPIServerConfig) string {
-	if apiServerConfig != nil &&
-		apiServerConfig.StructuredAuthorization != nil {
+	if apiServerConfig != nil && apiServerConfig.StructuredAuthorization != nil {
 		return apiServerConfig.StructuredAuthorization.ConfigMapName
 	}
 	return ""

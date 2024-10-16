@@ -2595,6 +2595,24 @@ var _ = Describe("Helper", func() {
 		}, "foo"),
 	)
 
+	DescribeTable("#GetShootAuthorizationConfigurationConfigMapName",
+		func(kubeAPIServerConfig *gardencorev1beta1.KubeAPIServerConfig, expectedName string) {
+			authConfigName := GetShootAuthorizationConfigurationConfigMapName(kubeAPIServerConfig)
+			Expect(authConfigName).To(Equal(expectedName))
+		},
+
+		Entry("KubeAPIServerConfig = nil", nil, ""),
+		Entry("StructuredAuthorization = nil", &gardencorev1beta1.KubeAPIServerConfig{}, ""),
+		Entry("ConfigMapName not set", &gardencorev1beta1.KubeAPIServerConfig{
+			StructuredAuthorization: &gardencorev1beta1.StructuredAuthorization{},
+		}, ""),
+		Entry("ConfigMapName set", &gardencorev1beta1.KubeAPIServerConfig{
+			StructuredAuthorization: &gardencorev1beta1.StructuredAuthorization{
+				ConfigMapName: "foo",
+			},
+		}, "foo"),
+	)
+
 	DescribeTable("#GetShootAuthorizationConfiguration",
 		func(kubeAPIServerConfig *gardencorev1beta1.KubeAPIServerConfig, expectedResult *gardencorev1beta1.StructuredAuthorization) {
 			Expect(GetShootAuthorizationConfiguration(kubeAPIServerConfig)).To(Equal(expectedResult))

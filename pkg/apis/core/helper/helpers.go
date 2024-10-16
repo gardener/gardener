@@ -358,27 +358,33 @@ func GetShootAuditPolicyConfigMapName(apiServerConfig *core.KubeAPIServerConfig)
 
 // GetShootAuditPolicyConfigMapRef returns the Shoot's ConfigMap reference for the audit policy.
 func GetShootAuditPolicyConfigMapRef(apiServerConfig *core.KubeAPIServerConfig) *corev1.ObjectReference {
-	if apiServerConfig != nil &&
-		apiServerConfig.AuditConfig != nil &&
-		apiServerConfig.AuditConfig.AuditPolicy != nil {
+	if apiServerConfig != nil && apiServerConfig.AuditConfig != nil && apiServerConfig.AuditConfig.AuditPolicy != nil {
 		return apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef
 	}
 	return nil
 }
 
-// GetShootAuthenticationConfigurationConfigMapName returns the Shoot's ConfigMap reference name for the aithentication configuration.
+// GetShootAuthenticationConfigurationConfigMapName returns the Shoot's ConfigMap reference name for the authentication
+// configuration.
 func GetShootAuthenticationConfigurationConfigMapName(apiServerConfig *core.KubeAPIServerConfig) string {
-	if apiServerConfig != nil &&
-		apiServerConfig.StructuredAuthentication != nil {
+	if apiServerConfig != nil && apiServerConfig.StructuredAuthentication != nil {
 		return apiServerConfig.StructuredAuthentication.ConfigMapName
+	}
+	return ""
+}
+
+// GetShootAuthorizationConfigurationConfigMapName returns the Shoot's ConfigMap reference name for the authorization
+// configuration.
+func GetShootAuthorizationConfigurationConfigMapName(apiServerConfig *core.KubeAPIServerConfig) string {
+	if apiServerConfig != nil && apiServerConfig.StructuredAuthorization != nil {
+		return apiServerConfig.StructuredAuthorization.ConfigMapName
 	}
 	return ""
 }
 
 // GetShootServiceAccountConfigIssuer returns the Shoot's ServiceAccountConfig Issuer.
 func GetShootServiceAccountConfigIssuer(apiServerConfig *core.KubeAPIServerConfig) *string {
-	if apiServerConfig != nil &&
-		apiServerConfig.ServiceAccountConfig != nil {
+	if apiServerConfig != nil && apiServerConfig.ServiceAccountConfig != nil {
 		return apiServerConfig.ServiceAccountConfig.Issuer
 	}
 	return nil
@@ -386,8 +392,7 @@ func GetShootServiceAccountConfigIssuer(apiServerConfig *core.KubeAPIServerConfi
 
 // GetShootServiceAccountConfigAcceptedIssuers returns the Shoot's ServiceAccountConfig AcceptedIssuers.
 func GetShootServiceAccountConfigAcceptedIssuers(apiServerConfig *core.KubeAPIServerConfig) []string {
-	if apiServerConfig != nil &&
-		apiServerConfig.ServiceAccountConfig != nil {
+	if apiServerConfig != nil && apiServerConfig.ServiceAccountConfig != nil {
 		return apiServerConfig.ServiceAccountConfig.AcceptedIssuers
 	}
 	return nil
