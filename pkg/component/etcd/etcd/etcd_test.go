@@ -12,7 +12,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
@@ -171,7 +170,7 @@ var _ = Describe("Etcd", func() {
 				},
 			}
 			if topologyAwareRoutingEnabled {
-				metav1.SetMetaDataAnnotation(&clientService.ObjectMeta, "service.kubernetes.io/topology-aware-hints", "auto")
+				metav1.SetMetaDataAnnotation(&clientService.ObjectMeta, "service.kubernetes.io/topology-mode", "auto")
 				metav1.SetMetaDataLabel(&clientService.ObjectMeta, "endpoint-slice-hints.resources.gardener.cloud/consider", "true")
 			}
 
@@ -1964,7 +1963,6 @@ var _ = Describe("Etcd", func() {
 					StorageClassName:            &storageClassName,
 					DefragmentationSchedule:     &defragmentationSchedule,
 					CARotationPhase:             "",
-					RuntimeKubernetesVersion:    semver.MustParse("1.26.1"),
 					PriorityClassName:           priorityClassName,
 					HVPAEnabled:                 hvpaEnabled,
 					MaintenanceTimeWindow:       maintenanceTimeWindow,
@@ -2029,7 +2027,6 @@ var _ = Describe("Etcd", func() {
 					StorageClassName:            &storageClassName,
 					DefragmentationSchedule:     &defragmentationSchedule,
 					CARotationPhase:             "",
-					RuntimeKubernetesVersion:    semver.MustParse("1.26.1"),
 					PriorityClassName:           priorityClassName,
 					TopologyAwareRoutingEnabled: true,
 					NamePrefix:                  "virtual-garden-",
