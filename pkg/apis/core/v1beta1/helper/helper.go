@@ -1146,13 +1146,30 @@ func GetShootAuditPolicyConfigMapRef(apiServerConfig *gardencorev1beta1.KubeAPIS
 	return nil
 }
 
-// GetShootAuthenticationConfigurationConfigMapName returns the Shoot's ConfigMap reference name for the aithentication configuration.
+// GetShootAuthenticationConfigurationConfigMapName returns the Shoot's ConfigMap reference name for the authentication configuration.
 func GetShootAuthenticationConfigurationConfigMapName(apiServerConfig *gardencorev1beta1.KubeAPIServerConfig) string {
 	if apiServerConfig != nil &&
 		apiServerConfig.StructuredAuthentication != nil {
 		return apiServerConfig.StructuredAuthentication.ConfigMapName
 	}
 	return ""
+}
+
+// GetShootAuthorizationConfigurationConfigMapName returns the Shoot's ConfigMap reference name for the authorization configuration.
+func GetShootAuthorizationConfigurationConfigMapName(apiServerConfig *gardencorev1beta1.KubeAPIServerConfig) string {
+	if apiServerConfig != nil &&
+		apiServerConfig.StructuredAuthorization != nil {
+		return apiServerConfig.StructuredAuthorization.ConfigMapName
+	}
+	return ""
+}
+
+// GetShootAuthorizationConfiguration returns the Shoot's authorization configuration.
+func GetShootAuthorizationConfiguration(apiServerConfig *gardencorev1beta1.KubeAPIServerConfig) *gardencorev1beta1.StructuredAuthorization {
+	if apiServerConfig != nil {
+		return apiServerConfig.StructuredAuthorization
+	}
+	return nil
 }
 
 // AnonymousAuthenticationEnabled returns true if anonymous authentication is set explicitly to 'true' and false otherwise.

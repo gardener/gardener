@@ -2595,6 +2595,16 @@ var _ = Describe("Helper", func() {
 		}, "foo"),
 	)
 
+	DescribeTable("#GetShootAuthorizationConfiguration",
+		func(kubeAPIServerConfig *gardencorev1beta1.KubeAPIServerConfig, expectedResult *gardencorev1beta1.StructuredAuthorization) {
+			Expect(GetShootAuthorizationConfiguration(kubeAPIServerConfig)).To(Equal(expectedResult))
+		},
+
+		Entry("KubeAPIServerConfig = nil", nil, nil),
+		Entry("StructuredAuthorization not set", &gardencorev1beta1.KubeAPIServerConfig{}, nil),
+		Entry("StructuredAuthorization set", &gardencorev1beta1.KubeAPIServerConfig{StructuredAuthorization: &gardencorev1beta1.StructuredAuthorization{}}, &gardencorev1beta1.StructuredAuthorization{}),
+	)
+
 	Describe("#CalculateSeedUsage", func() {
 		type shootCase struct {
 			specSeedName, statusSeedName string
