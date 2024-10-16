@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -296,8 +295,6 @@ type Values struct {
 	// WatchedNamespace restricts the gardener-resource-manager to only watch ManagedResources in the defined namespace.
 	// If not set the gardener-resource-manager controller watches for ManagedResources in all namespaces
 	WatchedNamespace *string
-	// RuntimeKubernetesVersion is the Kubernetes version of the runtime cluster.
-	RuntimeKubernetesVersion *semver.Version
 	// SchedulingProfile is the kube-scheduler profile configured for the Shoot.
 	SchedulingProfile *gardencorev1beta1.SchedulingProfile
 	// DefaultSeccompProfileEnabled specifies if the defaulting seccomp profile webhook of GRM should be enabled or not.
@@ -732,7 +729,7 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 		}
 
 		topologyAwareRoutingEnabled := r.values.TopologyAwareRoutingEnabled && r.values.TargetDiffersFromSourceCluster
-		gardenerutils.ReconcileTopologyAwareRoutingMetadata(service, topologyAwareRoutingEnabled, r.values.RuntimeKubernetesVersion)
+		gardenerutils.ReconcileTopologyAwareRoutingMetadata(service, topologyAwareRoutingEnabled)
 
 		service.Spec.Selector = r.appLabel()
 		service.Spec.Type = corev1.ServiceTypeClusterIP

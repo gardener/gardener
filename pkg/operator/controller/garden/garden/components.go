@@ -362,7 +362,6 @@ func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden,
 	return sharedcomponent.NewRuntimeGardenerResourceManager(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
-		r.RuntimeVersion,
 		secretsManager,
 		r.Config.LogLevel, r.Config.LogFormat,
 		operatorv1alpha1.SecretNameCARuntime,
@@ -385,7 +384,6 @@ func (r *Reconciler) newVirtualGardenGardenerResourceManager(secretsManager secr
 		nil,
 		nil,
 		nil,
-		r.RuntimeVersion,
 		r.Config.LogLevel, r.Config.LogFormat,
 		namePrefix,
 		false,
@@ -513,7 +511,6 @@ func (r *Reconciler) newEtcd(
 			StorageClassName:            storageClassName,
 			DefragmentationSchedule:     &defragmentationSchedule,
 			CARotationPhase:             helper.GetCARotationPhase(garden.Status.Credentials),
-			RuntimeKubernetesVersion:    r.RuntimeVersion,
 			HVPAEnabled:                 hvpaEnabled(),
 			MaintenanceTimeWindow:       garden.Spec.VirtualCluster.Maintenance.TimeWindow,
 			ScaleDownUpdateMode:         hvpaScaleDownUpdateMode,
@@ -978,7 +975,6 @@ func (r *Reconciler) newGardenerAdmissionController(garden *operatorv1alpha1.Gar
 	values := gardeneradmissioncontroller.Values{
 		Image:                       image.String(),
 		LogLevel:                    logger.InfoLevel,
-		RuntimeVersion:              r.RuntimeVersion,
 		SeedRestrictionEnabled:      enableSeedRestriction,
 		TopologyAwareRoutingEnabled: helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
 	}
@@ -1132,7 +1128,6 @@ func (r *Reconciler) newTerminalControllerManager(garden *operatorv1alpha1.Garde
 
 	values := terminal.Values{
 		Image:                       image.String(),
-		RuntimeVersion:              r.RuntimeVersion,
 		TopologyAwareRoutingEnabled: helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
 	}
 

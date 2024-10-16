@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -41,7 +40,6 @@ import (
 func NewRuntimeGardenerResourceManager(
 	c client.Client,
 	gardenNamespaceName string,
-	runtimeVersion *semver.Version,
 	secretsManager secretsmanager.Interface,
 	logLevel, logFormat string,
 	secretNameServerCA string,
@@ -92,7 +90,6 @@ func NewRuntimeGardenerResourceManager(
 		ResourceClass:                       ptr.To(v1beta1constants.SeedResourceManagerClass),
 		SecretNameServerCA:                  secretNameServerCA,
 		SyncPeriod:                          &metav1.Duration{Duration: time.Hour},
-		RuntimeKubernetesVersion:            runtimeVersion,
 		Zones:                               zones,
 	}), nil
 }
@@ -106,7 +103,6 @@ func NewTargetGardenerResourceManager(
 	clusterIdentity *string,
 	defaultNotReadyTolerationSeconds *int64,
 	defaultUnreachableTolerationSeconds *int64,
-	kubernetesVersion *semver.Version,
 	logLevel, logFormat string,
 	namePrefix string,
 	podTopologySpreadConstraintsEnabled bool,
@@ -153,7 +149,6 @@ func NewTargetGardenerResourceManager(
 		SystemComponentTolerations:           systemComponentsToleration,
 		TargetDiffersFromSourceCluster:       true,
 		TargetNamespaces:                     targetNamespaces,
-		RuntimeKubernetesVersion:             kubernetesVersion,
 		WatchedNamespace:                     &namespaceName,
 		TopologyAwareRoutingEnabled:          topologyAwareRoutingEnabled,
 		IsWorkerless:                         isWorkerless,

@@ -80,7 +80,7 @@ var _ = Describe("GardenerAPIServer", func() {
 		managedResourceSecretVirtual *corev1.Secret
 
 		podDisruptionBudget *policyv1.PodDisruptionBudget
-		serviceRuntimeFor   func(bool) *corev1.Service
+		serviceRuntime      *corev1.Service
 		vpaInBaselineMode   *vpaautoscalingv1.VerticalPodAutoscaler
 		vpaInHPAAndVPAMode  *vpaautoscalingv1.VerticalPodAutoscaler
 		hpaOnHPAAndVPAMode  *autoscalingv2.HorizontalPodAutoscaler
@@ -194,42 +194,33 @@ var _ = Describe("GardenerAPIServer", func() {
 			},
 		}
 
-		serviceRuntimeFor = func(k8sGreaterEqual127 bool) *corev1.Service {
-			svc := &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gardener-apiserver",
-					Namespace: namespace,
-					Annotations: map[string]string{
-						"networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports":       `[{"protocol":"TCP","port":8443}]`,
-						"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8443}]`,
-					},
-					Labels: map[string]string{
-						"app":  "gardener",
-						"role": "apiserver",
-						"endpoint-slice-hints.resources.gardener.cloud/consider": "true",
-					},
+		serviceRuntime = &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener-apiserver",
+				Namespace: namespace,
+				Annotations: map[string]string{
+					"networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports":       `[{"protocol":"TCP","port":8443}]`,
+					"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8443}]`,
+					"service.kubernetes.io/topology-mode":                                              "auto",
 				},
-				Spec: corev1.ServiceSpec{
-					Type: corev1.ServiceTypeClusterIP,
-					Selector: map[string]string{
-						"app":  "gardener",
-						"role": "apiserver",
-					},
-					Ports: []corev1.ServicePort{{
-						Port:       443,
-						Protocol:   corev1.ProtocolTCP,
-						TargetPort: intstr.FromInt32(8443),
-					}},
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "apiserver",
+					"endpoint-slice-hints.resources.gardener.cloud/consider": "true",
 				},
-			}
-
-			if k8sGreaterEqual127 {
-				svc.Annotations["service.kubernetes.io/topology-mode"] = "auto"
-			} else {
-				svc.Annotations["service.kubernetes.io/topology-aware-hints"] = "auto"
-			}
-
-			return svc
+			},
+			Spec: corev1.ServiceSpec{
+				Type: corev1.ServiceTypeClusterIP,
+				Selector: map[string]string{
+					"app":  "gardener",
+					"role": "apiserver",
+				},
+				Ports: []corev1.ServicePort{{
+					Port:       443,
+					Protocol:   corev1.ProtocolTCP,
+					TargetPort: intstr.FromInt32(8443),
+				}},
+			},
 		}
 
 		vpaInBaselineMode = &vpaautoscalingv1.VerticalPodAutoscaler{
@@ -909,7 +900,7 @@ var _ = Describe("GardenerAPIServer", func() {
 			// Create runtime service manually since it is required by the Deploy function. In reality, it gets created
 			// via the ManagedResource, however in this unit test the respective controller is not running, hence we
 			// have to create it here.
-			svcRuntime := serviceRuntimeFor(true).DeepCopy()
+			svcRuntime := serviceRuntime.DeepCopy()
 			Expect(fakeClient.Create(ctx, svcRuntime)).To(Succeed())
 			patch := client.MergeFrom(svcRuntime.DeepCopy())
 			svcRuntime.Spec.ClusterIP = clusterIP
@@ -1602,7 +1593,8 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 						expectedRuntimeObjects = append(
 							expectedRuntimeObjects,
 							vpaInBaselineMode,
-							serviceRuntimeFor(true),
+							podDisruptionBudget,
+							serviceRuntime,
 						)
 
 						Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
@@ -1620,7 +1612,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 							expectedRuntimeObjects,
 							hvpa,
 							podDisruptionBudget,
-							serviceRuntimeFor(true),
+							serviceRuntime,
 						)
 
 						Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
@@ -1642,7 +1634,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 							vpaInHPAAndVPAMode,
 							hpaOnHPAAndVPAMode,
 							podDisruptionBudget,
-							serviceRuntimeFor(true),
+							serviceRuntime,
 						}
 
 						Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
