@@ -157,7 +157,7 @@
 * [Extending the Monitoring Stack](development/monitoring-stack.md)
 * [How to create log parser for container into fluent-bit](development/log_parsers.md)
 * [`PriorityClasses` in Gardener Clusters](development/priority-classes.md)
-* [High Availability Of Deployed Components](development/high-availability-dev.md)
+* [High Availability Of Deployed Components](development/high-availability-of-components.md)
 * [Checklist For Adding New Components](development/component-checklist.md)
 * [Defaulting Strategy and Developer Guideline](development/defaulting.md)
 * [Autoscaling Specifics for Components](development/autoscaling-specifics-for-components.md)
