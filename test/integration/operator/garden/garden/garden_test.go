@@ -51,7 +51,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/networking/nginxingress"
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/features"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	gardencontroller "github.com/gardener/gardener/pkg/operator/controller/garden/garden"
@@ -78,7 +77,6 @@ var _ = Describe("Garden controller tests", func() {
 
 	BeforeEach(func() {
 		DeferCleanup(test.WithVar(&secretsutils.GenerateKey, secretsutils.FakeGenerateKey))
-		DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.HVPA, true))
 		DeferCleanup(test.WithVars(
 			&etcd.DefaultInterval, 100*time.Millisecond,
 			&etcd.DefaultTimeout, 500*time.Millisecond,
@@ -228,9 +226,6 @@ var _ = Describe("Garden controller tests", func() {
 						},
 					},
 				},
-				FeatureGates: map[string]bool{
-					"HVPA": true,
-				},
 			},
 			Identity:        &gardencorev1beta1.Gardener{Name: "test-gardener"},
 			GardenNamespace: testNamespace.Name,
@@ -350,7 +345,6 @@ spec:
 			return crdList.Items
 		}).Should(And(
 			ContainElements(
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("hvpas.autoscaling.k8s.io")})}),
 				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcds.druid.gardener.cloud")})}),
 				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcdcopybackupstasks.druid.gardener.cloud")})}),
 				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("managedresources.resources.gardener.cloud")})}),
@@ -456,7 +450,6 @@ spec:
 		}).Should(ContainElements(
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("garden-system")})}),
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("vpa")})}),
-			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("hvpa")})}),
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-druid")})}),
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("nginx-ingress")})}),
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("fluent-operator")})}),
@@ -956,7 +949,6 @@ spec:
 			g.Expect(testClient.List(ctx, crdList)).To(Succeed())
 			return crdList.Items
 		}).ShouldNot(ContainElements(
-			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("hvpas.autoscaling.k8s.io")})}),
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcds.druid.gardener.cloud")})}),
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcdcopybackupstasks.druid.gardener.cloud")})}),
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("managedresources.resources.gardener.cloud")})}),

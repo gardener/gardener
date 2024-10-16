@@ -26,10 +26,8 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/features"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	. "github.com/gardener/gardener/pkg/operator/controller/garden/care"
-	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -64,8 +62,6 @@ var _ = Describe("Garden health", func() {
 	)
 
 	BeforeEach(func() {
-		DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.HVPA, true))
-
 		ctx = context.Background()
 		runtimeClient = fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).Build()
 
