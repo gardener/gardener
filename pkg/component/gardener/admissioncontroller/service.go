@@ -54,7 +54,7 @@ func (a *gardenerAdmissionController) service() *corev1.Service {
 		Protocol: ptr.To(corev1.ProtocolTCP),
 	}))
 
-	gardenerutils.ReconcileTopologyAwareRoutingMetadata(svc, a.values.TopologyAwareRoutingEnabled, a.values.RuntimeVersion)
+	gardenerutils.ReconcileTopologyAwareRoutingMetadata(svc, a.values.TopologyAwareRoutingEnabled)
 
 	return svc
 }

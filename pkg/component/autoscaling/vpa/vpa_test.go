@@ -1016,7 +1016,7 @@ var _ = Describe("VPA", func() {
 			}
 
 			if topologyAwareRoutingEnabled {
-				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "service.kubernetes.io/topology-aware-hints", "auto")
+				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "service.kubernetes.io/topology-mode", "auto")
 				metav1.SetMetaDataLabel(&obj.ObjectMeta, "endpoint-slice-hints.resources.gardener.cloud/consider", "true")
 			}
 

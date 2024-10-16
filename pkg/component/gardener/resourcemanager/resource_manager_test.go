@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -71,7 +70,6 @@ var _ = Describe("ResourceManager", func() {
 		healthPort                  int32 = 8081
 		metricsPort                 int32 = 8080
 		serverPort                  int32 = 10250
-		version                           = semver.MustParse("1.25.1")
 		binPackingSchedulingProfile       = gardencorev1beta1.SchedulingProfileBinPacking
 
 		// optional configuration
@@ -319,7 +317,6 @@ var _ = Describe("ResourceManager", func() {
 			PriorityClassName:                                priorityClassName,
 			Replicas:                                         &replicas,
 			ResourceClass:                                    &resourceClass,
-			RuntimeKubernetesVersion:                         version,
 			SecretNameServerCA:                               "ca",
 			SystemComponentTolerations: []corev1.Toleration{
 				{Key: "a"},
@@ -2014,7 +2011,6 @@ subjects:
 
 					secrets.BootstrapKubeconfig = &component.Secret{Name: secretNameBootstrapKubeconfig}
 
-					cfg.RuntimeKubernetesVersion = semver.MustParse("1.25.0")
 					resourceManager = New(c, deployNamespace, sm, cfg)
 					resourceManager.SetSecrets(secrets)
 
@@ -2574,7 +2570,6 @@ subjects:
 	Describe("#Destroy", func() {
 		Context("target differs from source cluster", func() {
 			JustBeforeEach(func() {
-				cfg.RuntimeKubernetesVersion = semver.MustParse("1.26")
 				resourceManager = New(c, deployNamespace, sm, cfg)
 			})
 

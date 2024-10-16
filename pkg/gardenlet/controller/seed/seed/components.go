@@ -253,7 +253,6 @@ func (r *Reconciler) newGardenerResourceManager(seed *gardencorev1beta1.Seed, se
 		LogFormat:                                 r.Config.LogFormat,
 		NetworkPolicyAdditionalNamespaceSelectors: additionalNetworkPolicyNamespaceSelectors,
 		PriorityClassName:                         v1beta1constants.PriorityClassNameSeedSystemCritical,
-		RuntimeKubernetesVersion:                  r.SeedVersion,
 		SecretNameServerCA:                        v1beta1constants.SecretNameCASeed,
 		Zones:                                     seed.Spec.Provider.Zones,
 	})

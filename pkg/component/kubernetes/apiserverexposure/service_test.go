@@ -213,7 +213,7 @@ var _ = Describe("#Service", func() {
 					"networking.istio.io/exportTo": "*",
 					"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":443}]`,
 					"networking.resources.gardener.cloud/namespace-selectors":                          `[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}},{"matchLabels":{"networking.gardener.cloud/access-target-apiserver":"allowed"}}]`,
-					"service.kubernetes.io/topology-aware-hints":                                       "auto",
+					"service.kubernetes.io/topology-mode":                                              "auto",
 				}
 				expected.Labels = map[string]string{
 					"app": "kubernetes",
