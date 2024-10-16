@@ -895,7 +895,6 @@ message ETCDEncryptionKeyRotation {
 message EncryptionConfig {
   // Resources contains the list of resources that shall be encrypted in addition to secrets.
   // Each item is a Kubernetes resource name in plural (resource or resource.group) that should be encrypted.
-  // Note that configuring a custom resource is only supported for versions >= 1.26.
   // Wildcards are not supported for now.
   // See https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md for more details.
   repeated string resources = 1;
@@ -1294,14 +1293,14 @@ message KubeControllerManagerConfig {
   optional int32 nodeCIDRMaskSize = 3;
 
   // PodEvictionTimeout defines the grace period for deleting pods on failed nodes. Defaults to 2m.
+  // +optional
   //
   // Deprecated: The corresponding kube-controller-manager flag `--pod-eviction-timeout` is deprecated
   // in favor of the kube-apiserver flags `--default-not-ready-toleration-seconds` and `--default-unreachable-toleration-seconds`.
   // The `--pod-eviction-timeout` flag does not have effect when the taint based eviction is enabled. The taint
   // based eviction is beta (enabled by default) since Kubernetes 1.13 and GA since Kubernetes 1.18. Hence,
   // instead of setting this field, set the `spec.kubernetes.kubeAPIServer.defaultNotReadyTolerationSeconds` and
-  // `spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds`.
-  // +optional
+  // `spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds`. This field will be removed in gardener v1.112.
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration podEvictionTimeout = 4;
 
   // NodeMonitorGracePeriod defines the grace period before an unresponsive node is marked unhealthy.
@@ -1456,8 +1455,6 @@ message KubeletConfig {
   optional int32 registryBurst = 20;
 
   // SeccompDefault enables the use of `RuntimeDefault` as the default seccomp profile for all workloads.
-  // This requires the corresponding SeccompDefault feature gate to be enabled as well.
-  // This field is only available for Kubernetes v1.25 or later.
   // +optional
   optional bool seccompDefault = 21;
 
@@ -1471,15 +1468,13 @@ message KubeletConfig {
   optional int32 containerLogMaxFiles = 23;
 
   // ProtectKernelDefaults ensures that the kernel tunables are equal to the kubelet defaults.
-  // Defaults to true for Kubernetes v1.26 or later.
+  // Defaults to true.
   // +optional
   optional bool protectKernelDefaults = 24;
 
   // StreamingConnectionIdleTimeout is the maximum time a streaming connection can be idle before the connection is automatically closed.
   // This field cannot be set lower than "30s" or greater than "4h".
-  // Default:
-  //  "4h" for Kubernetes < v1.26.
-  //  "5m" for Kubernetes >= v1.26.
+  // Default: "5m".
   // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration streamingConnectionIdleTimeout = 25;
 
@@ -1613,9 +1608,10 @@ message Kubernetes {
   optional VerticalPodAutoscaler verticalPodAutoscaler = 9;
 
   // EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret will be created for the Shoot cluster.
-  // Defaults to true for Shoots with Kubernetes versions < 1.26. Defaults to false for Shoots with Kubernetes versions >= 1.26.
-  // Starting Kubernetes 1.27 the field will be locked to false.
+  // Setting this field to true is not supported.
   // +optional
+  //
+  // Deprecated: This field is deprecated and will be removed in gardener v1.112
   optional bool enableStaticTokenKubeconfig = 10;
 }
 
@@ -2935,6 +2931,8 @@ message ShootCredentialsRotation {
 
   // Kubeconfig contains information about the kubeconfig credential rotation.
   // +optional
+  //
+  // Deprecated: This field is deprecated and will be removed in gardener v1.112
   optional ShootKubeconfigRotation kubeconfig = 2;
 
   // SSHKeypair contains information about the ssh-keypair credential rotation.
