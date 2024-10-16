@@ -26,11 +26,11 @@ Please see [this](../../../example/35-namespacedcloudprofile.yaml) example manif
 In order to make changes to specific fields in the `NamespacedCloudProfile`, a user must be granted custom RBAC verbs, which are typically only granted to landscape operators.
 
 The following fields require the corresponding custom verbs to be modified:
-* for changing the `.spec.kubernetes` field the custom verb `modify-spec-kubernetes` is required.
-* for changing the `.spec.machineImages` field the custom verb `modify-spec-machineimages` is required.
-* for changing the `.spec.providerConfig` field the custom verb `modify-spec-providerconfig` is required.
+* For changing the `.spec.kubernetes` field, the custom verb `modify-spec-kubernetes` is required.
+* For changing the `.spec.machineImages` field, the custom verb `modify-spec-machineimages` is required.
+* For changing the `.spec.providerConfig` field, the custom verb `modify-spec-providerconfig` is required.
 
-The assignment of these custom verbs can be achieved by creating a `ClusterRole` and a `ClusterRoleBinding` in the `garden` namespace:
+The assignment of these custom verbs can be achieved by creating a `ClusterRole` and a `RoleBinding` like in the following example:
 
 ```yaml
 ---
