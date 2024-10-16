@@ -79,7 +79,7 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() apiserver.Autoscaling
 		defaultReplicas           *int32
 		// kube-apiserver is a control plane component of type "server".
 		// The HA webhook sets at least 2 replicas to components of type "server" (w/o HA or with w/ HA).
-		// Ref https://github.com/gardener/gardener/blob/master/docs/development/high-availability.md#control-plane-components.
+		// Ref https://github.com/gardener/gardener/blob/master/docs/development/high-availability-of-components.md#control-plane-components.
 		// That's why minReplicas is set to 2.
 		minReplicas        int32 = 2
 		maxReplicas        int32 = 3
