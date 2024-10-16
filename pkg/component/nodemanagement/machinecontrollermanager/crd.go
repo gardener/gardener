@@ -9,6 +9,7 @@ import (
 	_ "embed"
 	"fmt"
 
+	"golang.org/x/exp/maps"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -27,15 +28,26 @@ var (
 	//go:embed templates/crd-machine.sapcloud.io_machines.yaml
 	machineCRD string
 
-	crdResources []string
+	// resourceObjectKeyMap maps the ObjectKey of the CRD to its corresponding manifest
+	resourceObjectKeyMap map[client.ObjectKey]string
 )
 
 func init() {
-	crdResources = []string{
+	resourceObjectKeyMap = make(map[client.ObjectKey]string)
+	resources := []string{
 		machineClassCRD,
 		machineDeploymentCRD,
 		machineSetCRD,
 		machineCRD,
+	}
+
+	for _, resource := range resources {
+		objKey, err := kubernetesutils.GetObjectKeyFromManifest(resource)
+		if err != nil {
+			panic(err)
+		}
+
+		resourceObjectKeyMap[objKey] = resource
 	}
 }
 
@@ -54,7 +66,7 @@ func NewCRD(client client.Client, applier kubernetes.Applier) component.DeployWa
 
 // Deploy creates and updates the CRD definitions for the machine-controller-manager.
 func (c *crd) Deploy(ctx context.Context) error {
-	for _, resource := range crdResources {
+	for _, resource := range resourceObjectKeyMap {
 		if err := c.applier.ApplyManifest(ctx, kubernetes.NewManifestReader([]byte(resource)), kubernetes.DefaultMergeFuncs); err != nil {
 			return err
 		}
@@ -64,7 +76,7 @@ func (c *crd) Deploy(ctx context.Context) error {
 }
 
 func (c *crd) Destroy(ctx context.Context) error {
-	for _, resource := range crdResources {
+	for _, resource := range resourceObjectKeyMap {
 		reader := kubernetes.NewManifestReader([]byte(resource))
 
 		obj, err := reader.Read()
@@ -86,7 +98,7 @@ func (c *crd) Destroy(ctx context.Context) error {
 
 // Wait signals whether a CRD is ready or needs more time to be deployed.
 func (c *crd) Wait(ctx context.Context) error {
-	return kubernetesutils.WaitUntilCRDManifestsReady(ctx, c.client, crdResources)
+	return kubernetesutils.WaitUntilCRDManifestsReady(ctx, c.client, maps.Keys(resourceObjectKeyMap))
 }
 
 // WaitCleanup for destruction to finish and component to be fully removed. crdDeployer does not need to wait for cleanup.

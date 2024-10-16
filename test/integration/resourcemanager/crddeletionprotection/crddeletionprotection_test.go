@@ -74,7 +74,7 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 		Expect(crds.NewCRD(applier, true, true).Deploy(ctx)).To(Succeed())
 
 		manifestReader := kubernetes.NewManifestReader([]byte(strings.Join([]string{
-			etcd.CRD,
+			etcd.CrdCloudEtcds,
 			resourcemanager.CRD,
 		}, "\n---\n")))
 		Expect(applier.ApplyManifest(ctx, manifestReader, kubernetes.DefaultMergeFuncs)).To(Succeed())

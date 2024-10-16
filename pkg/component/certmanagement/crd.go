@@ -8,6 +8,7 @@ import (
 	"context"
 	_ "embed"
 
+	"golang.org/x/exp/maps"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -24,11 +25,22 @@ var (
 	//go:embed assets/crd-cert.gardener.cloud_issuers.yaml
 	crdIssuers string
 
-	resources []string
+	// resourceObjectKeyMap maps the ObjectKey of the CRD to its corresponding manifest
+	resourceObjectKeyMap map[client.ObjectKey]string
 )
 
 func init() {
-	resources = []string{crdRevocations, crdCertificates, crdIssuers}
+	resourceObjectKeyMap = make(map[client.ObjectKey]string)
+	resources := []string{crdRevocations, crdCertificates, crdIssuers}
+
+	for _, resource := range resources {
+		objKey, err := kubernetesutils.GetObjectKeyFromManifest(resource)
+		if err != nil {
+			panic(err)
+		}
+
+		resourceObjectKeyMap[objKey] = resource
+	}
 }
 
 type crdDeployer struct {
@@ -47,7 +59,7 @@ func NewCRDs(client client.Client, applier kubernetes.Applier) component.DeployW
 func (c *crdDeployer) Deploy(ctx context.Context) error {
 	var fns []flow.TaskFn
 
-	for _, resource := range resources {
+	for _, resource := range resourceObjectKeyMap {
 		r := resource
 		fns = append(fns, func(ctx context.Context) error {
 			return c.applier.ApplyManifest(ctx, kubernetes.NewManifestReader([]byte(r)), kubernetes.DefaultMergeFuncs)
@@ -60,7 +72,7 @@ func (c *crdDeployer) Deploy(ctx context.Context) error {
 func (c *crdDeployer) Destroy(ctx context.Context) error {
 	var fns []flow.TaskFn
 
-	for _, resource := range resources {
+	for _, resource := range resourceObjectKeyMap {
 		r := resource
 		fns = append(fns, func(ctx context.Context) error {
 			return client.IgnoreNotFound(c.applier.DeleteManifest(ctx, kubernetes.NewManifestReader([]byte(r))))
@@ -72,7 +84,7 @@ func (c *crdDeployer) Destroy(ctx context.Context) error {
 
 // Wait signals whether a CRD is ready or needs more time to be deployed.
 func (c *crdDeployer) Wait(ctx context.Context) error {
-	return kubernetesutils.WaitUntilCRDManifestsReady(ctx, c.client, resources)
+	return kubernetesutils.WaitUntilCRDManifestsReady(ctx, c.client, maps.Keys(resourceObjectKeyMap))
 }
 
 // WaitCleanup for destruction to finish and component to be fully removed. crdDeployer does not need to wait for cleanup.
