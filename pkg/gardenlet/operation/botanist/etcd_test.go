@@ -11,7 +11,6 @@ import (
 	"time"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
-	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo/v2"
@@ -36,7 +35,6 @@ import (
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	mocketcd "github.com/gardener/gardener/pkg/component/etcd/etcd/mock"
-	"github.com/gardener/gardener/pkg/features"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
@@ -44,7 +42,6 @@ import (
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
-	"github.com/gardener/gardener/pkg/utils/test"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
@@ -112,13 +109,6 @@ var _ = Describe("Etcd", func() {
 				botanist.ManagedSeed = nil
 			})
 
-			computeUpdateMode := func(class etcd.Class, purpose gardencorev1beta1.ShootPurpose) string {
-				if class == etcd.ClassImportant && (purpose == gardencorev1beta1.ShootPurposeProduction || purpose == gardencorev1beta1.ShootPurposeInfrastructure) {
-					return hvpav1alpha1.UpdateModeOff
-				}
-				return hvpav1alpha1.UpdateModeMaintenanceWindow
-			}
-
 			for _, etcdClass := range []etcd.Class{etcd.ClassNormal, etcd.ClassImportant} {
 				for _, shootPurpose := range []gardencorev1beta1.ShootPurpose{gardencorev1beta1.ShootPurposeEvaluation, gardencorev1beta1.ShootPurposeProduction, gardencorev1beta1.ShootPurposeInfrastructure} {
 					var (
@@ -139,7 +129,6 @@ var _ = Describe("Etcd", func() {
 							expectedStorageCapacity:         Equal("10Gi"),
 							expectedDefragmentationSchedule: Equal(ptr.To("34 12 */3 * *")),
 							expectedMaintenanceTimeWindow:   Equal(maintenanceTimeWindow),
-							expectedScaleDownUpdateMode:     Equal(ptr.To(computeUpdateMode(class, purpose))),
 							expectedHighAvailabilityEnabled: Equal(v1beta1helper.IsHAControlPlaneConfigured(botanist.Shoot.GetInfo())),
 						}
 
@@ -156,15 +145,11 @@ var _ = Describe("Etcd", func() {
 		})
 
 		Context("no HVPAShootedSeed feature gate", func() {
-			hvpaForShootedSeedEnabled := false
-
 			BeforeEach(func() {
 				botanist.ManagedSeed = &seedmanagementv1alpha1.ManagedSeed{}
 			})
 
 			It("should successfully create an etcd interface (normal class)", func() {
-				defer test.WithFeatureGate(features.DefaultFeatureGate, features.HVPAForShootedSeed, hvpaForShootedSeedEnabled)()
-
 				validator := &newEtcdValidator{
 					expectedClient:                  Equal(c),
 					expectedLogger:                  BeAssignableToTypeOf(logr.Logger{}),
@@ -176,7 +161,6 @@ var _ = Describe("Etcd", func() {
 					expectedStorageCapacity:         Equal("10Gi"),
 					expectedDefragmentationSchedule: Equal(ptr.To("34 12 * * *")),
 					expectedMaintenanceTimeWindow:   Equal(maintenanceTimeWindow),
-					expectedScaleDownUpdateMode:     Equal(ptr.To(hvpav1alpha1.UpdateModeMaintenanceWindow)),
 					expectedHighAvailabilityEnabled: Equal(v1beta1helper.IsHAControlPlaneConfigured(botanist.Shoot.GetInfo())),
 				}
 
@@ -203,7 +187,6 @@ var _ = Describe("Etcd", func() {
 					expectedStorageCapacity:         Equal("10Gi"),
 					expectedDefragmentationSchedule: Equal(ptr.To("34 12 * * *")),
 					expectedMaintenanceTimeWindow:   Equal(maintenanceTimeWindow),
-					expectedScaleDownUpdateMode:     Equal(ptr.To(hvpav1alpha1.UpdateModeMaintenanceWindow)),
 					expectedHighAvailabilityEnabled: Equal(v1beta1helper.IsHAControlPlaneConfigured(botanist.Shoot.GetInfo())),
 				}
 
@@ -527,7 +510,6 @@ type newEtcdValidator struct {
 	expectedDefragmentationSchedule gomegatypes.GomegaMatcher
 	expectedHighAvailabilityEnabled gomegatypes.GomegaMatcher
 	expectedMaintenanceTimeWindow   gomegatypes.GomegaMatcher
-	expectedScaleDownUpdateMode     gomegatypes.GomegaMatcher
 }
 
 func (v *newEtcdValidator) NewEtcd(
