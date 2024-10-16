@@ -61,7 +61,7 @@ func (b *Bootstrapper) Start(parentCtx context.Context) error {
 }
 
 func bootstrapCluster(ctx context.Context, gardenClient client.Client, discoveryClient discovery.DiscoveryInterface, secretsManager secretsmanager.Interface) error {
-	const minKubernetesVersion = "1.25"
+	const minKubernetesVersion = "1.27"
 
 	serverVersion, err := discoveryClient.ServerVersion()
 	if err != nil {
