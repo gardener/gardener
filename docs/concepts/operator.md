@@ -546,15 +546,28 @@ This reconciler inspects the following references:
 
 Further checks might be added in the future.
 
+### [`Access` Reconciler](../../pkg/operator/controller/garden/access)
+
+This reconciler performs actions related to the garden access secret (`gardener` or `gardener-internal`).
+
+It extracts the included Kubeconfig, and prepares a dedicated config where the inline bearer token is replaced by a bearer token file with the said token persisted.
+Afterward, the config is used to add the [`Gardenlet` controller](#gardenlet-controller). 
+Any subsequent reconciliation run, mostly triggered by a token replacement, causes the content of the bearer token file to be updated with the token found in the access secret.
+
+Together with the adjusted config and the token file, related controllers can continuously run their operations, even after credentials rotation.
+
 ### [`Controller Registrar` controller](../../pkg/operator/controller/controllerregistrar)
 
-This controller registers controllers, which need to be installed in two contexts. If the Garden cluster is at the same time used as a Seed cluster, the `gardener-operator` will start these controllers. If the Garden cluster is separate from the Seed cluster, the controllers will be started by gardenlet.
+Some controllers may only be instantiated or added later, because they need the `Garden` resource to be available (e.g. network configuration) or even the entire virtual garden cluster to run:
 
-Currently, this applies to two controllers:
 * [`NetworkPolicy` controller](gardenlet.md#networkpolicy-controller)
 * [`VPA EvictionRequirements` controller](gardenlet.md#vpaevictionrequirements-controller)
+* [`Garden Access` reconciler](#access-reconciler)
 
-The registration happens as soon as the `Garden` resource is created.
+> [!NOTE]
+> Some of the listed controllers are managed `gardenlet`, as well.
+> If the Garden cluster is at the same time used as a Seed cluster, `gardenlet` will skip running the `NetworkPolicy` and `VPA EvictionRequirements` controllers to avoid interferences.
+
 It contains the networking information of the garden runtime cluster which is required configuration for the `NetworkPolicy` controller.
 
 

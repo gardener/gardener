@@ -253,6 +253,7 @@ build:
             - pkg/operator/controller/extension/extension/runtime
             - pkg/operator/controller/extension/required
             - pkg/operator/controller/garden
+            - pkg/operator/controller/garden/access
             - pkg/operator/controller/garden/care
             - pkg/operator/controller/garden/garden
             - pkg/operator/controller/garden/reference

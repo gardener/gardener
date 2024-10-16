@@ -7,13 +7,16 @@ package controller
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
@@ -25,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/operator/controller/extension"
 	"github.com/gardener/gardener/pkg/operator/controller/extension/required"
 	"github.com/gardener/gardener/pkg/operator/controller/garden"
+	gardenaccess "github.com/gardener/gardener/pkg/operator/controller/garden/access"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
@@ -73,6 +77,22 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 				return (&required.Reconciler{
 					Config: cfg,
 				}).AddToManager(ctx, mgr)
+			}},
+			{AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, _ *operatorv1alpha1.Garden) error {
+				log := logf.FromContext(ctx)
+				secretName := v1beta1constants.SecretNameGardener
+
+				// Prefer the internal host if available
+				addr, err := net.LookupHost(fmt.Sprintf("virtual-garden-%s.%s.svc.cluster.local", v1beta1constants.DeploymentNameKubeAPIServer, v1beta1constants.GardenNamespace))
+				if err != nil {
+					log.Info("Service DNS name lookup of virtual-garden-kube-apiserver failed, falling back to external kubeconfig", "error", err)
+				} else if len(addr) > 0 {
+					secretName = v1beta1constants.SecretNameGardenerInternal
+				}
+
+				return (&gardenaccess.Reconciler{
+					Config: cfg,
+				}).AddToManager(mgr, v1beta1constants.GardenNamespace, secretName)
 			}},
 		},
 	}).AddToManager(mgr); err != nil {

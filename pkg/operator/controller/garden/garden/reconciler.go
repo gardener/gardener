@@ -18,7 +18,6 @@ import (
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -29,11 +28,8 @@ import (
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
-	operatorclient "github.com/gardener/gardener/pkg/operator/client"
-	"github.com/gardener/gardener/pkg/operator/controller/gardenlet"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/gardener/tokenrequest"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -59,8 +55,6 @@ type Reconciler struct {
 	GardenNamespace       string
 	// GardenClientMap is the ClientMap used to communicate with the virtual garden cluster. It should be set by AddToManager function but the field is still public for usage in tests.
 	GardenClientMap clientmap.ClientMap
-
-	gardenletControllerAdded bool
 }
 
 // Reconcile performs the main reconciliation logic.
@@ -122,32 +116,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return result, r.updateStatusOperationError(ctx, garden, err, operationType)
 	} else if result.Requeue {
 		return result, nil
-	}
-
-	if !r.gardenletControllerAdded {
-		virtualClusterClientSet, err := r.GardenClientMap.GetClient(ctx, keys.ForGarden(garden))
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-
-		virtualCluster, err := cluster.New(virtualClusterClientSet.RESTConfig(), func(opts *cluster.Options) {
-			opts.Scheme = operatorclient.VirtualScheme
-			opts.Logger = log
-		})
-		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("could not instantiate virtual cluster: %w", err)
-		}
-		if err := r.Manager.Add(virtualCluster); err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed adding virtual cluster to manager: %w", err)
-		}
-
-		log.Info("Adding Gardenlet controller to manager now that Garden has been reconciled successfully")
-		if err := (&gardenlet.Reconciler{
-			Config: r.Config.Controllers.GardenletDeployer,
-		}).AddToManager(ctx, r.Manager, virtualCluster); err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed adding Gardenlet controller: %w", err)
-		}
-		r.gardenletControllerAdded = true
 	}
 
 	return reconcile.Result{RequeueAfter: r.Config.Controllers.Garden.SyncPeriod.Duration}, r.updateStatusOperationSuccess(ctx, garden, operationType)
