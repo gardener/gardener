@@ -243,6 +243,11 @@ type NetworkingStatus struct {
 	// Services are the CIDRs of the service network.
 	// +optional
 	Services []string `json:"services,omitempty" protobuf:"bytes,3,rep,name=services"`
+	// EgressCIDRs is a list of CIDRs used by the shoot as the source IP for egress traffic as reported by the used
+	// Infrastructure extension controller. For certain environments the egress IPs may not be stable in which case the
+	// extension controller may opt to not populate this field.
+	// +optional
+	EgressCIDRs []string `json:"egressCIDRs,omitempty" protobuf:"bytes,4,rep,name=egressCIDRs"`
 }
 
 // ShootCredentials contains information about the shoot credentials.

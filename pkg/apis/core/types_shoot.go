@@ -187,6 +187,10 @@ type NetworkingStatus struct {
 	Nodes []string
 	// Services are the CIDRs of the service network.
 	Services []string
+	// EgressCIDRs is a list of CIDRs used by the shoot as the source IP for egress traffic as reported by the used
+	// Infrastructure extension controller. For certain environments the egress IPs may not be stable in which case the
+	// extension controller may opt to not populate this field.
+	EgressCIDRs []string
 }
 
 // ShootCredentials contains information about the shoot credentials.
