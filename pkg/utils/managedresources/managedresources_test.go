@@ -14,7 +14,11 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/apimachinery/pkg/types"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -793,5 +797,68 @@ var _ = Describe("managedresources", func() {
 				Expect(resourcesExist).To(BeTrue())
 			})
 		})
+	})
+
+	Describe("#GetObjects", func() {
+		var (
+			scheme       = runtime.NewScheme()
+			serial       = json.NewSerializerWithOptions(json.DefaultMetaFactory, scheme, scheme, json.SerializerOptions{Yaml: true, Pretty: false, Strict: false})
+			codecFactory = serializer.NewCodecFactory(scheme)
+
+			registry *Registry
+		)
+
+		BeforeEach(func() {
+			Expect(kubernetesscheme.AddToScheme(scheme)).To(Succeed())
+
+			registry = NewRegistry(scheme, codecFactory, serial)
+		})
+
+		It("should return all objects", func() {
+			expectedObjects := []client.Object{
+				&corev1.ConfigMap{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: corev1.SchemeGroupVersion.String(),
+						Kind:       "ConfigMap",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo",
+						Namespace: "bar",
+					},
+					Data: map[string]string{"foo": "bar"},
+				},
+				&corev1.Namespace{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: corev1.SchemeGroupVersion.String(),
+						Kind:       "Namespace",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   "bar",
+						Labels: map[string]string{"foo": "bar"},
+					},
+				},
+				&corev1.Secret{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: corev1.SchemeGroupVersion.String(),
+						Kind:       "Secret",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foobar",
+						Namespace: "bar",
+					},
+				},
+			}
+
+			By("Create managed resource with objects")
+			resources, err := registry.AddAllAndSerialize(expectedObjects...)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(CreateForSeed(ctx, fakeClient, namespace, name, false, resources)).To(Succeed())
+
+			By("Get objects from managed resource")
+			objects, err := GetObjects(ctx, fakeClient, namespace, name)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(objects).To(DeepEqual(expectedObjects))
+		})
+
 	})
 })

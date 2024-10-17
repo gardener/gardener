@@ -10,12 +10,21 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
@@ -25,7 +34,71 @@ func (g *garden) runMigrations(ctx context.Context, log logr.Logger) error {
 		return err
 	}
 
+	log.Info("Migrating targetRef of shoot alertmanager VPAs")
+	if err := migrateAlertManagerVPAs(ctx, log, g.mgr.GetClient()); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+// TODO(oliver-goetz): Remove this function after v1.108 has been released.
+func migrateAlertManagerVPAs(ctx context.Context, log logr.Logger, seedClient client.Client) error {
+	managedResources := v1alpha1.ManagedResourceList{}
+
+	if err := seedClient.List(ctx, &managedResources, client.MatchingLabels{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}); err != nil {
+		if meta.IsNoMatchError(err) {
+			return nil
+		}
+		return fmt.Errorf("failed listing shoot alertmanager ManagedResources: %w", err)
+	}
+
+	var taskFns []flow.TaskFn
+
+	for _, managedResource := range managedResources.Items {
+		if managedResource.Name != "alertmanager-shoot" || ptr.Deref(managedResource.Spec.Class, "") != "seed" {
+			continue
+		}
+
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			objects, err := managedresources.GetObjects(ctx, seedClient, managedResource.Namespace, managedResource.Name)
+			if err != nil {
+				return fmt.Errorf("failed getting objects for ManagedResource %q: %w", client.ObjectKeyFromObject(&managedResource), err)
+			}
+
+			var needUpdate bool
+			for i, obj := range objects {
+				vpa, ok := obj.(*vpaautoscalingv1.VerticalPodAutoscaler)
+				if !ok || vpa.Name != "alertmanager-shoot" {
+					continue
+				}
+				if vpa.Spec.TargetRef != nil && vpa.Spec.TargetRef.Kind != "Alertmanager" {
+					vpa.Spec.TargetRef = &autoscalingv1.CrossVersionObjectReference{
+						APIVersion: monitoringv1.SchemeGroupVersion.String(),
+						Kind:       "Alertmanager",
+						Name:       "shoot",
+					}
+					objects[i] = vpa
+					needUpdate = true
+				}
+			}
+
+			if !needUpdate {
+				return nil
+			}
+
+			log.Info("Migrating targetRef of alertmanager VPA in managed resource", "managedResource", client.ObjectKeyFromObject(&managedResource))
+			registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+			resources, err := registry.AddAllAndSerialize(objects...)
+			if err != nil {
+				return fmt.Errorf("failed serializing objects for managed resource %q: %w", client.ObjectKeyFromObject(&managedResource), err)
+			}
+
+			return managedresources.CreateForSeedWithLabels(ctx, seedClient, managedResource.Namespace, managedResource.Name, false, managedResource.Labels, resources)
+		})
+	}
+
+	return flow.Parallel(taskFns...)(ctx)
 }
 
 // TODO: Remove this function when Kubernetes 1.27 support gets dropped.
