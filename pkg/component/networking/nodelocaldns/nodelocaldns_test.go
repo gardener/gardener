@@ -225,7 +225,7 @@ var _ = Describe("NodeLocalDNS", func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		values = Values{
 			Image:             image,
-			KubernetesVersion: semver.MustParse("1.26.1"),
+			KubernetesVersion: semver.MustParse("1.31.1"),
 		}
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
