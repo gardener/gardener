@@ -151,6 +151,7 @@ func validateResourceManagerWebhookConfiguration(conf config.ResourceManagerWebh
 	allErrs = append(allErrs, validateProjectedTokenMountWebhookConfiguration(conf.ProjectedTokenMount, fldPath.Child("projectedTokenMount"))...)
 	allErrs = append(allErrs, validateHighAvailabilityConfigWebhookConfiguration(conf.HighAvailabilityConfig, fldPath.Child("highAvailabilityConfig"))...)
 	allErrs = append(allErrs, validateSystemComponentsConfigWebhookConfig(&conf.SystemComponentsConfig, fldPath.Child("systemComponentsConfig"))...)
+	allErrs = append(allErrs, validateNodeAgentAuthorizerWebhookConfiguration(conf.NodeAgentAuthorizer, fldPath.Child("nodeAgentAuthorizer"))...)
 
 	return allErrs
 }
@@ -170,6 +171,16 @@ func validateProjectedTokenMountWebhookConfiguration(conf config.ProjectedTokenM
 
 	if conf.Enabled && ptr.Deref(conf.ExpirationSeconds, 0) < 600 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("expirationSeconds"), ptr.Deref(conf.ExpirationSeconds, 0), "must be at least 600"))
+	}
+
+	return allErrs
+}
+
+func validateNodeAgentAuthorizerWebhookConfiguration(conf config.NodeAgentAuthorizerWebhookConfig, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if conf.Enabled && conf.MachineNamespace == "" {
+		allErrs = append(allErrs, field.Required(fldPath.Child("machineNamespace"), "machine namespace must not be empty"))
 	}
 
 	return allErrs

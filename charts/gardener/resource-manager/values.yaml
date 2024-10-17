@@ -144,3 +144,6 @@ global:
       #   tolerationSeconds: 300
       tokenInvalidator:
         enabled: false
+      nodeAgentAuthorizer:
+        enabled: false
+      # machineNamespace: shoot--foo--bar

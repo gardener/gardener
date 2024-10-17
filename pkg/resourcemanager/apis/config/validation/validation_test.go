@@ -422,6 +422,27 @@ var _ = Describe("Validation", func() {
 					))
 				})
 			})
+
+			Context("node agent authorizer", func() {
+				It("should succeed with a valid machine namespace", func() {
+					conf.Webhooks.NodeAgentAuthorizer.Enabled = true
+					conf.Webhooks.NodeAgentAuthorizer.MachineNamespace = "foo-namespace"
+
+					Expect(ValidateResourceManagerConfiguration(conf)).To(BeEmpty())
+				})
+
+				It("should return errors when machine namespace is empty", func() {
+					conf.Webhooks.NodeAgentAuthorizer.Enabled = true
+					conf.Webhooks.NodeAgentAuthorizer.MachineNamespace = ""
+
+					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeRequired),
+							"Field": Equal("webhooks.nodeAgentAuthorizer.machineNamespace"),
+						})),
+					))
+				})
+			})
 		})
 	})
 })
