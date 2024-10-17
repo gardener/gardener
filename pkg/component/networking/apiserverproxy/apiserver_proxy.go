@@ -304,7 +304,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 								Args: []string{
 									fmt.Sprintf("--ip-address=%s", a.values.advertiseIPAddress),
 									"--daemon=false",
-									"--interface=lo",
+									"--interface=apiserverproxy0",
 								},
 								SecurityContext: &corev1.SecurityContext{
 									Capabilities: &corev1.Capabilities{
@@ -331,7 +331,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 								ImagePullPolicy: corev1.PullIfNotPresent,
 								Args: []string{
 									fmt.Sprintf("--ip-address=%s", a.values.advertiseIPAddress),
-									"--interface=lo",
+									"--interface=apiserverproxy0",
 								},
 								SecurityContext: &corev1.SecurityContext{
 									Capabilities: &corev1.Capabilities{
