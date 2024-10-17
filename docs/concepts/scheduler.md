@@ -39,6 +39,7 @@ The following **sequence** describes the steps involved to determine a seed cand
    * matching `.spec.seedSelector` in `Shoot`
    * having no network intersection with the `Shoot`'s networks (due to the VPN connectivity between seeds and shoots their networks must be disjoint)
    * whose taints (`.spec.taints`) are tolerated by the `Shoot` (`.spec.tolerations`)
+   * whose access restrictions (`.spec.accessRestrictions`) are supporting those configured in the `Shoot` (`.spec.accessRestrictions`)
    * whose capacity for shoots would not be exceeded if the shoot is scheduled onto the seed, see [Ensuring seeds capacity for shoots is not exceeded](#ensuring-seeds-capacity-for-shoots-is-not-exceeded)
    * which have at least three zones in `.spec.provider.zones` if shoot requests a high available control plane with failure tolerance type `zone`.
 1. Apply active [strategy](#strategies) e.g., _Minimal Distance strategy_

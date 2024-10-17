@@ -6,6 +6,7 @@ package cloudprofile
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -30,17 +31,20 @@ func (cloudProfileStrategy) NamespaceScoped() bool {
 }
 
 func (cloudProfileStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
-	cloudprofile := obj.(*core.CloudProfile)
+	cloudProfile := obj.(*core.CloudProfile)
 
-	dropExpiredVersions(cloudprofile)
+	dropExpiredVersions(cloudProfile)
 }
 
 func (cloudProfileStrategy) Validate(_ context.Context, obj runtime.Object) field.ErrorList {
-	cloudprofile := obj.(*core.CloudProfile)
-	return validation.ValidateCloudProfile(cloudprofile)
+	cloudProfile := obj.(*core.CloudProfile)
+	return validation.ValidateCloudProfile(cloudProfile)
 }
 
-func (cloudProfileStrategy) Canonicalize(_ runtime.Object) {
+func (cloudProfileStrategy) Canonicalize(obj runtime.Object) {
+	cloudProfile := obj.(*core.CloudProfile)
+
+	syncLegacyAccessRestrictionLabelWithNewField(cloudProfile)
 }
 
 func (cloudProfileStrategy) AllowCreateOnUpdate() bool {
@@ -48,8 +52,10 @@ func (cloudProfileStrategy) AllowCreateOnUpdate() bool {
 }
 
 func (cloudProfileStrategy) PrepareForUpdate(_ context.Context, newObj, oldObj runtime.Object) {
-	_ = oldObj.(*core.CloudProfile)
-	_ = newObj.(*core.CloudProfile)
+	oldCloudProfile := oldObj.(*core.CloudProfile)
+	newCloudProfile := newObj.(*core.CloudProfile)
+
+	syncLegacyAccessRestrictionLabelWithNewFieldOnUpdate(newCloudProfile, oldCloudProfile)
 }
 
 func (cloudProfileStrategy) AllowUnconditionalUpdate() bool {
@@ -94,5 +100,67 @@ func dropExpiredVersions(cloudProfile *core.CloudProfile) {
 		}
 
 		cloudProfile.Spec.MachineImages[i].Versions = validMachineImageVersions
+	}
+}
+
+// TODO(rfranzke): Remove everything below this line and the legacy access restriction label after
+// https://github.com/gardener/dashboard/issues/2120 has been merged and ~6 months have passed to make sure all clients
+// have adapted to the new fields in the specifications, and are rolled out.
+func syncLegacyAccessRestrictionLabelWithNewField(cloudProfile *core.CloudProfile) {
+	for i, region := range cloudProfile.Spec.Regions {
+		if region.Labels["seed.gardener.cloud/eu-access"] == "true" {
+			if !slices.ContainsFunc(region.AccessRestrictions, func(accessRestriction core.AccessRestriction) bool {
+				return accessRestriction.Name == "eu-access-only"
+			}) {
+				cloudProfile.Spec.Regions[i].AccessRestrictions = append(cloudProfile.Spec.Regions[i].AccessRestrictions, core.AccessRestriction{Name: "eu-access-only"})
+				continue
+			}
+		}
+
+		if slices.ContainsFunc(region.AccessRestrictions, func(accessRestriction core.AccessRestriction) bool {
+			return accessRestriction.Name == "eu-access-only"
+		}) {
+			if region.Labels == nil {
+				cloudProfile.Spec.Regions[i].Labels = make(map[string]string)
+			}
+			cloudProfile.Spec.Regions[i].Labels["seed.gardener.cloud/eu-access"] = "true"
+		}
+	}
+}
+
+func syncLegacyAccessRestrictionLabelWithNewFieldOnUpdate(cloudProfile, oldCloudProfile *core.CloudProfile) {
+	hasAccessRestriction := func(accessRestrictions []core.AccessRestriction, name string) bool {
+		return slices.ContainsFunc(accessRestrictions, func(accessRestriction core.AccessRestriction) bool {
+			return accessRestriction.Name == name
+		})
+	}
+
+	removeAccessRestriction := func(accessRestrictions []core.AccessRestriction, name string) []core.AccessRestriction {
+		var updatedAccessRestrictions []core.AccessRestriction
+		for _, accessRestriction := range accessRestrictions {
+			if accessRestriction.Name != name {
+				updatedAccessRestrictions = append(updatedAccessRestrictions, accessRestriction)
+			}
+		}
+		return updatedAccessRestrictions
+	}
+
+	for _, oldRegion := range oldCloudProfile.Spec.Regions {
+		i := slices.IndexFunc(cloudProfile.Spec.Regions, func(currentRegion core.Region) bool {
+			return currentRegion.Name == oldRegion.Name
+		})
+		if i == -1 {
+			continue
+		}
+
+		if oldRegion.Labels["seed.gardener.cloud/eu-access"] == "true" &&
+			cloudProfile.Spec.Regions[i].Labels["seed.gardener.cloud/eu-access"] != "true" {
+			cloudProfile.Spec.Regions[i].AccessRestrictions = removeAccessRestriction(cloudProfile.Spec.Regions[i].AccessRestrictions, "eu-access-only")
+		}
+
+		if hasAccessRestriction(oldRegion.AccessRestrictions, "eu-access-only") &&
+			!hasAccessRestriction(cloudProfile.Spec.Regions[i].AccessRestrictions, "eu-access-only") {
+			delete(cloudProfile.Spec.Regions[i].Labels, "seed.gardener.cloud/eu-access")
+		}
 	}
 }

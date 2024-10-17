@@ -332,6 +332,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, _ adm
 	allErrs = append(allErrs, validationContext.validateShootNetworks(a, helper.IsWorkerless(shoot))...)
 	allErrs = append(allErrs, validationContext.validateKubernetes(a)...)
 	allErrs = append(allErrs, validationContext.validateRegion()...)
+	allErrs = append(allErrs, validationContext.validateAccessRestrictions()...)
 	allErrs = append(allErrs, validationContext.validateProvider(a)...)
 	allErrs = append(allErrs, validationContext.validateAdmissionPlugins(a, v.secretLister)...)
 
@@ -443,7 +444,7 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 			return admission.NewForbidden(a, fmt.Errorf("cannot schedule shoot '%s' on seed '%s' that is already marked for deletion", c.shoot.Name, c.seed.Name))
 		}
 
-		seedTaints := []core.SeedTaint{}
+		var seedTaints []core.SeedTaint
 		if c.seed.Spec.Taints != nil {
 			for _, taint := range c.seed.Spec.Taints {
 				seedTaints = append(seedTaints, core.SeedTaint{
@@ -455,6 +456,19 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 
 		if !helper.TaintsAreTolerated(seedTaints, c.shoot.Spec.Tolerations) {
 			return admission.NewForbidden(a, fmt.Errorf("forbidden to use a seed whose taints are not tolerated by the shoot"))
+		}
+
+		var seedAccessRestrictions []core.AccessRestriction
+		if c.seed.Spec.AccessRestrictions != nil {
+			for _, accessRestriction := range c.seed.Spec.AccessRestrictions {
+				seedAccessRestrictions = append(seedAccessRestrictions, core.AccessRestriction{
+					Name: accessRestriction.Name,
+				})
+			}
+		}
+
+		if !helper.AccessRestrictionsAreSupported(seedAccessRestrictions, c.shoot.Spec.AccessRestrictions) {
+			return admission.NewForbidden(a, fmt.Errorf("forbidden to use a seed which doesn't support the access restrictions of the shoot"))
 		}
 
 		if allocatableShoots, ok := c.seed.Status.Allocatable[core.ResourceShoots]; ok {
@@ -1598,6 +1612,63 @@ func (c *validationContext) validateRegion() field.ErrorList {
 	}
 
 	return field.ErrorList{field.NotSupported(fldPath, region, validValues)}
+}
+
+func (c *validationContext) validateAccessRestrictions() field.ErrorList {
+	var (
+		allErrs     field.ErrorList
+		fldPath     = field.NewPath("spec", "accessRestrictions")
+		validValues = sets.New[string]()
+
+		accessRestrictions    = sets.New[string]()
+		oldAccessRestrictions = sets.New[string]()
+	)
+
+	for _, restriction := range c.shoot.Spec.AccessRestrictions {
+		accessRestrictions.Insert(restriction.Name)
+	}
+	for _, restriction := range c.oldShoot.Spec.AccessRestrictions {
+		oldAccessRestrictions.Insert(restriction.Name)
+	}
+
+	if accessRestrictions.Equal(oldAccessRestrictions) {
+		return nil
+	}
+
+	// verify that the access restrictions are present for this region in the CloudProfile
+	regionIndex := slices.IndexFunc(c.cloudProfileSpec.Regions, func(region gardencorev1beta1.Region) bool {
+		return region.Name == c.shoot.Spec.Region
+	})
+
+	if regionIndex == -1 {
+		return field.ErrorList{field.Invalid(field.NewPath("spec", "region"), c.shoot.Spec.Region, "region not present in CloudProfile")}
+	}
+
+	for _, restriction := range c.cloudProfileSpec.Regions[regionIndex].AccessRestrictions {
+		validValues.Insert(restriction.Name)
+	}
+
+	for i, restriction := range c.shoot.Spec.AccessRestrictions {
+		if !validValues.Has(restriction.Name) {
+			allErrs = append(allErrs, field.NotSupported(fldPath.Index(i), restriction.Name, validValues.UnsortedList()))
+		}
+	}
+
+	// verify that the access restrictions are supported by the seed
+	if c.seed != nil {
+		supportedAccessRestrictionsOfSeed := sets.New[string]()
+		for _, restriction := range c.seed.Spec.AccessRestrictions {
+			supportedAccessRestrictionsOfSeed.Insert(restriction.Name)
+		}
+
+		for i, restriction := range c.shoot.Spec.AccessRestrictions {
+			if !supportedAccessRestrictionsOfSeed.Has(restriction.Name) {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Index(i), fmt.Sprintf("access restriction %q is not supported by the seed", restriction.Name)))
+			}
+		}
+	}
+
+	return allErrs
 }
 
 func validateZones(constraints []gardencorev1beta1.Region, region, oldRegion string, worker, oldWorker core.Worker, fldPath *field.Path) field.ErrorList {

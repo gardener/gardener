@@ -7,9 +7,11 @@ package shoot
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -79,6 +81,8 @@ func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object
 	if oldShoot.Spec.CredentialsBindingName == nil && !utilfeature.DefaultFeatureGate.Enabled(features.ShootCredentialsBinding) {
 		newShoot.Spec.CredentialsBindingName = nil
 	}
+
+	syncLegacyAccessRestrictionLabelWithNewFieldOnUpdate(newShoot, oldShoot)
 }
 
 func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
@@ -173,6 +177,7 @@ func (shootStrategy) Canonicalize(obj runtime.Object) {
 	shoot := obj.(*core.Shoot)
 
 	gardenerutils.MaintainSeedNameLabels(shoot, shoot.Spec.SeedName, shoot.Status.SeedName)
+	syncLegacyAccessRestrictionLabelWithNewField(shoot)
 }
 
 func (shootStrategy) AllowCreateOnUpdate() bool {
@@ -319,4 +324,79 @@ func getStatusSeedName(shoot *core.Shoot) string {
 		return ""
 	}
 	return *shoot.Status.SeedName
+}
+
+// TODO(rfranzke): Remove everything below this line and the legacy access restriction label after
+// https://github.com/gardener/dashboard/issues/2120 has been merged and ~6 months have passed to make sure all clients
+// have adapted to the new fields in the specifications, and are rolled out.
+func syncLegacyAccessRestrictionLabelWithNewField(shoot *core.Shoot) {
+	if shoot.Spec.SeedSelector != nil && shoot.Spec.SeedSelector.MatchLabels["seed.gardener.cloud/eu-access"] == "true" {
+		if !slices.ContainsFunc(shoot.Spec.AccessRestrictions, func(accessRestriction core.AccessRestrictionWithOptions) bool {
+			return accessRestriction.Name == "eu-access-only"
+		}) {
+			shoot.Spec.AccessRestrictions = append(shoot.Spec.AccessRestrictions, core.AccessRestrictionWithOptions{AccessRestriction: core.AccessRestriction{Name: "eu-access-only"}})
+		}
+	}
+
+	if slices.ContainsFunc(shoot.Spec.AccessRestrictions, func(accessRestriction core.AccessRestrictionWithOptions) bool {
+		return accessRestriction.Name == "eu-access-only"
+	}) {
+		if shoot.Spec.SeedSelector == nil {
+			shoot.Spec.SeedSelector = &core.SeedSelector{}
+		}
+		if shoot.Spec.SeedSelector.MatchLabels == nil {
+			shoot.Spec.SeedSelector.MatchLabels = make(map[string]string)
+		}
+		shoot.Spec.SeedSelector.MatchLabels["seed.gardener.cloud/eu-access"] = "true"
+	}
+
+	if i := slices.IndexFunc(shoot.Spec.AccessRestrictions, func(accessRestriction core.AccessRestrictionWithOptions) bool {
+		return accessRestriction.Name == "eu-access-only"
+	}); i != -1 {
+		for _, key := range []string{
+			"support.gardener.cloud/eu-access-for-cluster-addons",
+			"support.gardener.cloud/eu-access-for-cluster-nodes",
+		} {
+			if v, ok := shoot.Annotations[key]; ok {
+				if shoot.Spec.AccessRestrictions[i].Options == nil {
+					shoot.Spec.AccessRestrictions[i].Options = make(map[string]string)
+				}
+				shoot.Spec.AccessRestrictions[i].Options[key] = v
+			}
+		}
+
+		for k, v := range shoot.Spec.AccessRestrictions[i].Options {
+			if k == "support.gardener.cloud/eu-access-for-cluster-addons" || k == "support.gardener.cloud/eu-access-for-cluster-nodes" {
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, k, v)
+			}
+		}
+	}
+}
+
+func syncLegacyAccessRestrictionLabelWithNewFieldOnUpdate(shoot, oldShoot *core.Shoot) {
+	hasAccessRestriction := func(accessRestrictions []core.AccessRestrictionWithOptions, name string) bool {
+		return slices.ContainsFunc(accessRestrictions, func(accessRestriction core.AccessRestrictionWithOptions) bool {
+			return accessRestriction.Name == name
+		})
+	}
+
+	removeAccessRestriction := func(accessRestrictions []core.AccessRestrictionWithOptions, name string) []core.AccessRestrictionWithOptions {
+		var updatedAccessRestrictions []core.AccessRestrictionWithOptions
+		for _, accessRestriction := range accessRestrictions {
+			if accessRestriction.Name != name {
+				updatedAccessRestrictions = append(updatedAccessRestrictions, accessRestriction)
+			}
+		}
+		return updatedAccessRestrictions
+	}
+
+	if oldShoot.Spec.SeedSelector != nil && oldShoot.Spec.SeedSelector.MatchLabels["seed.gardener.cloud/eu-access"] == "true" &&
+		(shoot.Spec.SeedSelector == nil || shoot.Spec.SeedSelector.MatchLabels["seed.gardener.cloud/eu-access"] != "true") {
+		shoot.Spec.AccessRestrictions = removeAccessRestriction(shoot.Spec.AccessRestrictions, "eu-access-only")
+	}
+
+	if hasAccessRestriction(oldShoot.Spec.AccessRestrictions, "eu-access-only") &&
+		!hasAccessRestriction(shoot.Spec.AccessRestrictions, "eu-access-only") {
+		shoot.Spec.SeedSelector = nil
+	}
 }

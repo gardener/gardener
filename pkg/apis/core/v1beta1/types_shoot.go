@@ -96,7 +96,7 @@ type ShootSpec struct {
 	Purpose *ShootPurpose `json:"purpose,omitempty" protobuf:"bytes,11,opt,name=purpose,casttype=ShootPurpose"`
 	// Region is a name of a region. This field is immutable.
 	Region string `json:"region" protobuf:"bytes,12,opt,name=region"`
-	// SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret.
+	// SecretBindingName is the name of a SecretBinding that has a reference to the provider secret.
 	// The credentials inside the provider secret will be used to create the shoot in the respective account.
 	// The field is mutually exclusive with CredentialsBindingName.
 	// This field is immutable.
@@ -134,10 +134,13 @@ type ShootSpec struct {
 	// CloudProfile contains a reference to a CloudProfile or a NamespacedCloudProfile.
 	// +optional
 	CloudProfile *CloudProfileReference `json:"cloudProfile,omitempty" protobuf:"bytes,22,opt,name=cloudProfile"`
-	// CredentialsBindingName is the name of the a CredentialsBinding that has a reference to the provider credentials.
+	// CredentialsBindingName is the name of a CredentialsBinding that has a reference to the provider credentials.
 	// The credentials will be used to create the shoot in the respective account. The field is mutually exclusive with SecretBindingName.
 	// +optional
 	CredentialsBindingName *string `json:"credentialsBindingName,omitempty" protobuf:"bytes,23,opt,name=credentialsBindingName"`
+	// AccessRestrictions describe a list of access restrictions for this shoot cluster.
+	// +optional
+	AccessRestrictions []AccessRestrictionWithOptions `json:"accessRestrictions,omitempty" protobuf:"bytes,24,rep,name=accessRestrictions"`
 }
 
 var _ gardencore.Object = (*Shoot)(nil)

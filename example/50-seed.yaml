@@ -91,3 +91,5 @@ spec:
 #  providers:
 #  - purpose: etcd-main
 #    name: flexvolume
+# accessRestrictions:
+# - name: eu-access-only

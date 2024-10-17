@@ -188,6 +188,29 @@ func TaintsAreTolerated(taints []core.SeedTaint, tolerations []core.Toleration) 
 	return true
 }
 
+// AccessRestrictionsAreSupported returns true when all the given access restrictions are supported.
+func AccessRestrictionsAreSupported(seedAccessRestrictions []core.AccessRestriction, shootAccessRestrictions []core.AccessRestrictionWithOptions) bool {
+	if len(shootAccessRestrictions) == 0 {
+		return true
+	}
+	if len(shootAccessRestrictions) > len(seedAccessRestrictions) {
+		return false
+	}
+
+	seedAccessRestrictionsNames := sets.New[string]()
+	for _, seedAccessRestriction := range seedAccessRestrictions {
+		seedAccessRestrictionsNames.Insert(seedAccessRestriction.Name)
+	}
+
+	for _, accessRestriction := range shootAccessRestrictions {
+		if !seedAccessRestrictionsNames.Has(accessRestriction.Name) {
+			return false
+		}
+	}
+
+	return true
+}
+
 // SeedSettingSchedulingVisible returns true if the 'scheduling' setting is set to 'visible'.
 func SeedSettingSchedulingVisible(settings *core.SeedSettings) bool {
 	return settings == nil || settings.Scheduling == nil || settings.Scheduling.Visible
