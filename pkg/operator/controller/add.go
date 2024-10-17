@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
@@ -49,13 +50,13 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 
 	if err := (&controllerregistrar.Reconciler{
 		Controllers: []controllerregistrar.Controller{
-			{AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, garden *operatorv1alpha1.Garden) error {
+			{AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, garden *operatorv1alpha1.Garden) (bool, error) {
 				var nodes []string
 				if garden.Spec.RuntimeCluster.Networking.Nodes != nil {
 					nodes = []string{*garden.Spec.RuntimeCluster.Networking.Nodes}
 				}
 
-				return (&networkpolicy.Reconciler{
+				return true, (&networkpolicy.Reconciler{
 					ConcurrentSyncs:              cfg.Controllers.NetworkPolicy.ConcurrentSyncs,
 					AdditionalNamespaceSelectors: cfg.Controllers.NetworkPolicy.AdditionalNamespaceSelectors,
 					RuntimeNetworks: networkpolicy.RuntimeNetworkConfig{
@@ -68,29 +69,33 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 					},
 				}).AddToManager(ctx, mgr, mgr)
 			}},
-			{AddToManagerFunc: func(_ context.Context, mgr manager.Manager, _ *operatorv1alpha1.Garden) error {
-				return (&vpaevictionrequirements.Reconciler{
+			{AddToManagerFunc: func(_ context.Context, mgr manager.Manager, _ *operatorv1alpha1.Garden) (bool, error) {
+				return true, (&vpaevictionrequirements.Reconciler{
 					ConcurrentSyncs: cfg.Controllers.VPAEvictionRequirements.ConcurrentSyncs,
 				}).AddToManager(mgr, mgr)
 			}},
-			{AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, _ *operatorv1alpha1.Garden) error {
-				return (&required.Reconciler{
+			{AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, _ *operatorv1alpha1.Garden) (bool, error) {
+				return true, (&required.Reconciler{
 					Config: cfg,
 				}).AddToManager(ctx, mgr)
 			}},
-			{AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, _ *operatorv1alpha1.Garden) error {
+			{AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, garden *operatorv1alpha1.Garden) (bool, error) {
 				log := logf.FromContext(ctx)
 				secretName := v1beta1constants.SecretNameGardener
 
 				// Prefer the internal host if available
 				addr, err := net.LookupHost(fmt.Sprintf("virtual-garden-%s.%s.svc.cluster.local", v1beta1constants.DeploymentNameKubeAPIServer, v1beta1constants.GardenNamespace))
-				if err != nil {
+				if len(addr) == 0 && gardenReconciled(garden.Status) {
+					log.Info("Service DNS name lookup of virtual-garden-kube-apiserver is tried again because garden is still being created")
+					return false, nil
+				} else if err != nil {
 					log.Info("Service DNS name lookup of virtual-garden-kube-apiserver failed, falling back to external kubeconfig", "error", err)
-				} else if len(addr) > 0 {
+				} else {
+					log.Info("Service DNS name lookup of virtual-garden-kube-apiserver successfull, using internal kubeconfig", "error", err)
 					secretName = v1beta1constants.SecretNameGardenerInternal
 				}
 
-				return (&gardenaccess.Reconciler{
+				return true, (&gardenaccess.Reconciler{
 					Config: cfg,
 				}).AddToManager(mgr, v1beta1constants.GardenNamespace, secretName)
 			}},
@@ -111,4 +116,10 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 	}
 
 	return nil
+}
+
+func gardenReconciled(gardenStatus operatorv1alpha1.GardenStatus) bool {
+	return gardenStatus.LastOperation == nil ||
+		(gardenStatus.LastOperation.Type == gardencorev1beta1.LastOperationTypeReconcile &&
+			gardenStatus.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded)
 }
