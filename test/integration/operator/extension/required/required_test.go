@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -79,7 +80,8 @@ var _ = Describe("Extension Required controller tests", func() {
 			},
 			Spec: extensionsv1alpha1.BackupBucketSpec{
 				DefaultSpec: extensionsv1alpha1.DefaultSpec{
-					Type: backupBucketProvider,
+					Class: ptr.To[extensionsv1alpha1.ExtensionClass]("garden"),
+					Type:  backupBucketProvider,
 				},
 				Region: "region",
 				SecretRef: corev1.SecretReference{
@@ -95,7 +97,8 @@ var _ = Describe("Extension Required controller tests", func() {
 			},
 			Spec: extensionsv1alpha1.DNSRecordSpec{
 				DefaultSpec: extensionsv1alpha1.DefaultSpec{
-					Type: dnsProvider + "-foo",
+					Class: ptr.To[extensionsv1alpha1.ExtensionClass]("garden"),
+					Type:  dnsProvider + "-foo",
 				},
 				SecretRef: corev1.SecretReference{
 					Name: "test-foo-dns",
@@ -113,7 +116,8 @@ var _ = Describe("Extension Required controller tests", func() {
 			},
 			Spec: extensionsv1alpha1.ExtensionSpec{
 				DefaultSpec: extensionsv1alpha1.DefaultSpec{
-					Type: extensionProvider,
+					Class: ptr.To[extensionsv1alpha1.ExtensionClass]("garden"),
+					Type:  extensionProvider,
 				},
 			},
 		}

@@ -93,7 +93,8 @@ func defaultBuckupBucket() *extensionsv1alpha1.BackupBucket {
 		},
 		Spec: extensionsv1alpha1.BackupBucketSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
-				Type: "local",
+				Class: ptr.To[extensionsv1alpha1.ExtensionClass]("garden"),
+				Type:  "local",
 			},
 			Region: "region",
 			SecretRef: corev1.SecretReference{
