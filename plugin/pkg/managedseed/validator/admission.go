@@ -236,7 +236,6 @@ func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, _ admis
 	if err != nil {
 		return err
 	}
-
 	allErrs = append(allErrs, errs...)
 
 	switch a.GetOperation() {
