@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	apiserverv1beta1 "k8s.io/apiserver/pkg/apis/apiserver/v1beta1"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/component-base/version"
@@ -570,7 +571,7 @@ func (r *Reconciler) newKubeAPIServer(
 		apiServerConfig              *gardencorev1beta1.KubeAPIServerConfig
 		auditWebhookConfig           *apiserver.AuditWebhook
 		authenticationWebhookConfig  *kubeapiserver.AuthenticationWebhook
-		authorizationWebhookConfig   *kubeapiserver.AuthorizationWebhook
+		authorizationWebhookConfigs  []kubeapiserver.AuthorizationWebhook
 		resourcesToStoreInETCDEvents []schema.GroupResource
 	)
 
@@ -610,11 +611,19 @@ func (r *Reconciler) newKubeAPIServer(
 			return nil, fmt.Errorf("failed generating authorization webhook kubeconfig: %w", err)
 		}
 
-		authorizationWebhookConfig = &kubeapiserver.AuthorizationWebhook{
-			Kubeconfig:           kubeconfig,
-			CacheAuthorizedTTL:   ptr.To(time.Duration(0)),
-			CacheUnauthorizedTTL: ptr.To(time.Duration(0)),
-		}
+		authorizationWebhookConfigs = append(authorizationWebhookConfigs, kubeapiserver.AuthorizationWebhook{
+			Name:       "seed-authorizer",
+			Kubeconfig: kubeconfig,
+			WebhookConfiguration: apiserverv1beta1.WebhookConfiguration{
+				AuthorizedTTL:                            metav1.Duration{Duration: time.Duration(0)},
+				UnauthorizedTTL:                          metav1.Duration{Duration: time.Duration(0)},
+				Timeout:                                  metav1.Duration{Duration: 10 * time.Second},
+				FailurePolicy:                            apiserverv1beta1.FailurePolicyNoOpinion,
+				SubjectAccessReviewVersion:               "v1",
+				MatchConditionSubjectAccessReviewVersion: "v1",
+				MatchConditions:                          nil,
+			},
+		})
 	}
 
 	return sharedcomponent.NewKubeAPIServer(
@@ -635,7 +644,7 @@ func (r *Reconciler) newKubeAPIServer(
 		ptr.To(false),
 		auditWebhookConfig,
 		authenticationWebhookConfig,
-		authorizationWebhookConfig,
+		authorizationWebhookConfigs,
 		resourcesToStoreInETCDEvents,
 	)
 }

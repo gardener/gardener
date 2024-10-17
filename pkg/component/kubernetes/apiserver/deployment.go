@@ -47,10 +47,8 @@ const (
 	ContainerNameKubeAPIServer     = "kube-apiserver"
 	containerNameVPNPathController = "vpn-path-controller"
 	containerNameVPNSeedClient     = "vpn-client"
-	containerNameWatchdog          = "watchdog"
 
 	volumeNameAuthenticationWebhookKubeconfig = "authentication-webhook-kubeconfig"
-	volumeNameAuthorizationWebhookKubeconfig  = "authorization-webhook-kubeconfig"
 	volumeNameCA                              = "ca"
 	volumeNameCAClient                        = "ca-client"
 	volumeNameCAFrontProxy                    = "ca-front-proxy"
@@ -69,10 +67,8 @@ const (
 	volumeNameAPIServerAccess                 = "kube-api-access-gardener"
 	volumeNameVPNSeedTLSAuth                  = "vpn-seed-tlsauth"
 	volumeNameDevNetTun                       = "dev-net-tun"
-	volumeNameWatchdog                        = "watchdog"
 
 	volumeMountPathAuthenticationWebhookKubeconfig = "/etc/kubernetes/webhook/authentication"
-	volumeMountPathAuthorizationWebhookKubeconfig  = "/etc/kubernetes/webhook/authorization"
 	volumeMountPathCA                              = "/srv/kubernetes/ca"
 	volumeMountPathCAClient                        = "/srv/kubernetes/ca-client"
 	volumeMountPathCAFrontProxy                    = "/srv/kubernetes/ca-front-proxy"
@@ -90,10 +86,6 @@ const (
 	volumeMountPathAPIServerAccess                 = "/var/run/secrets/kubernetes.io/serviceaccount"
 	volumeMountPathVPNSeedTLSAuth                  = "/srv/secrets/tlsauth"
 	volumeMountPathDevNetTun                       = "/dev/net/tun"
-	volumeMountPathFedora                          = "/etc/pki/tls"
-	volumeMountPathCentOS                          = "/etc/pki/ca-trust/extracted/pem"
-	volumeMountPathEtcSSL                          = "/etc/ssl"
-	volumeMountPathUsrShareCaCerts                 = "/usr/share/ca-certificates"
 )
 
 func (k *kubeAPIServer) emptyDeployment() *appsv1.Deployment {
@@ -106,6 +98,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 	serviceAccount *corev1.ServiceAccount,
 	configMapAuditPolicy *corev1.ConfigMap,
 	configMapAuthenticationConfig *corev1.ConfigMap,
+	configMapAuthorizationConfig *corev1.ConfigMap,
 	configMapAdmissionConfigs *corev1.ConfigMap,
 	secretAdmissionKubeconfigs *corev1.Secret,
 	configMapEgressSelector *corev1.ConfigMap,
@@ -121,7 +114,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 	secretHAVPNSeedClientSeedTLSAuth *corev1.Secret,
 	secretAuditWebhookKubeconfig *corev1.Secret,
 	secretAuthenticationWebhookKubeconfig *corev1.Secret,
-	secretAuthorizationWebhookKubeconfig *corev1.Secret,
+	secretAuthorizationWebhooksKubeconfigs *corev1.Secret,
 	tlsSNISecrets []tlsSNISecret,
 ) error {
 	var (
@@ -374,10 +367,10 @@ func (k *kubeAPIServer) reconcileDeployment(
 		apiserver.InjectEncryptionSettings(deployment, secretETCDEncryptionConfiguration)
 		k.handleSNISettings(deployment)
 		k.handleTLSSNISettings(deployment, tlsSNISecrets)
-		k.handleAuthenticationSettings(deployment, configMapAuthenticationConfig, secretOIDCCABundle)
 		k.handleServiceAccountSigningKeySettings(deployment)
+		k.handleAuthenticationSettings(deployment, configMapAuthenticationConfig, secretOIDCCABundle)
 		k.handleAuthenticationWebhookSettings(deployment, secretAuthenticationWebhookKubeconfig)
-		k.handleAuthorizationSettings(deployment, secretAuthorizationWebhookKubeconfig)
+		k.handleAuthorizationSettings(deployment, configMapAuthorizationConfig, secretAuthorizationWebhooksKubeconfigs)
 		if err := k.handleVPNSettings(deployment, serviceAccount, configMapEgressSelector, secretHTTPProxy, secretHAVPNSeedClient, secretHAVPNSeedClientSeedTLSAuth); err != nil {
 			return err
 		}
@@ -1036,46 +1029,4 @@ func (k *kubeAPIServer) handleAuthenticationWebhookSettings(deployment *appsv1.D
 	if v := k.values.AuthenticationWebhook.Version; v != nil {
 		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--authentication-token-webhook-version=%s", *v))
 	}
-}
-
-func (k *kubeAPIServer) handleAuthorizationSettings(deployment *appsv1.Deployment, secretWebhookKubeconfig *corev1.Secret) {
-	authModes := []string{"RBAC"}
-
-	if !k.values.IsWorkerless {
-		authModes = append([]string{"Node"}, authModes...)
-	}
-
-	if k.values.AuthorizationWebhook != nil {
-		authModes = append(authModes, "Webhook")
-
-		if len(k.values.AuthorizationWebhook.Kubeconfig) > 0 {
-			deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--authorization-webhook-config-file=%s/%s", volumeMountPathAuthorizationWebhookKubeconfig, apiserver.SecretWebhookKubeconfigDataKey))
-			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-				Name:      volumeNameAuthorizationWebhookKubeconfig,
-				MountPath: volumeMountPathAuthorizationWebhookKubeconfig,
-				ReadOnly:  true,
-			})
-			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
-				Name: volumeNameAuthorizationWebhookKubeconfig,
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName: secretWebhookKubeconfig.Name,
-					},
-				},
-			})
-		}
-
-		if v := k.values.AuthorizationWebhook.CacheAuthorizedTTL; v != nil {
-			deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--authorization-webhook-cache-authorized-ttl=%s", v.String()))
-		}
-		if v := k.values.AuthorizationWebhook.CacheUnauthorizedTTL; v != nil {
-			deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--authorization-webhook-cache-unauthorized-ttl=%s", v.String()))
-		}
-
-		if v := k.values.AuthorizationWebhook.Version; v != nil {
-			deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--authorization-webhook-version=%s", *v))
-		}
-	}
-
-	deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, "--authorization-mode="+strings.Join(authModes, ","))
 }

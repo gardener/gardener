@@ -86,7 +86,7 @@ func NewKubeAPIServer(
 	staticTokenKubeconfigEnabled *bool,
 	auditWebhookConfig *apiserver.AuditWebhook,
 	authenticationWebhookConfig *kubeapiserver.AuthenticationWebhook,
-	authorizationWebhookConfig *kubeapiserver.AuthorizationWebhook,
+	authorizationWebhookConfigs []kubeapiserver.AuthorizationWebhook,
 	resourcesToStoreInETCDEvents []schema.GroupResource,
 ) (
 	kubeapiserver.Interface,
@@ -176,7 +176,7 @@ func NewKubeAPIServer(
 			APIAudiences:                        apiAudiences,
 			AuthenticationConfiguration:         authenticationConfiguration,
 			AuthenticationWebhook:               authenticationWebhookConfig,
-			AuthorizationWebhook:                authorizationWebhookConfig,
+			AuthorizationWebhooks:               authorizationWebhookConfigs,
 			DefaultNotReadyTolerationSeconds:    defaultNotReadyTolerationSeconds,
 			DefaultUnreachableTolerationSeconds: defaultUnreachableTolerationSeconds,
 			EventTTL:                            eventTTL,
