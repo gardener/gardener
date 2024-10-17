@@ -58,13 +58,13 @@ var _ = Describe("MachineControllerManager", func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		fakeSecretsManager = fakesecretsmanager.New(fakeClient, namespace)
 
-		shoot = &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Kubernetes: gardencorev1beta1.Kubernetes{Version: "1.25.0"}}}
+		shoot = &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Kubernetes: gardencorev1beta1.Kubernetes{Version: "1.31.1"}}}
 		deployment = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "machine-controller-manager", Namespace: namespace}}
 
 		botanist = &Botanist{Operation: &operation.Operation{}}
 		botanist.SeedClientSet = kubernetesClient
 		botanist.SecretsManager = fakeSecretsManager
-		botanist.Seed = &seedpkg.Seed{KubernetesVersion: semver.MustParse("1.25.0")}
+		botanist.Seed = &seedpkg.Seed{KubernetesVersion: semver.MustParse("1.31.0")}
 		botanist.Shoot = &shootpkg.Shoot{ControlPlaneNamespace: namespace}
 		botanist.Shoot.SetInfo(shoot)
 

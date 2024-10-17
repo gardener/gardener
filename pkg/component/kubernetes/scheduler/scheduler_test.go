@@ -9,7 +9,6 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
@@ -45,17 +44,16 @@ import (
 
 var _ = Describe("KubeScheduler", func() {
 	var (
-		c                             client.Client
-		sm                            secretsmanager.Interface
-		kubeScheduler                 component.DeployWaiter
-		ctx                           = context.Background()
-		namespace                     = "shoot--foo--bar"
-		runtimeVersion, targetVersion *semver.Version
-		image                               = "registry.k8s.io/kube-scheduler:v1.27.2"
-		replicas                      int32 = 1
-		profileBinPacking                   = gardencorev1beta1.SchedulingProfileBinPacking
-		configEmpty                   *gardencorev1beta1.KubeSchedulerConfig
-		configFull                    = &gardencorev1beta1.KubeSchedulerConfig{
+		c                 client.Client
+		sm                secretsmanager.Interface
+		kubeScheduler     component.DeployWaiter
+		ctx                     = context.Background()
+		namespace               = "shoot--foo--bar"
+		image                   = "registry.k8s.io/kube-scheduler:v1.27.2"
+		replicas          int32 = 1
+		profileBinPacking       = gardencorev1beta1.SchedulingProfileBinPacking
+		configEmpty       *gardencorev1beta1.KubeSchedulerConfig
+		configFull        = &gardencorev1beta1.KubeSchedulerConfig{
 			KubernetesConfig: gardencorev1beta1.KubernetesConfig{
 				FeatureGates: map[string]bool{"Foo": true, "Bar": false, "Baz": false},
 			},
@@ -488,9 +486,7 @@ var _ = Describe("KubeScheduler", func() {
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		sm = fakesecretsmanager.New(c, namespace)
-		targetVersion = semver.MustParse("1.27.2")
-		runtimeVersion = semver.MustParse("1.25.2")
-		kubeScheduler = New(c, namespace, sm, runtimeVersion, targetVersion, image, replicas, configEmpty)
+		kubeScheduler = New(c, namespace, sm, image, replicas, configEmpty)
 		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
 
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
@@ -516,17 +512,11 @@ var _ = Describe("KubeScheduler", func() {
 			}
 		})
 
-		DescribeTable("success tests for various kubernetes versions",
-			func(targetVersion, runtimeVersion string, config *gardencorev1beta1.KubeSchedulerConfig, expectedComponentConfigFilePath string) {
-				targetSemverVersion, err := semver.NewVersion(targetVersion)
-				Expect(err).NotTo(HaveOccurred())
-
-				runtimeSemverVersion, err := semver.NewVersion(runtimeVersion)
-				Expect(err).NotTo(HaveOccurred())
-
+		DescribeTable("success tests w and w/o config",
+			func(config *gardencorev1beta1.KubeSchedulerConfig, expectedComponentConfigFilePath string) {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 
-				kubeScheduler = New(c, namespace, sm, runtimeSemverVersion, targetSemverVersion, image, replicas, config)
+				kubeScheduler = New(c, namespace, sm, image, replicas, config)
 				Expect(kubeScheduler.Deploy(ctx)).To(Succeed())
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
@@ -613,10 +603,8 @@ var _ = Describe("KubeScheduler", func() {
 				Expect(actualServiceMonitor).To(DeepEqual(serviceMonitor))
 			},
 
-			Entry("kubernetes 1.25 w/o config", "1.25.0", "1.25.0", configEmpty, "testdata/component-config-1.25.yaml"),
-			Entry("kubernetes 1.25 w/ full config", "1.25.0", "1.25.0", configFull, "testdata/component-config-1.25-bin-packing.yaml"),
-			Entry("kubernetes 1.26 w/o config", "1.26.0", "1.26.0", configEmpty, "testdata/component-config-1.25.yaml"),
-			Entry("kubernetes 1.26 w/ full config", "1.26.0", "1.26.0", configFull, "testdata/component-config-1.25-bin-packing.yaml"),
+			Entry("w/o config", configEmpty, "testdata/component-config.yaml"),
+			Entry("w/ full config", configFull, "testdata/component-config-bin-packing.yaml"),
 		)
 	})
 
