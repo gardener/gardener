@@ -28,4 +28,8 @@ const (
 	// OperationRotateWorkloadIdentityKeyComplete is a constant for an annotation on a Shoot indicating that the
 	// rotation of the workload identity signing key shall be completed.
 	OperationRotateWorkloadIdentityKeyComplete = "rotate-workload-identity-key-complete"
+
+	// AnnotationKeyExtensionResourcesCleanedUp is the annotation key on the garden resource to mark
+	// that all extension resources like DNSRecords and disposable BackupBuckets have been deleted.
+	AnnotationKeyExtensionResourcesCleanedUp = "operator.gardener.cloud/extension-resources-cleaned-up"
 )
