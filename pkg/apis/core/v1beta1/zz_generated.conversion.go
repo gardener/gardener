@@ -4634,6 +4634,7 @@ func autoConvert_v1beta1_NamespacedCloudProfileSpec_To_core_NamespacedCloudProfi
 	if err := Convert_v1beta1_CloudProfileReference_To_core_CloudProfileReference(&in.Parent, &out.Parent, s); err != nil {
 		return err
 	}
+	out.ProviderConfig = (*runtime.RawExtension)(unsafe.Pointer(in.ProviderConfig))
 	return nil
 }
 
@@ -4651,6 +4652,7 @@ func autoConvert_core_NamespacedCloudProfileSpec_To_v1beta1_NamespacedCloudProfi
 	if err := Convert_core_CloudProfileReference_To_v1beta1_CloudProfileReference(&in.Parent, &out.Parent, s); err != nil {
 		return err
 	}
+	out.ProviderConfig = (*runtime.RawExtension)(unsafe.Pointer(in.ProviderConfig))
 	return nil
 }
 

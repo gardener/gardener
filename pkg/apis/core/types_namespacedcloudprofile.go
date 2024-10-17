@@ -6,6 +6,7 @@ package core
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // +genclient
@@ -47,6 +48,8 @@ type NamespacedCloudProfileSpec struct {
 	VolumeTypes []VolumeType
 	// Parent contains a reference to a CloudProfile it inherits from.
 	Parent CloudProfileReference
+	// ProviderConfig contains provider-specific configuration for the profile.
+	ProviderConfig *runtime.RawExtension
 }
 
 // NamespacedCloudProfileStatus holds the most recently observed status of the NamespacedCloudProfile.
