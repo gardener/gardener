@@ -13,6 +13,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 SEED_NAME=""
 PATH_SEED_KUBECONFIG=""
 PATH_GARDEN_KUBECONFIG=""
+WORKLOAD_IDENTITY_SUPPORT=""
 
 parse_flags() {
   while test $# -gt 0; do
@@ -25,6 +26,9 @@ parse_flags() {
       ;;
     --path-garden-kubeconfig)
       shift; PATH_GARDEN_KUBECONFIG="$1"
+      ;;
+    --with-workload-identity-support)
+      shift; WORKLOAD_IDENTITY_SUPPORT="$1"
       ;;
     esac
 
@@ -50,4 +54,9 @@ echo "Registering controllers"
 kubectl --kubeconfig "$PATH_GARDEN_KUBECONFIG" --server-side=true --force-conflicts=true apply -f "$SCRIPT_DIR"/../example/provider-extensions/garden/controllerregistrations
 echo "Creating CloudProfiles"
 kubectl --kubeconfig "$PATH_GARDEN_KUBECONFIG" --server-side=true apply -f "$SCRIPT_DIR"/../example/provider-extensions/garden/cloudprofiles
+
+if [[ "$WORKLOAD_IDENTITY_SUPPORT" == "true" ]]; then
+  "$SCRIPT_DIR"/../example/provider-extensions/seed/configure-discovery-server.sh "$PATH_GARDEN_KUBECONFIG" "$PATH_SEED_KUBECONFIG"
+fi
+
 "$SCRIPT_DIR"/../example/provider-extensions/seed/create-seed.sh "$PATH_GARDEN_KUBECONFIG" "$PATH_SEED_KUBECONFIG" "$SEED_NAME"
