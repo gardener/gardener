@@ -54,10 +54,6 @@ type authorizer struct {
 
 var _ auth.Authorizer = (*authorizer)(nil)
 
-// TODO(oliver-goetz): Revisit all `DecisionNoOpinion` when the NodeAgentAuthorizer feature gate is promoted to GA and locked to `true`. Today we cannot deny the request for backwards compatibility
-// when the NodeAgentAuthorizer feature gate is switched off again.
-// With `DecisionNoOpinion`, RBAC will be respected in the authorization chain afterwards.
-
 func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth.Decision, string, error) {
 	machineName, isNodeAgent := GetNodeAgentIdentity(attrs.GetUser())
 	if !isNodeAgent {
@@ -71,7 +67,7 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 
 	if machineName == "" {
 		requestLog.Info("No machine for user")
-		return auth.DecisionNoOpinion, "", nil
+		return auth.DecisionDeny, "", nil
 	}
 
 	if attrs.IsResourceRequest() {
@@ -90,16 +86,16 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 		}
 	}
 
-	return auth.DecisionNoOpinion, "", nil
+	return auth.DecisionDeny, "", nil
 }
 
 func (a *authorizer) authorizeCertificateSigningRequest(ctx context.Context, log logr.Logger, attrs auth.Attributes) (auth.Decision, string, error) {
 	if ok, reason := a.checkSubresource(log, attrs); !ok {
-		return auth.DecisionNoOpinion, reason, nil
+		return auth.DecisionDeny, reason, nil
 	}
 
 	if allowed, reason := a.checkVerb(log, attrs, "get", "create"); !allowed {
-		return auth.DecisionNoOpinion, reason, nil
+		return auth.DecisionDeny, reason, nil
 	}
 
 	if attrs.GetVerb() == "create" {
@@ -108,12 +104,12 @@ func (a *authorizer) authorizeCertificateSigningRequest(ctx context.Context, log
 
 	csr := &certificatesv1.CertificateSigningRequest{}
 	if err := a.targetClient.Get(ctx, types.NamespacedName{Name: attrs.GetName()}, csr); err != nil {
-		return auth.DecisionNoOpinion, "", err
+		return auth.DecisionDeny, "", err
 	}
 
 	if csr.Spec.Username != attrs.GetUser().GetName() {
 		log.Info("Denying authorization because the CSR is for a different user", "csrUsername", csr.Spec.Username)
-		return auth.DecisionNoOpinion, fmt.Sprintf("gardener-node-agent is only allowed to read or request CSRs for its own user %q", attrs.GetUser().GetName()), nil
+		return auth.DecisionDeny, fmt.Sprintf("gardener-node-agent is only allowed to read or request CSRs for its own user %q", attrs.GetUser().GetName()), nil
 	}
 
 	return auth.DecisionAllow, "", nil
@@ -121,11 +117,11 @@ func (a *authorizer) authorizeCertificateSigningRequest(ctx context.Context, log
 
 func (a *authorizer) authorizeEvent(log logr.Logger, attrs auth.Attributes) (auth.Decision, string, error) {
 	if ok, reason := a.checkSubresource(log, attrs); !ok {
-		return auth.DecisionNoOpinion, reason, nil
+		return auth.DecisionDeny, reason, nil
 	}
 
 	if allowed, reason := a.checkVerb(log, attrs, "create", "patch"); !allowed {
-		return auth.DecisionNoOpinion, reason, nil
+		return auth.DecisionDeny, reason, nil
 	}
 
 	return auth.DecisionAllow, "", nil
@@ -133,29 +129,29 @@ func (a *authorizer) authorizeEvent(log logr.Logger, attrs auth.Attributes) (aut
 
 func (a *authorizer) authorizeLease(ctx context.Context, log logr.Logger, machineName string, attrs auth.Attributes) (auth.Decision, string, error) {
 	if ok, reason := a.checkSubresource(log, attrs); !ok {
-		return auth.DecisionNoOpinion, reason, nil
+		return auth.DecisionDeny, reason, nil
 	}
 
 	allowedVerbs := []string{"get", "list", "watch", "create", "update"}
 	if allowed, reason := a.checkVerb(log, attrs, allowedVerbs...); !allowed {
-		return auth.DecisionNoOpinion, reason, nil
+		return auth.DecisionDeny, reason, nil
 	}
 
 	machine := &machinev1alpha1.Machine{}
 	if err := a.sourceClient.Get(ctx, client.ObjectKey{Name: machineName, Namespace: a.machineNamespace}, machine); err != nil {
-		return auth.DecisionNoOpinion, "", fmt.Errorf("error getting machine %q: %w", machineName, err)
+		return auth.DecisionDeny, "", fmt.Errorf("error getting machine %q: %w", machineName, err)
 	}
 
 	node := machine.Labels[machinev1alpha1.NodeLabelKey]
 	if node == "" {
 		log.Info(`Denying request because the machine does not have a "node" label`, "machineName", machineName)
-		return auth.DecisionNoOpinion, fmt.Sprintf(`expecting "node" label on machine %q`, machineName), nil
+		return auth.DecisionDeny, fmt.Sprintf(`expecting "node" label on machine %q`, machineName), nil
 	}
 
 	allowedLease := "gardener-node-agent-" + node
 	if (attrs.GetVerb() != "create" && attrs.GetName() != allowedLease) || attrs.GetNamespace() != metav1.NamespaceSystem {
 		log.Info("Denying authorization because gardener-node-agent is not allowed to access the lease", "nodeName", node, "machineName", machineName, "leaseName", attrs.GetName())
-		return auth.DecisionNoOpinion, fmt.Sprintf("this gardener-node-agent can only access lease %q in %q namespace", allowedLease, metav1.NamespaceSystem), nil
+		return auth.DecisionDeny, fmt.Sprintf("this gardener-node-agent can only access lease %q in %q namespace", allowedLease, metav1.NamespaceSystem), nil
 	}
 
 	return auth.DecisionAllow, "", nil
@@ -163,12 +159,12 @@ func (a *authorizer) authorizeLease(ctx context.Context, log logr.Logger, machin
 
 func (a *authorizer) authorizeNode(ctx context.Context, log logr.Logger, machineName string, attrs auth.Attributes) (auth.Decision, string, error) {
 	if ok, reason := a.checkSubresource(log, attrs, "status"); !ok {
-		return auth.DecisionNoOpinion, reason, nil
+		return auth.DecisionDeny, reason, nil
 	}
 
 	allowedVerbs := []string{"get", "list", "watch", "patch", "update"}
 	if allowed, reason := a.checkVerb(log, attrs, allowedVerbs...); !allowed {
-		return auth.DecisionNoOpinion, reason, nil
+		return auth.DecisionDeny, reason, nil
 	}
 
 	// Listing nodes must be allowed unconditionally, because gardener-node-agent only knows its hostname, but not its node name.
@@ -179,12 +175,12 @@ func (a *authorizer) authorizeNode(ctx context.Context, log logr.Logger, machine
 
 	machine := &machinev1alpha1.Machine{}
 	if err := a.sourceClient.Get(ctx, client.ObjectKey{Name: machineName, Namespace: a.machineNamespace}, machine); err != nil {
-		return auth.DecisionNoOpinion, "", err
+		return auth.DecisionDeny, "", err
 	}
 
 	if machine.Labels[machinev1alpha1.NodeLabelKey] != attrs.GetName() {
 		log.Info("Denying request because node belongs to a different machine", "nodeName", attrs.GetName(), "machineName", machineName)
-		return auth.DecisionNoOpinion, fmt.Sprintf("node %q does not belong to machine %q", attrs.GetName(), machineName), nil
+		return auth.DecisionDeny, fmt.Sprintf("node %q does not belong to machine %q", attrs.GetName(), machineName), nil
 	}
 
 	return auth.DecisionAllow, "", nil
@@ -192,24 +188,24 @@ func (a *authorizer) authorizeNode(ctx context.Context, log logr.Logger, machine
 
 func (a *authorizer) authorizeSecret(ctx context.Context, log logr.Logger, machineName string, attrs auth.Attributes) (auth.Decision, string, error) {
 	if ok, reason := a.checkSubresource(log, attrs); !ok {
-		return auth.DecisionNoOpinion, reason, nil
+		return auth.DecisionDeny, reason, nil
 	}
 
 	allowedVerbs := []string{"get", "list", "watch"}
 	if allowed, reason := a.checkVerb(log, attrs, allowedVerbs...); !allowed {
-		return auth.DecisionNoOpinion, reason, nil
+		return auth.DecisionDeny, reason, nil
 	}
 
 	machine := &machinev1alpha1.Machine{}
 	if err := a.sourceClient.Get(ctx, client.ObjectKey{Name: machineName, Namespace: a.machineNamespace}, machine); err != nil {
-		return auth.DecisionNoOpinion, "", fmt.Errorf("error getting machine %q: %w", machineName, err)
+		return auth.DecisionDeny, "", fmt.Errorf("error getting machine %q: %w", machineName, err)
 	}
 
 	validSecrets := []string{machine.Spec.NodeTemplateSpec.Labels[v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName], valitailTokenSecretName}
 
 	if !slices.Contains(validSecrets, attrs.GetName()) || attrs.GetNamespace() != metav1.NamespaceSystem {
 		log.Info("Denying authorization because gardener-node-agent is not allowed to access secret", "secret", attrs.GetName(), "machine", machineName)
-		return auth.DecisionNoOpinion, fmt.Sprintf("gardener-node-agent can only access secrets %v in %q namespace", validSecrets, metav1.NamespaceSystem), nil
+		return auth.DecisionDeny, fmt.Sprintf("gardener-node-agent can only access secrets %v in %q namespace", validSecrets, metav1.NamespaceSystem), nil
 	}
 
 	return auth.DecisionAllow, "", nil

@@ -127,16 +127,30 @@ var _ = Describe("Authorizer", func() {
 				Expect(reason).To(BeEmpty())
 			})
 
-			It("should have no opinion for a gardener-node-agent with an empty machine name", func() {
+			It("should have no opinion for if the user is not member of the gardener-node-agent group", func() {
 				attrs := auth.AttributesRecord{
 					User: &user.DefaultInfo{
-						Name: v1beta1constants.NodeAgentUserNamePrefix,
+						Name: fmt.Sprintf("%s%s", v1beta1constants.NodeAgentUserNamePrefix, machineName),
 					},
 				}
 				decision, reason, err := authorizer.Authorize(ctx, attrs)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionNoOpinion))
+				Expect(reason).To(BeEmpty())
+			})
+
+			It("should deny for a gardener-node-agent with an empty machine name", func() {
+				attrs := auth.AttributesRecord{
+					User: &user.DefaultInfo{
+						Name:   v1beta1constants.NodeAgentUserNamePrefix,
+						Groups: []string{v1beta1constants.NodeAgentsGroup},
+					},
+				}
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionDeny))
 				Expect(reason).To(BeEmpty())
 			})
 		})
@@ -184,7 +198,7 @@ var _ = Describe("Authorizer", func() {
 				Expect(reason).To(BeEmpty())
 			})
 
-			It("should have no opinion to get a certificate signing request created by a different user", func() {
+			It("should deny to get a certificate signing request created by a different user", func() {
 				csr := &certificatesv1.CertificateSigningRequest{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "foo-csr",
@@ -206,11 +220,11 @@ var _ = Describe("Authorizer", func() {
 				decision, reason, err := authorizer.Authorize(ctx, attrs)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionNoOpinion))
+				Expect(decision).To(Equal(auth.DecisionDeny))
 				Expect(reason).To(Equal(fmt.Sprintf("gardener-node-agent is only allowed to read or request CSRs for its own user %q", nodeAgentUser.GetName())))
 			})
 
-			DescribeTable("should have no opinion because no allowed verb", func(verb string) {
+			DescribeTable("should deny because no allowed verb", func(verb string) {
 				attrs := &auth.AttributesRecord{
 					User:            nodeAgentUser,
 					Name:            "foo-csr",
@@ -222,7 +236,7 @@ var _ = Describe("Authorizer", func() {
 				decision, reason, err := authorizer.Authorize(ctx, attrs)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionNoOpinion))
+				Expect(decision).To(Equal(auth.DecisionDeny))
 				Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get create]"))
 			},
 				Entry("update", "update"),
@@ -254,7 +268,7 @@ var _ = Describe("Authorizer", func() {
 				Entry("patch", "patch"),
 			)
 
-			DescribeTable("should have no opinion because no allowed verb", func(verb string) {
+			DescribeTable("should deny because no allowed verb", func(verb string) {
 				attrs := &auth.AttributesRecord{
 					User:            nodeAgentUser,
 					Name:            "foo-event",
@@ -266,7 +280,7 @@ var _ = Describe("Authorizer", func() {
 				decision, reason, err := authorizer.Authorize(ctx, attrs)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionNoOpinion))
+				Expect(decision).To(Equal(auth.DecisionDeny))
 				Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [create patch]"))
 			},
 				Entry("get", "get"),
@@ -296,7 +310,7 @@ var _ = Describe("Authorizer", func() {
 				Expect(reason).To(BeEmpty())
 			})
 
-			It("should have no opinion when creating a lease in a namespace other than kube-system", func() {
+			It("should deny creating a lease in a namespace other than kube-system", func() {
 				attrs := &auth.AttributesRecord{
 					User:            nodeAgentUser,
 					Name:            "",
@@ -309,11 +323,11 @@ var _ = Describe("Authorizer", func() {
 				decision, reason, err := authorizer.Authorize(ctx, attrs)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionNoOpinion))
+				Expect(decision).To(Equal(auth.DecisionDeny))
 				Expect(reason).To(Equal(fmt.Sprintf("this gardener-node-agent can only access lease \"gardener-node-agent-%s\" in \"kube-system\" namespace", nodeName)))
 			})
 
-			DescribeTable("should have no opinion when accessing a lease for a machine without a node label", func(verb string) {
+			DescribeTable("should deny accessing a lease for a machine without a node label", func(verb string) {
 				attrs := &auth.AttributesRecord{
 					User:            newNodeAgentUser,
 					Name:            "",
@@ -326,7 +340,7 @@ var _ = Describe("Authorizer", func() {
 				decision, reason, err := authorizer.Authorize(ctx, attrs)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionNoOpinion))
+				Expect(decision).To(Equal(auth.DecisionDeny))
 				Expect(reason).To(Equal(fmt.Sprintf("expecting \"node\" label on machine %q", newMachineName)))
 			},
 				Entry("create", "create"),
@@ -358,7 +372,7 @@ var _ = Describe("Authorizer", func() {
 				Entry("watch", "watch"),
 			)
 
-			DescribeTable("should have no opinion when accessing a lease which belongs to a different gardener-node-agent instance", func(verb string) {
+			DescribeTable("should deny accessing a lease which belongs to a different gardener-node-agent instance", func(verb string) {
 				attrs := &auth.AttributesRecord{
 					User:            nodeAgentUser,
 					Name:            "gardener-node-agent-other-bar-node",
@@ -371,7 +385,7 @@ var _ = Describe("Authorizer", func() {
 				decision, reason, err := authorizer.Authorize(ctx, attrs)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionNoOpinion))
+				Expect(decision).To(Equal(auth.DecisionDeny))
 				Expect(reason).To(Equal(fmt.Sprintf("this gardener-node-agent can only access lease \"gardener-node-agent-%s\" in \"kube-system\" namespace", nodeName)))
 			},
 				Entry("get", "get"),
@@ -380,7 +394,7 @@ var _ = Describe("Authorizer", func() {
 				Entry("watch", "watch"),
 			)
 
-			DescribeTable("should have no opinion when accessing a lease in a different namespace", func(verb string) {
+			DescribeTable("should deny accessing a lease in a different namespace", func(verb string) {
 				attrs := &auth.AttributesRecord{
 					User:            nodeAgentUser,
 					Name:            fmt.Sprintf("gardener-node-agent-%s", nodeName),
@@ -393,7 +407,7 @@ var _ = Describe("Authorizer", func() {
 				decision, reason, err := authorizer.Authorize(ctx, attrs)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionNoOpinion))
+				Expect(decision).To(Equal(auth.DecisionDeny))
 				Expect(reason).To(Equal(fmt.Sprintf("this gardener-node-agent can only access lease \"gardener-node-agent-%s\" in \"kube-system\" namespace", nodeName)))
 			},
 				Entry("get", "get"),
@@ -402,7 +416,7 @@ var _ = Describe("Authorizer", func() {
 				Entry("watch", "watch"),
 			)
 
-			DescribeTable("should have no opinion because no allowed verb", func(verb string) {
+			DescribeTable("should deny because no allowed verb", func(verb string) {
 				attrs := &auth.AttributesRecord{
 					User:            nodeAgentUser,
 					Name:            "gardener-node-agent-other-bar-node",
@@ -415,7 +429,7 @@ var _ = Describe("Authorizer", func() {
 				decision, reason, err := authorizer.Authorize(ctx, attrs)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionNoOpinion))
+				Expect(decision).To(Equal(auth.DecisionDeny))
 				Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get list watch create update]"))
 			},
 				Entry("patch", "patch"),
@@ -464,7 +478,7 @@ var _ = Describe("Authorizer", func() {
 				Entry("update", "update"),
 			)
 
-			DescribeTable("should have no opinion when accessing a node which belongs to a different gardener-node-agent instance", func(verb string) {
+			DescribeTable("should deny accessing a node which belongs to a different gardener-node-agent instance", func(verb string) {
 				anotherNodeName := "another-bar-node"
 				attrs := &auth.AttributesRecord{
 					User:            nodeAgentUser,
@@ -477,7 +491,7 @@ var _ = Describe("Authorizer", func() {
 				decision, reason, err := authorizer.Authorize(ctx, attrs)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionNoOpinion))
+				Expect(decision).To(Equal(auth.DecisionDeny))
 				Expect(reason).To(Equal(fmt.Sprintf("node %q does not belong to machine %q", anotherNodeName, machineName)))
 			},
 				Entry("get", "get"),
@@ -508,7 +522,7 @@ var _ = Describe("Authorizer", func() {
 				Entry("watch", "watch"),
 			)
 
-			DescribeTable("should have no opinion when accessing a random subresource", func(verb string) {
+			DescribeTable("should deny accessing a random subresource", func(verb string) {
 				attrs := &auth.AttributesRecord{
 					User:            nodeAgentUser,
 					Name:            nodeName,
@@ -521,7 +535,7 @@ var _ = Describe("Authorizer", func() {
 				decision, reason, err := authorizer.Authorize(ctx, attrs)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionNoOpinion))
+				Expect(decision).To(Equal(auth.DecisionDeny))
 				Expect(reason).To(Equal("only the following subresources are allowed for this resource type: [status]"))
 			},
 				Entry("get", "get"),
@@ -531,7 +545,7 @@ var _ = Describe("Authorizer", func() {
 				Entry("watch", "watch"),
 			)
 
-			DescribeTable("should have no opinion because no allowed verb", func(verb string) {
+			DescribeTable("should deny because no allowed verb", func(verb string) {
 				attrs := &auth.AttributesRecord{
 					User:            nodeAgentUser,
 					Name:            "",
@@ -543,7 +557,7 @@ var _ = Describe("Authorizer", func() {
 				decision, reason, err := authorizer.Authorize(ctx, attrs)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionNoOpinion))
+				Expect(decision).To(Equal(auth.DecisionDeny))
 				Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get list watch patch update]"))
 			},
 				Entry("create", "create"),
@@ -579,7 +593,7 @@ var _ = Describe("Authorizer", func() {
 				Entry("watch", "watch"),
 			)
 
-			DescribeTable("should have no opinion when accessing the node agent config secret which belong to a different gardener-node-agent instance", func(verb string) {
+			DescribeTable("should deny accessing the node agent config secret which belong to a different gardener-node-agent instance", func(verb string) {
 				attrs := &auth.AttributesRecord{
 					User:            nodeAgentUser,
 					Name:            newMachineSecretName,
@@ -593,7 +607,7 @@ var _ = Describe("Authorizer", func() {
 				decision, reason, err := authorizer.Authorize(ctx, attrs)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionNoOpinion))
+				Expect(decision).To(Equal(auth.DecisionDeny))
 				Expect(reason).To(Equal(fmt.Sprintf("gardener-node-agent can only access secrets [%s gardener-valitail] in \"kube-system\" namespace", machineSecretName)))
 			},
 				Entry("get", "get"),
@@ -601,7 +615,7 @@ var _ = Describe("Authorizer", func() {
 				Entry("watch", "watch"),
 			)
 
-			DescribeTable("should have no opinion when accessing secrets in a different namespace", func(verb string) {
+			DescribeTable("should deny accessing secrets in a different namespace", func(verb string) {
 				attrs := &auth.AttributesRecord{
 					User:            nodeAgentUser,
 					Name:            "",
@@ -618,7 +632,7 @@ var _ = Describe("Authorizer", func() {
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 
 					Expect(err).NotTo(HaveOccurred())
-					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(decision).To(Equal(auth.DecisionDeny))
 					Expect(reason).To(Equal(fmt.Sprintf("gardener-node-agent can only access secrets [%s gardener-valitail] in \"kube-system\" namespace", machineSecretName)))
 				}
 			},
@@ -627,7 +641,7 @@ var _ = Describe("Authorizer", func() {
 				Entry("watch", "watch"),
 			)
 
-			DescribeTable("should have no opinion because no allowed verb", func(verb string) {
+			DescribeTable("should deny because no allowed verb", func(verb string) {
 				attrs := &auth.AttributesRecord{
 					User:            nodeAgentUser,
 					Name:            newMachineSecretName,
@@ -640,7 +654,7 @@ var _ = Describe("Authorizer", func() {
 				decision, reason, err := authorizer.Authorize(ctx, attrs)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionNoOpinion))
+				Expect(decision).To(Equal(auth.DecisionDeny))
 				Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get list watch]"))
 			},
 				Entry("create", "create"),
