@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"text/template"
 
-	"github.com/Masterminds/semver/v3"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -95,8 +94,6 @@ func New(
 	client client.Client,
 	namespace string,
 	secretsManager secretsmanager.Interface,
-	runtimeVersion *semver.Version,
-	targetVersion *semver.Version,
 	image string,
 	replicas int32,
 	config *gardencorev1beta1.KubeSchedulerConfig,
@@ -105,8 +102,6 @@ func New(
 		client:         client,
 		namespace:      namespace,
 		secretsManager: secretsManager,
-		runtimeVersion: runtimeVersion,
-		targetVersion:  targetVersion,
 		image:          image,
 		replicas:       replicas,
 		config:         config,
@@ -117,8 +112,6 @@ type kubeScheduler struct {
 	client         client.Client
 	namespace      string
 	secretsManager secretsmanager.Interface
-	runtimeVersion *semver.Version
-	targetVersion  *semver.Version
 	image          string
 	replicas       int32
 	config         *gardencorev1beta1.KubeSchedulerConfig
