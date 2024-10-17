@@ -43,7 +43,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	log := logf.FromContext(ctx)
 
 	for _, ext := range runtimeClusterExtensions {
-		if _, ok := r.KindToRequiredTypes[ext.objectKind]; !ok {
+		r.Lock.RLock()
+		_, kindProcessed := r.KindToRequiredTypes[ext.objectKind]
+		r.Lock.RUnlock()
+		if !kindProcessed {
 			// The object kind in question has not yet been processed.
 			// Hence, it's not possible to determine if the extension is required or not.
 			log.Info("Kind is not yet calculated. Request is re-queued", "kind", ext.objectKind)
@@ -76,7 +79,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	requiredRuntimeCondition := r.getRuntimeCondition(extension, requiredExtensionKinds)
 	if err := r.updateConditions(ctx, extension, requiredRuntimeCondition); err != nil {
-		return reconcile.Result{}, fmt.Errorf("could not update extension statsus: %w", err)
+		return reconcile.Result{}, fmt.Errorf("could not update extension status: %w", err)
 	}
 
 	return reconcile.Result{}, nil
