@@ -71,7 +71,7 @@ var _ = Describe("Interface", func() {
 		secret        *corev1.Secret
 
 		seedTemplate *gardencorev1beta1.SeedTemplate
-		gardenlet    *seedmanagementv1alpha1.GardenletConfig
+		gardenlet    seedmanagementv1alpha1.GardenletConfig
 
 		gardenNamespace     *corev1.Namespace
 		backupSecret        *corev1.Secret
@@ -194,7 +194,7 @@ var _ = Describe("Interface", func() {
 				Ingress: &gardencorev1beta1.Ingress{},
 			},
 		}
-		gardenlet = &seedmanagementv1alpha1.GardenletConfig{
+		gardenlet = seedmanagementv1alpha1.GardenletConfig{
 			Deployment: &seedmanagementv1alpha1.GardenletDeployment{
 				ReplicaCount:         ptr.To[int32](1),
 				RevisionHistoryLimit: ptr.To[int32](1),

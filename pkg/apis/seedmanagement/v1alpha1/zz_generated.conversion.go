@@ -769,14 +769,8 @@ func Convert_seedmanagement_ManagedSeedSetStatus_To_v1alpha1_ManagedSeedSetStatu
 
 func autoConvert_v1alpha1_ManagedSeedSpec_To_seedmanagement_ManagedSeedSpec(in *ManagedSeedSpec, out *seedmanagement.ManagedSeedSpec, s conversion.Scope) error {
 	out.Shoot = (*seedmanagement.Shoot)(unsafe.Pointer(in.Shoot))
-	if in.Gardenlet != nil {
-		in, out := &in.Gardenlet, &out.Gardenlet
-		*out = new(seedmanagement.GardenletConfig)
-		if err := Convert_v1alpha1_GardenletConfig_To_seedmanagement_GardenletConfig(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Gardenlet = nil
+	if err := Convert_v1alpha1_GardenletConfig_To_seedmanagement_GardenletConfig(&in.Gardenlet, &out.Gardenlet, s); err != nil {
+		return err
 	}
 	return nil
 }
@@ -788,14 +782,8 @@ func Convert_v1alpha1_ManagedSeedSpec_To_seedmanagement_ManagedSeedSpec(in *Mana
 
 func autoConvert_seedmanagement_ManagedSeedSpec_To_v1alpha1_ManagedSeedSpec(in *seedmanagement.ManagedSeedSpec, out *ManagedSeedSpec, s conversion.Scope) error {
 	out.Shoot = (*Shoot)(unsafe.Pointer(in.Shoot))
-	if in.Gardenlet != nil {
-		in, out := &in.Gardenlet, &out.Gardenlet
-		*out = new(GardenletConfig)
-		if err := Convert_seedmanagement_GardenletConfig_To_v1alpha1_GardenletConfig(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Gardenlet = nil
+	if err := Convert_seedmanagement_GardenletConfig_To_v1alpha1_GardenletConfig(&in.Gardenlet, &out.Gardenlet, s); err != nil {
+		return err
 	}
 	return nil
 }

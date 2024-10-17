@@ -512,11 +512,7 @@ func (in *ManagedSeedSpec) DeepCopyInto(out *ManagedSeedSpec) {
 		*out = new(Shoot)
 		**out = **in
 	}
-	if in.Gardenlet != nil {
-		in, out := &in.Gardenlet, &out.Gardenlet
-		*out = new(GardenletConfig)
-		(*in).DeepCopyInto(*out)
-	}
+	in.Gardenlet.DeepCopyInto(&out.Gardenlet)
 	return
 }
 

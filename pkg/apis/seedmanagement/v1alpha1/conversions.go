@@ -54,7 +54,7 @@ func Convert_seedmanagement_GardenletConfig_To_v1alpha1_GardenletConfig(in *seed
 	if err := autoConvert_seedmanagement_GardenletConfig_To_v1alpha1_GardenletConfig(in, out, s); err != nil {
 		return err
 	}
-	if out.Config.Raw == nil {
+	if out.Config.Raw == nil && out.Config.Object != nil {
 		cfg, ok := out.Config.Object.(*gardenletv1alpha1.GardenletConfiguration)
 		if !ok {
 			return errors.New("unknown gardenlet config object type")

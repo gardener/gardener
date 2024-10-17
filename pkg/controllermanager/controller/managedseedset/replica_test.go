@@ -59,7 +59,7 @@ var _ = Describe("Replica", func() {
 						},
 					},
 					Spec: seedmanagementv1alpha1.ManagedSeedSpec{
-						Gardenlet: &seedmanagementv1alpha1.GardenletConfig{
+						Gardenlet: seedmanagementv1alpha1.GardenletConfig{
 							Config: runtime.RawExtension{
 								Object: &gardenletv1alpha1.GardenletConfiguration{
 									SeedConfig: &gardenletv1alpha1.SeedConfig{
@@ -350,7 +350,7 @@ var _ = Describe("Replica", func() {
 							Shoot: &seedmanagementv1alpha1.Shoot{
 								Name: replicaName,
 							},
-							Gardenlet: &seedmanagementv1alpha1.GardenletConfig{
+							Gardenlet: seedmanagementv1alpha1.GardenletConfig{
 								Config: runtime.RawExtension{
 									Object: &gardenletv1alpha1.GardenletConfiguration{
 										SeedConfig: &gardenletv1alpha1.SeedConfig{

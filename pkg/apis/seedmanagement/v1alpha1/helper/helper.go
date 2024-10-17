@@ -23,14 +23,6 @@ func GetBootstrap(bootstrap *seedmanagementv1alpha1.Bootstrap) seedmanagementv1a
 	return seedmanagementv1alpha1.BootstrapNone
 }
 
-// GardenletConfigFromManagedSeed returns the gardenlet config.
-func GardenletConfigFromManagedSeed(gardenlet *seedmanagementv1alpha1.GardenletConfig) *runtime.RawExtension {
-	if gardenlet == nil {
-		return nil
-	}
-	return &gardenlet.Config
-}
-
 // ExtractSeedTemplateAndGardenletConfig extracts SeedTemplate and GardenletConfig from the given `managedSeed`.
 // An error is returned if either SeedTemplate of GardenletConfig is not specified.
 func ExtractSeedTemplateAndGardenletConfig(name string, config *runtime.RawExtension) (*gardencorev1beta1.SeedTemplate, *gardenletv1alpha1.GardenletConfiguration, error) {

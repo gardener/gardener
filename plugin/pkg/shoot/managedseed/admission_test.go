@@ -107,7 +107,7 @@ var _ = Describe("ManagedSeed", func() {
 					Shoot: &seedmanagementv1alpha1.Shoot{
 						Name: name,
 					},
-					Gardenlet: &seedmanagementv1alpha1.GardenletConfig{
+					Gardenlet: seedmanagementv1alpha1.GardenletConfig{
 						Config: runtime.RawExtension{
 							Object: gardenletConfig,
 						},
@@ -192,7 +192,7 @@ var _ = Describe("ManagedSeed", func() {
 			})
 
 			It("should forbid Shoot update if the seedTemplate is not specified", func() {
-				managedSeed.Spec.Gardenlet = &seedmanagementv1alpha1.GardenletConfig{
+				managedSeed.Spec.Gardenlet = seedmanagementv1alpha1.GardenletConfig{
 					Config: runtime.RawExtension{
 						Object: &gardenletv1alpha1.GardenletConfiguration{},
 					},

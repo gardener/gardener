@@ -15,7 +15,7 @@ import (
 // ExtractSeedSpec extracts the seed spec from the ManagedSeed.
 func ExtractSeedSpec(managedSeed *seedmanagement.ManagedSeed) (*gardencore.SeedSpec, error) {
 	gardenlet := managedSeed.Spec.Gardenlet
-	if gardenlet == nil || gardenlet.Config == nil {
+	if gardenlet.Config == nil {
 		return nil, fmt.Errorf("no gardenlet config specified in managedseed %s", managedSeed.Name)
 	}
 
