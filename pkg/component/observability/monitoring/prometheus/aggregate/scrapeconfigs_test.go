@@ -35,7 +35,7 @@ var _ = Describe("ScrapeConfigs", func() {
 							},
 						},
 						KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
-							Role:       "service",
+							Role:       "Service",
 							Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{"garden"}},
 						}},
 						RelabelConfigs: []monitoringv1.RelabelConfig{

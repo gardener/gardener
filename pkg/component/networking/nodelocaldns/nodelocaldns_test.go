@@ -86,7 +86,7 @@ var _ = Describe("NodeLocalDNS", func() {
 				}},
 				KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
 					APIServer:  ptr.To("https://kube-apiserver"),
-					Role:       "pod",
+					Role:       "Pod",
 					Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{"kube-system"}},
 					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
@@ -161,7 +161,7 @@ var _ = Describe("NodeLocalDNS", func() {
 				}},
 				KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
 					APIServer:  ptr.To("https://kube-apiserver"),
-					Role:       "pod",
+					Role:       "Pod",
 					Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{"kube-system"}},
 					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
