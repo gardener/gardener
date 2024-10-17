@@ -36,15 +36,15 @@ func (r *Reconciler) reconcile(
 	reconcile.Result,
 	error,
 ) {
-	conditions := NewConditions(r.Clock, extension.Status)
+	conditions := NewConditions(r.clock, extension.Status)
 
 	if garden.garden == nil {
-		if conditions.installed.Status == gardencorev1beta1.ConditionFalse && conditions.installed.Reason == ConditionDeleteSuccessful {
+		if conditions.installed.Status == gardencorev1beta1.ConditionFalse && conditions.installed.Reason == ReasonDeleteSuccessful {
 			// Retain condition if the extension was previously uninstalled due to a garden deletion
 			return reconcile.Result{}, nil
 		}
 
-		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionFalse, ConditionNoGardenFound, "No garden found")
+		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.clock, conditions.installed, gardencorev1beta1.ConditionFalse, ReasonNoGardenFound, "No garden found")
 		return reconcile.Result{}, r.updateExtensionStatus(ctx, log, extension, conditions)
 	}
 
@@ -53,7 +53,7 @@ func (r *Reconciler) reconcile(
 
 	if !controllerutil.ContainsFinalizer(extension, operatorv1alpha1.FinalizerName) {
 		log.Info("Adding finalizer")
-		if err := controllerutils.AddFinalizers(reconcileCtx, r.RuntimeClientSet.Client(), extension, operatorv1alpha1.FinalizerName); err != nil {
+		if err := controllerutils.AddFinalizers(reconcileCtx, r.runtimeClientSet.Client(), extension, operatorv1alpha1.FinalizerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
 		}
 	}
@@ -86,7 +86,7 @@ func (r *Reconciler) reconcile(
 		createVirtualGardenClientSet = g.Add(flow.Task{
 			Name: "Creating virtual garden-client",
 			Fn: func(ctx context.Context) error {
-				clientSet, err := r.GardenClientMap.GetClient(ctx, keys.ForGarden(garden.garden))
+				clientSet, err := r.gardenClientMap.GetClient(ctx, keys.ForGarden(garden.garden))
 				if err != nil {
 					return fmt.Errorf("error retrieving virtual cluster client set: %w", err)
 				}
@@ -120,7 +120,7 @@ func (r *Reconciler) reconcile(
 	if err := g.Compile().Run(reconcileCtx, flow.Opts{
 		Log: log,
 	}); err != nil {
-		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionFalse, ConditionReconcileFailed, err.Error())
+		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.clock, conditions.installed, gardencorev1beta1.ConditionFalse, ReasonReconcileFailed, err.Error())
 		if err := r.updateExtensionStatus(ctx, log, extension, conditions); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to update extension status: %w", err)
 		}
@@ -130,13 +130,15 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{}, errors.Join(err, r.updateExtensionStatus(ctx, log, extension, conditions))
 	}
 
-	conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionTrue, ConditionReconcileSuccess, "Extension has been reconciled successfully")
+	conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.clock, conditions.installed, gardencorev1beta1.ConditionTrue, ReasonReconcileSuccess, "Extension has been reconciled successfully")
 	return reconcileResult, r.updateExtensionStatus(ctx, log, extension, conditions)
 }
 
 func (r *Reconciler) deployExtensionInRuntime(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension) error {
-	if !r.isDeploymentInRuntimeRequired(log, extension) {
+	if !r.isDeploymentInRuntimeRequired(extension) {
+		log.V(1).Info("Deployment in runtime cluster not required")
 		return r.runtime.Delete(ctx, log, extension)
 	}
+	log.V(1).Info("Deployment in runtime cluster required")
 	return r.runtime.Reconcile(ctx, log, extension)
 }

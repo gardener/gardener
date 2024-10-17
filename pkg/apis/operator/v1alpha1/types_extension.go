@@ -73,7 +73,6 @@ type ExtensionDeploymentSpec struct {
 	// +optional
 	Values *apiextensionsv1.JSON `json:"values,omitempty"`
 	// RuntimeClusterValues are the deployment values for the extension deployment running in the runtime garden cluster.
-	// If no values are specified, a runtime deployment is considered deactivated.
 	// +optional
 	RuntimeClusterValues *apiextensionsv1.JSON `json:"runtimeClusterValues,omitempty"`
 	// Policy controls how the controller is deployed. It defaults to 'OnDemand'.
@@ -132,4 +131,6 @@ type ExtensionStatus struct {
 const (
 	// ExtensionInstalled is a condition type for indicating whether the extension has been installed.
 	ExtensionInstalled gardencorev1beta1.ConditionType = "Installed"
+	// ExtensionRequiredRuntime is a condition type for indicating whether the extension is required in the garden runtime cluster.
+	ExtensionRequiredRuntime gardencorev1beta1.ConditionType = "RequiredRuntime"
 )
