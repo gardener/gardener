@@ -154,7 +154,7 @@ func (r *Reconciler) delete(
 
 		ensureOnlyCleanupRelevantVirtualManagedResourcesExist = g.Add(flow.Task{
 			Name:         "Ensuring only virtual garden ManagedResources which are required for cleanup exist",
-			Fn:           r.checkIfNonCleanupRelevantVirtualGardenManagedResourcesExist(),
+			Fn:           r.checkIfOnlyCleanupRelevantVirtualGardenManagedResourcesExist(),
 			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenManagedResourcesDestroyed),
 		})
 
@@ -176,7 +176,7 @@ func (r *Reconciler) delete(
 
 		ensureNoVirtualGardenManagedResourcesExistAnymore = g.Add(flow.Task{
 			Name:         "Ensuring no virtual garden ManagedResources exist anymore",
-			Fn:           r.checkIfVirtualGardenManagedResourcesExist(),
+			Fn:           r.checkIfVirtualGardenManagedResourcesAreGone(),
 			Dependencies: flow.NewTaskIDs(syncPointCleanupRelevantVirtualManagedResourcesDestroyed),
 		})
 		destroyVirtualGardenGardenerResourceManager = g.Add(flow.Task{
@@ -372,11 +372,11 @@ func (r *Reconciler) delete(
 	return reconcile.Result{}, nil
 }
 
-func (r *Reconciler) checkIfNonCleanupRelevantVirtualGardenManagedResourcesExist() func(context.Context) error {
-	return r.checkIfVirtualGardenManagedResourcesExist(virtual.ManagedResourceName, gardeneraccess.ManagedResourceName, controllermanager.ManagedResourceName)
+func (r *Reconciler) checkIfOnlyCleanupRelevantVirtualGardenManagedResourcesExist() func(context.Context) error {
+	return r.checkIfVirtualGardenManagedResourcesAreGone(virtual.ManagedResourceName, gardeneraccess.ManagedResourceName, controllermanager.ManagedResourceName)
 }
 
-func (r *Reconciler) checkIfVirtualGardenManagedResourcesExist(excludedNames ...string) func(context.Context) error {
+func (r *Reconciler) checkIfVirtualGardenManagedResourcesAreGone(excludedNames ...string) func(context.Context) error {
 	return func(ctx context.Context) error {
 		managedResourcesStillExist, err := managedresources.CheckIfManagedResourcesExist(
 			ctx,

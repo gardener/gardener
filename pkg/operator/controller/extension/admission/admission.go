@@ -201,7 +201,7 @@ func (d *deployment) createOrUpdateAdmissionVirtualClusterResources(ctx context.
 		}
 	}
 	namespace := virtualNamespace(extension)
-	registry := managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+	registry := managedresources.NewRegistry(kubernetes.GardenScheme, kubernetes.GardenCodec, kubernetes.GardenSerializer)
 	if err := registry.Add(namespace); err != nil {
 		return fmt.Errorf("failed adding namespace to registry: %w", err)
 	}
