@@ -618,10 +618,13 @@ func (r *Reconciler) newKubeAPIServer(
 				AuthorizedTTL:                            metav1.Duration{Duration: time.Duration(0)},
 				UnauthorizedTTL:                          metav1.Duration{Duration: time.Duration(0)},
 				Timeout:                                  metav1.Duration{Duration: 10 * time.Second},
-				FailurePolicy:                            apiserverv1beta1.FailurePolicyNoOpinion,
+				FailurePolicy:                            apiserverv1beta1.FailurePolicyDeny,
 				SubjectAccessReviewVersion:               "v1",
 				MatchConditionSubjectAccessReviewVersion: "v1",
-				MatchConditions:                          nil,
+				MatchConditions: []apiserverv1beta1.WebhookMatchCondition{{
+					// only intercept request from gardenlets
+					Expression: fmt.Sprintf("'%s' in request.groups", v1beta1constants.SeedsGroup),
+				}},
 			},
 		})
 	}
