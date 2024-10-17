@@ -1011,32 +1011,183 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("should reject because the referenced cloud profile does not exist (create)", func() {
-				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-				Expect(gardenSecurityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBindingRefSecret)).To(Succeed())
-				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
+			Context("change the cloud profile reference", func() {
+				var (
+					namespacedCloudProfile gardencorev1beta1.NamespacedCloudProfile
+				)
 
-				attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+				BeforeEach(func() {
+					namespacedCloudProfile = gardencorev1beta1.NamespacedCloudProfile{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "namespaced-profile-1",
+							Namespace: namespace,
+						},
+						Spec: gardencorev1beta1.NamespacedCloudProfileSpec{
+							Parent: gardencorev1beta1.CloudProfileReference{
+								Name: cloudProfileName,
+								Kind: "CloudProfile",
+							},
+						},
+					}
+				})
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				It("should reject because the referenced cloud profile does not exist (create)", func() {
+					attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
-				Expect(err).To(HaveOccurred())
-			})
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
-			It("should reject because the referenced cloud profile does not exist (update)", func() {
-				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
+					Expect(err).To(HaveOccurred())
+				})
 
-				oldShoot := coreShoot.DeepCopy()
-				oldShoot.Spec.CloudProfileName = ptr.To("")
+				It("should reject because the referenced cloud profile does not exist (update)", func() {
+					oldShoot := coreShoot.DeepCopy()
+					oldShoot.Spec.CloudProfileName = ptr.To("")
 
-				attrs := admission.NewAttributesRecord(&coreShoot, oldShoot, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+					attrs := admission.NewAttributesRecord(&coreShoot, oldShoot, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
-				Expect(err).To(HaveOccurred())
+					Expect(err).To(HaveOccurred())
+				})
+
+				It("should reject because the referenced NamespacedCloudProfile does not exist (create)", func() {
+					Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					coreShoot.Spec.CloudProfileName = nil
+					coreShoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "NamespacedCloudProfile",
+						Name: "namespaced-profile-1",
+					}
+
+					attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).To(HaveOccurred())
+				})
+
+				It("should reject because the referenced NamespacedCloudProfile does not exist (update)", func() {
+					Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+
+					oldShoot := coreShoot.DeepCopy()
+					coreShoot.Spec.CloudProfileName = nil
+					coreShoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "NamespacedCloudProfile",
+						Name: "namespaced-profile-1",
+					}
+
+					attrs := admission.NewAttributesRecord(&coreShoot, oldShoot, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).To(HaveOccurred())
+				})
+
+				It("should reject because the cloud profile changed to does not contain the Shoot's current machine type", func() {
+					Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(gardenCoreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(&namespacedCloudProfile)).To(Succeed())
+
+					coreShoot.Spec.Provider.Workers = []core.Worker{
+						{
+							Name: "testing",
+							Machine: core.Machine{
+								Type: "a-special-machine-type",
+							},
+						},
+					}
+					oldShoot := coreShoot.DeepCopy()
+					oldShoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "NamespacedCloudProfile",
+						Name: "namespaced-profile-1",
+					}
+
+					attrs := admission.NewAttributesRecord(&coreShoot, oldShoot, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).To(PointTo(MatchFields(IgnoreExtras, Fields{
+						"ErrStatus": MatchFields(IgnoreExtras, Fields{
+							"Code":    Equal(int32(http.StatusForbidden)),
+							"Message": ContainSubstring("newly referenced cloud profile does not contain the machine type \"a-special-machine-type\" currently in use by worker \"testing\""),
+						}),
+					})))
+				})
+
+				It("should reject because the cloud profile changed to does not contain the Shoot's current volume type", func() {
+					cloudProfile.Spec.MachineTypes = []gardencorev1beta1.MachineType{{Name: "a-special-machine-type"}}
+
+					Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(gardenCoreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(&namespacedCloudProfile)).To(Succeed())
+
+					coreShoot.Spec.Provider.Workers = []core.Worker{
+						{
+							Name:    "testing",
+							Machine: core.Machine{Type: "a-special-machine-type"},
+							Volume: &core.Volume{
+								Type: ptr.To("a-special-volume-type"),
+							},
+						},
+					}
+					oldShoot := coreShoot.DeepCopy()
+					oldShoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "NamespacedCloudProfile",
+						Name: "namespaced-profile-1",
+					}
+
+					attrs := admission.NewAttributesRecord(&coreShoot, oldShoot, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).To(PointTo(MatchFields(IgnoreExtras, Fields{
+						"ErrStatus": MatchFields(IgnoreExtras, Fields{
+							"Code":    Equal(int32(http.StatusForbidden)),
+							"Message": ContainSubstring("newly referenced cloud profile does not contain the volume type \"a-special-volume-type\" currently in use by worker \"testing\""),
+						}),
+					})))
+				})
+
+				It("should reject because the cloud profile changed to does not contain the Shoot's current machine image version", func() {
+					cloudProfile.Spec.MachineTypes = []gardencorev1beta1.MachineType{{Name: "a-special-machine-type"}}
+
+					namespacedCloudProfile.Status.CloudProfileSpec.MachineImages = []gardencorev1beta1.MachineImage{
+						{
+							Name: "gardenlinux",
+							Versions: []gardencorev1beta1.MachineImageVersion{
+								{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1592.1.0-dev"}},
+							},
+						},
+					}
+					Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(gardenCoreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(&namespacedCloudProfile)).To(Succeed())
+
+					coreShoot.Spec.Provider.Workers = []core.Worker{
+						{
+							Name: "testing",
+							Machine: core.Machine{
+								Type: "a-special-machine-type",
+								Image: &core.ShootMachineImage{
+									Name:    "gardenlinux",
+									Version: "1592.1.0-dev",
+								},
+							},
+						},
+					}
+					oldShoot := coreShoot.DeepCopy()
+					oldShoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "NamespacedCloudProfile",
+						Name: "namespaced-profile-1",
+					}
+
+					attrs := admission.NewAttributesRecord(&coreShoot, oldShoot, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).To(PointTo(MatchFields(IgnoreExtras, Fields{
+						"ErrStatus": MatchFields(IgnoreExtras, Fields{
+							"Code":    Equal(int32(http.StatusForbidden)),
+							"Message": ContainSubstring("newly referenced cloud profile does not contain the machine image version \"gardenlinux@1592.1.0-dev\" currently in use by worker \"testing\""),
+						}),
+					})))
+				})
 			})
 
 			It("should reject because the referenced seed does not exist (create)", func() {

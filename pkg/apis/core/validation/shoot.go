@@ -257,7 +257,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 		workerless = len(spec.Provider.Workers) == 0
 	)
 
-	allErrs = append(allErrs, ValidateCloudProfileReference(spec.CloudProfile, nil, spec.CloudProfileName, nil, fldPath.Child("cloudProfile"))...)
+	allErrs = append(allErrs, ValidateCloudProfileReference(spec.CloudProfile, spec.CloudProfileName, fldPath.Child("cloudProfile"))...)
 	allErrs = append(allErrs, validateProvider(spec.Provider, spec.Kubernetes, spec.Networking, workerless, fldPath.Child("provider"), inTemplate)...)
 	allErrs = append(allErrs, validateAddons(spec.Addons, spec.Purpose, workerless, fldPath.Child("addons"))...)
 	allErrs = append(allErrs, validateDNS(spec.DNS, fldPath.Child("dns"))...)
@@ -320,7 +320,7 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 	}
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Region, oldSpec.Region, fldPath.Child("region"))...)
-	allErrs = append(allErrs, ValidateCloudProfileReference(newSpec.CloudProfile, oldSpec.CloudProfile, newSpec.CloudProfileName, oldSpec.CloudProfileName, fldPath.Child("cloudProfile"))...)
+	allErrs = append(allErrs, ValidateCloudProfileReference(newSpec.CloudProfile, newSpec.CloudProfileName, fldPath.Child("cloudProfile"))...)
 
 	if oldSpec.CredentialsBindingName != nil && len(ptr.Deref(newSpec.CredentialsBindingName, "")) == 0 {
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("credentialsBindingName"), "the field cannot be unset"))
@@ -1156,7 +1156,7 @@ func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, fldPath *field
 }
 
 // ValidateCloudProfileReference validates the given CloudProfileReference fields.
-func ValidateCloudProfileReference(cloudProfileReference, oldCloudProfileReference *core.CloudProfileReference, cloudProfileName, oldCloudProfileName *string, fldPath *field.Path) field.ErrorList {
+func ValidateCloudProfileReference(cloudProfileReference *core.CloudProfileReference, cloudProfileName *string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	// TODO(LucaBernstein): For backwards-compatibility, also to test shoots still specifying only cloudProfileName
@@ -1167,14 +1167,8 @@ func ValidateCloudProfileReference(cloudProfileReference, oldCloudProfileReferen
 			Name: *cloudProfileName,
 		}
 	}
-	if oldCloudProfileReference == nil && oldCloudProfileName != nil {
-		oldCloudProfileReference = &core.CloudProfileReference{
-			Kind: "CloudProfile",
-			Name: *oldCloudProfileName,
-		}
-	}
 
-	// Ensure that cloudProfileReference is provided and contains a cloudprofile reference of a valid kind, else fail early.
+	// Ensure that cloudProfileReference is provided and contains a cloud profile reference of a valid kind, else fail early.
 	// Due to the field synchronization in the shoot strategy, it is safe to only check the cloudProfileReference.
 	if cloudProfileReference == nil || len(cloudProfileReference.Name) == 0 {
 		return append(allErrs, field.Required(fldPath.Child("name"), "must specify a cloud profile"))
@@ -1182,29 +1176,6 @@ func ValidateCloudProfileReference(cloudProfileReference, oldCloudProfileReferen
 	cloudProfileReferenceKind := sets.New(v1beta1constants.CloudProfileReferenceKindCloudProfile, v1beta1constants.CloudProfileReferenceKindNamespacedCloudProfile)
 	if !cloudProfileReferenceKind.Has(cloudProfileReference.Kind) {
 		allErrs = append(allErrs, field.NotSupported(fldPath.Child("kind"), cloudProfileReference.Kind, sets.List(cloudProfileReferenceKind)))
-	}
-
-	// Fail early for changing a NamespacedCloudProfile to a CloudProfile
-	if oldCloudProfileReference != nil && oldCloudProfileReference.Kind == v1beta1constants.CloudProfileReferenceKindNamespacedCloudProfile &&
-		(cloudProfileReference.Kind != v1beta1constants.CloudProfileReferenceKindNamespacedCloudProfile) {
-		return append(allErrs, field.Forbidden(fldPath.Child("kind"), "a namespacedcloudprofile must not be changed back to a cloudprofile"))
-	}
-
-	// Grant directly for changing a CloudProfile to a NamespacedCloudProfile as the admission validation ensures
-	// that the NamespacedCloudProfile is a direct descendant to the CloudProfile.
-	if (oldCloudProfileReference == nil || oldCloudProfileReference.Kind == v1beta1constants.CloudProfileReferenceKindCloudProfile) &&
-		(cloudProfileReference.Kind == v1beta1constants.CloudProfileReferenceKindNamespacedCloudProfile) {
-		return allErrs
-	}
-
-	// Else, ensure that the name of the (Namespaced)CloudProfile stays the same
-	// Due to the field synchronization in the shoot strategy it is safe to only check in cloudProfileReference
-	formerCloudProfileName := oldCloudProfileName
-	if oldCloudProfileReference != nil {
-		formerCloudProfileName = &oldCloudProfileReference.Name
-	}
-	if formerCloudProfileName != nil && *formerCloudProfileName != cloudProfileReference.Name {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("name"), "changing the cloudProfile name is not allowed, except for switching from a CloudProfile to a directly descendant NamespacedCloudProfile"))
 	}
 	return allErrs
 }

@@ -13,8 +13,8 @@ Project viewers have the permission to see `NamespacedCloudProfile`s associated 
 Project administrators can generally create, edit, or delete `NamespacedCloudProfile`s but with some exceptions (see the [restrictions](#field-modification-restrictions) outlined below).
 
 When creating or updating a `Shoot`, the cloud profile reference can be set to point to a `NamespacedCloudProfile`, allowing for more granular and project-specific configurations.
-The modification of a `Shoot`'s cloud profile reference is restricted to switching from a `CloudProfile` to a descendant `NamespacedCloudProfile`.
-Changing the reference from one `NamespacedCloudProfile` to another `NamespacedCloudProfile` or even to another `CloudProfile` is not allowed.
+The modification of a `Shoot`'s cloud profile reference is restricted to switching within the same profile hierarchy, i.e. from a `CloudProfile` to a descendant `NamespacedCloudProfile`, from a `NamespacedCloudProfile` to its parent `CloudProfile` and between `NamespacedCloudProfile`s having the same `CloudProfile` parent.
+Changing the reference from one `CloudProfile` or descendant `NamespacedCloudProfile` to another `CloudProfile` or descendant `NamespacedCloudProfile` is not allowed.
 
 The usage of `NamespacedCloudProfile`s is currently subject to an alpha feature gate and is not enabled by default.
 It requires the enabled provider extensions to support the feature as well.

@@ -43,9 +43,8 @@ func GetCloudProfileSpec(cloudProfileLister gardencorev1beta1listers.CloudProfil
 	return nil, fmt.Errorf("could not find referenced cloudprofile")
 }
 
-// ValidateCloudProfileChanges validates that the referenced CloudProfile does only change towards a more specific reference
-// (i.e. currently only from a CloudProfile to a descendant NamespacedCloudProfile).
-// For now, other changes are not supported (e.g. from one CloudProfile to another or from one NamespacedCloudProfile to another).
+// ValidateCloudProfileChanges validates that the referenced CloudProfile only changes within the current profile hierarchy
+// (i.e. between the parent CloudProfile and the descendant NamespacedCloudProfiles).
 func ValidateCloudProfileChanges(namespacedCloudProfileLister gardencorev1beta1listers.NamespacedCloudProfileLister, newShoot, oldShoot *core.Shoot) error {
 	oldCloudProfileReference := BuildCloudProfileReference(oldShoot)
 	if oldCloudProfileReference == nil {
@@ -60,13 +59,16 @@ func ValidateCloudProfileChanges(namespacedCloudProfileLister gardencorev1beta1l
 	if err != nil {
 		return err
 	}
-	if oldCloudProfileReference.Kind == constants.CloudProfileReferenceKindCloudProfile &&
-		newCloudProfileReference.Kind == constants.CloudProfileReferenceKindNamespacedCloudProfile &&
-		equality.Semantic.DeepEqual(oldCloudProfileReference, newCloudProfileRoot) {
+	oldCloudProfileRoot, err := getRootCloudProfile(namespacedCloudProfileLister, oldCloudProfileReference, oldShoot.Namespace)
+	if err != nil {
+		return err
+	}
+
+	if equality.Semantic.DeepEqual(oldCloudProfileRoot, newCloudProfileRoot) {
 		return nil
 	}
 
-	return fmt.Errorf("a Seed's CloudProfile may only be changed to a descendant NamespacedCloudProfile, other modifications are currently not supported")
+	return fmt.Errorf("cloud profile reference change is invalid: cannot change from %q (root: %q) to %q (root: %q). The cloud profile reference must remain within the same hierarchy", oldCloudProfileReference.Name, oldCloudProfileRoot.Name, newCloudProfileReference.Name, newCloudProfileRoot.Name)
 }
 
 // getRootCloudProfile determines the root CloudProfile from a CloudProfileReference containing any (Namespaced)CloudProfile

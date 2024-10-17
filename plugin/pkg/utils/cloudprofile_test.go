@@ -206,6 +206,48 @@ var _ = Describe("CloudProfile", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
+		It("should pass if the NamespacedCloudProfile referenced by cloudProfile is updated to a its parent CloudProfile", func() {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, true))
+
+			Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(cloudProfile)).To(Succeed())
+			Expect(coreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(namespacedCloudProfile)).To(Succeed())
+
+			newShoot := shoot.DeepCopy()
+			shoot.Spec.CloudProfile = &core.CloudProfileReference{
+				Kind: "NamespacedCloudProfile",
+				Name: namespacedCloudProfileName,
+			}
+			newShoot.Spec.CloudProfile = &core.CloudProfileReference{
+				Kind: "CloudProfile",
+				Name: cloudProfileName,
+			}
+			err := admissionutils.ValidateCloudProfileChanges(namespacedCloudProfileLister, newShoot, shoot)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should pass if the NamespacedCloudProfile referenced by cloudProfile is updated to another related NamespacedCloudProfile", func() {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, true))
+
+			anotherNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
+			anotherNamespacedCloudProfile.Name = namespacedCloudProfileName + "-2"
+
+			Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(cloudProfile)).To(Succeed())
+			Expect(coreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(namespacedCloudProfile)).To(Succeed())
+			Expect(coreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(anotherNamespacedCloudProfile)).To(Succeed())
+
+			newShoot := shoot.DeepCopy()
+			shoot.Spec.CloudProfile = &core.CloudProfileReference{
+				Kind: "NamespacedCloudProfile",
+				Name: namespacedCloudProfileName,
+			}
+			newShoot.Spec.CloudProfile = &core.CloudProfileReference{
+				Kind: "NamespacedCloudProfile",
+				Name: namespacedCloudProfileName + "-2",
+			}
+			err := admissionutils.ValidateCloudProfileChanges(namespacedCloudProfileLister, newShoot, shoot)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
 		It("should fail if the CloudProfile referenced by cloudProfileName is updated to an unrelated NamespacedCloudProfile", func() {
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, true))
 
