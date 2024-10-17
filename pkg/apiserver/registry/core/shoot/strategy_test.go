@@ -160,17 +160,17 @@ var _ = Describe("Strategy", func() {
 	})
 
 	Describe("#PrepareForUpdate", func() {
+		var (
+			oldShoot *core.Shoot
+			newShoot *core.Shoot
+		)
+
+		BeforeEach(func() {
+			oldShoot = &core.Shoot{}
+			newShoot = oldShoot.DeepCopy()
+		})
+
 		Context("cloudProfile field removal", func() {
-			var (
-				oldShoot *core.Shoot
-				newShoot *core.Shoot
-			)
-
-			BeforeEach(func() {
-				oldShoot = &core.Shoot{}
-				newShoot = oldShoot.DeepCopy()
-			})
-
 			It("should fill cloudProfile field with fallback if empty", func() {
 				newShoot.Spec.CloudProfileName = ptr.To("foo")
 				strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
@@ -303,11 +303,6 @@ var _ = Describe("Strategy", func() {
 		})
 
 		Context("seedName change", func() {
-			var (
-				oldShoot *core.Shoot
-				newShoot *core.Shoot
-			)
-
 			BeforeEach(func() {
 				oldShoot = &core.Shoot{
 					Spec: core.ShootSpec{
@@ -657,6 +652,35 @@ var _ = Describe("Strategy", func() {
 				),
 			)
 		})
+
+		Context("access restrictions", func() {
+			BeforeEach(func() {
+				newShoot = &core.Shoot{}
+				oldShoot = newShoot.DeepCopy()
+			})
+
+			It("should remove the access restriction when the seed selector is dropped", func() {
+				oldShoot.Spec.SeedSelector = &core.SeedSelector{LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{"seed.gardener.cloud/eu-access": "true"}}}
+				oldShoot.Spec.AccessRestrictions = []core.AccessRestrictionWithOptions{{AccessRestriction: core.AccessRestriction{Name: "eu-access-only"}}}
+				newShoot.Spec.AccessRestrictions = []core.AccessRestrictionWithOptions{{AccessRestriction: core.AccessRestriction{Name: "eu-access-only"}}}
+
+				strategy.PrepareForUpdate(context.Background(), newShoot, oldShoot)
+
+				Expect(newShoot.Spec.AccessRestrictions).To(BeEmpty())
+				Expect(newShoot.Spec.SeedSelector).To(BeNil())
+			})
+
+			It("should remove the seed selector when the access restriction is dropped", func() {
+				oldShoot.Spec.SeedSelector = &core.SeedSelector{LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{"seed.gardener.cloud/eu-access": "true"}}}
+				oldShoot.Spec.AccessRestrictions = []core.AccessRestrictionWithOptions{{AccessRestriction: core.AccessRestriction{Name: "eu-access-only"}}}
+				newShoot.Spec.SeedSelector = &core.SeedSelector{LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{"seed.gardener.cloud/eu-access": "true"}}}
+
+				strategy.PrepareForUpdate(context.Background(), newShoot, oldShoot)
+
+				Expect(newShoot.Spec.AccessRestrictions).To(BeEmpty())
+				Expect(newShoot.Spec.SeedSelector).To(BeNil())
+			})
+		})
 	})
 
 	Describe("#Canonicalize", func() {
@@ -716,7 +740,7 @@ var _ = Describe("Strategy", func() {
 				}))
 			})
 
-			It("should not add eu-access-only access restriction if already present, but it should augment the options", func() {
+			It("should add the seed selector and augment the options", func() {
 				shoot.Spec.AccessRestrictions = append(shoot.Spec.AccessRestrictions, core.AccessRestrictionWithOptions{
 					AccessRestriction: core.AccessRestriction{Name: "eu-access-only"},
 				})
@@ -730,27 +754,36 @@ var _ = Describe("Strategy", func() {
 						"support.gardener.cloud/eu-access-for-cluster-nodes":  "true",
 					},
 				}))
+				Expect(shoot.Spec.SeedSelector).To(Equal(&core.SeedSelector{LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{
+					"seed.gardener.cloud/eu-access": "true",
+				}}}))
 			})
 
-			It("should add options to existing eu-access-only access restriction", func() {
-				shoot.Spec.AccessRestrictions = append(shoot.Spec.AccessRestrictions, core.AccessRestrictionWithOptions{
+			It("should add the annotation from the access restriction options", func() {
+				shoot.Annotations = nil
+				shoot.Spec.AccessRestrictions = []core.AccessRestrictionWithOptions{{
 					AccessRestriction: core.AccessRestriction{Name: "eu-access-only"},
-				})
+					Options: map[string]string{
+						"support.gardener.cloud/eu-access-for-cluster-addons": "true",
+						"support.gardener.cloud/eu-access-for-cluster-nodes":  "true",
+					},
+				}}
 
 				strategy.Canonicalize(shoot)
 
-				Expect(shoot.Spec.AccessRestrictions[0].Options).To(And(
+				Expect(shoot.Annotations).To(And(
 					HaveKeyWithValue("support.gardener.cloud/eu-access-for-cluster-addons", "true"),
 					HaveKeyWithValue("support.gardener.cloud/eu-access-for-cluster-nodes", "true"),
 				))
 			})
 
-			It("should not add options if access restriction is not present", func() {
+			It("should not add seed selector or options if access restriction is not present", func() {
 				shoot.Spec.SeedSelector = nil
 
 				strategy.Canonicalize(shoot)
 
 				Expect(shoot.Spec.AccessRestrictions).To(BeEmpty())
+				Expect(shoot.Spec.SeedSelector).To(BeNil())
 			})
 		})
 	})
@@ -758,7 +791,7 @@ var _ = Describe("Strategy", func() {
 
 var _ = Describe("ToSelectableFields", func() {
 	It("should return correct fields", func() {
-		result := ToSelectableFields(newShoot("foo"))
+		result := ToSelectableFields(createNewShootObject("foo"))
 
 		Expect(result).To(HaveLen(7))
 		Expect(result.Has(core.ShootSeedName)).To(BeTrue())
@@ -781,7 +814,7 @@ var _ = Describe("GetAttrs", func() {
 	})
 
 	It("should return correct result", func() {
-		ls, fs, err := GetAttrs(newShoot("foo"))
+		ls, fs, err := GetAttrs(createNewShootObject("foo"))
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ls).To(HaveLen(1))
@@ -792,7 +825,7 @@ var _ = Describe("GetAttrs", func() {
 
 var _ = Describe("SeedNameTriggerFunc", func() {
 	It("should return spec.seedName", func() {
-		actual := SeedNameTriggerFunc(newShoot("foo"))
+		actual := SeedNameTriggerFunc(createNewShootObject("foo"))
 		Expect(actual).To(Equal("foo"))
 	})
 })
@@ -810,7 +843,7 @@ var _ = Describe("MatchShoot", func() {
 	})
 })
 
-func newShoot(seedName string) *core.Shoot {
+func createNewShootObject(seedName string) *core.Shoot {
 	return &core.Shoot{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",

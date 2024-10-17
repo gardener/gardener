@@ -143,6 +143,46 @@ var _ = Describe("Strategy", func() {
 		})
 	})
 
+	Describe("#PrepareForUpdate", func() {
+		var (
+			newCloudProfile *core.CloudProfile
+			oldCloudProfile *core.CloudProfile
+		)
+
+		BeforeEach(func() {
+			newCloudProfile = &core.CloudProfile{
+				Spec: core.CloudProfileSpec{
+					Regions: []core.Region{{
+						Name: "local",
+					}},
+				},
+			}
+			oldCloudProfile = newCloudProfile.DeepCopy()
+		})
+
+		It("should remove the access restriction when the label is dropped", func() {
+			oldCloudProfile.Spec.Regions[0].Labels = map[string]string{"seed.gardener.cloud/eu-access": "true"}
+			oldCloudProfile.Spec.Regions[0].AccessRestrictions = []core.AccessRestriction{{Name: "eu-access-only"}}
+			newCloudProfile.Spec.Regions[0].AccessRestrictions = []core.AccessRestriction{{Name: "eu-access-only"}}
+
+			cloudprofileregistry.Strategy.PrepareForUpdate(context.Background(), newCloudProfile, oldCloudProfile)
+
+			Expect(newCloudProfile.Spec.Regions[0].AccessRestrictions).To(BeEmpty())
+			Expect(newCloudProfile.Spec.Regions[0].Labels).To(BeEmpty())
+		})
+
+		It("should remove the label when the access restriction is dropped", func() {
+			oldCloudProfile.Spec.Regions[0].Labels = map[string]string{"seed.gardener.cloud/eu-access": "true"}
+			oldCloudProfile.Spec.Regions[0].AccessRestrictions = []core.AccessRestriction{{Name: "eu-access-only"}}
+			newCloudProfile.Spec.Regions[0].Labels = map[string]string{"seed.gardener.cloud/eu-access": "true"}
+
+			cloudprofileregistry.Strategy.PrepareForUpdate(context.Background(), newCloudProfile, oldCloudProfile)
+
+			Expect(newCloudProfile.Spec.Regions[0].AccessRestrictions).To(BeEmpty())
+			Expect(newCloudProfile.Spec.Regions[0].Labels).To(BeEmpty())
+		})
+	})
+
 	Describe("#Canonicalize", func() {
 		It("should add the access restriction if the legacy label is present", func() {
 			cloudProfile := &core.CloudProfile{
@@ -159,7 +199,7 @@ var _ = Describe("Strategy", func() {
 			Expect(cloudProfile.Spec.Regions[0].AccessRestrictions).To(HaveExactElements(core.AccessRestriction{Name: "eu-access-only"}))
 		})
 
-		It("should not add the access restriction again if it is already present", func() {
+		It("should add the label if the access restriction is configured", func() {
 			cloudProfile := &core.CloudProfile{
 				Spec: core.CloudProfileSpec{
 					Regions: []core.Region{{
@@ -172,10 +212,10 @@ var _ = Describe("Strategy", func() {
 
 			cloudprofileregistry.Strategy.Canonicalize(cloudProfile)
 
-			Expect(cloudProfile.Spec.Regions[0].AccessRestrictions).To(HaveExactElements(core.AccessRestriction{Name: "eu-access-only"}))
+			Expect(cloudProfile.Spec.Regions[0].Labels).To(HaveKeyWithValue("seed.gardener.cloud/eu-access", "true"))
 		})
 
-		It("should not add the access restriction because the legacy label is not present", func() {
+		It("should not add the access restriction or label", func() {
 			cloudProfile := &core.CloudProfile{
 				Spec: core.CloudProfileSpec{
 					Regions: []core.Region{{
@@ -187,6 +227,7 @@ var _ = Describe("Strategy", func() {
 			cloudprofileregistry.Strategy.Canonicalize(cloudProfile)
 
 			Expect(cloudProfile.Spec.Regions[0].AccessRestrictions).To(BeEmpty())
+			Expect(cloudProfile.Spec.Regions[0].Labels).To(BeEmpty())
 		})
 	})
 })
