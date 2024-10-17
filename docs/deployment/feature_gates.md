@@ -26,7 +26,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | ShootForceDeletion        | `true`  | `Beta`  | `1.91`  |         |
 | UseNamespacedCloudProfile | `false` | `Alpha` | `1.92`  |         |
 | ShootManagedIssuer        | `false` | `Alpha` | `1.93`  |         |
-| ShootCredentialsBinding   | `false` | `Alpha` | `1.98`  |         |
+| ShootCredentialsBinding   | `false` | `Alpha` | `1.98`  | `1.106` |
+| ShootCredentialsBinding   | `true`  | `Beta`  | `1.107` |         |
 | NewWorkerPoolHash         | `false` | `Alpha` | `1.98`  |         |
 | NewVPN                    | `false` | `Alpha` | `1.104` |         |
 
