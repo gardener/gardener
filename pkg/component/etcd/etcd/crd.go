@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	"golang.org/x/exp/maps"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -20,18 +21,20 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var (
 	//go:embed crds/templates/crd-druid.gardener.cloud_etcds.yaml
-	// CRD holds the etcd custom resource definition template
-	CRD string
+	// CrdCloudEtcds holds the etcd custom resource definition template
+	CrdCloudEtcds string
 	//go:embed crds/templates/crd-druid.gardener.cloud_etcdcopybackupstasks.yaml
-	etcdCopyBackupsTaskCRD string
+	crdEtcdCopyBackupsTasks string
 
 	etcdCRDName                = "etcds.druid.gardener.cloud"
 	etcdCopyBackupsTaskCRDName = "etcdcopybackupstasks.druid.gardener.cloud"
-	crdResources               []string
+	// resourceObjectKeyMap maps the ObjectKey of the CRD to its corresponding manifest
+	resourceObjectKeyMap map[client.ObjectKey]string
 )
 
 type crd struct {
@@ -40,11 +43,21 @@ type crd struct {
 }
 
 func init() {
-	crdResources = append(crdResources, CRD, etcdCopyBackupsTaskCRD)
+	resourceObjectKeyMap = make(map[client.ObjectKey]string)
+	resources := []string{CrdCloudEtcds, crdEtcdCopyBackupsTasks}
+
+	for _, resource := range resources {
+		objKey, err := kubernetesutils.GetObjectKeyFromManifest(resource)
+		if err != nil {
+			panic(err)
+		}
+
+		resourceObjectKeyMap[objKey] = resource
+	}
 }
 
 // NewCRD can be used to deploy the CRD definitions for Etcd and EtcdCopyBackupsTask.
-func NewCRD(c client.Client, applier kubernetes.Applier) component.Deployer {
+func NewCRD(c client.Client, applier kubernetes.Applier) component.DeployWaiter {
 	return &crd{
 		client:  c,
 		applier: applier,
@@ -55,7 +68,7 @@ func NewCRD(c client.Client, applier kubernetes.Applier) component.Deployer {
 func (c *crd) Deploy(ctx context.Context) error {
 	var fns []flow.TaskFn
 
-	for _, resource := range crdResources {
+	for _, resource := range resourceObjectKeyMap {
 		r := resource
 		fns = append(fns, func(ctx context.Context) error {
 			return c.applier.ApplyManifest(ctx, kubernetes.NewManifestReader([]byte(r)), kubernetes.DefaultMergeFuncs)
@@ -95,7 +108,7 @@ func (c *crd) Destroy(ctx context.Context) error {
 
 	var fns []flow.TaskFn
 
-	for _, resource := range crdResources {
+	for _, resource := range resourceObjectKeyMap {
 		r := resource
 		fns = append(fns, func(ctx context.Context) error {
 			return client.IgnoreNotFound(c.applier.DeleteManifest(ctx, kubernetes.NewManifestReader([]byte(r))))
@@ -103,4 +116,14 @@ func (c *crd) Destroy(ctx context.Context) error {
 	}
 
 	return flow.Parallel(fns...)(ctx)
+}
+
+// Wait signals whether a CRD is ready or needs more time to be deployed.
+func (c *crd) Wait(ctx context.Context) error {
+	return kubernetesutils.WaitUntilCRDManifestsReady(ctx, c.client, maps.Keys(resourceObjectKeyMap))
+}
+
+// WaitCleanup for destruction to finish and component to be fully removed. crdDeployer does not need to wait for cleanup.
+func (c *crd) WaitCleanup(_ context.Context) error {
+	return nil
 }

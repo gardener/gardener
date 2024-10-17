@@ -8,11 +8,13 @@ import (
 	"context"
 	_ "embed"
 
+	"golang.org/x/exp/maps"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var (
@@ -43,11 +45,13 @@ var (
 	//go:embed assets/crd-fluentbit.fluent.io_multilineparsers.yaml
 	fluentBitMultilineParserCRD string
 
-	resources []string
+	// resourceObjectKeyMap maps the ObjectKey of the CRD to its corresponding manifest
+	resourceObjectKeyMap map[client.ObjectKey]string
 )
 
 func init() {
-	resources = append(resources,
+	resourceObjectKeyMap = make(map[client.ObjectKey]string)
+	resources := []string{
 		fluentBitClusterFilterCRD,
 		fluentBitClusterFBConfigCRD,
 		fluentBitClusterInputCRD,
@@ -61,16 +65,27 @@ func init() {
 		fluentBitOutputCRD,
 		fluentBitClusterMultilineParserCRD,
 		fluentBitMultilineParserCRD,
-	)
+	}
+
+	for _, resource := range resources {
+		objKey, err := kubernetesutils.GetObjectKeyFromManifest(resource)
+		if err != nil {
+			panic(err)
+		}
+
+		resourceObjectKeyMap[objKey] = resource
+	}
 }
 
 type crds struct {
+	client  client.Client
 	applier kubernetes.Applier
 }
 
 // NewCRDs can be used to deploy Fluent Operator CRDs.
-func NewCRDs(a kubernetes.Applier) component.DeployWaiter {
+func NewCRDs(client client.Client, a kubernetes.Applier) component.DeployWaiter {
 	return &crds{
+		client:  client,
 		applier: a,
 	}
 }
@@ -79,7 +94,7 @@ func NewCRDs(a kubernetes.Applier) component.DeployWaiter {
 func (c *crds) Deploy(ctx context.Context) error {
 	var fns []flow.TaskFn
 
-	for _, resource := range resources {
+	for _, resource := range resourceObjectKeyMap {
 		r := resource
 		fns = append(fns, func(ctx context.Context) error {
 			return c.applier.ApplyManifest(ctx, kubernetes.NewManifestReader([]byte(r)), kubernetes.DefaultMergeFuncs)
@@ -93,7 +108,7 @@ func (c *crds) Deploy(ctx context.Context) error {
 func (c *crds) Destroy(ctx context.Context) error {
 	var fns []flow.TaskFn
 
-	for _, resource := range resources {
+	for _, resource := range resourceObjectKeyMap {
 		r := resource
 		fns = append(fns, func(ctx context.Context) error {
 			return client.IgnoreNotFound(c.applier.DeleteManifest(ctx, kubernetes.NewManifestReader([]byte(r))))
@@ -103,12 +118,12 @@ func (c *crds) Destroy(ctx context.Context) error {
 	return flow.Parallel(fns...)(ctx)
 }
 
-// Wait does nothing
-func (c *crds) Wait(_ context.Context) error {
-	return nil
+// Wait signals whether a CRD is ready or needs more time to be deployed.
+func (c *crds) Wait(ctx context.Context) error {
+	return kubernetesutils.WaitUntilCRDManifestsReady(ctx, c.client, maps.Keys(resourceObjectKeyMap))
 }
 
-// WaitCleanup does nothing
+// WaitCleanup for destruction to finish and component to be fully removed. crdDeployer does not need to wait for cleanup.
 func (c *crds) WaitCleanup(_ context.Context) error {
 	return nil
 }

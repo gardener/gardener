@@ -619,9 +619,9 @@ var _ = Describe("Seed controller tests", func() {
 							managedResourceCRDReader = kubernetes.NewManifestReader([]byte(managedResourcesCRD))
 							istioSystemNamespace     = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "istio-system"}}
 							istioCRDs                = istio.NewCRD(chartApplier)
-							vpaCRD                   = vpa.NewCRD(applier, nil)
-							fluentCRD                = fluentoperator.NewCRDs(applier)
-							monitoringCRD            = prometheusoperator.NewCRDs(applier)
+							vpaCRD                   = vpa.NewCRD(testClient, applier, nil)
+							fluentCRD                = fluentoperator.NewCRDs(testClient, applier)
+							monitoringCRD            = prometheusoperator.NewCRDs(testClient, applier)
 						)
 
 						Expect(applier.ApplyManifest(ctx, managedResourceCRDReader, kubernetes.DefaultMergeFuncs)).To(Succeed())
