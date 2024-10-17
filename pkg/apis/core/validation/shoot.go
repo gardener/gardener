@@ -216,7 +216,7 @@ func ValidateShootTemplateUpdate(newShootTemplate, oldShootTemplate *core.ShootT
 }
 
 // ValidateShootObjectMetaUpdate validates the object metadata of a Shoot object.
-func ValidateShootObjectMetaUpdate(newMeta, oldMeta metav1.ObjectMeta, fldPath *field.Path) field.ErrorList {
+func ValidateShootObjectMetaUpdate(_, _ metav1.ObjectMeta, _ *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	return allErrs
 }
