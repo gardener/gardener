@@ -111,6 +111,35 @@ var _ = Describe("Strategy", func() {
 
 				Expect(newSeed.Generation).To(Equal(oldSeed.Generation))
 			})
+
+			Context("access restrictions", func() {
+				BeforeEach(func() {
+					newSeed = &core.Seed{}
+					oldSeed = newSeed.DeepCopy()
+				})
+
+				It("should remove the access restriction when the label is dropped", func() {
+					oldSeed.Labels = map[string]string{"seed.gardener.cloud/eu-access": "true"}
+					oldSeed.Spec.AccessRestrictions = []core.AccessRestriction{{Name: "eu-access-only"}}
+					newSeed.Spec.AccessRestrictions = []core.AccessRestriction{{Name: "eu-access-only"}}
+
+					strategy.PrepareForUpdate(ctx, newSeed, oldSeed)
+
+					Expect(newSeed.Spec.AccessRestrictions).To(BeEmpty())
+					Expect(newSeed.Labels).To(BeEmpty())
+				})
+
+				It("should remove the label when the access restriction is dropped", func() {
+					oldSeed.Labels = map[string]string{"seed.gardener.cloud/eu-access": "true"}
+					oldSeed.Spec.AccessRestrictions = []core.AccessRestriction{{Name: "eu-access-only"}}
+					newSeed.Labels = map[string]string{"seed.gardener.cloud/eu-access": "true"}
+
+					strategy.PrepareForUpdate(ctx, newSeed, oldSeed)
+
+					Expect(newSeed.Spec.AccessRestrictions).To(BeEmpty())
+					Expect(newSeed.Labels).To(BeEmpty())
+				})
+			})
 		})
 	})
 
@@ -127,7 +156,7 @@ var _ = Describe("Strategy", func() {
 			Expect(seed.Spec.AccessRestrictions).To(HaveExactElements(core.AccessRestriction{Name: "eu-access-only"}))
 		})
 
-		It("should not add the access restriction again if it is already present", func() {
+		It("should add the label if the access restriction is configured", func() {
 			seed := &core.Seed{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{"seed.gardener.cloud/eu-access": "true"},
@@ -139,15 +168,16 @@ var _ = Describe("Strategy", func() {
 
 			strategy.Canonicalize(seed)
 
-			Expect(seed.Spec.AccessRestrictions).To(HaveExactElements(core.AccessRestriction{Name: "eu-access-only"}))
+			Expect(seed.Labels).To(HaveKeyWithValue("seed.gardener.cloud/eu-access", "true"))
 		})
 
-		It("should not add the access restriction because the legacy label is not present", func() {
+		It("should not add the access restriction or label", func() {
 			seed := &core.Seed{}
 
 			strategy.Canonicalize(seed)
 
 			Expect(seed.Spec.AccessRestrictions).To(BeEmpty())
+			Expect(seed.Labels).To(BeEmpty())
 		})
 	})
 })
