@@ -56,9 +56,18 @@ You can complete the rotation (second phase) by annotating the shoot with the `r
 kubectl -n <shoot-namespace> annotate shoot <shoot-name> gardener.cloud/operation=rotate-credentials-complete
 ```
 
-### Kubeconfig
+### Static Token Kubeconfig
 
-If the `.spec.kubernetes.enableStaticTokenKubeconfig` field is set to `true` (default), then Gardener generates a `kubeconfig` with `cluster-admin` privileges for the `Shoot`s containing credentials for communication with the `kube-apiserver` (see [this document](../shoot/shoot_access.md#static-token-kubeconfig) for more information).
+Static token kubeconfig is available only for Shoot clusters using Kubernetes version <= 1.26. It is controlled via the `.spec.kubernetes.enableStaticTokenKubeconfig` field.
+
+When the `enableStaticTokenKubeconfig` field is not explicitly set in the Shoot spec:
+
+- for Shoot clusters using Kubernetes version < 1.26, the field is defaulted to `true`.
+- for Shoot clusters using Kubernetes version >= 1.26, the field is defaulted to `false`.
+
+> **Note:**  For Shoot clusters using Kubernetes version >= 1.27 the [`shoots/adminkubeconfig` subresource](#shootsadminkubeconfig-subresource) should be used instead.
+
+For Shoot clusters using Kubernetes version <= 1.26, when the `.spec.kubernetes.enableStaticTokenKubeconfig` field is set to `true`, Gardener generates a `kubeconfig` with `cluster-admin` privileges for the `Shoot`s containing credentials for communication with the `kube-apiserver` (see [this document](../shoot/shoot_access.md#static-token-kubeconfig) for more information).
 
 This `Secret` is stored with the name `<shoot-name>.kubeconfig` in the project namespace in the garden cluster and has multiple data keys:
 
@@ -69,7 +78,7 @@ This `Secret` is stored with the name `<shoot-name>.kubeconfig` in the project n
 >
 > ⚠️ This does not invalidate the old client certificate. In order to do this, you should perform a rotation of the CAs (see section below).
 
-**It is the responsibility of the end-user to regularly rotate those credentials (or disable this `kubeconfig` entirely).**
+**It is the responsibility of the end-user to regularly rotate those credentials (or disable this `kubeconfig` entirely) for all Shoot clusters with Kubernetes version <= 1.26.**
 In order to rotate the `token` in this `kubeconfig`, annotate the `Shoot` with `gardener.cloud/operation=rotate-kubeconfig-credentials`.
 This operation is not allowed for `Shoot`s that are already marked for deletion.
 Please note that only the token (and basic auth password, if enabled) are exchanged.
