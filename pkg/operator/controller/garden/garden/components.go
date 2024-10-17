@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	apiserverv1beta1 "k8s.io/apiserver/pkg/apis/apiserver/v1beta1"
+	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/component-base/version"
@@ -618,10 +619,13 @@ func (r *Reconciler) newKubeAPIServer(
 				AuthorizedTTL:                            metav1.Duration{Duration: time.Duration(0)},
 				UnauthorizedTTL:                          metav1.Duration{Duration: time.Duration(0)},
 				Timeout:                                  metav1.Duration{Duration: 10 * time.Second},
-				FailurePolicy:                            apiserverv1beta1.FailurePolicyNoOpinion,
+				FailurePolicy:                            apiserverv1beta1.FailurePolicyDeny,
 				SubjectAccessReviewVersion:               "v1",
 				MatchConditionSubjectAccessReviewVersion: "v1",
-				MatchConditions:                          nil,
+				MatchConditions: []apiserverv1beta1.WebhookMatchCondition{{
+					// only intercept request from gardenlets and service accounts from seed namespaces
+					Expression: fmt.Sprintf("'%s' in request.groups || request.groups.exists(e, e.startsWith('%s%s'))", v1beta1constants.SeedsGroup, serviceaccount.ServiceAccountGroupPrefix, gardenerutils.SeedNamespaceNamePrefix),
+				}},
 			},
 		})
 	}
