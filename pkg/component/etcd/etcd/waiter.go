@@ -47,21 +47,21 @@ func (e *etcd) WaitCleanup(_ context.Context) error { return nil }
 
 // CheckEtcdObject checks if the given Etcd object was reconciled successfully.
 func CheckEtcdObject(obj client.Object) error {
-	etcd, ok := obj.(*druidv1alpha1.Etcd)
+	e, ok := obj.(*druidv1alpha1.Etcd)
 	if !ok {
 		return fmt.Errorf("expected *duridv1alpha1.Etcd but got %T", obj)
 	}
 
-	if etcd.Status.LastError != nil {
-		return retry.RetriableError(fmt.Errorf("error during reconciliation: %s", *etcd.Status.LastError))
+	if len(e.Status.LastErrors) != 0 {
+		return retry.RetriableError(fmt.Errorf("errors during reconciliation: %+v", e.Status.LastErrors))
 	}
 
-	if etcd.DeletionTimestamp != nil {
+	if e.DeletionTimestamp != nil {
 		return fmt.Errorf("unexpectedly has a deletion timestamp")
 	}
 
-	generation := etcd.Generation
-	observedGeneration := etcd.Status.ObservedGeneration
+	generation := e.Generation
+	observedGeneration := e.Status.ObservedGeneration
 	if observedGeneration == nil {
 		return fmt.Errorf("observed generation not recorded")
 	}
@@ -69,11 +69,11 @@ func CheckEtcdObject(obj client.Object) error {
 		return fmt.Errorf("observed generation outdated (%d/%d)", *observedGeneration, generation)
 	}
 
-	if op, ok := etcd.Annotations[v1beta1constants.GardenerOperation]; ok {
+	if op, ok := e.Annotations[v1beta1constants.GardenerOperation]; ok {
 		return fmt.Errorf("gardener operation %q is not yet picked up by etcd-druid", op)
 	}
 
-	if !ptr.Deref(etcd.Status.Ready, false) {
+	if !ptr.Deref(e.Status.Ready, false) {
 		return fmt.Errorf("is not ready yet")
 	}
 
