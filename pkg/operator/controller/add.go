@@ -16,7 +16,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
@@ -85,7 +84,7 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 
 				// Prefer the internal host if available
 				addr, err := net.LookupHost(fmt.Sprintf("virtual-garden-%s.%s.svc.cluster.local", v1beta1constants.DeploymentNameKubeAPIServer, v1beta1constants.GardenNamespace))
-				if len(addr) == 0 && gardenReconciled(garden.Status) {
+				if len(addr) == 0 && !gardenerutils.IsGardenSuccessfullyReconciled(garden) {
 					log.Info("Service DNS name lookup of virtual-garden-kube-apiserver is tried again because garden is still being created")
 					return false, nil
 				} else if err != nil {
@@ -116,10 +115,4 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 	}
 
 	return nil
-}
-
-func gardenReconciled(gardenStatus operatorv1alpha1.GardenStatus) bool {
-	return gardenStatus.LastOperation == nil ||
-		(gardenStatus.LastOperation.Type == gardencorev1beta1.LastOperationTypeReconcile &&
-			gardenStatus.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded)
 }
