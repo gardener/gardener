@@ -21,7 +21,7 @@ For this, Gardener follows the proposed solution by the Kubernetes community and
 gardener-resource-manager's [`Node` controller](../../concepts/resource-manager.md#node-controller) reacts on newly created `Node` objects that have this taint.
 The controller removes the taint once all node-critical Pods are ready (determined by checking the Pods' `Ready` conditions).
 
-The `Node` controller considers all `DaemonSets` and `Pods` with the label `node.gardener.cloud/critical-component=true` and located in the `kube-system` namespace as node-critical.
+The `Node` controller considers all `DaemonSets` and `Pods` as node-critical which run in the `kube-system` namespace and are labeled with `node.gardener.cloud/critical-component=true`.
 If there are `DaemonSets` that contain the `node.gardener.cloud/critical-component=true` label in their metadata and in their Pod template, the `Node` controller waits for corresponding daemon Pods to be scheduled and to get ready before removing the taint.
 
 Additionally, the `Node` controller checks for the readiness of `csi-driver-node` components if a respective Pod indicates that it uses such a driver.
