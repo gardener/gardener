@@ -13,11 +13,11 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	apiserverv1beta1 "k8s.io/apiserver/pkg/apis/apiserver/v1beta1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/yaml"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -114,12 +114,12 @@ func ComputeAuthenticationConfigRawConfig(oidc *gardencorev1beta1.OIDCConfig) (s
 		authenticationConfiguration.JWT[0].ClaimValidationRules = append(authenticationConfiguration.JWT[0].ClaimValidationRules, claimValidationRule)
 	}
 
-	rawConfig, err := yaml.Marshal(authenticationConfiguration)
+	data, err := runtime.Encode(apiServerCodec, authenticationConfiguration)
 	if err != nil {
-		return "", fmt.Errorf("unable to parse authenticationConfiguration: %w", err)
+		return "", fmt.Errorf("unable to encode authentication configuration: %w", err)
 	}
 
-	return string(rawConfig), nil
+	return string(data), nil
 }
 
 func (k *kubeAPIServer) handleAuthenticationSettings(deployment *appsv1.Deployment, configMapAuthenticationConfig *corev1.ConfigMap, secretOIDCCABundle *corev1.Secret) {

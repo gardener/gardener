@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,12 +35,10 @@ const (
 	secretOIDCCABundleNamePrefix   = "kube-apiserver-oidc-cabundle" // #nosec G101 -- No credential.
 	secretOIDCCABundleDataKeyCaCrt = "ca.crt"
 
-	secretAuditWebhookKubeconfigNamePrefix          = "kube-apiserver-audit-webhook-kubeconfig"          // #nosec G101 -- No credential.
-	secretAuthenticationWebhookKubeconfigNamePrefix = "kube-apiserver-authentication-webhook-kubeconfig" // #nosec G101 -- No credential.
-	secretAuthorizationWebhookKubeconfigNamePrefix  = "kube-apiserver-authorization-webhook-kubeconfig"  // #nosec G101 -- No credential.
-
-	secretETCDEncryptionConfigurationDataKey = "encryption-configuration.yaml"
-	secretAdmissionKubeconfigsNamePrefix     = "kube-apiserver-admission-kubeconfigs" // #nosec G101 -- No credential.
+	secretAuditWebhookKubeconfigNamePrefix           = "kube-apiserver-audit-webhook-kubeconfig"           // #nosec G101 -- No credential.
+	secretAuthenticationWebhookKubeconfigNamePrefix  = "kube-apiserver-authentication-webhook-kubeconfig"  // #nosec G101 -- No credential.
+	secretAuthorizationWebhooksKubeconfigsNamePrefix = "kube-apiserver-authorization-webhooks-kubeconfigs" // #nosec G101 -- No credential.
+	secretAdmissionKubeconfigsNamePrefix             = "kube-apiserver-admission-kubeconfigs"              // #nosec G101 -- No credential.
 
 	userNameClusterAdmin = "system:cluster-admin"
 	userNameHealthCheck  = "health-check"
@@ -279,12 +278,25 @@ func (k *kubeAPIServer) reconcileSecretAuthenticationWebhookKubeconfig(ctx conte
 	return apiserver.ReconcileSecretWebhookKubeconfig(ctx, k.client.Client(), secret, k.values.AuthenticationWebhook.Kubeconfig)
 }
 
-func (k *kubeAPIServer) reconcileSecretAuthorizationWebhookKubeconfig(ctx context.Context, secret *corev1.Secret) error {
-	if k.values.AuthorizationWebhook == nil || len(k.values.AuthorizationWebhook.Kubeconfig) == 0 {
+func (k *kubeAPIServer) reconcileSecretAuthorizationWebhooksKubeconfigs(ctx context.Context, secret *corev1.Secret) error {
+	if len(k.values.AuthorizationWebhooks) == 0 {
 		// We don't delete the secret here as we don't know its name (as it's unique). Instead, we rely on the usual
 		// garbage collection for unique secrets/configmaps.
 		return nil
 	}
 
-	return apiserver.ReconcileSecretWebhookKubeconfig(ctx, k.client.Client(), secret, k.values.AuthorizationWebhook.Kubeconfig)
+	secret.Data = make(map[string][]byte)
+
+	for _, webhook := range k.values.AuthorizationWebhooks {
+		if len(webhook.Kubeconfig) != 0 {
+			secret.Data[authorizationWebhookKubeconfigFilename(webhook.Name)] = webhook.Kubeconfig
+		}
+	}
+
+	utilruntime.Must(kubernetesutils.MakeUnique(secret))
+	return client.IgnoreAlreadyExists(k.client.Client().Create(ctx, secret))
+}
+
+func authorizationWebhookKubeconfigFilename(name string) string {
+	return strings.ToLower(name) + "-kubeconfig.yaml"
 }
