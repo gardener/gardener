@@ -142,7 +142,8 @@ func (b *Builder) WithShoot(s *shootpkg.Shoot) *Builder {
 
 // WithShootFromCluster sets the shootFunc attribute at the Builder which will build a new Shoot object constructed from the cluster resource.
 // The shoot status is still taken from the passed `shoot`, though.
-func (b *Builder) WithShootFromCluster(gardenClient client.Client, seedClientSet kubernetes.Interface, s *gardencorev1beta1.Shoot) *Builder {
+// The credentials in the Shoot object are always set to `nil`.
+func (b *Builder) WithShootFromCluster(seedClientSet kubernetes.Interface, s *gardencorev1beta1.Shoot) *Builder {
 	b.shootFunc = func(ctx context.Context, c client.Reader, gardenObj *garden.Garden, seedObj *seed.Seed, serviceAccountIssuerConfig *corev1.Secret) (*shootpkg.Shoot, error) {
 		shootNamespace := gardenerutils.ComputeTechnicalID(gardenObj.Project.Name, s)
 
@@ -150,7 +151,7 @@ func (b *Builder) WithShootFromCluster(gardenClient client.Client, seedClientSet
 			NewBuilder().
 			WithShootObjectFromCluster(seedClientSet, shootNamespace).
 			WithCloudProfileObjectFromCluster(seedClientSet, shootNamespace).
-			WithShootCredentialsFrom(gardenClient).
+			WithoutShootCredentials().
 			WithSeedObject(seedObj.GetInfo()).
 			WithProjectName(gardenObj.Project.Name).
 			WithInternalDomain(gardenObj.InternalDomain).
