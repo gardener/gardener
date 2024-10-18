@@ -113,6 +113,9 @@ var _ = Describe("operatingsystemconfig", func() {
 						{Name: "foo"},
 					},
 				},
+				Networking: &gardencorev1beta1.Networking{
+					IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
+				},
 			},
 			Status: gardencorev1beta1.ShootStatus{
 				TechnicalID: "shoot--garden-testing",
@@ -150,6 +153,30 @@ var _ = Describe("operatingsystemconfig", func() {
 						},
 					},
 				}
+				operatingSystemConfig.EXPECT().SetCABundle(nil)
+
+				operatingSystemConfig.EXPECT().Deploy(ctx)
+				Expect(botanist.DeployOperatingSystemConfig(ctx)).To(Succeed())
+			})
+
+			It("should deploy successfully with ipFamiliy IPv6", func() {
+
+				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+					Spec: gardencorev1beta1.ShootSpec{
+						Provider: gardencorev1beta1.Provider{
+							Workers: []gardencorev1beta1.Worker{
+								{Name: "foo"},
+							},
+						},
+						Networking: &gardencorev1beta1.Networking{
+							IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6},
+						},
+					},
+					Status: gardencorev1beta1.ShootStatus{
+						TechnicalID: "shoot--garden-testing",
+					},
+				})
+				botanist.Shoot.Purpose = "development"
 				operatingSystemConfig.EXPECT().SetCABundle(nil)
 
 				operatingSystemConfig.EXPECT().Deploy(ctx)
