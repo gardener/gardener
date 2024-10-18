@@ -16,6 +16,8 @@ const (
 	DefaultBackupPath = "dev/local-backupbuckets"
 	// DefaultContainerMountPath is the default path to the directory where the backup bucket is mounted on the container.
 	DefaultContainerMountPath = "/etc/gardener/local-backupbuckets"
+	// EtcdBackupSecretHostPath is the key for the host path in the etcd-backup secret.
+	EtcdBackupSecretHostPath = "hostPath"
 )
 
 // ControllerOptions are command line options that can be set for controller.Options.
