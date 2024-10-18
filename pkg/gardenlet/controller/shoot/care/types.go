@@ -164,6 +164,6 @@ var defaultNewOperationFunc = func(
 		WithSecrets(secrets).
 		WithGardenFrom(gardenClient, shoot.Namespace).
 		WithSeedFrom(gardenClient, *shoot.Spec.SeedName).
-		WithShootFromCluster(gardenClient, seedClientSet, shoot).
+		WithShootFromCluster(seedClientSet, shoot).
 		Build(ctx, gardenClient, seedClientSet, shootClientMap)
 }
