@@ -75,20 +75,9 @@ func (b *Botanist) lastSecretRotationStartTimes() map[string]time.Time {
 			for _, config := range caCertConfigurations(b.Shoot.IsWorkerless) {
 				rotation[config.GetName()] = shootStatus.Credentials.Rotation.CertificateAuthorities.LastInitiationTime.Time
 			}
-		}
-
-		// When the static token kubeconfig is disabled, there will not be any kubeconfig rotation anymore. However, the
-		// static token secret does not only contain the token for the user kubeconfig but also a token for the health
-		// check of the kube-apiserver. This token must still be rotated even when the user kubeconfig is disabled.
-		// Hence, let's use the last rotation initiation time of the CA rotation also to rotate the static token secret.
-		if !ptr.Deref(b.Shoot.GetInfo().Spec.Kubernetes.EnableStaticTokenKubeconfig, false) {
-			if shootStatus.Credentials.Rotation.CertificateAuthorities != nil && shootStatus.Credentials.Rotation.CertificateAuthorities.LastInitiationTime != nil {
-				rotation[kubeapiserver.SecretStaticTokenName] = shootStatus.Credentials.Rotation.CertificateAuthorities.LastInitiationTime.Time
-			}
-		} else {
-			if shootStatus.Credentials.Rotation.Kubeconfig != nil && shootStatus.Credentials.Rotation.Kubeconfig.LastInitiationTime != nil {
-				rotation[kubeapiserver.SecretStaticTokenName] = shootStatus.Credentials.Rotation.Kubeconfig.LastInitiationTime.Time
-			}
+			// The static token secret contains token for the health check of the kube-apiserver.
+			// Hence, let's use the last rotation initiation time of the CA rotation also to rotate the static token secret.
+			rotation[kubeapiserver.SecretStaticTokenName] = shootStatus.Credentials.Rotation.CertificateAuthorities.LastInitiationTime.Time
 		}
 
 		if shootStatus.Credentials.Rotation.SSHKeypair != nil && shootStatus.Credentials.Rotation.SSHKeypair.LastInitiationTime != nil {
