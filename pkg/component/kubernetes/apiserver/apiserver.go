@@ -42,8 +42,6 @@ import (
 )
 
 const (
-	// SecretNameUserKubeconfig is the name for the user kubeconfig.
-	SecretNameUserKubeconfig = "user-kubeconfig" // #nosec G101 -- No credential.
 	// ServicePortName is the name of the port in the service.
 	ServicePortName = "kube-apiserver"
 	// UserNameVPNSeedClient is the user name for the HA vpn-seed-client components (used as common name in its client certificate)
@@ -128,8 +126,6 @@ type Values struct {
 	ServiceNetworkCIDRs []net.IPNet
 	// SNI contains information for configuring SNI settings for the kube-apiserver.
 	SNI SNIConfig
-	// StaticTokenKubeconfigEnabled indicates whether static token kubeconfig secret will be created for shoot.
-	StaticTokenKubeconfigEnabled *bool
 	// Version is the Kubernetes version for the kube-apiserver.
 	Version *semver.Version
 	// VPN contains information for configuring the VPN settings for the kube-apiserver.
@@ -423,12 +419,6 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		tlsSNISecrets,
 	); err != nil {
 		return err
-	}
-
-	if ptr.Deref(k.values.StaticTokenKubeconfigEnabled, true) {
-		if err := k.reconcileSecretUserKubeconfig(ctx, secretStaticToken); err != nil {
-			return err
-		}
 	}
 
 	if err := k.reconcileServiceMonitor(ctx, k.emptyServiceMonitor()); err != nil {

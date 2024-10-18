@@ -151,7 +151,7 @@ spec:
   #     enabled: false
   kubernetes:
   # version: 1.27.3
-  # enableStaticTokenKubeconfig: true
+  # enableStaticTokenKubeconfig: false # Deprecated, will be removed in gardener v1.112
   # kubeAPIServer:
   #   eventTTL: 1h
   #   featureGates:

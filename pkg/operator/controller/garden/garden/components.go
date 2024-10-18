@@ -613,7 +613,6 @@ func (r *Reconciler) newKubeAPIServer(
 		kubeapiserver.VPNConfig{Enabled: false},
 		v1beta1constants.PriorityClassNameGardenSystem500,
 		true,
-		ptr.To(false),
 		auditWebhookConfig,
 		authenticationWebhookConfig,
 		authorizationWebhookConfigs,

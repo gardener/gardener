@@ -67,7 +67,6 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 		vpnConfig,
 		v1beta1constants.PriorityClassNameShootControlPlane500,
 		b.Shoot.IsWorkerless,
-		b.Shoot.GetInfo().Spec.Kubernetes.EnableStaticTokenKubeconfig,
 		nil,
 		nil,
 		nil,
@@ -226,31 +225,8 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context, enableNodeAgentAutho
 		return err
 	}
 
-	if enableStaticTokenKubeconfig := b.Shoot.GetInfo().Spec.Kubernetes.EnableStaticTokenKubeconfig; enableStaticTokenKubeconfig == nil || *enableStaticTokenKubeconfig {
-		userKubeconfigSecret, found := b.SecretsManager.Get(kubeapiserver.SecretNameUserKubeconfig)
-		if !found {
-			return fmt.Errorf("secret %q not found", kubeapiserver.SecretNameUserKubeconfig)
-		}
-
-		// add CA bundle as ca.crt to kubeconfig secret for backwards-compatibility
-		caBundleSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
-		if !found {
-			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
-		}
-
-		kubeconfigSecretData := userKubeconfigSecret.DeepCopy().Data
-		kubeconfigSecretData[secretsutils.DataKeyCertificateCA] = caBundleSecret.Data[secretsutils.DataKeyCertificateBundle]
-
-		if err := b.syncShootCredentialToGarden(
-			ctx,
-			gardenerutils.ShootProjectSecretSuffixKubeconfig,
-			map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleKubeconfig},
-			map[string]string{"url": "https://" + externalServer},
-			kubeconfigSecretData,
-		); err != nil {
-			return err
-		}
-	} else {
+	// TODO(shafeeqes): Remove this code in gardener v1.112
+	{
 		secretName := gardenerutils.ComputeShootProjectResourceName(b.Shoot.GetInfo().Name, gardenerutils.ShootProjectSecretSuffixKubeconfig)
 		if err := kubernetesutils.DeleteObject(ctx, b.GardenClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.GetInfo().Namespace}}); err != nil {
 			return err

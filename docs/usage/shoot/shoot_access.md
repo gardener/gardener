@@ -255,32 +255,3 @@ If you want the changes to roll out immediately, [trigger a reconciliation expli
 
 Be aware of the fact that all webhook authorizers are added only after the `RBAC`/`Node` authorizers.
 Hence, if RBAC already allows a request, your webhook authorizer might not get called.
-
-## Static Token Kubeconfig
-
-> **Note:** Static token kubeconfig is not available for Shoot clusters using Kubernetes version >= 1.27. The [`shoots/adminkubeconfig` subresource](#shootsadminkubeconfig-subresource) should be used instead.
-
-This `kubeconfig` contains a [static token](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#static-token-file) and provides `cluster-admin` privileges.
-It is created by default and persisted in the `<shoot-name>.kubeconfig` secret in the project namespace in the garden cluster.
-
-```yaml
-apiVersion: core.gardener.cloud/v1beta1
-kind: Shoot
-...
-spec:
-  kubernetes:
-    enableStaticTokenKubeconfig: true
-...
-```
-
-It is **not** the recommended method to access the shoot cluster, as the static token `kubeconfig` has some security flaws associated with it:
-
-- The static token in the `kubeconfig` doesn't have any expiration date. Read [Credentials Rotation for Shoot Clusters](../shoot-operations/shoot_credentials_rotation.md#kubeconfig) to learn how to rotate the static token.
-- The static token doesn't have any user identity associated with it. The user in that token will always be `system:cluster-admin`, irrespective of the person accessing the cluster. Hence, it is impossible to audit the events in cluster.
-
-When the `enableStaticTokenKubeconfig` field is not explicitly set in the Shoot spec:
-
-- for Shoot clusters using Kubernetes version < 1.26, the field is defaulted to `true`.
-- for Shoot clusters using Kubernetes version >= 1.26, the field is defaulted to `false`.
-
-> **Note:** Starting with Kubernetes 1.27, the `enableStaticTokenKubeconfig` field will be locked to `false`.

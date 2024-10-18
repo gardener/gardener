@@ -386,43 +386,6 @@ var _ = Describe("Helper", func() {
 		)
 	})
 
-	Describe("#MutateShootKubeconfigRotation", func() {
-		It("should do nothing when mutate function is nil", func() {
-			shoot := &gardencorev1beta1.Shoot{}
-			MutateShootKubeconfigRotation(shoot, nil)
-			Expect(shoot.Status.Credentials).To(BeNil())
-		})
-
-		DescribeTable("mutate function not nil",
-			func(shoot *gardencorev1beta1.Shoot, lastInitiationTime metav1.Time) {
-				MutateShootKubeconfigRotation(shoot, func(rotation *gardencorev1beta1.ShootKubeconfigRotation) {
-					rotation.LastInitiationTime = &lastInitiationTime
-				})
-				Expect(shoot.Status.Credentials.Rotation.Kubeconfig.LastInitiationTime).To(PointTo(Equal(lastInitiationTime)))
-			},
-
-			Entry("credentials nil", &gardencorev1beta1.Shoot{}, metav1.Now()),
-			Entry("rotation nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{}}}, metav1.Now()),
-			Entry("kubeconfig nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{}}}}, metav1.Now()),
-			Entry("kubeconfig non-nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{Kubeconfig: &gardencorev1beta1.ShootKubeconfigRotation{}}}}}, metav1.Now()),
-		)
-	})
-
-	DescribeTable("#IsShootKubeconfigRotationInitiationTimeAfterLastCompletionTime",
-		func(credentials *gardencorev1beta1.ShootCredentials, matcher gomegatypes.GomegaMatcher) {
-			Expect(IsShootKubeconfigRotationInitiationTimeAfterLastCompletionTime(credentials)).To(matcher)
-		},
-
-		Entry("credentials nil", nil, BeFalse()),
-		Entry("rotation nil", &gardencorev1beta1.ShootCredentials{}, BeFalse()),
-		Entry("kubeconfig nil", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{}}, BeFalse()),
-		Entry("lastInitiationTime nil", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{Kubeconfig: &gardencorev1beta1.ShootKubeconfigRotation{}}}, BeFalse()),
-		Entry("lastCompletionTime nil", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{Kubeconfig: &gardencorev1beta1.ShootKubeconfigRotation{LastInitiationTime: &metav1.Time{Time: metav1.Now().Time}}}}, BeTrue()),
-		Entry("lastCompletionTime before lastInitiationTime", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{Kubeconfig: &gardencorev1beta1.ShootKubeconfigRotation{LastInitiationTime: &metav1.Time{Time: metav1.Now().Time}, LastCompletionTime: &metav1.Time{Time: metav1.Now().Add(-time.Minute)}}}}, BeTrue()),
-		Entry("lastCompletionTime equal lastInitiationTime", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{Kubeconfig: &gardencorev1beta1.ShootKubeconfigRotation{LastInitiationTime: &metav1.Time{Time: metav1.Now().Time}, LastCompletionTime: &metav1.Time{Time: metav1.Now().Time}}}}, BeFalse()),
-		Entry("lastCompletionTime after lastInitiationTime", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{Kubeconfig: &gardencorev1beta1.ShootKubeconfigRotation{LastInitiationTime: &metav1.Time{Time: metav1.Now().Time}, LastCompletionTime: &metav1.Time{Time: metav1.Now().Add(time.Minute)}}}}, BeFalse()),
-	)
-
 	Describe("#MutateShootSSHKeypairRotation", func() {
 		It("should do nothing when mutate function is nil", func() {
 			shoot := &gardencorev1beta1.Shoot{}

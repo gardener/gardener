@@ -261,6 +261,8 @@ type ShootCredentialsRotation struct {
 	CertificateAuthorities *CARotation `json:"certificateAuthorities,omitempty" protobuf:"bytes,1,opt,name=certificateAuthorities"`
 	// Kubeconfig contains information about the kubeconfig credential rotation.
 	// +optional
+	//
+	// Deprecated: This field is deprecated and will be removed in gardener v1.112
 	Kubeconfig *ShootKubeconfigRotation `json:"kubeconfig,omitempty" protobuf:"bytes,2,opt,name=kubeconfig"`
 	// SSHKeypair contains information about the ssh-keypair credential rotation.
 	// +optional
@@ -615,9 +617,10 @@ type Kubernetes struct {
 	// +optional
 	VerticalPodAutoscaler *VerticalPodAutoscaler `json:"verticalPodAutoscaler,omitempty" protobuf:"bytes,9,opt,name=verticalPodAutoscaler"`
 	// EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret will be created for the Shoot cluster.
-	// Defaults to true for Shoots with Kubernetes versions < 1.26. Defaults to false for Shoots with Kubernetes versions >= 1.26.
-	// Starting Kubernetes 1.27 the field will be locked to false.
+	// Setting this field to true is not supported.
 	// +optional
+	//
+	// Deprecated: This field is deprecated and will be removed in gardener v1.112
 	EnableStaticTokenKubeconfig *bool `json:"enableStaticTokenKubeconfig,omitempty" protobuf:"varint,10,opt,name=enableStaticTokenKubeconfig"`
 }
 

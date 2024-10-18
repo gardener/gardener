@@ -201,6 +201,8 @@ type ShootCredentialsRotation struct {
 	// CertificateAuthorities contains information about the certificate authority credential rotation.
 	CertificateAuthorities *CARotation
 	// Kubeconfig contains information about the kubeconfig credential rotation.
+	//
+	// Deprecated: This field is deprecated and will be removed in gardener v1.112
 	Kubeconfig *ShootKubeconfigRotation
 	// SSHKeypair contains information about the ssh-keypair credential rotation.
 	SSHKeypair *ShootSSHKeypairRotation
@@ -494,8 +496,9 @@ type Kubernetes struct {
 	// VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.
 	VerticalPodAutoscaler *VerticalPodAutoscaler
 	// EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret will be created for the Shoot cluster.
-	// Defaults to true for Shoots with Kubernetes versions < 1.26. Defaults to false for Shoots with Kubernetes versions >= 1.26.
-	// Starting Kubernetes 1.27 the field will be locked to false.
+	// Setting this field to true is not supported.
+	//
+	// Deprecated: This field is deprecated and will be removed in gardener v1.112
 	EnableStaticTokenKubeconfig *bool
 }
 

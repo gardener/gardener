@@ -68,7 +68,6 @@ var (
 		v1beta1constants.OperationRotateCAStart,
 		v1beta1constants.OperationRotateCAStartWithoutWorkersRollout,
 		v1beta1constants.OperationRotateCAComplete,
-		v1beta1constants.ShootOperationRotateKubeconfigCredentials,
 		v1beta1constants.OperationRotateObservabilityCredentials,
 		v1beta1constants.ShootOperationRotateSSHKeypair,
 		v1beta1constants.OperationRotateRolloutWorkers,
@@ -219,28 +218,6 @@ func ValidateShootTemplateUpdate(newShootTemplate, oldShootTemplate *core.ShootT
 // ValidateShootObjectMetaUpdate validates the object metadata of a Shoot object.
 func ValidateShootObjectMetaUpdate(newMeta, oldMeta metav1.ObjectMeta, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-	allErrs = append(allErrs, validateShootKubeconfigRotation(newMeta, oldMeta, fldPath)...)
-	return allErrs
-}
-
-// validateShootKubeconfigRotation validates that shoot in deletion cannot rotate its kubeconfig.
-func validateShootKubeconfigRotation(newMeta, oldMeta metav1.ObjectMeta, fldPath *field.Path) field.ErrorList {
-	if newMeta.DeletionTimestamp == nil {
-		return field.ErrorList{}
-	}
-
-	// already set operation is valid use case
-	if oldOperation, oldOk := oldMeta.Annotations[v1beta1constants.GardenerOperation]; oldOk && oldOperation == v1beta1constants.ShootOperationRotateKubeconfigCredentials {
-		return field.ErrorList{}
-	}
-
-	allErrs := field.ErrorList{}
-
-	// disallow kubeconfig rotation
-	if operation, ok := newMeta.Annotations[v1beta1constants.GardenerOperation]; ok && operation == v1beta1constants.ShootOperationRotateKubeconfigCredentials {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("annotations").Key(v1beta1constants.GardenerOperation), v1beta1constants.ShootOperationRotateKubeconfigCredentials, "kubeconfig rotations is not allowed for clusters in deletion"))
-	}
-
 	return allErrs
 }
 
@@ -896,9 +873,8 @@ func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking,
 		return allErrs
 	}
 
-	k8sGreaterEqual127, _ := versionutils.CheckVersionMeetsConstraint(kubernetes.Version, ">= 1.27")
-	if k8sGreaterEqual127 && ptr.Deref(kubernetes.EnableStaticTokenKubeconfig, false) {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("enableStaticTokenKubeconfig"), kubernetes.EnableStaticTokenKubeconfig, "for Kubernetes versions >= 1.27, enableStaticTokenKubeconfig field cannot not be set to true, please see https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_access.md#static-token-kubeconfig"))
+	if ptr.Deref(kubernetes.EnableStaticTokenKubeconfig, false) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("enableStaticTokenKubeconfig"), *kubernetes.EnableStaticTokenKubeconfig, "setting this field to true is not supported"))
 	}
 
 	allErrs = append(allErrs, ValidateKubeAPIServer(kubernetes.KubeAPIServer, kubernetes.Version, workerless, gardenerutils.DefaultResourcesForEncryption(), fldPath.Child("kubeAPIServer"))...)

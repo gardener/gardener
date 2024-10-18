@@ -252,8 +252,7 @@ var _ = Describe("validator", func() {
 						},
 					},
 					Kubernetes: core.Kubernetes{
-						Version:                     "1.6.4",
-						EnableStaticTokenKubeconfig: ptr.To(true),
+						Version: "1.6.4",
 						KubeControllerManager: &core.KubeControllerManagerConfig{
 							NodeMonitorGracePeriod: &metav1.Duration{Duration: 40 * time.Second},
 						},
@@ -3148,66 +3147,6 @@ var _ = Describe("validator", func() {
 
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
-				})
-			})
-
-			Context("kubernetes enableStaticTokenKubeconfig defaulting", func() {
-				BeforeEach(func() {
-					shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = nil
-
-					cloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
-						{Version: "1.26.0"},
-						{Version: "1.25.0"},
-					}
-
-					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-					Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
-				})
-
-				It("should not default the enableStaticTokenKubeconfig field when it is set", func() {
-					shoot.Spec.Kubernetes.Version = "1.26.0"
-					shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(false)
-
-					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-					err := admissionHandler.Admit(ctx, attrs, nil)
-
-					Expect(err).NotTo(HaveOccurred())
-					Expect(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(PointTo(Equal(false)))
-				})
-
-				It("should not default the enableStaticTokenKubeconfig field when shoot is in deletion", func() {
-					shoot.Spec.Kubernetes.Version = "1.25.0"
-					oldShoot := shoot.DeepCopy()
-					shoot.SetDeletionTimestamp(&metav1.Time{})
-
-					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
-					err := admissionHandler.Admit(ctx, attrs, nil)
-
-					Expect(err).NotTo(HaveOccurred())
-					Expect(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(BeNil())
-				})
-
-				It("should default the enableStaticTokenKubeconfig field to 'true' for k8s version < 1.26", func() {
-					shoot.Spec.Kubernetes.Version = "1.25.0"
-
-					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-					err := admissionHandler.Admit(ctx, attrs, nil)
-
-					Expect(err).NotTo(HaveOccurred())
-					Expect(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(PointTo(Equal(true)))
-				})
-
-				It("should default the enableStaticTokenKubeconfig field to false for k8s version >= 1.26", func() {
-					shoot.Spec.Kubernetes.Version = "1.26.0"
-
-					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-					err := admissionHandler.Admit(ctx, attrs, nil)
-
-					Expect(err).NotTo(HaveOccurred())
-					Expect(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(PointTo(Equal(false)))
 				})
 			})
 

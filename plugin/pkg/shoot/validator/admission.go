@@ -1007,22 +1007,7 @@ func (c *validationContext) validateKubernetes(a admission.Attributes) field.Err
 
 	allErrs = append(allErrs, c.validateKubeAPIServerOIDCConfig(a)...)
 
-	if c.shoot.DeletionTimestamp == nil {
-		performKubernetesDefaulting(c.shoot, c.oldShoot)
-	}
-
 	return allErrs
-}
-
-func performKubernetesDefaulting(newShoot, oldShoot *core.Shoot) {
-	if newShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig == nil {
-		// Error is ignored here because we cannot do anything meaningful with it - variable will default to "false".
-		if k8sLessThan126, _ := versionutils.CheckVersionMeetsConstraint(newShoot.Spec.Kubernetes.Version, "< 1.26"); k8sLessThan126 {
-			newShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(true)
-		} else {
-			newShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(false)
-		}
-	}
 }
 
 func (c *validationContext) validateProvider(a admission.Attributes) field.ErrorList {

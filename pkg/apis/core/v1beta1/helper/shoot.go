@@ -140,41 +140,6 @@ func MutateShootCARotation(shoot *gardencorev1beta1.Shoot, f func(*gardencorev1b
 	f(shoot.Status.Credentials.Rotation.CertificateAuthorities)
 }
 
-// MutateShootKubeconfigRotation mutates the .status.credentials.rotation.kubeconfig field based on the provided
-// mutation function. If the field is nil then it is initialized.
-func MutateShootKubeconfigRotation(shoot *gardencorev1beta1.Shoot, f func(*gardencorev1beta1.ShootKubeconfigRotation)) {
-	if f == nil {
-		return
-	}
-
-	if shoot.Status.Credentials == nil {
-		shoot.Status.Credentials = &gardencorev1beta1.ShootCredentials{}
-	}
-	if shoot.Status.Credentials.Rotation == nil {
-		shoot.Status.Credentials.Rotation = &gardencorev1beta1.ShootCredentialsRotation{}
-	}
-	if shoot.Status.Credentials.Rotation.Kubeconfig == nil {
-		shoot.Status.Credentials.Rotation.Kubeconfig = &gardencorev1beta1.ShootKubeconfigRotation{}
-	}
-
-	f(shoot.Status.Credentials.Rotation.Kubeconfig)
-}
-
-// IsShootKubeconfigRotationInitiationTimeAfterLastCompletionTime returns true when the lastInitiationTime in the
-// .status.credentials.rotation.kubeconfig field is newer than the lastCompletionTime. This is also true if the
-// lastCompletionTime is unset.
-func IsShootKubeconfigRotationInitiationTimeAfterLastCompletionTime(credentials *gardencorev1beta1.ShootCredentials) bool {
-	if credentials == nil ||
-		credentials.Rotation == nil ||
-		credentials.Rotation.Kubeconfig == nil ||
-		credentials.Rotation.Kubeconfig.LastInitiationTime == nil {
-		return false
-	}
-
-	return credentials.Rotation.Kubeconfig.LastCompletionTime == nil ||
-		credentials.Rotation.Kubeconfig.LastCompletionTime.Before(credentials.Rotation.Kubeconfig.LastInitiationTime)
-}
-
 // MutateShootSSHKeypairRotation mutates the .status.credentials.rotation.sshKeypair field based on the provided
 // mutation function. If the field is nil then it is initialized.
 func MutateShootSSHKeypairRotation(shoot *gardencorev1beta1.Shoot, f func(*gardencorev1beta1.ShootSSHKeypairRotation)) {

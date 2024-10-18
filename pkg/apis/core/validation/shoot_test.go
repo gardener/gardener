@@ -2395,42 +2395,16 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		Context("kubernetes.enableStaticTokenKubeconfig field validation", func() {
-			Context("kubernetes version < 1.27", func() {
-				It("should allow creating shoots with this field set to true", func() {
-					shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(true)
+			It("should deny creating shoots with this field set to true", func() {
+				shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(true)
 
-					errorList := ValidateShoot(shoot)
-					Expect(errorList).To(BeEmpty())
-				})
-			})
-
-			Context("kubernetes version >= 1.27", func() {
-				It("should deny creating shoots with this field set to true", func() {
-					shoot.Spec.Kubernetes.Version = "1.27.0"
-					shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(true)
-
-					errorList := ValidateShoot(shoot)
-					Expect(errorList).Should(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.kubernetes.enableStaticTokenKubeconfig"),
-						"Detail": ContainSubstring("for Kubernetes versions >= 1.27, enableStaticTokenKubeconfig field cannot not be set to true"),
-					}))))
-				})
-
-				It("should deny updating shoots to v1.27 with this field set to true", func() {
-					shoot.Spec.Kubernetes.Version = "1.26.0"
-					shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(true)
-
-					newShoot := prepareShootForUpdate(shoot)
-					newShoot.Spec.Kubernetes.Version = "1.27.0"
-
-					errorList := ValidateShootUpdate(newShoot, shoot)
-					Expect(errorList).Should(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.kubernetes.enableStaticTokenKubeconfig"),
-						"Detail": ContainSubstring("for Kubernetes versions >= 1.27, enableStaticTokenKubeconfig field cannot not be set to true"),
-					}))))
-				})
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).Should(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("spec.kubernetes.enableStaticTokenKubeconfig"),
+					"BadValue": Equal(true),
+					"Detail":   ContainSubstring("setting this field to true is not supported"),
+				}))))
 			})
 		})
 
@@ -3854,44 +3828,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 			errorList := ValidateShootUpdate(newShoot, shoot)
 
 			Expect(errorList).To(BeEmpty())
-		})
-
-		Describe("kubeconfig rotation", func() {
-			DescribeTable("DisallowKubeconfigRotationForShootInDeletion",
-				func(oldAnnotations, newAnnotations map[string]string, newSetDeletionTimestamp, expectedError bool) {
-					now := metav1.NewTime(time.Now())
-					newShoot := prepareShootForUpdate(shoot)
-					if oldAnnotations != nil {
-						shoot.Annotations = oldAnnotations
-					}
-
-					if newSetDeletionTimestamp {
-						newShoot.DeletionTimestamp = &now
-					}
-					newShoot.Annotations = newAnnotations
-
-					errorList := ValidateShootObjectMetaUpdate(newShoot.ObjectMeta, shoot.ObjectMeta, field.NewPath("metadata"))
-
-					if expectedError {
-						Expect(errorList).ToNot(BeEmpty())
-						Expect(errorList).To(ConsistOfFields(Fields{
-							"Type":   Equal(field.ErrorTypeInvalid),
-							"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
-							"Detail": ContainSubstring(`kubeconfig rotations is not allowed for clusters in deletion`),
-						}))
-					} else {
-						Expect(errorList).To(BeEmpty())
-					}
-				},
-				Entry("should allow kubeconfig rotation for cluster not in deletion", nil, map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials"}, false, false),
-				Entry("should allow reconcile operation for cluster in deletion", nil, map[string]string{"gardener.cloud/operation": "reconcile"}, true, false),
-				Entry("should allow any annotations for cluster in deletion", nil, map[string]string{"foo": "bar"}, true, false),
-				Entry("should allow other update request for cluster in deletion and already requested kubeconfig rotation operation", map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials"}, map[string]string{"gardener.cloud/operation": "reconcile"}, true, false),
-				Entry("should allow any annotations for cluster in deletion with already requested kubeconfig rotation", map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials"}, map[string]string{"foo": "bar"}, true, false),
-				Entry("should allow update request for cluster in deletion with already requested kubeconfig rotation", map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials"}, map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials", "foo": "bar"}, true, false),
-				Entry("should not allow kubeconfig rotation for cluster in deletion", nil, map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials"}, true, true),
-				Entry("should not allow kubeconfig rotation for cluster in deletion with already requested operation", map[string]string{"gardener.cloud/operation": "some-other-operation"}, map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials"}, true, true),
-			)
 		})
 
 		Describe("#ValidateSystemComponents", func() {

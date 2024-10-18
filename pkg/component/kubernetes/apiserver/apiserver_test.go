@@ -30,10 +30,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/apimachinery/pkg/util/yaml"
 	apiserverv1beta1 "k8s.io/apiserver/pkg/apis/apiserver/v1beta1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -85,7 +83,7 @@ var _ = Describe("KubeAPIServer", func() {
 		namePrefix          string
 		consistOf           func(...client.Object) types.GomegaMatcher
 
-		secretNameStaticToken             = "kube-apiserver-static-token-c069a0e6"
+		secretNameStaticToken             = "kube-apiserver-static-token-53d619b2"
 		secretNameCA                      = "ca"
 		secretNameCAClient                = "ca-client"
 		secretNameCAEtcd                  = "ca-etcd"
@@ -2361,7 +2359,7 @@ kind: AuthorizationConfiguration
 						"reference.resources.gardener.cloud/secret-389fbba5":    secretNameEtcd,
 						"reference.resources.gardener.cloud/secret-998b2966":    secretNameKubeAggregator,
 						"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
-						"reference.resources.gardener.cloud/secret-430944e0":    secretNameStaticToken,
+						"reference.resources.gardener.cloud/secret-af50ac19":    secretNameStaticToken,
 						"reference.resources.gardener.cloud/secret-c4700ce9":    secretNameETCDEncryptionConfig,
 						"reference.resources.gardener.cloud/configmap-130aa219": configMapNameAdmissionConfigs,
 						"reference.resources.gardener.cloud/secret-5613e39f":    secretNameAdmissionKubeconfigs,
@@ -2550,7 +2548,7 @@ kind: AuthorizationConfiguration
 						"reference.resources.gardener.cloud/secret-389fbba5":    secretNameEtcd,
 						"reference.resources.gardener.cloud/secret-998b2966":    secretNameKubeAggregator,
 						"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
-						"reference.resources.gardener.cloud/secret-430944e0":    secretNameStaticToken,
+						"reference.resources.gardener.cloud/secret-af50ac19":    secretNameStaticToken,
 						"reference.resources.gardener.cloud/secret-c4700ce9":    secretNameETCDEncryptionConfig,
 						"reference.resources.gardener.cloud/configmap-130aa219": configMapNameAdmissionConfigs,
 						"reference.resources.gardener.cloud/secret-5613e39f":    secretNameAdmissionKubeconfigs,
@@ -3426,49 +3424,7 @@ kind: AuthorizationConfiguration
 					))
 				})
 
-				It("should generate a kubeconfig secret for the user when StaticTokenKubeconfigEnabled is set to true", func() {
-					deployAndRead()
-
-					secretList := &corev1.SecretList{}
-					Expect(c.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
-						"name": "user-kubeconfig",
-					})).To(Succeed())
-
-					Expect(secretList.Items).To(HaveLen(1))
-					Expect(secretList.Items[0].Data).To(HaveKey("kubeconfig"))
-
-					kubeconfig := &clientcmdv1.Config{}
-					Expect(yaml.Unmarshal(secretList.Items[0].Data["kubeconfig"], kubeconfig)).To(Succeed())
-					Expect(kubeconfig.CurrentContext).To(Equal(namespace))
-					Expect(kubeconfig.AuthInfos).To(HaveLen(1))
-					Expect(kubeconfig.AuthInfos[0].AuthInfo.Token).NotTo(BeEmpty())
-				})
-
-				It("should not generate a kubeconfig secret for the user when StaticTokenKubeconfigEnabled is set to false", func() {
-					deployAndRead()
-
-					secretList := &corev1.SecretList{}
-					Expect(c.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
-						"name": "user-kubeconfig",
-					})).To(Succeed())
-
-					kapi = New(kubernetesInterface, namespace, sm, Values{
-						Values: apiserver.Values{
-							RuntimeVersion: runtimeVersion,
-						},
-						Version:                      version,
-						StaticTokenKubeconfigEnabled: ptr.To(false),
-					})
-					Expect(kapi.Deploy(ctx)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
-
-					secretList = &corev1.SecretList{}
-					Expect(c.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
-						"name": "user-kubeconfig",
-					})).To(Succeed())
-				})
-
-				It("should generate kube-apiserver-static-token without system:cluster-admin token when StaticTokenKubeconfigEnabled is set to false", func() {
+				It("should generate kube-apiserver-static-token without system:cluster-admin token", func() {
 					deployAndRead()
 
 					secret := &corev1.Secret{}
@@ -3484,19 +3440,7 @@ kind: AuthorizationConfiguration
 						},
 					))
 
-					newSecretNameStaticToken := "kube-apiserver-static-token-53d619b2"
-
-					kapi = New(kubernetesInterface, namespace, sm, Values{
-						Values: apiserver.Values{
-							RuntimeVersion: runtimeVersion,
-						},
-						Version:                      version,
-						StaticTokenKubeconfigEnabled: ptr.To(false),
-					})
-					Expect(kapi.Deploy(ctx)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
-
-					Expect(deployment.Spec.Template.Spec.Volumes).ToNot(ContainElements(
+					Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
 						corev1.Volume{
 							Name: "static-token",
 							VolumeSource: corev1.VolumeSource{
@@ -3507,19 +3451,8 @@ kind: AuthorizationConfiguration
 						},
 					))
 
-					Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
-						corev1.Volume{
-							Name: "static-token",
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: newSecretNameStaticToken,
-								},
-							},
-						},
-					))
-
 					secret = &corev1.Secret{}
-					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: newSecretNameStaticToken}, secret)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: secretNameStaticToken}, secret)).To(Succeed())
 					Expect(secret.Data).To(HaveKey("static_tokens.csv"))
 				})
 
@@ -4014,9 +3947,8 @@ kind: AuthenticationConfiguration
 						Values: apiserver.Values{
 							RuntimeVersion: runtimeVersion,
 						},
-						Images:                       images,
-						Version:                      semver.MustParse("1.26.9"),
-						StaticTokenKubeconfigEnabled: ptr.To(true),
+						Images:  images,
+						Version: semver.MustParse("1.26.9"),
 					})
 					deployAndRead()
 
