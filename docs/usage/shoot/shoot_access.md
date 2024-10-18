@@ -110,7 +110,7 @@ The examples for other programming languages are similar to [the above](#shootsa
 
 ## OpenID Connect
 
-> **Note:** OpenID Connect is deprecated in favor of [Structured Authentication configuration](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#using-authentication-configuration). Setting OpenID Connect configurations is forbidden for clusters with Kubernetes version `>= 1.32`
+> **Note:** OpenID Connect is deprecated in favor of [Structured Authentication configuration](#structured-authentication). Setting OpenID Connect configurations is forbidden for clusters with Kubernetes version `>= 1.32`
 
 The `kube-apiserver` of shoot clusters can be provided with [OpenID Connect configuration](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#openid-connect-tokens) via the Shoot spec:
 
