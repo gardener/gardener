@@ -46,6 +46,22 @@ message APIServerRequests {
   optional int32 maxMutatingInflight = 2;
 }
 
+// AccessRestriction describes an access restriction for a Kubernetes cluster (e.g., EU access-only).
+message AccessRestriction {
+  // Name is the name of the restriction.
+  optional string name = 1;
+}
+
+// AccessRestrictionWithOptions describes an access restriction for a Kubernetes cluster (e.g., EU access-only) and
+// allows to specify additional options.
+message AccessRestrictionWithOptions {
+  optional AccessRestriction accessRestriction = 1;
+
+  // Options is a map of additional options for the access restriction.
+  // +optional
+  map<string, string> options = 2;
+}
+
 // Addon allows enabling or disabling a specific addon and is used to derive from.
 message Addon {
   // Enabled indicates whether the addon is enabled or not.
@@ -2275,9 +2291,13 @@ message Region {
 
   // Labels is an optional set of key-value pairs that contain certain administrator-controlled labels for this region.
   // It can be used by Gardener administrators/operators to provide additional information about a region, e.g. wrt
-  // quality, reliability, access restrictions, etc.
+  // quality, reliability, etc.
   // +optional
   map<string, string> labels = 3;
+
+  // AccessRestrictions describe a list of access restrictions that can be used for Shoots using this region.
+  // +optional
+  repeated AccessRestriction accessRestrictions = 4;
 }
 
 // ResourceData holds the data of a resource referred to by an extension controller state.
@@ -2646,6 +2666,10 @@ message SeedSpec {
   // Ingress configures Ingress specific settings of the Seed cluster. This field is immutable.
   // +optional
   optional Ingress ingress = 9;
+
+  // AccessRestrictions describe a list of access restrictions for this seed cluster.
+  // +optional
+  repeated AccessRestriction accessRestrictions = 10;
 }
 
 // SeedStatus is the status of a Seed.
@@ -2955,7 +2979,7 @@ message ShootSpec {
   // Region is a name of a region. This field is immutable.
   optional string region = 12;
 
-  // SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret.
+  // SecretBindingName is the name of a SecretBinding that has a reference to the provider secret.
   // The credentials inside the provider secret will be used to create the shoot in the respective account.
   // The field is mutually exclusive with CredentialsBindingName.
   // This field is immutable.
@@ -3003,10 +3027,14 @@ message ShootSpec {
   // +optional
   optional CloudProfileReference cloudProfile = 22;
 
-  // CredentialsBindingName is the name of the a CredentialsBinding that has a reference to the provider credentials.
+  // CredentialsBindingName is the name of a CredentialsBinding that has a reference to the provider credentials.
   // The credentials will be used to create the shoot in the respective account. The field is mutually exclusive with SecretBindingName.
   // +optional
   optional string credentialsBindingName = 23;
+
+  // AccessRestrictions describe a list of access restrictions for this shoot cluster.
+  // +optional
+  repeated AccessRestrictionWithOptions accessRestrictions = 24;
 }
 
 // ShootState contains a snapshot of the Shoot's state required to migrate the Shoot's control plane to a new Seed.

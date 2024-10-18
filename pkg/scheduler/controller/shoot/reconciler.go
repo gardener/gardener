@@ -161,6 +161,10 @@ func (r *Reconciler) determineSeed(
 	if err != nil {
 		return nil, err
 	}
+	filteredSeeds, err = filterSeedsForAccessRestrictions(filteredSeeds, shoot)
+	if err != nil {
+		return nil, err
+	}
 	filteredSeeds, err = filterCandidates(shoot, shootList, filteredSeeds)
 	if err != nil {
 		return nil, err
@@ -276,6 +280,21 @@ func filterSeedsForZonalShootControlPlanes(seedList []gardencorev1beta1.Seed, sh
 		return seedsWithAtLeastThreeZones, nil
 	}
 	return seedList, nil
+}
+
+// filterSeedsForAccessRestrictions filters seeds which do not support the access restrictions configured in the shoot.
+func filterSeedsForAccessRestrictions(seedList []gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot) ([]gardencorev1beta1.Seed, error) {
+	var seedsSupportingAccessRestrictions []gardencorev1beta1.Seed
+	for _, seed := range seedList {
+		if v1beta1helper.AccessRestrictionsAreSupported(seed.Spec.AccessRestrictions, shoot.Spec.AccessRestrictions) {
+			seedsSupportingAccessRestrictions = append(seedsSupportingAccessRestrictions, seed)
+		}
+	}
+
+	if len(seedsSupportingAccessRestrictions) == 0 {
+		return nil, fmt.Errorf("none of the %d seeds supports the access restrictions configured in the shoot specification", len(seedList))
+	}
+	return seedsSupportingAccessRestrictions, nil
 }
 
 func applyStrategy(log logr.Logger, shoot *gardencorev1beta1.Shoot, seedList []gardencorev1beta1.Seed, strategy config.CandidateDeterminationStrategy, regionConfig *corev1.ConfigMap) ([]gardencorev1beta1.Seed, error) {

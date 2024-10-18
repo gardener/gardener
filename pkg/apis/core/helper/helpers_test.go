@@ -217,6 +217,38 @@ var _ = Describe("helper", func() {
 		),
 	)
 
+	DescribeTable("#AccessRestrictionsAreSupported",
+		func(seedAccessRestrictions []core.AccessRestriction, shootAccessRestrictions []core.AccessRestrictionWithOptions, expectation bool) {
+			Expect(AccessRestrictionsAreSupported(seedAccessRestrictions, shootAccessRestrictions)).To(Equal(expectation))
+		},
+
+		Entry("both have no access restrictions",
+			nil,
+			nil,
+			true,
+		),
+		Entry("shoot has no access restrictions",
+			[]core.AccessRestriction{{Name: "foo"}},
+			nil,
+			true,
+		),
+		Entry("seed has no access restrictions",
+			nil,
+			[]core.AccessRestrictionWithOptions{{AccessRestriction: core.AccessRestriction{Name: "foo"}}},
+			false,
+		),
+		Entry("both have access restrictions and they match",
+			[]core.AccessRestriction{{Name: "foo"}},
+			[]core.AccessRestrictionWithOptions{{AccessRestriction: core.AccessRestriction{Name: "foo"}}},
+			true,
+		),
+		Entry("both have access restrictions and they don't match",
+			[]core.AccessRestriction{{Name: "bar"}},
+			[]core.AccessRestrictionWithOptions{{AccessRestriction: core.AccessRestriction{Name: "foo"}}},
+			false,
+		),
+	)
+
 	var (
 		unmanagedType = core.DNSUnmanaged
 		differentType = "foo"

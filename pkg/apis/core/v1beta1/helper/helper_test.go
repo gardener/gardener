@@ -346,6 +346,38 @@ var _ = Describe("Helper", func() {
 		),
 	)
 
+	DescribeTable("#AccessRestrictionsAreSupported",
+		func(seedAccessRestrictions []gardencorev1beta1.AccessRestriction, shootAccessRestrictions []gardencorev1beta1.AccessRestrictionWithOptions, expectation bool) {
+			Expect(AccessRestrictionsAreSupported(seedAccessRestrictions, shootAccessRestrictions)).To(Equal(expectation))
+		},
+
+		Entry("both have no access restrictions",
+			nil,
+			nil,
+			true,
+		),
+		Entry("shoot has no access restrictions",
+			[]gardencorev1beta1.AccessRestriction{{Name: "foo"}},
+			nil,
+			true,
+		),
+		Entry("seed has no access restrictions",
+			nil,
+			[]gardencorev1beta1.AccessRestrictionWithOptions{{AccessRestriction: gardencorev1beta1.AccessRestriction{Name: "foo"}}},
+			false,
+		),
+		Entry("both have access restrictions and they match",
+			[]gardencorev1beta1.AccessRestriction{{Name: "foo"}},
+			[]gardencorev1beta1.AccessRestrictionWithOptions{{AccessRestriction: gardencorev1beta1.AccessRestriction{Name: "foo"}}},
+			true,
+		),
+		Entry("both have access restrictions and they don't match",
+			[]gardencorev1beta1.AccessRestriction{{Name: "bar"}},
+			[]gardencorev1beta1.AccessRestrictionWithOptions{{AccessRestriction: gardencorev1beta1.AccessRestriction{Name: "foo"}}},
+			false,
+		),
+	)
+
 	Describe("#ReadManagedSeedAPIServer", func() {
 		var shoot *gardencorev1beta1.Shoot
 
