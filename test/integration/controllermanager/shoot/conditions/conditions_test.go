@@ -73,7 +73,27 @@ var _ = Describe("Shoot Conditions controller tests", func() {
 		})
 
 		gardenletConfig := &gardenletv1alpha1.GardenletConfiguration{
-			SeedConfig: &gardenletv1alpha1.SeedConfig{},
+			SeedConfig: &gardenletv1alpha1.SeedConfig{
+				SeedTemplate: gardencorev1beta1.SeedTemplate{
+					Spec: gardencorev1beta1.SeedSpec{
+						DNS: gardencorev1beta1.SeedDNS{
+							Provider: &gardencorev1beta1.SeedDNSProvider{
+								Type: "foo",
+								SecretRef: corev1.SecretReference{
+									Name:      "secret",
+									Namespace: "namespace",
+								},
+							},
+						},
+						Ingress: &gardencorev1beta1.Ingress{
+							Domain: "ingress.test.example.com",
+							Controller: gardencorev1beta1.IngressController{
+								Kind: "nginx",
+							},
+						},
+					},
+				},
+			},
 		}
 
 		rawGardenletConfig, err := encoding.EncodeGardenletConfiguration(gardenletConfig)

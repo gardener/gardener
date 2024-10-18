@@ -112,12 +112,27 @@ var _ = Describe("ManagedSeed controller test", func() {
 						},
 					},
 					Spec: gardencorev1beta1.SeedSpec{
+						DNS: gardencorev1beta1.SeedDNS{
+							Provider: &gardencorev1beta1.SeedDNSProvider{
+								Type: "foo",
+								SecretRef: corev1.SecretReference{
+									Name:      "secret",
+									Namespace: "namespace",
+								},
+							},
+						},
 						Backup: &gardencorev1beta1.SeedBackup{
 							Provider: "test",
 							Region:   ptr.To("bar"),
 							SecretRef: corev1.SecretReference{
 								Name:      backupSecret.Name,
 								Namespace: backupSecret.Namespace,
+							},
+						},
+						Ingress: &gardencorev1beta1.Ingress{
+							Domain: "ingress.test.example.com",
+							Controller: gardencorev1beta1.IngressController{
+								Kind: "nginx",
 							},
 						},
 					},

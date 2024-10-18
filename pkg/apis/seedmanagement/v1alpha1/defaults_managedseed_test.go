@@ -114,6 +114,11 @@ var _ = Describe("Defaults", func() {
 											Namespace: namespace,
 										},
 									},
+									Ingress: &gardencorev1beta1.Ingress{
+										Controller: gardencorev1beta1.IngressController{
+											Kind: "nginx",
+										},
+									},
 								},
 							},
 						},
@@ -170,11 +175,15 @@ var _ = Describe("Defaults", func() {
 						SeedConfig: &gardenletv1alpha1.SeedConfig{
 							SeedTemplate: gardencorev1beta1.SeedTemplate{
 								Spec: gardencorev1beta1.SeedSpec{
-									//Ingress does not get defaulted
 									Backup: &gardencorev1beta1.SeedBackup{
 										SecretRef: corev1.SecretReference{
 											Name:      "foo",
 											Namespace: "bar",
+										},
+									},
+									Ingress: &gardencorev1beta1.Ingress{
+										Controller: gardencorev1beta1.IngressController{
+											Kind: "nginx",
 										},
 									},
 								},
