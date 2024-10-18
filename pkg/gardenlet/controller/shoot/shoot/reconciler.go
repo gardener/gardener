@@ -565,7 +565,6 @@ func (r *Reconciler) updateShootStatusOperationStart(
 		mustRemoveOperationAnnotation = true
 		startRotationCA(shoot, &now)
 		startRotationServiceAccountKey(shoot, &now)
-		startRotationKubeconfig(shoot, &now)
 		if v1beta1helper.ShootEnablesSSHAccess(shoot) {
 			startRotationSSHKeypair(shoot, &now)
 		}
@@ -583,10 +582,6 @@ func (r *Reconciler) updateShootStatusOperationStart(
 	case v1beta1constants.OperationRotateCAComplete:
 		mustRemoveOperationAnnotation = true
 		completeRotationCA(shoot, &now)
-
-	case v1beta1constants.ShootOperationRotateKubeconfigCredentials:
-		mustRemoveOperationAnnotation = true
-		startRotationKubeconfig(shoot, &now)
 
 	case v1beta1constants.ShootOperationRotateSSHKeypair:
 		mustRemoveOperationAnnotation = true
@@ -755,12 +750,6 @@ func (r *Reconciler) patchShootStatusOperationSuccess(
 		})
 	}
 
-	if v1beta1helper.IsShootKubeconfigRotationInitiationTimeAfterLastCompletionTime(shoot.Status.Credentials) {
-		v1beta1helper.MutateShootKubeconfigRotation(shoot, func(rotation *gardencorev1beta1.ShootKubeconfigRotation) {
-			rotation.LastCompletionTime = &now
-		})
-	}
-
 	if v1beta1helper.IsShootSSHKeypairRotationInitiationTimeAfterLastCompletionTime(shoot.Status.Credentials) {
 		v1beta1helper.MutateShootSSHKeypairRotation(shoot, func(rotation *gardencorev1beta1.ShootSSHKeypairRotation) {
 			rotation.LastCompletionTime = &now
@@ -774,10 +763,6 @@ func (r *Reconciler) patchShootStatusOperationSuccess(
 	}
 
 	if shoot.Status.Credentials != nil && shoot.Status.Credentials.Rotation != nil {
-		if ptr.Equal(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, ptr.To(false)) {
-			shoot.Status.Credentials.Rotation.Kubeconfig = nil
-		}
-
 		if !v1beta1helper.ShootEnablesSSHAccess(shoot) {
 			shoot.Status.Credentials.Rotation.SSHKeypair = nil
 		}
@@ -993,12 +978,6 @@ func completeRotationETCDEncryptionKey(shoot *gardencorev1beta1.Shoot, now *meta
 	v1beta1helper.MutateShootETCDEncryptionKeyRotation(shoot, func(rotation *gardencorev1beta1.ETCDEncryptionKeyRotation) {
 		rotation.Phase = gardencorev1beta1.RotationCompleting
 		rotation.LastCompletionTriggeredTime = now
-	})
-}
-
-func startRotationKubeconfig(shoot *gardencorev1beta1.Shoot, now *metav1.Time) {
-	v1beta1helper.MutateShootKubeconfigRotation(shoot, func(rotation *gardencorev1beta1.ShootKubeconfigRotation) {
-		rotation.LastInitiationTime = now
 	})
 }
 
