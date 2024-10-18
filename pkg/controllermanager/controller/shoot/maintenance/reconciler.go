@@ -145,17 +145,8 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		return err
 	}
 
-	// Set the .spec.kubernetes.enableStaticTokenKubeconfig field to false, when Shoot cluster is being forcefully updated to K8s >= 1.27.
-	// Gardener forbids enabling the static token kubeconfig for Shoots with K8s 1.27+. See https://github.com/gardener/gardener/pull/7883/commits/ca49644d32df48e0cf3fd00192f2ad078555796c
 	{
 		if versionutils.ConstraintK8sLess127.Check(oldShootKubernetesVersion) && versionutils.ConstraintK8sGreaterEqual127.Check(shootKubernetesVersion) {
-			if ptr.Deref(maintainedShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, false) {
-				maintainedShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(false)
-
-				reason := ".spec.kubernetes.enableStaticTokenKubeconfig is set to false. Reason: The static token kubeconfig can no longer be enabled for Shoot clusters using Kubernetes version 1.27+"
-				operations = append(operations, reason)
-			}
-
 			reasonsForIncreasingMaxWorkers := ensureSufficientMaxWorkers(maintainedShoot, fmt.Sprintf("Maximum number of workers of a worker group must be greater or equal to its number of zones for updating Kubernetes to %q", shootKubernetesVersion.String()))
 			operations = append(operations, reasonsForIncreasingMaxWorkers...)
 		}
