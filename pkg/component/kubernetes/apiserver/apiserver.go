@@ -16,7 +16,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	apiserverv1 "k8s.io/apiserver/pkg/apis/apiserver/v1"
+	apiserverv1alpha1 "k8s.io/apiserver/pkg/apis/apiserver/v1alpha1"
+	apiserverv1beta1 "k8s.io/apiserver/pkg/apis/apiserver/v1beta1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -80,8 +87,8 @@ type Values struct {
 	AuthenticationConfiguration *string
 	// AuthenticationWebhook contains configuration for the authentication webhook.
 	AuthenticationWebhook *AuthenticationWebhook
-	// AuthorizationWebhook contains configuration for the authorization webhook.
-	AuthorizationWebhook *AuthorizationWebhook
+	// AuthorizationWebhook contains configuration for the authorization webhooks.
+	AuthorizationWebhooks []AuthorizationWebhook
 	// DefaultNotReadyTolerationSeconds indicates the tolerationSeconds of the toleration for notReady:NoExecute
 	// that is added by default to every pod that does not already have such a toleration (flag `--default-not-ready-toleration-seconds`).
 	DefaultNotReadyTolerationSeconds *int64
@@ -138,16 +145,13 @@ type AuthenticationWebhook struct {
 
 // AuthorizationWebhook contains configuration for the authorization webhook.
 type AuthorizationWebhook struct {
+	// Name is the name of the webhook.
+	Name string
 	// Kubeconfig contains the webhook configuration in kubeconfig format. The API server will query the remote service
 	// to determine access on the API server's secure port.
 	Kubeconfig []byte
-	// CacheAuthorizedTTL is the duration to cache 'authorized' responses from the webhook authorizer.
-	CacheAuthorizedTTL *time.Duration
-	// CacheUnauthorizedTTL is the duration to cache 'unauthorized' responses from the webhook authorizer.
-	CacheUnauthorizedTTL *time.Duration
-	// Version is the API version of the authorization.k8s.io SubjectAccessReview to send to and expect from the
-	// webhook.
-	Version *string
+	// WebhookConfiguration is the actual webhook configuration.
+	apiserverv1beta1.WebhookConfiguration
 }
 
 // Images is a set of container images used for the containers of the kube-apiserver pods.
@@ -251,21 +255,22 @@ type kubeAPIServer struct {
 
 func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 	var (
-		deployment                            = k.emptyDeployment()
-		podDisruptionBudget                   = k.emptyPodDisruptionBudget()
-		horizontalPodAutoscaler               = k.emptyHorizontalPodAutoscaler()
-		verticalPodAutoscaler                 = k.emptyVerticalPodAutoscaler()
-		hvpa                                  = k.emptyHVPA()
-		secretETCDEncryptionConfiguration     = k.emptySecret(v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration)
-		secretOIDCCABundle                    = k.emptySecret(secretOIDCCABundleNamePrefix)
-		secretAuditWebhookKubeconfig          = k.emptySecret(secretAuditWebhookKubeconfigNamePrefix)
-		secretAuthenticationWebhookKubeconfig = k.emptySecret(secretAuthenticationWebhookKubeconfigNamePrefix)
-		secretAuthorizationWebhookKubeconfig  = k.emptySecret(secretAuthorizationWebhookKubeconfigNamePrefix)
-		configMapAdmissionConfigs             = k.emptyConfigMap(configMapAdmissionNamePrefix)
-		secretAdmissionKubeconfigs            = k.emptySecret(secretAdmissionKubeconfigsNamePrefix)
-		configMapAuditPolicy                  = k.emptyConfigMap(configMapAuditPolicyNamePrefix)
-		configMapAuthenticationConfig         = k.emptyConfigMap(configMapAuthenticationConfigNamePrefix)
-		configMapEgressSelector               = k.emptyConfigMap(configMapEgressSelectorNamePrefix)
+		deployment                             = k.emptyDeployment()
+		podDisruptionBudget                    = k.emptyPodDisruptionBudget()
+		horizontalPodAutoscaler                = k.emptyHorizontalPodAutoscaler()
+		verticalPodAutoscaler                  = k.emptyVerticalPodAutoscaler()
+		hvpa                                   = k.emptyHVPA()
+		secretETCDEncryptionConfiguration      = k.emptySecret(v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration)
+		secretOIDCCABundle                     = k.emptySecret(secretOIDCCABundleNamePrefix)
+		secretAuditWebhookKubeconfig           = k.emptySecret(secretAuditWebhookKubeconfigNamePrefix)
+		secretAuthenticationWebhookKubeconfig  = k.emptySecret(secretAuthenticationWebhookKubeconfigNamePrefix)
+		secretAuthorizationWebhooksKubeconfigs = k.emptySecret(secretAuthorizationWebhooksKubeconfigsNamePrefix)
+		configMapAdmissionConfigs              = k.emptyConfigMap(configMapAdmissionNamePrefix)
+		secretAdmissionKubeconfigs             = k.emptySecret(secretAdmissionKubeconfigsNamePrefix)
+		configMapAuditPolicy                   = k.emptyConfigMap(configMapAuditPolicyNamePrefix)
+		configMapAuthenticationConfig          = k.emptyConfigMap(configMapAuthenticationConfigNamePrefix)
+		configMapAuthorizationConfig           = k.emptyConfigMap(configMapAuthorizationConfigNamePrefix)
+		configMapEgressSelector                = k.emptyConfigMap(configMapEgressSelectorNamePrefix)
 	)
 
 	if err := k.reconcilePodDisruptionBudget(ctx, podDisruptionBudget); err != nil {
@@ -296,7 +301,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := k.reconcileSecretAuthorizationWebhookKubeconfig(ctx, secretAuthorizationWebhookKubeconfig); err != nil {
+	if err := k.reconcileSecretAuthorizationWebhooksKubeconfigs(ctx, secretAuthorizationWebhooksKubeconfigs); err != nil {
 		return err
 	}
 
@@ -348,6 +353,10 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	if err := k.reconcileConfigMapAuthorizationConfig(ctx, configMapAuthorizationConfig); err != nil {
+		return err
+	}
+
 	if err := k.reconcileConfigMapEgressSelector(ctx, configMapEgressSelector); err != nil {
 		return err
 	}
@@ -395,6 +404,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		serviceAccount,
 		configMapAuditPolicy,
 		configMapAuthenticationConfig,
+		configMapAuthorizationConfig,
 		configMapAdmissionConfigs,
 		secretAdmissionKubeconfigs,
 		configMapEgressSelector,
@@ -410,7 +420,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		secretHAVPNClientSeedTLSAuth,
 		secretAuditWebhookKubeconfig,
 		secretAuthenticationWebhookKubeconfig,
-		secretAuthorizationWebhookKubeconfig,
+		secretAuthorizationWebhooksKubeconfigs,
 		tlsSNISecrets,
 	); err != nil {
 		return err
@@ -647,4 +657,31 @@ func ComputeKubeAPIServerServiceAccountConfig(
 	}
 
 	return out
+}
+
+// ConfigCodec is the code for kube-apiserver configuration APIs.
+var ConfigCodec runtime.Codec
+
+func init() {
+	scheme := runtime.NewScheme()
+	utilruntime.Must(apiserverv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(apiserverv1beta1.AddToScheme(scheme))
+	utilruntime.Must(apiserverv1.AddToScheme(scheme))
+
+	var (
+		ser = json.NewSerializerWithOptions(json.DefaultMetaFactory, scheme, scheme, json.SerializerOptions{
+			Yaml:   true,
+			Pretty: false,
+			Strict: false,
+		})
+		versions = schema.GroupVersions([]schema.GroupVersion{
+			apiserverv1alpha1.SchemeGroupVersion,
+			apiserverv1alpha1.ConfigSchemeGroupVersion,
+			apiserverv1beta1.SchemeGroupVersion,
+			apiserverv1beta1.ConfigSchemeGroupVersion,
+			apiserverv1.SchemeGroupVersion,
+		})
+	)
+
+	ConfigCodec = serializer.NewCodecFactory(scheme).CodecForVersions(ser, ser, versions, versions)
 }
