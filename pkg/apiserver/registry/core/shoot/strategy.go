@@ -374,10 +374,12 @@ func syncLegacyAccessRestrictionLabelWithNewField(shoot *core.Shoot) {
 }
 
 func syncLegacyAccessRestrictionLabelWithNewFieldOnUpdate(shoot, oldShoot *core.Shoot) {
-	hasAccessRestriction := func(accessRestrictions []core.AccessRestrictionWithOptions, name string) bool {
-		return slices.ContainsFunc(accessRestrictions, func(accessRestriction core.AccessRestrictionWithOptions) bool {
-			return accessRestriction.Name == name
-		})
+	filterEUAccessOnlyRestriction := func(accessRestriction core.AccessRestrictionWithOptions) bool {
+		return accessRestriction.Name == "eu-access-only"
+	}
+
+	hasAccessRestriction := func(accessRestrictions []core.AccessRestrictionWithOptions) bool {
+		return slices.ContainsFunc(accessRestrictions, filterEUAccessOnlyRestriction)
 	}
 
 	removeAccessRestriction := func(accessRestrictions []core.AccessRestrictionWithOptions, name string) []core.AccessRestrictionWithOptions {
@@ -390,13 +392,56 @@ func syncLegacyAccessRestrictionLabelWithNewFieldOnUpdate(shoot, oldShoot *core.
 		return updatedAccessRestrictions
 	}
 
+	updateOptionInAccessRestrictions := func(accessRestrictions []core.AccessRestrictionWithOptions, key, value string) {
+		i := slices.IndexFunc(accessRestrictions, filterEUAccessOnlyRestriction)
+		if accessRestrictions[i].Options == nil {
+			accessRestrictions[i].Options = make(map[string]string)
+		}
+		accessRestrictions[i].Options[key] = value
+	}
+
+	removeOptionFromAccessRestrictions := func(accessRestrictions []core.AccessRestrictionWithOptions, key string) {
+		delete(accessRestrictions[slices.IndexFunc(accessRestrictions, filterEUAccessOnlyRestriction)].Options, key)
+	}
+
+	hasOptionInAccessRestrictions := func(accessRestrictions []core.AccessRestrictionWithOptions, option string) bool {
+		return slices.ContainsFunc(accessRestrictions, func(accessRestriction core.AccessRestrictionWithOptions) bool {
+			return accessRestriction.Name == "eu-access-only" && accessRestriction.Options[option] != ""
+		})
+	}
+
 	if oldShoot.Spec.SeedSelector != nil && oldShoot.Spec.SeedSelector.MatchLabels["seed.gardener.cloud/eu-access"] == "true" &&
 		(shoot.Spec.SeedSelector == nil || shoot.Spec.SeedSelector.MatchLabels["seed.gardener.cloud/eu-access"] != "true") {
 		shoot.Spec.AccessRestrictions = removeAccessRestriction(shoot.Spec.AccessRestrictions, "eu-access-only")
 	}
 
-	if hasAccessRestriction(oldShoot.Spec.AccessRestrictions, "eu-access-only") &&
-		!hasAccessRestriction(shoot.Spec.AccessRestrictions, "eu-access-only") {
+	if hasAccessRestriction(oldShoot.Spec.AccessRestrictions) &&
+		!hasAccessRestriction(shoot.Spec.AccessRestrictions) {
 		shoot.Spec.SeedSelector = nil
+	}
+
+	for _, key := range []string{
+		"support.gardener.cloud/eu-access-for-cluster-addons",
+		"support.gardener.cloud/eu-access-for-cluster-nodes",
+	} {
+		if oldShoot.Annotations[key] != shoot.Annotations[key] {
+			updateOptionInAccessRestrictions(shoot.Spec.AccessRestrictions, key, shoot.Annotations[key])
+		}
+
+		if hasAccessRestriction(oldShoot.Spec.AccessRestrictions) &&
+			hasAccessRestriction(shoot.Spec.AccessRestrictions) &&
+			oldShoot.Spec.AccessRestrictions[slices.IndexFunc(oldShoot.Spec.AccessRestrictions, filterEUAccessOnlyRestriction)].Options[key] != shoot.Spec.AccessRestrictions[slices.IndexFunc(shoot.Spec.AccessRestrictions, filterEUAccessOnlyRestriction)].Options[key] {
+			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, key, shoot.Spec.AccessRestrictions[slices.IndexFunc(shoot.Spec.AccessRestrictions, filterEUAccessOnlyRestriction)].Options[key])
+		}
+
+		if hasOptionInAccessRestrictions(oldShoot.Spec.AccessRestrictions, key) &&
+			!hasOptionInAccessRestrictions(shoot.Spec.AccessRestrictions, key) {
+			delete(shoot.Annotations, key)
+		}
+
+		if oldShoot.Annotations[key] != "" &&
+			shoot.Annotations[key] == "" {
+			removeOptionFromAccessRestrictions(shoot.Spec.AccessRestrictions, key)
+		}
 	}
 }

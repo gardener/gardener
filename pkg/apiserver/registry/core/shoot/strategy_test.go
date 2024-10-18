@@ -6,6 +6,7 @@ package shoot_test
 
 import (
 	"context"
+	"maps"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -679,6 +680,112 @@ var _ = Describe("Strategy", func() {
 
 				Expect(newShoot.Spec.AccessRestrictions).To(BeEmpty())
 				Expect(newShoot.Spec.SeedSelector).To(BeNil())
+			})
+
+			It("should remove the option annotations when they are removed from the access restrictions", func() {
+				oldShoot.Spec.AccessRestrictions = []core.AccessRestrictionWithOptions{{
+					AccessRestriction: core.AccessRestriction{Name: "eu-access-only"},
+					Options: map[string]string{
+						"support.gardener.cloud/eu-access-for-cluster-addons": "true",
+						"support.gardener.cloud/eu-access-for-cluster-nodes":  "false",
+					},
+				}}
+				oldShoot.Annotations = map[string]string{
+					"support.gardener.cloud/eu-access-for-cluster-addons": "true",
+					"support.gardener.cloud/eu-access-for-cluster-nodes":  "false",
+				}
+				newShoot.Annotations = maps.Clone(oldShoot.Annotations)
+				newShoot.Spec.AccessRestrictions = []core.AccessRestrictionWithOptions{{AccessRestriction: core.AccessRestriction{Name: "eu-access-only"}}}
+
+				strategy.PrepareForUpdate(context.Background(), newShoot, oldShoot)
+
+				Expect(newShoot.Annotations).To(BeEmpty())
+			})
+
+			It("should remove the options from the access restrictions when the annotations are removed", func() {
+				oldShoot.Spec.AccessRestrictions = []core.AccessRestrictionWithOptions{{
+					AccessRestriction: core.AccessRestriction{Name: "eu-access-only"},
+					Options: map[string]string{
+						"support.gardener.cloud/eu-access-for-cluster-addons": "false",
+						"support.gardener.cloud/eu-access-for-cluster-nodes":  "true",
+					},
+				}}
+				oldShoot.Annotations = map[string]string{
+					"support.gardener.cloud/eu-access-for-cluster-addons": "false",
+					"support.gardener.cloud/eu-access-for-cluster-nodes":  "true",
+				}
+				newShoot.Spec.AccessRestrictions = []core.AccessRestrictionWithOptions{{
+					AccessRestriction: core.AccessRestriction{Name: "eu-access-only"},
+					Options: map[string]string{
+						"support.gardener.cloud/eu-access-for-cluster-addons": "false",
+						"support.gardener.cloud/eu-access-for-cluster-nodes":  "true",
+					},
+				}}
+
+				strategy.PrepareForUpdate(context.Background(), newShoot, oldShoot)
+
+				Expect(newShoot.Spec.AccessRestrictions).To(HaveExactElements(core.AccessRestrictionWithOptions{
+					AccessRestriction: core.AccessRestriction{Name: "eu-access-only"},
+					Options:           map[string]string{},
+				}))
+			})
+
+			It("should update the option annotations when they are updated in the access restriction", func() {
+				oldShoot.Spec.AccessRestrictions = []core.AccessRestrictionWithOptions{{
+					AccessRestriction: core.AccessRestriction{Name: "eu-access-only"},
+					Options: map[string]string{
+						"support.gardener.cloud/eu-access-for-cluster-addons": "false",
+						"support.gardener.cloud/eu-access-for-cluster-nodes":  "true",
+					},
+				}}
+				oldShoot.Annotations = map[string]string{
+					"support.gardener.cloud/eu-access-for-cluster-addons": "false",
+					"support.gardener.cloud/eu-access-for-cluster-nodes":  "true",
+				}
+				newShoot.Annotations = maps.Clone(oldShoot.Annotations)
+				newShoot.Spec.AccessRestrictions = []core.AccessRestrictionWithOptions{{
+					AccessRestriction: core.AccessRestriction{Name: "eu-access-only"},
+					Options: map[string]string{
+						"support.gardener.cloud/eu-access-for-cluster-addons": "true",
+						"support.gardener.cloud/eu-access-for-cluster-nodes":  "false",
+					},
+				}}
+
+				strategy.PrepareForUpdate(context.Background(), newShoot, oldShoot)
+
+				Expect(newShoot.Annotations).To(Equal(map[string]string{
+					"support.gardener.cloud/eu-access-for-cluster-addons": "true",
+					"support.gardener.cloud/eu-access-for-cluster-nodes":  "false",
+				}))
+			})
+
+			It("should update the access restriction options when they are updated in the annotations", func() {
+				oldShoot.Spec.AccessRestrictions = []core.AccessRestrictionWithOptions{{
+					AccessRestriction: core.AccessRestriction{Name: "eu-access-only"},
+					Options: map[string]string{
+						"support.gardener.cloud/eu-access-for-cluster-addons": "false",
+						"support.gardener.cloud/eu-access-for-cluster-nodes":  "true",
+					},
+				}}
+				oldShoot.Annotations = map[string]string{
+					"support.gardener.cloud/eu-access-for-cluster-addons": "false",
+					"support.gardener.cloud/eu-access-for-cluster-nodes":  "true",
+				}
+				newShoot.Spec.AccessRestrictions = []core.AccessRestrictionWithOptions{{
+					AccessRestriction: core.AccessRestriction{Name: "eu-access-only"},
+					Options: map[string]string{
+						"support.gardener.cloud/eu-access-for-cluster-addons": "true",
+						"support.gardener.cloud/eu-access-for-cluster-nodes":  "false",
+					},
+				}}
+				newShoot.Annotations = maps.Clone(oldShoot.Annotations)
+
+				strategy.PrepareForUpdate(context.Background(), newShoot, oldShoot)
+
+				Expect(newShoot.Spec.AccessRestrictions[0].Options).To(Equal(map[string]string{
+					"support.gardener.cloud/eu-access-for-cluster-addons": "true",
+					"support.gardener.cloud/eu-access-for-cluster-nodes":  "false",
+				}))
 			})
 		})
 	})
