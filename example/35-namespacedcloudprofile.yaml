@@ -36,7 +36,7 @@ spec:
       - amd64
       cri:
       - name: containerd
-  providerConfig: # add provider specific configuration if necessary, especially for custom machine images
+  providerConfig:
     apiVersion: local.provider.extensions.gardener.cloud/v1alpha1
     kind: CloudProfileConfig
     machineImages:

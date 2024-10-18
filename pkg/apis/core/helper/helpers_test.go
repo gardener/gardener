@@ -1164,5 +1164,74 @@ var _ = Describe("helper", func() {
 				},
 			))
 		})
+
+		It("should return the diff between an empty old and a filled new machine image slice", func() {
+			versions2 := []core.MachineImage{
+				{
+					Name: "image-2",
+					Versions: []core.MachineImageVersion{
+						{ExpirableVersion: core.ExpirableVersion{Version: "version-3"}},
+					},
+				},
+				{
+					Name: "image-3",
+					Versions: []core.MachineImageVersion{
+						{ExpirableVersion: core.ExpirableVersion{Version: "version-1"}},
+						{ExpirableVersion: core.ExpirableVersion{Version: "version-2"}},
+					},
+				},
+			}
+
+			removedImages, removedVersions, addedImages, addedVersions := GetMachineImageDiff(nil, versions2)
+
+			Expect(removedImages.UnsortedList()).To(BeEmpty())
+			Expect(removedVersions).To(BeEmpty())
+			Expect(addedImages.UnsortedList()).To(ConsistOf("image-2", "image-3"))
+			Expect(addedVersions).To(BeEquivalentTo(
+				map[string]sets.Set[string]{
+					"image-2": sets.New[string]("version-3"),
+					"image-3": sets.New[string]("version-1", "version-2"),
+				},
+			))
+		})
+
+		It("should return the diff between a filled old and an empty new machine image slice", func() {
+			versions1 := []core.MachineImage{
+				{
+					Name: "image-2",
+					Versions: []core.MachineImageVersion{
+						{ExpirableVersion: core.ExpirableVersion{Version: "version-3"}},
+					},
+				},
+				{
+					Name: "image-3",
+					Versions: []core.MachineImageVersion{
+						{ExpirableVersion: core.ExpirableVersion{Version: "version-1"}},
+						{ExpirableVersion: core.ExpirableVersion{Version: "version-2"}},
+					},
+				},
+			}
+
+			removedImages, removedVersions, addedImages, addedVersions := GetMachineImageDiff(versions1, []core.MachineImage{})
+
+			Expect(removedImages.UnsortedList()).To(ConsistOf("image-2", "image-3"))
+			Expect(removedVersions).To(BeEquivalentTo(
+				map[string]sets.Set[string]{
+					"image-2": sets.New[string]("version-3"),
+					"image-3": sets.New[string]("version-1", "version-2"),
+				},
+			))
+			Expect(addedImages.UnsortedList()).To(BeEmpty())
+			Expect(addedVersions).To(BeEmpty())
+		})
+
+		It("should return the diff between two empty machine image slices", func() {
+			removedImages, removedVersions, addedImages, addedVersions := GetMachineImageDiff([]core.MachineImage{}, nil)
+
+			Expect(removedImages.UnsortedList()).To(BeEmpty())
+			Expect(removedVersions).To(BeEmpty())
+			Expect(addedImages.UnsortedList()).To(BeEmpty())
+			Expect(addedVersions).To(BeEmpty())
+		})
 	})
 })
