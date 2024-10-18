@@ -164,6 +164,12 @@ func (b *Builder) WithShootCredentialsFrom(c client.Reader) *Builder {
 	return b
 }
 
+// WithoutShootCredentials sets the shootCredentialsFunc attribute at the builder to return empty Secret as credentials.
+func (b *Builder) WithoutShootCredentials() *Builder {
+	b.shootCredentialsFunc = func(context.Context, string, string, bool) (client.Object, error) { return &corev1.Secret{}, nil }
+	return b
+}
+
 // WithProjectName sets the projectName attribute at the Builder.
 func (b *Builder) WithProjectName(projectName string) *Builder {
 	b.projectName = projectName
