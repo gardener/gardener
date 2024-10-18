@@ -123,7 +123,13 @@ func (b *Botanist) DeployOperatingSystemConfig(ctx context.Context) error {
 		// If IPVS is enabled then instruct the kubelet to create pods resolving DNS to the `nodelocaldns` network
 		// interface link-local ip address. For more information checkout the usage documentation under
 		// https://kubernetes.io/docs/tasks/administer-cluster/nodelocaldns/.
-		clusterDNSAddresses = []string{nodelocaldnsconstants.IPVSAddress}
+		ipFamiliesSet := sets.New[gardencorev1beta1.IPFamily](b.Shoot.GetInfo().Spec.Networking.IPFamilies...)
+		if ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv4) && !ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv6) {
+			clusterDNSAddresses = []string{nodelocaldnsconstants.IPVSAddress}
+		}
+		if ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv6) && !ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv4) {
+			clusterDNSAddresses = []string{nodelocaldnsconstants.IPVSIPv6Address}
+		}
 	}
 	b.Shoot.Components.Extensions.OperatingSystemConfig.SetClusterDNSAddresses(clusterDNSAddresses)
 
