@@ -10,6 +10,7 @@
 package v1alpha1
 
 import (
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -17,6 +18,11 @@ import (
 func (in *Configuration) DeepCopyInto(out *Configuration) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
+	if in.Selector != nil {
+		in, out := &in.Selector, &out.Selector
+		*out = new(v1.LabelSelector)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 
