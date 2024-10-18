@@ -67,3 +67,10 @@ type CloudProfileReference struct {
 	// Name contains the name of the referenced CloudProfile.
 	Name string
 }
+
+var _ Object = (*NamespacedCloudProfile)(nil)
+
+// GetProviderType gets the type of the provider.
+func (c *NamespacedCloudProfile) GetProviderType() string {
+	return c.Status.CloudProfileSpec.Type
+}
