@@ -20,6 +20,7 @@ import (
 type MockEventRecorder struct {
 	ctrl     *gomock.Controller
 	recorder *MockEventRecorderMockRecorder
+	isgomock struct{}
 }
 
 // MockEventRecorderMockRecorder is the mock recorder for MockEventRecorder.
@@ -40,47 +41,47 @@ func (m *MockEventRecorder) EXPECT() *MockEventRecorderMockRecorder {
 }
 
 // AnnotatedEventf mocks base method.
-func (m *MockEventRecorder) AnnotatedEventf(arg0 runtime.Object, arg1 map[string]string, arg2, arg3, arg4 string, arg5 ...any) {
+func (m *MockEventRecorder) AnnotatedEventf(object runtime.Object, annotations map[string]string, eventtype, reason, messageFmt string, args ...any) {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0, arg1, arg2, arg3, arg4}
-	for _, a := range arg5 {
+	varargs := []any{object, annotations, eventtype, reason, messageFmt}
+	for _, a := range args {
 		varargs = append(varargs, a)
 	}
 	m.ctrl.Call(m, "AnnotatedEventf", varargs...)
 }
 
 // AnnotatedEventf indicates an expected call of AnnotatedEventf.
-func (mr *MockEventRecorderMockRecorder) AnnotatedEventf(arg0, arg1, arg2, arg3, arg4 any, arg5 ...any) *gomock.Call {
+func (mr *MockEventRecorderMockRecorder) AnnotatedEventf(object, annotations, eventtype, reason, messageFmt any, args ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0, arg1, arg2, arg3, arg4}, arg5...)
+	varargs := append([]any{object, annotations, eventtype, reason, messageFmt}, args...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AnnotatedEventf", reflect.TypeOf((*MockEventRecorder)(nil).AnnotatedEventf), varargs...)
 }
 
 // Event mocks base method.
-func (m *MockEventRecorder) Event(arg0 runtime.Object, arg1, arg2, arg3 string) {
+func (m *MockEventRecorder) Event(object runtime.Object, eventtype, reason, message string) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Event", arg0, arg1, arg2, arg3)
+	m.ctrl.Call(m, "Event", object, eventtype, reason, message)
 }
 
 // Event indicates an expected call of Event.
-func (mr *MockEventRecorderMockRecorder) Event(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockEventRecorderMockRecorder) Event(object, eventtype, reason, message any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Event", reflect.TypeOf((*MockEventRecorder)(nil).Event), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Event", reflect.TypeOf((*MockEventRecorder)(nil).Event), object, eventtype, reason, message)
 }
 
 // Eventf mocks base method.
-func (m *MockEventRecorder) Eventf(arg0 runtime.Object, arg1, arg2, arg3 string, arg4 ...any) {
+func (m *MockEventRecorder) Eventf(object runtime.Object, eventtype, reason, messageFmt string, args ...any) {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0, arg1, arg2, arg3}
-	for _, a := range arg4 {
+	varargs := []any{object, eventtype, reason, messageFmt}
+	for _, a := range args {
 		varargs = append(varargs, a)
 	}
 	m.ctrl.Call(m, "Eventf", varargs...)
 }
 
 // Eventf indicates an expected call of Eventf.
-func (mr *MockEventRecorderMockRecorder) Eventf(arg0, arg1, arg2, arg3 any, arg4 ...any) *gomock.Call {
+func (mr *MockEventRecorderMockRecorder) Eventf(object, eventtype, reason, messageFmt any, args ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0, arg1, arg2, arg3}, arg4...)
+	varargs := append([]any{object, eventtype, reason, messageFmt}, args...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Eventf", reflect.TypeOf((*MockEventRecorder)(nil).Eventf), varargs...)
 }

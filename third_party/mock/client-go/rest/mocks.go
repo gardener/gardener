@@ -24,6 +24,7 @@ import (
 type MockHTTPClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockHTTPClientMockRecorder
+	isgomock struct{}
 }
 
 // MockHTTPClientMockRecorder is the mock recorder for MockHTTPClient.
@@ -44,24 +45,25 @@ func (m *MockHTTPClient) EXPECT() *MockHTTPClientMockRecorder {
 }
 
 // Do mocks base method.
-func (m *MockHTTPClient) Do(arg0 *http.Request) (*http.Response, error) {
+func (m *MockHTTPClient) Do(req *http.Request) (*http.Response, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Do", arg0)
+	ret := m.ctrl.Call(m, "Do", req)
 	ret0, _ := ret[0].(*http.Response)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Do indicates an expected call of Do.
-func (mr *MockHTTPClientMockRecorder) Do(arg0 any) *gomock.Call {
+func (mr *MockHTTPClientMockRecorder) Do(req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Do", reflect.TypeOf((*MockHTTPClient)(nil).Do), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Do", reflect.TypeOf((*MockHTTPClient)(nil).Do), req)
 }
 
 // MockInterface is a mock of Interface interface.
 type MockInterface struct {
 	ctrl     *gomock.Controller
 	recorder *MockInterfaceMockRecorder
+	isgomock struct{}
 }
 
 // MockInterfaceMockRecorder is the mock recorder for MockInterface.
@@ -138,17 +140,17 @@ func (mr *MockInterfaceMockRecorder) GetRateLimiter() *gomock.Call {
 }
 
 // Patch mocks base method.
-func (m *MockInterface) Patch(arg0 types.PatchType) *rest.Request {
+func (m *MockInterface) Patch(pt types.PatchType) *rest.Request {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Patch", arg0)
+	ret := m.ctrl.Call(m, "Patch", pt)
 	ret0, _ := ret[0].(*rest.Request)
 	return ret0
 }
 
 // Patch indicates an expected call of Patch.
-func (mr *MockInterfaceMockRecorder) Patch(arg0 any) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) Patch(pt any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Patch", reflect.TypeOf((*MockInterface)(nil).Patch), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Patch", reflect.TypeOf((*MockInterface)(nil).Patch), pt)
 }
 
 // Post mocks base method.
@@ -180,15 +182,15 @@ func (mr *MockInterfaceMockRecorder) Put() *gomock.Call {
 }
 
 // Verb mocks base method.
-func (m *MockInterface) Verb(arg0 string) *rest.Request {
+func (m *MockInterface) Verb(verb string) *rest.Request {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Verb", arg0)
+	ret := m.ctrl.Call(m, "Verb", verb)
 	ret0, _ := ret[0].(*rest.Request)
 	return ret0
 }
 
 // Verb indicates an expected call of Verb.
-func (mr *MockInterfaceMockRecorder) Verb(arg0 any) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) Verb(verb any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Verb", reflect.TypeOf((*MockInterface)(nil).Verb), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Verb", reflect.TypeOf((*MockInterface)(nil).Verb), verb)
 }

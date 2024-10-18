@@ -22,6 +22,7 @@ import (
 type MockInterface struct {
 	ctrl     *gomock.Controller
 	recorder *MockInterfaceMockRecorder
+	isgomock struct{}
 }
 
 // MockInterfaceMockRecorder is the mock recorder for MockInterface.
@@ -42,43 +43,43 @@ func (m *MockInterface) EXPECT() *MockInterfaceMockRecorder {
 }
 
 // HasPathFrom mocks base method.
-func (m *MockInterface) HasPathFrom(arg0 graph.VertexType, arg1, arg2 string, arg3 graph.VertexType, arg4, arg5 string) bool {
+func (m *MockInterface) HasPathFrom(fromType graph.VertexType, fromNamespace, fromName string, toType graph.VertexType, toNamespace, toName string) bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HasPathFrom", arg0, arg1, arg2, arg3, arg4, arg5)
+	ret := m.ctrl.Call(m, "HasPathFrom", fromType, fromNamespace, fromName, toType, toNamespace, toName)
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
 // HasPathFrom indicates an expected call of HasPathFrom.
-func (mr *MockInterfaceMockRecorder) HasPathFrom(arg0, arg1, arg2, arg3, arg4, arg5 any) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) HasPathFrom(fromType, fromNamespace, fromName, toType, toNamespace, toName any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasPathFrom", reflect.TypeOf((*MockInterface)(nil).HasPathFrom), arg0, arg1, arg2, arg3, arg4, arg5)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasPathFrom", reflect.TypeOf((*MockInterface)(nil).HasPathFrom), fromType, fromNamespace, fromName, toType, toNamespace, toName)
 }
 
 // HasVertex mocks base method.
-func (m *MockInterface) HasVertex(arg0 graph.VertexType, arg1, arg2 string) bool {
+func (m *MockInterface) HasVertex(vertexType graph.VertexType, vertexNamespace, vertexName string) bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HasVertex", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "HasVertex", vertexType, vertexNamespace, vertexName)
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
 // HasVertex indicates an expected call of HasVertex.
-func (mr *MockInterfaceMockRecorder) HasVertex(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) HasVertex(vertexType, vertexNamespace, vertexName any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasVertex", reflect.TypeOf((*MockInterface)(nil).HasVertex), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasVertex", reflect.TypeOf((*MockInterface)(nil).HasVertex), vertexType, vertexNamespace, vertexName)
 }
 
 // Setup mocks base method.
-func (m *MockInterface) Setup(arg0 context.Context, arg1 cache.Cache) error {
+func (m *MockInterface) Setup(ctx context.Context, c cache.Cache) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Setup", arg0, arg1)
+	ret := m.ctrl.Call(m, "Setup", ctx, c)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Setup indicates an expected call of Setup.
-func (mr *MockInterfaceMockRecorder) Setup(arg0, arg1 any) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) Setup(ctx, c any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Setup", reflect.TypeOf((*MockInterface)(nil).Setup), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Setup", reflect.TypeOf((*MockInterface)(nil).Setup), ctx, c)
 }

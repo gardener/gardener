@@ -21,6 +21,7 @@ import (
 type MockConfigCodec struct {
 	ctrl     *gomock.Controller
 	recorder *MockConfigCodecMockRecorder
+	isgomock struct{}
 }
 
 // MockConfigCodecMockRecorder is the mock recorder for MockConfigCodec.

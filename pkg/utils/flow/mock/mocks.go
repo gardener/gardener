@@ -20,6 +20,7 @@ import (
 type MockTaskFn struct {
 	ctrl     *gomock.Controller
 	recorder *MockTaskFnMockRecorder
+	isgomock struct{}
 }
 
 // MockTaskFnMockRecorder is the mock recorder for MockTaskFn.

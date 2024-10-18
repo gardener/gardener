@@ -15,7 +15,6 @@ import (
 
 	gomock "go.uber.org/mock/gomock"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
-	types "k8s.io/apimachinery/pkg/types"
 	cache "sigs.k8s.io/controller-runtime/pkg/cache"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -24,6 +23,7 @@ import (
 type MockCache struct {
 	ctrl     *gomock.Controller
 	recorder *MockCacheMockRecorder
+	isgomock struct{}
 }
 
 // MockCacheMockRecorder is the mock recorder for MockCache.
@@ -44,10 +44,10 @@ func (m *MockCache) EXPECT() *MockCacheMockRecorder {
 }
 
 // Get mocks base method.
-func (m *MockCache) Get(arg0 context.Context, arg1 types.NamespacedName, arg2 client.Object, arg3 ...client.GetOption) error {
+func (m *MockCache) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0, arg1, arg2}
-	for _, a := range arg3 {
+	varargs := []any{ctx, key, obj}
+	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "Get", varargs...)
@@ -56,17 +56,17 @@ func (m *MockCache) Get(arg0 context.Context, arg1 types.NamespacedName, arg2 cl
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockCacheMockRecorder) Get(arg0, arg1, arg2 any, arg3 ...any) *gomock.Call {
+func (mr *MockCacheMockRecorder) Get(ctx, key, obj any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0, arg1, arg2}, arg3...)
+	varargs := append([]any{ctx, key, obj}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockCache)(nil).Get), varargs...)
 }
 
 // GetInformer mocks base method.
-func (m *MockCache) GetInformer(arg0 context.Context, arg1 client.Object, arg2 ...cache.InformerGetOption) (cache.Informer, error) {
+func (m *MockCache) GetInformer(ctx context.Context, obj client.Object, opts ...cache.InformerGetOption) (cache.Informer, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0, arg1}
-	for _, a := range arg2 {
+	varargs := []any{ctx, obj}
+	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "GetInformer", varargs...)
@@ -76,17 +76,17 @@ func (m *MockCache) GetInformer(arg0 context.Context, arg1 client.Object, arg2 .
 }
 
 // GetInformer indicates an expected call of GetInformer.
-func (mr *MockCacheMockRecorder) GetInformer(arg0, arg1 any, arg2 ...any) *gomock.Call {
+func (mr *MockCacheMockRecorder) GetInformer(ctx, obj any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0, arg1}, arg2...)
+	varargs := append([]any{ctx, obj}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInformer", reflect.TypeOf((*MockCache)(nil).GetInformer), varargs...)
 }
 
 // GetInformerForKind mocks base method.
-func (m *MockCache) GetInformerForKind(arg0 context.Context, arg1 schema.GroupVersionKind, arg2 ...cache.InformerGetOption) (cache.Informer, error) {
+func (m *MockCache) GetInformerForKind(ctx context.Context, gvk schema.GroupVersionKind, opts ...cache.InformerGetOption) (cache.Informer, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0, arg1}
-	for _, a := range arg2 {
+	varargs := []any{ctx, gvk}
+	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "GetInformerForKind", varargs...)
@@ -96,31 +96,31 @@ func (m *MockCache) GetInformerForKind(arg0 context.Context, arg1 schema.GroupVe
 }
 
 // GetInformerForKind indicates an expected call of GetInformerForKind.
-func (mr *MockCacheMockRecorder) GetInformerForKind(arg0, arg1 any, arg2 ...any) *gomock.Call {
+func (mr *MockCacheMockRecorder) GetInformerForKind(ctx, gvk any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0, arg1}, arg2...)
+	varargs := append([]any{ctx, gvk}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInformerForKind", reflect.TypeOf((*MockCache)(nil).GetInformerForKind), varargs...)
 }
 
 // IndexField mocks base method.
-func (m *MockCache) IndexField(arg0 context.Context, arg1 client.Object, arg2 string, arg3 client.IndexerFunc) error {
+func (m *MockCache) IndexField(ctx context.Context, obj client.Object, field string, extractValue client.IndexerFunc) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IndexField", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "IndexField", ctx, obj, field, extractValue)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // IndexField indicates an expected call of IndexField.
-func (mr *MockCacheMockRecorder) IndexField(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockCacheMockRecorder) IndexField(ctx, obj, field, extractValue any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IndexField", reflect.TypeOf((*MockCache)(nil).IndexField), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IndexField", reflect.TypeOf((*MockCache)(nil).IndexField), ctx, obj, field, extractValue)
 }
 
 // List mocks base method.
-func (m *MockCache) List(arg0 context.Context, arg1 client.ObjectList, arg2 ...client.ListOption) error {
+func (m *MockCache) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0, arg1}
-	for _, a := range arg2 {
+	varargs := []any{ctx, list}
+	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "List", varargs...)
@@ -129,50 +129,50 @@ func (m *MockCache) List(arg0 context.Context, arg1 client.ObjectList, arg2 ...c
 }
 
 // List indicates an expected call of List.
-func (mr *MockCacheMockRecorder) List(arg0, arg1 any, arg2 ...any) *gomock.Call {
+func (mr *MockCacheMockRecorder) List(ctx, list any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0, arg1}, arg2...)
+	varargs := append([]any{ctx, list}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockCache)(nil).List), varargs...)
 }
 
 // RemoveInformer mocks base method.
-func (m *MockCache) RemoveInformer(arg0 context.Context, arg1 client.Object) error {
+func (m *MockCache) RemoveInformer(ctx context.Context, obj client.Object) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RemoveInformer", arg0, arg1)
+	ret := m.ctrl.Call(m, "RemoveInformer", ctx, obj)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // RemoveInformer indicates an expected call of RemoveInformer.
-func (mr *MockCacheMockRecorder) RemoveInformer(arg0, arg1 any) *gomock.Call {
+func (mr *MockCacheMockRecorder) RemoveInformer(ctx, obj any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveInformer", reflect.TypeOf((*MockCache)(nil).RemoveInformer), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveInformer", reflect.TypeOf((*MockCache)(nil).RemoveInformer), ctx, obj)
 }
 
 // Start mocks base method.
-func (m *MockCache) Start(arg0 context.Context) error {
+func (m *MockCache) Start(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Start", arg0)
+	ret := m.ctrl.Call(m, "Start", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Start indicates an expected call of Start.
-func (mr *MockCacheMockRecorder) Start(arg0 any) *gomock.Call {
+func (mr *MockCacheMockRecorder) Start(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockCache)(nil).Start), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockCache)(nil).Start), ctx)
 }
 
 // WaitForCacheSync mocks base method.
-func (m *MockCache) WaitForCacheSync(arg0 context.Context) bool {
+func (m *MockCache) WaitForCacheSync(ctx context.Context) bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WaitForCacheSync", arg0)
+	ret := m.ctrl.Call(m, "WaitForCacheSync", ctx)
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
 // WaitForCacheSync indicates an expected call of WaitForCacheSync.
-func (mr *MockCacheMockRecorder) WaitForCacheSync(arg0 any) *gomock.Call {
+func (mr *MockCacheMockRecorder) WaitForCacheSync(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForCacheSync", reflect.TypeOf((*MockCache)(nil).WaitForCacheSync), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForCacheSync", reflect.TypeOf((*MockCache)(nil).WaitForCacheSync), ctx)
 }

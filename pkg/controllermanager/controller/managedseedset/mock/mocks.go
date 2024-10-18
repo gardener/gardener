@@ -19,7 +19,6 @@ import (
 	gardener "github.com/gardener/gardener/pkg/utils/gardener"
 	logr "github.com/go-logr/logr"
 	gomock "go.uber.org/mock/gomock"
-	types "k8s.io/apimachinery/pkg/types"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -27,6 +26,7 @@ import (
 type MockActuator struct {
 	ctrl     *gomock.Controller
 	recorder *MockActuatorMockRecorder
+	isgomock struct{}
 }
 
 // MockActuatorMockRecorder is the mock recorder for MockActuator.
@@ -66,6 +66,7 @@ func (mr *MockActuatorMockRecorder) Reconcile(arg0, arg1, arg2 any) *gomock.Call
 type MockReplica struct {
 	ctrl     *gomock.Controller
 	recorder *MockReplicaMockRecorder
+	isgomock struct{}
 }
 
 // MockReplicaMockRecorder is the mock recorder for MockReplica.
@@ -86,59 +87,59 @@ func (m *MockReplica) EXPECT() *MockReplicaMockRecorder {
 }
 
 // CreateManagedSeed mocks base method.
-func (m *MockReplica) CreateManagedSeed(arg0 context.Context, arg1 client.Client) error {
+func (m *MockReplica) CreateManagedSeed(ctx context.Context, c client.Client) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateManagedSeed", arg0, arg1)
+	ret := m.ctrl.Call(m, "CreateManagedSeed", ctx, c)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateManagedSeed indicates an expected call of CreateManagedSeed.
-func (mr *MockReplicaMockRecorder) CreateManagedSeed(arg0, arg1 any) *gomock.Call {
+func (mr *MockReplicaMockRecorder) CreateManagedSeed(ctx, c any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateManagedSeed", reflect.TypeOf((*MockReplica)(nil).CreateManagedSeed), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateManagedSeed", reflect.TypeOf((*MockReplica)(nil).CreateManagedSeed), ctx, c)
 }
 
 // CreateShoot mocks base method.
-func (m *MockReplica) CreateShoot(arg0 context.Context, arg1 client.Client, arg2 int) error {
+func (m *MockReplica) CreateShoot(ctx context.Context, c client.Client, ordinal int) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateShoot", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "CreateShoot", ctx, c, ordinal)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateShoot indicates an expected call of CreateShoot.
-func (mr *MockReplicaMockRecorder) CreateShoot(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockReplicaMockRecorder) CreateShoot(ctx, c, ordinal any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateShoot", reflect.TypeOf((*MockReplica)(nil).CreateShoot), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateShoot", reflect.TypeOf((*MockReplica)(nil).CreateShoot), ctx, c, ordinal)
 }
 
 // DeleteManagedSeed mocks base method.
-func (m *MockReplica) DeleteManagedSeed(arg0 context.Context, arg1 client.Client) error {
+func (m *MockReplica) DeleteManagedSeed(ctx context.Context, c client.Client) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteManagedSeed", arg0, arg1)
+	ret := m.ctrl.Call(m, "DeleteManagedSeed", ctx, c)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteManagedSeed indicates an expected call of DeleteManagedSeed.
-func (mr *MockReplicaMockRecorder) DeleteManagedSeed(arg0, arg1 any) *gomock.Call {
+func (mr *MockReplicaMockRecorder) DeleteManagedSeed(ctx, c any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteManagedSeed", reflect.TypeOf((*MockReplica)(nil).DeleteManagedSeed), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteManagedSeed", reflect.TypeOf((*MockReplica)(nil).DeleteManagedSeed), ctx, c)
 }
 
 // DeleteShoot mocks base method.
-func (m *MockReplica) DeleteShoot(arg0 context.Context, arg1 client.Client) error {
+func (m *MockReplica) DeleteShoot(ctx context.Context, c client.Client) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteShoot", arg0, arg1)
+	ret := m.ctrl.Call(m, "DeleteShoot", ctx, c)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteShoot indicates an expected call of DeleteShoot.
-func (mr *MockReplicaMockRecorder) DeleteShoot(arg0, arg1 any) *gomock.Call {
+func (mr *MockReplicaMockRecorder) DeleteShoot(ctx, c any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteShoot", reflect.TypeOf((*MockReplica)(nil).DeleteShoot), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteShoot", reflect.TypeOf((*MockReplica)(nil).DeleteShoot), ctx, c)
 }
 
 // GetFullName mocks base method.
@@ -170,10 +171,10 @@ func (mr *MockReplicaMockRecorder) GetName() *gomock.Call {
 }
 
 // GetObjectKey mocks base method.
-func (m *MockReplica) GetObjectKey() types.NamespacedName {
+func (m *MockReplica) GetObjectKey() client.ObjectKey {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetObjectKey")
-	ret0, _ := ret[0].(types.NamespacedName)
+	ret0, _ := ret[0].(client.ObjectKey)
 	return ret0
 }
 
@@ -254,23 +255,24 @@ func (mr *MockReplicaMockRecorder) IsSeedReady() *gomock.Call {
 }
 
 // RetryShoot mocks base method.
-func (m *MockReplica) RetryShoot(arg0 context.Context, arg1 client.Client) error {
+func (m *MockReplica) RetryShoot(ctx context.Context, c client.Client) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RetryShoot", arg0, arg1)
+	ret := m.ctrl.Call(m, "RetryShoot", ctx, c)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // RetryShoot indicates an expected call of RetryShoot.
-func (mr *MockReplicaMockRecorder) RetryShoot(arg0, arg1 any) *gomock.Call {
+func (mr *MockReplicaMockRecorder) RetryShoot(ctx, c any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RetryShoot", reflect.TypeOf((*MockReplica)(nil).RetryShoot), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RetryShoot", reflect.TypeOf((*MockReplica)(nil).RetryShoot), ctx, c)
 }
 
 // MockReplicaFactory is a mock of ReplicaFactory interface.
 type MockReplicaFactory struct {
 	ctrl     *gomock.Controller
 	recorder *MockReplicaFactoryMockRecorder
+	isgomock struct{}
 }
 
 // MockReplicaFactoryMockRecorder is the mock recorder for MockReplicaFactory.
@@ -308,6 +310,7 @@ func (mr *MockReplicaFactoryMockRecorder) NewReplica(arg0, arg1, arg2, arg3, arg
 type MockReplicaGetter struct {
 	ctrl     *gomock.Controller
 	recorder *MockReplicaGetterMockRecorder
+	isgomock struct{}
 }
 
 // MockReplicaGetterMockRecorder is the mock recorder for MockReplicaGetter.

@@ -23,6 +23,7 @@ import (
 type MockInterface struct {
 	ctrl     *gomock.Controller
 	recorder *MockInterfaceMockRecorder
+	isgomock struct{}
 }
 
 // MockInterfaceMockRecorder is the mock recorder for MockInterface.
@@ -43,31 +44,31 @@ func (m *MockInterface) EXPECT() *MockInterfaceMockRecorder {
 }
 
 // Deploy mocks base method.
-func (m *MockInterface) Deploy(arg0 context.Context) error {
+func (m *MockInterface) Deploy(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Deploy", arg0)
+	ret := m.ctrl.Call(m, "Deploy", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Deploy indicates an expected call of Deploy.
-func (mr *MockInterfaceMockRecorder) Deploy(arg0 any) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) Deploy(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Deploy", reflect.TypeOf((*MockInterface)(nil).Deploy), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Deploy", reflect.TypeOf((*MockInterface)(nil).Deploy), ctx)
 }
 
 // Destroy mocks base method.
-func (m *MockInterface) Destroy(arg0 context.Context) error {
+func (m *MockInterface) Destroy(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Destroy", arg0)
+	ret := m.ctrl.Call(m, "Destroy", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Destroy indicates an expected call of Destroy.
-func (mr *MockInterfaceMockRecorder) Destroy(arg0 any) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) Destroy(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockInterface)(nil).Destroy), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockInterface)(nil).Destroy), ctx)
 }
 
 // GetValues mocks base method.
@@ -85,77 +86,77 @@ func (mr *MockInterfaceMockRecorder) GetValues() *gomock.Call {
 }
 
 // SetNodeNetworkCIDRs mocks base method.
-func (m *MockInterface) SetNodeNetworkCIDRs(arg0 []net.IPNet) {
+func (m *MockInterface) SetNodeNetworkCIDRs(nodes []net.IPNet) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetNodeNetworkCIDRs", arg0)
+	m.ctrl.Call(m, "SetNodeNetworkCIDRs", nodes)
 }
 
 // SetNodeNetworkCIDRs indicates an expected call of SetNodeNetworkCIDRs.
-func (mr *MockInterfaceMockRecorder) SetNodeNetworkCIDRs(arg0 any) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) SetNodeNetworkCIDRs(nodes any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetNodeNetworkCIDRs", reflect.TypeOf((*MockInterface)(nil).SetNodeNetworkCIDRs), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetNodeNetworkCIDRs", reflect.TypeOf((*MockInterface)(nil).SetNodeNetworkCIDRs), nodes)
 }
 
 // SetPodNetworkCIDRs mocks base method.
-func (m *MockInterface) SetPodNetworkCIDRs(arg0 []net.IPNet) {
+func (m *MockInterface) SetPodNetworkCIDRs(pods []net.IPNet) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetPodNetworkCIDRs", arg0)
+	m.ctrl.Call(m, "SetPodNetworkCIDRs", pods)
 }
 
 // SetPodNetworkCIDRs indicates an expected call of SetPodNetworkCIDRs.
-func (mr *MockInterfaceMockRecorder) SetPodNetworkCIDRs(arg0 any) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) SetPodNetworkCIDRs(pods any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetPodNetworkCIDRs", reflect.TypeOf((*MockInterface)(nil).SetPodNetworkCIDRs), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetPodNetworkCIDRs", reflect.TypeOf((*MockInterface)(nil).SetPodNetworkCIDRs), pods)
 }
 
 // SetSeedNamespaceObjectUID mocks base method.
-func (m *MockInterface) SetSeedNamespaceObjectUID(arg0 types.UID) {
+func (m *MockInterface) SetSeedNamespaceObjectUID(namespaceUID types.UID) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetSeedNamespaceObjectUID", arg0)
+	m.ctrl.Call(m, "SetSeedNamespaceObjectUID", namespaceUID)
 }
 
 // SetSeedNamespaceObjectUID indicates an expected call of SetSeedNamespaceObjectUID.
-func (mr *MockInterfaceMockRecorder) SetSeedNamespaceObjectUID(arg0 any) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) SetSeedNamespaceObjectUID(namespaceUID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSeedNamespaceObjectUID", reflect.TypeOf((*MockInterface)(nil).SetSeedNamespaceObjectUID), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSeedNamespaceObjectUID", reflect.TypeOf((*MockInterface)(nil).SetSeedNamespaceObjectUID), namespaceUID)
 }
 
 // SetServiceNetworkCIDRs mocks base method.
-func (m *MockInterface) SetServiceNetworkCIDRs(arg0 []net.IPNet) {
+func (m *MockInterface) SetServiceNetworkCIDRs(services []net.IPNet) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetServiceNetworkCIDRs", arg0)
+	m.ctrl.Call(m, "SetServiceNetworkCIDRs", services)
 }
 
 // SetServiceNetworkCIDRs indicates an expected call of SetServiceNetworkCIDRs.
-func (mr *MockInterfaceMockRecorder) SetServiceNetworkCIDRs(arg0 any) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) SetServiceNetworkCIDRs(services any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetServiceNetworkCIDRs", reflect.TypeOf((*MockInterface)(nil).SetServiceNetworkCIDRs), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetServiceNetworkCIDRs", reflect.TypeOf((*MockInterface)(nil).SetServiceNetworkCIDRs), services)
 }
 
 // Wait mocks base method.
-func (m *MockInterface) Wait(arg0 context.Context) error {
+func (m *MockInterface) Wait(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Wait", arg0)
+	ret := m.ctrl.Call(m, "Wait", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Wait indicates an expected call of Wait.
-func (mr *MockInterfaceMockRecorder) Wait(arg0 any) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) Wait(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Wait", reflect.TypeOf((*MockInterface)(nil).Wait), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Wait", reflect.TypeOf((*MockInterface)(nil).Wait), ctx)
 }
 
 // WaitCleanup mocks base method.
-func (m *MockInterface) WaitCleanup(arg0 context.Context) error {
+func (m *MockInterface) WaitCleanup(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WaitCleanup", arg0)
+	ret := m.ctrl.Call(m, "WaitCleanup", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // WaitCleanup indicates an expected call of WaitCleanup.
-func (mr *MockInterfaceMockRecorder) WaitCleanup(arg0 any) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) WaitCleanup(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitCleanup", reflect.TypeOf((*MockInterface)(nil).WaitCleanup), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitCleanup", reflect.TypeOf((*MockInterface)(nil).WaitCleanup), ctx)
 }

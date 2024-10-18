@@ -21,6 +21,7 @@ import (
 type MockAuthorizer struct {
 	ctrl     *gomock.Controller
 	recorder *MockAuthorizerMockRecorder
+	isgomock struct{}
 }
 
 // MockAuthorizerMockRecorder is the mock recorder for MockAuthorizer.
@@ -41,9 +42,9 @@ func (m *MockAuthorizer) EXPECT() *MockAuthorizerMockRecorder {
 }
 
 // Authorize mocks base method.
-func (m *MockAuthorizer) Authorize(arg0 context.Context, arg1 authorizer.Attributes) (authorizer.Decision, string, error) {
+func (m *MockAuthorizer) Authorize(ctx context.Context, a authorizer.Attributes) (authorizer.Decision, string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Authorize", arg0, arg1)
+	ret := m.ctrl.Call(m, "Authorize", ctx, a)
 	ret0, _ := ret[0].(authorizer.Decision)
 	ret1, _ := ret[1].(string)
 	ret2, _ := ret[2].(error)
@@ -51,7 +52,7 @@ func (m *MockAuthorizer) Authorize(arg0 context.Context, arg1 authorizer.Attribu
 }
 
 // Authorize indicates an expected call of Authorize.
-func (mr *MockAuthorizerMockRecorder) Authorize(arg0, arg1 any) *gomock.Call {
+func (mr *MockAuthorizerMockRecorder) Authorize(ctx, a any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Authorize", reflect.TypeOf((*MockAuthorizer)(nil).Authorize), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Authorize", reflect.TypeOf((*MockAuthorizer)(nil).Authorize), ctx, a)
 }

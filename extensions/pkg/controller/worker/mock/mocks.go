@@ -13,8 +13,8 @@ import (
 	context "context"
 	reflect "reflect"
 
+	controller "github.com/gardener/gardener/extensions/pkg/controller"
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	extensions "github.com/gardener/gardener/pkg/extensions"
 	logr "github.com/go-logr/logr"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -23,6 +23,7 @@ import (
 type MockActuator struct {
 	ctrl     *gomock.Controller
 	recorder *MockActuatorMockRecorder
+	isgomock struct{}
 }
 
 // MockActuatorMockRecorder is the mock recorder for MockActuator.
@@ -43,7 +44,7 @@ func (m *MockActuator) EXPECT() *MockActuatorMockRecorder {
 }
 
 // Delete mocks base method.
-func (m *MockActuator) Delete(arg0 context.Context, arg1 logr.Logger, arg2 *v1alpha1.Worker, arg3 *extensions.Cluster) error {
+func (m *MockActuator) Delete(arg0 context.Context, arg1 logr.Logger, arg2 *v1alpha1.Worker, arg3 *controller.Cluster) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
@@ -57,7 +58,7 @@ func (mr *MockActuatorMockRecorder) Delete(arg0, arg1, arg2, arg3 any) *gomock.C
 }
 
 // ForceDelete mocks base method.
-func (m *MockActuator) ForceDelete(arg0 context.Context, arg1 logr.Logger, arg2 *v1alpha1.Worker, arg3 *extensions.Cluster) error {
+func (m *MockActuator) ForceDelete(arg0 context.Context, arg1 logr.Logger, arg2 *v1alpha1.Worker, arg3 *controller.Cluster) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ForceDelete", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
@@ -71,7 +72,7 @@ func (mr *MockActuatorMockRecorder) ForceDelete(arg0, arg1, arg2, arg3 any) *gom
 }
 
 // Migrate mocks base method.
-func (m *MockActuator) Migrate(arg0 context.Context, arg1 logr.Logger, arg2 *v1alpha1.Worker, arg3 *extensions.Cluster) error {
+func (m *MockActuator) Migrate(arg0 context.Context, arg1 logr.Logger, arg2 *v1alpha1.Worker, arg3 *controller.Cluster) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Migrate", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
@@ -85,7 +86,7 @@ func (mr *MockActuatorMockRecorder) Migrate(arg0, arg1, arg2, arg3 any) *gomock.
 }
 
 // Reconcile mocks base method.
-func (m *MockActuator) Reconcile(arg0 context.Context, arg1 logr.Logger, arg2 *v1alpha1.Worker, arg3 *extensions.Cluster) error {
+func (m *MockActuator) Reconcile(arg0 context.Context, arg1 logr.Logger, arg2 *v1alpha1.Worker, arg3 *controller.Cluster) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Reconcile", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
@@ -99,7 +100,7 @@ func (mr *MockActuatorMockRecorder) Reconcile(arg0, arg1, arg2, arg3 any) *gomoc
 }
 
 // Restore mocks base method.
-func (m *MockActuator) Restore(arg0 context.Context, arg1 logr.Logger, arg2 *v1alpha1.Worker, arg3 *extensions.Cluster) error {
+func (m *MockActuator) Restore(arg0 context.Context, arg1 logr.Logger, arg2 *v1alpha1.Worker, arg3 *controller.Cluster) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Restore", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)

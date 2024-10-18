@@ -20,6 +20,7 @@ import (
 type MockChartRendererFactory struct {
 	ctrl     *gomock.Controller
 	recorder *MockChartRendererFactoryMockRecorder
+	isgomock struct{}
 }
 
 // MockChartRendererFactoryMockRecorder is the mock recorder for MockChartRendererFactory.

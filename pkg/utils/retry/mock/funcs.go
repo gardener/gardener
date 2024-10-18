@@ -20,6 +20,7 @@ import (
 type MockWaitFunc struct {
 	ctrl     *gomock.Controller
 	recorder *MockWaitFuncMockRecorder
+	isgomock struct{}
 }
 
 // MockWaitFuncMockRecorder is the mock recorder for MockWaitFunc.
@@ -40,24 +41,25 @@ func (m *MockWaitFunc) EXPECT() *MockWaitFuncMockRecorder {
 }
 
 // Do mocks base method.
-func (m *MockWaitFunc) Do(arg0 context.Context) (context.Context, context.CancelFunc) {
+func (m *MockWaitFunc) Do(ctx context.Context) (context.Context, context.CancelFunc) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Do", arg0)
+	ret := m.ctrl.Call(m, "Do", ctx)
 	ret0, _ := ret[0].(context.Context)
 	ret1, _ := ret[1].(context.CancelFunc)
 	return ret0, ret1
 }
 
 // Do indicates an expected call of Do.
-func (mr *MockWaitFuncMockRecorder) Do(arg0 any) *gomock.Call {
+func (mr *MockWaitFuncMockRecorder) Do(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Do", reflect.TypeOf((*MockWaitFunc)(nil).Do), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Do", reflect.TypeOf((*MockWaitFunc)(nil).Do), ctx)
 }
 
 // MockFunc is a mock of Func interface.
 type MockFunc struct {
 	ctrl     *gomock.Controller
 	recorder *MockFuncMockRecorder
+	isgomock struct{}
 }
 
 // MockFuncMockRecorder is the mock recorder for MockFunc.
@@ -78,16 +80,16 @@ func (m *MockFunc) EXPECT() *MockFuncMockRecorder {
 }
 
 // Do mocks base method.
-func (m *MockFunc) Do(arg0 context.Context) (bool, error) {
+func (m *MockFunc) Do(ctx context.Context) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Do", arg0)
+	ret := m.ctrl.Call(m, "Do", ctx)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Do indicates an expected call of Do.
-func (mr *MockFuncMockRecorder) Do(arg0 any) *gomock.Call {
+func (mr *MockFuncMockRecorder) Do(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Do", reflect.TypeOf((*MockFunc)(nil).Do), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Do", reflect.TypeOf((*MockFunc)(nil).Do), ctx)
 }

@@ -27,6 +27,7 @@ import (
 type MockInterface struct {
 	ctrl     *gomock.Controller
 	recorder *MockInterfaceMockRecorder
+	isgomock struct{}
 }
 
 // MockInterfaceMockRecorder is the mock recorder for MockInterface.
@@ -188,15 +189,15 @@ func (mr *MockInterfaceMockRecorder) RESTConfig() *gomock.Call {
 }
 
 // Start mocks base method.
-func (m *MockInterface) Start(arg0 context.Context) {
+func (m *MockInterface) Start(ctx context.Context) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Start", arg0)
+	m.ctrl.Call(m, "Start", ctx)
 }
 
 // Start indicates an expected call of Start.
-func (mr *MockInterfaceMockRecorder) Start(arg0 any) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) Start(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockInterface)(nil).Start), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockInterface)(nil).Start), ctx)
 }
 
 // Version mocks base method.
@@ -214,15 +215,15 @@ func (mr *MockInterfaceMockRecorder) Version() *gomock.Call {
 }
 
 // WaitForCacheSync mocks base method.
-func (m *MockInterface) WaitForCacheSync(arg0 context.Context) bool {
+func (m *MockInterface) WaitForCacheSync(ctx context.Context) bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WaitForCacheSync", arg0)
+	ret := m.ctrl.Call(m, "WaitForCacheSync", ctx)
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
 // WaitForCacheSync indicates an expected call of WaitForCacheSync.
-func (mr *MockInterfaceMockRecorder) WaitForCacheSync(arg0 any) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) WaitForCacheSync(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForCacheSync", reflect.TypeOf((*MockInterface)(nil).WaitForCacheSync), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForCacheSync", reflect.TypeOf((*MockInterface)(nil).WaitForCacheSync), ctx)
 }

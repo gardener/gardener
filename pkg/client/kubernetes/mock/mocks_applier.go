@@ -21,6 +21,7 @@ import (
 type MockApplier struct {
 	ctrl     *gomock.Controller
 	recorder *MockApplierMockRecorder
+	isgomock struct{}
 }
 
 // MockApplierMockRecorder is the mock recorder for MockApplier.
@@ -41,24 +42,24 @@ func (m *MockApplier) EXPECT() *MockApplierMockRecorder {
 }
 
 // ApplyManifest mocks base method.
-func (m *MockApplier) ApplyManifest(arg0 context.Context, arg1 kubernetes.UnstructuredReader, arg2 kubernetes.MergeFuncs) error {
+func (m *MockApplier) ApplyManifest(ctx context.Context, unstructured kubernetes.UnstructuredReader, options kubernetes.MergeFuncs) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ApplyManifest", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "ApplyManifest", ctx, unstructured, options)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ApplyManifest indicates an expected call of ApplyManifest.
-func (mr *MockApplierMockRecorder) ApplyManifest(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockApplierMockRecorder) ApplyManifest(ctx, unstructured, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyManifest", reflect.TypeOf((*MockApplier)(nil).ApplyManifest), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyManifest", reflect.TypeOf((*MockApplier)(nil).ApplyManifest), ctx, unstructured, options)
 }
 
 // DeleteManifest mocks base method.
-func (m *MockApplier) DeleteManifest(arg0 context.Context, arg1 kubernetes.UnstructuredReader, arg2 ...kubernetes.DeleteManifestOption) error {
+func (m *MockApplier) DeleteManifest(ctx context.Context, unstructured kubernetes.UnstructuredReader, opts ...kubernetes.DeleteManifestOption) error {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0, arg1}
-	for _, a := range arg2 {
+	varargs := []any{ctx, unstructured}
+	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "DeleteManifest", varargs...)
@@ -67,8 +68,8 @@ func (m *MockApplier) DeleteManifest(arg0 context.Context, arg1 kubernetes.Unstr
 }
 
 // DeleteManifest indicates an expected call of DeleteManifest.
-func (mr *MockApplierMockRecorder) DeleteManifest(arg0, arg1 any, arg2 ...any) *gomock.Call {
+func (mr *MockApplierMockRecorder) DeleteManifest(ctx, unstructured any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0, arg1}, arg2...)
+	varargs := append([]any{ctx, unstructured}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteManifest", reflect.TypeOf((*MockApplier)(nil).DeleteManifest), varargs...)
 }

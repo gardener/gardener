@@ -21,6 +21,7 @@ import (
 type MockMutator struct {
 	ctrl     *gomock.Controller
 	recorder *MockMutatorMockRecorder
+	isgomock struct{}
 }
 
 // MockMutatorMockRecorder is the mock recorder for MockMutator.
@@ -41,15 +42,15 @@ func (m *MockMutator) EXPECT() *MockMutatorMockRecorder {
 }
 
 // Mutate mocks base method.
-func (m *MockMutator) Mutate(arg0 context.Context, arg1, arg2 client.Object) error {
+func (m *MockMutator) Mutate(ctx context.Context, new, old client.Object) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Mutate", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Mutate", ctx, new, old)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Mutate indicates an expected call of Mutate.
-func (mr *MockMutatorMockRecorder) Mutate(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockMutatorMockRecorder) Mutate(ctx, new, old any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Mutate", reflect.TypeOf((*MockMutator)(nil).Mutate), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Mutate", reflect.TypeOf((*MockMutator)(nil).Mutate), ctx, new, old)
 }

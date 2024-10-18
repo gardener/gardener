@@ -20,6 +20,7 @@ import (
 type MockTypedRateLimitingInterface[T comparable] struct {
 	ctrl     *gomock.Controller
 	recorder *MockTypedRateLimitingInterfaceMockRecorder[T]
+	isgomock struct{}
 }
 
 // MockTypedRateLimitingInterfaceMockRecorder is the mock recorder for MockTypedRateLimitingInterface.

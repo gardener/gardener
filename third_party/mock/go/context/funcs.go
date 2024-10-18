@@ -21,6 +21,7 @@ import (
 type MockWithTimeout struct {
 	ctrl     *gomock.Controller
 	recorder *MockWithTimeoutMockRecorder
+	isgomock struct{}
 }
 
 // MockWithTimeoutMockRecorder is the mock recorder for MockWithTimeout.
@@ -41,24 +42,25 @@ func (m *MockWithTimeout) EXPECT() *MockWithTimeoutMockRecorder {
 }
 
 // Do mocks base method.
-func (m *MockWithTimeout) Do(arg0 context.Context, arg1 time.Duration) (context.Context, context.CancelFunc) {
+func (m *MockWithTimeout) Do(parent context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Do", arg0, arg1)
+	ret := m.ctrl.Call(m, "Do", parent, timeout)
 	ret0, _ := ret[0].(context.Context)
 	ret1, _ := ret[1].(context.CancelFunc)
 	return ret0, ret1
 }
 
 // Do indicates an expected call of Do.
-func (mr *MockWithTimeoutMockRecorder) Do(arg0, arg1 any) *gomock.Call {
+func (mr *MockWithTimeoutMockRecorder) Do(parent, timeout any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Do", reflect.TypeOf((*MockWithTimeout)(nil).Do), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Do", reflect.TypeOf((*MockWithTimeout)(nil).Do), parent, timeout)
 }
 
 // MockCancelFunc is a mock of CancelFunc interface.
 type MockCancelFunc struct {
 	ctrl     *gomock.Controller
 	recorder *MockCancelFuncMockRecorder
+	isgomock struct{}
 }
 
 // MockCancelFuncMockRecorder is the mock recorder for MockCancelFunc.
