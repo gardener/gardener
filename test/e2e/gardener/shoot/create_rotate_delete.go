@@ -15,7 +15,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -204,13 +203,6 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		f := defaultShootCreationFramework()
 		f.Shoot = shoot
 
-		// Setting the kubernetes versions to < 1.27 as enableStaticTokenKubeconfig cannot be enabled
-		// for Shoot clusters with k8s version >= 1.27.
-		f.Shoot.Spec.Kubernetes.Version = "1.26.0"
-
-		// Explicitly enable the static token kubeconfig to test the kubeconfig rotation.
-		f.Shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(true)
-
 		It("Create Shoot, Rotate Credentials and Delete Shoot", Offset(1), Label("credentials-rotation"), func() {
 			ctx, cancel := context.WithTimeout(parentCtx, 30*time.Minute)
 			defer cancel()
@@ -231,7 +223,6 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			v := rotationutils.Verifiers{
 				// basic verifiers checking secrets
 				&rotation.CAVerifier{ShootCreationFramework: f},
-				&rotation.KubeconfigVerifier{ShootCreationFramework: f},
 				&rotationutils.ObservabilityVerifier{
 					GetObservabilitySecretFunc: func(ctx context.Context) (*corev1.Secret, error) {
 						secret := &corev1.Secret{}
