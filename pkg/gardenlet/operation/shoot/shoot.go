@@ -113,21 +113,6 @@ func (b *Builder) WithExposureClassObject(exposureClass *gardencorev1beta1.Expos
 	return b
 }
 
-// WithShootCredentials sets the shootCredentialsFunc attribute at the Builder.
-// If the credentials are not of type [*corev1.Secret] or [*securityv1alpha1.WorkloadIdentity]
-// the function will panic.
-func (b *Builder) WithShootCredentials(credentials client.Object) *Builder {
-	_, isSecret := credentials.(*corev1.Secret)
-	_, isWorkloadIdentity := credentials.(*securityv1alpha1.WorkloadIdentity)
-
-	if !isSecret && !isWorkloadIdentity {
-		panic("credentials must be of type [*corev1.Secret] or [*securityv1alpha1.WorkloadIdentity]")
-	}
-
-	b.shootCredentialsFunc = func(context.Context, string, string, bool) (client.Object, error) { return credentials, nil }
-	return b
-}
-
 // WithShootCredentialsFrom sets the shootCredentialsFunc attribute at the Builder after fetching it from the given reader.
 func (b *Builder) WithShootCredentialsFrom(c client.Reader) *Builder {
 	b.shootCredentialsFunc = func(ctx context.Context, namespace, bindingName string, fromSecretBinding bool) (client.Object, error) {
