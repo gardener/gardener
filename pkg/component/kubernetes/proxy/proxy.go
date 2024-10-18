@@ -123,7 +123,7 @@ func (k *kubeProxy) Deploy(ctx context.Context) error {
 		scrapeConfig.Spec = shoot.ClusterComponentScrapeConfigSpec(
 			"kube-proxy",
 			shoot.KubernetesServiceDiscoveryConfig{
-				Role:             "endpoints",
+				Role:             monitoringv1alpha1.KubernetesRoleEndpoint,
 				ServiceName:      serviceName,
 				EndpointPortName: portNameMetrics,
 			},

@@ -47,7 +47,7 @@ import (
 var _ = Describe("Prometheus", func() {
 	type alertmanager struct {
 		name      string
-		namespace string
+		namespace *string
 	}
 
 	var (
@@ -788,7 +788,7 @@ location /api/v1/targets {
 						serviceAccount,
 						service,
 						clusterRoleBinding,
-						prometheusFor([]alertmanager{{name: alertmanagerName, namespace: namespace}}, false),
+						prometheusFor([]alertmanager{{name: alertmanagerName}}, false),
 						vpa,
 						prometheusRule,
 						scrapeConfig,
@@ -817,8 +817,8 @@ location /api/v1/targets {
 							clusterRoleBinding,
 							prometheusFor(
 								[]alertmanager{
-									{name: alertmanagerName, namespace: namespace},
-									{name: alertmanagerName2, namespace: alertmanagerNamespace2}},
+									{name: alertmanagerName},
+									{name: alertmanagerName2, namespace: &alertmanagerNamespace2}},
 								false),
 							vpa,
 							prometheusRule,
@@ -843,7 +843,7 @@ location /api/v1/targets {
 						})
 
 						It("should successfully deploy all resources", func() {
-							prometheusObj := prometheusFor([]alertmanager{{name: alertmanagerName, namespace: namespace}}, false)
+							prometheusObj := prometheusFor([]alertmanager{{name: alertmanagerName}}, false)
 							prometheusObj.Spec.AdditionalAlertManagerConfigs = &corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{Name: secretAdditionalAlertmanagerConfigs.Name},
 								Key:                  "configs.yaml",
@@ -893,7 +893,7 @@ basic_auth:
 						})
 
 						It("should successfully deploy all resources", func() {
-							prometheusObj := prometheusFor([]alertmanager{{name: alertmanagerName, namespace: namespace}}, false)
+							prometheusObj := prometheusFor([]alertmanager{{name: alertmanagerName}}, false)
 							prometheusObj.Spec.AdditionalAlertManagerConfigs = &corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{Name: secretAdditionalAlertmanagerConfigs.Name},
 								Key:                  "configs.yaml",
@@ -951,7 +951,7 @@ tls_config:
 						metav1.SetMetaDataLabel(&serviceMonitor.ObjectMeta, "prometheus", name)
 						metav1.SetMetaDataLabel(&podMonitor.ObjectMeta, "prometheus", name)
 
-						prometheus := prometheusFor([]alertmanager{{name: alertmanagerName, namespace: namespace}}, false)
+						prometheus := prometheusFor([]alertmanager{{name: alertmanagerName}}, false)
 						prometheus.Spec.Alerting.Alertmanagers[0].AlertRelabelConfigs = append(
 							prometheus.Spec.Alerting.Alertmanagers[0].AlertRelabelConfigs,
 							monitoringv1.RelabelConfig{

@@ -109,7 +109,7 @@ func (p *prometheus) prometheus(cortexConfigMap *corev1.ConfigMap) *monitoringv1
 		}
 		for _, alertManager := range p.values.Alerting.Alertmanagers {
 			obj.Spec.Alerting.Alertmanagers = append(obj.Spec.Alerting.Alertmanagers, monitoringv1.AlertmanagerEndpoints{
-				Namespace: ptr.Deref(alertManager.Namespace, p.namespace),
+				Namespace: alertManager.Namespace,
 				Name:      alertManager.Name,
 				Port:      intstr.FromString(alertmanager.PortNameMetrics),
 				AlertRelabelConfigs: append(

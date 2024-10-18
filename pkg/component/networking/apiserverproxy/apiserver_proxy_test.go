@@ -102,7 +102,7 @@ var _ = Describe("APIServerProxy", func() {
 				}},
 				KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
 					APIServer:  ptr.To("https://kube-apiserver"),
-					Role:       "endpoints",
+					Role:       "Endpoints",
 					Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{"kube-system"}},
 					Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},

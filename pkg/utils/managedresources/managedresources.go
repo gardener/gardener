@@ -5,16 +5,21 @@
 package managedresources
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"regexp"
 	"strings"
 	"time"
 
+	"github.com/andybalholm/brotli"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -431,4 +436,65 @@ func CheckIfManagedResourcesExist(ctx context.Context, c client.Client, class *s
 	}
 
 	return false, nil
+}
+
+// GetObjects returns the objects which belong to this managed resource.
+func GetObjects(ctx context.Context, c client.Client, namespace, name string) ([]client.Object, error) {
+	var objects []client.Object
+
+	managedResource := &resourcesv1alpha1.ManagedResource{}
+	if err := c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, managedResource); err != nil {
+		return nil, fmt.Errorf("could not get ManagedResource %q: %w", client.ObjectKey{Namespace: namespace, Name: name}, err)
+	}
+
+	decoder := serializer.NewCodecFactory(c.Scheme()).UniversalDeserializer()
+	for _, secretRef := range managedResource.Spec.SecretRefs {
+		secret := &corev1.Secret{}
+		if err := c.Get(ctx, client.ObjectKey{Name: secretRef.Name, Namespace: managedResource.Namespace}, secret); err != nil {
+			return nil, fmt.Errorf("could not get secret %q: %w", client.ObjectKey{Name: secretRef.Name, Namespace: managedResource.Namespace}, err)
+		}
+
+		objectsFromSecret, err := extractObjectsFromSecret(decoder, secret)
+		if err != nil {
+			return nil, fmt.Errorf("could not extract objects from secret %q: %w", client.ObjectKeyFromObject(secret), err)
+		}
+
+		objects = append(objects, objectsFromSecret...)
+	}
+
+	return objects, nil
+}
+
+func extractObjectsFromSecret(decoder runtime.Decoder, secret *corev1.Secret) ([]client.Object, error) {
+	var objects []client.Object
+
+	for key, value := range secret.Data {
+		var data []byte
+
+		if strings.HasSuffix(key, resourcesv1alpha1.BrotliCompressionSuffix) {
+			reader := brotli.NewReader(bytes.NewReader(value))
+			var err error
+			data, err = io.ReadAll(reader)
+			if err != nil {
+				return nil, fmt.Errorf("could not read brotli compressed data from key %q: %w", key, err)
+			}
+		} else {
+			data = value
+		}
+
+		for _, objRaw := range strings.Split(string(data), "---\n") {
+			if objRaw == "" {
+				continue
+			}
+
+			obj, _, err := decoder.Decode([]byte(objRaw), nil, nil)
+			if err != nil {
+				return nil, fmt.Errorf("could not decode object: %w", err)
+			}
+
+			objects = append(objects, obj.(client.Object))
+		}
+	}
+
+	return objects, nil
 }

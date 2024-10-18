@@ -137,6 +137,20 @@ generate_group () {
     generate="controller-gen crd"$crd_options" paths="$package_path" output:crd:dir="$output_dir_temp" output:stdout"
     $generate &> "$generator_output" ||:
     grep -v -e 'map keys must be strings, not int' -e 'not all generators ran successfully' -e 'usage' "$generator_output" && { echo "Failed to generate CRD YAMLs."; exit 1; }
+  elif [[ "$group" == "monitoring.coreos.com_v1alpha1" ]]; then
+    # ScrapeConfig roles change recently, see https://github.com/prometheus-operator/prometheus-operator/commit/38900ced627fdde49f3136795a678fbb8f79de05#diff-95caef4dacf48c47bf56afc00c513822feba29a5d2f6354b75c97a25a353d52fL75-R77
+    # The old roles (starting with lower case letters) are still working (because later roles are converted to lower case anyway). Yet, they are forbidden by the new enum.
+    # Some extensions still use the old roles, so we patch the CRD to give time for updating them.
+    # TODO(oliver-goetz): Remove this workaround in release v1.120 when all extensions have adapted the new scrapeconfig.
+    monitoring_dir="$(go list -f '{{ .Dir }}' "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring")"
+    scrapeconfig_types_file="${monitoring_dir}/v1alpha1/scrapeconfig_types.go"
+    # Create a local copy outside the mod cache path in order to patch the types file via sed.
+    scrapeconfig_types_backup="$(mktemp -d)/scrapeconfig_types.go"
+    cp "$scrapeconfig_types_file" "$scrapeconfig_types_backup"
+    chmod +w "$scrapeconfig_types_file" "$monitoring_dir/v1alpha1/"
+    trap 'cp "$scrapeconfig_types_backup" "$scrapeconfig_types_file" && chmod -w "$monitoring_dir/v1alpha1/"' EXIT
+    sed -i 's/\+kubebuilder:validation:Enum=Pod;Endpoints;Ingress;Service;Node;EndpointSlice/\+kubebuilder:validation:Enum=Pod;pod;Endpoints;endpoints;Ingress;ingress;Service;service;Node;node;EndpointSlice;endpointslice/g' "$scrapeconfig_types_file"
+    $generate
   else
     $generate
   fi

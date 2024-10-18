@@ -34,7 +34,7 @@ var _ = Describe("Utils", func() {
 				Expect(shoot.ClusterComponentScrapeConfigSpec(
 					jobName,
 					shoot.KubernetesServiceDiscoveryConfig{
-						Role:              "pod",
+						Role:              "Pod",
 						PodNamePrefix:     podNamePrefix,
 						ContainerName:     containerName,
 						ContainerPortName: containerPortName,
@@ -50,7 +50,7 @@ var _ = Describe("Utils", func() {
 					}},
 					KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
 						APIServer:  ptr.To("https://kube-apiserver"),
-						Role:       "pod",
+						Role:       "Pod",
 						Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{"kube-system"}},
 						Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 							LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},
@@ -120,7 +120,7 @@ var _ = Describe("Utils", func() {
 				Expect(shoot.ClusterComponentScrapeConfigSpec(
 					jobName,
 					shoot.KubernetesServiceDiscoveryConfig{
-						Role:             "endpoints",
+						Role:             "Endpoints",
 						ServiceName:      serviceName,
 						EndpointPortName: endpointPortName,
 					},
@@ -135,7 +135,7 @@ var _ = Describe("Utils", func() {
 					}},
 					KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
 						APIServer:  ptr.To("https://kube-apiserver"),
-						Role:       "endpoints",
+						Role:       "Endpoints",
 						Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{"kube-system"}},
 						Authorization: &monitoringv1.SafeAuthorization{Credentials: &corev1.SecretKeySelector{
 							LocalObjectReference: corev1.LocalObjectReference{Name: "shoot-access-prometheus-shoot"},

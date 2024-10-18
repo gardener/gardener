@@ -39,7 +39,7 @@ func ScrapeConfig(namespace string) []*monitoringv1alpha1.ScrapeConfig {
 				Key:                  resourcesv1alpha1.DataKeyToken,
 			}},
 			KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
-				Role:       "service",
+				Role:       monitoringv1alpha1.KubernetesRoleService,
 				Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{metav1.NamespaceSystem}},
 				APIServer:  ptr.To("https://" + v1beta1constants.DeploymentNameKubeAPIServer + ":" + strconv.Itoa(kubeapiserverconstants.Port)),
 				// This is needed because we do not fetch the correct cluster CA bundle right now
