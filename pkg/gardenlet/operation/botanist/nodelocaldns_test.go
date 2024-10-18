@@ -48,6 +48,7 @@ var _ = Describe("NodeLocalDNS", func() {
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					Version: "1.26.1",
 				},
+				Networking: &gardencorev1beta1.Networking{IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4}},
 			},
 		})
 	})
@@ -102,6 +103,7 @@ var _ = Describe("NodeLocalDNS", func() {
 
 			nodelocaldns.EXPECT().SetClusterDNS([]string{"__PILLAR__CLUSTER__DNS__"})
 			nodelocaldns.EXPECT().SetDNSServers([]string{botanist.Shoot.Networks.CoreDNS[0].String(), botanist.Shoot.Networks.CoreDNS[1].String()})
+			nodelocaldns.EXPECT().SetIPFamilies([]gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4})
 		})
 
 		It("should fail when the deploy function fails", func() {

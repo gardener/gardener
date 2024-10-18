@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/component/networking/nodelocaldns"
@@ -45,6 +46,7 @@ func (b *Botanist) ReconcileNodeLocalDNS(ctx context.Context) error {
 	clusterDNS := []string{"__PILLAR__CLUSTER__DNS__"}
 	var dnsServers []string
 	var coreDNS []string
+	var ipfamilies []gardencorev1beta1.IPFamily
 	for _, ip := range b.Shoot.Networks.CoreDNS {
 		coreDNS = append(coreDNS, ip.String())
 	}
@@ -53,9 +55,10 @@ func (b *Botanist) ReconcileNodeLocalDNS(ctx context.Context) error {
 	} else {
 		dnsServers = coreDNS
 	}
+	ipfamilies = b.Shoot.GetInfo().Spec.Networking.IPFamilies
 	b.Shoot.Components.SystemComponents.NodeLocalDNS.SetClusterDNS(clusterDNS)
 	b.Shoot.Components.SystemComponents.NodeLocalDNS.SetDNSServers(dnsServers)
-
+	b.Shoot.Components.SystemComponents.NodeLocalDNS.SetIPFamilies(ipfamilies)
 	if b.Shoot.NodeLocalDNSEnabled {
 		return b.Shoot.Components.SystemComponents.NodeLocalDNS.Deploy(ctx)
 	}

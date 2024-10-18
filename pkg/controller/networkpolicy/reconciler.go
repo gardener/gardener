@@ -490,8 +490,14 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToDNS(ctx context.Context, log l
 					// required for node local dns feature, allows egress traffic to node local dns cache
 					{
 						IPBlock: &networkingv1.IPBlock{
-							// node local dns feature is only supported for shoots with IPv4 single-stack networking
+							// node local dns feature is only supported for shoots with IPv4 or IPv6 single-stack networking
 							CIDR: fmt.Sprintf("%s/32", nodelocaldnsconstants.IPVSAddress),
+						},
+					},
+					{
+						IPBlock: &networkingv1.IPBlock{
+							// node local dns feature is only supported for shoots with IPv4 or IPv6 single-stack networking
+							CIDR: fmt.Sprintf("%s/128", nodelocaldnsconstants.IPVSIPv6Address),
 						},
 					},
 				},
