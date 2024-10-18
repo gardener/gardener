@@ -52,7 +52,7 @@ var _ = Describe("Validation Tests", func() {
 							Domains: []string{"foo.bar.com"},
 						},
 						Kubernetes: operatorv1alpha1.Kubernetes{
-							Version: "1.26.3",
+							Version: "1.28.3",
 							KubeAPIServer: &operatorv1alpha1.KubeAPIServerConfig{
 								KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{},
 							},

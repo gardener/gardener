@@ -42,7 +42,7 @@ var _ = Describe("Strategy", func() {
 					CloudProfileName: ptr.To("aws-profile"),
 					Region:           "eu-west-1",
 					Kubernetes: core.Kubernetes{
-						Version: "1.25.2",
+						Version: "1.31.2",
 					},
 					Provider: core.Provider{
 						Type:    "provider",
@@ -592,12 +592,6 @@ var _ = Describe("Strategy", func() {
 					true,
 				),
 
-				Entry("rotate-kubeconfig-credentials",
-					v1beta1constants.ShootOperationRotateKubeconfigCredentials,
-					nil,
-					true,
-					true,
-				),
 				Entry("rotate-ssh-keypair (ssh enabled)",
 					v1beta1constants.ShootOperationRotateSSHKeypair,
 					nil,
@@ -680,6 +674,21 @@ var _ = Describe("Strategy", func() {
 					"seed.gardener.cloud/spec-seed":   "true",
 					"seed.gardener.cloud/status-seed": "true",
 				}))
+			})
+		})
+
+		Context("enableStaticTokenKubeconfig", func() {
+			It("should set spec.kubernetes.enableStaticTokenKubeconfig to nil", func() {
+				shoot := &core.Shoot{}
+				shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(true)
+
+				strategy.Canonicalize(shoot)
+				Expect(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(BeNil())
+
+				shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(false)
+
+				strategy.Canonicalize(shoot)
+				Expect(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(BeNil())
 			})
 		})
 	})

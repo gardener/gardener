@@ -37,5 +37,5 @@ func NewEtcdDruid(
 		imageVectorOverwrite = &val
 	}
 
-	return etcd.NewBootstrapper(c, gardenNamespaceName, runtimeVersion, etcdConfig, image.String(), imageVectorOverwrite, priorityClassName), nil
+	return etcd.NewBootstrapper(c, gardenNamespaceName, etcdConfig, image.String(), imageVectorOverwrite, priorityClassName), nil
 }

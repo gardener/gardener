@@ -254,7 +254,6 @@ func (r *Reconciler) newGardenerResourceManager(seed *gardencorev1beta1.Seed, se
 	return sharedcomponent.NewRuntimeGardenerResourceManager(
 		r.SeedClientSet.Client(),
 		r.GardenNamespace,
-		r.SeedVersion,
 		secretsManager,
 		r.Config.LogLevel, r.Config.LogFormat,
 		v1beta1constants.SecretNameCASeed,
@@ -373,8 +372,8 @@ func (r *Reconciler) newDependencyWatchdogs(seedSettings *gardencorev1beta1.Seed
 	}
 
 	var (
-		dwdWeederValues = dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleWeeder, Image: image.String(), KubernetesVersion: r.SeedVersion}
-		dwdProberValues = dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProber, Image: image.String(), KubernetesVersion: r.SeedVersion}
+		dwdWeederValues = dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleWeeder, Image: image.String()}
+		dwdProberValues = dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProber, Image: image.String()}
 	)
 
 	dwdWeeder = component.OpDestroyWithoutWait(dependencywatchdog.NewBootstrapper(r.SeedClientSet.Client(), r.GardenNamespace, dwdWeederValues))
@@ -447,7 +446,6 @@ func (r *Reconciler) newVPNAuthzServer() (component.DeployWaiter, error) {
 		r.SeedClientSet.Client(),
 		r.GardenNamespace,
 		image.String(),
-		r.SeedVersion,
 	), nil
 }
 
@@ -712,7 +710,6 @@ func (r *Reconciler) newHVPA() (component.DeployWaiter, error) {
 		r.SeedClientSet.Client(),
 		r.GardenNamespace,
 		hvpaEnabled(),
-		r.SeedVersion,
 		v1beta1constants.PriorityClassNameSeedSystem700,
 	)
 }

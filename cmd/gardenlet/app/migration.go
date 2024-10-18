@@ -8,15 +8,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -24,12 +21,11 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 func (g *garden) runMigrations(ctx context.Context, log logr.Logger) error {
 	log.Info("Migrating deprecated failure-domain.beta.kubernetes.io labels to topology.kubernetes.io")
-	if err := migrateDeprecatedTopologyLabels(ctx, log, g.mgr.GetClient(), g.mgr.GetConfig()); err != nil {
+	if err := migrateDeprecatedTopologyLabels(ctx, log, g.mgr.GetClient()); err != nil {
 		return err
 	}
 
@@ -102,27 +98,7 @@ func migrateAlertManagerVPAs(ctx context.Context, log logr.Logger, seedClient cl
 }
 
 // TODO: Remove this function when Kubernetes 1.27 support gets dropped.
-func migrateDeprecatedTopologyLabels(ctx context.Context, log logr.Logger, seedClient client.Client, restConfig *rest.Config) error {
-	discoveryClient, err := discovery.NewDiscoveryClientForConfig(restConfig)
-	if err != nil {
-		return fmt.Errorf("failed creating discovery client: %w", err)
-	}
-
-	version, err := discoveryClient.ServerVersion()
-	if err != nil {
-		return fmt.Errorf("failed reading the server version of seed cluster: %w", err)
-	}
-
-	seedVersion, err := semver.NewVersion(version.GitVersion)
-	if err != nil {
-		return fmt.Errorf("failed parsing server version to semver: %w", err)
-	}
-
-	//  PV node affinities were immutable until Kubernetes 1.27, see https://github.com/kubernetes/kubernetes/pull/115391
-	if !versionutils.ConstraintK8sGreaterEqual127.Check(seedVersion) {
-		return nil
-	}
-
+func migrateDeprecatedTopologyLabels(ctx context.Context, log logr.Logger, seedClient client.Client) error {
 	persistentVolumeList := &corev1.PersistentVolumeList{}
 	if err := seedClient.List(ctx, persistentVolumeList); err != nil {
 		return fmt.Errorf("failed listing persistent volumes for migrating deprecated topology labels: %w", err)
