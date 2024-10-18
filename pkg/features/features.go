@@ -81,6 +81,7 @@ const (
 	// ShootCredentialsBinding enables the usage of the CredentialsBindingName API in shoot spec.
 	// owner: @vpnachev @dimityrmirchev
 	// alpha: v1.98.0
+	// beta: v1.107.0
 	ShootCredentialsBinding featuregate.Feature = "ShootCredentialsBinding"
 
 	// NewWorkerPoolHash enables a new calculation method for the worker pool hash. The new
@@ -131,7 +132,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	ShootForceDeletion:        {Default: true, PreRelease: featuregate.Beta},
 	UseNamespacedCloudProfile: {Default: false, PreRelease: featuregate.Alpha},
 	VPAAndHPAForAPIServer:     {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
-	ShootCredentialsBinding:   {Default: false, PreRelease: featuregate.Alpha},
+	ShootCredentialsBinding:   {Default: true, PreRelease: featuregate.Beta},
 	NewWorkerPoolHash:         {Default: false, PreRelease: featuregate.Alpha},
 	NewVPN:                    {Default: false, PreRelease: featuregate.Alpha},
 }
