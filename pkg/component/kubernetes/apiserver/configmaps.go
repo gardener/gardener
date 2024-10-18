@@ -69,7 +69,7 @@ func (k *kubeAPIServer) reconcileConfigMapEgressSelector(ctx context.Context, co
 		},
 	}
 
-	data, err := runtime.Encode(apiServerCodec, egressSelectorConfig)
+	data, err := runtime.Encode(ConfigCodec, egressSelectorConfig)
 	if err != nil {
 		return err
 	}

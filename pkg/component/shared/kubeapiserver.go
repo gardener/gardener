@@ -98,20 +98,21 @@ func NewKubeAPIServer(
 	}
 
 	var (
-		enabledAdmissionPlugins             = kubernetesutils.GetAdmissionPluginsForVersion(targetVersion.String())
-		disabledAdmissionPlugins            []gardencorev1beta1.AdmissionPlugin
-		apiAudiences                        = []string{"kubernetes", "gardener"}
-		auditConfig                         *apiserver.AuditConfig
-		authenticationConfiguration         *string
-		defaultNotReadyTolerationSeconds    *int64
-		defaultUnreachableTolerationSeconds *int64
-		eventTTL                            *metav1.Duration
-		featureGates                        map[string]bool
-		oidcConfig                          *gardencorev1beta1.OIDCConfig
-		requests                            *gardencorev1beta1.APIServerRequests
-		runtimeConfig                       map[string]bool
-		watchCacheSizes                     *gardencorev1beta1.WatchCacheSizes
-		logging                             *gardencorev1beta1.APIServerLogging
+		enabledAdmissionPlugins                  = kubernetesutils.GetAdmissionPluginsForVersion(targetVersion.String())
+		disabledAdmissionPlugins                 []gardencorev1beta1.AdmissionPlugin
+		apiAudiences                             = []string{"kubernetes", "gardener"}
+		auditConfig                              *apiserver.AuditConfig
+		authenticationConfigurationFromConfigMap *string
+		authorizationWebhookConfigsFromConfigMap []kubeapiserver.AuthorizationWebhook
+		defaultNotReadyTolerationSeconds         *int64
+		defaultUnreachableTolerationSeconds      *int64
+		eventTTL                                 *metav1.Duration
+		featureGates                             map[string]bool
+		oidcConfig                               *gardencorev1beta1.OIDCConfig
+		requests                                 *gardencorev1beta1.APIServerRequests
+		runtimeConfig                            map[string]bool
+		watchCacheSizes                          *gardencorev1beta1.WatchCacheSizes
+		logging                                  *gardencorev1beta1.APIServerLogging
 	)
 
 	if apiServerConfig != nil {
@@ -135,7 +136,12 @@ func NewKubeAPIServer(
 			return nil, err
 		}
 
-		authenticationConfiguration, err = computeAPIServerAuthenticationConfig(ctx, resourceConfigClient, objectMeta, apiServerConfig.StructuredAuthentication)
+		authenticationConfigurationFromConfigMap, err = computeAPIServerAuthenticationConfig(ctx, resourceConfigClient, objectMeta, apiServerConfig.StructuredAuthentication)
+		if err != nil {
+			return nil, err
+		}
+
+		authorizationWebhookConfigsFromConfigMap, err = computeAPIServerAuthorizationConfig(ctx, resourceConfigClient, objectMeta, apiServerConfig.StructuredAuthorization)
 		if err != nil {
 			return nil, err
 		}
@@ -174,9 +180,9 @@ func NewKubeAPIServer(
 			},
 			AnonymousAuthenticationEnabled:      v1beta1helper.AnonymousAuthenticationEnabled(apiServerConfig),
 			APIAudiences:                        apiAudiences,
-			AuthenticationConfiguration:         authenticationConfiguration,
+			AuthenticationConfiguration:         authenticationConfigurationFromConfigMap,
 			AuthenticationWebhook:               authenticationWebhookConfig,
-			AuthorizationWebhooks:               authorizationWebhookConfigs,
+			AuthorizationWebhooks:               append(authorizationWebhookConfigs, authorizationWebhookConfigsFromConfigMap...),
 			DefaultNotReadyTolerationSeconds:    defaultNotReadyTolerationSeconds,
 			DefaultUnreachableTolerationSeconds: defaultUnreachableTolerationSeconds,
 			EventTTL:                            eventTTL,

@@ -659,7 +659,8 @@ func ComputeKubeAPIServerServiceAccountConfig(
 	return out
 }
 
-var apiServerCodec runtime.Codec
+// ConfigCodec is the code for kube-apiserver configuration APIs.
+var ConfigCodec runtime.Codec
 
 func init() {
 	scheme := runtime.NewScheme()
@@ -682,5 +683,5 @@ func init() {
 		})
 	)
 
-	apiServerCodec = serializer.NewCodecFactory(scheme).CodecForVersions(ser, ser, versions, versions)
+	ConfigCodec = serializer.NewCodecFactory(scheme).CodecForVersions(ser, ser, versions, versions)
 }

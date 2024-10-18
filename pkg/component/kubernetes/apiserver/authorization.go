@@ -29,7 +29,8 @@ const (
 	volumeMountPathStructuredAuthorizationConfig             = "/etc/kubernetes/structured/authorization"
 	volumeMountPathStructuredAuthorizationWebhookKubeconfigs = "/etc/kubernetes/structured/authorization-kubeconfigs" // #nosec G101 -- No credential.
 
-	configMapAuthorizationConfigDataKey = "config.yaml"
+	// DataKeyConfigMapAuthorizationConfig is the key of the ConfigMap containing the authorization configuration.
+	DataKeyConfigMapAuthorizationConfig = "config.yaml"
 )
 
 func (k *kubeAPIServer) reconcileConfigMapAuthorizationConfig(ctx context.Context, configMap *corev1.ConfigMap) error {
@@ -65,12 +66,12 @@ func (k *kubeAPIServer) reconcileConfigMapAuthorizationConfig(ctx context.Contex
 		authorizationConfiguration.Authorizers = append(authorizationConfiguration.Authorizers, config)
 	}
 
-	data, err := runtime.Encode(apiServerCodec, authorizationConfiguration)
+	data, err := runtime.Encode(ConfigCodec, authorizationConfiguration)
 	if err != nil {
 		return fmt.Errorf("unable to encode authorization configuration: %w", err)
 	}
 
-	configMap.Data = map[string]string{configMapAuthorizationConfigDataKey: string(data)}
+	configMap.Data = map[string]string{DataKeyConfigMapAuthorizationConfig: string(data)}
 	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
 	return client.IgnoreAlreadyExists(k.client.Client().Create(ctx, configMap))
 }
@@ -78,7 +79,7 @@ func (k *kubeAPIServer) reconcileConfigMapAuthorizationConfig(ctx context.Contex
 func (k *kubeAPIServer) handleAuthorizationSettings(deployment *appsv1.Deployment, configMapAuthorizationConfig *corev1.ConfigMap, secretWebhooksKubeconfigs *corev1.Secret) {
 	if value, ok := k.values.FeatureGates["StructuredAuthorizationConfiguration"]; (!ok || value) &&
 		!versionutils.ConstraintK8sLess130.Check(k.values.Version) {
-		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--authorization-config=%s/%s", volumeMountPathStructuredAuthorizationConfig, configMapAuthorizationConfigDataKey))
+		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--authorization-config=%s/%s", volumeMountPathStructuredAuthorizationConfig, DataKeyConfigMapAuthorizationConfig))
 		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
 			Name:      volumeNameStructuredAuthorizationConfig,
 			MountPath: volumeMountPathStructuredAuthorizationConfig,
