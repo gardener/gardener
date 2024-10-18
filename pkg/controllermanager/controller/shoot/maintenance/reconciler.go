@@ -878,26 +878,6 @@ func ExpirationDateExpired(timestamp *metav1.Time) bool {
 	return time.Now().UTC().After(timestamp.Time) || time.Now().UTC().Equal(timestamp.Time)
 }
 
-// ensureSufficientMaxWorkers ensures that the number of max workers of a worker group is greater or equal to its number of zones
-func ensureSufficientMaxWorkers(shoot *gardencorev1beta1.Shoot, reason string) []string {
-	var reasonsForUpdate []string
-
-	for i, worker := range shoot.Spec.Provider.Workers {
-		if !v1beta1helper.SystemComponentsAllowed(&worker) {
-			continue
-		}
-
-		if int(worker.Maximum) >= len(worker.Zones) {
-			continue
-		}
-		newMaximum := int32(len(worker.Zones)) // #nosec G115 -- `len(worker.Zones)` cannot be higher than max int32. Zones come from shoot spec and there is a validation that there cannot be more zones than worker.Maximum which is int32.
-		reasonsForUpdate = append(reasonsForUpdate, fmt.Sprintf("Maximum of worker-pool %q upgraded from %d to %d. Reason: %s", worker.Name, worker.Maximum, newMaximum, reason))
-		shoot.Spec.Provider.Workers[i].Maximum = newMaximum
-	}
-
-	return reasonsForUpdate
-}
-
 // setLimitedSwap sets the swap behavior to `LimitedSwap` if it's currently set to `UnlimitedSwap`
 func setLimitedSwap(kubelet *gardencorev1beta1.KubeletConfig, reason string) []string {
 	var reasonsForUpdate []string
