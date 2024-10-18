@@ -7,18 +7,23 @@ package shared
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
+	apiserverv1beta1 "k8s.io/apiserver/pkg/apis/apiserver/v1beta1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/apiserver"
+	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/secretsrotation"
 )
@@ -75,24 +80,100 @@ func computeAPIServerAuthenticationConfig(
 		return nil, nil
 	}
 
-	var (
-		out *string
-		key = client.ObjectKey{Namespace: objectMeta.Namespace, Name: structuredAuthentication.ConfigMapName}
-	)
+	var out *string
 
-	configMap := &corev1.ConfigMap{}
-	if err := cl.Get(ctx, key, configMap); err != nil {
+	configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: objectMeta.Namespace, Name: structuredAuthentication.ConfigMapName}}
+	if err := cl.Get(ctx, client.ObjectKeyFromObject(configMap), configMap); err != nil {
 		// Ignore missing authentication configuration on cluster deletion to prevent failing redeployments of the
 		// API server in case the end-user deleted the configmap before/simultaneously to the deletion.
 		if !apierrors.IsNotFound(err) || objectMeta.DeletionTimestamp == nil {
-			return nil, fmt.Errorf("retrieving authentication configuration from the ConfigMap %s failed: %w", key, err)
+			return nil, fmt.Errorf("retrieving authentication configuration from the ConfigMap %s failed: %w", client.ObjectKeyFromObject(configMap), err)
 		}
 	} else {
-		config, ok := configMap.Data["config.yaml"]
+		configRaw, ok := configMap.Data[kubeapiserver.DataKeyConfigMapAuthenticationConfig]
 		if !ok {
-			return nil, fmt.Errorf("missing '.data[config.yaml]' in authentication configuration ConfigMap %s", key)
+			return nil, fmt.Errorf("missing '.data[%s]' in authentication configuration ConfigMap %s", kubeapiserver.DataKeyConfigMapAuthenticationConfig, client.ObjectKeyFromObject(configMap))
 		}
-		out = ptr.To(config)
+		out = ptr.To(configRaw)
+	}
+
+	return out, nil
+}
+
+func computeAPIServerAuthorizationConfig(
+	ctx context.Context,
+	cl client.Client,
+	objectMeta metav1.ObjectMeta,
+	structuredAuthorization *gardencorev1beta1.StructuredAuthorization,
+) (
+	[]kubeapiserver.AuthorizationWebhook,
+	error,
+) {
+	if structuredAuthorization == nil || len(structuredAuthorization.ConfigMapName) == 0 {
+		return nil, nil
+	}
+
+	var out []kubeapiserver.AuthorizationWebhook
+
+	configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: objectMeta.Namespace, Name: structuredAuthorization.ConfigMapName}}
+	if err := cl.Get(ctx, client.ObjectKeyFromObject(configMap), configMap); err != nil {
+		// Ignore missing authorization configuration on cluster deletion to prevent failing redeployments of the
+		// API server in case the end-user deleted the configmap before/simultaneously to the deletion.
+		if !apierrors.IsNotFound(err) || objectMeta.DeletionTimestamp == nil {
+			return nil, fmt.Errorf("retrieving authorization configuration from the ConfigMap %s failed: %w", client.ObjectKeyFromObject(configMap), err)
+		}
+	} else {
+		configRaw, ok := configMap.Data[kubeapiserver.DataKeyConfigMapAuthorizationConfig]
+		if !ok {
+			return nil, fmt.Errorf("missing '.data[%s]' in authorization configuration ConfigMap", kubeapiserver.DataKeyConfigMapAuthorizationConfig)
+		}
+
+		out, err = translateRawAuthorizationConfigIntoWebhooks(ctx, cl, objectMeta.Namespace, configRaw, structuredAuthorization.Kubeconfigs)
+		if err != nil {
+			return nil, fmt.Errorf("failed translating raw authorization configuration in ConfigMap %s: %w", client.ObjectKeyFromObject(configMap), err)
+		}
+	}
+
+	return out, nil
+}
+
+func translateRawAuthorizationConfigIntoWebhooks(ctx context.Context, cl client.Client, namespace, configRaw string, kubeconfigSecretReferences []gardencorev1beta1.AuthorizerKubeconfigReference) ([]kubeapiserver.AuthorizationWebhook, error) {
+	obj, err := runtime.Decode(kubeapiserver.ConfigCodec, []byte(configRaw))
+	if err != nil {
+		return nil, err
+	}
+
+	config, ok := obj.(*apiserverv1beta1.AuthorizationConfiguration)
+	if !ok {
+		return nil, fmt.Errorf("provided configuration is not of type *apiserverv1beta1.AuthorizationConfiguration but %T", obj)
+	}
+
+	var out []kubeapiserver.AuthorizationWebhook
+
+	for _, authorizer := range config.Authorizers {
+		i := slices.IndexFunc(kubeconfigSecretReferences, func(ref gardencorev1beta1.AuthorizerKubeconfigReference) bool {
+			return ref.AuthorizerName == authorizer.Name
+		})
+		if i == -1 {
+			return nil, fmt.Errorf("missing kubeconfig secret reference for authorizer %s", authorizer.Name)
+		}
+
+		secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: kubeconfigSecretReferences[i].SecretName, Namespace: namespace}}
+		if err := cl.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
+			return nil, fmt.Errorf("retrieving kubeconfig secret %s failed: %w", client.ObjectKeyFromObject(secret), err)
+		}
+
+		if len(secret.Data[kubernetes.KubeConfig]) == 0 {
+			return nil, fmt.Errorf("missing kubeconfig in secret %s", client.ObjectKeyFromObject(secret))
+		}
+
+		if authorizer.Webhook != nil {
+			out = append(out, kubeapiserver.AuthorizationWebhook{
+				Name:                 authorizer.Name,
+				Kubeconfig:           secret.Data[kubernetes.KubeConfig],
+				WebhookConfiguration: *authorizer.Webhook,
+			})
+		}
 	}
 
 	return out, nil
