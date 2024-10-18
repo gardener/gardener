@@ -190,7 +190,7 @@ func (r *Reconciler) reconcile(
 
 	// Reconcile creation or update
 	log.V(1).Info("Reconciling")
-	status.Conditions, err = actuator.Reconcile(ctx, log, ms, status.Conditions, ms.Spec.Gardenlet.Deployment, helper.GardenletConfigFromManagedSeed(ms.Spec.Gardenlet), helper.GetBootstrap(ms.Spec.Gardenlet.Bootstrap), ptr.Deref(ms.Spec.Gardenlet.MergeWithParent, false))
+	status.Conditions, err = actuator.Reconcile(ctx, log, ms, status.Conditions, ms.Spec.Gardenlet.Deployment, &ms.Spec.Gardenlet.Config, helper.GetBootstrap(ms.Spec.Gardenlet.Bootstrap), ptr.Deref(ms.Spec.Gardenlet.MergeWithParent, false))
 	if err != nil {
 		if updateErr := r.updateStatus(ctx, ms, status); updateErr != nil {
 			log.Error(updateErr, "Could not update status", "status", status)
@@ -224,7 +224,7 @@ func (r *Reconciler) delete(
 	// Reconcile deletion
 	log.V(1).Info("Deletion")
 	var wait, removeFinalizer bool
-	status.Conditions, wait, removeFinalizer, err = actuator.Delete(ctx, log, ms, ms.Status.Conditions, ms.Spec.Gardenlet.Deployment, helper.GardenletConfigFromManagedSeed(ms.Spec.Gardenlet), helper.GetBootstrap(ms.Spec.Gardenlet.Bootstrap), ptr.Deref(ms.Spec.Gardenlet.MergeWithParent, false))
+	status.Conditions, wait, removeFinalizer, err = actuator.Delete(ctx, log, ms, ms.Status.Conditions, ms.Spec.Gardenlet.Deployment, &ms.Spec.Gardenlet.Config, helper.GetBootstrap(ms.Spec.Gardenlet.Bootstrap), ptr.Deref(ms.Spec.Gardenlet.MergeWithParent, false))
 	if err != nil {
 		// Only update status if the finalizer is not removed to prevent errors if the object is already gone
 		if !removeFinalizer {

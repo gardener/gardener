@@ -32,7 +32,6 @@ func newTableConvertor() rest.TableConvertor {
 			{Name: "Name", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["name"]},
 			{Name: "Status", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["status"]},
 			{Name: "Shoot", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["shootName"]},
-			{Name: "Gardenlet", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["gardenlet"]},
 			{Name: "Age", Type: "date", Description: swaggerMetadataDescriptions["creationTimestamp"]},
 		},
 	}
@@ -73,11 +72,7 @@ func (c *convertor) ConvertToTable(_ context.Context, obj runtime.Object, _ runt
 			cells = append(cells, "Registered")
 		}
 		cells = append(cells, managedseed.GetShootName(managedSeed))
-		if managedSeed.Spec.Gardenlet != nil {
-			cells = append(cells, "True")
-		} else {
-			cells = append(cells, "False")
-		}
+
 		cells = append(cells, metatable.ConvertToHumanReadableDateType(managedSeed.CreationTimestamp))
 
 		return cells, nil

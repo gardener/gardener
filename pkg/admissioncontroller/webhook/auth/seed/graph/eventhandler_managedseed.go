@@ -74,7 +74,7 @@ func (g *graph) handleManagedSeedCreateOrUpdate(ctx context.Context, managedSeed
 
 	g.addEdge(managedSeedVertex, shootVertex)
 
-	seedTemplate, gardenletConfig, err := seedmanagementv1alpha1helper.ExtractSeedTemplateAndGardenletConfig(managedSeed.Name, seedmanagementv1alpha1helper.GardenletConfigFromManagedSeed(managedSeed.Spec.Gardenlet))
+	seedTemplate, gardenletConfig, err := seedmanagementv1alpha1helper.ExtractSeedTemplateAndGardenletConfig(managedSeed.Name, &managedSeed.Spec.Gardenlet.Config)
 	if err != nil {
 		return
 	}

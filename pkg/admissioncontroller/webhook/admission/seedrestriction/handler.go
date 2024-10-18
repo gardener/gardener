@@ -431,7 +431,7 @@ func (h *Handler) admitSecret(ctx context.Context, seedName string, request admi
 			continue
 		}
 
-		seedTemplate, _, err := seedmanagementv1alpha1helper.ExtractSeedTemplateAndGardenletConfig(managedSeed.Name, seedmanagementv1alpha1helper.GardenletConfigFromManagedSeed(managedSeed.Spec.Gardenlet))
+		seedTemplate, _, err := seedmanagementv1alpha1helper.ExtractSeedTemplateAndGardenletConfig(managedSeed.Name, &managedSeed.Spec.Gardenlet.Config)
 		if err != nil {
 			return admission.Errored(http.StatusInternalServerError, err)
 		}

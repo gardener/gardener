@@ -157,7 +157,7 @@ func (v *ManagedSeed) validateUpdate(ctx context.Context, a admission.Attributes
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "networking", "nodes"), shoot.Spec.Networking.Nodes, "field is immutable for managed seeds"))
 	}
 
-	seedTemplate, _, err := seedmanagementv1alpha1helper.ExtractSeedTemplateAndGardenletConfig(managedSeed.Name, seedmanagementv1alpha1helper.GardenletConfigFromManagedSeed(managedSeed.Spec.Gardenlet))
+	seedTemplate, _, err := seedmanagementv1alpha1helper.ExtractSeedTemplateAndGardenletConfig(managedSeed.Name, &managedSeed.Spec.Gardenlet.Config)
 	if err != nil {
 		return apierrors.NewInternalError(fmt.Errorf("cannot extract the seed template: %w", err))
 	}

@@ -98,7 +98,7 @@ var _ = Describe("Reconciler", func() {
 				Shoot: &seedmanagementv1alpha1.Shoot{
 					Name: name,
 				},
-				Gardenlet: &seedmanagementv1alpha1.GardenletConfig{},
+				Gardenlet: seedmanagementv1alpha1.GardenletConfig{},
 			},
 		}
 		status = &seedmanagementv1alpha1.ManagedSeedStatus{
