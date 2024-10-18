@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -57,10 +58,23 @@ func (p *namespacedCloudProfile) Mutate(_ context.Context, newObj, _ client.Obje
 		return fmt.Errorf("could not decode providerConfig of namespacedCloudProfile status for '%s': %w", profile.Name, err)
 	}
 
-	specImages := utils.CreateMapFromSlice(specConfig.MachineImages, func(mi v1alpha1.MachineImages) string { return mi.Name })
-	statusImages := utils.CreateMapFromSlice(statusConfig.MachineImages, func(mi v1alpha1.MachineImages) string { return mi.Name })
+	statusConfig.MachineImages = mergeMachineImages(specConfig.MachineImages, statusConfig.MachineImages)
+
+	modifiedStatusConfig, err := json.Marshal(statusConfig)
+	if err != nil {
+		return err
+	}
+	profile.Status.CloudProfileSpec.ProviderConfig.Raw = modifiedStatusConfig
+
+	return nil
+}
+
+func mergeMachineImages(specMachineImages, statusMachineImages []v1alpha1.MachineImages) []v1alpha1.MachineImages {
+	specImages := utils.CreateMapFromSlice(specMachineImages, func(mi v1alpha1.MachineImages) string { return mi.Name })
+	statusImages := utils.CreateMapFromSlice(statusMachineImages, func(mi v1alpha1.MachineImages) string { return mi.Name })
 	for _, specMachineImage := range specImages {
 		if _, exists := statusImages[specMachineImage.Name]; !exists {
+			specMachineImage.Versions = sortMachineImageVersions(specMachineImage.Versions)
 			statusImages[specMachineImage.Name] = specMachineImage
 		} else {
 			statusImageVersions := utils.CreateMapFromSlice(statusImages[specMachineImage.Name].Versions, func(v v1alpha1.MachineImageVersion) string { return v.Version })
@@ -71,16 +85,16 @@ func (p *namespacedCloudProfile) Mutate(_ context.Context, newObj, _ client.Obje
 
 			statusImages[specMachineImage.Name] = v1alpha1.MachineImages{
 				Name:     specMachineImage.Name,
-				Versions: slices.Collect(maps.Values(statusImageVersions)),
+				Versions: sortMachineImageVersions(slices.Collect(maps.Values(statusImageVersions))),
 			}
 		}
 	}
-	statusConfig.MachineImages = slices.Collect(maps.Values(statusImages))
-	modifiedStatusConfig, err := json.Marshal(statusConfig)
-	if err != nil {
-		return err
-	}
-	profile.Status.CloudProfileSpec.ProviderConfig.Raw = modifiedStatusConfig
+	machineImages := slices.Collect(maps.Values(statusImages))
+	slices.SortFunc(machineImages, func(a, b v1alpha1.MachineImages) int { return strings.Compare(a.Name, b.Name) })
+	return machineImages
+}
 
-	return nil
+func sortMachineImageVersions(images []v1alpha1.MachineImageVersion) []v1alpha1.MachineImageVersion {
+	slices.SortFunc(images, func(a, b v1alpha1.MachineImageVersion) int { return strings.Compare(a.Version, b.Version) })
+	return images
 }
