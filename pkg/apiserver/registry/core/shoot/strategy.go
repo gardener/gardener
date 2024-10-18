@@ -123,7 +123,6 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 				v1beta1constants.OperationRotateServiceAccountKeyComplete,
 				v1beta1constants.OperationRotateETCDEncryptionKeyStart,
 				v1beta1constants.OperationRotateETCDEncryptionKeyComplete,
-				v1beta1constants.ShootOperationRotateKubeconfigCredentials,
 				v1beta1constants.OperationRotateObservabilityCredentials:
 				// We don't want to remove the annotation so that the gardenlet can pick it up and perform
 				// the rotation. It has to remove the annotation after it is done.
@@ -173,6 +172,9 @@ func (shootStrategy) Canonicalize(obj runtime.Object) {
 	shoot := obj.(*core.Shoot)
 
 	gardenerutils.MaintainSeedNameLabels(shoot, shoot.Spec.SeedName, shoot.Status.SeedName)
+
+	// TODO(shafeeqes): Remove this in gardener v1.112
+	shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = nil
 }
 
 func (shootStrategy) AllowCreateOnUpdate() bool {
