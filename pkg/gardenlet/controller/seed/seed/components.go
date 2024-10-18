@@ -73,14 +73,14 @@ import (
 )
 
 type components struct {
-	machineCRD    component.Deployer
-	extensionCRD  component.Deployer
-	etcdCRD       component.Deployer
-	istioCRD      component.Deployer
-	vpaCRD        component.Deployer
-	hvpaCRD       component.Deployer
-	fluentCRD     component.Deployer
-	prometheusCRD component.Deployer
+	machineCRD    component.DeployWaiter
+	extensionCRD  component.DeployWaiter
+	etcdCRD       component.DeployWaiter
+	istioCRD      component.DeployWaiter
+	vpaCRD        component.DeployWaiter
+	hvpaCRD       component.DeployWaiter
+	fluentCRD     component.DeployWaiter
+	prometheusCRD component.DeployWaiter
 
 	clusterIdentity          component.DeployWaiter
 	gardenerResourceManager  component.DeployWaiter
@@ -134,13 +134,13 @@ func (r *Reconciler) instantiateComponents(
 	c.extensionCRD = extensioncrds.NewCRD(r.SeedClientSet.Applier(), !seedIsGarden, true)
 	c.etcdCRD = etcd.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
 	c.istioCRD = istio.NewCRD(r.SeedClientSet.ChartApplier())
-	c.vpaCRD = vpa.NewCRD(r.SeedClientSet.Applier(), nil)
-	c.hvpaCRD = hvpa.NewCRD(r.SeedClientSet.Applier())
+	c.vpaCRD = vpa.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier(), nil)
+	c.hvpaCRD = hvpa.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
 	if !hvpaEnabled() {
-		c.hvpaCRD = component.OpDestroy(c.hvpaCRD)
+		c.hvpaCRD = component.OpDestroyAndWait(c.hvpaCRD)
 	}
-	c.fluentCRD = fluentoperator.NewCRDs(r.SeedClientSet.Applier())
-	c.prometheusCRD = prometheusoperator.NewCRDs(r.SeedClientSet.Applier())
+	c.fluentCRD = fluentoperator.NewCRDs(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
+	c.prometheusCRD = prometheusoperator.NewCRDs(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
 
 	// seed system components
 	c.clusterIdentity = r.newClusterIdentity(seed.GetInfo())

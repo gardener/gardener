@@ -86,13 +86,13 @@ import (
 )
 
 type components struct {
-	etcdCRD       component.Deployer
-	vpaCRD        component.Deployer
-	hvpaCRD       component.Deployer
-	istioCRD      component.Deployer
-	fluentCRD     component.Deployer
-	prometheusCRD component.Deployer
-	extensionCRD  component.Deployer
+	etcdCRD       component.DeployWaiter
+	vpaCRD        component.DeployWaiter
+	hvpaCRD       component.DeployWaiter
+	istioCRD      component.DeployWaiter
+	fluentCRD     component.DeployWaiter
+	prometheusCRD component.DeployWaiter
+	extensionCRD  component.DeployWaiter
 
 	gardenerResourceManager component.DeployWaiter
 	runtimeSystem           component.DeployWaiter
@@ -119,7 +119,7 @@ type components struct {
 
 	gardenerDiscoveryServer component.DeployWaiter
 
-	certManagementCRD        component.Deployer
+	certManagementCRD        component.DeployWaiter
 	certManagementController component.DeployWaiter
 	certManagementIssuer     component.DeployWaiter
 
@@ -160,15 +160,15 @@ func (r *Reconciler) instantiateComponents(
 
 	// crds
 	c.etcdCRD = etcd.NewCRD(r.RuntimeClientSet.Client(), applier)
-	c.vpaCRD = vpa.NewCRD(applier, nil)
-	c.hvpaCRD = hvpa.NewCRD(applier)
+	c.vpaCRD = vpa.NewCRD(r.RuntimeClientSet.Client(), applier, nil)
+	c.hvpaCRD = hvpa.NewCRD(r.RuntimeClientSet.Client(), applier)
 	if !hvpaEnabled() {
-		c.hvpaCRD = component.OpDestroy(c.hvpaCRD)
+		c.hvpaCRD = component.OpDestroyAndWait(c.hvpaCRD)
 	}
 	c.istioCRD = istio.NewCRD(r.RuntimeClientSet.ChartApplier())
-	c.fluentCRD = fluentoperator.NewCRDs(applier)
-	c.prometheusCRD = prometheusoperator.NewCRDs(applier)
-	c.certManagementCRD = certmanagement.NewCRDs(applier)
+	c.fluentCRD = fluentoperator.NewCRDs(r.RuntimeClientSet.Client(), applier)
+	c.prometheusCRD = prometheusoperator.NewCRDs(r.RuntimeClientSet.Client(), applier)
+	c.certManagementCRD = certmanagement.NewCRDs(r.RuntimeClientSet.Client(), applier)
 	c.extensionCRD = extensioncrds.NewCRD(applier, true, false)
 
 	// garden system components

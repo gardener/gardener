@@ -45,7 +45,7 @@ var _ = Describe("CRD", func() {
 			mapper.Add(apiextensionsv1.SchemeGroupVersion.WithKind("CustomResourceDefinition"), meta.RESTScopeRoot)
 			applier := kubernetes.NewApplier(c, mapper)
 
-			crdDeployer = NewCRD(applier, nil)
+			crdDeployer = NewCRD(c, applier, nil)
 		})
 
 		DescribeTable("CRD is deployed",
@@ -76,7 +76,7 @@ var _ = Describe("CRD", func() {
 		BeforeEach(func() {
 			registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
-			crdDeployer = NewCRD(nil, registry)
+			crdDeployer = NewCRD(nil, nil, registry)
 		})
 
 		It("should ensure CRDs are included", func() {

@@ -8,8 +8,11 @@ import (
 	"context"
 	_ "embed"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
@@ -20,6 +23,8 @@ var (
 	verticalPodAutoscalerCheckpointCRD string
 
 	crdResources map[string]string
+	// resourceObjectKeys is a slice of the CRD object keys
+	resourceObjectKeys []client.ObjectKey
 )
 
 func init() {
@@ -27,16 +32,27 @@ func init() {
 		"crd-verticalpodautoscalers.yaml":           verticalPodAutoscalerCRD,
 		"crd-verticalpodautoscalercheckpoints.yaml": verticalPodAutoscalerCheckpointCRD,
 	}
+
+	for _, resource := range crdResources {
+		objKey, err := kubernetesutils.GetObjectKeyFromManifest(resource)
+		if err != nil {
+			panic(err)
+		}
+
+		resourceObjectKeys = append(resourceObjectKeys, objKey)
+	}
 }
 
 type vpaCRD struct {
+	client   client.Client
 	applier  kubernetes.Applier
 	registry *managedresources.Registry
 }
 
 // NewCRD can be used to deploy the CRD definitions for the Kubernetes Vertical Pod Autoscaler.
-func NewCRD(applier kubernetes.Applier, registry *managedresources.Registry) component.Deployer {
+func NewCRD(client client.Client, applier kubernetes.Applier, registry *managedresources.Registry) component.DeployWaiter {
 	return &vpaCRD{
+		client:   client,
 		applier:  applier,
 		registry: registry,
 	}
@@ -69,5 +85,15 @@ func (v *vpaCRD) Destroy(ctx context.Context) error {
 		}
 	}
 
+	return nil
+}
+
+// Wait signals whether a CRD is ready or needs more time to be deployed.
+func (v *vpaCRD) Wait(ctx context.Context) error {
+	return kubernetesutils.WaitUntilCRDManifestsReady(ctx, v.client, resourceObjectKeys)
+}
+
+// WaitCleanup for destruction to finish and component to be fully removed. crdDeployer does not need to wait for cleanup.
+func (v *vpaCRD) WaitCleanup(_ context.Context) error {
 	return nil
 }
