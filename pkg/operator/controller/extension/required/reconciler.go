@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
@@ -77,7 +78,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 	}
 
-	requiredRuntimeCondition := r.getRuntimeCondition(extension, requiredExtensionKinds)
+	requiredRuntimeCondition := r.getRuntimeCondition(log, extension, requiredExtensionKinds)
 	if err := r.updateConditions(ctx, extension, requiredRuntimeCondition); err != nil {
 		return reconcile.Result{}, fmt.Errorf("could not update extension status: %w", err)
 	}
@@ -92,14 +93,16 @@ const (
 	ExtensionNotRequiredReason = "ExtensionNotRequired"
 )
 
-func (r *Reconciler) getRuntimeCondition(extension *operatorv1alpha1.Extension, kinds sets.Set[string]) gardencorev1beta1.Condition {
+func (r *Reconciler) getRuntimeCondition(log logr.Logger, extension *operatorv1alpha1.Extension, kinds sets.Set[string]) gardencorev1beta1.Condition {
 	requiredRuntimeCondition := v1beta1helper.GetOrInitConditionWithClock(r.clock, extension.Status.Conditions, operatorv1alpha1.ExtensionRequiredRuntime)
 
 	if len(kinds) > 0 {
 		sortedKinds := slices.Sorted(slices.Values(kinds.UnsortedList()))
 		requiredRuntimeCondition = v1beta1helper.UpdatedConditionWithClock(r.clock, requiredRuntimeCondition, gardencorev1beta1.ConditionTrue, ExtensionRequiredReason, fmt.Sprintf("Extension required for kinds %s", sortedKinds))
+		log.Info("Extension required for garden runtime cluster", "kinds", sortedKinds)
 	} else {
 		requiredRuntimeCondition = v1beta1helper.UpdatedConditionWithClock(r.clock, requiredRuntimeCondition, gardencorev1beta1.ConditionFalse, ExtensionNotRequiredReason, "Extension not required for any kind")
+		log.Info("Extension not required for garden runtime cluster")
 	}
 
 	return requiredRuntimeCondition
