@@ -109,7 +109,7 @@ func (r *Reconciler) getRuntimeCondition(log logr.Logger, extension *operatorv1a
 }
 
 func (r *Reconciler) updateConditions(ctx context.Context, extension *operatorv1alpha1.Extension, conditions ...gardencorev1beta1.Condition) error {
-	patch := client.MergeFrom(extension.DeepCopy())
+	patch := client.MergeFromWithOptions(extension.DeepCopy(), client.MergeFromWithOptimisticLock{})
 	newConditions := v1beta1helper.MergeConditions(extension.Status.Conditions, conditions...)
 	if !v1beta1helper.ConditionsNeedUpdate(extension.Status.Conditions, newConditions) {
 		return nil

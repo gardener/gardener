@@ -100,7 +100,7 @@ func (r *Reconciler) updateExtensionStatus(ctx context.Context, log logr.Logger,
 		return nil
 	}
 
-	patch := client.MergeFrom(extension.DeepCopy())
+	patch := client.MergeFromWithOptions(extension.DeepCopy(), client.MergeFromWithOptimisticLock{})
 	// Rebuild extension currentConditions to ensure that only the currentConditions with the correct types will be updated, and any other
 	// currentConditions will remain intact
 	extension.Status.Conditions = v1beta1helper.BuildConditions(extension.Status.Conditions, updatedConditions.ConvertToSlice(), currentConditions.ConditionTypes())
