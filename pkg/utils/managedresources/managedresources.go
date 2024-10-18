@@ -453,10 +453,12 @@ func GetObjects(ctx context.Context, c client.Client, namespace, name string) ([
 		if err := c.Get(ctx, client.ObjectKey{Name: secretRef.Name, Namespace: managedResource.Namespace}, secret); err != nil {
 			return nil, fmt.Errorf("could not get secret %q: %w", client.ObjectKey{Name: secretRef.Name, Namespace: managedResource.Namespace}, err)
 		}
+
 		objectsFromSecret, err := extractObjectsFromSecret(decoder, secret)
 		if err != nil {
 			return nil, fmt.Errorf("could not extract objects from secret %q: %w", client.ObjectKeyFromObject(secret), err)
 		}
+
 		objects = append(objects, objectsFromSecret...)
 	}
 
@@ -466,28 +468,30 @@ func GetObjects(ctx context.Context, c client.Client, namespace, name string) ([
 func extractObjectsFromSecret(decoder runtime.Decoder, secret *corev1.Secret) ([]client.Object, error) {
 	var objects []client.Object
 
-	for dataKey, dataValue := range secret.Data {
+	for key, value := range secret.Data {
 		var data []byte
 
-		if strings.HasSuffix(dataKey, resourcesv1alpha1.BrotliCompressionSuffix) {
-			reader := brotli.NewReader(bytes.NewReader(dataValue))
+		if strings.HasSuffix(key, resourcesv1alpha1.BrotliCompressionSuffix) {
+			reader := brotli.NewReader(bytes.NewReader(value))
 			var err error
 			data, err = io.ReadAll(reader)
 			if err != nil {
-				return nil, fmt.Errorf("could not read brotli compressed data from key %q: %w", dataKey, err)
+				return nil, fmt.Errorf("could not read brotli compressed data from key %q: %w", key, err)
 			}
 		} else {
-			data = dataValue
+			data = value
 		}
 
-		for _, objSerialized := range strings.Split(string(data), "---\n") {
-			if objSerialized == "" {
+		for _, objRaw := range strings.Split(string(data), "---\n") {
+			if objRaw == "" {
 				continue
 			}
-			obj, _, err := decoder.Decode([]byte(objSerialized), nil, nil)
+
+			obj, _, err := decoder.Decode([]byte(objRaw), nil, nil)
 			if err != nil {
 				return nil, fmt.Errorf("could not decode object: %w", err)
 			}
+
 			objects = append(objects, obj.(client.Object))
 		}
 	}

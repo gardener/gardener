@@ -859,6 +859,5 @@ var _ = Describe("managedresources", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(objects).To(DeepEqual(expectedObjects))
 		})
-
 	})
 })

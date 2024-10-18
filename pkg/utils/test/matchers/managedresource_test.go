@@ -156,6 +156,10 @@ var _ = Describe("ManagedResource Object Matcher", func() {
 			})
 
 			Context("without secret references", func() {
+				BeforeEach(func() {
+					ExpectWithOffset(1, fakeClient.Create(ctx, managedResource)).To(Succeed())
+				})
+
 				It("should not find an object", func() {
 					ExpectWithOffset(1, managedResource).NotTo(matcher(&corev1.Secret{}))
 				})

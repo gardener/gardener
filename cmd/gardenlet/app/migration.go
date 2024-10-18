@@ -17,7 +17,6 @@ import (
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -44,19 +43,19 @@ func (g *garden) runMigrations(ctx context.Context, log logr.Logger) error {
 
 // TODO(oliver-goetz): Remove this function after v1.108 has been released.
 func migrateAlertManagerVPAs(ctx context.Context, log logr.Logger, seedClient client.Client) error {
-	managedResources := v1alpha1.ManagedResourceList{}
+	managedResourceList := v1alpha1.ManagedResourceList{}
 
-	if err := seedClient.List(ctx, &managedResources, client.MatchingLabels{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}); err != nil {
+	if err := seedClient.List(ctx, &managedResourceList, client.MatchingLabels{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy}); err != nil {
 		if meta.IsNoMatchError(err) {
 			return nil
 		}
-		return fmt.Errorf("failed listing shoot alertmanager ManagedResources: %w", err)
+		return fmt.Errorf("failed listing ManagedResources: %w", err)
 	}
 
 	var taskFns []flow.TaskFn
 
-	for _, managedResource := range managedResources.Items {
-		if managedResource.Name != "alertmanager-shoot" || ptr.Deref(managedResource.Spec.Class, "") != "seed" {
+	for _, managedResource := range managedResourceList.Items {
+		if managedResource.Name != "alertmanager-shoot" {
 			continue
 		}
 
@@ -80,6 +79,7 @@ func migrateAlertManagerVPAs(ctx context.Context, log logr.Logger, seedClient cl
 					}
 					objects[i] = vpa
 					needUpdate = true
+					break
 				}
 			}
 
