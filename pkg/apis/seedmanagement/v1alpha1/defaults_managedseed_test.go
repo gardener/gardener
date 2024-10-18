@@ -56,7 +56,17 @@ var _ = Describe("Defaults", func() {
 							gardencorev1beta1.ResourceShoots: resource.MustParse("250"),
 						},
 					},
-					SeedConfig: &gardenletv1alpha1.SeedConfig{},
+					SeedConfig: &gardenletv1alpha1.SeedConfig{
+						SeedTemplate: gardencorev1beta1.SeedTemplate{
+							Spec: gardencorev1beta1.SeedSpec{
+								Ingress: &gardencorev1beta1.Ingress{
+									Controller: gardencorev1beta1.IngressController{
+										Kind: "nginx",
+									},
+								},
+							},
+						},
+					},
 				}}))
 			Expect(obj.Spec.Gardenlet.Bootstrap).To(PointTo(Equal(BootstrapToken)))
 			Expect(obj.Spec.Gardenlet.MergeWithParent).To(PointTo(Equal(true)))
@@ -102,6 +112,11 @@ var _ = Describe("Defaults", func() {
 										SecretRef: corev1.SecretReference{
 											Name:      "backup-" + name,
 											Namespace: namespace,
+										},
+									},
+									Ingress: &gardencorev1beta1.Ingress{
+										Controller: gardencorev1beta1.IngressController{
+											Kind: "nginx",
 										},
 									},
 								},
@@ -164,6 +179,11 @@ var _ = Describe("Defaults", func() {
 										SecretRef: corev1.SecretReference{
 											Name:      "foo",
 											Namespace: "bar",
+										},
+									},
+									Ingress: &gardencorev1beta1.Ingress{
+										Controller: gardencorev1beta1.IngressController{
+											Kind: "nginx",
 										},
 									},
 								},
