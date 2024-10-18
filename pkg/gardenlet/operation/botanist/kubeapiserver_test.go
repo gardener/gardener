@@ -40,7 +40,6 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("KubeAPIServer", func() {
@@ -454,75 +453,6 @@ var _ = Describe("KubeAPIServer", func() {
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(Equal("shoot requires managed issuer, but gardener does not have shoot service account hostname configured"))
 			})
-		})
-
-		It("should sync the kubeconfig to the garden project namespace when enableStaticTokenKubeconfig is set to true", func() {
-			kubeAPIServer.EXPECT().GetValues()
-			kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
-			kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
-			kubeAPIServer.EXPECT().SetETCDEncryptionConfig(gomock.Any())
-			kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
-			kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
-			kubeAPIServer.EXPECT().SetNodeNetworkCIDRs(gomock.Any())
-			kubeAPIServer.EXPECT().SetPodNetworkCIDRs(gomock.Any())
-			kubeAPIServer.EXPECT().SetServiceNetworkCIDRs(gomock.Any())
-			kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
-			kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
-			kubeAPIServer.EXPECT().Deploy(ctx)
-
-			Expect(gardenClient.Get(ctx, client.ObjectKey{Namespace: projectNamespace, Name: shootName + ".kubeconfig"}, &corev1.Secret{})).To(BeNotFoundError())
-
-			Expect(botanist.DeployKubeAPIServer(ctx, false)).To(Succeed())
-
-			kubeconfigSecret := &corev1.Secret{}
-			Expect(gardenClient.Get(ctx, client.ObjectKey{Namespace: projectNamespace, Name: shootName + ".kubeconfig"}, kubeconfigSecret)).To(Succeed())
-			Expect(kubeconfigSecret.Annotations).To(HaveKeyWithValue("url", "https://api."+externalClusterDomain))
-			Expect(kubeconfigSecret.Labels).To(HaveKeyWithValue("gardener.cloud/role", "kubeconfig"))
-			Expect(kubeconfigSecret.Data).To(And(
-				HaveKey("ca.crt"),
-				HaveKeyWithValue("data-for", []byte("user-kubeconfig")),
-			))
-		})
-
-		It("should not sync the kubeconfig to garden project namespace when enableStaticTokenKubeconfig is set to false", func() {
-			secret := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      shootName + ".kubeconfig",
-					Namespace: projectNamespace,
-				},
-			}
-			Expect(gardenClient.Create(ctx, secret)).To(Succeed())
-
-			Expect(gardenClient.Get(ctx, client.ObjectKey{Namespace: projectNamespace, Name: shootName + ".kubeconfig"}, &corev1.Secret{})).To(Succeed())
-
-			kubeAPIServer.EXPECT().GetValues()
-			kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
-			kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
-			kubeAPIServer.EXPECT().SetETCDEncryptionConfig(gomock.Any())
-			kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
-			kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
-			kubeAPIServer.EXPECT().SetNodeNetworkCIDRs(gomock.Any())
-			kubeAPIServer.EXPECT().SetPodNetworkCIDRs(gomock.Any())
-			kubeAPIServer.EXPECT().SetServiceNetworkCIDRs(gomock.Any())
-			kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
-			kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
-			kubeAPIServer.EXPECT().Deploy(ctx)
-
-			shootCopy := botanist.Shoot.GetInfo().DeepCopy()
-			shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
-				KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
-					ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
-						Issuer:          ptr.To("issuer"),
-						AcceptedIssuers: []string{"issuer1", "issuer2"},
-					},
-				},
-				EnableStaticTokenKubeconfig: ptr.To(false),
-			}
-			botanist.Shoot.SetInfo(shootCopy)
-
-			Expect(botanist.DeployKubeAPIServer(ctx, false)).To(Succeed())
-
-			Expect(gardenClient.Get(ctx, client.ObjectKey{Namespace: projectNamespace, Name: shootName + ".kubeconfig"}, &corev1.Secret{})).To(BeNotFoundError())
 		})
 
 		It("should append the node-agent-authorizer webhook configuration if it is enabled", func() {
