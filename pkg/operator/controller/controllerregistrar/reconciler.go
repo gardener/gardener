@@ -7,6 +7,7 @@ package controllerregistrar
 import (
 	"context"
 	"fmt"
+	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -24,9 +25,12 @@ type Reconciler struct {
 
 // Controller contains a function for registering a controller.
 type Controller struct {
-	AddToManagerFunc func(context.Context, manager.Manager, *operatorv1alpha1.Garden) error
+	AddToManagerFunc func(context.Context, manager.Manager, *operatorv1alpha1.Garden) (bool, error)
 	added            bool
 }
+
+// RequeueAfter is the time the request is requeued in case a controller is not added yet. Exposed for testing.
+var RequeueAfter = 2 * time.Second
 
 // Reconcile performs the controller registration.
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
@@ -47,8 +51,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	for i, controller := range r.Controllers {
 		if !controller.added {
-			if err := controller.AddToManagerFunc(ctx, r.Manager, garden); err != nil {
+			done, err := controller.AddToManagerFunc(ctx, r.Manager, garden)
+			if err != nil {
 				return reconcile.Result{}, err
+			}
+			if !done {
+				return reconcile.Result{RequeueAfter: RequeueAfter}, nil
 			}
 			r.Controllers[i].added = true
 		}
