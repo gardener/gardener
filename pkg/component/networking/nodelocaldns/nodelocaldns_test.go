@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -226,6 +227,7 @@ var _ = Describe("NodeLocalDNS", func() {
 		values = Values{
 			Image:             image,
 			KubernetesVersion: semver.MustParse("1.26.1"),
+			IPFamilies:        []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
 		}
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
@@ -270,7 +272,7 @@ data:
                 ` + forceTcpToClusterDNS + `
         }
         prometheus :` + strconv.Itoa(prometheusPort) + `
-        health ` + ipvsAddress + `:` + strconv.Itoa(livenessProbePort) + `
+        health ` + healthAddress(values) + `:` + strconv.Itoa(livenessProbePort) + `
         }
     in-addr.arpa:53 {
         errors
@@ -624,7 +626,7 @@ status: {}
             ` + forceTcpToClusterDNS + `
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
-    health ` + ipvsAddress + `:` + strconv.Itoa(livenessProbePort) + `
+    health ` + healthAddress(values) + `:` + strconv.Itoa(livenessProbePort) + `
     }
 in-addr.arpa:53 {
     errors
@@ -896,7 +898,7 @@ ip6.arpa:53 {
             ` + forceTcpToClusterDNS + `
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
-    health ` + ipvsAddress + `:` + strconv.Itoa(livenessProbePort) + `
+    health ` + healthAddress(values) + `:` + strconv.Itoa(livenessProbePort) + `
     }
 in-addr.arpa:53 {
     errors
@@ -1114,6 +1116,57 @@ ip6.arpa:53 {
 						})
 					})
 				})
+
+				Context("With IPv6:", func() {
+					BeforeEach(func() {
+						values.IPFamilies = []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6}
+						values.Config = &gardencorev1beta1.NodeLocalDNS{Enabled: true,
+							ForceTCPToClusterDNS:        ptr.To(false),
+							ForceTCPToUpstreamDNS:       ptr.To(false),
+							DisableForwardToUpstreamDNS: ptr.To(false),
+						}
+						forceTcpToClusterDNS = "prefer_udp"
+						forceTcpToUpstreamDNS = "prefer_udp"
+						ipvsAddress = "fd30:1319:f1e:230b::1"
+					})
+
+					Context("w/o VPA", func() {
+						BeforeEach(func() {
+							values.VPAEnabled = false
+							values.IPFamilies = []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6}
+						})
+
+						It("should successfully deploy all resources", func() {
+							expectedManifests = nil
+							expectedManifests = append(expectedManifests, configMapYAMLFor())
+							Expect(manifests).To(ContainElements(expectedManifests))
+							managedResourceDaemonset, err := extractDaemonSet(manifests, kubernetes.ShootCodec.UniversalDeserializer())
+							Expect(err).ToNot(HaveOccurred())
+							daemonset := daemonSetYAMLFor()
+							utilruntime.Must(references.InjectAnnotations(daemonset))
+							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
+						})
+					})
+
+					Context("w/ VPA", func() {
+						BeforeEach(func() {
+							values.VPAEnabled = true
+							values.IPFamilies = []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6}
+
+						})
+
+						It("should successfully deploy all resources", func() {
+							expectedManifests = append(expectedManifests, configMapYAMLFor(), vpaYAML)
+							Expect(manifests).To(ContainElements(expectedManifests))
+
+							managedResourceDaemonset, err := extractDaemonSet(manifests, kubernetes.ShootCodec.UniversalDeserializer())
+							Expect(err).ToNot(HaveOccurred())
+							daemonset := daemonSetYAMLFor()
+							utilruntime.Must(references.InjectAnnotations(daemonset))
+							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
+						})
+					})
+				})
 			})
 		})
 	})
@@ -1235,18 +1288,52 @@ ip6.arpa:53 {
 
 })
 
-func bindIP(values Values) string {
-	if len(values.DNSServers) > 0 {
-		return "169.254.20.10 " + strings.Join(values.DNSServers, " ")
+func healthAddress(values Values) string {
+	ipFamiliesSet := sets.New[gardencorev1beta1.IPFamily](values.IPFamilies...)
+	if ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv4) && !ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv6) {
+		return "169.254.20.10"
 	}
-	return "169.254.20.10"
+	if ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv6) && !ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv4) {
+		if len(values.DNSServers) > 0 {
+			return "fd30:1319:f1e:230b::1 " + strings.Join(values.DNSServers, " ")
+		}
+		return "[fd30:1319:f1e:230b::1]"
+	}
+	return ""
+}
+
+func bindIP(values Values) string {
+	ipFamiliesSet := sets.New[gardencorev1beta1.IPFamily](values.IPFamilies...)
+	if ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv4) && !ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv6) {
+		if len(values.DNSServers) > 0 {
+			return "169.254.20.10 " + strings.Join(values.DNSServers, " ")
+		}
+		return "169.254.20.10"
+	}
+	if ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv6) && !ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv4) {
+		if len(values.DNSServers) > 0 {
+			return "fd30:1319:f1e:230b::1 " + strings.Join(values.DNSServers, " ")
+		}
+		return "fd30:1319:f1e:230b::1"
+	}
+	return ""
 }
 
 func containerArg(values Values) string {
-	if len(values.DNSServers) > 0 {
-		return "169.254.20.10," + strings.Join(values.DNSServers, ",")
+	ipFamiliesSet := sets.New[gardencorev1beta1.IPFamily](values.IPFamilies...)
+	if ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv4) && !ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv6) {
+		if len(values.DNSServers) > 0 {
+			return "169.254.20.10," + strings.Join(values.DNSServers, ",")
+		}
+		return "169.254.20.10"
 	}
-	return "169.254.20.10"
+	if ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv6) && !ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv4) {
+		if len(values.DNSServers) > 0 {
+			return "fd30:1319:f1e:230b::1," + strings.Join(values.DNSServers, ",")
+		}
+		return "fd30:1319:f1e:230b::1"
+	}
+	return ""
 }
 
 func extractDaemonSet(manifests []string, decoder runtime.Decoder) (*appsv1.DaemonSet, error) {
