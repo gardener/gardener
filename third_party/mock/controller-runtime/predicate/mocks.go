@@ -20,6 +20,7 @@ import (
 type MockTypedPredicate[object any] struct {
 	ctrl     *gomock.Controller
 	recorder *MockTypedPredicateMockRecorder[object]
+	isgomock struct{}
 }
 
 // MockTypedPredicateMockRecorder is the mock recorder for MockTypedPredicate.

@@ -21,6 +21,7 @@ import (
 type MockDeployer struct {
 	ctrl     *gomock.Controller
 	recorder *MockDeployerMockRecorder
+	isgomock struct{}
 }
 
 // MockDeployerMockRecorder is the mock recorder for MockDeployer.
@@ -41,37 +42,38 @@ func (m *MockDeployer) EXPECT() *MockDeployerMockRecorder {
 }
 
 // Deploy mocks base method.
-func (m *MockDeployer) Deploy(arg0 context.Context) error {
+func (m *MockDeployer) Deploy(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Deploy", arg0)
+	ret := m.ctrl.Call(m, "Deploy", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Deploy indicates an expected call of Deploy.
-func (mr *MockDeployerMockRecorder) Deploy(arg0 any) *gomock.Call {
+func (mr *MockDeployerMockRecorder) Deploy(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Deploy", reflect.TypeOf((*MockDeployer)(nil).Deploy), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Deploy", reflect.TypeOf((*MockDeployer)(nil).Deploy), ctx)
 }
 
 // Destroy mocks base method.
-func (m *MockDeployer) Destroy(arg0 context.Context) error {
+func (m *MockDeployer) Destroy(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Destroy", arg0)
+	ret := m.ctrl.Call(m, "Destroy", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Destroy indicates an expected call of Destroy.
-func (mr *MockDeployerMockRecorder) Destroy(arg0 any) *gomock.Call {
+func (mr *MockDeployerMockRecorder) Destroy(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockDeployer)(nil).Destroy), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockDeployer)(nil).Destroy), ctx)
 }
 
 // MockWaiter is a mock of Waiter interface.
 type MockWaiter struct {
 	ctrl     *gomock.Controller
 	recorder *MockWaiterMockRecorder
+	isgomock struct{}
 }
 
 // MockWaiterMockRecorder is the mock recorder for MockWaiter.
@@ -92,37 +94,38 @@ func (m *MockWaiter) EXPECT() *MockWaiterMockRecorder {
 }
 
 // Wait mocks base method.
-func (m *MockWaiter) Wait(arg0 context.Context) error {
+func (m *MockWaiter) Wait(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Wait", arg0)
+	ret := m.ctrl.Call(m, "Wait", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Wait indicates an expected call of Wait.
-func (mr *MockWaiterMockRecorder) Wait(arg0 any) *gomock.Call {
+func (mr *MockWaiterMockRecorder) Wait(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Wait", reflect.TypeOf((*MockWaiter)(nil).Wait), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Wait", reflect.TypeOf((*MockWaiter)(nil).Wait), ctx)
 }
 
 // WaitCleanup mocks base method.
-func (m *MockWaiter) WaitCleanup(arg0 context.Context) error {
+func (m *MockWaiter) WaitCleanup(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WaitCleanup", arg0)
+	ret := m.ctrl.Call(m, "WaitCleanup", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // WaitCleanup indicates an expected call of WaitCleanup.
-func (mr *MockWaiterMockRecorder) WaitCleanup(arg0 any) *gomock.Call {
+func (mr *MockWaiterMockRecorder) WaitCleanup(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitCleanup", reflect.TypeOf((*MockWaiter)(nil).WaitCleanup), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitCleanup", reflect.TypeOf((*MockWaiter)(nil).WaitCleanup), ctx)
 }
 
 // MockDeployWaiter is a mock of DeployWaiter interface.
 type MockDeployWaiter struct {
 	ctrl     *gomock.Controller
 	recorder *MockDeployWaiterMockRecorder
+	isgomock struct{}
 }
 
 // MockDeployWaiterMockRecorder is the mock recorder for MockDeployWaiter.
@@ -143,65 +146,66 @@ func (m *MockDeployWaiter) EXPECT() *MockDeployWaiterMockRecorder {
 }
 
 // Deploy mocks base method.
-func (m *MockDeployWaiter) Deploy(arg0 context.Context) error {
+func (m *MockDeployWaiter) Deploy(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Deploy", arg0)
+	ret := m.ctrl.Call(m, "Deploy", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Deploy indicates an expected call of Deploy.
-func (mr *MockDeployWaiterMockRecorder) Deploy(arg0 any) *gomock.Call {
+func (mr *MockDeployWaiterMockRecorder) Deploy(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Deploy", reflect.TypeOf((*MockDeployWaiter)(nil).Deploy), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Deploy", reflect.TypeOf((*MockDeployWaiter)(nil).Deploy), ctx)
 }
 
 // Destroy mocks base method.
-func (m *MockDeployWaiter) Destroy(arg0 context.Context) error {
+func (m *MockDeployWaiter) Destroy(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Destroy", arg0)
+	ret := m.ctrl.Call(m, "Destroy", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Destroy indicates an expected call of Destroy.
-func (mr *MockDeployWaiterMockRecorder) Destroy(arg0 any) *gomock.Call {
+func (mr *MockDeployWaiterMockRecorder) Destroy(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockDeployWaiter)(nil).Destroy), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockDeployWaiter)(nil).Destroy), ctx)
 }
 
 // Wait mocks base method.
-func (m *MockDeployWaiter) Wait(arg0 context.Context) error {
+func (m *MockDeployWaiter) Wait(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Wait", arg0)
+	ret := m.ctrl.Call(m, "Wait", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Wait indicates an expected call of Wait.
-func (mr *MockDeployWaiterMockRecorder) Wait(arg0 any) *gomock.Call {
+func (mr *MockDeployWaiterMockRecorder) Wait(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Wait", reflect.TypeOf((*MockDeployWaiter)(nil).Wait), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Wait", reflect.TypeOf((*MockDeployWaiter)(nil).Wait), ctx)
 }
 
 // WaitCleanup mocks base method.
-func (m *MockDeployWaiter) WaitCleanup(arg0 context.Context) error {
+func (m *MockDeployWaiter) WaitCleanup(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WaitCleanup", arg0)
+	ret := m.ctrl.Call(m, "WaitCleanup", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // WaitCleanup indicates an expected call of WaitCleanup.
-func (mr *MockDeployWaiterMockRecorder) WaitCleanup(arg0 any) *gomock.Call {
+func (mr *MockDeployWaiterMockRecorder) WaitCleanup(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitCleanup", reflect.TypeOf((*MockDeployWaiter)(nil).WaitCleanup), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitCleanup", reflect.TypeOf((*MockDeployWaiter)(nil).WaitCleanup), ctx)
 }
 
 // MockDeployMigrateWaiter is a mock of DeployMigrateWaiter interface.
 type MockDeployMigrateWaiter struct {
 	ctrl     *gomock.Controller
 	recorder *MockDeployMigrateWaiterMockRecorder
+	isgomock struct{}
 }
 
 // MockDeployMigrateWaiterMockRecorder is the mock recorder for MockDeployMigrateWaiter.
@@ -222,99 +226,99 @@ func (m *MockDeployMigrateWaiter) EXPECT() *MockDeployMigrateWaiterMockRecorder 
 }
 
 // Deploy mocks base method.
-func (m *MockDeployMigrateWaiter) Deploy(arg0 context.Context) error {
+func (m *MockDeployMigrateWaiter) Deploy(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Deploy", arg0)
+	ret := m.ctrl.Call(m, "Deploy", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Deploy indicates an expected call of Deploy.
-func (mr *MockDeployMigrateWaiterMockRecorder) Deploy(arg0 any) *gomock.Call {
+func (mr *MockDeployMigrateWaiterMockRecorder) Deploy(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Deploy", reflect.TypeOf((*MockDeployMigrateWaiter)(nil).Deploy), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Deploy", reflect.TypeOf((*MockDeployMigrateWaiter)(nil).Deploy), ctx)
 }
 
 // Destroy mocks base method.
-func (m *MockDeployMigrateWaiter) Destroy(arg0 context.Context) error {
+func (m *MockDeployMigrateWaiter) Destroy(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Destroy", arg0)
+	ret := m.ctrl.Call(m, "Destroy", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Destroy indicates an expected call of Destroy.
-func (mr *MockDeployMigrateWaiterMockRecorder) Destroy(arg0 any) *gomock.Call {
+func (mr *MockDeployMigrateWaiterMockRecorder) Destroy(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockDeployMigrateWaiter)(nil).Destroy), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockDeployMigrateWaiter)(nil).Destroy), ctx)
 }
 
 // Migrate mocks base method.
-func (m *MockDeployMigrateWaiter) Migrate(arg0 context.Context) error {
+func (m *MockDeployMigrateWaiter) Migrate(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Migrate", arg0)
+	ret := m.ctrl.Call(m, "Migrate", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Migrate indicates an expected call of Migrate.
-func (mr *MockDeployMigrateWaiterMockRecorder) Migrate(arg0 any) *gomock.Call {
+func (mr *MockDeployMigrateWaiterMockRecorder) Migrate(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Migrate", reflect.TypeOf((*MockDeployMigrateWaiter)(nil).Migrate), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Migrate", reflect.TypeOf((*MockDeployMigrateWaiter)(nil).Migrate), ctx)
 }
 
 // Restore mocks base method.
-func (m *MockDeployMigrateWaiter) Restore(arg0 context.Context, arg1 *v1beta1.ShootState) error {
+func (m *MockDeployMigrateWaiter) Restore(ctx context.Context, shootState *v1beta1.ShootState) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Restore", arg0, arg1)
+	ret := m.ctrl.Call(m, "Restore", ctx, shootState)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Restore indicates an expected call of Restore.
-func (mr *MockDeployMigrateWaiterMockRecorder) Restore(arg0, arg1 any) *gomock.Call {
+func (mr *MockDeployMigrateWaiterMockRecorder) Restore(ctx, shootState any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Restore", reflect.TypeOf((*MockDeployMigrateWaiter)(nil).Restore), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Restore", reflect.TypeOf((*MockDeployMigrateWaiter)(nil).Restore), ctx, shootState)
 }
 
 // Wait mocks base method.
-func (m *MockDeployMigrateWaiter) Wait(arg0 context.Context) error {
+func (m *MockDeployMigrateWaiter) Wait(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Wait", arg0)
+	ret := m.ctrl.Call(m, "Wait", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Wait indicates an expected call of Wait.
-func (mr *MockDeployMigrateWaiterMockRecorder) Wait(arg0 any) *gomock.Call {
+func (mr *MockDeployMigrateWaiterMockRecorder) Wait(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Wait", reflect.TypeOf((*MockDeployMigrateWaiter)(nil).Wait), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Wait", reflect.TypeOf((*MockDeployMigrateWaiter)(nil).Wait), ctx)
 }
 
 // WaitCleanup mocks base method.
-func (m *MockDeployMigrateWaiter) WaitCleanup(arg0 context.Context) error {
+func (m *MockDeployMigrateWaiter) WaitCleanup(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WaitCleanup", arg0)
+	ret := m.ctrl.Call(m, "WaitCleanup", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // WaitCleanup indicates an expected call of WaitCleanup.
-func (mr *MockDeployMigrateWaiterMockRecorder) WaitCleanup(arg0 any) *gomock.Call {
+func (mr *MockDeployMigrateWaiterMockRecorder) WaitCleanup(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitCleanup", reflect.TypeOf((*MockDeployMigrateWaiter)(nil).WaitCleanup), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitCleanup", reflect.TypeOf((*MockDeployMigrateWaiter)(nil).WaitCleanup), ctx)
 }
 
 // WaitMigrate mocks base method.
-func (m *MockDeployMigrateWaiter) WaitMigrate(arg0 context.Context) error {
+func (m *MockDeployMigrateWaiter) WaitMigrate(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WaitMigrate", arg0)
+	ret := m.ctrl.Call(m, "WaitMigrate", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // WaitMigrate indicates an expected call of WaitMigrate.
-func (mr *MockDeployMigrateWaiterMockRecorder) WaitMigrate(arg0 any) *gomock.Call {
+func (mr *MockDeployMigrateWaiterMockRecorder) WaitMigrate(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitMigrate", reflect.TypeOf((*MockDeployMigrateWaiter)(nil).WaitMigrate), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitMigrate", reflect.TypeOf((*MockDeployMigrateWaiter)(nil).WaitMigrate), ctx)
 }

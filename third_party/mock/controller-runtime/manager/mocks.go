@@ -32,6 +32,7 @@ import (
 type MockManager struct {
 	ctrl     *gomock.Controller
 	recorder *MockManagerMockRecorder
+	isgomock struct{}
 }
 
 // MockManagerMockRecorder is the mock recorder for MockManager.
@@ -66,45 +67,45 @@ func (mr *MockManagerMockRecorder) Add(arg0 any) *gomock.Call {
 }
 
 // AddHealthzCheck mocks base method.
-func (m *MockManager) AddHealthzCheck(arg0 string, arg1 healthz.Checker) error {
+func (m *MockManager) AddHealthzCheck(name string, check healthz.Checker) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddHealthzCheck", arg0, arg1)
+	ret := m.ctrl.Call(m, "AddHealthzCheck", name, check)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddHealthzCheck indicates an expected call of AddHealthzCheck.
-func (mr *MockManagerMockRecorder) AddHealthzCheck(arg0, arg1 any) *gomock.Call {
+func (mr *MockManagerMockRecorder) AddHealthzCheck(name, check any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddHealthzCheck", reflect.TypeOf((*MockManager)(nil).AddHealthzCheck), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddHealthzCheck", reflect.TypeOf((*MockManager)(nil).AddHealthzCheck), name, check)
 }
 
 // AddMetricsServerExtraHandler mocks base method.
-func (m *MockManager) AddMetricsServerExtraHandler(arg0 string, arg1 http.Handler) error {
+func (m *MockManager) AddMetricsServerExtraHandler(path string, handler http.Handler) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddMetricsServerExtraHandler", arg0, arg1)
+	ret := m.ctrl.Call(m, "AddMetricsServerExtraHandler", path, handler)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddMetricsServerExtraHandler indicates an expected call of AddMetricsServerExtraHandler.
-func (mr *MockManagerMockRecorder) AddMetricsServerExtraHandler(arg0, arg1 any) *gomock.Call {
+func (mr *MockManagerMockRecorder) AddMetricsServerExtraHandler(path, handler any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddMetricsServerExtraHandler", reflect.TypeOf((*MockManager)(nil).AddMetricsServerExtraHandler), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddMetricsServerExtraHandler", reflect.TypeOf((*MockManager)(nil).AddMetricsServerExtraHandler), path, handler)
 }
 
 // AddReadyzCheck mocks base method.
-func (m *MockManager) AddReadyzCheck(arg0 string, arg1 healthz.Checker) error {
+func (m *MockManager) AddReadyzCheck(name string, check healthz.Checker) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddReadyzCheck", arg0, arg1)
+	ret := m.ctrl.Call(m, "AddReadyzCheck", name, check)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddReadyzCheck indicates an expected call of AddReadyzCheck.
-func (mr *MockManagerMockRecorder) AddReadyzCheck(arg0, arg1 any) *gomock.Call {
+func (mr *MockManagerMockRecorder) AddReadyzCheck(name, check any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddReadyzCheck", reflect.TypeOf((*MockManager)(nil).AddReadyzCheck), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddReadyzCheck", reflect.TypeOf((*MockManager)(nil).AddReadyzCheck), name, check)
 }
 
 // Elected mocks base method.
@@ -192,17 +193,17 @@ func (mr *MockManagerMockRecorder) GetControllerOptions() *gomock.Call {
 }
 
 // GetEventRecorderFor mocks base method.
-func (m *MockManager) GetEventRecorderFor(arg0 string) record.EventRecorder {
+func (m *MockManager) GetEventRecorderFor(name string) record.EventRecorder {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetEventRecorderFor", arg0)
+	ret := m.ctrl.Call(m, "GetEventRecorderFor", name)
 	ret0, _ := ret[0].(record.EventRecorder)
 	return ret0
 }
 
 // GetEventRecorderFor indicates an expected call of GetEventRecorderFor.
-func (mr *MockManagerMockRecorder) GetEventRecorderFor(arg0 any) *gomock.Call {
+func (mr *MockManagerMockRecorder) GetEventRecorderFor(name any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEventRecorderFor", reflect.TypeOf((*MockManager)(nil).GetEventRecorderFor), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEventRecorderFor", reflect.TypeOf((*MockManager)(nil).GetEventRecorderFor), name)
 }
 
 // GetFieldIndexer mocks base method.
@@ -290,15 +291,15 @@ func (mr *MockManagerMockRecorder) GetWebhookServer() *gomock.Call {
 }
 
 // Start mocks base method.
-func (m *MockManager) Start(arg0 context.Context) error {
+func (m *MockManager) Start(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Start", arg0)
+	ret := m.ctrl.Call(m, "Start", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Start indicates an expected call of Start.
-func (mr *MockManagerMockRecorder) Start(arg0 any) *gomock.Call {
+func (mr *MockManagerMockRecorder) Start(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockManager)(nil).Start), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockManager)(nil).Start), ctx)
 }

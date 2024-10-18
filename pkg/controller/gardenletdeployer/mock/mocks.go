@@ -26,6 +26,7 @@ import (
 type MockInterface struct {
 	ctrl     *gomock.Controller
 	recorder *MockInterfaceMockRecorder
+	isgomock struct{}
 }
 
 // MockInterfaceMockRecorder is the mock recorder for MockInterface.
@@ -81,6 +82,7 @@ func (mr *MockInterfaceMockRecorder) Reconcile(arg0, arg1, arg2, arg3, arg4, arg
 type MockValuesHelper struct {
 	ctrl     *gomock.Controller
 	recorder *MockValuesHelperMockRecorder
+	isgomock struct{}
 }
 
 // MockValuesHelperMockRecorder is the mock recorder for MockValuesHelper.
@@ -116,18 +118,18 @@ func (mr *MockValuesHelperMockRecorder) GetGardenletChartValues(arg0, arg1, arg2
 }
 
 // MergeGardenletConfiguration mocks base method.
-func (m *MockValuesHelper) MergeGardenletConfiguration(arg0 *v1alpha10.GardenletConfiguration) (*v1alpha10.GardenletConfiguration, error) {
+func (m *MockValuesHelper) MergeGardenletConfiguration(config *v1alpha10.GardenletConfiguration) (*v1alpha10.GardenletConfiguration, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MergeGardenletConfiguration", arg0)
+	ret := m.ctrl.Call(m, "MergeGardenletConfiguration", config)
 	ret0, _ := ret[0].(*v1alpha10.GardenletConfiguration)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // MergeGardenletConfiguration indicates an expected call of MergeGardenletConfiguration.
-func (mr *MockValuesHelperMockRecorder) MergeGardenletConfiguration(arg0 any) *gomock.Call {
+func (mr *MockValuesHelperMockRecorder) MergeGardenletConfiguration(config any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MergeGardenletConfiguration", reflect.TypeOf((*MockValuesHelper)(nil).MergeGardenletConfiguration), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MergeGardenletConfiguration", reflect.TypeOf((*MockValuesHelper)(nil).MergeGardenletConfiguration), config)
 }
 
 // MergeGardenletDeployment mocks base method.

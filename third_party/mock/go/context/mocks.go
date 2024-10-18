@@ -20,6 +20,7 @@ import (
 type MockContext struct {
 	ctrl     *gomock.Controller
 	recorder *MockContextMockRecorder
+	isgomock struct{}
 }
 
 // MockContextMockRecorder is the mock recorder for MockContext.
@@ -83,15 +84,15 @@ func (mr *MockContextMockRecorder) Err() *gomock.Call {
 }
 
 // Value mocks base method.
-func (m *MockContext) Value(arg0 any) any {
+func (m *MockContext) Value(key any) any {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Value", arg0)
+	ret := m.ctrl.Call(m, "Value", key)
 	ret0, _ := ret[0].(any)
 	return ret0
 }
 
 // Value indicates an expected call of Value.
-func (mr *MockContextMockRecorder) Value(arg0 any) *gomock.Call {
+func (mr *MockContextMockRecorder) Value(key any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Value", reflect.TypeOf((*MockContext)(nil).Value), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Value", reflect.TypeOf((*MockContext)(nil).Value), key)
 }

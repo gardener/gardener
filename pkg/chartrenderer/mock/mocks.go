@@ -22,6 +22,7 @@ import (
 type MockInterface struct {
 	ctrl     *gomock.Controller
 	recorder *MockInterfaceMockRecorder
+	isgomock struct{}
 }
 
 // MockInterfaceMockRecorder is the mock recorder for MockInterface.
@@ -42,39 +43,40 @@ func (m *MockInterface) EXPECT() *MockInterfaceMockRecorder {
 }
 
 // RenderArchive mocks base method.
-func (m *MockInterface) RenderArchive(arg0 []byte, arg1, arg2 string, arg3 any) (*chartrenderer.RenderedChart, error) {
+func (m *MockInterface) RenderArchive(archive []byte, releaseName, namespace string, values any) (*chartrenderer.RenderedChart, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RenderArchive", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "RenderArchive", archive, releaseName, namespace, values)
 	ret0, _ := ret[0].(*chartrenderer.RenderedChart)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // RenderArchive indicates an expected call of RenderArchive.
-func (mr *MockInterfaceMockRecorder) RenderArchive(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) RenderArchive(archive, releaseName, namespace, values any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RenderArchive", reflect.TypeOf((*MockInterface)(nil).RenderArchive), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RenderArchive", reflect.TypeOf((*MockInterface)(nil).RenderArchive), archive, releaseName, namespace, values)
 }
 
 // RenderEmbeddedFS mocks base method.
-func (m *MockInterface) RenderEmbeddedFS(arg0 embed.FS, arg1, arg2, arg3 string, arg4 any) (*chartrenderer.RenderedChart, error) {
+func (m *MockInterface) RenderEmbeddedFS(embeddedFS embed.FS, chartPath, releaseName, namespace string, values any) (*chartrenderer.RenderedChart, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RenderEmbeddedFS", arg0, arg1, arg2, arg3, arg4)
+	ret := m.ctrl.Call(m, "RenderEmbeddedFS", embeddedFS, chartPath, releaseName, namespace, values)
 	ret0, _ := ret[0].(*chartrenderer.RenderedChart)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // RenderEmbeddedFS indicates an expected call of RenderEmbeddedFS.
-func (mr *MockInterfaceMockRecorder) RenderEmbeddedFS(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) RenderEmbeddedFS(embeddedFS, chartPath, releaseName, namespace, values any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RenderEmbeddedFS", reflect.TypeOf((*MockInterface)(nil).RenderEmbeddedFS), arg0, arg1, arg2, arg3, arg4)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RenderEmbeddedFS", reflect.TypeOf((*MockInterface)(nil).RenderEmbeddedFS), embeddedFS, chartPath, releaseName, namespace, values)
 }
 
 // MockFactory is a mock of Factory interface.
 type MockFactory struct {
 	ctrl     *gomock.Controller
 	recorder *MockFactoryMockRecorder
+	isgomock struct{}
 }
 
 // MockFactoryMockRecorder is the mock recorder for MockFactory.
@@ -95,16 +97,16 @@ func (m *MockFactory) EXPECT() *MockFactoryMockRecorder {
 }
 
 // NewForConfig mocks base method.
-func (m *MockFactory) NewForConfig(arg0 *rest.Config) (chartrenderer.Interface, error) {
+func (m *MockFactory) NewForConfig(config *rest.Config) (chartrenderer.Interface, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NewForConfig", arg0)
+	ret := m.ctrl.Call(m, "NewForConfig", config)
 	ret0, _ := ret[0].(chartrenderer.Interface)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // NewForConfig indicates an expected call of NewForConfig.
-func (mr *MockFactoryMockRecorder) NewForConfig(arg0 any) *gomock.Call {
+func (mr *MockFactoryMockRecorder) NewForConfig(config any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewForConfig", reflect.TypeOf((*MockFactory)(nil).NewForConfig), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewForConfig", reflect.TypeOf((*MockFactory)(nil).NewForConfig), config)
 }

@@ -22,6 +22,7 @@ import (
 type MockInterface struct {
 	ctrl     *gomock.Controller
 	recorder *MockInterfaceMockRecorder
+	isgomock struct{}
 }
 
 // MockInterfaceMockRecorder is the mock recorder for MockInterface.
@@ -42,31 +43,31 @@ func (m *MockInterface) EXPECT() *MockInterfaceMockRecorder {
 }
 
 // Deploy mocks base method.
-func (m *MockInterface) Deploy(arg0 context.Context) error {
+func (m *MockInterface) Deploy(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Deploy", arg0)
+	ret := m.ctrl.Call(m, "Deploy", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Deploy indicates an expected call of Deploy.
-func (mr *MockInterfaceMockRecorder) Deploy(arg0 any) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) Deploy(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Deploy", reflect.TypeOf((*MockInterface)(nil).Deploy), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Deploy", reflect.TypeOf((*MockInterface)(nil).Deploy), ctx)
 }
 
 // Destroy mocks base method.
-func (m *MockInterface) Destroy(arg0 context.Context) error {
+func (m *MockInterface) Destroy(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Destroy", arg0)
+	ret := m.ctrl.Call(m, "Destroy", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Destroy indicates an expected call of Destroy.
-func (mr *MockInterfaceMockRecorder) Destroy(arg0 any) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) Destroy(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockInterface)(nil).Destroy), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockInterface)(nil).Destroy), ctx)
 }
 
 // SetPodNetworks mocks base method.
@@ -82,27 +83,27 @@ func (mr *MockInterfaceMockRecorder) SetPodNetworks(arg0 any) *gomock.Call {
 }
 
 // SetReplicaCount mocks base method.
-func (m *MockInterface) SetReplicaCount(arg0 int32) {
+func (m *MockInterface) SetReplicaCount(replicas int32) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetReplicaCount", arg0)
+	m.ctrl.Call(m, "SetReplicaCount", replicas)
 }
 
 // SetReplicaCount indicates an expected call of SetReplicaCount.
-func (mr *MockInterfaceMockRecorder) SetReplicaCount(arg0 any) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) SetReplicaCount(replicas any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetReplicaCount", reflect.TypeOf((*MockInterface)(nil).SetReplicaCount), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetReplicaCount", reflect.TypeOf((*MockInterface)(nil).SetReplicaCount), replicas)
 }
 
 // SetRuntimeConfig mocks base method.
-func (m *MockInterface) SetRuntimeConfig(arg0 map[string]bool) {
+func (m *MockInterface) SetRuntimeConfig(runtimeConfig map[string]bool) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetRuntimeConfig", arg0)
+	m.ctrl.Call(m, "SetRuntimeConfig", runtimeConfig)
 }
 
 // SetRuntimeConfig indicates an expected call of SetRuntimeConfig.
-func (mr *MockInterfaceMockRecorder) SetRuntimeConfig(arg0 any) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) SetRuntimeConfig(runtimeConfig any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetRuntimeConfig", reflect.TypeOf((*MockInterface)(nil).SetRuntimeConfig), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetRuntimeConfig", reflect.TypeOf((*MockInterface)(nil).SetRuntimeConfig), runtimeConfig)
 }
 
 // SetServiceNetworks mocks base method.
@@ -118,55 +119,55 @@ func (mr *MockInterfaceMockRecorder) SetServiceNetworks(arg0 any) *gomock.Call {
 }
 
 // SetShootClient mocks base method.
-func (m *MockInterface) SetShootClient(arg0 client.Client) {
+func (m *MockInterface) SetShootClient(c client.Client) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetShootClient", arg0)
+	m.ctrl.Call(m, "SetShootClient", c)
 }
 
 // SetShootClient indicates an expected call of SetShootClient.
-func (mr *MockInterfaceMockRecorder) SetShootClient(arg0 any) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) SetShootClient(c any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetShootClient", reflect.TypeOf((*MockInterface)(nil).SetShootClient), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetShootClient", reflect.TypeOf((*MockInterface)(nil).SetShootClient), c)
 }
 
 // Wait mocks base method.
-func (m *MockInterface) Wait(arg0 context.Context) error {
+func (m *MockInterface) Wait(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Wait", arg0)
+	ret := m.ctrl.Call(m, "Wait", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Wait indicates an expected call of Wait.
-func (mr *MockInterfaceMockRecorder) Wait(arg0 any) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) Wait(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Wait", reflect.TypeOf((*MockInterface)(nil).Wait), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Wait", reflect.TypeOf((*MockInterface)(nil).Wait), ctx)
 }
 
 // WaitCleanup mocks base method.
-func (m *MockInterface) WaitCleanup(arg0 context.Context) error {
+func (m *MockInterface) WaitCleanup(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WaitCleanup", arg0)
+	ret := m.ctrl.Call(m, "WaitCleanup", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // WaitCleanup indicates an expected call of WaitCleanup.
-func (mr *MockInterfaceMockRecorder) WaitCleanup(arg0 any) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) WaitCleanup(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitCleanup", reflect.TypeOf((*MockInterface)(nil).WaitCleanup), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitCleanup", reflect.TypeOf((*MockInterface)(nil).WaitCleanup), ctx)
 }
 
 // WaitForControllerToBeActive mocks base method.
-func (m *MockInterface) WaitForControllerToBeActive(arg0 context.Context) error {
+func (m *MockInterface) WaitForControllerToBeActive(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WaitForControllerToBeActive", arg0)
+	ret := m.ctrl.Call(m, "WaitForControllerToBeActive", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // WaitForControllerToBeActive indicates an expected call of WaitForControllerToBeActive.
-func (mr *MockInterfaceMockRecorder) WaitForControllerToBeActive(arg0 any) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) WaitForControllerToBeActive(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForControllerToBeActive", reflect.TypeOf((*MockInterface)(nil).WaitForControllerToBeActive), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForControllerToBeActive", reflect.TypeOf((*MockInterface)(nil).WaitForControllerToBeActive), ctx)
 }

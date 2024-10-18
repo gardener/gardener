@@ -22,6 +22,7 @@ import (
 type MockClientMap struct {
 	ctrl     *gomock.Controller
 	recorder *MockClientMapMockRecorder
+	isgomock struct{}
 }
 
 // MockClientMapMockRecorder is the mock recorder for MockClientMap.
@@ -42,52 +43,53 @@ func (m *MockClientMap) EXPECT() *MockClientMapMockRecorder {
 }
 
 // GetClient mocks base method.
-func (m *MockClientMap) GetClient(arg0 context.Context, arg1 clientmap.ClientSetKey) (kubernetes.Interface, error) {
+func (m *MockClientMap) GetClient(ctx context.Context, key clientmap.ClientSetKey) (kubernetes.Interface, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetClient", arg0, arg1)
+	ret := m.ctrl.Call(m, "GetClient", ctx, key)
 	ret0, _ := ret[0].(kubernetes.Interface)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetClient indicates an expected call of GetClient.
-func (mr *MockClientMapMockRecorder) GetClient(arg0, arg1 any) *gomock.Call {
+func (mr *MockClientMapMockRecorder) GetClient(ctx, key any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClient", reflect.TypeOf((*MockClientMap)(nil).GetClient), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClient", reflect.TypeOf((*MockClientMap)(nil).GetClient), ctx, key)
 }
 
 // InvalidateClient mocks base method.
-func (m *MockClientMap) InvalidateClient(arg0 clientmap.ClientSetKey) error {
+func (m *MockClientMap) InvalidateClient(key clientmap.ClientSetKey) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InvalidateClient", arg0)
+	ret := m.ctrl.Call(m, "InvalidateClient", key)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // InvalidateClient indicates an expected call of InvalidateClient.
-func (mr *MockClientMapMockRecorder) InvalidateClient(arg0 any) *gomock.Call {
+func (mr *MockClientMapMockRecorder) InvalidateClient(key any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InvalidateClient", reflect.TypeOf((*MockClientMap)(nil).InvalidateClient), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InvalidateClient", reflect.TypeOf((*MockClientMap)(nil).InvalidateClient), key)
 }
 
 // Start mocks base method.
-func (m *MockClientMap) Start(arg0 context.Context) error {
+func (m *MockClientMap) Start(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Start", arg0)
+	ret := m.ctrl.Call(m, "Start", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Start indicates an expected call of Start.
-func (mr *MockClientMapMockRecorder) Start(arg0 any) *gomock.Call {
+func (mr *MockClientMapMockRecorder) Start(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockClientMap)(nil).Start), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockClientMap)(nil).Start), ctx)
 }
 
 // MockClientSetFactory is a mock of ClientSetFactory interface.
 type MockClientSetFactory struct {
 	ctrl     *gomock.Controller
 	recorder *MockClientSetFactoryMockRecorder
+	isgomock struct{}
 }
 
 // MockClientSetFactoryMockRecorder is the mock recorder for MockClientSetFactory.
@@ -108,24 +110,24 @@ func (m *MockClientSetFactory) EXPECT() *MockClientSetFactoryMockRecorder {
 }
 
 // CalculateClientSetHash mocks base method.
-func (m *MockClientSetFactory) CalculateClientSetHash(arg0 context.Context, arg1 clientmap.ClientSetKey) (string, error) {
+func (m *MockClientSetFactory) CalculateClientSetHash(ctx context.Context, key clientmap.ClientSetKey) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CalculateClientSetHash", arg0, arg1)
+	ret := m.ctrl.Call(m, "CalculateClientSetHash", ctx, key)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CalculateClientSetHash indicates an expected call of CalculateClientSetHash.
-func (mr *MockClientSetFactoryMockRecorder) CalculateClientSetHash(arg0, arg1 any) *gomock.Call {
+func (mr *MockClientSetFactoryMockRecorder) CalculateClientSetHash(ctx, key any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CalculateClientSetHash", reflect.TypeOf((*MockClientSetFactory)(nil).CalculateClientSetHash), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CalculateClientSetHash", reflect.TypeOf((*MockClientSetFactory)(nil).CalculateClientSetHash), ctx, key)
 }
 
 // NewClientSet mocks base method.
-func (m *MockClientSetFactory) NewClientSet(arg0 context.Context, arg1 clientmap.ClientSetKey) (kubernetes.Interface, string, error) {
+func (m *MockClientSetFactory) NewClientSet(ctx context.Context, key clientmap.ClientSetKey) (kubernetes.Interface, string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NewClientSet", arg0, arg1)
+	ret := m.ctrl.Call(m, "NewClientSet", ctx, key)
 	ret0, _ := ret[0].(kubernetes.Interface)
 	ret1, _ := ret[1].(string)
 	ret2, _ := ret[2].(error)
@@ -133,7 +135,7 @@ func (m *MockClientSetFactory) NewClientSet(arg0 context.Context, arg1 clientmap
 }
 
 // NewClientSet indicates an expected call of NewClientSet.
-func (mr *MockClientSetFactoryMockRecorder) NewClientSet(arg0, arg1 any) *gomock.Call {
+func (mr *MockClientSetFactoryMockRecorder) NewClientSet(ctx, key any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewClientSet", reflect.TypeOf((*MockClientSetFactory)(nil).NewClientSet), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewClientSet", reflect.TypeOf((*MockClientSetFactory)(nil).NewClientSet), ctx, key)
 }

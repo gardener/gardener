@@ -13,8 +13,8 @@ import (
 	context "context"
 	reflect "reflect"
 
+	controller "github.com/gardener/gardener/extensions/pkg/controller"
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	extensions "github.com/gardener/gardener/pkg/extensions"
 	manager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -23,6 +23,7 @@ import (
 type MockValuesProvider struct {
 	ctrl     *gomock.Controller
 	recorder *MockValuesProviderMockRecorder
+	isgomock struct{}
 }
 
 // MockValuesProviderMockRecorder is the mock recorder for MockValuesProvider.
@@ -43,91 +44,91 @@ func (m *MockValuesProvider) EXPECT() *MockValuesProviderMockRecorder {
 }
 
 // GetConfigChartValues mocks base method.
-func (m *MockValuesProvider) GetConfigChartValues(arg0 context.Context, arg1 *v1alpha1.ControlPlane, arg2 *extensions.Cluster) (map[string]any, error) {
+func (m *MockValuesProvider) GetConfigChartValues(ctx context.Context, cp *v1alpha1.ControlPlane, cluster *controller.Cluster) (map[string]any, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetConfigChartValues", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "GetConfigChartValues", ctx, cp, cluster)
 	ret0, _ := ret[0].(map[string]any)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetConfigChartValues indicates an expected call of GetConfigChartValues.
-func (mr *MockValuesProviderMockRecorder) GetConfigChartValues(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockValuesProviderMockRecorder) GetConfigChartValues(ctx, cp, cluster any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConfigChartValues", reflect.TypeOf((*MockValuesProvider)(nil).GetConfigChartValues), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConfigChartValues", reflect.TypeOf((*MockValuesProvider)(nil).GetConfigChartValues), ctx, cp, cluster)
 }
 
 // GetControlPlaneChartValues mocks base method.
-func (m *MockValuesProvider) GetControlPlaneChartValues(arg0 context.Context, arg1 *v1alpha1.ControlPlane, arg2 *extensions.Cluster, arg3 manager.Reader, arg4 map[string]string, arg5 bool) (map[string]any, error) {
+func (m *MockValuesProvider) GetControlPlaneChartValues(ctx context.Context, cp *v1alpha1.ControlPlane, cluster *controller.Cluster, secretsReader manager.Reader, checksums map[string]string, scaledDown bool) (map[string]any, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetControlPlaneChartValues", arg0, arg1, arg2, arg3, arg4, arg5)
+	ret := m.ctrl.Call(m, "GetControlPlaneChartValues", ctx, cp, cluster, secretsReader, checksums, scaledDown)
 	ret0, _ := ret[0].(map[string]any)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetControlPlaneChartValues indicates an expected call of GetControlPlaneChartValues.
-func (mr *MockValuesProviderMockRecorder) GetControlPlaneChartValues(arg0, arg1, arg2, arg3, arg4, arg5 any) *gomock.Call {
+func (mr *MockValuesProviderMockRecorder) GetControlPlaneChartValues(ctx, cp, cluster, secretsReader, checksums, scaledDown any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetControlPlaneChartValues", reflect.TypeOf((*MockValuesProvider)(nil).GetControlPlaneChartValues), arg0, arg1, arg2, arg3, arg4, arg5)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetControlPlaneChartValues", reflect.TypeOf((*MockValuesProvider)(nil).GetControlPlaneChartValues), ctx, cp, cluster, secretsReader, checksums, scaledDown)
 }
 
 // GetControlPlaneExposureChartValues mocks base method.
-func (m *MockValuesProvider) GetControlPlaneExposureChartValues(arg0 context.Context, arg1 *v1alpha1.ControlPlane, arg2 *extensions.Cluster, arg3 manager.Reader, arg4 map[string]string) (map[string]any, error) {
+func (m *MockValuesProvider) GetControlPlaneExposureChartValues(ctx context.Context, cp *v1alpha1.ControlPlane, cluster *controller.Cluster, secretsReader manager.Reader, checksums map[string]string) (map[string]any, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetControlPlaneExposureChartValues", arg0, arg1, arg2, arg3, arg4)
+	ret := m.ctrl.Call(m, "GetControlPlaneExposureChartValues", ctx, cp, cluster, secretsReader, checksums)
 	ret0, _ := ret[0].(map[string]any)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetControlPlaneExposureChartValues indicates an expected call of GetControlPlaneExposureChartValues.
-func (mr *MockValuesProviderMockRecorder) GetControlPlaneExposureChartValues(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
+func (mr *MockValuesProviderMockRecorder) GetControlPlaneExposureChartValues(ctx, cp, cluster, secretsReader, checksums any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetControlPlaneExposureChartValues", reflect.TypeOf((*MockValuesProvider)(nil).GetControlPlaneExposureChartValues), arg0, arg1, arg2, arg3, arg4)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetControlPlaneExposureChartValues", reflect.TypeOf((*MockValuesProvider)(nil).GetControlPlaneExposureChartValues), ctx, cp, cluster, secretsReader, checksums)
 }
 
 // GetControlPlaneShootCRDsChartValues mocks base method.
-func (m *MockValuesProvider) GetControlPlaneShootCRDsChartValues(arg0 context.Context, arg1 *v1alpha1.ControlPlane, arg2 *extensions.Cluster) (map[string]any, error) {
+func (m *MockValuesProvider) GetControlPlaneShootCRDsChartValues(ctx context.Context, cp *v1alpha1.ControlPlane, cluster *controller.Cluster) (map[string]any, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetControlPlaneShootCRDsChartValues", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "GetControlPlaneShootCRDsChartValues", ctx, cp, cluster)
 	ret0, _ := ret[0].(map[string]any)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetControlPlaneShootCRDsChartValues indicates an expected call of GetControlPlaneShootCRDsChartValues.
-func (mr *MockValuesProviderMockRecorder) GetControlPlaneShootCRDsChartValues(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockValuesProviderMockRecorder) GetControlPlaneShootCRDsChartValues(ctx, cp, cluster any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetControlPlaneShootCRDsChartValues", reflect.TypeOf((*MockValuesProvider)(nil).GetControlPlaneShootCRDsChartValues), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetControlPlaneShootCRDsChartValues", reflect.TypeOf((*MockValuesProvider)(nil).GetControlPlaneShootCRDsChartValues), ctx, cp, cluster)
 }
 
 // GetControlPlaneShootChartValues mocks base method.
-func (m *MockValuesProvider) GetControlPlaneShootChartValues(arg0 context.Context, arg1 *v1alpha1.ControlPlane, arg2 *extensions.Cluster, arg3 manager.Reader, arg4 map[string]string) (map[string]any, error) {
+func (m *MockValuesProvider) GetControlPlaneShootChartValues(ctx context.Context, cp *v1alpha1.ControlPlane, cluster *controller.Cluster, secretsReader manager.Reader, checksums map[string]string) (map[string]any, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetControlPlaneShootChartValues", arg0, arg1, arg2, arg3, arg4)
+	ret := m.ctrl.Call(m, "GetControlPlaneShootChartValues", ctx, cp, cluster, secretsReader, checksums)
 	ret0, _ := ret[0].(map[string]any)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetControlPlaneShootChartValues indicates an expected call of GetControlPlaneShootChartValues.
-func (mr *MockValuesProviderMockRecorder) GetControlPlaneShootChartValues(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
+func (mr *MockValuesProviderMockRecorder) GetControlPlaneShootChartValues(ctx, cp, cluster, secretsReader, checksums any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetControlPlaneShootChartValues", reflect.TypeOf((*MockValuesProvider)(nil).GetControlPlaneShootChartValues), arg0, arg1, arg2, arg3, arg4)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetControlPlaneShootChartValues", reflect.TypeOf((*MockValuesProvider)(nil).GetControlPlaneShootChartValues), ctx, cp, cluster, secretsReader, checksums)
 }
 
 // GetStorageClassesChartValues mocks base method.
-func (m *MockValuesProvider) GetStorageClassesChartValues(arg0 context.Context, arg1 *v1alpha1.ControlPlane, arg2 *extensions.Cluster) (map[string]any, error) {
+func (m *MockValuesProvider) GetStorageClassesChartValues(ctx context.Context, cp *v1alpha1.ControlPlane, cluster *controller.Cluster) (map[string]any, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetStorageClassesChartValues", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "GetStorageClassesChartValues", ctx, cp, cluster)
 	ret0, _ := ret[0].(map[string]any)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetStorageClassesChartValues indicates an expected call of GetStorageClassesChartValues.
-func (mr *MockValuesProviderMockRecorder) GetStorageClassesChartValues(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockValuesProviderMockRecorder) GetStorageClassesChartValues(ctx, cp, cluster any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStorageClassesChartValues", reflect.TypeOf((*MockValuesProvider)(nil).GetStorageClassesChartValues), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStorageClassesChartValues", reflect.TypeOf((*MockValuesProvider)(nil).GetStorageClassesChartValues), ctx, cp, cluster)
 }

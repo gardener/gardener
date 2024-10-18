@@ -20,6 +20,7 @@ import (
 type MockCompleter struct {
 	ctrl     *gomock.Controller
 	recorder *MockCompleterMockRecorder
+	isgomock struct{}
 }
 
 // MockCompleterMockRecorder is the mock recorder for MockCompleter.
@@ -57,6 +58,7 @@ func (mr *MockCompleterMockRecorder) Complete() *gomock.Call {
 type MockOption struct {
 	ctrl     *gomock.Controller
 	recorder *MockOptionMockRecorder
+	isgomock struct{}
 }
 
 // MockOptionMockRecorder is the mock recorder for MockOption.
@@ -106,6 +108,7 @@ func (mr *MockOptionMockRecorder) Complete() *gomock.Call {
 type MockFlagger struct {
 	ctrl     *gomock.Controller
 	recorder *MockFlaggerMockRecorder
+	isgomock struct{}
 }
 
 // MockFlaggerMockRecorder is the mock recorder for MockFlagger.

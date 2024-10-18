@@ -21,6 +21,7 @@ import (
 type MockOps struct {
 	ctrl     *gomock.Controller
 	recorder *MockOpsMockRecorder
+	isgomock struct{}
 }
 
 // MockOpsMockRecorder is the mock recorder for MockOps.
@@ -41,16 +42,16 @@ func (m *MockOps) EXPECT() *MockOpsMockRecorder {
 }
 
 // WithTimeout mocks base method.
-func (m *MockOps) WithTimeout(arg0 context.Context, arg1 time.Duration) (context.Context, context.CancelFunc) {
+func (m *MockOps) WithTimeout(ctx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WithTimeout", arg0, arg1)
+	ret := m.ctrl.Call(m, "WithTimeout", ctx, timeout)
 	ret0, _ := ret[0].(context.Context)
 	ret1, _ := ret[1].(context.CancelFunc)
 	return ret0, ret1
 }
 
 // WithTimeout indicates an expected call of WithTimeout.
-func (mr *MockOpsMockRecorder) WithTimeout(arg0, arg1 any) *gomock.Call {
+func (mr *MockOpsMockRecorder) WithTimeout(ctx, timeout any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WithTimeout", reflect.TypeOf((*MockOps)(nil).WithTimeout), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WithTimeout", reflect.TypeOf((*MockOps)(nil).WithTimeout), ctx, timeout)
 }

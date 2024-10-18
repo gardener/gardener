@@ -29,6 +29,7 @@ import (
 type MockCoreV1Interface struct {
 	ctrl     *gomock.Controller
 	recorder *MockCoreV1InterfaceMockRecorder
+	isgomock struct{}
 }
 
 // MockCoreV1InterfaceMockRecorder is the mock recorder for MockCoreV1Interface.
@@ -63,59 +64,59 @@ func (mr *MockCoreV1InterfaceMockRecorder) ComponentStatuses() *gomock.Call {
 }
 
 // ConfigMaps mocks base method.
-func (m *MockCoreV1Interface) ConfigMaps(arg0 string) v13.ConfigMapInterface {
+func (m *MockCoreV1Interface) ConfigMaps(namespace string) v13.ConfigMapInterface {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ConfigMaps", arg0)
+	ret := m.ctrl.Call(m, "ConfigMaps", namespace)
 	ret0, _ := ret[0].(v13.ConfigMapInterface)
 	return ret0
 }
 
 // ConfigMaps indicates an expected call of ConfigMaps.
-func (mr *MockCoreV1InterfaceMockRecorder) ConfigMaps(arg0 any) *gomock.Call {
+func (mr *MockCoreV1InterfaceMockRecorder) ConfigMaps(namespace any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ConfigMaps", reflect.TypeOf((*MockCoreV1Interface)(nil).ConfigMaps), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ConfigMaps", reflect.TypeOf((*MockCoreV1Interface)(nil).ConfigMaps), namespace)
 }
 
 // Endpoints mocks base method.
-func (m *MockCoreV1Interface) Endpoints(arg0 string) v13.EndpointsInterface {
+func (m *MockCoreV1Interface) Endpoints(namespace string) v13.EndpointsInterface {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Endpoints", arg0)
+	ret := m.ctrl.Call(m, "Endpoints", namespace)
 	ret0, _ := ret[0].(v13.EndpointsInterface)
 	return ret0
 }
 
 // Endpoints indicates an expected call of Endpoints.
-func (mr *MockCoreV1InterfaceMockRecorder) Endpoints(arg0 any) *gomock.Call {
+func (mr *MockCoreV1InterfaceMockRecorder) Endpoints(namespace any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Endpoints", reflect.TypeOf((*MockCoreV1Interface)(nil).Endpoints), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Endpoints", reflect.TypeOf((*MockCoreV1Interface)(nil).Endpoints), namespace)
 }
 
 // Events mocks base method.
-func (m *MockCoreV1Interface) Events(arg0 string) v13.EventInterface {
+func (m *MockCoreV1Interface) Events(namespace string) v13.EventInterface {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Events", arg0)
+	ret := m.ctrl.Call(m, "Events", namespace)
 	ret0, _ := ret[0].(v13.EventInterface)
 	return ret0
 }
 
 // Events indicates an expected call of Events.
-func (mr *MockCoreV1InterfaceMockRecorder) Events(arg0 any) *gomock.Call {
+func (mr *MockCoreV1InterfaceMockRecorder) Events(namespace any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Events", reflect.TypeOf((*MockCoreV1Interface)(nil).Events), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Events", reflect.TypeOf((*MockCoreV1Interface)(nil).Events), namespace)
 }
 
 // LimitRanges mocks base method.
-func (m *MockCoreV1Interface) LimitRanges(arg0 string) v13.LimitRangeInterface {
+func (m *MockCoreV1Interface) LimitRanges(namespace string) v13.LimitRangeInterface {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "LimitRanges", arg0)
+	ret := m.ctrl.Call(m, "LimitRanges", namespace)
 	ret0, _ := ret[0].(v13.LimitRangeInterface)
 	return ret0
 }
 
 // LimitRanges indicates an expected call of LimitRanges.
-func (mr *MockCoreV1InterfaceMockRecorder) LimitRanges(arg0 any) *gomock.Call {
+func (mr *MockCoreV1InterfaceMockRecorder) LimitRanges(namespace any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LimitRanges", reflect.TypeOf((*MockCoreV1Interface)(nil).LimitRanges), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LimitRanges", reflect.TypeOf((*MockCoreV1Interface)(nil).LimitRanges), namespace)
 }
 
 // Namespaces mocks base method.
@@ -147,17 +148,17 @@ func (mr *MockCoreV1InterfaceMockRecorder) Nodes() *gomock.Call {
 }
 
 // PersistentVolumeClaims mocks base method.
-func (m *MockCoreV1Interface) PersistentVolumeClaims(arg0 string) v13.PersistentVolumeClaimInterface {
+func (m *MockCoreV1Interface) PersistentVolumeClaims(namespace string) v13.PersistentVolumeClaimInterface {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PersistentVolumeClaims", arg0)
+	ret := m.ctrl.Call(m, "PersistentVolumeClaims", namespace)
 	ret0, _ := ret[0].(v13.PersistentVolumeClaimInterface)
 	return ret0
 }
 
 // PersistentVolumeClaims indicates an expected call of PersistentVolumeClaims.
-func (mr *MockCoreV1InterfaceMockRecorder) PersistentVolumeClaims(arg0 any) *gomock.Call {
+func (mr *MockCoreV1InterfaceMockRecorder) PersistentVolumeClaims(namespace any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PersistentVolumeClaims", reflect.TypeOf((*MockCoreV1Interface)(nil).PersistentVolumeClaims), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PersistentVolumeClaims", reflect.TypeOf((*MockCoreV1Interface)(nil).PersistentVolumeClaims), namespace)
 }
 
 // PersistentVolumes mocks base method.
@@ -175,31 +176,31 @@ func (mr *MockCoreV1InterfaceMockRecorder) PersistentVolumes() *gomock.Call {
 }
 
 // PodTemplates mocks base method.
-func (m *MockCoreV1Interface) PodTemplates(arg0 string) v13.PodTemplateInterface {
+func (m *MockCoreV1Interface) PodTemplates(namespace string) v13.PodTemplateInterface {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PodTemplates", arg0)
+	ret := m.ctrl.Call(m, "PodTemplates", namespace)
 	ret0, _ := ret[0].(v13.PodTemplateInterface)
 	return ret0
 }
 
 // PodTemplates indicates an expected call of PodTemplates.
-func (mr *MockCoreV1InterfaceMockRecorder) PodTemplates(arg0 any) *gomock.Call {
+func (mr *MockCoreV1InterfaceMockRecorder) PodTemplates(namespace any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PodTemplates", reflect.TypeOf((*MockCoreV1Interface)(nil).PodTemplates), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PodTemplates", reflect.TypeOf((*MockCoreV1Interface)(nil).PodTemplates), namespace)
 }
 
 // Pods mocks base method.
-func (m *MockCoreV1Interface) Pods(arg0 string) v13.PodInterface {
+func (m *MockCoreV1Interface) Pods(namespace string) v13.PodInterface {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Pods", arg0)
+	ret := m.ctrl.Call(m, "Pods", namespace)
 	ret0, _ := ret[0].(v13.PodInterface)
 	return ret0
 }
 
 // Pods indicates an expected call of Pods.
-func (mr *MockCoreV1InterfaceMockRecorder) Pods(arg0 any) *gomock.Call {
+func (mr *MockCoreV1InterfaceMockRecorder) Pods(namespace any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Pods", reflect.TypeOf((*MockCoreV1Interface)(nil).Pods), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Pods", reflect.TypeOf((*MockCoreV1Interface)(nil).Pods), namespace)
 }
 
 // RESTClient mocks base method.
@@ -217,79 +218,80 @@ func (mr *MockCoreV1InterfaceMockRecorder) RESTClient() *gomock.Call {
 }
 
 // ReplicationControllers mocks base method.
-func (m *MockCoreV1Interface) ReplicationControllers(arg0 string) v13.ReplicationControllerInterface {
+func (m *MockCoreV1Interface) ReplicationControllers(namespace string) v13.ReplicationControllerInterface {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReplicationControllers", arg0)
+	ret := m.ctrl.Call(m, "ReplicationControllers", namespace)
 	ret0, _ := ret[0].(v13.ReplicationControllerInterface)
 	return ret0
 }
 
 // ReplicationControllers indicates an expected call of ReplicationControllers.
-func (mr *MockCoreV1InterfaceMockRecorder) ReplicationControllers(arg0 any) *gomock.Call {
+func (mr *MockCoreV1InterfaceMockRecorder) ReplicationControllers(namespace any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReplicationControllers", reflect.TypeOf((*MockCoreV1Interface)(nil).ReplicationControllers), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReplicationControllers", reflect.TypeOf((*MockCoreV1Interface)(nil).ReplicationControllers), namespace)
 }
 
 // ResourceQuotas mocks base method.
-func (m *MockCoreV1Interface) ResourceQuotas(arg0 string) v13.ResourceQuotaInterface {
+func (m *MockCoreV1Interface) ResourceQuotas(namespace string) v13.ResourceQuotaInterface {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ResourceQuotas", arg0)
+	ret := m.ctrl.Call(m, "ResourceQuotas", namespace)
 	ret0, _ := ret[0].(v13.ResourceQuotaInterface)
 	return ret0
 }
 
 // ResourceQuotas indicates an expected call of ResourceQuotas.
-func (mr *MockCoreV1InterfaceMockRecorder) ResourceQuotas(arg0 any) *gomock.Call {
+func (mr *MockCoreV1InterfaceMockRecorder) ResourceQuotas(namespace any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResourceQuotas", reflect.TypeOf((*MockCoreV1Interface)(nil).ResourceQuotas), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResourceQuotas", reflect.TypeOf((*MockCoreV1Interface)(nil).ResourceQuotas), namespace)
 }
 
 // Secrets mocks base method.
-func (m *MockCoreV1Interface) Secrets(arg0 string) v13.SecretInterface {
+func (m *MockCoreV1Interface) Secrets(namespace string) v13.SecretInterface {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Secrets", arg0)
+	ret := m.ctrl.Call(m, "Secrets", namespace)
 	ret0, _ := ret[0].(v13.SecretInterface)
 	return ret0
 }
 
 // Secrets indicates an expected call of Secrets.
-func (mr *MockCoreV1InterfaceMockRecorder) Secrets(arg0 any) *gomock.Call {
+func (mr *MockCoreV1InterfaceMockRecorder) Secrets(namespace any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Secrets", reflect.TypeOf((*MockCoreV1Interface)(nil).Secrets), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Secrets", reflect.TypeOf((*MockCoreV1Interface)(nil).Secrets), namespace)
 }
 
 // ServiceAccounts mocks base method.
-func (m *MockCoreV1Interface) ServiceAccounts(arg0 string) v13.ServiceAccountInterface {
+func (m *MockCoreV1Interface) ServiceAccounts(namespace string) v13.ServiceAccountInterface {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ServiceAccounts", arg0)
+	ret := m.ctrl.Call(m, "ServiceAccounts", namespace)
 	ret0, _ := ret[0].(v13.ServiceAccountInterface)
 	return ret0
 }
 
 // ServiceAccounts indicates an expected call of ServiceAccounts.
-func (mr *MockCoreV1InterfaceMockRecorder) ServiceAccounts(arg0 any) *gomock.Call {
+func (mr *MockCoreV1InterfaceMockRecorder) ServiceAccounts(namespace any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceAccounts", reflect.TypeOf((*MockCoreV1Interface)(nil).ServiceAccounts), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceAccounts", reflect.TypeOf((*MockCoreV1Interface)(nil).ServiceAccounts), namespace)
 }
 
 // Services mocks base method.
-func (m *MockCoreV1Interface) Services(arg0 string) v13.ServiceInterface {
+func (m *MockCoreV1Interface) Services(namespace string) v13.ServiceInterface {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Services", arg0)
+	ret := m.ctrl.Call(m, "Services", namespace)
 	ret0, _ := ret[0].(v13.ServiceInterface)
 	return ret0
 }
 
 // Services indicates an expected call of Services.
-func (mr *MockCoreV1InterfaceMockRecorder) Services(arg0 any) *gomock.Call {
+func (mr *MockCoreV1InterfaceMockRecorder) Services(namespace any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Services", reflect.TypeOf((*MockCoreV1Interface)(nil).Services), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Services", reflect.TypeOf((*MockCoreV1Interface)(nil).Services), namespace)
 }
 
 // MockPodInterface is a mock of PodInterface interface.
 type MockPodInterface struct {
 	ctrl     *gomock.Controller
 	recorder *MockPodInterfaceMockRecorder
+	isgomock struct{}
 }
 
 // MockPodInterfaceMockRecorder is the mock recorder for MockPodInterface.
@@ -310,183 +312,183 @@ func (m *MockPodInterface) EXPECT() *MockPodInterfaceMockRecorder {
 }
 
 // Apply mocks base method.
-func (m *MockPodInterface) Apply(arg0 context.Context, arg1 *v12.PodApplyConfiguration, arg2 v11.ApplyOptions) (*v1.Pod, error) {
+func (m *MockPodInterface) Apply(ctx context.Context, pod *v12.PodApplyConfiguration, opts v11.ApplyOptions) (*v1.Pod, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Apply", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Apply", ctx, pod, opts)
 	ret0, _ := ret[0].(*v1.Pod)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Apply indicates an expected call of Apply.
-func (mr *MockPodInterfaceMockRecorder) Apply(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockPodInterfaceMockRecorder) Apply(ctx, pod, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Apply", reflect.TypeOf((*MockPodInterface)(nil).Apply), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Apply", reflect.TypeOf((*MockPodInterface)(nil).Apply), ctx, pod, opts)
 }
 
 // ApplyStatus mocks base method.
-func (m *MockPodInterface) ApplyStatus(arg0 context.Context, arg1 *v12.PodApplyConfiguration, arg2 v11.ApplyOptions) (*v1.Pod, error) {
+func (m *MockPodInterface) ApplyStatus(ctx context.Context, pod *v12.PodApplyConfiguration, opts v11.ApplyOptions) (*v1.Pod, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ApplyStatus", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "ApplyStatus", ctx, pod, opts)
 	ret0, _ := ret[0].(*v1.Pod)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ApplyStatus indicates an expected call of ApplyStatus.
-func (mr *MockPodInterfaceMockRecorder) ApplyStatus(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockPodInterfaceMockRecorder) ApplyStatus(ctx, pod, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyStatus", reflect.TypeOf((*MockPodInterface)(nil).ApplyStatus), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyStatus", reflect.TypeOf((*MockPodInterface)(nil).ApplyStatus), ctx, pod, opts)
 }
 
 // Bind mocks base method.
-func (m *MockPodInterface) Bind(arg0 context.Context, arg1 *v1.Binding, arg2 v11.CreateOptions) error {
+func (m *MockPodInterface) Bind(ctx context.Context, binding *v1.Binding, opts v11.CreateOptions) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Bind", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Bind", ctx, binding, opts)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Bind indicates an expected call of Bind.
-func (mr *MockPodInterfaceMockRecorder) Bind(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockPodInterfaceMockRecorder) Bind(ctx, binding, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Bind", reflect.TypeOf((*MockPodInterface)(nil).Bind), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Bind", reflect.TypeOf((*MockPodInterface)(nil).Bind), ctx, binding, opts)
 }
 
 // Create mocks base method.
-func (m *MockPodInterface) Create(arg0 context.Context, arg1 *v1.Pod, arg2 v11.CreateOptions) (*v1.Pod, error) {
+func (m *MockPodInterface) Create(ctx context.Context, pod *v1.Pod, opts v11.CreateOptions) (*v1.Pod, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Create", ctx, pod, opts)
 	ret0, _ := ret[0].(*v1.Pod)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockPodInterfaceMockRecorder) Create(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockPodInterfaceMockRecorder) Create(ctx, pod, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockPodInterface)(nil).Create), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockPodInterface)(nil).Create), ctx, pod, opts)
 }
 
 // Delete mocks base method.
-func (m *MockPodInterface) Delete(arg0 context.Context, arg1 string, arg2 v11.DeleteOptions) error {
+func (m *MockPodInterface) Delete(ctx context.Context, name string, opts v11.DeleteOptions) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Delete", ctx, name, opts)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockPodInterfaceMockRecorder) Delete(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockPodInterfaceMockRecorder) Delete(ctx, name, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockPodInterface)(nil).Delete), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockPodInterface)(nil).Delete), ctx, name, opts)
 }
 
 // DeleteCollection mocks base method.
-func (m *MockPodInterface) DeleteCollection(arg0 context.Context, arg1 v11.DeleteOptions, arg2 v11.ListOptions) error {
+func (m *MockPodInterface) DeleteCollection(ctx context.Context, opts v11.DeleteOptions, listOpts v11.ListOptions) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteCollection", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "DeleteCollection", ctx, opts, listOpts)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteCollection indicates an expected call of DeleteCollection.
-func (mr *MockPodInterfaceMockRecorder) DeleteCollection(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockPodInterfaceMockRecorder) DeleteCollection(ctx, opts, listOpts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCollection", reflect.TypeOf((*MockPodInterface)(nil).DeleteCollection), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCollection", reflect.TypeOf((*MockPodInterface)(nil).DeleteCollection), ctx, opts, listOpts)
 }
 
 // Evict mocks base method.
-func (m *MockPodInterface) Evict(arg0 context.Context, arg1 *v1beta1.Eviction) error {
+func (m *MockPodInterface) Evict(ctx context.Context, eviction *v1beta1.Eviction) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Evict", arg0, arg1)
+	ret := m.ctrl.Call(m, "Evict", ctx, eviction)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Evict indicates an expected call of Evict.
-func (mr *MockPodInterfaceMockRecorder) Evict(arg0, arg1 any) *gomock.Call {
+func (mr *MockPodInterfaceMockRecorder) Evict(ctx, eviction any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Evict", reflect.TypeOf((*MockPodInterface)(nil).Evict), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Evict", reflect.TypeOf((*MockPodInterface)(nil).Evict), ctx, eviction)
 }
 
 // EvictV1 mocks base method.
-func (m *MockPodInterface) EvictV1(arg0 context.Context, arg1 *v10.Eviction) error {
+func (m *MockPodInterface) EvictV1(ctx context.Context, eviction *v10.Eviction) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EvictV1", arg0, arg1)
+	ret := m.ctrl.Call(m, "EvictV1", ctx, eviction)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // EvictV1 indicates an expected call of EvictV1.
-func (mr *MockPodInterfaceMockRecorder) EvictV1(arg0, arg1 any) *gomock.Call {
+func (mr *MockPodInterfaceMockRecorder) EvictV1(ctx, eviction any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EvictV1", reflect.TypeOf((*MockPodInterface)(nil).EvictV1), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EvictV1", reflect.TypeOf((*MockPodInterface)(nil).EvictV1), ctx, eviction)
 }
 
 // EvictV1beta1 mocks base method.
-func (m *MockPodInterface) EvictV1beta1(arg0 context.Context, arg1 *v1beta1.Eviction) error {
+func (m *MockPodInterface) EvictV1beta1(ctx context.Context, eviction *v1beta1.Eviction) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EvictV1beta1", arg0, arg1)
+	ret := m.ctrl.Call(m, "EvictV1beta1", ctx, eviction)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // EvictV1beta1 indicates an expected call of EvictV1beta1.
-func (mr *MockPodInterfaceMockRecorder) EvictV1beta1(arg0, arg1 any) *gomock.Call {
+func (mr *MockPodInterfaceMockRecorder) EvictV1beta1(ctx, eviction any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EvictV1beta1", reflect.TypeOf((*MockPodInterface)(nil).EvictV1beta1), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EvictV1beta1", reflect.TypeOf((*MockPodInterface)(nil).EvictV1beta1), ctx, eviction)
 }
 
 // Get mocks base method.
-func (m *MockPodInterface) Get(arg0 context.Context, arg1 string, arg2 v11.GetOptions) (*v1.Pod, error) {
+func (m *MockPodInterface) Get(ctx context.Context, name string, opts v11.GetOptions) (*v1.Pod, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Get", ctx, name, opts)
 	ret0, _ := ret[0].(*v1.Pod)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockPodInterfaceMockRecorder) Get(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockPodInterfaceMockRecorder) Get(ctx, name, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockPodInterface)(nil).Get), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockPodInterface)(nil).Get), ctx, name, opts)
 }
 
 // GetLogs mocks base method.
-func (m *MockPodInterface) GetLogs(arg0 string, arg1 *v1.PodLogOptions) *rest.Request {
+func (m *MockPodInterface) GetLogs(name string, opts *v1.PodLogOptions) *rest.Request {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetLogs", arg0, arg1)
+	ret := m.ctrl.Call(m, "GetLogs", name, opts)
 	ret0, _ := ret[0].(*rest.Request)
 	return ret0
 }
 
 // GetLogs indicates an expected call of GetLogs.
-func (mr *MockPodInterfaceMockRecorder) GetLogs(arg0, arg1 any) *gomock.Call {
+func (mr *MockPodInterfaceMockRecorder) GetLogs(name, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLogs", reflect.TypeOf((*MockPodInterface)(nil).GetLogs), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLogs", reflect.TypeOf((*MockPodInterface)(nil).GetLogs), name, opts)
 }
 
 // List mocks base method.
-func (m *MockPodInterface) List(arg0 context.Context, arg1 v11.ListOptions) (*v1.PodList, error) {
+func (m *MockPodInterface) List(ctx context.Context, opts v11.ListOptions) (*v1.PodList, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0, arg1)
+	ret := m.ctrl.Call(m, "List", ctx, opts)
 	ret0, _ := ret[0].(*v1.PodList)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List.
-func (mr *MockPodInterfaceMockRecorder) List(arg0, arg1 any) *gomock.Call {
+func (mr *MockPodInterfaceMockRecorder) List(ctx, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockPodInterface)(nil).List), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockPodInterface)(nil).List), ctx, opts)
 }
 
 // Patch mocks base method.
-func (m *MockPodInterface) Patch(arg0 context.Context, arg1 string, arg2 types.PatchType, arg3 []byte, arg4 v11.PatchOptions, arg5 ...string) (*v1.Pod, error) {
+func (m *MockPodInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v11.PatchOptions, subresources ...string) (*v1.Pod, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0, arg1, arg2, arg3, arg4}
-	for _, a := range arg5 {
+	varargs := []any{ctx, name, pt, data, opts}
+	for _, a := range subresources {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "Patch", varargs...)
@@ -496,90 +498,91 @@ func (m *MockPodInterface) Patch(arg0 context.Context, arg1 string, arg2 types.P
 }
 
 // Patch indicates an expected call of Patch.
-func (mr *MockPodInterfaceMockRecorder) Patch(arg0, arg1, arg2, arg3, arg4 any, arg5 ...any) *gomock.Call {
+func (mr *MockPodInterfaceMockRecorder) Patch(ctx, name, pt, data, opts any, subresources ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0, arg1, arg2, arg3, arg4}, arg5...)
+	varargs := append([]any{ctx, name, pt, data, opts}, subresources...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Patch", reflect.TypeOf((*MockPodInterface)(nil).Patch), varargs...)
 }
 
 // ProxyGet mocks base method.
-func (m *MockPodInterface) ProxyGet(arg0, arg1, arg2, arg3 string, arg4 map[string]string) rest.ResponseWrapper {
+func (m *MockPodInterface) ProxyGet(scheme, name, port, path string, params map[string]string) rest.ResponseWrapper {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ProxyGet", arg0, arg1, arg2, arg3, arg4)
+	ret := m.ctrl.Call(m, "ProxyGet", scheme, name, port, path, params)
 	ret0, _ := ret[0].(rest.ResponseWrapper)
 	return ret0
 }
 
 // ProxyGet indicates an expected call of ProxyGet.
-func (mr *MockPodInterfaceMockRecorder) ProxyGet(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
+func (mr *MockPodInterfaceMockRecorder) ProxyGet(scheme, name, port, path, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProxyGet", reflect.TypeOf((*MockPodInterface)(nil).ProxyGet), arg0, arg1, arg2, arg3, arg4)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProxyGet", reflect.TypeOf((*MockPodInterface)(nil).ProxyGet), scheme, name, port, path, params)
 }
 
 // Update mocks base method.
-func (m *MockPodInterface) Update(arg0 context.Context, arg1 *v1.Pod, arg2 v11.UpdateOptions) (*v1.Pod, error) {
+func (m *MockPodInterface) Update(ctx context.Context, pod *v1.Pod, opts v11.UpdateOptions) (*v1.Pod, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Update", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Update", ctx, pod, opts)
 	ret0, _ := ret[0].(*v1.Pod)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockPodInterfaceMockRecorder) Update(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockPodInterfaceMockRecorder) Update(ctx, pod, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockPodInterface)(nil).Update), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockPodInterface)(nil).Update), ctx, pod, opts)
 }
 
 // UpdateEphemeralContainers mocks base method.
-func (m *MockPodInterface) UpdateEphemeralContainers(arg0 context.Context, arg1 string, arg2 *v1.Pod, arg3 v11.UpdateOptions) (*v1.Pod, error) {
+func (m *MockPodInterface) UpdateEphemeralContainers(ctx context.Context, podName string, pod *v1.Pod, opts v11.UpdateOptions) (*v1.Pod, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateEphemeralContainers", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "UpdateEphemeralContainers", ctx, podName, pod, opts)
 	ret0, _ := ret[0].(*v1.Pod)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // UpdateEphemeralContainers indicates an expected call of UpdateEphemeralContainers.
-func (mr *MockPodInterfaceMockRecorder) UpdateEphemeralContainers(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockPodInterfaceMockRecorder) UpdateEphemeralContainers(ctx, podName, pod, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEphemeralContainers", reflect.TypeOf((*MockPodInterface)(nil).UpdateEphemeralContainers), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEphemeralContainers", reflect.TypeOf((*MockPodInterface)(nil).UpdateEphemeralContainers), ctx, podName, pod, opts)
 }
 
 // UpdateStatus mocks base method.
-func (m *MockPodInterface) UpdateStatus(arg0 context.Context, arg1 *v1.Pod, arg2 v11.UpdateOptions) (*v1.Pod, error) {
+func (m *MockPodInterface) UpdateStatus(ctx context.Context, pod *v1.Pod, opts v11.UpdateOptions) (*v1.Pod, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateStatus", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "UpdateStatus", ctx, pod, opts)
 	ret0, _ := ret[0].(*v1.Pod)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // UpdateStatus indicates an expected call of UpdateStatus.
-func (mr *MockPodInterfaceMockRecorder) UpdateStatus(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockPodInterfaceMockRecorder) UpdateStatus(ctx, pod, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateStatus", reflect.TypeOf((*MockPodInterface)(nil).UpdateStatus), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateStatus", reflect.TypeOf((*MockPodInterface)(nil).UpdateStatus), ctx, pod, opts)
 }
 
 // Watch mocks base method.
-func (m *MockPodInterface) Watch(arg0 context.Context, arg1 v11.ListOptions) (watch.Interface, error) {
+func (m *MockPodInterface) Watch(ctx context.Context, opts v11.ListOptions) (watch.Interface, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Watch", arg0, arg1)
+	ret := m.ctrl.Call(m, "Watch", ctx, opts)
 	ret0, _ := ret[0].(watch.Interface)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Watch indicates an expected call of Watch.
-func (mr *MockPodInterfaceMockRecorder) Watch(arg0, arg1 any) *gomock.Call {
+func (mr *MockPodInterfaceMockRecorder) Watch(ctx, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Watch", reflect.TypeOf((*MockPodInterface)(nil).Watch), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Watch", reflect.TypeOf((*MockPodInterface)(nil).Watch), ctx, opts)
 }
 
 // MockNodeInterface is a mock of NodeInterface interface.
 type MockNodeInterface struct {
 	ctrl     *gomock.Controller
 	recorder *MockNodeInterfaceMockRecorder
+	isgomock struct{}
 }
 
 // MockNodeInterfaceMockRecorder is the mock recorder for MockNodeInterface.
@@ -600,113 +603,113 @@ func (m *MockNodeInterface) EXPECT() *MockNodeInterfaceMockRecorder {
 }
 
 // Apply mocks base method.
-func (m *MockNodeInterface) Apply(arg0 context.Context, arg1 *v12.NodeApplyConfiguration, arg2 v11.ApplyOptions) (*v1.Node, error) {
+func (m *MockNodeInterface) Apply(ctx context.Context, node *v12.NodeApplyConfiguration, opts v11.ApplyOptions) (*v1.Node, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Apply", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Apply", ctx, node, opts)
 	ret0, _ := ret[0].(*v1.Node)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Apply indicates an expected call of Apply.
-func (mr *MockNodeInterfaceMockRecorder) Apply(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockNodeInterfaceMockRecorder) Apply(ctx, node, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Apply", reflect.TypeOf((*MockNodeInterface)(nil).Apply), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Apply", reflect.TypeOf((*MockNodeInterface)(nil).Apply), ctx, node, opts)
 }
 
 // ApplyStatus mocks base method.
-func (m *MockNodeInterface) ApplyStatus(arg0 context.Context, arg1 *v12.NodeApplyConfiguration, arg2 v11.ApplyOptions) (*v1.Node, error) {
+func (m *MockNodeInterface) ApplyStatus(ctx context.Context, node *v12.NodeApplyConfiguration, opts v11.ApplyOptions) (*v1.Node, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ApplyStatus", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "ApplyStatus", ctx, node, opts)
 	ret0, _ := ret[0].(*v1.Node)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ApplyStatus indicates an expected call of ApplyStatus.
-func (mr *MockNodeInterfaceMockRecorder) ApplyStatus(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockNodeInterfaceMockRecorder) ApplyStatus(ctx, node, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyStatus", reflect.TypeOf((*MockNodeInterface)(nil).ApplyStatus), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyStatus", reflect.TypeOf((*MockNodeInterface)(nil).ApplyStatus), ctx, node, opts)
 }
 
 // Create mocks base method.
-func (m *MockNodeInterface) Create(arg0 context.Context, arg1 *v1.Node, arg2 v11.CreateOptions) (*v1.Node, error) {
+func (m *MockNodeInterface) Create(ctx context.Context, node *v1.Node, opts v11.CreateOptions) (*v1.Node, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Create", ctx, node, opts)
 	ret0, _ := ret[0].(*v1.Node)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockNodeInterfaceMockRecorder) Create(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockNodeInterfaceMockRecorder) Create(ctx, node, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockNodeInterface)(nil).Create), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockNodeInterface)(nil).Create), ctx, node, opts)
 }
 
 // Delete mocks base method.
-func (m *MockNodeInterface) Delete(arg0 context.Context, arg1 string, arg2 v11.DeleteOptions) error {
+func (m *MockNodeInterface) Delete(ctx context.Context, name string, opts v11.DeleteOptions) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Delete", ctx, name, opts)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockNodeInterfaceMockRecorder) Delete(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockNodeInterfaceMockRecorder) Delete(ctx, name, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockNodeInterface)(nil).Delete), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockNodeInterface)(nil).Delete), ctx, name, opts)
 }
 
 // DeleteCollection mocks base method.
-func (m *MockNodeInterface) DeleteCollection(arg0 context.Context, arg1 v11.DeleteOptions, arg2 v11.ListOptions) error {
+func (m *MockNodeInterface) DeleteCollection(ctx context.Context, opts v11.DeleteOptions, listOpts v11.ListOptions) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteCollection", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "DeleteCollection", ctx, opts, listOpts)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteCollection indicates an expected call of DeleteCollection.
-func (mr *MockNodeInterfaceMockRecorder) DeleteCollection(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockNodeInterfaceMockRecorder) DeleteCollection(ctx, opts, listOpts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCollection", reflect.TypeOf((*MockNodeInterface)(nil).DeleteCollection), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCollection", reflect.TypeOf((*MockNodeInterface)(nil).DeleteCollection), ctx, opts, listOpts)
 }
 
 // Get mocks base method.
-func (m *MockNodeInterface) Get(arg0 context.Context, arg1 string, arg2 v11.GetOptions) (*v1.Node, error) {
+func (m *MockNodeInterface) Get(ctx context.Context, name string, opts v11.GetOptions) (*v1.Node, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Get", ctx, name, opts)
 	ret0, _ := ret[0].(*v1.Node)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockNodeInterfaceMockRecorder) Get(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockNodeInterfaceMockRecorder) Get(ctx, name, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockNodeInterface)(nil).Get), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockNodeInterface)(nil).Get), ctx, name, opts)
 }
 
 // List mocks base method.
-func (m *MockNodeInterface) List(arg0 context.Context, arg1 v11.ListOptions) (*v1.NodeList, error) {
+func (m *MockNodeInterface) List(ctx context.Context, opts v11.ListOptions) (*v1.NodeList, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0, arg1)
+	ret := m.ctrl.Call(m, "List", ctx, opts)
 	ret0, _ := ret[0].(*v1.NodeList)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List.
-func (mr *MockNodeInterfaceMockRecorder) List(arg0, arg1 any) *gomock.Call {
+func (mr *MockNodeInterfaceMockRecorder) List(ctx, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockNodeInterface)(nil).List), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockNodeInterface)(nil).List), ctx, opts)
 }
 
 // Patch mocks base method.
-func (m *MockNodeInterface) Patch(arg0 context.Context, arg1 string, arg2 types.PatchType, arg3 []byte, arg4 v11.PatchOptions, arg5 ...string) (*v1.Node, error) {
+func (m *MockNodeInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v11.PatchOptions, subresources ...string) (*v1.Node, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0, arg1, arg2, arg3, arg4}
-	for _, a := range arg5 {
+	varargs := []any{ctx, name, pt, data, opts}
+	for _, a := range subresources {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "Patch", varargs...)
@@ -716,76 +719,77 @@ func (m *MockNodeInterface) Patch(arg0 context.Context, arg1 string, arg2 types.
 }
 
 // Patch indicates an expected call of Patch.
-func (mr *MockNodeInterfaceMockRecorder) Patch(arg0, arg1, arg2, arg3, arg4 any, arg5 ...any) *gomock.Call {
+func (mr *MockNodeInterfaceMockRecorder) Patch(ctx, name, pt, data, opts any, subresources ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0, arg1, arg2, arg3, arg4}, arg5...)
+	varargs := append([]any{ctx, name, pt, data, opts}, subresources...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Patch", reflect.TypeOf((*MockNodeInterface)(nil).Patch), varargs...)
 }
 
 // PatchStatus mocks base method.
-func (m *MockNodeInterface) PatchStatus(arg0 context.Context, arg1 string, arg2 []byte) (*v1.Node, error) {
+func (m *MockNodeInterface) PatchStatus(ctx context.Context, nodeName string, data []byte) (*v1.Node, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PatchStatus", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "PatchStatus", ctx, nodeName, data)
 	ret0, _ := ret[0].(*v1.Node)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // PatchStatus indicates an expected call of PatchStatus.
-func (mr *MockNodeInterfaceMockRecorder) PatchStatus(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockNodeInterfaceMockRecorder) PatchStatus(ctx, nodeName, data any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PatchStatus", reflect.TypeOf((*MockNodeInterface)(nil).PatchStatus), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PatchStatus", reflect.TypeOf((*MockNodeInterface)(nil).PatchStatus), ctx, nodeName, data)
 }
 
 // Update mocks base method.
-func (m *MockNodeInterface) Update(arg0 context.Context, arg1 *v1.Node, arg2 v11.UpdateOptions) (*v1.Node, error) {
+func (m *MockNodeInterface) Update(ctx context.Context, node *v1.Node, opts v11.UpdateOptions) (*v1.Node, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Update", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Update", ctx, node, opts)
 	ret0, _ := ret[0].(*v1.Node)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockNodeInterfaceMockRecorder) Update(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockNodeInterfaceMockRecorder) Update(ctx, node, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockNodeInterface)(nil).Update), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockNodeInterface)(nil).Update), ctx, node, opts)
 }
 
 // UpdateStatus mocks base method.
-func (m *MockNodeInterface) UpdateStatus(arg0 context.Context, arg1 *v1.Node, arg2 v11.UpdateOptions) (*v1.Node, error) {
+func (m *MockNodeInterface) UpdateStatus(ctx context.Context, node *v1.Node, opts v11.UpdateOptions) (*v1.Node, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateStatus", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "UpdateStatus", ctx, node, opts)
 	ret0, _ := ret[0].(*v1.Node)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // UpdateStatus indicates an expected call of UpdateStatus.
-func (mr *MockNodeInterfaceMockRecorder) UpdateStatus(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockNodeInterfaceMockRecorder) UpdateStatus(ctx, node, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateStatus", reflect.TypeOf((*MockNodeInterface)(nil).UpdateStatus), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateStatus", reflect.TypeOf((*MockNodeInterface)(nil).UpdateStatus), ctx, node, opts)
 }
 
 // Watch mocks base method.
-func (m *MockNodeInterface) Watch(arg0 context.Context, arg1 v11.ListOptions) (watch.Interface, error) {
+func (m *MockNodeInterface) Watch(ctx context.Context, opts v11.ListOptions) (watch.Interface, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Watch", arg0, arg1)
+	ret := m.ctrl.Call(m, "Watch", ctx, opts)
 	ret0, _ := ret[0].(watch.Interface)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Watch indicates an expected call of Watch.
-func (mr *MockNodeInterfaceMockRecorder) Watch(arg0, arg1 any) *gomock.Call {
+func (mr *MockNodeInterfaceMockRecorder) Watch(ctx, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Watch", reflect.TypeOf((*MockNodeInterface)(nil).Watch), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Watch", reflect.TypeOf((*MockNodeInterface)(nil).Watch), ctx, opts)
 }
 
 // MockNamespaceInterface is a mock of NamespaceInterface interface.
 type MockNamespaceInterface struct {
 	ctrl     *gomock.Controller
 	recorder *MockNamespaceInterfaceMockRecorder
+	isgomock struct{}
 }
 
 // MockNamespaceInterfaceMockRecorder is the mock recorder for MockNamespaceInterface.
@@ -806,114 +810,114 @@ func (m *MockNamespaceInterface) EXPECT() *MockNamespaceInterfaceMockRecorder {
 }
 
 // Apply mocks base method.
-func (m *MockNamespaceInterface) Apply(arg0 context.Context, arg1 *v12.NamespaceApplyConfiguration, arg2 v11.ApplyOptions) (*v1.Namespace, error) {
+func (m *MockNamespaceInterface) Apply(ctx context.Context, namespace *v12.NamespaceApplyConfiguration, opts v11.ApplyOptions) (*v1.Namespace, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Apply", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Apply", ctx, namespace, opts)
 	ret0, _ := ret[0].(*v1.Namespace)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Apply indicates an expected call of Apply.
-func (mr *MockNamespaceInterfaceMockRecorder) Apply(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockNamespaceInterfaceMockRecorder) Apply(ctx, namespace, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Apply", reflect.TypeOf((*MockNamespaceInterface)(nil).Apply), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Apply", reflect.TypeOf((*MockNamespaceInterface)(nil).Apply), ctx, namespace, opts)
 }
 
 // ApplyStatus mocks base method.
-func (m *MockNamespaceInterface) ApplyStatus(arg0 context.Context, arg1 *v12.NamespaceApplyConfiguration, arg2 v11.ApplyOptions) (*v1.Namespace, error) {
+func (m *MockNamespaceInterface) ApplyStatus(ctx context.Context, namespace *v12.NamespaceApplyConfiguration, opts v11.ApplyOptions) (*v1.Namespace, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ApplyStatus", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "ApplyStatus", ctx, namespace, opts)
 	ret0, _ := ret[0].(*v1.Namespace)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ApplyStatus indicates an expected call of ApplyStatus.
-func (mr *MockNamespaceInterfaceMockRecorder) ApplyStatus(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockNamespaceInterfaceMockRecorder) ApplyStatus(ctx, namespace, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyStatus", reflect.TypeOf((*MockNamespaceInterface)(nil).ApplyStatus), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyStatus", reflect.TypeOf((*MockNamespaceInterface)(nil).ApplyStatus), ctx, namespace, opts)
 }
 
 // Create mocks base method.
-func (m *MockNamespaceInterface) Create(arg0 context.Context, arg1 *v1.Namespace, arg2 v11.CreateOptions) (*v1.Namespace, error) {
+func (m *MockNamespaceInterface) Create(ctx context.Context, namespace *v1.Namespace, opts v11.CreateOptions) (*v1.Namespace, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Create", ctx, namespace, opts)
 	ret0, _ := ret[0].(*v1.Namespace)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockNamespaceInterfaceMockRecorder) Create(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockNamespaceInterfaceMockRecorder) Create(ctx, namespace, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockNamespaceInterface)(nil).Create), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockNamespaceInterface)(nil).Create), ctx, namespace, opts)
 }
 
 // Delete mocks base method.
-func (m *MockNamespaceInterface) Delete(arg0 context.Context, arg1 string, arg2 v11.DeleteOptions) error {
+func (m *MockNamespaceInterface) Delete(ctx context.Context, name string, opts v11.DeleteOptions) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Delete", ctx, name, opts)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockNamespaceInterfaceMockRecorder) Delete(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockNamespaceInterfaceMockRecorder) Delete(ctx, name, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockNamespaceInterface)(nil).Delete), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockNamespaceInterface)(nil).Delete), ctx, name, opts)
 }
 
 // Finalize mocks base method.
-func (m *MockNamespaceInterface) Finalize(arg0 context.Context, arg1 *v1.Namespace, arg2 v11.UpdateOptions) (*v1.Namespace, error) {
+func (m *MockNamespaceInterface) Finalize(ctx context.Context, item *v1.Namespace, opts v11.UpdateOptions) (*v1.Namespace, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Finalize", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Finalize", ctx, item, opts)
 	ret0, _ := ret[0].(*v1.Namespace)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Finalize indicates an expected call of Finalize.
-func (mr *MockNamespaceInterfaceMockRecorder) Finalize(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockNamespaceInterfaceMockRecorder) Finalize(ctx, item, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Finalize", reflect.TypeOf((*MockNamespaceInterface)(nil).Finalize), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Finalize", reflect.TypeOf((*MockNamespaceInterface)(nil).Finalize), ctx, item, opts)
 }
 
 // Get mocks base method.
-func (m *MockNamespaceInterface) Get(arg0 context.Context, arg1 string, arg2 v11.GetOptions) (*v1.Namespace, error) {
+func (m *MockNamespaceInterface) Get(ctx context.Context, name string, opts v11.GetOptions) (*v1.Namespace, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Get", ctx, name, opts)
 	ret0, _ := ret[0].(*v1.Namespace)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockNamespaceInterfaceMockRecorder) Get(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockNamespaceInterfaceMockRecorder) Get(ctx, name, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockNamespaceInterface)(nil).Get), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockNamespaceInterface)(nil).Get), ctx, name, opts)
 }
 
 // List mocks base method.
-func (m *MockNamespaceInterface) List(arg0 context.Context, arg1 v11.ListOptions) (*v1.NamespaceList, error) {
+func (m *MockNamespaceInterface) List(ctx context.Context, opts v11.ListOptions) (*v1.NamespaceList, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0, arg1)
+	ret := m.ctrl.Call(m, "List", ctx, opts)
 	ret0, _ := ret[0].(*v1.NamespaceList)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List.
-func (mr *MockNamespaceInterfaceMockRecorder) List(arg0, arg1 any) *gomock.Call {
+func (mr *MockNamespaceInterfaceMockRecorder) List(ctx, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockNamespaceInterface)(nil).List), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockNamespaceInterface)(nil).List), ctx, opts)
 }
 
 // Patch mocks base method.
-func (m *MockNamespaceInterface) Patch(arg0 context.Context, arg1 string, arg2 types.PatchType, arg3 []byte, arg4 v11.PatchOptions, arg5 ...string) (*v1.Namespace, error) {
+func (m *MockNamespaceInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v11.PatchOptions, subresources ...string) (*v1.Namespace, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0, arg1, arg2, arg3, arg4}
-	for _, a := range arg5 {
+	varargs := []any{ctx, name, pt, data, opts}
+	for _, a := range subresources {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "Patch", varargs...)
@@ -923,61 +927,62 @@ func (m *MockNamespaceInterface) Patch(arg0 context.Context, arg1 string, arg2 t
 }
 
 // Patch indicates an expected call of Patch.
-func (mr *MockNamespaceInterfaceMockRecorder) Patch(arg0, arg1, arg2, arg3, arg4 any, arg5 ...any) *gomock.Call {
+func (mr *MockNamespaceInterfaceMockRecorder) Patch(ctx, name, pt, data, opts any, subresources ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0, arg1, arg2, arg3, arg4}, arg5...)
+	varargs := append([]any{ctx, name, pt, data, opts}, subresources...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Patch", reflect.TypeOf((*MockNamespaceInterface)(nil).Patch), varargs...)
 }
 
 // Update mocks base method.
-func (m *MockNamespaceInterface) Update(arg0 context.Context, arg1 *v1.Namespace, arg2 v11.UpdateOptions) (*v1.Namespace, error) {
+func (m *MockNamespaceInterface) Update(ctx context.Context, namespace *v1.Namespace, opts v11.UpdateOptions) (*v1.Namespace, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Update", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Update", ctx, namespace, opts)
 	ret0, _ := ret[0].(*v1.Namespace)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockNamespaceInterfaceMockRecorder) Update(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockNamespaceInterfaceMockRecorder) Update(ctx, namespace, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockNamespaceInterface)(nil).Update), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockNamespaceInterface)(nil).Update), ctx, namespace, opts)
 }
 
 // UpdateStatus mocks base method.
-func (m *MockNamespaceInterface) UpdateStatus(arg0 context.Context, arg1 *v1.Namespace, arg2 v11.UpdateOptions) (*v1.Namespace, error) {
+func (m *MockNamespaceInterface) UpdateStatus(ctx context.Context, namespace *v1.Namespace, opts v11.UpdateOptions) (*v1.Namespace, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateStatus", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "UpdateStatus", ctx, namespace, opts)
 	ret0, _ := ret[0].(*v1.Namespace)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // UpdateStatus indicates an expected call of UpdateStatus.
-func (mr *MockNamespaceInterfaceMockRecorder) UpdateStatus(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockNamespaceInterfaceMockRecorder) UpdateStatus(ctx, namespace, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateStatus", reflect.TypeOf((*MockNamespaceInterface)(nil).UpdateStatus), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateStatus", reflect.TypeOf((*MockNamespaceInterface)(nil).UpdateStatus), ctx, namespace, opts)
 }
 
 // Watch mocks base method.
-func (m *MockNamespaceInterface) Watch(arg0 context.Context, arg1 v11.ListOptions) (watch.Interface, error) {
+func (m *MockNamespaceInterface) Watch(ctx context.Context, opts v11.ListOptions) (watch.Interface, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Watch", arg0, arg1)
+	ret := m.ctrl.Call(m, "Watch", ctx, opts)
 	ret0, _ := ret[0].(watch.Interface)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Watch indicates an expected call of Watch.
-func (mr *MockNamespaceInterfaceMockRecorder) Watch(arg0, arg1 any) *gomock.Call {
+func (mr *MockNamespaceInterfaceMockRecorder) Watch(ctx, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Watch", reflect.TypeOf((*MockNamespaceInterface)(nil).Watch), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Watch", reflect.TypeOf((*MockNamespaceInterface)(nil).Watch), ctx, opts)
 }
 
 // MockSecretInterface is a mock of SecretInterface interface.
 type MockSecretInterface struct {
 	ctrl     *gomock.Controller
 	recorder *MockSecretInterfaceMockRecorder
+	isgomock struct{}
 }
 
 // MockSecretInterfaceMockRecorder is the mock recorder for MockSecretInterface.
@@ -998,98 +1003,98 @@ func (m *MockSecretInterface) EXPECT() *MockSecretInterfaceMockRecorder {
 }
 
 // Apply mocks base method.
-func (m *MockSecretInterface) Apply(arg0 context.Context, arg1 *v12.SecretApplyConfiguration, arg2 v11.ApplyOptions) (*v1.Secret, error) {
+func (m *MockSecretInterface) Apply(ctx context.Context, secret *v12.SecretApplyConfiguration, opts v11.ApplyOptions) (*v1.Secret, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Apply", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Apply", ctx, secret, opts)
 	ret0, _ := ret[0].(*v1.Secret)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Apply indicates an expected call of Apply.
-func (mr *MockSecretInterfaceMockRecorder) Apply(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockSecretInterfaceMockRecorder) Apply(ctx, secret, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Apply", reflect.TypeOf((*MockSecretInterface)(nil).Apply), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Apply", reflect.TypeOf((*MockSecretInterface)(nil).Apply), ctx, secret, opts)
 }
 
 // Create mocks base method.
-func (m *MockSecretInterface) Create(arg0 context.Context, arg1 *v1.Secret, arg2 v11.CreateOptions) (*v1.Secret, error) {
+func (m *MockSecretInterface) Create(ctx context.Context, secret *v1.Secret, opts v11.CreateOptions) (*v1.Secret, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Create", ctx, secret, opts)
 	ret0, _ := ret[0].(*v1.Secret)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockSecretInterfaceMockRecorder) Create(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockSecretInterfaceMockRecorder) Create(ctx, secret, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockSecretInterface)(nil).Create), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockSecretInterface)(nil).Create), ctx, secret, opts)
 }
 
 // Delete mocks base method.
-func (m *MockSecretInterface) Delete(arg0 context.Context, arg1 string, arg2 v11.DeleteOptions) error {
+func (m *MockSecretInterface) Delete(ctx context.Context, name string, opts v11.DeleteOptions) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Delete", ctx, name, opts)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockSecretInterfaceMockRecorder) Delete(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockSecretInterfaceMockRecorder) Delete(ctx, name, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockSecretInterface)(nil).Delete), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockSecretInterface)(nil).Delete), ctx, name, opts)
 }
 
 // DeleteCollection mocks base method.
-func (m *MockSecretInterface) DeleteCollection(arg0 context.Context, arg1 v11.DeleteOptions, arg2 v11.ListOptions) error {
+func (m *MockSecretInterface) DeleteCollection(ctx context.Context, opts v11.DeleteOptions, listOpts v11.ListOptions) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteCollection", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "DeleteCollection", ctx, opts, listOpts)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteCollection indicates an expected call of DeleteCollection.
-func (mr *MockSecretInterfaceMockRecorder) DeleteCollection(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockSecretInterfaceMockRecorder) DeleteCollection(ctx, opts, listOpts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCollection", reflect.TypeOf((*MockSecretInterface)(nil).DeleteCollection), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCollection", reflect.TypeOf((*MockSecretInterface)(nil).DeleteCollection), ctx, opts, listOpts)
 }
 
 // Get mocks base method.
-func (m *MockSecretInterface) Get(arg0 context.Context, arg1 string, arg2 v11.GetOptions) (*v1.Secret, error) {
+func (m *MockSecretInterface) Get(ctx context.Context, name string, opts v11.GetOptions) (*v1.Secret, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Get", ctx, name, opts)
 	ret0, _ := ret[0].(*v1.Secret)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockSecretInterfaceMockRecorder) Get(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockSecretInterfaceMockRecorder) Get(ctx, name, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockSecretInterface)(nil).Get), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockSecretInterface)(nil).Get), ctx, name, opts)
 }
 
 // List mocks base method.
-func (m *MockSecretInterface) List(arg0 context.Context, arg1 v11.ListOptions) (*v1.SecretList, error) {
+func (m *MockSecretInterface) List(ctx context.Context, opts v11.ListOptions) (*v1.SecretList, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0, arg1)
+	ret := m.ctrl.Call(m, "List", ctx, opts)
 	ret0, _ := ret[0].(*v1.SecretList)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List.
-func (mr *MockSecretInterfaceMockRecorder) List(arg0, arg1 any) *gomock.Call {
+func (mr *MockSecretInterfaceMockRecorder) List(ctx, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockSecretInterface)(nil).List), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockSecretInterface)(nil).List), ctx, opts)
 }
 
 // Patch mocks base method.
-func (m *MockSecretInterface) Patch(arg0 context.Context, arg1 string, arg2 types.PatchType, arg3 []byte, arg4 v11.PatchOptions, arg5 ...string) (*v1.Secret, error) {
+func (m *MockSecretInterface) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v11.PatchOptions, subresources ...string) (*v1.Secret, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0, arg1, arg2, arg3, arg4}
-	for _, a := range arg5 {
+	varargs := []any{ctx, name, pt, data, opts}
+	for _, a := range subresources {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "Patch", varargs...)
@@ -1099,38 +1104,38 @@ func (m *MockSecretInterface) Patch(arg0 context.Context, arg1 string, arg2 type
 }
 
 // Patch indicates an expected call of Patch.
-func (mr *MockSecretInterfaceMockRecorder) Patch(arg0, arg1, arg2, arg3, arg4 any, arg5 ...any) *gomock.Call {
+func (mr *MockSecretInterfaceMockRecorder) Patch(ctx, name, pt, data, opts any, subresources ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0, arg1, arg2, arg3, arg4}, arg5...)
+	varargs := append([]any{ctx, name, pt, data, opts}, subresources...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Patch", reflect.TypeOf((*MockSecretInterface)(nil).Patch), varargs...)
 }
 
 // Update mocks base method.
-func (m *MockSecretInterface) Update(arg0 context.Context, arg1 *v1.Secret, arg2 v11.UpdateOptions) (*v1.Secret, error) {
+func (m *MockSecretInterface) Update(ctx context.Context, secret *v1.Secret, opts v11.UpdateOptions) (*v1.Secret, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Update", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Update", ctx, secret, opts)
 	ret0, _ := ret[0].(*v1.Secret)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockSecretInterfaceMockRecorder) Update(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockSecretInterfaceMockRecorder) Update(ctx, secret, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockSecretInterface)(nil).Update), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockSecretInterface)(nil).Update), ctx, secret, opts)
 }
 
 // Watch mocks base method.
-func (m *MockSecretInterface) Watch(arg0 context.Context, arg1 v11.ListOptions) (watch.Interface, error) {
+func (m *MockSecretInterface) Watch(ctx context.Context, opts v11.ListOptions) (watch.Interface, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Watch", arg0, arg1)
+	ret := m.ctrl.Call(m, "Watch", ctx, opts)
 	ret0, _ := ret[0].(watch.Interface)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Watch indicates an expected call of Watch.
-func (mr *MockSecretInterfaceMockRecorder) Watch(arg0, arg1 any) *gomock.Call {
+func (mr *MockSecretInterfaceMockRecorder) Watch(ctx, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Watch", reflect.TypeOf((*MockSecretInterface)(nil).Watch), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Watch", reflect.TypeOf((*MockSecretInterface)(nil).Watch), ctx, opts)
 }

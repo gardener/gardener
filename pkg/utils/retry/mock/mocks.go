@@ -21,6 +21,7 @@ import (
 type MockErrorAggregator struct {
 	ctrl     *gomock.Controller
 	recorder *MockErrorAggregatorMockRecorder
+	isgomock struct{}
 }
 
 // MockErrorAggregatorMockRecorder is the mock recorder for MockErrorAggregator.
@@ -55,33 +56,34 @@ func (mr *MockErrorAggregatorMockRecorder) Error() *gomock.Call {
 }
 
 // Minor mocks base method.
-func (m *MockErrorAggregator) Minor(arg0 error) {
+func (m *MockErrorAggregator) Minor(err error) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Minor", arg0)
+	m.ctrl.Call(m, "Minor", err)
 }
 
 // Minor indicates an expected call of Minor.
-func (mr *MockErrorAggregatorMockRecorder) Minor(arg0 any) *gomock.Call {
+func (mr *MockErrorAggregatorMockRecorder) Minor(err any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Minor", reflect.TypeOf((*MockErrorAggregator)(nil).Minor), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Minor", reflect.TypeOf((*MockErrorAggregator)(nil).Minor), err)
 }
 
 // Severe mocks base method.
-func (m *MockErrorAggregator) Severe(arg0 error) {
+func (m *MockErrorAggregator) Severe(err error) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Severe", arg0)
+	m.ctrl.Call(m, "Severe", err)
 }
 
 // Severe indicates an expected call of Severe.
-func (mr *MockErrorAggregatorMockRecorder) Severe(arg0 any) *gomock.Call {
+func (mr *MockErrorAggregatorMockRecorder) Severe(err any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Severe", reflect.TypeOf((*MockErrorAggregator)(nil).Severe), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Severe", reflect.TypeOf((*MockErrorAggregator)(nil).Severe), err)
 }
 
 // MockErrorAggregatorFactory is a mock of ErrorAggregatorFactory interface.
 type MockErrorAggregatorFactory struct {
 	ctrl     *gomock.Controller
 	recorder *MockErrorAggregatorFactoryMockRecorder
+	isgomock struct{}
 }
 
 // MockErrorAggregatorFactoryMockRecorder is the mock recorder for MockErrorAggregatorFactory.
@@ -119,6 +121,7 @@ func (mr *MockErrorAggregatorFactoryMockRecorder) New() *gomock.Call {
 type MockIntervalFactory struct {
 	ctrl     *gomock.Controller
 	recorder *MockIntervalFactoryMockRecorder
+	isgomock struct{}
 }
 
 // MockIntervalFactoryMockRecorder is the mock recorder for MockIntervalFactory.
@@ -139,15 +142,15 @@ func (m *MockIntervalFactory) EXPECT() *MockIntervalFactoryMockRecorder {
 }
 
 // New mocks base method.
-func (m *MockIntervalFactory) New(arg0 time.Duration) retry.WaitFunc {
+func (m *MockIntervalFactory) New(interval time.Duration) retry.WaitFunc {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "New", arg0)
+	ret := m.ctrl.Call(m, "New", interval)
 	ret0, _ := ret[0].(retry.WaitFunc)
 	return ret0
 }
 
 // New indicates an expected call of New.
-func (mr *MockIntervalFactoryMockRecorder) New(arg0 any) *gomock.Call {
+func (mr *MockIntervalFactoryMockRecorder) New(interval any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "New", reflect.TypeOf((*MockIntervalFactory)(nil).New), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "New", reflect.TypeOf((*MockIntervalFactory)(nil).New), interval)
 }

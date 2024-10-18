@@ -20,6 +20,7 @@ import (
 type MockTaskFunc struct {
 	ctrl     *gomock.Controller
 	recorder *MockTaskFuncMockRecorder
+	isgomock struct{}
 }
 
 // MockTaskFuncMockRecorder is the mock recorder for MockTaskFunc.
@@ -40,16 +41,16 @@ func (m *MockTaskFunc) EXPECT() *MockTaskFuncMockRecorder {
 }
 
 // Do mocks base method.
-func (m *MockTaskFunc) Do(arg0 *errors.ErrorContext) (string, error) {
+func (m *MockTaskFunc) Do(errorContext *errors.ErrorContext) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Do", arg0)
+	ret := m.ctrl.Call(m, "Do", errorContext)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Do indicates an expected call of Do.
-func (mr *MockTaskFuncMockRecorder) Do(arg0 any) *gomock.Call {
+func (mr *MockTaskFuncMockRecorder) Do(errorContext any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Do", reflect.TypeOf((*MockTaskFunc)(nil).Do), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Do", reflect.TypeOf((*MockTaskFunc)(nil).Do), errorContext)
 }

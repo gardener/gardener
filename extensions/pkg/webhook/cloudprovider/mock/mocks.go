@@ -22,6 +22,7 @@ import (
 type MockEnsurer struct {
 	ctrl     *gomock.Controller
 	recorder *MockEnsurerMockRecorder
+	isgomock struct{}
 }
 
 // MockEnsurerMockRecorder is the mock recorder for MockEnsurer.
@@ -42,15 +43,15 @@ func (m *MockEnsurer) EXPECT() *MockEnsurerMockRecorder {
 }
 
 // EnsureCloudProviderSecret mocks base method.
-func (m *MockEnsurer) EnsureCloudProviderSecret(arg0 context.Context, arg1 context0.GardenContext, arg2, arg3 *v1.Secret) error {
+func (m *MockEnsurer) EnsureCloudProviderSecret(ctx context.Context, gctx context0.GardenContext, new, old *v1.Secret) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureCloudProviderSecret", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "EnsureCloudProviderSecret", ctx, gctx, new, old)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // EnsureCloudProviderSecret indicates an expected call of EnsureCloudProviderSecret.
-func (mr *MockEnsurerMockRecorder) EnsureCloudProviderSecret(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockEnsurerMockRecorder) EnsureCloudProviderSecret(ctx, gctx, new, old any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureCloudProviderSecret", reflect.TypeOf((*MockEnsurer)(nil).EnsureCloudProviderSecret), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureCloudProviderSecret", reflect.TypeOf((*MockEnsurer)(nil).EnsureCloudProviderSecret), ctx, gctx, new, old)
 }

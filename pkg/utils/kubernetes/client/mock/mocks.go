@@ -23,6 +23,7 @@ import (
 type MockCleaner struct {
 	ctrl     *gomock.Controller
 	recorder *MockCleanerMockRecorder
+	isgomock struct{}
 }
 
 // MockCleanerMockRecorder is the mock recorder for MockCleaner.
@@ -43,10 +44,10 @@ func (m *MockCleaner) EXPECT() *MockCleanerMockRecorder {
 }
 
 // Clean mocks base method.
-func (m *MockCleaner) Clean(arg0 context.Context, arg1 client0.Client, arg2 runtime.Object, arg3 ...client.CleanOption) error {
+func (m *MockCleaner) Clean(ctx context.Context, c client0.Client, obj runtime.Object, opts ...client.CleanOption) error {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0, arg1, arg2}
-	for _, a := range arg3 {
+	varargs := []any{ctx, c, obj}
+	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "Clean", varargs...)
@@ -55,9 +56,9 @@ func (m *MockCleaner) Clean(arg0 context.Context, arg1 client0.Client, arg2 runt
 }
 
 // Clean indicates an expected call of Clean.
-func (mr *MockCleanerMockRecorder) Clean(arg0, arg1, arg2 any, arg3 ...any) *gomock.Call {
+func (mr *MockCleanerMockRecorder) Clean(ctx, c, obj any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0, arg1, arg2}, arg3...)
+	varargs := append([]any{ctx, c, obj}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Clean", reflect.TypeOf((*MockCleaner)(nil).Clean), varargs...)
 }
 
@@ -65,6 +66,7 @@ func (mr *MockCleanerMockRecorder) Clean(arg0, arg1, arg2 any, arg3 ...any) *gom
 type MockGoneEnsurer struct {
 	ctrl     *gomock.Controller
 	recorder *MockGoneEnsurerMockRecorder
+	isgomock struct{}
 }
 
 // MockGoneEnsurerMockRecorder is the mock recorder for MockGoneEnsurer.
@@ -85,10 +87,10 @@ func (m *MockGoneEnsurer) EXPECT() *MockGoneEnsurerMockRecorder {
 }
 
 // EnsureGone mocks base method.
-func (m *MockGoneEnsurer) EnsureGone(arg0 context.Context, arg1 client0.Client, arg2 runtime.Object, arg3 ...client0.ListOption) error {
+func (m *MockGoneEnsurer) EnsureGone(ctx context.Context, c client0.Client, obj runtime.Object, opts ...client0.ListOption) error {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0, arg1, arg2}
-	for _, a := range arg3 {
+	varargs := []any{ctx, c, obj}
+	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "EnsureGone", varargs...)
@@ -97,8 +99,8 @@ func (m *MockGoneEnsurer) EnsureGone(arg0 context.Context, arg1 client0.Client, 
 }
 
 // EnsureGone indicates an expected call of EnsureGone.
-func (mr *MockGoneEnsurerMockRecorder) EnsureGone(arg0, arg1, arg2 any, arg3 ...any) *gomock.Call {
+func (mr *MockGoneEnsurerMockRecorder) EnsureGone(ctx, c, obj any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0, arg1, arg2}, arg3...)
+	varargs := append([]any{ctx, c, obj}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureGone", reflect.TypeOf((*MockGoneEnsurer)(nil).EnsureGone), varargs...)
 }
