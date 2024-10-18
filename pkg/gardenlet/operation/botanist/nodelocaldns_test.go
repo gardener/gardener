@@ -48,6 +48,7 @@ var _ = Describe("NodeLocalDNS", func() {
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					Version: "1.26.1",
 				},
+				Networking: &gardencorev1beta1.Networking{IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4}},
 			},
 		})
 	})
@@ -105,12 +106,33 @@ var _ = Describe("NodeLocalDNS", func() {
 		})
 
 		It("should fail when the deploy function fails", func() {
+			nodelocaldns.EXPECT().SetIPFamilies([]gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4})
 			nodelocaldns.EXPECT().Deploy(ctx).Return(fakeErr)
 
 			Expect(botanist.ReconcileNodeLocalDNS(ctx)).To(MatchError(fakeErr))
 		})
 
 		It("should successfully deploy when enabled", func() {
+			nodelocaldns.EXPECT().SetIPFamilies([]gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4})
+			nodelocaldns.EXPECT().Deploy(ctx)
+
+			Expect(botanist.ReconcileNodeLocalDNS(ctx)).To(Succeed())
+		})
+		It("should successfully deploy when enabled with ipfamily IPv6", func() {
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					SystemComponents: &gardencorev1beta1.SystemComponents{
+						NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{
+							Enabled: true,
+						},
+					},
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						Version: "1.26.1",
+					},
+					Networking: &gardencorev1beta1.Networking{IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6}},
+				},
+			})
+			nodelocaldns.EXPECT().SetIPFamilies([]gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6})
 			nodelocaldns.EXPECT().Deploy(ctx)
 
 			Expect(botanist.ReconcileNodeLocalDNS(ctx)).To(Succeed())
@@ -119,6 +141,7 @@ var _ = Describe("NodeLocalDNS", func() {
 		Context("node-local-dns disabled", func() {
 			BeforeEach(func() {
 				botanist.Shoot.NodeLocalDNSEnabled = false
+				nodelocaldns.EXPECT().SetIPFamilies([]gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4})
 			})
 
 			Context("but still node with label existing", func() {
