@@ -319,7 +319,22 @@ string
 </em>
 </td>
 <td>
-<p>BucketName is the name of the backup bucket.</p>
+<em>(Optional)</em>
+<p>BucketName is the name of the backup bucket. If not provided, gardener-operator attempts to manage a new bucket.
+In this case, the cloud provider credentials provided in the SecretRef must have enough privileges for creating
+and deleting buckets.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>providerConfig</code></br>
+<em>
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderConfig is the provider-specific configuration passed to BackupBucket resource.</p>
 </td>
 </tr>
 <tr>
@@ -619,13 +634,157 @@ WorkloadIdentityKeyRotation
 <td>
 <code>domains</code></br>
 <em>
-[]string
+<a href="#operator.gardener.cloud/v1alpha1.DNSDomain">
+[]DNSDomain
+</a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
 <p>Domains are the external domains of the virtual garden cluster.
 The first given domain in this list is immutable.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.DNSDomain">DNSDomain
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.DNS">DNS</a>, 
+<a href="#operator.gardener.cloud/v1alpha1.Ingress">Ingress</a>)
+</p>
+<p>
+<p>DNSDomain defines a DNS domain with optional provider.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name is the domain name.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>provider</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Provider is the DNS provider as declared in the spec.DNS.providers configuration.
+If not set, the first provider in the list is used.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.DNSManagement">DNSManagement
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.GardenSpec">GardenSpec</a>)
+</p>
+<p>
+<p>DNSManagement contains specifications of DNS providers.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>providers</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.DNSProvider">
+[]DNSProvider
+</a>
+</em>
+</td>
+<td>
+<p>Providers is a list of DNS providers.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.DNSProvider">DNSProvider
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.DNSManagement">DNSManagement</a>)
+</p>
+<p>
+<p>DNSProvider contains the configuration for a DNS provider.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name is the name of the DNS provider.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>type</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Type is the type of the DNS provider.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>providerConfig</code></br>
+<em>
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Config is the provider-specific configuration passed to DNSRecord resources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>secretRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#localobjectreference-v1-core">
+Kubernetes core/v1.LocalObjectReference
+</a>
+</em>
+</td>
+<td>
+<p>SecretRef is a reference to a Secret object containing the DNS provider credentials.</p>
 </td>
 </tr>
 </tbody>
@@ -1469,6 +1628,20 @@ GardenSpec
 <table>
 <tr>
 <td>
+<code>dns</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.DNSManagement">
+DNSManagement
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DNS contains specifications of DNS providers.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>runtimeCluster</code></br>
 <em>
 <a href="#operator.gardener.cloud/v1alpha1.RuntimeCluster">
@@ -1528,6 +1701,20 @@ GardenStatus
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+<code>dns</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.DNSManagement">
+DNSManagement
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DNS contains specifications of DNS providers.</p>
+</td>
+</tr>
 <tr>
 <td>
 <code>runtimeCluster</code></br>
@@ -2235,7 +2422,9 @@ string
 <td>
 <code>domains</code></br>
 <em>
-[]string
+<a href="#operator.gardener.cloud/v1alpha1.DNSDomain">
+[]DNSDomain
+</a>
 </em>
 </td>
 <td>
@@ -2580,6 +2769,18 @@ Defaults to empty LabelSelector, which matches all projects.</p>
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+<code>region</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Region is the region the cluster is deployed to.</p>
+</td>
+</tr>
 <tr>
 <td>
 <code>zones</code></br>

@@ -5,6 +5,8 @@
 package reference
 
 import (
+	"reflect"
+
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -39,9 +41,24 @@ func Predicate(oldObj, newObj client.Object) bool {
 		return false
 	}
 
+	oldProviderSecretNames := map[string]string{}
+	newProvidersSecretNames := map[string]string{}
+	if oldGarden.Spec.DNS != nil {
+		for _, provider := range oldGarden.Spec.DNS.Providers {
+			oldProviderSecretNames[provider.Name] = provider.SecretRef.Name
+		}
+	}
+	if newGarden.Spec.DNS != nil {
+		for _, provider := range newGarden.Spec.DNS.Providers {
+			newProvidersSecretNames[provider.Name] = provider.SecretRef.Name
+		}
+	}
+	dnsSecretsChanged := !reflect.DeepEqual(oldProviderSecretNames, newProvidersSecretNames)
+
 	return kubeAPIServerAuditPolicyConfigMapChanged(oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer, newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer) ||
 		gardenerAPIServerAuditPolicyConfigMapChanged(oldGarden.Spec.VirtualCluster.Gardener.APIServer, newGarden.Spec.VirtualCluster.Gardener.APIServer) ||
 		etcdBackupSecretChanged(oldGarden.Spec.VirtualCluster.ETCD, newGarden.Spec.VirtualCluster.ETCD) ||
+		dnsSecretsChanged ||
 		authenticationWebhookSecretChanged(oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer, newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer) ||
 		sniSecretChanged(oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer, newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer) ||
 		kubeAPIServerAuditWebhookSecretChanged(oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer, newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer) ||
@@ -199,6 +216,12 @@ func getReferencedSecretNames(obj client.Object) []string {
 
 	if virtualCluster.ETCD != nil && virtualCluster.ETCD.Main != nil && virtualCluster.ETCD.Main.Backup != nil {
 		out = append(out, virtualCluster.ETCD.Main.Backup.SecretRef.Name)
+	}
+
+	if garden.Spec.DNS != nil {
+		for _, provider := range garden.Spec.DNS.Providers {
+			out = append(out, provider.SecretRef.Name)
+		}
 	}
 
 	if virtualCluster.Kubernetes.KubeAPIServer != nil {

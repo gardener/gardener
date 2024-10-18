@@ -39,7 +39,7 @@ var _ = Describe("Handler", func() {
 			Spec: operatorv1alpha1.GardenSpec{
 				RuntimeCluster: operatorv1alpha1.RuntimeCluster{
 					Ingress: operatorv1alpha1.Ingress{
-						Domains: []string{"ingress.bar.com"},
+						Domains: []operatorv1alpha1.DNSDomain{{Name: "ingress.bar.com"}},
 					},
 					Networking: operatorv1alpha1.RuntimeNetworking{
 						Pods:     "10.1.0.0/16",
@@ -48,9 +48,7 @@ var _ = Describe("Handler", func() {
 				},
 				VirtualCluster: operatorv1alpha1.VirtualCluster{
 					DNS: operatorv1alpha1.DNS{
-						Domains: []string{
-							"virtual-garden.local.gardener.cloud",
-						},
+						Domains: []operatorv1alpha1.DNSDomain{{Name: "virtual-garden.local.gardener.cloud"}},
 					},
 					Kubernetes: operatorv1alpha1.Kubernetes{
 						Version: "1.26.3",

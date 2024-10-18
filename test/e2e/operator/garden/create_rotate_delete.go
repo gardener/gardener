@@ -32,7 +32,7 @@ import (
 var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 	var (
 		backupSecret = defaultBackupSecret()
-		garden       = defaultGarden(backupSecret, nil)
+		garden       = defaultGarden(backupSecret, nil, false)
 	)
 
 	It("Create Garden, Rotate Credentials and Delete Garden", Label("credentials-rotation"), func() {
@@ -82,7 +82,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 					return &secretList.Items[0], nil
 				},
 				GetObservabilityEndpoint: func(_ *corev1.Secret) string {
-					return "https://plutono-garden." + garden.Spec.RuntimeCluster.Ingress.Domains[0]
+					return "https://plutono-garden." + garden.Spec.RuntimeCluster.Ingress.Domains[0].Name
 				},
 				GetObservabilityRotation: func() *gardencorev1beta1.ObservabilityRotation {
 					return garden.Status.Credentials.Rotation.Observability

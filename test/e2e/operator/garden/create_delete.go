@@ -39,7 +39,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 	var (
 		backupSecret = defaultBackupSecret()
 		rootCASecret = defaultRootCASecret()
-		garden       = defaultGarden(backupSecret, rootCASecret)
+		garden       = defaultGarden(backupSecret, rootCASecret, true)
 	)
 
 	It("Create, Delete", Label("simple"), func() {
