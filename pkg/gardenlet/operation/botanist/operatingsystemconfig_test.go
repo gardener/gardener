@@ -113,6 +113,9 @@ var _ = Describe("operatingsystemconfig", func() {
 						{Name: "foo"},
 					},
 				},
+				Networking: &gardencorev1beta1.Networking{
+					IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
+				},
 			},
 			Status: gardencorev1beta1.ShootStatus{
 				TechnicalID: "shoot--garden-testing",

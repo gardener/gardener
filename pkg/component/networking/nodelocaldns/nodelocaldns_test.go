@@ -226,6 +226,7 @@ var _ = Describe("NodeLocalDNS", func() {
 		values = Values{
 			Image:             image,
 			KubernetesVersion: semver.MustParse("1.26.1"),
+			IPFamilies:        []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
 		}
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
