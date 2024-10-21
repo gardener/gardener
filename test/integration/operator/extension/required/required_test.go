@@ -5,6 +5,8 @@
 package required_test
 
 import (
+	"fmt"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -135,11 +137,11 @@ var _ = Describe("Extension Required controller tests", func() {
 				By("Ensure extension is gone")
 				Eventually(func() error {
 					return mgrClient.Get(ctx, client.ObjectKeyFromObject(ext), ext)
-				}).Should(BeNotFoundError())
+				}).Should(BeNotFoundError(), fmt.Sprintf("extension %s/%s is expected to be gone", ext.GetNamespace(), ext.GetName()))
 			})
 		}
 
-		By("Check provider extensions is reported as not required")
+		By("Ensure provider extension is reported as not required")
 		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(providerExtension), providerExtension)).To(Succeed())
 			return providerExtension.Status.Conditions
@@ -149,7 +151,7 @@ var _ = Describe("Extension Required controller tests", func() {
 			WithReason("ExtensionNotRequired"),
 		))
 
-		By("Check dns extensions is reported as not required")
+		By("Ensure dns extension is reported as not required")
 		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(providerExtension), providerExtension)).To(Succeed())
 			return providerExtension.Status.Conditions

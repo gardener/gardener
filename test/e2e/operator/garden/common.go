@@ -86,7 +86,7 @@ func defaultRootCASecret() *corev1.Secret {
 	}
 }
 
-func defaultBuckupBucket() *extensionsv1alpha1.BackupBucket {
+func defaultBackupBucket() *extensionsv1alpha1.BackupBucket {
 	return &extensionsv1alpha1.BackupBucket{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-bucket",

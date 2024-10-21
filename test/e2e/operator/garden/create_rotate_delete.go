@@ -30,7 +30,7 @@ import (
 
 var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 	var (
-		backupBucket = defaultBuckupBucket()
+		backupBucket = defaultBackupBucket()
 		backupSecret = defaultBackupSecret()
 		garden       = defaultGarden(backupSecret, nil)
 	)
@@ -48,7 +48,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 			ctx, cancel = context.WithTimeout(parentCtx, 5*time.Minute)
 			defer cancel()
 
-			// TODO(oliver-goetz): Remove this step when gardener-operator is able to create its backup bucket and DNS record by itself.
+			// TODO(MartinWeindel): Remove this step when gardener-operator is able to create its backup bucket and DNS record by itself.
 			By("Delete BackupBucket")
 			Expect(gardenerutils.ConfirmDeletion(ctx, runtimeClient, backupBucket)).To(Succeed())
 			Expect(runtimeClient.Delete(ctx, backupBucket)).To(Succeed())
