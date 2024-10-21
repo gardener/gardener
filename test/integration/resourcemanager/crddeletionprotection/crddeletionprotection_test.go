@@ -17,7 +17,9 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -70,11 +72,15 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 
 		By("Apply CRDs")
 		applier, err := kubernetes.NewApplierForConfig(restConfig)
+
+		s := runtime.NewScheme()
+		c := fake.NewClientBuilder().WithScheme(s).Build()
+
 		Expect(err).NotTo(HaveOccurred())
-		Expect(crds.NewCRD(applier, true, true).Deploy(ctx)).To(Succeed())
+		Expect(crds.NewCRD(c, applier, true, true).Deploy(ctx)).To(Succeed())
 
 		manifestReader := kubernetes.NewManifestReader([]byte(strings.Join([]string{
-			etcd.CrdCloudEtcds,
+			etcd.CRD,
 			resourcemanager.CRD,
 		}, "\n---\n")))
 		Expect(applier.ApplyManifest(ctx, manifestReader, kubernetes.DefaultMergeFuncs)).To(Succeed())

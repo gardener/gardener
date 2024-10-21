@@ -15,6 +15,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
@@ -90,6 +91,7 @@ var _ = BeforeSuite(func() {
 		kubernetes.AddSeedSchemeToScheme,
 		gardencorev1beta1.AddToScheme,
 		seedmanagementv1alpha1.AddToScheme,
+		apiextensionsv1.AddToScheme,
 	)
 	testScheme = runtime.NewScheme()
 	Expect(testSchemeBuilder.AddToScheme(testScheme)).To(Succeed())

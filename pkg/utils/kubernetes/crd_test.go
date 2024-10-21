@@ -12,7 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
-	cli "sigs.k8s.io/controller-runtime/pkg/client"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	. "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -22,8 +22,15 @@ var _ = Describe("CRD", func() {
 	var (
 		ctx context.Context
 
-		UnreadyCrd = &apiextensionsv1.CustomResourceDefinition{}
-		ReadyCrd   = &apiextensionsv1.CustomResourceDefinition{
+		UnreadyCrd = &apiextensionsv1.CustomResourceDefinition{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "myresources.mygroup.example.com",
+			},
+		}
+		ReadyCrd = &apiextensionsv1.CustomResourceDefinition{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "myresources.mygroup.example.com",
+			},
 			Status: apiextensionsv1.CustomResourceDefinitionStatus{
 				Conditions: []apiextensionsv1.CustomResourceDefinitionCondition{
 					{Type: apiextensionsv1.Established, Status: apiextensionsv1.ConditionTrue},
@@ -32,15 +39,28 @@ var _ = Describe("CRD", func() {
 			},
 		}
 
-		ValidManifest = `apiVersion: apiextensions.k8s.io/v1
-kind: CustomResourceDefinition
-metadata:
-    name: myresources.mygroup.example.com`
-		InValidManifest = `thisIsNotAValidManifest`
+		ValidManifest   string
+		InvalidManifest string
 	)
 
 	BeforeEach(func() {
 		ctx = context.Background()
+		ValidManifest = `apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+    name: myresources.mygroup.example.com`
+		InvalidManifest = `thisIsNotAValidManifest`
+	})
+
+	Describe("#MakeCrdNameMap", func() {
+		It("should return a map representing the CRD name map", func() {
+			crdNameToManifest := MakeCrdNameMap([]string{ValidManifest})
+			Expect(crdNameToManifest).To(HaveKeyWithValue("myresources.mygroup.example.com", ValidManifest))
+		})
+
+		It("should panic when a non valid CRD is provided", func() {
+			Expect(func() { MakeCrdNameMap([]string{InvalidManifest}) }).To(Panic())
+		})
 	})
 
 	Describe("#WaitUntilCRDManifestsReady", func() {
@@ -50,7 +70,7 @@ metadata:
 				WithObjects(ReadyCrd).
 				Build()
 
-			err := WaitUntilCRDManifestsReady(ctx, fakeClient, []cli.ObjectKey{cli.ObjectKeyFromObject(ReadyCrd)})
+			err := WaitUntilCRDManifestsReady(ctx, fakeClient, []string{"myresources.mygroup.example.com"})
 
 			Expect(err).ToNot(HaveOccurred())
 		})
@@ -63,25 +83,25 @@ metadata:
 				WithObjects(UnreadyCrd).
 				Build()
 
-			err := WaitUntilCRDManifestsReady(ctx, fakeClient, []cli.ObjectKey{cli.ObjectKeyFromObject(UnreadyCrd)})
+			err := WaitUntilCRDManifestsReady(ctx, fakeClient, []string{"myresources.mygroup.example.com"})
 
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError(ContainSubstring("context deadline exceeded")))
 		})
 	})
 
-	Describe("#GetObjectKeyFromManifest", func() {
+	Describe("#GetObjectNameFromManifest", func() {
 		It("should return the correct object key from the manifest", func() {
-			objKey, err := GetObjectKeyFromManifest(ValidManifest)
+			objKey, err := GetObjectNameFromManifest(ValidManifest)
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(objKey).To(Equal(cli.ObjectKey{Name: "myresources.mygroup.example.com"}))
+			Expect(objKey).To(Equal("myresources.mygroup.example.com"))
 		})
 
 		It("should throw an error if no valid manifest is passed", func() {
-			objKey, err := GetObjectKeyFromManifest(InValidManifest)
+			objKey, err := GetObjectNameFromManifest(InvalidManifest)
 
-			Expect(objKey).To(Equal(cli.ObjectKey{}))
+			Expect(objKey).To(Equal(""))
 			Expect(err).To(MatchError(ContainSubstring("cannot unmarshal")))
 		})
 	})
