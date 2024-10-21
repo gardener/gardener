@@ -82,6 +82,15 @@ EnvironmentFile=/etc/environment
 ExecStart=` + pathScript + `
 `),
 			},
+			{
+				Name:   "gardener-user.path",
+				Enable: ptr.To(true),
+				Content: ptr.To(`[Path]
+PathChanged=` + pathAuthorizedSSHKeys + `
+[Install]
+WantedBy=multi-user.target
+`),
+			},
 		},
 		[]extensionsv1alpha1.File{
 			{
