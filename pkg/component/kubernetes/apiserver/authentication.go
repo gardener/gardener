@@ -65,6 +65,7 @@ func (k *kubeAPIServer) reconcileConfigMapAuthenticationConfig(ctx context.Conte
 }
 
 // ComputeAuthenticationConfigRawConfig computes a AuthenticationConfiguration from oidcConfiguration.
+// TODO(AleksandarSavchev): Remove this functionality as soon as v1.32 is the least supported Kubernetes version in Gardener.
 func ComputeAuthenticationConfigRawConfig(oidc *gardencorev1beta1.OIDCConfig) (string, error) {
 	authenticationConfiguration := &apiserverv1beta1.AuthenticationConfiguration{
 		TypeMeta: metav1.TypeMeta{
@@ -149,6 +150,7 @@ func (k *kubeAPIServer) handleAuthenticationSettings(deployment *appsv1.Deployme
 	})
 }
 
+// TODO(AleksandarSavchev): Remove this functionality as soon as v1.32 is the least supported Kubernetes version in Gardener.
 func (k *kubeAPIServer) handleOIDCSettings(deployment *appsv1.Deployment, secretOIDCCABundle *corev1.Secret) {
 	if k.values.OIDC == nil {
 		return
