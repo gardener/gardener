@@ -17,13 +17,13 @@ import (
 )
 
 const (
-	// Name is a name for a validation webhook.
+	// Name is a name for a mutation webhook.
 	Name = "mutator"
 )
 
 var logger = log.Log.WithName("local-mutator-webhook")
 
-// New creates a new webhook that mutates Shoot resources.
+// New creates a new webhook that mutates Shoot and NamespacedCloudProfile resources.
 func New(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
 	logger.Info("Setting up webhook", "name", Name)
 
@@ -33,7 +33,8 @@ func New(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
 		Path:       "/webhooks/mutate",
 		Predicates: []predicate.Predicate{extensionspredicate.GardenCoreProviderType(local.Type)},
 		Mutators: map[extensionswebhook.Mutator][]extensionswebhook.Type{
-			NewShootMutator(mgr): {{Obj: &gardencorev1beta1.Shoot{}}},
+			NewShootMutator(mgr):                  {{Obj: &gardencorev1beta1.Shoot{}}},
+			NewNamespacedCloudProfileMutator(mgr): {{Obj: &gardencorev1beta1.NamespacedCloudProfile{}}},
 		},
 		Target: extensionswebhook.TargetSeed,
 		ObjectSelector: &metav1.LabelSelector{
