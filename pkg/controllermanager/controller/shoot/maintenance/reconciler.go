@@ -184,7 +184,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 			if maintainedShoot.Spec.Kubernetes.KubeAPIServer != nil && maintainedShoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig != nil {
 				maintainedShoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig = nil
 
-				reason := ".spec.kubernetes.kubeAPIServer.oidcConfig is set to nil. Reason: The field was no-op since its introduction and can no longer be enabled for Shoot clusters using Kubernetes version 1.32+"
+				reason := ".spec.kubernetes.kubeAPIServer.oidcConfig is set to nil. Reason: The field has been deprecated in favor of structured authentication and can no longer be enabled for Shoot clusters using Kubernetes version 1.32+"
 				operations = append(operations, reason)
 			}
 		}

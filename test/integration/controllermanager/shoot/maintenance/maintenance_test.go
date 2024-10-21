@@ -1108,7 +1108,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				Eventually(func(g Gomega) string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot131), shoot131)).To(Succeed())
 					g.Expect(shoot131.Status.LastMaintenance).NotTo(BeNil())
-					g.Expect(shoot131.Status.LastMaintenance.Description).To(ContainSubstring("Control Plane: Updated Kubernetes version from \"1.31.0\" to \"1.32.0\". Reason: Kubernetes version expired - force update required, .spec.kubernetes.kubeAPIServer.oidcConfig is set to nil. Reason: The field was no-op since its introduction and can no longer be enabled for Shoot clusters using Kubernetes version 1.32+"))
+					g.Expect(shoot131.Status.LastMaintenance.Description).To(ContainSubstring("Control Plane: Updated Kubernetes version from \"1.31.0\" to \"1.32.0\". Reason: Kubernetes version expired - force update required, .spec.kubernetes.kubeAPIServer.oidcConfig is set to nil. Reason: The field has been deprecated in favor of structured authentication and can no longer be enabled for Shoot clusters using Kubernetes version 1.32+"))
 					g.Expect(shoot131.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
 					g.Expect(shoot131.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
 					g.Expect(shoot131.Spec.Kubernetes.KubeAPIServer.OIDCConfig).To(BeNil())
