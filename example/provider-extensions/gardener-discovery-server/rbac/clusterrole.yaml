@@ -1,0 +1,14 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: gardener-discovery-server
+rules:
+- apiGroups:
+  - core.gardener.cloud
+  resources:
+  - shoots
+  - projects
+  verbs:
+  - get
+  - list
+  - watch
