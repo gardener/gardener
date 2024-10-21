@@ -3136,6 +3136,63 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 		})
 
+		Context("Authorization validation", func() {
+			It("should forbid for version < v1.30", func() {
+				shoot.Spec.Kubernetes.Version = "v1.29.0"
+				shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization = &core.StructuredAuthorization{
+					ConfigMapName: "foo",
+					Kubeconfigs:   []core.AuthorizerKubeconfigReference{{AuthorizerName: "foo", SecretName: "bar"}},
+				}
+
+				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.kubernetes.kubeAPIServer.structuredAuthorization"),
+					"Detail": Equal("is available for Kubernetes versions >= v1.30"),
+				}))))
+			})
+
+			It("should forbid empty name", func() {
+				shoot.Spec.Kubernetes.Version = "v1.30.0"
+				shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization = &core.StructuredAuthorization{}
+
+				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.kubernetes.kubeAPIServer.structuredAuthorization.configMapName"),
+					"Detail": Equal("must provide a name"),
+				}))))
+			})
+
+			It("should forbid empty list of kubeconfig references", func() {
+				shoot.Spec.Kubernetes.Version = "v1.30.0"
+				shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization = &core.StructuredAuthorization{
+					ConfigMapName: "foo",
+				}
+
+				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeRequired),
+					"Field":  Equal("spec.kubernetes.kubeAPIServer.structuredAuthorization.kubeconfigs"),
+					"Detail": Equal("must provide kubeconfig secret references if an authorization config is configured"),
+				}))))
+			})
+
+			It("should forbid setting structured authorization when feature gate is disabled", func() {
+				shoot.Spec.Kubernetes.Version = "v1.30.0"
+				shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization = &core.StructuredAuthorization{
+					ConfigMapName: "foo",
+					Kubeconfigs:   []core.AuthorizerKubeconfigReference{{}},
+				}
+				shoot.Spec.Kubernetes.KubeAPIServer.FeatureGates = map[string]bool{
+					"StructuredAuthorizationConfiguration": false,
+				}
+
+				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.kubernetes.kubeAPIServer.structuredAuthorization"),
+					"Detail": Equal("requires feature gate StructuredAuthorizationConfiguration to be enabled"),
+				}))))
+			})
+		})
+
 		Context("FeatureGates validation", func() {
 			It("should forbid invalid feature gates", func() {
 				featureGates := map[string]bool{

@@ -15,6 +15,7 @@ import (
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/admissionpluginsecret"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/auditpolicy"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/authenticationconfig"
+	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/authorizationconfig"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/internaldomainsecret"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/kubeconfigsecret"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/namespacedeletion"
@@ -45,6 +46,15 @@ func AddToManager(
 		Decoder:   admission.NewDecoder(mgr.GetScheme()),
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding %s webhook handler: %w", authenticationconfig.HandlerName, err)
+	}
+
+	if err := (&authorizationconfig.Handler{
+		Logger:    mgr.GetLogger().WithName("webhook").WithName(authorizationconfig.HandlerName),
+		APIReader: mgr.GetAPIReader(),
+		Client:    mgr.GetClient(),
+		Decoder:   admission.NewDecoder(mgr.GetScheme()),
+	}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding %s webhook handler: %w", authorizationconfig.HandlerName, err)
 	}
 
 	if err := (&internaldomainsecret.Handler{

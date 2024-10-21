@@ -41,6 +41,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Alerting":                                   schema_pkg_apis_core_v1beta1_Alerting(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditConfig":                                schema_pkg_apis_core_v1beta1_AuditConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditPolicy":                                schema_pkg_apis_core_v1beta1_AuditPolicy(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.AuthorizerKubeconfigReference":              schema_pkg_apis_core_v1beta1_AuthorizerKubeconfigReference(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.AvailabilityZone":                           schema_pkg_apis_core_v1beta1_AvailabilityZone(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupBucket":                               schema_pkg_apis_core_v1beta1_BackupBucket(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupBucketList":                           schema_pkg_apis_core_v1beta1_BackupBucketList(ref),
@@ -207,6 +208,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootStatus":                                schema_pkg_apis_core_v1beta1_ShootStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootTemplate":                              schema_pkg_apis_core_v1beta1_ShootTemplate(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.StructuredAuthentication":                   schema_pkg_apis_core_v1beta1_StructuredAuthentication(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.StructuredAuthorization":                    schema_pkg_apis_core_v1beta1_StructuredAuthorization(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SystemComponents":                           schema_pkg_apis_core_v1beta1_SystemComponents(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Toleration":                                 schema_pkg_apis_core_v1beta1_Toleration(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.VerticalPodAutoscaler":                      schema_pkg_apis_core_v1beta1_VerticalPodAutoscaler(ref),
@@ -1281,6 +1283,36 @@ func schema_pkg_apis_core_v1beta1_AuditPolicy(ref common.ReferenceCallback) comm
 		},
 		Dependencies: []string{
 			"k8s.io/api/core/v1.ObjectReference"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_AuthorizerKubeconfigReference(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "AuthorizerKubeconfigReference is a reference for a kubeconfig for a authorization webhook.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"authorizerName": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AuthorizerName is the name of a webhook authorizer.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"secretName": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SecretName is the name of a secret containing the kubeconfig.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"authorizerName", "secretName"},
+			},
+		},
 	}
 }
 
@@ -4291,11 +4323,17 @@ func schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref common.ReferenceCallba
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.StructuredAuthentication"),
 						},
 					},
+					"structuredAuthorization": {
+						SchemaProps: spec.SchemaProps{
+							Description: "StructuredAuthorization contains configuration settings for structured authorization to the kube-apiserver. This field is only available for Kubernetes v1.30 or later.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.StructuredAuthorization"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerLogging", "github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerRequests", "github.com/gardener/gardener/pkg/apis/core/v1beta1.AdmissionPlugin", "github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.OIDCConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.StructuredAuthentication", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WatchCacheSizes", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerLogging", "github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerRequests", "github.com/gardener/gardener/pkg/apis/core/v1beta1.AdmissionPlugin", "github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.OIDCConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.StructuredAuthentication", "github.com/gardener/gardener/pkg/apis/core/v1beta1.StructuredAuthorization", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WatchCacheSizes", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
@@ -9309,6 +9347,44 @@ func schema_pkg_apis_core_v1beta1_StructuredAuthentication(ref common.ReferenceC
 				Required: []string{"configMapName"},
 			},
 		},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_StructuredAuthorization(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "StructuredAuthorization contains authorization config for kube-apiserver.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"configMapName": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ConfigMapName is the name of the ConfigMap in the project namespace which contains AuthorizationConfiguration for the kube-apiserver.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"kubeconfigs": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kubeconfigs is a list of references for kubeconfigs for the authorization webhooks.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.AuthorizerKubeconfigReference"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"configMapName", "kubeconfigs"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.AuthorizerKubeconfigReference"},
 	}
 }
 
