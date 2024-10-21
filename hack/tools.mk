@@ -53,7 +53,7 @@ VGOPATH                    := $(TOOLS_BIN_DIR)/vgopath
 # renovate: datasource=github-releases depName=golangci/golangci-lint
 GOLANGCI_LINT_VERSION ?= v1.61.0
 # renovate: datasource=github-releases depName=securego/gosec
-GOSEC_VERSION ?= v2.20.0
+GOSEC_VERSION ?= v2.21.4
 # renovate: datasource=github-releases depName=joelanford/go-apidiff
 GO_APIDIFF_VERSION ?= v0.8.2
 # renovate: datasource=github-releases depName=google/addlicense
