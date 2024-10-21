@@ -9,8 +9,12 @@ import (
 	"embed"
 	"path/filepath"
 
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var (
@@ -21,15 +25,30 @@ var (
 
 type crds struct {
 	kubernetes.ChartApplier
+	client   client.Client
+	crdNames []string
 }
 
 // NewCRD can be used to deploy istio CRDs.
 func NewCRD(
+	client client.Client,
 	applier kubernetes.ChartApplier,
 ) component.DeployWaiter {
-	return &crds{
+	deployWaiter := &crds{
 		ChartApplier: applier,
+		client:       client,
 	}
+
+	chart, err := deployWaiter.RenderEmbeddedFS(chartCRDs, chartPathCRDs, "", "", nil)
+	utilruntime.Must(err)
+
+	for _, manifest := range chart.Manifests {
+		obj, err := kubernetes.NewManifestReader([]byte(manifest.Content)).Read()
+		utilruntime.Must(err)
+
+		deployWaiter.crdNames = append(deployWaiter.crdNames, obj.GetName())
+	}
+	return deployWaiter
 }
 
 func (c *crds) Deploy(ctx context.Context) error {
@@ -40,8 +59,8 @@ func (c *crds) Destroy(ctx context.Context) error {
 	return c.DeleteFromEmbeddedFS(ctx, chartCRDs, chartPathCRDs, "", "istio")
 }
 
-func (c *crds) Wait(_ context.Context) error {
-	return nil
+func (c *crds) Wait(ctx context.Context) error {
+	return kubernetesutils.WaitUntilCRDManifestsReady(ctx, c.client, c.crdNames)
 }
 
 func (c *crds) WaitCleanup(_ context.Context) error {

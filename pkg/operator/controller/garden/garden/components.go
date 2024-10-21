@@ -167,11 +167,11 @@ func (r *Reconciler) instantiateComponents(
 	if !hvpaEnabled() {
 		c.hvpaCRD = component.OpDestroyAndWait(c.hvpaCRD)
 	}
-	c.istioCRD = istio.NewCRD(r.RuntimeClientSet.ChartApplier())
+	c.istioCRD = istio.NewCRD(r.RuntimeClientSet.Client(), r.RuntimeClientSet.ChartApplier())
 	c.fluentCRD = fluentoperator.NewCRDs(r.RuntimeClientSet.Client(), applier)
 	c.prometheusCRD = prometheusoperator.NewCRDs(r.RuntimeClientSet.Client(), applier)
 	c.certManagementCRD = certmanagement.NewCRDs(r.RuntimeClientSet.Client(), applier)
-	c.extensionCRD = extensioncrds.NewCRD(applier, true, false)
+	c.extensionCRD = extensioncrds.NewCRD(r.RuntimeClientSet.Client(), applier, true, false)
 
 	// garden system components
 	c.gardenerResourceManager, err = r.newGardenerResourceManager(garden, secretsManager)

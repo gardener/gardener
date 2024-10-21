@@ -131,9 +131,9 @@ func (r *Reconciler) instantiateComponents(
 ) {
 	// crds
 	c.machineCRD = machinecontrollermanager.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
-	c.extensionCRD = extensioncrds.NewCRD(r.SeedClientSet.Applier(), !seedIsGarden, true)
+	c.extensionCRD = extensioncrds.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier(), !seedIsGarden, true)
 	c.etcdCRD = etcd.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
-	c.istioCRD = istio.NewCRD(r.SeedClientSet.ChartApplier())
+	c.istioCRD = istio.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.ChartApplier())
 	c.vpaCRD = vpa.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier(), nil)
 	c.hvpaCRD = hvpa.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
 	if !hvpaEnabled() {
