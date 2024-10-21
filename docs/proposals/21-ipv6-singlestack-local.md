@@ -30,7 +30,7 @@ reviewers:
     - [`DNSRecord` API](#dnsrecord-api)
     - [Implementation Overview](#implementation-overview)
       - [Preparing the Local Setup](#preparing-the-local-setup)
-      - [DNS Records](#dns-records)
+      - [DNS Records](#dnsrecords)
       - [Network Policies](#network-policies)
       - [Shoot Worker Node Kernel Configuration](#shoot-worker-node-kernel-configuration)
       - [Docker Hub Images](#docker-hub-images)

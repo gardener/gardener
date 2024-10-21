@@ -1,6 +1,6 @@
 # Contract: `Bastion` Resource
 
-The Gardener project allows users to connect to Shoot worker nodes via SSH. As nodes are usually firewalled and not directly accessible from the public internet, [GEP-15](../proposals/15-manage-bastions-and-ssh-key-pair-rotation.md) introduced the concept of "Bastions". A bastion is a dedicated server that only serves to allow SSH ingress to the worker nodes.
+The Gardener project allows users to connect to Shoot worker nodes via SSH. As nodes are usually firewalled and not directly accessible from the public internet, [GEP-15](../../proposals/15-manage-bastions-and-ssh-key-pair-rotation.md) introduced the concept of "Bastions". A bastion is a dedicated server that only serves to allow SSH ingress to the worker nodes.
 
 `Bastion` resources contain the user's public SSH key and IP address, in order to provision the server accordingly: The public key is put onto the Bastion and SSH ingress is only authorized for the given IP address (in fact, it's not a single IP address, but a set of IP ranges, however for most purposes a single IP is be used).
 
@@ -41,12 +41,12 @@ Your controller is supposed to create a new instance at the given cloud provider
 
 ### `ConfigValidator` Interface
 
-For bastion controllers, the generic `Reconciler` also delegates to a [`ConfigValidator` interface](../../extensions/pkg/controller/bastion/configvalidator.go) that contains a single `Validate` method. This method is called by the generic `Reconciler` at the beginning of every reconciliation, and can be implemented by the extension to validate the `.spec.providerConfig` part of the `Bastion` resource with the respective cloud provider, typically the existence and validity of cloud provider resources such as VPCs, images, etc.
+For bastion controllers, the generic `Reconciler` also delegates to a [`ConfigValidator` interface](../../../extensions/pkg/controller/bastion/configvalidator.go) that contains a single `Validate` method. This method is called by the generic `Reconciler` at the beginning of every reconciliation, and can be implemented by the extension to validate the `.spec.providerConfig` part of the `Bastion` resource with the respective cloud provider, typically the existence and validity of cloud provider resources such as VPCs, images, etc.
 
 The `Validate` method returns a list of errors. If this list is non-empty, the generic `Reconciler` will fail with an error. This error will have the error code `ERR_CONFIGURATION_PROBLEM`, unless there is at least one error in the list that has its `ErrorType` field set to `field.ErrorTypeInternal`.
 
 ## References and Additional Resources
 
-* [`Bastion` API Reference](../api-reference/extensions.md#bastion)
+* [`Bastion` API Reference](../../api-reference/extensions.md#bastion)
 * [Exemplary Implementation for the AWS Provider](https://github.com/gardener/gardener-extension-provider-aws/tree/master/pkg/controller/bastion)
-* [GEP-15](../proposals/15-manage-bastions-and-ssh-key-pair-rotation.md)
+* [GEP-15](../../proposals/15-manage-bastions-and-ssh-key-pair-rotation.md)
