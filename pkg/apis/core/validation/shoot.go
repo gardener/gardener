@@ -2641,10 +2641,6 @@ func validateShootManagedIssuer(shoot *core.Shoot) field.ErrorList {
 			kubeAPIServerConfig.ServiceAccountConfig.Issuer != nil {
 			allErrors = append(allErrors, field.Forbidden(field.NewPath("metadata", "annotations").Key(v1beta1constants.AnnotationAuthenticationIssuer), "managed shoot issuer cannot be enabled when .kubernetes.kubeAPIServer.serviceAccountConfig.issuer is set"))
 		}
-
-		if helper.IsWorkerless(shoot) {
-			allErrors = append(allErrors, field.Forbidden(field.NewPath("metadata", "annotations").Key(v1beta1constants.AnnotationAuthenticationIssuer), "managed shoot issuer cannot be enabled for workerless shoots"))
-		}
 	}
 
 	return allErrors
