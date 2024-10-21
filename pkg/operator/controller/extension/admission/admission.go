@@ -20,6 +20,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -100,6 +101,9 @@ func (d *deployment) createOrUpdateAdmissionRuntimeClusterResources(ctx context.
 		"gardener": map[string]any{
 			"runtimeCluster": map[string]any{
 				"priorityClassName": v1beta1constants.PriorityClassNameGardenSystem400,
+			},
+			"virtualCluster": map[string]any{
+				"namespace": virtualNamespace(extension).GetName(),
 			},
 		},
 	}
@@ -196,14 +200,24 @@ func (d *deployment) createOrUpdateAdmissionVirtualClusterResources(ctx context.
 			return err
 		}
 	}
+	namespace := virtualNamespace(extension)
+	registry := managedresources.NewRegistry(kubernetes.GardenScheme, kubernetes.GardenCodec, kubernetes.GardenSerializer)
+	if err := registry.Add(namespace); err != nil {
+		return fmt.Errorf("failed adding namespace to registry: %w", err)
+	}
 
-	renderedChart, err := virtualClusterClientSet.ChartRenderer().RenderArchive(archive, extension.Name, v1beta1constants.GardenNamespace, utils.MergeMaps(helmValues, gardenerValues))
+	renderedChart, err := virtualClusterClientSet.ChartRenderer().RenderArchive(archive, extension.Name, namespace.Name, utils.MergeMaps(helmValues, gardenerValues))
 	if err != nil {
 		return fmt.Errorf("failed rendering Helm chart %q: %w", extension.Spec.Deployment.AdmissionDeployment.VirtualCluster.Helm.OCIRepository.GetURL(), err)
 	}
 
+	serializedObjects, err := serializeRenderedChartAndRegistry(renderedChart, registry)
+	if err != nil {
+		return err
+	}
+
 	managedResourceName := virtualManagedResourceName(extension)
-	if err := managedresources.CreateForShoot(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, managedResourceName, managedresources.LabelValueOperator, false, renderedChart.AsSecretData()); err != nil {
+	if err := managedresources.CreateForShoot(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, managedResourceName, managedresources.LabelValueOperator, false, serializedObjects); err != nil {
 		return fmt.Errorf("failed creating ManagedResource: %w", err)
 	}
 
@@ -220,8 +234,11 @@ func (d *deployment) deleteAdmissionVirtualClusterResources(ctx context.Context,
 	if err := managedresources.DeleteForShoot(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, managedResourceName); err != nil {
 		return fmt.Errorf("failed deleting ManagedResource: %w", err)
 	}
+	if err := managedresources.WaitUntilDeleted(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, managedResourceName); err != nil {
+		return fmt.Errorf("failed waiting for ManagedResource to be deleted: %w", err)
+	}
 
-	return managedresources.WaitUntilDeleted(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, virtualManagedResourceName(extension))
+	return nil
 }
 
 func (d *deployment) getVirtualClusterAccessSecret(name string) *gardenerutils.AccessSecret {
@@ -234,6 +251,14 @@ func resourceName(extension *operatorv1alpha1.Extension) string {
 
 func runtimeManagedResourceName(extension *operatorv1alpha1.Extension) string {
 	return fmt.Sprintf("extension-admission-runtime-%s", extension.Name)
+}
+
+func serializeRenderedChartAndRegistry(chart *chartrenderer.RenderedChart, registry *managedresources.Registry) (map[string][]byte, error) {
+	for name, data := range chart.AsSecretData() {
+		registry.AddSerialized(name, data)
+	}
+
+	return registry.SerializedObjects()
 }
 
 func virtualManagedResourceName(extension *operatorv1alpha1.Extension) string {
@@ -252,6 +277,18 @@ func virtualDeploymentSpecified(extension *operatorv1alpha1.Extension) bool {
 		extension.Spec.Deployment.AdmissionDeployment != nil &&
 		extension.Spec.Deployment.AdmissionDeployment.VirtualCluster != nil &&
 		extension.Spec.Deployment.AdmissionDeployment.VirtualCluster.Helm != nil
+}
+
+func virtualNamespace(extension *operatorv1alpha1.Extension) *corev1.Namespace {
+	return &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: fmt.Sprintf("extension-%s", extension.Name),
+			Annotations: map[string]string{
+				v1beta1constants.GardenRole:               v1beta1constants.GardenRoleExtension,
+				"extensions.operator.gardener.cloud/name": extension.Name,
+			},
+		},
+	}
 }
 
 // New creates a new admission deployer.

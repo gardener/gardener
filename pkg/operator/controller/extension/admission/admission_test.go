@@ -6,6 +6,7 @@ package admission_test
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -117,7 +118,7 @@ var _ = Describe("Deployment", func() {
 
 		It("should fail when runtime OCI artifact is not found", func() {
 			ociRegistry.AddArtifact(&gardencorev1.OCIRepository{Ref: &ociRefApplication}, []byte(""))
-			chartRenderer.EXPECT().RenderArchive(gomock.Any(), extension.Name, "garden", gomock.Any()).Return(&chartrenderer.RenderedChart{}, nil)
+			chartRenderer.EXPECT().RenderArchive(gomock.Any(), extension.Name, fmt.Sprintf("extension-%s", extension.Name), gomock.Any()).Return(&chartrenderer.RenderedChart{}, nil)
 
 			defer test.WithVar(&retry.Until, func(_ context.Context, _ time.Duration, _ retry.Func) error {
 				return nil
@@ -152,10 +153,13 @@ var _ = Describe("Deployment", func() {
 					"runtimeCluster": map[string]any{
 						"priorityClassName": "gardener-garden-system-400",
 					},
+					"virtualCluster": map[string]any{
+						"namespace": "extension-" + extensionName,
+					},
 				},
 			}
 
-			chartRenderer.EXPECT().RenderArchive([]byte("virtual-chart"), extension.Name, "garden", expectedVirtualValues).Return(&chartrenderer.RenderedChart{}, nil)
+			chartRenderer.EXPECT().RenderArchive([]byte("virtual-chart"), extension.Name, fmt.Sprintf("extension-%s", extension.Name), expectedVirtualValues).Return(&chartrenderer.RenderedChart{}, nil)
 			chartRenderer.EXPECT().RenderArchive([]byte("runtime-chart"), extension.Name, "garden", expectedRuntimeValues).Return(&chartrenderer.RenderedChart{}, nil)
 
 			defer test.WithVar(&retry.Until, func(_ context.Context, _ time.Duration, _ retry.Func) error {
@@ -226,7 +230,7 @@ var _ = Describe("Deployment", func() {
 
 		It("should only delete the managed resource for the runtime cluster", func() {
 			ociRegistry.AddArtifact(&gardencorev1.OCIRepository{Ref: &ociRefApplication}, []byte("virtual-chart"))
-			chartRenderer.EXPECT().RenderArchive([]byte("virtual-chart"), extension.Name, "garden", gomock.Any()).Return(&chartrenderer.RenderedChart{}, nil)
+			chartRenderer.EXPECT().RenderArchive([]byte("virtual-chart"), extension.Name, fmt.Sprintf("extension-%s", extension.Name), gomock.Any()).Return(&chartrenderer.RenderedChart{}, nil)
 			defer test.WithVar(&retry.Until, func(_ context.Context, _ time.Duration, _ retry.Func) error {
 				return nil
 			})()
