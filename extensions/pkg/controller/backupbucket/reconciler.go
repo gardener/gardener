@@ -126,11 +126,11 @@ func (r *reconciler) delete(ctx context.Context, log logr.Logger, bb *extensions
 	}
 
 	secretMetadata, err := kubernetesutils.GetSecretMetadataByReference(ctx, r.client, &bb.Spec.SecretRef)
-	if err != nil {
+	if client.IgnoreNotFound(err) != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get backup bucket secret: %+v", err)
 	}
 
-	if controllerutil.ContainsFinalizer(secretMetadata, FinalizerName) {
+	if secretMetadata != nil && controllerutil.ContainsFinalizer(secretMetadata, FinalizerName) {
 		log.Info("Removing finalizer from secret", "secret", client.ObjectKeyFromObject(secretMetadata))
 		if err := controllerutils.RemoveFinalizers(ctx, r.client, secretMetadata, FinalizerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer from secret: %w", err)

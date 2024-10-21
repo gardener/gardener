@@ -29,7 +29,7 @@ import (
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/logger"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
-	. "github.com/gardener/gardener/pkg/operator/controller/extension/runtime"
+	. "github.com/gardener/gardener/pkg/operator/controller/extension/extension/runtime"
 	ocifake "github.com/gardener/gardener/pkg/utils/oci/fake"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/test"

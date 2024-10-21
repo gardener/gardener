@@ -13,5 +13,5 @@ import (
 
 func TestExtension(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Operator Controller Extension Suite")
+	RunSpecs(t, "Operator Controller Extension Main Suite")
 }
