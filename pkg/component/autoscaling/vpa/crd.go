@@ -8,6 +8,7 @@ import (
 	"context"
 	_ "embed"
 
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -22,9 +23,8 @@ var (
 	//go:embed templates/crd-autoscaling.k8s.io_verticalpodautoscalercheckpoints.yaml
 	verticalPodAutoscalerCheckpointCRD string
 
-	crdResources map[string]string
-	// resourceObjectKeys is a slice of the CRD object keys
-	resourceObjectKeys []client.ObjectKey
+	crdResources  map[string]string
+	resourceNames []string
 )
 
 func init() {
@@ -32,14 +32,10 @@ func init() {
 		"crd-verticalpodautoscalers.yaml":           verticalPodAutoscalerCRD,
 		"crd-verticalpodautoscalercheckpoints.yaml": verticalPodAutoscalerCheckpointCRD,
 	}
-
 	for _, resource := range crdResources {
-		objKey, err := kubernetesutils.GetObjectKeyFromManifest(resource)
-		if err != nil {
-			panic(err)
-		}
-
-		resourceObjectKeys = append(resourceObjectKeys, objKey)
+		name, err := kubernetesutils.GetObjectNameFromManifest(resource)
+		utilruntime.Must(err)
+		resourceNames = append(resourceNames, name)
 	}
 }
 
@@ -90,7 +86,7 @@ func (v *vpaCRD) Destroy(ctx context.Context) error {
 
 // Wait signals whether a CRD is ready or needs more time to be deployed.
 func (v *vpaCRD) Wait(ctx context.Context) error {
-	return kubernetesutils.WaitUntilCRDManifestsReady(ctx, v.client, resourceObjectKeys)
+	return kubernetesutils.WaitUntilCRDManifestsReady(ctx, v.client, resourceNames)
 }
 
 // WaitCleanup for destruction to finish and component to be fully removed. crdDeployer does not need to wait for cleanup.

@@ -28,27 +28,17 @@ var (
 	//go:embed templates/crd-machine.sapcloud.io_machines.yaml
 	machineCRD string
 
-	// resourceObjectKeyMap maps the ObjectKey of the CRD to its corresponding manifest
-	resourceObjectKeyMap map[client.ObjectKey]string
+	crdNameToManifest map[string]string
 )
 
 func init() {
-	resourceObjectKeyMap = make(map[client.ObjectKey]string)
 	resources := []string{
 		machineClassCRD,
 		machineDeploymentCRD,
 		machineSetCRD,
 		machineCRD,
 	}
-
-	for _, resource := range resources {
-		objKey, err := kubernetesutils.GetObjectKeyFromManifest(resource)
-		if err != nil {
-			panic(err)
-		}
-
-		resourceObjectKeyMap[objKey] = resource
-	}
+	crdNameToManifest = kubernetesutils.MakeCrdNameMap(resources)
 }
 
 type crd struct {
@@ -66,7 +56,7 @@ func NewCRD(client client.Client, applier kubernetes.Applier) component.DeployWa
 
 // Deploy creates and updates the CRD definitions for the machine-controller-manager.
 func (c *crd) Deploy(ctx context.Context) error {
-	for _, resource := range resourceObjectKeyMap {
+	for _, resource := range crdNameToManifest {
 		if err := c.applier.ApplyManifest(ctx, kubernetes.NewManifestReader([]byte(resource)), kubernetes.DefaultMergeFuncs); err != nil {
 			return err
 		}
@@ -76,7 +66,7 @@ func (c *crd) Deploy(ctx context.Context) error {
 }
 
 func (c *crd) Destroy(ctx context.Context) error {
-	for _, resource := range resourceObjectKeyMap {
+	for _, resource := range crdNameToManifest {
 		reader := kubernetes.NewManifestReader([]byte(resource))
 
 		obj, err := reader.Read()
@@ -98,7 +88,7 @@ func (c *crd) Destroy(ctx context.Context) error {
 
 // Wait signals whether a CRD is ready or needs more time to be deployed.
 func (c *crd) Wait(ctx context.Context) error {
-	return kubernetesutils.WaitUntilCRDManifestsReady(ctx, c.client, maps.Keys(resourceObjectKeyMap))
+	return kubernetesutils.WaitUntilCRDManifestsReady(ctx, c.client, maps.Keys(crdNameToManifest))
 }
 
 // WaitCleanup for destruction to finish and component to be fully removed. crdDeployer does not need to wait for cleanup.
