@@ -190,11 +190,11 @@
     * [`Infrastructure` resource](extensions/resources/infrastructure.md)
     * [`Worker` resource](extensions/resources/worker.md)
   * Network plugin providers
-    * [`Network` resource](extensions/network.md)
+    * [`Network` resource](extensions/resources/network.md)
   * Operating systems
     * [`OperatingSystemConfig` resource](extensions/resources/operatingsystemconfig.md)
   * Container runtimes
-    * [`ContainerRuntime` resource](extensions/containerruntime.md)
+    * [`ContainerRuntime` resource](extensions/resources/containerruntime.md)
   * Generic (non-essential) extensions
     * [`Extension` resource](extensions/resources/extension.md)
   * [Extension Admission](extensions/admission.md)
