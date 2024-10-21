@@ -89,9 +89,8 @@ func buildRef(oci *gardencorev1.OCIRepository) (name.Reference, error) {
 		name.StrictValidation,
 	}
 
-	// in the local setup, we need to replace the registry and configure that we don't want to use TLS
-	if strings.Contains(ref, localRegistry) {
-		ref = strings.Replace(ref, localRegistry, inKubernetesRegistry, 1)
+	// in the local setup we don't want to use TLS
+	if strings.Contains(ref, inKubernetesRegistry) {
 		opts = append(opts, name.Insecure)
 	}
 
