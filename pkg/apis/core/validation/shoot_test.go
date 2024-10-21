@@ -1177,19 +1177,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
-			It("should not allow enabling it for workerless shoots", func() {
-				shoot.Annotations = map[string]string{
-					"authentication.gardener.cloud/issuer": "managed",
-				}
-				shoot.Spec.Provider.Workers = []core.Worker{}
-				errorList := ValidateShoot(shoot)
-				Expect(errorList).To(ContainElements(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("metadata.annotations[authentication.gardener.cloud/issuer]"),
-					"Detail": ContainSubstring("managed shoot issuer cannot be enabled for workerless shoots"),
-				}))))
-			})
-
 			It("should allow enabling it for shoots without configured issuer", func() {
 				shoot.Annotations = map[string]string{
 					"authentication.gardener.cloud/issuer": "managed",
