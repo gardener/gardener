@@ -517,6 +517,12 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 									CIDR: "169.254.20.10/32",
 								},
 							},
+							// required for node local dns feature, allows egress traffic to node local dns cache
+							{
+								IPBlock: &networkingv1.IPBlock{
+									CIDR: "fd30:1319:f1e:230b::1/128",
+								},
+							},
 							// required for node local dns feature, allows egress traffic to CoreDNS
 							{
 								IPBlock: &networkingv1.IPBlock{

@@ -55,7 +55,7 @@ func (b *Botanist) ReconcileNodeLocalDNS(ctx context.Context) error {
 	}
 	b.Shoot.Components.SystemComponents.NodeLocalDNS.SetClusterDNS(clusterDNS)
 	b.Shoot.Components.SystemComponents.NodeLocalDNS.SetDNSServers(dnsServers)
-
+	b.Shoot.Components.SystemComponents.NodeLocalDNS.SetIPFamilies(b.Shoot.GetInfo().Spec.Networking.IPFamilies)
 	if b.Shoot.NodeLocalDNSEnabled {
 		return b.Shoot.Components.SystemComponents.NodeLocalDNS.Deploy(ctx)
 	}
