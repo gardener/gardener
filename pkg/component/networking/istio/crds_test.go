@@ -46,7 +46,7 @@ var _ = Describe("#CRDs", func() {
 		ca := kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(c, mapper))
 		Expect(ca).NotTo(BeNil(), "should return chart applier")
 
-		crd = NewCRD(ca)
+		crd = NewCRD(c, ca)
 	})
 
 	JustBeforeEach(func() {

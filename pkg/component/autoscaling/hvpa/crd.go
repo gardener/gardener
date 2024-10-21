@@ -5,31 +5,21 @@
 package hvpa
 
 import (
-	"context"
 	_ "embed"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-//go:embed templates/crd-autoscaling.k8s.io_hvpas.yaml
-var crd string
-
-type crdDeployer struct {
-	applier kubernetes.Applier
-}
+var (
+	//go:embed templates/crd-autoscaling.k8s.io_hvpas.yaml
+	crdHvpas string
+)
 
 // NewCRD can be used to deploy the CRD definitions for the HVPA controller.
-func NewCRD(applier kubernetes.Applier) component.Deployer {
-	return &crdDeployer{applier: applier}
-}
-
-func (v *crdDeployer) Deploy(ctx context.Context) error {
-	return v.applier.ApplyManifest(ctx, kubernetes.NewManifestReader([]byte(crd)), kubernetes.DefaultMergeFuncs)
-}
-
-func (v *crdDeployer) Destroy(ctx context.Context) error {
-	return client.IgnoreNotFound(v.applier.DeleteManifest(ctx, kubernetes.NewManifestReader([]byte(crd))))
+func NewCRD(client client.Client, applier kubernetes.Applier) component.DeployWaiter {
+	return kubernetesutils.NewCRDDeployer(client, applier, []string{crdHvpas})
 }
