@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package seed_test
+package authorizer_test
 
 import (
 	"errors"
@@ -12,7 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 	authorizationv1 "k8s.io/api/authorization/v1"
 
-	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed"
+	. "github.com/gardener/gardener/pkg/webhook/authorizer"
 )
 
 var _ = Describe("Response", func() {

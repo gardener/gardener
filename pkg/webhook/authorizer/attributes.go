@@ -19,7 +19,7 @@ https://github.com/kubernetes/kubernetes/blob/v1.20.2/pkg/registry/authorization
 Modifications Copyright 2024 SAP SE or an SAP affiliate company and Gardener contributors
 */
 
-package seed
+package authorizer
 
 import (
 	authorizationv1 "k8s.io/api/authorization/v1"

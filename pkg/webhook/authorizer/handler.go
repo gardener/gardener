@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package seed
+package authorizer
 
 import (
 	"context"
@@ -36,14 +36,14 @@ func init() {
 	utilruntime.Must(authorizationv1.AddToScheme(scheme))
 }
 
-// Handler authorizing requests for resources related to a Seed.
+// Handler authorizing requests for resources.
 type Handler struct {
 	Logger     logr.Logger
 	Authorizer auth.Authorizer
 }
 
-// Handle authorizing requests for resources related to a Seed.
-func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
+// ServeHTTP authorizing requests for resources.
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		if r := recover(); r != nil {
 			for _, fn := range utilruntime.PanicHandlers {

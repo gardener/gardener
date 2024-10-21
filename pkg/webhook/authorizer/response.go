@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package seed
+package authorizer
 
 import (
 	"fmt"
@@ -36,7 +36,7 @@ func NoOpinion(reason string) authorizationv1.SubjectAccessReviewStatus {
 	}
 }
 
-// Errored constructs a SubjectAccessReview and indicates in its status that the an error has been occurred during the
+// Errored constructs a SubjectAccessReview and indicates in its status that an error has occurred during the
 // evaluation of the result.
 func Errored(code int32, err error) authorizationv1.SubjectAccessReviewStatus {
 	return authorizationv1.SubjectAccessReviewStatus{
