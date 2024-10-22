@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestAPI(t *testing.T) {
+func TestV1alpha1(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "APIs Settings V1alpha1 Suite")
+	RunSpecs(t, "AdmissionPlugin Shoot ResourceReservation API v1alpha1 Suite")
 }
