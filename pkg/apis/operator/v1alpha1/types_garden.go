@@ -120,7 +120,7 @@ type DNSDomain struct {
 	// Name is the domain name.
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
-	// Provider is the DNS provider as declared in the spec.DNS.providers configuration.
+	// Provider is the name of the DNS provider as declared in the 'spec.dns.providers' section.
 	// If not set, the first provider in the list is used.
 	// +optional
 	Provider *string `json:"provider,omitempty"`

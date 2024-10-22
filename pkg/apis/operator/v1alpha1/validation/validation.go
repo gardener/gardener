@@ -115,7 +115,12 @@ func validateVirtualClusterUpdate(oldGarden, newGarden *operatorv1alpha1.Garden)
 
 	if oldVirtualCluster.ETCD != nil && oldVirtualCluster.ETCD.Main != nil && oldVirtualCluster.ETCD.Main.Backup != nil && oldVirtualCluster.ETCD.Main.Backup.BucketName == nil {
 		if newVirtualCluster.ETCD != nil && newVirtualCluster.ETCD.Main != nil && newVirtualCluster.ETCD.Main.Backup != nil && newVirtualCluster.ETCD.Main.Backup.BucketName != nil {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("etcd", "main", "backup", "bucketName"), "bucket name must not be set if it was not set before"))
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("etcd", "main", "backup", "bucketName"), "bucket name must remain unset if it was not set before"))
+		}
+	}
+	if oldVirtualCluster.ETCD != nil && oldVirtualCluster.ETCD.Main != nil && oldVirtualCluster.ETCD.Main.Backup != nil && oldVirtualCluster.ETCD.Main.Backup.BucketName != nil {
+		if newVirtualCluster.ETCD != nil && newVirtualCluster.ETCD.Main != nil && newVirtualCluster.ETCD.Main.Backup != nil && newVirtualCluster.ETCD.Main.Backup.BucketName == nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("etcd", "main", "backup", "bucketName"), "bucket name must remain unchanged if it was set before"))
 		}
 	}
 
@@ -621,13 +626,7 @@ func validateEncryptionConfigUpdate(oldGarden, newGarden *operatorv1alpha1.Garde
 }
 
 func hasProvider(dns *operatorv1alpha1.DNSManagement, provider string) bool {
-	if dns == nil {
-		return false
-	}
-	for _, p := range dns.Providers {
-		if p.Name == provider {
-			return true
-		}
-	}
-	return false
+	return dns != nil && slices.ContainsFunc(dns.Providers, func(p operatorv1alpha1.DNSProvider) bool {
+		return p.Name == provider
+	})
 }
