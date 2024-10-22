@@ -45,7 +45,7 @@ if [[ -n "$client_certificate_data" ]] && ! echo "$client_certificate_data" | ba
 fi
 
 echo "Configure seed cluster"
-"$SCRIPT_DIR"/../example/provider-extensions/seed/configure-seed.sh "$PATH_GARDEN_KUBECONFIG" "$PATH_SEED_KUBECONFIG" "$SEED_NAME"
+"$SCRIPT_DIR"/../example/provider-extensions/seed/configure-seed.sh "$PATH_GARDEN_KUBECONFIG" "$PATH_SEED_KUBECONFIG" "$SEED_NAME" "$WORKLOAD_IDENTITY_SUPPORT"
 echo "Start bootstrapping Gardener"
 SKAFFOLD_DEFAULT_REPO=localhost:5001 SKAFFOLD_PUSH=true skaffold run -m etcd,controlplane,extensions-env -p extensions
 echo "Configure admission controllers"

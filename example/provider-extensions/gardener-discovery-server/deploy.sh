@@ -25,7 +25,7 @@ fi
 garden_kubeconfig=$1
 seed_kubeconfig=$2
 
-kubectl --server-side=true --kubeconfig "$garden_kubeconfig" apply -k "$SCRIPT_DIR"/rbac
+kubectl --server-side=true --kubeconfig "$garden_kubeconfig" apply -f "$SCRIPT_DIR"/rbac
 
 token=$(kubectl --kubeconfig "$garden_kubeconfig" -n garden create token gardener-discovery-server --duration 24h)
 kubectl --kubeconfig "$seed_kubeconfig" apply -f - << EOF
@@ -73,4 +73,4 @@ data:
     $jwks
 EOF
 
-kubectl --server-side=true --kubeconfig "$seed_kubeconfig" apply -k "$SCRIPT_DIR"/server
+kubectl --server-side=true --kubeconfig "$seed_kubeconfig" apply -f "$SCRIPT_DIR"/server

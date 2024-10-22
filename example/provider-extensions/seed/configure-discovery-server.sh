@@ -62,7 +62,7 @@ else
 fi
 
 echo "Deploying load-balancer service for Gardener Discovery Server"
-kubectl --server-side=true --kubeconfig "$seed_kubeconfig" apply -k "$SCRIPT_DIR"/../gardener-discovery-server/load-balancer
+kubectl --server-side=true --kubeconfig "$seed_kubeconfig" apply -f "$SCRIPT_DIR"/../gardener-discovery-server/load-balancer
 
 if [[ $use_shoot_info == "true" ]]; then
   ensure-gardener-dns-and-cert-annotations gardener-discovery-server gardener-discovery-server "$gardener_issuer_domain"

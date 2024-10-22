@@ -103,12 +103,16 @@ Afterwards, the images for the Garden cluster are built and deployed into the Ki
 Finally, the images for the Seed cluster are built, pushed to a container registry on the Seed, and the `gardenlet` is started.
 
 If support for workload identity is required you can invoke the top command with `DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT` variable set to `true`.
-This will cause the Gardener Discovery Server to be deployed and exposed through the seed cluster.
+This will cause the [Gardener Discovery Server](https://github.com/gardener/gardener-discovery-server) to be deployed and exposed through the seed cluster.
 External systems can be then configured to trust the workload identity issuer of the local Garden cluster.
 
 ```bash
 DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT=true make gardener-extensions-up
 ```
+
+> [!IMPORTANT]
+> When working with multiple seed clusters you need to only pass `DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT=true` for the one seed cluster that will be used to expose the workload identity documents.
+> A single Garden cluster needs only one Gardener Discovery Server.
 
 ### Adding Additional Seeds
 
@@ -133,6 +137,12 @@ make gardener-extensions-down SEED_NAME=<seed-name>
 
 If it is not the last seed, this command will only remove the seed, but leave the local Gardener cluster and the other seeds untouched.
 To remove all seeds and to cleanup the local Gardener cluster, you have to run the command for each seed.
+
+> [!TIP]
+> If using development setup that supports workload identity pass `DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT=true` when removing the seed that was used to host the [Gardener Discovery Server](https://github.com/gardener/gardener-discovery-server).
+> ```bash
+> DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT=true make gardener-extensions-down SEED_NAME=<seed-name>
+> ```
 
 ### Rotate credentials of container image registry in a Seed
 
