@@ -626,6 +626,26 @@ func getLabels() map[string]string {
 	}
 }
 
+func (k *kubeControllerManager) isDualStack() bool {
+	hasIPv4 := false
+	hasIPv6 := false
+
+	for _, podNetwork := range k.values.PodNetworks {
+		ip := podNetwork.IP
+
+		if ip.To4() != nil {
+			hasIPv4 = true
+		} else {
+			hasIPv6 = true
+		}
+
+		if hasIPv4 && hasIPv6 {
+			return true
+		}
+	}
+	return false
+}
+
 func (k *kubeControllerManager) computeCommand(port int32) []string {
 	var (
 		defaultHorizontalPodAutoscalerConfig = k.getHorizontalPodAutoscalerConfig()
@@ -650,8 +670,14 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		if v := k.values.Config.NodeMonitorGracePeriod; v != nil {
 			nodeMonitorGracePeriod = *v
 		}
+
 		if k.values.Config.NodeCIDRMaskSize != nil {
-			command = append(command, fmt.Sprintf("--node-cidr-mask-size=%d", *k.values.Config.NodeCIDRMaskSize))
+			if k.isDualStack() {
+				command = append(command, fmt.Sprintf("--node-cidr-mask-size-ipv4=%d", *k.values.Config.NodeCIDRMaskSize))
+				command = append(command, fmt.Sprintf("--node-cidr-mask-size-ipv6=%d", 64))
+			} else {
+				command = append(command, fmt.Sprintf("--node-cidr-mask-size=%d", *k.values.Config.NodeCIDRMaskSize))
+			}
 		}
 
 		command = append(command,

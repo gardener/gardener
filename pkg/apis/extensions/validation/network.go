@@ -70,7 +70,10 @@ func ValidateNetworkSpec(spec *extensionsv1alpha1.NetworkSpec, fldPath *field.Pa
 	}
 
 	allErrs = append(allErrs, cidrvalidation.ValidateCIDRParse(cidrs...)...)
-	allErrs = append(allErrs, cidrvalidation.ValidateCIDRIPFamily(cidrs, string(primaryIPFamily))...)
+	// For dualstack, primaryIPFamily might not match configured CIDRs.
+	if len(spec.IPFamilies) < 2 {
+		allErrs = append(allErrs, cidrvalidation.ValidateCIDRIPFamily(cidrs, string(primaryIPFamily))...)
+	}
 
 	if !(len(spec.IPFamilies) == 1 && spec.IPFamilies[0] == extensionsv1alpha1.IPFamilyIPv6) {
 		allErrs = append(allErrs, cidrvalidation.ValidateCIDROverlap(cidrs, false)...)
@@ -130,11 +133,6 @@ func ValidateIPFamilies(ipFamilies []extensionsv1alpha1.IPFamily, fldPath *field
 	if len(allErrs) > 0 {
 		// further validation doesn't make any sense, because there are unsupported or duplicate IP families
 		return allErrs
-	}
-
-	// validate: only supported single-stack/dual-stack combinations
-	if len(ipFamilies) > 1 {
-		allErrs = append(allErrs, field.Invalid(fldPath, ipFamilies, "dual-stack networking is not supported"))
 	}
 
 	return allErrs

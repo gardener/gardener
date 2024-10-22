@@ -280,17 +280,10 @@ var _ = Describe("Network validation tests", func() {
 			))
 		})
 
-		It("should deny dual-stack IP families", func() {
+		It("should allow dual-stack IP families", func() {
 			ipFamilies := []extensionsv1alpha1.IPFamily{extensionsv1alpha1.IPFamilyIPv4, extensionsv1alpha1.IPFamilyIPv6}
 			errorList := ValidateIPFamilies(ipFamilies, fldPath)
-			Expect(errorList).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":     Equal(field.ErrorTypeInvalid),
-					"Field":    Equal(fldPath.String()),
-					"BadValue": Equal(ipFamilies),
-					"Detail":   Equal("dual-stack networking is not supported"),
-				})),
-			))
+			Expect(errorList).To(BeEmpty())
 		})
 
 		It("should allow IPv4 single-stack", func() {

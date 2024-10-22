@@ -1019,7 +1019,8 @@ func commandForKubernetesVersion(
 
 	if !isWorkerless {
 		if nodeCIDRMaskSize != nil {
-			command = append(command, fmt.Sprintf("--node-cidr-mask-size=%d", *nodeCIDRMaskSize))
+			command = append(command, fmt.Sprintf("--node-cidr-mask-size-ipv4=%d", *nodeCIDRMaskSize))
+			command = append(command, fmt.Sprintf("--node-cidr-mask-size-ipv6=%d", 64))
 		}
 
 		command = append(command,
