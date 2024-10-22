@@ -685,7 +685,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Provider is the name of the DNS provider as declared in the &lsquo;spec.dns.providers&rsquo; configuration.
+<p>Provider is the name of the DNS provider as declared in the &lsquo;spec.dns.providers&rsquo; section.
 If not set, the first provider in the list is used.</p>
 </td>
 </tr>
