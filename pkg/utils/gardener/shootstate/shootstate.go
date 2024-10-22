@@ -141,11 +141,15 @@ func computeGardenerData(
 		return nil, fmt.Errorf("failed compressing machine state data: %w", err)
 	}
 
-	return append(secretsToPersist, gardencorev1beta1.GardenerResourceData{
-		Name: v1beta1constants.DataTypeMachineState,
-		Type: v1beta1constants.DataTypeMachineState,
-		Data: runtime.RawExtension{Raw: machineStateJSONCompressed},
-	}), nil
+	if machineStateJSONCompressed != nil {
+		return append(secretsToPersist, gardencorev1beta1.GardenerResourceData{
+			Name: v1beta1constants.DataTypeMachineState,
+			Type: v1beta1constants.DataTypeMachineState,
+			Data: runtime.RawExtension{Raw: machineStateJSONCompressed},
+		}), nil
+	}
+
+	return secretsToPersist, nil
 }
 
 func computeSecretsToPersist(
