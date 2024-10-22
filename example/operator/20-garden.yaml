@@ -32,7 +32,7 @@ spec:
     ingress:
       domains:
       - name: ingress.runtime-garden.local.gardener.cloud
-      # provider: other-provider # needs to be specified in the `spec.dns.providers` section
+      # provider: other-provider # if no provider name is specified, the first provider defined at `spec.dns.providers` is used
       controller:
         kind: nginx
       # providerConfig:
@@ -72,7 +72,7 @@ spec:
     dns:
       domains:
       - name: virtual-garden.local.gardener.cloud
-      # provider: other-provider # needs to be specified in the `spec.dns.providers` section
+      # provider: other-provider # if no provider name is specified, the first provider defined at `spec.dns.providers` is used
     etcd:
       main:
         backup:

@@ -2171,6 +2171,29 @@ var _ = Describe("Validation Tests", func() {
 						"Field": Equal("spec.virtualCluster.etcd.main.backup.bucketName"),
 					}))))
 				})
+
+				It("should not be possible to delete the backup bucket name if it was set initially", func() {
+					oldGarden.Spec.VirtualCluster.ETCD = &operatorv1alpha1.ETCD{
+						Main: &operatorv1alpha1.ETCDMain{
+							Backup: &operatorv1alpha1.Backup{
+								Provider:   "foo-provider",
+								BucketName: ptr.To("foo-bucket"),
+							},
+						},
+					}
+					newGarden.Spec.VirtualCluster.ETCD = &operatorv1alpha1.ETCD{
+						Main: &operatorv1alpha1.ETCDMain{
+							Backup: &operatorv1alpha1.Backup{
+								Provider: "foo-provider",
+							},
+						},
+					}
+
+					Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.virtualCluster.etcd.main.backup.bucketName"),
+					}))))
+				})
 			})
 
 			Context("control plane", func() {
