@@ -71,7 +71,7 @@ WantedBy=multi-user.target`),
 					Inline: &extensionsv1alpha1.FileContentInline{
 						// The bootstrap token will be created by the machine-controller-manager when creating an actual
 						// machine, and it will replace this "magic" string with the actual token in the user data. See
-						// https://github.com/gardener/gardener/blob/master/docs/extensions/operatingsystemconfig.md#bootstrap-tokens
+						// https://github.com/gardener/gardener/blob/master/docs/extensions/resources/operatingsystemconfig.md#bootstrap-tokens
 						// for more details.
 						Data: "<<BOOTSTRAP_TOKEN>>",
 					},

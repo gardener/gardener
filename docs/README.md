@@ -181,7 +181,7 @@
     * [`BackupBucket` resource](extensions/resources/backupbucket.md)
     * [`BackupEntry` resource](extensions/resources/backupentry.md)
   * DNS providers
-    * [`DNSRecord` resources](extensions/dnsrecord.md)
+    * [`DNSRecord` resources](extensions/resources/dnsrecord.md)
   * IaaS/Cloud providers
     * [Control plane customization webhooks](extensions/controlplane-webhooks.md)
     * [`Bastion` resource](extensions/resources/bastion.md)

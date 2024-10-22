@@ -1,3 +1,6 @@
+---
+title: OperatingSystemConfig
+---
 # Contract: `OperatingSystemConfig` Resource
 
 Gardener uses the machine API and leverages the functionalities of the [machine-controller-manager](https://github.com/gardener/machine-controller-manager) (MCM) in order to manage the worker nodes of a shoot cluster.
