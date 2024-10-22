@@ -251,6 +251,7 @@ build:
             - pkg/operator/controller/extension/controllerregistration
             - pkg/operator/controller/extension/runtime
             - pkg/operator/controller/garden
+            - pkg/operator/controller/garden/access
             - pkg/operator/controller/garden/care
             - pkg/operator/controller/garden/garden
             - pkg/operator/controller/garden/reference
