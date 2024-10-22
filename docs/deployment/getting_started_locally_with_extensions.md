@@ -106,6 +106,8 @@ If support for workload identity is required you can invoke the top command with
 This will cause the [Gardener Discovery Server](https://github.com/gardener/gardener-discovery-server) to be deployed and exposed through the seed cluster.
 External systems can be then configured to trust the workload identity issuer of the local Garden cluster.
 
+<!-- TODO(dimityrmirchev): Link the to be added provider extension guides how to set up a Shoot cluster with WorkloadIdentity. -->
+
 ```bash
 DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT=true make gardener-extensions-up
 ```
