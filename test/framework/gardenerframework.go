@@ -11,6 +11,7 @@ import (
 
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
+	componentbaseconfig "k8s.io/component-base/config"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -74,6 +75,7 @@ func (f *GardenerFramework) BeforeEach() {
 	validateGardenerConfig(f.Config)
 	gardenClient, err := kubernetes.NewClientFromFile("", f.Config.GardenerKubeconfig,
 		kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.GardenScheme}),
+		kubernetes.WithClientConnectionOptions(componentbaseconfig.ClientConnectionConfiguration{QPS: 100, Burst: 130}),
 		kubernetes.WithAllowedUserFields([]string{kubernetes.AuthTokenFile}),
 		kubernetes.WithDisabledCachedClient(),
 	)

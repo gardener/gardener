@@ -6,6 +6,7 @@ package access
 
 import (
 	"context"
+	"fmt"
 
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -54,7 +55,7 @@ func RequestAdminKubeconfigForShoot(ctx context.Context, gardenClient kubernetes
 		},
 	}
 	if err := gardenClient.Client().SubResource("adminkubeconfig").Create(ctx, shoot, adminKubeconfigRequest); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create admin kubeconfig request for shoot %s: %w", client.ObjectKeyFromObject(shoot), err)
 	}
 
 	return adminKubeconfigRequest.Status.Kubeconfig, nil
