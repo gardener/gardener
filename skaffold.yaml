@@ -1664,8 +1664,3 @@ profiles:
                   - bash
                   - -ec
                   - KUBECONFIG=$VIRTUAL_GARDEN_KUBECONFIG hack/usage/wait-for.sh seed local GardenletReady SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
-  - name: operator-debug
-    patches:
-      - op: add
-        path: /manifests/kustomize/paths/-
-        value: example/gardener-local/gardenlet/debug
