@@ -126,6 +126,46 @@ var _ = Describe("Handler", func() {
 		})
 	})
 
+	Context("structured authorization kubeconfig secrets", func() {
+		It("should fail because some shoot references secret and kubeconfig is removed from secret", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization = &gardencorev1beta1.StructuredAuthorization{
+				Kubeconfigs: []gardencorev1beta1.AuthorizerKubeconfigReference{{SecretName: secret.Name}},
+			}
+			shoot1 := shoot.DeepCopy()
+			shoot1.Name = "test-shoot"
+			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
+			Expect(fakeClient.Create(ctx, shoot1)).To(Succeed())
+
+			warning, err = handler.ValidateUpdate(ctx, nil, secret)
+			Expect(warning).To(BeNil())
+			Expect(err).To(MatchError(ContainSubstring("Secret \"test-kubeconfig\" is forbidden: data kubeconfig can't be removed from secret or set to empty because secret is in use by shoots: [fake-shoot-name, test-shoot]")))
+		})
+
+		It("should fail because some shoot references secret and kubeconfig is set to empty", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization = &gardencorev1beta1.StructuredAuthorization{
+				Kubeconfigs: []gardencorev1beta1.AuthorizerKubeconfigReference{{SecretName: secret.Name}},
+			}
+			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
+
+			secret.Data = map[string][]byte{"kubeconfig": {}}
+			warning, err = handler.ValidateUpdate(ctx, nil, secret)
+			Expect(warning).To(BeNil())
+			Expect(err).To(MatchError(ContainSubstring("Secret \"test-kubeconfig\" is forbidden: data kubeconfig can't be removed from secret or set to empty because secret is in use by shoots: [fake-shoot-name]")))
+		})
+
+		It("should pass because secret contain kubeconfig and it is not empty", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization = &gardencorev1beta1.StructuredAuthorization{
+				Kubeconfigs: []gardencorev1beta1.AuthorizerKubeconfigReference{{SecretName: secret.Name}},
+			}
+			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
+
+			secret.Data = map[string][]byte{"kubeconfig": []byte("secret-data")}
+			warning, err = handler.ValidateUpdate(ctx, nil, secret)
+			Expect(warning).To(BeNil())
+			Expect(err).To(Succeed())
+		})
+	})
+
 	It("should do nothing for on Create operation", func() {
 		warning, err = handler.ValidateCreate(ctx, secret)
 		Expect(warning).To(BeNil())

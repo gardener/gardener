@@ -61,7 +61,8 @@ func (h *Handler) ValidateUpdate(ctx context.Context, _, newObj runtime.Object) 
 			continue
 		}
 
-		if isReferencedInAdmissionPlugins(req.Name, shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins) {
+		if isReferencedInAdmissionPlugins(req.Name, shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins) ||
+			isReferencedInStructuredAuthorization(req.Name, shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization) {
 			shoots = append(shoots, shoot.Name)
 		}
 	}
@@ -84,5 +85,19 @@ func isReferencedInAdmissionPlugins(secretName string, admissionPlugins []garden
 			return true
 		}
 	}
+	return false
+}
+
+func isReferencedInStructuredAuthorization(secretName string, structuredAuthorization *gardencorev1beta1.StructuredAuthorization) bool {
+	if structuredAuthorization == nil {
+		return false
+	}
+
+	for _, kubeconfig := range structuredAuthorization.Kubeconfigs {
+		if kubeconfig.SecretName == secretName {
+			return true
+		}
+	}
+
 	return false
 }
