@@ -10,18 +10,17 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	extensioncontroller "github.com/gardener/gardener/pkg/operator/controller/extension"
+	extensioncontroller "github.com/gardener/gardener/pkg/operator/controller/extension/extension"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -36,8 +35,6 @@ var _ = Describe("Extension controller tests", func() {
 		managedResourceRuntimeFoo      *resourcesv1alpha1.ManagedResource
 		managedResourceRegistrationBar *resourcesv1alpha1.ManagedResource
 		managedResourceRegistrationFoo *resourcesv1alpha1.ManagedResource
-		dnsRecordFoo                   *extensionsv1alpha1.DNSRecord
-		backupBucketBar                *extensionsv1alpha1.BackupBucket
 	)
 
 	BeforeEach(func() {
@@ -196,42 +193,9 @@ var _ = Describe("Extension controller tests", func() {
 				Namespace: testNamespace.Name,
 			},
 		}
-
-		dnsRecordFoo = &extensionsv1alpha1.DNSRecord{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo-dns",
-				Namespace: testNamespace.Name,
-			},
-			Spec: extensionsv1alpha1.DNSRecordSpec{
-				DefaultSpec: extensionsv1alpha1.DefaultSpec{
-					Type: "foo",
-				},
-				SecretRef: corev1.SecretReference{
-					Name: "test-foo-dns",
-				},
-				Name:       "test.example.com",
-				RecordType: extensionsv1alpha1.DNSRecordTypeA,
-				Values:     []string{"1.2.3.4"},
-			},
-		}
-
-		backupBucketBar = &extensionsv1alpha1.BackupBucket{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "bar-bucket",
-			},
-			Spec: extensionsv1alpha1.BackupBucketSpec{
-				DefaultSpec: extensionsv1alpha1.DefaultSpec{
-					Type: "bar",
-				},
-				Region: "region",
-				SecretRef: corev1.SecretReference{
-					Name: "test-bar-bucket",
-				},
-			},
-		}
 	})
 
-	It("should reconcile virtual and runtime cluster resources", func() {
+	It("should reconcile all required cluster resources in the virtual and runtime garden cluster", func() {
 		By("Create extension bar")
 		Expect(testClient.Create(ctx, extensionBar)).To(Succeed())
 		log.Info("Created extension for test", "garden", extensionBar.Name)
@@ -349,12 +313,34 @@ var _ = Describe("Extension controller tests", func() {
 		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntimeFoo), &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
 		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntimeBar), &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
 
-		By("Deploy extension in runtime cluster by creating a backup bucket")
-		Expect(testClient.Create(ctx, backupBucketBar)).To(Succeed())
-		DeferCleanup(func() {
-			By("Delete backup bucket")
-			Expect(client.IgnoreNotFound(testClient.Delete(ctx, backupBucketBar))).To(Succeed())
-		})
+		By("Mark extension bar in runtime cluster as not required")
+		Eventually(func() error {
+			extensionBar.Status.Conditions = v1beta1helper.MergeConditions(extensionBar.Status.Conditions, gardencorev1beta1.Condition{
+				LastUpdateTime:     metav1.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+				LastTransitionTime: metav1.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+				Type:               "RequiredRuntime",
+				Status:             "Flase",
+			})
+
+			return testClient.Status().Update(ctx, extensionBar)
+		}).Should(Succeed())
+
+		By("Validate that extension bar is still not deployed in runtime cluster")
+		Consistently(func() error {
+			return testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntimeBar), &resourcesv1alpha1.ManagedResource{})
+		}).Should(BeNotFoundError())
+
+		By("Deploy extension bar in runtime cluster by marking it as required")
+		Eventually(func() error {
+			extensionBar.Status.Conditions = v1beta1helper.MergeConditions(extensionBar.Status.Conditions, gardencorev1beta1.Condition{
+				LastUpdateTime:     metav1.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+				LastTransitionTime: metav1.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+				Type:               "RequiredRuntime",
+				Status:             "True",
+			})
+
+			return testClient.Status().Update(ctx, extensionBar)
+		}).Should(Succeed())
 
 		By("Wait for runtime managed resource and set it as applied, healthy and not progressing")
 		Eventually(func() error {
@@ -375,12 +361,16 @@ var _ = Describe("Extension controller tests", func() {
 		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntimeFoo), &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
 		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntimeBar), &resourcesv1alpha1.ManagedResource{})).To(Succeed())
 
-		By("Deploy extensions in runtime cluster by creating a dns record")
-		Expect(testClient.Create(ctx, dnsRecordFoo)).To(Succeed())
-		DeferCleanup(func() {
-			By("Delete dns record")
-			Expect(client.IgnoreNotFound(testClient.Delete(ctx, dnsRecordFoo))).To(Succeed())
-		})
+		By("Deploy extension foo in runtime cluster by marking it as required")
+		Eventually(func() error {
+			extensionFoo.Status.Conditions = v1beta1helper.MergeConditions(extensionFoo.Status.Conditions, gardencorev1beta1.Condition{
+				LastUpdateTime:     metav1.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+				LastTransitionTime: metav1.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+				Type:               "RequiredRuntime",
+				Status:             "True",
+			})
+			return testClient.Status().Update(ctx, extensionFoo)
+		}).Should(Succeed())
 
 		By("Wait for runtime managed resource and set it as applied, healthy and not progressing")
 		Eventually(func() error {
@@ -401,8 +391,16 @@ var _ = Describe("Extension controller tests", func() {
 		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntimeFoo), &resourcesv1alpha1.ManagedResource{})).To(Succeed())
 		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntimeBar), &resourcesv1alpha1.ManagedResource{})).To(Succeed())
 
-		By("Delete extension in runtime cluster by deleting its last reference")
-		Expect(testClient.Delete(ctx, backupBucketBar)).To(Succeed())
+		By("Delete extension bar in runtime cluster by marking it as not required")
+		Eventually(func() error {
+			extensionBar.Status.Conditions = v1beta1helper.MergeConditions(extensionBar.Status.Conditions, gardencorev1beta1.Condition{
+				LastUpdateTime:     metav1.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+				LastTransitionTime: metav1.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+				Type:               "RequiredRuntime",
+				Status:             "False",
+			})
+			return testClient.Status().Update(ctx, extensionBar)
+		}).Should(Succeed())
 
 		By("Wait for runtime managed resource to be deleted")
 		Eventually(func() error {
@@ -430,13 +428,37 @@ var _ = Describe("Extension controller tests", func() {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRegistrationFoo), &resourcesv1alpha1.ManagedResource{})
 		}).Should(BeNotFoundError())
 		Eventually(func() error {
-			return testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntimeFoo), &resourcesv1alpha1.ManagedResource{})
-		}).Should(BeNotFoundError())
-		Eventually(func() error {
 			return testClient.Get(ctx, client.ObjectKey{Namespace: testNamespace.Name, Name: "extension-admission-runtime-provider-foo"}, &resourcesv1alpha1.ManagedResource{})
 		}).Should(BeNotFoundError())
 		Eventually(func() error {
 			return testClient.Get(ctx, client.ObjectKey{Namespace: testNamespace.Name, Name: "extension-admission-virtual-provider-foo"}, &resourcesv1alpha1.ManagedResource{})
+		}).Should(BeNotFoundError())
+
+		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionFoo), extensionFoo)).To(Succeed())
+			g.Expect(extensionFoo.Finalizers).To(ConsistOf("gardener.cloud/operator"))
+			return extensionFoo.Status.Conditions
+		}).Should(ContainCondition(
+			OfType(operatorv1alpha1.ExtensionInstalled),
+			WithStatus(gardencorev1beta1.ConditionTrue),
+			WithReason("InstalledInRuntime"),
+		), fmt.Sprintf("Failed conditions expected to be healthy:%+v", extensionFoo.Status.Conditions))
+
+		By("Mark extension foo in runtime cluster as not required")
+		Eventually(func() error {
+			extensionFoo.Status.Conditions = v1beta1helper.MergeConditions(extensionFoo.Status.Conditions, gardencorev1beta1.Condition{
+				LastUpdateTime:     metav1.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+				LastTransitionTime: metav1.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+				Type:               "RequiredRuntime",
+				Status:             "Flase",
+			})
+
+			return testClient.Status().Update(ctx, extensionFoo)
+		}).Should(Succeed())
+
+		By("Wait for extension to be gone")
+		Eventually(func() error {
+			return testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntimeFoo), &resourcesv1alpha1.ManagedResource{})
 		}).Should(BeNotFoundError())
 		Eventually(func() error {
 			return mgrClient.Get(ctx, client.ObjectKeyFromObject(extensionFoo), extensionFoo)

@@ -24,6 +24,7 @@ build:
             - cmd/utils
             - extensions/pkg/apis/config
             - extensions/pkg/controller
+            - extensions/pkg/predicate
             - extensions/pkg/util
             - extensions/pkg/webhook
             - extensions/pkg/webhook/certificates
@@ -34,7 +35,9 @@ build:
             - pkg/admissioncontroller/apis/config
             - pkg/admissioncontroller/apis/config/v1alpha1
             - pkg/admissioncontroller/apis/config/validation
+            - pkg/api/core
             - pkg/api/extensions
+            - pkg/api/security
             - pkg/apis/core
             - pkg/apis/core/helper
             - pkg/apis/core/install
@@ -247,9 +250,11 @@ build:
             - pkg/operator/controller
             - pkg/operator/controller/controllerregistrar
             - pkg/operator/controller/extension
-            - pkg/operator/controller/extension/admission
-            - pkg/operator/controller/extension/controllerregistration
-            - pkg/operator/controller/extension/runtime
+            - pkg/operator/controller/extension/extension
+            - pkg/operator/controller/extension/extension/admission
+            - pkg/operator/controller/extension/extension/controllerregistration
+            - pkg/operator/controller/extension/extension/runtime
+            - pkg/operator/controller/extension/required
             - pkg/operator/controller/garden
             - pkg/operator/controller/garden/care
             - pkg/operator/controller/garden/garden

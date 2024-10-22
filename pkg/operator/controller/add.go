@@ -23,6 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	"github.com/gardener/gardener/pkg/operator/controller/controllerregistrar"
 	"github.com/gardener/gardener/pkg/operator/controller/extension"
+	"github.com/gardener/gardener/pkg/operator/controller/extension/required"
 	"github.com/gardener/gardener/pkg/operator/controller/garden"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -38,10 +39,8 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 		return err
 	}
 
-	if err := (&extension.Reconciler{
-		Config: *cfg,
-	}).AddToManager(ctx, mgr, gardenClientMap); err != nil {
-		return fmt.Errorf("failed adding Extension controller: %w", err)
+	if err := extension.AddToManager(ctx, mgr, cfg, gardenClientMap); err != nil {
+		return err
 	}
 
 	if err := (&controllerregistrar.Reconciler{
@@ -69,6 +68,11 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 				return (&vpaevictionrequirements.Reconciler{
 					ConcurrentSyncs: cfg.Controllers.VPAEvictionRequirements.ConcurrentSyncs,
 				}).AddToManager(mgr, mgr)
+			}},
+			{AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, _ *operatorv1alpha1.Garden) error {
+				return (&required.Reconciler{
+					Config: cfg,
+				}).AddToManager(ctx, mgr)
 			}},
 		},
 	}).AddToManager(mgr); err != nil {

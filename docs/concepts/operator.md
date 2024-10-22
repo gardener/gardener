@@ -604,10 +604,18 @@ It contains the networking information of the garden runtime cluster which is re
 Gardener relies on extensions to provide various capabilities, such as supporting cloud providers.
 This controller automates the management of extensions by managing all necessary resources in the runtime and virtual garden clusters.
 
-Currently, this controller handles the following scenarios:
-- Extension deployment in the runtime cluster
+#### [`Main` Reconciler](../../pkg/operator/controller/extension/extension)
+
+Currently, this logic handles the following scenarios:
+- Extension deployment in the runtime cluster, based on the `RequiredRuntime` condition.
 - Extension admission deployment for the virtual garden cluster.
 - `ControllerDeployment` and `ControllerRegistration` reconciliation in the virtual garden cluster.
+
+#### [`Required` Reconciler](../../pkg/operator/controller/extension/required)
+
+This reconciler reacts on events from `BackupBucket`, `DNSRecord` and `Extension` resources.
+Based on these resources and the related `Extension` specification, it is checked if the extension deployment is required in the garden runtime cluster.
+The result is then put into the `RuntimeRequired` condition and added to the `Extension` status.
 
 ### [`Gardenlet` Controller](../../pkg/operator/controller/gardenlet)
 
