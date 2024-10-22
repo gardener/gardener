@@ -29,8 +29,8 @@ func ExtensionRequirementsChanged() predicate.Predicate {
 			requiredRuntimeCondition := v1beta1helper.GetCondition(ext.Status.Conditions, operatorv1alpha1.ExtensionRequiredRuntime)
 			oldRequiredRuntimeCondition := v1beta1helper.GetCondition(oldExt.Status.Conditions, operatorv1alpha1.ExtensionRequiredRuntime)
 
-			if oldRequiredRuntimeCondition == nil && requiredRuntimeCondition != nil ||
-				oldRequiredRuntimeCondition != nil && requiredRuntimeCondition == nil {
+			if (oldRequiredRuntimeCondition == nil && requiredRuntimeCondition != nil) ||
+				(oldRequiredRuntimeCondition != nil && requiredRuntimeCondition == nil) {
 				return true
 			}
 			if oldRequiredRuntimeCondition != nil && requiredRuntimeCondition != nil {
