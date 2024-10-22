@@ -109,7 +109,7 @@ var _ = Describe("Shoot Conditions controller tests", func() {
 				Shoot: &seedmanagementv1alpha1.Shoot{
 					Name: shoot.Name,
 				},
-				Gardenlet: &seedmanagementv1alpha1.GardenletConfig{
+				Gardenlet: seedmanagementv1alpha1.GardenletConfig{
 					Config: *rawGardenletConfig,
 				},
 			},
