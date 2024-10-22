@@ -23,6 +23,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/gardener/shootstate"
@@ -68,18 +69,17 @@ var _ = Describe("ShootState", func() {
 		It("should deploy an empty ShootState when there is nothing to persist", func() {
 			Expect(Deploy(ctx, fakeClock, fakeGardenClient, fakeSeedClient, shoot, true)).To(Succeed())
 			Expect(fakeGardenClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
-			Expect(shootState.Spec).To(Equal(gardencorev1beta1.ShootStateSpec{
-				Gardener: []gardencorev1beta1.GardenerResourceData{{Name: "machine-state", Type: "machine-state"}},
-			}))
+			Expect(shootState.Spec).To(Equal(gardencorev1beta1.ShootStateSpec{}))
 			Expect(shootState.Annotations).To(HaveKeyWithValue("gardener.cloud/timestamp", fakeClock.Now().UTC().Format(time.RFC3339)))
 		})
 
 		Context("with data to backup", func() {
 			var (
-				existingGardenerData   = []gardencorev1beta1.GardenerResourceData{{Name: "some-data"}}
-				existingExtensionsData = []gardencorev1beta1.ExtensionResourceState{{Name: ptr.To("some-data")}}
-				existingResourcesData  = []gardencorev1beta1.ResourceData{{Data: runtime.RawExtension{Raw: []byte("{}")}}}
-				expectedSpec           gardencorev1beta1.ShootStateSpec
+				existingGardenerData      = []gardencorev1beta1.GardenerResourceData{{Name: "some-data"}}
+				existingExtensionsData    = []gardencorev1beta1.ExtensionResourceState{{Name: ptr.To("some-data")}}
+				existingResourcesData     = []gardencorev1beta1.ResourceData{{Data: runtime.RawExtension{Raw: []byte("{}")}}}
+				expectedSpec              gardencorev1beta1.ShootStateSpec
+				cleanupMachineObjectsFunc func(ctx context.Context)
 			)
 
 			BeforeEach(func() {
@@ -112,7 +112,7 @@ var _ = Describe("ShootState", func() {
 				createExtensionObject(ctx, fakeSeedClient, "osc2", seedNamespace, &extensionsv1alpha1.OperatingSystemConfig{}, nil)
 
 				By("Creating machine data")
-				createMachineObjects(ctx, fakeSeedClient, seedNamespace)
+				cleanupMachineObjectsFunc = createMachineObjects(ctx, fakeSeedClient, seedNamespace)
 
 				expectedSpec = gardencorev1beta1.ShootStateSpec{
 					Gardener: []gardencorev1beta1.GardenerResourceData{
@@ -214,7 +214,34 @@ var _ = Describe("ShootState", func() {
 				Expect(shootState.Spec).To(Equal(expectedSpec))
 			})
 
+			It("should compute expected spec for both gardener and extension data and overwrite the spec with no longer existing machine resources", func() {
+				Expect(Deploy(ctx, fakeClock, fakeGardenClient, fakeSeedClient, shoot, true)).To(Succeed())
+
+				cleanupMachineObjectsFunc(ctx)
+				Expect(Deploy(ctx, fakeClock, fakeGardenClient, fakeSeedClient, shoot, true)).To(Succeed())
+				Expect(fakeGardenClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
+
+				gardenerResourceData := v1beta1helper.GardenerResourceDataList(shootState.Spec.Gardener)
+				gardenerResourceData.Delete("machine-state")
+				expectedSpec.Gardener = gardenerResourceData
+
+				Expect(shootState.Spec).To(Equal(expectedSpec))
+			})
+
 			It("should compute the expected spec for both gardener and extensions data and keep existing data in the spec", func() {
+				Expect(Deploy(ctx, fakeClock, fakeGardenClient, fakeSeedClient, shoot, false)).To(Succeed())
+				Expect(fakeGardenClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
+
+				expectedSpec.Gardener = append(existingGardenerData, expectedSpec.Gardener...)
+				expectedSpec.Extensions = append(existingExtensionsData, expectedSpec.Extensions...)
+				expectedSpec.Resources = append(existingResourcesData, expectedSpec.Resources...)
+				Expect(shootState.Spec).To(Equal(expectedSpec))
+			})
+
+			It("should compute the expected spec for both gardener and extension data and keep existing data in the spec if machine resources were deleted", func() {
+				Expect(Deploy(ctx, fakeClock, fakeGardenClient, fakeSeedClient, shoot, false)).To(Succeed())
+
+				cleanupMachineObjectsFunc(ctx)
 				Expect(Deploy(ctx, fakeClock, fakeGardenClient, fakeSeedClient, shoot, false)).To(Succeed())
 				Expect(fakeGardenClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
 
@@ -285,7 +312,7 @@ func createMachineObjects(
 	ctx context.Context,
 	fakeSeedClient client.Client,
 	namespace string,
-) {
+) func(ctx context.Context) {
 	machineDeployment1 := &machinev1alpha1.MachineDeployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "deploy1",
@@ -368,4 +395,13 @@ func createMachineObjects(
 		Spec: machinev1alpha1.MachineDeploymentSpec{Replicas: 3},
 	}
 	ExpectWithOffset(1, fakeSeedClient.Create(ctx, machineDeployment2)).To(Succeed())
+
+	objectsToDelete := []client.Object{
+		machineDeployment1, machineDeployment2, machineSet1, machineSet2, machine1, machine2, machine3,
+	}
+	return func(ctx context.Context) {
+		for _, obj := range objectsToDelete {
+			ExpectWithOffset(1, fakeSeedClient.Delete(ctx, obj)).To(Succeed())
+		}
+	}
 }

@@ -29,8 +29,6 @@ var _ = Describe("Shoot State controller tests", func() {
 		secret     *corev1.Secret
 
 		lastOperation *gardencorev1beta1.LastOperation
-
-		emptyMachineState = gardencorev1beta1.GardenerResourceData{Name: "machine-state", Type: "machine-state"}
 	)
 
 	BeforeEach(func() {
@@ -141,7 +139,7 @@ var _ = Describe("Shoot State controller tests", func() {
 			By("Ensure ShootState is newly created")
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
-				g.Expect(shootState.Spec.Gardener).To(ConsistOf(emptyMachineState))
+				g.Expect(shootState.Spec.Gardener).To(BeEmpty())
 			}).Should(Succeed())
 
 			By("Create secret for next backup")
@@ -162,7 +160,7 @@ var _ = Describe("Shoot State controller tests", func() {
 			By("Ensure ShootState is not updated")
 			Consistently(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
-				g.Expect(shootState.Spec.Gardener).To(ConsistOf(emptyMachineState))
+				g.Expect(shootState.Spec.Gardener).To(BeEmpty())
 			}).Should(Succeed())
 		})
 	})
@@ -235,7 +233,7 @@ var _ = Describe("Shoot State controller tests", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
 				lastBackup = shootState.Annotations["gardener.cloud/timestamp"]
-				g.Expect(shootState.Spec.Gardener).To(ConsistOf(emptyMachineState))
+				g.Expect(shootState.Spec.Gardener).To(BeEmpty())
 			}).Should(Succeed())
 
 			By("Create secret for next backup")
@@ -245,7 +243,7 @@ var _ = Describe("Shoot State controller tests", func() {
 			Consistently(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
 				g.Expect(shootState.Annotations).To(HaveKeyWithValue("gardener.cloud/timestamp", lastBackup))
-				g.Expect(shootState.Spec.Gardener).To(ConsistOf(emptyMachineState))
+				g.Expect(shootState.Spec.Gardener).To(BeEmpty())
 			}).Should(Succeed())
 
 			By("Step clock")
@@ -255,7 +253,7 @@ var _ = Describe("Shoot State controller tests", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
 				g.Expect(shootState.Annotations).To(HaveKeyWithValue("gardener.cloud/timestamp", Not(Equal(lastBackup))))
-				g.Expect(shootState.Spec.Gardener).To(HaveLen(2))
+				g.Expect(shootState.Spec.Gardener).To(HaveLen(1))
 			}).Should(Succeed())
 		})
 	})
