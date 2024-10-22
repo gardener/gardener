@@ -929,7 +929,7 @@ build:
     - garden.local.gardener.cloud:5001
   tagPolicy:
     customTemplate:
-      template: "{{.version}}-{{.sha}}"
+      template: "{{.version}}-{{.sha}}-{{.timestamp}}"
       components:
         - name: version
           envTemplate:
@@ -937,6 +937,9 @@ build:
         - name: sha
           gitCommit:
             variant: AbbrevCommitSha
+        - name: timestamp
+          dateTime:
+            format: "20060102150405"
   artifacts:
     - image: local-skaffold/gardenlet
       ko:
@@ -1661,3 +1664,8 @@ profiles:
                   - bash
                   - -ec
                   - KUBECONFIG=$VIRTUAL_GARDEN_KUBECONFIG hack/usage/wait-for.sh seed local GardenletReady SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
+  - name: operator-debug
+    patches:
+      - op: add
+        path: /manifests/kustomize/paths/-
+        value: example/gardener-local/gardenlet/debug
