@@ -103,7 +103,7 @@ var _ = Describe("resourcereservation", func() {
 		)
 
 		var parsedLabelSelector labels.Selector
-		var labelSelectorString string
+		var labelSelector = &metav1.LabelSelector{}
 		var typeDependentReservations bool
 
 		setupProfile := func(typeDependentReservations bool, selector labels.Selector) {
@@ -115,7 +115,7 @@ var _ = Describe("resourcereservation", func() {
 		}
 
 		JustBeforeEach(func() {
-			parsedLabelSelector, _ = labels.Parse(labelSelectorString)
+			parsedLabelSelector, _ = metav1.LabelSelectorAsSelector(labelSelector)
 			setupProfile(typeDependentReservations, parsedLabelSelector)
 		})
 
@@ -155,7 +155,7 @@ var _ = Describe("resourcereservation", func() {
 
 				Context("with a label selector configured", func() {
 					BeforeEach(func() {
-						labelSelectorString = "shoot.gardener.cloud/worker-specific-reservations=true"
+						labelSelector = &metav1.LabelSelector{MatchLabels: map[string]string{"shoot.gardener.cloud/worker-specific-reservations": "true"}}
 					})
 
 					Context("when the Shoot label matches the label selector", func() {
@@ -211,7 +211,7 @@ var _ = Describe("resourcereservation", func() {
 
 				Context("with no label selector configured", func() {
 					BeforeEach(func() {
-						labelSelectorString = ""
+						labelSelector = &metav1.LabelSelector{}
 					})
 
 					It("should not overwrite worker pool resource reservations", func() {
