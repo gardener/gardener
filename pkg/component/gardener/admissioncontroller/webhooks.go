@@ -212,7 +212,7 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 				SideEffects: &sideEffectsNone,
 			},
 			{
-				Name:                    "admission-plugin-secret.gardener.cloud",
+				Name:                    "shoot-kubeconfig-secret-ref.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
 				TimeoutSeconds:          ptr.To[int32](10),
 				Rules: []admissionregistrationv1.RuleWithOperations{
@@ -232,7 +232,7 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 					},
 				},
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
-					URL:      buildClientConfigURL("/webhooks/validate-admission-plugin-secret", a.namespace),
+					URL:      buildClientConfigURL("/webhooks/validate-shoot-kubeconfig-secret-ref", a.namespace),
 					CABundle: caBundle,
 				},
 				SideEffects: &sideEffectsNone,

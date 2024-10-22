@@ -12,7 +12,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
-	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/admissionpluginsecret"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/auditpolicy"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/authenticationconfig"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/authorizationconfig"
@@ -21,6 +20,7 @@ import (
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/namespacedeletion"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/resourcesize"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/seedrestriction"
+	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/shootkubeconfigsecretref"
 	seedauthorizer "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed"
 )
 
@@ -100,11 +100,11 @@ func AddToManager(
 		return fmt.Errorf("failed adding %s webhook handler: %w", seedrestriction.HandlerName, err)
 	}
 
-	if err := (&admissionpluginsecret.Handler{
-		Logger: mgr.GetLogger().WithName("webhook").WithName(admissionpluginsecret.HandlerName),
+	if err := (&shootkubeconfigsecretref.Handler{
+		Logger: mgr.GetLogger().WithName("webhook").WithName(shootkubeconfigsecretref.HandlerName),
 		Client: mgr.GetClient(),
 	}).AddToManager(mgr); err != nil {
-		return fmt.Errorf("failed adding %s webhook handler: %w", admissionpluginsecret.HandlerName, err)
+		return fmt.Errorf("failed adding %s webhook handler: %w", shootkubeconfigsecretref.HandlerName, err)
 	}
 
 	return nil

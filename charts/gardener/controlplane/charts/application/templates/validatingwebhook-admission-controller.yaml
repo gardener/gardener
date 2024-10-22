@@ -319,7 +319,7 @@ webhooks:
     {{- end }}
     caBundle: {{ required ".Values.global.admission.config.server.webhooks.tls.caBundle is required" (b64enc .Values.global.admission.config.server.webhooks.tls.caBundle) }}
   sideEffects: None
-- name: admission-plugin-secret.gardener.cloud
+- name: shoot-kubeconfig-secret-ref.gardener.cloud
   admissionReviewVersions: ["v1", "v1beta1"]
   timeoutSeconds: 10
   rules:
@@ -337,12 +337,12 @@ webhooks:
       gardener.cloud/role: project
   clientConfig:
     {{- if .Values.global.deployment.virtualGarden.enabled }}
-    url: https://gardener-admission-controller.garden/webhooks/validate-admission-plugin-secret
+    url: https://gardener-admission-controller.garden/webhooks/validate-shoot-kubeconfig-secret-ref
     {{- else }}
     service:
       namespace: garden
       name: gardener-admission-controller
-      path: /webhooks/validate-admission-plugin-secret
+      path: /webhooks/validate-shoot-kubeconfig-secret-ref
     {{- end }}
     caBundle: {{ required ".Values.global.admission.config.server.webhooks.tls.caBundle is required" (b64enc .Values.global.admission.config.server.webhooks.tls.caBundle) }}
   sideEffects: None

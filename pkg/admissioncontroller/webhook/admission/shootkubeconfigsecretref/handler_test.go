@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package admissionpluginsecret_test
+package shootkubeconfigsecretref_test
 
 import (
 	"context"
@@ -18,7 +18,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/admissionpluginsecret"
+	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/shootkubeconfigsecretref"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
@@ -83,51 +83,47 @@ var _ = Describe("Handler", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	It("should fail because some shoot references secret and kubeconfig is removed from secret", func() {
-		shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
-			{
+	Context("admission plugin kubeconfig secrets", func() {
+		It("should fail because some shoot references secret and kubeconfig is removed from secret", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{{
 				Name:                 "plugin-1",
 				KubeconfigSecretName: ptr.To(secret.Name),
-			},
-		}
-		shoot1 := shoot.DeepCopy()
-		shoot1.Name = "test-shoot"
-		Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
-		Expect(fakeClient.Create(ctx, shoot1)).To(Succeed())
+			}}
+			shoot1 := shoot.DeepCopy()
+			shoot1.Name = "test-shoot"
+			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
+			Expect(fakeClient.Create(ctx, shoot1)).To(Succeed())
 
-		warning, err = handler.ValidateUpdate(ctx, nil, secret)
-		Expect(warning).To(BeNil())
-		Expect(err).To(MatchError(ContainSubstring("Secret \"test-kubeconfig\" is forbidden: data kubeconfig can't be removed from secret or set to empty because secret is in use by shoots: [fake-shoot-name, test-shoot]")))
-	})
+			warning, err = handler.ValidateUpdate(ctx, nil, secret)
+			Expect(warning).To(BeNil())
+			Expect(err).To(MatchError(ContainSubstring("Secret \"test-kubeconfig\" is forbidden: data kubeconfig can't be removed from secret or set to empty because secret is in use by shoots: [fake-shoot-name, test-shoot]")))
+		})
 
-	It("should fail because some shoot references secret and kubeconfig is set to empty", func() {
-		shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
-			{
+		It("should fail because some shoot references secret and kubeconfig is set to empty", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{{
 				Name:                 "plugin-1",
 				KubeconfigSecretName: ptr.To(secret.Name),
-			},
-		}
-		Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
+			}}
+			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 
-		secret.Data = map[string][]byte{"kubeconfig": {}}
-		warning, err = handler.ValidateUpdate(ctx, nil, secret)
-		Expect(warning).To(BeNil())
-		Expect(err).To(MatchError(ContainSubstring("Secret \"test-kubeconfig\" is forbidden: data kubeconfig can't be removed from secret or set to empty because secret is in use by shoots: [fake-shoot-name]")))
-	})
+			secret.Data = map[string][]byte{"kubeconfig": {}}
+			warning, err = handler.ValidateUpdate(ctx, nil, secret)
+			Expect(warning).To(BeNil())
+			Expect(err).To(MatchError(ContainSubstring("Secret \"test-kubeconfig\" is forbidden: data kubeconfig can't be removed from secret or set to empty because secret is in use by shoots: [fake-shoot-name]")))
+		})
 
-	It("should pass because secret contain kubeconfig and it is not empty", func() {
-		shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
-			{
+		It("should pass because secret contain kubeconfig and it is not empty", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{{
 				Name:                 "plugin-1",
 				KubeconfigSecretName: ptr.To(secret.Name),
-			},
-		}
-		Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
+			}}
+			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 
-		secret.Data = map[string][]byte{"kubeconfig": []byte("secret-data")}
-		warning, err = handler.ValidateUpdate(ctx, nil, secret)
-		Expect(warning).To(BeNil())
-		Expect(err).To(Succeed())
+			secret.Data = map[string][]byte{"kubeconfig": []byte("secret-data")}
+			warning, err = handler.ValidateUpdate(ctx, nil, secret)
+			Expect(warning).To(BeNil())
+			Expect(err).To(Succeed())
+		})
 	})
 
 	It("should do nothing for on Create operation", func() {

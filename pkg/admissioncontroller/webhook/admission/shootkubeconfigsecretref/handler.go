@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package admissionpluginsecret
+package shootkubeconfigsecretref
 
 import (
 	"context"
@@ -20,7 +20,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
-// Handler validates admission plugins secret.
+// Handler validates shoot kubeconfig secrets.
 type Handler struct {
 	Logger logr.Logger
 	Client client.Reader
@@ -31,7 +31,7 @@ func (h *Handler) ValidateCreate(_ context.Context, _ runtime.Object) (admission
 	return nil, nil
 }
 
-// ValidateUpdate validate an admission plugins secret.
+// ValidateUpdate validates that the kubeconfig is not removed from kubeconfig secrets referenced in Shoot resources.
 func (h *Handler) ValidateUpdate(ctx context.Context, _, newObj runtime.Object) (admission.Warnings, error) {
 	var shoots []string
 
@@ -46,7 +46,7 @@ func (h *Handler) ValidateUpdate(ctx context.Context, _, newObj runtime.Object) 
 	}
 
 	if kubeConfig, ok := secret.Data[kubernetes.KubeConfig]; ok && len(kubeConfig) > 0 {
-		h.Logger.Info("Secret has data `kubeconfig` no need to check further", "name", secret.Name)
+		h.Logger.Info("Secret has data `kubeconfig`, no need to check further", "name", secret.Name)
 		return nil, nil
 	}
 
@@ -57,12 +57,12 @@ func (h *Handler) ValidateUpdate(ctx context.Context, _, newObj runtime.Object) 
 	}
 
 	for _, shoot := range shootList.Items {
-		if shoot.Spec.Kubernetes.KubeAPIServer != nil {
-			for _, plugin := range shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins {
-				if plugin.KubeconfigSecretName != nil && *plugin.KubeconfigSecretName == req.Name {
-					shoots = append(shoots, shoot.Name)
-				}
-			}
+		if shoot.Spec.Kubernetes.KubeAPIServer == nil {
+			continue
+		}
+
+		if isReferencedInAdmissionPlugins(req.Name, shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins) {
+			shoots = append(shoots, shoot.Name)
 		}
 	}
 
@@ -76,4 +76,13 @@ func (h *Handler) ValidateUpdate(ctx context.Context, _, newObj runtime.Object) 
 // ValidateDelete returns nil (not implemented by this handler).
 func (h *Handler) ValidateDelete(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
 	return nil, nil
+}
+
+func isReferencedInAdmissionPlugins(secretName string, admissionPlugins []gardencorev1beta1.AdmissionPlugin) bool {
+	for _, plugin := range admissionPlugins {
+		if plugin.KubeconfigSecretName != nil && *plugin.KubeconfigSecretName == secretName {
+			return true
+		}
+	}
+	return false
 }

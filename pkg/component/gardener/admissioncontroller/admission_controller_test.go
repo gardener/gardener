@@ -1119,7 +1119,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 				SideEffects: &sideEffectsNone,
 			},
 			{
-				Name:                    "admission-plugin-secret.gardener.cloud",
+				Name:                    "shoot-kubeconfig-secret-ref.gardener.cloud",
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
 				TimeoutSeconds:          ptr.To[int32](10),
 				Rules: []admissionregistrationv1.RuleWithOperations{
@@ -1139,7 +1139,7 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 					},
 				},
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
-					URL:      ptr.To("https://gardener-admission-controller." + namespace + "/webhooks/validate-admission-plugin-secret"),
+					URL:      ptr.To("https://gardener-admission-controller." + namespace + "/webhooks/validate-shoot-kubeconfig-secret-ref"),
 					CABundle: caBundle,
 				},
 				SideEffects: &sideEffectsNone,
