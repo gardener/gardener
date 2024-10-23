@@ -163,14 +163,26 @@ func (r *Reconciler) instantiateComponents(
 	// crds
 	c.etcdCRD = etcd.NewCRD(r.RuntimeClientSet.Client(), applier)
 	c.vpaCRD = vpa.NewCRD(r.RuntimeClientSet.Client(), applier, nil)
-	c.hvpaCRD = hvpa.NewCRD(r.RuntimeClientSet.Client(), applier)
+	c.hvpaCRD, err = hvpa.NewCRD(r.RuntimeClientSet.Client(), applier)
+	if err != nil {
+		return
+	}
 	if !hvpaEnabled() {
 		c.hvpaCRD = component.OpDestroyAndWait(c.hvpaCRD)
 	}
 	c.istioCRD = istio.NewCRD(r.RuntimeClientSet.Client(), r.RuntimeClientSet.ChartApplier())
-	c.fluentCRD = fluentoperator.NewCRDs(r.RuntimeClientSet.Client(), applier)
-	c.prometheusCRD = prometheusoperator.NewCRDs(r.RuntimeClientSet.Client(), applier)
-	c.certManagementCRD = certmanagement.NewCRDs(r.RuntimeClientSet.Client(), applier)
+	c.fluentCRD, err = fluentoperator.NewCRDs(r.RuntimeClientSet.Client(), applier)
+	if err != nil {
+		return
+	}
+	c.prometheusCRD, err = prometheusoperator.NewCRDs(r.RuntimeClientSet.Client(), applier)
+	if err != nil {
+		return
+	}
+	c.certManagementCRD, err = certmanagement.NewCRDs(r.RuntimeClientSet.Client(), applier)
+	if err != nil {
+		return
+	}
 	c.extensionCRD = extensioncrds.NewCRD(r.RuntimeClientSet.Client(), applier, true, false)
 
 	// garden system components

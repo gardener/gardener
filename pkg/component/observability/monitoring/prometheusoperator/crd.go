@@ -38,7 +38,7 @@ var (
 )
 
 // NewCRDs can be used to deploy the CRD definitions for the Prometheus Operator.
-func NewCRDs(client client.Client, applier kubernetes.Applier) component.DeployWaiter {
+func NewCRDs(client client.Client, applier kubernetes.Applier) (component.DeployWaiter, error) {
 	resources := []string{
 		crdAlertmanagerConfigs,
 		crdAlertmanagers,

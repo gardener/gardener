@@ -20,6 +20,6 @@ var (
 )
 
 // NewCRD can be used to deploy the CRD definitions for the HVPA controller.
-func NewCRD(client client.Client, applier kubernetes.Applier) component.DeployWaiter {
+func NewCRD(client client.Client, applier kubernetes.Applier) (component.DeployWaiter, error) {
 	return kubernetesutils.NewCRDDeployer(client, applier, []string{crdHvpas})
 }

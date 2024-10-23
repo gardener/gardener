@@ -44,7 +44,7 @@ var (
 )
 
 // NewCRDs can be used to deploy Fluent Operator CRDs.
-func NewCRDs(client client.Client, applier kubernetes.Applier) component.DeployWaiter {
+func NewCRDs(client client.Client, applier kubernetes.Applier) (component.DeployWaiter, error) {
 	resources := []string{
 		fluentBitClusterFilterCRD,
 		fluentBitClusterFBConfigCRD,
