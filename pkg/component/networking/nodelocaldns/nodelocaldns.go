@@ -6,6 +6,8 @@ package nodelocaldns
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -19,6 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -64,6 +67,7 @@ type Interface interface {
 	component.DeployWaiter
 	SetClusterDNS([]string)
 	SetDNSServers([]string)
+	SetIPFamilies([]gardencorev1beta1.IPFamily)
 }
 
 // Values is a set of configuration values for the node-local-dns component.
@@ -80,6 +84,8 @@ type Values struct {
 	DNSServers []string
 	// KubernetesVersion is the Kubernetes version of the Shoot.
 	KubernetesVersion *semver.Version
+	// IPFamilies specifies the IP protocol versions to use for node local dns.
+	IPFamilies []gardencorev1beta1.IPFamily
 }
 
 // New creates a new instance of DeployWaiter for node-local-dns.
@@ -189,9 +195,12 @@ func (n *nodeLocalDNS) WaitCleanup(ctx context.Context) error {
 }
 
 func (n *nodeLocalDNS) computeResourcesData() (map[string][]byte, error) {
-	var (
-		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+	if n.getHealthAddress() == "" {
+		return nil, errors.New("empty IPVSAddress")
+	}
 
+	var (
+		registry       = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 		serviceAccount = &corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "node-local-dns",
@@ -222,7 +231,7 @@ func (n *nodeLocalDNS) computeResourcesData() (map[string][]byte, error) {
             ` + n.forceTcpToClusterDNS() + `
     }
     prometheus :` + strconv.Itoa(prometheusPort) + `
-    health ` + nodelocaldnsconstants.IPVSAddress + `:` + strconv.Itoa(livenessProbePort) + `
+    health ` + n.getHealthAddress() + `:` + strconv.Itoa(livenessProbePort) + `
     }
 in-addr.arpa:53 {
     errors
@@ -404,7 +413,7 @@ ip6.arpa:53 {
 								LivenessProbe: &corev1.Probe{
 									ProbeHandler: corev1.ProbeHandler{
 										HTTPGet: &corev1.HTTPGetAction{
-											Host: nodelocaldnsconstants.IPVSAddress,
+											Host: n.getIPVSAddress(),
 											Path: "/health",
 											Port: intstr.FromInt32(livenessProbePort),
 										},
@@ -513,16 +522,16 @@ ip6.arpa:53 {
 
 func (n *nodeLocalDNS) bindIP() string {
 	if len(n.values.DNSServers) > 0 {
-		return nodelocaldnsconstants.IPVSAddress + " " + strings.Join(n.values.DNSServers, " ")
+		return n.getIPVSAddress() + " " + strings.Join(n.values.DNSServers, " ")
 	}
-	return nodelocaldnsconstants.IPVSAddress
+	return n.getIPVSAddress()
 }
 
 func (n *nodeLocalDNS) containerArg() string {
 	if len(n.values.DNSServers) > 0 {
-		return nodelocaldnsconstants.IPVSAddress + "," + strings.Join(n.values.DNSServers, ",")
+		return n.getIPVSAddress() + "," + strings.Join(n.values.DNSServers, ",")
 	}
-	return nodelocaldnsconstants.IPVSAddress
+	return n.getIPVSAddress()
 }
 
 func (n *nodeLocalDNS) forceTcpToClusterDNS() string {
@@ -556,4 +565,30 @@ func (n *nodeLocalDNS) SetClusterDNS(dns []string) {
 
 func (n *nodeLocalDNS) SetDNSServers(servers []string) {
 	n.values.DNSServers = servers
+}
+
+func (n *nodeLocalDNS) SetIPFamilies(ipfamilies []gardencorev1beta1.IPFamily) {
+	n.values.IPFamilies = ipfamilies
+}
+
+func (n *nodeLocalDNS) getIPVSAddress() (ipvsAddress string) {
+	return n.getAddress(false)
+}
+
+func (n *nodeLocalDNS) getHealthAddress() (healthAddress string) {
+	return n.getAddress(true)
+}
+
+func (n *nodeLocalDNS) getAddress(useIPv6Brackets bool) string {
+	ipFamiliesSet := sets.New[gardencorev1beta1.IPFamily](n.values.IPFamilies...)
+	if ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv4) && !ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv6) {
+		return nodelocaldnsconstants.IPVSAddress
+	}
+	if ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv6) && !ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv4) {
+		if useIPv6Brackets {
+			return fmt.Sprintf("[%s]", nodelocaldnsconstants.IPVSIPv6Address)
+		}
+		return nodelocaldnsconstants.IPVSIPv6Address
+	}
+	return ""
 }

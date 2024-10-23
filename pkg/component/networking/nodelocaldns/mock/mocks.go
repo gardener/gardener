@@ -13,6 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -90,6 +91,18 @@ func (m *MockInterface) SetDNSServers(arg0 []string) {
 func (mr *MockInterfaceMockRecorder) SetDNSServers(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetDNSServers", reflect.TypeOf((*MockInterface)(nil).SetDNSServers), arg0)
+}
+
+// SetIPFamilies mocks base method.
+func (m *MockInterface) SetIPFamilies(arg0 []v1beta1.IPFamily) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetIPFamilies", arg0)
+}
+
+// SetIPFamilies indicates an expected call of SetIPFamilies.
+func (mr *MockInterfaceMockRecorder) SetIPFamilies(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetIPFamilies", reflect.TypeOf((*MockInterface)(nil).SetIPFamilies), arg0)
 }
 
 // Wait mocks base method.
