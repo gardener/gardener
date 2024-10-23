@@ -1211,109 +1211,138 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(err).To(MatchError(ContainSubstring("failed to resolve shoot resource reference")))
 			})
 
-			It("should reject because the referenced DNS provider secret does not exist (create)", func() {
-				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-				Expect(gardenSecurityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBindingRefSecret)).To(Succeed())
-				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
+			tests := func(description string, resource string, mutate func(*core.Shoot), expectedErrorMessage string) {
+				It("should reject because the referenced "+description+" does not exist (create)", func() {
+					Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					Expect(gardenSecurityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBindingRefSecret)).To(Succeed())
+					Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
 
-				coreShoot.Spec.DNS = &core.DNS{
-					Providers: []core.DNSProvider{
-						{SecretName: ptr.To("foo")},
-					},
-				}
+					mutate(&coreShoot)
 
-				kubeClient.AddReactor("get", "secrets", func(_ testing.Action) (bool, runtime.Object, error) {
-					return true, nil, errors.New("nope, out of luck")
+					kubeClient.AddReactor("get", resource, func(_ testing.Action) (bool, runtime.Object, error) {
+						return true, nil, errors.New("nope, out of luck")
+					})
+
+					user := &user.DefaultInfo{Name: allowedUser}
+					attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+
+					Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring(expectedErrorMessage)))
 				})
 
-				user := &user.DefaultInfo{Name: allowedUser}
-				attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+				It("should reject because the referenced "+description+" does not exist (update)", func() {
+					Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+					oldShoot := coreShoot.DeepCopy()
 
-				Expect(err).To(MatchError(ContainSubstring("failed to reference DNS provider secret")))
+					mutate(&coreShoot)
+
+					kubeClient.AddReactor("get", resource, func(_ testing.Action) (bool, runtime.Object, error) {
+						return true, nil, errors.New("nope, out of luck")
+					})
+
+					user := &user.DefaultInfo{Name: allowedUser}
+					attrs := admission.NewAttributesRecord(&coreShoot, oldShoot, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, user)
+
+					Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring(expectedErrorMessage)))
+				})
+
+				It("should pass because the referenced "+description+" does not exist but shoot has deletion timestamp", func() {
+					Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
+
+					oldShoot := coreShoot.DeepCopy()
+
+					mutate(&coreShoot)
+
+					now := metav1.Now()
+					coreShoot.DeletionTimestamp = &now
+
+					kubeClient.AddReactor("get", resource, func(_ testing.Action) (bool, runtime.Object, error) {
+						return true, nil, errors.New("nope, out of luck")
+					})
+
+					user := &user.DefaultInfo{Name: allowedUser}
+					attrs := admission.NewAttributesRecord(&coreShoot, oldShoot, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, user)
+
+					Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+				})
+
+				It("should pass because the referenced "+description+" exists", func() {
+					Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					Expect(gardenSecurityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBindingRefSecret)).To(Succeed())
+					Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
+
+					mutate(&coreShoot)
+
+					kubeClient.AddReactor("get", "secrets", func(_ testing.Action) (bool, runtime.Object, error) {
+						return true, nil, nil
+					})
+
+					user := &user.DefaultInfo{Name: allowedUser}
+					attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+
+					Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+				})
+			}
+
+			Context("DNS provider secrets", func() {
+				tests("DNS provider secret", "secrets", func(shoot *core.Shoot) {
+					shoot.Spec.DNS = &core.DNS{
+						Providers: []core.DNSProvider{
+							{SecretName: ptr.To("foo")},
+						},
+					}
+				}, "failed to resolve DNS provider secret reference")
 			})
 
-			It("should reject because the referenced DNS provider secret does not exist (update)", func() {
-				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
-
-				oldShoot := coreShoot.DeepCopy()
-
-				coreShoot.Spec.DNS = &core.DNS{
-					Providers: []core.DNSProvider{
-						{SecretName: ptr.To("foo")},
-					},
-				}
-
-				kubeClient.AddReactor("get", "secrets", func(_ testing.Action) (bool, runtime.Object, error) {
-					return true, nil, errors.New("nope, out of luck")
-				})
-
-				user := &user.DefaultInfo{Name: allowedUser}
-				attrs := admission.NewAttributesRecord(&coreShoot, oldShoot, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, user)
-
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-				Expect(err).To(MatchError(ContainSubstring("failed to reference DNS provider secret")))
+			Context("admission plugin kubeconfig secrets", func() {
+				tests("admission plugin kubeconfig secret", "secrets", func(shoot *core.Shoot) {
+					shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
+						AdmissionPlugins: []core.AdmissionPlugin{{
+							Name:                 "ValidatingAdmissionWebhook",
+							KubeconfigSecretName: ptr.To("foo"),
+						}},
+					}
+				}, "failed to resolve admission plugin kubeconfig secret reference")
 			})
 
-			It("should pass because the referenced DNS provider secret does not exist but shoot has deletion timestamp", func() {
-				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
-
-				oldShoot := coreShoot.DeepCopy()
-
-				coreShoot.Spec.DNS = &core.DNS{
-					Providers: []core.DNSProvider{
-						{SecretName: ptr.To("foo")},
-					},
-				}
-
-				now := metav1.Now()
-				coreShoot.DeletionTimestamp = &now
-
-				kubeClient.AddReactor("get", "secrets", func(_ testing.Action) (bool, runtime.Object, error) {
-					return true, nil, errors.New("nope, out of luck")
-				})
-
-				user := &user.DefaultInfo{Name: allowedUser}
-				attrs := admission.NewAttributesRecord(&coreShoot, oldShoot, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, user)
-
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-				Expect(err).To(Not(HaveOccurred()))
+			Context("structured authentication config maps", func() {
+				tests("structured authentication config map", "configmaps", func(shoot *core.Shoot) {
+					shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
+						StructuredAuthentication: &core.StructuredAuthentication{
+							ConfigMapName: "foo",
+						},
+					}
+				}, "failed to resolve structured authentication config map reference")
 			})
 
-			It("should pass because the referenced DNS provider secret exists", func() {
-				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-				Expect(gardenSecurityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBindingRefSecret)).To(Succeed())
-				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
+			Context("structured authorization config maps", func() {
+				tests("structured authorization config map", "configmaps", func(shoot *core.Shoot) {
+					shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
+						StructuredAuthorization: &core.StructuredAuthorization{
+							ConfigMapName: "foo",
+						},
+					}
+				}, "failed to resolve structured authorization config map reference")
+			})
 
-				coreShoot.Spec.DNS = &core.DNS{
-					Providers: []core.DNSProvider{
-						{SecretName: ptr.To("foo")},
-					},
-				}
-
-				kubeClient.AddReactor("get", "secrets", func(_ testing.Action) (bool, runtime.Object, error) {
-					return true, nil, nil
-				})
-
-				user := &user.DefaultInfo{Name: allowedUser}
-				attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
-
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-				Expect(err).To(Not(HaveOccurred()))
+			Context("structured authorization kubeconfig secrets", func() {
+				tests("structured authorization kubeconfig secret", "secrets", func(shoot *core.Shoot) {
+					shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
+						StructuredAuthorization: &core.StructuredAuthorization{
+							Kubeconfigs: []core.AuthorizerKubeconfigReference{{SecretName: "foo"}},
+						},
+					}
+				}, "failed to resolve structured authorization kubeconfig secret reference")
 			})
 		})
 
