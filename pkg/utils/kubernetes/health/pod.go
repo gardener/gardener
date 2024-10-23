@@ -67,3 +67,13 @@ func IsPodStale(reason string) bool {
 		strings.Contains(reason, "NodeAffinity") ||
 		strings.Contains(reason, "NodeLost")
 }
+
+// IsPodCompleted returns true when the pod ready condition indicates completeness.
+func IsPodCompleted(conditions []corev1.PodCondition) bool {
+	for _, condition := range conditions {
+		if condition.Type == corev1.PodReady {
+			return condition.Status == "PodCompleted"
+		}
+	}
+	return false
+}
