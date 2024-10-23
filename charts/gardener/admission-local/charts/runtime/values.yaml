@@ -19,3 +19,11 @@ webhookConfig:
 service:
   topologyAwareRouting:
     enabled: false
+livenessProbe:
+  enable: true
+readinessProbe:
+  enable: true
+leaderElection:
+  enable: true
+highAvailability:
+  enable: true
