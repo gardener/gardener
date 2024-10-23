@@ -137,22 +137,22 @@ var _ = Describe("Etcd", func() {
 				},
 				Rules: []rbacv1.PolicyRule{
 					{
-						APIGroups: []string{""},
+						APIGroups: []string{corev1.SchemeGroupVersion.String()},
 						Resources: []string{"pods"},
 						Verbs:     []string{"get", "list", "watch", "delete", "deletecollection"},
 					},
 					{
-						APIGroups: []string{""},
+						APIGroups: []string{corev1.SchemeGroupVersion.String()},
 						Resources: []string{"secrets", "endpoints"},
 						Verbs:     []string{"get", "list", "patch", "update", "watch"},
 					},
 					{
-						APIGroups: []string{""},
+						APIGroups: []string{corev1.SchemeGroupVersion.String()},
 						Resources: []string{"events"},
 						Verbs:     []string{"create", "get", "list", "watch", "patch", "update"},
 					},
 					{
-						APIGroups: []string{""},
+						APIGroups: []string{corev1.SchemeGroupVersion.String()},
 						Resources: []string{"serviceaccounts"},
 						Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
 					},
@@ -162,7 +162,7 @@ var _ = Describe("Etcd", func() {
 						Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
 					},
 					{
-						APIGroups: []string{""},
+						APIGroups: []string{corev1.SchemeGroupVersion.String()},
 						Resources: []string{"services", "configmaps"},
 						Verbs:     []string{"get", "list", "patch", "update", "watch", "create", "delete"},
 					},
@@ -192,7 +192,7 @@ var _ = Describe("Etcd", func() {
 						Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"},
 					},
 					{
-						APIGroups: []string{""},
+						APIGroups: []string{corev1.SchemeGroupVersion.String()},
 						Resources: []string{"persistentvolumeclaims"},
 						Verbs:     []string{"get", "list", "watch"},
 					},
@@ -280,7 +280,7 @@ var _ = Describe("Etcd", func() {
 							"high-availability-config.resources.gardener.cloud/type": "controller",
 						},
 						Annotations: map[string]string{
-							references.AnnotationKey(references.KindSecret, "etcd-druid-webhook-server-tls"): "etcd-druid-webhook-server-tls",
+							references.AnnotationKey(references.KindSecret, "etcd-druid-webhook"): "etcd-druid-webhook",
 						},
 					},
 					Spec: appsv1.DeploymentSpec{
@@ -299,7 +299,7 @@ var _ = Describe("Etcd", func() {
 									"networking.gardener.cloud/to-runtime-apiserver": "allowed",
 								},
 								Annotations: map[string]string{
-									references.AnnotationKey(references.KindSecret, "etcd-druid-webhook-server-tls"): "etcd-druid-webhook-server-tls",
+									references.AnnotationKey(references.KindSecret, "etcd-druid-webhook"): "etcd-druid-webhook",
 								},
 							},
 							Spec: corev1.PodSpec{
@@ -353,7 +353,7 @@ var _ = Describe("Etcd", func() {
 										Name: "webhook-server-tls-cert",
 										VolumeSource: corev1.VolumeSource{
 											Secret: &corev1.SecretVolumeSource{
-												SecretName:  "etcd-druid-webhook-server-tls",
+												SecretName:  "etcd-druid-webhook",
 												DefaultMode: ptr.To[int32](420),
 											},
 										},
@@ -384,8 +384,8 @@ var _ = Describe("Etcd", func() {
 						"high-availability-config.resources.gardener.cloud/type": "controller",
 					},
 					Annotations: map[string]string{
-						references.AnnotationKey(references.KindConfigMap, configMapName):                configMapName,
-						references.AnnotationKey(references.KindSecret, "etcd-druid-webhook-server-tls"): "etcd-druid-webhook-server-tls",
+						references.AnnotationKey(references.KindConfigMap, configMapName):     configMapName,
+						references.AnnotationKey(references.KindSecret, "etcd-druid-webhook"): "etcd-druid-webhook",
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
@@ -404,8 +404,8 @@ var _ = Describe("Etcd", func() {
 								"networking.gardener.cloud/to-runtime-apiserver": "allowed",
 							},
 							Annotations: map[string]string{
-								references.AnnotationKey(references.KindConfigMap, configMapName):                configMapName,
-								references.AnnotationKey(references.KindSecret, "etcd-druid-webhook-server-tls"): "etcd-druid-webhook-server-tls",
+								references.AnnotationKey(references.KindConfigMap, configMapName):     configMapName,
+								references.AnnotationKey(references.KindSecret, "etcd-druid-webhook"): "etcd-druid-webhook",
 							},
 						},
 						Spec: corev1.PodSpec{
@@ -470,7 +470,7 @@ var _ = Describe("Etcd", func() {
 									Name: "webhook-server-tls-cert",
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
-											SecretName:  "etcd-druid-webhook-server-tls",
+											SecretName:  "etcd-druid-webhook",
 											DefaultMode: ptr.To[int32](420),
 										},
 									},
@@ -553,7 +553,7 @@ var _ = Describe("Etcd", func() {
 						Rules: []admissionregistrationv1.RuleWithOperations{
 							{
 								Rule: admissionregistrationv1.Rule{
-									APIGroups:   []string{""},
+									APIGroups:   []string{corev1.SchemeGroupVersion.String()},
 									APIVersions: []string{"v1"},
 									Resources:   []string{"serviceaccounts", "services", "configmaps"},
 									Scope:       ptr.To[admissionregistrationv1.ScopeType](admissionregistrationv1.AllScopes),
@@ -562,7 +562,7 @@ var _ = Describe("Etcd", func() {
 							},
 							{
 								Rule: admissionregistrationv1.Rule{
-									APIGroups:   []string{""},
+									APIGroups:   []string{corev1.SchemeGroupVersion.String()},
 									APIVersions: []string{"v1"},
 									Resources:   []string{"persistentvolumeclaims"},
 									Scope:       ptr.To[admissionregistrationv1.ScopeType](admissionregistrationv1.AllScopes),
