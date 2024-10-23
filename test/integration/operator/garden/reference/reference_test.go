@@ -5,6 +5,8 @@
 package reference_test
 
 import (
+	"strings"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -18,64 +20,41 @@ import (
 
 var _ = Describe("Garden Reference controller tests", func() {
 	var (
-		secret1    *corev1.Secret
-		secret2    *corev1.Secret
-		secret3    *corev1.Secret
-		secret4    *corev1.Secret
-		secret5    *corev1.Secret
-		secret6    *corev1.Secret
-		secret7    *corev1.Secret
+		secret1 *corev1.Secret
+		secret2 *corev1.Secret
+		secret3 *corev1.Secret
+		secret4 *corev1.Secret
+		secret5 *corev1.Secret
+		secret6 *corev1.Secret
+		secret7 *corev1.Secret
+		secret8 *corev1.Secret
+
 		configMap1 *corev1.ConfigMap
 		configMap2 *corev1.ConfigMap
-		garden     *operatorv1alpha1.Garden
+		configMap3 *corev1.ConfigMap
+		configMap4 *corev1.ConfigMap
+
+		allReferencedObjects []client.Object
+		garden               *operatorv1alpha1.Garden
 	)
 
 	BeforeEach(func() {
-		secret1 = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: "secret-",
-				Namespace:    testNamespace.Name,
-				Labels:       map[string]string{testID: testRunID},
-			},
-		}
+		secret1 = initializeObject("secret").(*corev1.Secret)
+		secret2 = initializeObject("secret").(*corev1.Secret)
+		secret3 = initializeObject("secret").(*corev1.Secret)
+		secret4 = initializeObject("secret").(*corev1.Secret)
+		secret5 = initializeObject("secret").(*corev1.Secret)
+		secret6 = initializeObject("secret").(*corev1.Secret)
+		secret7 = initializeObject("secret").(*corev1.Secret)
+		secret8 = initializeObject("secret").(*corev1.Secret)
 
-		secret2 = secret1.DeepCopy()
-		secret3 = secret1.DeepCopy()
-		secret4 = secret1.DeepCopy()
-		secret5 = secret1.DeepCopy()
-		secret6 = secret1.DeepCopy()
-		secret7 = secret1.DeepCopy()
+		configMap1 = initializeObject("configMap").(*corev1.ConfigMap)
+		configMap2 = initializeObject("configMap").(*corev1.ConfigMap)
+		configMap3 = initializeObject("configMap").(*corev1.ConfigMap)
+		configMap4 = initializeObject("configMap").(*corev1.ConfigMap)
 
-		configMap1 = &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: "configmap-",
-				Namespace:    testNamespace.Name,
-				Labels:       map[string]string{testID: testRunID},
-			},
-		}
-		configMap2 = configMap1.DeepCopy()
-
-		for _, secret := range []*corev1.Secret{secret1, secret2, secret3, secret4, secret5, secret6, secret7} {
-			By("Create Secret")
-			Expect(testClient.Create(ctx, secret)).To(Succeed())
-			log.Info("Created Secret for test", "secret", client.ObjectKeyFromObject(secret))
-
-			DeferCleanup(func() {
-				By("Delete Secret")
-				Expect(client.IgnoreNotFound(testClient.Delete(ctx, secret))).To(Succeed())
-			})
-		}
-
-		for _, configMap := range []*corev1.ConfigMap{configMap1, configMap2} {
-			By("Create ConfigMap")
-			Expect(testClient.Create(ctx, configMap)).To(Succeed())
-			log.Info("Created ConfigMap for test", "configMap", client.ObjectKeyFromObject(configMap))
-
-			DeferCleanup(func() {
-				By("Delete ConfigMap")
-				Expect(client.IgnoreNotFound(testClient.Delete(ctx, configMap))).To(Succeed())
-			})
-		}
+		allReferencedObjects = append([]client.Object{}, secret1, secret2, secret3, secret4, secret5, secret6, secret7, secret8)
+		allReferencedObjects = append(allReferencedObjects, configMap1, configMap2, configMap3, configMap4)
 
 		garden = &operatorv1alpha1.Garden{
 			ObjectMeta: metav1.ObjectMeta{
@@ -122,6 +101,16 @@ var _ = Describe("Garden Reference controller tests", func() {
 											Name: configMap1.Name,
 										},
 									},
+								},
+								StructuredAuthentication: &gardencorev1beta1.StructuredAuthentication{
+									ConfigMapName: configMap3.Name,
+								},
+								StructuredAuthorization: &gardencorev1beta1.StructuredAuthorization{
+									ConfigMapName: configMap4.Name,
+									Kubeconfigs: []gardencorev1beta1.AuthorizerKubeconfigReference{{
+										AuthorizerName: "foo",
+										SecretName:     secret8.Name,
+									}},
 								},
 							},
 							Authentication: &operatorv1alpha1.Authentication{
@@ -207,7 +196,7 @@ var _ = Describe("Garden Reference controller tests", func() {
 		})
 
 		It("should add finalizers to the referenced secrets and configmaps", func() {
-			for _, obj := range []client.Object{secret1, secret2, secret3, secret4, secret5, secret6, secret7, configMap1, configMap2} {
+			for _, obj := range allReferencedObjects {
 				Eventually(func(g Gomega) []string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
 					return obj.GetFinalizers()
@@ -222,7 +211,7 @@ var _ = Describe("Garden Reference controller tests", func() {
 			garden.Spec.VirtualCluster.Gardener.APIServer = nil
 			Expect(testClient.Patch(ctx, garden, patch)).To(Succeed())
 
-			for _, obj := range []client.Object{garden, secret1, secret2, secret3, secret4, secret5, secret6, secret7, configMap1, configMap2} {
+			for _, obj := range append([]client.Object{garden}, allReferencedObjects...) {
 				Eventually(func(g Gomega) []string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
 					return obj.GetFinalizers()
@@ -231,3 +220,32 @@ var _ = Describe("Garden Reference controller tests", func() {
 		})
 	})
 })
+
+func initializeObject(kind string) client.Object {
+	var (
+		obj  client.Object
+		meta = metav1.ObjectMeta{
+			GenerateName: strings.ToLower(kind) + "-",
+			Namespace:    testNamespace.Name,
+			Labels:       map[string]string{testID: testRunID},
+		}
+	)
+
+	if kind == "secret" {
+		obj = &corev1.Secret{ObjectMeta: meta}
+	} else if kind == "configMap" {
+		obj = &corev1.ConfigMap{ObjectMeta: meta}
+	}
+
+	By("Create " + strings.ToTitle(kind))
+	ExpectWithOffset(1, testClient.Create(ctx, obj)).To(Succeed())
+	log.Info("Created object for test", kind, client.ObjectKeyFromObject(obj)) //nolint:logcheck
+
+	DeferCleanup(func() {
+		By("Delete  " + strings.ToTitle(kind))
+		ExpectWithOffset(1, client.IgnoreNotFound(testClient.Delete(ctx, obj))).To(Succeed())
+		log.Info("Deleted object for test", kind, client.ObjectKeyFromObject(obj)) //nolint:logcheck
+	})
+
+	return obj
+}

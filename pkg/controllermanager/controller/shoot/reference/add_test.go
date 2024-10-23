@@ -51,6 +51,12 @@ var _ = Describe("Add", func() {
 			Expect(Predicate(oldShoot, shoot)).To(BeTrue())
 		})
 
+		It("should return true because the admission plugins field changed", func() {
+			oldShoot := shoot.DeepCopy()
+			shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{{}}
+			Expect(Predicate(oldShoot, shoot)).To(BeTrue())
+		})
+
 		It("should return true because the audit policy field changed", func() {
 			oldShoot := shoot.DeepCopy()
 			shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig = &gardencorev1beta1.AuditConfig{
@@ -60,6 +66,18 @@ var _ = Describe("Add", func() {
 					},
 				},
 			}
+			Expect(Predicate(oldShoot, shoot)).To(BeTrue())
+		})
+
+		It("should return true because the structured authentication field changed", func() {
+			oldShoot := shoot.DeepCopy()
+			shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication = &gardencorev1beta1.StructuredAuthentication{}
+			Expect(Predicate(oldShoot, shoot)).To(BeTrue())
+		})
+
+		It("should return true because the structured authorization field changed", func() {
+			oldShoot := shoot.DeepCopy()
+			shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization = &gardencorev1beta1.StructuredAuthorization{}
 			Expect(Predicate(oldShoot, shoot)).To(BeTrue())
 		})
 
