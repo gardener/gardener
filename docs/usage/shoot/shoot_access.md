@@ -240,7 +240,10 @@ The user is responsible for the validity of the configured authorizers.
 >
 > You are not allowed to specify the `authorizers[].webhook.connectionInfo` field.
 > Instead, provide a kubeconfig file containing the server address (and optionally, credentials that can be used by `kube-apiserver` in order to authenticate with the webhook server) by creating a `Secret` containing the kubeconfig (in the `.data.kubeconfig` key).
-> Reference this `Secret` by adding it `.spec.kubernetes.kubeAPIServer.structuredAuthorization.kubeconfigs[]` (choose the proper `authorizerName`, see example above).
+> Reference this `Secret` by adding it to `.spec.kubernetes.kubeAPIServer.structuredAuthorization.kubeconfigs[]` (choose the proper `authorizerName`, see example above).
+
+Be aware of the fact that all webhook authorizers are added only after the `RBAC`/`Node` authorizers.
+Hence, if RBAC already allows a request, your webhook authorizer might not get called.
 
 ## Static Token Kubeconfig
 

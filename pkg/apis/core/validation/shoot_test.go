@@ -3134,6 +3134,16 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Detail": Equal("is incompatible with structuredAuthentication"),
 				}))))
 			})
+
+			It("should allow when config is valid", func() {
+				shoot.Spec.Kubernetes.Version = "v1.30.0"
+				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig = nil
+				shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication = &core.StructuredAuthentication{
+					ConfigMapName: "foo",
+				}
+
+				Expect(ValidateShoot(shoot)).To(BeEmpty())
+			})
 		})
 
 		Context("Authorization validation", func() {
@@ -3190,6 +3200,19 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Field":  Equal("spec.kubernetes.kubeAPIServer.structuredAuthorization"),
 					"Detail": Equal("requires feature gate StructuredAuthorizationConfiguration to be enabled"),
 				}))))
+			})
+
+			It("should allow when config is valid", func() {
+				shoot.Spec.Kubernetes.Version = "v1.30.0"
+				shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization = &core.StructuredAuthorization{
+					ConfigMapName: "foo",
+					Kubeconfigs: []core.AuthorizerKubeconfigReference{{
+						AuthorizerName: "some-authz",
+						SecretName:     "some-secret",
+					}},
+				}
+
+				Expect(ValidateShoot(shoot)).To(BeEmpty())
 			})
 		})
 

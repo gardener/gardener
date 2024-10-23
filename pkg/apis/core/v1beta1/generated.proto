@@ -1234,12 +1234,12 @@ message KubeAPIServerConfig {
   // +optional
   optional EncryptionConfig encryptionConfig = 16;
 
-  // StructuredAuthentication contains configuration settings for structured authentication to the kube-apiserver.
+  // StructuredAuthentication contains configuration settings for structured authentication for the kube-apiserver.
   // This field is only available for Kubernetes v1.30 or later.
   // +optional
   optional StructuredAuthentication structuredAuthentication = 17;
 
-  // StructuredAuthorization contains configuration settings for structured authorization to the kube-apiserver.
+  // StructuredAuthorization contains configuration settings for structured authorization for the kube-apiserver.
   // This field is only available for Kubernetes v1.30 or later.
   // +optional
   optional StructuredAuthorization structuredAuthorization = 18;

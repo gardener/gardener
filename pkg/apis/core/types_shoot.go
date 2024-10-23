@@ -634,9 +634,9 @@ type KubeAPIServerConfig struct {
 	DefaultUnreachableTolerationSeconds *int64
 	// EncryptionConfig contains customizable encryption configuration of the API server.
 	EncryptionConfig *EncryptionConfig
-	// StructuredAuthentication contains configuration settings for structured authentication to the kube-apiserver.
+	// StructuredAuthentication contains configuration settings for structured authentication for the kube-apiserver.
 	StructuredAuthentication *StructuredAuthentication
-	// StructuredAuthorization contains configuration settings for structured authorization to the kube-apiserver.
+	// StructuredAuthorization contains configuration settings for structured authorization for the kube-apiserver.
 	StructuredAuthorization *StructuredAuthorization
 }
 

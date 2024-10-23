@@ -6062,7 +6062,7 @@ StructuredAuthentication
 </td>
 <td>
 <em>(Optional)</em>
-<p>StructuredAuthentication contains configuration settings for structured authentication to the kube-apiserver.
+<p>StructuredAuthentication contains configuration settings for structured authentication for the kube-apiserver.
 This field is only available for Kubernetes v1.30 or later.</p>
 </td>
 </tr>
@@ -6077,7 +6077,7 @@ StructuredAuthorization
 </td>
 <td>
 <em>(Optional)</em>
-<p>StructuredAuthorization contains configuration settings for structured authorization to the kube-apiserver.
+<p>StructuredAuthorization contains configuration settings for structured authorization for the kube-apiserver.
 This field is only available for Kubernetes v1.30 or later.</p>
 </td>
 </tr>
