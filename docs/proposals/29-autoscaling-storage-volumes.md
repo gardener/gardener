@@ -53,7 +53,7 @@ The goals are achieved by the following means:
 - Initial volume size is reduced
 - Where the storage infrastructure does not support volume resizing, the preexisting, static-size volume sizing strategy is employed
 
-The current initiative is limited to scaling the observability components - _Vali_, _Prometheus_, and _Alert Manager_.
+The current initiative is limited to scaling observability components - _Vali_ and _Prometheus_.
 However, the long term vision is, once the PV autoscaling implementation matures enough, to also use it to offer PV
 auto-scaling for shoot (i.e. customer) volumes.
 
@@ -66,7 +66,7 @@ auto-scaling for shoot (i.e. customer) volumes.
     threshold configurable via code.
   - Ability to configure absolute upper scaling limit per PVC.
   - Autoscaling causes minimal interruption to scaled workloads.
-- Autoscaling ability activated for observability volumes (`alertmanager`, `prometheus`, and `vali`) in seeds'
+- Autoscaling ability activated for observability volumes (`prometheus` and `vali`) in seeds'
   `garden` namespace, and in shoot namespaces.
 - Absolute upper scaling limit configured on each observability volume.
 - Reduce the initial size of a volume, when autoscaling is activated for that volume, if such reduction is aligned with
@@ -106,7 +106,7 @@ Its primary driving signal is the PVC metrics from the seed's cache Prometheus i
 periodically examines, and if capacity is found to be near exhaustion, `pvc-autoscaler` takes action by updating the
 PVC's storage request.
 
-In this initial iteration, `pvc-autoscaler` scales two categories of `vali`, `prometheus`, and `alertmanager` volumes:
+In this initial iteration, `pvc-autoscaler` scales two categories of `vali` and `prometheus` volumes:
 those in shoot namespaces, and those in the seed's `garden` namespace.
 
 `pvc-autoscaler` publishes Prometheus metrics to anonymous scrapers via a `/metrics` HTTP endpoint. A `ServiceMonitor`
@@ -280,16 +280,16 @@ and lightly and predictably loaded, autoscaler is thus limited to the availabili
 may be subject to load spikes and autoscaling evictions. By itself, this limitation is deemed acceptable, as the trigger
 thresholds, configured for PVC autoscaling, usually afford tolerance to substantial delays.
 
-Using the seed's cache Prometheus instance creates a dependency loop - `pvc-autoscaler` needs `cache-prometheus` in order
-to perform scaling, and `cache-prometheus` needs `pvc-autoscaler` to scale its database volume. That dependency results
+Using the seed's cache Prometheus instance creates a dependency loop - `pvc-autoscaler` needs `prometheus-cache` in order
+to perform scaling, and `prometheus-cache` needs `pvc-autoscaler` to scale its database volume. That dependency results
 in one mode of persistent failure:
-1. `cache-prometheus` exhausts its storage before `pvc-autoscaler` resizes it
-2. `cache-prometheus` enters a fault loop, due to inability ot expand database
+1. `prometheus-cache` exhausts its storage before `pvc-autoscaler` resizes it
+2. `prometheus-cache` enters a fault loop, due to inability ot expand database
 3. `pvc-autoscaler` enters fault loop, due to driving metrics signal unavailable
 4. At this point, autoscaling seizes for all PVs on the seed
 
-To mitigate the risk of such failure, a larger initial storage request is used for `cache-prometheus` - 6Gi. It offers a
-1Gi headroom over the 5Gi storage retention limit, configured on `cache-prometheus`. Field data suggests 1Gi should
+To mitigate the risk of such failure, a larger initial storage request is used for `prometheus-cache` - 6Gi. It offers a
+1Gi headroom over the 5Gi storage retention limit, configured on `prometheus-cache`. Field data suggests 1Gi should
 suffice to accommodate the occasional usage spikes which exceed the data retention limit.
 
 #### Latency
