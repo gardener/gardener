@@ -125,6 +125,10 @@ func (r *Reconciler) MapObjectKindToExtensions(objectKind string, newObjectListF
 				return err
 			}
 
+			if ptr.Deref(obj.GetExtensionSpec().GetExtensionClass(), extensionsv1alpha1.ExtensionClassShoot) != extensionsv1alpha1.ExtensionClassGarden {
+				return nil
+			}
+
 			newRequiredTypes.Insert(obj.GetExtensionSpec().GetExtensionType())
 			return nil
 		}); err != nil {
