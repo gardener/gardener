@@ -149,6 +149,11 @@ var _ = Describe("Defaults", func() {
 											Namespace: "bar",
 										},
 									},
+									Ingress: &gardencorev1beta1.Ingress{
+										Controller: gardencorev1beta1.IngressController{
+											Kind: "foobar",
+										},
+									},
 								},
 							},
 						},
@@ -183,7 +188,7 @@ var _ = Describe("Defaults", func() {
 									},
 									Ingress: &gardencorev1beta1.Ingress{
 										Controller: gardencorev1beta1.IngressController{
-											Kind: "nginx",
+											Kind: "foobar",
 										},
 									},
 								},

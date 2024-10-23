@@ -115,7 +115,6 @@ func setDefaultsGardenletConfiguration(obj *gardenletv1alpha1.GardenletConfigura
 	setDefaultsResources(obj.Resources)
 
 	// Initialize seed config
-
 	if obj.SeedConfig == nil {
 		obj.SeedConfig = &gardenletv1alpha1.SeedConfig{
 			SeedTemplate: gardencorev1beta1.SeedTemplate{
