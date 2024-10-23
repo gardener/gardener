@@ -401,7 +401,7 @@ The one for the virtual garden is accessible at `./example/operator/virtual-gard
 > ```
 > When the shoot cluster is HA (i.e., `.spec.controlPlane.highAvailability.failureTolerance == zone`), then you can access it via `172.18.255.1`.
 
-Similar as in the section _[Devleoping Gardener](#developing-gardener)_ it's possible to run a [Skaffold development loop](https://skaffold.dev/docs/workflows/dev/) as well using:
+Similar as in the section _[Developing Gardener](#developing-gardener)_ it's possible to run a [Skaffold development loop](https://skaffold.dev/docs/workflows/dev/) as well using:
 ```shell
 make operator-seed-dev
 ```
