@@ -5,7 +5,9 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
 {{ include "labels" . | indent 4 }}
+    {{- if .Values.highAvailability.enable }}
     high-availability-config.resources.gardener.cloud/type: server
+    {{- end }}
 spec:
   revisionHistoryLimit: 5
   replicas: {{ .Values.replicaCount }}
@@ -38,6 +40,9 @@ spec:
 {{- end }}
         - --health-bind-address=:{{ .Values.healthPort }}
         - --leader-election-id={{ include "leaderelectionid" . }}
+        {{- if .Values.leaderElection.enable }}
+        - --leader-election=false
+        {{- end }}
         env:
         - name: LEADER_ELECTION_NAMESPACE
           valueFrom:
@@ -49,6 +54,7 @@ spec:
         - name: webhook-server
           containerPort: {{ .Values.webhookConfig.serverPort }}
           protocol: TCP
+        {{- if .Values.livenessProbe.enable }}
         livenessProbe:
           httpGet:
             path: /healthz
@@ -56,12 +62,15 @@ spec:
             scheme: HTTP
           initialDelaySeconds: 5
           periodSeconds: 10
+        {{- end }}
+        {{- if .Values.readinessProbe.enable }}
         readinessProbe:
           httpGet:
             path: /readyz
             port: {{ .Values.healthPort }}
             scheme: HTTP
           initialDelaySeconds: 5
+          {{- end }}
 {{- if .Values.resources }}
         resources:
 {{ toYaml .Values.resources | nindent 10 }}

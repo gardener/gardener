@@ -1818,3 +1818,16 @@ deploy:
           gardener.runtimeCluster.priorityClassName: gardener-system-400
         createNamespace: true
         wait: true
+profiles:
+  - name: debug
+    activation:
+      - command: debug
+    patches:
+      - op: add
+        path: /deploy/helm/releases/1/setValues
+        value:
+          replicaCount: 1
+          livenessProbe.enable: false
+          readinessProbe.enable: false
+          leaderElection.enable: false
+          highAvailability.enable: false
