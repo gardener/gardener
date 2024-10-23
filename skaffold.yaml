@@ -929,14 +929,11 @@ build:
     - garden.local.gardener.cloud:5001
   tagPolicy:
     customTemplate:
-      template: "{{.version}}-{{.sha}}-{{.timestamp}}"
+      template: "{{.version}}-{{.timestamp}}"
       components:
         - name: version
           envTemplate:
             template: "{{.GARDENER_VERSION}}"
-        - name: sha
-          gitCommit:
-            variant: AbbrevCommitSha
         - name: timestamp
           dateTime:
             format: "20060102150405"
