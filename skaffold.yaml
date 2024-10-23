@@ -582,7 +582,6 @@ profiles:
         path: /deploy/helm/releases/0/setValues
         value:
           global.admission.service.clusterIP: fd00:10:2::1000
-          global.apiserver.featureGates.IPv6SingleStack: true
   - name: debug
     activation:
       - command: debug

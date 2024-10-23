@@ -12,8 +12,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
-	"github.com/gardener/gardener/pkg/features"
-	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Utils tests", func() {
@@ -88,22 +86,7 @@ var _ = Describe("Utils tests", func() {
 			Expect(errorList).To(BeEmpty())
 		})
 
-		It("should deny IPv6 single-stack if feature gate is disabled", func() {
-			ipFamilies := []core.IPFamily{core.IPFamilyIPv6}
-			errorList := ValidateIPFamilies(ipFamilies, fldPath)
-			Expect(errorList).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":     Equal(field.ErrorTypeInvalid),
-					"Field":    Equal(fldPath.String()),
-					"BadValue": Equal(ipFamilies),
-					"Detail":   Equal("IPv6 single-stack networking is not supported"),
-				})),
-			))
-		})
-
-		It("should allow IPv6 single-stack if feature gate is enabled", func() {
-			defer test.WithFeatureGate(features.DefaultFeatureGate, features.IPv6SingleStack, true)()
-
+		It("should allow IPv6 single-stack", func() {
 			errorList := ValidateIPFamilies([]core.IPFamily{core.IPFamilyIPv6}, fldPath)
 			Expect(errorList).To(BeEmpty())
 		})

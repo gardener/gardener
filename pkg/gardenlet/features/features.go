@@ -23,7 +23,6 @@ func GetFeatures() []featuregate.Feature {
 		features.HVPAForShootedSeed,
 		features.VPAForETCD,
 		features.DefaultSeccompProfile,
-		features.IPv6SingleStack,
 		features.ShootManagedIssuer,
 		features.VPAAndHPAForAPIServer,
 		features.NewWorkerPoolHash,
