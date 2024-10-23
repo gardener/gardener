@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -121,7 +122,8 @@ var _ = Describe("Add", func() {
 						},
 						Spec: extensionsv1alpha1.BackupBucketSpec{
 							DefaultSpec: extensionsv1alpha1.DefaultSpec{
-								Type: requiredExtensionType,
+								Type:  requiredExtensionType,
+								Class: ptr.To(extensionsv1alpha1.ExtensionClassGarden),
 							},
 						},
 					}

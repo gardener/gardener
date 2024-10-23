@@ -15,6 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -173,6 +174,34 @@ var _ = Describe("Add", func() {
 				reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerInstallation2.Name}},
 			))
 			Expect(reconciler.KindToRequiredTypes).To(HaveKeyWithValue(extensionsv1alpha1.InfrastructureResource, sets.New(type1, type2)))
+		})
+
+		It("should correctly calculate the kind-to-types map and return the expected extension in the requests", func() {
+			Expect(fakeGardenClient.Create(ctx, controllerRegistration1)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, controllerInstallation1)).To(Succeed())
+
+			By("Invoke mapper the first time and expect requests")
+			Expect(fakeSeedClient.Create(ctx, infrastructure)).To(Succeed())
+
+			Expect(mapFn(ctx, log, nil, nil)).To(ConsistOf(Equal(reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerInstallation1.Name}})))
+			Expect(reconciler.KindToRequiredTypes).To(HaveKeyWithValue(extensionsv1alpha1.InfrastructureResource, sets.New(type1)))
+
+			By("Invoke mapper again w/o changes and expect no requests")
+			Expect(mapFn(ctx, log, nil, nil)).To(BeEmpty())
+			Expect(reconciler.KindToRequiredTypes).To(HaveKeyWithValue(extensionsv1alpha1.InfrastructureResource, sets.New(type1)))
+
+			By("Delete infrastructure and expect the extension in the requests")
+			Expect(fakeSeedClient.Delete(ctx, infrastructure)).To(Succeed())
+			Expect(mapFn(ctx, log, nil, nil)).To(ConsistOf(Equal(reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerInstallation1.Name}})))
+			Expect(reconciler.KindToRequiredTypes).To(HaveKeyWithValue(extensionsv1alpha1.InfrastructureResource, sets.New[string]()))
+
+			By("Create a infrastructure with class garden and expect no requests")
+			infrastructureGarden := infrastructure.DeepCopy()
+			infrastructureGarden.ResourceVersion = ""
+			infrastructureGarden.Spec.Class = ptr.To(extensionsv1alpha1.ExtensionClassGarden)
+			Expect(fakeSeedClient.Create(ctx, infrastructureGarden)).To(Succeed())
+			Expect(mapFn(ctx, log, nil, nil)).To(BeEmpty())
+			Expect(reconciler.KindToRequiredTypes).To(HaveKeyWithValue(extensionsv1alpha1.InfrastructureResource, sets.New[string]()))
 		})
 	})
 })
