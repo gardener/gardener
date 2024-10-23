@@ -57,6 +57,10 @@ The current initiative is limited to scaling observability components - _Vali_ a
 However, the long term vision is, once the PV autoscaling implementation matures enough, to also use it to offer PV
 auto-scaling for shoot (i.e. customer) volumes.
 
+There are no plans to extend the present initiative to shoot Etcd volumes. Instead, a more advanced, Etcd-specific
+storage management functionality is envisioned in `etcd-druid`. For details, see
+[`etcd-druid` feature request issue#481](https://github.com/gardener/etcd-druid/issues/481#issuecomment-1346402013).
+
 ### Goals
 - General ability to autoscale seed PVs.
   - Ability is conditional on PVC's storage class supporting resizing.
