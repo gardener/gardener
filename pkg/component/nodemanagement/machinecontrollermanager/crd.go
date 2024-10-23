@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"golang.org/x/exp/maps"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -32,13 +33,15 @@ var (
 )
 
 func init() {
+	var err error
 	resources := []string{
 		machineClassCRD,
 		machineDeploymentCRD,
 		machineSetCRD,
 		machineCRD,
 	}
-	crdNameToManifest = kubernetesutils.MakeCrdNameMap(resources)
+	crdNameToManifest, err = kubernetesutils.MakeCRDNameMap(resources)
+	utilruntime.Must(err)
 }
 
 type crd struct {

@@ -15,6 +15,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -43,7 +44,9 @@ type crd struct {
 }
 
 func init() {
-	crdNameToManifest = kubernetesutils.MakeCrdNameMap([]string{CRD, crdEtcdCopyBackupsTasks})
+	var err error
+	crdNameToManifest, err = kubernetesutils.MakeCRDNameMap([]string{CRD, crdEtcdCopyBackupsTasks})
+	utilruntime.Must(err)
 }
 
 // NewCRD can be used to deploy the CRD definitions for Etcd and EtcdCopyBackupsTask.

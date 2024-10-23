@@ -24,7 +24,6 @@ var (
 )
 
 // NewCRDs can be used to deploy the CRD definitions for the cert-management.
-func NewCRDs(client client.Client, applier kubernetes.Applier) component.DeployWaiter {
-	resources := []string{crdRevocations, crdCertificates, crdIssuers}
-	return kubernetesutils.NewCRDDeployer(client, applier, resources)
+func NewCRDs(client client.Client, applier kubernetes.Applier) (component.DeployWaiter, error) {
+	return kubernetesutils.NewCRDDeployer(client, applier, []string{crdRevocations, crdCertificates, crdIssuers})
 }

@@ -9,6 +9,7 @@ import (
 	_ "embed"
 
 	"golang.org/x/exp/maps"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -48,12 +49,14 @@ var (
 )
 
 func init() {
+	var err error
 	generalCRDs := []string{
 		backupBucketCRD,
 		dnsRecordCRD,
 		extensionCRD,
 	}
-	generalCRDNamesToManifest = kubernetesutils.MakeCrdNameMap(generalCRDs)
+	generalCRDNamesToManifest, err = kubernetesutils.MakeCRDNameMap(generalCRDs)
+	utilruntime.Must(err)
 
 	shootCRDs := []string{
 		backupEntryCRD,
@@ -66,7 +69,8 @@ func init() {
 		operatingSystemConfigCRD,
 		workerCRD,
 	}
-	shootCRDNamesToManifest = kubernetesutils.MakeCrdNameMap(shootCRDs)
+	shootCRDNamesToManifest, err = kubernetesutils.MakeCRDNameMap(shootCRDs)
+	utilruntime.Must(err)
 }
 
 type crd struct {
