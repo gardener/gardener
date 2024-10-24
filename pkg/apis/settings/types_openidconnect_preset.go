@@ -13,6 +13,11 @@ import (
 
 // OpenIDConnectPreset is a OpenID Connect configuration that is applied
 // to a Shoot in a namespace.
+//
+// Deprecated: This resource is deprecated and will be removed after support for Kubernetes 1.31 is dropped.
+// Please configure and use structured authentication instead of oidc flags.
+// For more information check https://github.com/gardener/gardener/issues/9858
+// TODO(AleksandarSavchev): Remove this resource after support for Kubernetes 1.31 is dropped.
 type OpenIDConnectPreset struct {
 	metav1.TypeMeta
 	// Standard object metadata.
