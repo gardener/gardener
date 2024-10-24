@@ -441,6 +441,13 @@ func (s *shootSystem) shootInfoData() map[string]string {
 }
 
 func (s *shootSystem) readOnlyRBACResources() []client.Object {
+	allowedSubResources := map[string]map[string][]string{
+		corev1.GroupName: {
+			"pods":  {"log"},
+			"nodes": {"proxy"},
+		},
+	}
+
 	apiGroupToReadableResourcesNames := make(map[string][]string, len(s.values.APIResourceList))
 	for _, api := range s.values.APIResourceList {
 		apiGroup := strings.Split(api.GroupVersion, "/")[0]
@@ -462,6 +469,12 @@ func (s *shootSystem) readOnlyRBACResources() []client.Object {
 			}
 
 			apiGroupToReadableResourcesNames[apiGroup] = append(apiGroupToReadableResourcesNames[apiGroup], resource.Name)
+
+			if resourceToSubResources, ok := allowedSubResources[apiGroup]; ok {
+				for _, subResource := range resourceToSubResources[resource.Name] {
+					apiGroupToReadableResourcesNames[apiGroup] = append(apiGroupToReadableResourcesNames[apiGroup], resource.Name+"/"+subResource)
+				}
+			}
 		}
 
 		// Sort keys to get a stable order of the RBAC rules when iterating.

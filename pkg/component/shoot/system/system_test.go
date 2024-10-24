@@ -554,6 +554,8 @@ var _ = Describe("ShootSystem", func() {
 								{Name: "secrets", Verbs: metav1.Verbs{"get", "list", "watch"}},
 								{Name: "configmaps", Verbs: metav1.Verbs{"get", "list", "watch"}},
 								{Name: "services", Verbs: metav1.Verbs{"get", "list", "watch"}},
+								{Name: "pods", Verbs: metav1.Verbs{"get", "list", "watch"}},
+								{Name: "nodes", Verbs: metav1.Verbs{"get", "list", "watch"}},
 							},
 						},
 						{
@@ -596,7 +598,7 @@ var _ = Describe("ShootSystem", func() {
 						Rules: []rbacv1.PolicyRule{
 							{
 								APIGroups: []string{""},
-								Resources: []string{"configmaps"},
+								Resources: []string{"configmaps", "nodes", "nodes/proxy", "pods", "pods/log"},
 								Verbs:     []string{"get", "list", "watch"},
 							},
 							{
