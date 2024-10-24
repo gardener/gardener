@@ -13,6 +13,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -718,16 +719,21 @@ var _ = Describe("Project controller tests", func() {
 					g.Expect(namespacedCloudProfile.Status.ObservedGeneration).To(Equal(namespacedCloudProfile.Generation))
 				}).Should(Succeed())
 
-				By("Ensure admin without proper role cannot update NamespacedCloudProfile.Spec.{Kubernetes,MachineImages}")
+				By("Ensure admin without proper role cannot update NamespacedCloudProfile.Spec.{Kubernetes,MachineImages,ProviderConfig}")
 				updatedNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
 				updatedNamespacedCloudProfile.Spec.Kubernetes = &gardencorev1beta1.KubernetesSettings{
 					Versions: []gardencorev1beta1.ExpirableVersion{{Version: "1.25.1", ExpirationDate: futureExpirationDate}},
 				}
+				Expect(testUserClient.Update(ctx, updatedNamespacedCloudProfile)).To(BeForbiddenError())
+				updatedNamespacedCloudProfile = namespacedCloudProfile.DeepCopy()
 				updatedNamespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 					{Name: "some-OS", Versions: []gardencorev1beta1.MachineImageVersion{
 						{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.1.1", ExpirationDate: futureExpirationDate}},
 					}},
 				}
+				Expect(testUserClient.Update(ctx, updatedNamespacedCloudProfile)).To(BeForbiddenError())
+				updatedNamespacedCloudProfile = namespacedCloudProfile.DeepCopy()
+				updatedNamespacedCloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{"foo": "bar"}`)}
 				Expect(testUserClient.Update(ctx, updatedNamespacedCloudProfile)).To(BeForbiddenError())
 			})
 
@@ -747,7 +753,7 @@ var _ = Describe("Project controller tests", func() {
 						{
 							APIGroups: []string{"core.gardener.cloud"},
 							Resources: []string{"namespacedcloudprofiles"},
-							Verbs:     []string{"modify-spec-kubernetes", "modify-spec-machineimages"},
+							Verbs:     []string{"modify-spec-kubernetes", "modify-spec-machineimages", "modify-spec-providerconfig"},
 						},
 					},
 				}
@@ -768,7 +774,7 @@ var _ = Describe("Project controller tests", func() {
 				})
 				Expect(testClient.Patch(ctx, project, patch)).To(Succeed())
 
-				By("Ensure admin with proper role can update NamespacedCloudProfile.Spec.{Kubernetes,MachineImages}")
+				By("Ensure admin with proper role can update NamespacedCloudProfile.Spec.{Kubernetes,MachineImages,ProviderConfig}")
 				namespacedCloudProfile.Spec.Kubernetes = &gardencorev1beta1.KubernetesSettings{
 					Versions: []gardencorev1beta1.ExpirableVersion{{Version: "1.25.1", ExpirationDate: futureExpirationDate}},
 				}
@@ -777,6 +783,7 @@ var _ = Describe("Project controller tests", func() {
 						{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.1.1", ExpirationDate: futureExpirationDate}},
 					}},
 				}
+				namespacedCloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{"foo": "bar"}`)}
 				Eventually(func() error {
 					return testUserClient.Update(ctx, namespacedCloudProfile)
 				}).Should(Succeed())
