@@ -15,7 +15,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/containerd"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // CLIFlags returns a list of kubelet CLI flags based on the provided parameters and for the provided Kubernetes version.
@@ -37,9 +36,6 @@ func CLIFlags(kubernetesVersion *semver.Version, nodeLabels map[string]string, c
 			"--container-runtime-endpoint="+containerd.PathSocketEndpoint,
 			"--runtime-cgroups="+containerd.CgroupPath,
 		)
-		if versionutils.ConstraintK8sLess127.Check(kubernetesVersion) {
-			flags = append(flags, "--container-runtime=remote")
-		}
 	}
 
 	flags = append(flags, "--v=2")

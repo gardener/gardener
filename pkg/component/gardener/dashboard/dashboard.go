@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -40,8 +39,6 @@ var TimeoutWaitForManagedResource = 5 * time.Minute
 type Values struct {
 	// Image defines the container image of gardener-dashboard.
 	Image string
-	// RuntimeVersion is the Kubernetes version of the runtime cluster.
-	RuntimeVersion *semver.Version
 	// LogLevel is the level/severity for the logs.
 	LogLevel string
 	// APIServerURL is the URL of the API server of the virtual garden cluster.

@@ -79,14 +79,14 @@ var _ = Describe("GardenerAPIServer", func() {
 		managedResourceSecretRuntime *corev1.Secret
 		managedResourceSecretVirtual *corev1.Secret
 
-		podDisruptionBudgetFor func(bool) *policyv1.PodDisruptionBudget
-		serviceRuntimeFor      func(bool) *corev1.Service
-		vpaInBaselineMode      *vpaautoscalingv1.VerticalPodAutoscaler
-		vpaInHPAAndVPAMode     *vpaautoscalingv1.VerticalPodAutoscaler
-		hpaOnHPAAndVPAMode     *autoscalingv2.HorizontalPodAutoscaler
-		hvpa                   *hvpav1alpha1.Hvpa
-		deploymentFor          func(bool) *appsv1.Deployment
-		apiServiceFor          = func(group, version string) *apiregistrationv1.APIService {
+		podDisruptionBudget *policyv1.PodDisruptionBudget
+		serviceRuntime      *corev1.Service
+		vpaInBaselineMode   *vpaautoscalingv1.VerticalPodAutoscaler
+		vpaInHPAAndVPAMode  *vpaautoscalingv1.VerticalPodAutoscaler
+		hpaOnHPAAndVPAMode  *autoscalingv2.HorizontalPodAutoscaler
+		hvpa                *hvpav1alpha1.Hvpa
+		deploymentFor       func(bool) *appsv1.Deployment
+		apiServiceFor       = func(group, version string) *apiregistrationv1.APIService {
 			return &apiregistrationv1.APIService{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: version + "." + group,
@@ -175,70 +175,52 @@ var _ = Describe("GardenerAPIServer", func() {
 			},
 		}
 
-		podDisruptionBudgetFor = func(k8sGreaterEqual126 bool) *policyv1.PodDisruptionBudget {
-			var (
-				unhealthyPodEvictionPolicyAlwatysAllow = policyv1.AlwaysAllow
-				pdb                                    = &policyv1.PodDisruptionBudget{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gardener-apiserver",
-						Namespace: namespace,
-						Labels: map[string]string{
-							"app":  "gardener",
-							"role": "apiserver",
-						},
-					},
-					Spec: policyv1.PodDisruptionBudgetSpec{
-						MaxUnavailable: ptr.To(intstr.FromInt32(1)),
-						Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
-							"app":  "gardener",
-							"role": "apiserver",
-						}},
-					},
-				}
-			)
-
-			if k8sGreaterEqual126 {
-				pdb.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
-			}
-
-			return pdb
+		podDisruptionBudget = &policyv1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener-apiserver",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "apiserver",
+				},
+			},
+			Spec: policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
+					"app":  "gardener",
+					"role": "apiserver",
+				}},
+				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+			},
 		}
-		serviceRuntimeFor = func(k8sGreaterEqual127 bool) *corev1.Service {
-			svc := &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gardener-apiserver",
-					Namespace: namespace,
-					Annotations: map[string]string{
-						"networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports":       `[{"protocol":"TCP","port":8443}]`,
-						"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8443}]`,
-					},
-					Labels: map[string]string{
-						"app":  "gardener",
-						"role": "apiserver",
-						"endpoint-slice-hints.resources.gardener.cloud/consider": "true",
-					},
-				},
-				Spec: corev1.ServiceSpec{
-					Type: corev1.ServiceTypeClusterIP,
-					Selector: map[string]string{
-						"app":  "gardener",
-						"role": "apiserver",
-					},
-					Ports: []corev1.ServicePort{{
-						Port:       443,
-						Protocol:   corev1.ProtocolTCP,
-						TargetPort: intstr.FromInt32(8443),
-					}},
-				},
-			}
 
-			if k8sGreaterEqual127 {
-				svc.Annotations["service.kubernetes.io/topology-mode"] = "auto"
-			} else {
-				svc.Annotations["service.kubernetes.io/topology-aware-hints"] = "auto"
-			}
-
-			return svc
+		serviceRuntime = &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener-apiserver",
+				Namespace: namespace,
+				Annotations: map[string]string{
+					"networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports":       `[{"protocol":"TCP","port":8443}]`,
+					"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8443}]`,
+					"service.kubernetes.io/topology-mode":                                              "auto",
+				},
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "apiserver",
+					"endpoint-slice-hints.resources.gardener.cloud/consider": "true",
+				},
+			},
+			Spec: corev1.ServiceSpec{
+				Type: corev1.ServiceTypeClusterIP,
+				Selector: map[string]string{
+					"app":  "gardener",
+					"role": "apiserver",
+				},
+				Ports: []corev1.ServicePort{{
+					Port:       443,
+					Protocol:   corev1.ProtocolTCP,
+					TargetPort: intstr.FromInt32(8443),
+				}},
+			},
 		}
 
 		vpaInBaselineMode = &vpaautoscalingv1.VerticalPodAutoscaler{
@@ -900,7 +882,7 @@ var _ = Describe("GardenerAPIServer", func() {
 					MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 						SourceLabels: []monitoringv1.LabelName{"__name__"},
 						Action:       "keep",
-						Regex:        `^(authentication_attempts|authenticated_user_requests|apiserver_admission_controller_admission_duration_seconds_.+|apiserver_admission_webhook_admission_duration_seconds_.+|apiserver_admission_step_admission_duration_seconds_.+|apiserver_admission_webhook_rejection_count|apiserver_audit_event_total|apiserver_audit_error_total|apiserver_audit_requests_rejected_total|apiserver_request_total|apiserver_storage_objects|apiserver_latency_seconds|apiserver_current_inflight_requests|apiserver_current_inqueue_requests|apiserver_response_sizes_.+|apiserver_request_duration_seconds_.+|apiserver_request_terminations_total|apiserver_storage_transformation_duration_seconds_.+|apiserver_storage_transformation_operations_total|apiserver_registered_watchers|apiserver_init_events_total|apiserver_watch_events_sizes_.+|apiserver_watch_events_total|etcd_db_total_size_in_bytes|etcd_request_duration_seconds_.+|watch_cache_capacity_increase_total|watch_cache_capacity_decrease_total|watch_cache_capacity|go_.+|apiserver_cache_list_.+|apiserver_storage_list_.+)$`,
+						Regex:        `^(authentication_attempts|authenticated_user_requests|apiserver_admission_controller_admission_duration_seconds_.+|apiserver_admission_webhook_admission_duration_seconds_.+|apiserver_admission_step_admission_duration_seconds_.+|apiserver_admission_webhook_rejection_count|apiserver_audit_event_total|apiserver_audit_error_total|apiserver_audit_requests_rejected_total|apiserver_request_total|apiserver_storage_objects|apiserver_latency_seconds|apiserver_current_inflight_requests|apiserver_current_inqueue_requests|apiserver_response_sizes_.+|apiserver_request_duration_seconds_.+|apiserver_request_terminations_total|apiserver_storage_transformation_duration_seconds_.+|apiserver_storage_transformation_operations_total|apiserver_registered_watchers|apiserver_init_events_total|apiserver_watch_events_sizes_.+|apiserver_watch_events_total|etcd_request_duration_seconds_.+|watch_cache_capacity_increase_total|watch_cache_capacity_decrease_total|watch_cache_capacity|go_.+|apiserver_cache_list_.+|apiserver_storage_list_.+)$`,
 					}},
 				}},
 			},
@@ -918,7 +900,7 @@ var _ = Describe("GardenerAPIServer", func() {
 			// Create runtime service manually since it is required by the Deploy function. In reality, it gets created
 			// via the ManagedResource, however in this unit test the respective controller is not running, hence we
 			// have to create it here.
-			svcRuntime := serviceRuntimeFor(true).DeepCopy()
+			svcRuntime := serviceRuntime.DeepCopy()
 			Expect(fakeClient.Create(ctx, svcRuntime)).To(Succeed())
 			patch := client.MergeFrom(svcRuntime.DeepCopy())
 			svcRuntime.Spec.ClusterIP = clusterIP
@@ -1577,7 +1559,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					managedResourceSecretVirtual.Name = managedResourceVirtual.Spec.SecretRefs[0].Name
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretVirtual), managedResourceSecretVirtual)).To(Succeed())
 
-					expectedRuntimeObjects = []client.Object{deploymentFor(false), serviceMonitor}
+					expectedRuntimeObjects = []client.Object{deploymentFor(false), serviceMonitor, podDisruptionBudget}
 					Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
 					Expect(managedResourceSecretRuntime.Immutable).To(Equal(ptr.To(true)))
 					Expect(managedResourceSecretRuntime.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
@@ -1611,8 +1593,8 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 						expectedRuntimeObjects = append(
 							expectedRuntimeObjects,
 							vpaInBaselineMode,
-							podDisruptionBudgetFor(true),
-							serviceRuntimeFor(true),
+							podDisruptionBudget,
+							serviceRuntime,
 						)
 
 						Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
@@ -1629,8 +1611,8 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 						expectedRuntimeObjects = append(
 							expectedRuntimeObjects,
 							hvpa,
-							podDisruptionBudgetFor(true),
-							serviceRuntimeFor(true),
+							podDisruptionBudget,
+							serviceRuntime,
 						)
 
 						Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
@@ -1651,45 +1633,9 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 							serviceMonitor,
 							vpaInHPAAndVPAMode,
 							hpaOnHPAAndVPAMode,
-							podDisruptionBudgetFor(true),
-							serviceRuntimeFor(true),
+							podDisruptionBudget,
+							serviceRuntime,
 						}
-
-						Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
-					})
-				})
-
-				Context("when kubernetes version is < 1.26", func() {
-					BeforeEach(func() {
-						values.RuntimeVersion = semver.MustParse("1.25.0")
-						deployer = New(fakeClient, namespace, fakeSecretManager, values)
-					})
-
-					It("should successfully deploy all resources", func() {
-						expectedRuntimeObjects = append(
-							expectedRuntimeObjects,
-							vpaInBaselineMode,
-							podDisruptionBudgetFor(false),
-							serviceRuntimeFor(false),
-						)
-
-						Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
-					})
-				})
-
-				Context("when kubernetes version is < 1.27", func() {
-					BeforeEach(func() {
-						values.RuntimeVersion = semver.MustParse("1.26.0")
-						deployer = New(fakeClient, namespace, fakeSecretManager, values)
-					})
-
-					It("should successfully deploy all resources", func() {
-						expectedRuntimeObjects = append(
-							expectedRuntimeObjects,
-							vpaInBaselineMode,
-							podDisruptionBudgetFor(true),
-							serviceRuntimeFor(false),
-						)
 
 						Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
 					})

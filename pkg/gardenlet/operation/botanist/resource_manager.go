@@ -7,7 +7,6 @@ package botanist
 import (
 	"context"
 
-	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -24,11 +23,6 @@ import (
 
 // DefaultResourceManager returns an instance of Gardener Resource Manager with defaults configured for being deployed in a Shoot namespace
 func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
-	version, err := semver.NewVersion(b.SeedClientSet.Version())
-	if err != nil {
-		return nil, err
-	}
-
 	var defaultNotReadyTolerationSeconds, defaultUnreachableTolerationSeconds *int64
 	if b.Config != nil && b.Config.NodeToleration != nil {
 		nodeToleration := b.Config.NodeToleration
@@ -43,7 +37,6 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		b.Seed.GetInfo().Status.ClusterIdentity,
 		defaultNotReadyTolerationSeconds,
 		defaultUnreachableTolerationSeconds,
-		version,
 		logger.InfoLevel, logger.FormatJSON,
 		"",
 		true,

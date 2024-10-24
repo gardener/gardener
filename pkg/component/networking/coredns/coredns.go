@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -75,8 +74,6 @@ type Interface interface {
 
 // Values is a set of configuration values for the coredns component.
 type Values struct {
-	// KubernetesVersion is the Kubernetes version of the Shoot.
-	KubernetesVersion *semver.Version
 	// APIServerHost is the host of the kube-apiserver.
 	APIServerHost *string
 	// ClusterDomain is the domain used for cluster-wide DNS records handled by CoreDNS.
@@ -701,8 +698,9 @@ import custom/*.server
 				Labels:    map[string]string{corednsconstants.LabelKey: corednsconstants.LabelValue},
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: ptr.To(intstr.FromInt32(1)),
-				Selector:       deployment.Spec.Selector,
+				MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+				Selector:                   deployment.Spec.Selector,
+				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 			},
 		}
 
@@ -735,8 +733,6 @@ import custom/*.server
 			},
 		}
 	)
-
-	kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, c.values.KubernetesVersion)
 
 	managedObjects := []client.Object{
 		serviceAccount,
