@@ -22,6 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	apiextensions "github.com/gardener/gardener/pkg/api/extensions"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -97,7 +98,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 			return err
 		}
 
-		if err := c.Watch(source.Kind[client.Object](seedCluster.GetCache(), extension.object, eventHandler, extensions.ObjectPredicate())); err != nil {
+		if err := c.Watch(source.Kind[client.Object](seedCluster.GetCache(), extension.object, eventHandler, extensions.ObjectPredicate(), extensionspredicate.HasClass(extensionsv1alpha1.ExtensionClassShoot))); err != nil {
 			return err
 		}
 	}
@@ -132,6 +133,10 @@ func (r *Reconciler) MapObjectKindToControllerInstallations(objectKind string, n
 			obj, err := apiextensions.Accessor(o)
 			if err != nil {
 				return err
+			}
+
+			if ptr.Deref(obj.GetExtensionSpec().GetExtensionClass(), extensionsv1alpha1.ExtensionClassShoot) != extensionsv1alpha1.ExtensionClassShoot {
+				return nil
 			}
 
 			newRequiredTypes.Insert(obj.GetExtensionSpec().GetExtensionType())

@@ -173,14 +173,25 @@ rules:
 - apiGroups:
   - extensions.gardener.cloud
   resources:
-  - backupbuckets
   - clusters
-  - dnsrecords
   - extensions
   verbs:
   - get
   - list
   - watch
+- apiGroups:
+  - extensions.gardener.cloud
+  resources:
+  - backupbuckets
+  - dnsrecords
+  verbs:
+  - get
+  - list
+  - watch
+  - patch
+  - update
+  - create
+  - delete
 - apiGroups:
   - autoscaling
   resources:

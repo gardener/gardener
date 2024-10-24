@@ -22,6 +22,17 @@ var _ = Describe("Add", func() {
 		BeforeEach(func() {
 			garden = &operatorv1alpha1.Garden{
 				Spec: operatorv1alpha1.GardenSpec{
+					DNS: &operatorv1alpha1.DNSManagement{
+						Providers: []operatorv1alpha1.DNSProvider{
+							{
+								Name: "primary",
+								Type: "test",
+								SecretRef: corev1.LocalObjectReference{
+									Name: "secret-name",
+								},
+							},
+						},
+					},
 					VirtualCluster: operatorv1alpha1.VirtualCluster{
 						Kubernetes: operatorv1alpha1.Kubernetes{
 							KubeAPIServer: &operatorv1alpha1.KubeAPIServerConfig{
@@ -75,6 +86,18 @@ var _ = Describe("Add", func() {
 		It("should return true because the ETCD backup secret field changed", func() {
 			oldShoot := garden.DeepCopy()
 			garden.Spec.VirtualCluster.ETCD = &operatorv1alpha1.ETCD{Main: &operatorv1alpha1.ETCDMain{Backup: &operatorv1alpha1.Backup{SecretRef: corev1.LocalObjectReference{Name: "secret-name"}}}}
+			Expect(Predicate(oldShoot, garden)).To(BeTrue())
+		})
+
+		It("should return true because the DNS secret field changed", func() {
+			oldShoot := garden.DeepCopy()
+			garden.Spec.DNS.Providers[0].SecretRef.Name = "secret-name2"
+			Expect(Predicate(oldShoot, garden)).To(BeTrue())
+		})
+
+		It("should return true because the DNS section has been deleted", func() {
+			oldShoot := garden.DeepCopy()
+			garden.Spec.DNS = nil
 			Expect(Predicate(oldShoot, garden)).To(BeTrue())
 		})
 
