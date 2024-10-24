@@ -146,7 +146,7 @@ func DeploymentHasExactNumberOfPods(ctx context.Context, reader client.Reader, d
 
 	var numberOfRelevantPods int32
 	for _, pod := range podList.Items {
-		if !IsPodStale(pod.Status.Reason) {
+		if !IsPodStale(pod.Status.Reason) && !IsPodCompleted(pod.Status.Conditions) {
 			numberOfRelevantPods++
 		}
 	}
