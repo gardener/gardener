@@ -58,7 +58,7 @@ func getValitailConfigurationFile(ctx components.Context) (extensionsv1alpha1.Fi
 
 	return extensionsv1alpha1.File{
 		Path:        PathConfig,
-		Permissions: ptr.To[int32](0644),
+		Permissions: ptr.To[uint32](0644),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Encoding: "b64",
@@ -76,7 +76,7 @@ func getValitailCAFile(ctx components.Context) extensionsv1alpha1.File {
 
 	return extensionsv1alpha1.File{
 		Path:        PathCACert,
-		Permissions: ptr.To[int32](0644),
+		Permissions: ptr.To[uint32](0644),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Encoding: "b64",

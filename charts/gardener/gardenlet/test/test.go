@@ -1070,7 +1070,14 @@ func ComputeExpectedGardenletDeploymentSpec(
 				numberOfZones = len(seedConfig.Spec.Provider.Zones)
 			}
 
-			deployment.Template.Spec.TopologySpreadConstraints = kubernetesutils.GetTopologySpreadConstraints(replicas, replicas, metav1.LabelSelector{MatchLabels: map[string]string{"app": "gardener", "role": "gardenlet"}}, int32(numberOfZones), nil, false)
+			deployment.Template.Spec.TopologySpreadConstraints = kubernetesutils.GetTopologySpreadConstraints(
+				replicas,
+				replicas,
+				metav1.LabelSelector{MatchLabels: map[string]string{"app": "gardener", "role": "gardenlet"}},
+				int32(numberOfZones), // #nosec G115 -- `len(seedConfig.Spec.Provider.Zones)` cannot be higher than max int32. Zones come from shoot spec and there is a validation that there cannot be more zones than worker.Maximum which is int32.
+				nil,
+				false,
+			)
 		}
 
 		if deploymentConfiguration.Env != nil {

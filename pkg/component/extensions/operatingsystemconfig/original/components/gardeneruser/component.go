@@ -86,7 +86,7 @@ ExecStart=` + pathScript + `
 		[]extensionsv1alpha1.File{
 			{
 				Path:        pathAuthorizedSSHKeys,
-				Permissions: ptr.To[int32](0644),
+				Permissions: ptr.To[uint32](0644),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",
@@ -96,7 +96,7 @@ ExecStart=` + pathScript + `
 			},
 			{
 				Path:        pathScript,
-				Permissions: ptr.To[int32](0755),
+				Permissions: ptr.To[uint32](0755),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",

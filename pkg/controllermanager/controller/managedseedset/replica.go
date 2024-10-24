@@ -82,7 +82,7 @@ type Replica interface {
 	// GetObjectKey returns this replica's ObjectKey.
 	GetObjectKey() client.ObjectKey
 	// GetOrdinal returns this replica's ordinal. If the replica has no ordinal, -1 is returned.
-	GetOrdinal() int
+	GetOrdinal() int32
 	// GetStatus returns this replica's status. If the replica's managed seed doesn't exist,
 	// it returns one of the StatusShoot* statuses, depending on the shoot state.
 	// Otherwise, it returns one of the ManagedSeed* statuses, depending on the managed seed state.
@@ -95,7 +95,7 @@ type Replica interface {
 	// scheduled shoots and is not protected by the "protect-from-deletion" annotation.
 	IsDeletable() bool
 	// CreateShoot initializes this replica's shoot and then creates it using the given context and client.
-	CreateShoot(ctx context.Context, c client.Client, ordinal int) error
+	CreateShoot(ctx context.Context, c client.Client, ordinal int32) error
 	// CreateManagedSeed initializes this replica's managed seed, and then creates it using the given context and client.
 	CreateManagedSeed(ctx context.Context, c client.Client) error
 	// DeleteShoot deletes this replica's shoot using the given context and client.
@@ -178,7 +178,7 @@ func (r *replica) GetObjectKey() client.ObjectKey {
 }
 
 // GetOrdinal returns this replica's ordinal. If the replica has no ordinal, -1 is returned.
-func (r *replica) GetOrdinal() int {
+func (r *replica) GetOrdinal() int32 {
 	if r.shoot == nil {
 		return -1
 	}
@@ -239,7 +239,7 @@ func (r *replica) IsDeletable() bool {
 }
 
 // CreateShoot initializes this replica's shoot and then creates it using the given context and client.
-func (r *replica) CreateShoot(ctx context.Context, c client.Client, ordinal int) error {
+func (r *replica) CreateShoot(ctx context.Context, c client.Client, ordinal int32) error {
 	if r.shoot == nil {
 		r.shoot = newShoot(r.managedSeedSet, ordinal)
 		return client.IgnoreAlreadyExists(c.Create(ctx, r.shoot))
@@ -331,7 +331,7 @@ func shootHealthStatus(shoot *gardencorev1beta1.Shoot) gardenerutils.ShootStatus
 }
 
 // newShoot creates a new shoot object for the given set and ordinal.
-func newShoot(managedSeedSet *seedmanagementv1alpha1.ManagedSeedSet, ordinal int) *gardencorev1beta1.Shoot {
+func newShoot(managedSeedSet *seedmanagementv1alpha1.ManagedSeedSet, ordinal int32) *gardencorev1beta1.Shoot {
 	name := getName(managedSeedSet, ordinal)
 
 	// Initialize shoot
@@ -355,7 +355,7 @@ func newShoot(managedSeedSet *seedmanagementv1alpha1.ManagedSeedSet, ordinal int
 }
 
 // newManagedSeed creates a new managed seed object for the given set and ordinal.
-func newManagedSeed(managedSeedSet *seedmanagementv1alpha1.ManagedSeedSet, ordinal int) (*seedmanagementv1alpha1.ManagedSeed, error) {
+func newManagedSeed(managedSeedSet *seedmanagementv1alpha1.ManagedSeedSet, ordinal int32) (*seedmanagementv1alpha1.ManagedSeed, error) {
 	name := getName(managedSeedSet, ordinal)
 
 	// Initialize managed seed
@@ -402,12 +402,12 @@ func replacePlaceholdersInSeedSpec(spec *gardencorev1beta1.SeedSpec, name string
 }
 
 // getName returns the replica object name for the given set and ordinal.
-func getName(managedSeedSet *seedmanagementv1alpha1.ManagedSeedSet, ordinal int) string {
+func getName(managedSeedSet *seedmanagementv1alpha1.ManagedSeedSet, ordinal int32) string {
 	return fmt.Sprintf("%s-%d", managedSeedSet.Name, ordinal)
 }
 
 // getFullName returns the replica's full object name (namespace/name) for the given set and ordinal.
-func getFullName(managedSeedSet *seedmanagementv1alpha1.ManagedSeedSet, ordinal int) string {
+func getFullName(managedSeedSet *seedmanagementv1alpha1.ManagedSeedSet, ordinal int32) string {
 	return fmt.Sprintf("%s/%s", managedSeedSet.Namespace, getName(managedSeedSet, ordinal))
 }
 
@@ -416,7 +416,7 @@ var ordinalRegex = regexp.MustCompile(".*-([0-9]+)$")
 
 // getOrdinal gets the ordinal from the given replica object name.
 // If the object was not created by a ManagedSeedSet, its ordinal is considered to be -1.
-func getOrdinal(name string) int {
+func getOrdinal(name string) int32 {
 	subMatches := ordinalRegex.FindStringSubmatch(name)
 	if len(subMatches) < 2 {
 		return -1
@@ -425,5 +425,5 @@ func getOrdinal(name string) int {
 	if err != nil {
 		return -1
 	}
-	return int(ordinal)
+	return int32(ordinal)
 }

@@ -26,7 +26,7 @@ func (component) Config(_ components.Context) ([]extensionsv1alpha1.Unit, []exte
 	return nil, []extensionsv1alpha1.File{
 		{
 			Path:        "/etc/systemd/journald.conf",
-			Permissions: ptr.To[int32](0644),
+			Permissions: ptr.To[uint32](0644),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Data: `[Journal]

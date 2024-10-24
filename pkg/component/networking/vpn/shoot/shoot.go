@@ -687,7 +687,7 @@ func (v *vpnShoot) statefulSet(labels map[string]string, template *corev1.PodTem
 		Spec: appsv1.StatefulSetSpec{
 			PodManagementPolicy:  appsv1.ParallelPodManagement,
 			RevisionHistoryLimit: ptr.To[int32](2),
-			Replicas:             ptr.To(int32(replicas)),
+			Replicas:             ptr.To(int32(replicas)), // #nosec: G115 - There is a validation for `replicas` in `Deployments` and `StatefulSets` which limits their value range.
 			UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
 				Type: appsv1.RollingUpdateStatefulSetStrategyType,
 			},

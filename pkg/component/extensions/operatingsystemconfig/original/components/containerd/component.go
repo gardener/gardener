@@ -76,7 +76,7 @@ func (containerd) Config(_ components.Context) ([]extensionsv1alpha1.Unit, []ext
 
 	monitorFile := extensionsv1alpha1.File{
 		Path:        pathHealthMonitor,
-		Permissions: ptr.To[int32](0755),
+		Permissions: ptr.To[uint32](0755),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Encoding: "b64",

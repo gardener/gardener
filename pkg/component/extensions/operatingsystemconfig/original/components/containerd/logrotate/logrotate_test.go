@@ -60,7 +60,7 @@ WantedBy=multi-user.target`),
 
 				serviceConfigFile := extensionsv1alpha1.File{
 					Path:        pathConfig,
-					Permissions: ptr.To[int32](0644),
+					Permissions: ptr.To[uint32](0644),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Data: pathLogFiles.String() + ` {

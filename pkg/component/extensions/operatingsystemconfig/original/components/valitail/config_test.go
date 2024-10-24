@@ -80,7 +80,7 @@ ExecStart=/opt/bin/valitail -config.file=` + PathConfig
 
 				valitailConfigFile := extensionsv1alpha1.File{
 					Path:        "/var/lib/valitail/config/config",
-					Permissions: ptr.To[int32](0644),
+					Permissions: ptr.To[uint32](0644),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",
@@ -226,7 +226,7 @@ scrape_configs:
 
 				valitailBinaryFile := extensionsv1alpha1.File{
 					Path:        "/opt/bin/valitail",
-					Permissions: ptr.To[int32](0755),
+					Permissions: ptr.To[uint32](0755),
 					Content: extensionsv1alpha1.FileContent{
 						ImageRef: &extensionsv1alpha1.FileContentImageRef{
 							Image:           ctx.Images["valitail"].String(),
@@ -237,7 +237,7 @@ scrape_configs:
 
 				caBundleFile := extensionsv1alpha1.File{
 					Path:        "/var/lib/valitail/ca.crt",
-					Permissions: ptr.To[int32](0644),
+					Permissions: ptr.To[uint32](0644),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",

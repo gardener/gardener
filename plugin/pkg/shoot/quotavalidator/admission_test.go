@@ -463,7 +463,7 @@ var _ = Describe("quotavalidator", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("should fail as shoots expiration time can’t be extended, because requested time higher then the minimum .spec.clusterLifetimeDays among the quotas", func() {
+			It("should fail as shoots expiration time can’t be extended, because requested time higher than the minimum .spec.clusterLifetimeDays among the quotas", func() {
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.ShootExpirationTimestamp, "2018-01-05T00:00:00+00:00") // plus 4 days compared to time.Now()
 				attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
@@ -475,7 +475,7 @@ var _ = Describe("quotavalidator", func() {
 				Expect(err).To(HaveOccurred())
 			})
 
-			It("should fail as shoots expiration time can’t be extended, because requested time higher then the maximum .spec.clusterLifetimeDays among the quotas", func() {
+			It("should fail as shoots expiration time can’t be extended, because requested time higher than the maximum .spec.clusterLifetimeDays among the quotas", func() {
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.ShootExpirationTimestamp, "2018-01-09T00:00:00+00:00") // plus 8 days compared to time.Now()
 				attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 

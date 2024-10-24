@@ -110,7 +110,7 @@ var _ = Describe("Bash", func() {
 						},
 						TransmitUnencoded: ptr.To(true),
 					},
-					Permissions: ptr.To(int32(0777)),
+					Permissions: ptr.To(uint32(0777)),
 				},
 			}
 

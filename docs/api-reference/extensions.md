@@ -3168,7 +3168,7 @@ string
 <td>
 <code>permissions</code></br>
 <em>
-int32
+uint32
 </em>
 </td>
 <td>

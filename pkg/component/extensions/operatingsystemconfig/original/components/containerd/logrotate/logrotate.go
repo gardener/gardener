@@ -19,7 +19,7 @@ import (
 func Config(pathConfig, pathLogFiles, prefix string) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File) {
 	serviceFile := extensionsv1alpha1.File{
 		Path:        pathConfig,
-		Permissions: ptr.To[int32](0644),
+		Permissions: ptr.To[uint32](0644),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Data: pathLogFiles + ` {

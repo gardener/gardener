@@ -1111,7 +1111,7 @@ var _ = Describe("Helper", func() {
 		)
 
 		DescribeTable("#GetQualifyingVersionForNextHigher",
-			func(original []gardencorev1beta1.ExpirableVersion, currentVersion string, getNextHigherMinor bool, expectVersionToBeFound bool, expected *string, expectedNextMinorOrMajorVersion int64, expectError bool) {
+			func(original []gardencorev1beta1.ExpirableVersion, currentVersion string, getNextHigherMinor bool, expectVersionToBeFound bool, expected *string, expectedNextMinorOrMajorVersion uint64, expectError bool) {
 				var (
 					majorMinor    GetMajorOrMinor
 					filterSmaller VersionPredicate
@@ -1121,10 +1121,10 @@ var _ = Describe("Helper", func() {
 
 				// setup filter for smaller minor or smaller major
 				if getNextHigherMinor {
-					majorMinor = func(v semver.Version) int64 { return int64(v.Minor()) }
+					majorMinor = func(v semver.Version) uint64 { return v.Minor() }
 					filterSmaller = FilterEqualAndSmallerMinorVersion(*currentSemVerVersion)
 				} else {
-					majorMinor = func(v semver.Version) int64 { return int64(v.Major()) }
+					majorMinor = func(v semver.Version) uint64 { return v.Major() }
 					filterSmaller = FilterEqualAndSmallerMajorVersion(*currentSemVerVersion)
 				}
 
@@ -1165,7 +1165,7 @@ var _ = Describe("Helper", func() {
 				true, // target minor
 				true,
 				ptr.To("1.3.2"),
-				int64(3), // next minor version to be found
+				uint64(3), // next minor version to be found
 				false,
 			),
 			Entry("Get latest non-preview version for next higher major version",
@@ -1193,7 +1193,7 @@ var _ = Describe("Helper", func() {
 				false, // target major
 				true,
 				ptr.To("4.3.2"),
-				int64(4), // next major version to be found
+				uint64(4), // next major version to be found
 				false,
 			),
 			Entry("Skip next higher minor version if contains no qualifying version",
@@ -1216,7 +1216,7 @@ var _ = Describe("Helper", func() {
 				true, // target minor
 				true,
 				ptr.To("1.4.2"),
-				int64(3), // next minor version to be found
+				uint64(3), // next minor version to be found
 				false,
 			),
 			Entry("Skip next higher major version if contains no qualifying version",
@@ -1239,7 +1239,7 @@ var _ = Describe("Helper", func() {
 				false, // target major
 				true,
 				ptr.To("4.4.2"),
-				int64(3), // next major version to be found
+				uint64(3), // next major version to be found
 				false,
 			),
 			Entry("Expect no version to be found: already on highest version in major",
@@ -1262,7 +1262,7 @@ var _ = Describe("Helper", func() {
 				true, // target minor
 				false,
 				nil,
-				int64(3), // next minor version to be found
+				uint64(3), // next minor version to be found
 				false,
 			),
 			Entry("Expect no version to be found: already on overall highest version",
@@ -1275,7 +1275,7 @@ var _ = Describe("Helper", func() {
 				false, // target major
 				false,
 				nil,
-				int64(-1), // next minor version to be found
+				uint64(0), // next minor version to be found
 				false,
 			),
 			Entry("Expect no qualifying version to be found - no latest version could be found",
@@ -1284,7 +1284,7 @@ var _ = Describe("Helper", func() {
 				true, // target minor
 				false,
 				nil,
-				int64(-1),
+				uint64(0),
 				false,
 			),
 			Entry("Expect error, because contains invalid semVer",
@@ -1297,7 +1297,7 @@ var _ = Describe("Helper", func() {
 				false,
 				false,
 				nil,
-				int64(1),
+				uint64(1),
 				true,
 			),
 		)

@@ -121,7 +121,7 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 		if apierrors.IsNotFound(err) {
 			status = http.StatusUnprocessableEntity
 		}
-		return admission.Errored(int32(status), fmt.Errorf("could not retrieve configmap: %w", err))
+		return admission.Errored(int32(status), fmt.Errorf("could not retrieve configmap: %w", err)) // #nosec G115 -- `status` has two fixed values which fit into int32.
 	}
 	authenticationConfiguration, err := getAuthenticationConfiguration(authenticationConfigurationConfigMap)
 	if err != nil {

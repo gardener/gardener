@@ -1697,7 +1697,7 @@ func yaml_parser_scan_version_directive_number(parser *yaml_parser_t, start_mark
 			return yaml_parser_set_scanner_error(parser, "while scanning a %YAML directive",
 				start_mark, "found extremely long version number")
 		}
-		value = value*10 + int8(as_digit(parser.buffer, parser.buffer_pos))
+		value = value*10 + int8(as_digit(parser.buffer, parser.buffer_pos)) // #nosec G115 -- The value is validated 7 lines before.
 		skip(parser)
 		if parser.unread < 1 && !yaml_parser_update_buffer(parser, 1) {
 			return false

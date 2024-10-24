@@ -891,7 +891,7 @@ func ensureSufficientMaxWorkers(shoot *gardencorev1beta1.Shoot, reason string) [
 		if int(worker.Maximum) >= len(worker.Zones) {
 			continue
 		}
-		newMaximum := int32(len(worker.Zones))
+		newMaximum := int32(len(worker.Zones)) // #nosec G115 -- `len(worker.Zones)` cannot be higher than max int32. Zones come from shoot spec and there is a validation that there cannot be more zones than worker.Maximum which is int32.
 		reasonsForUpdate = append(reasonsForUpdate, fmt.Sprintf("Maximum of worker-pool %q upgraded from %d to %d. Reason: %s", worker.Name, worker.Maximum, newMaximum, reason))
 		shoot.Spec.Provider.Workers[i].Maximum = newMaximum
 	}

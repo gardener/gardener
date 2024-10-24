@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	ordinal     = 42
+	ordinal     = int32(42)
 	replicaName = name + "-42"
 )
 
@@ -216,11 +216,11 @@ var _ = Describe("Replica", func() {
 	)
 
 	DescribeTable("#GetOrdinal",
-		func(shoot *gardencorev1beta1.Shoot, ordinal int) {
+		func(shoot *gardencorev1beta1.Shoot, ordinal int32) {
 			replica := NewReplica(managedSeedSet, shoot, nil, nil, false)
 			Expect(replica.GetOrdinal()).To(Equal(ordinal))
 		},
-		Entry("should return -1", nil, -1),
+		Entry("should return -1", nil, int32(-1)),
 		Entry("should return the ordinal from the shoot name", shoot(nil, "", "", "", false), ordinal),
 	)
 

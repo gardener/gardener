@@ -1097,7 +1097,7 @@ func (in *File) DeepCopyInto(out *File) {
 	*out = *in
 	if in.Permissions != nil {
 		in, out := &in.Permissions, &out.Permissions
-		*out = new(int32)
+		*out = new(uint32)
 		**out = **in
 	}
 	in.Content.DeepCopyInto(&out.Content)

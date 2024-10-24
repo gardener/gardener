@@ -172,7 +172,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		file1 = extensionsv1alpha1.File{
 			Path:        "/example/file",
 			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "", Data: "file1"}},
-			Permissions: ptr.To[int32](0777),
+			Permissions: ptr.To[uint32](0777),
 		}
 		file2 = extensionsv1alpha1.File{
 			Path:    "/another/file",
@@ -181,33 +181,33 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		file3 = extensionsv1alpha1.File{
 			Path:        "/third/file",
 			Content:     extensionsv1alpha1.FileContent{ImageRef: &extensionsv1alpha1.FileContentImageRef{Image: "foo-image", FilePathInImage: "/foo-file"}},
-			Permissions: ptr.To[int32](0750),
+			Permissions: ptr.To[uint32](0750),
 		}
 		Expect(fakeFS.WriteFile(path.Join(imageMountDirectory, file3.Content.ImageRef.FilePathInImage), []byte("file3"), 0755)).To(Succeed())
 		file4 = extensionsv1alpha1.File{
 			Path:        "/unchanged/file",
 			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "", Data: "file4"}},
-			Permissions: ptr.To[int32](0750),
+			Permissions: ptr.To[uint32](0750),
 		}
 		file5 = extensionsv1alpha1.File{
 			Path:        "/changed/file",
 			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "", Data: "file5"}},
-			Permissions: ptr.To[int32](0750),
+			Permissions: ptr.To[uint32](0750),
 		}
 		file6 = extensionsv1alpha1.File{
 			Path:        "/sixth/file",
 			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "", Data: "file6"}},
-			Permissions: ptr.To[int32](0750),
+			Permissions: ptr.To[uint32](0750),
 		}
 		file7 = extensionsv1alpha1.File{
 			Path:        "/seventh/file",
 			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "", Data: "file7"}},
-			Permissions: ptr.To[int32](0750),
+			Permissions: ptr.To[uint32](0750),
 		}
 		file8 = extensionsv1alpha1.File{
 			Path:        "/opt/bin/init-containerd",
 			Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "", Data: "file8"}},
-			Permissions: ptr.To[int32](0644),
+			Permissions: ptr.To[uint32](0644),
 		}
 
 		gnaUnit = extensionsv1alpha1.Unit{
