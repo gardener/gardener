@@ -8,11 +8,14 @@ import (
 	"context"
 	_ "embed"
 
+	"golang.org/x/exp/maps"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var (
@@ -41,18 +44,21 @@ var (
 	//go:embed assets/crd-extensions.gardener.cloud_workers.yaml
 	workerCRD string
 
-	generalCRDs []string
-	shootCRDs   []string
+	generalCRDNamesToManifest map[string]string
+	shootCRDNamesToManifest   map[string]string
 )
 
 func init() {
-	generalCRDs = []string{
+	var err error
+	generalCRDs := []string{
 		backupBucketCRD,
 		dnsRecordCRD,
 		extensionCRD,
 	}
+	generalCRDNamesToManifest, err = kubernetesutils.MakeCRDNameMap(generalCRDs)
+	utilruntime.Must(err)
 
-	shootCRDs = []string{
+	shootCRDs := []string{
 		backupEntryCRD,
 		bastionCRD,
 		clusterCRD,
@@ -63,17 +69,21 @@ func init() {
 		operatingSystemConfigCRD,
 		workerCRD,
 	}
+	shootCRDNamesToManifest, err = kubernetesutils.MakeCRDNameMap(shootCRDs)
+	utilruntime.Must(err)
 }
 
 type crd struct {
+	client             client.Client
 	applier            kubernetes.Applier
 	includeGeneralCRDs bool
 	includeShootCRDs   bool
 }
 
 // NewCRD can be used to deploy extensions CRDs.
-func NewCRD(a kubernetes.Applier, includeGeneralCRDs, includeShootCRDs bool) component.DeployWaiter {
+func NewCRD(client client.Client, a kubernetes.Applier, includeGeneralCRDs, includeShootCRDs bool) component.DeployWaiter {
 	return &crd{
+		client:             client,
 		applier:            a,
 		includeGeneralCRDs: includeGeneralCRDs,
 		includeShootCRDs:   includeShootCRDs,
@@ -86,10 +96,10 @@ func (c *crd) Deploy(ctx context.Context) error {
 
 	var resources []string
 	if c.includeGeneralCRDs {
-		resources = append(resources, generalCRDs...)
+		resources = append(resources, maps.Values(generalCRDNamesToManifest)...)
 	}
 	if c.includeShootCRDs {
-		resources = append(resources, shootCRDs...)
+		resources = append(resources, maps.Values(shootCRDNamesToManifest)...)
 	}
 
 	for _, resource := range resources {
@@ -102,16 +112,16 @@ func (c *crd) Deploy(ctx context.Context) error {
 	return flow.Parallel(fns...)(ctx)
 }
 
-// Destroy does nothing
+// Destroy deletes the CRD manifests.
 func (c *crd) Destroy(ctx context.Context) error {
 	var fns []flow.TaskFn
 
 	var resources []string
 	if c.includeGeneralCRDs {
-		resources = append(resources, generalCRDs...)
+		resources = append(resources, maps.Values(generalCRDNamesToManifest)...)
 	}
 	if c.includeShootCRDs {
-		resources = append(resources, shootCRDs...)
+		resources = append(resources, maps.Values(shootCRDNamesToManifest)...)
 	}
 
 	for _, resource := range resources {
@@ -124,12 +134,19 @@ func (c *crd) Destroy(ctx context.Context) error {
 	return flow.Parallel(fns...)(ctx)
 }
 
-// Wait does nothing
-func (c *crd) Wait(_ context.Context) error {
-	return nil
+// Wait waits for the manifests to become ready.
+func (c *crd) Wait(ctx context.Context) error {
+	var names []string
+	if c.includeGeneralCRDs {
+		names = append(names, maps.Keys(generalCRDNamesToManifest)...)
+	}
+	if c.includeShootCRDs {
+		names = append(names, maps.Keys(shootCRDNamesToManifest)...)
+	}
+	return kubernetesutils.WaitUntilCRDManifestsReady(ctx, c.client, names)
 }
 
-// WaitCleanup does nothing
+// WaitCleanup does nothing.
 func (c *crd) WaitCleanup(_ context.Context) error {
 	return nil
 }
