@@ -374,7 +374,7 @@ var _ = Describe("ManagedSeed", func() {
 
 				err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
 				Expect(err).NotTo(HaveOccurred())
-
+				seedx.Spec.Ingress.Controller.Kind = v1beta1constants.IngressKindNginx
 				Expect(managedSeed.Spec.Gardenlet).To(Equal(seedmanagement.GardenletConfig{
 					Config: &gardenletv1alpha1.GardenletConfiguration{
 						TypeMeta: metav1.TypeMeta{
@@ -452,7 +452,6 @@ var _ = Describe("ManagedSeed", func() {
 					},
 				}
 				shoot.Spec.SecretBindingName = ptr.To(secretBinding.Name)
-
 				managedSeed.Spec.Gardenlet = seedmanagement.GardenletConfig{
 					Config: &gardenletv1alpha1.GardenletConfiguration{
 						TypeMeta: metav1.TypeMeta{

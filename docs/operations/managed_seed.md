@@ -35,7 +35,6 @@ metadata:
 spec:
   shoot:
     name: crazy-botany
-  gardenlet: {}
 ```
 
 For an example that uses non-default configuration, see [55-managed-seed-gardenlet.yaml](../../example/55-managedseed-gardenlet.yaml)

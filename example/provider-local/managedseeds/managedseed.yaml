@@ -19,6 +19,3 @@ spec:
               visible: false
             verticalPodAutoscaler:
               enabled: false
-          ingress:
-            controller:
-              kind: nginx

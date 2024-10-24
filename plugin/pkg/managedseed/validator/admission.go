@@ -354,7 +354,11 @@ func (v *ManagedSeed) admitSeedSpec(spec *gardencore.SeedSpec, shoot *gardencore
 
 	// Initialize and validate DNS and ingress
 	if spec.Ingress == nil {
-		spec.Ingress = &gardencore.Ingress{}
+		spec.Ingress = &gardencore.Ingress{
+			Controller: gardencore.IngressController{
+				Kind: v1beta1constants.IngressKindNginx,
+			},
+		}
 	}
 
 	if spec.DNS.Provider == nil {
