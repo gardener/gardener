@@ -185,6 +185,10 @@ var _ = Describe("Gardenlet controller test", func() {
 
 			verifyGardenletDeployment(true)
 
+			Eventually(func() error {
+				return mgrClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)
+			}).Should(Succeed())
+
 			By("Update some value")
 			patch := client.MergeFrom(gardenlet.DeepCopy())
 			gardenlet.Spec.Deployment.RevisionHistoryLimit = ptr.To[int32](1337)
