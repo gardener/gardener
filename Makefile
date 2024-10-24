@@ -395,12 +395,14 @@ operator-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	$(SKAFFOLD) delete
 
 operator-seed-up: SKAFFOLD_MODE=run
+operator-seed-up: SKAFFOLD_PROFILE=operator
 operator-seed-dev: SKAFFOLD_MODE=dev
+operator-seed-dev: SKAFFOLD_PROFILE=operator,operator-dev
 operator-seed-up operator-seed-dev: $(SKAFFOLD) $(HELM) $(KUBECTL) operator-up
 	$(SKAFFOLD) run -m garden -f=skaffold-operator-garden.yaml
 	$(SKAFFOLD) run -m garden-config -f=skaffold-operator-garden.yaml --kubeconfig=$(VIRTUAL_GARDEN_KUBECONFIG) \
 		--status-check=false --platform="linux/$(SYSTEM_ARCH)" 	# deployments don't exist in virtual-garden, see https://skaffold.dev/docs/status-check/; nodes don't exist in virtual-garden, ensure skaffold use the host architecture instead of amd64, see https://skaffold.dev/docs/workflows/handling-platforms/
-	$(SKAFFOLD) $(SKAFFOLD_MODE) -m gardenlet -p operator -f=skaffold.yaml --kubeconfig=$(VIRTUAL_GARDEN_KUBECONFIG) \
+	$(SKAFFOLD) $(SKAFFOLD_MODE) -m gardenlet -p $(SKAFFOLD_PROFILE) -f=skaffold.yaml --kubeconfig=$(VIRTUAL_GARDEN_KUBECONFIG) \
 		--status-check=false --platform="linux/$(SYSTEM_ARCH)" 	# deployments don't exist in virtual-garden, see https://skaffold.dev/docs/status-check/; nodes don't exist in virtual-garden, ensure skaffold use the host architecture instead of amd64, see https://skaffold.dev/docs/workflows/handling-platforms/
 
 operator-seed-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
