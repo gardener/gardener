@@ -116,19 +116,7 @@ func setDefaultsGardenletConfiguration(obj *gardenletv1alpha1.GardenletConfigura
 
 	// Initialize seed config
 	if obj.SeedConfig == nil {
-		obj.SeedConfig = &gardenletv1alpha1.SeedConfig{
-			SeedTemplate: gardencorev1beta1.SeedTemplate{
-				Spec: gardencorev1beta1.SeedSpec{},
-			},
-		}
-	}
-
-	if obj.SeedConfig.SeedTemplate.Spec.Ingress == nil {
-		obj.SeedConfig.SeedTemplate.Spec.Ingress = &gardencorev1beta1.Ingress{
-			Controller: gardencorev1beta1.IngressController{
-				Kind: "nginx",
-			},
-		}
+		obj.SeedConfig = &gardenletv1alpha1.SeedConfig{}
 	}
 
 	// Set seed spec defaults
