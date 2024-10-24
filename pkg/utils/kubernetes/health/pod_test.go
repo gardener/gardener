@@ -51,7 +51,7 @@ var _ = Describe("Pod", func() {
 		Entry("Foo", "Foo", BeFalse()),
 	)
 
-	DescribeTable("#IsPodCompleeted",
+	DescribeTable("#IsPodCompleted",
 		func(conditions []corev1.PodCondition, matcher types.GomegaMatcher) {
 			Expect(health.IsPodCompleted(conditions)).To(matcher)
 		},
