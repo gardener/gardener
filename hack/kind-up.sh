@@ -135,7 +135,7 @@ setup_loopback_device() {
 setup_containerd_registry_mirrors() {
   REGISTRY_HOSTNAME="garden.local.gardener.cloud"
 
-  for NODE in $(kind get nodes --name="$CLUSTER_NAME"); do
+  for NODE in $(kubectl get nodes -o jsonpath='{.items[*].metadata.name}'); do
     setup_containerd_registry_mirror $NODE "localhost:5001" "http://localhost:5001" "http://${REGISTRY_HOSTNAME}:5001"
     setup_containerd_registry_mirror $NODE "gcr.io" "https://gcr.io" "http://${REGISTRY_HOSTNAME}:5003"
     setup_containerd_registry_mirror $NODE "registry.k8s.io" "https://registry.k8s.io" "http://${REGISTRY_HOSTNAME}:5006"
@@ -347,8 +347,7 @@ else
 fi
 EOF
 
-    for node_name in $(kubectl get nodes -o name | cut -d/ -f2)
-    do
+    for node_name in $(kubectl get nodes -o jsonpath='{.items[*].metadata.name}'); do
         echo "Adjusting containerd config for kind node $node_name"
 
         # copy script to the kind's docker container and execute it
@@ -358,9 +357,9 @@ EOF
 fi
 
 # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
-kubectl get nodes -o name |\
-  cut -d/ -f2 |\
-  xargs -I {} docker exec {} sh -c "sysctl fs.inotify.max_user_instances=8192"
+for node in $(kubectl get nodes -o jsonpath='{.items[*].metadata.name}'); do
+  docker exec "$node" sh -c "sysctl fs.inotify.max_user_instances=8192"
+done
 
 authorization_webhook_config_file=$(kubectl -n kube-system get configmap kubeadm-config -o yaml | yq e '.data.ClusterConfiguration' | yq e '.apiServer.extraVolumes[0].hostPath')
 if [[ -n "$authorization_webhook_config_file" && "$authorization_webhook_config_file" != "null" ]]; then
@@ -368,9 +367,9 @@ if [[ -n "$authorization_webhook_config_file" && "$authorization_webhook_config_
     sed -e "s#value: RBAC,Node#value: RBAC,Node,Webhook\n      - name: authorization-webhook-config-file\n        value: $authorization_webhook_config_file#" | \
     kubectl apply -f -
 
-  kubectl get nodes -o name |\
-    cut -d/ -f2 |\
-    xargs -I {} docker exec {} bash -c "kubeadm upgrade node"
+  for node in $(kubectl get nodes -o jsonpath='{.items[*].metadata.name}'); do
+    docker exec "$node" bash -c "kubeadm upgrade node"
+  done
 fi
 
 if [[ "$KUBECONFIG" != "$PATH_KUBECONFIG" ]]; then
@@ -405,9 +404,9 @@ fi
 garden_cluster_ip="$(docker inspect "$garden_cluster"-control-plane | yq ".[].NetworkSettings.Networks.kind.$ip_address_field")"
 
 # Inject garden.local.gardener.cloud into all nodes
-kubectl get nodes -o name |\
-  cut -d/ -f2 |\
-  xargs -I {} docker exec {} sh -c "echo $garden_cluster_ip garden.local.gardener.cloud >> /etc/hosts"
+for node in $(kubectl get nodes -o jsonpath='{.items[*].metadata.name}'); do
+  docker exec "$node" sh -c "echo $garden_cluster_ip garden.local.gardener.cloud >> /etc/hosts"
+done
 
 # Inject garden.local.gardener.cloud into coredns config (after ready plugin, before kubernetes plugin)
 kubectl -n kube-system get configmap coredns -ojson | \
@@ -443,9 +442,9 @@ kubectl apply -k "$(dirname "$0")/../example/gardener-local/metrics-server"   --
 setup_containerd_registry_mirrors
 setup_kind_with_lpp_resize_support
 
-kubectl get nodes -l node-role.kubernetes.io/control-plane -o name |\
-  cut -d/ -f2 |\
-  xargs -I {} kubectl taint node {} node-role.kubernetes.io/control-plane:NoSchedule- || true
+for node in $(kubectl get nodes -l node-role.kubernetes.io/control-plane -o jsonpath='{.items[*].metadata.name}'); do
+  kubectl taint node "$node" node-role.kubernetes.io/control-plane:NoSchedule- || true
+done
 
 # Allow multiple shoot worker nodes with calico as shoot CNI: As we run overlay in overlay ip-in-ip needs to be allowed in the workload.
 # Unfortunately, the felix configuration is created on the fly by calico. Hence, we need to poll until kubectl wait for new resources
