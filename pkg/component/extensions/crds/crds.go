@@ -112,7 +112,7 @@ func (c *crd) Deploy(ctx context.Context) error {
 	return flow.Parallel(fns...)(ctx)
 }
 
-// Destroy does nothing
+// Destroy deletes the CRD manifests.
 func (c *crd) Destroy(ctx context.Context) error {
 	var fns []flow.TaskFn
 
@@ -134,7 +134,7 @@ func (c *crd) Destroy(ctx context.Context) error {
 	return flow.Parallel(fns...)(ctx)
 }
 
-// Wait does nothing
+// Wait waits for the manifests to become ready.
 func (c *crd) Wait(ctx context.Context) error {
 	var names []string
 	if c.includeGeneralCRDs {
@@ -146,7 +146,7 @@ func (c *crd) Wait(ctx context.Context) error {
 	return kubernetesutils.WaitUntilCRDManifestsReady(ctx, c.client, names)
 }
 
-// WaitCleanup does nothing
+// WaitCleanup does nothing.
 func (c *crd) WaitCleanup(_ context.Context) error {
 	return nil
 }

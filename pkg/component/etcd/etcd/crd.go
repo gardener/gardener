@@ -27,7 +27,7 @@ import (
 
 var (
 	//go:embed crds/templates/crd-druid.gardener.cloud_etcds.yaml
-	// CRD holds the etcd custom resource definition template
+	// CRD holds the etcd custom resource definition template.
 	CRD string
 	//go:embed crds/templates/crd-druid.gardener.cloud_etcdcopybackupstasks.yaml
 	crdEtcdCopyBackupsTasks string
