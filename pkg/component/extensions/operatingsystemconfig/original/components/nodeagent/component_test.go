@@ -56,7 +56,7 @@ var _ = Describe("Component", func() {
 
 			expectedFiles = append(expectedFiles, extensionsv1alpha1.File{
 				Path:        "/opt/bin/gardener-node-agent",
-				Permissions: ptr.To[int32](0755),
+				Permissions: ptr.To[uint32](0755),
 				Content: extensionsv1alpha1.FileContent{
 					ImageRef: &extensionsv1alpha1.FileContentImageRef{
 						Image:           "gardener-node-agent:v1",
@@ -142,7 +142,7 @@ WantedBy=multi-user.target`))
 
 			Expect(Files(config)).To(ConsistOf(extensionsv1alpha1.File{
 				Path:        "/var/lib/gardener-node-agent/config.yaml",
-				Permissions: ptr.To[int32](0600),
+				Permissions: ptr.To[uint32](0600),
 				Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiServer:
   caBundle: ` + utils.EncodeBase64(caBundle) + `
   server: ` + apiServerURL + `

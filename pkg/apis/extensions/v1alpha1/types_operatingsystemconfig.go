@@ -138,7 +138,7 @@ type File struct {
 	// Permissions describes with which permissions the file should get written to the file system.
 	// If no permissions are set, the operating system's defaults are used.
 	// +optional
-	Permissions *int32 `json:"permissions,omitempty"`
+	Permissions *uint32 `json:"permissions,omitempty"`
 	// Content describe the file's content.
 	Content FileContent `json:"content"`
 }

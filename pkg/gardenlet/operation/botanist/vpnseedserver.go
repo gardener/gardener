@@ -51,7 +51,7 @@ func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.Interface, error) {
 	}
 
 	if b.Shoot.VPNHighAvailabilityEnabled {
-		values.Replicas = b.Shoot.GetReplicas(int32(b.Shoot.VPNHighAvailabilityNumberOfSeedServers))
+		values.Replicas = b.Shoot.GetReplicas(int32(b.Shoot.VPNHighAvailabilityNumberOfSeedServers)) // #nosec G115 -- `b.Shoot.VPNHighAvailabilityNumberOfSeedServers` cannot be configured by users, it is set to `2` in the code.
 	}
 
 	return vpnseedserver.New(

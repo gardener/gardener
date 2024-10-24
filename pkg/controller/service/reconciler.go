@@ -181,7 +181,7 @@ func (r *Reconciler) remediateAllocatedNodePorts(ctx context.Context, log logr.L
 				port.NodePort == nodePortIstioIngressGatewayZone2 {
 				var (
 					min, max    = 30000, 32767
-					newNodePort = int32(rand.N(max-min) + min) // #nosec: G404 -- No cryptographic context.
+					newNodePort = int32(rand.N(max-min) + min) // #nosec: G115 G404 -- Value range limited in previous line, no cryptographic context.
 				)
 
 				log.Info("Assigning new nodePort to service which already allocates the nodePort",

@@ -141,7 +141,7 @@ var _ = Describe("Actuator", func() {
 			}
 		}
 
-		expectReplica = func(r *mockmanagedseedset.MockReplica, ordinal int, status ReplicaStatus, seedReady bool, shs gardenerutils.ShootStatus, deletable bool) {
+		expectReplica = func(r *mockmanagedseedset.MockReplica, ordinal int32, status ReplicaStatus, seedReady bool, shs gardenerutils.ShootStatus, deletable bool) {
 			r.EXPECT().GetName().Return(getReplicaName(ordinal)).AnyTimes()
 			r.EXPECT().GetFullName().Return(getReplicaFullName(ordinal)).AnyTimes()
 			r.EXPECT().GetObjectKey().Return(getReplicaObjectKey(ordinal)).AnyTimes()
@@ -381,7 +381,7 @@ var _ = Describe("Actuator", func() {
 					expectReplica(r0, 0, StatusManagedSeedRegistered, true, gardenerutils.ShootStatusHealthy, true)
 					r1 := mockmanagedseedset.NewMockReplica(ctrl)
 					rf.EXPECT().NewReplica(managedSeedSet(2, 1, "", "", nil), nil, nil, nil, false).Return(r1)
-					r1.EXPECT().CreateShoot(ctx, gc, 1).Return(nil)
+					r1.EXPECT().CreateShoot(ctx, gc, int32(1)).Return(nil)
 					r1.EXPECT().GetName().Return(getReplicaName(1))
 				},
 				status(2, 1, 2, getReplicaName(1), seedmanagementv1alpha1.ShootReconcilingReason, now, nil),
@@ -393,7 +393,7 @@ var _ = Describe("Actuator", func() {
 					expectReplica(r0, 0, StatusManagedSeedRegistered, true, gardenerutils.ShootStatusHealthy, true)
 					r1 := mockmanagedseedset.NewMockReplica(ctrl)
 					rf.EXPECT().NewReplica(managedSeedSet(2, 0, "", "", nil), nil, nil, nil, false).Return(r1)
-					r1.EXPECT().CreateShoot(ctx, gc, 1).Return(nil)
+					r1.EXPECT().CreateShoot(ctx, gc, int32(1)).Return(nil)
 					r1.EXPECT().GetName().Return(getReplicaName(1))
 				},
 				status(2, 1, 2, getReplicaName(1), seedmanagementv1alpha1.ShootReconcilingReason, now, nil),
@@ -531,14 +531,14 @@ var _ = Describe("Actuator", func() {
 	})
 })
 
-func getReplicaName(ordinal int) string {
+func getReplicaName(ordinal int32) string {
 	return fmt.Sprintf("%s-%d", name, ordinal)
 }
 
-func getReplicaFullName(ordinal int) string {
+func getReplicaFullName(ordinal int32) string {
 	return fmt.Sprintf("%s/%s", namespace, getReplicaName(ordinal))
 }
 
-func getReplicaObjectKey(ordinal int) client.ObjectKey {
+func getReplicaObjectKey(ordinal int32) client.ObjectKey {
 	return client.ObjectKey{Namespace: namespace, Name: getReplicaName(ordinal)}
 }

@@ -56,7 +56,7 @@ ExecStart=/var/lib/gardener-user/run.sh
 			Expect(files).To(ConsistOf(
 				extensionsv1alpha1.File{
 					Path:        "/var/lib/gardener-user-authorized-keys",
-					Permissions: ptr.To[int32](0644),
+					Permissions: ptr.To[uint32](0644),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",
@@ -66,7 +66,7 @@ ExecStart=/var/lib/gardener-user/run.sh
 				},
 				extensionsv1alpha1.File{
 					Path:        "/var/lib/gardener-user/run.sh",
-					Permissions: ptr.To[int32](0755),
+					Permissions: ptr.To[uint32](0755),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",

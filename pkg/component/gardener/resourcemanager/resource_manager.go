@@ -1004,7 +1004,14 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 				resourcesv1alpha1.HighAvailabilityConfigSkip: "true",
 			})
 
-			deployment.Spec.Template.Spec.TopologySpreadConstraints = kubernetesutils.GetTopologySpreadConstraints(ptr.Deref(r.values.Replicas, 0), ptr.Deref(r.values.Replicas, 0), metav1.LabelSelector{MatchLabels: r.getDeploymentTemplateLabels()}, int32(len(r.values.Zones)), nil, false)
+			deployment.Spec.Template.Spec.TopologySpreadConstraints = kubernetesutils.GetTopologySpreadConstraints(
+				ptr.Deref(r.values.Replicas, 0),
+				ptr.Deref(r.values.Replicas, 0),
+				metav1.LabelSelector{MatchLabels: r.getDeploymentTemplateLabels()},
+				int32(len(r.values.Zones)), // #nosec G115 -- `len(zones)` cannot be higher than max int32. Zones come from shoot spec and there is a validation that there cannot be more zones than worker.Maximum which is int32.
+				nil,
+				false,
+			)
 
 			// ATTENTION: THIS MUST BE THE LAST THING HAPPENING IN THIS FUNCTION TO MAKE SURE THE COMPUTED CHECKSUM IS
 			// ACCURATE!

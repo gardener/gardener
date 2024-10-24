@@ -337,7 +337,7 @@ func getReplicaCount(obj client.Object, currentOrMinReplicas *int32, failureTole
 		if err != nil {
 			return nil, err
 		}
-		replicas = ptr.To(int32(v)) // #nosec: G109 - There is a validation for `replicas` in `Deployments` and `StatefulSets`.
+		replicas = ptr.To(int32(v)) // #nosec: G109 G115 - There is a validation for `replicas` in `Deployments` and `StatefulSets` which limits their value range.
 	}
 	return replicas, nil
 }
@@ -431,7 +431,14 @@ func (h *Handler) mutateTopologySpreadConstraints(
 		enforceSpreadAcrossHosts = b
 	}
 
-	if constraints := kubernetesutils.GetTopologySpreadConstraints(replicas, maxReplicas, metav1.LabelSelector{MatchLabels: podTemplateSpec.Labels}, int32(len(zones)), failureToleranceType, enforceSpreadAcrossHosts); constraints != nil {
+	if constraints := kubernetesutils.GetTopologySpreadConstraints(
+		replicas,
+		maxReplicas,
+		metav1.LabelSelector{MatchLabels: podTemplateSpec.Labels},
+		int32(len(zones)), // #nosec G115 -- `len(zones)` cannot be higher than max int32. Zones come from shoot spec and there is a validation that there cannot be more zones than worker.Maximum which is int32.
+		failureToleranceType,
+		enforceSpreadAcrossHosts,
+	); constraints != nil {
 		// Filter existing constraints with the same topology key to prevent that we are trying to add a constraint with
 		// the same key multiple times.
 		var filteredConstraints []corev1.TopologySpreadConstraint

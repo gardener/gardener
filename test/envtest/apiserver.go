@@ -413,7 +413,7 @@ func (g *GardenerAPIServer) registerGardenerAPIs(ctx context.Context) error {
 }
 
 func (g *GardenerAPIServer) apiServiceForSchemeGroupVersion(svc *corev1.Service, gv schema.GroupVersion) *apiregistrationv1.APIService {
-	port := int32(g.SecurePort)
+	port := int32(g.SecurePort) // #nosec G115 -- Test code.
 	return &apiregistrationv1.APIService{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: apiServiceNameForSchemeGroupVersion(gv),

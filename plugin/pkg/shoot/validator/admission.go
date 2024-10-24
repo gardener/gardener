@@ -1365,20 +1365,20 @@ func defaultKubernetesVersion(constraints []gardencorev1beta1.ExpirableVersion, 
 		return nil, allErrs
 	}
 	if len(versionParts) == 2 && len(versionParts[1]) > 0 {
-		v, err := strconv.Atoi(versionParts[1])
+		v, err := strconv.ParseUint(versionParts[1], 10, 0)
 		if err != nil {
 			allErrs = append(allErrs, field.Invalid(fldPath, versionParts[1], "must be a semantic version"))
 			return nil, allErrs
 		}
-		shootVersionMinor = ptr.To(uint64(v))
+		shootVersionMinor = ptr.To(v)
 	}
 	if len(versionParts) >= 1 && len(versionParts[0]) > 0 {
-		v, err := strconv.Atoi(versionParts[0])
+		v, err := strconv.ParseUint(versionParts[0], 10, 0)
 		if err != nil {
 			allErrs = append(allErrs, field.Invalid(fldPath, versionParts[0], "must be a semantic version"))
 			return nil, allErrs
 		}
-		shootVersionMajor = ptr.To(uint64(v))
+		shootVersionMajor = ptr.To(v)
 	}
 
 	if latestVersion := findLatestVersion(constraints, shootVersionMajor, shootVersionMinor); latestVersion != nil {

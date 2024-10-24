@@ -688,7 +688,7 @@ func GetVersionForForcefulUpdateToNextHigherMinor(versions []gardencorev1beta1.E
 	predicates := []VersionPredicate{FilterDifferentMajorVersion(*currentSemVerVersion), FilterEqualAndSmallerMinorVersion(*currentSemVerVersion)}
 
 	// prefer non-expired version
-	return getVersionForMachineImageForceUpdate(versions, func(v semver.Version) int64 { return int64(v.Minor()) }, currentSemVerVersion, predicates)
+	return getVersionForMachineImageForceUpdate(versions, func(v semver.Version) uint64 { return v.Minor() }, currentSemVerVersion, predicates)
 }
 
 // GetVersionForForcefulUpdateToNextHigherMajor finds a version from a slice of expirable versions that qualifies for a major level update given a <currentVersion>.
@@ -705,7 +705,7 @@ func GetVersionForForcefulUpdateToNextHigherMajor(versions []gardencorev1beta1.E
 	predicates := []VersionPredicate{FilterEqualAndSmallerMajorVersion(*currentSemVerVersion)}
 
 	// prefer non-expired version
-	return getVersionForMachineImageForceUpdate(versions, func(v semver.Version) int64 { return int64(v.Major()) }, currentSemVerVersion, predicates)
+	return getVersionForMachineImageForceUpdate(versions, func(v semver.Version) uint64 { return v.Major() }, currentSemVerVersion, predicates)
 }
 
 // getVersionForMachineImageForceUpdate finds a version from a slice of expirable versions that qualifies for an update given a <currentVersion>.
@@ -795,12 +795,12 @@ OUTER:
 }
 
 // GetMajorOrMinor returns either the major or the minor version from a semVer version.
-type GetMajorOrMinor func(v semver.Version) int64
+type GetMajorOrMinor func(v semver.Version) uint64
 
 // GetQualifyingVersionForNextHigher returns the latest expirable version for the next higher {minor/major} (not necessarily consecutive n+1) version from a set of expirable versions.
 // A version qualifies if its classification is not preview and the optional predicate does not filter out the version.
 // If the predicate returns true, the version is not considered for the latest qualifying version.
-func GetQualifyingVersionForNextHigher(versions []gardencorev1beta1.ExpirableVersion, majorOrMinor GetMajorOrMinor, currentSemVerVersion *semver.Version, predicates ...VersionPredicate) (qualifyingVersionFound bool, qualifyingVersion *gardencorev1beta1.ExpirableVersion, nextMinorOrMajor int64, err error) {
+func GetQualifyingVersionForNextHigher(versions []gardencorev1beta1.ExpirableVersion, majorOrMinor GetMajorOrMinor, currentSemVerVersion *semver.Version, predicates ...VersionPredicate) (qualifyingVersionFound bool, qualifyingVersion *gardencorev1beta1.ExpirableVersion, nextMinorOrMajor uint64, err error) {
 	// How to find the highest version with the next higher (not necessarily consecutive n+1) minor version (if the next higher minor version has no qualifying version, skip it to avoid consecutive updates)
 	// 1) Sort the versions in ascending order
 	// 2) Loop over the sorted array until the minor version changes (select all versions for the next higher minor)
@@ -813,8 +813,9 @@ func GetQualifyingVersionForNextHigher(versions []gardencorev1beta1.ExpirableVer
 
 	var (
 		highestVersionNextHigherMinorOrMajor   *semver.Version
-		nextMajorOrMinorVersion                int64 = -1
-		expirableVersionNextHigherMinorOrMajor       = gardencorev1beta1.ExpirableVersion{}
+		nextMajorOrMinorVersion                uint64
+		isNextMajorOrMinorVersionSet           bool
+		expirableVersionNextHigherMinorOrMajor = gardencorev1beta1.ExpirableVersion{}
 	)
 
 OUTER:
@@ -826,8 +827,9 @@ OUTER:
 
 		// Determine the next higher minor/major version, even though all versions from that minor/major might be filtered (e.g, all expired)
 		// That's required so that the caller can determine if the next minor/major version has been skipped or not.
-		if majorOrMinor(*parse) > majorOrMinor(*currentSemVerVersion) && (majorOrMinor(*parse) < nextMajorOrMinorVersion || nextMajorOrMinorVersion == -1) {
+		if majorOrMinor(*parse) > majorOrMinor(*currentSemVerVersion) && (majorOrMinor(*parse) < nextMajorOrMinorVersion || !isNextMajorOrMinorVersionSet) {
 			nextMajorOrMinorVersion = majorOrMinor(*parse)
+			isNextMajorOrMinorVersionSet = true
 		}
 
 		// never update to preview versions

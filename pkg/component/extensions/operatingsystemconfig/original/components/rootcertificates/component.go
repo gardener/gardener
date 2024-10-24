@@ -70,7 +70,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		// This file contains Gardener CAs for Debian based OS
 		{
 			Path:        pathLocalSSLCerts + "/ROOTcerts.crt",
-			Permissions: ptr.To[int32](0644),
+			Permissions: ptr.To[uint32](0644),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Encoding: "b64",
@@ -81,7 +81,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		// This file contains Gardener CAs for Redhat/SUSE OS
 		{
 			Path:        "/etc/pki/trust/anchors/ROOTcerts.pem",
-			Permissions: ptr.To[int32](0644),
+			Permissions: ptr.To[uint32](0644),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Encoding: "b64",
@@ -125,7 +125,7 @@ func updateLocalCACertificatesScriptFile() (extensionsv1alpha1.File, error) {
 
 	return extensionsv1alpha1.File{
 		Path:        pathUpdateLocalCaCertificates,
-		Permissions: ptr.To[int32](0744),
+		Permissions: ptr.To[uint32](0744),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Encoding: "b64",

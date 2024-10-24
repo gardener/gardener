@@ -125,7 +125,7 @@ type Stats struct {
 // ProgressPercent retrieves the progress of a Flow execution in percent.
 func (s *Stats) ProgressPercent() int32 {
 	progress := (100 * s.Succeeded.Len()) / s.All.Len()
-	return int32(progress)
+	return int32(progress) // #nosec G115 -- s.All.Len() >= s.Succeeded.Len(), so progress is <= 100.
 }
 
 // Copy deeply copies a Stats object.

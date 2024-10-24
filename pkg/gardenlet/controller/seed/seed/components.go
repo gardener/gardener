@@ -459,7 +459,7 @@ func (r *Reconciler) newSystem(seed *gardencorev1beta1.Seed) (component.DeployWa
 
 	var replicasExcessCapacityReservation int32 = 2
 	if numberOfZones := len(seed.Spec.Provider.Zones); numberOfZones > 1 {
-		replicasExcessCapacityReservation = int32(numberOfZones)
+		replicasExcessCapacityReservation = int32(numberOfZones) // #nosec G115 -- `len(seed.Spec.Provider.Zones)` cannot be higher than max int32. Zones come from shoot spec and there is a validation that there cannot be more zones than worker.Maximum which is int32.
 	}
 
 	return seedsystem.New(

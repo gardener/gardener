@@ -60,7 +60,7 @@ ExecStart=` + InitializerScriptPath),
 		[]extensionsv1alpha1.File{
 			{
 				Path:        InitializerScriptPath,
-				Permissions: ptr.To[int32](744),
+				Permissions: ptr.To[uint32](744),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",

@@ -101,7 +101,7 @@ func (mr *MockReplicaMockRecorder) CreateManagedSeed(ctx, c any) *gomock.Call {
 }
 
 // CreateShoot mocks base method.
-func (m *MockReplica) CreateShoot(ctx context.Context, c client.Client, ordinal int) error {
+func (m *MockReplica) CreateShoot(ctx context.Context, c client.Client, ordinal int32) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateShoot", ctx, c, ordinal)
 	ret0, _ := ret[0].(error)
@@ -185,10 +185,10 @@ func (mr *MockReplicaMockRecorder) GetObjectKey() *gomock.Call {
 }
 
 // GetOrdinal mocks base method.
-func (m *MockReplica) GetOrdinal() int {
+func (m *MockReplica) GetOrdinal() int32 {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetOrdinal")
-	ret0, _ := ret[0].(int)
+	ret0, _ := ret[0].(int32)
 	return ret0
 }
 

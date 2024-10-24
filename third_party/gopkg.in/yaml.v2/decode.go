@@ -496,7 +496,7 @@ func (d *decoder) scalar(n *node, out reflect.Value) bool {
 			}
 		case uint64:
 			if resolved <= math.MaxInt64 && !out.OverflowInt(int64(resolved)) {
-				out.SetInt(int64(resolved))
+				out.SetInt(int64(resolved)) // #nosec G115 -- The value is validated in the previous line.
 				return true
 			}
 		case float64:
@@ -517,12 +517,12 @@ func (d *decoder) scalar(n *node, out reflect.Value) bool {
 		switch resolved := resolved.(type) {
 		case int:
 			if resolved >= 0 && !out.OverflowUint(uint64(resolved)) {
-				out.SetUint(uint64(resolved))
+				out.SetUint(uint64(resolved)) // #nosec G115 -- The value is validated in the previous line.
 				return true
 			}
 		case int64:
 			if resolved >= 0 && !out.OverflowUint(uint64(resolved)) {
-				out.SetUint(uint64(resolved))
+				out.SetUint(uint64(resolved)) // #nosec G115 -- The value is validated in the previous line.
 				return true
 			}
 		case uint64:

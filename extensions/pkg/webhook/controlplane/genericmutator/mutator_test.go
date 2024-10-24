@@ -579,7 +579,7 @@ func checkOperatingSystemConfig(osc *extensionsv1alpha1.OperatingSystemConfig) {
 	cloudProvider := extensionswebhook.FileWithPath(osc.Spec.Files, genericmutator.CloudProviderConfigPath)
 	ExpectWithOffset(1, cloudProvider).To(Not(BeNil()))
 	ExpectWithOffset(1, cloudProvider.Path).To(Equal(genericmutator.CloudProviderConfigPath))
-	ExpectWithOffset(1, cloudProvider.Permissions).To(PointTo(Equal(int32(0644))))
+	ExpectWithOffset(1, cloudProvider.Permissions).To(PointTo(Equal(uint32(0644))))
 	ExpectWithOffset(1, cloudProvider.Content.Inline).To(Equal(&extensionsv1alpha1.FileContentInline{Data: cloudproviderconfEncoded, Encoding: encoding}))
 }
 

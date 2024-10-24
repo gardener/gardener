@@ -11,7 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func daemonSetMaxUnavailable(daemonSet *appsv1.DaemonSet) int32 {
+func daemonSetMaxUnavailable(daemonSet *appsv1.DaemonSet) int {
 	if daemonSet.Status.DesiredNumberScheduled == 0 || daemonSet.Spec.UpdateStrategy.Type != appsv1.RollingUpdateDaemonSetStrategyType {
 		return 0
 	}
@@ -26,7 +26,7 @@ func daemonSetMaxUnavailable(daemonSet *appsv1.DaemonSet) int32 {
 		return 0
 	}
 
-	return int32(maxUnavailable)
+	return maxUnavailable
 }
 
 // CheckDaemonSet checks whether the given DaemonSet is healthy.
@@ -47,7 +47,7 @@ func CheckDaemonSet(daemonSet *appsv1.DaemonSet) error {
 
 	// Check if DaemonSet rollout is ongoing.
 	if daemonSet.Status.UpdatedNumberScheduled < daemonSet.Status.DesiredNumberScheduled {
-		if maxUnavailable := daemonSetMaxUnavailable(daemonSet); daemonSet.Status.NumberUnavailable > maxUnavailable {
+		if maxUnavailable := daemonSetMaxUnavailable(daemonSet); int(daemonSet.Status.NumberUnavailable) > maxUnavailable {
 			return fmt.Errorf("too many unavailable pods found (%d/%d, only max. %d unavailable pods allowed)", daemonSet.Status.NumberUnavailable, daemonSet.Status.CurrentNumberScheduled, maxUnavailable)
 		}
 	} else {

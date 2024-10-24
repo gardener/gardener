@@ -366,7 +366,7 @@ func calculateDefaultNodeCIDRMaskSize(shoot *ShootSpec) *int32 {
 	}
 
 	// by having approximately twice as many available IP addresses as possible Pods, Kubernetes is able to mitigate IP address reuse as Pods are added to and removed from a node.
-	nodeCidrRange := int32(32 - int(math.Ceil(math.Log2(float64(maxPods*2)))))
+	nodeCidrRange := 32 - int32(math.Ceil(math.Log2(float64(maxPods*2))))
 	return &nodeCidrRange
 }
 

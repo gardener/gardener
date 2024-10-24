@@ -74,7 +74,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 
 	sshdEnsurerFile := extensionsv1alpha1.File{
 		Path:        pathScript,
-		Permissions: ptr.To[int32](0755),
+		Permissions: ptr.To[uint32](0755),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Encoding: "b64",
