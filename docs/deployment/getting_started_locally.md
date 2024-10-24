@@ -115,7 +115,7 @@ make gardener-debug
 ```
 
 This is using skaffold debugging features. In the Gardener case, Go debugging using [Delve](https://github.com/go-delve/delve) is the most relevant use case.
-Please see the [skaffold debugging documentation](https://skaffold.dev/docs/workflows/debug/) how to setup your IDE accordingly.
+Please see the [skaffold debugging documentation](https://skaffold.dev/docs/workflows/debug/) how to set up your IDE accordingly or check the examples below ([GoLand](#debugging-in-goland), [VS Code](#debugging-in-vs-code)).
 
 `SKAFFOLD_MODULE` environment variable is working the same way as described for [Developing Gardener](#developing-gardener). However, skaffold is not watching for changes when debugging,
 because it would like to avoid interrupting your debugging session.
@@ -141,6 +141,31 @@ This means that when a goroutine of gardenlet (or any other gardener-core compon
 Thus, leader election, health and readiness checks for `gardener-admission-controller`, `gardener-apiserver`, `gardener-controller-manager`, `gardener-scheduler`,`gardenlet` and `operator` are disabled when debugging.
 
 If you have similar problems with other components which are not deployed by skaffold, you could temporarily turn off the leader election and disable liveness and readiness probes there too.
+
+### Debugging in GoLand
+
+1. Edit your **Run/Debug Configurations**.
+2. Add a new **Go Remote** configuration.
+3. Set the port to `56268` (or any increment of it when debugging multiple components).
+4. _Recommended:_ Change the behavior of **On disconnect** to **Leave it running**.
+
+### Debugging in VS Code
+
+1. Create or edit your `.vscode/launch.json` configuration.
+2. Add the following configuration:
+
+```json5
+{
+  "name": "go remote",
+  "type": "go",
+  "request": "attach",
+  "mode": "remote",
+  "port": 56268, // or any increment of it when debugging multiple components
+  "host": "127.0.0.1"
+}
+```
+
+Since the [ko](https://skaffold.dev/docs/builders/builder-types/ko/) builder is used in Skaffold to build the images it's not necessary to specify the `cwd` and `remotePath` options as they match the workspace folder ([ref](https://skaffold.dev/docs/workflows/debug/#skaffold-debug-using-the-vs-code-go-extension)).
 
 ## Creating a `Shoot` Cluster
 
