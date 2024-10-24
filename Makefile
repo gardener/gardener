@@ -258,7 +258,7 @@ test-e2e-local-ha-single-zone test-e2e-local-migration-ha-single-zone ci-e2e-kin
 kind2-ha-single-zone-up kind2-ha-single-zone-down gardenlet-kind2-ha-single-zone-up gardenlet-kind2-ha-single-zone-dev gardenlet-kind2-ha-single-zone-debug gardenlet-kind2-ha-single-zone-down: export KUBECONFIG = $(GARDENER_LOCAL2_HA_SINGLE_ZONE_KUBECONFIG)
 kind-ha-multi-zone-up kind-ha-multi-zone-down gardener-ha-multi-zone-up: export KUBECONFIG = $(GARDENER_LOCAL_HA_MULTI_ZONE_KUBECONFIG)
 test-e2e-local-ha-multi-zone ci-e2e-kind-ha-multi-zone ci-e2e-kind-ha-multi-zone-upgrade: export KUBECONFIG = $(GARDENER_LOCAL_HA_MULTI_ZONE_KUBECONFIG)
-kind-operator-up kind-operator-down operator%up operator-dev operator-debug operator%down test-e2e-local-operator ci-e2e-kind-operator ci-e2e-kind-operator-seed: export KUBECONFIG = $(GARDENER_LOCAL_OPERATOR_KUBECONFIG)
+kind-operator-up kind-operator-down operator%up operator-dev operator-debug operator%down operator-seed-dev test-e2e-local-operator ci-e2e-kind-operator ci-e2e-kind-operator-seed: export KUBECONFIG = $(GARDENER_LOCAL_OPERATOR_KUBECONFIG)
 operator-seed-% test-e2e-local-operator-seed: export VIRTUAL_GARDEN_KUBECONFIG = $(REPO_ROOT)/example/operator/virtual-garden/kubeconfig
 test-e2e-local-operator-seed: export KUBECONFIG = $(VIRTUAL_GARDEN_KUBECONFIG)
 # CLUSTER_NAME
@@ -323,19 +323,19 @@ kind-operator-down: $(KIND)
 
 # speed-up skaffold deployments by building all images concurrently
 export SKAFFOLD_BUILD_CONCURRENCY = 0
-gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator%up operator-dev operator-debug: export SKAFFOLD_DEFAULT_REPO = garden.local.gardener.cloud:5001
-gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator%up operator-dev operator-debug: export SKAFFOLD_PUSH = true
-gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator%up operator-dev operator-debug: export SOURCE_DATE_EPOCH = $(shell date -d $(BUILD_DATE) +%s)
-gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator%up operator-dev operator-debug: export GARDENER_VERSION = $(VERSION)
+gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator%up operator-dev operator-debug operator-seed-dev: export SKAFFOLD_DEFAULT_REPO = garden.local.gardener.cloud:5001
+gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator%up operator-dev operator-debug operator-seed-dev: export SKAFFOLD_PUSH = true
+gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator%up operator-dev operator-debug operator-seed-dev: export SOURCE_DATE_EPOCH = $(shell date -d $(BUILD_DATE) +%s)
+gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator%up operator-dev operator-debug operator-seed-dev: export GARDENER_VERSION = $(VERSION)
 # use static label for skaffold to prevent rolling all gardener components on every `skaffold` invocation
 gardener%up gardener%dev gardener%debug gardener%down gardenlet%up gardenlet%dev gardenlet%debug gardenlet%down: export SKAFFOLD_LABEL = skaffold.dev/run-id=gardener-local
 # set ldflags for skaffold
-gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator%up operator-dev operator-debug: export LD_FLAGS = $(shell $(REPO_ROOT)/hack/get-build-ld-flags.sh k8s.io/component-base $(REPO_ROOT)/VERSION Gardener $(BUILD_DATE))
+gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator%up operator-dev operator-debug operator-seed-dev: export LD_FLAGS = $(shell $(REPO_ROOT)/hack/get-build-ld-flags.sh k8s.io/component-base $(REPO_ROOT)/VERSION Gardener $(BUILD_DATE))
 # skaffold dev and debug clean up deployed modules by default, disable this
-gardener%dev gardener%debug gardenlet%dev gardenlet%debug operator-dev operator-debug: export SKAFFOLD_CLEANUP = false
+gardener%dev gardener%debug gardenlet%dev gardenlet%debug operator-dev operator-debug operator-seed-dev: export SKAFFOLD_CLEANUP = false
 # skaffold dev triggers new builds and deployments immediately on file changes by default,
 # this is too heavy in a large project like gardener, so trigger new builds and deployments manually instead.
-gardener%dev gardenlet%dev operator-dev: export SKAFFOLD_TRIGGER = manual
+gardener%dev gardenlet%dev operator-dev operator-seed-dev: export SKAFFOLD_TRIGGER = manual
 # Artifacts might be already built when you decide to start debugging.
 # However, these artifacts do not include the gcflags which `skaffold debug` sets automatically, so delve would not work.
 # Disabling the skaffold cache for debugging ensures that you run artifacts with gcflags required for debugging.
@@ -394,11 +394,15 @@ operator-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	$(KUBECTL) delete garden --all --ignore-not-found --wait --timeout 5m
 	$(SKAFFOLD) delete
 
-operator-seed-up: $(SKAFFOLD) $(HELM) $(KUBECTL) operator-up
+operator-seed-up: SKAFFOLD_MODE=run
+operator-seed-up: SKAFFOLD_PROFILE=operator
+operator-seed-dev: SKAFFOLD_MODE=dev
+operator-seed-dev: SKAFFOLD_PROFILE=operator,operator-dev
+operator-seed-up operator-seed-dev: $(SKAFFOLD) $(HELM) $(KUBECTL) operator-up
 	$(SKAFFOLD) run -m garden -f=skaffold-operator-garden.yaml
 	$(SKAFFOLD) run -m garden-config -f=skaffold-operator-garden.yaml --kubeconfig=$(VIRTUAL_GARDEN_KUBECONFIG) \
 		--status-check=false --platform="linux/$(SYSTEM_ARCH)" 	# deployments don't exist in virtual-garden, see https://skaffold.dev/docs/status-check/; nodes don't exist in virtual-garden, ensure skaffold use the host architecture instead of amd64, see https://skaffold.dev/docs/workflows/handling-platforms/
-	$(SKAFFOLD) run -m gardenlet -p operator -f=skaffold.yaml --kubeconfig=$(VIRTUAL_GARDEN_KUBECONFIG) \
+	$(SKAFFOLD) $(SKAFFOLD_MODE) -m gardenlet -p $(SKAFFOLD_PROFILE) -f=skaffold.yaml --kubeconfig=$(VIRTUAL_GARDEN_KUBECONFIG) \
 		--status-check=false --platform="linux/$(SYSTEM_ARCH)" 	# deployments don't exist in virtual-garden, see https://skaffold.dev/docs/status-check/; nodes don't exist in virtual-garden, ensure skaffold use the host architecture instead of amd64, see https://skaffold.dev/docs/workflows/handling-platforms/
 
 operator-seed-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
