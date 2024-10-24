@@ -18,6 +18,7 @@ fi
 echo "> E2E Tests"
 
 source "$(dirname "$0")/test-e2e-local.env"
+source $(dirname "${0}")/ci-common.sh
 
 ginkgo_flags=
 
@@ -39,6 +40,8 @@ local_address_operator="172.18.255.3"
 if [[ "${IPFAMILY:-}" == "ipv6" ]]; then
   local_address_operator="::3"
 fi
+
+ensure_glgc_resolves_to_localhost
 
 # If we are running the gardener-operator tests then we have to make the virtual garden domains accessible.
 if [[ "$TYPE" == "operator" ]] || [[ "$TYPE" == "operator-seed" ]]; then

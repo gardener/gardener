@@ -14,6 +14,8 @@ VERSION="$(cat VERSION)"
 CLUSTER_NAME=""
 SEED_NAME=""
 
+ensure_glgc_resolves_to_localhost
+
 # copy_kubeconfig_from_kubeconfig_env_var copies the kubeconfig to apporiate location based on kind setup
 function copy_kubeconfig_from_kubeconfig_env_var() {
   case "$SHOOT_FAILURE_TOLERANCE_TYPE" in

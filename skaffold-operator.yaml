@@ -3,6 +3,8 @@ kind: Config
 metadata:
   name: gardener-operator
 build:
+  insecureRegistries:
+    - garden.local.gardener.cloud:5001
   tagPolicy:
     customTemplate:
       template: "{{.version}}-{{.sha}}"
@@ -967,6 +969,8 @@ kind: Config
 metadata:
   name: provider-local
 build:
+  insecureRegistries:
+    - garden.local.gardener.cloud:5001
   tagPolicy:
     customTemplate:
       template: "{{.version}}-{{.sha}}"

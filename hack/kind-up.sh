@@ -53,6 +53,27 @@ parse_flags() {
   done
 }
 
+check_local_dns_records() {
+  local glgc_ip_address
+  glgc_ip_address=""
+
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    # Suppress exit code using "|| true"
+    glgc_ip_address=$(dscacheutil -q host -a name garden.local.gardener.cloud | grep "ip_address" | head -n 1| cut -d' ' -f2 || true)
+  elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    # Suppress exit code using "|| true"
+    glgc_ip_address="$(getent ahosts garden.local.gardener.cloud | cut -d' ' -f1 || true)"
+  else
+    echo "Warning: Unknown OS. Make sure garden.local.gardener.cloud resolves to 127.0.0.1"
+    return 0
+  fi
+    
+  if ! echo "$glgc_ip_address" | grep -q "127.0.0.1" ; then
+      echo "Error: garden.local.gardener.cloud does not resolve to 127.0.0.1. Please add a line for it in /etc/hosts"
+      exit 1
+  fi
+}
+
 # setup_kind_network is similar to kind's network creation logic, ref https://github.com/kubernetes-sigs/kind/blob/23d2ac0e9c41028fa252dd1340411d70d46e2fd4/pkg/cluster/internal/providers/docker/network.go#L50
 # In addition to kind's logic, we ensure stable CIDRs that we can rely on in our local setup manifests and code.
 setup_kind_network() {
@@ -252,6 +273,7 @@ check_shell_dependencies() {
 }
 
 check_shell_dependencies
+check_local_dns_records
 
 parse_flags "$@"
 
