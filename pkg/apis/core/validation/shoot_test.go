@@ -2653,7 +2653,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 					Context("IPv6", func() {
 						BeforeEach(func() {
-							DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.IPv6SingleStack, true))
 							shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv6}
 
 							// /64 CIDR can host a lot of pod IPs (prefix is small enough for the largest maxPods setting)
@@ -3543,7 +3542,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			Context("IPv6", func() {
 				BeforeEach(func() {
-					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.IPv6SingleStack, true))
 					shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv6}
 				})
 
