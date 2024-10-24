@@ -9,6 +9,11 @@ Please always make sure that you use the Helm chart version that matches the Gar
 
 ## Deploying the Gardener Control Plane (API Server, Admission Controller, Controller Manager, Scheduler)
 
+In order to deploy the control plane components, please first deploy [`gardener-operator`](../concepts/operator.md#deployment) and create a [`Garden` resource](../concepts/operator.md#garden-resources).
+
+> [!CAUTION]
+> Below approach is deprecated and will be removed after v1.135 of Gardener has been released (around beginning of 2026).
+
 The [configuration values](../../charts/gardener/controlplane/values.yaml) depict the various options to configure the different components.
 Please consult [Gardener Configuration and Usage](../operations/configuration.md) for component specific configurations and [Authentication of Gardener Control Plane Components Against the Garden Cluster](./authentication_gardener_control_plane.md) for authentication related specifics.
 
