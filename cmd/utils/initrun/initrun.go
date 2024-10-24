@@ -2,7 +2,11 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package utils
+// This file has been deliberately moved into its own package since it imports k8s.io/component-base/version/verflag
+// which automatically registers the `--version` flag as soon as the packages is (transitively) imported.
+// In order to prevent this from happening accidentally, it's safer to keep it in its own package.
+
+package initrun
 
 import (
 	"fmt"

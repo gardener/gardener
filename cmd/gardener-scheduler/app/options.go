@@ -13,7 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
-	"github.com/gardener/gardener/cmd/utils"
+	"github.com/gardener/gardener/cmd/utils/initrun"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
 	schedulerv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
@@ -37,7 +37,7 @@ type options struct {
 	config     *config.SchedulerConfiguration
 }
 
-var _ utils.Options = &options{}
+var _ initrun.Options = &options{}
 
 func (o *options) addFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.configFile, "config", o.configFile, "Path to configuration file.")

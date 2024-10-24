@@ -23,7 +23,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	controllerwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	"github.com/gardener/gardener/cmd/utils"
+	"github.com/gardener/gardener/cmd/utils/initrun"
 	"github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -43,7 +43,7 @@ func NewCommand() *cobra.Command {
 		Short: "Launch the " + Name,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			log, err := utils.InitRun(cmd, opts, Name)
+			log, err := initrun.InitRun(cmd, opts, Name)
 			if err != nil {
 				return err
 			}
