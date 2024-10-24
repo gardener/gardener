@@ -44,9 +44,11 @@ kubectl --kubeconfig "$PATH_KIND_KUBECONFIG" delete ns \
   seed-local \
   --ignore-not-found
 
-# delete provider-local extension
-kubectl --kubeconfig "$PATH_KIND_KUBECONFIG" delete extensions.operator.gardener.cloud provider-local
+# delete provider-local extension (no wait, as it is required for garden resources)
+kubectl --kubeconfig "$PATH_KIND_KUBECONFIG" delete extensions.operator.gardener.cloud provider-local --wait=false
 # cleanup garden
 kubectl --kubeconfig "$PATH_KIND_KUBECONFIG" annotate garden local confirmation.gardener.cloud/deletion=true
 skaffold -f=skaffold-operator-garden.yaml --kubeconfig "$PATH_KIND_KUBECONFIG" delete -m garden
 kubectl --kubeconfig "$PATH_KIND_KUBECONFIG" delete secrets -n garden virtual-garden-etcd-main-backup-local
+# check if provider-local extension is deleted
+kubectl --kubeconfig "$PATH_KIND_KUBECONFIG" delete extensions.operator.gardener.cloud provider-local --ignore-not-found
