@@ -121,6 +121,13 @@ var _ = Describe("CoreDNS", func() {
 					CoreDNS: coreDNS,
 				},
 			}
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Networking: &gardencorev1beta1.Networking{
+						IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
+					},
+				},
+			})
 			botanist.Shoot.Networks = &shootpkg.Networks{
 				CoreDNS: []net.IP{net.ParseIP("18.19.20.21"), net.ParseIP("2001:db8::1")},
 				Pods:    []net.IPNet{{IP: net.ParseIP("22.23.24.25")}, {IP: net.ParseIP("2001:db8::2")}},
@@ -136,6 +143,7 @@ var _ = Describe("CoreDNS", func() {
 			kubernetesClient.EXPECT().Client().Return(c)
 
 			coreDNS.EXPECT().SetPodAnnotations(nil)
+			coreDNS.EXPECT().SetIPFamilies([]gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4})
 			coreDNS.EXPECT().Deploy(ctx).Return(fakeErr)
 
 			Expect(botanist.DeployCoreDNS(ctx)).To(MatchError(fakeErr))
@@ -145,6 +153,7 @@ var _ = Describe("CoreDNS", func() {
 			kubernetesClient.EXPECT().Client().Return(c)
 
 			coreDNS.EXPECT().SetPodAnnotations(nil)
+			coreDNS.EXPECT().SetIPFamilies([]gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4})
 			coreDNS.EXPECT().Deploy(ctx)
 
 			Expect(botanist.DeployCoreDNS(ctx)).To(Succeed())
@@ -161,6 +170,7 @@ var _ = Describe("CoreDNS", func() {
 			botanist.Shoot.SetInfo(shoot)
 
 			coreDNS.EXPECT().SetPodAnnotations(map[string]string{"gardener.cloud/restarted-at": nowFunc().Format(time.RFC3339)})
+			coreDNS.EXPECT().SetIPFamilies([]gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4})
 			coreDNS.EXPECT().Deploy(ctx)
 
 			Expect(botanist.DeployCoreDNS(ctx)).To(Succeed())
@@ -185,6 +195,25 @@ var _ = Describe("CoreDNS", func() {
 			})).To(Succeed())
 
 			coreDNS.EXPECT().SetPodAnnotations(annotations)
+			coreDNS.EXPECT().SetIPFamilies([]gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4})
+			coreDNS.EXPECT().Deploy(ctx)
+
+			Expect(botanist.DeployCoreDNS(ctx)).To(Succeed())
+		})
+
+		It("should successfully deploy with dual-stack enabled", func() {
+
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Networking: &gardencorev1beta1.Networking{
+						IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4, gardencorev1beta1.IPFamilyIPv6},
+					},
+				},
+			})
+			kubernetesClient.EXPECT().Client().Return(c)
+
+			coreDNS.EXPECT().SetPodAnnotations(nil)
+			coreDNS.EXPECT().SetIPFamilies([]gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4, gardencorev1beta1.IPFamilyIPv6})
 			coreDNS.EXPECT().Deploy(ctx)
 
 			Expect(botanist.DeployCoreDNS(ctx)).To(Succeed())

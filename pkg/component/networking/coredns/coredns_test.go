@@ -18,6 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -177,7 +178,8 @@ metadata:
   name: coredns-custom
   namespace: kube-system
 `
-		serviceYAML = `apiVersion: v1
+		serviceYAML = func(ipfp string) string {
+			out := `apiVersion: v1
 kind: Service
 metadata:
   creationTimestamp: null
@@ -192,6 +194,7 @@ spec:
   clusterIPs:
   - ` + clusterIPs[0].String() + `
   - ` + clusterIPs[1].String() + `
+  ipFamilyPolicy: ` + ipfp + `
   ports:
   - name: dns
     port: 53
@@ -209,6 +212,8 @@ spec:
 status:
   loadBalancer: {}
 `
+			return out
+		}
 		networkPolicyYAML = `apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -743,11 +748,11 @@ status: {}
 			vpaEnabled = false
 			commonSuffixes = []string{}
 			k8sGreaterEquals126 = false
+			values.IPFamilies = []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4}
 		})
 
 		JustBeforeEach(func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
-
 			component = New(c, namespace, values)
 			Expect(component.Deploy(ctx)).To(Succeed())
 
@@ -796,7 +801,7 @@ status: {}
 				clusterRoleBindingYAML,
 				configMapYAML(commonSuffixes),
 				configMapCustomYAML,
-				serviceYAML,
+				serviceYAML(ipFamilyPolicy(values.IPFamilies)),
 				networkPolicyYAML,
 			))
 
@@ -931,6 +936,18 @@ status: {}
 				})
 			})
 		})
+
+		Context("with dual-stack", func() {
+			BeforeEach(func() {
+				values.IPFamilies = []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4, gardencorev1beta1.IPFamilyIPv6}
+			})
+
+			Context("w/o apiserver host, w/o pod annotations", func() {
+				It("should successfully deploy all resources", func() {
+					Expect(manifests).To(ContainElement(serviceYAML(ipFamilyPolicy(values.IPFamilies))))
+				})
+			})
+		})
 	})
 
 	Describe("#Destroy", func() {
@@ -1045,3 +1062,11 @@ status: {}
 		})
 	})
 })
+
+func ipFamilyPolicy(ipfamilies []gardencorev1beta1.IPFamily) string {
+	ipFamiliesSet := sets.New[gardencorev1beta1.IPFamily](ipfamilies...)
+	if ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv4) && ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv6) {
+		return string(corev1.IPFamilyPolicyPreferDualStack)
+	}
+	return string(corev1.IPFamilyPolicySingleStack)
+}

@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/sets"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -71,6 +72,7 @@ type Interface interface {
 	SetNodeNetworkCIDRs([]net.IPNet)
 	SetPodNetworkCIDRs([]net.IPNet)
 	SetClusterIPs([]net.IP)
+	SetIPFamilies([]gardencorev1beta1.IPFamily)
 }
 
 // Values is a set of configuration values for the coredns component.
@@ -99,6 +101,8 @@ type Values struct {
 	WantsVerticalPodAutoscaler bool
 	// SearchPathRewriteCommonSuffixes contains common suffixes to be rewritten when SearchPathRewritesEnabled is set.
 	SearchPathRewriteCommonSuffixes []string
+	// IPFamilies specifies the IP protocol versions to use for core dns.
+	IPFamilies []gardencorev1beta1.IPFamily
 }
 
 // New creates a new instance of DeployWaiter for coredns.
@@ -327,6 +331,8 @@ import custom/*.server
 			},
 		}
 
+		ipFamilyPolicy = getIPFamilyPolicy(c.values.IPFamilies)
+
 		service = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      serviceName,
@@ -359,6 +365,7 @@ import custom/*.server
 						TargetPort: intstr.FromInt32(portMetrics),
 					},
 				},
+				IPFamilyPolicy: &ipFamilyPolicy,
 			},
 		}
 
@@ -803,6 +810,10 @@ func (c *coreDNS) SetClusterIPs(ips []net.IP) {
 	c.values.ClusterIPs = ips
 }
 
+func (c *coreDNS) SetIPFamilies(ipfamilies []gardencorev1beta1.IPFamily) {
+	c.values.IPFamilies = ipfamilies
+}
+
 func (c *coreDNS) emptyScrapeConfig() *monitoringv1alpha1.ScrapeConfig {
 	return &monitoringv1alpha1.ScrapeConfig{ObjectMeta: monitoringutils.ConfigObjectMeta("coredns", c.namespace, shoot.Label)}
 }
@@ -845,4 +856,12 @@ func getSearchPathRewrites(clusterDomain string, commonSuffixes []string) string
     answer name (^(?:[^\.]+\.)+)svc\.` + quotedClusterDomain + ` {1}svc.` + clusterDomain + `.svc.` + clusterDomain + `
     answer value (^(?:[^\.]+\.)+)svc\.` + quotedClusterDomain + ` {1}svc.` + clusterDomain + `.svc.` + clusterDomain + `
   }` + suffixRewrites
+}
+
+func getIPFamilyPolicy(ipFamilies []gardencorev1beta1.IPFamily) corev1.IPFamilyPolicy {
+	ipFamiliesSet := sets.New[gardencorev1beta1.IPFamily](ipFamilies...)
+	if ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv4) && ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv6) {
+		return corev1.IPFamilyPolicyPreferDualStack
+	}
+	return corev1.IPFamilyPolicySingleStack
 }

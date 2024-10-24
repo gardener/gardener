@@ -67,6 +67,7 @@ func (b *Botanist) DeployCoreDNS(ctx context.Context) error {
 	b.Shoot.Components.SystemComponents.CoreDNS.SetPodNetworkCIDRs(b.Shoot.Networks.Pods)
 	b.Shoot.Components.SystemComponents.CoreDNS.SetClusterIPs(b.Shoot.Networks.CoreDNS)
 	b.Shoot.Components.SystemComponents.CoreDNS.SetPodAnnotations(restartedAtAnnotations)
+	b.Shoot.Components.SystemComponents.CoreDNS.SetIPFamilies(b.Shoot.GetInfo().Spec.Networking.IPFamilies)
 
 	return b.Shoot.Components.SystemComponents.CoreDNS.Deploy(ctx)
 }
