@@ -37,9 +37,9 @@ Likewise, when the `Shoot` or `Garden` is deleted, `gardenlet` or `gardener-oper
 
 ## Backup
 
-If `Seed`s specify backups for etcd ([example](../../example/50-seed.yaml)), then Gardener and the respective [provider extensions](../extensions/overview.md) are responsible for creating a bucket on the cloud provider's side (modelled through a [BackupBucket resource](../extensions/backupbucket.md)).
+If `Seed`s specify backups for etcd ([example](../../example/50-seed.yaml)), then Gardener and the respective [provider extensions](../extensions/overview.md) are responsible for creating a bucket on the cloud provider's side (modelled through a [BackupBucket resource](../extensions/resources/backupbucket.md)).
 The bucket stores backups of `Shoot`s scheduled on that `Seed`.
-Furthermore, Gardener creates a [BackupEntry](../extensions/backupentry.md), which subdivides the bucket and thus makes it possible to store backups of multiple shoot clusters.
+Furthermore, Gardener creates a [BackupEntry](../extensions/resources/backupentry.md), which subdivides the bucket and thus makes it possible to store backups of multiple shoot clusters.
 
 How long backups are stored in the bucket after a shoot has been deleted depends on the configured _retention period_ in the `Seed` resource.
 Please see this [example configuration](https://github.com/gardener/gardener/blob/849cd857d0d20e5dde26b9740ca2814603a56dfd/example/20-componentconfig-gardenlet.yaml#L20) for more information.

@@ -208,7 +208,7 @@ The gardenlet consists out of several controllers which are now described in mor
 The `BackupBucket` controller reconciles those `core.gardener.cloud/v1beta1.BackupBucket` resources whose `.spec.seedName` value is equal to the name of the `Seed` the respective `gardenlet` is responsible for.
 A `core.gardener.cloud/v1beta1.BackupBucket` resource is created by the `Seed` controller if `.spec.backup` is defined in the `Seed`.
 
-The controller adds finalizers to the `BackupBucket` and the secret mentioned in the `.spec.secretRef` of the `BackupBucket`. The controller also copies this secret to the seed cluster. Additionally, it creates an `extensions.gardener.cloud/v1alpha1.BackupBucket` resource (non-namespaced) in the seed cluster and waits until the responsible extension controller reconciles it (see [Contract: BackupBucket Resource](../extensions/backupbucket.md) for more details).
+The controller adds finalizers to the `BackupBucket` and the secret mentioned in the `.spec.secretRef` of the `BackupBucket`. The controller also copies this secret to the seed cluster. Additionally, it creates an `extensions.gardener.cloud/v1alpha1.BackupBucket` resource (non-namespaced) in the seed cluster and waits until the responsible extension controller reconciles it (see [Contract: BackupBucket Resource](../extensions/resources/backupbucket.md) for more details).
 The status from the reconciliation is reported in the `.status.lastOperation` field. Once the extension resource is ready and the `.status.generatedSecretRef` is set by the extension controller, the `gardenlet` copies the referenced secret to the `garden` namespace in the garden cluster. An owner reference to the `core.gardener.cloud/v1beta1.BackupBucket` is added to this secret.
 
 If the `core.gardener.cloud/v1beta1.BackupBucket` is deleted, the controller deletes the generated secret in the garden cluster and the `extensions.gardener.cloud/v1alpha1.BackupBucket` resource in the seed cluster and it waits for the respective extension controller to remove its finalizers from the `extensions.gardener.cloud/v1alpha1.BackupBucket`. Then it deletes the secret in the seed cluster and finally removes the finalizers from the `core.gardener.cloud/v1beta1.BackupBucket` and the referred secret.
@@ -218,7 +218,7 @@ If the `core.gardener.cloud/v1beta1.BackupBucket` is deleted, the controller del
 The `BackupEntry` controller reconciles those `core.gardener.cloud/v1beta1.BackupEntry` resources whose `.spec.seedName` value is equal to the name of a `Seed` the respective gardenlet is responsible for.
 Those resources are created by the `Shoot` controller (only if backup is enabled for the respective `Seed`) and there is exactly one `BackupEntry` per `Shoot`.
 
-The controller creates an `extensions.gardener.cloud/v1alpha1.BackupEntry` resource (non-namespaced) in the seed cluster and waits until the responsible extension controller reconciled it (see [Contract: BackupEntry Resource](../extensions/backupentry.md) for more details).
+The controller creates an `extensions.gardener.cloud/v1alpha1.BackupEntry` resource (non-namespaced) in the seed cluster and waits until the responsible extension controller reconciled it (see [Contract: BackupEntry Resource](../extensions/resources/backupentry.md) for more details).
 The status is populated in the `.status.lastOperation` field.
 
 The `core.gardener.cloud/v1beta1.BackupEntry` resource has an owner reference pointing to the corresponding `Shoot`.
@@ -244,7 +244,7 @@ In case a `BackupEntry` is scheduled for future deletion but you want to delete 
 
 The `Bastion` controller reconciles those `operations.gardener.cloud/v1alpha1.Bastion` resources whose `.spec.seedName` value is equal to the name of a `Seed` the respective gardenlet is responsible for.
 
-The controller creates an `extensions.gardener.cloud/v1alpha1.Bastion` resource in the seed cluster in the shoot namespace with the same name as `operations.gardener.cloud/v1alpha1.Bastion`. Then it waits until the responsible extension controller has reconciled it (see [Contract: Bastion Resource](../extensions/bastion.md) for more details). The status is populated in the `.status.conditions` and `.status.ingress` fields.
+The controller creates an `extensions.gardener.cloud/v1alpha1.Bastion` resource in the seed cluster in the shoot namespace with the same name as `operations.gardener.cloud/v1alpha1.Bastion`. Then it waits until the responsible extension controller has reconciled it (see [Contract: Bastion Resource](../extensions/resources/bastion.md) for more details). The status is populated in the `.status.conditions` and `.status.ingress` fields.
 
 During the deletion of `operations.gardener.cloud/v1alpha1.Bastion` resources, the controller first sets the `Ready` condition to `False` and then deletes the `extensions.gardener.cloud/v1alpha1.Bastion` resource in the seed cluster.
 Once this resource is gone, the finalizer of the `operations.gardener.cloud/v1alpha1.Bastion` resource is released, so it finally disappears from the system.

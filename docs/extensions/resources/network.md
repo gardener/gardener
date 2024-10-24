@@ -1,4 +1,4 @@
-# Gardener Network Extension
+# Contract: `Network` Resource
 
 Gardener is an open-source project that provides a nested user model. Basically, there are two types of services provided by Gardener to its users:
 
@@ -6,9 +6,9 @@ Gardener is an open-source project that provides a nested user model. Basically,
 - Hosted: operators utilize Gardener to provide their own managed version of Kubernetes (Cluster-Provisioner-as-a-service)
 
 Whether a user is an operator or an end-user, it makes sense to provide choice. For example, for an end-user it might make sense to 
-choose a network-plugin that would support enforcing network policies (some plugins does not come with network-policy support by default). 
-For operators however, choice only matters for delegation purposes i.e., when providing an own managed-service, it becomes important to also provide choice over which network-plugins to use.
- 
+choose a network-plugin that would support enforcing network policies (some plugins does not come with network-policy support by default).
+For operators however, choice only matters for delegation purposes, i.e., when providing an own managed-service, it becomes important to also provide choice over which network-plugins to use.
+
 Furthermore, Gardener provisions clusters on different cloud-providers with different networking requirements. For example, Azure does not support Calico overlay networking with IP in IP [1], this leads to the introduction of manual exceptions in static add-on charts which is error prone and can lead to failures during upgrades.
 
 Finally, every provider is different, and thus the network always needs to adapt to the infrastructure needs to provide better performance. Consistency does not necessarily lie in the implementation but in the interface.
@@ -83,13 +83,14 @@ For additional reference, please have a look at the [networking-calico](https://
 
 ## Supporting `kube-proxy`-less Service Routing
 
-Some networking extensions support service routing without the `kube-proxy` component. This is why Gardener supports disabling of `kube-proxy` for service routing by setting `.spec.kubernetes.kubeproxy.enabled` to `false` in the `Shoot` specification. The implicit contract of the flag is: 
+Some networking extensions support service routing without the `kube-proxy` component. This is why Gardener supports disabling of `kube-proxy` for service routing by setting `.spec.kubernetes.kubeproxy.enabled` to `false` in the `Shoot` specification. The implicit contract of the flag is:
 
 *If `kube-proxy` is disabled, then the networking extension is responsible for the service routing.*
 
 The networking extensions need to handle this twofold:
+
 1. During the reconciliation of the networking resources, the extension needs to check whether `kube-proxy` takes care of the service routing or the networking extension itself should handle it. In case the networking extension should be responsible according to `.spec.kubernetes.kubeproxy.enabled` (but is unable to perform the service routing), it should raise an error during the reconciliation. If the networking extension should handle the service routing, it may reconfigure itself accordingly.
-2. (Optional) In case the networking extension does not support taking over the service routing (in some scenarios), it is recommended to also provide a validating admission webhook to reject corresponding changes early on. The validation may take the current operating mode of the networking extension into consideration.
+1. (Optional) In case the networking extension does not support taking over the service routing (in some scenarios), it is recommended to also provide a validating admission webhook to reject corresponding changes early on. The validation may take the current operating mode of the networking extension into consideration.
 
 ## Related Links
 

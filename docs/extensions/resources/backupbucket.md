@@ -7,7 +7,7 @@ title: BackupBucket
 The Gardener project features a sub-project called [etcd-backup-restore](https://github.com/gardener/etcd-backup-restore) to take periodic backups of etcd backing Shoot clusters. It demands the bucket (or its equivalent in different object store providers) to be created and configured externally with appropriate credentials. The `BackupBucket` resource takes this responsibility in Gardener.
 
 Before introducing the `BackupBucket` extension resource, Gardener was using Terraform in order to create and manage these provider-specific resources (e.g., see [AWS Backup](https://github.com/gardener/gardener/tree/0.27.0/charts/seed-terraformer/charts/aws-backup)).
-Now, Gardener commissions an external, provider-specific controller to take over this task. You can also refer to [backupInfra proposal documentation](../proposals/02-backupinfra.md) to get an idea about how the transition was done and understand the resource in a broader scope.
+Now, Gardener commissions an external, provider-specific controller to take over this task. You can also refer to [backupInfra proposal documentation](../../proposals/02-backupinfra.md) to get an idea about how the transition was done and understand the resource in a broader scope.
 
 ## What Is the Scope of a Bucket?
 
@@ -48,7 +48,7 @@ In order to support a new infrastructure provider, you need to write a controlle
 
 ## References and Additional Resources
 
-* [`BackupBucket` API Reference](../api-reference/extensions.md#backupbucket)
+* [`BackupBucket` API Reference](../../api-reference/extensions.md#backupbucket)
 * [Exemplary Implementation for the Azure Provider](https://github.com/gardener/gardener-extension-provider-azure/tree/master/pkg/controller/backupbucket)
 * [`BackupEntry` Resource Documentation](./backupentry.md)
-* [Shared Bucket Proposal](../proposals/02-backupinfra.md)
+* [Shared Bucket Proposal](../../proposals/02-backupinfra.md)

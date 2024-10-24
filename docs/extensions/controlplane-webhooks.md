@@ -7,7 +7,7 @@ title: ControlPlane Webhooks
 Gardener creates the Shoot controlplane in several steps of the Shoot flow. At different point of this flow, it:
 
 * Deploys standard controlplane components such as kube-apiserver, kube-controller-manager, and kube-scheduler by creating the corresponding deployments, services, and other resources in the Shoot namespace.
-* Initiates the deployment of custom controlplane components by [ControlPlane controllers](controlplane.md) by creating a `ControlPlane` resource in the Shoot namespace.
+* Initiates the deployment of custom controlplane components by [ControlPlane controllers](./resources/controlplane.md) by creating a `ControlPlane` resource in the Shoot namespace.
 
 In order to apply any provider-specific changes to the configuration provided by Gardener for the standard controlplane components, cloud extension providers can install mutating admission webhooks for the resources created by Gardener in the Shoot namespace.
 
@@ -134,15 +134,15 @@ Gardener **shall** configure the `Etcd` resource completely to set up an etcd cl
 
 ### cloud-controller-manager
 
-Gardener **shall not** deploy a cloud-controller-manager. If it is needed, it should be added by a [`ControlPlane` controller](controlplane.md)
+Gardener **shall not** deploy a cloud-controller-manager. If it is needed, it should be added by a [`ControlPlane` controller](./resources/controlplane.md)
 
 ### CSI Controllers
 
-Gardener **shall not** deploy a CSI controller. If it is needed, it should be added by a [`ControlPlane` controller](controlplane.md)
+Gardener **shall not** deploy a CSI controller. If it is needed, it should be added by a [`ControlPlane` controller](./resources/controlplane.md)
 
 ### kubelet
 
-To specify the kubelet configuration, Gardener **shall** create a [`OperatingSystemConfig` resource](operatingsystemconfig.md) with any name and purpose `reconcile` in the Shoot namespace. It can therefore also be mutated by webhooks to apply any provider-specific changes to the standard configuration provided by Gardener. Gardener **may** write multiple such resources with different `type` to the same Shoot namespaces if multiple OSs are used.
+To specify the kubelet configuration, Gardener **shall** create a [`OperatingSystemConfig` resource](./resources/operatingsystemconfig.md) with any name and purpose `reconcile` in the Shoot namespace. It can therefore also be mutated by webhooks to apply any provider-specific changes to the standard configuration provided by Gardener. Gardener **may** write multiple such resources with different `type` to the same Shoot namespaces if multiple OSs are used.
 
 The OSC resource **shall** contain a unit named `kubelet.service`, containing the corresponding systemd unit configuration file. The `[Service]` section of this file **shall** contain a single `ExecStart` option having the [kubelet command line](https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet/) as its value.
 

@@ -4,12 +4,12 @@ title: BackupEntry
 
 # Contract: `BackupEntry` Resource
 
-The Gardener project features a sub-project called [etcd-backup-restore](https://github.com/gardener/etcd-backup-restore) to take periodic backups of etcd backing Shoot clusters. It demands the bucket (or its equivalent in different object store providers) access credentials to be created and configured externally with appropriate credentials. The `BackupEntry` resource takes this responsibility in Gardener to provide this information by creating a secret specific to the component. 
+The Gardener project features a sub-project called [etcd-backup-restore](https://github.com/gardener/etcd-backup-restore) to take periodic backups of etcd backing Shoot clusters. It demands the bucket (or its equivalent in different object store providers) access credentials to be created and configured externally with appropriate credentials. The `BackupEntry` resource takes this responsibility in Gardener to provide this information by creating a secret specific to the component.
 
 That being said, the core motivation for introducing this resource was to support retention of backups post deletion of `Shoot`. The etcd-backup-restore components take responsibility of garbage collecting old backups out of the defined period. Once a shoot is deleted, we need to persist the backups for few days. Hence, Gardener uses the `BackupEntry` resource for this housekeeping work post deletion of a `Shoot`. The `BackupEntry` resource is responsible for shoot specific prefix under referred bucket.
 
 Before introducing the `BackupEntry` extension resource, Gardener was using Terraform in order to create and manage these provider-specific resources (e.g., see [AWS Backup](https://github.com/gardener/gardener/tree/0.27.0/charts/seed-terraformer/charts/aws-backup)).
-Now, Gardener commissions an external, provider-specific controller to take over this task. You can also refer to [backupInfra proposal documentation](../proposals/02-backupinfra.md) to get idea about how the transition was done and understand the resource in broader scope.
+Now, Gardener commissions an external, provider-specific controller to take over this task. You can also refer to [backupInfra proposal documentation](../../proposals/02-backupinfra.md) to get idea about how the transition was done and understand the resource in broader scope.
 
 ## What Is the Lifespan of a `BackupEntry`?
 
@@ -46,8 +46,8 @@ In order to support a new infrastructure provider, you need to write a controlle
 
 ## References and Additional Resources
 
-* [`BackupEntry` API Reference](../api-reference/extensions.md#backupbucket)
+* [`BackupEntry` API Reference](../../api-reference/extensions.md#backupbucket)
 * [Exemplary Implementation for the Azure Provider](https://github.com/gardener/gardener-extension-provider-azure/tree/master/pkg/controller/backupentry)
 * [`BackupBucket` Resource Documentation](./backupbucket.md)
-* [Shared Bucket Proposal](../proposals/02-backupinfra.md)
-* [Gardener-controller-manager-component-config API Specification](../../pkg/controllermanager/apis/config/types.go#L101-#L107)
+* [Shared Bucket Proposal](../../proposals/02-backupinfra.md)
+* [Gardener-controller-manager-component-config API Specification](../../../pkg/controllermanager/apis/config/types.go#L101-#L107)
