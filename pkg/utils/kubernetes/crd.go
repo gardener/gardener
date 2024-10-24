@@ -24,14 +24,14 @@ var (
 	CRDWaitTimeout = 15 * time.Second
 )
 
-// CRDDeployer is a DeployWaiter that can deploy CRDs and wait for them to be ready
+// CRDDeployer is a DeployWaiter that can deploy CRDs and wait for them to be ready.
 type CRDDeployer struct {
 	client            client.Client
 	applier           kubernetes.Applier
 	crdNameToManifest map[string]string
 }
 
-// NewCRDDeployer returns a DeployWaiter that can deploy CRDs and wait for them to be ready
+// NewCRDDeployer returns a DeployWaiter that can deploy CRDs and wait for them to be ready.
 func NewCRDDeployer(client client.Client, applier kubernetes.Applier, manifests []string) (*CRDDeployer, error) {
 	crdNameToManifest, err := MakeCRDNameMap(manifests)
 	if err != nil {
@@ -94,7 +94,7 @@ func (c *CRDDeployer) WaitCleanup(ctx context.Context) error {
 	return nil
 }
 
-// MakeCRDNameMap returns a map that has the name of the resource as key, and the corresponding manifest as value
+// MakeCRDNameMap returns a map that has the name of the resource as key, and the corresponding manifest as value.
 func MakeCRDNameMap(manifests []string) (map[string]string, error) {
 	crdNameToManifest := make(map[string]string)
 	for _, manifest := range manifests {
@@ -107,7 +107,7 @@ func MakeCRDNameMap(manifests []string) (map[string]string, error) {
 	return crdNameToManifest, nil
 }
 
-// WaitUntilCRDManifestsReady takes CRD ObjectKeys and waits for them to get ready with a timeout of 15 seconds
+// WaitUntilCRDManifestsReady takes CRD ObjectKeys and waits for them to get ready with a timeout of 15 seconds.
 func WaitUntilCRDManifestsReady(ctx context.Context, c client.Client, crdNames []string) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, CRDWaitTimeout)
 	defer cancel()
@@ -128,7 +128,7 @@ func WaitUntilCRDManifestsReady(ctx context.Context, c client.Client, crdNames [
 	})
 }
 
-// GetObjectNameFromManifest takes a manifest and returns its corresponding name
+// GetObjectNameFromManifest takes a manifest and returns its corresponding name.
 func GetObjectNameFromManifest(manifest string) (string, error) {
 	object, err := kubernetes.NewManifestReader([]byte(manifest)).Read()
 	if err != nil {
