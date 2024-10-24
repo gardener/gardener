@@ -576,7 +576,7 @@ type ETCDConfig struct {
 	BackupLeaderElection *ETCDBackupLeaderElection `json:"backupLeaderElection,omitempty"`
 	// FeatureGates is a map of feature names to bools that enable or disable alpha/experimental
 	// features. This field modifies piecemeal the built-in default values from
-	// "github.com/gardener/etcd-druid/pkg/features/features.go".
+	// "github.com/gardener/etcd-druid/internal/features/features.go".
 	// Default: nil
 	// +optional
 	FeatureGates map[string]bool `json:"featureGates,omitempty"`

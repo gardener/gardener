@@ -168,7 +168,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.etcdDruid, err = r.newEtcdDruid()
+	c.etcdDruid, err = r.newEtcdDruid(secretsManager)
 	if err != nil {
 		return
 	}
@@ -717,13 +717,15 @@ func (r *Reconciler) newHVPA() (component.DeployWaiter, error) {
 	)
 }
 
-func (r *Reconciler) newEtcdDruid() (component.DeployWaiter, error) {
+func (r *Reconciler) newEtcdDruid(secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
 	return sharedcomponent.NewEtcdDruid(
 		r.SeedClientSet.Client(),
 		r.GardenNamespace,
 		r.SeedVersion,
 		r.ComponentImageVectors,
 		r.Config.ETCDConfig,
+		secretsManager,
+		v1beta1constants.SecretNameCASeed,
 		v1beta1constants.PriorityClassNameSeedSystem800,
 	)
 }
