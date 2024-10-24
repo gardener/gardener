@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gardener-discovery-server
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gardener-discovery-server
+  namespace: gardener-discovery-server
+  labels:
+    app:  gardener-discovery-server
+spec:
+  selector:
+    app: gardener-discovery-server
+  ports:
+  - name: gardener-discovery-server
+    protocol: TCP
+    port: 443
+    targetPort: 10443
+  type: LoadBalancer

@@ -18,13 +18,14 @@ usage() {
   exit 0
 }
 
-if [ "$1" == "-h" ] || [ "$#" -ne 3 ]; then
+if [ "$1" == "-h" ] || [ "$#" -ne 4 ]; then
   usage
 fi
 
 garden_kubeconfig=$1
 seed_kubeconfig=$2
 seed_name=$3
+workload_identity_support=$4
 
 seed_base_dir="$SCRIPT_DIR/../ssh-reverse-tunnel/seeds/$seed_name"
 
@@ -91,6 +92,7 @@ ensure-gardener-dns-annotations() {
 
 echo "Ensuring config files"
 ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml
+ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/workload-identity-issuer.yaml
 ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/infrastructure-secrets.yaml
 ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/secretbindings.yaml
 ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values.yaml.tmpl
@@ -153,6 +155,11 @@ if kubectl get configmaps -n kube-system shoot-info --kubeconfig "$seed_kubeconf
     .config.seedConfig.spec.provider.region = \"$region\" |
     .config.seedConfig.spec.provider.type = \"$type\"
   " "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values"
+
+  if [[ "$workload_identity_support" == "true" ]]; then
+    gardener_issuer=https://issuer.$(yq -e '.data.domain' "$temp_shoot_info")/garden/workload-identity/issuer
+    yq -e -i ".global.apiserver.workloadIdentity.token.issuer = \"$gardener_issuer\"" "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/workload-identity-issuer.yaml
+  fi
 else
   echo "######################################################################################"
   echo "Please enter domain names for registry and relay domains on the seed"
