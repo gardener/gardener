@@ -362,10 +362,10 @@ kubectl get nodes -o name |\
   cut -d/ -f2 |\
   xargs -I {} docker exec {} sh -c "sysctl fs.inotify.max_user_instances=8192"
 
-value=$(kubectl get cm -n kube-system kubeadm-config -oyaml | yq e '.data.ClusterConfiguration' | yq e '.apiServer.extraVolumes[0].hostPath')
-if [[ -n "$value" && "$value" != "null" ]]; then
-  kubectl get cm -n kube-system kubeadm-config -o yaml | \
-    sed -e "s#authorization-mode: RBAC,Node#authorization-mode: RBAC,Node,Webhook\n        authorization-webhook-config-file: $value#" | \
+authorization_webhook_config_file=$(kubectl -n kube-system get configmap kubeadm-config -o yaml | yq e '.data.ClusterConfiguration' | yq e '.apiServer.extraVolumes[0].hostPath')
+if [[ -n "$authorization_webhook_config_file" && "$authorization_webhook_config_file" != "null" ]]; then
+  kubectl -n kube-system get configmap kubeadm-config -o yaml | \
+    sed -e "s#value: RBAC,Node#value: RBAC,Node,Webhook\n      - name: authorization-webhook-config-file\n        value: $authorization_webhook_config_file#" | \
     kubectl apply -f -
 
   kubectl get nodes -o name |\
