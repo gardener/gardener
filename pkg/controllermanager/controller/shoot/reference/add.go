@@ -5,7 +5,6 @@
 package reference
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -42,16 +41,12 @@ func Predicate(oldObj, newObj client.Object) bool {
 		return false
 	}
 
-	return shootDNSFieldChanged(oldShoot, newShoot) ||
-		shootKubeAPIServerAuditConfigFieldChanged(oldShoot, newShoot) || !v1beta1helper.ShootResourceReferencesEqual(oldShoot.Spec.Resources, newShoot.Spec.Resources)
-}
-
-func shootDNSFieldChanged(oldShoot, newShoot *gardencorev1beta1.Shoot) bool {
-	return !apiequality.Semantic.Equalities.DeepEqual(oldShoot.Spec.DNS, newShoot.Spec.DNS)
-}
-
-func shootKubeAPIServerAuditConfigFieldChanged(oldShoot, newShoot *gardencorev1beta1.Shoot) bool {
-	return !apiequality.Semantic.Equalities.DeepEqual(oldShoot.Spec.Kubernetes.KubeAPIServer.AuditConfig, newShoot.Spec.Kubernetes.KubeAPIServer.AuditConfig)
+	return !apiequality.Semantic.Equalities.DeepEqual(oldShoot.Spec.DNS, newShoot.Spec.DNS) ||
+		!apiequality.Semantic.Equalities.DeepEqual(oldShoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins, newShoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins) ||
+		!apiequality.Semantic.Equalities.DeepEqual(oldShoot.Spec.Kubernetes.KubeAPIServer.AuditConfig, newShoot.Spec.Kubernetes.KubeAPIServer.AuditConfig) ||
+		!apiequality.Semantic.Equalities.DeepEqual(oldShoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication, newShoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication) ||
+		!apiequality.Semantic.Equalities.DeepEqual(oldShoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization, newShoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization) ||
+		!v1beta1helper.ShootResourceReferencesEqual(oldShoot.Spec.Resources, newShoot.Spec.Resources)
 }
 
 func getReferencedSecretNames(obj client.Object) []string {
@@ -62,6 +57,8 @@ func getReferencedSecretNames(obj client.Object) []string {
 
 	var out []string
 	out = append(out, secretNamesForDNSProviders(shoot)...)
+	out = append(out, secretNamesForAdmissionPlugins(shoot)...)
+	out = append(out, secretNamesForStructuredAuthorization(shoot)...)
 	out = append(out, namesForReferencedResources(shoot, "Secret")...)
 	return out
 }
@@ -73,8 +70,14 @@ func getReferencedConfigMapNames(obj client.Object) []string {
 	}
 
 	var out []string
-	if configMapRef := getAuditPolicyConfigMapRef(shoot.Spec.Kubernetes.KubeAPIServer); configMapRef != nil {
-		out = append(out, configMapRef.Name)
+	if configMapName := v1beta1helper.GetShootAuditPolicyConfigMapName(shoot.Spec.Kubernetes.KubeAPIServer); configMapName != "" {
+		out = append(out, configMapName)
+	}
+	if configMapName := v1beta1helper.GetShootAuthenticationConfigurationConfigMapName(shoot.Spec.Kubernetes.KubeAPIServer); configMapName != "" {
+		out = append(out, configMapName)
+	}
+	if configMapName := v1beta1helper.GetShootAuthorizationConfigurationConfigMapName(shoot.Spec.Kubernetes.KubeAPIServer); configMapName != "" {
+		out = append(out, configMapName)
 	}
 	out = append(out, namesForReferencedResources(shoot, "ConfigMap")...)
 	return out
@@ -96,6 +99,34 @@ func secretNamesForDNSProviders(shoot *gardencorev1beta1.Shoot) []string {
 	return names
 }
 
+func secretNamesForAdmissionPlugins(shoot *gardencorev1beta1.Shoot) []string {
+	if shoot.Spec.Kubernetes.KubeAPIServer == nil {
+		return nil
+	}
+
+	var names []string
+	for _, plugin := range shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins {
+		if plugin.KubeconfigSecretName != nil {
+			names = append(names, *plugin.KubeconfigSecretName)
+		}
+	}
+
+	return names
+}
+
+func secretNamesForStructuredAuthorization(shoot *gardencorev1beta1.Shoot) []string {
+	if shoot.Spec.Kubernetes.KubeAPIServer == nil || shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization == nil {
+		return nil
+	}
+
+	var names = make([]string, 0, len(shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization.Kubeconfigs))
+	for _, kubeconfig := range shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization.Kubeconfigs {
+		names = append(names, kubeconfig.SecretName)
+	}
+
+	return names
+}
+
 func namesForReferencedResources(shoot *gardencorev1beta1.Shoot, kind string) []string {
 	var names []string
 	for _, ref := range shoot.Spec.Resources {
@@ -104,15 +135,4 @@ func namesForReferencedResources(shoot *gardencorev1beta1.Shoot, kind string) []
 		}
 	}
 	return names
-}
-
-func getAuditPolicyConfigMapRef(apiServerConfig *gardencorev1beta1.KubeAPIServerConfig) *corev1.ObjectReference {
-	if apiServerConfig != nil &&
-		apiServerConfig.AuditConfig != nil &&
-		apiServerConfig.AuditConfig.AuditPolicy != nil &&
-		apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef != nil {
-		return apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef
-	}
-
-	return nil
 }

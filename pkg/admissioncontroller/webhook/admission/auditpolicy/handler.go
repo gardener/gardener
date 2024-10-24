@@ -89,7 +89,7 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 	}
 
 	if shoot.DeletionTimestamp != nil {
-		// don't mutate shoot if it's already marked for deletion, otherwise gardener-apiserver will deny the user's/
+		// don't validate shoot if it's already marked for deletion, otherwise gardener-apiserver will deny the user's/
 		// controller's request, because we changed the spec
 		return admissionwebhook.Allowed("shoot is already marked for deletion")
 	}

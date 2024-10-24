@@ -50,6 +50,7 @@ func (g *graph) setupShootWatch(ctx context.Context, informer cache.Informer) er
 				!apiequality.Semantic.DeepEqual(oldShoot.Spec.CloudProfile, newShoot.Spec.CloudProfile) ||
 				v1beta1helper.GetShootAuditPolicyConfigMapName(oldShoot.Spec.Kubernetes.KubeAPIServer) != v1beta1helper.GetShootAuditPolicyConfigMapName(newShoot.Spec.Kubernetes.KubeAPIServer) ||
 				v1beta1helper.GetShootAuthenticationConfigurationConfigMapName(oldShoot.Spec.Kubernetes.KubeAPIServer) != v1beta1helper.GetShootAuthenticationConfigurationConfigMapName(newShoot.Spec.Kubernetes.KubeAPIServer) ||
+				!apiequality.Semantic.DeepEqual(v1beta1helper.GetShootAuthorizationConfiguration(oldShoot.Spec.Kubernetes.KubeAPIServer), v1beta1helper.GetShootAuthorizationConfiguration(newShoot.Spec.Kubernetes.KubeAPIServer)) ||
 				!v1beta1helper.ShootDNSProviderSecretNamesEqual(oldShoot.Spec.DNS, newShoot.Spec.DNS) ||
 				!v1beta1helper.ShootResourceReferencesEqual(oldShoot.Spec.Resources, newShoot.Spec.Resources) ||
 				v1beta1helper.HasManagedIssuer(oldShoot) != v1beta1helper.HasManagedIssuer(newShoot) {
@@ -136,14 +137,26 @@ func (g *graph) handleShootCreateOrUpdate(ctx context.Context, shoot *gardencore
 	}
 
 	if kubeAPIServer := shoot.Spec.Kubernetes.KubeAPIServer; kubeAPIServer != nil {
-		if len(v1beta1helper.GetShootAuditPolicyConfigMapName(kubeAPIServer)) > 0 {
-			configMapVertex := g.getOrCreateVertex(VertexTypeConfigMap, shoot.Namespace, shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.Name)
+		if configMapName := v1beta1helper.GetShootAuditPolicyConfigMapName(kubeAPIServer); len(configMapName) > 0 {
+			configMapVertex := g.getOrCreateVertex(VertexTypeConfigMap, shoot.Namespace, configMapName)
 			g.addEdge(configMapVertex, shootVertex)
 		}
 
-		if len(v1beta1helper.GetShootAuthenticationConfigurationConfigMapName(kubeAPIServer)) > 0 {
-			configMapVertex := g.getOrCreateVertex(VertexTypeConfigMap, shoot.Namespace, shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication.ConfigMapName)
+		if configMapName := v1beta1helper.GetShootAuthenticationConfigurationConfigMapName(kubeAPIServer); len(configMapName) > 0 {
+			configMapVertex := g.getOrCreateVertex(VertexTypeConfigMap, shoot.Namespace, configMapName)
 			g.addEdge(configMapVertex, shootVertex)
+		}
+
+		if configMapName := v1beta1helper.GetShootAuthorizationConfigurationConfigMapName(kubeAPIServer); len(configMapName) > 0 {
+			configMapVertex := g.getOrCreateVertex(VertexTypeConfigMap, shoot.Namespace, configMapName)
+			g.addEdge(configMapVertex, shootVertex)
+		}
+
+		if kubeAPIServer.StructuredAuthorization != nil {
+			for _, kubeconfig := range kubeAPIServer.StructuredAuthorization.Kubeconfigs {
+				secretVertex := g.getOrCreateVertex(VertexTypeSecret, shoot.Namespace, kubeconfig.SecretName)
+				g.addEdge(secretVertex, shootVertex)
+			}
 		}
 	}
 

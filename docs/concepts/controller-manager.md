@@ -348,8 +348,13 @@ When an object is not actively referenced anymore because the `Shoot` specificat
 
 This reconciler inspects the following references:
 
-- DNS provider secrets (`.spec.dns.provider`)
-- Audit policy configmaps (`.spec.kubernetes.kubeAPIServer.auditConfig.auditPolicy.configMapRef`)
+- Admission plugin kubeconfig `Secret`s (`.spec.kubernetes.kubeAPIServer.admissionPlugins[].kubeconfigSecretName`)
+- Audit policy `ConfigMap`s (`.spec.kubernetes.kubeAPIServer.auditConfig.auditPolicy.configMapRef`)
+- DNS provider `Secret`s (`.spec.dns.providers[].secretName`)
+- Structured authentication `ConfigMap`s (`.spec.kubernetes.kubeAPIServer.structuredAuthentication.configMapName`)
+- Structured authorization `ConfigMap`s (`.spec.kubernetes.kubeAPIServer.structuredAuthorization.configMapName`)
+- Structured authorization kubeconfig `Secret`s (`.spec.kubernetes.kubeAPIServer.structuredAuthorization.kubeconfigs[].secretName`)
+- `Secret`s and `ConfigMap`s from `.spec.resources[]`
 
 Further checks might be added in the future.
 

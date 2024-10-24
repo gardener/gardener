@@ -578,12 +578,15 @@ When an object is not actively referenced anymore because the `Garden` specifica
 
 This reconciler inspects the following references:
 
-- ETCD backup `Secret`s (`.spec.virtualCluster.etcd.main.backup.secretRef`)
 - Admission plugin kubeconfig `Secret`s (`.spec.virtualCluster.kubernetes.kubeAPIServer.admissionPlugins[].kubeconfigSecretName` and `.spec.virtualCluster.gardener.gardenerAPIServer.admissionPlugins[].kubeconfigSecretName`)
-- Authentication webhook kubeconfig `Secret`s (`.spec.virtualCluster.kubernetes.kubeAPIServer.authentication.webhook.kubeconfigSecretName`)
-- Audit webhook kubeconfig `Secret`s (`.spec.virtualCluster.kubernetes.kubeAPIServer.auditWebhook.kubeconfigSecretName` and `.spec.virtualCluster.gardener.gardenerAPIServer.auditWebhook.kubeconfigSecretName`)
-- SNI `Secret`s (`.spec.virtualCluster.kubernetes.kubeAPIServer.sni.secretName`)
 - Audit policy `ConfigMap`s (`.spec.virtualCluster.kubernetes.kubeAPIServer.auditConfig.auditPolicy.configMapRef.name` and `.spec.virtualCluster.gardener.gardenerAPIServer.auditConfig.auditPolicy.configMapRef.name`)
+- Audit webhook kubeconfig `Secret`s (`.spec.virtualCluster.kubernetes.kubeAPIServer.auditWebhook.kubeconfigSecretName` and `.spec.virtualCluster.gardener.gardenerAPIServer.auditWebhook.kubeconfigSecretName`)
+- Authentication webhook kubeconfig `Secret`s (`.spec.virtualCluster.kubernetes.kubeAPIServer.authentication.webhook.kubeconfigSecretName`)
+- ETCD backup `Secret`s (`.spec.virtualCluster.etcd.main.backup.secretRef`)
+- Structured authentication `ConfigMap`s (`.spec.virtualCluster.kubernetes.kubeAPIServer.structuredAuthentication.configMapName`)
+- Structured authorization `ConfigMap`s (`.spec.virtualCluster.kubernetes.kubeAPIServer.structuredAuthorization.configMapName`)
+- Structured authorization kubeconfig `Secret`s (`.spec.virtualCluster.kubernetes.kubeAPIServer.structuredAuthorization.kubeconfigs[].secretName`)
+- SNI `Secret`s (`.spec.virtualCluster.kubernetes.kubeAPIServer.sni.secretName`)
 
 Further checks might be added in the future.
 

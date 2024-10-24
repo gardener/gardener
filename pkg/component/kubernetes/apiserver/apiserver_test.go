@@ -33,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/yaml"
+	apiserverv1beta1 "k8s.io/apiserver/pkg/apis/apiserver/v1beta1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	testclock "k8s.io/utils/clock/testing"
@@ -107,19 +108,21 @@ var _ = Describe("KubeAPIServer", func() {
 		configMapNameAuditPolicy       = "audit-policy-config-f5b578b4"
 		configMapNameEgressPolicy      = "kube-apiserver-egress-selector-config-53d92abc"
 
-		deployment                 *appsv1.Deployment
-		horizontalPodAutoscaler    *autoscalingv2.HorizontalPodAutoscaler
-		verticalPodAutoscaler      *vpaautoscalingv1.VerticalPodAutoscaler
-		hvpa                       *hvpav1alpha1.Hvpa
-		podDisruptionBudget        *policyv1.PodDisruptionBudget
-		serviceMonitor             *monitoringv1.ServiceMonitor
-		prometheusRule             *monitoringv1.PrometheusRule
-		configMapAdmission         *corev1.ConfigMap
-		secretAdmissionKubeconfigs *corev1.Secret
-		configMapAuditPolicy       *corev1.ConfigMap
-		configMapAuthConfig        *corev1.ConfigMap
-		configMapEgressSelector    *corev1.ConfigMap
-		managedResource            *resourcesv1alpha1.ManagedResource
+		deployment                     *appsv1.Deployment
+		horizontalPodAutoscaler        *autoscalingv2.HorizontalPodAutoscaler
+		verticalPodAutoscaler          *vpaautoscalingv1.VerticalPodAutoscaler
+		hvpa                           *hvpav1alpha1.Hvpa
+		podDisruptionBudget            *policyv1.PodDisruptionBudget
+		serviceMonitor                 *monitoringv1.ServiceMonitor
+		prometheusRule                 *monitoringv1.PrometheusRule
+		configMapAdmission             *corev1.ConfigMap
+		secretAdmissionKubeconfigs     *corev1.Secret
+		configMapAuditPolicy           *corev1.ConfigMap
+		configMapAuthentication        *corev1.ConfigMap
+		configMapAuthorization         *corev1.ConfigMap
+		secretAuthorizationKubeconfigs *corev1.Secret
+		configMapEgressSelector        *corev1.ConfigMap
+		managedResource                *resourcesv1alpha1.ManagedResource
 
 		values Values
 	)
@@ -1262,7 +1265,7 @@ var _ = Describe("KubeAPIServer", func() {
 					}))
 				})
 
-				It("should successfully deploy the configmap resource w/ admission plugins", func() {
+				It("should successfully deploy the secret resource w/ admission plugins", func() {
 					admissionPlugins := []apiserver.AdmissionPluginConfig{
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Foo"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Baz"}, Kubeconfig: []byte("foo")},
@@ -1723,42 +1726,51 @@ resources:
 				}))
 			})
 
-			It("should successfully deploy the authorization webhook kubeconfig secret resource", func() {
-				var (
-					kubeconfig        = []byte("some-kubeconfig")
-					authWebhookConfig = &AuthorizationWebhook{Kubeconfig: kubeconfig}
-				)
+			Context("authorization webhook kubeconfigs", func() {
+				It("should not deploy the secret resource when there are no webhook configurations", func() {
+					secretAuthorizationKubeconfigs = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authorization-webhooks-kubeconfigs", Namespace: namespace}}
+					Expect(kubernetesutils.MakeUnique(secretAuthorizationKubeconfigs)).To(Succeed())
 
-				kapi = New(kubernetesInterface, namespace, sm, Values{
-					Values: apiserver.Values{
-						RuntimeVersion: runtimeVersion,
-					},
-					AuthorizationWebhook: authWebhookConfig,
-					Version:              version,
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(secretAuthorizationKubeconfigs), secretAuthorizationKubeconfigs)).To(BeNotFoundError())
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(secretAuthorizationKubeconfigs), secretAuthorizationKubeconfigs)).To(BeNotFoundError())
 				})
 
-				expectedSecret := &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authorization-webhook-kubeconfig", Namespace: namespace},
-					Data:       map[string][]byte{"kubeconfig.yaml": kubeconfig},
-				}
-				Expect(kubernetesutils.MakeUnique(expectedSecret)).To(Succeed())
+				It("should successfully deploy the secret resource w/ authorization webhooks", func() {
+					authorizationWebhooks := []AuthorizationWebhook{
+						{Name: "foo", Kubeconfig: []byte("bar")},
+						{Name: "baz", Kubeconfig: []byte("foo")},
+					}
 
-				actualSecret := &corev1.Secret{}
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecret), actualSecret)).To(BeNotFoundError())
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values:                apiserver.Values{RuntimeVersion: runtimeVersion},
+						AuthorizationWebhooks: authorizationWebhooks,
+						Version:               version,
+					})
 
-				Expect(kapi.Deploy(ctx)).To(Succeed())
+					secretAuthorizationKubeconfigs = &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authorization-webhooks-kubeconfigs", Namespace: namespace},
+						Data: map[string][]byte{
+							"foo-kubeconfig.yaml": []byte("bar"),
+							"baz-kubeconfig.yaml": []byte("foo"),
+						},
+					}
+					Expect(kubernetesutils.MakeUnique(secretAuthorizationKubeconfigs)).To(Succeed())
 
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecret), actualSecret)).To(Succeed())
-				Expect(actualSecret).To(DeepEqual(&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            expectedSecret.Name,
-						Namespace:       expectedSecret.Namespace,
-						Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
-						ResourceVersion: "1",
-					},
-					Immutable: ptr.To(true),
-					Data:      expectedSecret.Data,
-				}))
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(secretAuthorizationKubeconfigs), secretAuthorizationKubeconfigs)).To(BeNotFoundError())
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(secretAuthorizationKubeconfigs), secretAuthorizationKubeconfigs)).To(Succeed())
+					Expect(secretAuthorizationKubeconfigs).To(DeepEqual(&corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            secretAuthorizationKubeconfigs.Name,
+							Namespace:       secretAuthorizationKubeconfigs.Namespace,
+							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							ResourceVersion: "1",
+						},
+						Immutable: ptr.To(true),
+						Data:      secretAuthorizationKubeconfigs.Data,
+					}))
+				})
 			})
 		})
 
@@ -2130,7 +2142,7 @@ rules:
 					Expect(kapi.Deploy(ctx)).To(MatchError("structured authentication is not available for versions < v1.30"))
 				})
 
-				It("should error when authentcation config and oidc settings are configured", func() {
+				It("should error when authentication config and oidc settings are configured", func() {
 					var (
 						authenticationConfig = "some-auth-config"
 						version              = semver.MustParse("1.30.0")
@@ -2145,13 +2157,13 @@ rules:
 						Version:                     version,
 					})
 
-					configMapAuthConfig = &corev1.ConfigMap{
+					configMapAuthentication = &corev1.ConfigMap{
 						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authentication-config", Namespace: namespace},
 						Data:       map[string]string{"config.yaml": authenticationConfig},
 					}
-					Expect(kubernetesutils.MakeUnique(configMapAuthConfig)).To(Succeed())
+					Expect(kubernetesutils.MakeUnique(configMapAuthentication)).To(Succeed())
 
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthConfig), configMapAuthConfig)).To(BeNotFoundError())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthentication), configMapAuthentication)).To(BeNotFoundError())
 					Expect(kapi.Deploy(ctx)).To(MatchError("oidc configuration is incompatible with structured authentication"))
 				})
 
@@ -2169,24 +2181,24 @@ rules:
 						Version:                     version,
 					})
 
-					configMapAuthConfig = &corev1.ConfigMap{
+					configMapAuthentication = &corev1.ConfigMap{
 						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authentication-config", Namespace: namespace},
 						Data:       map[string]string{"config.yaml": authenticationConfig},
 					}
-					Expect(kubernetesutils.MakeUnique(configMapAuthConfig)).To(Succeed())
+					Expect(kubernetesutils.MakeUnique(configMapAuthentication)).To(Succeed())
 
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthConfig), configMapAuthConfig)).To(BeNotFoundError())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthentication), configMapAuthentication)).To(BeNotFoundError())
 					Expect(kapi.Deploy(ctx)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthConfig), configMapAuthConfig)).To(Succeed())
-					Expect(configMapAuthConfig).To(DeepEqual(&corev1.ConfigMap{
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthentication), configMapAuthentication)).To(Succeed())
+					Expect(configMapAuthentication).To(DeepEqual(&corev1.ConfigMap{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:            configMapAuthConfig.Name,
-							Namespace:       configMapAuthConfig.Namespace,
+							Name:            configMapAuthentication.Name,
+							Namespace:       configMapAuthentication.Namespace,
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
 						Immutable: ptr.To(true),
-						Data:      configMapAuthConfig.Data,
+						Data:      configMapAuthentication.Data,
 					}))
 				})
 
@@ -2207,15 +2219,15 @@ rules:
 						Version:                     version,
 					})
 
-					configMapAuthConfig = &corev1.ConfigMap{
+					configMapAuthentication = &corev1.ConfigMap{
 						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authentication-config", Namespace: namespace},
 						Data:       map[string]string{"config.yaml": authenticationConfig},
 					}
-					Expect(kubernetesutils.MakeUnique(configMapAuthConfig)).To(Succeed())
+					Expect(kubernetesutils.MakeUnique(configMapAuthentication)).To(Succeed())
 
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthConfig), configMapAuthConfig)).To(BeNotFoundError())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthentication), configMapAuthentication)).To(BeNotFoundError())
 					Expect(kapi.Deploy(ctx)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthConfig), configMapAuthConfig)).To(BeNotFoundError())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthentication), configMapAuthentication)).To(BeNotFoundError())
 				})
 
 				It("should successfully deploy the configmap resource from oidc settings", func() {
@@ -2264,24 +2276,24 @@ kind: AuthenticationConfiguration
 						Version: version,
 					})
 
-					configMapAuthConfig = &corev1.ConfigMap{
+					configMapAuthentication = &corev1.ConfigMap{
 						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authentication-config", Namespace: namespace},
 						Data:       map[string]string{"config.yaml": authenticationConfig},
 					}
-					Expect(kubernetesutils.MakeUnique(configMapAuthConfig)).To(Succeed())
+					Expect(kubernetesutils.MakeUnique(configMapAuthentication)).To(Succeed())
 
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthConfig), configMapAuthConfig)).To(BeNotFoundError())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthentication), configMapAuthentication)).To(BeNotFoundError())
 					Expect(kapi.Deploy(ctx)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthConfig), configMapAuthConfig)).To(Succeed())
-					Expect(configMapAuthConfig).To(DeepEqual(&corev1.ConfigMap{
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthentication), configMapAuthentication)).To(Succeed())
+					Expect(configMapAuthentication).To(DeepEqual(&corev1.ConfigMap{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:            configMapAuthConfig.Name,
-							Namespace:       configMapAuthConfig.Namespace,
+							Name:            configMapAuthentication.Name,
+							Namespace:       configMapAuthentication.Namespace,
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
 						Immutable: ptr.To(true),
-						Data:      configMapAuthConfig.Data,
+						Data:      configMapAuthentication.Data,
 					}))
 				})
 			})
@@ -2320,24 +2332,24 @@ kind: AuthenticationConfiguration
 					Version: version,
 				})
 
-				configMapAuthConfig = &corev1.ConfigMap{
+				configMapAuthentication = &corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authentication-config", Namespace: namespace},
 					Data:       map[string]string{"config.yaml": authenticationConfig},
 				}
-				Expect(kubernetesutils.MakeUnique(configMapAuthConfig)).To(Succeed())
+				Expect(kubernetesutils.MakeUnique(configMapAuthentication)).To(Succeed())
 
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthConfig), configMapAuthConfig)).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthentication), configMapAuthentication)).To(BeNotFoundError())
 				Expect(kapi.Deploy(ctx)).To(Succeed())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthConfig), configMapAuthConfig)).To(Succeed())
-				Expect(configMapAuthConfig).To(DeepEqual(&corev1.ConfigMap{
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthentication), configMapAuthentication)).To(Succeed())
+				Expect(configMapAuthentication).To(DeepEqual(&corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:            configMapAuthConfig.Name,
-						Namespace:       configMapAuthConfig.Namespace,
+						Name:            configMapAuthentication.Name,
+						Namespace:       configMapAuthentication.Namespace,
 						Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 						ResourceVersion: "1",
 					},
 					Immutable: ptr.To(true),
-					Data:      configMapAuthConfig.Data,
+					Data:      configMapAuthentication.Data,
 				}))
 			})
 
@@ -2373,25 +2385,276 @@ kind: AuthenticationConfiguration
 					Version: version,
 				})
 
-				configMapAuthConfig = &corev1.ConfigMap{
+				configMapAuthentication = &corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authentication-config", Namespace: namespace},
 					Data:       map[string]string{"config.yaml": authenticationConfig},
 				}
-				Expect(kubernetesutils.MakeUnique(configMapAuthConfig)).To(Succeed())
+				Expect(kubernetesutils.MakeUnique(configMapAuthentication)).To(Succeed())
 
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthConfig), configMapAuthConfig)).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthentication), configMapAuthentication)).To(BeNotFoundError())
 				Expect(kapi.Deploy(ctx)).To(Succeed())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthConfig), configMapAuthConfig)).To(Succeed())
-				Expect(configMapAuthConfig).To(DeepEqual(&corev1.ConfigMap{
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthentication), configMapAuthentication)).To(Succeed())
+				Expect(configMapAuthentication).To(DeepEqual(&corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:            configMapAuthConfig.Name,
-						Namespace:       configMapAuthConfig.Namespace,
+						Name:            configMapAuthentication.Name,
+						Namespace:       configMapAuthentication.Namespace,
 						Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 						ResourceVersion: "1",
 					},
 					Immutable: ptr.To(true),
-					Data:      configMapAuthConfig.Data,
+					Data:      configMapAuthentication.Data,
 				}))
+			})
+
+			Context("authorization configuration", func() {
+				It("should do nothing when Kubernetes version is < v1.30", func() {
+					version := semver.MustParse("1.29.0")
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						Version: version,
+					})
+
+					configMapAuthorization = &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authorization-config", Namespace: namespace}}
+					Expect(kubernetesutils.MakeUnique(configMapAuthorization)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthorization), configMapAuthorization)).To(BeNotFoundError())
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthorization), configMapAuthorization)).To(BeNotFoundError())
+				})
+
+				It("should do nothing when Kubernetes version is >= v1.30 but the feature gate is disabled", func() {
+					version := semver.MustParse("1.30.0")
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+							FeatureGates: map[string]bool{
+								"StructuredAuthorizationConfiguration": false,
+							},
+						},
+						Version: version,
+					})
+
+					configMapAuthorization = &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authorization-config", Namespace: namespace}}
+					Expect(kubernetesutils.MakeUnique(configMapAuthorization)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthorization), configMapAuthorization)).To(BeNotFoundError())
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthorization), configMapAuthorization)).To(BeNotFoundError())
+				})
+
+				It("should successfully deploy the configmap resource w/o webhooks", func() {
+					version := semver.MustParse("1.30.0")
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						Version: version,
+					})
+
+					configMapAuthorization = &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authorization-config", Namespace: namespace},
+						Data: map[string]string{"config.yaml": `apiVersion: apiserver.config.k8s.io/v1beta1
+authorizers:
+- name: node
+  type: Node
+- name: rbac
+  type: RBAC
+kind: AuthorizationConfiguration
+`},
+					}
+					Expect(kubernetesutils.MakeUnique(configMapAuthorization)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthorization), configMapAuthorization)).To(BeNotFoundError())
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthorization), configMapAuthorization)).To(Succeed())
+					Expect(configMapAuthorization).To(DeepEqual(&corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            configMapAuthorization.Name,
+							Namespace:       configMapAuthorization.Namespace,
+							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							ResourceVersion: "1",
+						},
+						Immutable: ptr.To(true),
+						Data:      configMapAuthorization.Data,
+					}))
+				})
+
+				It("should successfully deploy the configmap resource w/ webhooks", func() {
+					version := semver.MustParse("1.30.0")
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						Version: version,
+						AuthorizationWebhooks: []AuthorizationWebhook{
+							{Name: "foo", WebhookConfiguration: apiserverv1beta1.WebhookConfiguration{}},
+							{Name: "bar", WebhookConfiguration: apiserverv1beta1.WebhookConfiguration{}},
+						},
+					})
+
+					configMapAuthorization = &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authorization-config", Namespace: namespace},
+						Data: map[string]string{"config.yaml": `apiVersion: apiserver.config.k8s.io/v1beta1
+authorizers:
+- name: node
+  type: Node
+- name: rbac
+  type: RBAC
+- name: foo
+  type: Webhook
+  webhook:
+    authorizedTTL: 0s
+    connectionInfo:
+      kubeConfigFile: /etc/kubernetes/structured/authorization-kubeconfigs/foo-kubeconfig.yaml
+      type: KubeConfigFile
+    failurePolicy: ""
+    matchConditionSubjectAccessReviewVersion: ""
+    matchConditions: null
+    subjectAccessReviewVersion: ""
+    timeout: 0s
+    unauthorizedTTL: 0s
+- name: bar
+  type: Webhook
+  webhook:
+    authorizedTTL: 0s
+    connectionInfo:
+      kubeConfigFile: /etc/kubernetes/structured/authorization-kubeconfigs/bar-kubeconfig.yaml
+      type: KubeConfigFile
+    failurePolicy: ""
+    matchConditionSubjectAccessReviewVersion: ""
+    matchConditions: null
+    subjectAccessReviewVersion: ""
+    timeout: 0s
+    unauthorizedTTL: 0s
+kind: AuthorizationConfiguration
+`},
+					}
+					Expect(kubernetesutils.MakeUnique(configMapAuthorization)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthorization), configMapAuthorization)).To(BeNotFoundError())
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthorization), configMapAuthorization)).To(Succeed())
+					Expect(configMapAuthorization).To(DeepEqual(&corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            configMapAuthorization.Name,
+							Namespace:       configMapAuthorization.Namespace,
+							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							ResourceVersion: "1",
+						},
+						Immutable: ptr.To(true),
+						Data:      configMapAuthorization.Data,
+					}))
+				})
+
+				It("should successfully deploy the configmap resource for workerless clusters w/o webhooks", func() {
+					version := semver.MustParse("1.30.0")
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						Version:      version,
+						IsWorkerless: true,
+					})
+
+					configMapAuthorization = &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authorization-config", Namespace: namespace},
+						Data: map[string]string{"config.yaml": `apiVersion: apiserver.config.k8s.io/v1beta1
+authorizers:
+- name: rbac
+  type: RBAC
+kind: AuthorizationConfiguration
+`},
+					}
+					Expect(kubernetesutils.MakeUnique(configMapAuthorization)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthorization), configMapAuthorization)).To(BeNotFoundError())
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthorization), configMapAuthorization)).To(Succeed())
+					Expect(configMapAuthorization).To(DeepEqual(&corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            configMapAuthorization.Name,
+							Namespace:       configMapAuthorization.Namespace,
+							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							ResourceVersion: "1",
+						},
+						Immutable: ptr.To(true),
+						Data:      configMapAuthorization.Data,
+					}))
+				})
+
+				It("should successfully deploy the configmap resource for workerless clusters w/ webhooks", func() {
+					version := semver.MustParse("1.30.0")
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion: runtimeVersion,
+						},
+						Version: version,
+						AuthorizationWebhooks: []AuthorizationWebhook{
+							{Name: "foo", WebhookConfiguration: apiserverv1beta1.WebhookConfiguration{}},
+							{Name: "bar", WebhookConfiguration: apiserverv1beta1.WebhookConfiguration{}},
+						},
+						IsWorkerless: true,
+					})
+
+					configMapAuthorization = &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authorization-config", Namespace: namespace},
+						Data: map[string]string{"config.yaml": `apiVersion: apiserver.config.k8s.io/v1beta1
+authorizers:
+- name: rbac
+  type: RBAC
+- name: foo
+  type: Webhook
+  webhook:
+    authorizedTTL: 0s
+    connectionInfo:
+      kubeConfigFile: /etc/kubernetes/structured/authorization-kubeconfigs/foo-kubeconfig.yaml
+      type: KubeConfigFile
+    failurePolicy: ""
+    matchConditionSubjectAccessReviewVersion: ""
+    matchConditions: null
+    subjectAccessReviewVersion: ""
+    timeout: 0s
+    unauthorizedTTL: 0s
+- name: bar
+  type: Webhook
+  webhook:
+    authorizedTTL: 0s
+    connectionInfo:
+      kubeConfigFile: /etc/kubernetes/structured/authorization-kubeconfigs/bar-kubeconfig.yaml
+      type: KubeConfigFile
+    failurePolicy: ""
+    matchConditionSubjectAccessReviewVersion: ""
+    matchConditions: null
+    subjectAccessReviewVersion: ""
+    timeout: 0s
+    unauthorizedTTL: 0s
+kind: AuthorizationConfiguration
+`},
+					}
+					Expect(kubernetesutils.MakeUnique(configMapAuthorization)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthorization), configMapAuthorization)).To(BeNotFoundError())
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuthorization), configMapAuthorization)).To(Succeed())
+					Expect(configMapAuthorization).To(DeepEqual(&corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            configMapAuthorization.Name,
+							Namespace:       configMapAuthorization.Namespace,
+							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							ResourceVersion: "1",
+						},
+						Immutable: ptr.To(true),
+						Data:      configMapAuthorization.Data,
+					}))
+				})
 			})
 
 			Context("egress selector", func() {
@@ -3775,11 +4038,11 @@ kind: AuthenticationConfiguration
 						Version:                     version,
 					})
 
-					configMapAuthConfig = &corev1.ConfigMap{
+					configMapAuthentication = &corev1.ConfigMap{
 						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authentication-config", Namespace: namespace},
 						Data:       map[string]string{"config.yaml": authenticationConfig},
 					}
-					Expect(kubernetesutils.MakeUnique(configMapAuthConfig)).To(Succeed())
+					Expect(kubernetesutils.MakeUnique(configMapAuthentication)).To(Succeed())
 
 					kapi = New(kubernetesInterface, namespace, sm, Values{
 						Values: apiserver.Values{
@@ -3797,7 +4060,7 @@ kind: AuthenticationConfiguration
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: configMapAuthConfig.Name,
+										Name: configMapAuthentication.Name,
 									},
 								},
 							},
@@ -3845,11 +4108,11 @@ kind: AuthenticationConfiguration
 						Version: version,
 					})
 
-					configMapAuthConfig = &corev1.ConfigMap{
+					configMapAuthentication = &corev1.ConfigMap{
 						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-authentication-config", Namespace: namespace},
 						Data:       map[string]string{"config.yaml": authenticationConfig},
 					}
-					Expect(kubernetesutils.MakeUnique(configMapAuthConfig)).To(Succeed())
+					Expect(kubernetesutils.MakeUnique(configMapAuthentication)).To(Succeed())
 
 					deployAndRead()
 
@@ -3859,7 +4122,7 @@ kind: AuthenticationConfiguration
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: configMapAuthConfig.Name,
+										Name: configMapAuthentication.Name,
 									},
 								},
 							},
@@ -4251,40 +4514,92 @@ kind: AuthenticationConfiguration
 					))
 				})
 
-				It("should properly configure the authorization settings with webhook", func() {
-					values.AuthorizationWebhook = &AuthorizationWebhook{
-						Kubeconfig:           []byte("foo"),
-						CacheAuthorizedTTL:   ptr.To(13 * time.Second),
-						CacheUnauthorizedTTL: ptr.To(37 * time.Second),
-						Version:              ptr.To("v1alpha1"),
-					}
-					kapi = New(kubernetesInterface, namespace, sm, values)
-					deployAndRead()
+				Context("authorization settings", func() {
+					It("should properly configure the authorization settings with webhook for Kubernetes < 1.30", func() {
+						values.AuthorizationWebhooks = []AuthorizationWebhook{{
+							Name: "foo",
+							WebhookConfiguration: apiserverv1beta1.WebhookConfiguration{
+								AuthorizedTTL:              metav1.Duration{Duration: 13 * time.Second},
+								UnauthorizedTTL:            metav1.Duration{Duration: 37 * time.Second},
+								SubjectAccessReviewVersion: "v1alpha1",
+							},
+						}}
+						kapi = New(kubernetesInterface, namespace, sm, values)
+						deployAndRead()
 
-					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElements(
-						"--authorization-webhook-config-file=/etc/kubernetes/webhook/authorization/kubeconfig.yaml",
-						"--authorization-webhook-cache-authorized-ttl=13s",
-						"--authorization-webhook-cache-unauthorized-ttl=37s",
-						"--authorization-webhook-version=v1alpha1",
-						"--authorization-mode=RBAC,Webhook",
-					))
-					Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ContainElements(
-						corev1.VolumeMount{
-							Name:      "authorization-webhook-kubeconfig",
-							MountPath: "/etc/kubernetes/webhook/authorization",
-							ReadOnly:  true,
-						},
-					))
-					Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
-						corev1.Volume{
-							Name: "authorization-webhook-kubeconfig",
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: "kube-apiserver-authorization-webhook-kubeconfig-50522102",
+						Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElements(
+							"--authorization-webhook-config-file=/etc/kubernetes/structured/authorization-kubeconfigs/foo-kubeconfig.yaml",
+							"--authorization-webhook-cache-authorized-ttl=13s",
+							"--authorization-webhook-cache-unauthorized-ttl=37s",
+							"--authorization-webhook-version=v1alpha1",
+							"--authorization-mode=RBAC,Webhook",
+						))
+						Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ContainElements(
+							corev1.VolumeMount{
+								Name:      "authorization-kubeconfigs",
+								MountPath: "/etc/kubernetes/structured/authorization-kubeconfigs",
+								ReadOnly:  true,
+							},
+						))
+						Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
+							corev1.Volume{
+								Name: "authorization-kubeconfigs",
+								VolumeSource: corev1.VolumeSource{
+									Secret: &corev1.SecretVolumeSource{
+										SecretName: "kube-apiserver-authorization-webhooks-kubeconfigs-e3b0c442",
+									},
 								},
 							},
-						},
-					))
+						))
+					})
+
+					It("should properly configure the authorization settings with webhook for Kubernetes >= 1.30", func() {
+						values.AuthorizationWebhooks = []AuthorizationWebhook{{
+							Name: "foo",
+							WebhookConfiguration: apiserverv1beta1.WebhookConfiguration{
+								AuthorizedTTL:              metav1.Duration{Duration: 13 * time.Second},
+								UnauthorizedTTL:            metav1.Duration{Duration: 37 * time.Second},
+								SubjectAccessReviewVersion: "v1alpha1",
+							},
+						}}
+						values.Version = semver.MustParse("1.30.3")
+						kapi = New(kubernetesInterface, namespace, sm, values)
+						deployAndRead()
+
+						Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElement(
+							"--authorization-config=/etc/kubernetes/structured/authorization/config.yaml",
+						))
+						Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ContainElements(
+							corev1.VolumeMount{
+								Name:      "authorization-config",
+								MountPath: "/etc/kubernetes/structured/authorization",
+								ReadOnly:  true,
+							},
+							corev1.VolumeMount{
+								Name:      "authorization-kubeconfigs",
+								MountPath: "/etc/kubernetes/structured/authorization-kubeconfigs",
+								ReadOnly:  true,
+							},
+						))
+						Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
+							corev1.Volume{
+								Name: "authorization-config",
+								VolumeSource: corev1.VolumeSource{
+									ConfigMap: &corev1.ConfigMapVolumeSource{
+										LocalObjectReference: corev1.LocalObjectReference{Name: "kube-apiserver-authorization-config-6cc78111"},
+									},
+								},
+							},
+							corev1.Volume{
+								Name: "authorization-kubeconfigs",
+								VolumeSource: corev1.VolumeSource{
+									Secret: &corev1.SecretVolumeSource{
+										SecretName: "kube-apiserver-authorization-webhooks-kubeconfigs-e3b0c442",
+									},
+								},
+							},
+						))
+					})
 				})
 			})
 		})

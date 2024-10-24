@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -887,7 +887,7 @@ func (r *ReferenceManager) ensureShootReferences(ctx context.Context, attributes
 		}
 	}
 
-	if !equality.Semantic.DeepEqual(oldShoot.Spec.SeedName, shoot.Spec.SeedName) {
+	if !apiequality.Semantic.DeepEqual(oldShoot.Spec.SeedName, shoot.Spec.SeedName) {
 		if shoot.Spec.SeedName != nil {
 			if _, err := r.seedLister.Get(*shoot.Spec.SeedName); err != nil {
 				return err
@@ -895,25 +895,25 @@ func (r *ReferenceManager) ensureShootReferences(ctx context.Context, attributes
 		}
 	}
 
-	if shoot.Spec.SecretBindingName != nil && !equality.Semantic.DeepEqual(oldShoot.Spec.SecretBindingName, shoot.Spec.SecretBindingName) {
+	if shoot.Spec.SecretBindingName != nil && !apiequality.Semantic.DeepEqual(oldShoot.Spec.SecretBindingName, shoot.Spec.SecretBindingName) {
 		if _, err := r.secretBindingLister.SecretBindings(shoot.Namespace).Get(*shoot.Spec.SecretBindingName); err != nil {
 			return err
 		}
 	}
 
-	if shoot.Spec.CredentialsBindingName != nil && !equality.Semantic.DeepEqual(oldShoot.Spec.CredentialsBindingName, shoot.Spec.CredentialsBindingName) {
+	if shoot.Spec.CredentialsBindingName != nil && !apiequality.Semantic.DeepEqual(oldShoot.Spec.CredentialsBindingName, shoot.Spec.CredentialsBindingName) {
 		if _, err := r.credentialsBindingLister.CredentialsBindings(shoot.Namespace).Get(*shoot.Spec.CredentialsBindingName); err != nil {
 			return err
 		}
 	}
 
-	if !equality.Semantic.DeepEqual(oldShoot.Spec.ExposureClassName, shoot.Spec.ExposureClassName) && shoot.Spec.ExposureClassName != nil {
+	if !apiequality.Semantic.DeepEqual(oldShoot.Spec.ExposureClassName, shoot.Spec.ExposureClassName) && shoot.Spec.ExposureClassName != nil {
 		if _, err := r.exposureClassLister.Get(*shoot.Spec.ExposureClassName); err != nil {
 			return err
 		}
 	}
 
-	if !equality.Semantic.DeepEqual(oldShoot.Spec.Resources, shoot.Spec.Resources) {
+	if !apiequality.Semantic.DeepEqual(oldShoot.Spec.Resources, shoot.Spec.Resources) {
 		for _, resource := range shoot.Spec.Resources {
 			// Get the APIResource for the current resource
 			apiResource, err := r.getAPIResource(resource.ResourceRef.APIVersion, resource.ResourceRef.Kind)
@@ -959,13 +959,80 @@ func (r *ReferenceManager) ensureShootReferences(ctx context.Context, attributes
 		}
 	}
 
-	if !equality.Semantic.DeepEqual(oldShoot.Spec.DNS, shoot.Spec.DNS) && shoot.Spec.DNS != nil && shoot.DeletionTimestamp == nil {
+	if !apiequality.Semantic.DeepEqual(oldShoot.Spec.DNS, shoot.Spec.DNS) && shoot.Spec.DNS != nil && shoot.DeletionTimestamp == nil {
 		for _, dnsProvider := range shoot.Spec.DNS.Providers {
 			if dnsProvider.SecretName == nil {
 				continue
 			}
 			if err := r.lookupSecret(ctx, shoot.Namespace, *dnsProvider.SecretName); err != nil {
-				return fmt.Errorf("failed to reference DNS provider secret %w", err)
+				return fmt.Errorf("failed to resolve DNS provider secret reference: %w", err)
+			}
+		}
+	}
+
+	admissionPluginsChanged := func(oldKubeAPIServer, newKubeAPIServer *core.KubeAPIServerConfig) bool {
+		if oldKubeAPIServer == nil && newKubeAPIServer != nil {
+			return len(newKubeAPIServer.AdmissionPlugins) > 0
+		}
+		if oldKubeAPIServer != nil && newKubeAPIServer == nil {
+			return len(oldKubeAPIServer.AdmissionPlugins) > 0
+		}
+		if oldKubeAPIServer != nil && newKubeAPIServer != nil {
+			return !apiequality.Semantic.DeepEqual(oldKubeAPIServer.AdmissionPlugins, newKubeAPIServer.AdmissionPlugins)
+		}
+		return false
+	}
+
+	if admissionPluginsChanged(oldShoot.Spec.Kubernetes.KubeAPIServer, shoot.Spec.Kubernetes.KubeAPIServer) && shoot.Spec.Kubernetes.KubeAPIServer != nil && shoot.DeletionTimestamp == nil {
+		for _, plugin := range shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins {
+			if plugin.KubeconfigSecretName != nil {
+				if err := r.lookupSecret(ctx, shoot.Namespace, *plugin.KubeconfigSecretName); err != nil {
+					return fmt.Errorf("failed to resolve admission plugin kubeconfig secret reference for %q: %w", plugin.Name, err)
+				}
+			}
+		}
+	}
+
+	structuredAuthenticationChanged := func(oldKubeAPIServer, newKubeAPIServer *core.KubeAPIServerConfig) bool {
+		if oldKubeAPIServer == nil && newKubeAPIServer != nil {
+			return newKubeAPIServer.StructuredAuthentication != nil
+		}
+		if oldKubeAPIServer != nil && newKubeAPIServer == nil {
+			return oldKubeAPIServer.StructuredAuthentication != nil
+		}
+		if oldKubeAPIServer != nil && newKubeAPIServer != nil {
+			return !apiequality.Semantic.DeepEqual(oldKubeAPIServer.StructuredAuthentication, newKubeAPIServer.StructuredAuthentication)
+		}
+		return false
+	}
+
+	if structuredAuthenticationChanged(oldShoot.Spec.Kubernetes.KubeAPIServer, shoot.Spec.Kubernetes.KubeAPIServer) && shoot.Spec.Kubernetes.KubeAPIServer != nil && shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication != nil && shoot.DeletionTimestamp == nil {
+		if err := r.lookupConfigMap(ctx, shoot.Namespace, shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication.ConfigMapName); err != nil {
+			return fmt.Errorf("failed to resolve structured authentication config map reference: %w", err)
+		}
+	}
+
+	structuredAuthorizationChanged := func(oldKubeAPIServer, newKubeAPIServer *core.KubeAPIServerConfig) bool {
+		if oldKubeAPIServer == nil && newKubeAPIServer != nil {
+			return newKubeAPIServer.StructuredAuthorization != nil
+		}
+		if oldKubeAPIServer != nil && newKubeAPIServer == nil {
+			return oldKubeAPIServer.StructuredAuthorization != nil
+		}
+		if oldKubeAPIServer != nil && newKubeAPIServer != nil {
+			return !apiequality.Semantic.DeepEqual(oldKubeAPIServer.StructuredAuthorization, newKubeAPIServer.StructuredAuthorization)
+		}
+		return false
+	}
+
+	if structuredAuthorizationChanged(oldShoot.Spec.Kubernetes.KubeAPIServer, shoot.Spec.Kubernetes.KubeAPIServer) && shoot.Spec.Kubernetes.KubeAPIServer != nil && shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization != nil && shoot.DeletionTimestamp == nil {
+		if err := r.lookupConfigMap(ctx, shoot.Namespace, shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization.ConfigMapName); err != nil {
+			return fmt.Errorf("failed to resolve structured authorization config map reference: %w", err)
+		}
+
+		for _, kubeconfig := range shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization.Kubeconfigs {
+			if err := r.lookupSecret(ctx, shoot.Namespace, kubeconfig.SecretName); err != nil {
+				return fmt.Errorf("failed to resolve structured authorization kubeconfig secret reference: %w", err)
 			}
 		}
 	}
@@ -974,7 +1041,7 @@ func (r *ReferenceManager) ensureShootReferences(ctx context.Context, attributes
 }
 
 func (r *ReferenceManager) ensureBackupEntryReferences(oldBackupEntry, backupEntry *core.BackupEntry) error {
-	if !equality.Semantic.DeepEqual(oldBackupEntry.Spec.SeedName, backupEntry.Spec.SeedName) {
+	if !apiequality.Semantic.DeepEqual(oldBackupEntry.Spec.SeedName, backupEntry.Spec.SeedName) {
 		if backupEntry.Spec.SeedName != nil {
 			if _, err := r.seedLister.Get(*backupEntry.Spec.SeedName); err != nil {
 				return err
@@ -982,7 +1049,7 @@ func (r *ReferenceManager) ensureBackupEntryReferences(oldBackupEntry, backupEnt
 		}
 	}
 
-	if !equality.Semantic.DeepEqual(oldBackupEntry.Spec.BucketName, backupEntry.Spec.BucketName) {
+	if !apiequality.Semantic.DeepEqual(oldBackupEntry.Spec.BucketName, backupEntry.Spec.BucketName) {
 		if _, err := r.backupBucketLister.Get(backupEntry.Spec.BucketName); err != nil {
 			return err
 		}
@@ -992,7 +1059,7 @@ func (r *ReferenceManager) ensureBackupEntryReferences(oldBackupEntry, backupEnt
 }
 
 func (r *ReferenceManager) ensureBackupBucketReferences(ctx context.Context, oldBackupBucket, backupBucket *core.BackupBucket) error {
-	if !equality.Semantic.DeepEqual(oldBackupBucket.Spec.SeedName, backupBucket.Spec.SeedName) {
+	if !apiequality.Semantic.DeepEqual(oldBackupBucket.Spec.SeedName, backupBucket.Spec.SeedName) {
 		if backupBucket.Spec.SeedName != nil {
 			if _, err := r.seedLister.Get(*backupBucket.Spec.SeedName); err != nil {
 				return err
@@ -1180,6 +1247,18 @@ func (r *ReferenceManager) lookupSecret(ctx context.Context, namespace, name str
 	}
 
 	return lookupResource(ctx, namespace, name, secretFromLister, secretFromClient)
+}
+
+func (r *ReferenceManager) lookupConfigMap(ctx context.Context, namespace, name string) error {
+	configMapFromLister := func(_ context.Context, namespace, name string) (runtime.Object, error) {
+		return r.configMapLister.ConfigMaps(namespace).Get(name)
+	}
+
+	configMapFromClient := func(ctx context.Context, namespace, name string) (runtime.Object, error) {
+		return r.kubeClient.CoreV1().ConfigMaps(namespace).Get(ctx, name, kubernetesclient.DefaultGetOptions())
+	}
+
+	return lookupResource(ctx, namespace, name, configMapFromLister, configMapFromClient)
 }
 
 func (r *ReferenceManager) lookupControllerDeployment(ctx context.Context, name string) error {
