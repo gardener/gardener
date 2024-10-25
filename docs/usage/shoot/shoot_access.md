@@ -181,6 +181,8 @@ data:
 ```
 
 The user is responsible for the validity of the configured `JWTAuthenticator`s.
+Be aware that changing the configuration in the `ConfigMap` will be applied in the next `Shoot` reconciliation, but this is not automatically triggered.
+If you want the changes to roll out immediately, [trigger a reconciliation explicitly](../shoot-operations/shoot_operations.md#immediate-reconciliation).
 
 ## Structured Authorization
 
@@ -223,7 +225,12 @@ data:
         failurePolicy: Deny
         matchConditions:
         - expression: request.resourceAttributes.namespace == 'kube-system'
----
+```
+
+In addition, it is required to provide a `Secret` for each authorizer.
+This `Secret` should contain a kubeconfig with the server address of the webhook server, and optionally credentials for authentication:
+
+```yaml
 apiVersion: v1
 kind: Secret
 metadata:
@@ -234,12 +241,14 @@ data:
 ```
 
 The user is responsible for the validity of the configured authorizers.
+Be aware that changing the configuration in the `ConfigMap` will be applied in the next `Shoot` reconciliation, but this is not automatically triggered.
+If you want the changes to roll out immediately, [trigger a reconciliation explicitly](../shoot-operations/shoot_operations.md#immediate-reconciliation).
 
 > [!NOTE]
 > You can have one or more authorizers of type `Webhook` (no other types are supported).
 >
 > You are not allowed to specify the `authorizers[].webhook.connectionInfo` field.
-> Instead, provide a kubeconfig file containing the server address (and optionally, credentials that can be used by `kube-apiserver` in order to authenticate with the webhook server) by creating a `Secret` containing the kubeconfig (in the `.data.kubeconfig` key).
+> Instead, as mentioned above, provide a kubeconfig file containing the server address (and optionally, credentials that can be used by `kube-apiserver` in order to authenticate with the webhook server) by creating a `Secret` containing the kubeconfig (in the `.data.kubeconfig` key).
 > Reference this `Secret` by adding it to `.spec.kubernetes.kubeAPIServer.structuredAuthorization.kubeconfigs[]` (choose the proper `authorizerName`, see example above).
 
 Be aware of the fact that all webhook authorizers are added only after the `RBAC`/`Node` authorizers.
