@@ -1752,6 +1752,17 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		Context("KubeAPIServer validation", func() {
 			Context("OIDC validation", func() {
+				It("should forbid setting OIDC configuration from kubernetes version 1.32", func() {
+					shoot.Spec.Kubernetes.Version = "1.32"
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig"),
+					}))))
+				})
+
 				It("should forbid unsupported OIDC configuration", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.CABundle = ptr.To("")
 					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = ptr.To("")

@@ -5860,6 +5860,10 @@ OIDCConfig
 <td>
 <em>(Optional)</em>
 <p>OIDCConfig contains configuration settings for the OIDC provider.</p>
+<p>Deprecated: This field is deprecated and will be forbidden starting from Kubernetes 1.32.
+Please configure and use structured authentication instead of oidc flags.
+For more information check <a href="https://github.com/gardener/gardener/issues/9858">https://github.com/gardener/gardener/issues/9858</a>
+TODO(AleksandarSavchev): Drop this field after support for Kubernetes 1.31 is dropped.</p>
 </td>
 </tr>
 <tr>

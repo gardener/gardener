@@ -4208,7 +4208,7 @@ func schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref common.ReferenceCallba
 					},
 					"oidcConfig": {
 						SchemaProps: spec.SchemaProps{
-							Description: "OIDCConfig contains configuration settings for the OIDC provider.",
+							Description: "OIDCConfig contains configuration settings for the OIDC provider.\n\nDeprecated: This field is deprecated and will be forbidden starting from Kubernetes 1.32. Please configure and use structured authentication instead of oidc flags. For more information check https://github.com/gardener/gardener/issues/9858",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.OIDCConfig"),
 						},
 					},
