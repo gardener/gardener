@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package admissionpluginsecret_test
+package authorizationconfig_test
 
 import (
 	"testing"
@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestAdmissionPluginSecret(t *testing.T) {
+func TestAuthorizationConfig(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "AdmissionController Webhook Admission AdmissionPluginSecret Suite")
+	RunSpecs(t, "AdmissionController Webhook Admission AuthorizationConfiguration Suite")
 }

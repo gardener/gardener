@@ -90,6 +90,24 @@ var _ = Describe("Add", func() {
 			Expect(Predicate(oldShoot, garden)).To(BeTrue())
 		})
 
+		It("should return true because the kube-apiserver structured authentication config map changed", func() {
+			oldShoot := garden.DeepCopy()
+			garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.StructuredAuthentication = &gardencorev1beta1.StructuredAuthentication{ConfigMapName: "foo"}
+			Expect(Predicate(oldShoot, garden)).To(BeTrue())
+		})
+
+		It("should return true because the kube-apiserver structured authorization configmap changed", func() {
+			oldShoot := garden.DeepCopy()
+			garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.StructuredAuthorization = &gardencorev1beta1.StructuredAuthorization{ConfigMapName: "bar"}
+			Expect(Predicate(oldShoot, garden)).To(BeTrue())
+		})
+
+		It("should return true because the kube-apiserver structured authroization kubeconfig secret fields changed", func() {
+			oldShoot := garden.DeepCopy()
+			garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.StructuredAuthorization = &gardencorev1beta1.StructuredAuthorization{Kubeconfigs: []gardencorev1beta1.AuthorizerKubeconfigReference{{SecretName: "foo"}}}
+			Expect(Predicate(oldShoot, garden)).To(BeTrue())
+		})
+
 		It("should return true because the kube-apiserver admission plugin secret fields changed", func() {
 			oldShoot := garden.DeepCopy()
 			garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{{KubeconfigSecretName: ptr.To("foo")}}

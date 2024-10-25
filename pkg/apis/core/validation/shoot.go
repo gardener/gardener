@@ -1388,6 +1388,22 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 		}
 	}
 
+	if structuredAuthorization := kubeAPIServer.StructuredAuthorization; structuredAuthorization != nil {
+		structAuthPath := fldPath.Child("structuredAuthorization")
+		if k8sLess130 {
+			allErrs = append(allErrs, field.Forbidden(structAuthPath, "is available for Kubernetes versions >= v1.30"))
+		}
+		if value, ok := kubeAPIServer.FeatureGates["StructuredAuthorizationConfiguration"]; ok && !value {
+			allErrs = append(allErrs, field.Forbidden(structAuthPath, "requires feature gate StructuredAuthorizationConfiguration to be enabled"))
+		}
+		if len(structuredAuthorization.ConfigMapName) == 0 {
+			allErrs = append(allErrs, field.Forbidden(structAuthPath.Child("configMapName"), "must provide a name"))
+		}
+		if structuredAuthorization.ConfigMapName != "" && len(structuredAuthorization.Kubeconfigs) == 0 {
+			allErrs = append(allErrs, field.Required(structAuthPath.Child("kubeconfigs"), "must provide kubeconfig secret references if an authorization config is configured"))
+		}
+	}
+
 	allErrs = append(allErrs, ValidateWatchCacheSizes(kubeAPIServer.WatchCacheSizes, fldPath.Child("watchCacheSizes"))...)
 
 	allErrs = append(allErrs, ValidateAPIServerLogging(kubeAPIServer.Logging, fldPath.Child("logging"))...)

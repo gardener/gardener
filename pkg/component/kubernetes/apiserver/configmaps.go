@@ -11,9 +11,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	apiserverv1alpha1 "k8s.io/apiserver/pkg/apis/apiserver/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -23,28 +20,11 @@ import (
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
-var apiServerCodec runtime.Codec
-
-func init() {
-	apiServerScheme := runtime.NewScheme()
-	utilruntime.Must(apiserverv1alpha1.AddToScheme(apiServerScheme))
-
-	var (
-		ser = json.NewSerializerWithOptions(json.DefaultMetaFactory, apiServerScheme, apiServerScheme, json.SerializerOptions{
-			Yaml:   true,
-			Pretty: false,
-			Strict: false,
-		})
-		versions = schema.GroupVersions([]schema.GroupVersion{apiserverv1alpha1.SchemeGroupVersion})
-	)
-
-	apiServerCodec = serializer.NewCodecFactory(apiServerScheme).CodecForVersions(ser, ser, versions, versions)
-}
-
 const (
 	configMapAdmissionNamePrefix            = "kube-apiserver-admission-config"
 	configMapAuditPolicyNamePrefix          = "audit-policy-config"
 	configMapAuthenticationConfigNamePrefix = "kube-apiserver-authentication-config"
+	configMapAuthorizationConfigNamePrefix  = "kube-apiserver-authorization-config"
 	configMapEgressSelectorNamePrefix       = "kube-apiserver-egress-selector-config"
 	configMapEgressSelectorDataKey          = "egress-selector-configuration.yaml"
 )
@@ -89,7 +69,7 @@ func (k *kubeAPIServer) reconcileConfigMapEgressSelector(ctx context.Context, co
 		},
 	}
 
-	data, err := runtime.Encode(apiServerCodec, egressSelectorConfig)
+	data, err := runtime.Encode(ConfigCodec, egressSelectorConfig)
 	if err != nil {
 		return err
 	}

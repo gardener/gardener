@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	apiserverv1beta1 "k8s.io/apiserver/pkg/apis/apiserver/v1beta1"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	admissionapiv1 "k8s.io/pod-security-admission/admission/api/v1"
 	admissionapiv1alpha1 "k8s.io/pod-security-admission/admission/api/v1alpha1"
@@ -76,7 +77,7 @@ var _ = Describe("KubeAPIServer", func() {
 			staticTokenKubeconfigEnabled *bool
 			auditWebhookConfig           *apiserver.AuditWebhook
 			authenticationWebhookConfig  *kubeapiserver.AuthenticationWebhook
-			authorizationWebhookConfig   *kubeapiserver.AuthorizationWebhook
+			authorizationWebhookConfigs  []kubeapiserver.AuthorizationWebhook
 			resourcesToStoreInETCDEvents []schema.GroupResource
 
 			runtimeClientSet     kubernetes.Interface
@@ -97,7 +98,7 @@ var _ = Describe("KubeAPIServer", func() {
 			staticTokenKubeconfigEnabled = nil
 			auditWebhookConfig = nil
 			authenticationWebhookConfig = &kubeapiserver.AuthenticationWebhook{Version: ptr.To("authn-version")}
-			authorizationWebhookConfig = &kubeapiserver.AuthorizationWebhook{Version: ptr.To("authnz-version")}
+			authorizationWebhookConfigs = []kubeapiserver.AuthorizationWebhook{{Name: "custom", Kubeconfig: []byte("bar"), WebhookConfiguration: apiserverv1beta1.WebhookConfiguration{FailurePolicy: "Fail"}}}
 			resourcesToStoreInETCDEvents = []schema.GroupResource{{Resource: "foo", Group: "bar"}}
 
 			secret = &corev1.Secret{
@@ -115,7 +116,7 @@ var _ = Describe("KubeAPIServer", func() {
 
 		Describe("AnonymousAuthenticationEnabled", func() {
 			It("should set the field to false by default", func() {
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().AnonymousAuthenticationEnabled).To(BeFalse())
 			})
@@ -123,7 +124,7 @@ var _ = Describe("KubeAPIServer", func() {
 			It("should set the field to true if explicitly enabled", func() {
 				apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{EnableAnonymousAuthentication: ptr.To(true)}
 
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().AnonymousAuthenticationEnabled).To(BeTrue())
 			})
@@ -131,7 +132,7 @@ var _ = Describe("KubeAPIServer", func() {
 
 		Describe("APIAudiences", func() {
 			It("should set the field to 'kubernetes' and 'gardener' by default", func() {
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().APIAudiences).To(ConsistOf("kubernetes", "gardener"))
 			})
@@ -140,7 +141,7 @@ var _ = Describe("KubeAPIServer", func() {
 				apiAudiences := []string{"foo", "bar"}
 				apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{APIAudiences: apiAudiences}
 
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().APIAudiences).To(Equal(append(apiAudiences, "gardener")))
 			})
@@ -149,7 +150,7 @@ var _ = Describe("KubeAPIServer", func() {
 				apiAudiences := []string{"foo", "bar", "gardener"}
 				apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{APIAudiences: apiAudiences}
 
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().APIAudiences).To(Equal(apiAudiences))
 			})
@@ -165,7 +166,7 @@ var _ = Describe("KubeAPIServer", func() {
 				func(configuredPlugins []gardencorev1beta1.AdmissionPlugin, expectedPlugins []apiserver.AdmissionPluginConfig, isWorkerless bool) {
 					apiServerConfig.AdmissionPlugins = configuredPlugins
 
-					kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+					kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(kubeAPIServer.GetValues().EnabledAdmissionPlugins).To(Equal(expectedPlugins))
 				},
@@ -291,7 +292,7 @@ var _ = Describe("KubeAPIServer", func() {
 				var expectedDisabledPlugins []gardencorev1beta1.AdmissionPlugin
 
 				AfterEach(func() {
-					kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+					kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(kubeAPIServer.GetValues().DisabledAdmissionPlugins).To(Equal(expectedDisabledPlugins))
 				})
@@ -366,7 +367,7 @@ var _ = Describe("KubeAPIServer", func() {
 					codec = serializer.NewCodecFactory(runtimeScheme).CodecForVersions(ser, ser, versions, versions)
 
 					configData = nil
-					kubeAPIServer, err = NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+					kubeAPIServer, err = NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
 				})
 
 				Context("When the config is nil", func() {
@@ -578,7 +579,7 @@ exemptions:
 						prepTest()
 					}
 
-					kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+					kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
 					Expect(err).To(errMatcher)
 					if kubeAPIServer != nil {
 						Expect(kubeAPIServer.GetValues().Audit).To(Equal(expectedConfig))
@@ -731,7 +732,7 @@ exemptions:
 						prepTest()
 					}
 
-					kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+					kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
 					Expect(err).To(errMatcher)
 					if kubeAPIServer != nil {
 						Expect(kubeAPIServer.GetValues().AuthenticationConfiguration).To(Equal(expectedConfig))
@@ -814,9 +815,194 @@ exemptions:
 			)
 		})
 
+		Describe("AuthorizationWebhooks", func() {
+			var (
+				config = `---
+apiVersion: apiserver.config.k8s.io/v1beta1
+kind: AuthorizationConfiguration
+authorizers:
+- type: Webhook
+  name: webhook
+  webhook:
+    timeout: 3s
+    subjectAccessReviewVersion: v1
+    matchConditionSubjectAccessReviewVersion: v1
+    failurePolicy: Deny
+    matchConditions:
+    - expression: request.resourceAttributes.namespace == 'kube-system'
+`
+				authorizationConfigurationCm *corev1.ConfigMap
+			)
+
+			BeforeEach(func() {
+				authorizationConfigurationCm = &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "auth-config",
+						Namespace: objectMeta.Namespace,
+					},
+					Data: map[string]string{"config.yaml": config},
+				}
+			})
+
+			DescribeTable("should have the expected authorization configuration",
+				func(prepTest func(), expectedWebhooks []kubeapiserver.AuthorizationWebhook, errMatcher gomegatypes.GomegaMatcher) {
+					if prepTest != nil {
+						prepTest()
+					}
+
+					kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
+					Expect(err).To(errMatcher)
+					if kubeAPIServer != nil {
+						Expect(kubeAPIServer.GetValues().AuthorizationWebhooks).To(Equal(expectedWebhooks))
+					}
+				},
+
+				Entry("KubeAPIServerConfig is nil",
+					nil,
+					[]kubeapiserver.AuthorizationWebhook{{
+						Name:                 "custom",
+						Kubeconfig:           []byte("bar"),
+						WebhookConfiguration: apiserverv1beta1.WebhookConfiguration{FailurePolicy: "Fail"}},
+					},
+					Not(HaveOccurred()),
+				),
+				Entry("StructuredAuthorization is nil",
+					func() {
+						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{}
+					},
+					[]kubeapiserver.AuthorizationWebhook{{
+						Name:                 "custom",
+						Kubeconfig:           []byte("bar"),
+						WebhookConfiguration: apiserverv1beta1.WebhookConfiguration{FailurePolicy: "Fail"}},
+					},
+					Not(HaveOccurred()),
+				),
+				Entry("ConfigMapName is empty",
+					func() {
+						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
+							StructuredAuthorization: &gardencorev1beta1.StructuredAuthorization{
+								ConfigMapName: "",
+							},
+						}
+					},
+					[]kubeapiserver.AuthorizationWebhook{{
+						Name:                 "custom",
+						Kubeconfig:           []byte("bar"),
+						WebhookConfiguration: apiserverv1beta1.WebhookConfiguration{FailurePolicy: "Fail"}},
+					},
+					Not(HaveOccurred()),
+				),
+				Entry("ConfigMapName is provided but ConfigMap is missing",
+					func() {
+						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
+							StructuredAuthorization: &gardencorev1beta1.StructuredAuthorization{
+								ConfigMapName: authorizationConfigurationCm.Name,
+							},
+						}
+					},
+					nil,
+					MatchError(ContainSubstring("not found")),
+				),
+				Entry("ConfigMapName is provided but ConfigMap is missing while shoot has a deletion timestamp",
+					func() {
+						objectMeta.DeletionTimestamp = &metav1.Time{}
+						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
+							StructuredAuthorization: &gardencorev1beta1.StructuredAuthorization{
+								ConfigMapName: authorizationConfigurationCm.Name,
+							},
+						}
+					},
+					[]kubeapiserver.AuthorizationWebhook{{
+						Name:                 "custom",
+						Kubeconfig:           []byte("bar"),
+						WebhookConfiguration: apiserverv1beta1.WebhookConfiguration{FailurePolicy: "Fail"}},
+					},
+					Not(HaveOccurred()),
+				),
+				Entry("ConfigMapName is provided but ConfigMap does not have correct data field",
+					func() {
+						authorizationConfigurationCm.Data = nil
+						Expect(resourceConfigClient.Create(ctx, authorizationConfigurationCm)).To(Succeed())
+
+						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
+							StructuredAuthorization: &gardencorev1beta1.StructuredAuthorization{
+								ConfigMapName: authorizationConfigurationCm.Name,
+							},
+						}
+					},
+					nil,
+					MatchError(ContainSubstring("missing '.data[config.yaml]' in authorization configuration ConfigMap")),
+				),
+				Entry("ConfigMapName is provided and ConfigMap is compliant but kubeconfig secret ref is missing",
+					func() {
+						Expect(resourceConfigClient.Create(ctx, authorizationConfigurationCm)).To(Succeed())
+
+						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
+							StructuredAuthorization: &gardencorev1beta1.StructuredAuthorization{
+								ConfigMapName: authorizationConfigurationCm.Name,
+							},
+						}
+					},
+					nil,
+					MatchError(ContainSubstring("missing kubeconfig secret reference for authorizer webhook")),
+				),
+				Entry("ConfigMapName is provided and ConfigMap is compliant but referenced kubeconfig secret is missing",
+					func() {
+						Expect(resourceConfigClient.Create(ctx, authorizationConfigurationCm)).To(Succeed())
+
+						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
+							StructuredAuthorization: &gardencorev1beta1.StructuredAuthorization{
+								ConfigMapName: authorizationConfigurationCm.Name,
+								Kubeconfigs:   []gardencorev1beta1.AuthorizerKubeconfigReference{{AuthorizerName: "webhook", SecretName: "authz-kubeconfig"}},
+							},
+						}
+					},
+					nil,
+					MatchError(ContainSubstring("retrieving kubeconfig secret foo/authz-kubeconfig failed: secrets \"authz-kubeconfig\" not found")),
+				),
+				Entry("ConfigMapName is provided and ConfigMap is compliant and referenced kubeconfig secret is present",
+					func() {
+						Expect(resourceConfigClient.Create(ctx, authorizationConfigurationCm)).To(Succeed())
+						Expect(resourceConfigClient.Create(ctx, &corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{Name: "authz-kubeconfig", Namespace: authorizationConfigurationCm.Namespace},
+							Data:       map[string][]byte{"kubeconfig": []byte("webhook-kubeconfig")},
+						})).To(Succeed())
+
+						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
+							StructuredAuthorization: &gardencorev1beta1.StructuredAuthorization{
+								ConfigMapName: authorizationConfigurationCm.Name,
+								Kubeconfigs:   []gardencorev1beta1.AuthorizerKubeconfigReference{{AuthorizerName: "webhook", SecretName: "authz-kubeconfig"}},
+							},
+						}
+					},
+					[]kubeapiserver.AuthorizationWebhook{
+						{
+							Name:                 "custom",
+							Kubeconfig:           []byte("bar"),
+							WebhookConfiguration: apiserverv1beta1.WebhookConfiguration{FailurePolicy: "Fail"},
+						},
+						{
+							Name:       "webhook",
+							Kubeconfig: []byte("webhook-kubeconfig"),
+							WebhookConfiguration: apiserverv1beta1.WebhookConfiguration{
+								AuthorizedTTL:                            metav1.Duration{Duration: 5 * time.Minute},
+								UnauthorizedTTL:                          metav1.Duration{Duration: 30 * time.Second},
+								Timeout:                                  metav1.Duration{Duration: 3 * time.Second},
+								SubjectAccessReviewVersion:               "v1",
+								MatchConditionSubjectAccessReviewVersion: "v1",
+								FailurePolicy:                            "Deny",
+								MatchConditions:                          []apiserverv1beta1.WebhookMatchCondition{{Expression: `request.resourceAttributes.namespace == 'kube-system'`}},
+							},
+						},
+					},
+					Not(HaveOccurred()),
+				),
+			)
+		})
+
 		Describe("DefaultNotReadyTolerationSeconds and DefaultUnreachableTolerationSeconds", func() {
 			It("should not set the fields", func() {
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().DefaultNotReadyTolerationSeconds).To(BeNil())
 				Expect(kubeAPIServer.GetValues().DefaultUnreachableTolerationSeconds).To(BeNil())
@@ -828,7 +1014,7 @@ exemptions:
 					DefaultUnreachableTolerationSeconds: ptr.To[int64](130),
 				}
 
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().DefaultNotReadyTolerationSeconds).To(PointTo(Equal(int64(120))))
 				Expect(kubeAPIServer.GetValues().DefaultUnreachableTolerationSeconds).To(PointTo(Equal(int64(130))))
@@ -837,7 +1023,7 @@ exemptions:
 
 		Describe("EventTTL", func() {
 			It("should not set the event ttl field", func() {
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().EventTTL).To(BeNil())
 			})
@@ -849,7 +1035,7 @@ exemptions:
 					EventTTL: eventTTL,
 				}
 
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().EventTTL).To(Equal(eventTTL))
 			})
@@ -857,7 +1043,7 @@ exemptions:
 
 		Describe("FeatureGates", func() {
 			It("should set the field to nil by default", func() {
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().FeatureGates).To(BeNil())
 			})
@@ -871,7 +1057,7 @@ exemptions:
 					},
 				}
 
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().FeatureGates).To(Equal(featureGates))
 			})
@@ -884,7 +1070,7 @@ exemptions:
 						prepTest()
 					}
 
-					kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+					kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(kubeAPIServer.GetValues().OIDC).To(Equal(expectedConfig))
 				},
@@ -910,7 +1096,7 @@ exemptions:
 
 		Describe("Requests", func() {
 			It("should set the field to nil by default", func() {
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().Requests).To(BeNil())
 			})
@@ -922,7 +1108,7 @@ exemptions:
 				}
 				apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{Requests: requests}
 
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().Requests).To(Equal(requests))
 			})
@@ -930,7 +1116,7 @@ exemptions:
 
 		Describe("RuntimeConfig", func() {
 			It("should set the field to nil by default", func() {
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().RuntimeConfig).To(BeNil())
 			})
@@ -939,7 +1125,7 @@ exemptions:
 				runtimeConfig := map[string]bool{"foo": true, "bar": false}
 				apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{RuntimeConfig: runtimeConfig}
 
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().RuntimeConfig).To(Equal(runtimeConfig))
 			})
@@ -949,7 +1135,7 @@ exemptions:
 			It("should set the field to the configured values", func() {
 				vpnConfig = kubeapiserver.VPNConfig{Enabled: true}
 
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().VPN).To(Equal(vpnConfig))
 			})
@@ -957,7 +1143,7 @@ exemptions:
 
 		Describe("WatchCacheSizes", func() {
 			It("should set the field to nil by default", func() {
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().WatchCacheSizes).To(BeNil())
 			})
@@ -969,7 +1155,7 @@ exemptions:
 				}
 				apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{WatchCacheSizes: watchCacheSizes}
 
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().WatchCacheSizes).To(Equal(watchCacheSizes))
 			})
@@ -977,7 +1163,7 @@ exemptions:
 
 		Describe("PriorityClassName", func() {
 			It("should set the field properly", func() {
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().PriorityClassName).To(Equal(priorityClassName))
 			})
@@ -985,31 +1171,31 @@ exemptions:
 
 		Describe("IsWorkerless", func() {
 			It("should set the field properly", func() {
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().IsWorkerless).To(Equal(isWorkerless))
 			})
 		})
 
-		Describe("Authentication", func() {
+		Describe("AuthenticationWebhook", func() {
 			It("should set the field properly", func() {
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().AuthenticationWebhook).To(Equal(authenticationWebhookConfig))
 			})
 		})
 
-		Describe("Authorization", func() {
+		Describe("AuthorizationWebhooks", func() {
 			It("should set the field properly", func() {
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(kubeAPIServer.GetValues().AuthorizationWebhook).To(Equal(authorizationWebhookConfig))
+				Expect(kubeAPIServer.GetValues().AuthorizationWebhooks).To(Equal(authorizationWebhookConfigs))
 			})
 		})
 
 		Describe("ResourcesToStoreInETCDEvents", func() {
 			It("should set the field properly", func() {
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
+				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfigs, resourcesToStoreInETCDEvents)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(kubeAPIServer.GetValues().ResourcesToStoreInETCDEvents).To(Equal(resourcesToStoreInETCDEvents))
 			})

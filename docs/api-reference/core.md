@@ -2623,6 +2623,47 @@ which contains the audit policy for the kube-apiserver.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.AuthorizerKubeconfigReference">AuthorizerKubeconfigReference
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.StructuredAuthorization">StructuredAuthorization</a>)
+</p>
+<p>
+<p>AuthorizerKubeconfigReference is a reference for a kubeconfig for a authorization webhook.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>authorizerName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>AuthorizerName is the name of a webhook authorizer.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>secretName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>SecretName is the name of a secret containing the kubeconfig.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.AvailabilityZone">AvailabilityZone
 </h3>
 <p>
@@ -6025,7 +6066,22 @@ StructuredAuthentication
 </td>
 <td>
 <em>(Optional)</em>
-<p>StructuredAuthentication contains configuration settings for structured authentication to the kube-apiserver.
+<p>StructuredAuthentication contains configuration settings for structured authentication for the kube-apiserver.
+This field is only available for Kubernetes v1.30 or later.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>structuredAuthorization</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.StructuredAuthorization">
+StructuredAuthorization
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>StructuredAuthorization contains configuration settings for structured authorization for the kube-apiserver.
 This field is only available for Kubernetes v1.30 or later.</p>
 </td>
 </tr>
@@ -12895,8 +12951,52 @@ string
 </em>
 </td>
 <td>
-<p>ConfigMapName is the name of the ConfigMap in the project namespace
-which contains AuthenticationConfiguration for the kube-apiserver.</p>
+<p>ConfigMapName is the name of the ConfigMap in the project namespace which contains AuthenticationConfiguration
+for the kube-apiserver.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.StructuredAuthorization">StructuredAuthorization
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
+</p>
+<p>
+<p>StructuredAuthorization contains authorization config for kube-apiserver.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>configMapName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>ConfigMapName is the name of the ConfigMap in the project namespace which contains AuthorizationConfiguration for
+the kube-apiserver.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>kubeconfigs</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.AuthorizerKubeconfigReference">
+[]AuthorizerKubeconfigReference
+</a>
+</em>
+</td>
+<td>
+<p>Kubeconfigs is a list of references for kubeconfigs for the authorization webhooks.</p>
 </td>
 </tr>
 </tbody>

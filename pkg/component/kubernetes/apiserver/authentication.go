@@ -13,11 +13,11 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	apiserverv1beta1 "k8s.io/apiserver/pkg/apis/apiserver/v1beta1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/yaml"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -30,7 +30,8 @@ const (
 	volumeMountPathStructuredAuthenticationConfig = "/etc/kubernetes/structured/authentication"
 	volumeMountPathOIDCCABundle                   = "/srv/kubernetes/oidc"
 
-	configMapAuthenticationConfigDataKey = "config.yaml"
+	// DataKeyConfigMapAuthenticationConfig is the key of the ConfigMap containing the authentication configuration.
+	DataKeyConfigMapAuthenticationConfig = "config.yaml"
 )
 
 // reconcileConfigMapAuthenticationConfig reconciles the ConfigMap containing the authentication configuration.
@@ -59,7 +60,7 @@ func (k *kubeAPIServer) reconcileConfigMapAuthenticationConfig(ctx context.Conte
 		authenticationConfig = oidcAuthenticationConfig
 	}
 
-	configMap.Data = map[string]string{configMapAuthenticationConfigDataKey: authenticationConfig}
+	configMap.Data = map[string]string{DataKeyConfigMapAuthenticationConfig: authenticationConfig}
 	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
 	return client.IgnoreAlreadyExists(k.client.Client().Create(ctx, configMap))
 }
@@ -115,12 +116,12 @@ func ComputeAuthenticationConfigRawConfig(oidc *gardencorev1beta1.OIDCConfig) (s
 		authenticationConfiguration.JWT[0].ClaimValidationRules = append(authenticationConfiguration.JWT[0].ClaimValidationRules, claimValidationRule)
 	}
 
-	rawConfig, err := yaml.Marshal(authenticationConfiguration)
+	data, err := runtime.Encode(ConfigCodec, authenticationConfiguration)
 	if err != nil {
-		return "", fmt.Errorf("unable to parse authenticationConfiguration: %w", err)
+		return "", fmt.Errorf("unable to encode authentication configuration: %w", err)
 	}
 
-	return string(rawConfig), nil
+	return string(data), nil
 }
 
 func (k *kubeAPIServer) handleAuthenticationSettings(deployment *appsv1.Deployment, configMapAuthenticationConfig *corev1.ConfigMap, secretOIDCCABundle *corev1.Secret) {
@@ -129,11 +130,11 @@ func (k *kubeAPIServer) handleAuthenticationSettings(deployment *appsv1.Deployme
 		return
 	}
 
-	if _, ok := configMapAuthenticationConfig.Data[configMapAuthenticationConfigDataKey]; !ok {
+	if _, ok := configMapAuthenticationConfig.Data[DataKeyConfigMapAuthenticationConfig]; !ok {
 		return
 	}
 
-	deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--authentication-config=%s/%s", volumeMountPathStructuredAuthenticationConfig, configMapAuthenticationConfigDataKey))
+	deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--authentication-config=%s/%s", volumeMountPathStructuredAuthenticationConfig, DataKeyConfigMapAuthenticationConfig))
 	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
 		Name:      volumeNameStructuredAuthenticationConfig,
 		MountPath: volumeMountPathStructuredAuthenticationConfig,

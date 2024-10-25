@@ -24,6 +24,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	apiserverv1beta1 "k8s.io/apiserver/pkg/apis/apiserver/v1beta1"
+	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/component-base/version"
@@ -333,6 +335,9 @@ func (r *Reconciler) enableSeedAuthorizer(ctx context.Context) (bool, error) {
 	// above order). Hence, we have to run the flow as second time after the initial Garden creation - this time with
 	// the SeedAuthorizer feature getting enabled. From then on, all subsequent reconciliations can always enable it and
 	// only one reconciliation is needed.
+	// TODO(rfranzke): Consider removing this two-step deployment once we only support Kubernetes 1.32+ (in this
+	//  version, the structured authorization feature has been promoted to GA). We already use structured authz for
+	//  1.30+ clusters. See https://github.com/gardener/gardener/pull/10682#discussion_r1816324389 for more information.
 	if err := r.RuntimeClientSet.Client().Get(ctx, client.ObjectKey{Name: gardenerapiserver.DeploymentName, Namespace: r.GardenNamespace}, &appsv1.Deployment{}); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return false, err
@@ -570,7 +575,7 @@ func (r *Reconciler) newKubeAPIServer(
 		apiServerConfig              *gardencorev1beta1.KubeAPIServerConfig
 		auditWebhookConfig           *apiserver.AuditWebhook
 		authenticationWebhookConfig  *kubeapiserver.AuthenticationWebhook
-		authorizationWebhookConfig   *kubeapiserver.AuthorizationWebhook
+		authorizationWebhookConfigs  []kubeapiserver.AuthorizationWebhook
 		resourcesToStoreInETCDEvents []schema.GroupResource
 	)
 
@@ -610,11 +615,22 @@ func (r *Reconciler) newKubeAPIServer(
 			return nil, fmt.Errorf("failed generating authorization webhook kubeconfig: %w", err)
 		}
 
-		authorizationWebhookConfig = &kubeapiserver.AuthorizationWebhook{
-			Kubeconfig:           kubeconfig,
-			CacheAuthorizedTTL:   ptr.To(time.Duration(0)),
-			CacheUnauthorizedTTL: ptr.To(time.Duration(0)),
-		}
+		authorizationWebhookConfigs = append(authorizationWebhookConfigs, kubeapiserver.AuthorizationWebhook{
+			Name:       "seed-authorizer",
+			Kubeconfig: kubeconfig,
+			WebhookConfiguration: apiserverv1beta1.WebhookConfiguration{
+				AuthorizedTTL:                            metav1.Duration{Duration: time.Duration(0)},
+				UnauthorizedTTL:                          metav1.Duration{Duration: time.Duration(0)},
+				Timeout:                                  metav1.Duration{Duration: 10 * time.Second},
+				FailurePolicy:                            apiserverv1beta1.FailurePolicyDeny,
+				SubjectAccessReviewVersion:               "v1",
+				MatchConditionSubjectAccessReviewVersion: "v1",
+				MatchConditions: []apiserverv1beta1.WebhookMatchCondition{{
+					// only intercept request from gardenlets and service accounts from seed namespaces
+					Expression: fmt.Sprintf("'%s' in request.groups || request.groups.exists(e, e.startsWith('%s%s'))", v1beta1constants.SeedsGroup, serviceaccount.ServiceAccountGroupPrefix, gardenerutils.SeedNamespaceNamePrefix),
+				}},
+			},
+		})
 	}
 
 	return sharedcomponent.NewKubeAPIServer(
@@ -635,7 +651,7 @@ func (r *Reconciler) newKubeAPIServer(
 		ptr.To(false),
 		auditWebhookConfig,
 		authenticationWebhookConfig,
-		authorizationWebhookConfig,
+		authorizationWebhookConfigs,
 		resourcesToStoreInETCDEvents,
 	)
 }

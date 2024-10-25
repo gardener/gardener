@@ -183,8 +183,80 @@ data:
 ```
 
 The user is responsible for the validity of the configured `JWTAuthenticator`s.
+Be aware that changing the configuration in the `ConfigMap` will be applied in the next `Shoot` reconciliation, but this is not automatically triggered.
+If you want the changes to roll out immediately, [trigger a reconciliation explicitly](../shoot-operations/shoot_operations.md#immediate-reconciliation).
 
-## Static Token kubeconfig
+## Structured Authorization
+
+For shoots with Kubernetes version `>= 1.30`, which have `StructuredAuthorizationConfiguration` feature gate enabled (enabled by default), `kube-apiserver` of shoot clusters can be provided with [Structured Authorization configuration](https://kubernetes.io/docs/reference/access-authn-authz/authorization/#using-configuration-file-for-authorization) via the Shoot spec:
+
+```yaml
+apiVersion: core.gardener.cloud/v1beta1
+kind: Shoot
+...
+spec:
+  kubernetes:
+    kubeAPIServer:
+      structuredAuthorization:
+        configMapName: name-of-configmap-containing-authorization-config
+        kubeconfigs:
+        - authorizerName: my-webhook
+          secretName: webhook-kubeconfig
+```
+
+The `configMapName` references a user created `ConfigMap` in the project namespace containing the `AuthorizationConfiguration` in it's `config.yaml` data field.
+Here is an example of such `ConfigMap`:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: name-of-configmap-containing-authorization-config
+  namespace: garden-my-project
+data:
+  config.yaml: |
+    apiVersion: apiserver.config.k8s.io/v1beta1
+    kind: AuthorizationConfiguration
+    authorizers:
+    - type: Webhook
+      name: my-webhook
+      webhook:
+        timeout: 3s
+        subjectAccessReviewVersion: v1
+        matchConditionSubjectAccessReviewVersion: v1
+        failurePolicy: Deny
+        matchConditions:
+        - expression: request.resourceAttributes.namespace == 'kube-system'
+```
+
+In addition, it is required to provide a `Secret` for each authorizer.
+This `Secret` should contain a kubeconfig with the server address of the webhook server, and optionally credentials for authentication:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: webhook-kubeconfig
+  namespace: garden-my-project
+data:
+  kubeconfig: <base64-encoded-kubeconfig-for-authz-webhook>
+```
+
+The user is responsible for the validity of the configured authorizers.
+Be aware that changing the configuration in the `ConfigMap` will be applied in the next `Shoot` reconciliation, but this is not automatically triggered.
+If you want the changes to roll out immediately, [trigger a reconciliation explicitly](../shoot-operations/shoot_operations.md#immediate-reconciliation).
+
+> [!NOTE]
+> You can have one or more authorizers of type `Webhook` (no other types are supported).
+>
+> You are not allowed to specify the `authorizers[].webhook.connectionInfo` field.
+> Instead, as mentioned above, provide a kubeconfig file containing the server address (and optionally, credentials that can be used by `kube-apiserver` in order to authenticate with the webhook server) by creating a `Secret` containing the kubeconfig (in the `.data.kubeconfig` key).
+> Reference this `Secret` by adding it to `.spec.kubernetes.kubeAPIServer.structuredAuthorization.kubeconfigs[]` (choose the proper `authorizerName`, see example above).
+
+Be aware of the fact that all webhook authorizers are added only after the `RBAC`/`Node` authorizers.
+Hence, if RBAC already allows a request, your webhook authorizer might not get called.
+
+## Static Token Kubeconfig
 
 > **Note:** Static token kubeconfig is not available for Shoot clusters using Kubernetes version >= 1.27. The [`shoots/adminkubeconfig` subresource](#shootsadminkubeconfig-subresource) should be used instead.
 

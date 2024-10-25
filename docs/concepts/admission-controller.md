@@ -13,9 +13,19 @@ It is also used to serve http(s) handlers for authorization webhooks.
 
 This section describes the admission webhook handlers that are currently served.
 
+### Authentication Configuration Validator
+
+In `Shoot`s, it is possible to reference [structured authentication configurations](https://kubernetes.io/blog/2024/04/25/structured-authentication-moves-to-beta).
+This validation handler validates that such configurations are valid.
+
+### Authorization Configuration Validator
+
+In `Shoot`s, it is possible to reference [structured authorization configurations](https://kubernetes.io/blog/2024/04/26/multi-webhook-and-modular-authorization-made-much-easier).
+This validation handler validates that such configurations are valid.
+
 ### Admission Plugin Secret Validator
 
-In `Shoot`, `AdmissionPlugin` can have reference to other files. This validation handler validates the referred admission plugin secret and ensures that the secret always contains the required data `kubeconfig`.
+In `Shoot`s, `AdmissionPlugin` can have reference to other files. This validation handler validates the referred admission plugin secret and ensures that the secret always contains the required data `kubeconfig`.
 
 ### Kubeconfig Secret Validator
 
@@ -40,6 +50,7 @@ The Resource Size Validator checks arbitrary incoming admission requests against
 > The contents of `status` subresources and `metadata.managedFields` are not taken into account for the resource size calculation.
 
 Example for Gardener Admission Controller configuration:
+
 ```yaml
 server:
   resourceAdmissionConfiguration:

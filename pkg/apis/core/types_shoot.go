@@ -599,8 +599,6 @@ type KubeAPIServerConfig struct {
 	APIAudiences []string
 	// AuditConfig contains configuration settings for the audit of the kube-apiserver.
 	AuditConfig *AuditConfig
-	// StructuredAuthentication contains configuration settings for structured authentication to the kube-apiserver.
-	StructuredAuthentication *StructuredAuthentication
 	// OIDCConfig contains configuration settings for the OIDC provider.
 	//
 	// Deprecated: This field is deprecated and will be forbidden starting from Kubernetes 1.32.
@@ -641,6 +639,10 @@ type KubeAPIServerConfig struct {
 	DefaultUnreachableTolerationSeconds *int64
 	// EncryptionConfig contains customizable encryption configuration of the API server.
 	EncryptionConfig *EncryptionConfig
+	// StructuredAuthentication contains configuration settings for structured authentication for the kube-apiserver.
+	StructuredAuthentication *StructuredAuthentication
+	// StructuredAuthorization contains configuration settings for structured authorization for the kube-apiserver.
+	StructuredAuthorization *StructuredAuthorization
 }
 
 // APIServerLogging contains configuration for the logs level and http access logs
@@ -711,6 +713,23 @@ type StructuredAuthentication struct {
 	// ConfigMapName is the name of the ConfigMap in the project namespace
 	// which contains AuthenticationConfiguration for the kube-apiserver.
 	ConfigMapName string
+}
+
+// StructuredAuthorization contains authorization config for kube-apiserver.
+type StructuredAuthorization struct {
+	// ConfigMapName is the name of the ConfigMap in the project namespace which contains AuthorizationConfiguration for
+	// the kube-apiserver.
+	ConfigMapName string
+	// Kubeconfigs is a list of references for kubeconfigs for the authorization webhooks.
+	Kubeconfigs []AuthorizerKubeconfigReference
+}
+
+// AuthorizerKubeconfigReference is a reference for a kubeconfig for a authorization webhook.
+type AuthorizerKubeconfigReference struct {
+	// AuthorizerName is the name of a webhook authorizer.
+	AuthorizerName string
+	// SecretName is the name of a secret containing the kubeconfig.
+	SecretName string
 }
 
 // OIDCConfig contains configuration settings for the OIDC provider.
@@ -1379,7 +1398,7 @@ type NodeLocalDNS struct {
 	// DisableForwardToUpstreamDNS indicates whether requests from node local DNS to upstream DNS should be disabled.
 	// Default, if unspecified, is to forward requests for external domains to upstream DNS
 	// +optional
-	DisableForwardToUpstreamDNS *bool `json:"disableForwardToUpstreamDNS,omitempty" protobuf:"varint,4,opt,name=disableForwardToUpstreamDNS"`
+	DisableForwardToUpstreamDNS *bool
 }
 
 const (

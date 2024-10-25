@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package admissionpluginsecret
+package shootkubeconfigsecretref
 
 import (
 	corev1 "k8s.io/api/core/v1"
@@ -12,9 +12,9 @@ import (
 
 const (
 	// HandlerName is the name of this admission webhook handler.
-	HandlerName = "admissionpluginsecret_validator"
+	HandlerName = "shootkubeconfigsecretref_validator"
 	// WebhookPath is the HTTP handler path for this admission webhook handler.
-	WebhookPath = "/webhooks/validate-admission-plugin-secret"
+	WebhookPath = "/webhooks/validate-shoot-kubeconfig-secret-ref"
 )
 
 // AddToManager adds Handler to the given manager.

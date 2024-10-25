@@ -92,7 +92,7 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 	}
 
 	if shoot.DeletionTimestamp != nil {
-		// don't mutate shoot if it's already marked for deletion, otherwise gardener-apiserver will deny the user's/
+		// don't validate shoot if it's already marked for deletion, otherwise gardener-apiserver will deny the user's/
 		// controller's request, because we changed the spec
 		return admissionwebhook.Allowed("shoot is already marked for deletion")
 	}
@@ -213,7 +213,7 @@ func validateAuthenticationConfigurationSemantics(authenticationConfiguration st
 	}
 	authConfig, ok := authConfigObj.(*apiserver.AuthenticationConfiguration)
 	if !ok {
-		return http.StatusInternalServerError, fmt.Errorf("failure to cast to authentication configuration type: %v", schemaVersion)
+		return http.StatusInternalServerError, fmt.Errorf("failed to cast to authentication configuration type: %v", schemaVersion)
 	}
 	if errList := apiservervalidation.ValidateAuthenticationConfiguration(authConfig, disallowedIssuers); len(errList) != 0 {
 		return http.StatusUnprocessableEntity, fmt.Errorf("provided invalid authentication configuration: %v", errList)

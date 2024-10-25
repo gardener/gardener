@@ -10,6 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/controller/reference"
 )
@@ -46,8 +47,11 @@ func Predicate(oldObj, newObj client.Object) bool {
 		sniSecretChanged(oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer, newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer) ||
 		kubeAPIServerAuditWebhookSecretChanged(oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer, newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer) ||
 		gardenerAPIServerAuditWebhookSecretChanged(oldGarden.Spec.VirtualCluster.Gardener.APIServer, newGarden.Spec.VirtualCluster.Gardener.APIServer) ||
-		kubeAPIServerAdmissionPluginSecretChanged(oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer, newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer) ||
-		gardenerAPIServerAdmissionPluginSecretChanged(oldGarden.Spec.VirtualCluster.Gardener.APIServer, newGarden.Spec.VirtualCluster.Gardener.APIServer)
+		kubeAPIServerAdmissionPluginSecretsChanged(oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer, newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer) ||
+		gardenerAPIServerAdmissionPluginSecretChanged(oldGarden.Spec.VirtualCluster.Gardener.APIServer, newGarden.Spec.VirtualCluster.Gardener.APIServer) ||
+		kubeAPIServerStructuredAuthenticationConfigMapChanged(oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer, newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer) ||
+		kubeAPIServerStructuredAuthorizationConfigMapChanged(oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer, newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer) ||
+		kubeAPIServerStructuredAuthorizationSecretsChanged(oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer, newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer)
 }
 
 func kubeAPIServerAuditPolicyConfigMapChanged(oldKubeAPIServer, newKubeAPIServer *operatorv1alpha1.KubeAPIServerConfig) bool {
@@ -144,7 +148,50 @@ func gardenerAPIServerAuditWebhookSecretChanged(oldGardenerAPIServer, newGardene
 	return oldSecret != newSecret
 }
 
-func kubeAPIServerAdmissionPluginSecretChanged(oldKubeAPIServer, newKubeAPIServer *operatorv1alpha1.KubeAPIServerConfig) bool {
+func kubeAPIServerStructuredAuthenticationConfigMapChanged(oldKubeAPIServer, newKubeAPIServer *operatorv1alpha1.KubeAPIServerConfig) bool {
+	var oldConfigMap, newConfigMap string
+
+	if oldKubeAPIServer != nil {
+		oldConfigMap = v1beta1helper.GetShootAuthenticationConfigurationConfigMapName(oldKubeAPIServer.KubeAPIServerConfig)
+	}
+	if newKubeAPIServer != nil {
+		newConfigMap = v1beta1helper.GetShootAuthenticationConfigurationConfigMapName(newKubeAPIServer.KubeAPIServerConfig)
+	}
+
+	return oldConfigMap != newConfigMap
+}
+
+func kubeAPIServerStructuredAuthorizationConfigMapChanged(oldKubeAPIServer, newKubeAPIServer *operatorv1alpha1.KubeAPIServerConfig) bool {
+	var oldConfigMap, newConfigMap string
+
+	if oldKubeAPIServer != nil {
+		oldConfigMap = v1beta1helper.GetShootAuthorizationConfigurationConfigMapName(oldKubeAPIServer.KubeAPIServerConfig)
+	}
+	if newKubeAPIServer != nil {
+		newConfigMap = v1beta1helper.GetShootAuthorizationConfigurationConfigMapName(newKubeAPIServer.KubeAPIServerConfig)
+	}
+
+	return oldConfigMap != newConfigMap
+}
+
+func kubeAPIServerStructuredAuthorizationSecretsChanged(oldKubeAPIServer, newKubeAPIServer *operatorv1alpha1.KubeAPIServerConfig) bool {
+	oldSecrets, newSecrets := sets.Set[string]{}, sets.Set[string]{}
+
+	if oldKubeAPIServer != nil && oldKubeAPIServer.StructuredAuthorization != nil {
+		for _, plugin := range oldKubeAPIServer.StructuredAuthorization.Kubeconfigs {
+			oldSecrets.Insert(plugin.SecretName)
+		}
+	}
+	if newKubeAPIServer != nil && newKubeAPIServer.StructuredAuthorization != nil {
+		for _, plugin := range newKubeAPIServer.StructuredAuthorization.Kubeconfigs {
+			newSecrets.Insert(plugin.SecretName)
+		}
+	}
+
+	return !oldSecrets.Equal(newSecrets)
+}
+
+func kubeAPIServerAdmissionPluginSecretsChanged(oldKubeAPIServer, newKubeAPIServer *operatorv1alpha1.KubeAPIServerConfig) bool {
 	oldSecrets, newSecrets := sets.Set[string]{}, sets.Set[string]{}
 
 	if oldKubeAPIServer != nil {
@@ -207,6 +254,24 @@ func getReferencedSecretNames(obj client.Object) []string {
 				out = append(out, *plugin.KubeconfigSecretName)
 			}
 		}
+
+		if virtualCluster.Kubernetes.KubeAPIServer.StructuredAuthorization != nil {
+			for _, kubeconfig := range virtualCluster.Kubernetes.KubeAPIServer.StructuredAuthorization.Kubeconfigs {
+				out = append(out, kubeconfig.SecretName)
+			}
+		}
+
+		if virtualCluster.Kubernetes.KubeAPIServer.Authentication != nil && virtualCluster.Kubernetes.KubeAPIServer.Authentication.Webhook != nil {
+			out = append(out, virtualCluster.Kubernetes.KubeAPIServer.Authentication.Webhook.KubeconfigSecretName)
+		}
+
+		if virtualCluster.Kubernetes.KubeAPIServer.SNI != nil {
+			out = append(out, virtualCluster.Kubernetes.KubeAPIServer.SNI.SecretName)
+		}
+
+		if virtualCluster.Kubernetes.KubeAPIServer.AuditWebhook != nil {
+			out = append(out, virtualCluster.Kubernetes.KubeAPIServer.AuditWebhook.KubeconfigSecretName)
+		}
 	}
 
 	if virtualCluster.Gardener.APIServer != nil {
@@ -215,22 +280,10 @@ func getReferencedSecretNames(obj client.Object) []string {
 				out = append(out, *plugin.KubeconfigSecretName)
 			}
 		}
-	}
 
-	if virtualCluster.Kubernetes.KubeAPIServer != nil && virtualCluster.Kubernetes.KubeAPIServer.Authentication != nil && virtualCluster.Kubernetes.KubeAPIServer.Authentication.Webhook != nil {
-		out = append(out, virtualCluster.Kubernetes.KubeAPIServer.Authentication.Webhook.KubeconfigSecretName)
-	}
-
-	if virtualCluster.Kubernetes.KubeAPIServer != nil && virtualCluster.Kubernetes.KubeAPIServer.SNI != nil {
-		out = append(out, virtualCluster.Kubernetes.KubeAPIServer.SNI.SecretName)
-	}
-
-	if virtualCluster.Kubernetes.KubeAPIServer != nil && virtualCluster.Kubernetes.KubeAPIServer.AuditWebhook != nil {
-		out = append(out, virtualCluster.Kubernetes.KubeAPIServer.AuditWebhook.KubeconfigSecretName)
-	}
-
-	if virtualCluster.Gardener.APIServer != nil && virtualCluster.Gardener.APIServer.AuditWebhook != nil {
-		out = append(out, virtualCluster.Gardener.APIServer.AuditWebhook.KubeconfigSecretName)
+		if virtualCluster.Gardener.APIServer.AuditWebhook != nil {
+			out = append(out, virtualCluster.Gardener.APIServer.AuditWebhook.KubeconfigSecretName)
+		}
 	}
 
 	return out
@@ -247,8 +300,16 @@ func getReferencedConfigMapNames(obj client.Object) []string {
 		out            []string
 	)
 
-	if virtualCluster.Kubernetes.KubeAPIServer != nil && virtualCluster.Kubernetes.KubeAPIServer.AuditConfig != nil && virtualCluster.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy != nil && virtualCluster.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef != nil {
-		out = append(out, virtualCluster.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.Name)
+	if virtualCluster.Kubernetes.KubeAPIServer != nil {
+		if virtualCluster.Kubernetes.KubeAPIServer.AuditConfig != nil && virtualCluster.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy != nil && virtualCluster.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef != nil {
+			out = append(out, virtualCluster.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.Name)
+		}
+		if configMapName := v1beta1helper.GetShootAuthenticationConfigurationConfigMapName(virtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig); configMapName != "" {
+			out = append(out, configMapName)
+		}
+		if configMapName := v1beta1helper.GetShootAuthorizationConfigurationConfigMapName(virtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig); configMapName != "" {
+			out = append(out, configMapName)
+		}
 	}
 
 	if virtualCluster.Gardener.APIServer != nil && virtualCluster.Gardener.APIServer.AuditConfig != nil && virtualCluster.Gardener.APIServer.AuditConfig.AuditPolicy != nil && virtualCluster.Gardener.APIServer.AuditConfig.AuditPolicy.ConfigMapRef != nil {

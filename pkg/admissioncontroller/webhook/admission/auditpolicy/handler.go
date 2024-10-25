@@ -89,7 +89,7 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 	}
 
 	if shoot.DeletionTimestamp != nil {
-		// don't mutate shoot if it's already marked for deletion, otherwise gardener-apiserver will deny the user's/
+		// don't validate shoot if it's already marked for deletion, otherwise gardener-apiserver will deny the user's/
 		// controller's request, because we changed the spec
 		return admissionwebhook.Allowed("shoot is already marked for deletion")
 	}
@@ -212,7 +212,7 @@ func validateAuditPolicySemantics(auditPolicy string) (errCode int32, err error)
 	}
 	auditPolicyInternal, ok := auditPolicyObj.(*audit_internal.Policy)
 	if !ok {
-		return http.StatusInternalServerError, fmt.Errorf("failure to cast to audit Policy type: %v", schemaVersion)
+		return http.StatusInternalServerError, fmt.Errorf("failed to cast to audit Policy type: %v", schemaVersion)
 	}
 	errList := auditvalidation.ValidatePolicy(auditPolicyInternal)
 	if len(errList) != 0 {
