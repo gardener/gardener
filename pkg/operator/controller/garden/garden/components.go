@@ -335,6 +335,9 @@ func (r *Reconciler) enableSeedAuthorizer(ctx context.Context) (bool, error) {
 	// above order). Hence, we have to run the flow as second time after the initial Garden creation - this time with
 	// the SeedAuthorizer feature getting enabled. From then on, all subsequent reconciliations can always enable it and
 	// only one reconciliation is needed.
+	// TODO(rfranzke): Consider removing this two-step deployment once we only support Kubernetes 1.32+ (in this
+	//  version, the structured authorization feature has been promoted to GA). We already use structured authz for
+	//  1.30+ clusters. See https://github.com/gardener/gardener/pull/10682#discussion_r1816324389 for more information.
 	if err := r.RuntimeClientSet.Client().Get(ctx, client.ObjectKey{Name: gardenerapiserver.DeploymentName, Namespace: r.GardenNamespace}, &appsv1.Deployment{}); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return false, err
