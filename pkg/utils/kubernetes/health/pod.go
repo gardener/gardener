@@ -8,6 +8,7 @@ package health
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -66,4 +67,11 @@ func IsPodStale(reason string) bool {
 		strings.HasPrefix(reason, "OutOf") ||
 		strings.Contains(reason, "NodeAffinity") ||
 		strings.Contains(reason, "NodeLost")
+}
+
+// IsPodCompleted returns true when the pod ready condition indicates completeness.
+func IsPodCompleted(conditions []corev1.PodCondition) bool {
+	return slices.ContainsFunc(conditions, func(condition corev1.PodCondition) bool {
+		return condition.Type == corev1.PodReady && condition.Status == "PodCompleted"
+	})
 }
