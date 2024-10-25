@@ -39,6 +39,8 @@ build:
             - cmd/gardener-apiserver
             - cmd/gardener-apiserver/app
             - cmd/utils
+            - extensions/pkg/apis/config
+            - extensions/pkg/util
             - pkg/api
             - pkg/api/core/shoot
             - pkg/api/extensions

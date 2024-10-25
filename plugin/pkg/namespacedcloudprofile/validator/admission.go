@@ -17,6 +17,7 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/utils/ptr"
 
+	"github.com/gardener/gardener/extensions/pkg/util"
 	"github.com/gardener/gardener/pkg/api"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -219,27 +220,24 @@ func (c *validationContext) validateKubernetesVersionOverrides(attr admission.At
 
 func (c *validationContext) validateMachineImageOverrides(attr admission.Attributes) error {
 	now := ptr.To(metav1.Now())
-	parentImages := utils.CreateMapFromSlice(c.parentCloudProfile.Spec.MachineImages, func(mi gardencorev1beta1.MachineImage) string { return mi.Name })
-	currentVersionsMerged := make(map[string]map[string]gardencore.MachineImageVersion)
+	parentImages := util.NewV1beta1ImagesContext(c.parentCloudProfile.Spec.MachineImages)
+	var currentVersionsMerged *util.ImagesContext[gardencore.MachineImage, gardencore.MachineImageVersion]
 	if attr.GetOperation() == admission.Update {
-		for _, machineImage := range c.oldNamespacedCloudProfile.Status.CloudProfileSpec.MachineImages {
-			currentVersionsMerged[machineImage.Name] = utils.CreateMapFromSlice(machineImage.Versions, func(version gardencore.MachineImageVersion) string { return version.Version })
-		}
+		currentVersionsMerged = util.NewCoreImagesContext(c.oldNamespacedCloudProfile.Status.CloudProfileSpec.MachineImages)
 	}
 
 	allErrs := field.ErrorList{}
 	for imageIndex, image := range c.namespacedCloudProfile.Spec.MachineImages {
 		imageIndexPath := field.NewPath("spec", "machineImages").Index(imageIndex)
-		existingParentImage, isExistingImage := parentImages[image.Name]
+		_, isExistingImage := parentImages.GetImage(image.Name)
 
 		if isExistingImage {
 			if len(ptr.Deref(image.UpdateStrategy, "")) > 0 {
 				allErrs = append(allErrs, field.Forbidden(imageIndexPath.Child("updateStrategy"), "must not provide an updateStrategy to an extended machine image in NamespacedCloudProfile"))
 			}
-			parentVersions := utils.CreateMapFromSlice(existingParentImage.Versions, func(v gardencorev1beta1.MachineImageVersion) string { return v.Version })
 
 			for imageVersionIndex, imageVersion := range image.Versions {
-				if _, isExistingVersion := parentVersions[imageVersion.Version]; isExistingVersion {
+				if _, isExistingVersion := parentImages.GetImageVersion(image.Name, imageVersion.Version); isExistingVersion {
 					// An image with the specified version is already present in the parent CloudProfile.
 					// Ensure that only the expiration date is overridden.
 					// For new versions added to an existing image, the validation will be done on the simulated merge result.
@@ -251,10 +249,12 @@ func (c *validationContext) validateMachineImageOverrides(attr admission.Attribu
 						allErrs = append(allErrs, field.Invalid(imageVersionIndexPath.Child("expirationDate"), imageVersion.ExpirationDate, fmt.Sprintf("expiration date for version %q must be set", imageVersion.Version)))
 					}
 					if attr.GetOperation() == admission.Update && imageVersion.ExpirationDate.Before(now) {
-						var override gardencore.MachineImageVersion
-						exists := false
-						if _, imageNameExists := currentVersionsMerged[image.Name]; imageNameExists {
-							override, exists = currentVersionsMerged[image.Name][imageVersion.Version]
+						var (
+							override gardencore.MachineImageVersion
+							exists   bool
+						)
+						if currentVersionsMerged != nil {
+							override, exists = currentVersionsMerged.GetImageVersion(image.Name, imageVersion.Version)
 						}
 						if !exists || !override.ExpirationDate.Equal(imageVersion.ExpirationDate) {
 							allErrs = append(allErrs, field.Invalid(imageVersionIndexPath.Child("expirationDate"), imageVersion.ExpirationDate, fmt.Sprintf("expiration date for version %q is in the past", imageVersion.Version)))

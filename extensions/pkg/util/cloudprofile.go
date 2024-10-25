@@ -15,7 +15,7 @@ type ImagesContext[A any, B any] struct {
 	Images map[string]A
 
 	createVersionsMap func(A) map[string]B
-	// imageVersions will be calculated lazy on first access of each key.
+	// imageVersions will be calculated lazily on first access of each key.
 	imageVersions map[string]map[string]B
 }
 

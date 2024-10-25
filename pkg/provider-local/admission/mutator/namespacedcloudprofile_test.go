@@ -109,33 +109,6 @@ var _ = Describe("NamespacedCloudProfile Mutator", func() {
 				}),
 			))
 		})
-
-		It("should sort the machine images by name and version", func() {
-			namespacedCloudProfile.Status.CloudProfileSpec.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{
-"apiVersion":"local.provider.extensions.gardener.cloud/v1alpha1",
-"kind":"CloudProfileConfig",
-"machineImages":[
-  {"name":"image-10","versions":[{"version":"10.0","image":"local/image:10.0"}]},
-  {"name":"image-1","versions":[{"version":"1.0","image":"local/image:1.0"}]}
-]}`)}
-			namespacedCloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{
-"apiVersion":"local.provider.extensions.gardener.cloud/v1alpha1",
-"kind":"CloudProfileConfig",
-"machineImages":[
-  {"name":"image-2","versions":[{"version":"2.9","image":"local/image:2.9"}, {"version":"2.0","image":"local/image:2.0"}]},
-  {"name":"image-1","versions":[{"version":"1.1","image":"local/image:1.1"}]}
-]}`)}
-
-			Expect(namespacedCloudProfileMutator.Mutate(ctx, namespacedCloudProfile, nil)).To(Succeed())
-
-			mergedConfig, err := decodeCloudProfileConfig(decoder, namespacedCloudProfile.Status.CloudProfileSpec.ProviderConfig)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(mergedConfig.MachineImages).To(Equal([]api.MachineImages{
-				{Name: "image-1", Versions: []api.MachineImageVersion{{Version: "1.0", Image: "local/image:1.0"}, {Version: "1.1", Image: "local/image:1.1"}}},
-				{Name: "image-10", Versions: []api.MachineImageVersion{{Version: "10.0", Image: "local/image:10.0"}}},
-				{Name: "image-2", Versions: []api.MachineImageVersion{{Version: "2.0", Image: "local/image:2.0"}, {Version: "2.9", Image: "local/image:2.9"}}},
-			}))
-		})
 	})
 })
 

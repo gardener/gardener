@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"maps"
 	"slices"
-	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -74,7 +73,6 @@ func mergeMachineImages(specMachineImages, statusMachineImages []v1alpha1.Machin
 	statusImages := utils.CreateMapFromSlice(statusMachineImages, func(mi v1alpha1.MachineImages) string { return mi.Name })
 	for _, specMachineImage := range specImages {
 		if _, exists := statusImages[specMachineImage.Name]; !exists {
-			specMachineImage.Versions = sortMachineImageVersions(specMachineImage.Versions)
 			statusImages[specMachineImage.Name] = specMachineImage
 		} else {
 			statusImageVersions := utils.CreateMapFromSlice(statusImages[specMachineImage.Name].Versions, func(v v1alpha1.MachineImageVersion) string { return v.Version })
@@ -85,16 +83,9 @@ func mergeMachineImages(specMachineImages, statusMachineImages []v1alpha1.Machin
 
 			statusImages[specMachineImage.Name] = v1alpha1.MachineImages{
 				Name:     specMachineImage.Name,
-				Versions: sortMachineImageVersions(slices.Collect(maps.Values(statusImageVersions))),
+				Versions: slices.Collect(maps.Values(statusImageVersions)),
 			}
 		}
 	}
-	machineImages := slices.Collect(maps.Values(statusImages))
-	slices.SortFunc(machineImages, func(a, b v1alpha1.MachineImages) int { return strings.Compare(a.Name, b.Name) })
-	return machineImages
-}
-
-func sortMachineImageVersions(images []v1alpha1.MachineImageVersion) []v1alpha1.MachineImageVersion {
-	slices.SortFunc(images, func(a, b v1alpha1.MachineImageVersion) int { return strings.Compare(a.Version, b.Version) })
-	return images
+	return slices.Collect(maps.Values(statusImages))
 }
