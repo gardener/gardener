@@ -151,22 +151,22 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 			},
 			Rules: []rbacv1.PolicyRule{
 				{
-					APIGroups: []string{corev1.SchemeGroupVersion.String()},
+					APIGroups: []string{corev1.GroupName},
 					Resources: []string{"pods"},
 					Verbs:     []string{"get", "list", "watch", "delete", "deletecollection"},
 				},
 				{
-					APIGroups: []string{corev1.SchemeGroupVersion.String()},
+					APIGroups: []string{corev1.GroupName},
 					Resources: []string{"secrets", "endpoints"},
 					Verbs:     []string{"get", "list", "patch", "update", "watch"},
 				},
 				{
-					APIGroups: []string{corev1.SchemeGroupVersion.String()},
+					APIGroups: []string{corev1.GroupName},
 					Resources: []string{"events"},
 					Verbs:     []string{"create", "get", "list", "watch", "patch", "update"},
 				},
 				{
-					APIGroups: []string{corev1.SchemeGroupVersion.String()},
+					APIGroups: []string{corev1.GroupName},
 					Resources: []string{"serviceaccounts"},
 					Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
 				},
@@ -176,7 +176,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 					Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
 				},
 				{
-					APIGroups: []string{corev1.SchemeGroupVersion.String()},
+					APIGroups: []string{corev1.GroupName},
 					Resources: []string{"services", "configmaps"},
 					Verbs:     []string{"get", "list", "patch", "update", "watch", "create", "delete"},
 				},
@@ -206,7 +206,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 					Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"},
 				},
 				{
-					APIGroups: []string{corev1.SchemeGroupVersion.String()},
+					APIGroups: []string{corev1.GroupName},
 					Resources: []string{"persistentvolumeclaims"},
 					Verbs:     []string{"get", "list", "watch"},
 				},
@@ -332,7 +332,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 					Rules: []admissionregistrationv1.RuleWithOperations{
 						{
 							Rule: admissionregistrationv1.Rule{
-								APIGroups:   []string{corev1.SchemeGroupVersion.String()},
+								APIGroups:   []string{corev1.GroupName},
 								APIVersions: []string{"v1"},
 								Resources:   []string{"serviceaccounts", "services", "configmaps"},
 								Scope:       ptr.To(admissionregistrationv1.AllScopes),
@@ -341,7 +341,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 						},
 						{
 							Rule: admissionregistrationv1.Rule{
-								APIGroups:   []string{corev1.SchemeGroupVersion.String()},
+								APIGroups:   []string{corev1.GroupName},
 								APIVersions: []string{"v1"},
 								Resources:   []string{"persistentvolumeclaims"},
 								Scope:       ptr.To(admissionregistrationv1.AllScopes),
