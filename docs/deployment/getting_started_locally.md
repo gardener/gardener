@@ -406,7 +406,7 @@ Similar as in the section _[Developing Gardener](#developing-gardener)_ it's pos
 make operator-seed-dev
 ```
 
-> :info: Please note that in this setup Skaffold is only watching for changes in the following components:
+> :information_source: Please note that in this setup Skaffold is only watching for changes in the following components:
 > - [`gardenlet`](../concepts/gardenlet.md)
 > - `gardenlet/chart`
 > - [`gardener-resource-manager`](../concepts/resource-manager.md)
