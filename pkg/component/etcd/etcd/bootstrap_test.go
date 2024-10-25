@@ -6,6 +6,9 @@ package etcd_test
 
 import (
 	"context"
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	batchv1 "k8s.io/api/batch/v1"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -157,7 +160,7 @@ var _ = Describe("Etcd", func() {
 						Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
 					},
 					{
-						APIGroups: []string{"rbac.authorization.k8s.io"},
+						APIGroups: []string{rbacv1.GroupName},
 						Resources: []string{"roles", "rolebindings"},
 						Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
 					},
@@ -167,27 +170,27 @@ var _ = Describe("Etcd", func() {
 						Verbs:     []string{"get", "list", "patch", "update", "watch", "create", "delete"},
 					},
 					{
-						APIGroups: []string{"apps"},
+						APIGroups: []string{appsv1.GroupName},
 						Resources: []string{"statefulsets"},
 						Verbs:     []string{"get", "list", "patch", "update", "watch", "create", "delete"},
 					},
 					{
-						APIGroups: []string{"batch"},
+						APIGroups: []string{batchv1.GroupName},
 						Resources: []string{"jobs"},
 						Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
 					},
 					{
-						APIGroups: []string{"druid.gardener.cloud"},
+						APIGroups: []string{druidv1alpha1.GroupName},
 						Resources: []string{"etcds", "etcdcopybackupstasks"},
 						Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
 					},
 					{
-						APIGroups: []string{"druid.gardener.cloud"},
+						APIGroups: []string{druidv1alpha1.GroupName},
 						Resources: []string{"etcds/status", "etcds/finalizers", "etcdcopybackupstasks/status", "etcdcopybackupstasks/finalizers"},
 						Verbs:     []string{"get", "update", "patch", "create"},
 					},
 					{
-						APIGroups: []string{"coordination.k8s.io"},
+						APIGroups: []string{coordinationv1.GroupName},
 						Resources: []string{"leases"},
 						Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"},
 					},
@@ -197,7 +200,7 @@ var _ = Describe("Etcd", func() {
 						Verbs:     []string{"get", "list", "watch"},
 					},
 					{
-						APIGroups: []string{"policy"},
+						APIGroups: []string{policyv1.GroupName},
 						Resources: []string{"poddisruptionbudgets"},
 						Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
 					},
@@ -571,7 +574,7 @@ var _ = Describe("Etcd", func() {
 							},
 							{
 								Rule: admissionregistrationv1.Rule{
-									APIGroups:   []string{"rbac.authorization.k8s.io"},
+									APIGroups:   []string{rbacv1.GroupName},
 									APIVersions: []string{"v1"},
 									Resources:   []string{"roles", "rolebindings"},
 									Scope:       ptr.To[admissionregistrationv1.ScopeType](admissionregistrationv1.AllScopes),
@@ -580,7 +583,7 @@ var _ = Describe("Etcd", func() {
 							},
 							{
 								Rule: admissionregistrationv1.Rule{
-									APIGroups:   []string{"apps"},
+									APIGroups:   []string{appsv1.GroupName},
 									APIVersions: []string{"v1"},
 									Resources:   []string{"statefulsets"},
 									Scope:       ptr.To[admissionregistrationv1.ScopeType](admissionregistrationv1.AllScopes),
@@ -589,7 +592,7 @@ var _ = Describe("Etcd", func() {
 							},
 							{
 								Rule: admissionregistrationv1.Rule{
-									APIGroups:   []string{"policy"},
+									APIGroups:   []string{policyv1.GroupName},
 									APIVersions: []string{"v1"},
 									Resources:   []string{"poddisruptionbudgets"},
 									Scope:       ptr.To[admissionregistrationv1.ScopeType](admissionregistrationv1.AllScopes),
@@ -598,7 +601,7 @@ var _ = Describe("Etcd", func() {
 							},
 							{
 								Rule: admissionregistrationv1.Rule{
-									APIGroups:   []string{"batch"},
+									APIGroups:   []string{batchv1.GroupName},
 									APIVersions: []string{"v1"},
 									Resources:   []string{"jobs"},
 									Scope:       ptr.To[admissionregistrationv1.ScopeType](admissionregistrationv1.AllScopes),
@@ -607,7 +610,7 @@ var _ = Describe("Etcd", func() {
 							},
 							{
 								Rule: admissionregistrationv1.Rule{
-									APIGroups:   []string{"coordination.k8s.io"},
+									APIGroups:   []string{coordinationv1.GroupName},
 									APIVersions: []string{"v1"},
 									Resources:   []string{"leases"},
 									Scope:       ptr.To[admissionregistrationv1.ScopeType](admissionregistrationv1.AllScopes),
@@ -635,7 +638,7 @@ var _ = Describe("Etcd", func() {
 						Rules: []admissionregistrationv1.RuleWithOperations{
 							{
 								Rule: admissionregistrationv1.Rule{
-									APIGroups:   []string{"apps"},
+									APIGroups:   []string{appsv1.GroupName},
 									APIVersions: []string{"v1"},
 									Resources:   []string{"statefulsets/scale"},
 									Scope:       ptr.To[admissionregistrationv1.ScopeType](admissionregistrationv1.AllScopes),

@@ -350,7 +350,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 						},
 						{
 							Rule: admissionregistrationv1.Rule{
-								APIGroups:   []string{"rbac.authorization.k8s.io"},
+								APIGroups:   []string{rbacv1.GroupName},
 								APIVersions: []string{"v1"},
 								Resources:   []string{"roles", "rolebindings"},
 								Scope:       ptr.To(admissionregistrationv1.AllScopes),
@@ -359,7 +359,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 						},
 						{
 							Rule: admissionregistrationv1.Rule{
-								APIGroups:   []string{"apps"},
+								APIGroups:   []string{appsv1.GroupName},
 								APIVersions: []string{"v1"},
 								Resources:   []string{"statefulsets"},
 								Scope:       ptr.To(admissionregistrationv1.AllScopes),
@@ -368,7 +368,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 						},
 						{
 							Rule: admissionregistrationv1.Rule{
-								APIGroups:   []string{"policy"},
+								APIGroups:   []string{policyv1.GroupName},
 								APIVersions: []string{"v1"},
 								Resources:   []string{"poddisruptionbudgets"},
 								Scope:       ptr.To(admissionregistrationv1.AllScopes),
@@ -377,7 +377,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 						},
 						{
 							Rule: admissionregistrationv1.Rule{
-								APIGroups:   []string{"batch"},
+								APIGroups:   []string{batchv1.GroupName},
 								APIVersions: []string{"v1"},
 								Resources:   []string{"jobs"},
 								Scope:       ptr.To(admissionregistrationv1.AllScopes),
@@ -386,7 +386,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 						},
 						{
 							Rule: admissionregistrationv1.Rule{
-								APIGroups:   []string{"coordination.k8s.io"},
+								APIGroups:   []string{coordinationv1.GroupName},
 								APIVersions: []string{"v1"},
 								Resources:   []string{"leases"},
 								Scope:       ptr.To(admissionregistrationv1.AllScopes),
@@ -410,7 +410,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 					Rules: []admissionregistrationv1.RuleWithOperations{
 						{
 							Rule: admissionregistrationv1.Rule{
-								APIGroups:   []string{"apps"},
+								APIGroups:   []string{appsv1.GroupName},
 								APIVersions: []string{"v1"},
 								Resources:   []string{"statefulsets/scale"},
 								Scope:       ptr.To(admissionregistrationv1.AllScopes),
