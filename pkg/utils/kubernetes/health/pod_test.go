@@ -50,4 +50,15 @@ var _ = Describe("Pod", func() {
 		Entry("NodeLost", "NodeLost", BeTrue()),
 		Entry("Foo", "Foo", BeFalse()),
 	)
+
+	DescribeTable("#IsPodCompleted",
+		func(conditions []corev1.PodCondition, matcher types.GomegaMatcher) {
+			Expect(health.IsPodCompleted(conditions)).To(matcher)
+		},
+
+		Entry("No conditions", nil, BeFalse()),
+		Entry("No ready condition", []corev1.PodCondition{{}}, BeFalse()),
+		Entry("Not completed", []corev1.PodCondition{{Type: "Ready"}}, BeFalse()),
+		Entry("Completed", []corev1.PodCondition{{Type: "Ready", Status: "PodCompleted"}}, BeTrue()),
+	)
 })
