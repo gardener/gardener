@@ -18,7 +18,7 @@ func NewCommand(ioStreams genericiooptions.IOStreams) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "bootstrap",
-		Short: "Bootstrap the infrastructure for an Autonomous Shoot Cluster (networks, machines, etc.)",
+		Short: "Bootstrap the infrastructure for an Autonomous Shoot Cluster",
 		Long:  "Bootstrap the infrastructure for an Autonomous Shoot Cluster (networks, machines, etc.)",
 
 		Example: `# Bootstrap the infrastructure

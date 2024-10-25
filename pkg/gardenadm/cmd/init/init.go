@@ -18,10 +18,10 @@ func NewCommand(ioStreams genericiooptions.IOStreams) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "init",
-		Short: "Bootstrap a first control plane node",
-		Long:  "Bootstrap a first control plane node",
+		Short: "Bootstrap the first control plane node",
+		Long:  "Bootstrap the first control plane node",
 
-		Example: `# Bootstrap a first control plane node
+		Example: `# Bootstrap the first control plane node
 gardenadm init`,
 
 		RunE: func(cmd *cobra.Command, _ []string) error {

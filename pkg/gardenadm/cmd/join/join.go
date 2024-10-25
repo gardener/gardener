@@ -18,8 +18,8 @@ func NewCommand(ioStreams genericiooptions.IOStreams) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "join",
-		Short: "Bootstrap further control plane nodes, or bootstrap worker nodes, and join them to the cluster",
-		Long:  "Bootstrap further control plane nodes, or bootstrap worker nodes, and join them to the cluster",
+		Short: "Bootstrap further control plane nodes or worker nodes and join them to the cluster",
+		Long:  "Bootstrap further control plane nodes or worker nodes and join them to the cluster",
 
 		Example: `# Bootstrap a worker node and join it to the cluster
 gardenadm join`,
