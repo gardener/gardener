@@ -443,8 +443,7 @@ func (s *shootSystem) shootInfoData() map[string]string {
 func (s *shootSystem) readOnlyRBACResources() []client.Object {
 	allowedSubResources := map[string]map[string][]string{
 		corev1.GroupName: {
-			"pods":  {"log"},
-			"nodes": {"proxy"},
+			"pods": {"log"},
 		},
 	}
 

@@ -598,7 +598,7 @@ var _ = Describe("ShootSystem", func() {
 						Rules: []rbacv1.PolicyRule{
 							{
 								APIGroups: []string{""},
-								Resources: []string{"configmaps", "nodes", "nodes/proxy", "pods", "pods/log"},
+								Resources: []string{"configmaps", "nodes", "pods", "pods/log"},
 								Verbs:     []string{"get", "list", "watch"},
 							},
 							{
