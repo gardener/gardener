@@ -6,6 +6,7 @@ aliases:
   - ary1992
   - ialidzhikov
   - LucaBernstein
+  - marc1404
   - oliver-goetz
   - plkokanov
   - rfranzke
@@ -14,12 +15,12 @@ aliases:
   - timebertt
   - timuthy
   - tobschli
-  - marc1404
   gardener-approvers:
   - acumino
   - ary1992
   - ialidzhikov
   - LucaBernstein
+  - marc1404
   - oliver-goetz
   - plkokanov
   - rfranzke
@@ -28,4 +29,3 @@ aliases:
   - timebertt
   - timuthy
   - tobschli
-  - marc1404
