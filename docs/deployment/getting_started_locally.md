@@ -165,7 +165,7 @@ If you have similar problems with other components which are not deployed by ska
 }
 ```
 
-Since the [ko](https://skaffold.dev/docs/builders/builder-types/ko/) builder is used in Skaffold to build the images it's not necessary to specify the `cwd` and `remotePath` options as they match the workspace folder ([ref](https://skaffold.dev/docs/workflows/debug/#skaffold-debug-using-the-vs-code-go-extension)).
+Since the [ko](https://skaffold.dev/docs/builders/builder-types/ko/) builder is used in Skaffold to build the images, it's not necessary to specify the `cwd` and `remotePath` options as they match the workspace folder ([ref](https://skaffold.dev/docs/workflows/debug/#skaffold-debug-using-the-vs-code-go-extension)).
 
 ## Creating a `Shoot` Cluster
 
