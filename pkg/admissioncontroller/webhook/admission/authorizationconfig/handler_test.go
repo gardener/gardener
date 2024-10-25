@@ -376,7 +376,7 @@ authorizers:
 
 				It("did not change config.yaml field", func() {
 					Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
-					test(admissionv1.Update, configMap, configMap, true, statusCodeAllowed, "authorization configuration or kubeconfig secret names not changed", "")
+					test(admissionv1.Update, configMap, configMap, true, statusCodeAllowed, "authorization configuration not changed", "")
 				})
 
 				It("should allow if the AuthorizationConfig is changed to something valid", func() {

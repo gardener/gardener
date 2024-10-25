@@ -179,7 +179,7 @@ func (h *Handler) admitConfigMap(ctx context.Context, request admission.Request)
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 	if apiequality.Semantic.DeepEqual(configMap.Data, oldConfigMap.Data) {
-		return admissionwebhook.Allowed("authorization configuration or kubeconfig secret names not changed")
+		return admissionwebhook.Allowed("authorization configuration not changed")
 	}
 
 	if errCode, err := validateAuthorizationConfigurationSemantics(authorizationConfiguration, nil, false); err != nil {
@@ -203,7 +203,7 @@ func validateAuthorizationConfigurationSemantics(authorizationConfiguration stri
 	}
 	authConfig, ok := authConfigObj.(*apiserver.AuthorizationConfiguration)
 	if !ok {
-		return http.StatusInternalServerError, fmt.Errorf("failure to cast to authorization configuration type: %v", schemaVersion)
+		return http.StatusInternalServerError, fmt.Errorf("failed to cast to authorization configuration type: %v", schemaVersion)
 	}
 
 	var authorizerNames []string

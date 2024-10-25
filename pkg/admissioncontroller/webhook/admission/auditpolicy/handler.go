@@ -212,7 +212,7 @@ func validateAuditPolicySemantics(auditPolicy string) (errCode int32, err error)
 	}
 	auditPolicyInternal, ok := auditPolicyObj.(*audit_internal.Policy)
 	if !ok {
-		return http.StatusInternalServerError, fmt.Errorf("failure to cast to audit Policy type: %v", schemaVersion)
+		return http.StatusInternalServerError, fmt.Errorf("failed to cast to audit Policy type: %v", schemaVersion)
 	}
 	errList := auditvalidation.ValidatePolicy(auditPolicyInternal)
 	if len(errList) != 0 {

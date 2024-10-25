@@ -213,7 +213,7 @@ func validateAuthenticationConfigurationSemantics(authenticationConfiguration st
 	}
 	authConfig, ok := authConfigObj.(*apiserver.AuthenticationConfiguration)
 	if !ok {
-		return http.StatusInternalServerError, fmt.Errorf("failure to cast to authentication configuration type: %v", schemaVersion)
+		return http.StatusInternalServerError, fmt.Errorf("failed to cast to authentication configuration type: %v", schemaVersion)
 	}
 	if errList := apiservervalidation.ValidateAuthenticationConfiguration(authConfig, disallowedIssuers); len(errList) != 0 {
 		return http.StatusUnprocessableEntity, fmt.Errorf("provided invalid authentication configuration: %v", errList)
