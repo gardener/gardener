@@ -7,12 +7,14 @@ package etcd
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -45,6 +47,8 @@ import (
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 const (
@@ -56,11 +60,17 @@ const (
 	druidVPAName                                 = Druid + "-vpa"
 	druidConfigMapImageVectorOverwriteNamePrefix = Druid + "-imagevector-overwrite"
 	druidServiceName                             = Druid
+	druidWebhookName                             = Druid
 	druidDeploymentName                          = Druid
 	managedResourceControlName                   = Druid
 
 	metricsPortName = "metrics"
 	metricsPort     = 8080
+
+	webhookServerPortName          = "webhooks"
+	webhookServerPort              = 9443
+	webhookServerTLSCertVolumeName = "webhook-server-tls-cert"
+	webhookServerTLSCertMountPath  = "/etc/webhook-server-tls"
 
 	druidConfigMapImageVectorOverwriteDataKey          = "images_overwrite.yaml"
 	druidDeploymentVolumeMountPathImageVectorOverwrite = "/imagevector_overwrite"
@@ -75,6 +85,8 @@ func NewBootstrapper(
 	etcdConfig *config.ETCDConfig,
 	image string,
 	imageVectorOverwrite *string,
+	secretsManager secretsmanager.Interface,
+	secretNameServerCA string,
 	priorityClassName string,
 ) component.DeployWaiter {
 	return &bootstrapper{
@@ -84,6 +96,8 @@ func NewBootstrapper(
 		etcdConfig:           etcdConfig,
 		image:                image,
 		imageVectorOverwrite: imageVectorOverwrite,
+		secretsManager:       secretsManager,
+		secretNameServerCA:   secretNameServerCA,
 		priorityClassName:    priorityClassName,
 	}
 }
@@ -95,10 +109,28 @@ type bootstrapper struct {
 	etcdConfig           *config.ETCDConfig
 	image                string
 	imageVectorOverwrite *string
+	secretsManager       secretsmanager.Interface
+	secretNameServerCA   string
 	priorityClassName    string
 }
 
 func (b *bootstrapper) Deploy(ctx context.Context) error {
+	caSecret, found := b.secretsManager.Get(b.secretNameServerCA)
+	if !found {
+		return fmt.Errorf("secret %q not found", b.secretNameServerCA)
+	}
+
+	serverSecret, err := b.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
+		Name:                        "etcd-druid-webhook",
+		CommonName:                  fmt.Sprintf("%s.%s.svc", druidServiceName, b.namespace),
+		DNSNames:                    kubernetesutils.DNSNamesForService(druidServiceName, b.namespace),
+		CertType:                    secretsutils.ServerCert,
+		SkipPublishingCACertificate: true,
+	}, secretsmanager.SignedByCA(b.secretNameServerCA, secretsmanager.UseCurrentCA), secretsmanager.Rotate(secretsmanager.InPlace))
+	if err != nil {
+		return err
+	}
+
 	var (
 		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 		labels   = func() map[string]string { return map[string]string{v1beta1constants.GardenRole: Druid} }
@@ -258,6 +290,134 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 						Port:       metricsPort,
 						TargetPort: intstr.FromInt32(metricsPort),
 					},
+					{
+						Name:       webhookServerPortName,
+						Protocol:   corev1.ProtocolTCP,
+						Port:       webhookServerPort,
+						TargetPort: intstr.FromInt32(webhookServerPort),
+					},
+				},
+			},
+		}
+
+		opUpdateAndDelete = []admissionregistrationv1.OperationType{admissionregistrationv1.Update, admissionregistrationv1.Delete}
+		opDelete          = []admissionregistrationv1.OperationType{admissionregistrationv1.Delete}
+		clientConfig      = admissionregistrationv1.WebhookClientConfig{
+			Service: &admissionregistrationv1.ServiceReference{
+				Name:      druidServiceName,
+				Namespace: b.namespace,
+				Path:      ptr.To[string]("/webhooks/etcdcomponents"),
+				Port:      ptr.To[int32](webhookServerPort),
+			},
+			CABundle: caSecret.Data[secretsutils.DataKeyCertificateBundle],
+		}
+		validatingWebhookConfiguration = &admissionregistrationv1.ValidatingWebhookConfiguration{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      druidWebhookName,
+				Namespace: b.namespace,
+				Labels:    labels(),
+			},
+			Webhooks: []admissionregistrationv1.ValidatingWebhook{
+				{
+					Name:                    "etcdcomponents.webhooks.druid.gardener.cloud",
+					ClientConfig:            clientConfig,
+					FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
+					MatchPolicy:             ptr.To(admissionregistrationv1.Exact),
+					SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
+					TimeoutSeconds:          ptr.To[int32](10),
+					AdmissionReviewVersions: []string{"v1", "v1beta1"},
+					ObjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
+						druidv1alpha1.LabelManagedByKey: druidv1alpha1.LabelManagedByValue,
+					}},
+					Rules: []admissionregistrationv1.RuleWithOperations{
+						{
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{corev1.GroupName},
+								APIVersions: []string{"v1"},
+								Resources:   []string{"serviceaccounts", "services", "configmaps"},
+								Scope:       ptr.To(admissionregistrationv1.AllScopes),
+							},
+							Operations: opUpdateAndDelete,
+						},
+						{
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{corev1.GroupName},
+								APIVersions: []string{"v1"},
+								Resources:   []string{"persistentvolumeclaims"},
+								Scope:       ptr.To(admissionregistrationv1.AllScopes),
+							},
+							Operations: opDelete,
+						},
+						{
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{rbacv1.GroupName},
+								APIVersions: []string{"v1"},
+								Resources:   []string{"roles", "rolebindings"},
+								Scope:       ptr.To(admissionregistrationv1.AllScopes),
+							},
+							Operations: opUpdateAndDelete,
+						},
+						{
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{appsv1.GroupName},
+								APIVersions: []string{"v1"},
+								Resources:   []string{"statefulsets"},
+								Scope:       ptr.To(admissionregistrationv1.AllScopes),
+							},
+							Operations: opUpdateAndDelete,
+						},
+						{
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{policyv1.GroupName},
+								APIVersions: []string{"v1"},
+								Resources:   []string{"poddisruptionbudgets"},
+								Scope:       ptr.To(admissionregistrationv1.AllScopes),
+							},
+							Operations: opUpdateAndDelete,
+						},
+						{
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{batchv1.GroupName},
+								APIVersions: []string{"v1"},
+								Resources:   []string{"jobs"},
+								Scope:       ptr.To(admissionregistrationv1.AllScopes),
+							},
+							Operations: opUpdateAndDelete,
+						},
+						{
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{coordinationv1.GroupName},
+								APIVersions: []string{"v1"},
+								Resources:   []string{"leases"},
+								Scope:       ptr.To(admissionregistrationv1.AllScopes),
+							},
+							Operations: opUpdateAndDelete,
+						},
+					},
+				},
+
+				// This webhook is required for specially handling statefulsets/scale subresource,
+				// because an `objectSelector` does not work for subresources.
+				// Refer https://github.com/kubernetes/kubernetes/issues/113594#issuecomment-1332573990.
+				{
+					Name:                    "stsscale.etcdcomponents.webhooks.druid.gardener.cloud",
+					ClientConfig:            clientConfig,
+					FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
+					MatchPolicy:             ptr.To(admissionregistrationv1.Exact),
+					SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
+					TimeoutSeconds:          ptr.To[int32](10),
+					AdmissionReviewVersions: []string{"v1", "v1beta1"},
+					Rules: []admissionregistrationv1.RuleWithOperations{
+						{
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{appsv1.GroupName},
+								APIVersions: []string{"v1"},
+								Resources:   []string{"statefulsets/scale"},
+								Scope:       ptr.To(admissionregistrationv1.AllScopes),
+							},
+							Operations: opUpdateAndDelete,
+						},
+					},
 				},
 			},
 		}
@@ -291,7 +451,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 								Name:            Druid,
 								Image:           b.image,
 								ImagePullPolicy: corev1.PullIfNotPresent,
-								Args:            getDruidDeployArgs(b.etcdConfig),
+								Args:            getDruidDeployArgs(b.etcdConfig, webhookServerTLSCertMountPath),
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{
 										corev1.ResourceCPU:    resource.MustParse("50m"),
@@ -304,6 +464,24 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 								Ports: []corev1.ContainerPort{{
 									ContainerPort: metricsPort,
 								}},
+								VolumeMounts: []corev1.VolumeMount{
+									{
+										Name:      webhookServerTLSCertVolumeName,
+										MountPath: webhookServerTLSCertMountPath,
+										ReadOnly:  true,
+									},
+								},
+							},
+						},
+						Volumes: []corev1.Volume{
+							{
+								Name: webhookServerTLSCertVolumeName,
+								VolumeSource: corev1.VolumeSource{
+									Secret: &corev1.SecretVolumeSource{
+										SecretName:  serverSecret.Name,
+										DefaultMode: ptr.To[int32](420),
+									},
+								},
 							},
 						},
 					},
@@ -347,6 +525,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 			clusterRoleBinding,
 			vpa,
 			serviceMonitor,
+			validatingWebhookConfiguration,
 		}
 	)
 
@@ -359,6 +538,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		Protocol: ptr.To(corev1.ProtocolTCP),
 	}
 
+	metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingFromWorldToPorts, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, webhookServerPort))
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, portMetrics))
 
 	resourcesToAdd = append(resourcesToAdd, service)
@@ -387,9 +567,9 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 			Name:  imagevector.OverrideEnv,
 			Value: druidDeploymentVolumeMountPathImageVectorOverwrite + "/" + druidConfigMapImageVectorOverwriteDataKey,
 		})
-
-		utilruntime.Must(references.InjectAnnotations(deployment))
 	}
+
+	utilruntime.Must(references.InjectAnnotations(deployment))
 
 	resources, err := registry.AddAllAndSerialize(append(resourcesToAdd, deployment)...)
 	if err != nil {
@@ -399,15 +579,18 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 	return managedresources.CreateForSeed(ctx, b.client, b.namespace, managedResourceControlName, false, resources)
 }
 
-func getDruidDeployArgs(etcdConfig *config.ETCDConfig) []string {
+func getDruidDeployArgs(etcdConfig *config.ETCDConfig, webhookServerTLSMountPath string) []string {
 	args := []string{
 		"--enable-leader-election=true",
-		"--ignore-operation-annotation=false",
 		"--disable-etcd-serviceaccount-automount=true",
-		"--workers=" + strconv.FormatInt(*etcdConfig.ETCDController.Workers, 10),
-		"--custodian-workers=" + strconv.FormatInt(*etcdConfig.CustodianController.Workers, 10),
-		"--compaction-workers=" + strconv.FormatInt(*etcdConfig.BackupCompactionController.Workers, 10),
+		"--etcd-workers=" + strconv.FormatInt(*etcdConfig.ETCDController.Workers, 10),
+		"--enable-etcd-spec-auto-reconcile=false",
+		"--webhook-server-port=" + strconv.Itoa(webhookServerPort),
+		"--webhook-server-tls-server-cert-dir=" + webhookServerTLSMountPath,
+		"--enable-etcd-components-webhook=true",
+		"--etcd-components-webhook-exempt-service-accounts=system:serviceaccount:kube-system:generic-garbage-collector",
 		"--enable-backup-compaction=" + strconv.FormatBool(*etcdConfig.BackupCompactionController.EnableBackupCompaction),
+		"--compaction-workers=" + strconv.FormatInt(*etcdConfig.BackupCompactionController.Workers, 10),
 		"--etcd-events-threshold=" + strconv.FormatInt(*etcdConfig.BackupCompactionController.EventsThreshold, 10),
 	}
 

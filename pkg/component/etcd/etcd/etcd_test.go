@@ -278,6 +278,8 @@ var _ = Describe("Etcd", func() {
 				}
 				obj.Spec.Etcd.Metrics = &metricsExtensive
 				obj.Spec.VolumeClaimTemplate = ptr.To(testRole + "-etcd")
+			} else if class == ClassNormal {
+				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "resources.druid.gardener.cloud/allow-unhealthy-pod-eviction", "")
 			}
 
 			if replicas == 3 {
@@ -550,8 +552,8 @@ var _ = Describe("Etcd", func() {
 				},
 				Spec: monitoringv1.ServiceMonitorSpec{
 					Selector: metav1.LabelSelector{MatchLabels: map[string]string{
-						"name":     "etcd",
-						"instance": etcdName,
+						druidv1alpha1.LabelAppNameKey: fmt.Sprintf("%s-client", etcdName),
+						druidv1alpha1.LabelPartOfKey:  etcdName,
 					}},
 					Endpoints: []monitoringv1.Endpoint{
 						{
@@ -570,7 +572,7 @@ var _ = Describe("Etcd", func() {
 							}},
 							RelabelConfigs: []monitoringv1.RelabelConfig{
 								{
-									SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_instance"},
+									SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_app_kubernetes_io_part_of"},
 									TargetLabel:  "role",
 								},
 								{
@@ -600,7 +602,7 @@ var _ = Describe("Etcd", func() {
 							}},
 							RelabelConfigs: []monitoringv1.RelabelConfig{
 								{
-									SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_instance"},
+									SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_service_label_app_kubernetes_io_part_of"},
 									TargetLabel:  "role",
 								},
 

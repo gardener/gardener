@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	etcddruidutils "github.com/gardener/etcd-druid/pkg/utils"
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -18,6 +17,7 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/backupentry/genericactuator"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/provider-local/controller/backupoptions"
 )
 
 type actuator struct {
@@ -35,7 +35,7 @@ func newActuator(mgr manager.Manager, containerMountPath, backupBucketPath strin
 }
 
 func (a *actuator) GetETCDSecretData(_ context.Context, _ logr.Logger, _ *extensionsv1alpha1.BackupEntry, backupSecretData map[string][]byte) (map[string][]byte, error) {
-	backupSecretData[etcddruidutils.EtcdBackupSecretHostPath] = []byte(filepath.Join(a.containerMountPath))
+	backupSecretData[backupoptions.EtcdBackupSecretHostPath] = []byte(filepath.Join(a.containerMountPath))
 	return backupSecretData, nil
 }
 

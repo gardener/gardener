@@ -9,12 +9,16 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	batchv1 "k8s.io/api/batch/v1"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -36,6 +40,8 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -43,6 +49,7 @@ import (
 var _ = Describe("Etcd", func() {
 	var (
 		c            client.Client
+		sm           secretsmanager.Interface
 		bootstrapper component.DeployWaiter
 		etcdConfig   *config.ETCDConfig
 		consistOf    func(...client.Object) types.GomegaMatcher
@@ -53,6 +60,7 @@ var _ = Describe("Etcd", func() {
 		etcdDruidImage           = "etcd/druid:1.2.3"
 		imageVectorOverwrite     *string
 		imageVectorOverwriteFull = ptr.To("some overwrite")
+		secretNameCA             = "ca"
 
 		priorityClassName = "some-priority-class"
 
@@ -85,8 +93,12 @@ var _ = Describe("Etcd", func() {
 
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
+		sm = fakesecretsmanager.New(c, namespace)
 
-		bootstrapper = NewBootstrapper(c, namespace, kubernetesVersion, etcdConfig, etcdDruidImage, imageVectorOverwrite, priorityClassName)
+		// Create CA secret for etcd-components webhook handler
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretNameCA, Namespace: namespace}})).To(Succeed())
+
+		bootstrapper = NewBootstrapper(c, namespace, kubernetesVersion, etcdConfig, etcdDruidImage, imageVectorOverwrite, sm, secretNameCA, priorityClassName)
 
 		managedResourceSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -128,67 +140,67 @@ var _ = Describe("Etcd", func() {
 				},
 				Rules: []rbacv1.PolicyRule{
 					{
-						APIGroups: []string{""},
+						APIGroups: []string{corev1.GroupName},
 						Resources: []string{"pods"},
 						Verbs:     []string{"get", "list", "watch", "delete", "deletecollection"},
 					},
 					{
-						APIGroups: []string{""},
+						APIGroups: []string{corev1.GroupName},
 						Resources: []string{"secrets", "endpoints"},
 						Verbs:     []string{"get", "list", "patch", "update", "watch"},
 					},
 					{
-						APIGroups: []string{""},
+						APIGroups: []string{corev1.GroupName},
 						Resources: []string{"events"},
 						Verbs:     []string{"create", "get", "list", "watch", "patch", "update"},
 					},
 					{
-						APIGroups: []string{""},
+						APIGroups: []string{corev1.GroupName},
 						Resources: []string{"serviceaccounts"},
 						Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
 					},
 					{
-						APIGroups: []string{"rbac.authorization.k8s.io"},
+						APIGroups: []string{rbacv1.GroupName},
 						Resources: []string{"roles", "rolebindings"},
 						Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
 					},
 					{
-						APIGroups: []string{""},
+						APIGroups: []string{corev1.GroupName},
 						Resources: []string{"services", "configmaps"},
 						Verbs:     []string{"get", "list", "patch", "update", "watch", "create", "delete"},
 					},
 					{
-						APIGroups: []string{"apps"},
+						APIGroups: []string{appsv1.GroupName},
 						Resources: []string{"statefulsets"},
 						Verbs:     []string{"get", "list", "patch", "update", "watch", "create", "delete"},
 					},
 					{
-						APIGroups: []string{"batch"},
+						APIGroups: []string{batchv1.GroupName},
 						Resources: []string{"jobs"},
 						Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
 					},
 					{
-						APIGroups: []string{"druid.gardener.cloud"},
+						APIGroups: []string{druidv1alpha1.GroupName},
 						Resources: []string{"etcds", "etcdcopybackupstasks"},
 						Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
 					},
 					{
-						APIGroups: []string{"druid.gardener.cloud"},
+						APIGroups: []string{druidv1alpha1.GroupName},
 						Resources: []string{"etcds/status", "etcds/finalizers", "etcdcopybackupstasks/status", "etcdcopybackupstasks/finalizers"},
 						Verbs:     []string{"get", "update", "patch", "create"},
 					},
 					{
-						APIGroups: []string{"coordination.k8s.io"},
+						APIGroups: []string{coordinationv1.GroupName},
 						Resources: []string{"leases"},
 						Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"},
 					},
 					{
-						APIGroups: []string{""},
+						APIGroups: []string{corev1.GroupName},
 						Resources: []string{"persistentvolumeclaims"},
 						Verbs:     []string{"get", "list", "watch"},
 					},
 					{
-						APIGroups: []string{"policy"},
+						APIGroups: []string{policyv1.GroupName},
 						Resources: []string{"poddisruptionbudgets"},
 						Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
 					},
@@ -270,6 +282,9 @@ var _ = Describe("Etcd", func() {
 							"gardener.cloud/role": "etcd-druid",
 							"high-availability-config.resources.gardener.cloud/type": "controller",
 						},
+						Annotations: map[string]string{
+							references.AnnotationKey(references.KindSecret, "etcd-druid-webhook"): "etcd-druid-webhook",
+						},
 					},
 					Spec: appsv1.DeploymentSpec{
 						Replicas:             ptr.To[int32](1),
@@ -286,18 +301,24 @@ var _ = Describe("Etcd", func() {
 									"networking.gardener.cloud/to-dns":               "allowed",
 									"networking.gardener.cloud/to-runtime-apiserver": "allowed",
 								},
+								Annotations: map[string]string{
+									references.AnnotationKey(references.KindSecret, "etcd-druid-webhook"): "etcd-druid-webhook",
+								},
 							},
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
 									{
 										Args: []string{
 											"--enable-leader-election=true",
-											"--ignore-operation-annotation=false",
 											"--disable-etcd-serviceaccount-automount=true",
-											"--workers=25",
-											"--custodian-workers=3",
-											"--compaction-workers=3",
+											"--etcd-workers=25",
+											"--enable-etcd-spec-auto-reconcile=false",
+											"--webhook-server-port=9443",
+											"--webhook-server-tls-server-cert-dir=/etc/webhook-server-tls",
+											"--enable-etcd-components-webhook=true",
+											"--etcd-components-webhook-exempt-service-accounts=system:serviceaccount:kube-system:generic-garbage-collector",
 											"--enable-backup-compaction=true",
+											"--compaction-workers=3",
 											"--etcd-events-threshold=1000000",
 											"--metrics-scrape-wait-duration=1m0s",
 											"--active-deadline-duration=3h0m0s",
@@ -319,10 +340,28 @@ var _ = Describe("Etcd", func() {
 												corev1.ResourceMemory: resource.MustParse("128Mi"),
 											},
 										},
+										VolumeMounts: []corev1.VolumeMount{
+											{
+												MountPath: "/etc/webhook-server-tls",
+												Name:      "webhook-server-tls-cert",
+												ReadOnly:  true,
+											},
+										},
 									},
 								},
 								PriorityClassName:  priorityClassName,
 								ServiceAccountName: "etcd-druid",
+								Volumes: []corev1.Volume{
+									{
+										Name: "webhook-server-tls-cert",
+										VolumeSource: corev1.VolumeSource{
+											Secret: &corev1.SecretVolumeSource{
+												SecretName:  "etcd-druid-webhook",
+												DefaultMode: ptr.To[int32](420),
+											},
+										},
+									},
+								},
 							},
 						},
 					},
@@ -348,7 +387,8 @@ var _ = Describe("Etcd", func() {
 						"high-availability-config.resources.gardener.cloud/type": "controller",
 					},
 					Annotations: map[string]string{
-						references.AnnotationKey(references.KindConfigMap, configMapName): configMapName,
+						references.AnnotationKey(references.KindConfigMap, configMapName):     configMapName,
+						references.AnnotationKey(references.KindSecret, "etcd-druid-webhook"): "etcd-druid-webhook",
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
@@ -367,7 +407,8 @@ var _ = Describe("Etcd", func() {
 								"networking.gardener.cloud/to-runtime-apiserver": "allowed",
 							},
 							Annotations: map[string]string{
-								references.AnnotationKey(references.KindConfigMap, configMapName): configMapName,
+								references.AnnotationKey(references.KindConfigMap, configMapName):     configMapName,
+								references.AnnotationKey(references.KindSecret, "etcd-druid-webhook"): "etcd-druid-webhook",
 							},
 						},
 						Spec: corev1.PodSpec{
@@ -375,12 +416,15 @@ var _ = Describe("Etcd", func() {
 								{
 									Args: []string{
 										"--enable-leader-election=true",
-										"--ignore-operation-annotation=false",
 										"--disable-etcd-serviceaccount-automount=true",
-										"--workers=25",
-										"--custodian-workers=3",
-										"--compaction-workers=3",
+										"--etcd-workers=25",
+										"--enable-etcd-spec-auto-reconcile=false",
+										"--webhook-server-port=9443",
+										"--webhook-server-tls-server-cert-dir=/etc/webhook-server-tls",
+										"--enable-etcd-components-webhook=true",
+										"--etcd-components-webhook-exempt-service-accounts=system:serviceaccount:kube-system:generic-garbage-collector",
 										"--enable-backup-compaction=true",
+										"--compaction-workers=3",
 										"--etcd-events-threshold=1000000",
 										"--metrics-scrape-wait-duration=1m0s",
 										"--active-deadline-duration=3h0m0s",
@@ -410,6 +454,11 @@ var _ = Describe("Etcd", func() {
 									},
 									VolumeMounts: []corev1.VolumeMount{
 										{
+											MountPath: "/etc/webhook-server-tls",
+											Name:      "webhook-server-tls-cert",
+											ReadOnly:  true,
+										},
+										{
 											MountPath: "/imagevector_overwrite",
 											Name:      "imagevector-overwrite",
 											ReadOnly:  true,
@@ -420,6 +469,15 @@ var _ = Describe("Etcd", func() {
 							PriorityClassName:  priorityClassName,
 							ServiceAccountName: "etcd-druid",
 							Volumes: []corev1.Volume{
+								{
+									Name: "webhook-server-tls-cert",
+									VolumeSource: corev1.VolumeSource{
+										Secret: &corev1.SecretVolumeSource{
+											SecretName:  "etcd-druid-webhook",
+											DefaultMode: ptr.To[int32](420),
+										},
+									},
+								},
 								{
 									Name: "imagevector-overwrite",
 									VolumeSource: corev1.VolumeSource{
@@ -446,6 +504,7 @@ var _ = Describe("Etcd", func() {
 					},
 					Annotations: map[string]string{
 						"networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8080}]`,
+						"networking.resources.gardener.cloud/from-world-to-ports":                        `[{"protocol":"TCP","port":9443}]`,
 					},
 				},
 				Spec: corev1.ServiceSpec{
@@ -456,11 +515,138 @@ var _ = Describe("Etcd", func() {
 							Protocol:   corev1.ProtocolTCP,
 							TargetPort: intstr.FromInt32(8080),
 						},
+						{
+							Name:       "webhooks",
+							Port:       9443,
+							Protocol:   corev1.ProtocolTCP,
+							TargetPort: intstr.FromInt32(9443),
+						},
 					},
 					Selector: map[string]string{
 						"gardener.cloud/role": "etcd-druid",
 					},
 					Type: corev1.ServiceTypeClusterIP,
+				},
+			}
+
+			validatingWebhookConfiguration = &admissionregistrationv1.ValidatingWebhookConfiguration{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "etcd-druid",
+					Namespace: namespace,
+					Labels:    map[string]string{"gardener.cloud/role": "etcd-druid"},
+				},
+				Webhooks: []admissionregistrationv1.ValidatingWebhook{
+					{
+						Name: "etcdcomponents.webhooks.druid.gardener.cloud",
+						ClientConfig: admissionregistrationv1.WebhookClientConfig{
+							Service: &admissionregistrationv1.ServiceReference{
+								Name:      "etcd-druid",
+								Namespace: namespace,
+								Path:      ptr.To[string]("/webhooks/etcdcomponents"),
+								Port:      ptr.To[int32](9443),
+							},
+							CABundle: nil,
+						},
+						FailurePolicy:           ptr.To[admissionregistrationv1.FailurePolicyType](admissionregistrationv1.Fail),
+						MatchPolicy:             ptr.To[admissionregistrationv1.MatchPolicyType](admissionregistrationv1.Exact),
+						SideEffects:             ptr.To[admissionregistrationv1.SideEffectClass](admissionregistrationv1.SideEffectClassNone),
+						TimeoutSeconds:          ptr.To[int32](10),
+						AdmissionReviewVersions: []string{"v1", "v1beta1"},
+						ObjectSelector:          &metav1.LabelSelector{MatchLabels: map[string]string{"app.kubernetes.io/managed-by": "etcd-druid"}},
+						Rules: []admissionregistrationv1.RuleWithOperations{
+							{
+								Rule: admissionregistrationv1.Rule{
+									APIGroups:   []string{corev1.GroupName},
+									APIVersions: []string{"v1"},
+									Resources:   []string{"serviceaccounts", "services", "configmaps"},
+									Scope:       ptr.To[admissionregistrationv1.ScopeType](admissionregistrationv1.AllScopes),
+								},
+								Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update, admissionregistrationv1.Delete},
+							},
+							{
+								Rule: admissionregistrationv1.Rule{
+									APIGroups:   []string{corev1.GroupName},
+									APIVersions: []string{"v1"},
+									Resources:   []string{"persistentvolumeclaims"},
+									Scope:       ptr.To[admissionregistrationv1.ScopeType](admissionregistrationv1.AllScopes),
+								},
+								Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Delete},
+							},
+							{
+								Rule: admissionregistrationv1.Rule{
+									APIGroups:   []string{rbacv1.GroupName},
+									APIVersions: []string{"v1"},
+									Resources:   []string{"roles", "rolebindings"},
+									Scope:       ptr.To[admissionregistrationv1.ScopeType](admissionregistrationv1.AllScopes),
+								},
+								Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update, admissionregistrationv1.Delete},
+							},
+							{
+								Rule: admissionregistrationv1.Rule{
+									APIGroups:   []string{appsv1.GroupName},
+									APIVersions: []string{"v1"},
+									Resources:   []string{"statefulsets"},
+									Scope:       ptr.To[admissionregistrationv1.ScopeType](admissionregistrationv1.AllScopes),
+								},
+								Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update, admissionregistrationv1.Delete},
+							},
+							{
+								Rule: admissionregistrationv1.Rule{
+									APIGroups:   []string{policyv1.GroupName},
+									APIVersions: []string{"v1"},
+									Resources:   []string{"poddisruptionbudgets"},
+									Scope:       ptr.To[admissionregistrationv1.ScopeType](admissionregistrationv1.AllScopes),
+								},
+								Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update, admissionregistrationv1.Delete},
+							},
+							{
+								Rule: admissionregistrationv1.Rule{
+									APIGroups:   []string{batchv1.GroupName},
+									APIVersions: []string{"v1"},
+									Resources:   []string{"jobs"},
+									Scope:       ptr.To[admissionregistrationv1.ScopeType](admissionregistrationv1.AllScopes),
+								},
+								Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update, admissionregistrationv1.Delete},
+							},
+							{
+								Rule: admissionregistrationv1.Rule{
+									APIGroups:   []string{coordinationv1.GroupName},
+									APIVersions: []string{"v1"},
+									Resources:   []string{"leases"},
+									Scope:       ptr.To[admissionregistrationv1.ScopeType](admissionregistrationv1.AllScopes),
+								},
+								Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update, admissionregistrationv1.Delete},
+							},
+						},
+					},
+					{
+						Name: "stsscale.etcdcomponents.webhooks.druid.gardener.cloud",
+						ClientConfig: admissionregistrationv1.WebhookClientConfig{
+							Service: &admissionregistrationv1.ServiceReference{
+								Name:      "etcd-druid",
+								Namespace: namespace,
+								Path:      ptr.To[string]("/webhooks/etcdcomponents"),
+								Port:      ptr.To[int32](9443),
+							},
+							CABundle: nil,
+						},
+						FailurePolicy:           ptr.To[admissionregistrationv1.FailurePolicyType](admissionregistrationv1.Fail),
+						MatchPolicy:             ptr.To[admissionregistrationv1.MatchPolicyType](admissionregistrationv1.Exact),
+						SideEffects:             ptr.To[admissionregistrationv1.SideEffectClass](admissionregistrationv1.SideEffectClassNone),
+						TimeoutSeconds:          ptr.To[int32](10),
+						AdmissionReviewVersions: []string{"v1", "v1beta1"},
+						Rules: []admissionregistrationv1.RuleWithOperations{
+							{
+								Rule: admissionregistrationv1.Rule{
+									APIGroups:   []string{appsv1.GroupName},
+									APIVersions: []string{"v1"},
+									Resources:   []string{"statefulsets/scale"},
+									Scope:       ptr.To[admissionregistrationv1.ScopeType](admissionregistrationv1.AllScopes),
+								},
+								Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update, admissionregistrationv1.Delete},
+							},
+						},
+					},
 				},
 			}
 
@@ -564,6 +750,7 @@ var _ = Describe("Etcd", func() {
 				clusterRoleBinding,
 				vpa,
 				service,
+				validatingWebhookConfiguration,
 				serviceMonitor,
 			}
 
@@ -610,7 +797,7 @@ var _ = Describe("Etcd", func() {
 			})
 
 			It("should successfully deploy all the resources (w/ image vector overwrite)", func() {
-				bootstrapper = NewBootstrapper(c, namespace, kubernetesVersion, etcdConfig, etcdDruidImage, imageVectorOverwriteFull, priorityClassName)
+				bootstrapper = NewBootstrapper(c, namespace, kubernetesVersion, etcdConfig, etcdDruidImage, imageVectorOverwriteFull, sm, secretNameCA, priorityClassName)
 
 				expectedResources = append(expectedResources,
 					deploymentWithImageVectorOverwrite,
