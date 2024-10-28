@@ -29,8 +29,6 @@ spec:
                   util-linux vim wget yq
           mkdir -p ~/.cache/wget
           cd ~/.cache/wget
-          echo gardenlogin     && wget -N "https://github.com/gardener/gardenlogin/releases/download/$(curl -sL https://raw.githubusercontent.com/gardener/gardenlogin/master/LATEST)/gardenlogin_linux_amd64" && mv gardenlogin_linux_amd64 /usr/local/bin/gardenlogin && chmod +x /usr/local/bin/gardenlogin \
-                               && ln -s "$(which gardenlogin)" /usr/local/bin/kubectl-gardenlogin
           echo gardenctl       && wget -N "https://github.com/gardener/gardenctl-v2/releases/download/$(curl -sL https://raw.githubusercontent.com/gardener/gardenctl-v2/master/LATEST)/gardenctl_v2_linux_amd64" && mv gardenctl_v2_linux_amd64 /usr/local/bin/gardenctl && chmod +x /usr/local/bin/gardenctl \
                                && ln -s "$(which gardenctl)" /usr/local/bin/g
           echo kind            && wget -N "https://kind.sigs.k8s.io/dl/$(curl -sL https://api.github.com/repos/kubernetes-sigs/kind/releases/latest | jq .tag_name -r)/kind-linux-amd64" && cp kind-linux-amd64 /usr/local/bin/kind && chmod +x /usr/local/bin/kind
@@ -48,6 +46,12 @@ spec:
                tar -C /usr/local -xzf "$VERSION.linux-amd64.tar.gz"
                ln -s /usr/local/go/bin/go /usr/local/bin/go
                ln -s /usr/local/go/bin/gofmt /usr/local/bin/gofmt  
+          echo gardenlogin
+               VERSION=$(curl -sL https://raw.githubusercontent.com/gardener/gardenlogin/master/LATEST)
+               wget -N "https://github.com/gardener/gardenlogin/releases/download/$VERSION/gardenlogin_linux_amd64"
+               cp gardenlogin_linux_amd64 /usr/local/bin/gardenlogin
+               chmod +x /usr/local/bin/gardenlogin
+               ln -s "$(which gardenlogin)" /usr/local/bin/kubectl-gardenlogin
           cd
           echo delve           && go install github.com/go-delve/delve/cmd/dlv@latest
           echo gron            && go install github.com/tomnomnom/gron@latest
