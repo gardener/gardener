@@ -134,6 +134,8 @@ shoots, those PVCs will be directly annotated by the operator. Such direct inter
 where autoscaling can initially be enabled only for a few PVCs for validation purposes.
 Similarly, to enable PVC autoscaling on existing seed clusters' `garden` PVCs, those will be directly annotated at
 operators' discretion.
+For details regarding the transition of existing volumes to autoscaling, see 
+[section 'Enabling Autoscaling for Existing Volumes'](#enabling-autoscaling-for-existing-volumes)
 
 ![02-operator_structure.png](assets/gep29-02-operator_structure.png)
 
@@ -183,6 +185,15 @@ in order to evaluate the economical effect, and the reliability of the scaling s
    - Peak volume utilisation (after)
    - Observability volume size: at p10, p50, p90, and average size (after)
    - Observability volume average size and count (before)
+
+#### Enabling Autoscaling for Existing Volumes
+Autoscaling is not automatically enabled for storage volumes which already exist at the time when the new feature is
+enabled. That applies to both volumes in shoot namespaces, and those in the `garden` namespace.
+
+These volumes have large, fixed capacity, which in most cases is severely underutilised. Merely enabling autoscaling
+on them would do nothing to release the unused storage space. It is the operator's responsibility to
+decide which of those volumes to migrate to autoscaling, whether to release the unused space, and if so, whether
+to preserve the existing data on the volumes, and how.
 
 ### Future Enhancements
 #### Metrics authorization
