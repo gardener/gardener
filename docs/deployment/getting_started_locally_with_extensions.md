@@ -113,6 +113,9 @@ DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT=true make gardener-extensions-up
 ```
 
 > [!IMPORTANT]
+> The Gardener Discovery Server is started with a token which is valid for 48 hours.
+> Rerun `DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT=true make gardener-extensions-up` in order to renew the token. 
+> 
 > When working with multiple seed clusters you need to only pass `DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT=true` for the one seed cluster that will be used to expose the workload identity documents.
 > A single Garden cluster needs only one Gardener Discovery Server.
 

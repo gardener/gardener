@@ -27,7 +27,7 @@ seed_kubeconfig=$2
 
 kubectl --server-side=true --kubeconfig "$garden_kubeconfig" apply -f "$SCRIPT_DIR"/rbac
 
-token=$(kubectl --kubeconfig "$garden_kubeconfig" -n garden create token gardener-discovery-server --duration 24h)
+token=$(kubectl --kubeconfig "$garden_kubeconfig" -n garden create token gardener-discovery-server --duration 48h)
 kubectl --kubeconfig "$seed_kubeconfig" apply -f - << EOF
 apiVersion: v1
 kind: Secret
