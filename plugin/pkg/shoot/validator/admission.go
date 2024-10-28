@@ -951,7 +951,8 @@ func (c *validationContext) validateShootNetworks(a admission.Attributes, worker
 					workerless,
 				)...)
 
-				if c.shoot.Status.Networking != nil {
+				// validate network disjointedness with seed networking if networking status is non-empty
+				if c.shoot.Status.Networking != nil && !apiequality.Semantic.DeepEqual(c.shoot.Status.Networking, &core.NetworkingStatus{}) {
 					allErrs = append(allErrs, cidrvalidation.ValidateMultiNetworkDisjointedness(
 						field.NewPath("status", "networking"),
 						c.shoot.Status.Networking.Nodes,
