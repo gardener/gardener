@@ -29,7 +29,6 @@ spec:
                   util-linux vim wget yq
           mkdir -p ~/.cache/wget
           cd ~/.cache/wget
-          echo kind            && wget -N "https://kind.sigs.k8s.io/dl/$(curl -sL https://api.github.com/repos/kubernetes-sigs/kind/releases/latest | jq .tag_name -r)/kind-linux-amd64" && cp kind-linux-amd64 /usr/local/bin/kind && chmod +x /usr/local/bin/kind
           echo kns             && wget -N "https://raw.githubusercontent.com/blendle/kns/master/bin/kns" && cp kns /usr/local/bin/kns && chmod +x /usr/local/bin/kns
           echo krew            && wget -N "https://github.com/kubernetes-sigs/krew/releases/download/$(curl -sL https://api.github.com/repos/kubernetes-sigs/krew/releases/latest | jq .tag_name -r)/krew-linux_amd64.tar.gz" && tar -xzf krew-linux_amd64.tar.gz ./krew-linux_amd64 && mv krew-linux_amd64 /usr/local/bin/krew && krew install krew
           echo ktx             && wget -N "https://raw.githubusercontent.com/blendle/kns/master/bin/ktx" && cp ktx /usr/local/bin/ktx && chmod +x /usr/local/bin/ktx
@@ -56,6 +55,11 @@ spec:
                cp gardenctl_v2_linux_amd64 /usr/local/bin/gardenctl
                chmod +x /usr/local/bin/gardenctl
                ln -s "$(which gardenctl)" /usr/local/bin/g
+          echo kind
+               VERSION=$(curl -sL https://api.github.com/repos/kubernetes-sigs/kind/releases/latest | jq '.tag_name // "v0.24.0"' -r)
+               wget -N "https://kind.sigs.k8s.io/dl/$VERSION/kind-linux-amd64"
+               cp kind-linux-amd64 /usr/local/bin/kind
+               chmod +x /usr/local/bin/kind
           cd
           echo delve           && go install github.com/go-delve/delve/cmd/dlv@latest
           echo gron            && go install github.com/tomnomnom/gron@latest
