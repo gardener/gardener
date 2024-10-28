@@ -93,7 +93,7 @@ var _ = Describe("ValuesHelper", func() {
 				string("FooFeature"): true,
 				string("BarFeature"): true,
 			},
-			Logging: &config.Logging{
+			Logging: config.Logging{
 				Enabled: ptr.To(true),
 			},
 			SeedConfig: &config.SeedConfig{
@@ -192,7 +192,7 @@ var _ = Describe("ValuesHelper", func() {
 					string("FooFeature"): false,
 					string("BarFeature"): true,
 				},
-				Logging: &gardenletv1alpha1.Logging{
+				Logging: gardenletv1alpha1.Logging{
 					Enabled: ptr.To(true),
 				},
 			}
@@ -227,6 +227,13 @@ var _ = Describe("ValuesHelper", func() {
 						"qps":                float64(100),
 						"burst":              float64(130),
 					},
+					"shootClientConnection": map[string]any{
+						"kubeconfig":         "",
+						"acceptContentTypes": "",
+						"contentType":        "",
+						"qps":                float64(0),
+						"burst":              float64(0),
+					},
 					"seedClientConnection": map[string]any{
 						"kubeconfig":         "",
 						"acceptContentTypes": "application/json",
@@ -234,6 +241,11 @@ var _ = Describe("ValuesHelper", func() {
 						"qps":                float64(100),
 						"burst":              float64(130),
 					},
+					"etcdConfig":  map[string]any{},
+					"sni":         map[string]any{},
+					"controllers": map[string]any{},
+					"monitoring":  map[string]any{},
+					"resources":   map[string]any{},
 					"server": map[string]any{
 						"healthProbes": map[string]any{
 							"bindAddress": "0.0.0.0",
@@ -314,6 +326,7 @@ var _ = Describe("ValuesHelper", func() {
 			result, err := vh.GetGardenletChartValues(mergedDeployment, mergedGardenletConfig(false), "")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal(gardenletChartValues(false, "", 1, nil)))
+			//Expect(reflect.DeepEqual(result, gardenletChartValues(false, "", 1, nil))).To(BeTrue())
 		})
 	})
 })

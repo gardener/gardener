@@ -66,7 +66,7 @@ var _ = Describe("Reconciler", func() {
 		gardenClient.EXPECT().Status().Return(gardenStatusWriter).AnyTimes()
 
 		cfg = config.GardenletConfiguration{
-			Controllers: &config.GardenletControllerConfiguration{
+			Controllers: config.GardenletControllerConfiguration{
 				ManagedSeed: &config.ManagedSeedControllerConfiguration{
 					SyncPeriod:     &metav1.Duration{Duration: syncPeriod},
 					WaitSyncPeriod: &metav1.Duration{Duration: waitSyncPeriod},

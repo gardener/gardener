@@ -30,14 +30,11 @@ type GardenletConfiguration struct {
 	SeedClientConnection *SeedClientConnection `json:"seedClientConnection,omitempty"`
 	// ShootClientConnection specifies the client connection settings for the proxy server
 	// to use when communicating with the shoot apiserver.
-	// +optional
-	ShootClientConnection *ShootClientConnection `json:"shootClientConnection,omitempty"`
+	ShootClientConnection ShootClientConnection `json:"shootClientConnection"`
 	// Controllers defines the configuration of the controllers.
-	// +optional
-	Controllers *GardenletControllerConfiguration `json:"controllers,omitempty"`
+	Controllers GardenletControllerConfiguration `json:"controllers"`
 	// Resources defines the total capacity for seed resources and the amount reserved for use by Gardener.
-	// +optional
-	Resources *ResourcesConfiguration `json:"resources,omitempty"`
+	Resources ResourcesConfiguration `json:"resources"`
 	// LeaderElection defines the configuration of leader election client.
 	// +optional
 	LeaderElection *componentbaseconfigv1alpha1.LeaderElectionConfiguration `json:"leaderElection,omitempty"`
@@ -61,22 +58,18 @@ type GardenletConfiguration struct {
 	SeedConfig *SeedConfig `json:"seedConfig,omitempty"`
 	// Logging contains an optional configurations for the logging stack deployed
 	// by the Gardenlet in the seed clusters.
-	// +optional
-	Logging *Logging `json:"logging,omitempty"`
+	Logging Logging `json:"logging"`
 	// SNI contains an optional configuration for the SNI settings used
 	// by the Gardenlet in the seed clusters.
-	// +optional
-	SNI *SNI `json:"sni,omitempty"`
+	SNI SNI `json:"sni"`
 	// ETCDConfig contains an optional configuration for the
 	// backup compaction feature in etcdbr
-	// +optional
-	ETCDConfig *ETCDConfig `json:"etcdConfig,omitempty"`
+	ETCDConfig ETCDConfig `json:"etcdConfig"`
 	// ExposureClassHandlers is a list of optional of exposure class handlers.
 	// +optional
 	ExposureClassHandlers []ExposureClassHandler `json:"exposureClassHandlers,omitempty"`
 	// MonitoringConfig is optional and adds additional settings for the monitoring stack.
-	// +optional
-	Monitoring *MonitoringConfig `json:"monitoring,omitempty"`
+	Monitoring MonitoringConfig `json:"monitoring"`
 	// NodeToleration contains optional settings for default tolerations.
 	// +optional
 	NodeToleration *NodeToleration `json:"nodeToleration,omitempty"`

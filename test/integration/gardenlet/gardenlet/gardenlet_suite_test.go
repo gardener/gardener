@@ -205,7 +205,7 @@ var _ = BeforeSuite(func() {
 
 	By("Register controller")
 	cfg := config.GardenletConfiguration{
-		Controllers: &config.GardenletControllerConfiguration{
+		Controllers: config.GardenletControllerConfiguration{
 			Gardenlet: &config.GardenletObjectControllerConfiguration{
 				// This controller is pretty heavy-weight, so use a higher duration.
 				SyncPeriod: &metav1.Duration{Duration: time.Minute},

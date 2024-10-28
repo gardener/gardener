@@ -257,7 +257,7 @@ var _ = BeforeSuite(func() {
 		SeedClientSet:  testClientSet,
 		ShootClientMap: shootClientMap,
 		Config: config.GardenletConfiguration{
-			Controllers: &config.GardenletControllerConfiguration{
+			Controllers: config.GardenletControllerConfiguration{
 				ShootCare: &config.ShootCareControllerConfiguration{
 					SyncPeriod: &metav1.Duration{Duration: 500 * time.Millisecond},
 				},

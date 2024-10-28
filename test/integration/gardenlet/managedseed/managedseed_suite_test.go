@@ -202,7 +202,7 @@ var _ = BeforeSuite(func() {
 	shootClientMap = fakeclientmap.NewClientMapBuilder().WithClientSetForKey(keys.ForShoot(&gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: gardenNamespaceGarden.Name}}), testClientSet).Build()
 
 	cfg := config.GardenletConfiguration{
-		Controllers: &config.GardenletControllerConfiguration{
+		Controllers: config.GardenletControllerConfiguration{
 			ManagedSeed: &config.ManagedSeedControllerConfiguration{
 				WaitSyncPeriod:   &metav1.Duration{Duration: 5 * time.Millisecond},
 				ConcurrentSyncs:  ptr.To(5),

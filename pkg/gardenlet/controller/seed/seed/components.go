@@ -478,7 +478,7 @@ func (r *Reconciler) newSystem(seed *gardencorev1beta1.Seed) (component.DeployWa
 
 func (r *Reconciler) newVali() (component.Deployer, error) {
 	var storage *resource.Quantity
-	if r.Config.Logging != nil && r.Config.Logging.Vali != nil && r.Config.Logging.Vali.Garden != nil {
+	if r.Config.Logging.Vali != nil && r.Config.Logging.Vali.Garden != nil {
 		storage = r.Config.Logging.Vali.Garden.Storage
 	}
 
@@ -723,7 +723,7 @@ func (r *Reconciler) newEtcdDruid(secretsManager secretsmanager.Interface) (comp
 		r.GardenNamespace,
 		r.SeedVersion,
 		r.ComponentImageVectors,
-		r.Config.ETCDConfig,
+		&r.Config.ETCDConfig,
 		secretsManager,
 		v1beta1constants.SecretNameCASeed,
 		v1beta1constants.PriorityClassNameSeedSystem800,

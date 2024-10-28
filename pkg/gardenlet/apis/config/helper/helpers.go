@@ -75,8 +75,7 @@ func ConvertGardenletConfigurationExternal(obj runtime.Object) (*gardenletv1alph
 
 // IsLoggingEnabled return true if the logging stack for clusters is enabled.
 func IsLoggingEnabled(c *config.GardenletConfiguration) bool {
-	if c != nil && c.Logging != nil &&
-		c.Logging.Enabled != nil {
+	if c != nil && c.Logging.Enabled != nil {
 		return *c.Logging.Enabled
 	}
 	return false
@@ -84,8 +83,7 @@ func IsLoggingEnabled(c *config.GardenletConfiguration) bool {
 
 // IsValiEnabled return true if the vali is enabled
 func IsValiEnabled(c *config.GardenletConfiguration) bool {
-	if c != nil && c.Logging != nil &&
-		c.Logging.Vali != nil && c.Logging.Vali.Enabled != nil {
+	if c != nil && c.Logging.Vali != nil && c.Logging.Vali.Enabled != nil {
 		return *c.Logging.Vali.Enabled
 	}
 	return true
@@ -93,7 +91,7 @@ func IsValiEnabled(c *config.GardenletConfiguration) bool {
 
 // IsEventLoggingEnabled returns true if the event-logging is enabled.
 func IsEventLoggingEnabled(c *config.GardenletConfiguration) bool {
-	return c != nil && c.Logging != nil &&
+	return c != nil &&
 		c.Logging.ShootEventLogging != nil &&
 		c.Logging.ShootEventLogging.Enabled != nil &&
 		*c.Logging.ShootEventLogging.Enabled
@@ -101,7 +99,7 @@ func IsEventLoggingEnabled(c *config.GardenletConfiguration) bool {
 
 // IsMonitoringEnabled returns true if the monitoring stack for shoot clusters is enabled. Default is enabled.
 func IsMonitoringEnabled(c *config.GardenletConfiguration) bool {
-	if c != nil && c.Monitoring != nil && c.Monitoring.Shoot != nil &&
+	if c != nil && c.Monitoring.Shoot != nil &&
 		c.Monitoring.Shoot.Enabled != nil {
 		return *c.Monitoring.Shoot.Enabled
 	}
@@ -110,7 +108,7 @@ func IsMonitoringEnabled(c *config.GardenletConfiguration) bool {
 
 // GetManagedResourceProgressingThreshold returns ManagedResourceProgressingThreshold if set otherwise it returns nil.
 func GetManagedResourceProgressingThreshold(c *config.GardenletConfiguration) *metav1.Duration {
-	if c != nil && c.Controllers != nil && c.Controllers.ShootCare != nil && c.Controllers.ShootCare.ManagedResourceProgressingThreshold != nil {
+	if c != nil && c.Controllers.ShootCare != nil && c.Controllers.ShootCare.ManagedResourceProgressingThreshold != nil {
 		return c.Controllers.ShootCare.ManagedResourceProgressingThreshold
 	}
 	return nil

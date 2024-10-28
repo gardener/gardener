@@ -106,13 +106,8 @@ func setDefaultsGardenletConfig(config *runtime.RawExtension, name, namespace st
 }
 
 func setDefaultsGardenletConfiguration(obj *gardenletv1alpha1.GardenletConfiguration, name, namespace string) {
-	// Initialize resources
-	if obj.Resources == nil {
-		obj.Resources = &gardenletv1alpha1.ResourcesConfiguration{}
-	}
-
 	// Set resources defaults
-	setDefaultsResources(obj.Resources)
+	setDefaultsResources(&obj.Resources)
 
 	// Initialize seed config
 	if obj.SeedConfig == nil {

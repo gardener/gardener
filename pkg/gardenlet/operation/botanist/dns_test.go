@@ -52,7 +52,7 @@ var _ = Describe("dns", func() {
 		b = &Botanist{
 			Operation: &operation.Operation{
 				Config: &config.GardenletConfiguration{
-					Controllers: &config.GardenletControllerConfiguration{
+					Controllers: config.GardenletControllerConfiguration{
 						Shoot: &config.ShootControllerConfiguration{
 							DNSEntryTTLSeconds: &dnsEntryTTL,
 						},

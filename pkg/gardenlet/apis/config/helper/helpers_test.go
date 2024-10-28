@@ -93,7 +93,7 @@ var _ = Describe("helper", func() {
 	Describe("#IsMonitoringEnabled", func() {
 		It("should return false when Monitoring.Shoot.Enabled is false", func() {
 			gardenletConfig := &config.GardenletConfiguration{
-				Monitoring: &config.MonitoringConfig{
+				Monitoring: config.MonitoringConfig{
 					Shoot: &config.ShootMonitoringConfig{
 						Enabled: ptr.To(false),
 					},
@@ -104,7 +104,7 @@ var _ = Describe("helper", func() {
 
 		It("should return true when Monitoring.Shoot.Enabled is true", func() {
 			gardenletConfig := &config.GardenletConfiguration{
-				Monitoring: &config.MonitoringConfig{
+				Monitoring: config.MonitoringConfig{
 					Shoot: &config.ShootMonitoringConfig{
 						Enabled: ptr.To(true),
 					},
@@ -120,14 +120,14 @@ var _ = Describe("helper", func() {
 
 		It("should return true when Monitoring.Shoot is nil", func() {
 			gardenletConfig := &config.GardenletConfiguration{
-				Monitoring: &config.MonitoringConfig{Shoot: nil},
+				Monitoring: config.MonitoringConfig{Shoot: nil},
 			}
 			Expect(IsMonitoringEnabled(gardenletConfig)).To(BeTrue())
 		})
 
 		It("should return true when Monitoring.Shoot.Enabled is nil", func() {
 			gardenletConfig := &config.GardenletConfiguration{
-				Monitoring: &config.MonitoringConfig{Shoot: &config.ShootMonitoringConfig{Enabled: nil}},
+				Monitoring: config.MonitoringConfig{Shoot: &config.ShootMonitoringConfig{Enabled: nil}},
 			}
 			Expect(IsMonitoringEnabled(gardenletConfig)).To(BeTrue())
 		})
@@ -146,7 +146,7 @@ var _ = Describe("helper", func() {
 
 		It("should return false when the logging is not enabled", func() {
 			gardenletConfig := &config.GardenletConfiguration{
-				Logging: &config.Logging{
+				Logging: config.Logging{
 					Enabled: ptr.To(false),
 				},
 			}
@@ -156,7 +156,7 @@ var _ = Describe("helper", func() {
 
 		It("should return true when the logging is enabled", func() {
 			gardenletConfig := &config.GardenletConfiguration{
-				Logging: &config.Logging{
+				Logging: config.Logging{
 					Enabled: ptr.To(true),
 				},
 			}
@@ -178,7 +178,7 @@ var _ = Describe("helper", func() {
 
 		It("should return false when the vali is not enabled", func() {
 			gardenletConfig := &config.GardenletConfiguration{
-				Logging: &config.Logging{
+				Logging: config.Logging{
 					Vali: &config.Vali{
 						Enabled: ptr.To(false),
 					},
@@ -190,7 +190,7 @@ var _ = Describe("helper", func() {
 
 		It("should return true when the vali is enabled", func() {
 			gardenletConfig := &config.GardenletConfiguration{
-				Logging: &config.Logging{
+				Logging: config.Logging{
 					Vali: &config.Vali{
 						Enabled: ptr.To(true),
 					},
@@ -214,7 +214,7 @@ var _ = Describe("helper", func() {
 
 		It("should return false when Logging configuration is empty", func() {
 			gardenletConfig := &config.GardenletConfiguration{
-				Logging: &config.Logging{},
+				Logging: config.Logging{},
 			}
 
 			Expect(IsEventLoggingEnabled(gardenletConfig)).To(BeFalse())
@@ -222,7 +222,7 @@ var _ = Describe("helper", func() {
 
 		It("should return false when ShootEventLogging is nil", func() {
 			gardenletConfig := &config.GardenletConfiguration{
-				Logging: &config.Logging{
+				Logging: config.Logging{
 					Enabled: ptr.To(true),
 				},
 			}
@@ -232,7 +232,7 @@ var _ = Describe("helper", func() {
 
 		It("should return false when ShootEventLogging is empty", func() {
 			gardenletConfig := &config.GardenletConfiguration{
-				Logging: &config.Logging{
+				Logging: config.Logging{
 					Enabled:          ptr.To(true),
 					ShootNodeLogging: &config.ShootNodeLogging{},
 				},
@@ -243,7 +243,7 @@ var _ = Describe("helper", func() {
 
 		It("should return false when the event logging is not enabled", func() {
 			gardenletConfig := &config.GardenletConfiguration{
-				Logging: &config.Logging{
+				Logging: config.Logging{
 					ShootEventLogging: &config.ShootEventLogging{
 						Enabled: ptr.To(false),
 					},
@@ -255,7 +255,7 @@ var _ = Describe("helper", func() {
 
 		It("should return true when the event logging is enabled", func() {
 			gardenletConfig := &config.GardenletConfiguration{
-				Logging: &config.Logging{
+				Logging: config.Logging{
 					ShootEventLogging: &config.ShootEventLogging{
 						Enabled: ptr.To(true),
 					},
@@ -279,7 +279,7 @@ var _ = Describe("helper", func() {
 
 		It("should return nil when Controller configuration is empty", func() {
 			gardenletConfig := &config.GardenletConfiguration{
-				Controllers: &config.GardenletControllerConfiguration{},
+				Controllers: config.GardenletControllerConfiguration{},
 			}
 
 			Expect(GetManagedResourceProgressingThreshold(gardenletConfig)).To(BeNil())
@@ -287,7 +287,7 @@ var _ = Describe("helper", func() {
 
 		It("should return nil when Shoot Care configuration is empty", func() {
 			gardenletConfig := &config.GardenletConfiguration{
-				Controllers: &config.GardenletControllerConfiguration{
+				Controllers: config.GardenletControllerConfiguration{
 					ShootCare: &config.ShootCareControllerConfiguration{},
 				},
 			}
@@ -298,7 +298,7 @@ var _ = Describe("helper", func() {
 		It("should return non nil value when ManagedResourceProgressingThreshold value is set", func() {
 			threshold := &metav1.Duration{Duration: time.Minute}
 			gardenletConfig := &config.GardenletConfiguration{
-				Controllers: &config.GardenletControllerConfiguration{
+				Controllers: config.GardenletControllerConfiguration{
 					ShootCare: &config.ShootCareControllerConfiguration{
 						ManagedResourceProgressingThreshold: threshold,
 					},

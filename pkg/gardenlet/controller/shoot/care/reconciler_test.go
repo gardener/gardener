@@ -107,7 +107,7 @@ var _ = Describe("Shoot Care Control", func() {
 			req = reconcile.Request{NamespacedName: client.ObjectKey{Namespace: shootNamespace, Name: shootName}}
 
 			gardenletConf = gardenletconfig.GardenletConfiguration{
-				Controllers: &gardenletconfig.GardenletControllerConfiguration{
+				Controllers: gardenletconfig.GardenletControllerConfiguration{
 					ShootCare: &gardenletconfig.ShootCareControllerConfiguration{
 						SyncPeriod: &metav1.Duration{Duration: careSyncPeriod},
 					},

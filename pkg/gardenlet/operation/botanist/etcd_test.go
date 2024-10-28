@@ -323,7 +323,7 @@ var _ = Describe("Etcd", func() {
 					Provider: backupProvider,
 				}
 				botanist.Config = &gardenletconfig.GardenletConfiguration{
-					ETCDConfig: &gardenletconfig.ETCDConfig{
+					ETCDConfig: gardenletconfig.ETCDConfig{
 						BackupLeaderElection: backupLeaderElectionConfig,
 					},
 				}

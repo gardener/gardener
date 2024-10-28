@@ -40,7 +40,7 @@ var _ = Describe("Add", func() {
 
 		cl = testclock.NewFakeClock(time.Now())
 		cfg = gardenletconfig.GardenletConfiguration{
-			Controllers: &gardenletconfig.GardenletControllerConfiguration{
+			Controllers: gardenletconfig.GardenletControllerConfiguration{
 				Shoot: &gardenletconfig.ShootControllerConfiguration{
 					SyncPeriod: &metav1.Duration{Duration: time.Hour},
 				},

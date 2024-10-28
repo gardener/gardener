@@ -165,7 +165,7 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, seed *garde
 
 	// Initialize capacity and allocatable
 	var capacity, allocatable corev1.ResourceList
-	if r.Config.Resources != nil && len(r.Config.Resources.Capacity) > 0 {
+	if len(r.Config.Resources.Capacity) > 0 {
 		capacity = make(corev1.ResourceList, len(r.Config.Resources.Capacity))
 		allocatable = make(corev1.ResourceList, len(r.Config.Resources.Capacity))
 

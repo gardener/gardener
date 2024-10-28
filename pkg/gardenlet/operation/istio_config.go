@@ -78,7 +78,7 @@ func (o *Operation) sniConfig() *gardenletconfig.SNI {
 	if exposureClassHandler := o.exposureClassHandler(); exposureClassHandler != nil {
 		return exposureClassHandler.SNI
 	}
-	return o.Config.SNI
+	return &o.Config.SNI
 }
 
 func (o *Operation) addZonePinningIfRequired(namespace string) string {

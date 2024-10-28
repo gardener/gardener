@@ -146,7 +146,7 @@ var _ = Describe("operatingsystemconfig", func() {
 			It("should deploy successfully shoot logging components with non testing purpose", func() {
 				botanist.Shoot.Purpose = "development"
 				botanist.Config = &config.GardenletConfiguration{
-					Logging: &config.Logging{
+					Logging: config.Logging{
 						Enabled: ptr.To(true),
 						ShootNodeLogging: &config.ShootNodeLogging{
 							ShootPurposes: []gardencore.ShootPurpose{"evaluation", "development"},

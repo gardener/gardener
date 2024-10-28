@@ -637,13 +637,13 @@ func ComputeExpectedGardenletConfiguration(
 				Burst: 130,
 			},
 		},
-		ShootClientConnection: &gardenletv1alpha1.ShootClientConnection{
+		ShootClientConnection: gardenletv1alpha1.ShootClientConnection{
 			ClientConnectionConfiguration: baseconfigv1alpha1.ClientConnectionConfiguration{
 				QPS:   25,
 				Burst: 50,
 			},
 		},
-		Controllers: &gardenletv1alpha1.GardenletControllerConfiguration{
+		Controllers: gardenletv1alpha1.GardenletControllerConfiguration{
 			BackupBucket: &gardenletv1alpha1.BackupBucketControllerConfiguration{
 				ConcurrentSyncs: &twenty,
 			},
@@ -786,7 +786,7 @@ func ComputeExpectedGardenletConfiguration(
 		},
 		LogLevel:  logLevelInfo,
 		LogFormat: logFormatJson,
-		Logging: &gardenletv1alpha1.Logging{
+		Logging: gardenletv1alpha1.Logging{
 			Enabled: ptr.To(false),
 			Vali: &gardenletv1alpha1.Vali{
 				Enabled: ptr.To(false),
@@ -811,22 +811,22 @@ func ComputeExpectedGardenletConfiguration(
 			EnableContentionProfiling: ptr.To(false),
 		},
 		FeatureGates: featureGates,
-		Resources: &gardenletv1alpha1.ResourcesConfiguration{
+		Resources: gardenletv1alpha1.ResourcesConfiguration{
 			Capacity: corev1.ResourceList{
 				"shoots": resource.MustParse("250"),
 			},
 		},
-		SNI: &gardenletv1alpha1.SNI{Ingress: &gardenletv1alpha1.SNIIngress{
+		SNI: gardenletv1alpha1.SNI{Ingress: &gardenletv1alpha1.SNIIngress{
 			ServiceName: ptr.To(v1beta1constants.DefaultSNIIngressServiceName),
 			Namespace:   ptr.To(v1beta1constants.DefaultSNIIngressNamespace),
 			Labels:      map[string]string{"app": "istio-ingressgateway", "istio": "ingressgateway"},
 		}},
-		Monitoring: &gardenletv1alpha1.MonitoringConfig{
+		Monitoring: gardenletv1alpha1.MonitoringConfig{
 			Shoot: &gardenletv1alpha1.ShootMonitoringConfig{
 				Enabled: ptr.To(true),
 			},
 		},
-		ETCDConfig: &gardenletv1alpha1.ETCDConfig{
+		ETCDConfig: gardenletv1alpha1.ETCDConfig{
 			BackupCompactionController: &gardenletv1alpha1.BackupCompactionController{
 				EnableBackupCompaction:    ptr.To(false),
 				EventsThreshold:           ptr.To[int64](1000000),

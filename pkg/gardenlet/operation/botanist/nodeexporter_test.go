@@ -32,7 +32,7 @@ var _ = Describe("NodeExporter", func() {
 		ctrl = gomock.NewController(GinkgoT())
 		botanist = &Botanist{Operation: &operation.Operation{
 			Config: &config.GardenletConfiguration{
-				Monitoring: &config.MonitoringConfig{
+				Monitoring: config.MonitoringConfig{
 					Shoot: &config.ShootMonitoringConfig{
 						Enabled: ptr.To(true),
 					},

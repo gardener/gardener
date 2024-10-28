@@ -122,7 +122,7 @@ var _ = Describe("NginxIngress", func() {
 		b = &Botanist{
 			Operation: &operation.Operation{
 				Config: &config.GardenletConfiguration{
-					Controllers: &config.GardenletControllerConfiguration{
+					Controllers: config.GardenletControllerConfiguration{
 						Shoot: &config.ShootControllerConfiguration{
 							DNSEntryTTLSeconds: ptr.To(ttl),
 						},

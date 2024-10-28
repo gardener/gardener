@@ -66,7 +66,7 @@ var _ = Describe("VPNSeedServer", func() {
 				KubernetesVersion: semver.MustParse("1.26.3"),
 			}
 			botanist.Config = &config.GardenletConfiguration{
-				SNI: &config.SNI{
+				SNI: config.SNI{
 					Ingress: &config.SNIIngress{
 						Namespace: ptr.To("test-ns"),
 						Labels: map[string]string{
@@ -135,7 +135,7 @@ var _ = Describe("VPNSeedServer", func() {
 				},
 			}
 			botanist.Config = &config.GardenletConfiguration{
-				SNI: &config.SNI{
+				SNI: config.SNI{
 					Ingress: &config.SNIIngress{
 						Namespace: ptr.To("test-ns"),
 						Labels: map[string]string{

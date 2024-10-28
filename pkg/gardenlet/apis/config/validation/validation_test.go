@@ -31,7 +31,7 @@ var _ = Describe("GardenletConfiguration", func() {
 
 	BeforeEach(func() {
 		cfg = &config.GardenletConfiguration{
-			Controllers: &config.GardenletControllerConfiguration{
+			Controllers: config.GardenletControllerConfiguration{
 				BackupEntry: &config.BackupEntryControllerConfiguration{
 					DeletionGracePeriodHours:         &deletionGracePeriodHours,
 					DeletionGracePeriodShootPurposes: []gardencore.ShootPurpose{gardencore.ShootPurposeDevelopment},
@@ -95,7 +95,7 @@ var _ = Describe("GardenletConfiguration", func() {
 					},
 				},
 			},
-			Resources: &config.ResourcesConfiguration{
+			Resources: config.ResourcesConfiguration{
 				Capacity: corev1.ResourceList{
 					"foo": resource.MustParse("42"),
 					"bar": resource.MustParse("13"),
@@ -442,7 +442,7 @@ var _ = Describe("GardenletConfiguration", func() {
 
 		Context("resources", func() {
 			It("should forbid reserved greater than capacity", func() {
-				cfg.Resources = &config.ResourcesConfiguration{
+				cfg.Resources = config.ResourcesConfiguration{
 					Capacity: corev1.ResourceList{
 						"foo": resource.MustParse("42"),
 					},
@@ -460,7 +460,7 @@ var _ = Describe("GardenletConfiguration", func() {
 			})
 
 			It("should forbid reserved without capacity", func() {
-				cfg.Resources = &config.ResourcesConfiguration{
+				cfg.Resources = config.ResourcesConfiguration{
 					Reserved: corev1.ResourceList{
 						"foo": resource.MustParse("42"),
 					},
@@ -477,7 +477,7 @@ var _ = Describe("GardenletConfiguration", func() {
 
 		Context("sni", func() {
 			BeforeEach(func() {
-				cfg.SNI = &config.SNI{Ingress: &config.SNIIngress{}}
+				cfg.SNI = config.SNI{Ingress: &config.SNIIngress{}}
 			})
 
 			It("should pass as sni config contains a valid external service ip", func() {

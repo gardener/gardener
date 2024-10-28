@@ -245,7 +245,7 @@ var _ = BeforeSuite(func() {
 		HelmRegistry:  fakeRegistry,
 		SeedClientSet: testClientSet,
 		Config: config.GardenletConfiguration{
-			Controllers: &config.GardenletControllerConfiguration{
+			Controllers: config.GardenletControllerConfiguration{
 				ControllerInstallation: &config.ControllerInstallationControllerConfiguration{
 					ConcurrentSyncs: ptr.To(5),
 				},

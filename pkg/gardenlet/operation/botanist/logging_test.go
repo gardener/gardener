@@ -74,7 +74,7 @@ var _ = Describe("Logging", func() {
 				SecretsManager: fakeSecretManager,
 				SeedClientSet:  k8sSeedClient,
 				Config: &config.GardenletConfiguration{
-					Logging: &config.Logging{
+					Logging: config.Logging{
 						Enabled: ptr.To(true),
 						Vali: &config.Vali{
 							Enabled: ptr.To(true),

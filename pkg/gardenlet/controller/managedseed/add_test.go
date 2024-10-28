@@ -289,7 +289,7 @@ var _ = Describe("Add", func() {
 
 		BeforeEach(func() {
 			cfg = config.GardenletConfiguration{
-				Controllers: &config.GardenletControllerConfiguration{
+				Controllers: config.GardenletControllerConfiguration{
 					ManagedSeed: &config.ManagedSeedControllerConfiguration{
 						SyncJitterPeriod: &metav1.Duration{Duration: 50 * time.Millisecond},
 					},

@@ -34,7 +34,7 @@ var _ = Describe("istioconfig", func() {
 			exposureClassLabels        = map[string]string{"exposure": "label"}
 			exposureClassAnnotations   = map[string]string{"exposure": "annotation"}
 			gardenletConfig            = &config.GardenletConfiguration{
-				SNI: &config.SNI{Ingress: &config.SNIIngress{
+				SNI: config.SNI{Ingress: &config.SNIIngress{
 					ServiceName: &defaultServiceName,
 					Namespace:   &defaultNamespaceName,
 					Labels:      defaultLabels,

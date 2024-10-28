@@ -26,11 +26,11 @@ type GardenletConfiguration struct {
 	SeedClientConnection *SeedClientConnection
 	// ShootClientConnection specifies the client connection settings for the proxy server
 	// to use when communicating with the shoot apiserver.
-	ShootClientConnection *ShootClientConnection
+	ShootClientConnection ShootClientConnection
 	// Controllers defines the configuration of the controllers.
-	Controllers *GardenletControllerConfiguration
+	Controllers GardenletControllerConfiguration
 	// Resources defines the total capacity for seed resources and the amount reserved for use by Gardener.
-	Resources *ResourcesConfiguration
+	Resources ResourcesConfiguration
 	// LeaderElection defines the configuration of leader election client.
 	LeaderElection *componentbaseconfig.LeaderElectionConfiguration
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
@@ -50,17 +50,17 @@ type GardenletConfiguration struct {
 	SeedConfig *SeedConfig
 	// Logging contains an optional configurations for the logging stack deployed
 	// by the Gardenlet in the seed clusters.
-	Logging *Logging
+	Logging Logging
 	// SNI contains an optional configuration for the SNI settings used
 	// by the Gardenlet in the seed clusters.
-	SNI *SNI
+	SNI SNI
 	// ETCDConfig contains an optional configuration for the
 	// backup compaction feature of ETCD backup-restore functionality.
-	ETCDConfig *ETCDConfig
+	ETCDConfig ETCDConfig
 	// ExposureClassHandlers is a list of optional of exposure class handlers.
 	ExposureClassHandlers []ExposureClassHandler
 	// MonitoringConfig is optional and adds additional settings for the monitoring stack.
-	Monitoring *MonitoringConfig
+	Monitoring MonitoringConfig
 	// NodeToleration contains optional settings for default tolerations.
 	NodeToleration *NodeToleration
 }

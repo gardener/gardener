@@ -41,7 +41,7 @@ var _ = Describe("Defaults", func() {
 						APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
 						Kind:       "GardenletConfiguration",
 					},
-					Resources: &gardenletv1alpha1.ResourcesConfiguration{
+					Resources: gardenletv1alpha1.ResourcesConfiguration{
 						Capacity: corev1.ResourceList{
 							gardencorev1beta1.ResourceShoots: resource.MustParse("250"),
 						},
@@ -76,7 +76,7 @@ var _ = Describe("Defaults", func() {
 							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
 							Kind:       "GardenletConfiguration",
 						},
-						Resources: &gardenletv1alpha1.ResourcesConfiguration{
+						Resources: gardenletv1alpha1.ResourcesConfiguration{
 							Capacity: corev1.ResourceList{
 								gardencorev1beta1.ResourceShoots: resource.MustParse("250"),
 							},
@@ -105,7 +105,7 @@ var _ = Describe("Defaults", func() {
 						APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
 						Kind:       "GardenletConfiguration",
 					},
-					Resources: &gardenletv1alpha1.ResourcesConfiguration{
+					Resources: gardenletv1alpha1.ResourcesConfiguration{
 						Capacity: corev1.ResourceList{
 							gardencorev1beta1.ResourceShoots: resource.MustParse("300"),
 						},
@@ -134,7 +134,7 @@ var _ = Describe("Defaults", func() {
 							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
 							Kind:       "GardenletConfiguration",
 						},
-						Resources: &gardenletv1alpha1.ResourcesConfiguration{
+						Resources: gardenletv1alpha1.ResourcesConfiguration{
 							Capacity: corev1.ResourceList{
 								gardencorev1beta1.ResourceShoots: resource.MustParse("300"),
 							},

@@ -121,7 +121,7 @@ var _ = Describe("BlackboxExporter", func() {
 		Context("shoot monitoring is disabled in GardenletConfiguration", func() {
 			BeforeEach(func() {
 				botanist.Config = &config.GardenletConfiguration{
-					Monitoring: &config.MonitoringConfig{
+					Monitoring: config.MonitoringConfig{
 						Shoot: &config.ShootMonitoringConfig{
 							Enabled: ptr.To(false),
 						},

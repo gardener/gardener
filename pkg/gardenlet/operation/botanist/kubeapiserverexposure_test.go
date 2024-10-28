@@ -98,7 +98,7 @@ var _ = Describe("KubeAPIServerExposure", func() {
 			})
 
 			botanist.Config = &config.GardenletConfiguration{
-				SNI: &config.SNI{
+				SNI: config.SNI{
 					Ingress: &config.SNIIngress{
 						Namespace: ptr.To("istio-ingress"),
 						Labels:    map[string]string{"istio": "ingressgateway"},

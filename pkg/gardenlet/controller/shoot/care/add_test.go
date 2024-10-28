@@ -36,7 +36,7 @@ var _ = Describe("Add", func() {
 		reconciler = &Reconciler{
 			SeedName: "shoot",
 			Config: config.GardenletConfiguration{
-				Controllers: &config.GardenletControllerConfiguration{
+				Controllers: config.GardenletControllerConfiguration{
 					ShootCare: &config.ShootCareControllerConfiguration{
 						SyncPeriod: &metav1.Duration{Duration: time.Minute},
 					},

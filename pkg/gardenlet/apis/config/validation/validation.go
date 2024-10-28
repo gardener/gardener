@@ -46,25 +46,23 @@ func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath 
 		}
 	}
 
-	if cfg.Controllers != nil {
-		if cfg.Controllers.BackupEntry != nil {
-			allErrs = append(allErrs, validateBackupEntryControllerConfiguration(cfg.Controllers.BackupEntry, fldPath.Child("controllers", "backupEntry"))...)
-		}
-		if cfg.Controllers.Bastion != nil {
-			allErrs = append(allErrs, validateBastionControllerConfiguration(cfg.Controllers.Bastion, fldPath.Child("controllers", "bastion"))...)
-		}
-		if cfg.Controllers.Shoot != nil {
-			allErrs = append(allErrs, validateShootControllerConfiguration(cfg.Controllers.Shoot, fldPath.Child("controllers", "shoot"))...)
-		}
-		if cfg.Controllers.ShootCare != nil {
-			allErrs = append(allErrs, validateShootCareControllerConfiguration(cfg.Controllers.ShootCare, fldPath.Child("controllers", "shootCare"))...)
-		}
-		if cfg.Controllers.ManagedSeed != nil {
-			allErrs = append(allErrs, validateManagedSeedControllerConfiguration(cfg.Controllers.ManagedSeed, fldPath.Child("controllers", "managedSeed"))...)
-		}
-		if cfg.Controllers.NetworkPolicy != nil {
-			allErrs = append(allErrs, validateNetworkPolicyControllerConfiguration(cfg.Controllers.NetworkPolicy, fldPath.Child("controllers", "networkPolicy"))...)
-		}
+	if cfg.Controllers.BackupEntry != nil {
+		allErrs = append(allErrs, validateBackupEntryControllerConfiguration(cfg.Controllers.BackupEntry, fldPath.Child("controllers", "backupEntry"))...)
+	}
+	if cfg.Controllers.Bastion != nil {
+		allErrs = append(allErrs, validateBastionControllerConfiguration(cfg.Controllers.Bastion, fldPath.Child("controllers", "bastion"))...)
+	}
+	if cfg.Controllers.Shoot != nil {
+		allErrs = append(allErrs, validateShootControllerConfiguration(cfg.Controllers.Shoot, fldPath.Child("controllers", "shoot"))...)
+	}
+	if cfg.Controllers.ShootCare != nil {
+		allErrs = append(allErrs, validateShootCareControllerConfiguration(cfg.Controllers.ShootCare, fldPath.Child("controllers", "shootCare"))...)
+	}
+	if cfg.Controllers.ManagedSeed != nil {
+		allErrs = append(allErrs, validateManagedSeedControllerConfiguration(cfg.Controllers.ManagedSeed, fldPath.Child("controllers", "managedSeed"))...)
+	}
+	if cfg.Controllers.NetworkPolicy != nil {
+		allErrs = append(allErrs, validateNetworkPolicyControllerConfiguration(cfg.Controllers.NetworkPolicy, fldPath.Child("controllers", "networkPolicy"))...)
 	}
 
 	if cfg.LogLevel != "" {
@@ -88,21 +86,19 @@ func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath 
 	}
 
 	resourcesPath := fldPath.Child("resources")
-	if cfg.Resources != nil {
-		for resourceName, quantity := range cfg.Resources.Capacity {
-			if reservedQuantity, ok := cfg.Resources.Reserved[resourceName]; ok && reservedQuantity.Value() > quantity.Value() {
-				allErrs = append(allErrs, field.Invalid(resourcesPath.Child("reserved", string(resourceName)), cfg.Resources.Reserved[resourceName], "reserved must be lower or equal to capacity"))
-			}
+	for resourceName, quantity := range cfg.Resources.Capacity {
+		if reservedQuantity, ok := cfg.Resources.Reserved[resourceName]; ok && reservedQuantity.Value() > quantity.Value() {
+			allErrs = append(allErrs, field.Invalid(resourcesPath.Child("reserved", string(resourceName)), cfg.Resources.Reserved[resourceName], "reserved must be lower or equal to capacity"))
 		}
-		for resourceName := range cfg.Resources.Reserved {
-			if _, ok := cfg.Resources.Capacity[resourceName]; !ok {
-				allErrs = append(allErrs, field.Invalid(resourcesPath.Child("reserved", string(resourceName)), cfg.Resources.Reserved[resourceName], "reserved without capacity"))
-			}
+	}
+	for resourceName := range cfg.Resources.Reserved {
+		if _, ok := cfg.Resources.Capacity[resourceName]; !ok {
+			allErrs = append(allErrs, field.Invalid(resourcesPath.Child("reserved", string(resourceName)), cfg.Resources.Reserved[resourceName], "reserved without capacity"))
 		}
 	}
 
 	sniPath := fldPath.Child("sni", "ingress")
-	if cfg.SNI != nil && cfg.SNI.Ingress != nil && cfg.SNI.Ingress.ServiceExternalIP != nil {
+	if cfg.SNI.Ingress != nil && cfg.SNI.Ingress.ServiceExternalIP != nil {
 		if ip := net.ParseIP(*cfg.SNI.Ingress.ServiceExternalIP); ip == nil {
 			allErrs = append(allErrs, field.Invalid(sniPath.Child("serviceExternalIP"), cfg.SNI.Ingress.ServiceExternalIP, "external service ip is invalid"))
 		}

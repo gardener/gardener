@@ -128,24 +128,24 @@ var _ = Describe("Seed controller tests", func() {
 		Expect((&seedcontroller.Reconciler{
 			SeedClientSet: testClientSet,
 			Config: config.GardenletConfiguration{
-				Controllers: &config.GardenletControllerConfiguration{
+				Controllers: config.GardenletControllerConfiguration{
 					Seed: &config.SeedControllerConfiguration{
 						// This controller is pretty heavy-weight, so use a higher duration.
 						SyncPeriod: &metav1.Duration{Duration: time.Minute},
 					},
 				},
-				SNI: &config.SNI{
+				SNI: config.SNI{
 					Ingress: &config.SNIIngress{
 						Namespace: ptr.To(testNamespace.Name + "-istio"),
 					},
 				},
-				Logging: &config.Logging{
+				Logging: config.Logging{
 					Enabled: ptr.To(true),
 					Vali: &config.Vali{
 						Enabled: ptr.To(true),
 					},
 				},
-				ETCDConfig: &config.ETCDConfig{
+				ETCDConfig: config.ETCDConfig{
 					BackupCompactionController: &config.BackupCompactionController{
 						EnableBackupCompaction: ptr.To(false),
 						EventsThreshold:        ptr.To[int64](1),

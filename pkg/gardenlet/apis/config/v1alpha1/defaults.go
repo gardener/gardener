@@ -24,14 +24,6 @@ func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
 		obj.SeedClientConnection = &SeedClientConnection{}
 	}
 
-	if obj.ShootClientConnection == nil {
-		obj.ShootClientConnection = &ShootClientConnection{}
-	}
-
-	if obj.Controllers == nil {
-		obj.Controllers = &GardenletControllerConfiguration{}
-	}
-
 	if obj.LeaderElection == nil {
 		obj.LeaderElection = &componentbaseconfigv1alpha1.LeaderElectionConfiguration{}
 	}
@@ -42,24 +34,6 @@ func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
 
 	if obj.LogFormat == "" {
 		obj.LogFormat = LogFormatJSON
-	}
-
-	if obj.Logging == nil {
-		obj.Logging = &Logging{}
-	}
-
-	// TODO: consider enabling profiling by default (like in k8s components)
-
-	if obj.SNI == nil {
-		obj.SNI = &SNI{}
-	}
-
-	if obj.Monitoring == nil {
-		obj.Monitoring = &MonitoringConfig{}
-	}
-
-	if obj.ETCDConfig == nil {
-		obj.ETCDConfig = &ETCDConfig{}
 	}
 
 	SetDefaults_ExposureClassHandler(obj.ExposureClassHandlers)
