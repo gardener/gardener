@@ -29,7 +29,6 @@ spec:
                   util-linux vim wget yq
           mkdir -p ~/.cache/wget
           cd ~/.cache/wget
-          echo krew            && wget -N "https://github.com/kubernetes-sigs/krew/releases/download/$(curl -sL https://api.github.com/repos/kubernetes-sigs/krew/releases/latest | jq .tag_name -r)/krew-linux_amd64.tar.gz" && tar -xzf krew-linux_amd64.tar.gz ./krew-linux_amd64 && mv krew-linux_amd64 /usr/local/bin/krew && krew install krew
           echo ktx             && wget -N "https://raw.githubusercontent.com/blendle/kns/master/bin/ktx" && cp ktx /usr/local/bin/ktx && chmod +x /usr/local/bin/ktx
           echo kube-ps1        && wget -N "https://raw.githubusercontent.com/jonmosco/kube-ps1/master/kube-ps1.sh" && cp kube-ps1.sh ~/.kube-ps1.sh
           echo kubectl         && wget -N "https://dl.k8s.io/release/$(curl -sL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && cp kubectl /usr/local/bin/kubectl && chmod +x /usr/local/bin/kubectl \
@@ -63,6 +62,11 @@ spec:
                wget -N "https://raw.githubusercontent.com/blendle/kns/master/bin/kns"
                cp kns /usr/local/bin/kns
                chmod +x /usr/local/bin/kns
+          echo krew
+               VERSION=$(curl -sL https://api.github.com/repos/kubernetes-sigs/krew/releases/latest | jq '.tag_name // "v0.4.4"' -r)
+               wget -N "https://github.com/kubernetes-sigs/krew/releases/download/$VERSION/krew-linux_amd64.tar.gz"
+               tar --no-same-owner -xzf krew-linux_amd64.tar.gz ./krew-linux_amd64
+               mv krew-linux_amd64 /usr/local/bin/krew
           cd
           echo delve           && go install github.com/go-delve/delve/cmd/dlv@latest
           echo gron            && go install github.com/tomnomnom/gron@latest
