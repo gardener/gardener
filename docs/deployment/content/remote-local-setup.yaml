@@ -29,7 +29,6 @@ spec:
                   util-linux vim wget yq
           mkdir -p ~/.cache/wget
           cd ~/.cache/wget
-          echo kube-ps1        && wget -N "https://raw.githubusercontent.com/jonmosco/kube-ps1/master/kube-ps1.sh" && cp kube-ps1.sh ~/.kube-ps1.sh
           echo kubectl         && wget -N "https://dl.k8s.io/release/$(curl -sL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && cp kubectl /usr/local/bin/kubectl && chmod +x /usr/local/bin/kubectl \
                                && ln -s "$(which kubectl)" /usr/local/bin/k
           echo tmux-completion && wget -N "https://raw.githubusercontent.com/imomaliev/tmux-bash-completion/master/completions/tmux" && cp tmux /usr/share/bash-completion/completions/tmux
@@ -70,6 +69,9 @@ spec:
                wget -N "https://raw.githubusercontent.com/blendle/kns/master/bin/ktx"
                cp ktx /usr/local/bin/ktx
                chmod +x /usr/local/bin/ktx
+          echo kube-ps1
+               wget -N "https://raw.githubusercontent.com/jonmosco/kube-ps1/master/kube-ps1.sh"
+               cp kube-ps1.sh /usr/local/bin/kube-ps1.sh
           cd
           echo delve           && go install github.com/go-delve/delve/cmd/dlv@latest
           echo gron            && go install github.com/tomnomnom/gron@latest
@@ -207,7 +209,7 @@ spec:
             source /usr/share/bash-completion/completions/gardenctl
             complete -o default -F __start_kubectl k
             complete -o default -F __start_gardenctl g
-            source ~/.kube-ps1.sh
+            source /usr/local/bin/kube-ps1.sh
             source /usr/share/git-core/git-prompt.sh
             export PS1='[\w $(printf "$(kube_ps1)")] $(__git_ps1 "(%s)") [$(date +%H:%M)]\$ '
             stty -ixon
