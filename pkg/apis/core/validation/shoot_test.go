@@ -4902,6 +4902,104 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(ValidateShoot(shoot)).To(BeEmpty())
 			})
 
+			DescribeTable("It should forbid setting certain operation annotations when shoot has a maintenance annotation",
+				func(maintenanceOpAnnotation, operationAnnotation string, errMatcher gomegatypes.GomegaMatcher) {
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", maintenanceOpAnnotation)
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", operationAnnotation)
+
+					shoot.Status = core.ShootStatus{
+						LastOperation: &core.LastOperation{
+							Type:  core.LastOperationTypeCreate,
+							State: core.LastOperationStateSucceeded,
+						},
+					}
+
+					if sets.New(v1beta1constants.OperationRotateCredentialsComplete, v1beta1constants.OperationRotateCAComplete, v1beta1constants.OperationRotateServiceAccountKeyComplete, v1beta1constants.OperationRotateETCDEncryptionKeyComplete).Has(maintenanceOpAnnotation) {
+						shoot.Status.Credentials = &core.ShootCredentials{
+							Rotation: &core.ShootCredentialsRotation{
+								CertificateAuthorities: &core.CARotation{
+									Phase: core.RotationPrepared,
+								},
+								ServiceAccountKey: &core.ServiceAccountKeyRotation{
+									Phase: core.RotationPrepared,
+								},
+								ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
+									Phase: core.RotationPrepared,
+								},
+							},
+						}
+					}
+
+					Expect(ValidateShoot(shoot)).To(errMatcher)
+
+					delete(shoot.Annotations, "maintenance.gardener.cloud/operation")
+					delete(shoot.Annotations, "gardener.cloud/operation")
+				},
+				Entry("rotate-ca-start", "rotate-credentials-start", "rotate-ca-start", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+					"Detail": ContainSubstring("operation 'rotate-ca-start' is not permitted when maintenance operation is 'rotate-credentials-start'"),
+				})))),
+				Entry("rotate-serviceaccount-key-start", "rotate-credentials-start", "rotate-serviceaccount-key-start", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+					"Detail": ContainSubstring("operation 'rotate-serviceaccount-key-start' is not permitted when maintenance operation is 'rotate-credentials-start'"),
+				})))),
+				Entry("rotate-etcd-encryption-key-start", "rotate-credentials-start", "rotate-etcd-encryption-key-start", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+					"Detail": ContainSubstring("operation 'rotate-etcd-encryption-key-start' is not permitted when maintenance operation is 'rotate-credentials-start'"),
+				})))),
+
+				Entry("rotate-ca-complete", "rotate-credentials-complete", "rotate-ca-complete", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+					"Detail": ContainSubstring("operation 'rotate-ca-complete' is not permitted when maintenance operation is 'rotate-credentials-complete'"),
+				})))),
+				Entry("rotate-serviceaccount-key-complete", "rotate-credentials-complete", "rotate-serviceaccount-key-complete", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+					"Detail": ContainSubstring("operation 'rotate-serviceaccount-key-complete' is not permitted when maintenance operation is 'rotate-credentials-complete'"),
+				})))),
+				Entry("rotate-etcd-encryption-key-complete", "rotate-credentials-complete", "rotate-etcd-encryption-key-complete", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+					"Detail": ContainSubstring("operation 'rotate-etcd-encryption-key-complete' is not permitted when maintenance operation is 'rotate-credentials-complete'"),
+				})))),
+
+				Entry("rotate-credentials-start", "rotate-ca-start", "rotate-credentials-start", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+					"Detail": ContainSubstring("operation 'rotate-credentials-start' is not permitted when maintenance operation is 'rotate-ca-start'"),
+				})))),
+				Entry("rotate-credentials-start", "rotate-serviceaccount-key-start", "rotate-credentials-start", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+					"Detail": ContainSubstring("operation 'rotate-credentials-start' is not permitted when maintenance operation is 'rotate-serviceaccount-key-start'"),
+				})))),
+				Entry("rotate-credentials-start", "rotate-etcd-encryption-key-start", "rotate-credentials-start", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+					"Detail": ContainSubstring("operation 'rotate-credentials-start' is not permitted when maintenance operation is 'rotate-etcd-encryption-key-start'"),
+				})))),
+
+				Entry("rotate-credentials-complete", "rotate-ca-complete", "rotate-credentials-complete", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+					"Detail": ContainSubstring("operation 'rotate-credentials-complete' is not permitted when maintenance operation is 'rotate-ca-complete'"),
+				})))),
+				Entry("rotate-credentials-complete", "rotate-serviceaccount-key-complete", "rotate-credentials-complete", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+					"Detail": ContainSubstring("operation 'rotate-credentials-complete' is not permitted when maintenance operation is 'rotate-serviceaccount-key-complete'"),
+				})))),
+				Entry("rotate-credentials-complete", "rotate-etcd-encryption-key-complete", "rotate-credentials-complete", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+					"Detail": ContainSubstring("operation 'rotate-credentials-complete' is not permitted when maintenance operation is 'rotate-etcd-encryption-key-complete'"),
+				})))),
+			)
+
 			DescribeTable("forbid certain rotation operations when shoot is hibernated",
 				func(operation string) {
 					shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
