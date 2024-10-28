@@ -158,7 +158,6 @@ global:
         maxSize: 0
         policy: ""
     featureGates:
-      IPv6SingleStack: true
       ShootForceDeletion: true
       UseNamespacedCloudProfile: true
     resources: {}

@@ -20,8 +20,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
-	"github.com/gardener/gardener/pkg/features"
-	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -541,7 +539,6 @@ var _ = Describe("Seed Validation Tests", func() {
 
 			Context("IPv6", func() {
 				BeforeEach(func() {
-					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.IPv6SingleStack, true))
 					seed.Spec.Networks.IPFamilies = []core.IPFamily{core.IPFamilyIPv6}
 				})
 
@@ -629,9 +626,7 @@ var _ = Describe("Seed Validation Tests", func() {
 				oldSeed = seed.DeepCopy()
 			})
 
-			It("should fail updating immutable fields with featureGate IPv6SingleStack enabled", func() {
-				defer test.WithFeatureGate(features.DefaultFeatureGate, features.IPv6SingleStack, true)()
-
+			It("should fail updating immutable fields", func() {
 				oldSeed.Spec.Networks.IPFamilies = []core.IPFamily{core.IPFamilyIPv4}
 
 				newSeed := prepareSeedForUpdate(oldSeed)
@@ -644,26 +639,6 @@ var _ = Describe("Seed Validation Tests", func() {
 					"Field":  Equal("spec.networks.ipFamilies"),
 					"Detail": ContainSubstring(`field is immutable`),
 				})))
-			})
-
-			It("should fail updating immutable fields with featureGate IPv6SingleStack disabled", func() {
-				oldSeed.Spec.Networks.IPFamilies = []core.IPFamily{core.IPFamilyIPv4}
-
-				newSeed := prepareSeedForUpdate(oldSeed)
-				newSeed.Spec.Networks.IPFamilies = []core.IPFamily{core.IPFamilyIPv6}
-
-				errorList := ValidateSeedUpdate(newSeed, oldSeed)
-
-				Expect(errorList).To(ConsistOfFields(Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("spec.networks.ipFamilies"),
-					"Detail": ContainSubstring(`field is immutable`),
-				}, Fields{
-					"Type":     Equal(field.ErrorTypeInvalid),
-					"Field":    Equal("spec.networks.ipFamilies"),
-					"BadValue": Equal([]core.IPFamily{core.IPFamilyIPv6}),
-					"Detail":   Equal("IPv6 single-stack networking is not supported"),
-				}))
 			})
 
 			It("should allow adding a nodes CIDR", func() {

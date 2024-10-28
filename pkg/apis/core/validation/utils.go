@@ -23,7 +23,6 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/features"
 	kubernetescorevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
 )
 
@@ -161,15 +160,6 @@ func ValidateIPFamilies(ipFamilies []core.IPFamily, fldPath *field.Path) field.E
 		} else {
 			ipFamiliesSeen.Insert(string(ipFamily))
 		}
-	}
-
-	if len(allErrs) > 0 {
-		// further validation doesn't make any sense, because there are unsupported or duplicate IP families
-		return allErrs
-	}
-
-	if len(ipFamilies) > 0 && ipFamilies[0] == core.IPFamilyIPv6 && !features.DefaultFeatureGate.Enabled(features.IPv6SingleStack) {
-		allErrs = append(allErrs, field.Invalid(fldPath, ipFamilies, "IPv6 single-stack networking is not supported"))
 	}
 
 	return allErrs

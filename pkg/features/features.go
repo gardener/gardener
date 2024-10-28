@@ -43,11 +43,6 @@ const (
 	// alpha: v1.54.0
 	DefaultSeccompProfile featuregate.Feature = "DefaultSeccompProfile"
 
-	// IPv6SingleStack allows creating shoot clusters with IPv6 single-stack networking (GEP-21).
-	// owner: @timebertt
-	// alpha: v1.63.0
-	IPv6SingleStack featuregate.Feature = "IPv6SingleStack"
-
 	// ShootForceDeletion allows force deletion of Shoots.
 	// See https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/shoot_operations.md#shoot-force-deletion for more details.
 	// owner: @acumino @ary1992 @shafeeqes
@@ -113,7 +108,7 @@ const (
 //
 // For checking whether a given feature gate is enabled (regardless of which component the code is executed in), use:
 //
-//	features.DefaultFeatureGate.Enabled(features.IPv6SingleStack)
+//	features.DefaultFeatureGate.Enabled(features.DefaultSeccompProfile)
 //
 // With this, code that needs to check a given feature gate's state can be shared across components, e.g. in API
 // validation code for Seeds (executed in gardener-apiserver and gardenlet).
@@ -127,7 +122,6 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	HVPAForShootedSeed:        {Default: false, PreRelease: featuregate.Deprecated, LockToDefault: true},
 	VPAForETCD:                {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	DefaultSeccompProfile:     {Default: false, PreRelease: featuregate.Alpha},
-	IPv6SingleStack:           {Default: false, PreRelease: featuregate.Alpha},
 	ShootManagedIssuer:        {Default: false, PreRelease: featuregate.Alpha},
 	ShootForceDeletion:        {Default: true, PreRelease: featuregate.Beta},
 	UseNamespacedCloudProfile: {Default: false, PreRelease: featuregate.Alpha},
