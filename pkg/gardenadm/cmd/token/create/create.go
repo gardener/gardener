@@ -21,7 +21,7 @@ func NewCommand(ioStreams genericiooptions.IOStreams) *cobra.Command {
 		Short: "Create a bootstrap token on the server",
 		Long: "The [token] is the actual token to write." +
 			"This should be a securely generated random token of the form \"[a-z0-9]{6}.[a-z0-9]{16}\"." +
-			"If no [token] is given, kubeadm will generate a random token instead.",
+			"If no [token] is given, gardenadm will generate a random token instead.",
 
 		Example: `# Create a bootstrap token with id "foo123" on the server
 gardenadm token create foo123.bar4567890baz123
