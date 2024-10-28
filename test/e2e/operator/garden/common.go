@@ -20,7 +20,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
@@ -86,24 +85,6 @@ func defaultRootCASecret() *corev1.Secret {
 	}
 }
 
-func defaultBackupBucket() *extensionsv1alpha1.BackupBucket {
-	return &extensionsv1alpha1.BackupBucket{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-bucket",
-		},
-		Spec: extensionsv1alpha1.BackupBucketSpec{
-			DefaultSpec: extensionsv1alpha1.DefaultSpec{
-				Class: ptr.To[extensionsv1alpha1.ExtensionClass]("garden"),
-				Type:  "local",
-			},
-			Region: "region",
-			SecretRef: corev1.SecretReference{
-				Name: "test-backup-bucket",
-			},
-		},
-	}
-}
-
 func defaultGarden(backupSecret, certManagementRootCA *corev1.Secret, specifyBackupBucket bool) *operatorv1alpha1.Garden {
 	randomSuffix, err := utils.GenerateRandomStringFromCharset(5, "0123456789abcdefghijklmnopqrstuvwxyz")
 	Expect(err).NotTo(HaveOccurred())
@@ -122,7 +103,7 @@ func defaultGarden(backupSecret, certManagementRootCA *corev1.Secret, specifyBac
 
 	var bucketName *string
 	if specifyBackupBucket {
-		bucketName = ptr.To("gardener-operator/" + name)
+		bucketName = ptr.To("gardener-operator-" + name)
 	}
 
 	return &operatorv1alpha1.Garden{

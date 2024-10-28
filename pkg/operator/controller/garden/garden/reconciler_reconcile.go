@@ -275,7 +275,7 @@ func (r *Reconciler) reconcile(
 					nil,
 				)
 			},
-			SkipIf:       garden.Spec.VirtualCluster.ETCD == nil || garden.Spec.VirtualCluster.ETCD.Main == nil || garden.Spec.VirtualCluster.ETCD.Main.Backup == nil || garden.Spec.VirtualCluster.ETCD.Main.Backup.BucketName != nil,
+			SkipIf:       garden.Spec.VirtualCluster.ETCD == nil || garden.Spec.VirtualCluster.ETCD.Main == nil || garden.Spec.VirtualCluster.ETCD.Main.Backup == nil,
 			Dependencies: flow.NewTaskIDs(deployExtensionCRD),
 		})
 		deployEtcds = g.Add(flow.Task{
@@ -677,12 +677,6 @@ func (r *Reconciler) deployEtcdsFunc(garden *operatorv1alpha1.Garden, etcdMain, 
 				backupLeaderElection = r.Config.Controllers.Garden.ETCDConfig.BackupLeaderElection
 			}
 
-			container, prefix := etcdMainBackupBucketName(garden), "virtual-garden-etcd-main"
-			if idx := strings.Index(container, "/"); idx != -1 {
-				h := container[:idx]
-				container, prefix = h, fmt.Sprintf("%s/%s", strings.TrimSuffix(container[idx+1:], "/"), prefix)
-			}
-
 			secretRefName := etcdConfig.Main.Backup.SecretRef.Name
 			if backupBucket.Status.GeneratedSecretRef != nil {
 				secretRefName = backupBucket.Status.GeneratedSecretRef.Name
@@ -691,8 +685,8 @@ func (r *Reconciler) deployEtcdsFunc(garden *operatorv1alpha1.Garden, etcdMain, 
 			etcdMain.SetBackupConfig(&etcd.BackupConfig{
 				Provider:             etcdConfig.Main.Backup.Provider,
 				SecretRefName:        secretRefName,
-				Container:            container,
-				Prefix:               prefix,
+				Container:            etcdMainBackupBucketName(garden),
+				Prefix:               "virtual-garden-etcd-main",
 				FullSnapshotSchedule: snapshotSchedule,
 				LeaderElection:       backupLeaderElection,
 			})
@@ -741,7 +735,7 @@ func (r *Reconciler) deployKubeAPIServerFunc(garden *operatorv1alpha1.Garden, ku
 		}
 		services = []net.IPNet{*cidr}
 
-		domains, _ := getAPIServerDomains(garden.Spec.VirtualCluster.DNS.Domains)
+		domains := toDomainNames(getAPIServerDomains(garden.Spec.VirtualCluster.DNS.Domains))
 		externalHostname := domains[0]
 		return shared.DeployKubeAPIServer(
 			ctx,
@@ -986,18 +980,19 @@ func (r *Reconciler) reconcileDNSRecords(ctx context.Context, log logr.Logger, g
 
 	var taskFns []flow.TaskFn
 
-	apiDomains, apiDomainProviders := getAPIServerDomains(garden.Spec.VirtualCluster.DNS.Domains)
-	ingressDomains, ingressDomainProviders := getIngressWildcardDomains(garden.Spec.RuntimeCluster.Ingress.Domains)
+	apiDomains := getAPIServerDomains(garden.Spec.VirtualCluster.DNS.Domains)
+	ingressDomains := getIngressWildcardDomains(garden.Spec.RuntimeCluster.Ingress.Domains)
 
-	providers := append(apiDomainProviders, ingressDomainProviders...)
-	for i, dnsName := range append(apiDomains, ingressDomains...) {
-		recordName := strings.ReplaceAll(strings.ReplaceAll(dnsName, ".", "-"), "*", "wildcard")
+	for _, domain := range append(apiDomains, ingressDomains...) {
+		dnsName := domain.Name
+		provider := getDNSProvider(*garden.Spec.DNS, domain.Provider)
+		if provider == nil {
+			return fmt.Errorf("provider %q not found in DNS providers", *domain.Provider)
+		}
+
+		recordName := strings.ReplaceAll(strings.ReplaceAll(dnsName, ".", "-"), "*", "wildcard") + "-" + provider.Type
 		staleDNSRecordNames.Delete(recordName)
 
-		provider := getDNSProvider(*garden.Spec.DNS, providers[i])
-		if provider == nil {
-			return fmt.Errorf("provider %q not found in DNS providers", *providers[i])
-		}
 		taskFns = append(taskFns, func(ctx context.Context) error {
 			return component.OpWait(dnsrecord.New(
 				log,

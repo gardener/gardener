@@ -640,7 +640,6 @@ WorkloadIdentityKeyRotation
 </em>
 </td>
 <td>
-<em>(Optional)</em>
 <p>Domains are the external domains of the virtual garden cluster.
 The first given domain in this list is immutable.</p>
 </td>
@@ -685,8 +684,8 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Provider is the name of the DNS provider as declared in the &lsquo;spec.dns.providers&rsquo; section.
-If not set, the first provider in the list is used.</p>
+<p>Provider is the name of the DNS provider as declared in the &lsquo;.spec.dns.providers&rsquo; section.
+It is only optional, if the <code>.spec.dns</code> section is not provided at all.</p>
 </td>
 </tr>
 </tbody>
@@ -2427,7 +2426,6 @@ string
 </em>
 </td>
 <td>
-<em>(Optional)</em>
 <p>Domains specify the ingress domains of the cluster pointing to the ingress controller endpoint. They will be used
 to construct ingress URLs for system applications running in runtime cluster.</p>
 </td>

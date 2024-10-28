@@ -109,7 +109,6 @@ type Ingress struct {
 	// Domains specify the ingress domains of the cluster pointing to the ingress controller endpoint. They will be used
 	// to construct ingress URLs for system applications running in runtime cluster.
 	// +kubebuilder:validation:MinItems=1
-	// +optional
 	Domains []DNSDomain `json:"domains,omitempty"`
 	// Controller configures a Gardener managed Ingress Controller listening on the ingressDomain.
 	Controller gardencorev1beta1.IngressController `json:"controller"`
@@ -120,8 +119,8 @@ type DNSDomain struct {
 	// Name is the domain name.
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
-	// Provider is the name of the DNS provider as declared in the 'spec.dns.providers' section.
-	// If not set, the first provider in the list is used.
+	// Provider is the name of the DNS provider as declared in the '.spec.dns.providers' section.
+	// It is only optional, if the `.spec.dns` section is not provided at all.
 	// +optional
 	Provider *string `json:"provider,omitempty"`
 }
@@ -287,7 +286,6 @@ type DNS struct {
 	// Domains are the external domains of the virtual garden cluster.
 	// The first given domain in this list is immutable.
 	// +kubebuilder:validation:MinItems=1
-	// +optional
 	Domains []DNSDomain `json:"domains,omitempty"`
 }
 

@@ -52,7 +52,7 @@ var _ = Describe("Validation Tests", func() {
 					},
 					RuntimeCluster: operatorv1alpha1.RuntimeCluster{
 						Ingress: operatorv1alpha1.Ingress{
-							Domains: []operatorv1alpha1.DNSDomain{{Name: "ingress.bar.com"}},
+							Domains: []operatorv1alpha1.DNSDomain{{Name: "ingress.bar.com", Provider: ptr.To("primary")}},
 						},
 						Networking: operatorv1alpha1.RuntimeNetworking{
 							Pods:     "10.1.0.0/16",
@@ -61,7 +61,7 @@ var _ = Describe("Validation Tests", func() {
 					},
 					VirtualCluster: operatorv1alpha1.VirtualCluster{
 						DNS: operatorv1alpha1.DNS{
-							Domains: []operatorv1alpha1.DNSDomain{{Name: "foo.bar.com"}},
+							Domains: []operatorv1alpha1.DNSDomain{{Name: "foo.bar.com", Provider: ptr.To("primary")}},
 						},
 						Kubernetes: operatorv1alpha1.Kubernetes{
 							Version: "1.26.3",
@@ -1090,9 +1090,9 @@ var _ = Describe("Validation Tests", func() {
 
 			Context("Ingress", func() {
 				It("should complain about invalid ingress domain names", func() {
-					garden.Spec.RuntimeCluster.Ingress.Domains = []operatorv1alpha1.DNSDomain{{Name: ",,,"}}
+					garden.Spec.RuntimeCluster.Ingress.Domains = []operatorv1alpha1.DNSDomain{{Name: ",,,", Provider: ptr.To("primary")}}
 
-					Expect(ValidateGarden(garden)).To(ContainElements(
+					Expect(ValidateGarden(garden)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeInvalid),
 							"Field": Equal("spec.runtimeCluster.ingress.domains[0].name"),
@@ -1102,12 +1102,12 @@ var _ = Describe("Validation Tests", func() {
 
 				It("should complain about duplicate ingress domain names in 'domains'", func() {
 					garden.Spec.RuntimeCluster.Ingress.Domains = []operatorv1alpha1.DNSDomain{
-						{Name: "example.com"},
-						{Name: "foo.bar"},
-						{Name: "example.com"},
+						{Name: "example.com", Provider: ptr.To("primary")},
+						{Name: "foo.bar", Provider: ptr.To("primary")},
+						{Name: "example.com", Provider: ptr.To("primary")},
 					}
 
-					Expect(ValidateGarden(garden)).To(ContainElements(
+					Expect(ValidateGarden(garden)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeDuplicate),
 							"Field": Equal("spec.runtimeCluster.ingress.domains[2].name"),
@@ -1121,10 +1121,28 @@ var _ = Describe("Validation Tests", func() {
 					Expect(ValidateGarden(garden)).To(BeEmpty())
 				})
 
+				It("should complain about missing domain provider", func() {
+					garden.Spec.RuntimeCluster.Ingress.Domains = []operatorv1alpha1.DNSDomain{{Name: "example.com"}}
+
+					Expect(ValidateGarden(garden)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeRequired),
+							"Field": Equal("spec.runtimeCluster.ingress.domains[0].provider"),
+						})),
+					))
+				})
+
+				It("should accept domain without provider if .spec.dns is unset", func() {
+					garden.Spec.DNS = nil
+					garden.Spec.RuntimeCluster.Ingress.Domains = []operatorv1alpha1.DNSDomain{{Name: "example.com"}}
+
+					Expect(ValidateGarden(garden)).To(BeEmpty())
+				})
+
 				It("should complain about unspecified provider", func() {
 					garden.Spec.RuntimeCluster.Ingress.Domains = []operatorv1alpha1.DNSDomain{{Name: "example.com", Provider: ptr.To("foo")}}
 
-					Expect(ValidateGarden(garden)).To(ContainElements(
+					Expect(ValidateGarden(garden)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeInvalid),
 							"Field": Equal("spec.runtimeCluster.ingress.domains[0].provider"),
@@ -1170,9 +1188,9 @@ var _ = Describe("Validation Tests", func() {
 		Context("virtual cluster", func() {
 			Context("DNS", func() {
 				It("should complain about invalid domain name in 'domain'", func() {
-					garden.Spec.VirtualCluster.DNS.Domains = []operatorv1alpha1.DNSDomain{{Name: ",,,"}}
+					garden.Spec.VirtualCluster.DNS.Domains = []operatorv1alpha1.DNSDomain{{Name: ",,,", Provider: ptr.To("primary")}}
 
-					Expect(ValidateGarden(garden)).To(ContainElements(
+					Expect(ValidateGarden(garden)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeInvalid),
 							"Field": Equal("spec.virtualCluster.dns.domains[0].name"),
@@ -1182,11 +1200,11 @@ var _ = Describe("Validation Tests", func() {
 
 				It("should complain about duplicate domain names in 'domains'", func() {
 					garden.Spec.VirtualCluster.DNS.Domains = []operatorv1alpha1.DNSDomain{
-						{Name: "example.com"},
-						{Name: "foo.bar"},
-						{Name: "example.com"},
+						{Name: "example.com", Provider: ptr.To("primary")},
+						{Name: "foo.bar", Provider: ptr.To("primary")},
+						{Name: "example.com", Provider: ptr.To("primary")},
 					}
-					Expect(ValidateGarden(garden)).To(ContainElements(
+					Expect(ValidateGarden(garden)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeDuplicate),
 							"Field": Equal("spec.virtualCluster.dns.domains[2].name"),
@@ -1200,10 +1218,28 @@ var _ = Describe("Validation Tests", func() {
 					Expect(ValidateGarden(garden)).To(BeEmpty())
 				})
 
+				It("should complain about missing domain provider", func() {
+					garden.Spec.VirtualCluster.DNS.Domains = []operatorv1alpha1.DNSDomain{{Name: "example.com"}}
+
+					Expect(ValidateGarden(garden)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeRequired),
+							"Field": Equal("spec.virtualCluster.dns.domains[0].provider"),
+						})),
+					))
+				})
+
+				It("should accept domain without provider if .spec.dns is unset", func() {
+					garden.Spec.DNS = nil
+					garden.Spec.VirtualCluster.DNS.Domains = []operatorv1alpha1.DNSDomain{{Name: "example.com"}}
+
+					Expect(ValidateGarden(garden)).To(BeEmpty())
+				})
+
 				It("should complain about invalid domain provider", func() {
 					garden.Spec.VirtualCluster.DNS.Domains = []operatorv1alpha1.DNSDomain{{Name: "example.com", Provider: ptr.To("foo")}}
 
-					Expect(ValidateGarden(garden)).To(ContainElements(
+					Expect(ValidateGarden(garden)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeInvalid),
 							"Field": Equal("spec.virtualCluster.dns.domains[0].provider"),
@@ -2192,6 +2228,27 @@ var _ = Describe("Validation Tests", func() {
 					Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeForbidden),
 						"Field": Equal("spec.virtualCluster.etcd.main.backup.bucketName"),
+					}))))
+				})
+
+				It("should not be possible to delete the backup if it was set initially", func() {
+					oldGarden.Spec.VirtualCluster.ETCD = &operatorv1alpha1.ETCD{
+						Main: &operatorv1alpha1.ETCDMain{
+							Backup: &operatorv1alpha1.Backup{
+								Provider:   "foo-provider",
+								BucketName: ptr.To("foo-bucket"),
+							},
+						},
+					}
+					newGarden.Spec.VirtualCluster.ETCD = &operatorv1alpha1.ETCD{
+						Main: &operatorv1alpha1.ETCDMain{
+							Backup: nil,
+						},
+					}
+
+					Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.virtualCluster.etcd.main.backup"),
 					}))))
 				})
 			})

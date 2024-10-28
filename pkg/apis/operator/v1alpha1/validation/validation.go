@@ -93,7 +93,7 @@ func validateRuntimeClusterUpdate(oldGarden, newGarden *operatorv1alpha1.Garden)
 	// First domain is immutable.
 	// Keep the first value immutable because components like the Gardener Discovery Server and Workload Identity depend on it.
 	if len(oldRuntimeCluster.Ingress.Domains) > 0 && len(newRuntimeCluster.Ingress.Domains) > 0 {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldRuntimeCluster.Ingress.Domains[0], newRuntimeCluster.Ingress.Domains[0], fldPath.Child("ingress", "domains").Index(0))...)
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldRuntimeCluster.Ingress.Domains[0].Name, newRuntimeCluster.Ingress.Domains[0].Name, fldPath.Child("ingress", "domains").Index(0))...)
 	}
 
 	return allErrs
@@ -110,17 +110,23 @@ func validateVirtualClusterUpdate(oldGarden, newGarden *operatorv1alpha1.Garden)
 	// First domain is immutable. Changing this would incompatibly change the service account issuer in the cluster, ref https://github.com/gardener/gardener/blob/17ff592e734131ef746560641bdcdec3bcfce0f1/pkg/component/kubeapiserver/deployment.go#L585C8-L585C8
 	// Note: We can consider supporting this scenario in the future but would need to re-issue all service account tokens during the reconcile run.
 	if len(oldVirtualCluster.DNS.Domains) > 0 && len(newVirtualCluster.DNS.Domains) > 0 {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldVirtualCluster.DNS.Domains[0], newVirtualCluster.DNS.Domains[0], fldPath.Child("dns", "domains").Index(0).Child("name"))...)
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldVirtualCluster.DNS.Domains[0].Name, newVirtualCluster.DNS.Domains[0].Name, fldPath.Child("dns", "domains").Index(0).Child("name"))...)
 	}
 
-	if oldVirtualCluster.ETCD != nil && oldVirtualCluster.ETCD.Main != nil && oldVirtualCluster.ETCD.Main.Backup != nil && oldVirtualCluster.ETCD.Main.Backup.BucketName == nil {
-		if newVirtualCluster.ETCD != nil && newVirtualCluster.ETCD.Main != nil && newVirtualCluster.ETCD.Main.Backup != nil && newVirtualCluster.ETCD.Main.Backup.BucketName != nil {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("etcd", "main", "backup", "bucketName"), "bucket name must remain unset if it was not set before"))
-		}
-	}
-	if oldVirtualCluster.ETCD != nil && oldVirtualCluster.ETCD.Main != nil && oldVirtualCluster.ETCD.Main.Backup != nil && oldVirtualCluster.ETCD.Main.Backup.BucketName != nil {
-		if newVirtualCluster.ETCD != nil && newVirtualCluster.ETCD.Main != nil && newVirtualCluster.ETCD.Main.Backup != nil && newVirtualCluster.ETCD.Main.Backup.BucketName == nil {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("etcd", "main", "backup", "bucketName"), "bucket name must remain unchanged if it was set before"))
+	if oldVirtualCluster.ETCD != nil && oldVirtualCluster.ETCD.Main != nil && oldVirtualCluster.ETCD.Main.Backup != nil {
+		if newVirtualCluster.ETCD != nil && newVirtualCluster.ETCD.Main != nil {
+			fldBackup := fldPath.Child("etcd", "main", "backup")
+			if newVirtualCluster.ETCD.Main.Backup != nil {
+				if oldVirtualCluster.ETCD.Main.Backup.BucketName == nil && newVirtualCluster.ETCD.Main.Backup.BucketName != nil {
+					allErrs = append(allErrs, field.Forbidden(fldBackup.Child("bucketName"), "bucket name must remain unset if it was not set before"))
+				}
+				if oldVirtualCluster.ETCD.Main.Backup.BucketName != nil && newVirtualCluster.ETCD.Main.Backup.BucketName == nil {
+					allErrs = append(allErrs, field.Forbidden(fldBackup.Child("bucketName"), "bucket name must remain unchanged if it was set before"))
+				}
+			} else {
+				allErrs = append(allErrs, field.Forbidden(fldBackup, "backup must not be deactivated if it was set before"))
+				allErrs = append(allErrs, apivalidation.ValidateImmutableField(newVirtualCluster.ETCD.Main.Backup, oldVirtualCluster.ETCD.Main.Backup, fldPath.Child("backup"))...)
+			}
 		}
 	}
 
@@ -183,9 +189,13 @@ func validateDomains(dns *operatorv1alpha1.DNSManagement, domains []operatorv1al
 			allErrs = append(allErrs, field.Duplicate(path.Index(i).Child("name"), domain.Name))
 		}
 		names.Insert(domain.Name)
-		if domain.Provider != nil {
-			if !hasProvider(dns, *domain.Provider) {
-				allErrs = append(allErrs, field.Invalid(path.Index(i).Child("provider"), *domain.Provider, "provider name not found in .spec.dns.providers"))
+		if dns != nil {
+			if domain.Provider != nil {
+				if !hasProvider(dns, *domain.Provider) {
+					allErrs = append(allErrs, field.Invalid(path.Index(i).Child("provider"), *domain.Provider, "provider name not found in .spec.dns.providers"))
+				}
+			} else {
+				allErrs = append(allErrs, field.Required(path.Index(i).Child("provider"), "provider name must be set if `.spec.dns` is set"))
 			}
 		}
 	}
@@ -626,7 +636,7 @@ func validateEncryptionConfigUpdate(oldGarden, newGarden *operatorv1alpha1.Garde
 }
 
 func hasProvider(dns *operatorv1alpha1.DNSManagement, provider string) bool {
-	return dns != nil && slices.ContainsFunc(dns.Providers, func(p operatorv1alpha1.DNSProvider) bool {
+	return slices.ContainsFunc(dns.Providers, func(p operatorv1alpha1.DNSProvider) bool {
 		return p.Name == provider
 	})
 }

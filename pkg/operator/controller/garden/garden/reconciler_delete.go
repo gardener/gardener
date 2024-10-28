@@ -258,7 +258,7 @@ func (r *Reconciler) delete(
 					time.Minute,
 				)
 			},
-			SkipIf:       garden.Spec.VirtualCluster.ETCD == nil || garden.Spec.VirtualCluster.ETCD.Main == nil || garden.Spec.VirtualCluster.ETCD.Main.Backup == nil || garden.Spec.VirtualCluster.ETCD.Main.Backup.BucketName != nil,
+			SkipIf:       garden.Spec.VirtualCluster.ETCD == nil || garden.Spec.VirtualCluster.ETCD.Main == nil || garden.Spec.VirtualCluster.ETCD.Main.Backup == nil,
 			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
 		})
 		destroyEtcdDruid = g.Add(flow.Task{

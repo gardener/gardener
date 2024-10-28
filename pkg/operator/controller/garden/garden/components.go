@@ -823,7 +823,7 @@ func (r *Reconciler) newSNI(garden *operatorv1alpha1.Garden, ingressGatewayValue
 		return nil, fmt.Errorf("exactly one Istio Ingress Gateway is required for the SNI config")
 	}
 
-	domains, _ := getAPIServerDomains(garden.Spec.VirtualCluster.DNS.Domains)
+	domains := toDomainNames(getAPIServerDomains(garden.Spec.VirtualCluster.DNS.Domains))
 	return kubeapiserverexposure.NewSNI(
 		r.RuntimeClientSet.Client(),
 		namePrefix+v1beta1constants.DeploymentNameKubeAPIServer,
@@ -855,25 +855,40 @@ func (r *Reconciler) newGardenerAccess(garden *operatorv1alpha1.Garden, secretsM
 
 const gardenerDNSNamePrefix = "gardener."
 
-func getAPIServerDomains(domains []operatorv1alpha1.DNSDomain) ([]string, []*string) {
-	apiServerDomains := make([]string, 0, len(domains)*2)
-	apiServerDomainProviders := make([]*string, 0, len(domains)*2)
+func toDomainNames(domains []operatorv1alpha1.DNSDomain) []string {
+	domainNames := make([]string, 0, len(domains))
 	for _, domain := range domains {
-		apiServerDomains = append(apiServerDomains, gardenerutils.GetAPIServerDomain(domain.Name))
-		apiServerDomains = append(apiServerDomains, gardenerDNSNamePrefix+domain.Name)
-		apiServerDomainProviders = append(apiServerDomainProviders, domain.Provider, domain.Provider)
+		domainNames = append(domainNames, domain.Name)
 	}
-	return apiServerDomains, apiServerDomainProviders
+	return domainNames
 }
 
-func getIngressWildcardDomains(domains []operatorv1alpha1.DNSDomain) ([]string, []*string) {
-	wildcardDomains := make([]string, 0, len(domains))
-	domainProviders := make([]*string, 0, len(domains))
+func getAPIServerDomains(domains []operatorv1alpha1.DNSDomain) []operatorv1alpha1.DNSDomain {
+	apiServerDomains := make([]operatorv1alpha1.DNSDomain, 0, len(domains)*2)
 	for _, domain := range domains {
-		wildcardDomains = append(wildcardDomains, "*."+domain.Name)
-		domainProviders = append(domainProviders, domain.Provider)
+		apiServerDomains = append(apiServerDomains,
+			operatorv1alpha1.DNSDomain{
+				Name:     gardenerutils.GetAPIServerDomain(domain.Name),
+				Provider: domain.Provider,
+			},
+			operatorv1alpha1.DNSDomain{
+				Name:     gardenerDNSNamePrefix + domain.Name,
+				Provider: domain.Provider,
+			})
 	}
-	return wildcardDomains, domainProviders
+	return apiServerDomains
+}
+
+func getIngressWildcardDomains(domains []operatorv1alpha1.DNSDomain) []operatorv1alpha1.DNSDomain {
+	wildcardDomains := make([]operatorv1alpha1.DNSDomain, 0, len(domains))
+	for _, domain := range domains {
+		wildcardDomains = append(wildcardDomains,
+			operatorv1alpha1.DNSDomain{
+				Name:     "*." + domain.Name,
+				Provider: domain.Provider,
+			})
+	}
+	return wildcardDomains
 }
 
 func (r *Reconciler) newNginxIngressController(garden *operatorv1alpha1.Garden, ingressGatewayValues []istio.IngressGatewayValues) (component.DeployWaiter, error) {
@@ -886,7 +901,7 @@ func (r *Reconciler) newNginxIngressController(garden *operatorv1alpha1.Garden, 
 		return nil, fmt.Errorf("exactly one Istio Ingress Gateway is required for the SNI config")
 	}
 
-	ingressDomains, _ := getIngressWildcardDomains(garden.Spec.RuntimeCluster.Ingress.Domains)
+	ingressDomains := toDomainNames(getIngressWildcardDomains(garden.Spec.RuntimeCluster.Ingress.Domains))
 
 	return sharedcomponent.NewNginxIngress(
 		r.RuntimeClientSet.Client(),

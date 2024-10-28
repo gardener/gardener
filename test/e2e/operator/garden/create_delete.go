@@ -35,7 +35,6 @@ import (
 
 var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 	var (
-		backupBucket = defaultBackupBucket()
 		backupSecret = defaultBackupSecret()
 		rootCASecret = defaultRootCASecret()
 		garden       = defaultGarden(backupSecret, rootCASecret, true)
@@ -55,11 +54,6 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 		DeferCleanup(func() {
 			ctx, cancel = context.WithTimeout(parentCtx, 5*time.Minute)
 			defer cancel()
-
-			// TODO(MartinWeindel): Remove this step when gardener-operator is able to create its backup bucket and DNS record by itself.
-			By("Delete BackupBucket")
-			Expect(gardenerutils.ConfirmDeletion(ctx, runtimeClient, backupBucket)).To(Succeed())
-			Expect(runtimeClient.Delete(ctx, backupBucket)).To(Succeed())
 
 			By("Delete Garden")
 			Expect(gardenerutils.ConfirmDeletion(ctx, runtimeClient, garden)).To(Succeed())
@@ -131,6 +125,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 				healthyManagedResource("extension-admission-runtime-provider-local"),
 				healthyManagedResource("extension-admission-virtual-provider-local"),
 				healthyManagedResource("extension-registration-provider-local"),
+				healthyManagedResource("extension-provider-local-garden"),
 				healthyManagedResource("cert-management-controller"),
 				healthyManagedResource("cert-management-issuers"),
 			))
@@ -139,16 +134,6 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 			g.Expect(managedResourceList.Items).To(ConsistOf(
 				healthyManagedResource("istio-system"),
 				healthyManagedResource("virtual-garden-istio"),
-			))
-		}).WithPolling(2 * time.Second).Should(Succeed())
-
-		// TODO(oliver-goetz): Remove this step when gardener-operator is able to create its backup bucket and DNS record by itself.
-		Expect(runtimeClient.Create(ctx, backupBucket)).To(Succeed())
-		CEventually(ctx, func(g Gomega) {
-			managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
-			g.Expect(runtimeClient.List(ctx, managedResourceList, client.InNamespace(namespace))).To(Succeed())
-			g.Expect(managedResourceList.Items).To(ContainElement(
-				healthyManagedResource("extension-provider-local-garden"),
 			))
 		}).WithPolling(2 * time.Second).Should(Succeed())
 

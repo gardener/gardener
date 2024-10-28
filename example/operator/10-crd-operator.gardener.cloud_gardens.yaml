@@ -260,8 +260,8 @@ spec:
                               type: string
                             provider:
                               description: |-
-                                Provider is the name of the DNS provider as declared in the 'spec.dns.providers' section.
-                                If not set, the first provider in the list is used.
+                                Provider is the name of the DNS provider as declared in the '.spec.dns.providers' section.
+                                It is only optional, if the `.spec.dns` section is not provided at all.
                               type: string
                           required:
                           - name
@@ -418,8 +418,8 @@ spec:
                               type: string
                             provider:
                               description: |-
-                                Provider is the name of the DNS provider as declared in the 'spec.dns.providers' section.
-                                If not set, the first provider in the list is used.
+                                Provider is the name of the DNS provider as declared in the '.spec.dns.providers' section.
+                                It is only optional, if the `.spec.dns` section is not provided at all.
                               type: string
                           required:
                           - name
