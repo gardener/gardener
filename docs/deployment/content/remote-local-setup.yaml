@@ -29,8 +29,6 @@ spec:
                   util-linux vim wget yq
           mkdir -p ~/.cache/wget
           cd ~/.cache/wget
-          echo gardenctl       && wget -N "https://github.com/gardener/gardenctl-v2/releases/download/$(curl -sL https://raw.githubusercontent.com/gardener/gardenctl-v2/master/LATEST)/gardenctl_v2_linux_amd64" && mv gardenctl_v2_linux_amd64 /usr/local/bin/gardenctl && chmod +x /usr/local/bin/gardenctl \
-                               && ln -s "$(which gardenctl)" /usr/local/bin/g
           echo kind            && wget -N "https://kind.sigs.k8s.io/dl/$(curl -sL https://api.github.com/repos/kubernetes-sigs/kind/releases/latest | jq .tag_name -r)/kind-linux-amd64" && cp kind-linux-amd64 /usr/local/bin/kind && chmod +x /usr/local/bin/kind
           echo kns             && wget -N "https://raw.githubusercontent.com/blendle/kns/master/bin/kns" && cp kns /usr/local/bin/kns && chmod +x /usr/local/bin/kns
           echo krew            && wget -N "https://github.com/kubernetes-sigs/krew/releases/download/$(curl -sL https://api.github.com/repos/kubernetes-sigs/krew/releases/latest | jq .tag_name -r)/krew-linux_amd64.tar.gz" && tar -xzf krew-linux_amd64.tar.gz ./krew-linux_amd64 && mv krew-linux_amd64 /usr/local/bin/krew && krew install krew
@@ -52,6 +50,12 @@ spec:
                cp gardenlogin_linux_amd64 /usr/local/bin/gardenlogin
                chmod +x /usr/local/bin/gardenlogin
                ln -s "$(which gardenlogin)" /usr/local/bin/kubectl-gardenlogin
+          echo gardenctl
+               VERSION=$(curl -sL https://raw.githubusercontent.com/gardener/gardenctl-v2/master/LATEST)
+               wget -N "https://github.com/gardener/gardenctl-v2/releases/download/$VERSION/gardenctl_v2_linux_amd64"
+               cp gardenctl_v2_linux_amd64 /usr/local/bin/gardenctl
+               chmod +x /usr/local/bin/gardenctl
+               ln -s "$(which gardenctl)" /usr/local/bin/g
           cd
           echo delve           && go install github.com/go-delve/delve/cmd/dlv@latest
           echo gron            && go install github.com/tomnomnom/gron@latest
