@@ -293,6 +293,8 @@ var _ = Describe("Secrets", func() {
 
 			Context("observability credentials", func() {
 				It("should generate the password and sync it to the garden", func() {
+					botanist.Shoot.WantsAlertmanager = true
+
 					Expect(botanist.InitializeSecretsManagement(ctx)).To(Succeed())
 
 					secretList := &corev1.SecretList{}
@@ -314,6 +316,9 @@ var _ = Describe("Secrets", func() {
 					gardenSecret := &corev1.Secret{}
 					Expect(gardenClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: shootName + ".monitoring"}, gardenSecret)).To(Succeed())
 					Expect(gardenSecret.Annotations).To(HaveKeyWithValue("url", "https://gu-foo--bar.example.com"))
+					Expect(gardenSecret.Annotations).To(HaveKeyWithValue("plutono-url", "https://gu-foo--bar.example.com"))
+					Expect(gardenSecret.Annotations).To(HaveKeyWithValue("prometheus-url", "https://p-foo--bar.example.com"))
+					Expect(gardenSecret.Annotations).To(HaveKeyWithValue("alertmanager-url", "https://au-foo--bar.example.com"))
 					Expect(gardenSecret.Labels).To(HaveKeyWithValue("gardener.cloud/role", "monitoring"))
 					Expect(gardenSecret.Data).To(And(HaveKey("username"), HaveKey("password"), HaveKey("auth")))
 				})
