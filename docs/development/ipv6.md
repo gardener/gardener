@@ -7,6 +7,9 @@
 [GEP-21](../proposals/21-ipv6-singlestack-local.md) proposes IPv6 Single-Stack Support in the local Gardener environment.
 This documentation will be enhanced while implementing GEP-21, see [gardener/gardener#7051](https://github.com/gardener/gardener/issues/7051).
 
+For real infrastructure providers, please check the corresponding provider documentation for IPv6 support.
+Furthermore, please check the documentation of your preferred networking extension for IPv6 support.
+
 ## Development/Testing Setup
 
 Developing or testing IPv6-related features requires a Linux machine (docker only supports IPv6 on Linux) and native IPv6 connectivity to the internet.
