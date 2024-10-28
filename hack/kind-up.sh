@@ -133,9 +133,10 @@ setup_loopback_device() {
 # - https://github.com/containerd/containerd/blob/main/docs/hosts.md
 # - https://kind.sigs.k8s.io/docs/user/local-registry/
 setup_containerd_registry_mirrors() {
+  NODES=("$@")
   REGISTRY_HOSTNAME="garden.local.gardener.cloud"
 
-  for NODE in $(kubectl get nodes -o jsonpath='{.items[*].metadata.name}'); do
+  for NODE in "${NODES[@]}"; do
     setup_containerd_registry_mirror $NODE "localhost:5001" "http://localhost:5001" "http://${REGISTRY_HOSTNAME}:5001"
     setup_containerd_registry_mirror $NODE "gcr.io" "https://gcr.io" "http://${REGISTRY_HOSTNAME}:5003"
     setup_containerd_registry_mirror $NODE "registry.k8s.io" "https://registry.k8s.io" "http://${REGISTRY_HOSTNAME}:5006"
@@ -322,6 +323,8 @@ kind create cluster \
   --name "$CLUSTER_NAME" \
   --config <(helm template $CHART --values "$PATH_CLUSTER_VALUES" $ADDITIONAL_ARGS --set "gardener.repositoryRoot"=$(dirname "$0")/..)
 
+nodes=$(kubectl get nodes -o jsonpath='{.items[*].metadata.name}')
+
 # Configure the default StorageClass in the kind cluster
 setup_kind_sc_default_volume_type
 
@@ -347,7 +350,7 @@ else
 fi
 EOF
 
-    for node_name in $(kubectl get nodes -o jsonpath='{.items[*].metadata.name}'); do
+    for node_name in $nodes; do
         echo "Adjusting containerd config for kind node $node_name"
 
         # copy script to the kind's docker container and execute it
@@ -357,7 +360,7 @@ EOF
 fi
 
 # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
-for node in $(kubectl get nodes -o jsonpath='{.items[*].metadata.name}'); do
+for node in $nodes; do
   docker exec "$node" sh -c "sysctl fs.inotify.max_user_instances=8192"
 done
 
@@ -367,7 +370,7 @@ if [[ -n "$authorization_webhook_config_file" && "$authorization_webhook_config_
     sed -e "s#value: RBAC,Node#value: RBAC,Node,Webhook\n      - name: authorization-webhook-config-file\n        value: $authorization_webhook_config_file#" | \
     kubectl apply -f -
 
-  for node in $(kubectl get nodes -o jsonpath='{.items[*].metadata.name}'); do
+  for node in $nodes; do
     docker exec "$node" bash -c "kubeadm upgrade node"
   done
 fi
@@ -404,7 +407,7 @@ fi
 garden_cluster_ip="$(docker inspect "$garden_cluster"-control-plane | yq ".[].NetworkSettings.Networks.kind.$ip_address_field")"
 
 # Inject garden.local.gardener.cloud into all nodes
-for node in $(kubectl get nodes -o jsonpath='{.items[*].metadata.name}'); do
+for node in $nodes; do
   docker exec "$node" sh -c "echo $garden_cluster_ip garden.local.gardener.cloud >> /etc/hosts"
 done
 
@@ -439,7 +442,7 @@ fi
 kubectl apply -k "$(dirname "$0")/../example/gardener-local/calico/$IPFAMILY" --server-side
 kubectl apply -k "$(dirname "$0")/../example/gardener-local/metrics-server"   --server-side
 
-setup_containerd_registry_mirrors
+setup_containerd_registry_mirrors $nodes
 setup_kind_with_lpp_resize_support
 
 for node in $(kubectl get nodes -l node-role.kubernetes.io/control-plane -o jsonpath='{.items[*].metadata.name}'); do
@@ -473,7 +476,7 @@ fi
 # The CSR is created with some delay, so for each node, wait for the CSR to be created.
 # There can be multiple CSRs for a node, so approve all of them.
 echo "Approving Kubelet Serving Certificate Signing Requests..."
-for node in $(kubectl get nodes -o jsonpath='{.items[*].metadata.name}'); do
+for node in $nodes; do
   max_retries=600
   for ((i = 0; i < max_retries; i++)); do
     csr_names=$(kubectl get csr -o json | jq -r --arg node "$node" '
