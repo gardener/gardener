@@ -431,21 +431,9 @@ func (in *GardenletConfiguration) DeepCopyInto(out *GardenletConfiguration) {
 		*out = new(SeedClientConnection)
 		**out = **in
 	}
-	if in.ShootClientConnection != nil {
-		in, out := &in.ShootClientConnection, &out.ShootClientConnection
-		*out = new(ShootClientConnection)
-		**out = **in
-	}
-	if in.Controllers != nil {
-		in, out := &in.Controllers, &out.Controllers
-		*out = new(GardenletControllerConfiguration)
-		(*in).DeepCopyInto(*out)
-	}
-	if in.Resources != nil {
-		in, out := &in.Resources, &out.Resources
-		*out = new(ResourcesConfiguration)
-		(*in).DeepCopyInto(*out)
-	}
+	out.ShootClientConnection = in.ShootClientConnection
+	in.Controllers.DeepCopyInto(&out.Controllers)
+	in.Resources.DeepCopyInto(&out.Resources)
 	if in.LeaderElection != nil {
 		in, out := &in.LeaderElection, &out.LeaderElection
 		*out = new(componentbaseconfig.LeaderElectionConfiguration)
@@ -469,21 +457,9 @@ func (in *GardenletConfiguration) DeepCopyInto(out *GardenletConfiguration) {
 		*out = new(SeedConfig)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.Logging != nil {
-		in, out := &in.Logging, &out.Logging
-		*out = new(Logging)
-		(*in).DeepCopyInto(*out)
-	}
-	if in.SNI != nil {
-		in, out := &in.SNI, &out.SNI
-		*out = new(SNI)
-		(*in).DeepCopyInto(*out)
-	}
-	if in.ETCDConfig != nil {
-		in, out := &in.ETCDConfig, &out.ETCDConfig
-		*out = new(ETCDConfig)
-		(*in).DeepCopyInto(*out)
-	}
+	in.Logging.DeepCopyInto(&out.Logging)
+	in.SNI.DeepCopyInto(&out.SNI)
+	in.ETCDConfig.DeepCopyInto(&out.ETCDConfig)
 	if in.ExposureClassHandlers != nil {
 		in, out := &in.ExposureClassHandlers, &out.ExposureClassHandlers
 		*out = make([]ExposureClassHandler, len(*in))
@@ -491,11 +467,7 @@ func (in *GardenletConfiguration) DeepCopyInto(out *GardenletConfiguration) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.Monitoring != nil {
-		in, out := &in.Monitoring, &out.Monitoring
-		*out = new(MonitoringConfig)
-		(*in).DeepCopyInto(*out)
-	}
+	in.Monitoring.DeepCopyInto(&out.Monitoring)
 	if in.NodeToleration != nil {
 		in, out := &in.NodeToleration, &out.NodeToleration
 		*out = new(NodeToleration)

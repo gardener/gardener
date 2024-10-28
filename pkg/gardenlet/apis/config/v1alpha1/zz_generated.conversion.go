@@ -883,17 +883,15 @@ func autoConvert_v1alpha1_GardenletConfiguration_To_config_GardenletConfiguratio
 	} else {
 		out.SeedClientConnection = nil
 	}
-	if in.ShootClientConnection != nil {
-		in, out := &in.ShootClientConnection, &out.ShootClientConnection
-		*out = new(config.ShootClientConnection)
-		if err := Convert_v1alpha1_ShootClientConnection_To_config_ShootClientConnection(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.ShootClientConnection = nil
+	if err := Convert_v1alpha1_ShootClientConnection_To_config_ShootClientConnection(&in.ShootClientConnection, &out.ShootClientConnection, s); err != nil {
+		return err
 	}
-	out.Controllers = (*config.GardenletControllerConfiguration)(unsafe.Pointer(in.Controllers))
-	out.Resources = (*config.ResourcesConfiguration)(unsafe.Pointer(in.Resources))
+	if err := Convert_v1alpha1_GardenletControllerConfiguration_To_config_GardenletControllerConfiguration(&in.Controllers, &out.Controllers, s); err != nil {
+		return err
+	}
+	if err := Convert_v1alpha1_ResourcesConfiguration_To_config_ResourcesConfiguration(&in.Resources, &out.Resources, s); err != nil {
+		return err
+	}
 	if in.LeaderElection != nil {
 		in, out := &in.LeaderElection, &out.LeaderElection
 		*out = new(componentbaseconfig.LeaderElectionConfiguration)
@@ -927,11 +925,19 @@ func autoConvert_v1alpha1_GardenletConfiguration_To_config_GardenletConfiguratio
 	} else {
 		out.SeedConfig = nil
 	}
-	out.Logging = (*config.Logging)(unsafe.Pointer(in.Logging))
-	out.SNI = (*config.SNI)(unsafe.Pointer(in.SNI))
-	out.ETCDConfig = (*config.ETCDConfig)(unsafe.Pointer(in.ETCDConfig))
+	if err := Convert_v1alpha1_Logging_To_config_Logging(&in.Logging, &out.Logging, s); err != nil {
+		return err
+	}
+	if err := Convert_v1alpha1_SNI_To_config_SNI(&in.SNI, &out.SNI, s); err != nil {
+		return err
+	}
+	if err := Convert_v1alpha1_ETCDConfig_To_config_ETCDConfig(&in.ETCDConfig, &out.ETCDConfig, s); err != nil {
+		return err
+	}
 	out.ExposureClassHandlers = *(*[]config.ExposureClassHandler)(unsafe.Pointer(&in.ExposureClassHandlers))
-	out.Monitoring = (*config.MonitoringConfig)(unsafe.Pointer(in.Monitoring))
+	if err := Convert_v1alpha1_MonitoringConfig_To_config_MonitoringConfig(&in.Monitoring, &out.Monitoring, s); err != nil {
+		return err
+	}
 	out.NodeToleration = (*config.NodeToleration)(unsafe.Pointer(in.NodeToleration))
 	return nil
 }
@@ -960,17 +966,15 @@ func autoConvert_config_GardenletConfiguration_To_v1alpha1_GardenletConfiguratio
 	} else {
 		out.SeedClientConnection = nil
 	}
-	if in.ShootClientConnection != nil {
-		in, out := &in.ShootClientConnection, &out.ShootClientConnection
-		*out = new(ShootClientConnection)
-		if err := Convert_config_ShootClientConnection_To_v1alpha1_ShootClientConnection(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.ShootClientConnection = nil
+	if err := Convert_config_ShootClientConnection_To_v1alpha1_ShootClientConnection(&in.ShootClientConnection, &out.ShootClientConnection, s); err != nil {
+		return err
 	}
-	out.Controllers = (*GardenletControllerConfiguration)(unsafe.Pointer(in.Controllers))
-	out.Resources = (*ResourcesConfiguration)(unsafe.Pointer(in.Resources))
+	if err := Convert_config_GardenletControllerConfiguration_To_v1alpha1_GardenletControllerConfiguration(&in.Controllers, &out.Controllers, s); err != nil {
+		return err
+	}
+	if err := Convert_config_ResourcesConfiguration_To_v1alpha1_ResourcesConfiguration(&in.Resources, &out.Resources, s); err != nil {
+		return err
+	}
 	if in.LeaderElection != nil {
 		in, out := &in.LeaderElection, &out.LeaderElection
 		*out = new(configv1alpha1.LeaderElectionConfiguration)
@@ -1004,11 +1008,19 @@ func autoConvert_config_GardenletConfiguration_To_v1alpha1_GardenletConfiguratio
 	} else {
 		out.SeedConfig = nil
 	}
-	out.Logging = (*Logging)(unsafe.Pointer(in.Logging))
-	out.SNI = (*SNI)(unsafe.Pointer(in.SNI))
-	out.ETCDConfig = (*ETCDConfig)(unsafe.Pointer(in.ETCDConfig))
+	if err := Convert_config_Logging_To_v1alpha1_Logging(&in.Logging, &out.Logging, s); err != nil {
+		return err
+	}
+	if err := Convert_config_SNI_To_v1alpha1_SNI(&in.SNI, &out.SNI, s); err != nil {
+		return err
+	}
+	if err := Convert_config_ETCDConfig_To_v1alpha1_ETCDConfig(&in.ETCDConfig, &out.ETCDConfig, s); err != nil {
+		return err
+	}
 	out.ExposureClassHandlers = *(*[]ExposureClassHandler)(unsafe.Pointer(&in.ExposureClassHandlers))
-	out.Monitoring = (*MonitoringConfig)(unsafe.Pointer(in.Monitoring))
+	if err := Convert_config_MonitoringConfig_To_v1alpha1_MonitoringConfig(&in.Monitoring, &out.Monitoring, s); err != nil {
+		return err
+	}
 	out.NodeToleration = (*NodeToleration)(unsafe.Pointer(in.NodeToleration))
 	return nil
 }

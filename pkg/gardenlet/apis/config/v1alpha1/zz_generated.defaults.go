@@ -33,90 +33,80 @@ func SetObjectDefaults_GardenletConfiguration(in *GardenletConfiguration) {
 	if in.SeedClientConnection != nil {
 		SetDefaults_ClientConnectionConfiguration(&in.SeedClientConnection.ClientConnectionConfiguration)
 	}
-	if in.ShootClientConnection != nil {
-		SetDefaults_ClientConnectionConfiguration(&in.ShootClientConnection.ClientConnectionConfiguration)
+	SetDefaults_ClientConnectionConfiguration(&in.ShootClientConnection.ClientConnectionConfiguration)
+	SetDefaults_GardenletControllerConfiguration(&in.Controllers)
+	if in.Controllers.BackupBucket != nil {
+		SetDefaults_BackupBucketControllerConfiguration(in.Controllers.BackupBucket)
 	}
-	if in.Controllers != nil {
-		SetDefaults_GardenletControllerConfiguration(in.Controllers)
-		if in.Controllers.BackupBucket != nil {
-			SetDefaults_BackupBucketControllerConfiguration(in.Controllers.BackupBucket)
+	if in.Controllers.BackupEntry != nil {
+		SetDefaults_BackupEntryControllerConfiguration(in.Controllers.BackupEntry)
+	}
+	if in.Controllers.Bastion != nil {
+		SetDefaults_BastionControllerConfiguration(in.Controllers.Bastion)
+	}
+	if in.Controllers.ControllerInstallation != nil {
+		SetDefaults_ControllerInstallationControllerConfiguration(in.Controllers.ControllerInstallation)
+	}
+	if in.Controllers.ControllerInstallationCare != nil {
+		SetDefaults_ControllerInstallationCareControllerConfiguration(in.Controllers.ControllerInstallationCare)
+	}
+	if in.Controllers.ControllerInstallationRequired != nil {
+		SetDefaults_ControllerInstallationRequiredControllerConfiguration(in.Controllers.ControllerInstallationRequired)
+	}
+	if in.Controllers.Gardenlet != nil {
+		SetDefaults_GardenletObjectControllerConfiguration(in.Controllers.Gardenlet)
+	}
+	if in.Controllers.Seed != nil {
+		SetDefaults_SeedControllerConfiguration(in.Controllers.Seed)
+	}
+	if in.Controllers.SeedCare != nil {
+		SetDefaults_SeedCareControllerConfiguration(in.Controllers.SeedCare)
+	}
+	if in.Controllers.Shoot != nil {
+		SetDefaults_ShootControllerConfiguration(in.Controllers.Shoot)
+	}
+	if in.Controllers.ShootCare != nil {
+		SetDefaults_ShootCareControllerConfiguration(in.Controllers.ShootCare)
+		if in.Controllers.ShootCare.StaleExtensionHealthChecks != nil {
+			SetDefaults_StaleExtensionHealthChecks(in.Controllers.ShootCare.StaleExtensionHealthChecks)
 		}
-		if in.Controllers.BackupEntry != nil {
-			SetDefaults_BackupEntryControllerConfiguration(in.Controllers.BackupEntry)
-		}
-		if in.Controllers.Bastion != nil {
-			SetDefaults_BastionControllerConfiguration(in.Controllers.Bastion)
-		}
-		if in.Controllers.ControllerInstallation != nil {
-			SetDefaults_ControllerInstallationControllerConfiguration(in.Controllers.ControllerInstallation)
-		}
-		if in.Controllers.ControllerInstallationCare != nil {
-			SetDefaults_ControllerInstallationCareControllerConfiguration(in.Controllers.ControllerInstallationCare)
-		}
-		if in.Controllers.ControllerInstallationRequired != nil {
-			SetDefaults_ControllerInstallationRequiredControllerConfiguration(in.Controllers.ControllerInstallationRequired)
-		}
-		if in.Controllers.Gardenlet != nil {
-			SetDefaults_GardenletObjectControllerConfiguration(in.Controllers.Gardenlet)
-		}
-		if in.Controllers.Seed != nil {
-			SetDefaults_SeedControllerConfiguration(in.Controllers.Seed)
-		}
-		if in.Controllers.SeedCare != nil {
-			SetDefaults_SeedCareControllerConfiguration(in.Controllers.SeedCare)
-		}
-		if in.Controllers.Shoot != nil {
-			SetDefaults_ShootControllerConfiguration(in.Controllers.Shoot)
-		}
-		if in.Controllers.ShootCare != nil {
-			SetDefaults_ShootCareControllerConfiguration(in.Controllers.ShootCare)
-			if in.Controllers.ShootCare.StaleExtensionHealthChecks != nil {
-				SetDefaults_StaleExtensionHealthChecks(in.Controllers.ShootCare.StaleExtensionHealthChecks)
-			}
-		}
-		if in.Controllers.ShootState != nil {
-			SetDefaults_ShootStateControllerConfiguration(in.Controllers.ShootState)
-		}
-		if in.Controllers.NetworkPolicy != nil {
-			SetDefaults_NetworkPolicyControllerConfiguration(in.Controllers.NetworkPolicy)
-		}
-		if in.Controllers.ManagedSeed != nil {
-			SetDefaults_ManagedSeedControllerConfiguration(in.Controllers.ManagedSeed)
-		}
-		if in.Controllers.TokenRequestorServiceAccount != nil {
-			SetDefaults_TokenRequestorServiceAccountControllerConfiguration(in.Controllers.TokenRequestorServiceAccount)
-		}
-		if in.Controllers.TokenRequestorWorkloadIdentity != nil {
-			SetDefaults_TokenRequestorWorkloadIdentityControllerConfiguration(in.Controllers.TokenRequestorWorkloadIdentity)
-		}
-		if in.Controllers.VPAEvictionRequirements != nil {
-			SetDefaults_VPAEvictionRequirementsControllerConfiguration(in.Controllers.VPAEvictionRequirements)
-		}
+	}
+	if in.Controllers.ShootState != nil {
+		SetDefaults_ShootStateControllerConfiguration(in.Controllers.ShootState)
+	}
+	if in.Controllers.NetworkPolicy != nil {
+		SetDefaults_NetworkPolicyControllerConfiguration(in.Controllers.NetworkPolicy)
+	}
+	if in.Controllers.ManagedSeed != nil {
+		SetDefaults_ManagedSeedControllerConfiguration(in.Controllers.ManagedSeed)
+	}
+	if in.Controllers.TokenRequestorServiceAccount != nil {
+		SetDefaults_TokenRequestorServiceAccountControllerConfiguration(in.Controllers.TokenRequestorServiceAccount)
+	}
+	if in.Controllers.TokenRequestorWorkloadIdentity != nil {
+		SetDefaults_TokenRequestorWorkloadIdentityControllerConfiguration(in.Controllers.TokenRequestorWorkloadIdentity)
+	}
+	if in.Controllers.VPAEvictionRequirements != nil {
+		SetDefaults_VPAEvictionRequirementsControllerConfiguration(in.Controllers.VPAEvictionRequirements)
 	}
 	if in.LeaderElection != nil {
 		SetDefaults_LeaderElectionConfiguration(in.LeaderElection)
 	}
 	SetDefaults_ServerConfiguration(&in.Server)
-	if in.Logging != nil {
-		SetDefaults_Logging(in.Logging)
+	SetDefaults_Logging(&in.Logging)
+	SetDefaults_SNI(&in.SNI)
+	if in.SNI.Ingress != nil {
+		SetDefaults_SNIIngress(in.SNI.Ingress)
 	}
-	if in.SNI != nil {
-		SetDefaults_SNI(in.SNI)
-		if in.SNI.Ingress != nil {
-			SetDefaults_SNIIngress(in.SNI.Ingress)
-		}
+	SetDefaults_ETCDConfig(&in.ETCDConfig)
+	if in.ETCDConfig.ETCDController != nil {
+		SetDefaults_ETCDController(in.ETCDConfig.ETCDController)
 	}
-	if in.ETCDConfig != nil {
-		SetDefaults_ETCDConfig(in.ETCDConfig)
-		if in.ETCDConfig.ETCDController != nil {
-			SetDefaults_ETCDController(in.ETCDConfig.ETCDController)
-		}
-		if in.ETCDConfig.CustodianController != nil {
-			SetDefaults_CustodianController(in.ETCDConfig.CustodianController)
-		}
-		if in.ETCDConfig.BackupCompactionController != nil {
-			SetDefaults_BackupCompactionController(in.ETCDConfig.BackupCompactionController)
-		}
+	if in.ETCDConfig.CustodianController != nil {
+		SetDefaults_CustodianController(in.ETCDConfig.CustodianController)
+	}
+	if in.ETCDConfig.BackupCompactionController != nil {
+		SetDefaults_BackupCompactionController(in.ETCDConfig.BackupCompactionController)
 	}
 	for i := range in.ExposureClassHandlers {
 		a := &in.ExposureClassHandlers[i]
@@ -127,10 +117,8 @@ func SetObjectDefaults_GardenletConfiguration(in *GardenletConfiguration) {
 			}
 		}
 	}
-	if in.Monitoring != nil {
-		SetDefaults_MonitoringConfig(in.Monitoring)
-		if in.Monitoring.Shoot != nil {
-			SetDefaults_ShootMonitoringConfig(in.Monitoring.Shoot)
-		}
+	SetDefaults_MonitoringConfig(&in.Monitoring)
+	if in.Monitoring.Shoot != nil {
+		SetDefaults_ShootMonitoringConfig(in.Monitoring.Shoot)
 	}
 }
