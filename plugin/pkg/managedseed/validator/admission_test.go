@@ -374,6 +374,7 @@ var _ = Describe("ManagedSeed", func() {
 
 				err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
 				Expect(err).NotTo(HaveOccurred())
+
 				seedx.Spec.Ingress.Controller.Kind = v1beta1constants.IngressKindNginx
 				Expect(managedSeed.Spec.Gardenlet).To(Equal(seedmanagement.GardenletConfig{
 					Config: &gardenletv1alpha1.GardenletConfiguration{
