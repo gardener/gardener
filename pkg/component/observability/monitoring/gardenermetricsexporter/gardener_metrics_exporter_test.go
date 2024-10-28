@@ -685,7 +685,8 @@ func deployment(namespace string, testValues Values) *appsv1.Deployment {
 										Scheme: corev1.URISchemeHTTP,
 									},
 								},
-								PeriodSeconds: 5,
+								TimeoutSeconds: 10,
+								PeriodSeconds:  15,
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
