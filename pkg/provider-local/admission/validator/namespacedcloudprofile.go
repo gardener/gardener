@@ -63,11 +63,10 @@ func (p *namespacedCloudProfile) Validate(ctx context.Context, new, _ client.Obj
 		return err
 	}
 
-	return p.ValidateNamespacedCloudProfileProviderConfig(cloudProfileConfig, profile.Spec.MachineImages, parentProfile).ToAggregate()
+	return p.validateNamespacedCloudProfileProviderConfig(cloudProfileConfig, profile.Spec.MachineImages, parentProfile).ToAggregate()
 }
 
-// ValidateNamespacedCloudProfileProviderConfig validates the providerConfig of the NamespacedCloudProfile.
-func (p *namespacedCloudProfile) ValidateNamespacedCloudProfileProviderConfig(providerConfig *api.CloudProfileConfig, machineImages []core.MachineImage, parentProfile *gardencorev1beta1.CloudProfile) field.ErrorList {
+func (p *namespacedCloudProfile) validateNamespacedCloudProfileProviderConfig(providerConfig *api.CloudProfileConfig, machineImages []core.MachineImage, parentProfile *gardencorev1beta1.CloudProfile) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	profileImages := util.NewCoreImagesContext(machineImages)
