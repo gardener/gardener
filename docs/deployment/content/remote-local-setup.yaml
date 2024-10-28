@@ -29,7 +29,6 @@ spec:
                   util-linux vim wget yq
           mkdir -p ~/.cache/wget
           cd ~/.cache/wget
-          echo yaml2json       && wget -N "https://github.com/bronze1man/yaml2json/releases/download/$(curl -sL https://api.github.com/repos/bronze1man/yaml2json/releases/latest | jq .tag_name -r)/yaml2json_linux_amd64" && cp yaml2json_linux_amd64 /usr/local/bin/yaml2json && chmod +x /usr/local/bin/yaml2json
           echo golang
                VERSION=$(curl -sL https://golang.org/VERSION?m=text | awk 'NR==1{print}')
                wget -N "https://go.dev/dl/$VERSION.linux-amd64.tar.gz"
@@ -78,6 +77,11 @@ spec:
           echo tmux-completion
                wget -N "https://raw.githubusercontent.com/imomaliev/tmux-bash-completion/master/completions/tmux"
                cp tmux /usr/share/bash-completion/completions/tmux
+          echo yaml2json
+               VERSION=$(curl -sL https://api.github.com/repos/bronze1man/yaml2json/releases/latest | jq '.tag_name // "v1.3.3"' -r)
+               wget -N "https://github.com/bronze1man/yaml2json/releases/download/$VERSION/yaml2json_linux_amd64"
+               cp yaml2json_linux_amd64 /usr/local/bin/yaml2json
+               chmod +x /usr/local/bin/yaml2json
           cd
           echo delve           && go install github.com/go-delve/delve/cmd/dlv@latest
           echo gron            && go install github.com/tomnomnom/gron@latest
