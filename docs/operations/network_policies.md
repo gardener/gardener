@@ -31,6 +31,26 @@ In summary, most of the pods that initiate connections with other pods will have
 This way, they leverage the automatically created `NetworkPolicy`s by the controller.
 As a result, in most cases no special/custom-crafted `NetworkPolicy`s must be created anymore.
 
+### Logging & Monitoring
+
+As part of the garden reconciliation flow, the `gardener-operator` deploys various Prometheus instances into the `garden` namespace.
+Each pod that should be scraped for metrics by these instances must have a `Service` which is annotated with
+
+```yaml
+annotations:
+  networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports: '[{"port":<metrics-port-on-pod>,"protocol":"<protocol, typically TCP>"}]'
+```
+
+If the respective pod is not running in the `garden` namespace, the `Service` needs these annotations in addition:
+
+```yaml
+annotations:
+  networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]'
+  networking.resources.gardener.cloud/pod-label-selector-namespace-alias: extensions
+```
+
+This automatically allows the needed network traffic from the respective Prometheus pods.
+
 ## Seed Cluster
 
 *(via `gardenlet` and `gardener-resource-manager`)*
