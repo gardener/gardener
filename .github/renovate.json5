@@ -78,6 +78,14 @@
       "matchPackagePatterns": ["gcr\\.io\/istio-release\/.+"],
     },
     {
+      // Group etcd-druid image updates in one PR.
+      "groupName": "etcd-druid images",
+      "matchPackagePatterns": [
+        "github.com/gardener/etcd-druid",
+        "gardener/etcd-druid"
+      ],
+    },
+    {
       // Group istio module updates in one PR.
       "groupName": "istio modules",
       "matchDatasources": ["go"],
