@@ -5162,7 +5162,7 @@ var _ = Describe("validator", func() {
 				Entry("should allow nil networking status", nil, Not(HaveOccurred())),
 				Entry("should allow empty networking status", &core.NetworkingStatus{}, Not(HaveOccurred())),
 				Entry("should allow correct networking status", &core.NetworkingStatus{Nodes: []string{nodesCIDR}, Pods: []string{podsCIDR}, Services: []string{servicesCIDR}}, Not(HaveOccurred())),
-				Entry("should reject networking status with seed values", &core.NetworkingStatus{Nodes: []string{seedNodesCIDR}, Pods: []string{seedPodsCIDR}, Services: []string{seedServicesCIDR}}, BeForbiddenError()),
+				Entry("should reject networking status if it is not disjoint with seed network", &core.NetworkingStatus{Nodes: []string{seedNodesCIDR}, Pods: []string{seedPodsCIDR}, Services: []string{seedServicesCIDR}}, BeForbiddenError()),
 			)
 		})
 
