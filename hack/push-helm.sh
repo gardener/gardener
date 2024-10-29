@@ -33,7 +33,7 @@ yq -i ".name |= \"$name\"" "$chart_dir/Chart.yaml"
 helm package "$chart_dir" -d "$chart_dir" --version "$tag"
 
 if echo $registry | grep -q -F "garden.local.gardener.cloud:5001"; then
-    PUSH_HTTP="--plain-http"
+    push_http="--plain-http"
 fi 
 
-helm push $PUSH_HTTP "$chart_dir/$name-$tag.tgz" "oci://$registry"
+helm push $push_http "$chart_dir/$name-$tag.tgz" "oci://$registry"
