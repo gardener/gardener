@@ -159,6 +159,7 @@ func (h *Handler) handleDeployment(
 		maxReplicas,
 		&deployment.Spec.Template,
 		deployment.Annotations,
+		metav1.LabelSelector{MatchLabels: deployment.Spec.Template.Labels},
 	)
 
 	h.mutatePodTolerationSeconds(
@@ -205,6 +206,10 @@ func (h *Handler) handleStatefulSet(
 		&statefulSet.Spec.Template,
 	)
 
+	// The label selector for TSCs must be stable, so we use the immutable field 'statefulSet.Spec.Selector'.
+	// If labels ('statefulSet.Spec.Template.Labels') change over time, the TSCs must still select the pods which
+	// were not updated yet.
+	// Please see https://github.com/gardener/etcd-druid/issues/899 for why this is especially important for StatefulSets.
 	h.mutateTopologySpreadConstraints(
 		failureToleranceType,
 		zones,
@@ -213,6 +218,7 @@ func (h *Handler) handleStatefulSet(
 		maxReplicas,
 		&statefulSet.Spec.Template,
 		statefulSet.Annotations,
+		*statefulSet.Spec.Selector,
 	)
 
 	h.mutatePodTolerationSeconds(
@@ -417,6 +423,7 @@ func (h *Handler) mutateTopologySpreadConstraints(
 	maxReplicas int32,
 	podTemplateSpec *corev1.PodTemplateSpec,
 	annotations map[string]string,
+	labelSelector metav1.LabelSelector,
 ) {
 	replicas := ptr.Deref(currentReplicas, 0)
 
@@ -434,7 +441,7 @@ func (h *Handler) mutateTopologySpreadConstraints(
 	if constraints := kubernetesutils.GetTopologySpreadConstraints(
 		replicas,
 		maxReplicas,
-		metav1.LabelSelector{MatchLabels: podTemplateSpec.Labels},
+		labelSelector,
 		int32(len(zones)), // #nosec G115 -- `len(zones)` cannot be higher than max int32. Zones come from shoot spec and there is a validation that there cannot be more zones than worker.Maximum which is int32.
 		failureToleranceType,
 		enforceSpreadAcrossHosts,
