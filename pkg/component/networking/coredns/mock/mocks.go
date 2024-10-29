@@ -14,6 +14,7 @@ import (
 	net "net"
 	reflect "reflect"
 
+	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -79,6 +80,18 @@ func (m *MockInterface) SetClusterIPs(arg0 []net.IP) {
 func (mr *MockInterfaceMockRecorder) SetClusterIPs(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetClusterIPs", reflect.TypeOf((*MockInterface)(nil).SetClusterIPs), arg0)
+}
+
+// SetIPFamilies mocks base method.
+func (m *MockInterface) SetIPFamilies(arg0 []v1beta1.IPFamily) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetIPFamilies", arg0)
+}
+
+// SetIPFamilies indicates an expected call of SetIPFamilies.
+func (mr *MockInterfaceMockRecorder) SetIPFamilies(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetIPFamilies", reflect.TypeOf((*MockInterface)(nil).SetIPFamilies), arg0)
 }
 
 // SetNodeNetworkCIDRs mocks base method.
