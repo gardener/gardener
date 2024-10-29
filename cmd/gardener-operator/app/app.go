@@ -29,7 +29,7 @@ import (
 	controllerwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/gardener/gardener/cmd/gardener-operator/app/bootstrappers"
-	"github.com/gardener/gardener/cmd/utils"
+	"github.com/gardener/gardener/cmd/utils/initrun"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/extensions/pkg/webhook/certificates"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -57,7 +57,7 @@ func NewCommand() *cobra.Command {
 		Short: "Launch the " + Name,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			log, err := utils.InitRun(cmd, opts, Name)
+			log, err := initrun.InitRun(cmd, opts, Name)
 			if err != nil {
 				return err
 			}

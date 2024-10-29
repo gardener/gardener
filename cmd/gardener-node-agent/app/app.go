@@ -34,7 +34,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/gardener/gardener/cmd/gardener-node-agent/app/bootstrappers"
-	"github.com/gardener/gardener/cmd/utils"
+	"github.com/gardener/gardener/cmd/utils/initrun"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -62,7 +62,7 @@ func NewCommand() *cobra.Command {
 		Short: "Launch the " + Name,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			log, err := utils.InitRun(cmd, opts, Name)
+			log, err := initrun.InitRun(cmd, opts, Name)
 			if err != nil {
 				return err
 			}
@@ -85,7 +85,7 @@ func getBootstrapCommand(opts *options) *cobra.Command {
 		Short: "Bootstrap the " + Name,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			log, err := utils.InitRun(cmd, opts, "gardener-node-init")
+			log, err := initrun.InitRun(cmd, opts, "gardener-node-init")
 			if err != nil {
 				return err
 			}

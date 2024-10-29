@@ -14,7 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
-	"github.com/gardener/gardener/cmd/utils"
+	"github.com/gardener/gardener/cmd/utils/initrun"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	controllermanagerv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	controllermanagervalidation "github.com/gardener/gardener/pkg/controllermanager/apis/config/validation"
@@ -38,7 +38,7 @@ type options struct {
 	config     *config.ControllerManagerConfiguration
 }
 
-var _ utils.Options = &options{}
+var _ initrun.Options = &options{}
 
 func (o *options) addFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.configFile, "config", o.configFile, "Path to configuration file.")

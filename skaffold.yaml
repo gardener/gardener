@@ -256,6 +256,7 @@ build:
             - cmd/gardener-controller-manager/app
             - cmd/gardener-controller-manager/app/bootstrappers
             - cmd/utils
+            - cmd/utils/initrun
             - pkg/api/extensions
             - pkg/api/indexer
             - pkg/apis/core
@@ -370,6 +371,7 @@ build:
             - cmd/gardener-scheduler
             - cmd/gardener-scheduler/app
             - cmd/utils
+            - cmd/utils/initrun
             - pkg/api/extensions
             - pkg/apis/core
             - pkg/apis/core/install
@@ -439,6 +441,7 @@ build:
             - cmd/gardener-admission-controller
             - cmd/gardener-admission-controller/app
             - cmd/utils
+            - cmd/utils/initrun
             - pkg/admissioncontroller/apis/config
             - pkg/admissioncontroller/apis/config/helper
             - pkg/admissioncontroller/apis/config/v1alpha1
@@ -951,6 +954,7 @@ build:
             - cmd/gardenlet/app
             - cmd/gardenlet/app/bootstrappers
             - cmd/utils
+            - cmd/utils/initrun
             - imagevector
             - imagevector/charts.yaml
             - imagevector/containers.yaml
@@ -1315,6 +1319,7 @@ build:
             - cmd/gardener-resource-manager/app
             - cmd/gardener-resource-manager/app/bootstrappers
             - cmd/utils
+            - cmd/utils/initrun
             - pkg/api/extensions
             - pkg/api/indexer
             - pkg/apis/core
@@ -1429,6 +1434,7 @@ build:
             - cmd/gardener-node-agent/app
             - cmd/gardener-node-agent/app/bootstrappers
             - cmd/utils
+            - cmd/utils/initrun
             - imagevector
             - imagevector/charts.yaml
             - imagevector/containers.yaml

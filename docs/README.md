@@ -11,7 +11,7 @@
 
 * Components
   * [Gardener API server](concepts/apiserver.md)
-    * [In-Tree admission plugins](concepts/apiserver-admission-plugins.md)
+    * [In-Tree Admission Plugins](concepts/apiserver-admission-plugins.md)
   * [Gardener Controller Manager](concepts/controller-manager.md)
   * [Gardener Scheduler](concepts/scheduler.md)
   * [Gardener Admission Controller](concepts/admission-controller.md)
@@ -19,6 +19,7 @@
   * [Gardener Operator](concepts/operator.md)
   * [Gardener Node Agent](concepts/node-agent.md)
   * [Gardenlet](concepts/gardenlet.md)
+  * [Gardenadm](concepts/gardenadm.md)
 * [Backup Restore](concepts/backup-restore.md)
 * [etcd](concepts/etcd.md)
 * [Relation between Gardener API and Cluster API](concepts/cluster-api.md)
