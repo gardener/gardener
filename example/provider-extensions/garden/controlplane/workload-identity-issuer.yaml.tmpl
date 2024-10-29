@@ -1,0 +1,15 @@
+global:
+  apiserver:
+    workloadIdentity:
+      token:
+        # You do not need to change this value if you are not developing features related
+        # to workload identities and their integration with cloud providers.
+        #
+        # If you are using a remote shoot as development seed cluster then this value should be in the following form:
+        # https://issuer.<shoot domain>/garden/workload-identity/issuer
+        # The shoot domain can be obtained by running the following command against the shoot cluster:
+        # kubectl -n kube-system get configmap shoot-info -o yaml | yq -e '.data.domain'
+        #
+        # If you are not using a shoot as development seed cluster then the value of the issuer should be in the following form:
+        # https://<your workload identity issuer domain>/garden/workload-identity/issuer
+        issuer: https://issuer.gardener.cloud.local

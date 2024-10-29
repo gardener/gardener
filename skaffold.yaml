@@ -570,6 +570,9 @@ profiles:
           global.apiserver.clusterIdentity: gardener-extensions
           global.scheduler.config.schedulers.shoot.candidateDeterminationStrategy: MinimalDistance
           global.scheduler.config.schedulers.shoot.concurrentSyncs: 5
+      - op: add
+        path: /deploy/helm/releases/0/valuesFiles/-
+        value: example/provider-extensions/garden/controlplane/workload-identity-issuer.yaml
       - op: replace
         path: /deploy/helm/hooks/after/0/host/command
         value:
