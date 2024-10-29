@@ -44,6 +44,7 @@ func NewFactory(_ io.Reader) (admission.Interface, error) {
 type ExtensionLabels struct {
 	*admission.Handler
 	backupBucketLister           gardencorev1beta1listers.BackupBucketLister
+	cloudProfileLister           gardencorev1beta1listers.CloudProfileLister
 	controllerRegistrationLister gardencorev1beta1listers.ControllerRegistrationLister
 	readyFunc                    admission.ReadyFunc
 }
@@ -70,11 +71,14 @@ func (e *ExtensionLabels) AssignReadyFunc(f admission.ReadyFunc) {
 func (e *ExtensionLabels) SetCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
 	backupBucketInformer := f.Core().V1beta1().BackupBuckets()
 	e.backupBucketLister = backupBucketInformer.Lister()
+	cloudProfileInformer := f.Core().V1beta1().CloudProfiles()
+	e.cloudProfileLister = cloudProfileInformer.Lister()
 	controllerRegistrationInformer := f.Core().V1beta1().ControllerRegistrations()
 	e.controllerRegistrationLister = controllerRegistrationInformer.Lister()
 
 	readyFuncs = append(readyFuncs,
 		backupBucketInformer.Informer().HasSynced,
+		cloudProfileInformer.Informer().HasSynced,
 		controllerRegistrationInformer.Informer().HasSynced,
 	)
 }
@@ -103,6 +107,9 @@ func (e *ExtensionLabels) waitUntilReady(attrs admission.Attributes) error {
 func (e *ExtensionLabels) ValidateInitialization() error {
 	if e.backupBucketLister == nil {
 		return errors.New("missing BackupBucket lister")
+	}
+	if e.cloudProfileLister == nil {
+		return errors.New("missing CloudProfile lister")
 	}
 	if e.controllerRegistrationLister == nil {
 		return errors.New("missing ControllerRegistration lister")
@@ -169,6 +176,23 @@ func (e *ExtensionLabels) Admit(_ context.Context, a admission.Attributes, _ adm
 
 		removeLabels(&cloudProfile.ObjectMeta)
 		addMetaDataLabelsCloudProfile(cloudProfile)
+
+	case core.Kind("NamespacedCloudProfile"):
+		namespacedCloudProfile, ok := a.GetObject().(*core.NamespacedCloudProfile)
+		if !ok {
+			return apierrors.NewBadRequest("could not convert resource into NamespacedCloudProfile object")
+		}
+
+		if namespacedCloudProfile.Spec.Parent.Kind != v1beta1constants.CloudProfileReferenceKindCloudProfile {
+			return apierrors.NewBadRequest("invalid parent kind")
+		}
+		parentCloudProfile, err := e.cloudProfileLister.Get(namespacedCloudProfile.Spec.Parent.Name)
+		if err != nil {
+			return apierrors.NewInternalError(err)
+		}
+
+		removeLabels(&namespacedCloudProfile.ObjectMeta)
+		addMetaDataLabelsNamespacedCloudProfile(namespacedCloudProfile, parentCloudProfile)
 
 	case core.Kind("BackupBucket"):
 		backupBucket, ok := a.GetObject().(*core.BackupBucket)
@@ -278,6 +302,10 @@ func getEnabledExtensionsForShoot(shoot *core.Shoot, controllerRegistrations []*
 
 func addMetaDataLabelsCloudProfile(cloudProfile *core.CloudProfile) {
 	metav1.SetMetaDataLabel(&cloudProfile.ObjectMeta, v1beta1constants.LabelExtensionProviderTypePrefix+cloudProfile.Spec.Type, "true")
+}
+
+func addMetaDataLabelsNamespacedCloudProfile(namespacedCloudProfile *core.NamespacedCloudProfile, parentCloudProfile *gardencorev1beta1.CloudProfile) {
+	metav1.SetMetaDataLabel(&namespacedCloudProfile.ObjectMeta, v1beta1constants.LabelExtensionProviderTypePrefix+parentCloudProfile.Spec.Type, "true")
 }
 
 func addMetaDataLabelsBackupBucket(backupBucket *core.BackupBucket) {

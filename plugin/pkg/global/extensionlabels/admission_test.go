@@ -507,6 +507,66 @@ var _ = Describe("ExtensionLabels tests", func() {
 		})
 	})
 
+	Context("NamespacedCloudProfile", func() {
+		var (
+			namespacedCloudProfile *core.NamespacedCloudProfile
+			parentCloudProfile     *gardencorev1beta1.CloudProfile
+			providerType           string
+		)
+
+		BeforeEach(func() {
+			providerType = "provider-type"
+			namespacedCloudProfile = &core.NamespacedCloudProfile{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-namespacedcloudprofile",
+					Namespace: "project-namespace",
+				},
+				Spec: core.NamespacedCloudProfileSpec{
+					Parent: core.CloudProfileReference{
+						Kind: "CloudProfile",
+						Name: "test-cloudprofile",
+					},
+				},
+			}
+			parentCloudProfile = &gardencorev1beta1.CloudProfile{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-cloudprofile",
+				},
+				Spec: gardencorev1beta1.CloudProfileSpec{Type: providerType},
+			}
+		})
+
+		It("should fail for an invalid parent kind", func() {
+			namespacedCloudProfile.Spec.Parent.Kind = "Invalid-kind"
+			attrs := admission.NewAttributesRecord(namespacedCloudProfile, nil, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+			err := admissionHandler.Admit(context.Background(), attrs, nil)
+
+			Expect(err).To(MatchError(ContainSubstring("invalid parent kind")))
+		})
+
+		It("should fail if parent CloudProfile is not found", func() {
+			attrs := admission.NewAttributesRecord(namespacedCloudProfile, nil, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+			err := admissionHandler.Admit(context.Background(), attrs, nil)
+
+			Expect(err).To(MatchError(ContainSubstring("not found")))
+		})
+
+		It("should successfully add all the correct labels on creation", func() {
+			Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
+
+			attrs := admission.NewAttributesRecord(namespacedCloudProfile, nil, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+			err := admissionHandler.Admit(context.Background(), attrs, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+
+			expectedLabels := map[string]string{
+				"provider.extensions.gardener.cloud/" + providerType: "true",
+			}
+
+			Expect(namespacedCloudProfile.ObjectMeta.Labels).To(Equal(expectedLabels))
+		})
+	})
+
 	Context("Backup Bucket", func() {
 		var (
 			backupBucket *core.BackupBucket
