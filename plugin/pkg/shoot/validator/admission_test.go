@@ -5149,6 +5149,21 @@ var _ = Describe("validator", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 			})
+
+			DescribeTable("Validating networking status during migration",
+				func(networking *core.NetworkingStatus, matcher types.GomegaMatcher) {
+					shoot.Status.Networking = networking
+
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).To(matcher)
+				},
+				Entry("should allow nil networking status", nil, Not(HaveOccurred())),
+				Entry("should allow empty networking status", &core.NetworkingStatus{}, Not(HaveOccurred())),
+				Entry("should allow correct networking status", &core.NetworkingStatus{Nodes: []string{nodesCIDR}, Pods: []string{podsCIDR}, Services: []string{servicesCIDR}}, Not(HaveOccurred())),
+				Entry("should reject networking status with seed values", &core.NetworkingStatus{Nodes: []string{seedNodesCIDR}, Pods: []string{seedPodsCIDR}, Services: []string{seedServicesCIDR}}, BeForbiddenError()),
+			)
 		})
 
 		Context("binding subresource", func() {
