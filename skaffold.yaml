@@ -1670,3 +1670,14 @@ profiles:
                   - bash
                   - -ec
                   - KUBECONFIG=$VIRTUAL_GARDEN_KUBECONFIG hack/usage/wait-for.sh seed local GardenletReady SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
+  - name: operator-dev
+    patches:
+      - op: replace
+        path: /build/tagPolicy/customTemplate/template
+        value: "{{.version}}-{{.timestamp}}"
+      - op: replace
+        path: /build/tagPolicy/customTemplate/components/1
+        value:
+          name: timestamp
+          dateTime:
+            format: "20060102150405"

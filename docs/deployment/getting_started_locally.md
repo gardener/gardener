@@ -401,13 +401,25 @@ The one for the virtual garden is accessible at `./example/operator/virtual-gard
 > ```
 > When the shoot cluster is HA (i.e., `.spec.controlPlane.highAvailability.failureTolerance == zone`), then you can access it via `172.18.255.1`.
 
-Please use this command to tear down your environment:
+Similar as in the section _[Developing Gardener](#developing-gardener)_ it's possible to run a [Skaffold development loop](https://skaffold.dev/docs/workflows/dev/) as well using:
+```shell
+make operator-seed-dev
+```
+
+> :information_source: Please note that in this setup Skaffold is only watching for changes in the following components:
+> - [`gardenlet`](../concepts/gardenlet.md)
+> - `gardenlet/chart`
+> - [`gardener-resource-manager`](../concepts/resource-manager.md)
+> - [`gardener-node-agent`](../concepts/node-agent.md)
+
+Finally, please use this command to tear down your environment:
 
 ```shell
 make kind-operator-down
 ```
 
-This setup supports creating shoots and managed seeds the same way as explained in the previous chapters. However, the development and debugging setups are not working yet.
+This setup supports creating shoots and managed seeds the same way as explained in the previous chapters.
+However, the development loop has limitations and the debugging setup is not working yet.
 
 ## Remote Local Setup
 
