@@ -68,7 +68,8 @@ const (
 	metricsPort     = 8080
 
 	webhookServerPortName          = "webhooks"
-	webhookServerPort              = 9443
+	webhookServerPort              = 10250
+	webhookServerServicePort       = 443
 	webhookServerTLSCertVolumeName = "webhook-server-tls-cert"
 	webhookServerTLSCertMountPath  = "/etc/webhook-server-tls"
 
@@ -293,7 +294,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 					{
 						Name:       webhookServerPortName,
 						Protocol:   corev1.ProtocolTCP,
-						Port:       webhookServerPort,
+						Port:       webhookServerServicePort,
 						TargetPort: intstr.FromInt32(webhookServerPort),
 					},
 				},
@@ -307,7 +308,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 				Name:      druidServiceName,
 				Namespace: b.namespace,
 				Path:      ptr.To[string]("/webhooks/etcdcomponents"),
-				Port:      ptr.To[int32](webhookServerPort),
+				Port:      ptr.To[int32](webhookServerServicePort),
 			},
 			CABundle: caSecret.Data[secretsutils.DataKeyCertificateBundle],
 		}
