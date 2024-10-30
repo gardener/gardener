@@ -119,6 +119,11 @@ var _ = Describe("Defaults", func() {
 										Namespace: "bar",
 									},
 								},
+								Ingress: &gardencorev1beta1.Ingress{
+									Controller: gardencorev1beta1.IngressController{
+										Kind: "foobar",
+									},
+								},
 							},
 						},
 					},
@@ -146,6 +151,11 @@ var _ = Describe("Defaults", func() {
 										SecretRef: corev1.SecretReference{
 											Name:      "foo",
 											Namespace: "bar",
+										},
+									},
+									Ingress: &gardencorev1beta1.Ingress{
+										Controller: gardencorev1beta1.IngressController{
+											Kind: "foobar",
 										},
 									},
 								},
