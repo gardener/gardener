@@ -163,17 +163,17 @@ func (k *kubeProxy) Deploy(ctx context.Context) error {
 					},
 					{
 						Record: "kubeproxy_sync_proxy:quantile",
-						Expr:   intstr.FromString(`histogram_quantile(0.99, sum(rate("kubeproxy_sync_proxy_rules_duration_seconds_bucket"[10m])) by (le))`),
+						Expr:   intstr.FromString(`histogram_quantile(0.99, sum(rate(kubeproxy_sync_proxy_rules_duration_seconds_bucket[10m])) by (le))`),
 						Labels: map[string]string{"quantile": "0.99"},
 					},
 					{
 						Record: "kubeproxy_sync_proxy:quantile",
-						Expr:   intstr.FromString(`histogram_quantile(0.9, sum(rate("kubeproxy_sync_proxy_rules_duration_seconds_bucket"[10m])) by (le))`),
+						Expr:   intstr.FromString(`histogram_quantile(0.9, sum(rate(kubeproxy_sync_proxy_rules_duration_seconds_bucket[10m])) by (le))`),
 						Labels: map[string]string{"quantile": "0.9"},
 					},
 					{
 						Record: "kubeproxy_sync_proxy:quantile",
-						Expr:   intstr.FromString(`histogram_quantile(0.5, sum(rate("kubeproxy_sync_proxy_rules_duration_seconds_bucket"[10m])) by (le))`),
+						Expr:   intstr.FromString(`histogram_quantile(0.5, sum(rate(kubeproxy_sync_proxy_rules_duration_seconds_bucket[10m])) by (le))`),
 						Labels: map[string]string{"quantile": "0.5"},
 					},
 				},
