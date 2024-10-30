@@ -70,7 +70,9 @@ func ValidateNetworkSpec(spec *extensionsv1alpha1.NetworkSpec, fldPath *field.Pa
 	}
 
 	allErrs = append(allErrs, cidrvalidation.ValidateCIDRParse(cidrs...)...)
-	allErrs = append(allErrs, cidrvalidation.ValidateCIDRIPFamily(cidrs, string(primaryIPFamily))...)
+	if len(spec.IPFamilies) == 1 {
+		allErrs = append(allErrs, cidrvalidation.ValidateCIDRIPFamily(cidrs, string(primaryIPFamily))...)
+	}
 
 	if !(len(spec.IPFamilies) == 1 && spec.IPFamilies[0] == extensionsv1alpha1.IPFamilyIPv6) {
 		allErrs = append(allErrs, cidrvalidation.ValidateCIDROverlap(cidrs, false)...)

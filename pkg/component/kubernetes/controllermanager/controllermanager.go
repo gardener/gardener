@@ -389,7 +389,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
 								SecretName:  secretCAClient.Name,
-								DefaultMode: ptr.To[int32](0640),
+								DefaultMode: ptr.To[int32](0o640),
 							},
 						},
 					},
@@ -398,7 +398,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
 								SecretName:  serviceAccountKeySecret.Name,
-								DefaultMode: ptr.To[int32](0640),
+								DefaultMode: ptr.To[int32](0o640),
 							},
 						},
 					},
@@ -407,7 +407,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
 								SecretName:  serverSecret.Name,
-								DefaultMode: ptr.To[int32](0640),
+								DefaultMode: ptr.To[int32](0o640),
 							},
 						},
 					},
@@ -426,7 +426,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 				VolumeSource: corev1.VolumeSource{
 					Secret: &corev1.SecretVolumeSource{
 						SecretName:  secretCAKubelet.Name,
-						DefaultMode: ptr.To[int32](0640),
+						DefaultMode: ptr.To[int32](0o640),
 					},
 				},
 			})
@@ -650,9 +650,9 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		if v := k.values.Config.NodeMonitorGracePeriod; v != nil {
 			nodeMonitorGracePeriod = *v
 		}
-		if k.values.Config.NodeCIDRMaskSize != nil {
-			command = append(command, fmt.Sprintf("--node-cidr-mask-size=%d", *k.values.Config.NodeCIDRMaskSize))
-		}
+
+		command = append(command, fmt.Sprintf("--node-cidr-mask-size-ipv4=%d", 24))
+		command = append(command, fmt.Sprintf("--node-cidr-mask-size-ipv6=%d", 64))
 
 		command = append(command,
 			"--allocate-node-cidrs=true",
