@@ -63,7 +63,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 			hpa         *autoscalingv2.HorizontalPodAutoscaler
 			hvpa        *hvpav1alpha1.Hvpa
 
-			labels = map[string]string{"foo": "bar"}
+			labels = map[string]string{"foo": "bar", "app": "foo"}
 			zones  = []string{"a", "b", "c"}
 		)
 
@@ -90,7 +90,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 			statefulSet = &appsv1.StatefulSet{
 				ObjectMeta: objectMeta,
 				Spec: appsv1.StatefulSetSpec{
-					Selector: &metav1.LabelSelector{MatchLabels: labels},
+					Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "foo"}},
 					Replicas: ptr.To[int32](1),
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
@@ -555,8 +555,17 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 					})
 
 					Context("when replicas are >= 2", func() {
+						var labelSelector *metav1.LabelSelector
+
 						BeforeEach(func() {
 							setReplicas(ptr.To[int32](2))
+
+							switch o := getObj().(type) {
+							case *appsv1.Deployment:
+								labelSelector = &metav1.LabelSelector{MatchLabels: labels}
+							case *appsv1.StatefulSet:
+								labelSelector = o.Spec.Selector
+							}
 						})
 
 						Context("when failure-tolerance-type is empty", func() {
@@ -566,7 +575,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 										TopologyKey:       corev1.LabelHostname,
 										MaxSkew:           1,
 										WhenUnsatisfiable: corev1.ScheduleAnyway,
-										LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
+										LabelSelector:     labelSelector,
 									}))
 								})
 							})
@@ -583,14 +592,14 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 												TopologyKey:       corev1.LabelHostname,
 												MaxSkew:           1,
 												WhenUnsatisfiable: corev1.ScheduleAnyway,
-												LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
+												LabelSelector:     labelSelector,
 											},
 											corev1.TopologySpreadConstraint{
 												TopologyKey:       corev1.LabelTopologyZone,
 												MaxSkew:           1,
 												MinDomains:        ptr.To[int32](2),
 												WhenUnsatisfiable: corev1.DoNotSchedule,
-												LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
+												LabelSelector:     labelSelector,
 											},
 										))
 									})
@@ -604,19 +613,19 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 													TopologyKey:       "some-key",
 													MaxSkew:           12,
 													WhenUnsatisfiable: corev1.DoNotSchedule,
-													LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
+													LabelSelector:     labelSelector,
 												},
 												{
 													TopologyKey:       corev1.LabelHostname,
 													MaxSkew:           34,
 													WhenUnsatisfiable: corev1.DoNotSchedule,
-													LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
+													LabelSelector:     labelSelector,
 												},
 												{
 													TopologyKey:       corev1.LabelTopologyZone,
 													MaxSkew:           56,
 													WhenUnsatisfiable: corev1.ScheduleAnyway,
-													LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
+													LabelSelector:     labelSelector,
 												},
 											}
 										})
@@ -628,20 +637,20 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 												TopologyKey:       "some-key",
 												MaxSkew:           12,
 												WhenUnsatisfiable: corev1.DoNotSchedule,
-												LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
+												LabelSelector:     labelSelector,
 											},
 											corev1.TopologySpreadConstraint{
 												TopologyKey:       corev1.LabelHostname,
 												MaxSkew:           1,
 												WhenUnsatisfiable: corev1.ScheduleAnyway,
-												LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
+												LabelSelector:     labelSelector,
 											},
 											corev1.TopologySpreadConstraint{
 												TopologyKey:       corev1.LabelTopologyZone,
 												MaxSkew:           1,
 												MinDomains:        ptr.To[int32](2),
 												WhenUnsatisfiable: corev1.DoNotSchedule,
-												LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
+												LabelSelector:     labelSelector,
 											},
 										))
 									})
@@ -661,7 +670,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 										MinDomains:        ptr.To[int32](2),
 										MaxSkew:           1,
 										WhenUnsatisfiable: corev1.DoNotSchedule,
-										LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
+										LabelSelector:     labelSelector,
 									}))
 								})
 							})
@@ -678,7 +687,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 											MinDomains:        ptr.To[int32](2),
 											MaxSkew:           1,
 											WhenUnsatisfiable: corev1.DoNotSchedule,
-											LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
+											LabelSelector:     labelSelector,
 										},
 									))
 								})
@@ -710,14 +719,14 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 											TopologyKey:       corev1.LabelHostname,
 											MaxSkew:           1,
 											WhenUnsatisfiable: corev1.ScheduleAnyway,
-											LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
+											LabelSelector:     labelSelector,
 										},
 										corev1.TopologySpreadConstraint{
 											TopologyKey:       corev1.LabelTopologyZone,
 											MaxSkew:           1,
 											MinDomains:        minDomains,
 											WhenUnsatisfiable: corev1.DoNotSchedule,
-											LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
+											LabelSelector:     labelSelector,
 										},
 									))
 								})
