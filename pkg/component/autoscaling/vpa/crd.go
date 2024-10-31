@@ -8,12 +8,13 @@ import (
 	"context"
 	_ "embed"
 
+	"golang.org/x/exp/maps"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/component/crddeployer"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
@@ -40,18 +41,24 @@ func init() {
 }
 
 type vpaCRD struct {
+	component.DeployWaiter
 	client   client.Client
 	applier  kubernetes.Applier
 	registry *managedresources.Registry
 }
 
 // NewCRD can be used to deploy the CRD definitions for the Kubernetes Vertical Pod Autoscaler.
-func NewCRD(client client.Client, applier kubernetes.Applier, registry *managedresources.Registry) component.DeployWaiter {
-	return &vpaCRD{
-		client:   client,
-		applier:  applier,
-		registry: registry,
+func NewCRD(client client.Client, applier kubernetes.Applier, registry *managedresources.Registry) (component.DeployWaiter, error) {
+	crdDeployer, err := kubernetesutils.NewCRDDeployer(client, applier, maps.Values(crdResources))
+	if err != nil {
+		return nil, err
 	}
+	return &vpaCRD{
+		DeployWaiter: crdDeployer,
+		client:       client,
+		applier:      applier,
+		registry:     registry,
+	}, err
 }
 
 // Deploy creates and updates the CRD definitions for the Kubernetes Vertical Pod Autoscaler.
@@ -81,15 +88,5 @@ func (v *vpaCRD) Destroy(ctx context.Context) error {
 		}
 	}
 
-	return nil
-}
-
-// Wait signals whether a CRD is ready or needs more time to be deployed.
-func (v *vpaCRD) Wait(ctx context.Context) error {
-	return kubernetesutils.WaitUntilCRDManifestsReady(ctx, v.client, resourceNames)
-}
-
-// WaitCleanup for destruction to finish and component to be fully removed. crdDeployer does not need to wait for cleanup.
-func (v *vpaCRD) WaitCleanup(_ context.Context) error {
 	return nil
 }

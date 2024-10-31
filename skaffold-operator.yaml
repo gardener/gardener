@@ -93,6 +93,7 @@ build:
             - pkg/component/certmanagement/assets/crd-cert.gardener.cloud_certificaterevocations.yaml
             - pkg/component/certmanagement/assets/crd-cert.gardener.cloud_certificates.yaml
             - pkg/component/certmanagement/assets/crd-cert.gardener.cloud_issuers.yaml
+            - pkg/component/crddeployer
             - pkg/component/etcd/etcd
             - pkg/component/etcd/etcd/constants
             - pkg/component/etcd/etcd/crds/templates/crd-druid.gardener.cloud_etcdcopybackupstasks.yaml
@@ -1060,6 +1061,7 @@ build:
             - pkg/client/kubernetes
             - pkg/client/kubernetes/cache
             - pkg/component
+            - pkg/component/crddeployer
             - pkg/component/extensions/operatingsystemconfig/nodeinit
             - pkg/component/extensions/operatingsystemconfig/nodeinit/templates/scripts/init.tpl.sh
             - pkg/component/extensions/operatingsystemconfig/original/components

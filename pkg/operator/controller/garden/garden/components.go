@@ -161,8 +161,14 @@ func (r *Reconciler) instantiateComponents(
 	}
 
 	// crds
-	c.etcdCRD = etcd.NewCRD(r.RuntimeClientSet.Client(), applier)
-	c.vpaCRD = vpa.NewCRD(r.RuntimeClientSet.Client(), applier, nil)
+	c.etcdCRD, err = etcd.NewCRD(r.RuntimeClientSet.Client(), applier)
+	if err != nil {
+		return
+	}
+	c.vpaCRD, err = vpa.NewCRD(r.RuntimeClientSet.Client(), applier, nil)
+	if err != nil {
+		return
+	}
 	c.hvpaCRD, err = hvpa.NewCRD(r.RuntimeClientSet.Client(), applier)
 	if err != nil {
 		return
@@ -183,7 +189,10 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.extensionCRD = extensioncrds.NewCRD(r.RuntimeClientSet.Client(), applier, true, false)
+	c.extensionCRD, err = extensioncrds.NewCRD(r.RuntimeClientSet.Client(), applier, true, false)
+	if err != nil {
+		return
+	}
 
 	// garden system components
 	c.gardenerResourceManager, err = r.newGardenerResourceManager(garden, secretsManager)

@@ -39,13 +39,15 @@ var _ = Describe("CRD", func() {
 		var c client.Client
 
 		BeforeEach(func() {
+			var err error
 			c = fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 
 			mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{apiextensionsv1.SchemeGroupVersion})
 			mapper.Add(apiextensionsv1.SchemeGroupVersion.WithKind("CustomResourceDefinition"), meta.RESTScopeRoot)
 			applier := kubernetes.NewApplier(c, mapper)
 
-			crdDeployer = NewCRD(c, applier, nil)
+			crdDeployer, err = NewCRD(c, applier, nil)
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		DescribeTable("CRD is deployed",
@@ -74,9 +76,12 @@ var _ = Describe("CRD", func() {
 		var registry *managedresources.Registry
 
 		BeforeEach(func() {
+			var err error
 			registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
-			crdDeployer = NewCRD(nil, nil, registry)
+			crdDeployer, err = NewCRD(nil, nil, registry)
+			Expect(err).NotTo(HaveOccurred())
+
 		})
 
 		It("should ensure CRDs are included", func() {

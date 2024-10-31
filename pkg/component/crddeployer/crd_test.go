@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package kubernetes_test
+package crddeployer_test
 
 import (
 	"context"
@@ -20,7 +20,8 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	. "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/component"
+	. "github.com/gardener/gardener/pkg/component/crddeployer"
 	"github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -50,7 +51,7 @@ var _ = Describe("CRD", func() {
 		validManifest   string
 		invalidManifest string
 
-		crdDeployer *CRDDeployer
+		crdDeployer component.DeployWaiter
 	)
 
 	BeforeEach(func() {
@@ -75,13 +76,10 @@ metadata:
 		It("should deploy a CRD", func() {
 			actualCRD := &apiextensionsv1.CustomResourceDefinition{}
 
-			err := crdDeployer.Deploy(ctx)
-			Expect(err).ToNot(HaveOccurred())
+			Expect(crdDeployer.Deploy(ctx)).To(Succeed())
 
-			err = testClient.Get(ctx, client.ObjectKey{Name: readyCRD.Name}, actualCRD)
-			Expect(err).ToNot(HaveOccurred())
+			Expect(testClient.Get(ctx, client.ObjectKey{Name: readyCRD.Name}, actualCRD)).To(Succeed())
 			Expect(actualCRD.Name).To(Equal(readyCRD.Name))
-
 		})
 	})
 
@@ -89,42 +87,11 @@ metadata:
 		It("should destroy a CRD", func() {
 			actualCRD := &apiextensionsv1.CustomResourceDefinition{}
 
-			err := testClient.Create(ctx, readyCRD)
-			Expect(err).ToNot(HaveOccurred())
+			Expect(testClient.Create(ctx, readyCRD)).To(Succeed())
 
-			err = crdDeployer.Destroy(ctx)
-			Expect(err).ToNot(HaveOccurred())
+			Expect(crdDeployer.Destroy(ctx)).To(Succeed())
 
 			Expect(testClient.Get(ctx, client.ObjectKey{Name: readyCRD.Name}, actualCRD)).To(matchers.BeNotFoundError())
-
-		})
-	})
-
-	Describe("#WaitCleanup", func() {
-		It("should return because the CRD is gone", func() {
-			testClient := fakeclient.NewClientBuilder().
-				WithScheme(apiextensionsscheme.Scheme).
-				WithObjects(readyCRD).
-				Build()
-
-			err := testClient.Delete(ctx, readyCRD)
-			Expect(err).ToNot(HaveOccurred())
-
-			err = crdDeployer.WaitCleanup(ctx)
-			Expect(err).ToNot(HaveOccurred())
-		})
-
-		It("should time out because CRD is not ready", func() {
-			// lower waiting timeout so that the unit test itself does not time out
-			CRDWaitTimeout = 10 * time.Millisecond
-
-			err := testClient.Create(ctx, unreadyCRD)
-			Expect(err).NotTo(HaveOccurred())
-
-			err = crdDeployer.WaitCleanup(ctx)
-
-			Expect(err).To(HaveOccurred())
-			Expect(err).To(MatchError(ContainSubstring("context deadline exceeded")))
 		})
 	})
 
@@ -149,9 +116,8 @@ metadata:
 				WithObjects(readyCRD).
 				Build()
 
-			err := WaitUntilCRDManifestsReady(ctx, testClient, []string{"myresources.mygroup.example.com"})
-
-			Expect(err).ToNot(HaveOccurred())
+			Expect(WaitUntilCRDManifestsReady(ctx, testClient, []string{"myresources.mygroup.example.com"})).
+				To(Succeed())
 		})
 
 		It("should time out because CRD is not ready", func() {
@@ -162,10 +128,32 @@ metadata:
 				WithObjects(unreadyCRD).
 				Build()
 
-			err := WaitUntilCRDManifestsReady(ctx, testClient, []string{"myresources.mygroup.example.com"})
+			Expect(WaitUntilCRDManifestsReady(ctx, testClient, []string{"myresources.mygroup.example.com"})).
+				To(MatchError(ContainSubstring("retry failed with context deadline exceeded, last error: condition \"NamesAccepted\" is missing")))
 
-			Expect(err).To(HaveOccurred())
-			Expect(err).To(MatchError(ContainSubstring("context deadline exceeded")))
+		})
+	})
+
+	Describe("#WaitUntilManifestsDestroyed", func() {
+		It("should return because the CRD is gone", func() {
+			testClient := fakeclient.NewClientBuilder().
+				WithScheme(apiextensionsscheme.Scheme).
+				WithObjects(readyCRD).
+				Build()
+
+			Expect(testClient.Delete(ctx, readyCRD)).To(Succeed())
+
+			Expect(WaitUntilCRDManifestsDestroyed(ctx, testClient, []string{readyCRD.Name})).To(Succeed())
+		})
+
+		It("should time out because CRD is not ready", func() {
+			// lower waiting timeout so that the unit test itself does not time out
+			CRDWaitTimeout = 10 * time.Millisecond
+
+			Expect(testClient.Create(ctx, unreadyCRD)).To(Succeed())
+
+			Expect(WaitUntilCRDManifestsDestroyed(ctx, testClient, []string{readyCRD.Name})).
+				To(MatchError(ContainSubstring("context deadline exceeded")))
 		})
 	})
 

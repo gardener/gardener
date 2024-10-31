@@ -14,7 +14,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/component/crddeployer"
 )
 
 var (
@@ -51,18 +51,22 @@ func NewCRD(
 	return deployWaiter
 }
 
+// Deploy deploys the CRDs.
 func (c *crds) Deploy(ctx context.Context) error {
 	return c.ApplyFromEmbeddedFS(ctx, chartCRDs, chartPathCRDs, "", "istio")
 }
 
+// Destroy destroys the CRDs.
 func (c *crds) Destroy(ctx context.Context) error {
 	return c.DeleteFromEmbeddedFS(ctx, chartCRDs, chartPathCRDs, "", "istio")
 }
 
+// Wait waits until the CRDs are ready or times out.
 func (c *crds) Wait(ctx context.Context) error {
-	return kubernetesutils.WaitUntilCRDManifestsReady(ctx, c.client, c.crdNames)
+	return crddeployer.WaitUntilCRDManifestsReady(ctx, c.client, c.crdNames)
 }
 
-func (c *crds) WaitCleanup(_ context.Context) error {
-	return nil
+// WaitCleanup waits until the CRDs are gone or times out.
+func (c *crds) WaitCleanup(ctx context.Context) error {
+	return crddeployer.WaitUntilCRDManifestsDestroyed(ctx, c.client, c.crdNames)
 }

@@ -20,9 +20,9 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	kubernetesutils "github.com/gardener/gardener/pkg/component/crddeployer"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var (
@@ -39,6 +39,7 @@ var (
 )
 
 type crd struct {
+	component.DeployWaiter
 	client  client.Client
 	applier kubernetes.Applier
 }
@@ -50,25 +51,16 @@ func init() {
 }
 
 // NewCRD can be used to deploy the CRD definitions for Etcd and EtcdCopyBackupsTask.
-func NewCRD(c client.Client, applier kubernetes.Applier) component.DeployWaiter {
+func NewCRD(c client.Client, applier kubernetes.Applier) (component.DeployWaiter, error) {
+	crdDeployer, err := kubernetesutils.NewCRDDeployer(c, applier, maps.Values(crdNameToManifest))
+	if err != nil {
+		return nil, err
+	}
 	return &crd{
-		client:  c,
-		applier: applier,
-	}
-}
-
-// Deploy creates and updates the CRD definitions for Etcd and EtcdCopyBackupsTask.
-func (c *crd) Deploy(ctx context.Context) error {
-	var fns []flow.TaskFn
-
-	for _, resource := range crdNameToManifest {
-		r := resource
-		fns = append(fns, func(ctx context.Context) error {
-			return c.applier.ApplyManifest(ctx, kubernetes.NewManifestReader([]byte(r)), kubernetes.DefaultMergeFuncs)
-		})
-	}
-
-	return flow.Parallel(fns...)(ctx)
+		DeployWaiter: crdDeployer,
+		client:       c,
+		applier:      applier,
+	}, nil
 }
 
 func (c *crd) Destroy(ctx context.Context) error {
@@ -109,14 +101,4 @@ func (c *crd) Destroy(ctx context.Context) error {
 	}
 
 	return flow.Parallel(fns...)(ctx)
-}
-
-// Wait signals whether a CRD is ready or needs more time to be deployed.
-func (c *crd) Wait(ctx context.Context) error {
-	return kubernetesutils.WaitUntilCRDManifestsReady(ctx, c.client, maps.Keys(crdNameToManifest))
-}
-
-// WaitCleanup for destruction to finish and component to be fully removed. crdDeployer does not need to wait for cleanup.
-func (c *crd) WaitCleanup(_ context.Context) error {
-	return nil
 }

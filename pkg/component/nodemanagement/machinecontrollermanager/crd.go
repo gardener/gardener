@@ -15,8 +15,8 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	kubernetesutils "github.com/gardener/gardener/pkg/component/crddeployer"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var (
@@ -45,27 +45,22 @@ func init() {
 }
 
 type crd struct {
+	component.DeployWaiter
 	client  client.Client
 	applier kubernetes.Applier
 }
 
 // NewCRD can be used to deploy the CRD definitions for the machine-controller-manager.
-func NewCRD(client client.Client, applier kubernetes.Applier) component.DeployWaiter {
+func NewCRD(client client.Client, applier kubernetes.Applier) (component.DeployWaiter, error) {
+	crdDeployer, err := kubernetesutils.NewCRDDeployer(client, applier, maps.Values(crdNameToManifest))
+	if err != nil {
+		return nil, err
+	}
 	return &crd{
-		client:  client,
-		applier: applier,
-	}
-}
-
-// Deploy creates and updates the CRD definitions for the machine-controller-manager.
-func (c *crd) Deploy(ctx context.Context) error {
-	for _, resource := range crdNameToManifest {
-		if err := c.applier.ApplyManifest(ctx, kubernetes.NewManifestReader([]byte(resource)), kubernetes.DefaultMergeFuncs); err != nil {
-			return err
-		}
-	}
-
-	return nil
+		DeployWaiter: crdDeployer,
+		client:       client,
+		applier:      applier,
+	}, nil
 }
 
 func (c *crd) Destroy(ctx context.Context) error {
@@ -81,20 +76,10 @@ func (c *crd) Destroy(ctx context.Context) error {
 			return err
 		}
 
-		if err := c.applier.DeleteManifest(ctx, reader); client.IgnoreNotFound(err) != nil {
+		if err := c.client.Delete(ctx, obj); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
 
-	return nil
-}
-
-// Wait signals whether a CRD is ready or needs more time to be deployed.
-func (c *crd) Wait(ctx context.Context) error {
-	return kubernetesutils.WaitUntilCRDManifestsReady(ctx, c.client, maps.Keys(crdNameToManifest))
-}
-
-// WaitCleanup for destruction to finish and component to be fully removed. crdDeployer does not need to wait for cleanup.
-func (c *crd) WaitCleanup(_ context.Context) error {
 	return nil
 }

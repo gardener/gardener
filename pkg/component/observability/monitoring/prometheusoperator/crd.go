@@ -11,7 +11,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/component/crddeployer"
 )
 
 var (
@@ -51,5 +51,5 @@ func NewCRDs(client client.Client, applier kubernetes.Applier) (component.Deploy
 		crdServiceMonitors,
 		crdThanosRulers,
 	}
-	return kubernetesutils.NewCRDDeployer(client, applier, resources)
+	return crddeployer.NewCRDDeployer(client, applier, resources)
 }

@@ -29,13 +29,15 @@ var _ = Describe("CRD", func() {
 	)
 
 	BeforeEach(func() {
+		var err error
 		fakeClient = fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 
 		mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{apiextensionsv1.SchemeGroupVersion})
 		mapper.Add(apiextensionsv1.SchemeGroupVersion.WithKind("CustomResourceDefinition"), meta.RESTScopeRoot)
 		applier := kubernetes.NewApplier(fakeClient, mapper)
 
-		crdDeployer = NewCRD(fakeClient, applier)
+		crdDeployer, err = NewCRD(fakeClient, applier)
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	Describe("#Deploy", func() {

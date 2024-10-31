@@ -77,7 +77,10 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 		testClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(crds.NewCRD(testClient, applier, true, true).Deploy(ctx)).To(Succeed())
+
+		crdDeployer, err := crds.NewCRD(testClient, applier, true, true)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(crdDeployer.Deploy(ctx)).To(Succeed())
 
 		manifestReader := kubernetes.NewManifestReader([]byte(strings.Join([]string{
 			etcd.CRD,

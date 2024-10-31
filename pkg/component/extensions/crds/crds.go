@@ -14,8 +14,8 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	crddeployer "github.com/gardener/gardener/pkg/component/crddeployer"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var (
@@ -55,7 +55,7 @@ func init() {
 		dnsRecordCRD,
 		extensionCRD,
 	}
-	generalCRDNamesToManifest, err = kubernetesutils.MakeCRDNameMap(generalCRDs)
+	generalCRDNamesToManifest, err = crddeployer.MakeCRDNameMap(generalCRDs)
 	utilruntime.Must(err)
 
 	shootCRDs := []string{
@@ -69,11 +69,13 @@ func init() {
 		operatingSystemConfigCRD,
 		workerCRD,
 	}
-	shootCRDNamesToManifest, err = kubernetesutils.MakeCRDNameMap(shootCRDs)
+	shootCRDNamesToManifest, err = crddeployer.MakeCRDNameMap(shootCRDs)
 	utilruntime.Must(err)
 }
 
 type crd struct {
+	generalCRDDeployer component.DeployWaiter
+	shootCRDDeployer   component.DeployWaiter
 	client             client.Client
 	applier            kubernetes.Applier
 	includeGeneralCRDs bool
@@ -81,32 +83,36 @@ type crd struct {
 }
 
 // NewCRD can be used to deploy extensions CRDs.
-func NewCRD(client client.Client, a kubernetes.Applier, includeGeneralCRDs, includeShootCRDs bool) component.DeployWaiter {
+func NewCRD(client client.Client, applier kubernetes.Applier, includeGeneralCRDs, includeShootCRDs bool) (component.DeployWaiter, error) {
+	generalCRDDeployer, err := crddeployer.NewCRDDeployer(client, applier, maps.Values(generalCRDNamesToManifest))
+	if err != nil {
+		return nil, err
+	}
+
+	shootCRDDeployer, err := crddeployer.NewCRDDeployer(client, applier, maps.Values(shootCRDNamesToManifest))
+	if err != nil {
+		return nil, err
+	}
+
 	return &crd{
+		generalCRDDeployer: generalCRDDeployer,
+		shootCRDDeployer:   shootCRDDeployer,
 		client:             client,
-		applier:            a,
+		applier:            applier,
 		includeGeneralCRDs: includeGeneralCRDs,
 		includeShootCRDs:   includeShootCRDs,
-	}
+	}, nil
 }
 
 // Deploy creates and updates the CRD definitions for the gardener extensions.
 func (c *crd) Deploy(ctx context.Context) error {
 	var fns []flow.TaskFn
 
-	var resources []string
 	if c.includeGeneralCRDs {
-		resources = append(resources, maps.Values(generalCRDNamesToManifest)...)
+		fns = append(fns, c.generalCRDDeployer.Deploy)
 	}
 	if c.includeShootCRDs {
-		resources = append(resources, maps.Values(shootCRDNamesToManifest)...)
-	}
-
-	for _, resource := range resources {
-		r := resource
-		fns = append(fns, func(ctx context.Context) error {
-			return c.applier.ApplyManifest(ctx, kubernetes.NewManifestReader([]byte(r)), kubernetes.DefaultMergeFuncs)
-		})
+		fns = append(fns, c.shootCRDDeployer.Deploy)
 	}
 
 	return flow.Parallel(fns...)(ctx)
@@ -116,37 +122,40 @@ func (c *crd) Deploy(ctx context.Context) error {
 func (c *crd) Destroy(ctx context.Context) error {
 	var fns []flow.TaskFn
 
-	var resources []string
 	if c.includeGeneralCRDs {
-		resources = append(resources, maps.Values(generalCRDNamesToManifest)...)
+		fns = append(fns, c.generalCRDDeployer.Destroy)
 	}
 	if c.includeShootCRDs {
-		resources = append(resources, maps.Values(shootCRDNamesToManifest)...)
-	}
-
-	for _, resource := range resources {
-		r := resource
-		fns = append(fns, func(ctx context.Context) error {
-			return client.IgnoreNotFound(c.applier.DeleteManifest(ctx, kubernetes.NewManifestReader([]byte(r))))
-		})
+		fns = append(fns, c.shootCRDDeployer.Destroy)
 	}
 
 	return flow.Parallel(fns...)(ctx)
 }
 
-// Wait waits for the manifests to become ready.
+// Wait waits until the CRDs are ready or times out.
 func (c *crd) Wait(ctx context.Context) error {
-	var names []string
+	var fns []flow.TaskFn
+
 	if c.includeGeneralCRDs {
-		names = append(names, maps.Keys(generalCRDNamesToManifest)...)
+		fns = append(fns, c.generalCRDDeployer.Wait)
 	}
 	if c.includeShootCRDs {
-		names = append(names, maps.Keys(shootCRDNamesToManifest)...)
+		fns = append(fns, c.shootCRDDeployer.Wait)
 	}
-	return kubernetesutils.WaitUntilCRDManifestsReady(ctx, c.client, names)
+
+	return flow.Parallel(fns...)(ctx)
 }
 
-// WaitCleanup does nothing.
-func (c *crd) WaitCleanup(_ context.Context) error {
-	return nil
+// WaitCleanup waits until the CRDs are gone or times out.
+func (c *crd) WaitCleanup(ctx context.Context) error {
+	var fns []flow.TaskFn
+
+	if c.includeGeneralCRDs {
+		fns = append(fns, c.generalCRDDeployer.Wait)
+	}
+	if c.includeShootCRDs {
+		fns = append(fns, c.shootCRDDeployer.Wait)
+	}
+
+	return flow.Parallel(fns...)(ctx)
 }

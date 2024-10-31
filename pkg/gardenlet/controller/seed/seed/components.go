@@ -130,11 +130,23 @@ func (r *Reconciler) instantiateComponents(
 	err error,
 ) {
 	// crds
-	c.machineCRD = machinecontrollermanager.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
-	c.extensionCRD = extensioncrds.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier(), !seedIsGarden, true)
-	c.etcdCRD = etcd.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
+	c.machineCRD, err = machinecontrollermanager.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
+	if err != nil {
+		return
+	}
+	c.extensionCRD, err = extensioncrds.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier(), true, true)
+	if err != nil {
+		return
+	}
+	c.etcdCRD, err = etcd.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
+	if err != nil {
+		return
+	}
 	c.istioCRD = istio.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.ChartApplier())
-	c.vpaCRD = vpa.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier(), nil)
+	c.vpaCRD, err = vpa.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier(), nil)
+	if err != nil {
+		return
+	}
 	c.hvpaCRD, err = hvpa.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
 	if err != nil {
 		return

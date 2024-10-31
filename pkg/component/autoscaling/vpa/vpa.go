@@ -157,7 +157,10 @@ func (v *vpa) Deploy(ctx context.Context) error {
 			}
 		}
 
-		crdDeployer := NewCRD(v.client, nil, registry)
+		crdDeployer, err := NewCRD(v.client, nil, registry)
+		if err != nil {
+			return err
+		}
 		if err := crdDeployer.Deploy(ctx); err != nil {
 			return err
 		}

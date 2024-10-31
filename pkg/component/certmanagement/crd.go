@@ -11,7 +11,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/component/crddeployer"
 )
 
 var (
@@ -25,5 +25,5 @@ var (
 
 // NewCRDs can be used to deploy the CRD definitions for the cert-management.
 func NewCRDs(client client.Client, applier kubernetes.Applier) (component.DeployWaiter, error) {
-	return kubernetesutils.NewCRDDeployer(client, applier, []string{crdRevocations, crdCertificates, crdIssuers})
+	return crddeployer.NewCRDDeployer(client, applier, []string{crdRevocations, crdCertificates, crdIssuers})
 }
