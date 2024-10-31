@@ -239,7 +239,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		})
 		deployPrometheusCRD = g.Add(flow.Task{
 			Name:   "Deploying monitoring-related custom resource definitions",
-			Fn:     c.prometheusCRD.Deploy,
+			Fn:     component.OpWait(c.prometheusCRD).Deploy,
 			SkipIf: seedIsGarden,
 		})
 		syncPointCRDs = flow.NewTaskIDs(

@@ -621,8 +621,10 @@ var _ = Describe("Seed controller tests", func() {
 							istioCRDs                = istio.NewCRD(chartApplier)
 							vpaCRD                   = vpa.NewCRD(applier, nil)
 							fluentCRD                = fluentoperator.NewCRDs(applier)
-							monitoringCRD            = prometheusoperator.NewCRDs(applier)
 						)
+
+						monitoringCRD, err := prometheusoperator.NewCRDs(testClient, applier)
+						Expect(err).NotTo(HaveOccurred())
 
 						Expect(applier.ApplyManifest(ctx, managedResourceCRDReader, kubernetes.DefaultMergeFuncs)).To(Succeed())
 						Expect(testClient.Create(ctx, istioSystemNamespace)).To(Succeed())
