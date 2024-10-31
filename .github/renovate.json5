@@ -66,6 +66,20 @@
   "separateMinorPatch": true,
   "packageRules": [
     {
+      // Run make generate when Go API packages have been changed because CRDs might have changed.
+      "matchDatasources": ["go"],
+      "matchPackagePatterns": [
+        ".+\/api\/.+",
+        ".+\/apis\/.+"
+      ],
+      "postUpgradeTasks": {
+        "commands": [
+          "make generate MODE=sequential"
+        ],
+        "executionMode": "branch"
+      }
+    },
+    {
       // Group golang updates in one PR.
       "groupName": "golang",
       "matchDatasources": ["docker"],
