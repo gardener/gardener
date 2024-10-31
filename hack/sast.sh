@@ -6,7 +6,7 @@
 
 set -e
 
-root_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." &> /dev/null && pwd )"
+report_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." &> /dev/null && pwd )"
 
 gosec_report="false"
 gosec_report_parse_flags=""
@@ -17,6 +17,9 @@ parse_flags() {
     case "$1" in
       --gosec-report)
         shift; gosec_report="$1"
+        ;;
+      --report-dir)
+        shift; report_dir="$1"
         ;;
       --exclude-dirs)
         shift; exclude_dirs="${exclude_dirs},${1}"
@@ -35,7 +38,7 @@ parse_flags "$@"
 echo "> Running gosec"
 gosec --version
 if [[ "$gosec_report" != "false" ]]; then
-  echo "Exporting report to $root_dir/gosec-report.sarif"
+  echo "Exporting report to $report_dir/gosec-report.sarif"
   gosec_report_parse_flags="-track-suppressions -fmt=sarif -out=gosec-report.sarif -stdout"
 fi
 
