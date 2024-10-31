@@ -5163,6 +5163,7 @@ var _ = Describe("validator", func() {
 				Entry("should allow empty networking status", &core.NetworkingStatus{}, Not(HaveOccurred())),
 				Entry("should allow correct networking status", &core.NetworkingStatus{Nodes: []string{nodesCIDR}, Pods: []string{podsCIDR}, Services: []string{servicesCIDR}}, Not(HaveOccurred())),
 				Entry("should reject networking status if it is not disjoint with seed network", &core.NetworkingStatus{Nodes: []string{seedNodesCIDR}, Pods: []string{seedPodsCIDR}, Services: []string{seedServicesCIDR}}, BeForbiddenError()),
+				Entry("should allow networking status with only egressCIDRs filled", &core.NetworkingStatus{EgressCIDRs: []string{"1.2.3.4/5"}}, Not(HaveOccurred())),
 			)
 		})
 
