@@ -394,6 +394,9 @@ func syncLegacyAccessRestrictionLabelWithNewFieldOnUpdate(shoot, oldShoot *core.
 
 	updateOptionInAccessRestrictions := func(accessRestrictions []core.AccessRestrictionWithOptions, key, value string) {
 		i := slices.IndexFunc(accessRestrictions, filterEUAccessOnlyRestriction)
+		if i == -1 {
+			return
+		}
 		if accessRestrictions[i].Options == nil {
 			accessRestrictions[i].Options = make(map[string]string)
 		}
@@ -401,7 +404,11 @@ func syncLegacyAccessRestrictionLabelWithNewFieldOnUpdate(shoot, oldShoot *core.
 	}
 
 	removeOptionFromAccessRestrictions := func(accessRestrictions []core.AccessRestrictionWithOptions, key string) {
-		delete(accessRestrictions[slices.IndexFunc(accessRestrictions, filterEUAccessOnlyRestriction)].Options, key)
+		i := slices.IndexFunc(accessRestrictions, filterEUAccessOnlyRestriction)
+		if i == -1 {
+			return
+		}
+		delete(accessRestrictions[i].Options, key)
 	}
 
 	hasOptionInAccessRestrictions := func(accessRestrictions []core.AccessRestrictionWithOptions, option string) bool {
