@@ -24,7 +24,7 @@ See [Contract Specification](#contract-specification) for more details on the co
 You can install 3 different kinds of controlplane webhooks:
 
 * `Shoot`, or `controlplane` webhooks apply changes needed by the Shoot cloud provider, for example the `--cloud-provider` command line flag of `kube-apiserver` and `kube-controller-manager`. Such webhooks should only operate on Shoot namespaces labeled with `shoot.gardener.cloud/provider=<provider>`.
-* `Seed`, or `controlplaneexposure` webhooks apply changes needed by the Seed cloud provider, for example annotations on the `kube-apiserver` service to ensure cloud-specific load balancers are correctly provisioned for a service of type `LoadBalancer`. Such webhooks should only operate on Shoot namespaces labeled with `seed.gardener.cloud/provider=<provider>`.
+* `Seed`, or `seedprovider` webhooks apply changes needed by the Seed cloud provider, for example adapting the storage class and capacity on `Etcd` objects. Such webhooks should only operate on Shoot namespaces labeled with `seed.gardener.cloud/provider=<provider>`.
 
 The labels `shoot.gardener.cloud/provider` and `seed.gardener.cloud/provider` are added by Gardener when it creates the Shoot namespace.
 
@@ -70,7 +70,7 @@ The `env` field of the `kube-apiserver` container **shall not** contain any prov
 
 The `volumes` field of the pod template of the `kube-apiserver` deployment, and respectively the `volumeMounts` field of the `kube-apiserver` container **shall not** contain any provider-specific `Secret` or `ConfigMap` resources. If such resources should be mounted as volumes, this should be done by webhooks.
 
-The `kube-apiserver` `Service` **may** be of type `LoadBalancer`, but **shall not** contain any provider-specific annotations that may be needed to actually provision a load balancer resource in the Seed provider's cloud. If any such annotations are needed, they should be added by webhooks (typically `controlplaneexposure` webhooks).
+The `kube-apiserver` `Service` **may** be of type `LoadBalancer`, but **shall not** contain any provider-specific annotations that may be needed to actually provision a load balancer resource in the Seed provider's cloud. If any such annotations are needed, they should be added by webhooks (typically `seedprovider` webhooks).
 
 The `kube-apiserver` `Service` **will** be of type `ClusterIP`. In this case, Gardener **will** label this `Service` with `core.gardener.cloud/apiserver-exposure: gardener-managed` label (deprecated, the label will no longer be added as of `v1.80`) and expects that no mutations happen.
 
