@@ -787,6 +787,18 @@ var _ = Describe("Strategy", func() {
 					"support.gardener.cloud/eu-access-for-cluster-nodes":  "false",
 				}))
 			})
+
+			It("should gracefully handle a missing access restriction when attempting to remove an option from the annotations", func() {
+				oldShoot.Annotations = map[string]string{
+					"support.gardener.cloud/eu-access-for-cluster-addons": "true",
+				}
+				newShoot.Annotations = map[string]string{}
+
+				strategy.PrepareForUpdate(context.Background(), newShoot, oldShoot)
+
+				Expect(newShoot.Spec.AccessRestrictions).To(BeEmpty())
+				Expect(newShoot.Annotations).NotTo(HaveKey("support.gardener.cloud/eu-access-for-cluster-addons"))
+			})
 		})
 	})
 
