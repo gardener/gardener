@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/api/indexer"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/backupentry"
@@ -204,6 +205,44 @@ var _ = Describe("Add", func() {
 				reconcile.Request{NamespacedName: types.NamespacedName{Name: backupEntry1.Name, Namespace: backupEntry1.Namespace}},
 				reconcile.Request{NamespacedName: types.NamespacedName{Name: backupEntry3.Name, Namespace: backupEntry3.Namespace}},
 			))
+		})
+
+		Context("when backupentry is being migrated to a different seed", func() {
+			It("should return requests only with the name and namespace of backupentries that were migrated successfully and annotated with `restore`", func() {
+				backupEntry1.Annotations = map[string]string{
+					v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationRestore,
+				}
+				backupEntry1.Status.LastOperation = &gardencorev1beta1.LastOperation{
+					State: gardencorev1beta1.LastOperationStateSucceeded,
+					Type:  gardencorev1beta1.LastOperationTypeMigrate,
+				}
+
+				backupEntry3.Status.LastOperation = &gardencorev1beta1.LastOperation{
+					State: gardencorev1beta1.LastOperationStateSucceeded,
+					Type:  gardencorev1beta1.LastOperationTypeMigrate,
+				}
+
+				Expect(fakeClient.Create(ctx, backupEntry1)).To(Succeed())
+				Expect(fakeClient.Create(ctx, backupEntry2)).To(Succeed())
+				Expect(fakeClient.Create(ctx, backupEntry3)).To(Succeed())
+
+				Expect(reconciler.MapBackupBucketToBackupEntry(ctx, log, nil, backupBucket)).To(ConsistOf(
+					reconcile.Request{NamespacedName: types.NamespacedName{Name: backupEntry1.Name, Namespace: backupEntry1.Namespace}},
+				))
+			})
+
+			It("should return requests with the name and namespace of backupentry which was not successfully migrated", func() {
+				backupEntry1.Status.LastOperation = &gardencorev1beta1.LastOperation{
+					State: gardencorev1beta1.LastOperationStateError,
+					Type:  gardencorev1beta1.LastOperationTypeMigrate,
+				}
+
+				Expect(fakeClient.Create(ctx, backupEntry1)).To(Succeed())
+
+				Expect(reconciler.MapBackupBucketToBackupEntry(ctx, log, nil, backupBucket)).To(ConsistOf(
+					reconcile.Request{NamespacedName: types.NamespacedName{Name: backupEntry1.Name, Namespace: backupEntry1.Namespace}},
+				))
+			})
 		})
 	})
 })
