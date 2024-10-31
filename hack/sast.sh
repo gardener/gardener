@@ -10,12 +10,16 @@ root_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." &> /dev/null && pwd )"
 
 gosec_report="false"
 gosec_report_parse_flags=""
+exclude_dirs="hack"
 
 parse_flags() {
   while test $# -gt 1; do
     case "$1" in
       --gosec-report)
         shift; gosec_report="$1"
+        ;;
+      --exclude-dirs)
+        shift; exclude_dirs="${exclude_dirs},${1}"
         ;;
       *)
         echo "Unknown argument: $1"
@@ -41,4 +45,4 @@ fi
 # Thus, generated code is excluded from gosec scan.
 # Nested go modules are not supported by gosec (see https://github.com/securego/gosec/issues/501), so the ./hack folder
 # is excluded too. It does not contain productive code anyway.
-gosec -exclude-generated -exclude-dir=hack $gosec_report_parse_flags ./...
+gosec -exclude-generated $(echo "$exclude_dirs" | awk -v RS=',' '{printf "-exclude-dir %s ", $1}') $gosec_report_parse_flags ./...
