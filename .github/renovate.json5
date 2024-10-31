@@ -66,6 +66,20 @@
   "separateMinorPatch": true,
   "packageRules": [
     {
+      // Run make generate when Go API packages have been changed because CRDs might have changed.
+      "matchDatasources": ["go"],
+      "matchPackagePatterns": [
+        ".+\/api\/.+",
+        ".+\/apis\/.+"
+      ],
+      "postUpgradeTasks": {
+        "commands": [
+          "make generate MODE=sequential"
+        ],
+        "executionMode": "branch"
+      }
+    },
+    {
       // Group golang updates in one PR.
       "groupName": "golang",
       "matchDatasources": ["docker"],
@@ -78,14 +92,6 @@
       "matchPackagePatterns": ["gcr\\.io\/istio-release\/.+"],
     },
     {
-      // Group etcd-druid image updates in one PR.
-      "groupName": "etcd-druid images",
-      "matchPackagePatterns": [
-        "github.com/gardener/etcd-druid",
-        "gardener/etcd-druid"
-      ],
-    },
-    {
       // Group istio module updates in one PR.
       "groupName": "istio modules",
       "matchDatasources": ["go"],
@@ -95,10 +101,21 @@
       ],
     },
     {
+      // Group etcd-druid updates in one PR.
+      "groupName": "etcd-druid",
+      "matchDatasources": ["github-releases", "go"],
+      "matchPackagePatterns": [
+        "github\\.com\/gardener\/etcd-druid",
+        "gardener\/etcd-druid"
+      ],
+    },
+    {
       // Group prometheus-operator image updates in one PR.
       "groupName": "prometheus-operator images",
-      "matchDatasources": ["docker"],
-      "matchPackagePatterns": ["quay\\.io\/prometheus-operator\/.+"],
+      "matchDatasources": ["docker", "go"],
+      "matchPackagePatterns": [
+        "quay\\.io\/prometheus-operator\/.+",
+        "github\\.com\/prometheus-operator\/prometheus-operator\/pkg\/apis\/.+"]
     },
     {
       // Ask for manual approval to create PRs for minor and major updates of dependencies which most likely
@@ -122,6 +139,8 @@
       "matchPackagePatterns": [
         "fluent\/.+",
         "gcr\\.io\/istio-release\/.+",
+        // valitail updates have a hard dependency on glibc version of the target nodes.
+        "europe-docker\\.pkg\\.dev\/gardener-project\/releases\/3rd\/credativ\/valitail",
       ],
       "dependencyDashboardApproval": true
     },
@@ -177,15 +196,6 @@
       "excludePackagePatterns": [
         "europe-docker\\.pkg\\.dev\/gardener-project\/releases\/3rd\/alpine",
         "europe-docker\\.pkg\\.dev\/gardener-project\/releases\/3rd\/kubernetesui\/.+"
-      ],
-      "enabled": false
-    },
-    {
-      // Exclude valitail updates due to hard dependency on glibc version of the target nodes.
-      "matchDatasources": ["docker"],
-      "matchFileNames": ["imagevector/**"],
-      "matchPackagePatterns": [
-        "europe-docker\\.pkg\\.dev\/gardener-project\/releases\/3rd\/credativ\/valitail"
       ],
       "enabled": false
     },
