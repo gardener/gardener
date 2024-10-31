@@ -65,7 +65,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 				&handler.EnqueueRequestForObject{},
 				&predicate.GenerationChangedPredicate{},
 				predicateutils.SeedNamePredicate(r.SeedName, gardenerutils.GetBackupEntrySeedNames),
-				predicate.NewPredicateFuncs(restoreAfterMigratePredicate())),
+				predicate.NewPredicateFuncs(restoreAfterMigratePredicate)),
 		).
 		Build(r)
 	if err != nil {
@@ -103,7 +103,7 @@ func (r *Reconciler) MapBackupBucketToBackupEntry(ctx context.Context, log logr.
 		return nil
 	}
 
-	return mapper.ObjectListToRequests(backupEntryList, restoreAfterMigratePredicate())
+	return mapper.ObjectListToRequests(backupEntryList, restoreAfterMigratePredicate)
 }
 
 // MapExtensionBackupEntryToCoreBackupEntry is a mapper.MapFunc for mapping a extensions.gardener.cloud/v1alpha1.BackupEntry to the owning
@@ -140,23 +140,20 @@ func getBackupBucketLastOperation(obj client.Object) *gardencorev1beta1.LastOper
 	return backupBucket.Status.LastOperation
 }
 
-// restoreAfterMigratePredicate returns a predicate which returns false if the core.gardener.cloud/v1beta1.BackupEntry has been
+// restoreAfterMigratePredicate is a predicate which returns false if the core.gardener.cloud/v1beta1.BackupEntry has been
 // successfully migrated and does not have the `gardener.cloud/operation: restore` annotation.
 // It returns true in all other cases.
-func restoreAfterMigratePredicate() func(obj client.Object) bool {
-	return func(obj client.Object) bool {
-		backupEntry, ok := obj.(*gardencorev1beta1.BackupEntry)
-		if !ok {
-			return false
-		}
-
-		isMigrateSucceeded := backupEntry.Status.LastOperation != nil && backupEntry.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded && backupEntry.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeMigrate
-		hasRestoreAnnotation := backupEntry.GetAnnotations()[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore
-
-		if !isMigrateSucceeded || hasRestoreAnnotation {
-			return true
-		}
-
+func restoreAfterMigratePredicate(obj client.Object) bool {
+	backupEntry, ok := obj.(*gardencorev1beta1.BackupEntry)
+	if !ok {
 		return false
 	}
+
+	isMigrateSucceeded := backupEntry.Status.LastOperation != nil &&
+		backupEntry.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded &&
+		backupEntry.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeMigrate
+
+	hasRestoreAnnotation := backupEntry.GetAnnotations()[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore
+
+	return !isMigrateSucceeded || hasRestoreAnnotation
 }
