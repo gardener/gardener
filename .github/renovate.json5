@@ -78,14 +78,6 @@
       "matchPackagePatterns": ["gcr\\.io\/istio-release\/.+"],
     },
     {
-      // Group etcd-druid image updates in one PR.
-      "groupName": "etcd-druid images",
-      "matchPackagePatterns": [
-        "github.com/gardener/etcd-druid",
-        "gardener/etcd-druid"
-      ],
-    },
-    {
       // Group istio module updates in one PR.
       "groupName": "istio modules",
       "matchDatasources": ["go"],
@@ -95,10 +87,21 @@
       ],
     },
     {
+      // Group etcd-druid updates in one PR.
+      "groupName": "etcd-druid",
+      "matchDatasources": ["github-releases", "go"],
+      "matchPackagePatterns": [
+        "github\\.com\/gardener\/etcd-druid",
+        "gardener\/etcd-druid"
+      ],
+    },
+    {
       // Group prometheus-operator image updates in one PR.
       "groupName": "prometheus-operator images",
-      "matchDatasources": ["docker"],
-      "matchPackagePatterns": ["quay\\.io\/prometheus-operator\/.+"],
+      "matchDatasources": ["docker", "go"],
+      "matchPackagePatterns": [
+        "quay\\.io\/prometheus-operator\/.+",
+        "github\\.com\/prometheus-operator\/prometheus-operator\/pkg\/apis\/.+"]
     },
     {
       // Ask for manual approval to create PRs for minor and major updates of dependencies which most likely
