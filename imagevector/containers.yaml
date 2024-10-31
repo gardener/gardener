@@ -580,7 +580,8 @@ images:
 - name: valitail
   sourceRepository: github.com/credativ/vali
   repository: europe-docker.pkg.dev/gardener-project/releases/3rd/credativ/valitail
-  tag: "v2.2.19"
+  # Do not update valitail version due to hard dependency on glibc version of the target nodes.
+  tag: "v2.2.15"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
