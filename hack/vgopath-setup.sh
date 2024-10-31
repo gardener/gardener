@@ -8,8 +8,8 @@ SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 # Ensure that the GOPATH/{bin,pkg} directory exists. This seems to be not always
 # the case in certain environments like Prow. As we will create a symlink against the bin folder we
 # need to make sure that the bin directory is present in the GOPATH.
-if [ -n "$(go env GOPATH)" ] && [ ! -d "$(go env GOPATH)/bin" ]; then mkdir -p "$(go env GOPATH)/bin"; fi
-if [ -n "$(go env GOPATH)" ] && [ ! -d "$(go env GOPATH)/pkg" ]; then mkdir -p "$(go env GOPATH)/pkg"; fi
+if [ ! -d "$(go env GOPATH)/bin" ]; then mkdir -p "$(go env GOPATH)/bin"; fi
+if [ ! -d "$(go env GOPATH)/pkg" ]; then mkdir -p "$(go env GOPATH)/pkg"; fi
 
 VIRTUAL_GOPATH="$(mktemp -d)"
 trap 'rm -rf "$VIRTUAL_GOPATH"' EXIT
@@ -22,4 +22,4 @@ TARGET_DIR="${REPO_ROOT:-$SCRIPT_DIR/..}"
 
 export GOROOT="${GOROOT:-"$(go env GOROOT)"}"
 export GOPATH="$VIRTUAL_GOPATH"
-export PATH="$PATH:$GOROOT/bin:$GOPATH/bin"
+export PATH="$GOROOT/bin:$GOPATH/bin:$PATH"
