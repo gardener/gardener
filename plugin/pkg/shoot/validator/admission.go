@@ -952,17 +952,21 @@ func (c *validationContext) validateShootNetworks(a admission.Attributes, worker
 				)...)
 
 				// validate network disjointedness with seed networks if networking status is non-empty
-				if c.shoot.Status.Networking != nil && !apiequality.Semantic.DeepEqual(c.shoot.Status.Networking, &core.NetworkingStatus{}) {
-					allErrs = append(allErrs, cidrvalidation.ValidateMultiNetworkDisjointedness(
-						field.NewPath("status", "networking"),
-						c.shoot.Status.Networking.Nodes,
-						c.shoot.Status.Networking.Pods,
-						c.shoot.Status.Networking.Services,
-						c.seed.Spec.Networks.Nodes,
-						c.seed.Spec.Networks.Pods,
-						c.seed.Spec.Networks.Services,
-						workerless,
-					)...)
+				if c.shoot.Status.Networking != nil {
+					networkingStatus := c.shoot.Status.Networking.DeepCopy()
+					networkingStatus.EgressCIDRs = nil
+					if !apiequality.Semantic.DeepEqual(networkingStatus, &core.NetworkingStatus{}) {
+						allErrs = append(allErrs, cidrvalidation.ValidateMultiNetworkDisjointedness(
+							field.NewPath("status", "networking"),
+							c.shoot.Status.Networking.Nodes,
+							c.shoot.Status.Networking.Pods,
+							c.shoot.Status.Networking.Services,
+							c.seed.Spec.Networks.Nodes,
+							c.seed.Spec.Networks.Pods,
+							c.seed.Spec.Networks.Services,
+							workerless,
+						)...)
+					}
 				}
 			}
 		}
