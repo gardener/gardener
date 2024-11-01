@@ -7,6 +7,8 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+
+	gardensecurity "github.com/gardener/gardener/pkg/apis/security"
 )
 
 // +genclient
@@ -27,6 +29,13 @@ type WorkloadIdentity struct {
 	Spec WorkloadIdentitySpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
 	// Status contain the latest observed status of the WorkloadIdentity.
 	Status WorkloadIdentityStatus `json:"status" protobuf:"bytes,3,opt,name=status"`
+}
+
+var _ gardensecurity.Object = (*WorkloadIdentity)(nil)
+
+// GetProviderType gets the type of the target system.
+func (wi *WorkloadIdentity) GetProviderType() string {
+	return wi.Spec.TargetSystem.Type
 }
 
 // WorkloadIdentitySpec configures the JSON Web Token issued by the Gardener API server.

@@ -27,6 +27,13 @@ type WorkloadIdentity struct {
 	Status WorkloadIdentityStatus
 }
 
+var _ Object = (*WorkloadIdentity)(nil)
+
+// GetProviderType gets the type of the target system.
+func (wi *WorkloadIdentity) GetProviderType() string {
+	return wi.Spec.TargetSystem.Type
+}
+
 // WorkloadIdentitySpec configures the JSON Web Token issued by the Gardener API server.
 type WorkloadIdentitySpec struct {
 	// Audiences specify the list of recipients that the JWT is intended for.
