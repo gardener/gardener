@@ -179,6 +179,8 @@ var _ = Describe("Gardenlet controller test", func() {
 
 	When("Seed object gets created", func() {
 		It("should deploy gardenlet and no longer touch it when Seed object got created", func() {
+			verifyGardenletDeployment(false)
+
 			By("Create Seed") // gardenlet would do this typically, but it doesn't run in this setup
 			seed.Name = gardenlet.Name
 			Expect(testClient.Create(ctx, seed)).To(Succeed())
