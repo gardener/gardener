@@ -80,7 +80,7 @@ type components struct {
 	vpaCRD        component.Deployer
 	hvpaCRD       component.Deployer
 	fluentCRD     component.Deployer
-	prometheusCRD component.Deployer
+	prometheusCRD component.DeployWaiter
 
 	clusterIdentity          component.DeployWaiter
 	gardenerResourceManager  component.DeployWaiter
@@ -140,7 +140,10 @@ func (r *Reconciler) instantiateComponents(
 		c.hvpaCRD = component.OpDestroy(c.hvpaCRD)
 	}
 	c.fluentCRD = fluentoperator.NewCRDs(r.SeedClientSet.Applier())
-	c.prometheusCRD = prometheusoperator.NewCRDs(r.SeedClientSet.Applier())
+	c.prometheusCRD, err = prometheusoperator.NewCRDs(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
+	if err != nil {
+		return
+	}
 
 	// seed system components
 	c.clusterIdentity = r.newClusterIdentity(seed.GetInfo())

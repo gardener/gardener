@@ -1012,6 +1012,7 @@ build:
             - pkg/component/autoscaling/vpa/templates/crd-autoscaling.k8s.io_verticalpodautoscalercheckpoints.yaml
             - pkg/component/autoscaling/vpa/templates/crd-autoscaling.k8s.io_verticalpodautoscalers.yaml
             - pkg/component/clusteridentity
+            - pkg/component/crddeployer
             - pkg/component/etcd/copybackupstask
             - pkg/component/etcd/etcd
             - pkg/component/etcd/etcd/constants

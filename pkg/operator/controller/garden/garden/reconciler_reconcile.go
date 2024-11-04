@@ -173,7 +173,7 @@ func (r *Reconciler) reconcile(
 		})
 		deployPrometheusCRD = g.Add(flow.Task{
 			Name: "Deploying custom resource definitions for prometheus-operator",
-			Fn:   c.prometheusCRD.Deploy,
+			Fn:   component.OpWait(c.prometheusCRD).Deploy,
 		})
 		deployExtensionCRD = g.Add(flow.Task{
 			Name: "Deploying custom resource definitions for extensions",
