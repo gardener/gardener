@@ -72,7 +72,7 @@ This prevents misconfigurations that would otherwise allow users to create such 
 
 _(enabled by default)_
 
-This admission controller reacts on `CREATE` and `UPDATE` operations for `BackupBucket`s, `BackupEntry`s, `CloudProfile`s, `Seed`s, `SecretBinding`s and `Shoot`s. For all the various extension types in the specifications of these objects, it adds a corresponding label in the resource. This would allow extension admission webhooks to filter out the resources they are responsible for and ignore all others. This label is of the form `<extension-type>.extensions.gardener.cloud/<extension-name> : "true"`. For example, an extension label for provider extension type `aws`, looks like `provider.extensions.gardener.cloud/aws : "true"`.
+This admission controller reacts on `CREATE` and `UPDATE` operations for `BackupBucket`s, `BackupEntry`s, `CloudProfile`s, `NamespacedCloudProfile`s, `Seed`s, `SecretBinding`s, `CredentialsBinding`s, `WorkloadIdentity`s and `Shoot`s. For all the various extension types in the specifications of these objects, it adds a corresponding label in the resource. This would allow extension admission webhooks to filter out the resources they are responsible for and ignore all others. This label is of the form `<extension-type>.extensions.gardener.cloud/<extension-name> : "true"`. For example, an extension label for provider extension type `aws`, looks like `provider.extensions.gardener.cloud/aws : "true"`.
 
 ## `ProjectValidator`
 
