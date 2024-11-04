@@ -45,13 +45,11 @@ var _ = Describe("CRD", func() {
 	)
 
 	BeforeEach(func() {
-		ctx = context.Background()
-		testClientBuilder = fakeclient.NewClientBuilder().WithScheme(apiextensionsscheme.Scheme)
-	})
-
-	JustBeforeEach(func() {
 		// lower waiting timeout so that the unit test itself does not time out.
 		DeferCleanup(test.WithVar(&WaitTimeout, 10*time.Millisecond))
+
+		ctx = context.Background()
+		testClientBuilder = fakeclient.NewClientBuilder().WithScheme(apiextensionsscheme.Scheme)
 	})
 
 	Describe("#WaitUntilCRDManifestsReady", func() {
@@ -67,6 +65,15 @@ var _ = Describe("CRD", func() {
 
 			Expect(WaitUntilCRDManifestsReady(ctx, testClient, "myresources.mygroup.example.com")).
 				To(MatchError(ContainSubstring("retry failed with context deadline exceeded, last error: condition \"NamesAccepted\" is missing")))
+		})
+
+		It("should time out because CRD is not present", func() {
+			// testClient without any objects.
+			testClient = testClientBuilder.Build()
+
+			Expect(WaitUntilCRDManifestsReady(ctx, testClient, "myresources.mygroup.example.com")).
+				To(MatchError(ContainSubstring("retry failed with context deadline exceeded, last error: customresourcedefinitions.apiextensions.k8s.io \"myresources.mygroup.example.com\" not found")))
+
 		})
 	})
 

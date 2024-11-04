@@ -13,5 +13,5 @@ import (
 
 func TestCRDDeployer(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "CRDDeployer Suite")
+	RunSpecs(t, "Component CRDDeployer Suite")
 }

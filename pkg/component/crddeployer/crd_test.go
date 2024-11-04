@@ -140,7 +140,7 @@ status:
 			Expect(crdDeployer.WaitCleanup(ctx)).To(Succeed())
 		})
 
-		It("should time out because CRD is not ready", func() {
+		It("should time out because CRD is still present", func() {
 			// lower waiting timeout so that the unit test itself does not time out.
 			DeferCleanup(test.WithVar(&kubernetesutils.WaitTimeout, 10*time.Millisecond))
 
