@@ -68,18 +68,18 @@ The proposed solution involves the following key changes:
 - Provide a phased implementation approach for gradual adoption
 
 ## Current Architecture
-> [!IMPORTANT]
-> **TODO:** *Describe the current architecture to drive the point home*
-
 With the current architecture, the `apiserver-proxy` creates a proxy protocol header, which gets forwarded by the LoadBalancer towards the `istio-ingressgateway`.
+
 A second proxy protocol header is created by the LoadBalancer, which is configured through the ACL extension.
 At this point, we need the destination IP address from the `apiserver-proxy` proxy protocol header and the source IP from the LoadBalancer proxy protocol header.
+
 Unfortunately, the `istio-ingressgateway` will read the first proxy protocol header and then overwrites the information with the second proxy protocol header and only uses these source and destination IP addresses.
+
 These source IP addresses will be used for filtering allowed traffic.
+
 Instead of the public IP address from the router *(here 10.1.0.1)* it will allow traffic from the client-pod *(here 10.3.0.1)*. This causes other clients in other shoots with the same IP address to bypass the list of allowed clients by the ACL extension and cause unauthorized requests to the `kube-apiserver`.
 
-![Current State with opaque LB](https://hackmd.io/_uploads/B1HcURNx1x.png)
-
+![Current State with opaque LB](./assets/30-current-architecture.png "Current State with opaque LB")
 
 ## Proposed Changes
 
@@ -109,39 +109,43 @@ Instead of the public IP address from the router *(here 10.1.0.1)* it will allow
     - Modify `istio-ingressgateway` to process the new header and route traffic accordingly
     - Update `apiserver-proxy` to add the new custom header
 
-![image](https://hackmd.io/_uploads/S17YU4_lyl.png)
-
-
+![Proposed Architecture](./assets/30-proposed-architecture.png "Proposed Architecture")
+    
+    
 ## Custom Header Specification
 
 The new custom header will be structured as follows:
 
 ```
-X-Gardener-API-Route-V1: <encoded-routing-information>
+X-Gardener-API-Route: <routing-information>
 ```
 
-> [!NOTE]
-> **TODO:** *Discuss details on the encoding method, included information, and any security measures like signing or encryption*
-
-The encoded routing information will be a Base64-encoded JSON string containing the following fields:
+The routing information will be a concatenated string, joined by pipes, containing the following fields:
 
 ```json
 {
-  "dst": "10.4.0.1",
-  "shoot": "shoot-name",
-  "namespace": "garden-project",
-  "timestamp": 1635724800
-  ...
+  "direction": "outbound",
+  "port": "8134",
+  "subset": null,
+  "destination": "kube-apiserver.{{ .namespace }}.svc.cluster.local"
 }
 ```
 
-- `dst`: The destination IP (`kube-apiserver` IP).
-- `shoot`: The name of the shoot cluster.
-- `namespace`: The namespace of the shoot cluster in the seed.
-- `timestamp`: Unix timestamp to prevent replay attacks.
-- ... ? :-)
+- `direction`: The direction of traffic.
+- `port`: The destination port.
+- `subset`: Istio subset/version.
+- `destination`: The destination.
 
-The encoding process constructs the JSON object with all fields and encodes the entire JSON string using Base64. Similarly, the decoding process should Base64 decode the header value and parse the JSON object. In addition the timestamp should be verified to be within an acceptable range.
+Putting this to practice should result in a header formatted like this:
+
+`X-Gardener-API-Route: outbound|8134||kube-apiserver.{{ .namespace }}.svc.cluster.local`
+
+Or formatted in YAML in a potential deployment manifest
+
+```yaml
+- name: X-Gardener-API-Route
+  value: outbound|8134||kube-apiserver.{{ .namespace }}.svc.cluster.local
+```
 
 During the transition period, the system should be able to handle both the new custom header and the existing routing method. This can be controlled via the feature gate.
 
@@ -158,30 +162,25 @@ The `apiserver-proxy` will be reconfigured to use HTTP CONNECT for establishing 
 
 ### Technical Implementation Details
 
-> [!Note]
-> **TODO:** Go over technical implementation and discuss with team
-
-The `apiserver-proxy` will require to be updated to use HTTP CONNECT. This should involve modifying its configuration and potentially its code. One example of how the configuration might look like
+The `apiserver-proxy` will be required to be updated to use HTTP CONNECT. This should involve modifying its configuration and potentially its code. One example of how the configuration might look like after reusing its Envoy tunneling config:
 
 ```yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: apiserver-proxy-config
-  namespace: kube-system
-data:
-  config.yaml: |
-    upstreamUrl: https://istio-ingressgateway.istio-system:8443
-    connectMethod: HTTP_CONNECT
-    connectPath: /api/v1/namespaces/kube-system/services/kube-apiserver:https/proxy
-    customHeaders:
-      - name: X-Gardener-API-Route-V1
-        valueFrom:
-          fieldRef:
-            fieldPath: metadata.annotations['gardener.cloud/api-route']
+...
+- domains: 
+  - api.*
+  name: gardener-api-route
+  routes:
+  - match:
+      connect_matcher: {}
+    route:
+     cluster_header: X-Gardener-API-Route
+     upgrade_configs:
+     - connect_config: {}
+       upgrade_type: CONNECT
+...
 ```
 
-This ConfigMap would be mounted into the apiserver-proxy pod and used to configure its behavior.
+This solution would be reusing existing Envoy filtering on the `apiserver-proxy` pod and simply exchange its Proxy Protocol configuration for the new proposed header.
 
 ### Istio IngressGateway Configuration
 
@@ -215,7 +214,7 @@ spec:
     - method:
         exact: CONNECT
       headers:
-        X-Gardener-API-Route-V1:
+        X-Gardener-API-Route:
           regex: ".*"
     ...
     ...
@@ -225,50 +224,27 @@ This configuration sets up the Istio IngressGateway to accept HTTPS traffic and 
 
 ### EnvoyFilter for Custom Header Processing
 
-To process the proposed custom header and make routing decisions based on it, it will be required to additionally add an EnvoyFilter. It might be required to add Lua scripts to process the proposed custom header, extract the routing information, and set the appropriate headers for upstream routing
+To process the proposed custom header and make routing decisions based on it, it will be required to additionally add and/or modify an EnvoyFilter. Again, existing configuration may be reused adjusted to this new use case to keep convention parity within the code base.
 
 ```yaml
-apiVersion: networking.istio.io/v1alpha3
-kind: EnvoyFilter
+{{- if eq .Values.vpn.enabled true -}}
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
 metadata:
-  name: api-route-header-processor
-  namespace: istio-system
+  name: reversed-vpn-auth-server
+  namespace: {{ .Release.Namespace }}
 spec:
-  workloadSelector:
-    labels:
-      istio: ingressgateway
-  configPatches:
-  - applyTo: HTTP_FILTER
-    match:
-      context: GATEWAY
-      listener:
-        filterChain:
-          filter:
-            name: "envoy.filters.network.http_connection_manager"
-    patch:
-      operation: INSERT_BEFORE
-      value:
-        name: envoy.lua
-        typed_config:
-          "@type": "type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua"
-          inlineCode: |
-            function envoy_on_request(request_handle)
-              local header = request_handle:headers():get("X-Gardener-API-Route-V1")
-              if header then
-                -- Base64 decode and JSON parse the header
-                local routing_info = parse_routing_info(header)
-                -- Set headers for upstream routing
-                request_handle:headers():add("X-Forwarded-For", routing_info.src)
-                request_handle:headers():add("X-Envoy-Original-Dst-Host", routing_info.dst)
-              end
-            end
-
-            function parse_routing_info(header)
-              -- Implement Base64 decoding and JSON parsing here
-              -- Return a table with src and dst fields
-            end
+  selector:
+{{ .Values.labels | toYaml | indent 4 }}
+  servers:
+  - hosts:
+    - reversed-vpn-auth-server.garden.svc.cluster.local
+    port:
+      name: tls-tunnel
+      number: 8134
+      protocol: HTTP
+{{- end }}
 ```
-
 ### Implementation Steps
 
 1. Apply the Istio Gateway and VirtualService configurations.
@@ -277,118 +253,65 @@ spec:
 4. Update the `apiserver-proxy` code or configuration to use HTTP CONNECT and include the custom header.
 5. Deploy the updated `apiserver-proxy` configuration.
 
-## Feature Gate Implementation
+## Phased Rollout
 
-Two distinct feature gates should be implemented that control different aspects of the implementation. Their progression will be based on specific success criteria and dependencies rather than fixed timelines.
+The implementation will be controlled by two distinct feature gates that handle different aspects of the solution. Each feature gate can be disabled per shoot to allow testing of the old implementation via E2E tests.
 
 ### Feature Gate 1: `APIServerSecureRouting`
-This feature gate controls the enablement of the new routing implementation using HTTP CONNECT and custom headers.
+Controls the enablement of the new routing implementation using HTTP CONNECT and custom headers.
 
-This feature gate should progress through the following stages:
+#### Alpha
+- **Default:** Disabled
+- **Actions:**
+    - Introduces new port for HTTP CONNECT
+    - Deploys new custom header processing
+    - Configures mTLS for new routing path
+    - Enables E2E testing of the feature
+    - Implementation of all unit and integration tests
+    - Documentation completion
 
-1. Alpha
-    - **Default:** Disabled
-    - **Graduation requirements:**
-        - All unit tests passing
-        - Integration tests for new routing path successful
-        - E2E tests showing no regression in existing functionality
-        - Successful deployment in development environment
-        - Performance metrics meeting baseline requirements
-        - Documentation completed
-    - **Actions:**
-        - Introduces new port for HTTP CONNECT
-        - Deploys new custom header processing
-        - Configures mTLS for new routing path
-2. Beta
-    - **Default:** Enabled
-    - **Graduation requirements:**
-        - No critical issues reported in alpha
-        - E2E tests consistently passing
-        - Performance metrics meeting or exceeding baseline
-        - Majority of test clusters successfully using new implementation
-        - No new security vulnerability identified
-    - **Actions:**
-        - Automatically configures new shoots to use new implementation
-        - Existing shoots continue using old implementation
-3. Stable
-    - **Default:** Always enabled
-    - **Graduation requirements:**
-        - No critical issues reported in beta
-        - All E2E tests passing consistently
-        - Performance metrics stable and satifsactory
-        - Possible security audits completed successfully
-        - All test clusters successfully using new implementation
-        - Documentation fully updated and verified
-    - **Actions:**
-        - All new shoots use new implementation
-        - Existing shoots automatically migrated during reconciliation
-4. Removed
-    - **Requirements:**
-        - Feature has been stable for sufficient time
-        - All shoots successfully migrated to new implementation
-        - No reported issues or regressions
-    - **Actions:**
-        - Remove feature gate configuration
-        - Clean up related legacy code
+#### Beta
+- **Default:** Enabled
+- New shoots automatically use new implementation
+- Existing shoots continue using old implementation
+
+#### GA
+- **Default:** Always enabled
+- All shoots use new implementation
+- Existing shoots automatically migrated during reconciliation
 
 ### Feature Gate 2: `APIServerLegacyPortDisable`
+Controls the disabling of the legacy port. Can only progress once `APIServerSecureRouting` is GA.
 
-This feature gate controls the disabling of the legacy port. It can only progress once `APIServerSecureRouting` is stable.
+#### Alpha
+- **Default:** Disabled
+- **Prerequisites:**
+    - Feature gate `APIServerSecureRouting` is in GA state
+    - All monitored shoots successfully using the new implementation
+- **Actions:**
+    - Marks port as deprecated
+    - Implementation of E2E tests with legacy port disabled
 
+#### Beta
+- **Default:** Enabled
+- Automatically closes legacy port for new shoots
+- Existing shoots prompted for migration during reconciliation
 
-Similarly, this feature gate should progress through the following stages:
+#### GA
+- **Default:** Always enabled
+- Legacy port completely disabled
+- All configuration for legacy port removed
 
-1. Alpha
-    - **Default:** Disabled
-    - **Prerequisites:**
-        - Feature gate `APIServerSecureRouting` is in stable state
-        - All monitored shoots successfully using the new implementation
-    - **Graduation requirements:**
-        - No traffic detected on legacy port in test environments
-        - Successful E2E tests with legacy port disabled
-        - Documentation updated
-    - **Actions:**
-        - Marks port as deprecated
-
-2. Beta
-    - **Default:** Enabled
-    - **Graduation requirements:**
-        - No critical issues reported in alpha
-        - E2E tests passing consistently with legacy port disabled
-        - Amount of traffic still using the legacy port is negligible
-        - No production impact reported
-        - All shoots in test environments successfully operating without legacy port
-    - **Actions:**
-        - Automatically closes legacy port for new shoots
-        - Existing shoots prompted for migration during reconciliation
-
-3. Stable
-    - **Default:** Always enabled
-    - **Graduation requirements:**
-        - No traffic on legacy port whatsoever
-        - All shoots successfully using new implementation
-        - No issues reported in beta
-        - E2E tests consistently passing
-        - Possible security audits completed successfully
-        - Documentation fully updated and verified
-    - **Actions:**
-        - Legacy port completely disabled
-        - All configuration for legacy port removed
-
-4. Removed
-    - **Requirements:**
-        - Feature has been stable for sufficient time
-        - No shoots using legacy port
-        - No reported issues on regressions
-    - **Actions:**
-        - Remove feature gate configuration
-        - Remove all legacy port related code and configurations
+### Testing Strategy
+- Feature gates can be switched off per shoot to allow testing of the old implementation
+- E2E tests will cover both new and old implementations
+- All testing functionality is implemented and validated in alpha phase
 
 ## Alternatives
 
 - Implement stricter filtering of proxy protocol headers at the istio-ingress gateway level
 - Use a custom LoadBalancer solution that is transparent or aware of the Gardener architecture
 
-We are not aware of any other or real alternative solution to address this issue.
+In all seriousness, we are not aware of any other or real alternative solution to address this issue.
 
 ---
