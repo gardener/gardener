@@ -2203,7 +2203,7 @@ var _ = Describe("Validation Tests", func() {
 					}
 
 					Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
+						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.virtualCluster.etcd.main.backup.bucketName"),
 					}))))
 				})
@@ -2226,7 +2226,7 @@ var _ = Describe("Validation Tests", func() {
 					}
 
 					Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
+						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.virtualCluster.etcd.main.backup.bucketName"),
 					}))))
 				})

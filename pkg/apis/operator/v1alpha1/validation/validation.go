@@ -113,20 +113,14 @@ func validateVirtualClusterUpdate(oldGarden, newGarden *operatorv1alpha1.Garden)
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldVirtualCluster.DNS.Domains[0].Name, newVirtualCluster.DNS.Domains[0].Name, fldPath.Child("dns", "domains").Index(0).Child("name"))...)
 	}
 
-	if oldVirtualCluster.ETCD != nil && oldVirtualCluster.ETCD.Main != nil && oldVirtualCluster.ETCD.Main.Backup != nil {
-		if newVirtualCluster.ETCD != nil && newVirtualCluster.ETCD.Main != nil {
-			fldBackup := fldPath.Child("etcd", "main", "backup")
-			if newVirtualCluster.ETCD.Main.Backup != nil {
-				if oldVirtualCluster.ETCD.Main.Backup.BucketName == nil && newVirtualCluster.ETCD.Main.Backup.BucketName != nil {
-					allErrs = append(allErrs, field.Forbidden(fldBackup.Child("bucketName"), "bucket name must remain unset if it was not set before"))
-				}
-				if oldVirtualCluster.ETCD.Main.Backup.BucketName != nil && newVirtualCluster.ETCD.Main.Backup.BucketName == nil {
-					allErrs = append(allErrs, field.Forbidden(fldBackup.Child("bucketName"), "bucket name must remain unchanged if it was set before"))
-				}
-			} else {
-				allErrs = append(allErrs, field.Forbidden(fldBackup, "backup must not be deactivated if it was set before"))
-				allErrs = append(allErrs, apivalidation.ValidateImmutableField(newVirtualCluster.ETCD.Main.Backup, oldVirtualCluster.ETCD.Main.Backup, fldPath.Child("backup"))...)
-			}
+	if oldVirtualCluster.ETCD != nil && oldVirtualCluster.ETCD.Main != nil && oldVirtualCluster.ETCD.Main.Backup != nil &&
+		newVirtualCluster.ETCD != nil && newVirtualCluster.ETCD.Main != nil {
+		fldBackup := fldPath.Child("etcd", "main", "backup")
+		if newVirtualCluster.ETCD.Main.Backup != nil {
+			allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldVirtualCluster.ETCD.Main.Backup.BucketName, newVirtualCluster.ETCD.Main.Backup.BucketName, fldBackup.Child("bucketName"))...)
+		}
+		if newVirtualCluster.ETCD.Main.Backup == nil {
+			allErrs = append(allErrs, field.Forbidden(fldBackup, "backup must not be deactivated if it was set before"))
 		}
 	}
 

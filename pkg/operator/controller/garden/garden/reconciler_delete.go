@@ -13,7 +13,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -243,7 +242,7 @@ func (r *Reconciler) delete(
 		destroyMainETCDBackupBucket = g.Add(flow.Task{
 			Name: "Destroying main ETCD backup bucket",
 			Fn: func(ctx context.Context) error {
-				backupBucket := &extensionsv1alpha1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: etcdMainBackupBucketName(garden)}}
+				backupBucket := etcdMainBackupBucket(garden)
 				if err := extensions.DeleteExtensionObject(ctx, r.RuntimeClientSet.Client(), backupBucket); err != nil {
 					return err
 				}

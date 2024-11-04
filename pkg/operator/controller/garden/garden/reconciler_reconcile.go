@@ -255,7 +255,7 @@ func (r *Reconciler) reconcile(
 			deployNginxIngressController,
 		)
 
-		backupBucket           = &extensionsv1alpha1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: etcdMainBackupBucketName(garden)}}
+		backupBucket           = etcdMainBackupBucket(garden)
 		deployEtcdBackupBucket = g.Add(flow.Task{
 			Name: "Reconciling main ETCD backup bucket",
 			Fn: func(ctx context.Context) error {
@@ -650,11 +650,22 @@ func (r *Reconciler) deployEtcdMainBackupBucket(ctx context.Context, garden *ope
 	return err
 }
 
-func etcdMainBackupBucketName(garden *operatorv1alpha1.Garden) string {
+func etcdMainBackupBucket(garden *operatorv1alpha1.Garden) *extensionsv1alpha1.BackupBucket {
+	name, _ := etcdMainBackupBucketNameAndPrefix(garden)
+	return &extensionsv1alpha1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: name}}
+}
+
+func etcdMainBackupBucketNameAndPrefix(garden *operatorv1alpha1.Garden) (string, string) {
+	prefix := "virtual-garden-etcd-main"
 	if etcdConfig := garden.Spec.VirtualCluster.ETCD; etcdConfig != nil && etcdConfig.Main != nil && etcdConfig.Main.Backup != nil && etcdConfig.Main.Backup.BucketName != nil {
-		return *etcdConfig.Main.Backup.BucketName
+		name := *etcdConfig.Main.Backup.BucketName
+		if idx := strings.LastIndex(name, "/"); idx != -1 {
+			prefix = fmt.Sprintf("%s/%s", name[:idx], prefix)
+			name = strings.ReplaceAll(name, "/", "-")
+		}
+		return name, prefix
 	}
-	return "garden-" + string(garden.UID)
+	return "garden-" + string(garden.UID), prefix
 }
 
 func (r *Reconciler) deployEtcdsFunc(garden *operatorv1alpha1.Garden, etcdMain, etcdEvents etcd.Interface, backupBucket *extensionsv1alpha1.BackupBucket) func(context.Context) error {
@@ -682,11 +693,13 @@ func (r *Reconciler) deployEtcdsFunc(garden *operatorv1alpha1.Garden, etcdMain, 
 				secretRefName = backupBucket.Status.GeneratedSecretRef.Name
 			}
 
+			container, prefix := etcdMainBackupBucketNameAndPrefix(garden)
+
 			etcdMain.SetBackupConfig(&etcd.BackupConfig{
 				Provider:             etcdConfig.Main.Backup.Provider,
 				SecretRefName:        secretRefName,
-				Container:            etcdMainBackupBucketName(garden),
-				Prefix:               "virtual-garden-etcd-main",
+				Container:            container,
+				Prefix:               prefix,
 				FullSnapshotSchedule: snapshotSchedule,
 				LeaderElection:       backupLeaderElection,
 			})
@@ -956,13 +969,6 @@ func (r *Reconciler) updateHelmChartRefForGardenlets(ctx context.Context, log lo
 }
 
 func (r *Reconciler) reconcileDNSRecords(ctx context.Context, log logr.Logger, garden *operatorv1alpha1.Garden) error {
-	if garden.Spec.DNS == nil {
-		return fmt.Errorf("no DNS management configuration '.spec.dns' found in Garden resource")
-	}
-	if len(garden.Spec.DNS.Providers) == 0 {
-		return fmt.Errorf("no DNS providers specified at '.spec.dns.providers' in Garden resource")
-	}
-
 	dnsRecordList := &extensionsv1alpha1.DNSRecordList{}
 	if err := r.listManagedDNSRecords(ctx, dnsRecordList); err != nil {
 		return fmt.Errorf("failed listing DNS records: %w", err)

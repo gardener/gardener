@@ -42,24 +42,10 @@ func Predicate(oldObj, newObj client.Object) bool {
 		return false
 	}
 
-	oldProviderSecretNames := map[string]string{}
-	newProvidersSecretNames := map[string]string{}
-	if oldGarden.Spec.DNS != nil {
-		for _, provider := range oldGarden.Spec.DNS.Providers {
-			oldProviderSecretNames[provider.Name] = provider.SecretRef.Name
-		}
-	}
-	if newGarden.Spec.DNS != nil {
-		for _, provider := range newGarden.Spec.DNS.Providers {
-			newProvidersSecretNames[provider.Name] = provider.SecretRef.Name
-		}
-	}
-	dnsSecretsChanged := !reflect.DeepEqual(oldProviderSecretNames, newProvidersSecretNames)
-
 	return kubeAPIServerAuditPolicyConfigMapChanged(oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer, newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer) ||
 		gardenerAPIServerAuditPolicyConfigMapChanged(oldGarden.Spec.VirtualCluster.Gardener.APIServer, newGarden.Spec.VirtualCluster.Gardener.APIServer) ||
 		etcdBackupSecretChanged(oldGarden.Spec.VirtualCluster.ETCD, newGarden.Spec.VirtualCluster.ETCD) ||
-		dnsSecretsChanged ||
+		dnsSecretsChanged(oldGarden.Spec.DNS, newGarden.Spec.DNS) ||
 		authenticationWebhookSecretChanged(oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer, newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer) ||
 		sniSecretChanged(oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer, newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer) ||
 		kubeAPIServerAuditWebhookSecretChanged(oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer, newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer) ||
@@ -109,6 +95,22 @@ func etcdBackupSecretChanged(oldETCD, newETCD *operatorv1alpha1.ETCD) bool {
 	}
 
 	return oldSecret != newSecret
+}
+
+func dnsSecretsChanged(oldDNS, newDNS *operatorv1alpha1.DNSManagement) bool {
+	oldProviderSecretNames := map[string]string{}
+	newProvidersSecretNames := map[string]string{}
+	if oldDNS != nil {
+		for _, provider := range oldDNS.Providers {
+			oldProviderSecretNames[provider.Name] = provider.SecretRef.Name
+		}
+	}
+	if newDNS != nil {
+		for _, provider := range newDNS.Providers {
+			newProvidersSecretNames[provider.Name] = provider.SecretRef.Name
+		}
+	}
+	return !reflect.DeepEqual(oldProviderSecretNames, newProvidersSecretNames)
 }
 
 func authenticationWebhookSecretChanged(oldKubeAPIServer, newKubeAPIServer *operatorv1alpha1.KubeAPIServerConfig) bool {

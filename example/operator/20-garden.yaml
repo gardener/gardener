@@ -81,7 +81,7 @@ spec:
         #   <some-provider-specific-config-for-the-backup-buckets>
           secretRef:
             name: virtual-garden-etcd-main-backup-local
-        # bucketName: gardener-operator # if not provided, gardener-operator attempts to create the bucket
+        # bucketName: gardener-operator # if not provided, gardener-operator generates a name
         storage:
           capacity: 25Gi
         # className: default

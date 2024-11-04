@@ -103,7 +103,7 @@ func defaultGarden(backupSecret, certManagementRootCA *corev1.Secret, specifyBac
 
 	var bucketName *string
 	if specifyBackupBucket {
-		bucketName = ptr.To("gardener-operator-" + name)
+		bucketName = ptr.To("gardener-operator/" + name)
 	}
 
 	return &operatorv1alpha1.Garden{
