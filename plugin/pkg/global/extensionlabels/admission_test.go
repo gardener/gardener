@@ -182,6 +182,46 @@ var _ = Describe("ExtensionLabels tests", func() {
 		})
 	})
 
+	Context("WorkloadIdentity", func() {
+		const (
+			providerType1 = "provider-type-1"
+			providerType2 = "provider-type-2"
+		)
+
+		It("should add the correct label on creation", func() {
+			workloadIdentity := &security.WorkloadIdentity{ObjectMeta: metav1.ObjectMeta{Name: "test-wi"}, Spec: security.WorkloadIdentitySpec{
+				TargetSystem: security.TargetSystem{
+					Type: providerType1,
+				},
+			}}
+			attrs := admission.NewAttributesRecord(workloadIdentity, nil, security.Kind("WorkloadIdentity").WithVersion("version"), "", workloadIdentity.Name, security.Resource("WorkloadIdentity").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+			err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(workloadIdentity.ObjectMeta.Labels).To(Equal(map[string]string{
+				"provider.extensions.gardener.cloud/" + providerType1: "true",
+			}))
+		})
+
+		It("should add the correct label on update", func() {
+			workloadIdentity := &security.WorkloadIdentity{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-wi",
+				},
+			}
+			newWorkloadIdentity := workloadIdentity.DeepCopy()
+			newWorkloadIdentity.Spec.TargetSystem.Type = providerType2
+
+			attrs := admission.NewAttributesRecord(newWorkloadIdentity, workloadIdentity, security.Kind("WorkloadIdentity").WithVersion("version"), "", workloadIdentity.Name, security.Resource("WorkloadIdentity").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+			err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(newWorkloadIdentity.ObjectMeta.Labels).To(Equal(map[string]string{
+				"provider.extensions.gardener.cloud/" + providerType2: "true",
+			}))
+		})
+	})
+
 	Context("Shoot", func() {
 		var (
 			shoot *core.Shoot

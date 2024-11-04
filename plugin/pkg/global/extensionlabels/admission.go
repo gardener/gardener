@@ -154,6 +154,16 @@ func (e *ExtensionLabels) Admit(_ context.Context, a admission.Attributes, _ adm
 		providerType := credentialsBinding.Provider.Type
 		metav1.SetMetaDataLabel(&credentialsBinding.ObjectMeta, v1beta1constants.LabelExtensionProviderTypePrefix+providerType, "true")
 
+	case security.Kind("WorkloadIdentity"):
+		workloadIdentity, ok := a.GetObject().(*security.WorkloadIdentity)
+		if !ok {
+			return apierrors.NewBadRequest("could not convert resource into WorkloadIdentity object")
+		}
+
+		removeLabels(&workloadIdentity.ObjectMeta)
+		providerType := workloadIdentity.Spec.TargetSystem.Type
+		metav1.SetMetaDataLabel(&workloadIdentity.ObjectMeta, v1beta1constants.LabelExtensionProviderTypePrefix+providerType, "true")
+
 	case core.Kind("Shoot"):
 		shoot, ok := a.GetObject().(*core.Shoot)
 		if !ok {
