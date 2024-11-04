@@ -50,9 +50,9 @@ Also, in the shoot control plane an `event-logger` pod is deployed, which scrape
 
 The logs are accessible via Plutono. To access them:
 
-  1. Authenticate via basic auth to gain access to Plutono.
-  The Plutono URL can be found in the `Logging and Monitoring` section of a cluster in the Gardener Dashboard alongside the credentials.
+  1. Authenticate via basic auth to gain access to Plutono.  
   The secret containing the credentials is stored in the project namespace following the naming pattern `<shoot-name>.monitoring`.
+  In this secret you can also find the Plutono URL in the `plutono-url` annotation.
   For Gardener operators, the credentials are also stored in the control-plane (`shoot--<project-name>--<shoot-name>`) namespace in the `observability-ingress-users-<hash>` secret in the seed.
 
   1. Plutono contains several dashboards that aim to facilitate the work of operators and users.

@@ -305,11 +305,22 @@ func (b *Botanist) generateObservabilityIngressPassword(ctx context.Context) err
 		return err
 	}
 
+	// TODO(oliver-goetz): Remove `url` when Gardener v1.110 is released.
+	annotations := map[string]string{
+		"url":            "https://" + b.ComputePlutonoHost(),
+		"plutono-url":    "https://" + b.ComputePlutonoHost(),
+		"prometheus-url": "https://" + b.ComputePrometheusHost(),
+	}
+
+	if b.Shoot.WantsAlertmanager {
+		annotations["alertmanager-url"] = "https://" + b.ComputeAlertManagerHost()
+	}
+
 	return b.syncShootCredentialToGarden(
 		ctx,
 		gardenerutils.ShootProjectSecretSuffixMonitoring,
 		map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring},
-		map[string]string{"url": "https://" + b.ComputePlutonoHost()},
+		annotations,
 		secret.Data,
 	)
 }

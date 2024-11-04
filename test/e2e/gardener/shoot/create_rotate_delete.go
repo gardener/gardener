@@ -56,7 +56,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 						return secret, f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: f.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectResourceName(f.Shoot.Name, "monitoring")}, secret)
 					},
 					GetObservabilityEndpoint: func(secret *corev1.Secret) string {
-						return secret.Annotations["url"]
+						return secret.Annotations["plutono-url"]
 					},
 					GetObservabilityRotation: func() *gardencorev1beta1.ObservabilityRotation {
 						return f.Shoot.Status.Credentials.Rotation.Observability
