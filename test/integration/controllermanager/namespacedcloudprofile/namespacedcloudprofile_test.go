@@ -34,6 +34,8 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 		dateNow, _ := time.Parse(time.DateOnly, time.Now().Format(time.DateOnly))
 		expirationDateFuture = metav1.Time{Time: dateNow.Local().Add(48 * time.Hour)}
 
+		updateStrategy := gardencorev1beta1.MachineImageUpdateStrategy("major")
+
 		parentCloudProfile = &gardencorev1beta1.CloudProfile{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: testID + "-",
@@ -78,7 +80,15 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 						Name: "some-image",
 						Versions: []gardencorev1beta1.MachineImageVersion{
 							{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "4.5.6", ExpirationDate: &expirationDateFuture}},
+							{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "7.8.9"}, CRI: []gardencorev1beta1.CRI{{Name: "containerd"}}, Architectures: []string{"amd64"}},
 						},
+					},
+					{
+						Name: "custom-image",
+						Versions: []gardencorev1beta1.MachineImageVersion{
+							{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.1.2"}, CRI: []gardencorev1beta1.CRI{{Name: "containerd"}}, Architectures: []string{"amd64"}},
+						},
+						UpdateStrategy: &updateStrategy,
 					},
 				},
 				MachineTypes: []gardencorev1beta1.MachineType{{
@@ -90,7 +100,6 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 			},
 		}
 
-		updateStrategy := gardencorev1beta1.MachineImageUpdateStrategy("major")
 		usable := true
 		architecture := "amd64"
 
@@ -120,6 +129,21 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 								"amd64",
 							},
 						},
+						{
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "7.8.9"},
+							CRI:              []gardencorev1beta1.CRI{{Name: "containerd"}},
+							Architectures:    []string{"amd64"},
+						},
+					},
+					UpdateStrategy: &updateStrategy,
+				},
+				{
+					Name: "custom-image",
+					Versions: []gardencorev1beta1.MachineImageVersion{
+						{
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.1.2"},
+							CRI:              []gardencorev1beta1.CRI{{Name: "containerd"}},
+							Architectures:    []string{"amd64"}},
 					},
 					UpdateStrategy: &updateStrategy,
 				},
@@ -471,7 +495,7 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 				{Version: "1.2.3", ExpirationDate: &expirationDatePast},
 			}
 			Expect(testClient.Update(ctx, namespacedCloudProfile)).To(MatchError(
-				ContainSubstring("expiration date of version '1.2.3' is in the past"),
+				ContainSubstring("expiration date for version \"1.2.3\" is in the past"),
 			))
 		})
 
@@ -494,7 +518,7 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 				},
 			}
 			Expect(testClient.Update(ctx, namespacedCloudProfile)).To(MatchError(
-				ContainSubstring("expiration date of version '4.5.6' is in the past"),
+				ContainSubstring("expiration date for version \"4.5.6\" is in the past"),
 			))
 		})
 	})

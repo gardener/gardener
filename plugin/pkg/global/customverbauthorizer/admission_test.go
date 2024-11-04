@@ -13,6 +13,7 @@ import (
 	"go.uber.org/mock/gomock"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/admission"
 	servieaccount "k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"k8s.io/apiserver/pkg/authentication/user"
@@ -571,6 +572,61 @@ var _ = Describe("customverbauthorizer", func() {
 						}
 						oldNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
 						namespacedCloudProfile.Spec.MachineImages = nil
+
+						attrs = admission.NewAttributesRecord(namespacedCloudProfile, oldNamespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("namespacedcloudprofiles").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).NotTo(Succeed())
+					})
+				})
+			})
+
+			Context("modify-spec-providerconfig verb", func() {
+				BeforeEach(func() {
+					authorizeAttributes.Verb = CustomVerbNamespacedCloudProfileModifyProviderConfig
+				})
+
+				It("should always allow creating a NamespacedCloudProfile without providerConfig settings", func() {
+					attrs = admission.NewAttributesRecord(namespacedCloudProfile, nil, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("namespacedcloudprofiles").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+				})
+
+				Describe("permissions granted", func() {
+					BeforeEach(func() {
+						auth.EXPECT().Authorize(ctx, authorizeAttributes).Return(authorizer.DecisionAllow, "", nil)
+					})
+
+					It("should allow creating a NamespacedCloudProfile with providerConfig section", func() {
+						namespacedCloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Raw: []byte{}}
+
+						attrs = admission.NewAttributesRecord(namespacedCloudProfile, nil, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("namespacedcloudprofiles").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+					})
+
+					It("should allow removing a NamespacedCloudProfile's providerConfig section", func() {
+						namespacedCloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Raw: []byte{}}
+						oldNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
+						namespacedCloudProfile.Spec.ProviderConfig = nil
+
+						attrs = admission.NewAttributesRecord(namespacedCloudProfile, oldNamespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("namespacedcloudprofiles").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+					})
+				})
+
+				Describe("permissions not granted", func() {
+					BeforeEach(func() {
+						auth.EXPECT().Authorize(ctx, authorizeAttributes).Return(authorizer.DecisionDeny, "", nil)
+					})
+
+					It("should forbid creating a NamespacedCloudProfile with providerConfig section", func() {
+						namespacedCloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Raw: []byte{}}
+
+						attrs = admission.NewAttributesRecord(namespacedCloudProfile, nil, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("namespacedcloudprofiles").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).NotTo(Succeed())
+					})
+
+					It("should forbid removing a NamespacedCloudProfile's providerConfig section", func() {
+						namespacedCloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Raw: []byte{}}
+						oldNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
+						namespacedCloudProfile.Spec.ProviderConfig = nil
 
 						attrs = admission.NewAttributesRecord(namespacedCloudProfile, oldNamespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("namespacedcloudprofiles").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
 						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).NotTo(Succeed())

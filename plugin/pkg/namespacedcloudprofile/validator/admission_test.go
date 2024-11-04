@@ -65,6 +65,8 @@ var _ = Describe("Admission", func() {
 					},
 				},
 			}
+			gardencorev1beta1.SetObjectDefaults_CloudProfile(parentCloudProfile)
+
 			namespacedCloudProfileParent = gardencore.CloudProfileReference{
 				Kind: "CloudProfile",
 				Name: parentCloudProfile.Name,
@@ -225,7 +227,7 @@ var _ = Describe("Admission", func() {
 
 				attrs := admission.NewAttributesRecord(updatedNamespacedCloudProfile, namespacedCloudProfile, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), "", namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Update, &metav1.CreateOptions{}, false, nil)
 
-				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(MatchError(ContainSubstring("expiration date of version '1.28.0' is in the past")))
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(MatchError(ContainSubstring("expiration date for version \"1.28.0\" is in the past")))
 			})
 		})
 
@@ -294,6 +296,7 @@ var _ = Describe("Admission", func() {
 				parentCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 					{Name: "test-image", Versions: []gardencorev1beta1.MachineImageVersion{{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.0.0"}, CRI: []gardencorev1beta1.CRI{{Name: "containerd"}}}}},
 				}
+				gardencorev1beta1.SetObjectDefaults_CloudProfile(parentCloudProfile)
 				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
 
 				namespacedCloudProfile.Spec.MachineImages = []gardencore.MachineImage{
@@ -305,34 +308,60 @@ var _ = Describe("Admission", func() {
 				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 			})
 
-			It("should fail for creating a NamespacedCloudProfile that specifies a MachineImage entry not in the parent CloudProfile", func() {
+			It("should allow creating a NamespacedCloudProfile that specifies a new MachineImage entry not in the parent CloudProfile", func() {
 				parentCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 					{Name: "test-image", Versions: []gardencorev1beta1.MachineImageVersion{{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.0.0"}, CRI: []gardencorev1beta1.CRI{{Name: "containerd"}}}}},
 				}
+				gardencorev1beta1.SetObjectDefaults_CloudProfile(parentCloudProfile)
 				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
 
 				namespacedCloudProfile.Spec.MachineImages = []gardencore.MachineImage{
-					{Name: "another-image", Versions: []gardencore.MachineImageVersion{{ExpirableVersion: gardencore.ExpirableVersion{Version: "1.0.0", ExpirationDate: ptr.To(metav1.Now())}, CRI: []gardencore.CRI{{Name: "containerd"}}}}},
+					{
+						Name: "another-image",
+						Versions: []gardencore.MachineImageVersion{
+							{ExpirableVersion: gardencore.ExpirableVersion{Version: "1.0.0", ExpirationDate: ptr.To(metav1.Now())}, CRI: []gardencore.CRI{{Name: "containerd"}}, Architectures: []string{"amd64"}},
+						},
+						UpdateStrategy: ptr.To(gardencore.UpdateStrategyMajor),
+					},
 				}
 
 				attrs := admission.NewAttributesRecord(namespacedCloudProfile, nil, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), "", namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(MatchError(ContainSubstring("invalid machine image specified: 'another-image' does not exist in parent")))
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 			})
 
-			It("should fail for creating a NamespacedCloudProfile that specifies a MachineImage entry version not in the parent CloudProfile", func() {
+			It("should succeed for creating a NamespacedCloudProfile that specifies a new version to an existing MachineImage from the parent CloudProfile", func() {
 				parentCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 					{Name: "test-image", Versions: []gardencorev1beta1.MachineImageVersion{{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.0.0"}, CRI: []gardencorev1beta1.CRI{{Name: "containerd"}}}}},
 				}
+				gardencorev1beta1.SetObjectDefaults_CloudProfile(parentCloudProfile)
 				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
 
 				namespacedCloudProfile.Spec.MachineImages = []gardencore.MachineImage{
-					{Name: "test-image", Versions: []gardencore.MachineImageVersion{{ExpirableVersion: gardencore.ExpirableVersion{Version: "1.2.0", ExpirationDate: ptr.To(metav1.Now())}, CRI: []gardencore.CRI{{Name: "containerd"}}}}},
+					{Name: "test-image", Versions: []gardencore.MachineImageVersion{{ExpirableVersion: gardencore.ExpirableVersion{Version: "1.2.0", ExpirationDate: ptr.To(metav1.Now())}, CRI: []gardencore.CRI{{Name: "containerd"}}, Architectures: []string{"amd64"}}}},
 				}
 
 				attrs := admission.NewAttributesRecord(namespacedCloudProfile, nil, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), "", namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(MatchError(ContainSubstring("invalid machine image specified: 'test-image@1.2.0' does not exist in parent")))
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+			})
+
+			It("should fail for creating a NamespacedCloudProfile that overrides an existing MachineImage version without specifying an expiration date", func() {
+				parentCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
+					{Name: "test-image", Versions: []gardencorev1beta1.MachineImageVersion{
+						{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.2.0"}, CRI: []gardencorev1beta1.CRI{{Name: "containerd"}}},
+						{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.0.0"}, CRI: []gardencorev1beta1.CRI{{Name: "containerd"}}},
+					}},
+				}
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
+
+				namespacedCloudProfile.Spec.MachineImages = []gardencore.MachineImage{
+					{Name: "test-image", Versions: []gardencore.MachineImageVersion{{ExpirableVersion: gardencore.ExpirableVersion{Version: "1.0.0"}}}},
+				}
+
+				attrs := admission.NewAttributesRecord(namespacedCloudProfile, nil, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), "", namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(MatchError(ContainSubstring("expiration date for version \"1.0.0\" must be set")))
 			})
 
 			It("should fail for updating a NamespacedCloudProfile that specifies an already expired MachineImage version", func() {
@@ -347,13 +376,13 @@ var _ = Describe("Admission", func() {
 				oldNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
 				namespacedCloudProfile.Spec.MachineImages = []gardencore.MachineImage{
 					{Name: "test-image", Versions: []gardencore.MachineImageVersion{
-						{ExpirableVersion: gardencore.ExpirableVersion{Version: "1.1.0", ExpirationDate: expiredExpirationDate}, CRI: []gardencore.CRI{{Name: "containerd"}}},
+						{ExpirableVersion: gardencore.ExpirableVersion{Version: "1.1.0", ExpirationDate: expiredExpirationDate}},
 					}},
 				}
 
 				attrs := admission.NewAttributesRecord(namespacedCloudProfile, oldNamespacedCloudProfile, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), "", namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(MatchError(ContainSubstring("expiration date of version '1.1.0' is in the past")))
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(MatchError(ContainSubstring("expiration date for version \"1.1.0\" is in the past")))
 			})
 
 			It("should allow creating a NamespacedCloudProfile that specifies an already expired MachineImage version", func() {
@@ -363,11 +392,12 @@ var _ = Describe("Admission", func() {
 						{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.2.0"}, CRI: []gardencorev1beta1.CRI{{Name: "containerd"}}},
 					}},
 				}
+				gardencorev1beta1.SetObjectDefaults_CloudProfile(parentCloudProfile)
 				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
 
 				namespacedCloudProfile.Spec.MachineImages = []gardencore.MachineImage{
 					{Name: "test-image", Versions: []gardencore.MachineImageVersion{
-						{ExpirableVersion: gardencore.ExpirableVersion{Version: "1.1.0", ExpirationDate: expiredExpirationDate}, CRI: []gardencore.CRI{{Name: "containerd"}}},
+						{ExpirableVersion: gardencore.ExpirableVersion{Version: "1.1.0", ExpirationDate: expiredExpirationDate}},
 					}},
 				}
 
@@ -427,14 +457,16 @@ var _ = Describe("Admission", func() {
 						MachineImages: []gardencorev1beta1.MachineImage{
 							{
 								Name: "test-image",
-								Versions: []gardencorev1beta1.MachineImageVersion{{
-									ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.0.0"},
-									CRI:              []gardencorev1beta1.CRI{{Name: "containerd"}},
-								}},
+								Versions: []gardencorev1beta1.MachineImageVersion{
+									{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.0.0"}},
+									{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.1.2"}},
+								},
 							},
 						},
 					},
 				}
+				gardencorev1beta1.SetObjectDefaults_CloudProfile(parentCloudProfile)
+
 				namespacedCloudProfile = &gardencorev1beta1.NamespacedCloudProfile{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      namespacedCloudProfileName,
@@ -452,11 +484,11 @@ var _ = Describe("Admission", func() {
 						},
 						MachineImages: []gardencorev1beta1.MachineImage{
 							{
-								Name: "some-machineimage",
+								Name: "test-image",
 								Versions: []gardencorev1beta1.MachineImageVersion{
 									{
 										ExpirableVersion: gardencorev1beta1.ExpirableVersion{
-											Version: "1.2.3",
+											Version: "1.0.0",
 										},
 										CRI: []gardencorev1beta1.CRI{{Name: "containerd"}},
 									},
@@ -565,11 +597,11 @@ var _ = Describe("Admission", func() {
 					Expect(errorList).To(BeEmpty())
 				})
 
-				It("should allow expiration date on latest machine image version", func() {
+				It("should allow expiration date on latest machine image version within NamespacedCloudProfile spec", func() {
 					expirationDate := &metav1.Time{Time: time.Now().AddDate(0, 0, 1)}
 					namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 						{
-							Name: "some-machineimage",
+							Name: "test-image",
 							Versions: []gardencorev1beta1.MachineImageVersion{
 								{
 									ExpirableVersion: gardencorev1beta1.ExpirableVersion{
@@ -577,14 +609,13 @@ var _ = Describe("Admission", func() {
 										ExpirationDate: expirationDate,
 										Classification: &previewClassification,
 									},
-									CRI: []gardencorev1beta1.CRI{{Name: "containerd"}},
+									CRI:           []gardencorev1beta1.CRI{{Name: "containerd"}},
+									Architectures: []string{"amd64"},
 								},
 								{
 									ExpirableVersion: gardencorev1beta1.ExpirableVersion{
-										Version:        "0.1.1",
-										Classification: &supportedClassification,
+										Version: "1.0.0",
 									},
-									CRI: []gardencorev1beta1.CRI{{Name: "containerd"}},
 								},
 							},
 						},
@@ -597,9 +628,11 @@ var _ = Describe("Admission", func() {
 										ExpirationDate: expirationDate,
 										Classification: &supportedClassification,
 									},
-									CRI: []gardencorev1beta1.CRI{{Name: "containerd"}},
+									CRI:           []gardencorev1beta1.CRI{{Name: "containerd"}},
+									Architectures: []string{"amd64"},
 								},
 							},
+							UpdateStrategy: ptr.To(gardencorev1beta1.UpdateStrategyMajor),
 						},
 					}
 

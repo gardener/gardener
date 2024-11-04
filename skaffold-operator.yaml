@@ -443,6 +443,8 @@ build:
             - cmd/gardener-apiserver
             - cmd/gardener-apiserver/app
             - cmd/utils
+            - extensions/pkg/apis/config
+            - extensions/pkg/util
             - pkg/api
             - pkg/api/core/shoot
             - pkg/api/extensions
@@ -1219,6 +1221,7 @@ build:
             - pkg/logger
             - pkg/provider-local/admission/cmd
             - pkg/provider-local/admission/mutator
+            - pkg/provider-local/admission/validator
             - pkg/provider-local/apis/local
             - pkg/provider-local/apis/local/install
             - pkg/provider-local/apis/local/v1alpha1

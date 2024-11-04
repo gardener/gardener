@@ -311,7 +311,7 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 					}))))
 				})
 
-				It("should forbid providing other values to fields than expiration dates", func() {
+				It("should allow providing new machine image versions with all fields filled out", func() {
 					validExpirationDate := &metav1.Time{Time: time.Now().AddDate(0, 1, 0)}
 					namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
 						{
@@ -332,26 +332,7 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 						},
 					}
 
-					errorList := ValidateNamespacedCloudProfile(namespacedCloudProfile)
-
-					Expect(errorList).To(ConsistOf(
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":  Equal(field.ErrorTypeForbidden),
-							"Field": Equal("spec.machineImages[0].updateStrategy"),
-						})), PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":  Equal(field.ErrorTypeForbidden),
-							"Field": Equal("spec.machineImages[0].versions[0].classification"),
-						})), PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":  Equal(field.ErrorTypeForbidden),
-							"Field": Equal("spec.machineImages[0].versions[0].cri"),
-						})), PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":  Equal(field.ErrorTypeForbidden),
-							"Field": Equal("spec.machineImages[0].versions[0].architectures"),
-						})), PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":  Equal(field.ErrorTypeForbidden),
-							"Field": Equal("spec.machineImages[0].versions[0].kubeletVersionConstraint"),
-						})),
-					))
+					Expect(ValidateNamespacedCloudProfile(namespacedCloudProfile)).To(BeEmpty())
 				})
 
 				It("should allow empty additional values", func() {
