@@ -36,7 +36,7 @@ var _ = Describe("ScrapeConfig", func() {
 						MetricsPath: ptr.To("/probe"),
 						StaticConfigs: []monitoringv1alpha1.StaticConfig{{
 							Targets: []monitoringv1alpha1.Target{"https://gardener-apiserver.garden.svc/healthz"},
-							Labels:  map[monitoringv1.LabelName]string{"purpose": "availability"},
+							Labels:  map[string]string{"purpose": "availability"},
 						}},
 						RelabelConfigs: []monitoringv1.RelabelConfig{
 							{
@@ -86,7 +86,7 @@ var _ = Describe("ScrapeConfig", func() {
 						MetricsPath: ptr.To("/probe"),
 						StaticConfigs: []monitoringv1alpha1.StaticConfig{{
 							Targets: kubeAPIServerTargets,
-							Labels:  map[monitoringv1.LabelName]string{"purpose": "availability"},
+							Labels:  map[string]string{"purpose": "availability"},
 						}},
 						RelabelConfigs: []monitoringv1.RelabelConfig{
 							{
@@ -144,7 +144,7 @@ var _ = Describe("ScrapeConfig", func() {
 						MetricsPath: ptr.To("/probe"),
 						StaticConfigs: []monitoringv1alpha1.StaticConfig{{
 							Targets: []monitoringv1alpha1.Target{gardenerDashboardTarget},
-							Labels:  map[monitoringv1.LabelName]string{"purpose": "availability"},
+							Labels:  map[string]string{"purpose": "availability"},
 						}},
 						RelabelConfigs: []monitoringv1.RelabelConfig{
 							{
@@ -194,7 +194,7 @@ var _ = Describe("ScrapeConfig", func() {
 						MetricsPath: ptr.To("/probe"),
 						StaticConfigs: []monitoringv1alpha1.StaticConfig{{
 							Targets: []monitoringv1alpha1.Target{"http://gardener-discovery-server.garden.svc.cluster.local:8081/healthz"},
-							Labels:  map[monitoringv1.LabelName]string{"purpose": "availability"},
+							Labels:  map[string]string{"purpose": "availability"},
 						}},
 						RelabelConfigs: []monitoringv1.RelabelConfig{
 							{
