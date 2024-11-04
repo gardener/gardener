@@ -23,7 +23,7 @@ func ScrapeConfig(namespace string, kubeAPIServerTargets []monitoringv1alpha1.Ta
 				MetricsPath: ptr.To("/probe"),
 				StaticConfigs: []monitoringv1alpha1.StaticConfig{{
 					Targets: targets,
-					Labels:  map[monitoringv1.LabelName]string{"purpose": "availability"},
+					Labels:  map[string]string{"purpose": "availability"},
 				}},
 				RelabelConfigs: []monitoringv1.RelabelConfig{
 					{
