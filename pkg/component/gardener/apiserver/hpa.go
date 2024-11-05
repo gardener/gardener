@@ -13,19 +13,10 @@ import (
 	"k8s.io/utils/ptr"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/component/apiserver"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
 func (g *gardenerAPIServer) horizontalPodAutoscaler() *autoscalingv2.HorizontalPodAutoscaler {
-	if g.values.Autoscaling.Mode != apiserver.AutoscalingModeVPAAndHPA {
-		return nil
-	}
-
-	return g.horizontalPodAutoscalerInVPAAndHPAMode()
-}
-
-func (g *gardenerAPIServer) horizontalPodAutoscalerInVPAAndHPAMode() *autoscalingv2.HorizontalPodAutoscaler {
 	return &autoscalingv2.HorizontalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      DeploymentName,

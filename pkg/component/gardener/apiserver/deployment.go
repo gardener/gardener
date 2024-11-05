@@ -160,10 +160,9 @@ func (g *gardenerAPIServer) deployment(
 	//
 	// Step 2. is the one that reverts the Deployment resources to the initial ones as during that time there is no existing HVPA object.
 	//
-	// TODO(ialidzhikov): Drop this if statement when the VPAAndHPA is the only one supported autoscaling mode.
-	if g.values.Autoscaling.Mode == apiserver.AutoscalingModeVPAAndHPA {
-		metav1.SetMetaDataAnnotation(&deployment.ObjectMeta, resourcesv1alpha1.PreserveResources, "true")
-	}
+	// TODO(plkokanov): Drop this annotation after gardener 1.109.0 has been released as the HVPA feature gate will have been locked to false for 3 releases.
+	// Additional migration logic will be needed to remove this annotation from existing deployments.
+	metav1.SetMetaDataAnnotation(&deployment.ObjectMeta, resourcesv1alpha1.PreserveResources, "true")
 
 	return deployment
 }
