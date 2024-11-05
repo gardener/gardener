@@ -87,12 +87,11 @@ var _ = Describe("#Wait", func() {
 			Role:            testRole,
 			Class:           ClassNormal,
 			StorageCapacity: "20Gi",
-			HVPAEnabled:     true,
 			MaintenanceTimeWindow: gardencorev1beta1.MaintenanceTimeWindow{
 				Begin: "1234",
 				End:   "5678",
 			},
-			ScaleDownUpdateMode: ptr.To(hvpav1alpha1.UpdateModeMaintenanceWindow),
+			EvictionRequirement: ptr.To(v1beta1constants.EvictionRequirementInMaintenanceWindowOnly),
 		})
 
 		expected = &druidv1alpha1.Etcd{
