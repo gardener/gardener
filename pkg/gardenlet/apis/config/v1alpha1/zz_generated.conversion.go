@@ -918,14 +918,8 @@ func autoConvert_v1alpha1_GardenletConfiguration_To_config_GardenletConfiguratio
 		out.Debugging = nil
 	}
 	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
-	if in.SeedConfig != nil {
-		in, out := &in.SeedConfig, &out.SeedConfig
-		*out = new(config.SeedConfig)
-		if err := Convert_v1alpha1_SeedConfig_To_config_SeedConfig(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.SeedConfig = nil
+	if err := Convert_v1alpha1_SeedConfig_To_config_SeedConfig(&in.SeedConfig, &out.SeedConfig, s); err != nil {
+		return err
 	}
 	out.Logging = (*config.Logging)(unsafe.Pointer(in.Logging))
 	out.SNI = (*config.SNI)(unsafe.Pointer(in.SNI))
@@ -995,14 +989,8 @@ func autoConvert_config_GardenletConfiguration_To_v1alpha1_GardenletConfiguratio
 		out.Debugging = nil
 	}
 	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
-	if in.SeedConfig != nil {
-		in, out := &in.SeedConfig, &out.SeedConfig
-		*out = new(SeedConfig)
-		if err := Convert_config_SeedConfig_To_v1alpha1_SeedConfig(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.SeedConfig = nil
+	if err := Convert_config_SeedConfig_To_v1alpha1_SeedConfig(&in.SeedConfig, &out.SeedConfig, s); err != nil {
+		return err
 	}
 	out.Logging = (*Logging)(unsafe.Pointer(in.Logging))
 	out.SNI = (*SNI)(unsafe.Pointer(in.SNI))
