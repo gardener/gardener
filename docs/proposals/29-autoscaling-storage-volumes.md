@@ -128,14 +128,11 @@ The `vali` and `prometheus` deployers, part of `gardenlet`'s shoot reconciliatio
 the respective StatefulSet objects contains the annotations, necessary to instruct `pvc-autoscaler` how to act on the
 PVCs, created from those templates.
 
-That `gardenlet` action mechanism, based on PVC templates, only affects PVCs upon creation. Therefore, it has no effect
-on existing shoots, and on the observability PVCs of existing seed clusters. To enable PVC autoscaling for existing
-shoots, those PVCs will be directly annotated by the operator. Such direct intervention allows gradual transition,
-where autoscaling can initially be enabled only for a few PVCs for validation purposes.
-Similarly, to enable PVC autoscaling on existing seed clusters' `garden` PVCs, those will be directly annotated at
-operators' discretion.
-For details regarding the transition of existing volumes to autoscaling, see 
-[section 'Enabling Autoscaling for Existing Volumes'](#enabling-autoscaling-for-existing-volumes)
+That `gardenlet` action mechanism, based on PVC templates, only affects PVCs upon creation. To enable PVC autoscaling on
+existing shoots, and on the observability PVCs of existing seed clusters, the deployers also directly annotate
+`vali` and `prometheus` PVCs. Those volumes have large, fixed capacity, which in most cases is severely underutilised.
+Enabling autoscaling on them allows them to grow if necessary, but does not release the unused storage space.
+Shrinking existing PVCs is beyond the scope of the present initiative.
 
 ![02-operator_structure.png](assets/gep29-02-operator_structure.png)
 
@@ -168,32 +165,21 @@ The following steps will be executed over time, to minimise the risk of disrupti
 1. The proposed scaling approach will be deployed behind a feature gate and disabled by default.
 2. The new feature will be gradually enabled on seed-by-seed basis:
    1. The feature gate will be enabled for the seed
-   2. The correct operation of newly created shoots will be verified via direct observation
-   3. The observability PVCs of preexisting shoots will gradually be annotated for scaling by `pvc-autoscaler`
-   4. The correct operation of preexisting shoots will be verified via direct observation
+   2. Correct operation will be verified via direct observation
 3. The feature flag will be promoted and eventually removed.
 
 The following metrics will be recorded before and/or after the transition of the seed to the new functionality,
 in order to evaluate the economical effect, and the reliability of the scaling solution:
    - Average utilisation of observability volumes:
-     - Preexisting volumes (before and after)
+     - Preexisting volumes (before)
      - Newly created volumes (after)
    - Percentage of observability volumes above 90% utilisation (before and after)
    - Utilisation of observability volumes at p10, p50, p90:
-     - Preexisting volumes (before and after)
+     - Preexisting volumes (before)
      - Newly created volumes (after)
    - Peak volume utilisation (after)
-   - Observability volume size: at p10, p50, p90, and average size (after)
+   - Observability volume size of newly created volumes: at p10, p50, p90, and average size (after)
    - Observability volume average size and count (before)
-
-#### Enabling Autoscaling for Existing Volumes
-Autoscaling is not automatically enabled for storage volumes which already exist at the time when the new feature is
-enabled. That applies to both volumes in shoot namespaces, and those in the `garden` namespace.
-
-These volumes have large, fixed capacity, which in most cases is severely underutilised. Merely enabling autoscaling
-on them would do nothing to release the unused storage space. It is the operator's responsibility to
-decide which of those volumes to migrate to autoscaling, whether to release the unused space, and if so, whether
-to preserve the existing data on the volumes, and how.
 
 ### Future Enhancements
 #### Metrics authorization
