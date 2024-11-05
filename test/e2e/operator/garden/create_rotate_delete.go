@@ -18,21 +18,18 @@ import (
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	. "github.com/gardener/gardener/pkg/utils/test"
 	"github.com/gardener/gardener/test/e2e/operator/garden/internal/rotation"
 	rotationutils "github.com/gardener/gardener/test/utils/rotation"
 )
 
 var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 	var (
-		backupBucket = defaultBackupBucket()
 		backupSecret = defaultBackupSecret()
-		garden       = defaultGarden(backupSecret, nil)
+		garden       = defaultGarden(backupSecret, nil, false)
 	)
 
 	It("Create Garden, Rotate Credentials and Delete Garden", Label("credentials-rotation"), func() {
@@ -47,11 +44,6 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 		DeferCleanup(func() {
 			ctx, cancel = context.WithTimeout(parentCtx, 5*time.Minute)
 			defer cancel()
-
-			// TODO(MartinWeindel): Remove this step when gardener-operator is able to create its backup bucket and DNS record by itself.
-			By("Delete BackupBucket")
-			Expect(gardenerutils.ConfirmDeletion(ctx, runtimeClient, backupBucket)).To(Succeed())
-			Expect(runtimeClient.Delete(ctx, backupBucket)).To(Succeed())
 
 			By("Delete Garden")
 			Expect(gardenerutils.ConfirmDeletion(ctx, runtimeClient, garden)).To(Succeed())
@@ -87,7 +79,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 					return &secretList.Items[0], nil
 				},
 				GetObservabilityEndpoint: func(_ *corev1.Secret) string {
-					return "https://plutono-garden." + garden.Spec.RuntimeCluster.Ingress.Domains[0]
+					return "https://plutono-garden." + garden.Spec.RuntimeCluster.Ingress.Domains[0].Name
 				},
 				GetObservabilityRotation: func() *gardencorev1beta1.ObservabilityRotation {
 					return garden.Status.Credentials.Rotation.Observability
@@ -193,17 +185,6 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 		})
 
 		v.Before(ctx)
-
-		// TODO(oliver-goetz): Remove this step when gardener-operator is able to create its backup bucket and DNS record by itself.
-		By("Deploy extension in runtime cluster by creating a backup bucket")
-		Expect(runtimeClient.Create(ctx, backupBucket)).To(Succeed())
-		CEventually(ctx, func(g Gomega) {
-			managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
-			g.Expect(runtimeClient.List(ctx, managedResourceList, client.InNamespace(namespace))).To(Succeed())
-			g.Expect(managedResourceList.Items).To(ContainElement(
-				healthyManagedResource("extension-provider-local-garden"),
-			))
-		}).WithPolling(2 * time.Second).Should(Succeed())
 
 		By("Start credentials rotation")
 		ctx, cancel = context.WithTimeout(parentCtx, 20*time.Minute)

@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/component-base/version"
 	podsecurityadmissionapi "k8s.io/pod-security-admission/api"
 	"k8s.io/utils/ptr"
@@ -33,6 +34,8 @@ import (
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -41,6 +44,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
+	"github.com/gardener/gardener/pkg/component/extensions/dnsrecord"
 	gardenerapiserver "github.com/gardener/gardener/pkg/component/gardener/apiserver"
 	gardenerdashboard "github.com/gardener/gardener/pkg/component/gardener/dashboard"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
@@ -50,12 +54,14 @@ import (
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/extensions"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/secretsrotation"
 	"github.com/gardener/gardener/pkg/utils/gardener/tokenrequest"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
@@ -229,6 +235,12 @@ func (r *Reconciler) reconcile(
 			Fn:           component.OpWait(c.istio).Deploy,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
+		_ = g.Add(flow.Task{
+			Name:         "Reconciling DNSRecords for virtual garden cluster and ingress controller",
+			Fn:           func(ctx context.Context) error { return r.reconcileDNSRecords(ctx, log, garden) },
+			SkipIf:       garden.Spec.DNS == nil,
+			Dependencies: flow.NewTaskIDs(deployIstio),
+		})
 		syncPointSystemComponents = flow.NewTaskIDs(
 			generateGenericTokenKubeconfig,
 			generateObservabilityIngressPassword,
@@ -243,10 +255,33 @@ func (r *Reconciler) reconcile(
 			deployNginxIngressController,
 		)
 
+		backupBucket           = etcdMainBackupBucket(garden)
+		deployEtcdBackupBucket = g.Add(flow.Task{
+			Name: "Reconciling main ETCD backup bucket",
+			Fn: func(ctx context.Context) error {
+				if err := r.deployEtcdMainBackupBucket(ctx, garden, backupBucket); err != nil {
+					return err
+				}
+
+				return extensions.WaitUntilExtensionObjectReady(
+					ctx,
+					r.RuntimeClientSet.Client(),
+					log,
+					backupBucket,
+					extensionsv1alpha1.BackupBucketResource,
+					2*time.Second,
+					30*time.Second,
+					time.Minute,
+					nil,
+				)
+			},
+			SkipIf:       garden.Spec.VirtualCluster.ETCD == nil || garden.Spec.VirtualCluster.ETCD.Main == nil || garden.Spec.VirtualCluster.ETCD.Main.Backup == nil,
+			Dependencies: flow.NewTaskIDs(deployExtensionCRD),
+		})
 		deployEtcds = g.Add(flow.Task{
 			Name:         "Deploying main and events ETCDs of virtual garden",
-			Fn:           r.deployEtcdsFunc(garden, c.etcdMain, c.etcdEvents),
-			Dependencies: flow.NewTaskIDs(syncPointSystemComponents),
+			Fn:           r.deployEtcdsFunc(garden, c.etcdMain, c.etcdEvents, backupBucket),
+			Dependencies: flow.NewTaskIDs(syncPointSystemComponents, deployEtcdBackupBucket),
 		})
 		waitUntilEtcdsReady = g.Add(flow.Task{
 			Name:         "Waiting until main and event ETCDs report readiness",
@@ -586,7 +621,54 @@ func (r *Reconciler) reconcile(
 	return reconcile.Result{}, secretsManager.Cleanup(ctx)
 }
 
-func (r *Reconciler) deployEtcdsFunc(garden *operatorv1alpha1.Garden, etcdMain, etcdEvents etcd.Interface) func(context.Context) error {
+func (r *Reconciler) deployEtcdMainBackupBucket(ctx context.Context, garden *operatorv1alpha1.Garden, backupBucket *extensionsv1alpha1.BackupBucket) error {
+	if etcdConfig := garden.Spec.VirtualCluster.ETCD; etcdConfig == nil || etcdConfig.Main == nil || etcdConfig.Main.Backup == nil {
+		return fmt.Errorf("no ETCD main backup configuration found in Garden resource")
+	}
+	if garden.Spec.RuntimeCluster.Provider.Region == nil {
+		return fmt.Errorf("no region found in spec.runtimeCluster.provider.region in Garden resource")
+	}
+
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.RuntimeClientSet.Client(), backupBucket, func() error {
+		metav1.SetMetaDataAnnotation(&backupBucket.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+		metav1.SetMetaDataAnnotation(&backupBucket.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().Format(time.RFC3339Nano))
+
+		backupBucket.Spec = extensionsv1alpha1.BackupBucketSpec{
+			DefaultSpec: extensionsv1alpha1.DefaultSpec{
+				Type:           garden.Spec.VirtualCluster.ETCD.Main.Backup.Provider,
+				ProviderConfig: garden.Spec.VirtualCluster.ETCD.Main.Backup.ProviderConfig,
+				Class:          ptr.To(extensionsv1alpha1.ExtensionClassGarden),
+			},
+			Region: *garden.Spec.RuntimeCluster.Provider.Region,
+			SecretRef: corev1.SecretReference{
+				Name:      garden.Spec.VirtualCluster.ETCD.Main.Backup.SecretRef.Name,
+				Namespace: r.GardenNamespace,
+			},
+		}
+		return nil
+	})
+	return err
+}
+
+func etcdMainBackupBucket(garden *operatorv1alpha1.Garden) *extensionsv1alpha1.BackupBucket {
+	name, _ := etcdMainBackupBucketNameAndPrefix(garden)
+	return &extensionsv1alpha1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: name}}
+}
+
+func etcdMainBackupBucketNameAndPrefix(garden *operatorv1alpha1.Garden) (string, string) {
+	prefix := "virtual-garden-etcd-main"
+	if etcdConfig := garden.Spec.VirtualCluster.ETCD; etcdConfig != nil && etcdConfig.Main != nil && etcdConfig.Main.Backup != nil && etcdConfig.Main.Backup.BucketName != nil {
+		name := *etcdConfig.Main.Backup.BucketName
+		if idx := strings.Index(name, "/"); idx != -1 {
+			prefix = fmt.Sprintf("%s/%s", strings.TrimSuffix(name[idx+1:], "/"), prefix)
+			name = name[:idx]
+		}
+		return name, prefix
+	}
+	return "garden-" + string(garden.UID), prefix
+}
+
+func (r *Reconciler) deployEtcdsFunc(garden *operatorv1alpha1.Garden, etcdMain, etcdEvents etcd.Interface, backupBucket *extensionsv1alpha1.BackupBucket) func(context.Context) error {
 	return func(ctx context.Context) error {
 		if etcdConfig := garden.Spec.VirtualCluster.ETCD; etcdConfig != nil && etcdConfig.Main != nil && etcdConfig.Main.Backup != nil {
 			snapshotSchedule, err := timewindow.DetermineSchedule(
@@ -606,15 +688,16 @@ func (r *Reconciler) deployEtcdsFunc(garden *operatorv1alpha1.Garden, etcdMain, 
 				backupLeaderElection = r.Config.Controllers.Garden.ETCDConfig.BackupLeaderElection
 			}
 
-			container, prefix := etcdConfig.Main.Backup.BucketName, "virtual-garden-etcd-main"
-			if idx := strings.Index(etcdConfig.Main.Backup.BucketName, "/"); idx != -1 {
-				container = etcdConfig.Main.Backup.BucketName[:idx]
-				prefix = fmt.Sprintf("%s/%s", strings.TrimSuffix(etcdConfig.Main.Backup.BucketName[idx+1:], "/"), prefix)
+			secretRefName := etcdConfig.Main.Backup.SecretRef.Name
+			if backupBucket.Status.GeneratedSecretRef != nil {
+				secretRefName = backupBucket.Status.GeneratedSecretRef.Name
 			}
+
+			container, prefix := etcdMainBackupBucketNameAndPrefix(garden)
 
 			etcdMain.SetBackupConfig(&etcd.BackupConfig{
 				Provider:             etcdConfig.Main.Backup.Provider,
-				SecretRefName:        etcdConfig.Main.Backup.SecretRef.Name,
+				SecretRefName:        secretRefName,
 				Container:            container,
 				Prefix:               prefix,
 				FullSnapshotSchedule: snapshotSchedule,
@@ -665,7 +748,8 @@ func (r *Reconciler) deployKubeAPIServerFunc(garden *operatorv1alpha1.Garden, ku
 		}
 		services = []net.IPNet{*cidr}
 
-		externalHostname := gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0])
+		domains := toDomainNames(getAPIServerDomains(garden.Spec.VirtualCluster.DNS.Domains))
+		externalHostname := domains[0]
 		return shared.DeployKubeAPIServer(
 			ctx,
 			r.RuntimeClientSet.Client(),
@@ -677,7 +761,7 @@ func (r *Reconciler) deployKubeAPIServerFunc(garden *operatorv1alpha1.Garden, ku
 				helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials),
 			),
 			kubeapiserver.ServerCertificateConfig{
-				ExtraDNSNames: getAPIServerDomains(garden.Spec.VirtualCluster.DNS.Domains),
+				ExtraDNSNames: domains,
 			},
 			sniConfig,
 			externalHostname,
@@ -884,6 +968,87 @@ func (r *Reconciler) updateHelmChartRefForGardenlets(ctx context.Context, log lo
 	return nil
 }
 
+func (r *Reconciler) reconcileDNSRecords(ctx context.Context, log logr.Logger, garden *operatorv1alpha1.Garden) error {
+	dnsRecordList := &extensionsv1alpha1.DNSRecordList{}
+	if err := r.listManagedDNSRecords(ctx, dnsRecordList); err != nil {
+		return fmt.Errorf("failed listing DNS records: %w", err)
+	}
+
+	staleDNSRecordNames := sets.New[string]()
+	for _, dnsRecord := range dnsRecordList.Items {
+		staleDNSRecordNames.Insert(dnsRecord.Name)
+	}
+
+	istioIngressGatewayLoadBalancerAddress, err := kubernetesutils.WaitUntilLoadBalancerIsReady(ctx, log, r.RuntimeClientSet.Client(), namePrefix+v1beta1constants.DefaultSNIIngressNamespace, v1beta1constants.DefaultSNIIngressServiceName, time.Minute)
+	if err != nil {
+		return fmt.Errorf("failed waiting until %s/%s is ready: %w", namePrefix+v1beta1constants.DefaultSNIIngressNamespace, v1beta1constants.DefaultSNIIngressServiceName, err)
+	}
+
+	var taskFns []flow.TaskFn
+
+	apiDomains := getAPIServerDomains(garden.Spec.VirtualCluster.DNS.Domains)
+	ingressDomains := getIngressWildcardDomains(garden.Spec.RuntimeCluster.Ingress.Domains)
+
+	for _, domain := range append(apiDomains, ingressDomains...) {
+		dnsName := domain.Name
+		provider := getDNSProvider(*garden.Spec.DNS, domain.Provider)
+		if provider == nil {
+			return fmt.Errorf("provider %q not found in DNS providers", *domain.Provider)
+		}
+
+		recordName := strings.ReplaceAll(strings.ReplaceAll(dnsName, ".", "-"), "*", "wildcard") + "-" + provider.Type
+		staleDNSRecordNames.Delete(recordName)
+
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			return component.OpWait(dnsrecord.New(
+				log,
+				r.RuntimeClientSet.Client(),
+				&dnsrecord.Values{
+					Name:                         recordName,
+					Namespace:                    r.GardenNamespace,
+					Labels:                       map[string]string{labelKeyOrigin: labelValueOperator},
+					DNSName:                      dnsName,
+					Values:                       []string{istioIngressGatewayLoadBalancerAddress},
+					RecordType:                   extensionsv1alpha1helper.GetDNSRecordType(istioIngressGatewayLoadBalancerAddress),
+					Type:                         provider.Type,
+					Class:                        ptr.To(extensionsv1alpha1.ExtensionClassGarden),
+					SecretName:                   provider.SecretRef.Name,
+					ReconcileOnlyOnChangeOrError: true,
+				},
+				dnsrecord.DefaultInterval,
+				dnsrecord.DefaultSevereThreshold,
+				dnsrecord.DefaultTimeout,
+			)).Deploy(ctx)
+		})
+	}
+
+	// cleanup no longer needed DNS records
+	for _, staleDNSRecordName := range staleDNSRecordNames.UnsortedList() {
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			return component.OpDestroyAndWait(dnsrecord.New(
+				log,
+				r.RuntimeClientSet.Client(),
+				&dnsrecord.Values{
+					Name:      staleDNSRecordName,
+					Namespace: r.GardenNamespace,
+				},
+				dnsrecord.DefaultInterval,
+				dnsrecord.DefaultSevereThreshold,
+				dnsrecord.DefaultTimeout,
+			)).Destroy(ctx)
+		})
+	}
+
+	return flow.Parallel(taskFns...)(ctx)
+}
+
+func (r *Reconciler) listManagedDNSRecords(ctx context.Context, dnsRecordList *extensionsv1alpha1.DNSRecordList) error {
+	if err := r.RuntimeClientSet.Client().List(ctx, dnsRecordList, client.InNamespace(r.GardenNamespace), client.MatchingLabels{labelKeyOrigin: labelValueOperator}); err != nil {
+		return fmt.Errorf("failed listing DNS records: %w", err)
+	}
+	return nil
+}
+
 func getKubernetesResourcesForEncryption(garden *operatorv1alpha1.Garden) []string {
 	var encryptionConfig *gardencorev1beta1.EncryptionConfig
 
@@ -902,4 +1067,20 @@ func getGardenerResourcesForEncryption(garden *operatorv1alpha1.Garden) []string
 	}
 
 	return shared.GetResourcesForEncryptionFromConfig(encryptionConfig)
+}
+
+func getDNSProvider(dns operatorv1alpha1.DNSManagement, providerName *string) *operatorv1alpha1.DNSProvider {
+	if len(dns.Providers) == 0 {
+		return nil
+	}
+	if providerName == nil {
+		return &dns.Providers[0]
+	}
+
+	for _, provider := range dns.Providers {
+		if provider.Name == *providerName {
+			return &provider
+		}
+	}
+	return nil
 }

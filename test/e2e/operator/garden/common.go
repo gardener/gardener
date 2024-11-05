@@ -20,7 +20,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
@@ -86,25 +85,7 @@ func defaultRootCASecret() *corev1.Secret {
 	}
 }
 
-func defaultBackupBucket() *extensionsv1alpha1.BackupBucket {
-	return &extensionsv1alpha1.BackupBucket{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-bucket",
-		},
-		Spec: extensionsv1alpha1.BackupBucketSpec{
-			DefaultSpec: extensionsv1alpha1.DefaultSpec{
-				Class: ptr.To[extensionsv1alpha1.ExtensionClass]("garden"),
-				Type:  "local",
-			},
-			Region: "region",
-			SecretRef: corev1.SecretReference{
-				Name: "test-backup-bucket",
-			},
-		},
-	}
-}
-
-func defaultGarden(backupSecret, certManagementRootCA *corev1.Secret) *operatorv1alpha1.Garden {
+func defaultGarden(backupSecret, certManagementRootCA *corev1.Secret, specifyBackupBucket bool) *operatorv1alpha1.Garden {
 	randomSuffix, err := utils.GenerateRandomStringFromCharset(5, "0123456789abcdefghijklmnopqrstuvwxyz")
 	Expect(err).NotTo(HaveOccurred())
 	name := "garden-" + randomSuffix
@@ -120,6 +101,11 @@ func defaultGarden(backupSecret, certManagementRootCA *corev1.Secret) *operatorv
 		}
 	}
 
+	var bucketName *string
+	if specifyBackupBucket {
+		bucketName = ptr.To("gardener-operator/" + name)
+	}
+
 	return &operatorv1alpha1.Garden{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
@@ -131,13 +117,14 @@ func defaultGarden(backupSecret, certManagementRootCA *corev1.Secret) *operatorv
 					Services: "10.2.0.0/16",
 				},
 				Ingress: operatorv1alpha1.Ingress{
-					Domains: []string{"ingress.runtime-garden.local.gardener.cloud"},
+					Domains: []operatorv1alpha1.DNSDomain{{Name: "ingress.runtime-garden.local.gardener.cloud"}},
 					Controller: gardencorev1beta1.IngressController{
 						Kind: "nginx",
 					},
 				},
 				Provider: operatorv1alpha1.Provider{
-					Zones: []string{"0", "1", "2"},
+					Region: ptr.To("local"),
+					Zones:  []string{"0", "1", "2"},
 				},
 				Settings: &operatorv1alpha1.Settings{
 					VerticalPodAutoscaler: &operatorv1alpha1.SettingVerticalPodAutoscaler{
@@ -154,13 +141,13 @@ func defaultGarden(backupSecret, certManagementRootCA *corev1.Secret) *operatorv
 					HighAvailability: &operatorv1alpha1.HighAvailability{},
 				},
 				DNS: operatorv1alpha1.DNS{
-					Domains: []string{"virtual-garden.local.gardener.cloud"},
+					Domains: []operatorv1alpha1.DNSDomain{{Name: "virtual-garden.local.gardener.cloud"}},
 				},
 				ETCD: &operatorv1alpha1.ETCD{
 					Main: &operatorv1alpha1.ETCDMain{
 						Backup: &operatorv1alpha1.Backup{
 							Provider:   "local",
-							BucketName: "gardener-operator/" + name,
+							BucketName: bucketName,
 							SecretRef: corev1.LocalObjectReference{
 								Name: backupSecret.Name,
 							},

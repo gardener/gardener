@@ -582,6 +582,7 @@ This reconciler inspects the following references:
 - Audit policy `ConfigMap`s (`.spec.virtualCluster.kubernetes.kubeAPIServer.auditConfig.auditPolicy.configMapRef.name` and `.spec.virtualCluster.gardener.gardenerAPIServer.auditConfig.auditPolicy.configMapRef.name`)
 - Audit webhook kubeconfig `Secret`s (`.spec.virtualCluster.kubernetes.kubeAPIServer.auditWebhook.kubeconfigSecretName` and `.spec.virtualCluster.gardener.gardenerAPIServer.auditWebhook.kubeconfigSecretName`)
 - Authentication webhook kubeconfig `Secret`s (`.spec.virtualCluster.kubernetes.kubeAPIServer.authentication.webhook.kubeconfigSecretName`)
+- DNS `Secret`s (`.spec.dns.providers[].secretRef`)
 - ETCD backup `Secret`s (`.spec.virtualCluster.etcd.main.backup.secretRef`)
 - Structured authentication `ConfigMap`s (`.spec.virtualCluster.kubernetes.kubeAPIServer.structuredAuthentication.configMapName`)
 - Structured authorization `ConfigMap`s (`.spec.virtualCluster.kubernetes.kubeAPIServer.structuredAuthorization.configMapName`)

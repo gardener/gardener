@@ -19,10 +19,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/extensions/dnsrecord"
 	"github.com/gardener/gardener/pkg/component/garden/system/virtual"
 	gardeneraccess "github.com/gardener/gardener/pkg/component/gardener/access"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
@@ -31,6 +33,7 @@ import (
 	gardenprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
+	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -229,6 +232,34 @@ func (r *Reconciler) delete(
 			invalidateClient,
 		)
 
+		destroyDNSRecords = g.Add(flow.Task{
+			Name:         "Destroying DNSRecords for virtual garden cluster and ingress controller",
+			Fn:           func(ctx context.Context) error { return r.destroyDNSRecords(ctx, log) },
+			SkipIf:       garden.Spec.DNS == nil,
+			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
+		})
+
+		destroyMainETCDBackupBucket = g.Add(flow.Task{
+			Name: "Destroying main ETCD backup bucket",
+			Fn: func(ctx context.Context) error {
+				backupBucket := etcdMainBackupBucket(garden)
+				if err := extensions.DeleteExtensionObject(ctx, r.RuntimeClientSet.Client(), backupBucket); err != nil {
+					return err
+				}
+
+				return extensions.WaitUntilExtensionObjectDeleted(
+					ctx,
+					r.RuntimeClientSet.Client(),
+					log,
+					backupBucket,
+					extensionsv1alpha1.BackupBucketResource,
+					2*time.Second,
+					time.Minute,
+				)
+			},
+			SkipIf:       garden.Spec.VirtualCluster.ETCD == nil || garden.Spec.VirtualCluster.ETCD.Main == nil || garden.Spec.VirtualCluster.ETCD.Main.Backup == nil,
+			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
+		})
 		destroyEtcdDruid = g.Add(flow.Task{
 			Name:         "Destroying ETCD Druid",
 			Fn:           component.OpDestroyAndWait(c.etcdDruid).Destroy,
@@ -280,6 +311,8 @@ func (r *Reconciler) delete(
 			Dependencies: flow.NewTaskIDs(destroyFluentOperatorCustomResources),
 		})
 		syncPointCleanedUp = flow.NewTaskIDs(
+			destroyDNSRecords,
+			destroyMainETCDBackupBucket,
 			destroyEtcdDruid,
 			destroyIstio,
 			destroyHVPAController,
@@ -431,4 +464,31 @@ func (r *Reconciler) destroyGardenPrometheus(ctx context.Context, prometheus pro
 	}
 
 	return r.RuntimeClientSet.Client().DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(r.GardenNamespace), client.MatchingLabels{v1beta1constants.GardenerPurpose: gardenerutils.LabelPurposeGlobalMonitoringSecret})
+}
+
+func (r *Reconciler) destroyDNSRecords(ctx context.Context, log logr.Logger) error {
+	dnsRecordList := &extensionsv1alpha1.DNSRecordList{}
+	if err := r.listManagedDNSRecords(ctx, dnsRecordList); err != nil {
+		return fmt.Errorf("failed listing DNS records: %w", err)
+	}
+
+	var taskFns []flow.TaskFn
+
+	for _, dnsRecord := range dnsRecordList.Items {
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			return component.OpDestroyAndWait(dnsrecord.New(
+				log,
+				r.RuntimeClientSet.Client(),
+				&dnsrecord.Values{
+					Name:      dnsRecord.Name,
+					Namespace: dnsRecord.Namespace,
+				},
+				dnsrecord.DefaultInterval,
+				dnsrecord.DefaultSevereThreshold,
+				dnsrecord.DefaultTimeout,
+			)).Destroy(ctx)
+		})
+	}
+
+	return flow.Parallel(taskFns...)(ctx)
 }

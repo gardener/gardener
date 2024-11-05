@@ -77,6 +77,53 @@ spec:
           spec:
             description: Spec contains the specification of this garden.
             properties:
+              dns:
+                description: DNS contains specifications of DNS providers.
+                properties:
+                  providers:
+                    description: Providers is a list of DNS providers.
+                    items:
+                      description: DNSProvider contains the configuration for a DNS
+                        provider.
+                      properties:
+                        name:
+                          description: Name is the name of the DNS provider.
+                          minLength: 1
+                          type: string
+                        providerConfig:
+                          description: Config is the provider-specific configuration
+                            passed to DNSRecord resources.
+                          type: object
+                          x-kubernetes-preserve-unknown-fields: true
+                        secretRef:
+                          description: SecretRef is a reference to a Secret object
+                            containing the DNS provider credentials.
+                          properties:
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        type:
+                          description: Type is the type of the DNS provider.
+                          minLength: 1
+                          type: string
+                      required:
+                      - name
+                      - secretRef
+                      - type
+                      type: object
+                    minItems: 1
+                    type: array
+                required:
+                - providers
+                type: object
               runtimeCluster:
                 description: RuntimeCluster contains configuration for the runtime
                   cluster.
@@ -204,7 +251,21 @@ spec:
                           Domains specify the ingress domains of the cluster pointing to the ingress controller endpoint. They will be used
                           to construct ingress URLs for system applications running in runtime cluster.
                         items:
-                          type: string
+                          description: DNSDomain defines a DNS domain with optional
+                            provider.
+                          properties:
+                            name:
+                              description: Name is the domain name.
+                              minLength: 1
+                              type: string
+                            provider:
+                              description: |-
+                                Provider is the name of the DNS provider as declared in the '.spec.dns.providers' section.
+                                It is only optional, if the `.spec.dns` section is not provided at all.
+                              type: string
+                          required:
+                          - name
+                          type: object
                         minItems: 1
                         type: array
                     required:
@@ -252,6 +313,10 @@ spec:
                     description: Provider defines the provider-specific information
                       for this cluster.
                     properties:
+                      region:
+                        description: Region is the region the cluster is deployed
+                          to.
+                        type: string
                       zones:
                         description: Zones is the list of availability zones the cluster
                           is deployed to.
@@ -344,7 +409,21 @@ spec:
                           Domains are the external domains of the virtual garden cluster.
                           The first given domain in this list is immutable.
                         items:
-                          type: string
+                          description: DNSDomain defines a DNS domain with optional
+                            provider.
+                          properties:
+                            name:
+                              description: Name is the domain name.
+                              minLength: 1
+                              type: string
+                            provider:
+                              description: |-
+                                Provider is the name of the DNS provider as declared in the '.spec.dns.providers' section.
+                                It is only optional, if the `.spec.dns` section is not provided at all.
+                              type: string
+                          required:
+                          - name
+                          type: object
                         minItems: 1
                         type: array
                     type: object
@@ -381,8 +460,10 @@ spec:
                               for backups for the virtual garden etcd.
                             properties:
                               bucketName:
-                                description: BucketName is the name of the backup
-                                  bucket.
+                                description: |-
+                                  BucketName is the name of the backup bucket. If not provided, gardener-operator attempts to manage a new bucket.
+                                  In this case, the cloud provider credentials provided in the SecretRef must have enough privileges for creating
+                                  and deleting buckets.
                                 type: string
                                 x-kubernetes-validations:
                                 - message: BucketName is immutable
@@ -394,6 +475,11 @@ spec:
                                 x-kubernetes-validations:
                                 - message: Provider is immutable
                                   rule: self == oldSelf
+                              providerConfig:
+                                description: ProviderConfig is the provider-specific
+                                  configuration passed to BackupBucket resource.
+                                type: object
+                                x-kubernetes-preserve-unknown-fields: true
                               secretRef:
                                 description: |-
                                   SecretRef is a reference to a Secret object containing the cloud provider credentials for the object store where
@@ -411,7 +497,6 @@ spec:
                                 type: object
                                 x-kubernetes-map-type: atomic
                             required:
-                            - bucketName
                             - provider
                             - secretRef
                             type: object

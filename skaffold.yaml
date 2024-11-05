@@ -957,11 +957,15 @@ build:
             - cmd/gardenlet/app/bootstrappers
             - cmd/utils
             - cmd/utils/initrun
+            - extensions/pkg/controller
+            - extensions/pkg/predicate
             - imagevector
             - imagevector/charts.yaml
             - imagevector/containers.yaml
+            - pkg/api/core
             - pkg/api/extensions
             - pkg/api/indexer
+            - pkg/api/security
             - pkg/apis/core
             - pkg/apis/core/helper
             - pkg/apis/core/install

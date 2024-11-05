@@ -12,7 +12,7 @@ spec:
     listKind: ExtensionList
     plural: extensions
     shortNames:
-    - ext
+    - extop
     singular: extension
   scope: Cluster
   versions:

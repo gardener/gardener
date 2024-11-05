@@ -53,10 +53,35 @@ type GardenList struct {
 
 // GardenSpec contains the specification of a garden environment.
 type GardenSpec struct {
+	// DNS contains specifications of DNS providers.
+	// +optional
+	DNS *DNSManagement `json:"dns,omitempty"`
 	// RuntimeCluster contains configuration for the runtime cluster.
 	RuntimeCluster RuntimeCluster `json:"runtimeCluster"`
 	// VirtualCluster contains configuration for the virtual cluster.
 	VirtualCluster VirtualCluster `json:"virtualCluster"`
+}
+
+// DNSManagement contains specifications of DNS providers.
+type DNSManagement struct {
+	// Providers is a list of DNS providers.
+	// +kubebuilder:validation:MinItems=1
+	Providers []DNSProvider `json:"providers"`
+}
+
+// DNSProvider contains the configuration for a DNS provider.
+type DNSProvider struct {
+	// Name is the name of the DNS provider.
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+	// Type is the type of the DNS provider.
+	// +kubebuilder:validation:MinLength=1
+	Type string `json:"type"`
+	// Config is the provider-specific configuration passed to DNSRecord resources.
+	// +optional
+	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty"`
+	// SecretRef is a reference to a Secret object containing the DNS provider credentials.
+	SecretRef corev1.LocalObjectReference `json:"secretRef"`
 }
 
 // RuntimeCluster contains configuration for the runtime cluster.
@@ -84,10 +109,20 @@ type Ingress struct {
 	// Domains specify the ingress domains of the cluster pointing to the ingress controller endpoint. They will be used
 	// to construct ingress URLs for system applications running in runtime cluster.
 	// +kubebuilder:validation:MinItems=1
-	// +optional
-	Domains []string `json:"domains,omitempty"`
+	Domains []DNSDomain `json:"domains,omitempty"`
 	// Controller configures a Gardener managed Ingress Controller listening on the ingressDomain.
 	Controller gardencorev1beta1.IngressController `json:"controller"`
+}
+
+// DNSDomain defines a DNS domain with optional provider.
+type DNSDomain struct {
+	// Name is the domain name.
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+	// Provider is the name of the DNS provider as declared in the '.spec.dns.providers' section.
+	// It is only optional, if the `.spec.dns` section is not provided at all.
+	// +optional
+	Provider *string `json:"provider,omitempty"`
 }
 
 // RuntimeNetworking defines the networking configuration of the runtime cluster.
@@ -112,6 +147,9 @@ type RuntimeNetworking struct {
 
 // Provider defines the provider-specific information for this cluster.
 type Provider struct {
+	// Region is the region the cluster is deployed to.
+	// +optional
+	Region *string `json:"region,omitempty"`
 	// Zones is the list of availability zones the cluster is deployed to.
 	// +optional
 	Zones []string `json:"zones,omitempty"`
@@ -248,8 +286,7 @@ type DNS struct {
 	// Domains are the external domains of the virtual garden cluster.
 	// The first given domain in this list is immutable.
 	// +kubebuilder:validation:MinItems=1
-	// +optional
-	Domains []string `json:"domains,omitempty"`
+	Domains []DNSDomain `json:"domains,omitempty"`
 }
 
 // ETCD contains configuration for the etcds of the virtual garden cluster.
@@ -295,9 +332,15 @@ type Backup struct {
 	// Provider is a provider name. This field is immutable.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Provider is immutable"
 	Provider string `json:"provider"`
-	// BucketName is the name of the backup bucket.
+	// BucketName is the name of the backup bucket. If not provided, gardener-operator attempts to manage a new bucket.
+	// In this case, the cloud provider credentials provided in the SecretRef must have enough privileges for creating
+	// and deleting buckets.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="BucketName is immutable"
-	BucketName string `json:"bucketName"`
+	// +optional
+	BucketName *string `json:"bucketName,omitempty"`
+	// ProviderConfig is the provider-specific configuration passed to BackupBucket resource.
+	// +optional
+	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty"`
 	// SecretRef is a reference to a Secret object containing the cloud provider credentials for the object store where
 	// backups should be stored. It should have enough privileges to manipulate the objects as well as buckets.
 	SecretRef corev1.LocalObjectReference `json:"secretRef"`
