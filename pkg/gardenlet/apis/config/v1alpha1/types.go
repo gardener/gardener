@@ -57,8 +57,7 @@ type GardenletConfiguration struct {
 	// +optional
 	FeatureGates map[string]bool `json:"featureGates,omitempty"`
 	// SeedConfig contains configuration for the seed cluster.
-	// +optional
-	SeedConfig *SeedConfig `json:"seedConfig,omitempty"`
+	SeedConfig SeedConfig `json:"seedConfig"`
 	// Logging contains an optional configurations for the logging stack deployed
 	// by the Gardenlet in the seed clusters.
 	// +optional

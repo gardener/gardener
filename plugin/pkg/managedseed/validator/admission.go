@@ -323,16 +323,14 @@ func (v *ManagedSeed) admitGardenlet(gardenlet *seedmanagement.GardenletConfig, 
 			return allErrs, apierrors.NewInternalError(fmt.Errorf("could not convert config: %v", err))
 		}
 
-		if gardenletConfig.SeedConfig != nil {
-			seedConfigPath := configPath.Child("seedConfig")
+		seedConfigPath := configPath.Child("seedConfig")
 
-			// Admit seed spec against shoot
-			errs, err := v.admitSeedSpec(&gardenletConfig.SeedConfig.Spec, shoot, seedConfigPath.Child("spec"))
-			if err != nil {
-				return allErrs, err
-			}
-			allErrs = append(allErrs, errs...)
+		// Admit seed spec against shoot
+		errs, err := v.admitSeedSpec(&gardenletConfig.SeedConfig.Spec, shoot, seedConfigPath.Child("spec"))
+		if err != nil {
+			return allErrs, err
 		}
+		allErrs = append(allErrs, errs...)
 
 		// Convert gardenlet config to an external version and set it back to gardenlet.Config
 		gardenlet.Config, err = gardenlethelper.ConvertGardenletConfigurationExternal(gardenletConfig)

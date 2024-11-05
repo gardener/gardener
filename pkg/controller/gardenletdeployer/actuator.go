@@ -615,11 +615,6 @@ func PrepareGardenletChartValues(
 		}
 	}
 
-	// Ensure seed config is set
-	if gardenletConfig.SeedConfig == nil {
-		gardenletConfig.SeedConfig = &gardenletv1alpha1.SeedConfig{}
-	}
-
 	// Set the seed name
 	gardenletConfig.SeedConfig.SeedTemplate.Name = obj.GetName()
 

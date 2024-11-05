@@ -47,7 +47,7 @@ type GardenletConfiguration struct {
 	// Default: nil
 	FeatureGates map[string]bool
 	// SeedConfig contains configuration for the seed cluster.
-	SeedConfig *SeedConfig
+	SeedConfig SeedConfig
 	// Logging contains an optional configurations for the logging stack deployed
 	// by the Gardenlet in the seed clusters.
 	Logging *Logging

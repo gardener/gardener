@@ -133,7 +133,7 @@ func (g *GardenKubeconfig) getOrBootstrapKubeconfig(
 		return nil, "", "", fmt.Errorf("unable to bootstrap client from bootstrap kubeconfig: %w", err)
 	}
 
-	seedName := gardenletbootstraputil.GetSeedName(g.Config.SeedConfig)
+	seedName := gardenletbootstraputil.GetSeedName(&g.Config.SeedConfig)
 	log = log.WithValues("seedName", seedName)
 
 	log.Info("Using provided bootstrap kubeconfig to request signed certificate")

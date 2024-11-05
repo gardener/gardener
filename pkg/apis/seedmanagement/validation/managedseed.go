@@ -257,7 +257,7 @@ func validateGardenletConfiguration(gardenletConfig *config.GardenletConfigurati
 	allErrs := field.ErrorList{}
 
 	// Ensure name is not specified since it will be set by the controller
-	if gardenletConfig.SeedConfig != nil && gardenletConfig.SeedConfig.Name != "" {
+	if gardenletConfig.SeedConfig.Name != "" {
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("seedConfig", "metadata", "name"), "seed name is forbidden"))
 	}
 
