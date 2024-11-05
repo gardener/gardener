@@ -36,7 +36,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	. "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
@@ -455,18 +454,6 @@ var _ = Describe("Util", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(rest.Host).To(Equal(restConfig.Host))
 			})
-		})
-	})
-
-	Describe("GetSeedName", func() {
-		It("should return the configured name", func() {
-			name := "test-name"
-			result := GetSeedName(&config.SeedConfig{
-				SeedTemplate: gardencore.SeedTemplate{
-					ObjectMeta: metav1.ObjectMeta{Name: name},
-				},
-			})
-			Expect(result).To(Equal("test-name"))
 		})
 	})
 

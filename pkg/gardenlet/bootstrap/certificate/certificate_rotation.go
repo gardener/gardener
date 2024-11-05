@@ -58,14 +58,12 @@ func NewCertificateManager(log logr.Logger, gardenCluster cluster.Cluster, seedC
 		return nil, fmt.Errorf("failed creating garden clientset: %w", err)
 	}
 
-	seedName := gardenletbootstraputil.GetSeedName(&config.SeedConfig)
-
 	return &Manager{
-		log:                    log.WithName("certificate-manager").WithValues("seedName", seedName),
+		log:                    log.WithName("certificate-manager").WithValues("seedName", config.SeedConfig.Name),
 		gardenClientSet:        gardenClientSet,
 		seedClient:             seedClient,
 		gardenClientConnection: config.GardenClientConnection,
-		seedName:               seedName,
+		seedName:               config.SeedConfig.Name,
 	}, nil
 }
 

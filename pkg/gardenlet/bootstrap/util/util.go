@@ -39,14 +39,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken"
 )
 
-// GetSeedName returns the seed name from the SeedConfig or the default Seed name
-func GetSeedName(seedConfig *config.SeedConfig) string {
-	if seedConfig != nil {
-		return seedConfig.Name
-	}
-	return ""
-}
-
 // GetKubeconfigFromSecret tries to retrieve the kubeconfig bytes using the given client
 // returns the kubeconfig or nil if it cannot be found
 func GetKubeconfigFromSecret(ctx context.Context, seedClient client.Client, key client.ObjectKey) ([]byte, error) {
