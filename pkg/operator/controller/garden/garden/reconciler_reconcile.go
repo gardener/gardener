@@ -659,9 +659,9 @@ func etcdMainBackupBucketNameAndPrefix(garden *operatorv1alpha1.Garden) (string,
 	prefix := "virtual-garden-etcd-main"
 	if etcdConfig := garden.Spec.VirtualCluster.ETCD; etcdConfig != nil && etcdConfig.Main != nil && etcdConfig.Main.Backup != nil && etcdConfig.Main.Backup.BucketName != nil {
 		name := *etcdConfig.Main.Backup.BucketName
-		if idx := strings.LastIndex(name, "/"); idx != -1 {
-			prefix = fmt.Sprintf("%s/%s", name[:idx], prefix)
-			name = strings.ReplaceAll(name, "/", "-")
+		if idx := strings.Index(name, "/"); idx != -1 {
+			prefix = fmt.Sprintf("%s/%s", strings.TrimSuffix(name[idx+1:], "/"), prefix)
+			name = name[:idx]
 		}
 		return name, prefix
 	}
