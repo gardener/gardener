@@ -22,7 +22,6 @@ import (
 	"golang.org/x/text/language"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
-	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -155,20 +154,15 @@ type Values struct {
 	CARotationPhase             gardencorev1beta1.CredentialsRotationPhase
 	RuntimeKubernetesVersion    *semver.Version
 	BackupConfig                *BackupConfig
-	HVPAEnabled                 bool
 	MaintenanceTimeWindow       gardencorev1beta1.MaintenanceTimeWindow
-	ScaleDownUpdateMode         *string
+	EvictionRequirement         *string
 	PriorityClassName           string
 	HighAvailabilityEnabled     bool
 	TopologyAwareRoutingEnabled bool
-	VPAEnabled                  bool
 }
 
 func (e *etcd) Deploy(ctx context.Context) error {
-	var (
-		existingEtcd *druidv1alpha1.Etcd
-		existingSts  *appsv1.StatefulSet
-	)
+	var existingEtcd *druidv1alpha1.Etcd
 
 	if err := e.client.Get(ctx, client.ObjectKeyFromObject(e.etcd), e.etcd); err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -178,28 +172,13 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		existingEtcd = e.etcd.DeepCopy()
 	}
 
-	stsName := e.etcd.Name
-	if existingEtcd != nil && existingEtcd.Status.Etcd != nil && existingEtcd.Status.Etcd.Name != "" {
-		stsName = existingEtcd.Status.Etcd.Name
-	}
-
-	var sts appsv1.StatefulSet
-	if err := e.client.Get(ctx, client.ObjectKey{Namespace: e.namespace, Name: stsName}, &sts); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return err
-		}
-	} else {
-		existingSts = &sts
-	}
-
 	var (
-		hvpa           = e.emptyHVPA()
 		vpa            = e.emptyVerticalPodAutoscaler()
 		serviceMonitor = e.emptyServiceMonitor()
 
 		replicas = e.computeReplicas(existingEtcd)
 
-		resourcesEtcd, resourcesBackupRestore = e.computeContainerResources(existingSts)
+		resourcesEtcd, resourcesBackupRestore = e.computeContainerResources()
 		garbageCollectionPolicy               = druidv1alpha1.GarbageCollectionPolicy(druidv1alpha1.GarbageCollectionPolicyExponential)
 		garbageCollectionPeriod               = metav1.Duration{Duration: 12 * time.Hour}
 		compressionPolicy                     = druidv1alpha1.GzipCompression
@@ -427,159 +406,12 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if e.values.VPAEnabled {
-		if err := kubernetesutils.DeleteObjects(ctx, e.client, hvpa); err != nil {
-			return err
-		}
-		if err := e.reconcileVerticalPodAutoscaler(ctx, vpa, minAllowed); err != nil {
-			return err
-		}
-	} else if e.values.HVPAEnabled {
-		if err := kubernetesutils.DeleteObjects(ctx, e.client, vpa); err != nil {
-			return err
-		}
-		var (
-			hpaLabels          = map[string]string{v1beta1constants.LabelRole: "etcd-hpa-" + e.values.Role}
-			vpaLabels          = map[string]string{v1beta1constants.LabelRole: "etcd-vpa-" + e.values.Role}
-			updateModeAuto     = hvpav1alpha1.UpdateModeAuto
-			containerPolicyOff = vpaautoscalingv1.ContainerScalingModeOff
-			controlledValues   = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-		)
-
-		scaleDownUpdateMode := e.values.ScaleDownUpdateMode
-		if scaleDownUpdateMode == nil {
-			scaleDownUpdateMode = ptr.To(hvpav1alpha1.UpdateModeMaintenanceWindow)
-		}
-
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, hvpa, func() error {
-			hvpa.Labels = utils.MergeStringMaps(e.getRoleLabels(), map[string]string{
-				v1beta1constants.LabelApp: LabelAppValue,
-			})
-			hvpa.Spec.Replicas = ptr.To[int32](1)
-			hvpa.Spec.MaintenanceTimeWindow = &hvpav1alpha1.MaintenanceTimeWindow{
-				Begin: e.values.MaintenanceTimeWindow.Begin,
-				End:   e.values.MaintenanceTimeWindow.End,
-			}
-			hvpa.Spec.Hpa = hvpav1alpha1.HpaSpec{
-				Selector: &metav1.LabelSelector{MatchLabels: hpaLabels},
-				Deploy:   false,
-				Template: hvpav1alpha1.HpaTemplate{
-					ObjectMeta: metav1.ObjectMeta{
-						Labels: hpaLabels,
-					},
-					Spec: hvpav1alpha1.HpaTemplateSpec{
-						MinReplicas: ptr.To(replicas),
-						MaxReplicas: replicas,
-						Metrics: []autoscalingv2beta1.MetricSpec{
-							{
-								Type: autoscalingv2beta1.ResourceMetricSourceType,
-								Resource: &autoscalingv2beta1.ResourceMetricSource{
-									Name:                     corev1.ResourceCPU,
-									TargetAverageUtilization: ptr.To[int32](80),
-								},
-							},
-							{
-								Type: autoscalingv2beta1.ResourceMetricSourceType,
-								Resource: &autoscalingv2beta1.ResourceMetricSource{
-									Name:                     corev1.ResourceMemory,
-									TargetAverageUtilization: ptr.To[int32](80),
-								},
-							},
-						},
-					},
-				},
-			}
-			hvpa.Spec.Vpa = hvpav1alpha1.VpaSpec{
-				Selector: &metav1.LabelSelector{MatchLabels: vpaLabels},
-				Deploy:   true,
-				ScaleUp: hvpav1alpha1.ScaleType{
-					UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-						UpdateMode: &updateModeAuto,
-					},
-					StabilizationDuration: ptr.To("5m"),
-					MinChange: hvpav1alpha1.ScaleParams{
-						CPU: hvpav1alpha1.ChangeParams{
-							Value:      ptr.To("1"),
-							Percentage: ptr.To[int32](80),
-						},
-						Memory: hvpav1alpha1.ChangeParams{
-							Value:      ptr.To("2G"),
-							Percentage: ptr.To[int32](80),
-						},
-					},
-				},
-				ScaleDown: hvpav1alpha1.ScaleType{
-					UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-						UpdateMode: scaleDownUpdateMode,
-					},
-					StabilizationDuration: ptr.To("15m"),
-					MinChange: hvpav1alpha1.ScaleParams{
-						CPU: hvpav1alpha1.ChangeParams{
-							Value:      ptr.To("1"),
-							Percentage: ptr.To[int32](80),
-						},
-						Memory: hvpav1alpha1.ChangeParams{
-							Value:      ptr.To("2G"),
-							Percentage: ptr.To[int32](80),
-						},
-					},
-				},
-				LimitsRequestsGapScaleParams: hvpav1alpha1.ScaleParams{
-					CPU: hvpav1alpha1.ChangeParams{
-						Value:      ptr.To("2"),
-						Percentage: ptr.To[int32](40),
-					},
-					Memory: hvpav1alpha1.ChangeParams{
-						Value:      ptr.To("5G"),
-						Percentage: ptr.To[int32](40),
-					},
-				},
-				Template: hvpav1alpha1.VpaTemplate{
-					ObjectMeta: metav1.ObjectMeta{
-						Labels: vpaLabels,
-					},
-					Spec: hvpav1alpha1.VpaTemplateSpec{
-						ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-							ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
-								{
-									ContainerName:    containerNameEtcd,
-									MinAllowed:       minAllowed,
-									ControlledValues: &controlledValues,
-								},
-								{
-									ContainerName:    containerNameBackupRestore,
-									Mode:             &containerPolicyOff,
-									ControlledValues: &controlledValues,
-								},
-							},
-						},
-					},
-				},
-			}
-			hvpa.Spec.WeightBasedScalingIntervals = []hvpav1alpha1.WeightBasedScalingInterval{
-				{
-					VpaWeight:         hvpav1alpha1.VpaOnly,
-					StartReplicaCount: replicas,
-					LastReplicaCount:  replicas,
-				},
-			}
-			hvpa.Spec.TargetRef = &autoscalingv2beta1.CrossVersionObjectReference{
-				APIVersion: appsv1.SchemeGroupVersion.String(),
-				Kind:       "StatefulSet",
-				Name:       stsName,
-			}
-			return nil
-		}); err != nil {
-			return err
-		}
-	} else {
-		// Neither VPA nor HVPA is enabled for etcd, delete the remaining objects
-		if err := kubernetesutils.DeleteObjects(ctx, e.client, hvpa); err != nil {
-			return err
-		}
-		if err = kubernetesutils.DeleteObjects(ctx, e.client, vpa); err != nil {
-			return err
-		}
+	// TODO(plkokanov): Remove the HVPA cleanup after gardener v1.109.0 has been released.
+	if err := kubernetesutils.DeleteObjects(ctx, e.client, e.emptyHVPA()); err != nil {
+		return err
+	}
+	if err := e.reconcileVerticalPodAutoscaler(ctx, vpa, minAllowed); err != nil {
+		return err
 	}
 
 	// etcd deployed for shoot cluster
@@ -892,6 +724,7 @@ func (e *etcd) Destroy(ctx context.Context) error {
 	}
 
 	return kubernetesutils.DeleteObjects(ctx, e.client,
+		// TODO(plkokanov): Remove the HVPA cleanup after gardener v1.109.0 has been released.
 		e.emptyHVPA(),
 		e.emptyVerticalPodAutoscaler(),
 		e.emptyServiceMonitor(),
@@ -942,14 +775,14 @@ func (e *etcd) reconcileVerticalPodAutoscaler(ctx context.Context, vpa *vpaautos
 	controlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, vpa, func() error {
-		var scaleDownUpdateMode *string
+		var evictionRequirement *string
 
 		metav1.SetMetaDataLabel(&vpa.ObjectMeta, v1beta1constants.LabelRole, "etcd-vpa-"+e.values.Role)
-		scaleDownUpdateMode = e.values.ScaleDownUpdateMode
-		if ptr.Deref(scaleDownUpdateMode, "") == hvpav1alpha1.UpdateModeOff {
+		evictionRequirement = e.values.EvictionRequirement
+		if ptr.Deref(evictionRequirement, "") == v1beta1constants.EvictionRequirementNever {
 			metav1.SetMetaDataLabel(&vpa.ObjectMeta, v1beta1constants.LabelVPAEvictionRequirementsController, v1beta1constants.EvictionRequirementManagedByController)
 			metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, v1beta1constants.AnnotationVPAEvictionRequirementDownscaleRestriction, v1beta1constants.EvictionRequirementNever)
-		} else if ptr.Deref(scaleDownUpdateMode, "") == hvpav1alpha1.UpdateModeMaintenanceWindow {
+		} else if ptr.Deref(evictionRequirement, "") == v1beta1constants.EvictionRequirementInMaintenanceWindowOnly {
 			metav1.SetMetaDataLabel(&vpa.ObjectMeta, v1beta1constants.LabelVPAEvictionRequirementsController, v1beta1constants.EvictionRequirementManagedByController)
 			metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, v1beta1constants.AnnotationVPAEvictionRequirementDownscaleRestriction, v1beta1constants.EvictionRequirementInMaintenanceWindowOnly)
 			metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, v1beta1constants.AnnotationShootMaintenanceWindow, e.values.MaintenanceTimeWindow.Begin+","+e.values.MaintenanceTimeWindow.End)
@@ -1068,25 +901,7 @@ func (e *etcd) Scale(ctx context.Context, replicas int32) error {
 
 	e.etcd = etcdObj
 
-	if err := e.client.Patch(ctx, etcdObj, patch); err != nil {
-		return err
-	}
-
-	if e.values.HVPAEnabled && !e.values.VPAEnabled { // Skip this when VPA is enabled for etcd: there is no HVPA object anymore
-		// Keep the `hvpa.Spec.Hpa.Template.Spec.MaxReplicas` and `hvpa.Spec.Hpa.Template.Spec.MinReplicas`
-		// values consistent with the replica count of the etcd.
-		hvpa := e.emptyHVPA()
-		if err := e.client.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa); err != nil {
-			return err
-		}
-
-		patch := client.MergeFrom(hvpa.DeepCopy())
-		hvpa.Spec.Hpa.Template.Spec.MaxReplicas = replicas
-		hvpa.Spec.Hpa.Template.Spec.MinReplicas = ptr.To(replicas)
-		return e.client.Patch(ctx, hvpa, patch)
-	}
-
-	return nil
+	return e.client.Patch(ctx, etcdObj, patch)
 }
 
 func (e *etcd) RolloutPeerCA(ctx context.Context) error {
@@ -1135,39 +950,18 @@ func (e *etcd) GetReplicas() *int32 { return e.values.Replicas }
 
 func (e *etcd) SetReplicas(replicas *int32) { e.values.Replicas = replicas }
 
-func (e *etcd) computeContainerResources(existingSts *appsv1.StatefulSet) (*corev1.ResourceRequirements, *corev1.ResourceRequirements) {
-	var (
-		resourcesEtcd = &corev1.ResourceRequirements{
+func (e *etcd) computeContainerResources() (*corev1.ResourceRequirements, *corev1.ResourceRequirements) {
+	return &corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("300m"),
 				corev1.ResourceMemory: resource.MustParse("1G"),
 			},
-		}
-		resourcesBackupRestore = &corev1.ResourceRequirements{
+		}, &corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("10m"),
 				corev1.ResourceMemory: resource.MustParse("40Mi"),
 			},
 		}
-	)
-
-	if existingSts != nil && e.values.HVPAEnabled && !e.values.VPAEnabled { // Skip this when VPA is enabled for etcd: we're not using HVPA for etcd in this case
-		for k := range existingSts.Spec.Template.Spec.Containers {
-			v := existingSts.Spec.Template.Spec.Containers[k]
-			switch v.Name {
-			case containerNameEtcd:
-				resourcesEtcd = &corev1.ResourceRequirements{
-					Requests: v.Resources.Requests,
-				}
-			case containerNameBackupRestore:
-				resourcesBackupRestore = &corev1.ResourceRequirements{
-					Requests: v.Resources.Requests,
-				}
-			}
-		}
-	}
-
-	return resourcesEtcd, resourcesBackupRestore
 }
 
 func (e *etcd) computeReplicas(existingEtcd *druidv1alpha1.Etcd) int32 {

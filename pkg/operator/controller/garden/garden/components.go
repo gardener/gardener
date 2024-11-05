@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
@@ -447,7 +446,7 @@ func (r *Reconciler) newEtcd(
 	error,
 ) {
 	var (
-		hvpaScaleDownUpdateMode       *string
+		evictionRequirement           *string
 		defragmentationScheduleFormat string
 		storageClassName              *string
 		storageCapacity               string
@@ -455,7 +454,7 @@ func (r *Reconciler) newEtcd(
 
 	switch role {
 	case v1beta1constants.ETCDRoleMain:
-		hvpaScaleDownUpdateMode = ptr.To(hvpav1alpha1.UpdateModeOff)
+		evictionRequirement = ptr.To(v1beta1constants.EvictionRequirementNever)
 		defragmentationScheduleFormat = "%d %d * * *" // defrag main etcd daily in the maintenance window
 		storageCapacity = "25Gi"
 		if etcd := garden.Spec.VirtualCluster.ETCD; etcd != nil && etcd.Main != nil && etcd.Main.Storage != nil {
@@ -466,7 +465,7 @@ func (r *Reconciler) newEtcd(
 		}
 
 	case v1beta1constants.ETCDRoleEvents:
-		hvpaScaleDownUpdateMode = ptr.To(hvpav1alpha1.UpdateModeMaintenanceWindow)
+		evictionRequirement = ptr.To(v1beta1constants.EvictionRequirementInMaintenanceWindowOnly)
 		defragmentationScheduleFormat = "%d %d */3 * *"
 		storageCapacity = "10Gi"
 		if etcd := garden.Spec.VirtualCluster.ETCD; etcd != nil && etcd.Events != nil && etcd.Events.Storage != nil {
@@ -511,13 +510,11 @@ func (r *Reconciler) newEtcd(
 			DefragmentationSchedule:     &defragmentationSchedule,
 			CARotationPhase:             helper.GetCARotationPhase(garden.Status.Credentials),
 			RuntimeKubernetesVersion:    r.RuntimeVersion,
-			HVPAEnabled:                 hvpaEnabled(),
 			MaintenanceTimeWindow:       garden.Spec.VirtualCluster.Maintenance.TimeWindow,
-			ScaleDownUpdateMode:         hvpaScaleDownUpdateMode,
+			EvictionRequirement:         evictionRequirement,
 			PriorityClassName:           v1beta1constants.PriorityClassNameGardenSystem500,
 			HighAvailabilityEnabled:     highAvailabilityEnabled,
 			TopologyAwareRoutingEnabled: helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
-			VPAEnabled:                  features.DefaultFeatureGate.Enabled(features.VPAForETCD),
 		},
 	), nil
 }
