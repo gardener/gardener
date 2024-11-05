@@ -515,7 +515,7 @@ func gardenletConfiguration(seed *gardencorev1beta1.Seed, gcc *gardenletv1alpha1
 			APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
 			Kind:       "GardenletConfiguration",
 		},
-		SeedConfig: &gardenletv1alpha1.SeedConfig{
+		SeedConfig: gardenletv1alpha1.SeedConfig{
 			SeedTemplate: gardencorev1beta1.SeedTemplate{
 				ObjectMeta: seed.ObjectMeta,
 				Spec:       seed.Spec,

@@ -262,7 +262,7 @@ var _ = BeforeSuite(func() {
 					SyncPeriod: &metav1.Duration{Duration: 500 * time.Millisecond},
 				},
 			},
-			SeedConfig: &config.SeedConfig{
+			SeedConfig: config.SeedConfig{
 				SeedTemplate: gardencore.SeedTemplate{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: seedName,

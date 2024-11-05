@@ -355,7 +355,7 @@ var _ = Describe("ManagedSeed", func() {
 							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
 							Kind:       "GardenletConfiguration",
 						},
-						SeedConfig: &gardenletv1alpha1.SeedConfig{
+						SeedConfig: gardenletv1alpha1.SeedConfig{
 							SeedTemplate: gardencorev1beta1.SeedTemplate{
 								Spec: gardencorev1beta1.SeedSpec{
 									Backup: &gardencorev1beta1.SeedBackup{},
@@ -382,7 +382,7 @@ var _ = Describe("ManagedSeed", func() {
 							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
 							Kind:       "GardenletConfiguration",
 						},
-						SeedConfig: &gardenletv1alpha1.SeedConfig{
+						SeedConfig: gardenletv1alpha1.SeedConfig{
 							SeedTemplate: gardencorev1beta1.SeedTemplate{
 								ObjectMeta: seedx.ObjectMeta,
 								Spec:       seedx.Spec,
@@ -410,7 +410,7 @@ var _ = Describe("ManagedSeed", func() {
 							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
 							Kind:       "GardenletConfiguration",
 						},
-						SeedConfig: &gardenletv1alpha1.SeedConfig{
+						SeedConfig: gardenletv1alpha1.SeedConfig{
 							SeedTemplate: gardencorev1beta1.SeedTemplate{
 								Spec: seedx.Spec,
 							},
@@ -431,7 +431,7 @@ var _ = Describe("ManagedSeed", func() {
 							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
 							Kind:       "GardenletConfiguration",
 						},
-						SeedConfig: &gardenletv1alpha1.SeedConfig{
+						SeedConfig: gardenletv1alpha1.SeedConfig{
 							SeedTemplate: gardencorev1beta1.SeedTemplate{
 								ObjectMeta: seedx.ObjectMeta,
 								Spec:       seedx.Spec,
@@ -459,7 +459,7 @@ var _ = Describe("ManagedSeed", func() {
 							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
 							Kind:       "GardenletConfiguration",
 						},
-						SeedConfig: &gardenletv1alpha1.SeedConfig{
+						SeedConfig: gardenletv1alpha1.SeedConfig{
 							SeedTemplate: gardencorev1beta1.SeedTemplate{
 								Spec: seedx.Spec,
 							},
@@ -480,7 +480,7 @@ var _ = Describe("ManagedSeed", func() {
 							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
 							Kind:       "GardenletConfiguration",
 						},
-						SeedConfig: &gardenletv1alpha1.SeedConfig{
+						SeedConfig: gardenletv1alpha1.SeedConfig{
 							SeedTemplate: gardencorev1beta1.SeedTemplate{
 								ObjectMeta: seedx.ObjectMeta,
 								Spec:       seedx.Spec,
@@ -508,7 +508,7 @@ var _ = Describe("ManagedSeed", func() {
 							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
 							Kind:       "GardenletConfiguration",
 						},
-						SeedConfig: &gardenletv1alpha1.SeedConfig{
+						SeedConfig: gardenletv1alpha1.SeedConfig{
 							SeedTemplate: gardencorev1beta1.SeedTemplate{
 								Spec: seedx.Spec,
 							},
@@ -529,7 +529,7 @@ var _ = Describe("ManagedSeed", func() {
 							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
 							Kind:       "GardenletConfiguration",
 						},
-						SeedConfig: &gardenletv1alpha1.SeedConfig{
+						SeedConfig: gardenletv1alpha1.SeedConfig{
 							SeedTemplate: gardencorev1beta1.SeedTemplate{
 								ObjectMeta: seedx.ObjectMeta,
 								Spec:       seedx.Spec,
@@ -583,7 +583,7 @@ var _ = Describe("ManagedSeed", func() {
 						APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
 						Kind:       "GardenletConfiguration",
 					},
-					SeedConfig: &gardenletv1alpha1.SeedConfig{
+					SeedConfig: gardenletv1alpha1.SeedConfig{
 						SeedTemplate: gardencorev1beta1.SeedTemplate{
 							Spec: seedSpec,
 						},
@@ -670,7 +670,7 @@ var _ = Describe("ManagedSeed", func() {
 								APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
 								Kind:       "GardenletConfiguration",
 							},
-							SeedConfig: &gardenletv1alpha1.SeedConfig{
+							SeedConfig: gardenletv1alpha1.SeedConfig{
 								SeedTemplate: gardencorev1beta1.SeedTemplate{
 									Spec: seedx.Spec,
 								},
@@ -728,7 +728,7 @@ var _ = Describe("ManagedSeed", func() {
 								APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
 								Kind:       "GardenletConfiguration",
 							},
-							SeedConfig: &gardenletv1alpha1.SeedConfig{
+							SeedConfig: gardenletv1alpha1.SeedConfig{
 								SeedTemplate: gardencorev1beta1.SeedTemplate{
 									Spec: seedx.Spec,
 								},
@@ -753,7 +753,7 @@ var _ = Describe("ManagedSeed", func() {
 							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
 							Kind:       "GardenletConfiguration",
 						},
-						SeedConfig: &gardenletv1alpha1.SeedConfig{
+						SeedConfig: gardenletv1alpha1.SeedConfig{
 							SeedTemplate: gardencorev1beta1.SeedTemplate{
 								Spec: gardencorev1beta1.SeedSpec{
 									Ingress: seedx.Spec.Ingress,

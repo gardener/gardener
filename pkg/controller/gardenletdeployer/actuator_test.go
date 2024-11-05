@@ -208,7 +208,7 @@ var _ = Describe("Interface", func() {
 						APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
 						Kind:       "GardenletConfiguration",
 					},
-					SeedConfig: &gardenletv1alpha1.SeedConfig{
+					SeedConfig: gardenletv1alpha1.SeedConfig{
 						SeedTemplate: *seedTemplate,
 					},
 				},

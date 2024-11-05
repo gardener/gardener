@@ -96,7 +96,7 @@ var _ = Describe("ValuesHelper", func() {
 			Logging: &config.Logging{
 				Enabled: ptr.To(true),
 			},
-			SeedConfig: &config.SeedConfig{
+			SeedConfig: config.SeedConfig{
 				SeedTemplate: gardencore.SeedTemplate{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "bar",
@@ -233,6 +233,19 @@ var _ = Describe("ValuesHelper", func() {
 						"contentType":        "application/json",
 						"qps":                float64(100),
 						"burst":              float64(130),
+					},
+					"seedConfig": map[string]any{
+						"metadata": map[string]any{
+							"creationTimestamp": nil,
+						},
+						"spec": map[string]any{
+							"dns": map[string]any{},
+							"networks": map[string]any{
+								"pods":     "",
+								"services": "",
+							},
+							"provider": map[string]any{"type": "", "region": ""},
+						},
 					},
 					"server": map[string]any{
 						"healthProbes": map[string]any{

@@ -259,7 +259,7 @@ func buildManagedSeed(shoot *gardencorev1beta1.Shoot) (*seedmanagementv1alpha1.M
 				Namespace: gardenletKubeconfigSecretNamespace,
 			},
 		},
-		SeedConfig: &gardenletv1alpha1.SeedConfig{
+		SeedConfig: gardenletv1alpha1.SeedConfig{
 			SeedTemplate: gardencorev1beta1.SeedTemplate{
 				Spec: gardencorev1beta1.SeedSpec{
 					Settings: &gardencorev1beta1.SeedSettings{

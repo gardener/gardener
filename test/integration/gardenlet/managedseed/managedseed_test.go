@@ -104,7 +104,7 @@ var _ = Describe("ManagedSeed controller test", func() {
 					Namespace: gardenNamespaceGarden.Name,
 				},
 			},
-			SeedConfig: &gardenletv1alpha1.SeedConfig{
+			SeedConfig: gardenletv1alpha1.SeedConfig{
 				SeedTemplate: gardencorev1beta1.SeedTemplate{
 					ObjectMeta: metav1.ObjectMeta{
 						Annotations: map[string]string{

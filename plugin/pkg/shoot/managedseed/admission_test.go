@@ -87,7 +87,7 @@ var _ = Describe("ManagedSeed", func() {
 			}
 
 			gardenletConfig = &gardenletv1alpha1.GardenletConfiguration{
-				SeedConfig: &gardenletv1alpha1.SeedConfig{
+				SeedConfig: gardenletv1alpha1.SeedConfig{
 					SeedTemplate: gardencorev1beta1.SeedTemplate{
 						Spec: gardencorev1beta1.SeedSpec{
 							Provider: gardencorev1beta1.SeedProvider{
@@ -189,23 +189,6 @@ var _ = Describe("ManagedSeed", func() {
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(BeInvalidError())
 				Expect(err).To(MatchError(ContainSubstring("field is immutable for managed seeds")))
-			})
-
-			It("should forbid Shoot update if the seedTemplate is not specified", func() {
-				managedSeed.Spec.Gardenlet = seedmanagementv1alpha1.GardenletConfig{
-					Config: runtime.RawExtension{
-						Object: &gardenletv1alpha1.GardenletConfiguration{},
-					},
-				}
-				seedManagementClient.AddReactor("list", "managedseeds", func(_ testing.Action) (bool, runtime.Object, error) {
-					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
-				})
-				oldShoot := shoot.DeepCopy()
-				attrs := getShootAttributes(shoot, oldShoot, admission.Update, &metav1.UpdateOptions{})
-				err := admissionHandler.Validate(context.TODO(), attrs, nil)
-				Expect(err).To(HaveOccurred())
-				Expect(err).To(BeInternalServerError())
-				Expect(err).To(MatchError(ContainSubstring("cannot extract the seed template")))
 			})
 
 			It("should forbid Shoot update when zones have changed but still configured in ManagedSeed", func() {

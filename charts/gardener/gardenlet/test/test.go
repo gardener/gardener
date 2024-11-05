@@ -860,7 +860,7 @@ func ComputeExpectedGardenletConfiguration(
 	config.GardenClientConnection.KubeconfigSecret = kubeconfigSecret
 
 	if seedConfig != nil {
-		config.SeedConfig = seedConfig
+		config.SeedConfig = *seedConfig
 	}
 
 	return config
