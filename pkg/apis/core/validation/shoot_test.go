@@ -612,77 +612,79 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})))),
 		)
 
-		DescribeTable("addons validation",
-			func(purpose core.ShootPurpose, allowed bool) {
-				shootCopy := shoot.DeepCopy()
-				shootCopy.Spec.Purpose = &purpose
+		Context("Addons validation", func() {
+			DescribeTable("addons validation",
+				func(purpose core.ShootPurpose, allowed bool) {
+					shootCopy := shoot.DeepCopy()
+					shootCopy.Spec.Purpose = &purpose
 
-				errorList := ValidateShoot(shootCopy)
+					errorList := ValidateShoot(shootCopy)
 
-				if allowed {
-					Expect(errorList).To(BeEmpty())
-				} else {
-					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.addons"),
-					}))))
-				}
-			},
-			Entry("should allow addons on evaluation shoots", core.ShootPurposeEvaluation, true),
-			Entry("should forbid addons on testing shoots", core.ShootPurposeTesting, false),
-			Entry("should forbid addons on development shoots", core.ShootPurposeDevelopment, false),
-			Entry("should forbid addons on production shoots", core.ShootPurposeProduction, false),
-		)
+					if allowed {
+						Expect(errorList).To(BeEmpty())
+					} else {
+						Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeForbidden),
+							"Field": Equal("spec.addons"),
+						}))))
+					}
+				},
+				Entry("should allow addons on evaluation shoots", core.ShootPurposeEvaluation, true),
+				Entry("should forbid addons on testing shoots", core.ShootPurposeTesting, false),
+				Entry("should forbid addons on development shoots", core.ShootPurposeDevelopment, false),
+				Entry("should forbid addons on production shoots", core.ShootPurposeProduction, false),
+			)
 
-		It("should forbid addon configuration if the shoot is workerless", func() {
-			shoot.Spec.Provider.Workers = []core.Worker{}
-			shoot.Spec.Addons = &core.Addons{}
-			shoot.Spec.Kubernetes.KubeControllerManager = nil
+			It("should forbid addon configuration if the shoot is workerless", func() {
+				shoot.Spec.Provider.Workers = []core.Worker{}
+				shoot.Spec.Addons = &core.Addons{}
+				shoot.Spec.Kubernetes.KubeControllerManager = nil
 
-			errorList := ValidateShoot(shoot)
+				errorList := ValidateShoot(shoot)
 
-			Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal(field.ErrorTypeForbidden),
-				"Field":  Equal("spec.addons"),
-				"Detail": ContainSubstring("addons cannot be enabled for Workerless Shoot clusters"),
-			}))))
-		})
+				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.addons"),
+					"Detail": ContainSubstring("addons cannot be enabled for Workerless Shoot clusters"),
+				}))))
+			})
 
-		It("should forbid unsupported addon configuration", func() {
-			shoot.Spec.Addons.KubernetesDashboard.AuthenticationMode = ptr.To("does-not-exist")
+			It("should forbid unsupported addon configuration", func() {
+				shoot.Spec.Addons.KubernetesDashboard.AuthenticationMode = ptr.To("does-not-exist")
 
-			errorList := ValidateShoot(shoot)
+				errorList := ValidateShoot(shoot)
 
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeNotSupported),
-				"Field": Equal("spec.addons.kubernetesDashboard.authenticationMode"),
-			}))))
-		})
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("spec.addons.kubernetesDashboard.authenticationMode"),
+				}))))
+			})
 
-		It("should allow external traffic policies 'Cluster' for nginx-ingress", func() {
-			v := corev1.ServiceExternalTrafficPolicyCluster
-			shoot.Spec.Addons.NginxIngress.ExternalTrafficPolicy = &v
-			errorList := ValidateShoot(shoot)
-			Expect(errorList).To(BeEmpty())
-		})
+			It("should allow external traffic policies 'Cluster' for nginx-ingress", func() {
+				v := corev1.ServiceExternalTrafficPolicyCluster
+				shoot.Spec.Addons.NginxIngress.ExternalTrafficPolicy = &v
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(BeEmpty())
+			})
 
-		It("should allow external traffic policies 'Local' for nginx-ingress", func() {
-			v := corev1.ServiceExternalTrafficPolicyLocal
-			shoot.Spec.Addons.NginxIngress.ExternalTrafficPolicy = &v
-			errorList := ValidateShoot(shoot)
-			Expect(errorList).To(BeEmpty())
-		})
+			It("should allow external traffic policies 'Local' for nginx-ingress", func() {
+				v := corev1.ServiceExternalTrafficPolicyLocal
+				shoot.Spec.Addons.NginxIngress.ExternalTrafficPolicy = &v
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(BeEmpty())
+			})
 
-		It("should forbid unsupported external traffic policies for nginx-ingress", func() {
-			v := corev1.ServiceExternalTrafficPolicy("something-else")
-			shoot.Spec.Addons.NginxIngress.ExternalTrafficPolicy = &v
+			It("should forbid unsupported external traffic policies for nginx-ingress", func() {
+				v := corev1.ServiceExternalTrafficPolicy("something-else")
+				shoot.Spec.Addons.NginxIngress.ExternalTrafficPolicy = &v
 
-			errorList := ValidateShoot(shoot)
+				errorList := ValidateShoot(shoot)
 
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeNotSupported),
-				"Field": Equal("spec.addons.nginxIngress.externalTrafficPolicy"),
-			}))))
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("spec.addons.nginxIngress.externalTrafficPolicy"),
+				}))))
+			})
 		})
 
 		It("should forbid unsupported specification (provider independent)", func() {
@@ -725,83 +727,144 @@ var _ = Describe("Shoot Validation Tests", func() {
 			))
 		})
 
-		It("should forbid adding secretBindingName in case of workerless shoot", func() {
-			shoot.Spec.Provider.Workers = nil
-			shoot.Spec.SecretBindingName = ptr.To("foo")
+		Context("SecretBindingName/CredentialsBinding validation", func() {
 
-			errorList := ValidateShoot(shoot)
+			It("should forbid adding secretBindingName in case of workerless shoot", func() {
+				shoot.Spec.Provider.Workers = nil
+				shoot.Spec.SecretBindingName = ptr.To("foo")
 
-			Expect(errorList).To(ContainElements(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal(field.ErrorTypeForbidden),
-				"Field":  Equal("spec.secretBindingName"),
-				"Detail": ContainSubstring("this field should not be set for workerless Shoot clusters"),
-			}))))
-		})
+				errorList := ValidateShoot(shoot)
 
-		It("should forbid adding credentialsBindingName in case of workerless shoot", func() {
-			shoot.Spec.Provider.Workers = nil
-			shoot.Spec.CredentialsBindingName = ptr.To("foo")
+				Expect(errorList).To(ContainElements(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.secretBindingName"),
+					"Detail": ContainSubstring("this field should not be set for workerless Shoot clusters"),
+				}))))
+			})
 
-			errorList := ValidateShoot(shoot)
+			It("should forbid adding credentialsBindingName in case of workerless shoot", func() {
+				shoot.Spec.Provider.Workers = nil
+				shoot.Spec.CredentialsBindingName = ptr.To("foo")
 
-			Expect(errorList).To(ContainElements(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal(field.ErrorTypeForbidden),
-				"Field":  Equal("spec.credentialsBindingName"),
-				"Detail": ContainSubstring("this field should not be set for workerless Shoot clusters"),
-			}))))
-		})
+				errorList := ValidateShoot(shoot)
 
-		It("should allow nil secretBindingName in case of workerless shoot", func() {
-			shoot.Spec.Provider.Workers = nil
-			shoot.Spec.Addons = nil
-			shoot.Spec.SecretBindingName = nil
-			shoot.Spec.Kubernetes.KubeControllerManager = nil
-			shoot.Spec.Networking = nil
-			shoot.Spec.Kubernetes.KubeControllerManager = nil
+				Expect(errorList).To(ContainElements(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.credentialsBindingName"),
+					"Detail": ContainSubstring("this field should not be set for workerless Shoot clusters"),
+				}))))
+			})
 
-			errorList := ValidateShoot(shoot)
+			It("should allow nil secretBindingName in case of workerless shoot", func() {
+				shoot.Spec.Provider.Workers = nil
+				shoot.Spec.Addons = nil
+				shoot.Spec.SecretBindingName = nil
+				shoot.Spec.Kubernetes.KubeControllerManager = nil
+				shoot.Spec.Networking = nil
+				shoot.Spec.Kubernetes.KubeControllerManager = nil
 
-			Expect(errorList).To(BeEmpty())
-		})
+				errorList := ValidateShoot(shoot)
 
-		It("should allow nil credentialsBindingName in case of workerless shoot", func() {
-			shoot.Spec.Provider.Workers = nil
-			shoot.Spec.Addons = nil
-			shoot.Spec.SecretBindingName = nil
-			shoot.Spec.CredentialsBindingName = nil
-			shoot.Spec.Kubernetes.KubeControllerManager = nil
-			shoot.Spec.Networking = nil
-			shoot.Spec.Kubernetes.KubeControllerManager = nil
+				Expect(errorList).To(BeEmpty())
+			})
 
-			errorList := ValidateShoot(shoot)
+			It("should allow nil credentialsBindingName in case of workerless shoot", func() {
+				shoot.Spec.Provider.Workers = nil
+				shoot.Spec.Addons = nil
+				shoot.Spec.SecretBindingName = nil
+				shoot.Spec.CredentialsBindingName = nil
+				shoot.Spec.Kubernetes.KubeControllerManager = nil
+				shoot.Spec.Networking = nil
+				shoot.Spec.Kubernetes.KubeControllerManager = nil
 
-			Expect(errorList).To(BeEmpty())
-		})
+				errorList := ValidateShoot(shoot)
 
-		It("should forbid setting both secretBindingName and credentialsBindingName", func() {
-			shoot.Spec.SecretBindingName = ptr.To("foo")
-			shoot.Spec.CredentialsBindingName = ptr.To("foo")
+				Expect(errorList).To(BeEmpty())
+			})
 
-			errorList := ValidateShoot(shoot)
+			It("should forbid setting both secretBindingName and credentialsBindingName", func() {
+				shoot.Spec.SecretBindingName = ptr.To("foo")
+				shoot.Spec.CredentialsBindingName = ptr.To("foo")
 
-			Expect(errorList).To(ContainElements(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal(field.ErrorTypeForbidden),
-				"Field":  Equal("spec.secretBindingName"),
-				"Detail": Equal("is incompatible with credentialsBindingName"),
-			}))))
-		})
+				errorList := ValidateShoot(shoot)
 
-		It("should forbid not setting at least one of secretBindingName or credentialsBindingName", func() {
-			shoot.Spec.SecretBindingName = nil
-			shoot.Spec.CredentialsBindingName = nil
+				Expect(errorList).To(ContainElements(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.secretBindingName"),
+					"Detail": Equal("is incompatible with credentialsBindingName"),
+				}))))
+			})
 
-			errorList := ValidateShoot(shoot)
+			It("should forbid not setting at least one of secretBindingName or credentialsBindingName", func() {
+				shoot.Spec.SecretBindingName = nil
+				shoot.Spec.CredentialsBindingName = nil
 
-			Expect(errorList).To(ContainElements(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal(field.ErrorTypeRequired),
-				"Field":  Equal("spec.secretBindingName"),
-				"Detail": Equal("must be set when credentialsBindingName is not"),
-			}))))
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ContainElements(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeRequired),
+					"Field":  Equal("spec.secretBindingName"),
+					"Detail": Equal("must be set when credentialsBindingName is not"),
+				}))))
+			})
+
+			It("should forbid updating secretBindingName when not migrating to credentialsBindingName", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				shoot.Spec.SecretBindingName = ptr.To("another-reference")
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.secretBindingName"),
+					})),
+				))
+			})
+
+			It("should allow updating credentialsBindingName", func() {
+				shoot.Spec.SecretBindingName = nil
+				shoot.Spec.CredentialsBindingName = ptr.To("foo")
+				newShoot := prepareShootForUpdate(shoot)
+				shoot.Spec.CredentialsBindingName = ptr.To("another-reference")
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should allow switching from secretBindingName to credentialsBindingName", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.SecretBindingName = nil
+				newShoot.Spec.CredentialsBindingName = ptr.To("another-reference")
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should not allow switching from credentialsBindingName to secretBindingName", func() {
+				shoot.Spec.SecretBindingName = nil
+				shoot.Spec.CredentialsBindingName = ptr.To("another-reference")
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.SecretBindingName = ptr.To("foo")
+				newShoot.Spec.CredentialsBindingName = nil
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.secretBindingName"),
+						"Detail": Equal("field is immutable"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.credentialsBindingName"),
+						"Detail": Equal("the field cannot be unset"),
+					})),
+				))
+			})
 		})
 
 		It("should forbid adding invalid/duplicate emails", func() {
@@ -879,64 +942,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 			))
 		})
 
-		It("should forbid updating secretBindingName when not migrating to credentialsBindingName", func() {
-			newShoot := prepareShootForUpdate(shoot)
-			shoot.Spec.SecretBindingName = ptr.To("another-reference")
-
-			errorList := ValidateShootUpdate(newShoot, shoot)
-
-			Expect(errorList).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.secretBindingName"),
-				})),
-			))
-		})
-
-		It("should allow updating credentialsBindingName", func() {
-			shoot.Spec.SecretBindingName = nil
-			shoot.Spec.CredentialsBindingName = ptr.To("foo")
-			newShoot := prepareShootForUpdate(shoot)
-			shoot.Spec.CredentialsBindingName = ptr.To("another-reference")
-
-			errorList := ValidateShootUpdate(newShoot, shoot)
-
-			Expect(errorList).To(BeEmpty())
-		})
-
-		It("should allow switching from secretBindingName to credentialsBindingName", func() {
-			newShoot := prepareShootForUpdate(shoot)
-			newShoot.Spec.SecretBindingName = nil
-			newShoot.Spec.CredentialsBindingName = ptr.To("another-reference")
-
-			errorList := ValidateShootUpdate(newShoot, shoot)
-
-			Expect(errorList).To(BeEmpty())
-		})
-
-		It("should not allow switching from credentialsBindingName to secretBindingName", func() {
-			shoot.Spec.SecretBindingName = nil
-			shoot.Spec.CredentialsBindingName = ptr.To("another-reference")
-			newShoot := prepareShootForUpdate(shoot)
-			newShoot.Spec.SecretBindingName = ptr.To("foo")
-			newShoot.Spec.CredentialsBindingName = nil
-
-			errorList := ValidateShootUpdate(newShoot, shoot)
-
-			Expect(errorList).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("spec.secretBindingName"),
-					"Detail": Equal("field is immutable"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("spec.credentialsBindingName"),
-					"Detail": Equal("the field cannot be unset"),
-				})),
-			))
-		})
-
 		Context("seed selector", func() {
 			seedSelector := &core.SeedSelector{LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}}}
 
@@ -1005,150 +1010,155 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 		})
 
-		It("should forbid passing an extension w/o type information", func() {
-			extension := core.Extension{}
-			shoot.Spec.Extensions = append(shoot.Spec.Extensions, extension)
+		Context("Extensions validation", func() {
 
-			errorList := ValidateShoot(shoot)
+			It("should forbid passing an extension w/o type information", func() {
+				extension := core.Extension{}
+				shoot.Spec.Extensions = append(shoot.Spec.Extensions, extension)
 
-			Expect(errorList).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("spec.extensions[0].type"),
-				}))))
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.extensions[0].type"),
+					}))))
+			})
+
+			It("should allow passing an extension w/ type information", func() {
+				extension := core.Extension{
+					Type: "arbitrary",
+				}
+				shoot.Spec.Extensions = append(shoot.Spec.Extensions, extension)
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should forbid passing an extension of same type more than once", func() {
+				extension := core.Extension{
+					Type: "arbitrary",
+				}
+				shoot.Spec.Extensions = append(shoot.Spec.Extensions, extension, extension)
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeDuplicate),
+						"Field": Equal("spec.extensions[1].type"),
+					}))))
+			})
+
+			It("should allow passing more than one extension of different type", func() {
+				extension := core.Extension{
+					Type: "arbitrary",
+				}
+				shoot.Spec.Extensions = append(shoot.Spec.Extensions, extension, extension)
+				shoot.Spec.Extensions[1].Type = "arbitrary-2"
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(BeEmpty())
+			})
 		})
 
-		It("should allow passing an extension w/ type information", func() {
-			extension := core.Extension{
-				Type: "arbitrary",
-			}
-			shoot.Spec.Extensions = append(shoot.Spec.Extensions, extension)
+		Context("Resources validation", func() {
+			It("should forbid resources w/o names or w/ invalid references", func() {
+				ref := core.NamedResourceReference{}
+				shoot.Spec.Resources = append(shoot.Spec.Resources, ref)
 
-			errorList := ValidateShoot(shoot)
+				errorList := ValidateShoot(shoot)
 
-			Expect(errorList).To(BeEmpty())
-		})
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.resources[0].name"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.resources[0].resourceRef.kind"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.resources[0].resourceRef.name"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.resources[0].resourceRef.apiVersion"),
+					})),
+				))
+			})
 
-		It("should forbid passing an extension of same type more than once", func() {
-			extension := core.Extension{
-				Type: "arbitrary",
-			}
-			shoot.Spec.Extensions = append(shoot.Spec.Extensions, extension, extension)
+			It("should forbid resources of kind other than Secret/ConfigMap", func() {
+				ref := core.NamedResourceReference{
+					Name: "test",
+					ResourceRef: autoscalingv1.CrossVersionObjectReference{
+						Kind:       "ServiceAccount",
+						Name:       "test-sa",
+						APIVersion: "v1",
+					},
+				}
+				shoot.Spec.Resources = append(shoot.Spec.Resources, ref)
 
-			errorList := ValidateShoot(shoot)
+				errorList := ValidateShoot(shoot)
 
-			Expect(errorList).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeDuplicate),
-					"Field": Equal("spec.extensions[1].type"),
-				}))))
-		})
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":     Equal(field.ErrorTypeNotSupported),
+						"Field":    Equal("spec.resources[0].resourceRef.kind"),
+						"BadValue": Equal("ServiceAccount"),
+					})),
+				))
+			})
 
-		It("should allow passing more than one extension of different type", func() {
-			extension := core.Extension{
-				Type: "arbitrary",
-			}
-			shoot.Spec.Extensions = append(shoot.Spec.Extensions, extension, extension)
-			shoot.Spec.Extensions[1].Type = "arbitrary-2"
+			It("should forbid resources with non-unique names", func() {
+				ref := core.NamedResourceReference{
+					Name: "test",
+					ResourceRef: autoscalingv1.CrossVersionObjectReference{
+						Kind:       "Secret",
+						Name:       "test-secret",
+						APIVersion: "v1",
+					},
+				}
+				shoot.Spec.Resources = append(shoot.Spec.Resources, ref, ref)
 
-			errorList := ValidateShoot(shoot)
+				errorList := ValidateShoot(shoot)
 
-			Expect(errorList).To(BeEmpty())
-		})
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeDuplicate),
+						"Field": Equal("spec.resources[1].name"),
+					})),
+				))
+			})
 
-		It("should forbid resources w/o names or w/ invalid references", func() {
-			ref := core.NamedResourceReference{}
-			shoot.Spec.Resources = append(shoot.Spec.Resources, ref)
+			It("should allow resources w/ names and valid references", func() {
+				ref := core.NamedResourceReference{
+					Name: "test",
+					ResourceRef: autoscalingv1.CrossVersionObjectReference{
+						Kind:       "Secret",
+						Name:       "test-secret",
+						APIVersion: "v1",
+					},
+				}
 
-			errorList := ValidateShoot(shoot)
+				ref2 := core.NamedResourceReference{
+					Name: "test-cm",
+					ResourceRef: autoscalingv1.CrossVersionObjectReference{
+						Kind:       "ConfigMap",
+						Name:       "test-cm",
+						APIVersion: "v1",
+					},
+				}
 
-			Expect(errorList).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("spec.resources[0].name"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("spec.resources[0].resourceRef.kind"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("spec.resources[0].resourceRef.name"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("spec.resources[0].resourceRef.apiVersion"),
-				})),
-			))
-		})
+				shoot.Spec.Resources = append(shoot.Spec.Resources, ref, ref2)
 
-		It("should forbid resources of kind other than Secret/ConfigMap", func() {
-			ref := core.NamedResourceReference{
-				Name: "test",
-				ResourceRef: autoscalingv1.CrossVersionObjectReference{
-					Kind:       "ServiceAccount",
-					Name:       "test-sa",
-					APIVersion: "v1",
-				},
-			}
-			shoot.Spec.Resources = append(shoot.Spec.Resources, ref)
+				errorList := ValidateShoot(shoot)
 
-			errorList := ValidateShoot(shoot)
-
-			Expect(errorList).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":     Equal(field.ErrorTypeNotSupported),
-					"Field":    Equal("spec.resources[0].resourceRef.kind"),
-					"BadValue": Equal("ServiceAccount"),
-				})),
-			))
-		})
-
-		It("should forbid resources with non-unique names", func() {
-			ref := core.NamedResourceReference{
-				Name: "test",
-				ResourceRef: autoscalingv1.CrossVersionObjectReference{
-					Kind:       "Secret",
-					Name:       "test-secret",
-					APIVersion: "v1",
-				},
-			}
-			shoot.Spec.Resources = append(shoot.Spec.Resources, ref, ref)
-
-			errorList := ValidateShoot(shoot)
-
-			Expect(errorList).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeDuplicate),
-					"Field": Equal("spec.resources[1].name"),
-				})),
-			))
-		})
-
-		It("should allow resources w/ names and valid references", func() {
-			ref := core.NamedResourceReference{
-				Name: "test",
-				ResourceRef: autoscalingv1.CrossVersionObjectReference{
-					Kind:       "Secret",
-					Name:       "test-secret",
-					APIVersion: "v1",
-				},
-			}
-
-			ref2 := core.NamedResourceReference{
-				Name: "test-cm",
-				ResourceRef: autoscalingv1.CrossVersionObjectReference{
-					Kind:       "ConfigMap",
-					Name:       "test-cm",
-					APIVersion: "v1",
-				},
-			}
-
-			shoot.Spec.Resources = append(shoot.Spec.Resources, ref, ref2)
-
-			errorList := ValidateShoot(shoot)
-
-			Expect(errorList).To(BeEmpty())
+				Expect(errorList).To(BeEmpty())
+			})
 		})
 
 		It("should allow updating the seed if it has not been set previously", func() {
@@ -4892,6 +4902,64 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(ValidateShoot(shoot)).To(BeEmpty())
 			})
 
+			DescribeTable("It should forbid setting certain operation annotations when shoot has a maintenance annotation",
+				func(maintenanceOpAnnotation, operationAnnotation, errString string) {
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", maintenanceOpAnnotation)
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", operationAnnotation)
+
+					shoot.Status = core.ShootStatus{
+						LastOperation: &core.LastOperation{
+							Type:  core.LastOperationTypeCreate,
+							State: core.LastOperationStateSucceeded,
+						},
+					}
+
+					if sets.New(v1beta1constants.OperationRotateCredentialsComplete,
+						v1beta1constants.OperationRotateCAComplete,
+						v1beta1constants.OperationRotateServiceAccountKeyComplete,
+						v1beta1constants.OperationRotateETCDEncryptionKeyComplete).Has(maintenanceOpAnnotation) {
+						shoot.Status.Credentials = &core.ShootCredentials{
+							Rotation: &core.ShootCredentialsRotation{
+								CertificateAuthorities: &core.CARotation{
+									Phase: core.RotationPrepared,
+								},
+								ServiceAccountKey: &core.ServiceAccountKeyRotation{
+									Phase: core.RotationPrepared,
+								},
+								ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
+									Phase: core.RotationPrepared,
+								},
+							},
+						}
+					}
+
+					Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+						"Detail": ContainSubstring(errString),
+					}))))
+
+					delete(shoot.Annotations, "maintenance.gardener.cloud/operation")
+					delete(shoot.Annotations, "gardener.cloud/operation")
+				},
+
+				Entry("rotate-ca-start", "rotate-credentials-start", "rotate-ca-start", "operation 'rotate-ca-start' is not permitted when maintenance operation is 'rotate-credentials-start'"),
+				Entry("rotate-serviceaccount-key-start", "rotate-credentials-start", "rotate-serviceaccount-key-start", "operation 'rotate-serviceaccount-key-start' is not permitted when maintenance operation is 'rotate-credentials-start'"),
+				Entry("rotate-etcd-encryption-key-start", "rotate-credentials-start", "rotate-etcd-encryption-key-start", "operation 'rotate-etcd-encryption-key-start' is not permitted when maintenance operation is 'rotate-credentials-start'"),
+
+				Entry("rotate-ca-complete", "rotate-credentials-complete", "rotate-ca-complete", "operation 'rotate-ca-complete' is not permitted when maintenance operation is 'rotate-credentials-complete'"),
+				Entry("rotate-serviceaccount-key-complete", "rotate-credentials-complete", "rotate-serviceaccount-key-complete", "operation 'rotate-serviceaccount-key-complete' is not permitted when maintenance operation is 'rotate-credentials-complete'"),
+				Entry("rotate-etcd-encryption-key-complete", "rotate-credentials-complete", "rotate-etcd-encryption-key-complete", "operation 'rotate-etcd-encryption-key-complete' is not permitted when maintenance operation is 'rotate-credentials-complete'"),
+
+				Entry("rotate-credentials-start", "rotate-ca-start", "rotate-credentials-start", "operation 'rotate-credentials-start' is not permitted when maintenance operation is 'rotate-ca-start'"),
+				Entry("rotate-credentials-start", "rotate-serviceaccount-key-start", "rotate-credentials-start", "operation 'rotate-credentials-start' is not permitted when maintenance operation is 'rotate-serviceaccount-key-start'"),
+				Entry("rotate-credentials-start", "rotate-etcd-encryption-key-start", "rotate-credentials-start", "operation 'rotate-credentials-start' is not permitted when maintenance operation is 'rotate-etcd-encryption-key-start'"),
+
+				Entry("rotate-credentials-complete", "rotate-ca-complete", "rotate-credentials-complete", "operation 'rotate-credentials-complete' is not permitted when maintenance operation is 'rotate-ca-complete'"),
+				Entry("rotate-credentials-complete", "rotate-serviceaccount-key-complete", "rotate-credentials-complete", "operation 'rotate-credentials-complete' is not permitted when maintenance operation is 'rotate-serviceaccount-key-complete'"),
+				Entry("rotate-credentials-complete", "rotate-etcd-encryption-key-complete", "rotate-credentials-complete", "operation 'rotate-credentials-complete' is not permitted when maintenance operation is 'rotate-etcd-encryption-key-complete'"),
+			)
+
 			DescribeTable("forbid certain rotation operations when shoot is hibernated",
 				func(operation string) {
 					shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
@@ -6856,9 +6924,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				Expect(errList).To(BeEmpty())
 			})
-
 		})
-
 	})
 
 	Describe("#ValidateHibernationSchedules", func() {

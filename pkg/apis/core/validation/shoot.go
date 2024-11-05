@@ -2469,6 +2469,28 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 		}
 	}
 
+	switch maintenanceOperation {
+	case v1beta1constants.OperationRotateCredentialsStart:
+		if sets.New(v1beta1constants.OperationRotateCAStart, v1beta1constants.OperationRotateServiceAccountKeyStart, v1beta1constants.OperationRotateETCDEncryptionKeyStart).Has(operation) {
+			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted when maintenance operation is '%s'", operation, maintenanceOperation)))
+		}
+	case v1beta1constants.OperationRotateCredentialsComplete:
+		if sets.New(v1beta1constants.OperationRotateCAComplete, v1beta1constants.OperationRotateServiceAccountKeyComplete, v1beta1constants.OperationRotateETCDEncryptionKeyComplete).Has(operation) {
+			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted when maintenance operation is '%s'", operation, maintenanceOperation)))
+		}
+	}
+
+	switch operation {
+	case v1beta1constants.OperationRotateCredentialsStart:
+		if sets.New(v1beta1constants.OperationRotateCAStart, v1beta1constants.OperationRotateServiceAccountKeyStart, v1beta1constants.OperationRotateETCDEncryptionKeyStart).Has(maintenanceOperation) {
+			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted when maintenance operation is '%s'", operation, maintenanceOperation)))
+		}
+	case v1beta1constants.OperationRotateCredentialsComplete:
+		if sets.New(v1beta1constants.OperationRotateCAComplete, v1beta1constants.OperationRotateServiceAccountKeyComplete, v1beta1constants.OperationRotateETCDEncryptionKeyComplete).Has(maintenanceOperation) {
+			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted when maintenance operation is '%s'", operation, maintenanceOperation)))
+		}
+	}
+
 	allErrs = append(allErrs, validateShootOperationContext(operation, shoot, fldPathOp)...)
 	if shoot.DeletionTimestamp == nil {
 		// Only validate maintenance operation context when shoot has no deletion timestamp. If it has such a timestamp,
