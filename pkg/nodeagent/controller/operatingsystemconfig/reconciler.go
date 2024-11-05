@@ -74,9 +74,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	node, err := r.getNode(ctx)
+	node, nodeCreated, err := r.getNode(ctx)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed getting node: %w", err)
+	}
+
+	if nodeCreated {
+		log.Info("Node registered by kubelet. Restarting myself (gardener-node-agent unit) to reinitialize caches, canceling the context to initiate graceful shutdown")
+		r.CancelContext()
+		return reconcile.Result{}, nil
 	}
 
 	osc, oscRaw, oscChecksum, err := extractOSCFromSecret(secret)
@@ -195,25 +201,27 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	return reconcile.Result{RequeueAfter: r.Config.SyncPeriod.Duration}, r.Client.Patch(ctx, node, patch)
 }
 
-func (r *Reconciler) getNode(ctx context.Context) (*corev1.Node, error) {
+func (r *Reconciler) getNode(ctx context.Context) (*corev1.Node, bool, error) {
 	if r.NodeName != "" {
 		node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: r.NodeName}}
 		if err := r.Client.Get(ctx, client.ObjectKeyFromObject(node), node); err != nil {
-			return nil, fmt.Errorf("unable to fetch node %q: %w", r.NodeName, err)
+			return nil, false, fmt.Errorf("unable to fetch node %q: %w", r.NodeName, err)
 		}
-		return node, nil
+		return node, false, nil
 	}
 
 	node, err := nodeagent.FetchNodeByHostName(ctx, r.Client, r.HostName)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
+	var nodeCreated bool
 	if node != nil {
 		r.NodeName = node.Name
+		nodeCreated = true
 	}
 
-	return node, nil
+	return node, nodeCreated, nil
 }
 
 var (

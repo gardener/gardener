@@ -294,7 +294,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		BootstrapRunnables: bootstrapRunnables,
 		ActualRunnables: []manager.Runnable{
 			manager.RunnableFunc(func(ctx context.Context) error {
-				return controller.AddToManager(ctx, cancel, mgr, cfg, hostName, machineName)
+				return controller.AddToManager(ctx, cancel, mgr, cfg, hostName, machineName, nodeName)
 			}),
 		},
 	}); err != nil {
