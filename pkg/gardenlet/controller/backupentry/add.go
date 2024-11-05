@@ -65,7 +65,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 				&handler.EnqueueRequestForObject{},
 				&predicate.GenerationChangedPredicate{},
 				predicateutils.SeedNamePredicate(r.SeedName, gardenerutils.GetBackupEntrySeedNames),
-				predicate.NewPredicateFuncs(restoreAfterMigratePredicate)),
+				predicate.NewPredicateFuncs(backupEntryPredicate)),
 		).
 		Build(r)
 	if err != nil {
@@ -103,7 +103,7 @@ func (r *Reconciler) MapBackupBucketToBackupEntry(ctx context.Context, log logr.
 		return nil
 	}
 
-	return mapper.ObjectListToRequests(backupEntryList, restoreAfterMigratePredicate)
+	return mapper.ObjectListToRequests(backupEntryList, backupEntryPredicate)
 }
 
 // MapExtensionBackupEntryToCoreBackupEntry is a mapper.MapFunc for mapping a extensions.gardener.cloud/v1alpha1.BackupEntry to the owning
@@ -140,10 +140,8 @@ func getBackupBucketLastOperation(obj client.Object) *gardencorev1beta1.LastOper
 	return backupBucket.Status.LastOperation
 }
 
-// restoreAfterMigratePredicate is a predicate which returns false if the core.gardener.cloud/v1beta1.BackupEntry has been
-// successfully migrated and does not have the `gardener.cloud/operation: restore` annotation.
-// It returns true in all other cases.
-func restoreAfterMigratePredicate(obj client.Object) bool {
+// backupEntryPredicate is a predicate which returns true if the core.gardener.cloud/v1beta1.BackupEntry has not yet been successfully migrated or has the `gardener.cloud/operation: restore` annotation.
+func backupEntryPredicate(obj client.Object) bool {
 	backupEntry, ok := obj.(*gardencorev1beta1.BackupEntry)
 	if !ok {
 		return false
