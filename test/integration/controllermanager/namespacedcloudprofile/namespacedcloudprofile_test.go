@@ -118,6 +118,11 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 					Name: "some-image",
 					Versions: []gardencorev1beta1.MachineImageVersion{
 						{
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "7.8.9"},
+							CRI:              []gardencorev1beta1.CRI{{Name: "containerd"}},
+							Architectures:    []string{"amd64"},
+						},
+						{
 							ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "4.5.6", ExpirationDate: &expirationDateFuture},
 							CRI: []gardencorev1beta1.CRI{
 								{
@@ -128,11 +133,6 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 							Architectures: []string{
 								"amd64",
 							},
-						},
-						{
-							ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "7.8.9"},
-							CRI:              []gardencorev1beta1.CRI{{Name: "containerd"}},
-							Architectures:    []string{"amd64"},
 						},
 					},
 					UpdateStrategy: &updateStrategy,
@@ -531,6 +531,11 @@ func withSortedArrays(nscpfl gardencorev1beta1.CloudProfileSpec) gardencorev1bet
 	sort.Slice(nscpfl.MachineImages, func(i, j int) bool {
 		return strings.Compare(nscpfl.MachineImages[i].Name, nscpfl.MachineImages[j].Name) >= 0
 	})
+	for mi := range nscpfl.MachineImages {
+		sort.Slice(nscpfl.MachineImages[mi].Versions, func(j, k int) bool {
+			return strings.Compare(nscpfl.MachineImages[mi].Versions[j].Version, nscpfl.MachineImages[mi].Versions[k].Version) >= 0
+		})
+	}
 	sort.Slice(nscpfl.Kubernetes.Versions, func(i, j int) bool {
 		return strings.Compare(nscpfl.Kubernetes.Versions[i].Version, nscpfl.Kubernetes.Versions[j].Version) >= 0
 	})
