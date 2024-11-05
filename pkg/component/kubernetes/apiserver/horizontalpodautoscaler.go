@@ -16,14 +16,8 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/component/apiserver"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-)
-
-const (
-	hpaTargetAverageUtilizationCPU    int32 = 80
-	hpaTargetAverageUtilizationMemory int32 = 80
 )
 
 func (k *kubeAPIServer) emptyHorizontalPodAutoscaler() *autoscalingv2.HorizontalPodAutoscaler {
@@ -36,60 +30,11 @@ func (k *kubeAPIServer) emptyHorizontalPodAutoscaler() *autoscalingv2.Horizontal
 }
 
 func (k *kubeAPIServer) reconcileHorizontalPodAutoscaler(ctx context.Context, hpa *autoscalingv2.HorizontalPodAutoscaler, deployment *appsv1.Deployment) error {
-	if k.values.Autoscaling.Mode == apiserver.AutoscalingModeHVPA ||
-		k.values.Autoscaling.Replicas == nil ||
+	if k.values.Autoscaling.Replicas == nil ||
 		*k.values.Autoscaling.Replicas == 0 {
 		return kubernetesutils.DeleteObject(ctx, k.client.Client(), hpa)
 	}
 
-	if k.values.Autoscaling.Mode == apiserver.AutoscalingModeVPAAndHPA {
-		return k.reconcileHorizontalPodAutoscalerInVPAAndHPAMode(ctx, hpa, deployment)
-	}
-
-	return k.reconcileHorizontalPodAutoscalerInBaselineMode(ctx, hpa, deployment)
-}
-
-func (k *kubeAPIServer) reconcileHorizontalPodAutoscalerInBaselineMode(ctx context.Context, hpa *autoscalingv2.HorizontalPodAutoscaler, deployment *appsv1.Deployment) error {
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), hpa, func() error {
-		metav1.SetMetaDataLabel(&hpa.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigType, resourcesv1alpha1.HighAvailabilityConfigTypeServer)
-		hpa.Spec = autoscalingv2.HorizontalPodAutoscalerSpec{
-			MinReplicas: &k.values.Autoscaling.MinReplicas,
-			MaxReplicas: k.values.Autoscaling.MaxReplicas,
-			ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
-				APIVersion: appsv1.SchemeGroupVersion.String(),
-				Kind:       "Deployment",
-				Name:       deployment.Name,
-			},
-			Metrics: []autoscalingv2.MetricSpec{
-				{
-					Type: autoscalingv2.ResourceMetricSourceType,
-					Resource: &autoscalingv2.ResourceMetricSource{
-						Name: corev1.ResourceCPU,
-						Target: autoscalingv2.MetricTarget{
-							Type:               autoscalingv2.UtilizationMetricType,
-							AverageUtilization: ptr.To(hpaTargetAverageUtilizationCPU),
-						},
-					},
-				},
-				{
-					Type: autoscalingv2.ResourceMetricSourceType,
-					Resource: &autoscalingv2.ResourceMetricSource{
-						Name: corev1.ResourceMemory,
-						Target: autoscalingv2.MetricTarget{
-							Type:               autoscalingv2.UtilizationMetricType,
-							AverageUtilization: ptr.To(hpaTargetAverageUtilizationMemory),
-						},
-					},
-				},
-			},
-		}
-
-		return nil
-	})
-	return err
-}
-
-func (k *kubeAPIServer) reconcileHorizontalPodAutoscalerInVPAAndHPAMode(ctx context.Context, hpa *autoscalingv2.HorizontalPodAutoscaler, deployment *appsv1.Deployment) error {
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), hpa, func() error {
 		minReplicas := k.values.Autoscaling.MinReplicas
 		if k.values.Autoscaling.ScaleDownDisabled && hpa.Spec.MinReplicas != nil {

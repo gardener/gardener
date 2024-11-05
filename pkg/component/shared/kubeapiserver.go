@@ -235,13 +235,8 @@ func DeployKubeAPIServer(
 	kubeAPIServer.SetAutoscalingReplicas(computeKubeAPIServerReplicas(values.Autoscaling, deployment, wantScaleDown))
 
 	// For safety reasons, when the Deployment exists we don't overwrite the kube-apiserver container resources
-	// although it is not required in all cases. Few cases that require it:
-	// - When autoscaling mode is HVPA. hvpa-controller updates the resources in Deployment spec directly.
-	//   Overwriting the resources in the Deployment spec would revert hvpa-controller's recommendations.
-	// - When scale-down is disabled, operators might want to overwrite the kube-apiserver container resource requests.
-	// - When transitioning from HVPA to VPAAndHPA autoscaling mode, we need to preserve the kube-apiserver container resources
-	//   to do not cause an unwanted Deployment rollout by overwriting the container resources set by the HVPA with the initial
-	//   resources in VPAAndHPA mode.
+	// although it is not required in all cases.
+	// One case that require it is when scale-down is disabled, operators might want to overwrite the kube-apiserver container resource requests.
 	if deployment != nil {
 		for _, container := range deployment.Spec.Template.Spec.Containers {
 			// Autoscaling for the VPN sidecar containers is disabled,

@@ -285,7 +285,8 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := k.reconcileHVPA(ctx, hvpa, deployment); err != nil {
+	// TODO(plkokanov): remove this after gardener v1.109.0 has been released.
+	if err := kubernetesutils.DeleteObject(ctx, k.client.Client(), hvpa); err != nil {
 		return err
 	}
 
@@ -460,6 +461,7 @@ func (k *kubeAPIServer) Destroy(ctx context.Context) error {
 		k.emptyManagedResource(),
 		k.emptyHorizontalPodAutoscaler(),
 		k.emptyVerticalPodAutoscaler(),
+		// TODO(plkokanov): remove hvpa deletion after gardener v1.109.0 has been released
 		k.emptyHVPA(),
 		k.emptyPodDisruptionBudget(),
 		k.emptyDeployment(),
