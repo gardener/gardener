@@ -676,7 +676,7 @@ images:
 - name: vpa-recommender
   sourceRepository: github.com/gardener/autoscaler
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/autoscaler/vertical-pod-autoscaler/vpa-recommender
-  tag: "1.2.1"
+  tag: "1.2.1-gardener-build.3"
   labels:
     - name: 'gardener.cloud/cve-categorisation'
       value:
