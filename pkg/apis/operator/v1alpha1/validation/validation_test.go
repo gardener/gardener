@@ -1150,39 +1150,6 @@ var _ = Describe("Validation Tests", func() {
 					))
 				})
 			})
-
-			Context("certManagement", func() {
-				It("should not complain if ACME issuer is specified", func() {
-					garden.Spec.RuntimeCluster.CertManagement = &operatorv1alpha1.CertManagement{
-						DefaultIssuer: operatorv1alpha1.DefaultIssuer{
-							ACME: &operatorv1alpha1.ACMEIssuer{
-								Email:  "some.name@some-domain.com",
-								Server: "https://acme-staging-v02.api.letsencrypt.org/directory",
-							},
-						},
-					}
-					Expect(ValidateGarden(garden)).To(BeEmpty())
-				})
-				It("should complain about missing issuer", func() {
-					garden.Spec.RuntimeCluster.CertManagement = &operatorv1alpha1.CertManagement{}
-					Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal("spec.runtimeCluster.certManagement.defaultIssuer"),
-					}))))
-				})
-				It("should complain if both ACME and CA issuer are specified", func() {
-					garden.Spec.RuntimeCluster.CertManagement = &operatorv1alpha1.CertManagement{
-						DefaultIssuer: operatorv1alpha1.DefaultIssuer{
-							ACME: &operatorv1alpha1.ACMEIssuer{},
-							CA:   &operatorv1alpha1.CAIssuer{},
-						},
-					}
-					Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.runtimeCluster.certManagement.defaultIssuer"),
-					}))))
-				})
-			})
 		})
 
 		Context("virtual cluster", func() {

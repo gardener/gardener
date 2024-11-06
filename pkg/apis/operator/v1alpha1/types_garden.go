@@ -98,10 +98,6 @@ type RuntimeCluster struct {
 	// Volume contains settings for persistent volumes created in the runtime cluster.
 	// +optional
 	Volume *Volume `json:"volume,omitempty"`
-	// CertManagement configures the cert-management component for issuing TLS certificates
-	// from an ACME server.
-	// +optional
-	CertManagement *CertManagement `json:"certManagement,omitempty"`
 }
 
 // Ingress configures the Ingress specific settings of the runtime cluster.
@@ -206,58 +202,6 @@ type Volume struct {
 	// MinimumSize defines the minimum size that should be used for PVCs in the runtime cluster.
 	// +optional
 	MinimumSize *resource.Quantity `json:"minimumSize,omitempty"`
-}
-
-// CertManagement configures the cert-management component for issuing TLS certificates
-// from an ACME server.
-type CertManagement struct {
-	// Config contains configuration for deploying the cert-controller-manager.
-	// +optional
-	Config *CertManagementConfig `json:"config,omitempty"`
-	// DefaultIssuer is the default issuer used for requesting TLS certificates.
-	DefaultIssuer DefaultIssuer `json:"defaultIssuer"`
-}
-
-// CertManagementConfig contains information for deploying the cert-controller-manager.
-type CertManagementConfig struct {
-	// CACertificatesSecretRef are additional root certificates to access ACME servers with private TLS certificates.
-	// The certificates are expected at key 'bundle.crt'.
-	// +optional
-	CACertificatesSecretRef *corev1.LocalObjectReference `json:"caCertificatesSecretRef,omitempty"`
-}
-
-// DefaultIssuer specifies an issuer to be created on the cluster.
-type DefaultIssuer struct {
-	// ACME is the ACME protocol specific spec. Either ACME or CA must be specified.
-	// +optional
-	ACME *ACMEIssuer `json:"acme,omitempty"`
-	// CA is the CA specific spec. Either ACME or CA must be specified.
-	// +optional
-	CA *CAIssuer `json:"ca,omitempty"`
-}
-
-// ACMEIssuer specifies an issuer using an ACME server.
-type ACMEIssuer struct {
-	// Email is the e-mail for the ACME user.
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Pattern=`^[a-zA-Z0-9_\-\.]+@[a-zA-Z0-9_\-\.]+\.[a-zA-Z0-9_\-]+$`
-	Email string `json:"email"`
-	// Server is the ACME server endpoint.
-	// +kubebuilder:validation:MinLength=1
-	Server string `json:"server"`
-	// SecretRef is a reference to a secret containing a private key of the issuer (data key 'privateKey').
-	// +optional
-	SecretRef *corev1.LocalObjectReference `json:"secretRef,omitempty"`
-	// PrecheckNameservers overwrites the default precheck nameservers used for checking DNS propagation.
-	// Format `host` or `host:port`, e.g. "8.8.8.8" same as "8.8.8.8:53" or "google-public-dns-a.google.com:53".
-	// +optional
-	PrecheckNameservers []string `json:"precheckNameservers,omitempty"`
-}
-
-// CAIssuer specifies an issuer using a root or intermediate CA to be used for signing.
-type CAIssuer struct {
-	// SecretRef is a reference to a TLS secret containing the CA for signing certificates.
-	SecretRef corev1.LocalObjectReference `json:"secretRef"`
 }
 
 // VirtualCluster contains configuration for the virtual cluster.
