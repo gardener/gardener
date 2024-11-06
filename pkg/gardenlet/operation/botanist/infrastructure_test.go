@@ -196,17 +196,19 @@ var _ = Describe("Infrastructure", func() {
 			infrastructure.EXPECT().PodsCIDRs()
 			infrastructure.EXPECT().ServicesCIDRs()
 			infrastructure.EXPECT().EgressCIDRs()
-			shoot.Spec.Networking.Nodes = ptr.To(nodesCIDRs[0])
 
 			updatedShoot := shoot.DeepCopy()
-			updatedShoot.Status.Networking = &gardencorev1beta1.NetworkingStatus{}
+			updatedShoot.Spec.Networking.Nodes = ptr.To(nodesCIDRs[0])
+			botanist.Shoot.SetInfo(updatedShoot)
+			updatedShoot2 := updatedShoot.DeepCopy()
+			updatedShoot2.Status.Networking = &gardencorev1beta1.NetworkingStatus{}
 			gardenClient.EXPECT().Status().Return(mockStatusWriter)
-			test.EXPECTStatusPatch(ctx, mockStatusWriter, updatedShoot, shoot, types.StrategicMergePatchType)
+			test.EXPECTStatusPatch(ctx, mockStatusWriter, updatedShoot2, updatedShoot, types.StrategicMergePatchType)
 
 			seedClientSet.EXPECT().Client().Return(seedClient)
 
 			Expect(botanist.WaitForInfrastructure(ctx)).To(Succeed())
-			Expect(botanist.Shoot.GetInfo()).To(Equal(updatedShoot))
+			Expect(botanist.Shoot.GetInfo()).To(Equal(updatedShoot2))
 		})
 
 		It("should return the error during wait", func() {
