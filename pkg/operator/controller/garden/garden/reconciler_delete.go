@@ -369,12 +369,6 @@ func (r *Reconciler) delete(
 			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Destroying custom resource definition for HVPA",
-			Fn:           c.hvpaCRD.Destroy,
-			SkipIf:       !hvpaEnabled(),
-			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
-		})
-		_ = g.Add(flow.Task{
 			Name:         "Destroying ETCD-related custom resource definitions",
 			Fn:           c.etcdCRD.Destroy,
 			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),

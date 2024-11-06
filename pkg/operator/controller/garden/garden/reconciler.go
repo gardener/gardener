@@ -31,7 +31,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/operator/controller/gardenlet"
@@ -554,10 +553,6 @@ func vpaEnabled(settings *operatorv1alpha1.Settings) bool {
 		return ptr.Deref(settings.VerticalPodAutoscaler.Enabled, false)
 	}
 	return false
-}
-
-func hvpaEnabled() bool {
-	return features.DefaultFeatureGate.Enabled(features.HVPA)
 }
 
 func getValidVolumeSize(volume *operatorv1alpha1.Volume, size string) string {

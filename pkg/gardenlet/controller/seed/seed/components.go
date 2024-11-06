@@ -135,15 +135,14 @@ func (r *Reconciler) instantiateComponents(
 	c.etcdCRD = etcd.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
 	c.istioCRD = istio.NewCRD(r.SeedClientSet.ChartApplier())
 	c.vpaCRD = vpa.NewCRD(r.SeedClientSet.Applier(), nil)
-	c.hvpaCRD = hvpa.NewCRD(r.SeedClientSet.Applier())
-	if !hvpaEnabled() {
-		c.hvpaCRD = component.OpDestroy(c.hvpaCRD)
-	}
 	c.fluentCRD = fluentoperator.NewCRDs(r.SeedClientSet.Applier())
 	c.prometheusCRD, err = prometheusoperator.NewCRDs(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
 	if err != nil {
 		return
 	}
+
+	// TODO(plkokanov): Remove this after gardener v1.109.0 has been released.
+	c.hvpaCRD = component.OpDestroy(hvpa.NewCRD(r.SeedClientSet.Applier()))
 
 	// seed system components
 	c.clusterIdentity = r.newClusterIdentity(seed.GetInfo())
@@ -167,10 +166,13 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
+
+	// TODO(plkokanov): Remove this after gardener 1.109.0 has been released.
 	c.hvpaController, err = r.newHVPA()
 	if err != nil {
 		return
 	}
+
 	c.etcdDruid, err = r.newEtcdDruid(secretsManager)
 	if err != nil {
 		return
@@ -714,7 +716,7 @@ func (r *Reconciler) newHVPA() (component.DeployWaiter, error) {
 	return sharedcomponent.NewHVPA(
 		r.SeedClientSet.Client(),
 		r.GardenNamespace,
-		hvpaEnabled(),
+		false,
 		r.SeedVersion,
 		v1beta1constants.PriorityClassNameSeedSystem700,
 	)

@@ -163,10 +163,6 @@ func (r *Reconciler) instantiateComponents(
 	// crds
 	c.etcdCRD = etcd.NewCRD(r.RuntimeClientSet.Client(), applier)
 	c.vpaCRD = vpa.NewCRD(applier, nil)
-	c.hvpaCRD = hvpa.NewCRD(applier)
-	if !hvpaEnabled() {
-		c.hvpaCRD = component.OpDestroy(c.hvpaCRD)
-	}
 	c.istioCRD = istio.NewCRD(r.RuntimeClientSet.ChartApplier())
 	c.fluentCRD = fluentoperator.NewCRDs(applier)
 	c.prometheusCRD, err = prometheusoperator.NewCRDs(r.RuntimeClientSet.Client(), applier)
@@ -175,6 +171,8 @@ func (r *Reconciler) instantiateComponents(
 	}
 	c.certManagementCRD = certmanagement.NewCRDs(applier)
 	c.extensionCRD = extensioncrds.NewCRD(applier, true, false)
+	// TODO(plkokanov): Remove this after gardener v1.109.0 has been released.
+	c.hvpaCRD = component.OpDestroy(hvpa.NewCRD(applier))
 
 	// garden system components
 	c.gardenerResourceManager, err = r.newGardenerResourceManager(garden, secretsManager)
@@ -186,6 +184,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
+	// TODO(plkokanov): Remove this after gardener v1.109.0 has been released.
 	c.hvpaController, err = r.newHVPA()
 	if err != nil {
 		return
@@ -430,7 +429,7 @@ func (r *Reconciler) newHVPA() (component.DeployWaiter, error) {
 	return sharedcomponent.NewHVPA(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
-		hvpaEnabled(),
+		false,
 		r.RuntimeVersion,
 		v1beta1constants.PriorityClassNameGardenSystem200,
 	)
@@ -528,7 +527,7 @@ func (r *Reconciler) newEtcd(
 			DefragmentationSchedule:     &defragmentationSchedule,
 			CARotationPhase:             helper.GetCARotationPhase(garden.Status.Credentials),
 			RuntimeKubernetesVersion:    r.RuntimeVersion,
-			HVPAEnabled:                 hvpaEnabled(),
+			HVPAEnabled:                 false,
 			MaintenanceTimeWindow:       garden.Spec.VirtualCluster.Maintenance.TimeWindow,
 			ScaleDownUpdateMode:         hvpaScaleDownUpdateMode,
 			PriorityClassName:           v1beta1constants.PriorityClassNameGardenSystem500,
@@ -674,8 +673,6 @@ func defaultAPIServerAutoscalingConfig(garden *operatorv1alpha1.Garden) apiserve
 	// The VPAAndHPAForAPIServer feature gate takes precedence over the HVPA feature gate.
 	if features.DefaultFeatureGate.Enabled(features.VPAAndHPAForAPIServer) {
 		autoscalingMode = apiserver.AutoscalingModeVPAAndHPA
-	} else if hvpaEnabled() {
-		autoscalingMode = apiserver.AutoscalingModeHVPA
 	} else {
 		autoscalingMode = apiserver.AutoscalingModeBaseline
 	}
