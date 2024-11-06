@@ -156,39 +156,6 @@ global:
   # shootViewerKubeconfigMaxExpiration: 24h
   # shootCredentialsRotationInterval: 2160h
     vpa: false
-    hvpa:
-      enabled: false
-      maxReplicas: 4
-      minReplicas: 1
-      targetAverageUtilizationCpu: 80
-      targetAverageUtilizationMemory: 80
-      vpaScaleUpMode: "Auto"
-      vpaScaleDownMode: "Auto"
-      vpaScaleUpStabilization:
-        stabilizationDuration: "3m"
-        minChange:
-          cpu:
-            value: 300m
-            percentage: 80
-          memory:
-            value: 200M
-            percentage: 80
-      vpaScaleDownStabilization:
-        stabilizationDuration: "15m"
-        minChange:
-          cpu:
-            value: 600m
-            percentage: 80
-          memory:
-            value: 600M
-            percentage: 80
-      limitsRequestsGapScaleParams:
-        cpu:
-          value: "1"
-          percentage: 70
-        memory:
-          value: "1G"
-          percentage: 70
 
     shutdownDelayDuration: 15s
  #  goAwayChance: 0.1
