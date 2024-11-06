@@ -130,6 +130,8 @@ type MachineImageVersion struct {
 	// - '< 1.26' - supports only kubelet versions less than 1.26
 	// +optional
 	KubeletVersionConstraint *string `json:"kubeletVersionConstraint,omitempty" protobuf:"bytes,4,opt,name=kubeletVersionConstraint"`
+	// InPlaceUpdateConfig contains the configuration for in-place updates for this machine image version.
+	InPlaceUpdateConfig *InPlaceUpdateConfig `json:"inPlaceUpdateConfig,omitempty"`
 }
 
 // ExpirableVersion contains a version and an expiration date.
@@ -286,3 +288,11 @@ const (
 	// UpdateStrategyMajor indicates that auto-updates are performed always to the overall latest version.
 	UpdateStrategyMajor MachineImageUpdateStrategy = "major"
 )
+
+// InPlaceUpdateConfig contains the configuration for in-place updates for a machine image version.
+type InPlaceUpdateConfig struct {
+	// Supported indicates whether in-place updates are supported for this machine image version.
+	Supported bool `json:"supported"`
+	// MinVersionForInPlaceUpdate specifies the minimum supported version from which an in-place update to this machine image version can be performed.
+	MinVersionForUpdate *string `json:"minVersionForUpdate,omitempty"`
+}

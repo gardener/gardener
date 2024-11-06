@@ -31,7 +31,7 @@ spec:
     - version: 1.25.8
       expirationDate: 2022-11-30T01:02:03Z # optional
   machineImages:
-  - name: suse-chost
+  - name: gardenlinux
   # updateStrategy: "major" # optional, either {patch,minor,major}
     versions:
     - version: 15.4.20220818
@@ -46,6 +46,9 @@ spec:
     #   containerRuntimes:
     #   - type: gvisor
     # kubeletVersionConstraint: "< 1.26" # optional
+    # inPlaceUpdateConfig: # optional
+    #   supported: true 
+    #   minVersionForUpdate: 820.3.0 # optional
   - name: ubuntu
     versions:
     - version: 18.04.201906170
