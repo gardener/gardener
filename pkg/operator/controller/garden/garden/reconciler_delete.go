@@ -60,20 +60,6 @@ func (r *Reconciler) delete(
 	var (
 		g = flow.NewGraph("Garden deletion")
 
-		certManagementIssuer = g.Add(flow.Task{
-			Name: "Destroying Cert-Management default issuer",
-			Fn:   c.certManagementIssuer.Destroy,
-		})
-		certManagementController = g.Add(flow.Task{
-			Name: "Destroying Cert-Management controller",
-			Fn:   c.certManagementController.Destroy,
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Destroying Cert-Management CRDs",
-			Fn:           c.certManagementController.Destroy,
-			Dependencies: flow.NewTaskIDs(certManagementIssuer, certManagementController),
-			SkipIf:       garden.Spec.RuntimeCluster.CertManagement == nil, // CRDs may be deployed by external component, only remove if certManagement is configured
-		})
 		_ = g.Add(flow.Task{
 			Name: "Destroying Plutono",
 			Fn:   component.OpDestroyAndWait(c.plutono).Destroy,

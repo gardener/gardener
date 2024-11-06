@@ -17,8 +17,6 @@ const (
 	ContainerImageNameApiserverProxySidecar = "apiserver-proxy-sidecar"
 	// ContainerImageNameBlackboxExporter is a constant for an image in the image vector with name 'blackbox-exporter'.
 	ContainerImageNameBlackboxExporter = "blackbox-exporter"
-	// ContainerImageNameCertManagement is a constant for an image in the image vector with name 'cert-management'.
-	ContainerImageNameCertManagement = "cert-management"
 	// ContainerImageNameClusterAutoscaler is a constant for an image in the image vector with name 'cluster-autoscaler'.
 	ContainerImageNameClusterAutoscaler = "cluster-autoscaler"
 	// ContainerImageNameClusterProportionalAutoscaler is a constant for an image in the image vector with name 'cluster-proportional-autoscaler'.

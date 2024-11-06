@@ -168,10 +168,6 @@ func validateRuntimeCluster(dns *operatorv1alpha1.DNSManagement, runtimeCluster 
 
 	allErrs = validateDomains(dns, runtimeCluster.Ingress.Domains, fldPath.Child("ingress", "domains"), allErrs)
 
-	if runtimeCluster.CertManagement != nil {
-		allErrs = append(allErrs, validateCertManagement(runtimeCluster.CertManagement, fldPath.Child("certManagement"))...)
-	}
-
 	return allErrs
 }
 
@@ -194,16 +190,6 @@ func validateDomains(dns *operatorv1alpha1.DNSManagement, domains []operatorv1al
 		}
 	}
 
-	return allErrs
-}
-
-func validateCertManagement(certManagement *operatorv1alpha1.CertManagement, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-	if certManagement.DefaultIssuer.ACME == nil && certManagement.DefaultIssuer.CA == nil {
-		allErrs = append(allErrs, field.Required(fldPath.Child("defaultIssuer"), "either ACME or CA issuer must be set"))
-	} else if certManagement.DefaultIssuer.ACME != nil && certManagement.DefaultIssuer.CA != nil {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("defaultIssuer"), "ACME or CA issuers are exclusive, only one must be set"))
-	}
 	return allErrs
 }
 

@@ -10,74 +10,6 @@
 </p>
 Resource Types:
 <ul></ul>
-<h3 id="operator.gardener.cloud/v1alpha1.ACMEIssuer">ACMEIssuer
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.gardener.cloud/v1alpha1.DefaultIssuer">DefaultIssuer</a>)
-</p>
-<p>
-<p>ACMEIssuer specifies an issuer using an ACME server.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>email</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Email is the e-mail for the ACME user.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>server</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Server is the ACME server endpoint.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>secretRef</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#localobjectreference-v1-core">
-Kubernetes core/v1.LocalObjectReference
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>SecretRef is a reference to a secret containing a private key of the issuer (data key &lsquo;privateKey&rsquo;).</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>precheckNameservers</code></br>
-<em>
-[]string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>PrecheckNameservers overwrites the default precheck nameservers used for checking DNS propagation.
-Format <code>host</code> or <code>host:port</code>, e.g. &ldquo;8.8.8.8&rdquo; same as &ldquo;8.8.8.8:53&rdquo; or &ldquo;google-public-dns-a.google.com:53&rdquo;.</p>
-</td>
-</tr>
-</tbody>
-</table>
 <h3 id="operator.gardener.cloud/v1alpha1.AdmissionDeploymentSpec">AdmissionDeploymentSpec
 </h3>
 <p>
@@ -349,119 +281,6 @@ Kubernetes core/v1.LocalObjectReference
 <td>
 <p>SecretRef is a reference to a Secret object containing the cloud provider credentials for the object store where
 backups should be stored. It should have enough privileges to manipulate the objects as well as buckets.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="operator.gardener.cloud/v1alpha1.CAIssuer">CAIssuer
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.gardener.cloud/v1alpha1.DefaultIssuer">DefaultIssuer</a>)
-</p>
-<p>
-<p>CAIssuer specifies an issuer using a root or intermediate CA to be used for signing.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>secretRef</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#localobjectreference-v1-core">
-Kubernetes core/v1.LocalObjectReference
-</a>
-</em>
-</td>
-<td>
-<p>SecretRef is a reference to a TLS secret containing the CA for signing certificates.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="operator.gardener.cloud/v1alpha1.CertManagement">CertManagement
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.gardener.cloud/v1alpha1.RuntimeCluster">RuntimeCluster</a>)
-</p>
-<p>
-<p>CertManagement configures the cert-management component for issuing TLS certificates
-from an ACME server.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>config</code></br>
-<em>
-<a href="#operator.gardener.cloud/v1alpha1.CertManagementConfig">
-CertManagementConfig
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Config contains configuration for deploying the cert-controller-manager.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>defaultIssuer</code></br>
-<em>
-<a href="#operator.gardener.cloud/v1alpha1.DefaultIssuer">
-DefaultIssuer
-</a>
-</em>
-</td>
-<td>
-<p>DefaultIssuer is the default issuer used for requesting TLS certificates.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="operator.gardener.cloud/v1alpha1.CertManagementConfig">CertManagementConfig
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.gardener.cloud/v1alpha1.CertManagement">CertManagement</a>)
-</p>
-<p>
-<p>CertManagementConfig contains information for deploying the cert-controller-manager.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>caCertificatesSecretRef</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#localobjectreference-v1-core">
-Kubernetes core/v1.LocalObjectReference
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>CACertificatesSecretRef are additional root certificates to access ACME servers with private TLS certificates.
-The certificates are expected at key &lsquo;bundle.crt&rsquo;.</p>
 </td>
 </tr>
 </tbody>
@@ -1014,53 +833,6 @@ string
 <td>
 <em>(Optional)</em>
 <p>Description is a description for the dashboard terminal container with hints for the user.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="operator.gardener.cloud/v1alpha1.DefaultIssuer">DefaultIssuer
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.gardener.cloud/v1alpha1.CertManagement">CertManagement</a>)
-</p>
-<p>
-<p>DefaultIssuer specifies an issuer to be created on the cluster.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>acme</code></br>
-<em>
-<a href="#operator.gardener.cloud/v1alpha1.ACMEIssuer">
-ACMEIssuer
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ACME is the ACME protocol specific spec. Either ACME or CA must be specified.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>ca</code></br>
-<em>
-<a href="#operator.gardener.cloud/v1alpha1.CAIssuer">
-CAIssuer
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>CA is the CA specific spec. Either ACME or CA must be specified.</p>
 </td>
 </tr>
 </tbody>
@@ -3008,21 +2780,6 @@ Volume
 <td>
 <em>(Optional)</em>
 <p>Volume contains settings for persistent volumes created in the runtime cluster.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>certManagement</code></br>
-<em>
-<a href="#operator.gardener.cloud/v1alpha1.CertManagement">
-CertManagement
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>CertManagement configures the cert-management component for issuing TLS certificates
-from an ACME server.</p>
 </td>
 </tr>
 </tbody>

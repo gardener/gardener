@@ -36,8 +36,7 @@ import (
 var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 	var (
 		backupSecret = defaultBackupSecret()
-		rootCASecret = defaultRootCASecret()
-		garden       = defaultGarden(backupSecret, rootCASecret, true)
+		garden       = defaultGarden(backupSecret, true)
 	)
 
 	It("Create, Delete", Label("simple"), func() {
@@ -46,7 +45,6 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 		defer cancel()
 
 		Expect(runtimeClient.Create(ctx, backupSecret)).To(Succeed())
-		Expect(runtimeClient.Create(ctx, rootCASecret)).To(Succeed())
 		Expect(runtimeClient.Create(ctx, garden)).To(Succeed())
 
 		waitForGardenToBeReconciled(ctx, garden)
@@ -59,7 +57,6 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 			Expect(gardenerutils.ConfirmDeletion(ctx, runtimeClient, garden)).To(Succeed())
 			Expect(runtimeClient.Delete(ctx, garden)).To(Succeed())
 			Expect(runtimeClient.Delete(ctx, backupSecret)).To(Succeed())
-			Expect(runtimeClient.Delete(ctx, rootCASecret)).To(Succeed())
 			waitForGardenToBeDeleted(ctx, garden)
 			cleanupVolumes(ctx)
 			Expect(runtimeClient.DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(namespace), client.MatchingLabels{"role": "kube-apiserver-etcd-encryption-configuration"})).To(Succeed())
@@ -126,8 +123,6 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 				healthyManagedResource("extension-admission-virtual-provider-local"),
 				healthyManagedResource("extension-registration-provider-local"),
 				healthyManagedResource("extension-provider-local-garden"),
-				healthyManagedResource("cert-management-controller"),
-				healthyManagedResource("cert-management-issuers"),
 			))
 
 			g.Expect(runtimeClient.List(ctx, managedResourceList, client.InNamespace("istio-system"))).To(Succeed())
