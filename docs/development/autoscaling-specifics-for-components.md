@@ -36,57 +36,17 @@ For both of the autoscaling modes downscaling is handled more pessimistically to
 
 ## Shoot Kubernetes API Server
 
-There are three supported autoscaling modes for the Shoot Kubernetes API server.
+The Shoot Kubernetes API server is scaled simultaneously by VPA and HPA on the same metric (CPU and memory usage).
 
-- `Baseline`
+The pod-trashing cycle between VPA and HPA scaling on the same metric is avoided by configuring the HPA to scale on average usage (not on average utilization) and by picking the target average utilization values in sync with VPA's allowed maximums.
+This makes possible VPA to first scale vertically on CPU/memory usage.
+Once all Pods' average CPU/memory usage is close to exceed the VPA's allowed maximum CPU/memory (the HPA's target average utilization, 1/7 less than VPA's allowed maximums), HPA is scaling horizontally (by adding a new replica).
+The initial API server resource requests are `250m` and `500Mi`.
 
-   In `Baseline` mode, the Shoot Kubernetes API server is scaled by active HPA and VPA in passive, recommend-only mode.
+VPA's max allowed values are `7` CPU and `28G`. HPA's average target usage values are `6` CPU and `24G`.
 
-   The API server resource requests are computed based on the Shoot's minimum Nodes count:
-   | Range       | Resource Requests |
-   |-------------|-------------------|
-   | [0, 2]      | `800m`, `800Mi`   |
-   | (2, 10]     | `1000m`, `1100Mi` |
-   | (10, 50]    | `1200m`, `1600Mi` |
-   | (50, 100]   | `2500m`, `5200Mi` |
-   | (100, inf.) | `3000m`, `5200Mi` |
-
-   The API server's min replicas count is 2, the max replicas count - 3.
-
-   The `Baseline` mode is the used autoscaling mode when the `HVPA` and `VPAAndHPAForAPIServer` feature gates are not enabled.
-
-- `HVPA`
-
-   In `HVPA` mode, the Shoot Kubernetes API server is scaled by the [hvpa-controller](https://github.com/gardener/hvpa-controller). The gardenlet is creating an `HVPA` resource for the API server. The `HVPA` resource is backed by HPA and VPA both in recommend-only mode. The hvpa-controller is responsible for enabling simultaneous horizontal and vertical scaling by incorporating the recommendations from the HPA and VPA.
-
-   The initial API server resource requests are `500m` and `1Gi`.
-   HVPA's HPA is scaling only on CPU (average utilization 80%). HVPA's VPA max allowed values are `8` CPU and `25G`.
-
-   The API server's min replicas count is 2, the max replicas count - 3.
-
-   The `HVPA` mode is the used autoscaling mode when the `HVPA` feature gate is enabled (and the `VPAAndHPAForAPIServer` feature gate is disabled).
-
-> [!NOTE]
-> Starting with release `v1.106`, the `HVPA` feature gate is deprecated and locked to false.
-
-- `VPAAndHPA`
-
-   In `VPAAndHPA` mode, the Shoot Kubernetes API server is scaled simultaneously by VPA and HPA on the same metric (CPU and memory usage). The pod-trashing cycle between VPA and HPA scaling on the same metric is avoided by configuring the HPA to scale on average usage (not on average utilization) and by picking the target average utilization values in sync with VPA's allowed maximums. This makes possible VPA to first scale vertically on CPU/memory usage. Once all Pods' average CPU/memory usage is close to exceed the VPA's allowed maximum CPU/memory (the HPA's target average utilization, 1/7 less than VPA's allowed maximums), HPA is scaling horizontally (by adding a new replica).
-
-   The `VPAAndHPA` mode is introduced to address disadvantages with HVPA: additional component; modifies the deployment triggering unnecessary rollouts; vertical scaling only at max replicas; stuck vertical resource requests when scaling in again; etc.
-
-   The initial API server resource requests are `250m` and `500Mi`.
-   VPA's max allowed values are `7` CPU and `28G`. HPA's average target usage values are `6` CPU and `24G`.
-
-   The API server's min replicas count is 2, the max replicas count - 6.
-
-   The `VPAAndHPA` mode is the used autoscaling mode when the `VPAAndHPAForAPIServer` feature gate is enabled (takes precedence over the `HVPA` feature gate).
-
-> [!NOTE]
-> Starting with release `v1.101`, the `VPAAndHPAForAPIServer` feature gate is enabled by default.
-> Starting with release `v1.105`, the `VPAAndHPAForAPIServer` feature gate is promoted to GA and locked to true.
-
-In all scaling modes the min replicas count of 2 is imposed by the [High Availability of Shoot Control Plane Components](../development/high-availability-of-components.md#control-plane-components).
+The API server's min replicas count is 2, the max replicas count - 6.
+The min replicas count of 2 is imposed by the [High Availability of Shoot Control Plane Components](../development/high-availability-of-components.md#control-plane-components).
 
 The gardenlet sets the initial API server resource requests only when the Deployment is not found. When the Deployment exists, it is not overwriting the kube-apiserver container resources.
 
@@ -105,12 +65,9 @@ There are the following specifics for when disabling scale-down for the Kubernet
 ##  Virtual Kubernetes API Server and Gardener API Server
 
 The virtual Kubernetes API server's autoscaling is same as the Shoot Kubernetes API server's with the following differences:
-- The initial API server resource requests are `600m` and `512Mi` in all autoscaling modes.
+- The initial API server resource requests are `600m` and `512Mi`.
 - The min replicas count is 2 for a non-HA virtual cluster and 3 for an HA virtual cluster. The max replicas count is 6.
-- In `HVPA` mode, HVPA's HPA is scaling on both CPU and memory (average utilization 80% for both).
 
 The Gardener API server's autoscaling is the same as the Shoot Kubernetes API server's with the following differences:
-- The initial API server resource requests are `600m` and `512Mi` in all autoscaling modes.
+- The initial API server resource requests are `600m` and `512Mi`.
 - The min replicas count is 2 for a non-HA virtual cluster and 3 for an HA virtual cluster. The max replicas count is 6.
-- In `HVPA` mode, HVPA's HPA is scaling on both CPU and memory (average utilization 80% for both).
-- In `HVPA` mode, HVPA's VPA max allowed values are `4` CPU and `25G`.
