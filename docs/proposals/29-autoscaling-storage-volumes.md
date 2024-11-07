@@ -62,7 +62,7 @@ storage management functionality is envisioned in `etcd-druid`. For details, see
 [`etcd-druid` feature request issue#481](https://github.com/gardener/etcd-druid/issues/481#issuecomment-1346402013).
 
 ### Goals
-- General ability to autoscale seed PVs.
+- General ability to autoscale seed PVs (expand only).
   - Ability is conditional on PVC's storage class supporting resizing.
   - Autoscaling is inactive by default.
   - Ability to selectively activate autoscaling per PVC.
@@ -81,6 +81,7 @@ storage management functionality is envisioned in `etcd-druid`. For details, see
 - Ability to enable/disable the feature per seed, via feature gate.
 
 ### Non-Goals
+- Ability to scale down PVCs as function of autoscaling.
 - Ability to activate autoscaling on a group of PVCs, other than specifying each PVC individually. Activate by selector
   or namespace is not supported.
 - Ability to selectively deactivate autoscaling, e.g. by PVC selector or namespace.
@@ -93,9 +94,15 @@ storage management functionality is envisioned in `etcd-druid`. For details, see
   increased, and not decreased.
 - The newly introduced auto-scaling mode is predicated on the underlying infrastructure supporting volume resizing.
   This ability is expressed through the K8s StorageClass type. The respective StorageClass must have
-  `allowVolumeExpansion: true`. For details, see the K8s volume expansion documentation.
+  `allowVolumeExpansion: true`. For details, see the K8s volume expansion documentation: [[5]], [[6]].
   
 ## Proposal
+The existing, recently implemented Gardener PVC autoscaler application[[1]], hereafter referred to as `pvc-autoscaler`,
+is deployed to seeds, and takes the responsibility of scaling PVs. PVCs (seed and shoot `vali` and `prometheus` at this time) are
+annotated as to instruct the autoscaler to act on them, and to prescribe specific settings. New volumes are deployed with
+smaller initial capacity. Each time the used space of a volume exceeds 90% (referred to as "trigger threshold"),
+`pvc-autoscaler` expands capacity by 10%.
+
 ### PVC Autoscaler - Runtime Structure
 The overall runtime structure of the component is outlined in _Fig.1_:
 
@@ -103,9 +110,7 @@ The overall runtime structure of the component is outlined in _Fig.1_:
 
 _Fig.1: Runtime structure_
 
-For the role of a storage scaling controller, the existing, recently implemented Gardener PVC autoscaler application
-[[1]], hereafter referred to as `pvc-autoscaler`, is used. It is
-integrated as a seed system component, and runs as a deployment in the seed's `garden` namespace.
+`pvc-autoscaler` is integrated as a seed system component, and runs as a deployment in the seed's `garden` namespace.
 Its primary driving signal is the PVC metrics from the seed's cache Prometheus instance, which it
 periodically examines, and if capacity is found to be near exhaustion, `pvc-autoscaler` takes action by updating the
 PVC's storage request.
@@ -128,7 +133,7 @@ The `vali` and `prometheus` deployers, part of `gardenlet`'s shoot reconciliatio
 the respective StatefulSet objects contains the annotations, necessary to instruct `pvc-autoscaler` how to act on the
 PVCs, created from those templates.
 
-That `gardenlet` action mechanism, based on PVC templates, only affects PVCs upon creation. To enable PVC autoscaling on
+This `gardenlet` mechanism, based on PVC templates, only affects PVCs upon creation. To enable PVC autoscaling on
 existing shoots, and on the observability PVCs of existing seed clusters, the deployers also directly annotate
 `vali` and `prometheus` PVCs. Those volumes have large, fixed capacity, which in most cases is severely underutilised.
 Enabling autoscaling on them allows them to grow if necessary, but does not release the unused storage space.
@@ -314,8 +319,12 @@ as a scaling trigger threshold.
 - [[2]] `kube-rbac-proxy` GitHub project
 - [[3]] Kubernetes TokenReview API
 - [[4]] Kubernetes SubjectAccessReview API
+- [[5]] Kubernetes Blog: Resizing Persistent Volumes using Kubernetes
+- [[6]] Kubernetes Documentation: Storage Classes, section "Volume expansion"
 
 [1]: https://github.com/gardener/pvc-autoscaler
 [2]: https://github.com/brancz/kube-rbac-proxy
 [3]: https://kubernetes.io/docs/reference/kubernetes-api/authentication-resources/token-review-v1/
 [4]: https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/subject-access-review-v1/
+[5]: https://kubernetes.io/blog/2018/07/12/resizing-persistent-volumes-using-kubernetes/
+[6]: https://kubernetes.io/docs/concepts/storage/storage-classes/#allow-volume-expansion
