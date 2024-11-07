@@ -48,13 +48,14 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	"github.com/gardener/gardener/pkg/utils/secrets/vpntlsauth"
 )
 
 const (
 	// GatewayPort is the port exposed by the istio ingress gateway
 	GatewayPort = 8132
 	// SecretNameTLSAuth is the name of seed server tlsauth Secret.
-	SecretNameTLSAuth = "vpn-seed-server-tlsauth" // #nosec G101 -- No credential.
+	SecretNameTLSAuth = vpntlsauth.SecretNameTLSAuth
 	deploymentName    = v1beta1constants.DeploymentNameVPNSeedServer
 	// ServiceName is the name of the vpn seed server service running internally on the control plane in seed.
 	ServiceName = deploymentName
@@ -199,9 +200,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	secretTLSAuth, err := v.secretsManager.Generate(ctx, &secretsutils.VPNTLSAuthConfig{
-		Name: SecretNameTLSAuth,
-	}, secretsmanager.Rotate(secretsmanager.InPlace))
+	secretTLSAuth, err := vpntlsauth.GenerateSecret(ctx, v.secretsManager)
 	if err != nil {
 		return err
 	}

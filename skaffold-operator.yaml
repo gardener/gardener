@@ -304,6 +304,7 @@ build:
             - pkg/utils/retry
             - pkg/utils/secrets
             - pkg/utils/secrets/manager
+            - pkg/utils/secrets/vpntlsauth
             - pkg/utils/timewindow
             - pkg/utils/validation/admissionplugins
             - pkg/utils/validation/apigroups

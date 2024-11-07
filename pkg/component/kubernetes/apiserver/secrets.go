@@ -21,10 +21,10 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/apiserver"
-	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	"github.com/gardener/gardener/pkg/utils/secrets/vpntlsauth"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
@@ -227,9 +227,7 @@ func (k *kubeAPIServer) reconcileSecretHAVPNSeedClientTLSAuth(ctx context.Contex
 		return nil, nil
 	}
 
-	return k.secretsManager.Generate(ctx, &secretsutils.VPNTLSAuthConfig{
-		Name: vpnseedserver.SecretNameTLSAuth,
-	}, secretsmanager.Rotate(secretsmanager.InPlace))
+	return vpntlsauth.GenerateSecret(ctx, k.secretsManager)
 }
 
 type tlsSNISecret struct {

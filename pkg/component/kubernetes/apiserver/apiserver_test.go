@@ -100,7 +100,7 @@ var _ = Describe("KubeAPIServer", func() {
 		secretNameServiceAccountKey       = "service-account-key-c37a87f6"
 		secretNameServiceAccountKeyBundle = "service-account-key-bundle"
 		secretNameVPNSeedClient           = "vpn-seed-client"
-		secretNameVPNSeedServerTLSAuth    = "vpn-seed-server-tlsauth-a1d0aa00"
+		secretNameVPNSeedServerTLSAuth    = "vpn-seed-server-tlsauth-a1d0aa00-2a3206b8"
 
 		configMapNameAdmissionConfigs  = "kube-apiserver-admission-config-e38ff146"
 		secretNameAdmissionKubeconfigs = "kube-apiserver-admission-kubeconfigs-e3b0c442"
@@ -2851,7 +2851,7 @@ kind: AuthorizationConfiguration
 					Expect(deployment.Annotations).To(Equal(utils.MergeStringMaps(defaultAnnotations, map[string]string{
 						"reference.resources.gardener.cloud/secret-8ddd8e24":    secretNameCAVPN,
 						"reference.resources.gardener.cloud/secret-a41fe9a3":    secretNameVPNSeedClient,
-						"reference.resources.gardener.cloud/secret-facfe649":    secretNameVPNSeedServerTLSAuth,
+						"reference.resources.gardener.cloud/secret-065be996":    secretNameVPNSeedServerTLSAuth,
 						"reference.resources.gardener.cloud/configmap-a9a818ab": "kube-root-ca.crt",
 					})))
 				})
@@ -3040,7 +3040,7 @@ kind: AuthorizationConfiguration
 					Expect(deployment.Spec.Template.Annotations).To(Equal(utils.MergeStringMaps(defaultAnnotations, map[string]string{
 						"reference.resources.gardener.cloud/secret-8ddd8e24":    secretNameCAVPN,
 						"reference.resources.gardener.cloud/secret-a41fe9a3":    secretNameVPNSeedClient,
-						"reference.resources.gardener.cloud/secret-facfe649":    secretNameVPNSeedServerTLSAuth,
+						"reference.resources.gardener.cloud/secret-065be996":    secretNameVPNSeedServerTLSAuth,
 						"reference.resources.gardener.cloud/configmap-a9a818ab": "kube-root-ca.crt",
 					})))
 				})

@@ -66,7 +66,7 @@ var _ = Describe("VpnSeedServer", func() {
 		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		namespaceUID     = types.UID("123456")
 
-		secretNameTLSAuth = "vpn-seed-server-tlsauth-a1d0aa00"
+		secretNameTLSAuth = "vpn-seed-server-tlsauth-a1d0aa00-2a3206b8"
 
 		listenAddress   = "0.0.0.0"
 		listenAddressV6 = "::"

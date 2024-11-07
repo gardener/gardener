@@ -1,0 +1,6 @@
+version: 2
+
+secret:
+  ignored_matches:
+    - match: vpn-seed-server-tlsauth-a1d0aa00-2a3206b8
+      name: it's a secret name only
