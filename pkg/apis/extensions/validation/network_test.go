@@ -171,6 +171,20 @@ var _ = Describe("Network validation tests", func() {
 				Expect(errorList).To(BeEmpty())
 			})
 		})
+
+		Context("dual-stack", func() {
+			BeforeEach(func() {
+				network.Spec.IPFamilies = []extensionsv1alpha1.IPFamily{extensionsv1alpha1.IPFamilyIPv6, extensionsv1alpha1.IPFamilyIPv4}
+			})
+
+			It("should allow valid network resources", func() {
+				network.Spec.PodCIDR = "10.20.30.40/26"
+				network.Spec.ServiceCIDR = "10.30.40.50/26"
+
+				errorList := ValidateNetwork(network)
+				Expect(errorList).To(BeEmpty())
+			})
+		})
 	})
 
 	Describe("#ValidateNetworkUpdate", func() {

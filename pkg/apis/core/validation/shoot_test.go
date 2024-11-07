@@ -3734,6 +3734,20 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 		})
 
+		Context("dual-stack", func() {
+			BeforeEach(func() {
+				shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv6, core.IPFamilyIPv4}
+			})
+
+			It("should allow IPv4 networking configuration", func() {
+				shoot.Spec.Networking.Nodes = ptr.To("10.250.0.0/16")
+				shoot.Spec.Networking.Services = ptr.To("100.64.0.0/13")
+				shoot.Spec.Networking.Pods = ptr.To("100.96.0.0/11")
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(BeEmpty())
+			})
+		})
+
 		Context("maintenance section", func() {
 			It("should forbid invalid formats for the time window begin and end values", func() {
 				shoot.Spec.Maintenance.TimeWindow.Begin = "invalidformat"
