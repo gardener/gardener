@@ -1212,6 +1212,152 @@ var _ = Describe("handler", func() {
 						})
 					})
 
+					Context("shoot certificate authority secret", func() {
+						BeforeEach(func() {
+							request.Namespace = "gardener-system-shoot-ca"
+						})
+
+						DescribeTable("secret is missing labels",
+							func(secret *corev1.Secret, expectedResult *metav1.Status) {
+								data, err := runtime.Encode(encoder, secret)
+								Expect(err).NotTo(HaveOccurred())
+								request.Object.Raw = data
+
+								Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+									AdmissionResponse: admissionv1.AdmissionResponse{
+										Allowed: false,
+										Result:  expectedResult,
+									},
+								}))
+							},
+
+							Entry(
+								"missing shoot.gardener.cloud/name label",
+								&corev1.Secret{},
+								&metav1.Status{
+									Code:    int32(http.StatusUnprocessableEntity),
+									Message: `label "shoot.gardener.cloud/name" is missing`,
+								},
+							),
+							Entry(
+								"missing shoot.gardener.cloud/namespace label",
+								&corev1.Secret{
+									ObjectMeta: metav1.ObjectMeta{
+										Labels: map[string]string{
+											"shoot.gardener.cloud/name": "foo",
+										},
+									},
+								},
+								&metav1.Status{
+									Code:    int32(http.StatusUnprocessableEntity),
+									Message: `label "shoot.gardener.cloud/namespace" is missing`,
+								},
+							),
+							Entry(
+								"missing authentication.gardener.cloud/certificate-authority-bundle label",
+								&corev1.Secret{
+									ObjectMeta: metav1.ObjectMeta{
+										Labels: map[string]string{
+											"shoot.gardener.cloud/name":      "foo",
+											"shoot.gardener.cloud/namespace": "foo",
+										},
+									},
+								},
+								&metav1.Status{
+									Code:    int32(http.StatusUnprocessableEntity),
+									Message: `label "authentication.gardener.cloud/certificate-authority-bundle" is missing`,
+								},
+							),
+							Entry(
+								"label authentication.gardener.cloud/certificate-authority-bundle has wrong value",
+								&corev1.Secret{
+									ObjectMeta: metav1.ObjectMeta{
+										Labels: map[string]string{
+											"shoot.gardener.cloud/name":                                  "foo",
+											"shoot.gardener.cloud/namespace":                             "foo",
+											"authentication.gardener.cloud/certificate-authority-bundle": "foo",
+										},
+									},
+								},
+								&metav1.Status{
+									Code:    int32(http.StatusUnprocessableEntity),
+									Message: `label "authentication.gardener.cloud/certificate-authority-bundle" value must be set to "shoot"`,
+								},
+							),
+						)
+
+						Context("secret is configured correctly", func() {
+							BeforeEach(func() {
+								secret := &corev1.Secret{
+									ObjectMeta: metav1.ObjectMeta{
+										Labels: map[string]string{
+											"shoot.gardener.cloud/name":                                  name,
+											"shoot.gardener.cloud/namespace":                             namespace,
+											"authentication.gardener.cloud/certificate-authority-bundle": "shoot",
+										},
+									},
+								}
+								data, err := runtime.Encode(encoder, secret)
+								Expect(err).NotTo(HaveOccurred())
+								request.Object.Raw = data
+							})
+
+							It("should return an error because the related shoot was not found", func() {
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(apierrors.NewNotFound(schema.GroupResource{}, name))
+
+								Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+									AdmissionResponse: admissionv1.AdmissionResponse{
+										Allowed: false,
+										Result: &metav1.Status{
+											Code:    int32(http.StatusForbidden),
+											Message: fmt.Sprintf(" %q not found", name),
+										},
+									},
+								}))
+							})
+
+							It("should return an error because the related shoot could not be read", func() {
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(fakeErr)
+
+								Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+									AdmissionResponse: admissionv1.AdmissionResponse{
+										Allowed: false,
+										Result: &metav1.Status{
+											Code:    int32(http.StatusInternalServerError),
+											Message: fakeErr.Error(),
+										},
+									},
+								}))
+							})
+
+							It("should forbid because the related shoot does not belong to gardenlet's seed", func() {
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+									(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: ptr.To("some-different-seed")}}).DeepCopyInto(obj)
+									return nil
+								})
+
+								Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+									AdmissionResponse: admissionv1.AdmissionResponse{
+										Allowed: false,
+										Result: &metav1.Status{
+											Code:    int32(http.StatusForbidden),
+											Message: fmt.Sprintf("object does not belong to seed %q", seedName),
+										},
+									},
+								}))
+							})
+
+							It("should allow because the related shoot does belong to gardenlet's seed", func() {
+								mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+									(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: &seedName}}).DeepCopyInto(obj)
+									return nil
+								})
+
+								Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+							})
+						})
+					})
+
 					Context("bootstrap token secret for managed seed", func() {
 						var (
 							secret      *corev1.Secret

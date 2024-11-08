@@ -348,9 +348,11 @@ func (h *Handler) admitSecret(ctx context.Context, seedName string, request admi
 		return h.admit(seedName, shoot.Spec.SeedName)
 	}
 
-	// Gardenlets can create secrets that contain the public info of a shoot's
-	// service account issuer in the gardener-system-shoot-issuer namespace.
-	if request.Namespace == gardencorev1beta1.GardenerShootIssuerNamespace {
+	// Gardenlets create secrets that contain:
+	// - the public info of a shoot's service account issuer in the gardener-system-shoot-issuer namespace.
+	// - the certificate authority bundle of shoots in the gardener-system-shoot-ca namespace.
+	if request.Namespace == gardencorev1beta1.GardenerShootIssuerNamespace ||
+		request.Namespace == gardencorev1beta1.GardenerShootCANamespace {
 		secret := &corev1.Secret{}
 		if err := h.Decoder.Decode(request, secret); err != nil {
 			return admission.Errored(http.StatusBadRequest, err)
@@ -367,10 +369,19 @@ func (h *Handler) admitSecret(ctx context.Context, seedName string, request admi
 		if shootNamespace, ok = secret.Labels[v1beta1constants.LabelShootNamespace]; !ok {
 			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("label %q is missing", v1beta1constants.LabelShootNamespace))
 		}
-		if publicKeyType, ok := secret.Labels[v1beta1constants.LabelPublicKeys]; !ok {
-			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("label %q is missing", v1beta1constants.LabelPublicKeys))
-		} else if publicKeyType != v1beta1constants.LabelPublicKeysServiceAccount {
-			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("label %q value must be set to %q", v1beta1constants.LabelPublicKeys, v1beta1constants.LabelPublicKeysServiceAccount))
+
+		if request.Namespace == gardencorev1beta1.GardenerShootIssuerNamespace {
+			if publicKeyType, ok := secret.Labels[v1beta1constants.LabelPublicKeys]; !ok {
+				return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("label %q is missing", v1beta1constants.LabelPublicKeys))
+			} else if publicKeyType != v1beta1constants.LabelPublicKeysServiceAccount {
+				return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("label %q value must be set to %q", v1beta1constants.LabelPublicKeys, v1beta1constants.LabelPublicKeysServiceAccount))
+			}
+		} else {
+			if caBundleType, ok := secret.Labels[v1beta1constants.LabelCertificateAuthorityBundle]; !ok {
+				return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("label %q is missing", v1beta1constants.LabelCertificateAuthorityBundle))
+			} else if caBundleType != v1beta1constants.LabelCertificateAuthorityBundleShoot {
+				return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("label %q value must be set to %q", v1beta1constants.LabelCertificateAuthorityBundle, v1beta1constants.LabelCertificateAuthorityBundleShoot))
+			}
 		}
 
 		shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: shootNamespace}}
