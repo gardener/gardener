@@ -14,10 +14,12 @@ import (
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/features"
+	gardenerutils "github.com/gardener/gardener/pkg/utils"
 )
 
 // GetCloudProfileSpec determines whether the given shoot references a CloudProfile or a NamespacedCloudProfile and returns the appropriate CloudProfileSpec.
@@ -44,8 +46,9 @@ func GetCloudProfileSpec(cloudProfileLister gardencorev1beta1listers.CloudProfil
 }
 
 // ValidateCloudProfileChanges validates that the referenced CloudProfile only changes within the current profile hierarchy
-// (i.e. between the parent CloudProfile and the descendant NamespacedCloudProfiles).
-func ValidateCloudProfileChanges(namespacedCloudProfileLister gardencorev1beta1listers.NamespacedCloudProfileLister, newShoot, oldShoot *core.Shoot) error {
+// (i.e. between the parent CloudProfile and the descendant NamespacedCloudProfiles) and that upon changing the profile all
+// current configurations still stay valid.
+func ValidateCloudProfileChanges(cloudProfileLister gardencorev1beta1listers.CloudProfileLister, namespacedCloudProfileLister gardencorev1beta1listers.NamespacedCloudProfileLister, newShoot, oldShoot *core.Shoot) error {
 	oldCloudProfileReference := BuildCloudProfileReference(oldShoot)
 	if oldCloudProfileReference == nil {
 		return nil
@@ -64,11 +67,65 @@ func ValidateCloudProfileChanges(namespacedCloudProfileLister gardencorev1beta1l
 		return err
 	}
 
-	if equality.Semantic.DeepEqual(oldCloudProfileRoot, newCloudProfileRoot) {
-		return nil
+	if !equality.Semantic.DeepEqual(oldCloudProfileRoot, newCloudProfileRoot) {
+		fromProfile := fmt.Sprintf("%q", oldCloudProfileReference.Name)
+		if oldCloudProfileReference.Kind != constants.CloudProfileReferenceKindCloudProfile {
+			fromProfile += fmt.Sprintf(" (root: %q)", oldCloudProfileRoot.Name)
+		}
+		toProfile := fmt.Sprintf("%q", newCloudProfileReference.Name)
+		if newCloudProfileReference.Kind != constants.CloudProfileReferenceKindCloudProfile {
+			toProfile += fmt.Sprintf(" (root: %q)", newCloudProfileRoot.Name)
+		}
+		return fmt.Errorf("cloud profile reference change is invalid: cannot change from %s to %s. The cloud profile reference must remain within the same hierarchy", fromProfile, toProfile)
 	}
 
-	return fmt.Errorf("cloud profile reference change is invalid: cannot change from %q (root: %q) to %q (root: %q). The cloud profile reference must remain within the same hierarchy", oldCloudProfileReference.Name, oldCloudProfileRoot.Name, newCloudProfileReference.Name, newCloudProfileRoot.Name)
+	if !equality.Semantic.DeepEqual(newCloudProfileReference, oldCloudProfileReference) {
+		newCloudProfileSpec, err := GetCloudProfileSpec(cloudProfileLister, namespacedCloudProfileLister, newShoot)
+		if err != nil {
+			return fmt.Errorf("could not find cloudProfileSpec from the shoot cloudProfile reference: %s", err.Error())
+		}
+		if oldCloudProfileReference.Kind != newCloudProfileReference.Kind || oldCloudProfileReference.Name != newCloudProfileReference.Name {
+			newCloudProfileSpecCore := &core.CloudProfileSpec{}
+			if err := api.Scheme.Convert(newCloudProfileSpec, newCloudProfileSpecCore, nil); err != nil {
+				return err
+			}
+			oldCloudProfileSpec, err := GetCloudProfileSpec(cloudProfileLister, namespacedCloudProfileLister, oldShoot)
+			if err != nil {
+				return fmt.Errorf("could not find cloudProfileSpec from the shoot cloudProfile reference: %s", err.Error())
+			}
+			oldCloudProfileSpecCore := &core.CloudProfileSpec{}
+			if err := api.Scheme.Convert(oldCloudProfileSpec, oldCloudProfileSpecCore, nil); err != nil {
+				return err
+			}
+
+			// Check that the target cloud profile still supports the currently used machine types, machine images and volume types.
+			// No need to check for Kubernetes versions, as the NamespacedCloudProfile could have only extended a version so with the next maintenance the Shoot will be updated to a supported version.
+			_, removedMachineImageVersions, _, _ := helper.GetMachineImageDiff(oldCloudProfileSpecCore.MachineImages, newCloudProfileSpecCore.MachineImages)
+			machineTypes := gardenerutils.CreateMapFromSlice(newCloudProfileSpec.MachineTypes, func(mt gardencorev1beta1.MachineType) string { return mt.Name })
+			volumeTypes := gardenerutils.CreateMapFromSlice(newCloudProfileSpec.VolumeTypes, func(vt gardencorev1beta1.VolumeType) string { return vt.Name })
+
+			for _, w := range newShoot.Spec.Provider.Workers {
+				if len(removedMachineImageVersions) > 0 && w.Machine.Image != nil {
+					if removedVersions, exists := removedMachineImageVersions[w.Machine.Image.Name]; exists {
+						if removedVersions.Has(w.Machine.Image.Version) {
+							return fmt.Errorf("newly referenced cloud profile does not contain the machine image version \"%s@%s\" currently in use by worker \"%s\"", w.Machine.Image.Name, w.Machine.Image.Version, w.Name)
+						}
+					}
+				}
+
+				if _, exists := machineTypes[w.Machine.Type]; !exists {
+					return fmt.Errorf("newly referenced cloud profile does not contain the machine type %q currently in use by worker %q", w.Machine.Type, w.Name)
+				}
+
+				if w.Volume != nil && w.Volume.Type != nil {
+					if _, exists := volumeTypes[*w.Volume.Type]; !exists {
+						return fmt.Errorf("newly referenced cloud profile does not contain the volume type %q currently in use by worker %q", *w.Volume.Type, w.Name)
+					}
+				}
+			}
+		}
+	}
+	return nil
 }
 
 // getRootCloudProfile determines the root CloudProfile from a CloudProfileReference containing any (Namespaced)CloudProfile

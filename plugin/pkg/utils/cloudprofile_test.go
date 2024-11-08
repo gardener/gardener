@@ -131,7 +131,7 @@ var _ = Describe("CloudProfile", func() {
 				Name: cloudProfileName,
 			}
 
-			err := admissionutils.ValidateCloudProfileChanges(namespacedCloudProfileLister, newShoot, shoot)
+			err := admissionutils.ValidateCloudProfileChanges(cloudProfileLister, namespacedCloudProfileLister, newShoot, shoot)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -142,7 +142,7 @@ var _ = Describe("CloudProfile", func() {
 			}
 			newShoot := shoot.DeepCopy()
 
-			err := admissionutils.ValidateCloudProfileChanges(namespacedCloudProfileLister, newShoot, shoot)
+			err := admissionutils.ValidateCloudProfileChanges(cloudProfileLister, namespacedCloudProfileLister, newShoot, shoot)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -154,7 +154,7 @@ var _ = Describe("CloudProfile", func() {
 			}
 			newShoot.Spec.CloudProfileName = &cloudProfileName
 
-			err := admissionutils.ValidateCloudProfileChanges(namespacedCloudProfileLister, newShoot, shoot)
+			err := admissionutils.ValidateCloudProfileChanges(cloudProfileLister, namespacedCloudProfileLister, newShoot, shoot)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -167,7 +167,7 @@ var _ = Describe("CloudProfile", func() {
 			}
 			newShoot := shoot.DeepCopy()
 
-			err := admissionutils.ValidateCloudProfileChanges(namespacedCloudProfileLister, newShoot, shoot)
+			err := admissionutils.ValidateCloudProfileChanges(cloudProfileLister, namespacedCloudProfileLister, newShoot, shoot)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -183,7 +183,7 @@ var _ = Describe("CloudProfile", func() {
 				Kind: "NamespacedCloudProfile",
 				Name: namespacedCloudProfileName,
 			}
-			err := admissionutils.ValidateCloudProfileChanges(namespacedCloudProfileLister, newShoot, shoot)
+			err := admissionutils.ValidateCloudProfileChanges(cloudProfileLister, namespacedCloudProfileLister, newShoot, shoot)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -202,7 +202,7 @@ var _ = Describe("CloudProfile", func() {
 				Kind: "NamespacedCloudProfile",
 				Name: namespacedCloudProfileName,
 			}
-			err := admissionutils.ValidateCloudProfileChanges(namespacedCloudProfileLister, newShoot, shoot)
+			err := admissionutils.ValidateCloudProfileChanges(cloudProfileLister, namespacedCloudProfileLister, newShoot, shoot)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -221,7 +221,7 @@ var _ = Describe("CloudProfile", func() {
 				Kind: "CloudProfile",
 				Name: cloudProfileName,
 			}
-			err := admissionutils.ValidateCloudProfileChanges(namespacedCloudProfileLister, newShoot, shoot)
+			err := admissionutils.ValidateCloudProfileChanges(cloudProfileLister, namespacedCloudProfileLister, newShoot, shoot)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -244,7 +244,7 @@ var _ = Describe("CloudProfile", func() {
 				Kind: "NamespacedCloudProfile",
 				Name: namespacedCloudProfileName + "-2",
 			}
-			err := admissionutils.ValidateCloudProfileChanges(namespacedCloudProfileLister, newShoot, shoot)
+			err := admissionutils.ValidateCloudProfileChanges(cloudProfileLister, namespacedCloudProfileLister, newShoot, shoot)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -266,7 +266,7 @@ var _ = Describe("CloudProfile", func() {
 				Kind: "NamespacedCloudProfile",
 				Name: unrelatedNamespacedCloudProfile.Name,
 			}
-			err := admissionutils.ValidateCloudProfileChanges(namespacedCloudProfileLister, newShoot, shoot)
+			err := admissionutils.ValidateCloudProfileChanges(cloudProfileLister, namespacedCloudProfileLister, newShoot, shoot)
 			Expect(err).To(HaveOccurred())
 		})
 
@@ -285,7 +285,7 @@ var _ = Describe("CloudProfile", func() {
 				Kind: "CloudProfile",
 				Name: unrelatedCloudProfile.Name,
 			}
-			err := admissionutils.ValidateCloudProfileChanges(namespacedCloudProfileLister, newShoot, shoot)
+			err := admissionutils.ValidateCloudProfileChanges(cloudProfileLister, namespacedCloudProfileLister, newShoot, shoot)
 			Expect(err).To(HaveOccurred())
 		})
 	})
