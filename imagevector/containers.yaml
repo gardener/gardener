@@ -274,7 +274,7 @@ images:
 - name: kube-state-metrics
   sourceRepository: github.com/kubernetes/kube-state-metrics
   repository: registry.k8s.io/kube-state-metrics/kube-state-metrics
-  tag: v2.13.0
+  tag: v2.14.0
   labels:
   - name: gardener.cloud/cve-categorisation
     value:
