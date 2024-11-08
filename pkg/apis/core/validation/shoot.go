@@ -122,6 +122,7 @@ var (
 		gardencorev1beta1.GardenerName,
 		v1beta1constants.ReferenceProtectionFinalizerName,
 	)
+	availableUpdateStrategies = sets.New(core.AutoRollingUpdate, core.AutoInPlaceUpdate, core.ManualInPlaceUpdate)
 
 	// asymmetric algorithms from https://datatracker.ietf.org/doc/html/rfc7518#section-3.1
 	availableOIDCSigningAlgs = sets.New(
@@ -1806,6 +1807,16 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, fldPath *fie
 
 	if worker.ClusterAutoscaler != nil {
 		allErrs = append(allErrs, ValidateClusterAutoscalerOptions(worker.ClusterAutoscaler, fldPath.Child("autoscaler"))...)
+	}
+
+	if worker.UpdateStrategy != nil {
+		if !availableUpdateStrategies.Has(*worker.UpdateStrategy) {
+			allErrs = append(allErrs, field.NotSupported(fldPath.Child("updateStrategy"), *worker.UpdateStrategy, sets.List(availableUpdateStrategies)))
+		}
+
+		if !features.DefaultFeatureGate.Enabled(features.InPlaceNodeUpdates) && helper.IsUpdateStrategyInPlace(worker.UpdateStrategy) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("updateStrategy"), *worker.UpdateStrategy, "can not configure `AutoInPlaceUpdate` or `ManualInPlaceUpdate` update strategies when the `InPlaceNodeUpdates` feature gate is disabled."))
+		}
 	}
 
 	return allErrs

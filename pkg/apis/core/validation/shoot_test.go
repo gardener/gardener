@@ -6295,8 +6295,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						"Type":   Equal(field.ErrorTypeNotSupported),
 						"Field":  Equal("cloudProfile.kind"),
 						"Detail": Equal("supported values: \"CloudProfile\", \"NamespacedCloudProfile\""),
-					})),
-				))
+					}))))
 			})
 
 			It("should allow creation using a CloudProfile", func() {
@@ -6319,6 +6318,56 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errList := ValidateCloudProfileReference(cloudProfileReference, nil, fldPath)
 
 				Expect(errList).To(BeEmpty())
+			})
+		})
+
+		Describe("update strategy validation", func() {
+			var (
+				worker             core.Worker
+				fldPath            *field.Path
+				testUpdateStrategy core.MachineUpdateStrategy = "testStrategy"
+			)
+
+			BeforeEach(func() {
+				worker = core.Worker{
+					Name: "worker-1",
+					Machine: core.Machine{
+						Type: "xlarge",
+					},
+				}
+
+				fldPath = field.NewPath("workers").Index(0)
+			})
+
+			It("should fail if the update strategy is not supported", func() {
+				worker.UpdateStrategy = ptr.To(testUpdateStrategy)
+
+				Expect(ValidateWorker(worker, core.Kubernetes{}, fldPath, false)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeNotSupported),
+						"Field":  Equal("workers[0].updateStrategy"),
+						"Detail": Equal("supported values: \"AutoInPlaceUpdate\", \"AutoRollingUpdate\", \"ManualInPlaceUpdate\""),
+					})),
+				))
+			})
+
+			It("should succeed if the update strategy is supported", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
+				worker.UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+
+				Expect(ValidateWorker(worker, core.Kubernetes{}, fldPath, false)).To(BeEmpty())
+			})
+
+			It("should fail if the update strategy is AutoInPlaceUpdate/ManualInPlaceUpdate and InPlaceNodeUpdates feature gate is not enabled", func() {
+				worker.UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+
+				Expect(ValidateWorker(worker, core.Kubernetes{}, fldPath, false)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("workers[0].updateStrategy"),
+						"Detail": Equal("can not configure `AutoInPlaceUpdate` or `ManualInPlaceUpdate` update strategies when the `InPlaceNodeUpdates` feature gate is disabled."),
+					})),
+				))
 			})
 		})
 	})

@@ -562,4 +562,15 @@ var _ = Describe("Helper", func() {
 		Entry("worker not found", []core.Worker{{Name: "foo"}}, "bar", nil),
 		Entry("worker found", []core.Worker{{Name: "foo"}}, "foo", &core.Worker{Name: "foo"}),
 	)
+
+	DescribeTable("#IsUpdateStrategyInPlace",
+		func(updateStrategy *core.MachineUpdateStrategy, expected bool) {
+			Expect(IsUpdateStrategyInPlace(updateStrategy)).To(Equal(expected))
+		},
+
+		Entry("with nil", nil, false),
+		Entry("with AutoRollingUpdate update strategy", ptr.To(core.AutoRollingUpdate), false),
+		Entry("with AutoInPlaceUpdate update strategy", ptr.To(core.AutoInPlaceUpdate), true),
+		Entry("with ManualInPlaceUpdate  update strategy", ptr.To(core.ManualInPlaceUpdate), true),
+	)
 })
