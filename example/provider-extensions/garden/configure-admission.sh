@@ -30,14 +30,11 @@ garden_kubeconfig=$1
 command=$2
 shift 2
 
-for p in $(yq '. | select(.kind == "ControllerDeployment") | select(.metadata.name == "provider-*" or .metadata.name == "networking-cilium") | .metadata.name' "$REPO_ROOT_DIR"/example/provider-extensions/garden/controllerregistrations/* | grep -v -E "^---$"); do
+for p in $(yq '. | select(.kind == "ControllerDeployment") | select(.metadata.name == "provider-*" or .metadata.name == "networking-*") | .metadata.name' "$REPO_ROOT_DIR"/example/provider-extensions/garden/controllerregistrations/* | grep -v -E "^---$"); do
   echo "Found \"$p\" in $REPO_ROOT_DIR/example/provider-extensions/garden/controllerregistrations. Trying to configure its admission controller..."
   if PROVIDER_RELEASES=$(curl --fail -s -L -H "Accept: application/vnd.github+json" "https://api.github.com/repos/gardener/gardener-extension-$p/releases"); then
     LATEST_RELEASE=$(jq -r '.[].tag_name' <<< "$PROVIDER_RELEASES" | head -n 1)
-    ADMISSION_NAME=${p/provider/admission}
-    if [ "$ADMISSION_NAME" == "networking-cilium" ]; then
-      ADMISSION_NAME="admission-cilium"
-    fi
+    ADMISSION_NAME=$(sed -E 's/(provider|networking)/admission/g' <<< $p)
     echo "Identified $LATEST_RELEASE as latest release of $ADMISSION_NAME. Trying to $command it..."
     ADMISSION_GIT_ROOT=$(mktemp -d)
     ADMISSION_FILE=$(mktemp)
