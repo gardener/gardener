@@ -70,6 +70,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				MaxSurge:         &maxSurge,
 				MaxUnavailable:   &maxUnavailable,
 				SystemComponents: systemComponents,
+				UpdateStrategy:   ptr.To(core.AutoRollingUpdate),
 			}
 			invalidWorker = core.Worker{
 				Name: "",
@@ -5381,6 +5382,55 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.schedulerName"),
 				}))))
+			})
+		})
+
+		Describe("#ValidateProviderUpdate", func() {
+			Context("worker pool updateStrategy", func() {
+				It("should forbid changing the updateStrategy from AutoRollingUpdate to AutoInPlaceUpdate/ManualInPlaceUpdate", func() {
+					newShoot := prepareShootForUpdate(shoot)
+
+					newShoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.provider.workers[0].updateStrategy"),
+						"Detail": Equal("updateStrategy can't be changed from \"AutoRollingUpdate\" to \"AutoInPlaceUpdate\""),
+					}))))
+				})
+
+				It("should forbid changing the updateStrategy from ManualInPlaceUpdate to AutoRollingUpdate", func() {
+					shoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.ManualInPlaceUpdate)
+					newShoot := prepareShootForUpdate(shoot)
+
+					newShoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.AutoRollingUpdate)
+
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.provider.workers[0].updateStrategy"),
+						"Detail": Equal("updateStrategy can't be changed from \"ManualInPlaceUpdate\" to \"AutoRollingUpdate\""),
+					}))))
+				})
+
+				It("should allow changing the updateStrategy from AutoInPlaceUpdate to ManualInPlaceUpdate", func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
+					shoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+					newShoot := prepareShootForUpdate(shoot)
+
+					newShoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.ManualInPlaceUpdate)
+
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+				})
+
+				It("should allow changing the updateStrategy from ManualInPlaceUpdate to AutoInPlaceUpdate", func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
+					shoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.ManualInPlaceUpdate)
+					newShoot := prepareShootForUpdate(shoot)
+
+					newShoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+				})
 			})
 		})
 	})

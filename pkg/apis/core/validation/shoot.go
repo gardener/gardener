@@ -397,7 +397,53 @@ func validateWorkerUpdate(newHasWorkers, oldHasWorkers bool, fldPath *field.Path
 
 // ValidateProviderUpdate validates the specification of a Provider object.
 func ValidateProviderUpdate(newProvider, oldProvider *core.Provider, fldPath *field.Path) field.ErrorList {
-	return apivalidation.ValidateImmutableField(newProvider.Type, oldProvider.Type, fldPath.Child("type"))
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newProvider.Type, oldProvider.Type, fldPath.Child("type"))...)
+
+	for i, newWorker := range newProvider.Workers {
+		var oldWorker core.Worker
+
+		oldWorkerIndex := slices.IndexFunc(oldProvider.Workers, func(ow core.Worker) bool {
+			oldWorker = ow
+			return ow.Name == newWorker.Name
+		})
+
+		if oldWorkerIndex == -1 {
+			continue
+		}
+
+		idxPath := fldPath.Child("workers").Index(i)
+
+		if isUpdateStrategyChanged(oldWorker.UpdateStrategy, newWorker.UpdateStrategy) {
+			allErrs = append(allErrs, field.Invalid(idxPath.Child("updateStrategy"), newWorker.UpdateStrategy,
+				fmt.Sprintf("updateStrategy can't be changed from %q to %q",
+					stringPtrOrEmpty(oldWorker.UpdateStrategy), stringPtrOrEmpty(newWorker.UpdateStrategy))))
+		}
+
+	}
+
+	return allErrs
+}
+
+func isUpdateStrategyChanged(oldStrategy, newStrategy *core.MachineUpdateStrategy) bool {
+	if oldStrategy == nil || newStrategy == nil {
+		return oldStrategy != newStrategy
+	}
+
+	if (*oldStrategy == core.AutoInPlaceUpdate && *newStrategy == core.ManualInPlaceUpdate) ||
+		(*oldStrategy == core.ManualInPlaceUpdate && *newStrategy == core.AutoInPlaceUpdate) {
+		return false
+	}
+
+	return *oldStrategy != *newStrategy
+}
+
+func stringPtrOrEmpty(ptr *core.MachineUpdateStrategy) core.MachineUpdateStrategy {
+	if ptr == nil {
+		return ""
+	}
+	return *ptr
 }
 
 // ValidateShootStatusUpdate validates the status field of a Shoot object.
