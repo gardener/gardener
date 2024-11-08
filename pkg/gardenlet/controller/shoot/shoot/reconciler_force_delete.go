@@ -178,6 +178,11 @@ func (r *Reconciler) runForceDeleteShootFlow(ctx context.Context, log logr.Logge
 			Dependencies: flow.NewTaskIDs(syncPoint),
 		})
 		_ = g.Add(flow.Task{
+			Name:         "Delete certificate authority bundle from Garden cluster",
+			Fn:           botanist.DeleteCertificateAuthorityBundleSecret,
+			Dependencies: flow.NewTaskIDs(syncPoint),
+		})
+		_ = g.Add(flow.Task{
 			Name:         "Waiting until shoot namespace has been deleted",
 			Fn:           botanist.WaitUntilSeedNamespaceDeleted,
 			Dependencies: flow.NewTaskIDs(deleteNamespace),
