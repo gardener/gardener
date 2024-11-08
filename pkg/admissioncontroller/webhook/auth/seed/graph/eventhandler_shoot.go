@@ -209,14 +209,18 @@ func (g *graph) handleShootCreateOrUpdate(ctx context.Context, shoot *gardencore
 	shootStateVertex := g.getOrCreateVertex(VertexTypeShootState, shoot.Namespace, shoot.Name)
 	g.addEdge(shootStateVertex, shootVertex)
 
-	if v1beta1helper.HasManagedIssuer(shoot) {
-		namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: shoot.Namespace}}
-		if err := g.client.Get(ctx, client.ObjectKeyFromObject(namespace), namespace); err == nil {
-			if projectName, ok := namespace.Labels[v1beta1constants.ProjectName]; ok {
+	namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: shoot.Namespace}}
+	if err := g.client.Get(ctx, client.ObjectKeyFromObject(namespace), namespace); err == nil {
+		if projectName, ok := namespace.Labels[v1beta1constants.ProjectName]; ok {
+			if v1beta1helper.HasManagedIssuer(shoot) {
 				saPublicKeysSecretName := gardenerutils.ComputeDiscoverySecretName(projectName, shoot.UID)
 				saPublicKeysSecretVertex := g.getOrCreateVertex(VertexTypeSecret, gardencorev1beta1.GardenerShootIssuerNamespace, saPublicKeysSecretName)
 				g.addEdge(saPublicKeysSecretVertex, shootVertex)
 			}
+
+			caBundleDiscoverySecretName := gardenerutils.ComputeDiscoverySecretName(projectName, shoot.UID)
+			caBundleDiscoverySecretVertex := g.getOrCreateVertex(VertexTypeSecret, gardencorev1beta1.GardenerShootCANamespace, caBundleDiscoverySecretName)
+			g.addEdge(caBundleDiscoverySecretVertex, shootVertex)
 		}
 	}
 }
