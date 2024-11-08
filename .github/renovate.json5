@@ -1,266 +1,383 @@
 {
-  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended"
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+  extends: [
+    'config:recommended',
   ],
-  "labels": ["kind/enhancement"],
-  "postUpdateOptions": ["gomodTidy"],
+  labels: [
+    'kind/enhancement',
+  ],
+  postUpdateOptions: [
+    'gomodTidy',
+  ],
   // Add PR footer with empty release note by default.
-  "prFooter": "**Release note**:\n```other dependency\nNONE\n```",
-  "customManagers": [
+  prFooter: '**Release note**:\n```other dependency\nNONE\n```',
+  customManagers: [
     {
       // Update `_VERSION` and `_version` variables in Makefiles and scripts.
       // Inspired by `regexManagers:dockerfileVersions` preset.
-      "customType": "regex",
-      "fileMatch": ["Makefile$", "\\.mk$", "\\.sh$"],
-      "matchStrings": [
-        "# renovate: datasource=(?<datasource>[a-z-.]+?) depName=(?<depName>[^\\s]+?)(?: (lookupName|packageName)=(?<packageName>[^\\s]+?))?(?: versioning=(?<versioning>[^\\s]+?))?(?: extractVersion=(?<extractVersion>[^\\s]+?))?(?: registryUrl=(?<registryUrl>[^\\s]+?))?\\s.+?_(VERSION|version) *[?:]?= *\"?(?<currentValue>.+?)\"?\\s"
-      ]
+      customType: 'regex',
+      fileMatch: [
+        'Makefile$',
+        '\\.mk$',
+        '\\.sh$',
+      ],
+      matchStrings: [
+        '# renovate: datasource=(?<datasource>[a-z-.]+?) depName=(?<depName>[^\\s]+?)(?: (lookupName|packageName)=(?<packageName>[^\\s]+?))?(?: versioning=(?<versioning>[^\\s]+?))?(?: extractVersion=(?<extractVersion>[^\\s]+?))?(?: registryUrl=(?<registryUrl>[^\\s]+?))?\\s.+?_(VERSION|version) *[?:]?= *"?(?<currentValue>.+?)"?\\s',
+      ],
     },
     {
       // Generic detection for pod-like image specifications.
-      "customType": "regex",
-      "fileMatch": ["^example\/.+\\.yaml$", "^hack\/.+\\.yaml$", "^\\.test-defs\/.+\\.yaml$"],
-      "matchStrings": ["image: [\"|']?(?<depName>.*?):(?<currentValue>.*?)[\"|']?\\s"],
-      "datasourceTemplate": "docker"
+      customType: 'regex',
+      fileMatch: [
+        '^example/.+\\.yaml$',
+        '^hack/.+\\.yaml$',
+        '^\\.test-defs/.+\\.yaml$',
+      ],
+      matchStrings: [
+        'image: ["|\']?(?<depName>.*?):(?<currentValue>.*?)["|\']?\\s',
+      ],
+      datasourceTemplate: 'docker',
     },
     {
       // Generic detection for install manifests from GitHub releases.
-      "customType": "regex",
-      "fileMatch": ["\/kustomization\\.yaml$"],
-      "matchStrings": [
-        "https:\/\/github\\.com\/(?<depName>[^/]*\/[^/]*?)\/releases\/download\/(?<currentValue>.*?)\/",
-        "https:\/\/raw\\.githubusercontent\\.com\/(?<depName>[^/]*\/[^/]*?)\/(?<currentValue>.*?)\/",
+      customType: 'regex',
+      fileMatch: [
+        '/kustomization\\.yaml$',
       ],
-      "datasourceTemplate": "github-releases"
+      matchStrings: [
+        'https://github\\.com/(?<depName>[^/]*/[^/]*?)/releases/download/(?<currentValue>.*?)/',
+        'https://raw\\.githubusercontent\\.com/(?<depName>[^/]*/[^/]*?)/(?<currentValue>.*?)/',
+      ],
+      datasourceTemplate: 'github-releases',
     },
     {
       // Generic detection for cli argument image specifications.
-      "customType": "regex",
-      "fileMatch": ["^hack\/.+\\.sh$"],
-      "matchStrings": ["--image[=| ][\"|']?(?<depName>.*?):(?<currentValue>.*?)[\"|']?\\s"],
-      "datasourceTemplate": "docker"
+      customType: 'regex',
+      fileMatch: [
+        '^hack/.+\\.sh$',
+      ],
+      matchStrings: [
+        '--image[=| ]["|\']?(?<depName>.*?):(?<currentValue>.*?)["|\']?\\s',
+      ],
+      datasourceTemplate: 'docker',
     },
     {
       // Generic detection of container images in containers.yaml via container registry.
-      "customType": "regex",
-      "fileMatch": ["^imagevector\/containers.yaml$"],
-      "matchStrings": ["\\s+repository:\\s+(?<depName>.*?)\\n\\s+tag:\\s+[\"]?(?<currentValue>.*?)[\"]?\\n"],
-      "datasourceTemplate": "docker"
+      customType: 'regex',
+      fileMatch: [
+        '^imagevector/containers.yaml$',
+      ],
+      matchStrings: [
+        '\\s+repository:\\s+(?<depName>.*?)\\n\\s+tag:\\s+["]?(?<currentValue>.*?)["]?\\n',
+      ],
+      datasourceTemplate: 'docker',
     },
     {
       // Generic detection of container images in containers.yaml via github releases.
-      "customType": "regex",
-      "fileMatch": ["^imagevector\/containers.yaml$"],
-      "matchStrings": ["\\s+sourceRepository:\\s+github.com\/(?<depName>.*?)\\n\\s+repository:\\s+.*\\n\\s+tag:\\s+[\"]?(?<currentValue>.*?)[\"]?\\n"],
-      "datasourceTemplate": "github-releases"
+      customType: 'regex',
+      fileMatch: [
+        '^imagevector/containers.yaml$',
+      ],
+      matchStrings: [
+        '\\s+sourceRepository:\\s+github.com/(?<depName>.*?)\\n\\s+repository:\\s+.*\\n\\s+tag:\\s+["]?(?<currentValue>.*?)["]?\\n',
+      ],
+      datasourceTemplate: 'github-releases',
     },
     {
       // Detection for images with prow like tags (e.g. v20240213-749005b2).
-      "customType": "regex",
-      "fileMatch": ["^pkg\/provider-local\/imagevector/images.yaml$"],
-      "matchStrings": ["(?<depName>gcr\\.io\/k8s-staging-kind\/.*?):(?<currentValue>.*?)\\s"],
-      "datasourceTemplate": "docker"
-    }
+      customType: 'regex',
+      fileMatch: [
+        '^pkg/provider-local/imagevector/images.yaml$',
+      ],
+      matchStrings: [
+        '(?<depName>gcr\\.io/k8s-staging-kind/.*?):(?<currentValue>.*?)\\s',
+      ],
+      datasourceTemplate: 'docker',
+    },
   ],
-  "separateMinorPatch": true,
-  "packageRules": [
+  separateMinorPatch: true,
+  packageRules: [
     {
       // Run make generate when Go API packages have been changed because CRDs might have changed.
-      "matchDatasources": ["go"],
-      "matchPackagePatterns": [
-        ".+\/api\/.+",
-        ".+\/apis\/.+"
+      matchDatasources: [
+        'go',
       ],
-      "postUpgradeTasks": {
-        "commands": [
-          "make generate MODE=sequential"
+      postUpgradeTasks: {
+        commands: [
+          'make generate MODE=sequential',
         ],
-        "executionMode": "branch"
-      }
+        executionMode: 'branch',
+      },
+      matchPackageNames: [
+        '/.+/api/.+/',
+        '/.+/apis/.+/',
+      ],
     },
     {
       // Group golang updates in one PR.
-      "groupName": "golang",
-      "matchDatasources": ["docker"],
-      "matchPackagePatterns": ["golang"],
+      groupName: 'golang',
+      matchDatasources: [
+        'docker',
+      ],
+      matchPackageNames: [
+        '/golang/',
+      ],
     },
     {
       // Group istio image updates in one PR.
-      "groupName": "istio images",
-      "matchDatasources": ["docker"],
-      "matchPackagePatterns": ["gcr\\.io\/istio-release\/.+"],
+      groupName: 'istio images',
+      matchDatasources: [
+        'docker',
+      ],
+      matchPackageNames: [
+        '/gcr\\.io/istio-release/.+/',
+      ],
     },
     {
       // Group istio module updates in one PR.
-      "groupName": "istio modules",
-      "matchDatasources": ["go"],
-      "matchPackagePatterns": [
-        "istio\\.io\/api",
-        "istio\\.io\/client-go"
+      groupName: 'istio modules',
+      matchDatasources: [
+        'go',
+      ],
+      matchPackageNames: [
+        '/istio\\.io/api/',
+        '/istio\\.io/client-go/',
       ],
     },
     {
       // Group etcd-druid updates in one PR.
-      "groupName": "etcd-druid",
-      "matchDatasources": ["github-releases", "go"],
-      "matchPackagePatterns": [
-        "github\\.com\/gardener\/etcd-druid",
-        "gardener\/etcd-druid"
+      groupName: 'etcd-druid',
+      matchDatasources: [
+        'github-releases',
+        'go',
+      ],
+      matchPackageNames: [
+        '/github\\.com/gardener/etcd-druid/',
+        '/gardener/etcd-druid/',
       ],
     },
     {
-      // Group prometheus-operator image updates in one PR.
-      "groupName": "prometheus-operator images",
-      "matchDatasources": ["docker", "go"],
-      "matchPackagePatterns": [
-        "quay\\.io\/prometheus-operator\/.+",
-        "github\\.com\/prometheus-operator\/prometheus-operator\/pkg\/apis\/.+"]
+      // Group prometheus-operator updates in one PR.
+      groupName: 'prometheus-operator',
+      matchDatasources: [
+        'docker',
+        'go',
+      ],
+      matchPackageNames: [
+        '/quay\\.io/prometheus-operator/.+/',
+        '/github\\.com/prometheus-operator/prometheus-operator/pkg/apis/.+/',
+      ],
     },
     {
       // Ask for manual approval to create PRs for minor and major updates of dependencies which most likely
       // require manual adaptations of the code.
-      "matchDatasources": ["go"],
-      "matchUpdateTypes": ["major", "minor"],
-      "matchPackagePatterns": [
-        "k8s\\.io\/.+",
-        "sigs\\.k8s\\.io\/controller-runtime",
-        "istio\\.io\/.+",
-        "github\\.com\/fluent\/.+"
+      matchDatasources: [
+        'go',
       ],
-      "dependencyDashboardApproval": true
+      matchUpdateTypes: [
+        'major',
+        'minor',
+      ],
+      dependencyDashboardApproval: true,
+      matchPackageNames: [
+        '/k8s\\.io/.+/',
+        '/sigs\\.k8s\\.io/controller-runtime/',
+        '/istio\\.io/.+/',
+        '/github\\.com/fluent/.+/',
+      ],
     },
     {
       // Ask for manual approval to create PRs for minor and major updates of container images which most likely
       // require manual adaptations of the code.
-      "matchDatasources": ["docker", "github-releases"],
-      "matchUpdateTypes": ["major", "minor"],
-      "matchFileNames": ["imagevector/**"],
-      "matchPackagePatterns": [
-        "fluent\/.+",
-        "gcr\\.io\/istio-release\/.+",
-        // valitail updates have a hard dependency on glibc version of the target nodes.
-        "europe-docker\\.pkg\\.dev\/gardener-project\/releases\/3rd\/credativ\/valitail",
+      matchDatasources: [
+        'docker',
+        'github-releases',
       ],
-      "dependencyDashboardApproval": true
+      matchUpdateTypes: [
+        'major',
+        'minor',
+      ],
+      matchFileNames: [
+        'imagevector/**',
+      ],
+      dependencyDashboardApproval: true,
+      matchPackageNames: [
+        '/fluent/.+/',
+        '/gcr\\.io/istio-release/.+/',
+        '/europe-docker\\.pkg\\.dev/gardener-project/releases/3rd/credativ/valitail/',
+      ],
     },
     {
       // Ask for manual approval to create PRs for kindest/node image. Minor and major versions are updated when new
       // versions of Kubernetes are introduced only.
-      "matchDatasources": ["docker"],
-      "matchUpdateTypes": ["major", "minor"],
-      "matchPackagePatterns": ["kindest\/node"],
-      "dependencyDashboardApproval": true
+      matchDatasources: [
+        'docker',
+      ],
+      matchUpdateTypes: [
+        'major',
+        'minor',
+      ],
+      dependencyDashboardApproval: true,
+      matchPackageNames: [
+        '/kindest/node/',
+      ],
     },
     {
       // Only patch level updates for golang-test image. Minor and major versions are updated manually.
-      "matchDatasources": ["docker"],
-      "matchUpdateTypes": ["major", "minor"],
-      "matchFileNames": ["hack\/tools\/image\/variants\\.yaml"],
-      "enabled": false
+      matchDatasources: [
+        'docker',
+      ],
+      matchUpdateTypes: [
+        'major',
+        'minor',
+      ],
+      matchFileNames: [
+        'hack/tools/image/variants\\.yaml',
+      ],
+      enabled: false,
     },
     {
       // Do not update to patch versions of the Go Toolchain.
       // Default golang images set the environment variable GOTOOLCHAIN=local
       // and we don't want to enforce every (test-)image to be on the latest patch level.
-      "matchManagers": ["gomod"],
-      "matchUpdateTypes": ["patch"],
-      "matchPackagePatterns": ["go"],
-      "enabled": false
+      matchManagers: [
+        'gomod',
+      ],
+      matchUpdateTypes: [
+        'patch',
+      ],
+      enabled: false,
+      matchPackageNames: [
+        '/go/',
+      ],
     },
     {
       // Go versions must be in sync with golangci-lint.
-      "matchDatasources": ["go"],
-      "matchFileNames": ["hack\/tools\/logcheck\/go\\.mod"],
-      "enabled": false
+      matchDatasources: [
+        'go',
+      ],
+      matchFileNames: [
+        'hack/tools/logcheck/go\\.mod',
+      ],
+      enabled: false,
     },
     {
       // Update only patch levels for cluster-autoscaler container images.
       // There is a different minor version for each Kubernetes version active at the same time. In this scenario,
       // renovate is able to handle patch updates properly only.
-      "matchDatasources": ["docker", "github-releases"],
-      "matchUpdateTypes": ["major", "minor"],
-      "matchFileNames": ["imagevector/**"],
-      "matchPackagePatterns": [
-        "gardener\/autoscaler",
+      matchDatasources: [
+        'docker',
+        'github-releases',
       ],
-      "enabled": false
+      matchUpdateTypes: [
+        'major',
+        'minor',
+      ],
+      matchFileNames: [
+        'imagevector/**',
+      ],
+      enabled: false,
+      matchPackageNames: [
+        '/gardener/autoscaler/',
+      ],
     },
     {
       // Do not use docker for images from gardener registry except those which do not work with github-releases.
-      "matchDatasources": ["docker"],
-      "matchFileNames": ["imagevector/**"],
-      "matchPackagePatterns": [
-        "europe-docker\\.pkg\\.dev\/gardener-project\/releases\/.+"
+      matchDatasources: [
+        'docker',
       ],
-      "excludePackagePatterns": [
-        "europe-docker\\.pkg\\.dev\/gardener-project\/releases\/3rd\/alpine",
-        "europe-docker\\.pkg\\.dev\/gardener-project\/releases\/3rd\/kubernetesui\/.+"
+      matchFileNames: [
+        'imagevector/**',
       ],
-      "enabled": false
+      enabled: false,
+      matchPackageNames: [
+        '/europe-docker\\.pkg\\.dev/gardener-project/releases/.+/',
+        '!/europe-docker\\.pkg\\.dev/gardener-project/releases/3rd/alpine/',
+        '!/europe-docker\\.pkg\\.dev/gardener-project/releases/3rd/kubernetesui/.+/',
+      ],
     },
     {
       // Do not use github-releases for external dependencies except those we copy.
-      "matchDatasources": ["github-releases"],
-      "matchFileNames": ["imagevector/**"],
-      "excludePackagePatterns": [
-        "gardener\/.+",
-        "credativ\/.+",
-        "envoyproxy\/.+",
-        "fluent\/.+"
+      matchDatasources: [
+        'github-releases',
       ],
-      "enabled": false
+      matchFileNames: [
+        'imagevector/**',
+      ],
+      enabled: false,
+      matchPackageNames: [
+        '!/gardener/.+/',
+        '!/credativ/.+/',
+        '!/envoyproxy/.+/',
+        '!/fluent/.+/',
+      ],
     },
     {
       // Ignore local-skaffold packages because they are virtual packages for local setup only.
-      "matchPackagePatterns": [
-        "local-skaffold\/.+"
+      enabled: false,
+      matchPackageNames: [
+        '/local-skaffold/.+/',
       ],
-      "enabled": false
     },
     {
       // Ignore dependency updates from k8s.io/kube-openapi because it depends on k8s.io/apiserver.
-      "matchDatasources": ["go"],
-      "matchPackagePatterns": ["k8s\\.io\/kube-openapi"],
-      "enabled": false
+      matchDatasources: [
+        'go',
+      ],
+      enabled: false,
+      matchPackageNames: [
+        '/k8s\\.io/kube-openapi/',
+      ],
     },
     {
       // Ignore dependency updates from sigs.k8s.io/controller-runtime/tools/setup-envtest because it should be in sync with controller-runtime.
-      "matchDatasources": ["go"],
-      "matchPackagePatterns": ["sigs\\.k8s\\.io\/controller-runtime\/tools\/setup-envtest"],
-      "enabled": false
+      matchDatasources: [
+        'go',
+      ],
+      enabled: false,
+      matchPackageNames: [
+        '/sigs\\.k8s\\.io/controller-runtime/tools/setup-envtest/',
+      ],
     },
     {
       // Ignore paths which most likely create false positives.
-      "matchFileNames": [
-          "chart/**",
-          "cmd/**",
-          "extensions/**",
-          "pkg/**",
-          "plugin/**",
-          "test/**",
-          "third_party/**"
+      matchFileNames: [
+        'chart/**',
+        'cmd/**',
+        'extensions/**',
+        'pkg/**',
+        'plugin/**',
+        'test/**',
+        'third_party/**',
       ],
-      "enabled": false
+      enabled: false,
     },
     {
       // Enable specific paths which have been disabled by the previous rule.
-      "matchFileNames": [
-          "pkg/provider-local/node/*"
+      matchFileNames: [
+        'pkg/provider-local/node/*',
       ],
-      "enabled": true
+      enabled: true,
     },
     {
       // Add PR footer with release notes for docker releases.
-      "matchDatasources": ["docker"],
-      "matchFileNames": ["imagevector/**"],
-      "prFooter": "**Release note**:\n```other dependency\nThe `{{depName}}` image has been updated to `{{newVersion}}`.\n```"
+      matchDatasources: [
+        'docker',
+      ],
+      matchFileNames: [
+        'imagevector/**',
+      ],
+      prFooter: '**Release note**:\n```other dependency\nThe `{{depName}}` image has been updated to `{{newVersion}}`.\n```',
     },
     {
       // Add PR footer with release notes link for github-releases.
-      "matchDatasources": ["github-releases"],
-      "matchFileNames": ["imagevector/**"],
-      "prFooter": "**Release note**:\n```other dependency\nThe `{{depName}}` image has been updated to `{{newVersion}}`. [Release Notes](https://github.com/{{depName}}/releases/tag/{{newVersion}})\n```"
-    }
-  ]
+      matchDatasources: [
+        'github-releases',
+      ],
+      matchFileNames: [
+        'imagevector/**',
+      ],
+      prFooter: '**Release note**:\n```other dependency\nThe `{{depName}}` image has been updated to `{{newVersion}}`. [Release Notes](https://github.com/{{depName}}/releases/tag/{{newVersion}})\n```',
+    },
+  ],
 }
