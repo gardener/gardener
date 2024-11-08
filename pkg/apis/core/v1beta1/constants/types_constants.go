@@ -576,6 +576,10 @@ const (
 	LabelPublicKeys = "authentication.gardener.cloud/public-keys"
 	// LabelPublicKeysServiceAccount is a constant for a label value that indicates that a resource contains service account public keys.
 	LabelPublicKeysServiceAccount = "serviceaccount"
+	// LabelCertificateAuthorityBundle is a constant for a label key that indicates that a resource contains a certificate authority bundle.
+	LabelCertificateAuthorityBundle = "authentication.gardener.cloud/certificate-authority-bundle"
+	// LabelCertificateAuthorityBundleShoot is a constant for a label value that indicates that a resource contains the certificate authority bundle of shoot.
+	LabelCertificateAuthorityBundleShoot = "shoot"
 
 	// LabelExposureClassHandlerName is the label key for exposure class handler names.
 	LabelExposureClassHandlerName = "handler.exposureclass.gardener.cloud/name"
