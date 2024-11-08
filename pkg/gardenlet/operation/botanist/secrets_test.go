@@ -26,6 +26,7 @@ import (
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
+	"github.com/gardener/gardener/pkg/gardenlet/operation/garden"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
@@ -82,6 +83,13 @@ var _ = Describe("Secrets", func() {
 				Seed:           &seedpkg.Seed{},
 				Shoot: &shootpkg.Shoot{
 					SeedNamespace: seedNamespace,
+				},
+				Garden: &garden.Garden{
+					Project: &gardencorev1beta1.Project{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "proj",
+						},
+					},
 				},
 			},
 		}
@@ -201,6 +209,18 @@ var _ = Describe("Secrets", func() {
 				gardenSecret := &corev1.Secret{}
 				Expect(gardenClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: shootName + ".ca-cluster"}, gardenSecret)).To(Succeed())
 				Expect(gardenSecret.Labels).To(HaveKeyWithValue("gardener.cloud/role", "ca-cluster"))
+
+				caDiscoverySecret := &corev1.Secret{}
+				Expect(gardenClient.Get(ctx, client.ObjectKey{Namespace: "gardener-system-shoot-ca", Name: botanist.Garden.Project.Name + "--" + string(botanist.Shoot.GetInfo().UID)}, caDiscoverySecret)).To(Succeed())
+				Expect(caDiscoverySecret.Labels).To(
+					And(
+						HaveKeyWithValue("project.gardener.cloud/name", botanist.Garden.Project.Name),
+						HaveKeyWithValue("shoot.gardener.cloud/name", shootName),
+						HaveKeyWithValue("shoot.gardener.cloud/namespace", botanist.Shoot.GetInfo().Namespace),
+						HaveKeyWithValue("authentication.gardener.cloud/certificate-authority-bundle", "shoot"),
+					),
+				)
+				Expect(caDiscoverySecret.Data).To(HaveKey("bundle.crt"))
 
 				internalSecret := &gardencorev1beta1.InternalSecret{}
 				Expect(gardenClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: shootName + ".ca-client"}, internalSecret)).To(Succeed())

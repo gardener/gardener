@@ -15,6 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -222,6 +223,22 @@ func (b *Botanist) generateCertificateAuthorities(ctx context.Context) error {
 		nil,
 		map[string]string{secretsutils.DataKeyCertificateCA: string(caBundle)},
 	); err != nil {
+		return err
+	}
+
+	caDiscoverySecret := b.emptyCertificateAuthorityDiscoverySecret()
+	if _, err := controllerutil.CreateOrUpdate(ctx, b.GardenClient, caDiscoverySecret, func() error {
+		caDiscoverySecret.Labels = map[string]string{
+			v1beta1constants.ProjectName:                     b.Garden.Project.Name,
+			v1beta1constants.LabelShootName:                  b.Shoot.GetInfo().Name,
+			v1beta1constants.LabelShootNamespace:             b.Shoot.GetInfo().Namespace,
+			v1beta1constants.LabelCertificateAuthorityBundle: v1beta1constants.LabelCertificateAuthorityBundleShoot,
+		}
+		caDiscoverySecret.Data = map[string][]byte{
+			"bundle.crt": caBundle,
+		}
+		return nil
+	}); err != nil {
 		return err
 	}
 
@@ -513,4 +530,19 @@ func (b *Botanist) DeployCloudProviderSecret(ctx context.Context) error {
 	default:
 		return fmt.Errorf("unexpected type %T, should be either Secret or WorkloadIdentity", credentials)
 	}
+}
+
+func (b *Botanist) emptyCertificateAuthorityDiscoverySecret() *corev1.Secret {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      gardenerutils.ComputeDiscoverySecretName(b.Garden.Project.Name, b.Shoot.GetInfo().UID),
+			Namespace: gardencorev1beta1.GardenerShootCANamespace,
+		},
+	}
+}
+
+// DeleteCertificateAuthorityBundleSecret deletes the secret containing the certificate authority bundle
+// of the shoot from the gardener-system-shoot-ca namespace in the Garden cluster.
+func (b *Botanist) DeleteCertificateAuthorityBundleSecret(ctx context.Context) error {
+	return client.IgnoreNotFound(b.GardenClient.Delete(ctx, b.emptyCertificateAuthorityDiscoverySecret()))
 }
