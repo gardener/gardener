@@ -273,10 +273,11 @@ func IsShootProjectInternalSecret(secretName string) (string, bool) {
 	return "", false
 }
 
-// ComputeManagedShootIssuerSecretName returns the name that should be used for
-// storing the service account public keys of a shoot's kube-apiserver
-// in the gardener-system-shoot-issuer namespace in the Garden cluster.
-func ComputeManagedShootIssuerSecretName(projectName string, shootUID types.UID) string {
+// ComputeDiscoverySecretName returns the name that should be used for
+// storing one of the following types of secrets:
+//   - the service account public keys of a shoot's kube-apiserver in the gardener-system-shoot-issuer namespace in the Garden cluster
+//   - the certificate authority bundle of a shoot cluster in the gardener-system-shoot-ca namespace in the Garden cluster
+func ComputeDiscoverySecretName(projectName string, shootUID types.UID) string {
 	return projectName + "--" + string(shootUID)
 }
 

@@ -213,7 +213,7 @@ func (g *graph) handleShootCreateOrUpdate(ctx context.Context, shoot *gardencore
 		namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: shoot.Namespace}}
 		if err := g.client.Get(ctx, client.ObjectKeyFromObject(namespace), namespace); err == nil {
 			if projectName, ok := namespace.Labels[v1beta1constants.ProjectName]; ok {
-				saPublicKeysSecretName := gardenerutils.ComputeManagedShootIssuerSecretName(projectName, shoot.UID)
+				saPublicKeysSecretName := gardenerutils.ComputeDiscoverySecretName(projectName, shoot.UID)
 				saPublicKeysSecretVertex := g.getOrCreateVertex(VertexTypeSecret, gardencorev1beta1.GardenerShootIssuerNamespace, saPublicKeysSecretName)
 				g.addEdge(saPublicKeysSecretVertex, shootVertex)
 			}

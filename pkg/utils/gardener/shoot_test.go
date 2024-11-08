@@ -394,7 +394,7 @@ var _ = Describe("Shoot", func() {
 
 	DescribeTable("#ComputeManagedShootIssuerSecretName",
 		func(projectName string, shootUID types.UID, expectedName string) {
-			Expect(ComputeManagedShootIssuerSecretName(projectName, shootUID)).To(Equal(expectedName))
+			Expect(ComputeDiscoverySecretName(projectName, shootUID)).To(Equal(expectedName))
 		},
 		Entry("test one", "foo", types.UID("123"), "foo--123"),
 		Entry("test two", "bar", types.UID("4-5"), "bar--4-5"),
