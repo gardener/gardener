@@ -5,10 +5,12 @@
 package shoot
 
 import (
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -36,7 +38,8 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		For(&gardencorev1beta1.Shoot{}, builder.WithPredicates(
-			r.ShootPredicate(),
+			r.ShootUnassignedPredicate(),
+			r.ShootSpecChangedPredicate(),
 			predicate.Not(predicateutils.IsDeleting()),
 		)).
 		WithOptions(controller.Options{
@@ -45,9 +48,9 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		Complete(r)
 }
 
-// ShootPredicate is a predicate that returns true if a shoot is not assigned to a seed
+// ShootUnassignedPredicate is a predicate that returns true if a shoot is not assigned to a seed
 // and the default scheduler is configured.
-func (r *Reconciler) ShootPredicate() predicate.Predicate {
+func (r *Reconciler) ShootUnassignedPredicate() predicate.Predicate {
 	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		if shoot, ok := obj.(*gardencorev1beta1.Shoot); ok {
 			return shoot.Spec.SeedName == nil &&
@@ -55,4 +58,22 @@ func (r *Reconciler) ShootPredicate() predicate.Predicate {
 		}
 		return false
 	})
+}
+
+// ShootSpecChangedPredicate is a predicate that returns true if the shoot spec was updated.
+func (r *Reconciler) ShootSpecChangedPredicate() predicate.Predicate {
+	return predicate.Funcs{
+		UpdateFunc: func(e event.TypedUpdateEvent[client.Object]) bool {
+			shootNew, ok := e.ObjectNew.(*gardencorev1beta1.Shoot)
+			if !ok {
+				return false
+			}
+			shootOld, ok := e.ObjectOld.(*gardencorev1beta1.Shoot)
+			if !ok {
+				return false
+			}
+
+			return !apiequality.Semantic.DeepEqual(shootNew.Spec, shootOld.Spec)
+		},
+	}
 }
