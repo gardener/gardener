@@ -12,6 +12,9 @@ const (
 	// will sync service account issuer discovery documents
 	// of Shoot clusters which require managed issuer
 	GardenerShootIssuerNamespace = "gardener-system-shoot-issuer"
+	// GardenerShootCANamespace is the namespace in which Gardenlet
+	// will sync the certificate authority bundle of Shoot clusters
+	GardenerShootCANamespace = "gardener-system-shoot-ca"
 )
 
 // IPFamily is a type for specifying an IP protocol version to use in Gardener clusters.

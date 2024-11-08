@@ -320,7 +320,11 @@ func (o *Options) Run(ctx context.Context) error {
 	}
 
 	if err := server.GenericAPIServer.AddPostStartHook("bootstrap-garden-cluster", func(_ genericapiserver.PostStartHookContext) error {
-		for _, namespace := range []string{gardencorev1beta1.GardenerSeedLeaseNamespace, gardencorev1beta1.GardenerShootIssuerNamespace} {
+		for _, namespace := range []string{
+			gardencorev1beta1.GardenerSeedLeaseNamespace,
+			gardencorev1beta1.GardenerShootIssuerNamespace,
+			gardencorev1beta1.GardenerShootCANamespace,
+		} {
 			if _, err := kubeClient.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{}); client.IgnoreNotFound(err) != nil {
 				return err
 			} else if err == nil {
