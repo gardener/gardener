@@ -65,7 +65,7 @@ GO_VULN_CHECK_VERSION ?= latest
 # renovate: datasource=github-releases depName=helm/helm
 HELM_VERSION ?= v3.16.2
 # renovate: datasource=github-releases depName=kubernetes-sigs/kind
-KIND_VERSION ?= v0.24.0
+KIND_VERSION ?= v0.25.0
 # renovate: datasource=github-releases depName=kubernetes/kubernetes
 KUBECTL_VERSION ?= v1.31.2
 # renovate: datasource=github-releases depName=kubernetes-sigs/kustomize
