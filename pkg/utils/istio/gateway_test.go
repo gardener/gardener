@@ -18,6 +18,7 @@ var _ = Describe("Gateway", func() {
 
 		function := GatewayWithTLSPassthrough(gateway, labels, istioLabels, hosts, port)
 
+		// ginkgo-linter:ignore-err-assert-warning
 		Expect(function).NotTo(BeNil())
 
 		err := function()
@@ -39,6 +40,7 @@ var _ = Describe("Gateway", func() {
 
 		function := GatewayWithTLSTermination(gateway, labels, istioLabels, hosts, port, tlsSecret)
 
+		// ginkgo-linter:ignore-err-assert-warning
 		Expect(function).NotTo(BeNil())
 
 		err := function()

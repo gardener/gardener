@@ -26,6 +26,7 @@ var _ = Describe("Token", func() {
 
 	Describe("#RunE", func() {
 		It("should not have a Run function", func() {
+			// ginkgo-linter:ignore-err-assert-warning
 			Expect(cmd.RunE).To(BeNil())
 		})
 	})

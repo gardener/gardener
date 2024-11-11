@@ -19,6 +19,7 @@ var _ = Describe("DestinationRule", func() {
 
 		function := DestinationRuleWithLocalityPreference(destinationRule, labels, destinationHost)
 
+		// ginkgo-linter:ignore-err-assert-warning
 		Expect(function).NotTo(BeNil())
 
 		err := function()
@@ -37,6 +38,7 @@ var _ = Describe("DestinationRule", func() {
 
 		function := DestinationRuleWithLocalityPreferenceAndTLS(destinationRule, labels, destinationHost, tlsMode)
 
+		// ginkgo-linter:ignore-err-assert-warning
 		Expect(function).NotTo(BeNil())
 
 		err := function()

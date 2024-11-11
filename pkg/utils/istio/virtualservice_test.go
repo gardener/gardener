@@ -18,6 +18,7 @@ var _ = Describe("VirtualService", func() {
 
 		function := VirtualServiceWithSNIMatch(virtualService, labels, hosts, gatewayName, port, destinationHost)
 
+		// ginkgo-linter:ignore-err-assert-warning
 		Expect(function).NotTo(BeNil())
 
 		err := function()
