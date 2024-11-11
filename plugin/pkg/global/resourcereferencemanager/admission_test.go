@@ -1011,32 +1011,57 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("should reject because the referenced cloud profile does not exist (create)", func() {
-				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-				Expect(gardenSecurityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBindingRefSecret)).To(Succeed())
-				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
+			Context("change the cloud profile reference", func() {
+				It("should reject because the referenced cloud profile does not exist (create)", func() {
+					attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
-				attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+					Expect(err).To(HaveOccurred())
+				})
 
-				Expect(err).To(HaveOccurred())
-			})
+				It("should reject because the referenced cloud profile does not exist (update)", func() {
+					oldShoot := coreShoot.DeepCopy()
+					oldShoot.Spec.CloudProfileName = ptr.To("")
 
-			It("should reject because the referenced cloud profile does not exist (update)", func() {
-				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
+					attrs := admission.NewAttributesRecord(&coreShoot, oldShoot, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				oldShoot := coreShoot.DeepCopy()
-				oldShoot.Spec.CloudProfileName = ptr.To("")
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
-				attrs := admission.NewAttributesRecord(&coreShoot, oldShoot, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+					Expect(err).To(HaveOccurred())
+				})
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				It("should reject because the referenced NamespacedCloudProfile does not exist (create)", func() {
+					Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					coreShoot.Spec.CloudProfileName = nil
+					coreShoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "NamespacedCloudProfile",
+						Name: "namespaced-profile-1",
+					}
 
-				Expect(err).To(HaveOccurred())
+					attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).To(HaveOccurred())
+				})
+
+				It("should reject because the referenced NamespacedCloudProfile does not exist (update)", func() {
+					Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+
+					oldShoot := coreShoot.DeepCopy()
+					coreShoot.Spec.CloudProfileName = nil
+					coreShoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "NamespacedCloudProfile",
+						Name: "namespaced-profile-1",
+					}
+
+					attrs := admission.NewAttributesRecord(&coreShoot, oldShoot, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).To(HaveOccurred())
+				})
 			})
 
 			It("should reject because the referenced seed does not exist (create)", func() {

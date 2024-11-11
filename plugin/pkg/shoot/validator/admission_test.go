@@ -957,7 +957,7 @@ var _ = Describe("validator", func() {
 					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
-					Expect(err).To(MatchError(ContainSubstring("a Seed's CloudProfile may only be changed to a descendant NamespacedCloudProfile")))
+					Expect(err).To(MatchError(ContainSubstring("cannot change from \"profile\" to \"another-namespacedprofile\" (root: \"another-root-profile\")")))
 				})
 
 				It("should fail validation on a change from a CloudProfileName to a NamespacedCloudProfile with forbidden parent", func() {
@@ -979,7 +979,163 @@ var _ = Describe("validator", func() {
 					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
-					Expect(err).To(MatchError(ContainSubstring("a Seed's CloudProfile may only be changed to a descendant NamespacedCloudProfile")))
+					Expect(err).To(MatchError(ContainSubstring("cannot change from \"profile\" to \"another-namespacedprofile\" (root: \"another-root-profile\")")))
+				})
+
+				It("should pass validation on a change from a NamespacedCloudProfile to a CloudProfile", func() {
+					oldShoot := shoot.DeepCopy()
+					oldShoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "NamespacedCloudProfile",
+						Name: "namespacedprofile",
+					}
+					shoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "CloudProfile",
+						Name: "profile",
+					}
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).ToNot(HaveOccurred())
+				})
+
+				It("should pass validation on a change from a NamespacedCloudProfile to another NamespacedCloudProfile with the same parent", func() {
+					anotherNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
+					anotherNamespacedCloudProfile.Name = "namespacedprofile-1"
+					Expect(coreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(anotherNamespacedCloudProfile)).To(Succeed())
+
+					oldShoot := shoot.DeepCopy()
+					oldShoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "NamespacedCloudProfile",
+						Name: "namespacedprofile",
+					}
+					shoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "NamespacedCloudProfile",
+						Name: "namespacedprofile-1",
+					}
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).ToNot(HaveOccurred())
+				})
+
+				It("should fail validation on a change from a NamespacedCloudProfile to another NamespacedCloudProfile with different parents", func() {
+					anotherNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
+					anotherNamespacedCloudProfile.Name = "namespacedprofile-unrelated"
+					anotherNamespacedCloudProfile.Spec.Parent.Name = "unrelated-profile"
+					Expect(coreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(anotherNamespacedCloudProfile)).To(Succeed())
+
+					oldShoot := shoot.DeepCopy()
+					oldShoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "NamespacedCloudProfile",
+						Name: "namespacedprofile",
+					}
+					shoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "NamespacedCloudProfile",
+						Name: "namespacedprofile-unrelated",
+					}
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).To(MatchError(ContainSubstring("cannot change from \"namespacedprofile\" (root: \"profile\") to \"namespacedprofile-unrelated\" (root: \"unrelated-profile\")")))
+				})
+
+				It("should reject because the cloud profile changed to does not contain the Shoot's current machine type", func() {
+					shoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "CloudProfile",
+						Name: "profile",
+					}
+					shoot.Spec.Provider.Workers = []core.Worker{
+						{
+							Name: "testing",
+							Machine: core.Machine{
+								Type: "a-special-machine-type",
+							},
+						},
+					}
+					oldShoot := shoot.DeepCopy()
+					oldShoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "NamespacedCloudProfile",
+						Name: "namespacedprofile",
+					}
+
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).To(MatchError(ContainSubstring("newly referenced cloud profile does not contain the machine type \"a-special-machine-type\" currently in use by worker \"testing\"")))
+				})
+
+				It("should reject because the cloud profile changed to does not contain the Shoot's current volume type", func() {
+					cloudProfile.Spec.MachineTypes = []gardencorev1beta1.MachineType{{Name: "a-special-machine-type"}}
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Update(&cloudProfile)).To(Succeed())
+
+					shoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "CloudProfile",
+						Name: "profile",
+					}
+					shoot.Spec.Provider.Workers = []core.Worker{
+						{
+							Name:    "testing",
+							Machine: core.Machine{Type: "a-special-machine-type"},
+							Volume: &core.Volume{
+								Type: ptr.To("a-special-volume-type"),
+							},
+						},
+					}
+					oldShoot := shoot.DeepCopy()
+					oldShoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "NamespacedCloudProfile",
+						Name: "namespacedprofile",
+					}
+
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).To(MatchError(ContainSubstring("newly referenced cloud profile does not contain the volume type \"a-special-volume-type\" currently in use by worker \"testing\"")))
+				})
+
+				It("should reject because the cloud profile changed to does not contain the Shoot's current machine image version", func() {
+					cloudProfile.Spec.MachineTypes = []gardencorev1beta1.MachineType{{Name: "a-special-machine-type"}}
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Update(&cloudProfile)).To(Succeed())
+
+					namespacedCloudProfile.Status.CloudProfileSpec.MachineImages = []gardencorev1beta1.MachineImage{
+						{
+							Name: "gardenlinux",
+							Versions: []gardencorev1beta1.MachineImageVersion{
+								{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1592.1.0-dev"}},
+							},
+						},
+					}
+					Expect(coreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Update(&namespacedCloudProfile)).To(Succeed())
+
+					shoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "CloudProfile",
+						Name: "profile",
+					}
+					shoot.Spec.Provider.Workers = []core.Worker{
+						{
+							Name: "testing",
+							Machine: core.Machine{
+								Type: "a-special-machine-type",
+								Image: &core.ShootMachineImage{
+									Name:    "gardenlinux",
+									Version: "1592.1.0-dev",
+								},
+							},
+						},
+					}
+					oldShoot := shoot.DeepCopy()
+					oldShoot.Spec.CloudProfile = &core.CloudProfileReference{
+						Kind: "NamespacedCloudProfile",
+						Name: "namespacedprofile",
+					}
+
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).To(MatchError(ContainSubstring("newly referenced cloud profile does not contain the machine image version \"gardenlinux@1592.1.0-dev\" currently in use by worker \"testing\"")))
 				})
 			})
 
