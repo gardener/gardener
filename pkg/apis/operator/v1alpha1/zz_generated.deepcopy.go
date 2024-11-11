@@ -137,6 +137,11 @@ func (in *Backup) DeepCopyInto(out *Backup) {
 		(*in).DeepCopyInto(*out)
 	}
 	out.SecretRef = in.SecretRef
+	if in.Managed != nil {
+		in, out := &in.Managed, &out.Managed
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

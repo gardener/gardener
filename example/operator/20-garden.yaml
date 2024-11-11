@@ -75,6 +75,7 @@ spec:
           secretRef:
             name: virtual-garden-etcd-main-backup-local
         # bucketName: gardener-operator # if not provided, gardener-operator generates a name
+        # managed: true
         storage:
           capacity: 25Gi
         # className: default

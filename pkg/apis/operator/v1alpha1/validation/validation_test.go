@@ -2218,6 +2218,31 @@ var _ = Describe("Validation Tests", func() {
 						"Field": Equal("spec.virtualCluster.etcd.main.backup"),
 					}))))
 				})
+
+				It("should not be possible to disable the managed flag if it was set initially", func() {
+					oldGarden.Spec.VirtualCluster.ETCD = &operatorv1alpha1.ETCD{
+						Main: &operatorv1alpha1.ETCDMain{
+							Backup: &operatorv1alpha1.Backup{
+								Provider:   "foo-provider",
+								BucketName: ptr.To("foo-bucket"),
+								Managed:    ptr.To(true),
+							},
+						},
+					}
+					newGarden.Spec.VirtualCluster.ETCD = &operatorv1alpha1.ETCD{
+						Main: &operatorv1alpha1.ETCDMain{
+							Backup: &operatorv1alpha1.Backup{
+								Provider:   "foo-provider",
+								BucketName: ptr.To("foo-bucket"),
+							},
+						},
+					}
+
+					Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.virtualCluster.etcd.main.backup.managed"),
+					}))))
+				})
 			})
 
 			Context("control plane", func() {

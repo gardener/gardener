@@ -122,6 +122,9 @@ func validateVirtualClusterUpdate(oldGarden, newGarden *operatorv1alpha1.Garden)
 		if newVirtualCluster.ETCD.Main.Backup == nil {
 			allErrs = append(allErrs, field.Forbidden(fldBackup, "backup must not be deactivated if it was set before"))
 		}
+		if ptr.Deref(oldVirtualCluster.ETCD.Main.Backup.Managed, false) && !ptr.Deref(newVirtualCluster.ETCD.Main.Backup.Managed, false) {
+			allErrs = append(allErrs, field.Forbidden(fldBackup.Child("managed"), "managed must not be deactivated if it was set before"))
+		}
 	}
 
 	if oldVirtualCluster.ControlPlane != nil && oldVirtualCluster.ControlPlane.HighAvailability != nil &&

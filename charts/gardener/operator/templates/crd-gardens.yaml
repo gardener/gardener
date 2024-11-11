@@ -372,6 +372,11 @@ spec:
                                 x-kubernetes-validations:
                                 - message: BucketName is immutable
                                   rule: self == oldSelf
+                              managed:
+                                description: Managed is a flag to enable/disable the
+                                  generation of a BackupBucket resource managed by
+                                  a provider extension on the runtime cluster.
+                                type: boolean
                               provider:
                                 description: Provider is a provider name. This field
                                   is immutable.

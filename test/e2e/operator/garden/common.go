@@ -115,6 +115,7 @@ func defaultGarden(backupSecret *corev1.Secret, specifyBackupBucket bool) *opera
 							SecretRef: corev1.LocalObjectReference{
 								Name: backupSecret.Name,
 							},
+							Managed: ptr.To(true),
 						},
 					},
 				},

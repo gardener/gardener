@@ -15,11 +15,15 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -44,6 +48,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 		ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
 		defer cancel()
 
+		garden.Spec.VirtualCluster.ETCD.Main.Backup.Managed = nil
 		Expect(runtimeClient.Create(ctx, backupSecret)).To(Succeed())
 		Expect(runtimeClient.Create(ctx, garden)).To(Succeed())
 
@@ -122,7 +127,6 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 				healthyManagedResource("extension-admission-runtime-provider-local"),
 				healthyManagedResource("extension-admission-virtual-provider-local"),
 				healthyManagedResource("extension-registration-provider-local"),
-				healthyManagedResource("extension-provider-local-garden"),
 			))
 
 			g.Expect(runtimeClient.List(ctx, managedResourceList, client.InNamespace("istio-system"))).To(Succeed())
@@ -160,6 +164,36 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 			controllerDeploymentList := &gardencorev1.ControllerDeploymentList{}
 			g.Expect(virtualClusterClient.Client().List(ctx, controllerDeploymentList)).To(Succeed())
 			g.Expect(controllerDeploymentList.Items).To(ContainElement(MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("provider-local")})})))
+		}).Should(Succeed())
+
+		By("Verify no BackupBackup resource has been created")
+		bb := &extensionsv1alpha1.BackupBucket{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener-operator",
+			},
+		}
+		Eventually(func() bool {
+			return apierrors.IsNotFound(runtimeClient.Get(ctx, client.ObjectKeyFromObject(bb), bb))
+		}).Should(BeTrue())
+
+		By("Enable managed BackupBackup")
+		patch := client.MergeFrom(garden.DeepCopy())
+		garden.Spec.VirtualCluster.ETCD.Main.Backup.Managed = ptr.To(true)
+		Expect(runtimeClient.Patch(ctx, garden, patch)).To(Succeed())
+
+		waitForGardenToBeReconciled(ctx, garden)
+
+		CEventually(ctx, func(g Gomega) {
+			managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
+			g.Expect(runtimeClient.List(ctx, managedResourceList, client.InNamespace(namespace))).To(Succeed())
+			g.Expect(managedResourceList.Items).To(ContainElement(
+				healthyManagedResource("extension-provider-local-garden"),
+			))
+		}).WithPolling(2 * time.Second).Should(Succeed())
+
+		By("Verify BackupBackup resource has been created")
+		Eventually(func() error {
+			return runtimeClient.Get(ctx, client.ObjectKeyFromObject(bb), bb)
 		}).Should(Succeed())
 	})
 })

@@ -288,6 +288,9 @@ type Backup struct {
 	// SecretRef is a reference to a Secret object containing the cloud provider credentials for the object store where
 	// backups should be stored. It should have enough privileges to manipulate the objects as well as buckets.
 	SecretRef corev1.LocalObjectReference `json:"secretRef"`
+	// Managed is a flag to enable/disable the generation of a BackupBucket resource managed by a provider extension on the runtime cluster.
+	// +optional
+	Managed *bool `json:"managed,omitempty"`
 }
 
 // Maintenance contains information about the time window for maintenance operations.

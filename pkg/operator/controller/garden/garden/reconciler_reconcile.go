@@ -275,7 +275,10 @@ func (r *Reconciler) reconcile(
 					nil,
 				)
 			},
-			SkipIf:       garden.Spec.VirtualCluster.ETCD == nil || garden.Spec.VirtualCluster.ETCD.Main == nil || garden.Spec.VirtualCluster.ETCD.Main.Backup == nil,
+			SkipIf: garden.Spec.VirtualCluster.ETCD == nil ||
+				garden.Spec.VirtualCluster.ETCD.Main == nil ||
+				garden.Spec.VirtualCluster.ETCD.Main.Backup == nil ||
+				!ptr.Deref(garden.Spec.VirtualCluster.ETCD.Main.Backup.Managed, false),
 			Dependencies: flow.NewTaskIDs(deployExtensionCRD),
 		})
 		deployEtcds = g.Add(flow.Task{

@@ -283,6 +283,18 @@ Kubernetes core/v1.LocalObjectReference
 backups should be stored. It should have enough privileges to manipulate the objects as well as buckets.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>managed</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Managed is a flag to enable/disable the generation of a BackupBucket resource managed by a provider extension on the runtime cluster.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="operator.gardener.cloud/v1alpha1.ControlPlane">ControlPlane
