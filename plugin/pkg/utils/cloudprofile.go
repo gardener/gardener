@@ -84,43 +84,41 @@ func ValidateCloudProfileChanges(cloudProfileLister gardencorev1beta1listers.Clo
 		if err != nil {
 			return fmt.Errorf("could not find cloudProfileSpec from the shoot cloudProfile reference: %s", err.Error())
 		}
-		if oldCloudProfileReference.Kind != newCloudProfileReference.Kind || oldCloudProfileReference.Name != newCloudProfileReference.Name {
-			newCloudProfileSpecCore := &core.CloudProfileSpec{}
-			if err := api.Scheme.Convert(newCloudProfileSpec, newCloudProfileSpecCore, nil); err != nil {
-				return err
-			}
-			oldCloudProfileSpec, err := GetCloudProfileSpec(cloudProfileLister, namespacedCloudProfileLister, oldShoot)
-			if err != nil {
-				return fmt.Errorf("could not find cloudProfileSpec from the shoot cloudProfile reference: %s", err.Error())
-			}
-			oldCloudProfileSpecCore := &core.CloudProfileSpec{}
-			if err := api.Scheme.Convert(oldCloudProfileSpec, oldCloudProfileSpecCore, nil); err != nil {
-				return err
-			}
+		newCloudProfileSpecCore := &core.CloudProfileSpec{}
+		if err := api.Scheme.Convert(newCloudProfileSpec, newCloudProfileSpecCore, nil); err != nil {
+			return err
+		}
+		oldCloudProfileSpec, err := GetCloudProfileSpec(cloudProfileLister, namespacedCloudProfileLister, oldShoot)
+		if err != nil {
+			return fmt.Errorf("could not find cloudProfileSpec from the shoot cloudProfile reference: %s", err.Error())
+		}
+		oldCloudProfileSpecCore := &core.CloudProfileSpec{}
+		if err := api.Scheme.Convert(oldCloudProfileSpec, oldCloudProfileSpecCore, nil); err != nil {
+			return err
+		}
 
-			// Check that the target cloud profile still supports the currently used machine types, machine images and volume types.
-			// No need to check for Kubernetes versions, as the NamespacedCloudProfile could have only extended a version so with the next maintenance the Shoot will be updated to a supported version.
-			_, removedMachineImageVersions, _, _ := helper.GetMachineImageDiff(oldCloudProfileSpecCore.MachineImages, newCloudProfileSpecCore.MachineImages)
-			machineTypes := gardenerutils.CreateMapFromSlice(newCloudProfileSpec.MachineTypes, func(mt gardencorev1beta1.MachineType) string { return mt.Name })
-			volumeTypes := gardenerutils.CreateMapFromSlice(newCloudProfileSpec.VolumeTypes, func(vt gardencorev1beta1.VolumeType) string { return vt.Name })
+		// Check that the target cloud profile still supports the currently used machine types, machine images and volume types.
+		// No need to check for Kubernetes versions, as the NamespacedCloudProfile could have only extended a version so with the next maintenance the Shoot will be updated to a supported version.
+		_, removedMachineImageVersions, _, _ := helper.GetMachineImageDiff(oldCloudProfileSpecCore.MachineImages, newCloudProfileSpecCore.MachineImages)
+		machineTypes := gardenerutils.CreateMapFromSlice(newCloudProfileSpec.MachineTypes, func(mt gardencorev1beta1.MachineType) string { return mt.Name })
+		volumeTypes := gardenerutils.CreateMapFromSlice(newCloudProfileSpec.VolumeTypes, func(vt gardencorev1beta1.VolumeType) string { return vt.Name })
 
-			for _, w := range newShoot.Spec.Provider.Workers {
-				if len(removedMachineImageVersions) > 0 && w.Machine.Image != nil {
-					if removedVersions, exists := removedMachineImageVersions[w.Machine.Image.Name]; exists {
-						if removedVersions.Has(w.Machine.Image.Version) {
-							return fmt.Errorf("newly referenced cloud profile does not contain the machine image version \"%s@%s\" currently in use by worker \"%s\"", w.Machine.Image.Name, w.Machine.Image.Version, w.Name)
-						}
+		for _, w := range newShoot.Spec.Provider.Workers {
+			if len(removedMachineImageVersions) > 0 && w.Machine.Image != nil {
+				if removedVersions, exists := removedMachineImageVersions[w.Machine.Image.Name]; exists {
+					if removedVersions.Has(w.Machine.Image.Version) {
+						return fmt.Errorf("newly referenced cloud profile does not contain the machine image version \"%s@%s\" currently in use by worker \"%s\"", w.Machine.Image.Name, w.Machine.Image.Version, w.Name)
 					}
 				}
+			}
 
-				if _, exists := machineTypes[w.Machine.Type]; !exists {
-					return fmt.Errorf("newly referenced cloud profile does not contain the machine type %q currently in use by worker %q", w.Machine.Type, w.Name)
-				}
+			if _, exists := machineTypes[w.Machine.Type]; !exists {
+				return fmt.Errorf("newly referenced cloud profile does not contain the machine type %q currently in use by worker %q", w.Machine.Type, w.Name)
+			}
 
-				if w.Volume != nil && w.Volume.Type != nil {
-					if _, exists := volumeTypes[*w.Volume.Type]; !exists {
-						return fmt.Errorf("newly referenced cloud profile does not contain the volume type %q currently in use by worker %q", *w.Volume.Type, w.Name)
-					}
+			if w.Volume != nil && w.Volume.Type != nil {
+				if _, exists := volumeTypes[*w.Volume.Type]; !exists {
+					return fmt.Errorf("newly referenced cloud profile does not contain the volume type %q currently in use by worker %q", *w.Volume.Type, w.Name)
 				}
 			}
 		}
