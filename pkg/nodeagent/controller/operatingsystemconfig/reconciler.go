@@ -99,15 +99,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("failed reconciling containerd configuration: %w", err)
 	}
 
+	log.Info("Applying new or changed inline files")
+	if err := r.applyChangedInlineFiles(log, oscChanges.files.changed); err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed applying changed inline files: %w", err)
+	}
+
 	log.Info("Applying containerd registries")
 	waitForRegistries, err := r.ReconcileContainerdRegistries(ctx, log, oscChanges.containerd)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed reconciling containerd registries: %w", err)
 	}
 
-	log.Info("Applying new or changed files")
-	if err := r.applyChangedFiles(ctx, log, oscChanges.files.changed); err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed applying changed files: %w", err)
+	log.Info("Applying new or changed imageRef files")
+	if err := r.applyChangedImageRefFiles(ctx, log, oscChanges.files.changed); err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed applying changed imageRef files: %w", err)
 	}
 
 	log.Info("Applying new or changed units")
@@ -217,7 +222,31 @@ var (
 	defaultDirPermissions  os.FileMode = 0755
 )
 
-func (r *Reconciler) applyChangedFiles(ctx context.Context, log logr.Logger, files []extensionsv1alpha1.File) error {
+func getFilePermissions(file extensionsv1alpha1.File) os.FileMode {
+	permissions := defaultFilePermissions
+	if file.Permissions != nil {
+		permissions = fs.FileMode(*file.Permissions)
+	}
+	return permissions
+}
+
+func (r *Reconciler) applyChangedImageRefFiles(ctx context.Context, log logr.Logger, files []extensionsv1alpha1.File) error {
+	for _, file := range files {
+		if file.Content.ImageRef == nil {
+			continue
+		}
+
+		if err := r.Extractor.CopyFromImage(ctx, file.Content.ImageRef.Image, file.Content.ImageRef.FilePathInImage, file.Path, getFilePermissions(file)); err != nil {
+			return fmt.Errorf("unable to copy file %q from image %q to %q: %w", file.Content.ImageRef.FilePathInImage, file.Content.ImageRef.Image, file.Path, err)
+		}
+
+		log.Info("Successfully applied new or changed file from image", "path", file.Path, "image", file.Content.ImageRef.Image)
+	}
+
+	return nil
+}
+
+func (r *Reconciler) applyChangedInlineFiles(log logr.Logger, files []extensionsv1alpha1.File) error {
 	tmpDir, err := r.FS.TempDir(nodeagentv1alpha1.TempDir, "osc-reconciliation-file-")
 	if err != nil {
 		return fmt.Errorf("unable to create temporary directory: %w", err)
@@ -226,40 +255,29 @@ func (r *Reconciler) applyChangedFiles(ctx context.Context, log logr.Logger, fil
 	defer func() { utilruntime.HandleError(r.FS.RemoveAll(tmpDir)) }()
 
 	for _, file := range files {
-		permissions := defaultFilePermissions
-		if file.Permissions != nil {
-			permissions = fs.FileMode(*file.Permissions)
+		if file.Content.Inline == nil {
+			continue
 		}
 
-		switch {
-		case file.Content.Inline != nil:
-			if err := r.FS.MkdirAll(filepath.Dir(file.Path), defaultDirPermissions); err != nil {
-				return fmt.Errorf("unable to create directory %q: %w", file.Path, err)
-			}
-
-			data, err := extensionsv1alpha1helper.Decode(file.Content.Inline.Encoding, []byte(file.Content.Inline.Data))
-			if err != nil {
-				return fmt.Errorf("unable to decode data of file %q: %w", file.Path, err)
-			}
-
-			tmpFilePath := filepath.Join(tmpDir, filepath.Base(file.Path))
-			if err := r.FS.WriteFile(tmpFilePath, data, permissions); err != nil {
-				return fmt.Errorf("unable to create temporary file %q: %w", tmpFilePath, err)
-			}
-
-			if err := filespkg.Move(r.FS, tmpFilePath, file.Path); err != nil {
-				return fmt.Errorf("unable to rename temporary file %q to %q: %w", tmpFilePath, file.Path, err)
-			}
-
-			log.Info("Successfully applied new or changed file", "path", file.Path)
-
-		case file.Content.ImageRef != nil:
-			if err := r.Extractor.CopyFromImage(ctx, file.Content.ImageRef.Image, file.Content.ImageRef.FilePathInImage, file.Path, permissions); err != nil {
-				return fmt.Errorf("unable to copy file %q from image %q to %q: %w", file.Content.ImageRef.FilePathInImage, file.Content.ImageRef.Image, file.Path, err)
-			}
-
-			log.Info("Successfully applied new or changed file from image", "path", file.Path, "image", file.Content.ImageRef.Image)
+		if err := r.FS.MkdirAll(filepath.Dir(file.Path), defaultDirPermissions); err != nil {
+			return fmt.Errorf("unable to create directory %q: %w", file.Path, err)
 		}
+
+		data, err := extensionsv1alpha1helper.Decode(file.Content.Inline.Encoding, []byte(file.Content.Inline.Data))
+		if err != nil {
+			return fmt.Errorf("unable to decode data of file %q: %w", file.Path, err)
+		}
+
+		tmpFilePath := filepath.Join(tmpDir, filepath.Base(file.Path))
+		if err := r.FS.WriteFile(tmpFilePath, data, getFilePermissions(file)); err != nil {
+			return fmt.Errorf("unable to create temporary file %q: %w", tmpFilePath, err)
+		}
+
+		if err := filespkg.Move(r.FS, tmpFilePath, file.Path); err != nil {
+			return fmt.Errorf("unable to rename temporary file %q to %q: %w", tmpFilePath, file.Path, err)
+		}
+
+		log.Info("Successfully applied new or changed file", "path", file.Path)
 	}
 
 	return nil
