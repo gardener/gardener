@@ -21,7 +21,7 @@ In order to support a new cloud provider, you should install "controlplane" muta
 
 See [Contract Specification](#contract-specification) for more details on the contract that Gardener and webhooks should adhere to regarding the content of the above resources.
 
-You can install 3 different kinds of controlplane webhooks:
+You can install 2 different kinds of controlplane webhooks:
 
 * `Shoot`, or `controlplane` webhooks apply changes needed by the Shoot cloud provider, for example the `--cloud-provider` command line flag of `kube-apiserver` and `kube-controller-manager`. Such webhooks should only operate on Shoot namespaces labeled with `shoot.gardener.cloud/provider=<provider>`.
 * `Seed`, or `seedprovider` webhooks apply changes needed by the Seed cloud provider, for example adapting the storage class and capacity on `Etcd` objects. Such webhooks should only operate on Shoot namespaces labeled with `seed.gardener.cloud/provider=<provider>`.
@@ -62,7 +62,7 @@ The `kube-apiserver` command line **may** contain a number of additional provide
 * `--advertise-address`
 * `--feature-gates`
 
-Gardener uses [SNI](../proposals/08-shoot-apiserver-via-sni.md) to expose the apiserver. In this case, Gardener **will** label the `kube-apiserver`'s `Deployment` with `core.gardener.cloud/apiserver-exposure: gardener-managed` label (deprecated, the label will no longer be added as of `v1.80`) and expects that the `--endpoint-reconciler-type` and `--advertise-address` flags are not modified.
+Gardener uses [SNI](../proposals/08-shoot-apiserver-via-sni.md) to expose the apiserver. In this case, Gardener expects that the `--endpoint-reconciler-type` and `--advertise-address` flags of the `kube-apiserver`'s `Deployment` are not modified.
 
 The `--enable-admission-plugins` flag **may** contain admission plugins that are not compatible with CSI plugins such as `PersistentVolumeLabel`. Webhooks should therefore ensure that such admission plugins are either explicitly enabled (if CSI plugins are not used) or disabled (otherwise).
 
@@ -70,9 +70,7 @@ The `env` field of the `kube-apiserver` container **shall not** contain any prov
 
 The `volumes` field of the pod template of the `kube-apiserver` deployment, and respectively the `volumeMounts` field of the `kube-apiserver` container **shall not** contain any provider-specific `Secret` or `ConfigMap` resources. If such resources should be mounted as volumes, this should be done by webhooks.
 
-The `kube-apiserver` `Service` **may** be of type `LoadBalancer`, but **shall not** contain any provider-specific annotations that may be needed to actually provision a load balancer resource in the Seed provider's cloud. If any such annotations are needed, they should be added by webhooks (typically `seedprovider` webhooks).
-
-The `kube-apiserver` `Service` **will** be of type `ClusterIP`. In this case, Gardener **will** label this `Service` with `core.gardener.cloud/apiserver-exposure: gardener-managed` label (deprecated, the label will no longer be added as of `v1.80`) and expects that no mutations happen.
+The `kube-apiserver` `Service` **will** be of type `ClusterIP`. In this case, Gardener expects that for this `Service` no mutations happen.
 
 ### kube-controller-manager
 
