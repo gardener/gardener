@@ -73,8 +73,9 @@ storage management functionality is envisioned in `etcd-druid`. For details, see
 - Autoscaling ability activated for observability volumes (`prometheus` and `vali`) in seeds'
   `garden` namespace, and in shoot namespaces.
 - Absolute upper scaling limit configured on each observability volume.
-- Reduce the initial size of a volume, when autoscaling is activated for that volume, if such reduction is aligned with
-  general Gardener goals (cost, reliability).
+- If autoscaling is enabled for a newly created volume, reduce the initial size of that volume, as long as such reduction
+  does not contradict Gardener's overall reliability goals. For instance, Prometheus instances display sharp storage
+  allocation spikes; the choice of initial size must should accommodate those in an acceptable manner.
 - Some metrics, which represent an overview of the PVC autoscaling state per seed, available through one or more of the seed
   system's Prometheus instances.
 - Provide operational documentation for Gardener Operators.
@@ -100,7 +101,7 @@ storage management functionality is envisioned in `etcd-druid`. For details, see
 The existing, recently implemented Gardener PVC autoscaler application[[1]], hereafter referred to as `pvc-autoscaler`,
 is deployed to seeds, and takes the responsibility of scaling PVs. PVCs (seed and shoot `vali` and `prometheus` at this time) are
 annotated as to instruct the autoscaler to act on them, and to prescribe specific settings. New volumes are deployed with
-smaller initial capacity. Each time the used space of a volume exceeds 90% (referred to as "trigger threshold"),
+smaller initial capacity. Each time the free space of a volume drops below 90% (referred to as "trigger threshold"),
 `pvc-autoscaler` expands capacity by 10%.
 
 ### PVC Autoscaler - Runtime Structure
@@ -301,7 +302,7 @@ suffice to accommodate the occasional usage spikes which exceed the data retenti
 #### Latency
 The pipeline which propagates the volume metrics, driving `pvc-autoscaler`, is as follows:
 1. `kubelet` collects PV state data and publishes resource metrics. Default poll interval: 1 minute
-   ([source](https://kubernetes.io/docs/tasks/administer-cluster/kubelet-config-file/))
+   ([source](https://kubernetes.io/docs/reference/config-api/kubelet-config.v1beta1/))
 2. `metrics-server` polls `kubelet` resource metrics. Default poll interval: 1 minute
    ([source](https://github.com/kubernetes-sigs/metrics-server/blob/master/FAQ.md))
 3. `kube-apiserver` forwards metrics API calls to `metrics-server`, which is the registered APIService for metrics. Call
