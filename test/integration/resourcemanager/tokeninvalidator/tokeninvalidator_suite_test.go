@@ -144,7 +144,7 @@ var _ = BeforeSuite(func() {
 	Eventually(func() error {
 		checker := mgr.GetWebhookServer().StartedChecker()
 		return checker(&http.Request{})
-	}).Should(BeNil())
+	}).Should(Succeed())
 
 	DeferCleanup(func() {
 		By("Stop manager")
