@@ -259,7 +259,6 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		podDisruptionBudget                    = k.emptyPodDisruptionBudget()
 		horizontalPodAutoscaler                = k.emptyHorizontalPodAutoscaler()
 		verticalPodAutoscaler                  = k.emptyVerticalPodAutoscaler()
-		hvpa                                   = k.emptyHVPA()
 		secretETCDEncryptionConfiguration      = k.emptySecret(v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration)
 		secretOIDCCABundle                     = k.emptySecret(secretOIDCCABundleNamePrefix)
 		secretAuditWebhookKubeconfig           = k.emptySecret(secretAuditWebhookKubeconfigNamePrefix)
@@ -282,11 +281,6 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 	}
 
 	if err := k.reconcileVerticalPodAutoscaler(ctx, verticalPodAutoscaler, deployment); err != nil {
-		return err
-	}
-
-	// TODO(plkokanov): remove this after gardener v1.109.0 has been released.
-	if err := kubernetesutils.DeleteObject(ctx, k.client.Client(), hvpa); err != nil {
 		return err
 	}
 
@@ -461,8 +455,6 @@ func (k *kubeAPIServer) Destroy(ctx context.Context) error {
 		k.emptyManagedResource(),
 		k.emptyHorizontalPodAutoscaler(),
 		k.emptyVerticalPodAutoscaler(),
-		// TODO(plkokanov): remove hvpa deletion after gardener v1.109.0 has been released
-		k.emptyHVPA(),
 		k.emptyPodDisruptionBudget(),
 		k.emptyDeployment(),
 		k.emptyServiceAccount(),

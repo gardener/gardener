@@ -150,20 +150,6 @@ func (g *gardenerAPIServer) deployment(
 	utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, secretGenericTokenKubeconfig.Name, secretVirtualGardenAccess.Secret.Name))
 	utilruntime.Must(references.InjectAnnotations(deployment))
 
-	// Preserve the Deployment resources during the HPA -> VPAAndHPA transition.
-	//
-	// The gardener-apiserver is deployed via ManagedResource. In the general case, GRM preserves the Deployment resources when the resource is being scaled by HVPA.
-	// However, during the HPA -> VPAAndHPA transition the flow is as follows:
-	// 1. The HVPA resource is deleted.
-	// 2. The Deployment is updated.
-	// 3. The new HPA and VPA resources are created.
-	//
-	// Step 2. is the one that reverts the Deployment resources to the initial ones as during that time there is no existing HVPA object.
-	//
-	// TODO(plkokanov): Drop this annotation after gardener 1.109.0 has been released as the HVPA feature gate will have been locked to false for 3 releases.
-	// Additional migration logic will be needed to remove this annotation from existing deployments.
-	metav1.SetMetaDataAnnotation(&deployment.ObjectMeta, resourcesv1alpha1.PreserveResources, "true")
-
 	return deployment
 }
 

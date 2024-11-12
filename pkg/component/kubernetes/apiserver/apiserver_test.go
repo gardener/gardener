@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -108,7 +107,6 @@ var _ = Describe("KubeAPIServer", func() {
 		deployment                     *appsv1.Deployment
 		horizontalPodAutoscaler        *autoscalingv2.HorizontalPodAutoscaler
 		verticalPodAutoscaler          *vpaautoscalingv1.VerticalPodAutoscaler
-		hvpa                           *hvpav1alpha1.Hvpa
 		podDisruptionBudget            *policyv1.PodDisruptionBudget
 		serviceMonitor                 *monitoringv1.ServiceMonitor
 		prometheusRule                 *monitoringv1.PrometheusRule
@@ -175,12 +173,6 @@ var _ = Describe("KubeAPIServer", func() {
 		verticalPodAutoscaler = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "kube-apiserver-vpa",
-				Namespace: namespace,
-			},
-		}
-		hvpa = &hvpav1alpha1.Hvpa{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "kube-apiserver",
 				Namespace: namespace,
 			},
 		}
@@ -418,23 +410,6 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 				),
 			)
-		})
-
-		Describe("HVPA", func() {
-			It("should successfully delete the HVPA resource", func() {
-				kapi = New(kubernetesInterface, namespace, sm, Values{
-					Values: apiserver.Values{
-						Autoscaling:    apiserver.AutoscalingConfig{},
-						RuntimeVersion: runtimeVersion,
-					},
-					Version: version,
-				})
-
-				Expect(c.Create(ctx, hvpa)).To(Succeed())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(Succeed())
-				Expect(kapi.Deploy(ctx)).To(Succeed())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(BeNotFoundError())
-			})
 		})
 
 		Describe("PodDisruptionBudget", func() {
@@ -4369,19 +4344,16 @@ kind: AuthenticationConfiguration
 		JustBeforeEach(func() {
 			Expect(c.Create(ctx, deployment)).To(Succeed())
 			Expect(c.Create(ctx, verticalPodAutoscaler)).To(Succeed())
-			Expect(c.Create(ctx, hvpa)).To(Succeed())
 			Expect(c.Create(ctx, managedResource)).To(Succeed())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 		})
 
 		AfterEach(func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(BeNotFoundError())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 		})
 

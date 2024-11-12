@@ -356,7 +356,6 @@ var _ = Describe("GardenerAPIServer", func() {
 					"reference.resources.gardener.cloud/secret-3696832b":    "gardener-apiserver",
 					"reference.resources.gardener.cloud/secret-e01f5645":    "ca-etcd",
 					"reference.resources.gardener.cloud/secret-14294f8f":    "gardener-apiserver-workload-identity-signing-key-f70e59e4",
-					"resources.gardener.cloud/preserve-resources":           "true",
 				},
 			},
 			Spec: appsv1.DeploymentSpec{
