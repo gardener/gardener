@@ -249,7 +249,7 @@ var _ = Describe("KubeAPIServer", func() {
 						ScaleDownDisabled: false,
 					},
 				),
-				Entry("shoot enables HA control planes, VPAAndHPAForAPIServer is enabled",
+				Entry("shoot enables HA control planes",
 					func() {
 						botanist.Shoot.GetInfo().Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
 							HighAvailability: &gardencorev1beta1.HighAvailability{

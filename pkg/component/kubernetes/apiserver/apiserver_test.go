@@ -318,7 +318,7 @@ var _ = Describe("KubeAPIServer", func() {
 
 		Describe("VerticalPodAutoscaler", func() {
 			DescribeTable("should successfully deploy the VPA resource",
-				func(autoscalingConfig apiserver.AutoscalingConfig, haVPN bool, annotations, labels map[string]string, vpaUpdateMode *vpaautoscalingv1.UpdateMode, containerPolicies []vpaautoscalingv1.ContainerResourcePolicy) {
+				func(autoscalingConfig apiserver.AutoscalingConfig, haVPN bool, annotations, labels map[string]string, containerPolicies []vpaautoscalingv1.ContainerResourcePolicy) {
 					kapi = New(kubernetesInterface, namespace, sm, Values{
 						Values: apiserver.Values{
 							Autoscaling:    autoscalingConfig,
@@ -349,7 +349,7 @@ var _ = Describe("KubeAPIServer", func() {
 								Name:       "kube-apiserver",
 							},
 							UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-								UpdateMode: vpaUpdateMode,
+								UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
 							},
 							ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 								ContainerPolicies: containerPolicies,
@@ -357,12 +357,11 @@ var _ = Describe("KubeAPIServer", func() {
 						},
 					}))
 				},
-				Entry("autoscaling mode is VPAAndHPA",
+				Entry("default behaviour",
 					apiserver.AutoscalingConfig{},
 					false,
 					nil,
 					nil,
-					ptr.To(vpaautoscalingv1.UpdateModeAuto),
 					[]vpaautoscalingv1.ContainerResourcePolicy{
 						{
 							ContainerName:    "kube-apiserver",
@@ -374,12 +373,11 @@ var _ = Describe("KubeAPIServer", func() {
 						},
 					},
 				),
-				Entry("autoscaling mode is VPAAndHPA and HA VPN is enabled",
+				Entry("HA VPN is enabled",
 					apiserver.AutoscalingConfig{},
 					true,
 					nil,
 					nil,
-					ptr.To(vpaautoscalingv1.UpdateModeAuto),
 					[]vpaautoscalingv1.ContainerResourcePolicy{
 						{
 							ContainerName:    "kube-apiserver",
@@ -403,12 +401,11 @@ var _ = Describe("KubeAPIServer", func() {
 						},
 					},
 				),
-				Entry("autoscaling mode is VPAAndHPA and scale-down is disabled",
+				Entry("scale-down is disabled",
 					apiserver.AutoscalingConfig{ScaleDownDisabled: true},
 					false,
 					map[string]string{"eviction-requirements.autoscaling.gardener.cloud/downscale-restriction": "never"},
 					map[string]string{"autoscaling.gardener.cloud/eviction-requirements": "managed-by-controller"},
-					ptr.To(vpaautoscalingv1.UpdateModeAuto),
 					[]vpaautoscalingv1.ContainerResourcePolicy{
 						{
 							ContainerName:    "kube-apiserver",

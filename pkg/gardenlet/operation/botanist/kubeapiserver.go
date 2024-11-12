@@ -81,7 +81,12 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() apiserver.Autoscaling
 		// That's why minReplicas is set to 2.
 		minReplicas        int32 = 2
 		maxReplicas        int32 = 6
-		apiServerResources corev1.ResourceRequirements
+		apiServerResources       = corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("250m"),
+				corev1.ResourceMemory: resource.MustParse("500Mi"),
+			},
+		}
 	)
 
 	if v1beta1helper.IsHAControlPlaneConfigured(b.Shoot.GetInfo()) {
@@ -90,13 +95,6 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() apiserver.Autoscaling
 	if metav1.HasAnnotation(b.Shoot.GetInfo().ObjectMeta, v1beta1constants.ShootAlphaControlPlaneScaleDownDisabled) {
 		minReplicas = 4
 		scaleDownDisabled = true
-	}
-
-	apiServerResources = corev1.ResourceRequirements{
-		Requests: corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse("250m"),
-			corev1.ResourceMemory: resource.MustParse("500Mi"),
-		},
 	}
 
 	if b.ManagedSeed != nil {

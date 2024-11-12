@@ -471,15 +471,6 @@ func (s *Shoot) GetIngressFQDN(subDomain string) string {
 	return fmt.Sprintf("%s.%s.%s", subDomain, gardenerutils.IngressPrefix, *shoot.Spec.DNS.Domain)
 }
 
-// GetMinNodeCount returns the sum of all 'minimum' fields of all worker groups of the Shoot.
-func (s *Shoot) GetMinNodeCount() int32 {
-	var nodeCount int32
-	for _, worker := range s.GetInfo().Spec.Provider.Workers {
-		nodeCount += worker.Minimum
-	}
-	return nodeCount
-}
-
 // GetMaxNodeCount returns the sum of all 'maximum' fields of all worker groups of the Shoot.
 func (s *Shoot) GetMaxNodeCount() int32 {
 	var nodeCount int32
