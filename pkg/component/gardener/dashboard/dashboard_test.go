@@ -836,12 +836,19 @@ frontend:
 					"role": "dashboard",
 				},
 			},
-			Rules: []rbacv1.PolicyRule{{
-				APIGroups:     []string{"coordination.k8s.io"},
-				Resources:     []string{"leases"},
-				ResourceNames: []string{"gardener-dashboard-github-webhook"},
-				Verbs:         []string{"create", "get", "patch", "watch", "list"},
-			}},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups:     []string{"coordination.k8s.io"},
+					Resources:     []string{"leases"},
+					ResourceNames: []string{"gardener-dashboard-github-webhook"},
+					Verbs:         []string{"get", "patch", "watch", "list"},
+				},
+				{
+					APIGroups: []string{"coordination.k8s.io"},
+					Resources: []string{"leases"},
+					Verbs:     []string{"create"},
+				},
+			},
 		}
 		roleBindingGitHub = &rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{

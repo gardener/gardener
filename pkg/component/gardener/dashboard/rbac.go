@@ -125,12 +125,19 @@ func (g *gardenerDashboard) role() *rbacv1.Role {
 			Namespace: v1beta1constants.GardenNamespace,
 			Labels:    GetLabels(),
 		},
-		Rules: []rbacv1.PolicyRule{{
-			APIGroups:     []string{coordinationv1.GroupName},
-			Resources:     []string{"leases"},
-			ResourceNames: []string{"gardener-dashboard-github-webhook"},
-			Verbs:         []string{"create", "get", "patch", "watch", "list"},
-		}},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups:     []string{coordinationv1.GroupName},
+				Resources:     []string{"leases"},
+				ResourceNames: []string{"gardener-dashboard-github-webhook"},
+				Verbs:         []string{"get", "patch", "watch", "list"},
+			},
+			{
+				APIGroups: []string{coordinationv1.GroupName},
+				Resources: []string{"leases"},
+				Verbs:     []string{"create"},
+			},
+		},
 	}
 }
 
