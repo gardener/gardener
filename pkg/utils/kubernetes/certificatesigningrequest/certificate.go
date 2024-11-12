@@ -68,9 +68,9 @@ var DigestedName = ComputeDigestedName
 
 // ComputeDigestedName is a digest that should include all the relevant pieces of the CSR we care about.
 // We can't directly hash the serialized CSR because of random padding that we
-// regenerate every loop and we include usages which are not contained in the
+// regenerate every loop, and we include usages which are not contained in the
 // CSR. This needs to be kept up to date as we add new fields to the node
-// certificates and with ensureCompatible.
+// certificates and with `ensureCompatible` (https://github.com/kubernetes/client-go/blob/37045084c2aa82927b0e5ffc752861430fd7e4ab/util/certificate/csr/csr.go#L307).
 func ComputeDigestedName(publicKey any, subject *pkix.Name, usages []certificatesv1.KeyUsage, csrPrefix string) (string, error) {
 	hash := sha512.New512_256()
 
