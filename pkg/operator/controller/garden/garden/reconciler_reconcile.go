@@ -127,6 +127,12 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{}, err
 	}
 
+	// TODO (martinweindel) Temporary flag. Remove it again, when all provider extensions supporting BackupBucket are deployable on Garden runtime cluster.
+	hasExtensionForBackupBucket, err := r.hasExtensionForBackupBucket(ctx, garden)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	const (
 		secretsTypeKey                 = "secretsType"
 		secretsTypeGardenAccess        = "garden access"
@@ -255,7 +261,8 @@ func (r *Reconciler) reconcile(
 			deployNginxIngressController,
 		)
 
-		backupBucket           = etcdMainBackupBucket(garden)
+		backupBucket = etcdMainBackupBucket(garden)
+
 		deployEtcdBackupBucket = g.Add(flow.Task{
 			Name: "Reconciling main ETCD backup bucket",
 			Fn: func(ctx context.Context) error {
@@ -275,7 +282,10 @@ func (r *Reconciler) reconcile(
 					nil,
 				)
 			},
-			SkipIf:       garden.Spec.VirtualCluster.ETCD == nil || garden.Spec.VirtualCluster.ETCD.Main == nil || garden.Spec.VirtualCluster.ETCD.Main.Backup == nil,
+			SkipIf: garden.Spec.VirtualCluster.ETCD == nil ||
+				garden.Spec.VirtualCluster.ETCD.Main == nil ||
+				garden.Spec.VirtualCluster.ETCD.Main.Backup == nil ||
+				!hasExtensionForBackupBucket,
 			Dependencies: flow.NewTaskIDs(deployExtensionCRD),
 		})
 		deployEtcds = g.Add(flow.Task{
@@ -1031,6 +1041,27 @@ func (r *Reconciler) listManagedDNSRecords(ctx context.Context, dnsRecordList *e
 		return fmt.Errorf("failed listing DNS records: %w", err)
 	}
 	return nil
+}
+
+func (r *Reconciler) hasExtensionForBackupBucket(ctx context.Context, garden *operatorv1alpha1.Garden) (bool, error) {
+	if garden.Spec.VirtualCluster.ETCD == nil ||
+		garden.Spec.VirtualCluster.ETCD.Main == nil ||
+		garden.Spec.VirtualCluster.ETCD.Main.Backup == nil {
+		return false, nil
+	}
+
+	list := &operatorv1alpha1.ExtensionList{}
+	if err := r.RuntimeClientSet.Client().List(ctx, list); err != nil {
+		return false, fmt.Errorf("failed listing extensions: %w", err)
+	}
+	for _, ext := range list.Items {
+		for _, res := range ext.Spec.Resources {
+			if res.Kind == extensionsv1alpha1.BackupBucketResource && res.Type == garden.Spec.VirtualCluster.ETCD.Main.Backup.Provider {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
 }
 
 func getKubernetesResourcesForEncryption(garden *operatorv1alpha1.Garden) []string {
