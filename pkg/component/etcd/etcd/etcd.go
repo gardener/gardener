@@ -14,7 +14,6 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
-	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
@@ -406,10 +405,6 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	// TODO(plkokanov): Remove the HVPA cleanup after gardener v1.109.0 has been released.
-	if err := kubernetesutils.DeleteObjects(ctx, e.client, e.emptyHVPA()); err != nil {
-		return err
-	}
 	if err := e.reconcileVerticalPodAutoscaler(ctx, vpa, minAllowed); err != nil {
 		return err
 	}
@@ -724,8 +719,6 @@ func (e *etcd) Destroy(ctx context.Context) error {
 	}
 
 	return kubernetesutils.DeleteObjects(ctx, e.client,
-		// TODO(plkokanov): Remove the HVPA cleanup after gardener v1.109.0 has been released.
-		e.emptyHVPA(),
 		e.emptyVerticalPodAutoscaler(),
 		e.emptyServiceMonitor(),
 		e.emptyScrapeConfig(),
@@ -746,10 +739,6 @@ func (e *etcd) prometheusLabel() string {
 		return garden.Label
 	}
 	return shoot.Label
-}
-
-func (e *etcd) emptyHVPA() *hvpav1alpha1.Hvpa {
-	return &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: e.etcd.Name, Namespace: e.namespace}}
 }
 
 func (e *etcd) emptyServiceMonitor() *monitoringv1.ServiceMonitor {

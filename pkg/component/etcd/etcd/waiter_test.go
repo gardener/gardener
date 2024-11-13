@@ -10,7 +10,6 @@ import (
 	"time"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
-	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -22,6 +21,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -65,7 +65,7 @@ var _ = Describe("#Wait", func() {
 		Expect(corev1.AddToScheme(s)).To(Succeed())
 		Expect(appsv1.AddToScheme(s)).To(Succeed())
 		Expect(networkingv1.AddToScheme(s)).To(Succeed())
-		Expect(hvpav1alpha1.AddToScheme(s)).To(Succeed())
+		Expect(vpaautoscalingv1.AddToScheme(s)).To(Succeed())
 		Expect(druidv1alpha1.AddToScheme(s)).To(Succeed())
 		Expect(monitoringv1alpha1.AddToScheme(s)).To(Succeed())
 		Expect(monitoringv1.AddToScheme(s)).To(Succeed())

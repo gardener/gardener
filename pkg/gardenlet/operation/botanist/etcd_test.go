@@ -104,7 +104,7 @@ var _ = Describe("Etcd", func() {
 			})
 		})
 
-		Context("no ManagedSeeds", func() {
+		Context("no ManagedSeed", func() {
 			BeforeEach(func() {
 				botanist.ManagedSeed = nil
 			})
@@ -144,7 +144,7 @@ var _ = Describe("Etcd", func() {
 			}
 		})
 
-		Context("no HVPAShootedSeed feature gate", func() {
+		Context("with ManagedSeed", func() {
 			BeforeEach(func() {
 				botanist.ManagedSeed = &seedmanagementv1alpha1.ManagedSeed{}
 			})

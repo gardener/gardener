@@ -14,7 +14,6 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
-	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -111,7 +110,6 @@ var _ = Describe("Etcd", func() {
 		metricsExtensive    = druidv1alpha1.Extensive
 
 		etcdName = "etcd-" + testRole
-		hvpaName = "etcd-" + testRole
 		vpaName  = etcdName
 
 		etcdObjFor = func(
@@ -712,30 +710,6 @@ var _ = Describe("Etcd", func() {
 			Expect(etcd.Deploy(ctx)).To(MatchError(fakeErr))
 		})
 
-		It("should fail because the hvpa cannot be cleaned up", func() {
-			// update HVPA enablement to 'false', such that the component tries to remove the HVPA object
-			etcd = New(log, c, testNamespace, sm, Values{
-				Role:                    testRole,
-				Class:                   class,
-				Replicas:                replicas,
-				StorageCapacity:         storageCapacity,
-				StorageClassName:        &storageClassName,
-				DefragmentationSchedule: &defragmentationSchedule,
-				CARotationPhase:         "",
-				PriorityClassName:       priorityClassName,
-				MaintenanceTimeWindow:   maintenanceTimeWindow,
-			})
-
-			gomock.InOrder(
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})),
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()),
-				c.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})).Return(fakeErr),
-			)
-
-			Expect(etcd.Deploy(ctx)).To(MatchError(fakeErr))
-		})
-
 		It("should successfully deploy (normal etcd)", func() {
 			oldTimeNow := TimeNow
 			defer func() { TimeNow = oldTimeNow }()
@@ -760,7 +734,6 @@ var _ = Describe("Etcd", func() {
 						nil,
 						false)))
 				}),
-				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 				c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
 					Expect(obj).To(DeepEqual(expectedVPAFor(class, "")))
@@ -832,7 +805,6 @@ var _ = Describe("Etcd", func() {
 						nil,
 						false)))
 				}),
-				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 				c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
 					Expect(obj).To(DeepEqual(expectedVPAFor(class, "")))
@@ -909,7 +881,6 @@ var _ = Describe("Etcd", func() {
 						nil,
 						false)))
 				}),
-				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 				c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
 					Expect(obj).To(DeepEqual(expectedVPAFor(class, "")))
@@ -975,7 +946,6 @@ var _ = Describe("Etcd", func() {
 
 					Expect(obj).To(DeepEqual(expectedObj))
 				}),
-				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 				c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
 					Expect(obj).To(DeepEqual(expectedVPAFor(class, "")))
@@ -1040,7 +1010,6 @@ var _ = Describe("Etcd", func() {
 						nil,
 						false)))
 				}),
-				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 				c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
 					Expect(obj).To(DeepEqual(expectedVPAFor(class, "")))
@@ -1082,7 +1051,6 @@ var _ = Describe("Etcd", func() {
 						nil,
 						false)))
 				}),
-				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 				c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
 					Expect(obj).To(DeepEqual(expectedVPAFor(class, "")))
@@ -1147,7 +1115,6 @@ var _ = Describe("Etcd", func() {
 							nil,
 							false)))
 					}),
-					c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
 						Expect(obj).To(DeepEqual(expectedVPAFor(class, evictionRequirement)))
@@ -1204,7 +1171,6 @@ var _ = Describe("Etcd", func() {
 							nil,
 							false)))
 					}),
-					c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
 						Expect(obj).To(DeepEqual(expectedVPAFor(class, "")))
@@ -1269,7 +1235,6 @@ var _ = Describe("Etcd", func() {
 
 						Expect(obj).To(DeepEqual(expobj))
 					}),
-					c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
 						Expect(obj).To(DeepEqual(expectedVPAFor(class, "")))
@@ -1327,7 +1292,6 @@ var _ = Describe("Etcd", func() {
 							false,
 						)))
 					}),
-					c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
 						Expect(obj).To(DeepEqual(expectedVPAFor(class, "")))
@@ -1525,7 +1489,6 @@ var _ = Describe("Etcd", func() {
 							Expect(obj.(*druidv1alpha1.Etcd).Spec.Etcd.PeerUrlTLS).NotTo(BeNil())
 							clientSecretName = obj.(*druidv1alpha1.Etcd).Spec.Etcd.ClientUrlTLS.ClientTLSSecretRef.Name
 						}),
-						c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
 						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 						c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
 							Expect(obj).To(DeepEqual(expectedVPAFor(class, "")))
@@ -1573,7 +1536,6 @@ var _ = Describe("Etcd", func() {
 							Expect(obj.(*druidv1alpha1.Etcd).Spec.Etcd.PeerUrlTLS).NotTo(BeNil())
 							clientSecretName = obj.(*druidv1alpha1.Etcd).Spec.Etcd.ClientUrlTLS.ClientTLSSecretRef.Name
 						}),
-						c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
 						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 						c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
 							Expect(obj).To(DeepEqual(expectedVPAFor(class, "")))
@@ -1636,7 +1598,6 @@ var _ = Describe("Etcd", func() {
 							nil,
 							true)))
 					}),
-					c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
 						Expect(obj).To(DeepEqual(expectedVPAFor(class, "")))
@@ -1680,7 +1641,6 @@ var _ = Describe("Etcd", func() {
 				})
 
 				DeferCleanup(test.WithVar(&etcdName, "virtual-garden-"+etcdName))
-				DeferCleanup(test.WithVar(&hvpaName, "virtual-garden-"+hvpaName))
 				DeferCleanup(test.WithVar(&vpaName, "virtual-garden-"+vpaName))
 
 				etcdObj := etcdObjFor(
@@ -1711,7 +1671,6 @@ var _ = Describe("Etcd", func() {
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(etcdObj))
 					}),
-					c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: hvpaName, Namespace: testNamespace}}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
 						Expect(obj).To(DeepEqual(expectedVPAFor(class, "")))
@@ -1779,7 +1738,6 @@ var _ = Describe("Etcd", func() {
 
 			gomock.InOrder(
 				c.EXPECT().Patch(ctx, etcdRes, gomock.Any()),
-				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
 				c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
 				c.EXPECT().Delete(ctx, &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: "shoot-etcd-" + testRole, Namespace: testNamespace, Labels: map[string]string{"prometheus": "shoot"}}}),
 				c.EXPECT().Delete(ctx, &monitoringv1alpha1.ScrapeConfig{ObjectMeta: metav1.ObjectMeta{Name: "shoot-etcd-druid", Namespace: testNamespace, Labels: map[string]string{"prometheus": "shoot"}}}),
@@ -1789,23 +1747,11 @@ var _ = Describe("Etcd", func() {
 			Expect(etcd.Destroy(ctx)).To(Succeed())
 		})
 
-		It("should fail when the hvpa deletion fails", func() {
-			defer test.WithVar(&gardener.TimeNow, nowFunc)()
-
-			gomock.InOrder(
-				c.EXPECT().Patch(ctx, etcdRes, gomock.Any()),
-				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}).Return(fakeErr),
-			)
-
-			Expect(etcd.Destroy(ctx)).To(MatchError(fakeErr))
-		})
-
 		It("should fail when VPA deletion fails", func() {
 			defer test.WithVar(&gardener.TimeNow, nowFunc)()
 
 			gomock.InOrder(
 				c.EXPECT().Patch(ctx, etcdRes, gomock.Any()),
-				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
 				c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}).Return(fakeErr),
 			)
 
@@ -1817,7 +1763,6 @@ var _ = Describe("Etcd", func() {
 
 			gomock.InOrder(
 				c.EXPECT().Patch(ctx, etcdRes, gomock.Any()),
-				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
 				c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
 				c.EXPECT().Delete(ctx, &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: "shoot-etcd-" + testRole, Namespace: testNamespace, Labels: map[string]string{"prometheus": "shoot"}}}).Return(fakeErr),
 			)
@@ -1830,7 +1775,6 @@ var _ = Describe("Etcd", func() {
 
 			gomock.InOrder(
 				c.EXPECT().Patch(ctx, etcdRes, gomock.Any()),
-				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
 				c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
 				c.EXPECT().Delete(ctx, &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: "shoot-etcd-" + testRole, Namespace: testNamespace, Labels: map[string]string{"prometheus": "shoot"}}}),
 				c.EXPECT().Delete(ctx, &monitoringv1alpha1.ScrapeConfig{ObjectMeta: metav1.ObjectMeta{Name: "shoot-etcd-druid", Namespace: testNamespace, Labels: map[string]string{"prometheus": "shoot"}}}).Return(fakeErr),
@@ -1844,7 +1788,6 @@ var _ = Describe("Etcd", func() {
 
 			gomock.InOrder(
 				c.EXPECT().Patch(ctx, etcdRes, gomock.Any()),
-				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
 				c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
 				c.EXPECT().Delete(ctx, &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: "shoot-etcd-" + testRole, Namespace: testNamespace, Labels: map[string]string{"prometheus": "shoot"}}}),
 				c.EXPECT().Delete(ctx, &monitoringv1alpha1.ScrapeConfig{ObjectMeta: metav1.ObjectMeta{Name: "shoot-etcd-druid", Namespace: testNamespace, Labels: map[string]string{"prometheus": "shoot"}}}),
@@ -1859,7 +1802,6 @@ var _ = Describe("Etcd", func() {
 
 			gomock.InOrder(
 				c.EXPECT().Patch(ctx, etcdRes, gomock.Any()),
-				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
 				c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
 				c.EXPECT().Delete(ctx, &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: "shoot-etcd-" + testRole, Namespace: testNamespace, Labels: map[string]string{"prometheus": "shoot"}}}),
 				c.EXPECT().Delete(ctx, &monitoringv1alpha1.ScrapeConfig{ObjectMeta: metav1.ObjectMeta{Name: "shoot-etcd-druid", Namespace: testNamespace, Labels: map[string]string{"prometheus": "shoot"}}}),
