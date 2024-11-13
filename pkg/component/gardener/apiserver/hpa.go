@@ -38,7 +38,7 @@ func (g *gardenerAPIServer) horizontalPodAutoscaler() *autoscalingv2.HorizontalP
 						Name: corev1.ResourceCPU,
 						Target: autoscalingv2.MetricTarget{
 							Type: autoscalingv2.AverageValueMetricType,
-							// The chosen value is 6 CPU: 1 CPU less than the VPA's maxAllowed 7 CPU to have a headroom for the horizontal scaling.
+							// The chosen value of 6 CPU is aligned with the average value for memory - 24G. Preserve the cpu:memory ratio of 1:4.
 							AverageValue: ptr.To(resource.MustParse("6")),
 						},
 					},
@@ -49,7 +49,7 @@ func (g *gardenerAPIServer) horizontalPodAutoscaler() *autoscalingv2.HorizontalP
 						Name: corev1.ResourceMemory,
 						Target: autoscalingv2.MetricTarget{
 							Type: autoscalingv2.AverageValueMetricType,
-							// The chosen value is 24G: 4G less than the VPA's maxAllowed 28G to have a headroom for the horizontal scaling.
+							// The chosen value of 24G is aligned with the average value for cpu - 6 CPU cores. Preserve the cpu:memory ratio of 1:4.
 							AverageValue: ptr.To(resource.MustParse("24G")),
 						},
 					},

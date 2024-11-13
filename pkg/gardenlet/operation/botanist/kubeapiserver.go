@@ -74,7 +74,6 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 func (b *Botanist) computeKubeAPIServerAutoscalingConfig() apiserver.AutoscalingConfig {
 	var (
 		scaleDownDisabled = false
-		defaultReplicas   *int32
 		// kube-apiserver is a control plane component of type "server".
 		// The HA webhook sets at least 2 replicas to components of type "server" (w/o HA or with w/ HA).
 		// Ref https://github.com/gardener/gardener/blob/master/docs/development/high-availability-of-components.md#control-plane-components.
@@ -106,7 +105,6 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() apiserver.Autoscaling
 
 	return apiserver.AutoscalingConfig{
 		APIServerResources: apiServerResources,
-		Replicas:           defaultReplicas,
 		MinReplicas:        minReplicas,
 		MaxReplicas:        maxReplicas,
 		ScaleDownDisabled:  scaleDownDisabled,
