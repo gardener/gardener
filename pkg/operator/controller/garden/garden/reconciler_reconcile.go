@@ -171,10 +171,6 @@ func (r *Reconciler) reconcile(
 			Fn:     c.vpaCRD.Deploy,
 			SkipIf: !vpaEnabled(garden.Spec.RuntimeCluster.Settings),
 		})
-		reconcileHVPACRD = g.Add(flow.Task{
-			Name: "Reconciling custom resource definitions for HVPA",
-			Fn:   c.hvpaCRD.Deploy,
-		})
 		deployIstioCRD = g.Add(flow.Task{
 			Name: "Deploying custom resource definitions for Istio",
 			Fn:   c.istioCRD.Deploy,
@@ -209,7 +205,7 @@ func (r *Reconciler) reconcile(
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Deploying and waiting for gardener-resource-manager to be healthy",
 			Fn:           component.OpWait(c.gardenerResourceManager).Deploy,
-			Dependencies: flow.NewTaskIDs(deployEtcdCRD, deployVPACRD, reconcileHVPACRD, deployIstioCRD),
+			Dependencies: flow.NewTaskIDs(deployEtcdCRD, deployVPACRD, deployIstioCRD),
 		})
 		deployNginxIngressController = g.Add(flow.Task{
 			Name:         "Deploying nginx-ingress controller",
@@ -224,11 +220,6 @@ func (r *Reconciler) reconcile(
 		deployVPA = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes vertical pod autoscaler",
 			Fn:           c.verticalPodAutoscaler.Deploy,
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
-		})
-		deployHVPA = g.Add(flow.Task{
-			Name:         "Deploying HVPA controller",
-			Fn:           c.hvpaController.Deploy,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
 		deployEtcdDruid = g.Add(flow.Task{
@@ -255,7 +246,6 @@ func (r *Reconciler) reconcile(
 			deployPrometheusCRD,
 			deployExtensionCRD,
 			deployVPA,
-			deployHVPA,
 			deployEtcdDruid,
 			deployIstio,
 			deployNginxIngressController,

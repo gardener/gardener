@@ -256,11 +256,6 @@ func (r *Reconciler) delete(
 			Fn:           component.OpDestroyAndWait(c.istio).Destroy,
 			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
 		})
-		destroyHVPAController = g.Add(flow.Task{
-			Name:         "Destroying HVPA controller",
-			Fn:           component.OpDestroyAndWait(c.hvpaController).Destroy,
-			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
-		})
 		destroyVerticalPodAutoscaler = g.Add(flow.Task{
 			Name:         "Destroying Kubernetes vertical pod autoscaler",
 			Fn:           component.OpDestroyAndWait(c.verticalPodAutoscaler).Destroy,
@@ -301,7 +296,6 @@ func (r *Reconciler) delete(
 			destroyMainETCDBackupBucket,
 			destroyEtcdDruid,
 			destroyIstio,
-			destroyHVPAController,
 			destroyVerticalPodAutoscaler,
 			destroyNginxIngressController,
 			destroyFluentOperatorCustomResources,
@@ -352,12 +346,6 @@ func (r *Reconciler) delete(
 			Name:         "Destroying custom resource definition for VPA",
 			Fn:           c.vpaCRD.Destroy,
 			SkipIf:       !vpaEnabled(garden.Spec.RuntimeCluster.Settings),
-			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Destroying custom resource definition for HVPA",
-			Fn:           c.hvpaCRD.Destroy,
-			SkipIf:       !hvpaEnabled(),
 			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{

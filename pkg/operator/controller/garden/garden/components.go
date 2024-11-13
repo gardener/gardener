@@ -40,7 +40,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/apiserver"
-	"github.com/gardener/gardener/pkg/component/autoscaling/hvpa"
 	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	extensioncrds "github.com/gardener/gardener/pkg/component/extensions/crds"
@@ -88,7 +87,6 @@ import (
 type components struct {
 	etcdCRD       component.Deployer
 	vpaCRD        component.Deployer
-	hvpaCRD       component.Deployer
 	istioCRD      component.Deployer
 	fluentCRD     component.Deployer
 	extensionCRD  component.Deployer
@@ -97,7 +95,6 @@ type components struct {
 	gardenerResourceManager component.DeployWaiter
 	runtimeSystem           component.DeployWaiter
 	verticalPodAutoscaler   component.DeployWaiter
-	hvpaController          component.DeployWaiter
 	etcdDruid               component.DeployWaiter
 	istio                   istio.Interface
 	nginxIngressController  component.DeployWaiter
@@ -157,10 +154,6 @@ func (r *Reconciler) instantiateComponents(
 	// crds
 	c.etcdCRD = etcd.NewCRD(r.RuntimeClientSet.Client(), applier)
 	c.vpaCRD = vpa.NewCRD(applier, nil)
-	c.hvpaCRD = hvpa.NewCRD(applier)
-	if !hvpaEnabled() {
-		c.hvpaCRD = component.OpDestroy(c.hvpaCRD)
-	}
 	c.istioCRD = istio.NewCRD(r.RuntimeClientSet.ChartApplier())
 	c.fluentCRD = fluentoperator.NewCRDs(applier)
 	c.prometheusCRD, err = prometheusoperator.NewCRDs(r.RuntimeClientSet.Client(), applier)
@@ -176,10 +169,6 @@ func (r *Reconciler) instantiateComponents(
 	}
 	c.runtimeSystem = r.newRuntimeSystem()
 	c.verticalPodAutoscaler, err = r.newVerticalPodAutoscaler(garden, secretsManager)
-	if err != nil {
-		return
-	}
-	c.hvpaController, err = r.newHVPA()
 	if err != nil {
 		return
 	}
@@ -404,16 +393,6 @@ func (r *Reconciler) newVerticalPodAutoscaler(garden *operatorv1alpha1.Garden, s
 		operatorv1alpha1.SecretNameCARuntime,
 		v1beta1constants.PriorityClassNameGardenSystem300,
 		v1beta1constants.PriorityClassNameGardenSystem200,
-		v1beta1constants.PriorityClassNameGardenSystem200,
-	)
-}
-
-func (r *Reconciler) newHVPA() (component.DeployWaiter, error) {
-	return sharedcomponent.NewHVPA(
-		r.RuntimeClientSet.Client(),
-		r.GardenNamespace,
-		hvpaEnabled(),
-		r.RuntimeVersion,
 		v1beta1constants.PriorityClassNameGardenSystem200,
 	)
 }
