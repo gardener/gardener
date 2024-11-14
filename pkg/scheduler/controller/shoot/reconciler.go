@@ -331,26 +331,26 @@ func applyStrategy(log logr.Logger, shoot *gardencorev1beta1.Shoot, seedList []g
 
 func filterCandidates(shoot *gardencorev1beta1.Shoot, shootList []*gardencorev1beta1.Shoot, seedList []gardencorev1beta1.Seed) ([]gardencorev1beta1.Seed, error) {
 	var (
-		candidates []gardencorev1beta1.Seed
-		seedToErr  = make(map[string]error)
-		seedUsage  = v1beta1helper.CalculateSeedUsage(shootList)
+		candidates    []gardencorev1beta1.Seed
+		seedNameToErr = make(map[string]error)
+		seedUsage     = v1beta1helper.CalculateSeedUsage(shootList)
 	)
 
 	for _, seed := range seedList {
 		if shoot.Spec.Networking != nil {
 			if disjointed, err := networksAreDisjointed(&seed, shoot); !disjointed {
-				seedToErr[seed.Name] = err
+				seedNameToErr[seed.Name] = err
 				continue
 			}
 		}
 
 		if !v1beta1helper.TaintsAreTolerated(seed.Spec.Taints, shoot.Spec.Tolerations) {
-			seedToErr[seed.Name] = errors.New("shoot does not tolerate the seed's taints")
+			seedNameToErr[seed.Name] = errors.New("shoot does not tolerate the seed's taints")
 			continue
 		}
 
 		if allocatableShoots, ok := seed.Status.Allocatable[gardencorev1beta1.ResourceShoots]; ok && int64(seedUsage[seed.Name]) >= allocatableShoots.Value() {
-			seedToErr[seed.Name] = errors.New("seed does not have available capacity for shoots")
+			seedNameToErr[seed.Name] = errors.New("seed does not have available capacity for shoots")
 			continue
 		}
 
@@ -358,7 +358,7 @@ func filterCandidates(shoot *gardencorev1beta1.Shoot, shootList []*gardencorev1b
 	}
 
 	if candidates == nil {
-		return nil, fmt.Errorf("0/%d seed cluster candidate(s) are eligible for scheduling: %v", len(seedList), errorMapToString(seedToErr))
+		return nil, fmt.Errorf("0/%d seed cluster candidate(s) are eligible for scheduling: %v", len(seedList), errorMapToString(seedNameToErr))
 	}
 	return candidates, nil
 }
@@ -547,13 +547,13 @@ func networksAreDisjointed(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta
 	return len(errorMessages) == 0, fmt.Errorf("invalid networks: %s", errorMessages)
 }
 
-func errorMapToString(seedToErr map[string]error) string {
-	sortedSeeds := maps.Keys(seedToErr)
+func errorMapToString(seedNameToErr map[string]error) string {
+	sortedSeeds := maps.Keys(seedNameToErr)
 	slices.Sort(sortedSeeds)
 
 	res := "{"
 	for _, seed := range sortedSeeds {
-		res += fmt.Sprintf("%s => %s, ", seed, seedToErr[seed].Error())
+		res += fmt.Sprintf("%s => %s, ", seed, seedNameToErr[seed].Error())
 	}
 	res = strings.TrimSuffix(res, ", ") + "}"
 	return res
