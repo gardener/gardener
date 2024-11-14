@@ -21,7 +21,6 @@ func GetFeatures() []featuregate.Feature {
 	return []featuregate.Feature{
 		features.DefaultSeccompProfile,
 		features.ShootManagedIssuer,
-		features.VPAAndHPAForAPIServer,
 		features.NewWorkerPoolHash,
 		features.NewVPN,
 	}

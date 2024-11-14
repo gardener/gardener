@@ -41,17 +41,6 @@ const (
 	// alpha: v1.93.0
 	ShootManagedIssuer featuregate.Feature = "ShootManagedIssuer"
 
-	// VPAAndHPAForAPIServer an autoscaling mechanism for kube-apiserver of shoot or virtual garden clusters, and the gardener-apiserver.
-	// They are scaled simultaneously by VPA and HPA on the same metric (CPU and memory usage).
-	// The pod-trashing cycle between VPA and HPA scaling on the same metric is avoided
-	// by configuring the HPA to scale on average usage (not on average utilization) and
-	// by picking the target average utilization values in sync with VPA's allowed maximums.
-	// owner: @ialidzhikov
-	// alpha: v1.95.0
-	// beta: v1.101.0
-	// GA: v1.105.0
-	VPAAndHPAForAPIServer featuregate.Feature = "VPAAndHPAForAPIServer"
-
 	// ShootCredentialsBinding enables the usage of the CredentialsBindingName API in shoot spec.
 	// owner: @vpnachev @dimityrmirchev
 	// alpha: v1.98.0
@@ -101,7 +90,6 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	ShootManagedIssuer:        {Default: false, PreRelease: featuregate.Alpha},
 	ShootForceDeletion:        {Default: true, PreRelease: featuregate.Beta},
 	UseNamespacedCloudProfile: {Default: false, PreRelease: featuregate.Alpha},
-	VPAAndHPAForAPIServer:     {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	ShootCredentialsBinding:   {Default: true, PreRelease: featuregate.Beta},
 	NewWorkerPoolHash:         {Default: false, PreRelease: featuregate.Alpha},
 	NewVPN:                    {Default: false, PreRelease: featuregate.Alpha},
