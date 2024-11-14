@@ -103,15 +103,11 @@ func (r *Reconciler) runForceDeleteShootFlow(ctx context.Context, log logr.Logge
 		})
 		deleteMachineControllerManager = g.Add(flow.Task{
 			Name: "Deleting machine-controller-manager",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return botanist.Shoot.Components.ControlPlane.MachineControllerManager.Destroy(ctx)
-			}),
+			Fn:   botanist.Shoot.Components.ControlPlane.MachineControllerManager.Destroy,
 		})
 		waitUntilMachineControllerManagerDeleted = g.Add(flow.Task{
-			Name: "Waiting until machine-controller-manager has been deleted",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return botanist.Shoot.Components.ControlPlane.MachineControllerManager.WaitCleanup(ctx)
-			}),
+			Name:         "Waiting until machine-controller-manager has been deleted",
+			Fn:           botanist.Shoot.Components.ControlPlane.MachineControllerManager.WaitCleanup,
 			Dependencies: flow.NewTaskIDs(deleteMachineControllerManager),
 		})
 		deleteMachineResources = g.Add(flow.Task{
