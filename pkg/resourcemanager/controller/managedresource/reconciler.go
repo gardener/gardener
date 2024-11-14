@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"github.com/andybalholm/brotli"
-	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
 	appsv1 "k8s.io/api/apps/v1"
@@ -469,12 +468,12 @@ func (r *Reconciler) updateConditionsForDeletion(ctx context.Context, mr *resour
 func (r *Reconciler) applyNewResources(ctx context.Context, log logr.Logger, origin string, newResourcesObjects []object, labelsToInject map[string]string, equivalences Equivalences) error {
 	newResourcesObjects = sortByKind(newResourcesObjects)
 
-	// get all HPA and HVPA targetRefs to check if we should prevent overwriting replicas and/or resource requirements.
+	// get all HPA targetRefs to check if we should prevent overwriting replicas.
 	// VPAs don't have to be checked, as they don't update the spec directly and only mutate Pods via a MutatingWebhook
 	// and therefore don't interfere with the resource manager.
-	horizontallyScaledObjects, verticallyScaledObjects, err := computeAllScaledObjectKeys(ctx, r.TargetClient)
+	horizontallyScaledObjects, err := computeHorizontallyScaledObjectKeys(ctx, r.TargetClient)
 	if err != nil {
-		return fmt.Errorf("failed to compute all HPA and HVPA target ref object keys: %w", err)
+		return fmt.Errorf("failed to compute all HPA target ref object keys: %w", err)
 	}
 
 	for _, obj := range newResourcesObjects {
@@ -482,7 +481,6 @@ func (r *Reconciler) applyNewResources(ctx context.Context, log logr.Logger, ori
 			current            = obj.obj.DeepCopy()
 			resource           = unstructuredToString(obj.obj)
 			scaledHorizontally = isScaled(obj.obj, horizontallyScaledObjects, equivalences)
-			scaledVertically   = isScaled(obj.obj, verticallyScaledObjects, equivalences)
 		)
 
 		resourceLogger := log.WithValues("resource", resource)
@@ -507,7 +505,7 @@ func (r *Reconciler) applyNewResources(ctx context.Context, log logr.Logger, ori
 				return fmt.Errorf("error injecting labels into object %q: %s", resource, err)
 			}
 
-			return merge(origin, obj.obj, current, obj.forceOverwriteLabels, obj.oldInformation.Labels, obj.forceOverwriteAnnotations, obj.oldInformation.Annotations, scaledHorizontally, scaledVertically)
+			return merge(origin, obj.obj, current, obj.forceOverwriteLabels, obj.oldInformation.Labels, obj.forceOverwriteAnnotations, obj.oldInformation.Annotations, scaledHorizontally)
 		})
 		if err != nil {
 			if apierrors.IsConflict(err) {
@@ -538,49 +536,28 @@ func (r *Reconciler) applyNewResources(ctx context.Context, log logr.Logger, ori
 	return nil
 }
 
-// computeAllScaledObjectKeys returns two sets containing object keys (in the form `Group/Kind/Namespace/Name`).
-// The first one contains keys to objects that are horizontally scaled by either an HPA or HVPA. And the
-// second one contains keys to objects that are vertically scaled by an HVPA.
+// computeHorizontallyScaledObjectKeys returns a set of object keys (in the form `Group/Kind/Namespace/Name`)
+// to objects that are horizontally scaled by HPA.
 // VPAs are not checked, as they don't update the spec of Deployments/StatefulSets/... and only mutate resource
 // requirements via a MutatingWebhook. This way VPAs don't interfere with the resource manager and must not be considered.
-func computeAllScaledObjectKeys(ctx context.Context, c client.Client) (horizontallyScaledObjects, verticallyScaledObjects sets.Set[string], err error) {
+func computeHorizontallyScaledObjectKeys(ctx context.Context, c client.Client) (horizontallyScaledObjects sets.Set[string], err error) {
 	horizontallyScaledObjects = sets.New[string]()
-	verticallyScaledObjects = sets.New[string]()
 
 	// get all HPAs' targets
 	hpaList := &autoscalingv1.HorizontalPodAutoscalerList{}
 	if err := c.List(ctx, hpaList); err != nil && !meta.IsNoMatchError(err) {
-		return horizontallyScaledObjects, verticallyScaledObjects, fmt.Errorf("failed to list all HPAs: %w", err)
+		return horizontallyScaledObjects, fmt.Errorf("failed to list all HPAs: %w", err)
 	}
 
 	for _, hpa := range hpaList.Items {
 		if key, err := targetObjectKeyFromHPA(hpa); err != nil {
-			return horizontallyScaledObjects, verticallyScaledObjects, err
+			return horizontallyScaledObjects, err
 		} else {
 			horizontallyScaledObjects.Insert(key)
 		}
 	}
 
-	// get all HVPAs' targets
-	hvpaList := &hvpav1alpha1.HvpaList{}
-	if err := c.List(ctx, hvpaList); err != nil && !meta.IsNoMatchError(err) {
-		return horizontallyScaledObjects, verticallyScaledObjects, fmt.Errorf("failed to list all HVPAs: %w", err)
-	}
-
-	for _, hvpa := range hvpaList.Items {
-		if key, err := targetObjectKeyFromHVPA(hvpa); err != nil {
-			return horizontallyScaledObjects, verticallyScaledObjects, err
-		} else {
-			if hvpa.Spec.Hpa.Deploy {
-				horizontallyScaledObjects.Insert(key)
-			}
-			if hvpa.Spec.Vpa.Deploy {
-				verticallyScaledObjects.Insert(key)
-			}
-		}
-	}
-
-	return horizontallyScaledObjects, verticallyScaledObjects, nil
+	return horizontallyScaledObjects, nil
 }
 
 func targetObjectKeyFromHPA(hpa autoscalingv1.HorizontalPodAutoscaler) (string, error) {
@@ -592,15 +569,6 @@ func targetObjectKeyFromHPA(hpa autoscalingv1.HorizontalPodAutoscaler) (string, 
 	return objectKey(targetGV.Group, hpa.Spec.ScaleTargetRef.Kind, hpa.Namespace, hpa.Spec.ScaleTargetRef.Name), nil
 }
 
-func targetObjectKeyFromHVPA(hvpa hvpav1alpha1.Hvpa) (string, error) {
-	targetGV, err := schema.ParseGroupVersion(hvpa.Spec.TargetRef.APIVersion)
-	if err != nil {
-		return "", fmt.Errorf("invalid API version in scaleTargetReference of HorizontalPodAutoscaler '%s/%s': %w", hvpa.Namespace, hvpa.Name, err)
-	}
-
-	return objectKey(targetGV.Group, hvpa.Spec.TargetRef.Kind, hvpa.Namespace, hvpa.Spec.TargetRef.Name), nil
-}
-
 func isScaled(obj *unstructured.Unstructured, scaledObjectKeys sets.Set[string], equivalences Equivalences) bool {
 	key := objectKeyFromUnstructured(obj)
 
@@ -608,7 +576,7 @@ func isScaled(obj *unstructured.Unstructured, scaledObjectKeys sets.Set[string],
 		return true
 	}
 
-	// check if a HPA/HVPA targets this object via an equivalent API Group
+	// check if a HPA targets this object via an equivalent API Group
 	gk := metav1.GroupKind{
 		Group: obj.GroupVersionKind().Group,
 		Kind:  obj.GetKind(),
