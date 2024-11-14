@@ -65,7 +65,7 @@ This process presents challenges for **physical machines** or **bare-metal nodes
 - **Locally attached storage**: Physical machines often have locally attached disks, which cannot be easily moved or re-attached to other machines, unlike network-attached volumes in virtual environments.
 - **Limited interchangeability**: Physical machines are typically larger in size, fewer in number, and not as easily replaced or repurposed as virtual machines, making their replacement more challenging.
 
-To address this, we aim to support new update strategies that do not require the deletion and recreation of nodes when the Kubernetes minor version and/or machine image version is updated, reducing the need for node replacement—especially in environments with limited physical resources. Additionally, there are scenarios where users want control over node updates, allowing them to select specific nodes to be updated. Our goal is to support a new way to update these dependencies that avoids node deletion and recreation, while also giving users the flexibility to manage updates on particular nodes.
+To address this, we aim to support new update strategies that do not require the deletion and recreation of nodes when the Kubernetes minor version and/or machine image version is updated, reducing the need for node replacement, especially in environments with limited physical resources. Additionally, there are scenarios where users want control over node updates, allowing them to select specific nodes to be updated. Our goal is to support a new way to update these dependencies that avoids node deletion and recreation, while also giving users the flexibility to manage updates on particular nodes.
 
 ### Goals
 
