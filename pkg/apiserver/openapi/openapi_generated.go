@@ -2255,9 +2255,39 @@ func schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref common.ReferenceCallback
 							Format:      "int32",
 						},
 					},
+					"startupTaints": {
+						SchemaProps: spec.SchemaProps{
+							Description: "StartupTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group. Cluster Autoscaler treats nodes tainted with startup taints as unready, but taken into account during scale up logic, assuming they will become ready shortly.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+					"statusTaints": {
+						SchemaProps: spec.SchemaProps{
+							Description: "StatusTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group. Cluster Autoscaler internally treats nodes tainted with status taints as ready, but filtered out during scale up logic.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
 					"ignoreTaints": {
 						SchemaProps: spec.SchemaProps{
-							Description: "IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.",
+							Description: "Deprecated: Ignore taints are now deprecated and treated as startup taints. IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{

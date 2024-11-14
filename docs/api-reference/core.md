@@ -3676,13 +3676,8 @@ int32
 </td>
 <td>
 <em>(Optional)</em>
-<p>StartupTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.</p>
-<p>They are meant to be used when there is an operation that has to complete before any pods can run on the node, e.g. drivers installation.
-Cluster Autoscaler treats nodes tainted with startup taints as unready, but taken into account during scale up logic, 
-assuming they will become ready shortly.</p>
-<p><b>However, if the substantial number of nodes are tainted with startup taints (and therefore unready) for an extended 
-period of time the Cluster Autoscaler might stop working as it might assume the cluster is broken and should not be 
-scaled (creating new nodes doesn't help as they don't become ready).</b></p>
+<p>StartupTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
+Cluster Autoscaler treats nodes tainted with startup taints as unready, but taken into account during scale up logic, assuming they will become ready shortly.</p>
 </td>
 </tr>
 <tr>
@@ -3694,10 +3689,8 @@ scaled (creating new nodes doesn't help as they don't become ready).</b></p>
 </td>
 <td>
 <em>(Optional)</em>
-<p>StatusTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.</p>
-<p>They are meant to be used when a given node should not be used to run pods for the time being.
+<p>StatusTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
 Cluster Autoscaler internally treats nodes tainted with status taints as ready, but filtered out during scale up logic.</p>
-<p>This means that even though the node is ready, no pods should run there as long as the node is tainted and if necessary a scale-up should occur.</p>
 </td>
 </tr>
 <tr>
@@ -3708,9 +3701,9 @@ Cluster Autoscaler internally treats nodes tainted with status taints as ready, 
 </em>
 </td>
 <td>
-<em>(Optional, deprecated)</em>
-<p>IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.</p>
-<p>Ignore taints are now deprecated and treated as startup taints.</p>
+<em>(Optional)</em>
+<p>Deprecated: Ignore taints are now deprecated and treated as startup taints.
+IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.</p>
 </td>
 </tr>
 <tr>

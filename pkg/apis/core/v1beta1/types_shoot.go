@@ -640,24 +640,24 @@ type ClusterAutoscaler struct {
 	// StatusTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
 	// Cluster Autoscaler internally treats nodes tainted with status taints as ready, but filtered out during scale up logic.
 	// +optional
-	StatusTaints []string `json:"statusTaints,omitempty" protobuf:"bytes,10,opt,name=statusTaints"`
+	StatusTaints []string `json:"statusTaints,omitempty" protobuf:"bytes,11,opt,name=statusTaints"`
 	// Deprecated: Ignore taints are now deprecated and treated as startup taints.
 	// IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
 	// +optional
-	IgnoreTaints []string `json:"ignoreTaints,omitempty" protobuf:"bytes,10,opt,name=ignoreTaints"`
+	IgnoreTaints []string `json:"ignoreTaints,omitempty" protobuf:"bytes,12,opt,name=ignoreTaints"`
 
 	// NewPodScaleUpDelay specifies how long CA should ignore newly created pods before they have to be considered for scale-up (default: 0s).
 	// +optional
-	NewPodScaleUpDelay *metav1.Duration `json:"newPodScaleUpDelay,omitempty" protobuf:"bytes,11,opt,name=newPodScaleUpDelay"`
+	NewPodScaleUpDelay *metav1.Duration `json:"newPodScaleUpDelay,omitempty" protobuf:"bytes,13,opt,name=newPodScaleUpDelay"`
 	// MaxEmptyBulkDelete specifies the maximum number of empty nodes that can be deleted at the same time (default: 10).
 	// +optional
-	MaxEmptyBulkDelete *int32 `json:"maxEmptyBulkDelete,omitempty" protobuf:"varint,12,opt,name=maxEmptyBulkDelete"`
+	MaxEmptyBulkDelete *int32 `json:"maxEmptyBulkDelete,omitempty" protobuf:"varint,14,opt,name=maxEmptyBulkDelete"`
 	// IgnoreDaemonsetsUtilization allows CA to ignore DaemonSet pods when calculating resource utilization for scaling down (default: false).
 	// +optional
-	IgnoreDaemonsetsUtilization *bool `json:"ignoreDaemonsetsUtilization,omitempty" protobuf:"varint,13,opt,name=ignoreDaemonsetsUtilization"`
+	IgnoreDaemonsetsUtilization *bool `json:"ignoreDaemonsetsUtilization,omitempty" protobuf:"varint,15,opt,name=ignoreDaemonsetsUtilization"`
 	// Verbosity allows CA to modify its log level (default: 2).
 	// +optional
-	Verbosity *int32 `json:"verbosity,omitempty" protobuf:"varint,14,opt,name=verbosity"`
+	Verbosity *int32 `json:"verbosity,omitempty" protobuf:"varint,16,opt,name=verbosity"`
 }
 
 // ExpanderMode is type used for Expander values

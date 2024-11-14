@@ -457,25 +457,36 @@ message ClusterAutoscaler {
   // +optional
   optional int32 maxGracefulTerminationSeconds = 9;
 
+  // StartupTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
+  // Cluster Autoscaler treats nodes tainted with startup taints as unready, but taken into account during scale up logic, assuming they will become ready shortly.
+  // +optional
+  repeated string startupTaints = 10;
+
+  // StatusTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
+  // Cluster Autoscaler internally treats nodes tainted with status taints as ready, but filtered out during scale up logic.
+  // +optional
+  repeated string statusTaints = 11;
+
+  // Deprecated: Ignore taints are now deprecated and treated as startup taints.
   // IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
   // +optional
-  repeated string ignoreTaints = 10;
+  repeated string ignoreTaints = 12;
 
   // NewPodScaleUpDelay specifies how long CA should ignore newly created pods before they have to be considered for scale-up (default: 0s).
   // +optional
-  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration newPodScaleUpDelay = 11;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration newPodScaleUpDelay = 13;
 
   // MaxEmptyBulkDelete specifies the maximum number of empty nodes that can be deleted at the same time (default: 10).
   // +optional
-  optional int32 maxEmptyBulkDelete = 12;
+  optional int32 maxEmptyBulkDelete = 14;
 
   // IgnoreDaemonsetsUtilization allows CA to ignore DaemonSet pods when calculating resource utilization for scaling down (default: false).
   // +optional
-  optional bool ignoreDaemonsetsUtilization = 13;
+  optional bool ignoreDaemonsetsUtilization = 15;
 
   // Verbosity allows CA to modify its log level (default: 2).
   // +optional
-  optional int32 verbosity = 14;
+  optional int32 verbosity = 16;
 }
 
 // ClusterAutoscalerOptions contains the cluster autoscaler configurations for a worker pool.
