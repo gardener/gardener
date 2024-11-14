@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -22,7 +21,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
-	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -71,8 +69,6 @@ var _ = Describe("KubeAPIServer", func() {
 		ctx = context.Background()
 
 		namespace         = "some-namespace"
-		vpaUpdateMode     = vpaautoscalingv1.UpdateModeOff
-		controlledValues  = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		priorityClassName = "some-priority-class"
 
 		kubernetesInterface kubernetes.Interface
@@ -111,7 +107,6 @@ var _ = Describe("KubeAPIServer", func() {
 		deployment                     *appsv1.Deployment
 		horizontalPodAutoscaler        *autoscalingv2.HorizontalPodAutoscaler
 		verticalPodAutoscaler          *vpaautoscalingv1.VerticalPodAutoscaler
-		hvpa                           *hvpav1alpha1.Hvpa
 		podDisruptionBudget            *policyv1.PodDisruptionBudget
 		serviceMonitor                 *monitoringv1.ServiceMonitor
 		prometheusRule                 *monitoringv1.PrometheusRule
@@ -181,12 +176,6 @@ var _ = Describe("KubeAPIServer", func() {
 				Namespace: namespace,
 			},
 		}
-		hvpa = &hvpav1alpha1.Hvpa{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "kube-apiserver",
-				Namespace: namespace,
-			},
-		}
 		podDisruptionBudget = &policyv1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "kube-apiserver",
@@ -229,150 +218,99 @@ var _ = Describe("KubeAPIServer", func() {
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscaler), horizontalPodAutoscaler)).To(BeNotFoundError())
 				},
 
-				Entry("autoscaling mode is HVPA", apiserver.AutoscalingConfig{Mode: apiserver.AutoscalingModeHVPA}),
-				Entry("replicas is nil", apiserver.AutoscalingConfig{Mode: apiserver.AutoscalingModeBaseline, Replicas: nil}),
-				Entry("replicas is 0", apiserver.AutoscalingConfig{Mode: apiserver.AutoscalingModeBaseline, Replicas: ptr.To[int32](0)}),
+				Entry("replicas is nil", apiserver.AutoscalingConfig{Replicas: nil}),
+				Entry("replicas is 0", apiserver.AutoscalingConfig{Replicas: ptr.To[int32](0)}),
 			)
 
-			DescribeTable("should successfully deploy the HPA resource",
-				func(autoscalingConfig apiserver.AutoscalingConfig, metrics []autoscalingv2.MetricSpec, behavior *autoscalingv2.HorizontalPodAutoscalerBehavior) {
-					kapi = New(kubernetesInterface, namespace, sm, Values{
-						Values: apiserver.Values{
-							Autoscaling:    autoscalingConfig,
-							RuntimeVersion: runtimeVersion,
+			It("should successfully deploy the HPA resource", func() {
+				autoscalingConfig := apiserver.AutoscalingConfig{
+					Replicas:    ptr.To[int32](2),
+					MinReplicas: 4,
+					MaxReplicas: 6,
+				}
+				metrics := []autoscalingv2.MetricSpec{
+					{
+						Type: "Resource",
+						Resource: &autoscalingv2.ResourceMetricSource{
+							Name: "cpu",
+							Target: autoscalingv2.MetricTarget{
+								Type:         autoscalingv2.AverageValueMetricType,
+								AverageValue: ptr.To(resource.MustParse("6")),
+							},
 						},
-						Version: version},
-					)
+					},
+					{
+						Type: "Resource",
+						Resource: &autoscalingv2.ResourceMetricSource{
+							Name: "memory",
+							Target: autoscalingv2.MetricTarget{
+								Type:         autoscalingv2.AverageValueMetricType,
+								AverageValue: ptr.To(resource.MustParse("24G")),
+							},
+						},
+					},
+				}
+				hpaBehaviour := &autoscalingv2.HorizontalPodAutoscalerBehavior{
+					ScaleUp: &autoscalingv2.HPAScalingRules{
+						StabilizationWindowSeconds: ptr.To[int32](60),
+						Policies: []autoscalingv2.HPAScalingPolicy{
+							{
+								Type:          autoscalingv2.PercentScalingPolicy,
+								Value:         100,
+								PeriodSeconds: 60,
+							},
+						},
+					},
+					ScaleDown: &autoscalingv2.HPAScalingRules{
+						StabilizationWindowSeconds: ptr.To[int32](1800),
+						Policies: []autoscalingv2.HPAScalingPolicy{
+							{
+								Type:          autoscalingv2.PodsScalingPolicy,
+								Value:         1,
+								PeriodSeconds: 300,
+							},
+						},
+					},
+				}
 
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscaler), horizontalPodAutoscaler)).To(BeNotFoundError())
-					Expect(kapi.Deploy(ctx)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscaler), horizontalPodAutoscaler)).To(Succeed())
-					Expect(horizontalPodAutoscaler).To(DeepEqual(&autoscalingv2.HorizontalPodAutoscaler{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      horizontalPodAutoscaler.Name,
-							Namespace: horizontalPodAutoscaler.Namespace,
-							Labels: map[string]string{
-								"high-availability-config.resources.gardener.cloud/type": "server",
-							},
-							ResourceVersion: "1",
-						},
-						Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
-							MinReplicas: &autoscalingConfig.MinReplicas,
-							MaxReplicas: autoscalingConfig.MaxReplicas,
-							ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
-								APIVersion: "apps/v1",
-								Kind:       "Deployment",
-								Name:       "kube-apiserver",
-							},
-							Metrics:  metrics,
-							Behavior: behavior,
-						},
-					}))
-				},
+				kapi = New(kubernetesInterface, namespace, sm, Values{
+					Values: apiserver.Values{
+						Autoscaling:    autoscalingConfig,
+						RuntimeVersion: runtimeVersion,
+					},
+					Version: version},
+				)
 
-				Entry("autoscaling mode is baseline",
-					apiserver.AutoscalingConfig{
-						Mode:        apiserver.AutoscalingModeBaseline,
-						Replicas:    ptr.To[int32](2),
-						MinReplicas: 4,
-						MaxReplicas: 6,
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscaler), horizontalPodAutoscaler)).To(BeNotFoundError())
+				Expect(kapi.Deploy(ctx)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscaler), horizontalPodAutoscaler)).To(Succeed())
+				Expect(horizontalPodAutoscaler).To(DeepEqual(&autoscalingv2.HorizontalPodAutoscaler{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      horizontalPodAutoscaler.Name,
+						Namespace: horizontalPodAutoscaler.Namespace,
+						Labels: map[string]string{
+							"high-availability-config.resources.gardener.cloud/type": "server",
+						},
+						ResourceVersion: "1",
 					},
-					[]autoscalingv2.MetricSpec{
-						{
-							Type: "Resource",
-							Resource: &autoscalingv2.ResourceMetricSource{
-								Name: "cpu",
-								Target: autoscalingv2.MetricTarget{
-									Type:               autoscalingv2.UtilizationMetricType,
-									AverageUtilization: ptr.To[int32](80),
-								},
-							},
+					Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
+						MinReplicas: &autoscalingConfig.MinReplicas,
+						MaxReplicas: autoscalingConfig.MaxReplicas,
+						ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
+							APIVersion: "apps/v1",
+							Kind:       "Deployment",
+							Name:       "kube-apiserver",
 						},
-						{
-							Type: "Resource",
-							Resource: &autoscalingv2.ResourceMetricSource{
-								Name: "memory",
-								Target: autoscalingv2.MetricTarget{
-									Type:               autoscalingv2.UtilizationMetricType,
-									AverageUtilization: ptr.To[int32](80),
-								},
-							},
-						},
+						Metrics:  metrics,
+						Behavior: hpaBehaviour,
 					},
-					nil,
-				),
-
-				Entry("autoscaling mode is VPAAndHPA",
-					apiserver.AutoscalingConfig{
-						Mode:        apiserver.AutoscalingModeVPAAndHPA,
-						Replicas:    ptr.To[int32](2),
-						MinReplicas: 4,
-						MaxReplicas: 6,
-					},
-					[]autoscalingv2.MetricSpec{
-						{
-							Type: "Resource",
-							Resource: &autoscalingv2.ResourceMetricSource{
-								Name: "cpu",
-								Target: autoscalingv2.MetricTarget{
-									Type:         autoscalingv2.AverageValueMetricType,
-									AverageValue: ptr.To(resource.MustParse("6")),
-								},
-							},
-						},
-						{
-							Type: "Resource",
-							Resource: &autoscalingv2.ResourceMetricSource{
-								Name: "memory",
-								Target: autoscalingv2.MetricTarget{
-									Type:         autoscalingv2.AverageValueMetricType,
-									AverageValue: ptr.To(resource.MustParse("24G")),
-								},
-							},
-						},
-					},
-					&autoscalingv2.HorizontalPodAutoscalerBehavior{
-						ScaleUp: &autoscalingv2.HPAScalingRules{
-							StabilizationWindowSeconds: ptr.To[int32](60),
-							Policies: []autoscalingv2.HPAScalingPolicy{
-								{
-									Type:          autoscalingv2.PercentScalingPolicy,
-									Value:         100,
-									PeriodSeconds: 60,
-								},
-							},
-						},
-						ScaleDown: &autoscalingv2.HPAScalingRules{
-							StabilizationWindowSeconds: ptr.To[int32](1800),
-							Policies: []autoscalingv2.HPAScalingPolicy{
-								{
-									Type:          autoscalingv2.PodsScalingPolicy,
-									Value:         1,
-									PeriodSeconds: 300,
-								},
-							},
-						},
-					},
-				),
-			)
+				}))
+			})
 		})
 
 		Describe("VerticalPodAutoscaler", func() {
-			Context("autoscaling mode is HVPA", func() {
-				BeforeEach(func() {
-					autoscalingConfig = apiserver.AutoscalingConfig{Mode: apiserver.AutoscalingModeHVPA}
-				})
-
-				It("should delete the VPA resource", func() {
-					Expect(c.Create(ctx, verticalPodAutoscaler)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(Succeed())
-					Expect(kapi.Deploy(ctx)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(BeNotFoundError())
-				})
-			})
-
 			DescribeTable("should successfully deploy the VPA resource",
-				func(autoscalingConfig apiserver.AutoscalingConfig, haVPN bool, annotations, labels map[string]string, vpaUpdateMode *vpaautoscalingv1.UpdateMode, containerPolicies []vpaautoscalingv1.ContainerResourcePolicy) {
+				func(autoscalingConfig apiserver.AutoscalingConfig, haVPN bool, annotations, labels map[string]string, containerPolicies []vpaautoscalingv1.ContainerResourcePolicy) {
 					kapi = New(kubernetesInterface, namespace, sm, Values{
 						Values: apiserver.Values{
 							Autoscaling:    autoscalingConfig,
@@ -403,7 +341,7 @@ var _ = Describe("KubeAPIServer", func() {
 								Name:       "kube-apiserver",
 							},
 							UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-								UpdateMode: vpaUpdateMode,
+								UpdateMode: ptr.To(vpaautoscalingv1.UpdateModeAuto),
 							},
 							ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 								ContainerPolicies: containerPolicies,
@@ -411,26 +349,11 @@ var _ = Describe("KubeAPIServer", func() {
 						},
 					}))
 				},
-
-				Entry("autoscaling mode is baseline",
-					apiserver.AutoscalingConfig{Mode: apiserver.AutoscalingModeBaseline},
+				Entry("default behaviour",
+					apiserver.AutoscalingConfig{},
 					false,
 					nil,
 					nil,
-					ptr.To(vpaautoscalingv1.UpdateModeOff),
-					[]vpaautoscalingv1.ContainerResourcePolicy{
-						{
-							ContainerName:    vpaautoscalingv1.DefaultContainerResourcePolicy,
-							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
-						},
-					},
-				),
-				Entry("autoscaling mode is VPAAndHPA",
-					apiserver.AutoscalingConfig{Mode: apiserver.AutoscalingModeVPAAndHPA},
-					false,
-					nil,
-					nil,
-					ptr.To(vpaautoscalingv1.UpdateModeAuto),
 					[]vpaautoscalingv1.ContainerResourcePolicy{
 						{
 							ContainerName:    "kube-apiserver",
@@ -442,12 +365,11 @@ var _ = Describe("KubeAPIServer", func() {
 						},
 					},
 				),
-				Entry("autoscaling mode is VPAAndHPA and HA VPN is enabled",
-					apiserver.AutoscalingConfig{Mode: apiserver.AutoscalingModeVPAAndHPA},
+				Entry("HA VPN is enabled",
+					apiserver.AutoscalingConfig{},
 					true,
 					nil,
 					nil,
-					ptr.To(vpaautoscalingv1.UpdateModeAuto),
 					[]vpaautoscalingv1.ContainerResourcePolicy{
 						{
 							ContainerName:    "kube-apiserver",
@@ -471,12 +393,11 @@ var _ = Describe("KubeAPIServer", func() {
 						},
 					},
 				),
-				Entry("autoscaling mode is VPAAndHPA and scale-down is disabled",
-					apiserver.AutoscalingConfig{Mode: apiserver.AutoscalingModeVPAAndHPA, ScaleDownDisabled: true},
+				Entry("scale-down is disabled",
+					apiserver.AutoscalingConfig{ScaleDownDisabled: true},
 					false,
 					map[string]string{"eviction-requirements.autoscaling.gardener.cloud/downscale-restriction": "never"},
 					map[string]string{"autoscaling.gardener.cloud/eviction-requirements": "managed-by-controller"},
-					ptr.To(vpaautoscalingv1.UpdateModeAuto),
 					[]vpaautoscalingv1.ContainerResourcePolicy{
 						{
 							ContainerName:    "kube-apiserver",
@@ -485,302 +406,6 @@ var _ = Describe("KubeAPIServer", func() {
 								corev1.ResourceCPU:    resource.MustParse("20m"),
 								corev1.ResourceMemory: resource.MustParse("200M"),
 							},
-						},
-					},
-				),
-			)
-
-			Context("autoscaling mode is baseline", func() {
-				BeforeEach(func() {
-					autoscalingConfig = apiserver.AutoscalingConfig{Mode: apiserver.AutoscalingModeBaseline}
-				})
-
-				It("should successfully deploy the VPA resource", func() {
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(BeNotFoundError())
-					Expect(kapi.Deploy(ctx)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(Succeed())
-					Expect(verticalPodAutoscaler).To(DeepEqual(&vpaautoscalingv1.VerticalPodAutoscaler{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:            verticalPodAutoscaler.Name,
-							Namespace:       verticalPodAutoscaler.Namespace,
-							ResourceVersion: "1",
-						},
-						Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
-							TargetRef: &autoscalingv1.CrossVersionObjectReference{
-								APIVersion: "apps/v1",
-								Kind:       "Deployment",
-								Name:       "kube-apiserver",
-							},
-							UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-								UpdateMode: &vpaUpdateMode,
-							},
-							ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-								ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
-									ContainerName:    vpaautoscalingv1.DefaultContainerResourcePolicy,
-									ControlledValues: &controlledValues,
-								}},
-							},
-						},
-					}))
-				})
-			})
-		})
-
-		Describe("HVPA", func() {
-			DescribeTable("should delete the HVPA resource",
-				func(autoscalingConfig apiserver.AutoscalingConfig) {
-					kapi = New(kubernetesInterface, namespace, sm, Values{
-						Values: apiserver.Values{
-							Autoscaling:    autoscalingConfig,
-							RuntimeVersion: runtimeVersion,
-						},
-						Version: version,
-					})
-
-					Expect(c.Create(ctx, hvpa)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(Succeed())
-					Expect(kapi.Deploy(ctx)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(BeNotFoundError())
-				},
-
-				Entry("autoscaling mode is baseline", apiserver.AutoscalingConfig{Mode: apiserver.AutoscalingModeBaseline}),
-				Entry("autoscaling mode is VPAAndHPA", apiserver.AutoscalingConfig{Mode: apiserver.AutoscalingModeVPAAndHPA}),
-				Entry("autoscaling mode is HVPA but replicas nil", apiserver.AutoscalingConfig{Mode: apiserver.AutoscalingModeHVPA}),
-				Entry("autoscaling mode is HVPA but replicas zero", apiserver.AutoscalingConfig{Mode: apiserver.AutoscalingModeHVPA, Replicas: ptr.To[int32](0)}),
-			)
-
-			var (
-				defaultExpectedScaleDownUpdateMode = "Auto"
-				defaultExpectedHPAMetrics          = []autoscalingv2beta1.MetricSpec{
-					{
-						Type: "Resource",
-						Resource: &autoscalingv2beta1.ResourceMetricSource{
-							Name:                     "cpu",
-							TargetAverageUtilization: ptr.To[int32](80),
-						},
-					},
-				}
-				defaultExpectedVPAContainerResourcePolicies = []vpaautoscalingv1.ContainerResourcePolicy{
-					{
-						ContainerName: "kube-apiserver",
-						MinAllowed: corev1.ResourceList{
-							"memory": resource.MustParse("200M"),
-						},
-						ControlledValues: &controlledValues,
-					},
-				}
-				defaultExpectedWeightBasedScalingIntervals = []hvpav1alpha1.WeightBasedScalingInterval{
-					{
-						VpaWeight:         100,
-						StartReplicaCount: 5,
-						LastReplicaCount:  5,
-					},
-				}
-			)
-
-			DescribeTable("should successfully deploy the HVPA resource",
-				func(
-					autoscalingConfig apiserver.AutoscalingConfig,
-					sniConfig SNIConfig,
-					expectedScaleDownUpdateMode string,
-					expectedHPAMetrics []autoscalingv2beta1.MetricSpec,
-					expectedVPAContainerResourcePolicies []vpaautoscalingv1.ContainerResourcePolicy,
-					expectedWeightBasedScalingIntervals []hvpav1alpha1.WeightBasedScalingInterval,
-				) {
-					kapi = New(kubernetesInterface, namespace, sm, Values{
-						Values: apiserver.Values{
-							Autoscaling:    autoscalingConfig,
-							RuntimeVersion: runtimeVersion,
-						},
-						SNI:     sniConfig,
-						Version: version,
-					})
-
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(BeNotFoundError())
-					Expect(kapi.Deploy(ctx)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(Succeed())
-					Expect(hvpa).To(DeepEqual(&hvpav1alpha1.Hvpa{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:            hvpa.Name,
-							Namespace:       hvpa.Namespace,
-							ResourceVersion: "1",
-							Labels: map[string]string{
-								"high-availability-config.resources.gardener.cloud/type": "server",
-							},
-						},
-						Spec: hvpav1alpha1.HvpaSpec{
-							Replicas: ptr.To[int32](1),
-							Hpa: hvpav1alpha1.HpaSpec{
-								Selector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{"role": "apiserver-hpa"},
-								},
-								Deploy: true,
-								ScaleUp: hvpav1alpha1.ScaleType{
-									UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-										UpdateMode: ptr.To("Auto"),
-									},
-								},
-								ScaleDown: hvpav1alpha1.ScaleType{
-									UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-										UpdateMode: ptr.To("Auto"),
-									},
-								},
-								Template: hvpav1alpha1.HpaTemplate{
-									ObjectMeta: metav1.ObjectMeta{
-										Labels: map[string]string{"role": "apiserver-hpa"},
-									},
-									Spec: hvpav1alpha1.HpaTemplateSpec{
-										MinReplicas: &autoscalingConfig.MinReplicas,
-										MaxReplicas: autoscalingConfig.MaxReplicas,
-										Metrics:     expectedHPAMetrics,
-									},
-								},
-							},
-							Vpa: hvpav1alpha1.VpaSpec{
-								Selector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{"role": "apiserver-vpa"},
-								},
-								Deploy: true,
-								ScaleUp: hvpav1alpha1.ScaleType{
-									UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-										UpdateMode: ptr.To("Auto"),
-									},
-									StabilizationDuration: ptr.To("3m"),
-									MinChange: hvpav1alpha1.ScaleParams{
-										CPU: hvpav1alpha1.ChangeParams{
-											Value:      ptr.To("300m"),
-											Percentage: ptr.To[int32](80),
-										},
-										Memory: hvpav1alpha1.ChangeParams{
-											Value:      ptr.To("200M"),
-											Percentage: ptr.To[int32](80),
-										},
-									},
-								},
-								ScaleDown: hvpav1alpha1.ScaleType{
-									UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-										UpdateMode: &expectedScaleDownUpdateMode,
-									},
-									StabilizationDuration: ptr.To("15m"),
-									MinChange: hvpav1alpha1.ScaleParams{
-										CPU: hvpav1alpha1.ChangeParams{
-											Value:      ptr.To("300m"),
-											Percentage: ptr.To[int32](80),
-										},
-										Memory: hvpav1alpha1.ChangeParams{
-											Value:      ptr.To("200M"),
-											Percentage: ptr.To[int32](80),
-										},
-									},
-								},
-								LimitsRequestsGapScaleParams: hvpav1alpha1.ScaleParams{
-									CPU: hvpav1alpha1.ChangeParams{
-										Value:      ptr.To("1"),
-										Percentage: ptr.To[int32](70),
-									},
-									Memory: hvpav1alpha1.ChangeParams{
-										Value:      ptr.To("1G"),
-										Percentage: ptr.To[int32](70),
-									},
-								},
-								Template: hvpav1alpha1.VpaTemplate{
-									ObjectMeta: metav1.ObjectMeta{
-										Labels: map[string]string{"role": "apiserver-vpa"},
-									},
-									Spec: hvpav1alpha1.VpaTemplateSpec{
-										ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-											ContainerPolicies: expectedVPAContainerResourcePolicies,
-										},
-									},
-								},
-							},
-							WeightBasedScalingIntervals: expectedWeightBasedScalingIntervals,
-							TargetRef: &autoscalingv2beta1.CrossVersionObjectReference{
-								APIVersion: "apps/v1",
-								Kind:       "Deployment",
-								Name:       "kube-apiserver",
-							},
-						},
-					}))
-				},
-
-				Entry("default behaviour",
-					apiserver.AutoscalingConfig{
-						Mode:        apiserver.AutoscalingModeHVPA,
-						Replicas:    ptr.To[int32](2),
-						MinReplicas: 5,
-						MaxReplicas: 5,
-					},
-					SNIConfig{},
-					defaultExpectedScaleDownUpdateMode,
-					defaultExpectedHPAMetrics,
-					defaultExpectedVPAContainerResourcePolicies,
-					defaultExpectedWeightBasedScalingIntervals,
-				),
-				Entry("UseMemoryMetricForHvpaHPA is true",
-					apiserver.AutoscalingConfig{
-						Mode:                      apiserver.AutoscalingModeHVPA,
-						Replicas:                  ptr.To[int32](2),
-						UseMemoryMetricForHvpaHPA: true,
-						MinReplicas:               5,
-						MaxReplicas:               5,
-					},
-					SNIConfig{},
-					defaultExpectedScaleDownUpdateMode,
-					[]autoscalingv2beta1.MetricSpec{
-						{
-							Type: "Resource",
-							Resource: &autoscalingv2beta1.ResourceMetricSource{
-								Name:                     "cpu",
-								TargetAverageUtilization: ptr.To[int32](80),
-							},
-						},
-						{
-							Type: "Resource",
-							Resource: &autoscalingv2beta1.ResourceMetricSource{
-								Name:                     "memory",
-								TargetAverageUtilization: ptr.To[int32](80),
-							},
-						},
-					},
-					defaultExpectedVPAContainerResourcePolicies,
-					defaultExpectedWeightBasedScalingIntervals,
-				),
-				Entry("scale down is disabled",
-					apiserver.AutoscalingConfig{
-						Mode:              apiserver.AutoscalingModeHVPA,
-						Replicas:          ptr.To[int32](2),
-						MinReplicas:       5,
-						MaxReplicas:       5,
-						ScaleDownDisabled: true,
-					},
-					SNIConfig{},
-					"Off",
-					defaultExpectedHPAMetrics,
-					defaultExpectedVPAContainerResourcePolicies,
-					defaultExpectedWeightBasedScalingIntervals,
-				),
-				Entry("max replicas > min replicas",
-					apiserver.AutoscalingConfig{
-						Mode:        apiserver.AutoscalingModeHVPA,
-						Replicas:    ptr.To[int32](2),
-						MinReplicas: 3,
-						MaxReplicas: 5,
-					},
-					SNIConfig{},
-					defaultExpectedScaleDownUpdateMode,
-					defaultExpectedHPAMetrics,
-					defaultExpectedVPAContainerResourcePolicies,
-					[]hvpav1alpha1.WeightBasedScalingInterval{
-						{
-							VpaWeight:         100,
-							StartReplicaCount: 5,
-							LastReplicaCount:  5,
-						},
-						{
-							VpaWeight:         0,
-							StartReplicaCount: 3,
-							LastReplicaCount:  4,
 						},
 					},
 				),
@@ -4719,19 +4344,16 @@ kind: AuthenticationConfiguration
 		JustBeforeEach(func() {
 			Expect(c.Create(ctx, deployment)).To(Succeed())
 			Expect(c.Create(ctx, verticalPodAutoscaler)).To(Succeed())
-			Expect(c.Create(ctx, hvpa)).To(Succeed())
 			Expect(c.Create(ctx, managedResource)).To(Succeed())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 		})
 
 		AfterEach(func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(BeNotFoundError())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 		})
 

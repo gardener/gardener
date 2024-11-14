@@ -16,14 +16,8 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/component/apiserver"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-)
-
-const (
-	hpaTargetAverageUtilizationCPU    int32 = 80
-	hpaTargetAverageUtilizationMemory int32 = 80
 )
 
 func (k *kubeAPIServer) emptyHorizontalPodAutoscaler() *autoscalingv2.HorizontalPodAutoscaler {
@@ -36,60 +30,11 @@ func (k *kubeAPIServer) emptyHorizontalPodAutoscaler() *autoscalingv2.Horizontal
 }
 
 func (k *kubeAPIServer) reconcileHorizontalPodAutoscaler(ctx context.Context, hpa *autoscalingv2.HorizontalPodAutoscaler, deployment *appsv1.Deployment) error {
-	if k.values.Autoscaling.Mode == apiserver.AutoscalingModeHVPA ||
-		k.values.Autoscaling.Replicas == nil ||
+	if k.values.Autoscaling.Replicas == nil ||
 		*k.values.Autoscaling.Replicas == 0 {
 		return kubernetesutils.DeleteObject(ctx, k.client.Client(), hpa)
 	}
 
-	if k.values.Autoscaling.Mode == apiserver.AutoscalingModeVPAAndHPA {
-		return k.reconcileHorizontalPodAutoscalerInVPAAndHPAMode(ctx, hpa, deployment)
-	}
-
-	return k.reconcileHorizontalPodAutoscalerInBaselineMode(ctx, hpa, deployment)
-}
-
-func (k *kubeAPIServer) reconcileHorizontalPodAutoscalerInBaselineMode(ctx context.Context, hpa *autoscalingv2.HorizontalPodAutoscaler, deployment *appsv1.Deployment) error {
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), hpa, func() error {
-		metav1.SetMetaDataLabel(&hpa.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigType, resourcesv1alpha1.HighAvailabilityConfigTypeServer)
-		hpa.Spec = autoscalingv2.HorizontalPodAutoscalerSpec{
-			MinReplicas: &k.values.Autoscaling.MinReplicas,
-			MaxReplicas: k.values.Autoscaling.MaxReplicas,
-			ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
-				APIVersion: appsv1.SchemeGroupVersion.String(),
-				Kind:       "Deployment",
-				Name:       deployment.Name,
-			},
-			Metrics: []autoscalingv2.MetricSpec{
-				{
-					Type: autoscalingv2.ResourceMetricSourceType,
-					Resource: &autoscalingv2.ResourceMetricSource{
-						Name: corev1.ResourceCPU,
-						Target: autoscalingv2.MetricTarget{
-							Type:               autoscalingv2.UtilizationMetricType,
-							AverageUtilization: ptr.To(hpaTargetAverageUtilizationCPU),
-						},
-					},
-				},
-				{
-					Type: autoscalingv2.ResourceMetricSourceType,
-					Resource: &autoscalingv2.ResourceMetricSource{
-						Name: corev1.ResourceMemory,
-						Target: autoscalingv2.MetricTarget{
-							Type:               autoscalingv2.UtilizationMetricType,
-							AverageUtilization: ptr.To(hpaTargetAverageUtilizationMemory),
-						},
-					},
-				},
-			},
-		}
-
-		return nil
-	})
-	return err
-}
-
-func (k *kubeAPIServer) reconcileHorizontalPodAutoscalerInVPAAndHPAMode(ctx context.Context, hpa *autoscalingv2.HorizontalPodAutoscaler, deployment *appsv1.Deployment) error {
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), hpa, func() error {
 		minReplicas := k.values.Autoscaling.MinReplicas
 		if k.values.Autoscaling.ScaleDownDisabled && hpa.Spec.MinReplicas != nil {
@@ -116,7 +61,7 @@ func (k *kubeAPIServer) reconcileHorizontalPodAutoscalerInVPAAndHPAMode(ctx cont
 						Name: corev1.ResourceCPU,
 						Target: autoscalingv2.MetricTarget{
 							Type: autoscalingv2.AverageValueMetricType,
-							// The chosen value is 6 CPU: 1 CPU less (ratio 1/7) than the VPA's maxAllowed 7 CPU in VPAAndHPA mode to have a headroom for the horizontal scaling.
+							// The chosen value of 6 CPU is aligned with the average value for memory - 24G. Preserve the cpu:memory ratio of 1:4.
 							AverageValue: ptr.To(resource.MustParse("6")),
 						},
 					},
@@ -127,7 +72,7 @@ func (k *kubeAPIServer) reconcileHorizontalPodAutoscalerInVPAAndHPAMode(ctx cont
 						Name: corev1.ResourceMemory,
 						Target: autoscalingv2.MetricTarget{
 							Type: autoscalingv2.AverageValueMetricType,
-							// The chosen value is 24G: 4G less (ratio 1/7) than the VPA's maxAllowed 28G in VPAAndHPA mode to have a headroom for the horizontal scaling.
+							// The chosen value of 24G is aligned with the average value for cpu - 6 CPU cores. Preserve the cpu:memory ratio of 1:4.
 							AverageValue: ptr.To(resource.MustParse("24G")),
 						},
 					},

@@ -259,7 +259,6 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		podDisruptionBudget                    = k.emptyPodDisruptionBudget()
 		horizontalPodAutoscaler                = k.emptyHorizontalPodAutoscaler()
 		verticalPodAutoscaler                  = k.emptyVerticalPodAutoscaler()
-		hvpa                                   = k.emptyHVPA()
 		secretETCDEncryptionConfiguration      = k.emptySecret(v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration)
 		secretOIDCCABundle                     = k.emptySecret(secretOIDCCABundleNamePrefix)
 		secretAuditWebhookKubeconfig           = k.emptySecret(secretAuditWebhookKubeconfigNamePrefix)
@@ -282,10 +281,6 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 	}
 
 	if err := k.reconcileVerticalPodAutoscaler(ctx, verticalPodAutoscaler, deployment); err != nil {
-		return err
-	}
-
-	if err := k.reconcileHVPA(ctx, hvpa, deployment); err != nil {
 		return err
 	}
 
@@ -460,7 +455,6 @@ func (k *kubeAPIServer) Destroy(ctx context.Context) error {
 		k.emptyManagedResource(),
 		k.emptyHorizontalPodAutoscaler(),
 		k.emptyVerticalPodAutoscaler(),
-		k.emptyHVPA(),
 		k.emptyPodDisruptionBudget(),
 		k.emptyDeployment(),
 		k.emptyServiceAccount(),

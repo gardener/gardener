@@ -1,4 +1,4 @@
-{{- if or .Values.global.apiserver.hvpa.enabled (gt (int .Values.global.apiserver.replicaCount) 1) }}
+{{- if gt (int .Values.global.apiserver.replicaCount) 1 }}
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:

@@ -72,7 +72,7 @@ spec:
       {{- if .Values.global.apiserver.kubeconfig }}
       automountServiceAccountToken: false
       {{- end }}
-      {{- if or .Values.global.apiserver.hvpa.enabled (gt (int .Values.global.apiserver.replicaCount) 1) }}
+      {{- if gt (int .Values.global.apiserver.replicaCount) 1 }}
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:

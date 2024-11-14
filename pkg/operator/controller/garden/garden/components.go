@@ -653,28 +653,16 @@ func defaultAPIServerAutoscalingConfig(garden *operatorv1alpha1.Garden) apiserve
 		minReplicas = 3
 	}
 
-	var autoscalingMode apiserver.AutoscalingMode
-	// The VPAAndHPAForAPIServer feature gate takes precedence over the HVPA feature gate.
-	if features.DefaultFeatureGate.Enabled(features.VPAAndHPAForAPIServer) {
-		autoscalingMode = apiserver.AutoscalingModeVPAAndHPA
-	} else if hvpaEnabled() {
-		autoscalingMode = apiserver.AutoscalingModeHVPA
-	} else {
-		autoscalingMode = apiserver.AutoscalingModeBaseline
-	}
-
 	return apiserver.AutoscalingConfig{
-		Mode: autoscalingMode,
 		APIServerResources: corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("600m"),
 				corev1.ResourceMemory: resource.MustParse("512Mi"),
 			},
 		},
-		MinReplicas:               minReplicas,
-		MaxReplicas:               6,
-		UseMemoryMetricForHvpaHPA: true,
-		ScaleDownDisabled:         false,
+		MinReplicas:       minReplicas,
+		MaxReplicas:       6,
+		ScaleDownDisabled: false,
 	}
 }
 

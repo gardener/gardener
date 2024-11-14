@@ -73,17 +73,19 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 
 func (b *Botanist) computeKubeAPIServerAutoscalingConfig() apiserver.AutoscalingConfig {
 	var (
-		autoscalingMode           = b.autoscalingMode()
-		useMemoryMetricForHvpaHPA = false
-		scaleDownDisabled         = false
-		defaultReplicas           *int32
+		scaleDownDisabled = false
 		// kube-apiserver is a control plane component of type "server".
 		// The HA webhook sets at least 2 replicas to components of type "server" (w/o HA or with w/ HA).
 		// Ref https://github.com/gardener/gardener/blob/master/docs/development/high-availability-of-components.md#control-plane-components.
 		// That's why minReplicas is set to 2.
 		minReplicas        int32 = 2
-		maxReplicas        int32 = 3
-		apiServerResources corev1.ResourceRequirements
+		maxReplicas        int32 = 6
+		apiServerResources       = corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("250m"),
+				corev1.ResourceMemory: resource.MustParse("500Mi"),
+			},
+		}
 	)
 
 	if v1beta1helper.IsHAControlPlaneConfigured(b.Shoot.GetInfo()) {
@@ -91,102 +93,21 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() apiserver.Autoscaling
 	}
 	if metav1.HasAnnotation(b.Shoot.GetInfo().ObjectMeta, v1beta1constants.ShootAlphaControlPlaneScaleDownDisabled) {
 		minReplicas = 4
-		maxReplicas = 4
 		scaleDownDisabled = true
-	}
-	if autoscalingMode == apiserver.AutoscalingModeVPAAndHPA {
-		maxReplicas = 6
-	}
-
-	nodeCount := b.Shoot.GetMinNodeCount()
-
-	switch autoscalingMode {
-	case apiserver.AutoscalingModeHVPA:
-		apiServerResources = corev1.ResourceRequirements{
-			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("500m"),
-				corev1.ResourceMemory: resource.MustParse("1Gi"),
-			},
-		}
-	case apiserver.AutoscalingModeVPAAndHPA:
-		apiServerResources = corev1.ResourceRequirements{
-			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("250m"),
-				corev1.ResourceMemory: resource.MustParse("500Mi"),
-			},
-		}
-	default:
-		apiServerResources = resourcesRequirementsForKubeAPIServerInBaselineMode(nodeCount)
 	}
 
 	if b.ManagedSeed != nil {
-		useMemoryMetricForHvpaHPA = true
-
 		if b.ManagedSeedAPIServer != nil {
 			minReplicas = *b.ManagedSeedAPIServer.Autoscaler.MinReplicas
 			maxReplicas = b.ManagedSeedAPIServer.Autoscaler.MaxReplicas
-
-			if autoscalingMode == apiserver.AutoscalingModeBaseline {
-				defaultReplicas = b.ManagedSeedAPIServer.Replicas
-				apiServerResources = corev1.ResourceRequirements{
-					Requests: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("1750m"),
-						corev1.ResourceMemory: resource.MustParse("2Gi"),
-					},
-				}
-			}
 		}
 	}
 
 	return apiserver.AutoscalingConfig{
-		Mode:                      autoscalingMode,
-		APIServerResources:        apiServerResources,
-		Replicas:                  defaultReplicas,
-		MinReplicas:               minReplicas,
-		MaxReplicas:               maxReplicas,
-		UseMemoryMetricForHvpaHPA: useMemoryMetricForHvpaHPA,
-		ScaleDownDisabled:         scaleDownDisabled,
-	}
-}
-
-func (b *Botanist) autoscalingMode() apiserver.AutoscalingMode {
-	// The VPAAndHPAForAPIServer feature gate takes precedence over the HVPA feature gate.
-	if features.DefaultFeatureGate.Enabled(features.VPAAndHPAForAPIServer) {
-		return apiserver.AutoscalingModeVPAAndHPA
-	}
-
-	hvpaEnabled := features.DefaultFeatureGate.Enabled(features.HVPA)
-	if b.ManagedSeed != nil {
-		hvpaEnabled = features.DefaultFeatureGate.Enabled(features.HVPAForShootedSeed)
-	}
-
-	if hvpaEnabled {
-		return apiserver.AutoscalingModeHVPA
-	}
-	return apiserver.AutoscalingModeBaseline
-}
-
-func resourcesRequirementsForKubeAPIServerInBaselineMode(nodeCount int32) corev1.ResourceRequirements {
-	var cpuRequest, memoryRequest string
-
-	switch {
-	case nodeCount <= 2:
-		cpuRequest, memoryRequest = "800m", "800Mi"
-	case nodeCount <= 10:
-		cpuRequest, memoryRequest = "1000m", "1100Mi"
-	case nodeCount <= 50:
-		cpuRequest, memoryRequest = "1200m", "1600Mi"
-	case nodeCount <= 100:
-		cpuRequest, memoryRequest = "2500m", "5200Mi"
-	default:
-		cpuRequest, memoryRequest = "3000m", "5200Mi"
-	}
-
-	return corev1.ResourceRequirements{
-		Requests: corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse(cpuRequest),
-			corev1.ResourceMemory: resource.MustParse(memoryRequest),
-		},
+		APIServerResources: apiServerResources,
+		MinReplicas:        minReplicas,
+		MaxReplicas:        maxReplicas,
+		ScaleDownDisabled:  scaleDownDisabled,
 	}
 }
 
