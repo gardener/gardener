@@ -23,8 +23,8 @@ authors:
     - [Approach](#approach)
     - [Prerequisites](#prerequisites)
     - [Update Strategies](#update-strategies)
-      - [InplaceUpdate strategy](#inplaceupdate-strategy)
-      - [InplaceUpdateOnLabel strategy](#inplaceupdateonlabel-strategy)
+      - [`AutoInPlaceUpdate` strategy](#autoinplaceupdate-strategy)
+      - [`ManualInPlaceUpdate` strategy](#manualinplaceupdate-strategy)
     - [Gardener](#gardener)
       - [`CloudProfile` API](#cloudprofile-api)
       - [`Shoot` API](#shoot-api)
@@ -36,27 +36,27 @@ authors:
     - [Dependency Watchdog](#dependency-watchdog)
     - [Extensions](#extensions)
       - [OS extensions](#os-extensions)
+    - [Worker pool hash calculations](#worker-pool-hash-calculations)
     - [Failures and Recovery Strategy](#failures-and-recovery-strategy)
       - [Types of Failures During Update](#types-of-failures-during-update)
         - [Drain Timeout/Failure](#drain-timeoutfailure)
         - [Kubernetes Update Failures](#kubernetes-update-failures)
         - [OS Update Failures](#os-update-failures)
       - [Roles in Failure Handling](#roles-in-failure-handling)
-    - [Additional Validations](#additional-validations)
   - [Future Work](#future-work)
   - [Alternatives](#alternatives)
     - [Using Only Gardener Node Agent](#using-only-gardener-node-agent)
-    - [Using the same name for Machine Class](#using-the-same-name-for-machine-class)
+    - [Using the same name for `MachineClass`](#using-the-same-name-for-machineclass)
 
 ## Summary
 
-Gardener should support new update strategies for nodes that allow updates to Kubernetes minor versions and/or Machine image/OS versions without requiring the deletion and recreation of the nodes. These strategies aim to minimize the overhead traditionally associated with node replacement and offer an alternative approach to updates, particularly important for physical machines or bare-metal nodes.
+Gardener should support new update strategies for nodes that do not require the deletion and recreation of the nodes. These strategies aim to minimize the overhead traditionally associated with node replacement and offer an alternative approach to updates, which is particularly important for physical machines or bare-metal nodes.
 
-The in-place update strategy is not intended to replace the current rolling update strategy provided by the [`machine-controller-manager`](https://github.com/gardener/machine-controller-manager). Instead, it is designed for specific scenarios where physical machines or bare metal nodes—whether manually joined or programmatically provisioned, cannot be easily rolled. Additionally, this update strategy can be useful in scenarios where rolling machines are undesirable, such as when dealing with large machines or limited resources on the cloud provider. For all other scenarios where preserving nodes is not critical, the rolling update strategy remains the preferred approach.
+The in-place update strategy is not intended to replace the current rolling update strategy provided by the [`machine-controller-manager`](https://github.com/gardener/machine-controller-manager). Instead, it is designed for specific scenarios where physical machines or bare metal nodes, whether manually joined or programmatically provisioned, cannot be easily rolled. Additionally, this update strategy can be useful in scenarios where rolling machines are undesirable, such as when dealing with large machines or limited resources on the cloud provider. For all other scenarios where preserving nodes is not critical, the rolling update strategy remains the preferred approach.
 
 ## Motivation
 
-In Gardener, when the Kubernetes minor version and/or Machine image version of a worker pool in a shoot is updated, the nodes of the worker pool are typically rolled. This involves creating new nodes with an updated configuration and deleting the old nodes.
+In Gardener, certain changes to the worker pool configuration trigger a rolling update, during which nodes in the worker pool are replaced. This process involves creating new nodes with the updated configuration while systematically deleting the old ones. A comprehensive list of changes that initiate a rolling update is documented under [Rolling Update Triggers](https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/shoot_updates.md#rolling-update-triggers).
 
 This process presents challenges for **physical machines** or **bare-metal nodes**, which are not as interchangeable as virtual machines because of factors such as:
 
@@ -65,29 +65,41 @@ This process presents challenges for **physical machines** or **bare-metal nodes
 - **Locally attached storage**: Physical machines often have locally attached disks, which cannot be easily moved or re-attached to other machines, unlike network-attached volumes in virtual environments.
 - **Limited interchangeability**: Physical machines are typically larger in size, fewer in number, and not as easily replaced or repurposed as virtual machines, making their replacement more challenging.
 
-To address this, we aim to support new update strategies that do not require the deletion and recreation of nodes when the Kubernetes minor version and/or machine image version is updated, reducing the need for node replacement—especially in environments with limited physical resources. Additionally, there are scenarios where users want control over node updates, allowing them to select specific nodes to be updated. Our goal is to support a new way to update these dependencies that avoids node deletion and recreation, while also giving users the flexibility to manage updates on particular nodes.
+In addition, this process also presents challenges for **virtual machines**, e.g. if the virtual machine type is scarce (in general or because of an ongoing capacity crunch) or if certain scarce resources are connected/attached, e.g. GPUs that may not be available for additional or even replaced machines once released (as other customers are waiting for them).
+To address this, we aim to support new update strategies that do not require the deletion and recreation of nodes, reducing the need for node replacement, especially in environments with limited physical resources. Additionally, there are scenarios where users want control over node updates, allowing them to select specific nodes to be updated. Our goal is to support a new way to update these dependencies that avoids node deletion and recreation, while also giving users the flexibility to orchestrate (=trigger) updates themselves as they see fit, e.g. after executing custom pre-update checks.
 
 ### Goals
 
-- Provide functionality to update the nodes in-place for Kubernetes minor versions and Machine image versions.
-- Two strategies for in-place - `InPlaceUpdate` and `InplaceUpdateOnLabel`.
-- Maximize re-use of the existing functionality from `machine-controller-manager` and [`gardener-node-agent`](https://github.com/gardener/gardener/blob/master/docs/concepts/node-agent.md).
+- Provide functionality to support updating nodes in-place for specific rolling update triggers, including:
+  - `.spec.kubernetes.version` or `.spec.provider.workers[].kubernetes.version`
+  - `.spec.provider.workers[].machine.image.version`
+  - `.status.credentials.rotation.{certificateAuthorities,serviceAccountKey}.lastInitiationTime`
+  - `.spec.kubernetes.kubelet.{kubeReserved,systemReserved,evictionHard,cpuManagerPolicy}` or `.spec.provider.workers[].kubernetes.kubelet.{kubeReserved,systemReserved,evictionHard,cpuManagerPolicy}`
+- Disallow any other update triggers with validation when the strategy is set to an in-place strategy.
+- Provide two strategies for in-place - `AutoInPlaceUpdate` and `ManualInPlaceUpdate`. The former will be orchestrated by the `machine-controller-manager` and the latter by the users themselves.
+- Switching between `AutoInPlaceUpdate` and `ManualInPlaceUpdate` strategies.
 
 ### Non-Goals
 
 - Provide a way to schedule the pods on the same node after the in-place update.
-- Downgrading of Kubernetes/Machine image version after successful update.
+- Downgrading of Kubernetes/machine image version after successful update.
 - Switching between in-place and rolling update strategies.
 - Provide an update strategy without draining the node.
 - Provide in-place updates only for the Kubernetes version in worker pools where the OS does not support in-place updates.
+- Provide in-place updates for any rolling update trigger other than the ones mentioned in the [Goals](#goals).
 
 ## Proposal
 
-In short, Gardener should support new update strategies that do not require deleting and recreating the node when the Kubernetes minor or Machine image version is updated.
+In short, Gardener should support new update strategies that do not require deleting and recreating the node when:
+
+1. Kubernetes minor version is updated
+2. Machine image version is updated
+3. Certificate Authority (CA) rotation or ServiceAccount signing key rotation is triggered
+4. Relevant Kubelet configuration is modified.
 
 ### Approach
 
-The `machine-controller-manager` and `gardener-node-agent` components will be used to perform in-place updates. `machine-controller-manager` will provide an interface that prepares the machine/node for an update. This interface can be used by other components to determine if a node is ready for an update, allowing the other component to perform the update on the node and then notify the `machine-controller-manager` that the node has been successfully updated. _In the case of Gardener, this component will be the `gardener-node-agent`._
+The `machine-controller-manager` and `gardener-node-agent` components will be used to perform in-place updates. `machine-controller-manager` will provide an interface that prepares the machine/node for an update. This interface can be used by other components to determine if a node is ready for an update, allowing the other component to perform the update on the node and then notify the `machine-controller-manager` that the node is successfully updated. _In the case of Gardener, this component will be the `gardener-node-agent`._
 
 This design was chosen to leverage the `machine-controller-manager`'s node rollout orchestration functionality while ensuring that it remains a standalone component.
 
@@ -101,34 +113,38 @@ The only prerequisite is that the machine image/OS on the node must support in-p
 
 ### Update Strategies
 
-Gardener will introduce two additional update strategies, `InPlaceUpdate` and `InPlaceUpdateOnLabel`, for worker pools, in addition to the existing `RollingUpdate`. The two new strategies are described as follows:
+Gardener will introduce two additional update strategies, `AutoInPlaceUpdate` and `ManualInPlaceUpdate`, for worker pools, in addition to the existing rolling update which will be now named as `AutoReplaceUpdate` strategy. In the future, there could also be `ManualReplaceUpdate` which could give more control to the users in rolling updates as well. The two new strategies are described as follows:
 
-#### InplaceUpdate strategy
+#### `AutoInPlaceUpdate` strategy
 
-1. On shoot spec change for Kubernetes/Machine image version, `machine-controller-manager` will label all the nodes with `candidate-for-update` label. This label can be used to identify nodes that will be selected for updates in the future.
-2. `machine-controller-manager` will add the necessary annotation to the nodes to prevent it from being scaled down by [`cluster-autoscaler`](https://github.com/gardener/autoscaler/tree/machine-controller-manager-provider/cluster-autoscaler) during the update process.
-3. `machine-controller-manager` will select the nodes based on the configured `maxUnavailable` and label them with `selected-for-update`. This label can be used to identify nodes that are currently undergoing an update.
-4. `machine-controller-manager` will cordon and drain the node and label it with `ready-for-update` label.
-5. `gardener-node-agent` will detect the `ready-for-update` label and perform the update on the node. And it will wait for the update to complete within the specified timeout.
-6. Once the Kubernetes/Machine image version is updated, the node will be labeled by the `gardener-node-agent` with `update-successful` label.
-7. `machine-controller-manager` will `uncordon` the node, and remove all the added labels. The node is then ready to schedule the workloads.
+1. On a shoot spec change for a worker pool, `machine-controller-manager` will label all nodes of the updated worker pool with the `node.machine.sapcloud.io/candidate-for-update` label. This label is used to identify nodes that require an update.
+2. `machine-controller-manager` will add the necessary annotation to the nodes to prevent them from being scaled down by [`cluster-autoscaler`](https://github.com/gardener/autoscaler/tree/machine-controller-manager-provider/cluster-autoscaler) during the update process.
+3. `machine-controller-manager` will select as many nodes as are permitted by the `maxUnavailable` setting for the worker pool and label it/them with `node.machine.sapcloud.io/selected-for-update`. This label can be used to identify nodes that are about to or are currently undergoing an update.
+4. `machine-controller-manager` will cordon and drain the node/nodes and label it/them with the `node.machine.sapcloud.io/ready-for-update` label once the drain is completed.
+5. `gardener-node-agent` will detect the `node.machine.sapcloud.io/ready-for-update` label and perform the update on the machine. It will wait for the update to complete (with a specified timeout).
+6. Once the machine is updated, `gardener-node-agent` will delete all the pods in the node so that they will get recreated and the node will be labelled by the `gardener-node-agent` with the `node.machine.sapcloud.io/update-successful` label.
+7. `machine-controller-manager` will `uncordon` any node with the `node.machine.sapcloud.io/update-successful` label and remove this and all other update-related labels. Once the node becomes `Ready`, it can host workload again.
 
-![InplaceUpdate](assets/inplace-update.png "InPlace Update Strategy")
+![AutoInPlaceUpdate](assets/31-auto-inplace-update.png "Auto In Place Update Strategy")
 
-#### InplaceUpdateOnLabel strategy
+#### `ManualInPlaceUpdate` strategy
 
-1. On shoot spec change, nodes will be labeled with `candidate-for-update`.
-2. `machine-controller-manager` will add the necessary annotation to the nodes to prevent it from being scaled down by `cluster-autoscaler` during the update process.
-3. `machine-controller-manager` will wait for the `selected-for-update` label on the node. The orchestration of the update is solely the responsibility of the user. They are free to select the nodes to be updated at will.
-4. Once the `selected-for-update` label is added by the user on the node, steps 4-7 of the `Inplace` strategy will performed.
+1. On a shoot spec change for a worker pool, `machine-controller-manager` will label all nodes of the changed worker pool with the `node.machine.sapcloud.io/candidate-for-update` label. This label is used to identify nodes that require an update.
+2. `machine-controller-manager` will add the necessary annotation to the nodes to prevent them from being scaled down by `cluster-autoscaler` during the update process.
+3. `machine-controller-manager` will wait for the `node.machine.sapcloud.io/selected-for-update` label on the node. The orchestration of the update is solely the responsibility of the user. The user is free to select the nodes to be updated at will.
+4. Once the `node.machine.sapcloud.io/selected-for-update` label is added by the user, steps 4-7 of the `AutoInPlaceUpdate` strategy will be performed.
 
-![InplaceUpdateOnLabel](assets/inplace-update-onlabel.png "InPlace Update OnLabel Strategy")
+![ManualInPlaceUpdate](assets/31-manual-inplace-update.png "Manual In Place Update Strategy")
+
+A new optional [constraint](https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_status.md#constraints) will be introduced in the Shoot status to indicate that some worker pools are undergoing a manual in-place update. While the Shoot will be marked as successfully reconciled, these worker pools may still be outdated. A new field will be added to the Shoot status to keep track of the pending worker pools.
+
+Subsequent updates to the worker pool will be blocked by validation if an in-place update is already in progress. This ensures that worker pools do not skip intermediate Kubernetes minor versions or machine image versions. However, if an in-place update fails and a fix—such as a patch to the current updated minor version—is required, it will be allowed if the Shoot has the `shoot.gardener.cloud/force-in-place-update: true` annotation.
 
 ### Gardener
 
 #### `CloudProfile` API
 
-A new field `minSupportedVersionInPlaceUpdate` is introduced under `.spec.machineImages[]` under the CloudProfile spec. This field can be used to specify the minimum supported version from which the current machine image version can be in-place updated to.
+A new field `minVersionForInPlaceUpdate` is introduced under `.spec.machineImages[].versions[]` in the `CloudProfile`. This field specifies the minimum machine image version eligible for direct in-place upgrades to a newer version. If the current version is lower than `minVersionForInPlaceUpdate`, the update will be disallowed by validation.
 
 ```yaml
 apiVersion: core.gardener.cloud/v1beta1
@@ -146,8 +162,8 @@ spec:
       versions:
         - version: 1443.8.0
           expirationDate: "2025-02-28T23:59:59Z"
-          minSupportedVersionInPlaceUpdate: 1312.3.0
-        - version: 1443.7.0
+          minVersionForInPlaceUpdate: 1312.3.0
+        - version: 1443.7.0 # if minVersionForInPlaceUpdate is not specified, in-place update cannot be performed on this version
   machineTypes:
     - name: m5.large
       cpu: "2"
@@ -160,7 +176,7 @@ spec:
 
 #### `Shoot` API
 
-A new field `UpdateStrategy` is introduced under `spec.provider.workers[]` in the Shoot spec. This field will be passed on to the worker extension. Once set, changing the `UpdateStrategy` is prohibited through validation. Additionally, when the `InPlaceUpdate/InplaceUpdateOnLabel` update strategy is configured, skipping the worker pool's Kubernetes minor version is not allowed.
+A new field `updateStrategy` is introduced under `spec.provider.workers[]` in the Shoot spec. This field will be passed on to the worker extension. Once set, changing the `updateStrategy` between in-place and replace strategies is prohibited through validation. Additionally, when `AutoInPlaceUpdate` or `ManualInPlaceUpdate` is configured as an update strategy, skipping an intermediate Kubernetes minor version is no longer allowed, because of potential local changes that are then not carried out anymore when skipping versions (only allowed with `AutoReplace` as the machines/nodes are created from scratch in this case).
 
 ```yaml
 apiVersion: core.gardener.cloud/v1beta1
@@ -181,14 +197,14 @@ spec:
         maximum: 5
         maxSurge: 0
         maxUnavailable: 2
-        updateStrategy: InPlaceUpdate # RollingUpdate/InPlaceUpdate/InplaceUpdateOnLabel
+        updateStrategy: AutoInPlaceUpdate # AutoReplaceUpdate/AutoInPlaceUpdate/ManualInPlaceUpdate, defaulted to  AutoReplaceUpdate
         machine:
           type: m5.large
           image:
             name: <some-image-name>
             version: <some-image-version>
-            providerConfig: <some-machine-image-specific-configuration>
           architecture: <some-cpu-architecture>
+        providerConfig: <some-machine-image-specific-configuration>
   kubernetes:
     version: 1.27.3
   networking:
@@ -222,12 +238,21 @@ spec:
       maximum: 5
       maxSurge: 0
       maxUnavailable: 2
-      updateStrategy: InPlaceUpdate # RollingUpdate/InPlaceUpdate/InplaceUpdateOnLabel
+      updateStrategy: AutoInPlaceUpdate # AutoReplaceUpdate/AutoInPlaceUpdate/ManualInPlaceUpdate
 ```
 
 #### `OperatingSystemConfig` API
 
-A new field `version` is introduced in the `OperatingSystemConfig` spec. It specifies the machine image/OS version of the worker pool.
+New fields `osVersion`, `kubeletVersion`, and `credentialRotation` are introduced in the `OperatingSystemConfig` spec and `inPlaceUpdateConfig` in the `OperatingSystemConfig` status.
+
+- `osVersion` specifies the machine image version.
+- `kubeletVersion` specifies the version of the kubelet.
+- `credentialRotation` contains two subfields:
+  - `caRotationLastInitiationTime` records the timestamp of the most recent Certificate Authority (CA) rotation initiation.
+  - `serviceAccountKeyRotationLastInitiationTime` records the timestamp of the most recent `ServiceAccount` signing key rotation initiation.
+- `inPlaceUpdateConfig` contains two subfields:
+  - `osUpdateScriptPath` defines the path to the script responsible for performing machine image updates.
+  - `osUpdateScriptArgs` provides a mechanism to pass additional arguments or flags to the update script. These can include parameters like the target version or the OCI registry from which the updated machine image should be pulled, offering flexibility tailored to the needs of different OS extensions.
 
 ```yaml
 apiVersion: extensions.gardener.cloud/v1alpha1
@@ -236,43 +261,59 @@ metadata:
   name: pool-01-original
   namespace: default
 spec:
-  type: <os-type>
-  version: <operating-system-version>
+  type: gardenlinux
+  osVersion: 1631.0
+  kubeletVersion: 1.30.4
+  credentialRotation:
+    caRotationLastInitiationTime:
+    serviceAccountKeyRotationLastInitiationTime:
   units:
     - ...
   files:
     - ...
+status:
+  inPlaceUpdateConfig:
+    osUpdateScriptPath: /opt/gardener/bin/inplace-update.sh
+    osUpdateScriptArgs:
+      - --version
+      - 1631.0
+      - --repo
+      - <someOCIregistry>
 ```
 
 #### Gardener Node Agent
 
-The `gardener-node-agent` will function as the tool responsible for updating Kubernetes minor version and Machine image version dependencies on the node.
+The `gardener-node-agent` will function as the component responsible for carrying out in-place updates on the node.
 
-Currently, when a dependency changes in the Operating System Configuration (OSC), `gardener-node-agent` detects the difference between the current OSC and the last applied OSC, and updates any changed unit on the node. When the in-place update strategy is configured, and either the Kubernetes minor version or the machine image version is changed, `gardener-node-agent` will not immediately apply the updates to the node. Instead, it will wait for the `ready-to-update` label on the node. Once the label is present, `gardener-node-agent` will proceed with the update.
+Currently, when a dependency in the Operating System Configuration (OSC) changes, `gardener-node-agent` detects the differences between the current OSC and the last applied OSC and updates any modified units on the node. When the in-place update strategy is configured, if changes are detected that cannot be applied immediately (ie; if the change contains any of the update triggers listed in the [Goals](#goals)), `gardener-node-agent` will pause the update and wait for the `node.machine.sapcloud.io/ready-to-update` label to appear on the node before proceeding with the update.
 
-In the case of OS updates, `gardener-node-agent` expects an "update-script" to be present in the `.spec.files[]` of the OSC at a predefined path, and the same will be executed to perform the update.
+For OS updates, the OS extensions are responsible for populating the `inPlaceUpdateConfig` field within the OperatingSystemConfig status. This configuration includes the path to the update script (`osUpdateScriptPath`) and any additional arguments (`osUpdateScriptArgs`) required by the script. `gardener-node-agent` triggers the script located at the path specified in `inPlaceUpdateConfig.osUpdateScriptPath` and passes the arguments defined in `inPlaceUpdateConfig.osUpdateScriptArgs`.
 
-After the update, based on its success or failure, `gardener-node-agent` will add the appropriate label(`update-successful` or `update-failed`) to the node to indicate the status of the update.
+For Kubelet minor version or configuration updates, `gardener-node-agent` will apply the changed files and restart the `kubelet` unit and there are no additional steps involved.
+
+For credential rotation, in the case of Certificate Authority (CA) rotation, the `kubelet` needs to be bootstrapped again so that it can request client certificates signed by the new CA. `gardener-node-agent` will use the existing kubeconfig used by the `kubelet` (passed in the `--kubeconfig` flag. See [`kubelet` Options](https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet/)) and use it as bootstrap kubeconfig (`--bootstrap-kubeconfig` flag in the kubelet). It will remove the kubelet certificate directory (`--cert-dir` flag in the kubelet) `/var/lib/kubelet/pki`, and the `kubelet.service` unit is restarted. This makes the kubelet request new client certificates through [Certificate signing requests (CSR)](https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/#certificate-signing-requests).
+In case of `ServiceAccount` signing key rotation, `gardener-node-agent` will restart itself to load the new service account token using its [`token` controller](https://github.com/gardener/gardener/blob/master/docs/concepts/node-agent.md#token-controller).
+
+After executing an update, `gardener-node-agent` will determine the outcome and apply the corresponding label to the node: either `node.machine.sapcloud.io/update-successful` or `node.machine.sapcloud.io/update-failed`, indicating the status of the update. In the case of a successful update, before labelling the node as `node.machine.sapcloud.io/update-successful`, the `gardener-node-agent` will restart all pods running on the node. This step ensures that DaemonSet pods and pods with local storage are properly recreated post-update.
 
 ### Machine Controller Manager
 
 The `machine-controller-manager` acts as an orchestrator for the update, ensuring changes are rolled out in a controlled manner.
 
-In the current implementation, when a Kubernetes minor version or Machine Image/OS version is updated in the shoot (worker pool), the provider extension creates a new `MachineClass`, and the `MachineDeployment` is updated to reference this new `MachineClass`. `machine-controller-manager` detects this change and creates a new `MachineSet` with the new `MachineClass` and machines are rolled out based on the `RollingUpdate` strategy.
-
-In the case of the `RollingUpdate` strategy, new machines are created in the new `MachineSet` using the new `MachineClass`, and the old ones are deleted from the old `MachineSet`. For in-place updates, instead of creating new machines for the new `MachineSet`, the old ones are moved from the old `MachineSet` to the new one after the `gardener-node-agent` has successfully updated the dependencies. This process preserves the old nodes.
+In the current implementation, when there is a change which triggers a rolling update, the provider extension creates a new `MachineClass`, and the `MachineDeployment` is updated to reference this new `MachineClass`. `machine-controller-manager` detects this change and creates a new `MachineSet` with the new `MachineClass` and machines are rolled out based on the `RollingUpdate` strategy in the `MachineDeployment` spec.
+In the case of the `RollingUpdate` strategy, new machines are created in the new `MachineSet` using the new `MachineClass`, and the old ones are deleted from the old `MachineSet`. For in-place updates, instead of creating new machines for the new `MachineSet`, the old ones are moved from the old `MachineSet` to the new one after the `gardener-node-agent` has successfully performed the update. This process preserves the old machines (their `Machine` and `Node` resources).
 
 There are two ways to achieve this:
 
-1. **Owner Reference Update**: Move the old machine to the new `MachineSet` by updating the owner reference. The downside of this method is that the machine name will stay the same through updates, which breaks the current naming convention of including the `MachineSet` name as a prefix in machine names.
-2. **Shallow Delete**: Instead of directly moving a machine from one `MachineSet` to another, first perform a shallow delete of the old machine object (without deleting the underlying VM), then create a new machine object in the new `MachineSet` for the same VM.
+1. **Owner Reference Update**: Move the old `Machine` to the new `MachineSet` by updating the owner reference. The downside of this method is that the `Machine` name will stay the same through updates, which breaks the current naming convention of including the `MachineSet` name as a prefix in the `Machine` name.
+2. **Shallow Delete**: Instead of directly moving a `Machine` from one `MachineSet` to another, first perform a shallow delete of the old `Machine` object (without deleting the underlying physical/virtual machine), then create a new `Machine` object in the new `MachineSet` (for the same physical/virtual machine).
 
 > [!NOTE]
 > At the time of writing this GEP, it is undecided which method to proceed with. The first method has been evaluated, but the feasibility of the second method is yet to be assessed. If feasible, the second method is preferred.
 
 #### `MachineDeployment` API
 
-A new strategy type `InPlaceUpdate` and a new field, `inPlaceUpdate`, have been introduced under the `.spec.strategy` field. `inPlaceUpdate` can be configured when the selected strategy type is `InPlaceUpdate`.
+A new strategy type `InPlaceUpdate` and a new field, `inPlaceUpdate`, are introduced under the `.spec.strategy` field. `inPlaceUpdate` can be configured when the selected strategy type is `InPlaceUpdate`.
 
 ```yaml
 apiVersion: machine.sapcloud.io/v1alpha1
@@ -289,8 +330,8 @@ spec:
     inPlaceUpdate:
       maxUnavailable: 1
       maxSurge: 0
-      onLabel: false # true/false
-    type: InPlaceUpdate # RollingUpdate/InPlaceUpdate/Recreate
+      manualUpdate: false # true/false, defaulted to false
+    type: InPlaceUpdate # RollingUpdate/InPlaceUpdate/Recreate, defaulted to RollingUpdate
   template: {}
     spec: {}
 status: {}
@@ -298,36 +339,48 @@ status: {}
 
 `maxUnavailable`: Specifies the maximum number of unavailable machines during the update process.
 
-`maxSurge`: Specifies the maximum number of machines that can be scheduled above the desired number of machines. Set `maxSurge` to zero if you don't want any new nodes to be provisioned during the update. You can set it to a value greater than zero if you don't want unavailable nodes during the update; in that case, first new nodes will be created with the updated configuration and then the old nodes will undergo in-place updates.
+`maxSurge`: Specifies the maximum number of machines that can be scheduled above the desired number of machines. Set `maxSurge` to zero if you don't want any new machines/nodes to be provisioned during the update. You can set it to a value greater than zero if you don't want unavailable nodes during the update; in that case, first new machines/nodes will be created with the updated configuration and then the old machines/nodes will undergo in-place updates.
 
-`onLabel`: If the update strategy is `InPlaceUpdateOnLabel` in the worker spec, the worker controller will set this field to true.
+`manualUpdate`: If the update strategy is `ManualInPlaceUpdate` in the worker spec, the worker controller will set this field to true.
 
 ### Dependency Watchdog
 
-Currently, the [`dependency-watchdog`](https://github.com/gardener/dependency-watchdog) monitors the leases of the nodes in the shoot cluster. If nodes more than a configured threshold are unhealthy, it scales down the `machine-controller-manager`, `kube-controller-manager`, and `cluster-autoscaler` to prevent a meltdown. During an ongoing in-place update, DWD can make use of the labels added by `machine-controller-manager` during the `in-place` update to exclude nodes undergoing updates from its health check.
+Currently, the [`dependency-watchdog`](https://github.com/gardener/dependency-watchdog) monitors the leases of the nodes in the shoot cluster. If more nodes than a configured threshold are unhealthy, it scales down the `machine-controller-manager`, `kube-controller-manager`, and `cluster-autoscaler` to prevent a meltdown. During an ongoing in-place update, DWD can make use of the labels added by the `machine-controller-manager` during `in-place` update to exclude nodes undergoing updates from its health check.
 
 ### Extensions
 
 #### OS extensions
 
-The OS extension that wants to support in-place updates should add an "update-script" to the `.spec.files[]` of the OSC with a pre-defined path that will be executed by the `gardener-node-agent` to perform the update. This script should trigger the OS-provided update tool/utility to update the OS.
+The OS extensions are responsible for populating the `inPlaceUpdateConfig` field within the `OperatingSystemConfig` status. This configuration includes the path to the update script (`osUpdateScriptPath`) and any additional arguments (`osUpdateScriptArgs`) required by the script. This script will be executed by the `gardener-node-agent` to perform the update. Internally, this script should trigger the OS-provided update tool/utility to update the OS.
+
+### Worker pool hash calculations
+
+The worker pool hash calculation is derived from the rolling update triggers detailed [here](https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/shoot_updates.md#rolling-update-triggers).
+
+For in-place updates, the following fields are excluded from the hash calculation to ensure that the secret name for the `gardener-node-agent` remains unchanged:
+
+- `.spec.kubernetes.version` or `.spec.provider.workers[].kubernetes.version`
+- `.spec.provider.workers[].machine.image.version`
+- `.status.credentials.rotation.{certificateAuthorities,serviceAccountKey}.lastInitiationTime`
+- `.spec.kubernetes.kubelet.{kubeReserved,systemReserved,evictionHard,cpuManagerPolicy}` or `.spec.provider.workers[].kubernetes.kubelet.{kubeReserved,systemReserved,evictionHard,cpuManagerPolicy}`
+
+However, these fields are included in the [`WorkerPoolHashV2` function](https://github.com/gardener/gardener/blob/81e6fd096f8725d0b374315fe134cb35f604bd68/extensions/pkg/controller/worker/machines.go#L163-L175) to ensure changes to the `MachineClass` are properly reflected.
 
 ### Failures and Recovery Strategy
 
-In-place updates may fail because of several factors ranging from network issues to compatibility problems. This section outlines the failure scenarios, error classifications, and the specific roles `gardener-node-agent` and `machine-controller-manager` play in failure handling and recovery to ensure minimal disruption.
+In-place updates may fail because of several factors ranging from network issues to compatibility problems. This section outlines the failure scenarios, error classifications, and the specific roles `gardener-node-agent` and `machine-controller-manager` play in failure handling and recovery to ensure minimal disruption. The error will be reported in `node.machine.sapcloud.io/update-failure-message` annotation on the node which can be used subsequently by the Shoot care controller.
 
 #### Types of Failures During Update
 
 ##### Drain Timeout/Failure
 
-- A node is marked as `ready-for-update` only after a successful drain.
+- A node is marked as `node.machine.sapcloud.io/ready-for-update` only after a successful drain.
 - We use the existing [drain logic](https://github.com/gardener/machine-controller-manager/tree/v0.54.0/pkg/util/provider/drain) provided by the `machine-controller-manager`.
 - If a drain operation times out or fails, the node will be forcefully drained.
 
 ##### Kubernetes Update Failures
 
-- **Rollback on Failure:** If a Kubernetes version update fails, `gardener-node-agent` will roll back the `kubelet` to the version specified in the last applied `OperatingSystemConfig`. This ensures that the node remains operational.
-  - **Update Halt on Failure:** `gardener-node-agent` will label the node with an `update-failed` label. This label signals `machine-controller-manager` to stop further updates.
+- **Update Halt on Failure:** `gardener-node-agent` will label the failed node with an `node.machine.sapcloud.io/update-failed` label. This label signals `machine-controller-manager` to stop further updates when the number of unhealthy machines reaches configured `maxUnavailable`.
 
 ##### OS Update Failures
 
@@ -335,44 +388,33 @@ In-place updates may fail because of several factors ranging from network issues
 - **Failed to boot the new OS** - If the node fails to boot into the new OS version and reverts to the previous version, `gardener-node-agent` will annotate it to mark an update attempt, but the root cause may remain unlogged as filesystems mount later in the booting process; classified as non-retriable.
 - **Total failure** - In cases where the system fails to boot into either of the OS versions, the update attempt will timeout and be marked as failed; classified as non-retriable.
 
-![FailureStrategy](assets/inplace-failurestrategy.png "InPlace Failure State Diagram")
+![FailureStrategy](assets/31-inplace-failurestrategy.png "InPlace Failure State Diagram")
 
 #### Roles in Failure Handling
 
-**`gardener-node-agent`**
+**`gardener-node-agent`**:
+
 `gardener-node-agent` is responsible for initiating updates, with specific timeouts set for Kubernetes and machine image updates. When an error occurs it will be classified as follows:
 
-- **Retriable Error**: Temporary errors, such as network interruptions, prompt `gardener-node-agent` to retry the update after a delay. Retriable error will also get classified as non-retriable error after a certain number of retries and `gardener-node-agent` labels the node with an `update-failed` label.
-- **Non-Retriable Error**: For critical issues, such as incompatible OS versions, `gardener-node-agent` labels the node with an `update-failed` label.
+- **Retriable Error**: Temporary errors, such as network interruptions, prompt `gardener-node-agent` to retry the update after a delay. Retriable error will also get classified as non-retriable error after a certain number of retries and `gardener-node-agent` labels the node with an `node.machine.sapcloud.io/update-failed` label.
+- **Non-Retriable Error**: For critical issues, such as incompatible OS versions, `gardener-node-agent` labels the node with a `node.machine.sapcloud.io/update-failed` label.
 
-**`machine-controller-manager`**
-`machine-controller-manager` prepares nodes for updates by adding the `ready-to-update` label and waits for `gardener-node-agent` to perform the update. `machine-controller-manager` monitors for status labels applied by `gardener-node-agent`:
+**`machine-controller-manager`**:
 
-- **Timeout Handling**: After the `machine-controller-manager` adds the `ready-for-update` label to a node, it waits for the `gardener-node-agent` to complete the update within the timeout configured in `machine-controller-manager`. If `gardener-node-agent` does not complete the update within this timeout, `machine-controller-manager` will retry the rollout after a specified delay. The timeout on the `machine-controller-manager` side is essential for handling cases where `gardener-node-agent` fails to report any status, such as during a total failure of the OS update. If the update is unsuccessful after a certain number of retries, `machine-controller-manager` will add the `update-failed` label to the node.
-- **Failed Update Handling**: If a node is labeled with `update-failed`, `machine-controller-manager` stops further updates. The machine remains with the old `MachineSet`, and no additional nodes in that `MachineDeployment` will be updated until the node with `update-failed` label is fixed. The failure is propagated to the shoot status, notifying the operator or user, who may need to investigate the issue manually.
-  To resolve the issue, the error must be fixed manually, and the `update-failed` label should be removed from the node. This allows `machine-controller-manager` to proceed with the update process.
+`machine-controller-manager` prepares nodes for updates by adding the `node.machine.sapcloud.io/ready-to-update` label and waits for `gardener-node-agent` to perform the update. `machine-controller-manager` monitors for status labels applied by `gardener-node-agent`:
+
+- **Timeout Handling**: After the `machine-controller-manager` adds the `node.machine.sapcloud.io/ready-for-update` label to a node, it waits for the `gardener-node-agent` to complete the update within the timeout configured in `machine-controller-manager`. If `gardener-node-agent` does not complete the update within this timeout, `machine-controller-manager` will retry the rollout after a specified delay. The timeout on the `machine-controller-manager` side is essential for handling cases where `gardener-node-agent` fails to report any status, such as during a total failure of the OS update. If the update is unsuccessful after a certain number of retries, `machine-controller-manager` will add the `node.machine.sapcloud.io/update-failed` label to the node.
+- **Failed Update Handling**: If a node is labeled with `node.machine.sapcloud.io/update-failed`, `machine-controller-manager` stops further updates. The machine remains with the old `MachineSet`, and no additional nodes in that `MachineDeployment` will be updated until the node with the `node.machine.sapcloud.io/update-failed` label is fixed. The failure is propagated to the shoot status, notifying the operator or user, who may need to investigate the issue manually.
+  To resolve the issue, the error must be fixed manually, and the `node.machine.sapcloud.io/update-failed` label should be removed from the node. This allows the `machine-controller-manager` to proceed with the update process.
 
 > [!NOTE]
 > All mentioned timeouts and retries are subject to change, with exact values to be decided during implementation.
 
-### Additional Validations
-
-In addition to Kubernetes or Machine image updates, several other factors can trigger the rolling updates of nodes in the shoot clusters. These include:
-
-1. Modification of the following fields in the Shoot specification:
-   - `.spec.provider.workers[].machine.type`
-   - `.spec.provider.workers[].volume`
-   - `.spec.provider.workers[].cri`
-   - `.spec.systemComponents.nodeLocalDNS`
-2. Rotation of the `CA` or `ServiceAccount` signing key.
-3. Changes in the `kubelet` configuration (for eg., kubeReserved).
-
-In-place updates will support (2) and (3) but will disallow (1) with validations in the Shoot API. This ensures that certain critical changes, such as machine type or volume adjustments, follow the traditional rolling update process in which nodes are replaced.
-
 ## Future Work
 
 - Support node updates without graceful termination of the pods (via node drain) scheduled onto the node.
-- Allow to switch the update strategy from `RollingUpdate` to `InplaceUpdate`/`InplaceUpdateOnLabel` or vice-versa.
+- Allow to switch the update strategy from `AutoReplaceUpdate` to `AutoInPlaceUpdate`/`ManualInPlaceUpdate` or vice-versa.
+- Evaluate whether nodes can consistently be updated in-place for supported update triggers, eliminating the need to offer a choice between in-place and rolling updates.
 
 ## Alternatives
 
@@ -380,9 +422,9 @@ In-place updates will support (2) and (3) but will disallow (1) with validations
 
 Instead of using both the `machine-controller-manager` and the `gardener-node-agent` for in-place updates, use only `gardener-node-agent`. However, this method has the following drawbacks:
 
-- `machine-controller-manager` natively provides rolling update logic through `Machine Deployment` and `Machine Set`, which helps track the progress of updated and pending nodes. Additionally, `machine-controller-manager` includes logic to select machines based on `maxUnavailable/maxSurge`, ensuring machines are rolled in a controlled manner. If only `gardener-node-agent` is used, new logic would need to be implemented to track node update progress and to manage the number of nodes updated at a time before proceeding to the next set.
+- `machine-controller-manager` natively provides rolling update logic through `MachineDeployment` and `MachineSet`, which helps track the progress of updated and pending nodes. Additionally, `machine-controller-manager` includes logic to select machines based on `maxUnavailable/maxSurge`, ensuring machines are rolled in a controlled manner. If only `gardener-node-agent` was used, we would need to implement new logic to track node update progress and to manage the number of nodes updated at a time before proceeding to the next set.
 - `machine-controller-manager`'s drain logic, which offers special handling, cannot be utilized.
 
-### Using the same name for Machine Class
+### Using the same name for `MachineClass`
 
-As mentioned in the selected approach, the same machine object is transferred from one machine set to another, which would create a naming drift, leading to machine names not having the machine set name as a prefix. To prevent this, an alternative approach was evaluated, where the Machine Class name would not change when the machine image or Kubernetes minor version is updated. This way, no new machine set would be created, and the machine transfer between sets would be avoided, preserving naming consistency. However, this approach has the same disadvantage as the previous one: a new logic would need to be written to track the progress of the rolling update.
+As mentioned in the selected approach, the same machine object is transferred from one machine set to another, which would create a naming drift, leading to machine names not having the machine set name as a prefix. To prevent this, an alternative approach was evaluated, where the `MachineClass` name would not change when the machine image or Kubernetes minor version is updated. This way, no new machine set would be created, and the machine transfer between sets would be avoided, preserving naming consistency. However, this approach has the same disadvantage as the previous one: a new logic would need to be written to track the progress of the rolling update.
