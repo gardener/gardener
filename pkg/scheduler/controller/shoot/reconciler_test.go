@@ -673,14 +673,18 @@ var _ = Describe("Scheduler_Control", func() {
 		})
 
 		It("should fail because it cannot find a seed cluster due to non-tolerated taints", func() {
+			seed2 := seed.DeepCopy()
+			seed2.Name = "seed-2"
 			seed.Spec.Taints = []gardencorev1beta1.SeedTaint{{Key: "foo"}}
+			seed2.Spec.Taints = []gardencorev1beta1.SeedTaint{{Key: "bar"}}
 			shoot.Spec.Tolerations = nil
 
 			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, seed2)).To(Succeed())
 
 			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
-			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError("0/2 seed cluster candidate(s) are eligible for scheduling: {seed-1 => shoot does not tolerate the seed's taints, seed-2 => shoot does not tolerate the seed's taints}"))
 			Expect(bestSeed).To(BeNil())
 		})
 

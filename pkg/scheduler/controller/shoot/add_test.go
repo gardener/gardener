@@ -22,7 +22,7 @@ var _ = Describe("Add", func() {
 		reconciler = &Reconciler{}
 	})
 
-	Describe("ShootPredicate", func() {
+	Describe("ShootUnassignedPredicate", func() {
 		var (
 			predicate predicate.Predicate
 			shoot     *gardencorev1beta1.Shoot
@@ -34,7 +34,7 @@ var _ = Describe("Add", func() {
 		)
 
 		BeforeEach(func() {
-			predicate = reconciler.ShootPredicate()
+			predicate = reconciler.ShootUnassignedPredicate()
 			shoot = &gardencorev1beta1.Shoot{}
 
 			createEvent = event.CreateEvent{
@@ -99,6 +99,61 @@ var _ = Describe("Add", func() {
 					Expect(predicate.Delete(deleteEvent)).To(BeFalse())
 					Expect(predicate.Generic(genericEvent)).To(BeFalse())
 				})
+			})
+		})
+	})
+
+	Describe("ShootSpecChangedPredicate", func() {
+		var (
+			predicate predicate.Predicate
+			shootNew  *gardencorev1beta1.Shoot
+			shootOld  *gardencorev1beta1.Shoot
+
+			createEvent  event.CreateEvent
+			updateEvent  event.UpdateEvent
+			deleteEvent  event.DeleteEvent
+			genericEvent event.GenericEvent
+		)
+
+		BeforeEach(func() {
+			predicate = reconciler.ShootSpecChangedPredicate()
+			shootOld = &gardencorev1beta1.Shoot{}
+			shootNew = &gardencorev1beta1.Shoot{}
+
+			createEvent = event.CreateEvent{
+				Object: nil,
+			}
+			updateEvent = event.UpdateEvent{
+				ObjectOld: shootOld,
+				ObjectNew: shootNew,
+			}
+			deleteEvent = event.DeleteEvent{
+				Object: nil,
+			}
+			genericEvent = event.GenericEvent{
+				Object: nil,
+			}
+		})
+
+		Context("shoot spec unchanged", func() {
+			It("should be false", func() {
+				Expect(predicate.Create(createEvent)).To(BeTrue())
+				Expect(predicate.Update(updateEvent)).To(BeFalse())
+				Expect(predicate.Delete(deleteEvent)).To(BeTrue())
+				Expect(predicate.Generic(genericEvent)).To(BeTrue())
+			})
+		})
+
+		Context("shoot spec changed", func() {
+			BeforeEach(func() {
+				shootNew.Spec.Tolerations = []gardencorev1beta1.Toleration{{Key: "foo"}}
+			})
+
+			It("should be true", func() {
+				Expect(predicate.Create(createEvent)).To(BeTrue())
+				Expect(predicate.Update(updateEvent)).To(BeTrue())
+				Expect(predicate.Delete(deleteEvent)).To(BeTrue())
+				Expect(predicate.Generic(genericEvent)).To(BeTrue())
 			})
 		})
 	})
