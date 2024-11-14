@@ -173,6 +173,7 @@
       groupName: 'gardener-discovery-server',
       matchDatasources: [
         'docker',
+        'github-releases',
       ],
       matchPackageNames: [
         '/.+gardener-discovery-server$/'
