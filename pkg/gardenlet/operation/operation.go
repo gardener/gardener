@@ -29,7 +29,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/operation/garden"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -339,12 +338,6 @@ func (o *Operation) IsAPIServerRunning(ctx context.Context) (bool, error) {
 	return *deployment.Spec.Replicas > 0, nil
 }
 
-// GetSecretKeysOfRole returns a list of keys which are present in the Garden Secrets map and which
-// are prefixed with <kind>.
-func (o *Operation) GetSecretKeysOfRole(kind string) []string {
-	return utils.FilterEntriesByPrefix(kind, o.AllSecretKeys())
-}
-
 // ReportShootProgress will update the last operation object in the Shoot manifest `status` section
 // by the current progress of the Flow execution.
 func (o *Operation) ReportShootProgress(ctx context.Context, stats *flow.Stats) {
@@ -452,18 +445,6 @@ func (o *Operation) StoreSecret(key string, secret *corev1.Secret) {
 	}
 
 	o.secrets[key] = secret
-}
-
-// AllSecretKeys returns all stored secret keys from the operation. Calling this function is thread-safe.
-func (o *Operation) AllSecretKeys() []string {
-	o.secretsMutex.RLock()
-	defer o.secretsMutex.RUnlock()
-
-	var keys []string
-	for key := range o.secrets {
-		keys = append(keys, key)
-	}
-	return keys
 }
 
 // LoadSecret loads the secret under the given key from the operation. Calling this function is thread-safe.

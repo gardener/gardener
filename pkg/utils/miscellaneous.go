@@ -157,17 +157,6 @@ func InterfaceMapToStringMap(in map[string]any) map[string]string {
 	return m
 }
 
-// FilterEntriesByPrefix returns a list of strings which begin with the given prefix.
-func FilterEntriesByPrefix(prefix string, entries []string) []string {
-	var result []string
-	for _, entry := range entries {
-		if strings.HasPrefix(entry, prefix) {
-			result = append(result, entry)
-		}
-	}
-	return result
-}
-
 // FilterEntriesByFilterFn returns a list of entries which passes the filter function.
 func FilterEntriesByFilterFn(entries []string, filterFn func(entry string) bool) []string {
 	var result []string
