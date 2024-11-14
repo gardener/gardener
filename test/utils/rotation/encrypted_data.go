@@ -22,7 +22,7 @@ type EncryptedResource struct {
 
 // EncryptedDataVerifier creates and reads encrypted data in the cluster to verify correct configuration of etcd encryption.
 type EncryptedDataVerifier struct {
-	NewTargetClientFunc func() (kubernetes.Interface, error)
+	NewTargetClientFunc func(ctx context.Context) (kubernetes.Interface, error)
 	Resources           []EncryptedResource
 }
 
@@ -57,7 +57,7 @@ func (v *EncryptedDataVerifier) verifyEncryptedData(ctx context.Context) {
 	)
 
 	Eventually(func(g Gomega) {
-		targetClient, err = v.NewTargetClientFunc()
+		targetClient, err = v.NewTargetClientFunc(ctx)
 		g.Expect(err).NotTo(HaveOccurred())
 	}).Should(Succeed())
 

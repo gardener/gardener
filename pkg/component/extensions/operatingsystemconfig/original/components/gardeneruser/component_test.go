@@ -52,6 +52,15 @@ EnvironmentFile=/etc/environment
 ExecStart=/var/lib/gardener-user/run.sh
 `),
 				},
+				extensionsv1alpha1.Unit{
+					Name:   "gardener-user.path",
+					Enable: ptr.To(true),
+					Content: ptr.To(`[Path]
+PathChanged=/var/lib/gardener-user-authorized-keys
+[Install]
+WantedBy=multi-user.target
+`),
+				},
 			))
 			Expect(files).To(ConsistOf(
 				extensionsv1alpha1.File{

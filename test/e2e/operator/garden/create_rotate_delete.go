@@ -116,7 +116,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 
 			// advanced verifiers testing things from the user's perspective
 			&rotationutils.EncryptedDataVerifier{
-				NewTargetClientFunc: func() (kubernetes.Interface, error) {
+				NewTargetClientFunc: func(ctx context.Context) (kubernetes.Interface, error) {
 					return kubernetes.NewClientFromSecret(ctx, runtimeClient, namespace, "gardener",
 						kubernetes.WithDisabledCachedClient(),
 						kubernetes.WithClientOptions(client.Options{Scheme: operatorclient.VirtualScheme}),
