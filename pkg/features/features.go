@@ -17,13 +17,6 @@ const (
 	// // alpha: v5.X
 	// MyFeature featuregate.Feature = "MyFeature"
 
-	// HVPA enables simultaneous horizontal and vertical scaling in Seed Clusters.
-	// Deprecated: The feature gate is deprecated and locked to false. It will be removed in a future release.
-	// owner @shreyas-s-rao @voelzmo
-	// alpha: v0.31.0
-	// deprecated: v1.106.0
-	HVPA featuregate.Feature = "HVPA"
-
 	// HVPAForShootedSeed enables simultaneous horizontal and vertical scaling in shooted seed Clusters.
 	// Deprecated: The feature gate is deprecated and locked to false. It will be removed in a future release.
 	// owner @shreyas-s-rao @voelzmo
@@ -118,7 +111,6 @@ var DefaultFeatureGate = utilfeature.DefaultMutableFeatureGate
 
 // AllFeatureGates is the list of all feature gates.
 var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
-	HVPA:                      {Default: false, PreRelease: featuregate.Deprecated, LockToDefault: true},
 	HVPAForShootedSeed:        {Default: false, PreRelease: featuregate.Deprecated, LockToDefault: true},
 	VPAForETCD:                {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	DefaultSeccompProfile:     {Default: false, PreRelease: featuregate.Alpha},

@@ -15,9 +15,9 @@ import (
 var _ = Describe("Features", func() {
 	Describe("#GetFeatures", func() {
 		It("should return the spec for the given feature gate", func() {
-			Expect(GetFeatures("HVPA", "HVPAForShootedSeed", "Foo")).To(Equal(map[featuregate.Feature]featuregate.FeatureSpec{
-				HVPA:               {Default: false, PreRelease: featuregate.Deprecated, LockToDefault: true},
-				HVPAForShootedSeed: {Default: false, PreRelease: featuregate.Deprecated, LockToDefault: true},
+			Expect(GetFeatures("DefaultSeccompProfile", "ShootForceDeletion", "Foo")).To(Equal(map[featuregate.Feature]featuregate.FeatureSpec{
+				DefaultSeccompProfile: {Default: false, PreRelease: featuregate.Alpha},
+				ShootForceDeletion:    {Default: true, PreRelease: featuregate.Beta},
 			}))
 		})
 	})
