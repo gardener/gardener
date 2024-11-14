@@ -223,7 +223,7 @@ spec:
     matchLabels: ...
 ```
 
-1. Add the label `high-availability-config.resources.gardener.cloud/type` to `deployment`s or `statefulset`s, as well as optionally involved `horizontalpodautoscaler`s or `HVPA`s where the following two values are possible:
+1. Add the label `high-availability-config.resources.gardener.cloud/type` to `deployment`s or `statefulset`s, as well as optionally involved `horizontalpodautoscaler`s where the following two values are possible:
 
 - `controller`
 - `server`

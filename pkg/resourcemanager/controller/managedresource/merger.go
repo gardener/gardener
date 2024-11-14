@@ -137,7 +137,7 @@ func mergeDeployment(scheme *runtime.Scheme, oldObj, newObj runtime.Object, pres
 	}
 
 	// Do not overwrite a Deployment's '.spec.replicas' if the new Deployment's '.spec.replicas'
-	// field is unset or the Deployment is scaled by either an HPA or HVPA.
+	// field is unset or we are asked to preserve the replicas (e.g. the Deployment is scaled by HPA).
 	if newDeployment.Spec.Replicas == nil || preserveReplicas {
 		newDeployment.Spec.Replicas = oldDeployment.Spec.Replicas
 	}
@@ -160,7 +160,7 @@ func mergePodTemplate(oldPod, newPod *corev1.PodTemplateSpec, preserveResources 
 	}
 
 	if preserveResources {
-		// Do not overwrite a PodTemplate's resource requests / limits if it is scaled by an HVPA
+		// Do not overwrite a PodTemplate's resource requests / limits when we are asked to preserve the resources
 		for i, newContainer := range newPod.Spec.Containers {
 			for j, oldContainer := range oldPod.Spec.Containers {
 				if newContainer.Name == oldContainer.Name {
@@ -277,7 +277,7 @@ func mergeStatefulSet(scheme *runtime.Scheme, oldObj, newObj runtime.Object, pre
 	}
 
 	// Do not overwrite a StatefulSet's '.spec.replicas' if the new StatefulSet's `.spec.replicas'
-	// field is unset or the Deployment is scaled by either an HPA or HVPA.
+	// field is unset or we are asked to preserve the replicas (e.g. the StatefulSet is scaled by HPA).
 	if newStatefulSet.Spec.Replicas == nil || preserveReplicas {
 		newStatefulSet.Spec.Replicas = oldStatefulSet.Spec.Replicas
 	}

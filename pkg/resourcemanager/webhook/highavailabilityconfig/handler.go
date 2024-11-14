@@ -13,7 +13,6 @@ import (
 	"strconv"
 	"strings"
 
-	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
 	admissionv1 "k8s.io/api/admission/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -21,7 +20,6 @@ import (
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -92,8 +90,6 @@ func (h *Handler) Handle(ctx context.Context, req admission.Request) admission.R
 		obj, err = h.handleStatefulSet(req, failureToleranceType, zones, isHorizontallyScaled, maxReplicas, isZonePinningEnabled)
 	case autoscalingv2.SchemeGroupVersion.WithKind("HorizontalPodAutoscaler").GroupKind():
 		obj, err = h.handleHorizontalPodAutoscaler(req, failureToleranceType)
-	case hvpav1alpha1.SchemeGroupVersionHvpa.WithKind("Hvpa").GroupKind():
-		obj, err = h.handleHvpa(req, failureToleranceType)
 	default:
 		return admission.Allowed(fmt.Sprintf("unexpected resource: %s", requestGK))
 	}
@@ -228,29 +224,6 @@ func (h *Handler) handleStatefulSet(
 	return statefulSet, nil
 }
 
-func (h *Handler) handleHvpa(req admission.Request, failureToleranceType *gardencorev1beta1.FailureToleranceType) (runtime.Object, error) {
-	hvpa := &hvpav1alpha1.Hvpa{}
-	if err := h.Decoder.Decode(req, hvpa); err != nil {
-		return nil, err
-	}
-
-	log := h.Logger.WithValues("hvpa", kubernetesutils.ObjectKeyForCreateWebhooks(hvpa, req))
-
-	if err := mutateAutoscalingReplicas(
-		log,
-		failureToleranceType,
-		hvpa,
-		func() *int32 { return hvpa.Spec.Hpa.Template.Spec.MinReplicas },
-		func(n *int32) { hvpa.Spec.Hpa.Template.Spec.MinReplicas = n },
-		func() int32 { return hvpa.Spec.Hpa.Template.Spec.MaxReplicas },
-		func(n int32) { hvpa.Spec.Hpa.Template.Spec.MaxReplicas = n },
-	); err != nil {
-		return nil, err
-	}
-
-	return hvpa, nil
-}
-
 func (h *Handler) handleHorizontalPodAutoscaler(req admission.Request, failureToleranceType *gardencorev1beta1.FailureToleranceType) (runtime.Object, error) {
 	switch req.Kind.Version {
 	case autoscalingv2beta1.SchemeGroupVersion.Version:
@@ -361,18 +334,6 @@ func (h *Handler) isHorizontallyScaled(ctx context.Context, namespace, targetAPI
 		}
 	}
 
-	hvpaList := &hvpav1alpha1.HvpaList{}
-	if err := h.TargetClient.List(ctx, hvpaList); err != nil && !meta.IsNoMatchError(err) {
-		return false, 0, fmt.Errorf("failed to list all HVPAs: %w", err)
-	}
-
-	for _, hvpa := range hvpaList.Items {
-		if targetRef := hvpa.Spec.TargetRef; targetRef != nil && targetRef.APIVersion == targetAPIVersion &&
-			targetRef.Kind == targetKind && targetRef.Name == targetName && hvpa.Spec.Hpa.Deploy {
-			return true, hvpa.Spec.Hpa.Template.Spec.MaxReplicas, nil
-		}
-	}
-
 	return false, 0, nil
 }
 
@@ -428,7 +389,7 @@ func (h *Handler) mutateTopologySpreadConstraints(
 	replicas := ptr.Deref(currentReplicas, 0)
 
 	// Set maxReplicas to replicas if component is not scaled horizontally or of the replica count is higher than maxReplicas
-	// which can happen if the involved H(V)PA object is not mutated yet.
+	// which can happen if the involved HPA object is not mutated yet.
 	if !isHorizontallyScaled || replicas > maxReplicas {
 		maxReplicas = replicas
 	}

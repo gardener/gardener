@@ -233,7 +233,7 @@ var _ = Describe("ResourceManager", func() {
 						c.EXPECT().Get(ctx, client.ObjectKeyFromObject(managedResource), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *resourcesv1alpha1.ManagedResource, _ ...client.GetOption) error {
 							obj.Status.ObservedGeneration = obj.Generation
 							obj.Status.Conditions = []gardencorev1beta1.Condition{
-								{Type: "ResourcesApplied", Status: gardencorev1beta1.ConditionFalse, Message: `failed to compute all HPA and HVPA target ref object keys: failed to list all HPAs: Unauthorized`},
+								{Type: "ResourcesApplied", Status: gardencorev1beta1.ConditionFalse, Message: `failed to compute all HPA target ref object keys: failed to list all HPAs: Unauthorized`},
 								{Type: "ResourcesHealthy", Status: gardencorev1beta1.ConditionTrue},
 							}
 							return nil

@@ -7,7 +7,6 @@ package highavailabilityconfig_test
 import (
 	"context"
 	"net/http"
-	"path/filepath"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -63,9 +62,6 @@ var _ = BeforeSuite(func() {
 	testEnv = &envtest.Environment{
 		ControlPlane: envtest.ControlPlane{
 			APIServer: &envtest.APIServer{},
-		},
-		CRDInstallOptions: envtest.CRDInstallOptions{
-			Paths: []string{filepath.Join("..", "..", "..", "..", "example", "seed-crds", "10-crd-autoscaling.k8s.io_hvpas.yaml")},
 		},
 		ErrorIfCRDPathMissing: true,
 		WebhookInstallOptions: envtest.WebhookInstallOptions{

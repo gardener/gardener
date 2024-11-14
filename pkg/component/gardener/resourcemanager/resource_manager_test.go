@@ -967,14 +967,6 @@ var _ = Describe("ResourceManager", func() {
 							},
 							Operations: []admissionregistrationv1.OperationType{"CREATE", "UPDATE"},
 						},
-						{
-							Rule: admissionregistrationv1.Rule{
-								APIGroups:   []string{"autoscaling.k8s.io"},
-								APIVersions: []string{"v1alpha1"},
-								Resources:   []string{"hvpas"},
-							},
-							Operations: []admissionregistrationv1.OperationType{"CREATE", "UPDATE"},
-						},
 					},
 					NamespaceSelector: &metav1.LabelSelector{
 						MatchExpressions: []metav1.LabelSelectorRequirement{{
@@ -1287,15 +1279,6 @@ webhooks:
     - UPDATE
     resources:
     - horizontalpodautoscalers
-  - apiGroups:
-    - autoscaling.k8s.io
-    apiVersions:
-    - v1alpha1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - hvpas
   sideEffects: None
   timeoutSeconds: 10
 - admissionReviewVersions:
