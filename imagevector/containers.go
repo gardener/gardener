@@ -61,8 +61,6 @@ const (
 	ContainerImageNameGardenerScheduler = "gardener-scheduler"
 	// ContainerImageNameGardenlet is a constant for an image in the image vector with name 'gardenlet'.
 	ContainerImageNameGardenlet = "gardenlet"
-	// ContainerImageNameHvpaController is a constant for an image in the image vector with name 'hvpa-controller'.
-	ContainerImageNameHvpaController = "hvpa-controller"
 	// ContainerImageNameHyperkube is a constant for an image in the image vector with name 'hyperkube'.
 	ContainerImageNameHyperkube = "hyperkube"
 	// ContainerImageNameIngressDefaultBackend is a constant for an image in the image vector with name 'ingress-default-backend'.
