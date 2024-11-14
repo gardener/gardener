@@ -17,13 +17,6 @@ const (
 	// // alpha: v5.X
 	// MyFeature featuregate.Feature = "MyFeature"
 
-	// VPAForETCD enables using plain VPA for etcd-main and etcd-events.
-	// owner @voelzmo
-	// alpha: v1.94.0
-	// beta: v1.97.0
-	// GA: v1.105.0
-	VPAForETCD featuregate.Feature = "VPAForETCD"
-
 	// DefaultSeccompProfile defaults the seccomp profile for Gardener managed workload in the seed to RuntimeDefault.
 	// owner: @dimityrmirchev
 	// alpha: v1.54.0
@@ -104,7 +97,6 @@ var DefaultFeatureGate = utilfeature.DefaultMutableFeatureGate
 
 // AllFeatureGates is the list of all feature gates.
 var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
-	VPAForETCD:                {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	DefaultSeccompProfile:     {Default: false, PreRelease: featuregate.Alpha},
 	ShootManagedIssuer:        {Default: false, PreRelease: featuregate.Alpha},
 	ShootForceDeletion:        {Default: true, PreRelease: featuregate.Beta},
