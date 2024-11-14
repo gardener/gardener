@@ -2897,9 +2897,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 			expanderPriorityAndLeastWaste       = core.ClusterAutoscalerExpanderPriority + "," + core.ClusterAutoscalerExpanderLeastWaste
 			invalidExpander                     = core.ClusterAutoscalerExpanderPriority + ", test-expander"
 			invalidMultipleExpanderString       = core.ClusterAutoscalerExpanderPriority + ", " + core.ClusterAutoscalerExpanderLeastWaste
-			ignoreTaintsUnique                  = []string{"taint-1", "taint-2"}
-			ignoreTaintsDuplicate               = []string{"taint-1", "taint-1"}
-			ignoreTaintsInvalid                 = []string{"taint 1", "taint-1"}
+			taintsUnique                        = []string{"taint-1", "taint-2"}
+			taintsDuplicate                     = []string{"taint-1", "taint-1"}
+			taintsInvalid                       = []string{"taint 1", "taint-1"}
 		)
 
 		Context("ClusterAutoscaler validation", func() {
@@ -2941,15 +2941,45 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("valid with expander random", core.ClusterAutoscaler{
 					Expander: &expanderRandom,
 				}, BeEmpty()),
+				Entry("valid with startup taint", core.ClusterAutoscaler{
+					StartupTaints: taintsUnique,
+				}, BeEmpty()),
+				Entry("duplicate startup taint", core.ClusterAutoscaler{
+					StartupTaints: taintsDuplicate,
+				}, ConsistOf(field.Duplicate(field.NewPath("startupTaints").Index(1), taintsDuplicate[1]))),
+				Entry("invalid with startup taint",
+					core.ClusterAutoscaler{
+						StartupTaints: taintsInvalid,
+					},
+					ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("startupTaints[0]"),
+					}))),
+				),
+				Entry("valid with status taint", core.ClusterAutoscaler{
+					StatusTaints: taintsUnique,
+				}, BeEmpty()),
+				Entry("duplicate status taint", core.ClusterAutoscaler{
+					StatusTaints: taintsDuplicate,
+				}, ConsistOf(field.Duplicate(field.NewPath("statusTaints").Index(1), taintsDuplicate[1]))),
+				Entry("invalid with status taint",
+					core.ClusterAutoscaler{
+						StatusTaints: taintsInvalid,
+					},
+					ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("statusTaints[0]"),
+					}))),
+				),
 				Entry("valid with ignore taint", core.ClusterAutoscaler{
-					IgnoreTaints: ignoreTaintsUnique,
+					IgnoreTaints: taintsUnique,
 				}, BeEmpty()),
 				Entry("duplicate ignore taint", core.ClusterAutoscaler{
-					IgnoreTaints: ignoreTaintsDuplicate,
-				}, ConsistOf(field.Duplicate(field.NewPath("ignoreTaints").Index(1), ignoreTaintsDuplicate[1]))),
+					IgnoreTaints: taintsDuplicate,
+				}, ConsistOf(field.Duplicate(field.NewPath("ignoreTaints").Index(1), taintsDuplicate[1]))),
 				Entry("invalid with ignore taint",
 					core.ClusterAutoscaler{
-						IgnoreTaints: ignoreTaintsInvalid,
+						IgnoreTaints: taintsInvalid,
 					},
 					ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),

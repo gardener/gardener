@@ -504,7 +504,14 @@ type ClusterAutoscaler struct {
 	MaxNodeProvisionTime *metav1.Duration
 	// MaxGracefulTerminationSeconds is the number of seconds CA waits for pod termination when trying to scale down a node (default: 600).
 	MaxGracefulTerminationSeconds *int32
+	// StartupTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
+	// Cluster Autoscaler treats nodes tainted with startup taints as unready, but taken into account during scale up logic, assuming they will become ready shortly.
+	StartupTaints []string
+	// StatusTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
+	// Cluster Autoscaler internally treats nodes tainted with status taints as ready, but filtered out during scale up logic.
+	StatusTaints []string
 	// IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
+	// Ignore taints are now deprecated and treated as startup taints.
 	IgnoreTaints []string
 	// NewPodScaleUpDelay specifies how long CA should ignore newly created pods before they have to be considered for scale-up.
 	NewPodScaleUpDelay *metav1.Duration

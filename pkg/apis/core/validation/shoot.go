@@ -1140,8 +1140,16 @@ func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, fldPath *field
 		}
 	}
 
+	if startupTaints := autoScaler.StartupTaints; startupTaints != nil {
+		allErrs = append(allErrs, validateClusterAutoscalerStartupStatusIgnoreTaints(startupTaints, fldPath.Child("startupTaints"))...)
+	}
+
+	if statusTaints := autoScaler.StatusTaints; statusTaints != nil {
+		allErrs = append(allErrs, validateClusterAutoscalerStartupStatusIgnoreTaints(statusTaints, fldPath.Child("statusTaints"))...)
+	}
+
 	if ignoreTaints := autoScaler.IgnoreTaints; ignoreTaints != nil {
-		allErrs = append(allErrs, validateClusterAutoscalerIgnoreTaints(ignoreTaints, fldPath.Child("ignoreTaints"))...)
+		allErrs = append(allErrs, validateClusterAutoscalerStartupStatusIgnoreTaints(ignoreTaints, fldPath.Child("ignoreTaints"))...)
 	}
 
 	if newPodScaleUpDelay := autoScaler.NewPodScaleUpDelay; newPodScaleUpDelay != nil && newPodScaleUpDelay.Duration < 0 {
@@ -1966,11 +1974,11 @@ func validateKubeletConfigReserved(reserved *core.KubeletConfigReserved, fldPath
 
 var reservedTaintKeys = sets.New(v1beta1constants.TaintNodeCriticalComponentsNotReady)
 
-func validateClusterAutoscalerIgnoreTaints(ignoredTaints []string, fldPath *field.Path) field.ErrorList {
+func validateClusterAutoscalerStartupStatusIgnoreTaints(taints []string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	taintKeySet := make(map[string]struct{})
 
-	for i, taint := range ignoredTaints {
+	for i, taint := range taints {
 		idxPath := fldPath.Index(i)
 
 		// validate the taint key

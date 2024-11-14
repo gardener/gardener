@@ -633,9 +633,19 @@ type ClusterAutoscaler struct {
 	// MaxGracefulTerminationSeconds is the number of seconds CA waits for pod termination when trying to scale down a node (default: 600).
 	// +optional
 	MaxGracefulTerminationSeconds *int32 `json:"maxGracefulTerminationSeconds,omitempty" protobuf:"varint,9,opt,name=maxGracefulTerminationSeconds"`
+	// StartupTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
+	// Cluster Autoscaler treats nodes tainted with startup taints as unready, but taken into account during scale up logic, assuming they will become ready shortly.
+	// +optional
+	StartupTaints []string `json:"startupTaints,omitempty" protobuf:"bytes,10,opt,name=startupTaints"`
+	// StatusTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
+	// Cluster Autoscaler internally treats nodes tainted with status taints as ready, but filtered out during scale up logic.
+	// +optional
+	StatusTaints []string `json:"statusTaints,omitempty" protobuf:"bytes,10,opt,name=statusTaints"`
+	// Deprecated: Ignore taints are now deprecated and treated as startup taints.
 	// IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
 	// +optional
 	IgnoreTaints []string `json:"ignoreTaints,omitempty" protobuf:"bytes,10,opt,name=ignoreTaints"`
+
 	// NewPodScaleUpDelay specifies how long CA should ignore newly created pods before they have to be considered for scale-up (default: 0s).
 	// +optional
 	NewPodScaleUpDelay *metav1.Duration `json:"newPodScaleUpDelay,omitempty" protobuf:"bytes,11,opt,name=newPodScaleUpDelay"`

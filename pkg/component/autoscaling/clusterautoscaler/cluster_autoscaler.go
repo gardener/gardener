@@ -466,6 +466,14 @@ func (c *clusterAutoscaler) computeCommand() []string {
 		fmt.Sprintf("--max-nodes-total=%d", c.maxNodesTotal),
 	)
 
+	for _, taint := range c.config.StartupTaints {
+		command = append(command, "--startup-taint="+taint)
+	}
+
+	for _, taint := range c.config.StatusTaints {
+		command = append(command, "--status-taint="+taint)
+	}
+
 	for _, taint := range c.config.IgnoreTaints {
 		command = append(command, "--ignore-taint="+taint)
 	}
