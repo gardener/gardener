@@ -19,7 +19,6 @@ func RegisterFeatureGates() {
 // GetFeatures returns all gardenlet features.
 func GetFeatures() []featuregate.Feature {
 	return []featuregate.Feature{
-		features.HVPAForShootedSeed,
 		features.VPAForETCD,
 		features.DefaultSeccompProfile,
 		features.ShootManagedIssuer,

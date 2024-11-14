@@ -17,13 +17,6 @@ const (
 	// // alpha: v5.X
 	// MyFeature featuregate.Feature = "MyFeature"
 
-	// HVPAForShootedSeed enables simultaneous horizontal and vertical scaling in shooted seed Clusters.
-	// Deprecated: The feature gate is deprecated and locked to false. It will be removed in a future release.
-	// owner @shreyas-s-rao @voelzmo
-	// alpha: v0.32.0
-	// deprecated: v1.106.0
-	HVPAForShootedSeed featuregate.Feature = "HVPAForShootedSeed"
-
 	// VPAForETCD enables using plain VPA for etcd-main and etcd-events.
 	// owner @voelzmo
 	// alpha: v1.94.0
@@ -111,7 +104,6 @@ var DefaultFeatureGate = utilfeature.DefaultMutableFeatureGate
 
 // AllFeatureGates is the list of all feature gates.
 var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
-	HVPAForShootedSeed:        {Default: false, PreRelease: featuregate.Deprecated, LockToDefault: true},
 	VPAForETCD:                {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	DefaultSeccompProfile:     {Default: false, PreRelease: featuregate.Alpha},
 	ShootManagedIssuer:        {Default: false, PreRelease: featuregate.Alpha},
