@@ -5,11 +5,8 @@
 package botanist
 
 import (
-	"cmp"
 	"context"
 	"fmt"
-	"slices"
-	"strings"
 	"time"
 
 	"k8s.io/utils/clock"
@@ -26,33 +23,12 @@ import (
 // DefaultInterval is the default interval for retry operations.
 const DefaultInterval = 5 * time.Second
 
-// New takes an operation object <o> and creates a new Botanist object. It checks whether the given Shoot DNS
-// domain is covered by a default domain, and if so, it sets the <DefaultDomainSecret> attribute on the Botanist
-// object.
+// New takes an operation object <o> and creates a new Botanist object.
 func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	var (
 		b   = &Botanist{Operation: o}
 		err error
 	)
-
-	// Determine all default domain secrets and check whether the used Shoot domain matches a default domain.
-	if o.Shoot != nil && o.Shoot.GetInfo().Spec.DNS != nil && o.Shoot.GetInfo().Spec.DNS.Domain != nil {
-		var (
-			prefix            = fmt.Sprintf("%s-", v1beta1constants.GardenRoleDefaultDomain)
-			defaultDomainKeys = o.GetSecretKeysOfRole(v1beta1constants.GardenRoleDefaultDomain)
-		)
-		slices.SortFunc(defaultDomainKeys, func(a, b string) int {
-			return cmp.Compare(len(b), len(a))
-		})
-
-		for _, key := range defaultDomainKeys {
-			defaultDomain := strings.SplitAfter(key, prefix)[1]
-			if strings.HasSuffix(*(o.Shoot.GetInfo().Spec.DNS.Domain), defaultDomain) {
-				b.DefaultDomainSecret = b.LoadSecret(prefix + defaultDomain)
-				break
-			}
-		}
-	}
 
 	o.SecretsManager, err = secretsmanager.New(
 		ctx,
