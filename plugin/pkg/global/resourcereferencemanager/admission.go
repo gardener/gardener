@@ -1102,14 +1102,14 @@ func isShootRelatedToCloudProfile(shoot *gardencorev1beta1.Shoot, cloudProfile *
 }
 
 // getRemovedKubernetesVersions returns Kubernetes versions that have been removed from the NamespacedCloudProfile.
-func getRemovedKubernetesVersions(namespacedCloudProfile, oldNamespacedCloudProfile *core.NamespacedCloudProfile) sets.String {
-	var removedKubernetesVersions sets.String
+func getRemovedKubernetesVersions(namespacedCloudProfile, oldNamespacedCloudProfile *core.NamespacedCloudProfile) sets.Set[string] {
+	var removedKubernetesVersions sets.Set[string]
 	if oldNamespacedCloudProfile.Spec.Kubernetes != nil {
 		var newKubernetesVersions []core.ExpirableVersion
 		if namespacedCloudProfile.Spec.Kubernetes != nil {
 			newKubernetesVersions = namespacedCloudProfile.Spec.Kubernetes.Versions
 		}
-		removedKubernetesVersions = sets.StringKeySet(helper.GetRemovedVersions(oldNamespacedCloudProfile.Spec.Kubernetes.Versions, newKubernetesVersions))
+		removedKubernetesVersions = sets.KeySet(helper.GetRemovedVersions(oldNamespacedCloudProfile.Spec.Kubernetes.Versions, newKubernetesVersions))
 	}
 	return removedKubernetesVersions
 }
@@ -1143,7 +1143,7 @@ func getRemovedMachineImageVersions(namespacedCloudProfile, oldNamespacedCloudPr
 }
 
 // validateShootForRemovedKubernetesVersions checks that for a removed Kubernetes version override from a NamespacedCloudProfile that is used by a Shoot there is still a valid expiration date in the parent CloudProfile.
-func validateShootForRemovedKubernetesVersions(channel chan error, shoot *gardencorev1beta1.Shoot, removedKubernetesVersions sets.String, parentCloudProfileKubernetesVersions map[string]gardencorev1beta1.ExpirableVersion, namespacedCloudProfile *core.NamespacedCloudProfile) {
+func validateShootForRemovedKubernetesVersions(channel chan error, shoot *gardencorev1beta1.Shoot, removedKubernetesVersions sets.Set[string], parentCloudProfileKubernetesVersions map[string]gardencorev1beta1.ExpirableVersion, namespacedCloudProfile *core.NamespacedCloudProfile) {
 	shootKubernetesVersion := shoot.Spec.Kubernetes.Version
 	if removedKubernetesVersions.Has(shootKubernetesVersion) {
 		if parentCloudProfileKubernetesVersions[shootKubernetesVersion].ExpirationDate != nil && parentCloudProfileKubernetesVersions[shootKubernetesVersion].ExpirationDate.Before(&metav1.Time{Time: time.Now()}) {
