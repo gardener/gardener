@@ -50,11 +50,11 @@ if [[ "$TYPE" == "operator" ]] || [[ "$TYPE" == "operator-seed" ]]; then
     printf "\n$local_address_operator plutono-garden.ingress.runtime-garden.local.gardener.cloud\n" >>/etc/hosts
   else
     if ! grep -q -x "$local_address_operator api.virtual-garden.local.gardener.cloud" /etc/hosts; then
-      printf "Hostname for the virtual garden cluster is missing in /etc/hosts. To access the virtual garden cluster and run e2e tests, you need to extend your /etc/hosts file.\nPlease refer to https://github.com/gardener/gardener/blob/master/docs/deployment/getting_started_locally.md#accessing-the-shoot-cluster\n\n"
+      printf "Hostname for the virtual garden cluster is missing in /etc/hosts. To access the virtual garden cluster and run e2e tests, you need to extend your /etc/hosts file.\nPlease refer to https://github.com/gardener/gardener/blob/master/docs/deployment/getting_started_locally.md#alternative-way-to-set-up-garden-and-seed-leveraging-gardener-operator\n\n"
       exit 1
     fi
     if ! grep -q -x "$local_address_operator plutono-garden.ingress.runtime-garden.local.gardener.cloud" /etc/hosts; then
-      printf "Hostname for the plutono is missing in /etc/hosts. To access the plutono and run e2e tests, you need to extend your /etc/hosts file.\nPlease refer to https://github.com/gardener/gardener/blob/master/docs/deployment/getting_started_locally.md#accessing-the-shoot-cluster\n\n"
+      printf "Hostname for Plutono is missing in /etc/hosts. To access Plutono and run e2e tests, you need to extend your /etc/hosts file.\nPlease refer to https://github.com/gardener/gardener/blob/master/docs/deployment/getting_started_locally.md#alternative-way-to-set-up-garden-and-seed-leveraging-gardener-operator\n\n"
       exit 1
     fi
   fi
