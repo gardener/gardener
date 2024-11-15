@@ -169,6 +169,17 @@
       ],
     },
     {
+      // Group gardener-discovery-server updates in one PR.
+      groupName: 'gardener-discovery-server',
+      matchDatasources: [
+        'docker',
+        'github-releases',
+      ],
+      matchPackageNames: [
+        '/.+gardener-discovery-server$/'
+      ],
+    },
+    {
       // Ask for manual approval to create PRs for minor and major updates of dependencies which most likely
       // require manual adaptations of the code.
       matchDatasources: [
