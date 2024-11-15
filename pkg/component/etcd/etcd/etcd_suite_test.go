@@ -10,13 +10,11 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 func TestEtcd(t *testing.T) {
-	gardenletfeatures.RegisterFeatureGates()
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Component Etcd Suite")
 }

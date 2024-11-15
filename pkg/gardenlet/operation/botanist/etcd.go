@@ -7,7 +7,6 @@ package botanist
 import (
 	"context"
 
-	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,7 +19,6 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	"github.com/gardener/gardener/pkg/component/shared"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -42,11 +40,6 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 		replicas = ptr.To(getEtcdReplicas(b.Shoot.GetInfo()))
 	}
 
-	hvpaEnabled := features.DefaultFeatureGate.Enabled(features.HVPA)
-	if b.ManagedSeed != nil {
-		hvpaEnabled = features.DefaultFeatureGate.Enabled(features.HVPAForShootedSeed)
-	}
-
 	e := NewEtcd(
 		b.Logger,
 		b.SeedClientSet.Client(),
@@ -60,27 +53,25 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 			DefragmentationSchedule:     &defragmentationSchedule,
 			CARotationPhase:             v1beta1helper.GetShootCARotationPhase(b.Shoot.GetInfo().Status.Credentials),
 			RuntimeKubernetesVersion:    b.Seed.KubernetesVersion,
-			HVPAEnabled:                 hvpaEnabled,
 			MaintenanceTimeWindow:       *b.Shoot.GetInfo().Spec.Maintenance.TimeWindow,
-			ScaleDownUpdateMode:         getScaleDownUpdateMode(class, b.Shoot),
+			EvictionRequirement:         getEvictionRequirement(class, b.Shoot),
 			PriorityClassName:           v1beta1constants.PriorityClassNameShootControlPlane500,
 			HighAvailabilityEnabled:     v1beta1helper.IsHAControlPlaneConfigured(b.Shoot.GetInfo()),
 			TopologyAwareRoutingEnabled: b.Shoot.TopologyAwareRoutingEnabled,
-			VPAEnabled:                  features.DefaultFeatureGate.Enabled(features.VPAForETCD),
 		},
 	)
 
 	return e, nil
 }
 
-func getScaleDownUpdateMode(c etcd.Class, s *shoot.Shoot) *string {
+func getEvictionRequirement(c etcd.Class, s *shoot.Shoot) *string {
 	if c == etcd.ClassImportant && (s.Purpose == gardencorev1beta1.ShootPurposeProduction || s.Purpose == gardencorev1beta1.ShootPurposeInfrastructure) {
-		return ptr.To(hvpav1alpha1.UpdateModeOff)
+		return ptr.To(v1beta1constants.EvictionRequirementNever)
 	}
 	if metav1.HasAnnotation(s.GetInfo().ObjectMeta, v1beta1constants.ShootAlphaControlPlaneScaleDownDisabled) {
-		return ptr.To(hvpav1alpha1.UpdateModeOff)
+		return ptr.To(v1beta1constants.EvictionRequirementNever)
 	}
-	return ptr.To(hvpav1alpha1.UpdateModeMaintenanceWindow)
+	return ptr.To(v1beta1constants.EvictionRequirementInMaintenanceWindowOnly)
 }
 
 // DeployEtcd deploys the etcd main and events.
