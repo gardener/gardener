@@ -34,8 +34,12 @@ import (
 	"github.com/gardener/gardener/test/utils/rotation"
 )
 
-// SeedName is the name of the managed seed used in this e2e test
-const SeedName = "e2e-managedseed"
+const (
+	// SeedName is the name of the managed seed used in this e2e test
+	SeedName = "e2e-managedseed"
+	// SeedNameOperator is the name of the managed seed used in this e2e test with the gardener-operator
+	SeedNameOperator = "e2e-mngdseed-op"
+)
 
 var parentCtx context.Context
 
@@ -47,7 +51,11 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 	f := framework.NewShootCreationFramework(&framework.ShootCreationConfig{
 		GardenerConfig: e2e.DefaultGardenConfig("garden"),
 	})
-	f.Shoot = e2e.DefaultShoot(SeedName)
+	seedName := SeedName
+	if os.Getenv("OPERATOR_SEED") == "true" {
+		seedName = SeedNameOperator
+	}
+	f.Shoot = e2e.DefaultShoot(seedName)
 
 	It("Create Shoot, Create ManagedSeed, Delete ManagedSeed, Delete Shoot", func() {
 		By("Create Shoot")
