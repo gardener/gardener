@@ -42,5 +42,6 @@
 - containerPort: 30053
   hostPort: 5353
   protocol: TCP
+  listenAddress: 172.18.255.1
 {{- end -}}
 {{- end -}}
