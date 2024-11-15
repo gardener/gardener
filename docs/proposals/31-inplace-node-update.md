@@ -65,11 +65,12 @@ This process presents challenges for **physical machines** or **bare-metal nodes
 - **Locally attached storage**: Physical machines often have locally attached disks, which cannot be easily moved or re-attached to other machines, unlike network-attached volumes in virtual environments.
 - **Limited interchangeability**: Physical machines are typically larger in size, fewer in number, and not as easily replaced or repurposed as virtual machines, making their replacement more challenging.
 
-To address this, we aim to support new update strategies that do not require the deletion and recreation of nodes when the Kubernetes minor version and/or machine image version is updated, reducing the need for node replacement, especially in environments with limited physical resources. Additionally, there are scenarios where users want control over node updates, allowing them to select specific nodes to be updated. Our goal is to support a new way to update these dependencies that avoids node deletion and recreation, while also giving users the flexibility to manage updates on particular nodes.
+In addition, this process also presents challenges for **virtual machines**, e.g. if the virtual machine type is scarce (in general or because of an ongoing capacity crunch) or if certain scarce resources are connected/attached, e.g. GPUs that may not be available for additional or even replaced machines once released (as other customers are waiting for them).
+To address this, we aim to support new update strategies that do not require the deletion and recreation of nodes when the Kubernetes minor version and/or machine image version is updated, reducing the need for node replacement, especially in environments with limited physical resources. Additionally, there are scenarios where users want control over node updates, allowing them to select specific nodes to be updated. Our goal is to support a new way to update these dependencies that avoids node deletion and recreation, while also giving users the flexibility to orchestrate (=trigger) updates themselves as they see fit, e.g. after executing custom pre-update checks.
 
 ### Goals
 
-- Provide functionality to update the nodes in-place for Kubernetes minor versions and Machine image versions.
+- Provide functionality to update the nodes in-place for Kubernetes minor versions and machine image versions.
 - Two strategies for in-place - `InPlaceUpdate` and `InplaceUpdateOnLabel`.
 - Maximize re-use of the existing functionality from `machine-controller-manager` and [`gardener-node-agent`](https://github.com/gardener/gardener/blob/master/docs/concepts/node-agent.md).
 
@@ -105,21 +106,21 @@ Gardener will introduce two additional update strategies, `InPlaceUpdate` and `I
 
 #### InplaceUpdate strategy
 
-1. On shoot spec change for Kubernetes/Machine image version, `machine-controller-manager` will label all the nodes with `candidate-for-update` label. This label can be used to identify nodes that will be selected for updates in the future.
-2. `machine-controller-manager` will add the necessary annotation to the nodes to prevent it from being scaled down by [`cluster-autoscaler`](https://github.com/gardener/autoscaler/tree/machine-controller-manager-provider/cluster-autoscaler) during the update process.
-3. `machine-controller-manager` will select the nodes based on the configured `maxUnavailable` and label them with `selected-for-update`. This label can be used to identify nodes that are currently undergoing an update.
-4. `machine-controller-manager` will cordon and drain the node and label it with `ready-for-update` label.
-5. `gardener-node-agent` will detect the `ready-for-update` label and perform the update on the node. And it will wait for the update to complete within the specified timeout.
-6. Once the Kubernetes/Machine image version is updated, the node will be labeled by the `gardener-node-agent` with `update-successful` label.
-7. `machine-controller-manager` will `uncordon` the node, and remove all the added labels. The node is then ready to schedule the workloads.
+1. On a shoot spec change for a worker pool, `machine-controller-manager` will label all nodes of the changed worker pool with the `candidate-for-update` label. This label is used to identify nodes that require an update.
+2. `machine-controller-manager` will add the necessary annotation to the nodes to prevent them from being scaled down by [`cluster-autoscaler`](https://github.com/gardener/autoscaler/tree/machine-controller-manager-provider/cluster-autoscaler) during the update process.
+3. `machine-controller-manager` will select as many nodes as are permitted by the `maxUnavailable` setting for the worker pool and label it/them with `selected-for-update`. This label can be used to identify nodes that are about to or are currently undergoing an update.
+4. `machine-controller-manager` will cordon and drain the node/nodes and label it/them with the `ready-for-update` label once the drain has completed.
+5. `gardener-node-agent` will detect the `ready-for-update` label and perform the update on the machine. It will wait for the update to complete (with a specified timeout).
+6. Once the machine has been updated, the node will be labeled by the `gardener-node-agent` with the `update-successful` label.
+7. `machine-controller-manager` will `uncordon` any node with the `update-successful` label and remove this and all other update-related labels. When the node becomes `Ready`, it can host again workload.
 
 ![InplaceUpdate](assets/inplace-update.png "InPlace Update Strategy")
 
 #### InplaceUpdateOnLabel strategy
 
-1. On shoot spec change, nodes will be labeled with `candidate-for-update`.
+1. On a shoot spec change for a worker pool, `machine-controller-manager` will label all nodes of the changed worker pool with the `candidate-for-update` label. This label is used to identify nodes that require an update.
 2. `machine-controller-manager` will add the necessary annotation to the nodes to prevent it from being scaled down by `cluster-autoscaler` during the update process.
-3. `machine-controller-manager` will wait for the `selected-for-update` label on the node. The orchestration of the update is solely the responsibility of the user. They are free to select the nodes to be updated at will.
+3. `machine-controller-manager` will wait for the `selected-for-update` label on the node. The orchestration of the update is solely the responsibility of the user. The user is free to select the nodes to be updated at will.
 4. Once the `selected-for-update` label is added by the user on the node, steps 4-7 of the `Inplace` strategy will performed.
 
 ![InplaceUpdateOnLabel](assets/inplace-update-onlabel.png "InPlace Update OnLabel Strategy")
@@ -260,12 +261,12 @@ The `machine-controller-manager` acts as an orchestrator for the update, ensurin
 
 In the current implementation, when a Kubernetes minor version or Machine Image/OS version is updated in the shoot (worker pool), the provider extension creates a new `MachineClass`, and the `MachineDeployment` is updated to reference this new `MachineClass`. `machine-controller-manager` detects this change and creates a new `MachineSet` with the new `MachineClass` and machines are rolled out based on the `RollingUpdate` strategy.
 
-In the case of the `RollingUpdate` strategy, new machines are created in the new `MachineSet` using the new `MachineClass`, and the old ones are deleted from the old `MachineSet`. For in-place updates, instead of creating new machines for the new `MachineSet`, the old ones are moved from the old `MachineSet` to the new one after the `gardener-node-agent` has successfully updated the dependencies. This process preserves the old nodes.
+In the case of the `RollingUpdate` strategy, new machines are created in the new `MachineSet` using the new `MachineClass`, and the old ones are deleted from the old `MachineSet`. For in-place updates, instead of creating new machines for the new `MachineSet`, the old ones are moved from the old `MachineSet` to the new one after the `gardener-node-agent` has successfully updated the dependencies. This process preserves the old machines (their `Machine` and `Node` resources).
 
 There are two ways to achieve this:
 
-1. **Owner Reference Update**: Move the old machine to the new `MachineSet` by updating the owner reference. The downside of this method is that the machine name will stay the same through updates, which breaks the current naming convention of including the `MachineSet` name as a prefix in machine names.
-2. **Shallow Delete**: Instead of directly moving a machine from one `MachineSet` to another, first perform a shallow delete of the old machine object (without deleting the underlying VM), then create a new machine object in the new `MachineSet` for the same VM.
+1. **Owner Reference Update**: Move the old `Machine` to the new `MachineSet` by updating the owner reference. The downside of this method is that the `Machine` name will stay the same through updates, which breaks the current naming convention of including the `MachineSet` name as a prefix in `Machine` name.
+2. **Shallow Delete**: Instead of directly moving a `Machine` from one `MachineSet` to another, first perform a shallow delete of the old `Machine` object (without deleting the underlying physical/virtual machine), then create a new `Machine` object in the new `MachineSet` (for the same physical/virtual machine).
 
 > [!NOTE]
 > At the time of writing this GEP, it is undecided which method to proceed with. The first method has been evaluated, but the feasibility of the second method is yet to be assessed. If feasible, the second method is preferred.
@@ -298,13 +299,13 @@ status: {}
 
 `maxUnavailable`: Specifies the maximum number of unavailable machines during the update process.
 
-`maxSurge`: Specifies the maximum number of machines that can be scheduled above the desired number of machines. Set `maxSurge` to zero if you don't want any new nodes to be provisioned during the update. You can set it to a value greater than zero if you don't want unavailable nodes during the update; in that case, first new nodes will be created with the updated configuration and then the old nodes will undergo in-place updates.
+`maxSurge`: Specifies the maximum number of machines that can be scheduled above the desired number of machines. Set `maxSurge` to zero if you don't want any new machines/nodes to be provisioned during the update. You can set it to a value greater than zero if you don't want unavailable nodes during the update; in that case, first new machines/nodes will be created with the updated configuration and then the old machines/nodes will undergo in-place updates.
 
 `onLabel`: If the update strategy is `InPlaceUpdateOnLabel` in the worker spec, the worker controller will set this field to true.
 
 ### Dependency Watchdog
 
-Currently, the [`dependency-watchdog`](https://github.com/gardener/dependency-watchdog) monitors the leases of the nodes in the shoot cluster. If nodes more than a configured threshold are unhealthy, it scales down the `machine-controller-manager`, `kube-controller-manager`, and `cluster-autoscaler` to prevent a meltdown. During an ongoing in-place update, DWD can make use of the labels added by `machine-controller-manager` during the `in-place` update to exclude nodes undergoing updates from its health check.
+Currently, the [`dependency-watchdog`](https://github.com/gardener/dependency-watchdog) monitors the leases of the nodes in the shoot cluster. If more nodes than a configured threshold are unhealthy, it scales down the `machine-controller-manager`, `kube-controller-manager`, and `cluster-autoscaler` to prevent a meltdown. During an ongoing in-place update, DWD can make use of the labels added by `machine-controller-manager` during the `in-place` update to exclude nodes undergoing updates from its health check.
 
 ### Extensions
 
