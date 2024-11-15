@@ -79,11 +79,10 @@ var _ = BeforeSuite(func() {
 	testNamespaceName := testID + "-" + testRunID[:8]
 
 	By("Start source environment")
-	seedCRDs := filepath.Join("..", "..", "..", "..", "example", "seed-crds")
 	sourceEnv = &envtest.Environment{
 		CRDInstallOptions: envtest.CRDInstallOptions{
 			Paths: []string{
-				filepath.Join(seedCRDs, "10-crd-machine.sapcloud.io_machines.yaml"),
+				filepath.Join("..", "..", "..", "..", "example", "seed-crds", "10-crd-machine.sapcloud.io_machines.yaml"),
 			},
 		},
 		ErrorIfCRDPathMissing: true,
@@ -157,20 +156,16 @@ var _ = BeforeSuite(func() {
 	machineName = "machine-" + testRunID
 	userNameNodeAgent = "gardener.cloud:node-agent:machine:" + machineName
 
-	createClient := func(userName string) (client.Client, *rest.Config) {
-		user, err := targetEnv.AddUser(
-			envtest.User{Name: userName, Groups: []string{v1beta1constants.NodeAgentsGroup}},
-			&rest.Config{QPS: 1000.0, Burst: 2000.0},
-		)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(user).NotTo(BeNil())
+	user, err := targetEnv.AddUser(
+		envtest.User{Name: userNameNodeAgent, Groups: []string{v1beta1constants.NodeAgentsGroup}},
+		&rest.Config{QPS: 1000.0, Burst: 2000.0},
+	)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(user).NotTo(BeNil())
+	targetRestConfigNodeAgent = user.Config()
 
-		testClient, err := client.New(user.Config(), client.Options{Scheme: resourcemanagerclient.CombinedScheme})
-		Expect(err).NotTo(HaveOccurred())
-		return testClient, user.Config()
-	}
-
-	targetClientNodeAgent, targetRestConfigNodeAgent = createClient(userNameNodeAgent)
+	targetClientNodeAgent, err = client.New(user.Config(), client.Options{Scheme: resourcemanagerclient.CombinedScheme})
+	Expect(err).NotTo(HaveOccurred())
 
 	By("Setup manager")
 	mgr, err := manager.New(sourceRestConfig, manager.Options{

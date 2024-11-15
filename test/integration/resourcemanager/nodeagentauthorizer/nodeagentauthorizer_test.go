@@ -199,7 +199,7 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 
 		It("should be able to create and patch an event", func() {
 			// Recording the same event multiple times in a short period makes the event recorder patching the event.
-			for i := 0; i < 3; i++ {
+			for range 3 {
 				recorder.Event(node, "Normal", "test-reason", "test-message")
 			}
 
