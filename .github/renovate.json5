@@ -157,6 +157,18 @@
       ],
     },
     {
+      // Group helm updates in one PR.
+      groupName: 'helm',
+      matchDatasources: [
+        'github-releases',
+        'go',
+      ],
+      matchPackageNames: [
+        '/helm\\.sh/helm/v3/',
+        '/helm/helm/',
+      ],
+    },
+    {
       // Group prometheus-operator updates in one PR.
       groupName: 'prometheus-operator',
       matchDatasources: [
