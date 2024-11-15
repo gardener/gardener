@@ -92,9 +92,10 @@ var _ = Describe("shoot", func() {
 			It("returns correct joined networks if shoot status is set", func() {
 				shoot.Status.Networking = &gardencorev1beta1.NetworkingStatus{
 					Pods:     []string{"11.0.0.0/24", "12.0.0.0/24", "10.0.0.0/24"},
-					Services: []string{"20.0.0.0/24", "21.0.0.0/24"},
+					Services: []string{"20.0.0.0/24", "2001:db8::/64"},
 					Nodes:    []string{"30.0.0.0/24", "2001:db8::/64"},
 				}
+				shoot.Spec.Networking.IPFamilies = []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6, gardencorev1beta1.IPFamilyIPv4}
 				result, err := ToNetworks(shoot, false)
 
 				Expect(err).ToNot(HaveOccurred())
@@ -115,26 +116,26 @@ var _ = Describe("shoot", func() {
 					},
 					Services: []net.IPNet{
 						{
-							IP:   []byte{20, 0, 0, 0},
-							Mask: []byte{255, 255, 255, 0},
+							IP:   []byte{32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Mask: []byte{255, 255, 255, 255, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0},
 						},
 						{
-							IP:   []byte{21, 0, 0, 0},
+							IP:   []byte{20, 0, 0, 0},
 							Mask: []byte{255, 255, 255, 0},
 						},
 					},
 					Nodes: []net.IPNet{
 						{
-							IP:   []byte{30, 0, 0, 0},
-							Mask: []byte{255, 255, 255, 0},
-						},
-						{
 							IP:   []byte{32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Mask: []byte{255, 255, 255, 255, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0},
 						},
+						{
+							IP:   []byte{30, 0, 0, 0},
+							Mask: []byte{255, 255, 255, 0},
+						},
 					},
-					APIServer: []net.IP{[]byte{20, 0, 0, 1}, []byte{21, 0, 0, 1}},
-					CoreDNS:   []net.IP{[]byte{20, 0, 0, 10}, []byte{21, 0, 0, 10}},
+					APIServer: []net.IP{[]byte{32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}, []byte{20, 0, 0, 1}},
+					CoreDNS:   []net.IP{[]byte{32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10}, []byte{20, 0, 0, 10}},
 				})))
 			})
 

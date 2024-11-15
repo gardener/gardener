@@ -172,6 +172,13 @@ func (n *network) WaitCleanup(ctx context.Context) error {
 	)
 }
 
+func getCIDRforSpec(ipFamilies []extensionsv1alpha1.IPFamily, PodCIDRs []net.IPNet) string {
+	if len(ipFamilies) == 2 && ipFamilies[0] == extensionsv1alpha1.IPFamilyIPv6 {
+		return PodCIDRs[1].String()
+	}
+	return PodCIDRs[0].String()
+}
+
 func (n *network) deploy(ctx context.Context, operation string) (extensionsv1alpha1.Object, error) {
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, n.client, n.network, func() error {
 		metav1.SetMetaDataAnnotation(&n.network.ObjectMeta, v1beta1constants.GardenerOperation, operation)
@@ -183,8 +190,8 @@ func (n *network) deploy(ctx context.Context, operation string) (extensionsv1alp
 				ProviderConfig: n.values.ProviderConfig,
 			},
 			IPFamilies:  n.values.IPFamilies,
-			PodCIDR:     n.values.PodCIDRs[0].String(),
-			ServiceCIDR: n.values.ServiceCIDRs[0].String(),
+			PodCIDR:     getCIDRforSpec(n.values.IPFamilies, n.values.PodCIDRs),
+			ServiceCIDR: getCIDRforSpec(n.values.IPFamilies, n.values.ServiceCIDRs),
 		}
 
 		return nil

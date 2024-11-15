@@ -525,6 +525,27 @@ func (s *Shoot) IsShootControlPlaneLoggingEnabled(c *config.GardenletConfigurati
 	return s.Purpose != gardencorev1beta1.ShootPurposeTesting && gardenlethelper.IsLoggingEnabled(c)
 }
 
+func sortByIPFamilies(ipfamilies []gardencorev1beta1.IPFamily, cidr []net.IPNet) []net.IPNet {
+	var result []net.IPNet
+	for _, ipfamily := range ipfamilies {
+		switch ipfamily {
+		case gardencorev1beta1.IPFamilyIPv4:
+			for _, c := range cidr {
+				if c.IP.To4() != nil {
+					result = append(result, c)
+				}
+			}
+		case gardencorev1beta1.IPFamilyIPv6:
+			for _, c := range cidr {
+				if c.IP.To4() == nil {
+					result = append(result, c)
+				}
+			}
+		}
+	}
+	return result
+}
+
 // ToNetworks return a network with computed cidrs and ClusterIPs
 // for a Shoot
 func ToNetworks(shoot *gardencorev1beta1.Shoot, workerless bool) (*Networks, error) {
@@ -567,17 +588,17 @@ func ToNetworks(shoot *gardencorev1beta1.Shoot, workerless bool) (*Networks, err
 		if result, err := copyUniqueCIDRs(shoot.Status.Networking.Pods, pods, "pod"); err != nil {
 			return nil, err
 		} else {
-			pods = result
+			pods = sortByIPFamilies(shoot.Spec.Networking.IPFamilies, result)
 		}
 		if result, err := copyUniqueCIDRs(shoot.Status.Networking.Services, services, "service"); err != nil {
 			return nil, err
 		} else {
-			services = result
+			services = sortByIPFamilies(shoot.Spec.Networking.IPFamilies, result)
 		}
 		if result, err := copyUniqueCIDRs(shoot.Status.Networking.Nodes, nodes, "node"); err != nil {
 			return nil, err
 		} else {
-			nodes = result
+			nodes = sortByIPFamilies(shoot.Spec.Networking.IPFamilies, result)
 		}
 	}
 

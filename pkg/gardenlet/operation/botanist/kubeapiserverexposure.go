@@ -10,6 +10,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
 	kubeapiserverexposure "github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
@@ -67,15 +68,7 @@ func (b *Botanist) DeployKubeAPIServerSNI(ctx context.Context) error {
 }
 
 func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
-	isShootIPv6Only := true
-	for _, s := range b.Shoot.Networks.Services {
-		if s.IP.To4() != nil {
-			isShootIPv6Only = false
-			break
-		}
-	}
-
-	if isShootIPv6Only && net.ParseIP(clusterIP).To4() != nil {
+	if b.Shoot.GetInfo().Spec.Networking.IPFamilies[0] == v1beta1.IPFamilyIPv6 && net.ParseIP(clusterIP).To4() != nil {
 		// "64:ff9b:1::" is a well known prefix for address translation for use
 		// in local networks.
 		b.APIServerClusterIP = "64:ff9b:1::" + clusterIP
