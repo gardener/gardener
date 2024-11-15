@@ -169,6 +169,17 @@
       ],
     },
     {
+      // Group Prometheus updates in one PR.
+      groupName: 'prometheus',
+      matchDatasources: [
+        'github-releases',
+        'docker',
+      ],
+      matchPackageNames: [
+        '/.*prometheus/prometheus$/',
+      ],
+    },
+    {
       // Group prometheus-operator updates in one PR.
       groupName: 'prometheus-operator',
       matchDatasources: [
