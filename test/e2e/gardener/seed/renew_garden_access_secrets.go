@@ -41,7 +41,7 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 			seedList := &gardencorev1beta1.SeedList{}
 			Expect(testClient.List(ctx, seedList)).To(Succeed())
 			for _, s := range seedList.Items {
-				if s.Name != managedseed.SeedName && s.Name != managedseed.SeedNameOperator {
+				if s.Name != managedseed.GetSeedName() {
 					seed = s.DeepCopy()
 					break
 				}
