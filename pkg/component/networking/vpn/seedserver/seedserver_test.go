@@ -134,6 +134,18 @@ var _ = Describe("VpnSeedServer", func() {
 									Value: nodes,
 								},
 								{
+									Name:  "SERVICE_NETWORKS",
+									Value: values.Network.ServiceCIDRs[0].String(),
+								},
+								{
+									Name:  "POD_NETWORKS",
+									Value: values.Network.PodCIDRs[0].String(),
+								},
+								{
+									Name:  "NODE_NETWORKS",
+									Value: nodes,
+								},
+								{
 									Name: "LOCAL_NODE_IP",
 									ValueFrom: &corev1.EnvVarSource{
 										FieldRef: &corev1.ObjectFieldSelector{
@@ -356,11 +368,6 @@ var _ = Describe("VpnSeedServer", func() {
 					exporterContainer.Env = nil
 				}
 				template.Spec.Containers = append(template.Spec.Containers, exporterContainer)
-				template.Spec.Containers[0].Ports = append(template.Spec.Containers[0].Ports, corev1.ContainerPort{
-					Name:          "metrics",
-					ContainerPort: 15000,
-					Protocol:      corev1.ProtocolTCP,
-				})
 				template.Spec.Volumes = append(template.Spec.Volumes, corev1.Volume{
 					Name: "openvpn-status",
 					VolumeSource: corev1.VolumeSource{

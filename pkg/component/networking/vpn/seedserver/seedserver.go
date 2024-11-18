@@ -262,7 +262,13 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 
 func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, secretServer, secretTLSAuth *corev1.Secret) *corev1.PodTemplateSpec {
 	hostPathCharDev := corev1.HostPathCharDev
-	var ipFamilies []string
+	var (
+		ipFamilies   []string
+		serviceCIDRs []string
+		podCIDRs     []string
+		nodeCIDRs    []string
+	)
+
 	for _, v := range v.values.Network.IPFamilies {
 		ipFamilies = append(ipFamilies, string(v))
 	}
@@ -270,6 +276,18 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 	nodeNetwork := ""
 	if len(v.values.Network.NodeCIDRs) > 0 {
 		nodeNetwork = v.values.Network.NodeCIDRs[0].String()
+	}
+
+	for _, v := range v.values.Network.ServiceCIDRs {
+		serviceCIDRs = append(serviceCIDRs, v.String())
+	}
+
+	for _, v := range v.values.Network.PodCIDRs {
+		podCIDRs = append(podCIDRs, v.String())
+	}
+
+	for _, v := range v.values.Network.NodeCIDRs {
+		nodeCIDRs = append(nodeCIDRs, v.String())
 	}
 
 	template := &corev1.PodTemplateSpec{
@@ -320,6 +338,18 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 						{
 							Name:  "NODE_NETWORK",
 							Value: nodeNetwork,
+						},
+						{
+							Name:  "SERVICE_NETWORKS",
+							Value: strings.Join(serviceCIDRs, ","),
+						},
+						{
+							Name:  "POD_NETWORKS",
+							Value: strings.Join(podCIDRs, ","),
+						},
+						{
+							Name:  "NODE_NETWORKS",
+							Value: strings.Join(nodeCIDRs, ","),
 						},
 						{
 							Name: "LOCAL_NODE_IP",
@@ -519,11 +549,6 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 					Value: strconv.Itoa(v.values.HighAvailabilityNumberOfShootClients),
 				},
 			}...)
-		template.Spec.Containers[0].Ports = append(template.Spec.Containers[0].Ports, corev1.ContainerPort{
-			Name:          metricsPortName,
-			ContainerPort: metricsPort,
-			Protocol:      corev1.ProtocolTCP,
-		})
 		template.Spec.Containers[0].VolumeMounts = append(template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
 			Name:      volumeNameStatusDir,
 			MountPath: volumeMountPathStatusDir,
