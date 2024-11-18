@@ -371,9 +371,10 @@ In this setup, the virtual garden cluster has its own load balancer, so you have
 ```shell
 cat <<EOF | sudo tee -a /etc/hosts
 
-# Manually created to access local Gardener virtual garden cluster.
-# TODO: Remove this again when the virtual garden cluster access is no longer required.
+# Begin of Gardener Operator local setup section
 172.18.255.3 api.virtual-garden.local.gardener.cloud
+172.18.255.3 plutono-garden.ingress.runtime-garden.local.gardener.cloud
+# End of Gardener Operator local setup section
 EOF
 ```
 
