@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"strconv"
 	"strings"
 	"time"
@@ -21,7 +22,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/apimachinery/pkg/util/sets"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -520,16 +520,47 @@ ip6.arpa:53 {
 	)
 }
 
+func selectIPAddress(addresses []string, preferIPv6 bool) string {
+	if len(addresses) == 1 {
+		return addresses[0]
+	}
+	var ipv4, ipv6 string
+	for _, addr := range addresses {
+		ip := net.ParseIP(addr)
+		if ip.To4() != nil {
+			ipv4 = addr
+		} else {
+			ipv6 = addr
+		}
+	}
+	if preferIPv6 {
+		return ipv6
+	}
+	return ipv4
+}
+
 func (n *nodeLocalDNS) bindIP() string {
 	if len(n.values.DNSServers) > 0 {
-		return n.getIPVSAddress() + " " + strings.Join(n.values.DNSServers, " ")
+		if n.values.IPFamilies[0] == gardencorev1beta1.IPFamilyIPv4 {
+			dnsAddress := selectIPAddress(n.values.DNSServers, false)
+			return n.getIPVSAddress() + " " + dnsAddress
+		} else {
+			dnsAddress := selectIPAddress(n.values.DNSServers, true)
+			return n.getIPVSAddress() + " " + dnsAddress
+		}
 	}
 	return n.getIPVSAddress()
 }
 
 func (n *nodeLocalDNS) containerArg() string {
 	if len(n.values.DNSServers) > 0 {
-		return n.getIPVSAddress() + "," + strings.Join(n.values.DNSServers, ",")
+		if n.values.IPFamilies[0] == gardencorev1beta1.IPFamilyIPv4 {
+			dnsAddress := selectIPAddress(n.values.DNSServers, false)
+			return n.getIPVSAddress() + "," + dnsAddress
+		} else {
+			dnsAddress := selectIPAddress(n.values.DNSServers, true)
+			return n.getIPVSAddress() + "," + dnsAddress
+		}
 	}
 	return n.getIPVSAddress()
 }
@@ -580,15 +611,12 @@ func (n *nodeLocalDNS) getHealthAddress() (healthAddress string) {
 }
 
 func (n *nodeLocalDNS) getAddress(useIPv6Brackets bool) string {
-	ipFamiliesSet := sets.New[gardencorev1beta1.IPFamily](n.values.IPFamilies...)
-	if ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv4) && !ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv6) {
+	if n.values.IPFamilies[0] == gardencorev1beta1.IPFamilyIPv4 {
 		return nodelocaldnsconstants.IPVSAddress
-	}
-	if ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv6) && !ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv4) {
+	} else {
 		if useIPv6Brackets {
 			return fmt.Sprintf("[%s]", nodelocaldnsconstants.IPVSIPv6Address)
 		}
 		return nodelocaldnsconstants.IPVSIPv6Address
 	}
-	return ""
 }
