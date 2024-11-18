@@ -64,6 +64,7 @@ if [[ "$TYPE" == "operator" ]] || [[ "$TYPE" == "operator-seed" ]]; then
     # hack/ci-e2e-kind-operator-seed.sh script).
     echo "> Deploying Garden and Soil"
     make operator-seed-up
+    export OPERATOR_SEED="true"
   fi
 # If we are not running the gardener-operator tests then we have to make the shoot domains accessible.
 else
