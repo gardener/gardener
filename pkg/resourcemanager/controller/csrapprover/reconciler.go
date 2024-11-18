@@ -8,6 +8,7 @@ import (
 	"context"
 	"crypto/x509"
 	"fmt"
+	"net/netip"
 	"slices"
 	"strings"
 
@@ -197,15 +198,19 @@ func (r *Reconciler) mustApproveKubeletServing(ctx context.Context, csr *certifi
 
 	var (
 		hostNames   []string
-		ipAddresses []string
+		ipAddresses []netip.Addr
 	)
 
 	for _, address := range node.Status.Addresses {
-		if address.Type == corev1.NodeHostName || address.Type == corev1.NodeInternalDNS || address.Type == corev1.NodeExternalDNS {
+		switch address.Type {
+		case corev1.NodeHostName, corev1.NodeInternalDNS, corev1.NodeExternalDNS:
 			hostNames = append(hostNames, address.Address)
-		}
-		if address.Type == corev1.NodeInternalIP || address.Type == corev1.NodeExternalIP {
-			ipAddresses = append(ipAddresses, address.Address)
+		case corev1.NodeInternalIP, corev1.NodeExternalIP:
+			comparableIP, err := netip.ParseAddr(address.Address)
+			if err != nil {
+				return fmt.Sprintf("IP address %q in node.Status.Addresses is invalid", address.Address), false, nil
+			}
+			ipAddresses = append(ipAddresses, comparableIP)
 		}
 	}
 
@@ -213,9 +218,11 @@ func (r *Reconciler) mustApproveKubeletServing(ctx context.Context, csr *certifi
 		return "DNS names in CSR do not match addresses of type 'Hostname' or 'InternalDNS' or 'ExternalDNS' in node object", false, nil
 	}
 
-	var ipAddressesInCSR []string
+	var ipAddressesInCSR []netip.Addr
 	for _, ip := range x509cr.IPAddresses {
-		ipAddressesInCSR = append(ipAddressesInCSR, ip.String())
+		if comparableIP, ok := netip.AddrFromSlice(ip); ok {
+			ipAddressesInCSR = append(ipAddressesInCSR, comparableIP)
+		}
 	}
 
 	if !sets.New(ipAddresses...).Equal(sets.New(ipAddressesInCSR...)) {
