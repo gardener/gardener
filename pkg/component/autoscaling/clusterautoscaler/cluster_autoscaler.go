@@ -49,6 +49,8 @@ const (
 
 	portNameMetrics       = "metrics"
 	portMetrics     int32 = 8085
+
+	ClusterAutoScalerPriorityConfigMapName = "cluster-autoscaler-priority-expander"
 )
 
 // Interface contains functions for a cluster-autoscaler deployer.
@@ -60,12 +62,16 @@ type Interface interface {
 	SetMachineDeployments([]extensionsv1alpha1.MachineDeployment)
 	// SetMaxNodesTotal sets the maximum number of nodes that can be created in the cluster.
 	SetMaxNodesTotal(int64)
+	// HasExpanderConfigMapConfigured returns whether a priority expander ConfigMap was configured to be used
+	HasExpanderConfigMapConfigured() bool
 }
 
 // New creates a new instance of DeployWaiter for the cluster-autoscaler.
 func New(
+	gardenClient client.Client,
 	client client.Client,
 	namespace string,
+	projectNamespace string,
 	secretsManager secretsmanager.Interface,
 	image string,
 	replicas int32,
@@ -74,26 +80,30 @@ func New(
 	runtimeVersion *semver.Version,
 ) Interface {
 	return &clusterAutoscaler{
-		client:         client,
-		namespace:      namespace,
-		secretsManager: secretsManager,
-		image:          image,
-		replicas:       replicas,
-		config:         config,
-		maxNodesTotal:  maxNodesTotal,
-		runtimeVersion: runtimeVersion,
+		gardenClient:     gardenClient,
+		client:           client,
+		namespace:        namespace,
+		projectNamespace: projectNamespace,
+		secretsManager:   secretsManager,
+		image:            image,
+		replicas:         replicas,
+		config:           config,
+		maxNodesTotal:    maxNodesTotal,
+		runtimeVersion:   runtimeVersion,
 	}
 }
 
 type clusterAutoscaler struct {
-	client         client.Client
-	namespace      string
-	secretsManager secretsmanager.Interface
-	image          string
-	replicas       int32
-	config         *gardencorev1beta1.ClusterAutoscaler
-	maxNodesTotal  int64
-	runtimeVersion *semver.Version
+	gardenClient     client.Client
+	client           client.Client
+	namespace        string
+	projectNamespace string
+	secretsManager   secretsmanager.Interface
+	image            string
+	replicas         int32
+	config           *gardencorev1beta1.ClusterAutoscaler
+	maxNodesTotal    int64
+	runtimeVersion   *semver.Version
 
 	namespaceUID       types.UID
 	machineDeployments []extensionsv1alpha1.MachineDeployment
@@ -174,6 +184,23 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 
 	if err := shootAccessSecret.Reconcile(ctx, c.client); err != nil {
 		return err
+	}
+
+	if c.HasExpanderConfigMapConfigured() {
+		configMap := &corev1.ConfigMap{}
+		if err := c.gardenClient.Get(ctx, client.ObjectKey{Name: *c.config.ExpanderConfig.ConfigMapName, Namespace: c.projectNamespace}, configMap); err != nil {
+			return err
+		}
+
+		configMap.Namespace = c.namespace
+		configMap.Name = ClusterAutoScalerPriorityConfigMapName
+
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, configMap, func() error {
+			configMap.ResourceVersion = ""
+			return nil
+		}); err != nil {
+			return err
+		}
 	}
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, deployment, func() error {
@@ -383,6 +410,13 @@ func (c *clusterAutoscaler) SetMachineDeployments(machineDeployments []extension
 
 func (c *clusterAutoscaler) SetMaxNodesTotal(maxNodesTotal int64) {
 	c.maxNodesTotal = maxNodesTotal
+}
+
+func (c *clusterAutoscaler) HasExpanderConfigMapConfigured() bool {
+	if c.config == nil || c.config.ExpanderConfig == nil {
+		return false
+	}
+	return c.config.ExpanderConfig.ConfigMapName != nil
 }
 
 func (c *clusterAutoscaler) emptyClusterRoleBinding() *rbacv1.ClusterRoleBinding {
