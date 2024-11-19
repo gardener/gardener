@@ -535,6 +535,30 @@ var _ = Describe("Seed Validation Tests", func() {
 						"Detail": Equal(`must not overlap with "[]" ("192.168.123.0/24")`),
 					}))
 				})
+				It("should forbid Seed with overlap to reserved apiserver-proxy range", func() {
+					// Service CIDR overlaps with reserved range
+					seed.Spec.Networks.Pods = "240.0.0.0/16" // 240.0.0.0 -> 240.0.255.255
+
+					errorList := ValidateSeed(seed)
+
+					Expect(errorList).To(ConsistOfFields(Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.networks.pods"),
+						"Detail": Equal(`must not overlap with "[]" ("240.0.0.0/4")`),
+					}))
+				})
+				It("should forbid Seed with too large service range", func() {
+					// Service CIDR too large
+					seed.Spec.Networks.Services = "90.0.0.0/7" // 90.0.0.0 -> 91.255.255.255
+
+					errorList := ValidateSeed(seed)
+
+					Expect(errorList).To(ConsistOfFields(Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.networks.services"),
+						"Detail": Equal(`cannot be larger than /8`),
+					}))
+				})
 			})
 
 			Context("IPv6", func() {
@@ -615,6 +639,17 @@ var _ = Describe("Seed Validation Tests", func() {
 						"Field":  Equal("spec.networks.shootDefaults.pods"),
 						"Detail": ContainSubstring("must be a valid IPv6 address"),
 					}))
+				})
+				It("should allow Seed with very large service range because the range limit only applies to ipv4", func() {
+					seed.Spec.Networks.Nodes = ptr.To("2001:db8:11::/48")
+					seed.Spec.Networks.Pods = "2001:db8:12::/48"
+					seed.Spec.Networks.Services = "3001::/7" // larger than /8 ipv4 limit
+					seed.Spec.Networks.ShootDefaults.Pods = ptr.To("2001:db8:1::/48")
+					seed.Spec.Networks.ShootDefaults.Services = ptr.To("2001:db8:3::/48")
+
+					errorList := ValidateSeed(seed)
+
+					Expect(errorList).To(BeEmpty())
 				})
 			})
 		})

@@ -68,11 +68,22 @@ func (b *Botanist) DeployKubeAPIServerSNI(ctx context.Context) error {
 }
 
 func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
-	if b.Shoot.GetInfo().Spec.Networking.IPFamilies[0] == v1beta1.IPFamilyIPv6 && net.ParseIP(clusterIP).To4() != nil {
-		// "64:ff9b:1::" is a well known prefix for address translation for use
-		// in local networks.
-		b.APIServerClusterIP = "64:ff9b:1::" + clusterIP
+	clusterIPv4 := net.ParseIP(clusterIP).To4()
+
+	if clusterIPv4 != nil {
+		if b.Shoot.GetInfo().Spec.Networking.IPFamilies[0] == v1beta1.IPFamilyIPv6 {
+			// "64:ff9b:1::" is a well known prefix for address translation for use
+			// in local networks.
+			b.APIServerClusterIP = "64:ff9b:1::" + clusterIP
+		} else {
+			// prevent leakage of real cluster ip to shoot. we use the reserved range 240.0.0.0/4 as prefix instead.
+			prefixIp, _, _ := net.ParseCIDR(v1beta1constants.ReservedRangeApiServerProxy)
+			prefix := prefixIp.To4()
+			// we are foregoing 4 bits for readability. still leaves 16.7m possible shoots in a seed.
+			b.APIServerClusterIP = net.IPv4(prefix[0], clusterIPv4[1], clusterIPv4[2], clusterIPv4[3]).String()
+		}
 	} else {
+		// regular ipv6 cluster ip
 		b.APIServerClusterIP = clusterIP
 	}
 	b.Shoot.Components.ControlPlane.KubeAPIServerSNI = kubeapiserverexposure.NewSNI(
