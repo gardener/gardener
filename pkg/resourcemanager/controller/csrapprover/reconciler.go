@@ -208,7 +208,7 @@ func (r *Reconciler) mustApproveKubeletServing(ctx context.Context, csr *certifi
 		case corev1.NodeInternalIP, corev1.NodeExternalIP:
 			comparableIP, err := netip.ParseAddr(address.Address)
 			if err != nil {
-				return fmt.Sprintf("IP address %q in node.Status.Addresses is invalid", address.Address), false, nil
+				return fmt.Sprintf("IP address %q in node.Status.Addresses is invalid: %v", address.Address, err), false, nil //nolint:nilerr
 			}
 			ipAddresses = append(ipAddresses, comparableIP)
 		}
