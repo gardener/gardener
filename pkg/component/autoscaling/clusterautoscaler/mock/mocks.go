@@ -70,6 +70,20 @@ func (mr *MockInterfaceMockRecorder) Destroy(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockInterface)(nil).Destroy), ctx)
 }
 
+// HasExpanderConfigMapConfigured mocks base method.
+func (m *MockInterface) HasExpanderConfigMapConfigured() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasExpanderConfigMapConfigured")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// HasExpanderConfigMapConfigured indicates an expected call of HasExpanderConfigMapConfigured.
+func (mr *MockInterfaceMockRecorder) HasExpanderConfigMapConfigured() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasExpanderConfigMapConfigured", reflect.TypeOf((*MockInterface)(nil).HasExpanderConfigMapConfigured))
+}
+
 // SetMachineDeployments mocks base method.
 func (m *MockInterface) SetMachineDeployments(arg0 []v1alpha1.MachineDeployment) {
 	m.ctrl.T.Helper()

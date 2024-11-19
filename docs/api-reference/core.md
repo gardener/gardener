@@ -3643,6 +3643,20 @@ See: <a href="https://github.com/gardener/autoscaler/blob/machine-controller-man
 </tr>
 <tr>
 <td>
+<code>expanderConfig</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ExpanderConfig">
+ExpanderConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ExpanderConfig defines the configuration of the CA expander</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>maxNodeProvisionTime</code></br>
 <em>
 <a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
@@ -5034,6 +5048,37 @@ See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/securit
 <p>
 <p>ErrorCode is a string alias.</p>
 </p>
+<h3 id="core.gardener.cloud/v1beta1.ExpanderConfig">ExpanderConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ClusterAutoscaler">ClusterAutoscaler</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>configMapName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ConfigMapName specifies the name of the expander configuration, according to the priority expander.
+See: <a href="https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/expander/priority/readme.md">https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/expander/priority/readme.md</a></p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.ExpanderMode">ExpanderMode
 (<code>string</code> alias)</p></h3>
 <p>
