@@ -3,7 +3,7 @@ module github.com/gardener/gardener
 go 1.23.0
 
 require (
-	github.com/Masterminds/semver/v3 v3.3.0
+	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/ahmetb/gen-crd-api-reference-docs v0.3.0
 	github.com/andybalholm/brotli v1.1.1
