@@ -75,7 +75,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Sum of admitted Pods",
+      "title": "Admitted Pods rate",
       "tooltip": {
         "shared": true,
         "sort": 0,
