@@ -41,6 +41,10 @@ type CIDR interface {
 	LastIPInRange() net.IP
 	// ValidateOverlap returns errors if the subnets do not overlap with CIDR.
 	ValidateOverlap(subsets ...CIDR) field.ErrorList
+	// ValidateMaxSize returns errors if the subnet is larger than the given bits. e.g. /15 is larger than /16
+	ValidateMaxSize(bits int) field.ErrorList
+	// ValidateMinSize returns errors if the subnet is smaller than the given bits. e.g. /16 is smaller than /15
+	ValidateMinSize(bits int) field.ErrorList
 }
 
 type cidrPath struct {
@@ -142,6 +146,38 @@ func (c *cidrPath) ValidateIPFamily(ipFamily string) field.ErrorList {
 		allErrs = append(allErrs, validation.IsValidIPv4Address(c.fieldPath, c.net.IP.String())...)
 	case IPFamilyIPv6:
 		allErrs = append(allErrs, validation.IsValidIPv6Address(c.fieldPath, c.net.IP.String())...)
+	}
+
+	return allErrs
+}
+
+// ValidateMaxSize returns an error if CIDR size is larger than given bits. e.g. /15 is larger than /16
+func (c *cidrPath) ValidateMaxSize(bits int) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if c.ParseError != nil {
+		return allErrs
+	}
+	cidrBits, _ := c.net.Mask.Size()
+
+	if cidrBits < bits {
+		allErrs = append(allErrs, field.Invalid(c.fieldPath, c.net.String(), fmt.Sprintf("cannot be larger than /%d", bits)))
+	}
+
+	return allErrs
+}
+
+// ValidateMinSize returns an error if CIDR size is smaller than given bits. e.g. /16 is smaller than /15
+func (c *cidrPath) ValidateMinSize(bits int) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if c.ParseError != nil {
+		return allErrs
+	}
+	cidrBits, _ := c.net.Mask.Size()
+
+	if cidrBits > bits {
+		allErrs = append(allErrs, field.Invalid(c.fieldPath, c.net.String(), fmt.Sprintf("cannot be smaller than /%d", bits)))
 	}
 
 	return allErrs
