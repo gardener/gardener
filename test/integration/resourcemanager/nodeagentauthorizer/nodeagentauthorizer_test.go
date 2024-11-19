@@ -127,7 +127,7 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 			})
 		})
 
-		It("should be able to create a CertificateSigningRequest, get it but not change and delete it", func() {
+		It("should be able to create a CertificateSigningRequest, get it but not change or delete it", func() {
 			Expect(targetClientNodeAgent.Create(ctx, csr)).To(Succeed())
 
 			Expect(targetClientNodeAgent.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(Succeed())
@@ -164,7 +164,6 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 		It("should forbid to list CertificateSigningRequests", func() {
 			Expect(targetClientNodeAgent.List(ctx, &certificatesv1.CertificateSigningRequestList{})).To(BeForbiddenError())
 		})
-
 	})
 
 	Describe("#Events", func() {
@@ -639,7 +638,7 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 })
 
 func createNodeForMachine(node *corev1.Node, machine *machinev1alpha1.Machine) {
-	Expect(targetClient.Create(ctx, node)).To(Succeed())
+	ExpectWithOffset(1, targetClient.Create(ctx, node)).To(Succeed())
 	machine.SetLabels(map[string]string{machinev1alpha1.NodeLabelKey: node.Name})
-	Expect(sourceClient.Update(ctx, machine)).To(Succeed())
+	ExpectWithOffset(1, sourceClient.Update(ctx, machine)).To(Succeed())
 }

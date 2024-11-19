@@ -17,10 +17,11 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -38,6 +39,7 @@ import (
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/nodeagentauthorizer"
 	"github.com/gardener/gardener/pkg/utils"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	"github.com/gardener/gardener/test/framework"
 )
@@ -161,7 +163,6 @@ var _ = BeforeSuite(func() {
 		&rest.Config{QPS: 1000.0, Burst: 2000.0},
 	)
 	Expect(err).NotTo(HaveOccurred())
-	Expect(user).NotTo(BeNil())
 	targetRestConfigNodeAgent = user.Config()
 
 	targetClientNodeAgent, err = client.New(user.Config(), client.Options{Scheme: resourcemanagerclient.CombinedScheme})
@@ -214,31 +215,22 @@ var _ = BeforeSuite(func() {
 })
 
 func createKubeconfigFileForAuthorizationWebhook(webhookInstallOptions envtest.WebhookInstallOptions) (string, error) {
-	clusters := make(map[string]*clientcmdapi.Cluster)
-	clusters["authorization-webhook"] = &clientcmdapi.Cluster{
-		Server:                   fmt.Sprintf("https://%s:%d%s", webhookInstallOptions.LocalServingHost, webhookInstallOptions.LocalServingPort, nodeagentauthorizer.WebhookPath),
-		CertificateAuthorityData: webhookInstallOptions.LocalServingCAData,
+	kubeconfig, err := runtime.Encode(clientcmdlatest.Codec, kubernetesutils.NewKubeconfig(
+		"authorization-webhook",
+		clientcmdv1.Cluster{
+			Server:                   fmt.Sprintf("https://%s:%d%s", webhookInstallOptions.LocalServingHost, webhookInstallOptions.LocalServingPort, nodeagentauthorizer.WebhookPath),
+			CertificateAuthorityData: webhookInstallOptions.LocalServingCAData,
+		},
+		clientcmdv1.AuthInfo{},
+	))
+	if err != nil {
+		return "", err
 	}
-	contexts := make(map[string]*clientcmdapi.Context)
-	contexts["authorization-webhook"] = &clientcmdapi.Context{
-		Cluster:  "authorization-webhook",
-		AuthInfo: "authorization-webhook",
-	}
-	authinfos := make(map[string]*clientcmdapi.AuthInfo)
-	clientConfig := clientcmdapi.Config{
-		Kind:           "Config",
-		APIVersion:     "v1",
-		Clusters:       clusters,
-		Contexts:       contexts,
-		CurrentContext: "authorization-webhook",
-		AuthInfos:      authinfos,
-	}
+
 	kubeConfigFile, err := os.CreateTemp("", "kubeconfig-nodeagentauthorizer-")
 	if err != nil {
 		return "", err
 	}
-	if err := clientcmd.WriteToFile(clientConfig, kubeConfigFile.Name()); err != nil {
-		return "", err
-	}
-	return kubeConfigFile.Name(), nil
+
+	return kubeConfigFile.Name(), os.WriteFile(kubeConfigFile.Name(), kubeconfig, 0600)
 }
