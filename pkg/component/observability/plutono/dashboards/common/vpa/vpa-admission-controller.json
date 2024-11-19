@@ -67,7 +67,7 @@
           "exemplar": true,
           "expr": "sum(rate(vpa_admission_controller_admission_pods_total[$__rate_interval])) by (applied)",
           "interval": "",
-          "legendFormat": "",
+          "legendFormat": "Applied recommendation \"{{ applied }}\"",
           "refId": "A"
         }
       ],
