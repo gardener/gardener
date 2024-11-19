@@ -627,6 +627,9 @@ type ClusterAutoscaler struct {
 	// See: https://github.com/gardener/autoscaler/blob/machine-controller-manager-provider/cluster-autoscaler/FAQ.md#what-are-expanders.
 	// +optional
 	Expander *ExpanderMode `json:"expander,omitempty" protobuf:"bytes,7,opt,name=expander"`
+	// ExpanderConfig defines the configuration of the CA expander
+	// +optional
+	ExpanderConfig *ExpanderConfig `json:"expanderConfig,omitempty" protobuf:"bytes,15,opt,name=expanderConfig"`
 	// MaxNodeProvisionTime defines how long CA waits for node to be provisioned (default: 20 mins).
 	// +optional
 	MaxNodeProvisionTime *metav1.Duration `json:"maxNodeProvisionTime,omitempty" protobuf:"bytes,8,opt,name=maxNodeProvisionTime"`
@@ -648,6 +651,13 @@ type ClusterAutoscaler struct {
 	// Verbosity allows CA to modify its log level (default: 2).
 	// +optional
 	Verbosity *int32 `json:"verbosity,omitempty" protobuf:"varint,14,opt,name=verbosity"`
+}
+
+type ExpanderConfig struct {
+	// ConfigMapName specifies the name of the expander configuration, according to the priority expander.
+	// See: https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/expander/priority/readme.md
+	// +optional
+	ConfigMapName *string `json:"configMapName,omitempty" protobuf:"bytes,1,opt,name=configMapName"`
 }
 
 // ExpanderMode is type used for Expander values
