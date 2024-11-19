@@ -158,8 +158,8 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 	conditionResourcesApplied := v1beta1helper.GetOrInitConditionWithClock(r.Clock, mr.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
 
 	for _, ref := range mr.Spec.SecretRefs {
-		secret := &corev1.Secret{}
-		if err := r.SourceClient.Get(reconcileCtx, client.ObjectKey{Namespace: mr.Namespace, Name: ref.Name}, secret); err != nil {
+		secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: ref.Name, Namespace: mr.Namespace}}
+		if err := r.SourceClient.Get(reconcileCtx, client.ObjectKeyFromObject(secret), secret); err != nil {
 			conditionResourcesApplied = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionResourcesApplied, gardencorev1beta1.ConditionFalse, "CannotReadSecret", err.Error())
 			if err := updateConditions(ctx, r.SourceClient, mr, conditionResourcesApplied); err != nil {
 				return reconcile.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
