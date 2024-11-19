@@ -103,6 +103,7 @@ func (d *deployment) createOrUpdateAdmissionRuntimeClusterResources(ctx context.
 				"priorityClassName": v1beta1constants.PriorityClassNameGardenSystem400,
 			},
 			"virtualCluster": map[string]any{
+				"enabled":   true,
 				"namespace": virtualNamespace(extension).GetName(),
 			},
 		},
@@ -186,6 +187,7 @@ func (d *deployment) createOrUpdateAdmissionVirtualClusterResources(ctx context.
 	gardenerValues := map[string]any{
 		"gardener": map[string]any{
 			"virtualCluster": map[string]any{
+				"enabled": true,
 				"serviceAccount": map[string]any{
 					"name":      accessSecret.ServiceAccountName,
 					"namespace": metav1.NamespaceSystem,

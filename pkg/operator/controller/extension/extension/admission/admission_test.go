@@ -140,6 +140,7 @@ var _ = Describe("Deployment", func() {
 				"foo": "bar",
 				"gardener": map[string]any{
 					"virtualCluster": map[string]any{
+						"enabled": true,
 						"serviceAccount": map[string]any{
 							"name":      "extension-admission-" + extensionName,
 							"namespace": "kube-system",
@@ -154,6 +155,7 @@ var _ = Describe("Deployment", func() {
 						"priorityClassName": "gardener-garden-system-400",
 					},
 					"virtualCluster": map[string]any{
+						"enabled":   true,
 						"namespace": "extension-" + extensionName,
 					},
 				},
