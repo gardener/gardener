@@ -5,6 +5,7 @@
     ':semanticCommitsDisabled',
     'github>gardener/ci-infra//config/renovate/makefile-versions.json5',
     'github>gardener/ci-infra//config/renovate/imagevector.json5(^imagevector/containers.yaml$)',
+    'github>gardener/ci-infra//config/renovate/automerge-with-tide.json5',
   ],
   labels: [
     'kind/enhancement',
