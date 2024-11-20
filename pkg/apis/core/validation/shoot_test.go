@@ -2901,7 +2901,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 			taintsDuplicate                     = []string{"taint-1", "taint-1"}
 			taintsInvalid                       = []string{"taint 1", "taint-1"}
 			version_1_28                        = "1.28.4"
-			version_1_30                        = "1.30.0"
+			version_1_30                        = "1.30.1"
+			version_1_32                        = "1.32.0"
 		)
 
 		Context("ClusterAutoscaler validation", func() {
@@ -2980,6 +2981,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 						"Field": Equal("statusTaints[0]"),
 					}))),
 				),
+				Entry("invalid with ignore taint on K8S v1.32", core.ClusterAutoscaler{
+					IgnoreTaints: taintsUnique,
+				}, version_1_32, ConsistOf(field.Forbidden(field.NewPath("ignoreTaints.IgnoreTaints"), "not supported in Kubernetes version 1.32.0"))),
 				Entry("valid with ignore taint", core.ClusterAutoscaler{
 					IgnoreTaints: taintsUnique,
 				}, version_1_28, BeEmpty()),
