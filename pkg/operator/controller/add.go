@@ -11,6 +11,7 @@ import (
 	"os"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -29,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/operator/controller/extension/required"
 	"github.com/gardener/gardener/pkg/operator/controller/garden"
 	gardenaccess "github.com/gardener/gardener/pkg/operator/controller/garden/access"
+	"github.com/gardener/gardener/pkg/operator/controller/gardenlet"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
@@ -46,6 +48,8 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 	if err := extension.AddToManager(ctx, mgr, cfg, gardenClientMap); err != nil {
 		return err
 	}
+
+	var accessReconciler *gardenaccess.Reconciler
 
 	if err := (&controllerregistrar.Reconciler{
 		Controllers: []controllerregistrar.Controller{
@@ -94,9 +98,30 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 					secretName = v1beta1constants.SecretNameGardenerInternal
 				}
 
-				return true, (&gardenaccess.Reconciler{
-					Config: cfg,
-				}).AddToManager(mgr, v1beta1constants.GardenNamespace, secretName)
+				accessReconciler = &gardenaccess.Reconciler{Config: cfg}
+
+				return true, accessReconciler.AddToManager(mgr, v1beta1constants.GardenNamespace, secretName)
+			}},
+			{AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, _ *operatorv1alpha1.Garden) (bool, error) {
+				var (
+					log            = logf.FromContext(ctx)
+					virtualCluster cluster.Cluster
+				)
+
+				if accessReconciler == nil {
+					log.Info("Garden access reconciler is not yet started")
+					return false, nil
+				}
+
+				virtualCluster = accessReconciler.GetVirtualCluster()
+				if virtualCluster == nil {
+					log.Info("Virtual cluster is not yet created")
+					return false, nil
+				}
+
+				return true, (&gardenlet.Reconciler{
+					Config: cfg.Controllers.GardenletDeployer,
+				}).AddToManager(ctx, mgr, virtualCluster)
 			}},
 		},
 	}).AddToManager(mgr); err != nil {

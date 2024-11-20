@@ -23,7 +23,6 @@ import (
 	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
-	"github.com/gardener/gardener/pkg/operator/controller/gardenlet"
 )
 
 // Reconciler reconciles garden access secrets.
@@ -32,16 +31,14 @@ type Reconciler struct {
 	Manager manager.Manager
 	Config  *config.OperatorConfiguration
 
-	FS            afero.Fs
-	tokenFilePath string
-
-	GardenletControllerAdded bool
+	FS             afero.Fs
+	tokenFilePath  string
+	virtualCluster cluster.Cluster
 }
 
 // Reconcile processes the given access secret in the request.
 // It extracts the included Kubeconfig, and prepares a dedicated REST config
 // where the inline Bearer Token is replaced by a BearerTokenFile with the said token persisted.
-// Afterward, the config is used to add the 'controller/gardenlet' controller to the manager.
 // Any subsequent reconciliation run causes the content of the BearerTokenFile to be updated with the token found
 // in the access secret.
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
@@ -76,11 +73,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error writing bearer token to file: %w", err)
 	}
 
-	if err := r.addGardenletControllerOnce(ctx, log, restConfig); err != nil {
-		return reconcile.Result{}, err
-	}
+	return reconcile.Result{}, r.createVirtualCluster(log, restConfig)
+}
 
-	return reconcile.Result{}, nil
+// GetVirtualCluster returns the virtual cluster object.
+func (r *Reconciler) GetVirtualCluster() cluster.Cluster {
+	return r.virtualCluster
 }
 
 // CreateTemporaryFile creates a temporary file. Exposed for testing.
@@ -101,8 +99,8 @@ func (r *Reconciler) writeTokenToFile(token string) error {
 	return afero.WriteFile(r.FS, r.tokenFilePath, []byte(token), 0o600)
 }
 
-func (r *Reconciler) addGardenletControllerOnce(ctx context.Context, log logr.Logger, restConfig *rest.Config) error {
-	if r.GardenletControllerAdded {
+func (r *Reconciler) createVirtualCluster(log logr.Logger, restConfig *rest.Config) error {
+	if r.virtualCluster != nil {
 		return nil
 	}
 
@@ -128,13 +126,7 @@ func (r *Reconciler) addGardenletControllerOnce(ctx context.Context, log logr.Lo
 		return fmt.Errorf("failed adding virtual cluster to manager: %w", err)
 	}
 
-	log.Info("Adding Gardenlet controller to manager now that Garden has been reconciled successfully")
-	if err := (&gardenlet.Reconciler{
-		Config: r.Config.Controllers.GardenletDeployer,
-	}).AddToManager(ctx, r.Manager, virtualCluster); err != nil {
-		return fmt.Errorf("failed adding Gardenlet controller: %w", err)
-	}
-	r.GardenletControllerAdded = true
+	r.virtualCluster = virtualCluster
 
 	return nil
 }
