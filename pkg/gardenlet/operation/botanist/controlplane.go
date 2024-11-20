@@ -8,11 +8,8 @@ import (
 	"context"
 	"time"
 
-	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -102,12 +99,6 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 		return err
 	}
 	b.ShootClientSet = nil
-
-	if err := b.SeedClientSet.Client().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace}}, kubernetes.DefaultDeleteOptions...); err != nil {
-		if !apierrors.IsNotFound(err) && !meta.IsNoMatchError(err) {
-			return err
-		}
-	}
 
 	deployments := []string{
 		v1beta1constants.DeploymentNameGardenerResourceManager,

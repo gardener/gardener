@@ -376,7 +376,7 @@ func computeKubeAPIServerReplicas(autoscalingConfig apiserver.AutoscalingConfig,
 		// If the Deployment does not yet exist then set the desired replicas to the minimum replicas.
 		return &autoscalingConfig.MinReplicas
 	case deployment != nil && deployment.Spec.Replicas != nil && *deployment.Spec.Replicas > 0:
-		// If the Deployment exists then don't interfere with the replicas because they are controlled via HVPA or HPA.
+		// If the Deployment exists then don't interfere with the replicas because they are controlled via HPA.
 		return deployment.Spec.Replicas
 	case wantScaleDown && (deployment == nil || deployment.Spec.Replicas == nil || *deployment.Spec.Replicas == 0):
 		// If the scale down is desired and the deployment has already been scaled down then we want to keep it scaled
