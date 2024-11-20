@@ -31,15 +31,17 @@ var _ = Describe("CertificateSigningRequest Approver Controller tests", func() {
 		privateKey         *rsa.PrivateKey
 		certificateSubject *pkix.Name
 
-		ip1      = "1.2.3.4"
-		ip2      = "5.6.7.8"
-		ip3      = "9.0.1.2"
-		ips      []net.IP
-		dnsName1 = "foo.bar"
-		dnsName2 = "bar.baz"
-		dnsName3 = "baz.foo"
-		dnsName4 = "baz.bar"
-		dnsNames []string
+		ip1       = "1.2.3.4"
+		ip2       = "5.6.7.8"
+		ip3       = "9.0.1.2"
+		ipv6      = "2080:1000:1000:8ff0:0:0:0:0"
+		ipv6short = "2080:1000:1000:8ff0::"
+		ips       []net.IP
+		dnsName1  = "foo.bar"
+		dnsName2  = "bar.baz"
+		dnsName3  = "baz.foo"
+		dnsName4  = "baz.bar"
+		dnsNames  []string
 
 		csr     *certificatesv1.CertificateSigningRequest
 		node    *corev1.Node
@@ -53,7 +55,7 @@ var _ = Describe("CertificateSigningRequest Approver Controller tests", func() {
 			Organization: []string{user.NodesGroup},
 		}
 
-		ips = []net.IP{net.ParseIP(ip1), net.ParseIP(ip2), net.ParseIP(ip3)}
+		ips = []net.IP{net.ParseIP(ip1), net.ParseIP(ip2), net.ParseIP(ip3), net.ParseIP(ipv6short)}
 		dnsNames = []string{dnsName1, dnsName2, dnsName3, dnsName4}
 
 		csr = &certificatesv1.CertificateSigningRequest{
@@ -148,6 +150,7 @@ var _ = Describe("CertificateSigningRequest Approver Controller tests", func() {
 					corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: ip1},
 					corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: ip2},
 					corev1.NodeAddress{Type: corev1.NodeExternalIP, Address: ip3},
+					corev1.NodeAddress{Type: corev1.NodeExternalIP, Address: ipv6},
 				)
 			})
 
