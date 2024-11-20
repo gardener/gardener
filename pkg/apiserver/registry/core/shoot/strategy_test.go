@@ -671,7 +671,7 @@ var _ = Describe("Strategy", func() {
 				Expect(newShoot.Spec.SeedSelector).To(BeNil())
 			})
 
-			It("should remove the seed selector when the access restriction is dropped", func() {
+			It("should not remove the seed selector when the access restriction is dropped", func() {
 				oldShoot.Spec.SeedSelector = &core.SeedSelector{LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{"seed.gardener.cloud/eu-access": "true"}}}
 				oldShoot.Spec.AccessRestrictions = []core.AccessRestrictionWithOptions{{AccessRestriction: core.AccessRestriction{Name: "eu-access-only"}}}
 				newShoot.Spec.SeedSelector = &core.SeedSelector{LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{"seed.gardener.cloud/eu-access": "true"}}}
@@ -679,10 +679,10 @@ var _ = Describe("Strategy", func() {
 				strategy.PrepareForUpdate(context.Background(), newShoot, oldShoot)
 
 				Expect(newShoot.Spec.AccessRestrictions).To(BeEmpty())
-				Expect(newShoot.Spec.SeedSelector).To(BeNil())
+				Expect(newShoot.Spec.SeedSelector).To(Equal(&core.SeedSelector{LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{"seed.gardener.cloud/eu-access": "true"}}}))
 			})
 
-			It("should remove the option annotations when they are removed from the access restrictions", func() {
+			It("should not remove the option annotations when they are removed from the access restrictions", func() {
 				oldShoot.Spec.AccessRestrictions = []core.AccessRestrictionWithOptions{{
 					AccessRestriction: core.AccessRestriction{Name: "eu-access-only"},
 					Options: map[string]string{
@@ -699,7 +699,10 @@ var _ = Describe("Strategy", func() {
 
 				strategy.PrepareForUpdate(context.Background(), newShoot, oldShoot)
 
-				Expect(newShoot.Annotations).To(BeEmpty())
+				Expect(newShoot.Annotations).To(Equal(map[string]string{
+					"support.gardener.cloud/eu-access-for-cluster-addons": "true",
+					"support.gardener.cloud/eu-access-for-cluster-nodes":  "false",
+				}))
 			})
 
 			It("should remove the options from the access restrictions when the annotations are removed", func() {
