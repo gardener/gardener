@@ -43,6 +43,7 @@ func RBACResourcesData(secretNames []string) (map[string][]byte, error) {
 			},
 		}
 
+		// TODO(oliver-goetz): Remove when NodeAgentAuthorizer feature gate is going to be removed
 		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener-node-agent",
@@ -80,6 +81,7 @@ func RBACResourcesData(secretNames []string) (map[string][]byte, error) {
 			},
 		}
 
+		// TODO(oliver-goetz): Remove when NodeAgentAuthorizer feature gate is going to be removed
 		roleBinding = &rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "gardener-node-agent",

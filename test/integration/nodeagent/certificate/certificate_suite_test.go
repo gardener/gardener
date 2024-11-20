@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package nodeagent_test
+package certificate_test
 
 import (
 	"testing"
@@ -20,12 +20,12 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 )
 
-func TestNodeAgent(t *testing.T) {
+func TestCertificate(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Test Integration NodeAgent NodeAgent Suite")
+	RunSpecs(t, "Test Integration NodeAgent Certificate Suite")
 }
 
-const testID = "node-agent-test"
+const testID = "certificate-test"
 
 var (
 	log logr.Logger

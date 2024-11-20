@@ -119,7 +119,7 @@ func ComponentConfig(
 	caBundle []byte,
 	additionalTokenSyncConfigs []nodeagentv1alpha1.TokenSecretSyncConfig,
 ) *nodeagentv1alpha1.NodeAgentConfiguration {
-	tokenSyncConfigs := additionalTokenSyncConfigs
+	tokenSyncConfigs := additionalTokenSyncConfigs[:]
 	if !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) {
 		tokenSyncConfigs = append(tokenSyncConfigs, nodeagentv1alpha1.TokenSecretSyncConfig{
 			SecretName: nodeagentv1alpha1.AccessSecretName,

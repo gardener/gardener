@@ -51,7 +51,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 	}
 
 	if r.Clock.Now().After(*r.renewalDeadline) {
-		log.Info("Start rotating certificate because renewal deadline exceeded")
+		log.Info("Start rotating client certificate because renewal deadline exceeded", "renewalDeadline", *r.renewalDeadline)
 		if err := nodeagent.RequestAndStoreKubeconfig(ctx, log, r.FS, r.Config, r.MachineName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("error rotating certificate: %w", err)
 		}

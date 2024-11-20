@@ -362,9 +362,26 @@ var _ = Describe("CertificateSigningRequest Approver Controller tests", func() {
 				})
 			})
 
-			Context("constraints fulfilled", func() {
+			Context("constraints fulfilled - machine without node label", func() {
 				BeforeEach(func() {
 					createMachine(machine, false)
+				})
+
+				It("should approve the CSR", func() {
+					Eventually(func(g Gomega) {
+						g.Expect(testClientBootstrap.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(Succeed())
+						g.Expect(csr.Status.Conditions).To(ContainElement(And(
+							HaveField("Type", certificatesv1.CertificateApproved),
+							HaveField("Reason", "RequestApproved"),
+							HaveField("Message", "Approving gardener-node-agent certificate CSR (all checks passed)"),
+						)))
+					}).Should(Succeed())
+				})
+			})
+
+			Context("constraints fulfilled - machine with node label but node is not created yet", func() {
+				BeforeEach(func() {
+					createMachine(machine, true)
 				})
 
 				It("should approve the CSR", func() {

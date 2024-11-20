@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package nodeagent_test
+package certificate_test
 
 import (
 	"context"

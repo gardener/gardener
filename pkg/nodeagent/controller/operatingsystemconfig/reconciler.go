@@ -80,7 +80,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	if nodeCreated {
-		log.Info("Node registered by kubelet. Restarting myself (gardener-node-agent unit) to reinitialize caches, canceling the context to initiate graceful shutdown")
+		log.Info("Node registered by kubelet. Restarting myself (gardener-node-agent unit) to start lease controller and watch my own node only. Canceling the context to initiate graceful shutdown")
 		r.CancelContext()
 		return reconcile.Result{}, nil
 	}

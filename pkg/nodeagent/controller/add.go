@@ -60,7 +60,7 @@ func AddToManager(ctx context.Context, cancel context.CancelFunc, mgr manager.Ma
 	}
 
 	// Enable lease controller only if gardener-node-agent was able to determine the node name.
-	// Otherwise, gardener-node-agent would try to list leases of the entire kube-system namespace which is now allowed by node-agent-authorizer.
+	// Otherwise, gardener-node-agent would try to list leases of the entire kube-system namespace which is not allowed by node-agent-authorizer.
 	if !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) || nodeName != "" {
 		if err := (&lease.Reconciler{}).AddToManager(mgr, nodePredicate); err != nil {
 			return fmt.Errorf("failed adding lease controller: %w", err)

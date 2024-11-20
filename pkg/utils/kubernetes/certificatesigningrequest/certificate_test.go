@@ -6,6 +6,7 @@ package certificatesigningrequest_test
 
 import (
 	"context"
+	"crypto"
 	"crypto/x509/pkix"
 	"net"
 	"strings"
@@ -19,6 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/util/keyutil"
 
 	. "github.com/gardener/gardener/pkg/utils/kubernetes/certificatesigningrequest"
 )
@@ -52,6 +54,34 @@ var _ = Describe("Certificate", func() {
 
 		expectedCertData = []byte("foo-cert")
 	})
+
+	Describe("#DigestedName", func() {
+		It("digest should start with `seed-csr-`", func() {
+			privateKeyData, err := keyutil.MakeEllipticPrivateKeyPEM()
+			Expect(err).ToNot(HaveOccurred())
+
+			privateKey, err := keyutil.ParsePrivateKeyPEM(privateKeyData)
+			Expect(err).ToNot(HaveOccurred())
+
+			signer, ok := privateKey.(crypto.Signer)
+			Expect(ok).To(BeTrue())
+
+			organization := "test-org"
+			subject := &pkix.Name{
+				Organization: []string{organization},
+				CommonName:   "test-cn",
+			}
+			digest, err := DigestedName(signer.Public(), subject, []certificatesv1.KeyUsage{certificatesv1.UsageDigitalSignature}, "seed-csr-")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(strings.HasPrefix(digest, "seed-csr-")).To(BeTrue())
+		})
+
+		It("should return an error because the public key cannot be marshalled", func() {
+			_, err := DigestedName([]byte("test"), nil, []certificatesv1.KeyUsage{certificatesv1.UsageDigitalSignature}, "seed-csr-")
+			Expect(err).To(HaveOccurred())
+		})
+	})
+
 	Describe("#RequestCertificate", func() {
 		It("should return the issued certificate", func(ctx context.Context) {
 			go func(ctx context.Context) {

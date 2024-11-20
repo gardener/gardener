@@ -6,6 +6,7 @@ package bootstrappers
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-logr/logr"
 	"github.com/spf13/afero"
@@ -28,7 +29,7 @@ type NodeAgentKubeconfig struct {
 func (n *NodeAgentKubeconfig) Start(ctx context.Context) error {
 	ok, err := n.FS.Exists(nodeagentv1alpha1.KubeconfigFilePath)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to check if kubeconfig file exists: %w", err)
 	}
 	if ok {
 		n.Log.Info("Kubeconfig file exists, skipping bootstrap")
@@ -37,7 +38,7 @@ func (n *NodeAgentKubeconfig) Start(ctx context.Context) error {
 
 	n.Log.Info("Requesting kubeconfig for gardener-node agent")
 	if err := nodeagent.RequestAndStoreKubeconfig(ctx, n.Log, n.FS, n.Config, n.MachineName); err != nil {
-		return err
+		return fmt.Errorf("failed to request and store kubeconfig: %w", err)
 	}
 
 	n.Log.Info("New kubeconfig written to disk successfully. Terminating gardener-node-agent")

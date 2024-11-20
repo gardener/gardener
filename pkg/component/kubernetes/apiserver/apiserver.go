@@ -58,6 +58,8 @@ type Interface interface {
 	// GetValues returns the current configuration values of the deployer.
 	GetValues() Values
 	// AppendAuthorizationWebhook appends an AuthorizationWebhook to AuthorizationWebhooks in the Values of the deployer.
+	// TODO(oliver-goetz): Consider removing this method when we support Kubernetes version with structured authorization only.
+	//  See https://github.com/gardener/gardener/pull/10682#discussion_r1816324389 for more information.
 	AppendAuthorizationWebhook(AuthorizationWebhook)
 	// SetExternalHostname sets the ExternalHostname field in the Values of the deployer.
 	SetExternalHostname(string)

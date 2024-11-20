@@ -14,13 +14,15 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/spf13/afero"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/certificatesigningrequest"
 )
 
@@ -30,7 +32,7 @@ const nodeAgentCSRPrefix = "node-agent-csr-"
 func RequestAndStoreKubeconfig(ctx context.Context, log logr.Logger, fs afero.Afero, config *rest.Config, machineName string) error {
 	clientSet, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to create a clientset from rest config: %w", err)
 	}
 
 	certificateSubject := &pkix.Name{
@@ -49,27 +51,21 @@ func RequestAndStoreKubeconfig(ctx context.Context, log logr.Logger, fs afero.Af
 		caData = config.CAData
 	}
 
-	kubeconfig, err := clientcmd.Write(clientcmdapi.Config{
-		Clusters: map[string]*clientcmdapi.Cluster{"node-agent": {
+	kubeconfig, err := runtime.Encode(clientcmdlatest.Codec, kubernetesutils.NewKubeconfig(
+		"node-agent",
+		clientcmdv1.Cluster{
 			Server:                   config.Host,
 			InsecureSkipTLSVerify:    config.Insecure,
 			CertificateAuthority:     caFile,
 			CertificateAuthorityData: caData,
-		}},
-		AuthInfos: map[string]*clientcmdapi.AuthInfo{
-			"node-agent": {
-				ClientCertificateData: certData,
-				ClientKeyData:         privateKeyData,
-			}},
-		Contexts: map[string]*clientcmdapi.Context{
-			"node-agent": {
-				Cluster:  "node-agent",
-				AuthInfo: "node-agent",
-			}},
-		CurrentContext: "node-agent",
-	})
+		},
+		clientcmdv1.AuthInfo{
+			ClientCertificateData: certData,
+			ClientKeyData:         privateKeyData,
+		},
+	))
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to encode the gardener-node-agent kubeconfig: %w", err)
 	}
 
 	return fs.WriteFile(nodeagentv1alpha1.KubeconfigFilePath, kubeconfig, 0600)

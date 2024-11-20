@@ -266,11 +266,11 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 
 	var machineName string
 	if features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) {
-		machineName, err = fetchMachineName(fs)
+		machineName, err = fetchMachineNameFromFile(fs)
 		// TODO(oliver-goetz): Fetching the machine name from node label is migration code. Remove this migration code when feature gate NodeAgentAuthorizer is removed.
 		// Fetching the machine name from node label is for migrating existing nodes when the feature gate is activated, because there is no file with the machine name yet.
 		if errors.Is(err, afero.ErrFileNotFound) {
-			machineName, err = fetchMachineNameFromNode(ctx, restConfig, fs, nodeName)
+			machineName, err = fetchAndStoreMachineNameFromNode(ctx, restConfig, fs, nodeName)
 			if err != nil {
 				return err
 			}
@@ -397,7 +397,7 @@ func fetchAccessToken(ctx context.Context, log logr.Logger, restConfig *rest.Con
 	return nil
 }
 
-func fetchMachineName(fs afero.Afero) (string, error) {
+func fetchMachineNameFromFile(fs afero.Afero) (string, error) {
 	machineName, err := fs.ReadFile(nodeagentv1alpha1.MachineNameFilePath)
 	if err != nil {
 		return "", fmt.Errorf("failed reading machine-name file %q: %w", nodeagentv1alpha1.MachineNameFilePath, err)
@@ -405,7 +405,7 @@ func fetchMachineName(fs afero.Afero) (string, error) {
 	return strings.Split(string(machineName), "\n")[0], nil
 }
 
-func fetchMachineNameFromNode(ctx context.Context, restConfig *rest.Config, fs afero.Afero, nodeName string) (string, error) {
+func fetchAndStoreMachineNameFromNode(ctx context.Context, restConfig *rest.Config, fs afero.Afero, nodeName string) (string, error) {
 	if nodeName == "" {
 		return "", fmt.Errorf("node name is empty, cannot fetch machine name from node")
 	}
