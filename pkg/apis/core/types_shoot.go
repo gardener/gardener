@@ -511,7 +511,7 @@ type ClusterAutoscaler struct {
 	// Cluster Autoscaler internally treats nodes tainted with status taints as ready, but filtered out during scale up logic.
 	StatusTaints []string
 	// IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
-	// Ignore taints are now deprecated and treated as startup taints.
+	// Ignore taints are deprecated as of K8S 1.29 and treated as startup taints.
 	IgnoreTaints []string
 	// NewPodScaleUpDelay specifies how long CA should ignore newly created pods before they have to be considered for scale-up.
 	NewPodScaleUpDelay *metav1.Duration

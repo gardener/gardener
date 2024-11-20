@@ -84,7 +84,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 		configVerbosity                     int32 = 4
 		configMaxEmptyBulkDelete                  = ptr.To[int32](20)
 		configNewPodScaleUpDelay                  = &metav1.Duration{Duration: time.Second}
-		configStartupStatusIgnoreTaints           = []string{"taint-1", "taint-2"}
+		configTaints                              = []string{"taint-1", "taint-2"}
 		configFull                                = &gardencorev1beta1.ClusterAutoscaler{
 			Expander:                      &configExpander,
 			MaxGracefulTerminationSeconds: &configMaxGracefulTerminationSeconds,
@@ -95,9 +95,9 @@ var _ = Describe("ClusterAutoscaler", func() {
 			ScaleDownUnneededTime:         configScaleDownUnneededTime,
 			ScaleDownUtilizationThreshold: configScaleDownUtilizationThreshold,
 			ScanInterval:                  configScanInterval,
-			StartupTaints:                 configStartupStatusIgnoreTaints,
-			StatusTaints:                  configStartupStatusIgnoreTaints,
-			IgnoreTaints:                  configStartupStatusIgnoreTaints,
+			StartupTaints:                 configTaints,
+			StatusTaints:                  configTaints,
+			IgnoreTaints:                  configTaints,
 			IgnoreDaemonsetsUtilization:   &configIgnoreDaemonsetsUtilization,
 			Verbosity:                     &configVerbosity,
 			MaxEmptyBulkDelete:            configMaxEmptyBulkDelete,
@@ -266,12 +266,12 @@ var _ = Describe("ClusterAutoscaler", func() {
 					fmt.Sprintf("--max-empty-bulk-delete=%d", *configMaxEmptyBulkDelete),
 					fmt.Sprintf("--new-pod-scale-up-delay=%s", configNewPodScaleUpDelay.Duration),
 					"--max-nodes-total=0",
-					fmt.Sprintf("--startup-taint=%s", configStartupStatusIgnoreTaints[0]),
-					fmt.Sprintf("--startup-taint=%s", configStartupStatusIgnoreTaints[1]),
-					fmt.Sprintf("--status-taint=%s", configStartupStatusIgnoreTaints[0]),
-					fmt.Sprintf("--status-taint=%s", configStartupStatusIgnoreTaints[1]),
-					fmt.Sprintf("--ignore-taint=%s", configStartupStatusIgnoreTaints[0]),
-					fmt.Sprintf("--ignore-taint=%s", configStartupStatusIgnoreTaints[1]),
+					fmt.Sprintf("--startup-taint=%s", configTaints[0]),
+					fmt.Sprintf("--startup-taint=%s", configTaints[1]),
+					fmt.Sprintf("--status-taint=%s", configTaints[0]),
+					fmt.Sprintf("--status-taint=%s", configTaints[1]),
+					fmt.Sprintf("--ignore-taint=%s", configTaints[0]),
+					fmt.Sprintf("--ignore-taint=%s", configTaints[1]),
 				)
 			}
 

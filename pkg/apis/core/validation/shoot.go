@@ -853,7 +853,7 @@ func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking,
 		}
 
 		if clusterAutoscaler := kubernetes.ClusterAutoscaler; clusterAutoscaler != nil {
-			allErrs = append(allErrs, ValidateClusterAutoscaler(*clusterAutoscaler, fldPath.Child("clusterAutoscaler"))...)
+			allErrs = append(allErrs, ValidateClusterAutoscaler(*clusterAutoscaler, kubernetes.Version, fldPath.Child("clusterAutoscaler"))...)
 		}
 
 		if verticalPodAutoscaler := kubernetes.VerticalPodAutoscaler; verticalPodAutoscaler != nil {
@@ -1114,7 +1114,7 @@ func validateEncryptionConfig(encryptionConfig *core.EncryptionConfig, version s
 }
 
 // ValidateClusterAutoscaler validates the given ClusterAutoscaler fields.
-func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, fldPath *field.Path) field.ErrorList {
+func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, version string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if threshold := autoScaler.ScaleDownUtilizationThreshold; threshold != nil {
 		if *threshold < 0.0 {
@@ -1141,15 +1141,15 @@ func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, fldPath *field
 	}
 
 	if startupTaints := autoScaler.StartupTaints; startupTaints != nil {
-		allErrs = append(allErrs, validateClusterAutoscalerStartupStatusIgnoreTaints(startupTaints, fldPath.Child("startupTaints"))...)
+		allErrs = append(allErrs, validateClusterAutoscalerTaints(startupTaints, "StartupTaints", version, fldPath.Child("startupTaints"))...)
 	}
 
 	if statusTaints := autoScaler.StatusTaints; statusTaints != nil {
-		allErrs = append(allErrs, validateClusterAutoscalerStartupStatusIgnoreTaints(statusTaints, fldPath.Child("statusTaints"))...)
+		allErrs = append(allErrs, validateClusterAutoscalerTaints(statusTaints, "StatusTaints", version, fldPath.Child("statusTaints"))...)
 	}
 
 	if ignoreTaints := autoScaler.IgnoreTaints; ignoreTaints != nil {
-		allErrs = append(allErrs, validateClusterAutoscalerStartupStatusIgnoreTaints(ignoreTaints, fldPath.Child("ignoreTaints"))...)
+		allErrs = append(allErrs, validateClusterAutoscalerTaints(ignoreTaints, "IgnoreTaints", version, fldPath.Child("ignoreTaints"))...)
 	}
 
 	if newPodScaleUpDelay := autoScaler.NewPodScaleUpDelay; newPodScaleUpDelay != nil && newPodScaleUpDelay.Duration < 0 {
@@ -1974,8 +1974,22 @@ func validateKubeletConfigReserved(reserved *core.KubeletConfigReserved, fldPath
 
 var reservedTaintKeys = sets.New(v1beta1constants.TaintNodeCriticalComponentsNotReady)
 
-func validateClusterAutoscalerStartupStatusIgnoreTaints(taints []string, fldPath *field.Path) field.ErrorList {
+func validateClusterAutoscalerTaints(taints []string, featureGate string, version string, fldPath *field.Path) field.ErrorList {
+	var featureGateVersionRanges = map[string]*featuresvalidation.FeatureGateVersionRange{
+		"IgnoreTaints":  {VersionRange: versionutils.VersionRange{AddedInVersion: "1.14", RemovedInVersion: "1.32"}},
+		"StartupTaints": {VersionRange: versionutils.VersionRange{AddedInVersion: "1.29"}},
+		"StatusTaints":  {VersionRange: versionutils.VersionRange{AddedInVersion: "1.29"}},
+	}
+
 	allErrs := field.ErrorList{}
+
+	supported, err := featureGateVersionRanges[featureGate].Contains(version)
+	if err != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child(featureGate), featureGate, err.Error()))
+	} else if !supported {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child(featureGate), "not supported in Kubernetes version "+version))
+	}
+
 	taintKeySet := make(map[string]struct{})
 
 	for i, taint := range taints {
