@@ -171,7 +171,7 @@ var _ = Describe("Strategy", func() {
 			Expect(newCloudProfile.Spec.Regions[0].Labels).To(BeEmpty())
 		})
 
-		It("should remove the label when the access restriction is dropped", func() {
+		It("should not remove the label when the access restriction is dropped", func() {
 			oldCloudProfile.Spec.Regions[0].Labels = map[string]string{"seed.gardener.cloud/eu-access": "true"}
 			oldCloudProfile.Spec.Regions[0].AccessRestrictions = []core.AccessRestriction{{Name: "eu-access-only"}}
 			newCloudProfile.Spec.Regions[0].Labels = map[string]string{"seed.gardener.cloud/eu-access": "true"}
@@ -179,7 +179,7 @@ var _ = Describe("Strategy", func() {
 			cloudprofileregistry.Strategy.PrepareForUpdate(context.Background(), newCloudProfile, oldCloudProfile)
 
 			Expect(newCloudProfile.Spec.Regions[0].AccessRestrictions).To(BeEmpty())
-			Expect(newCloudProfile.Spec.Regions[0].Labels).To(BeEmpty())
+			Expect(newCloudProfile.Spec.Regions[0].Labels).To(Equal(map[string]string{"seed.gardener.cloud/eu-access": "true"}))
 		})
 	})
 

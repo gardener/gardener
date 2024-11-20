@@ -411,39 +411,27 @@ func syncLegacyAccessRestrictionLabelWithNewFieldOnUpdate(shoot, oldShoot *core.
 		delete(accessRestrictions[i].Options, key)
 	}
 
-	hasOptionInAccessRestrictions := func(accessRestrictions []core.AccessRestrictionWithOptions, option string) bool {
-		return slices.ContainsFunc(accessRestrictions, func(accessRestriction core.AccessRestrictionWithOptions) bool {
-			return accessRestriction.Name == "eu-access-only" && accessRestriction.Options[option] != ""
-		})
-	}
-
 	if oldShoot.Spec.SeedSelector != nil && oldShoot.Spec.SeedSelector.MatchLabels["seed.gardener.cloud/eu-access"] == "true" &&
 		(shoot.Spec.SeedSelector == nil || shoot.Spec.SeedSelector.MatchLabels["seed.gardener.cloud/eu-access"] != "true") {
 		shoot.Spec.AccessRestrictions = removeAccessRestriction(shoot.Spec.AccessRestrictions, "eu-access-only")
-	}
-
-	if hasAccessRestriction(oldShoot.Spec.AccessRestrictions) &&
-		!hasAccessRestriction(shoot.Spec.AccessRestrictions) {
-		shoot.Spec.SeedSelector = nil
 	}
 
 	for _, key := range []string{
 		"support.gardener.cloud/eu-access-for-cluster-addons",
 		"support.gardener.cloud/eu-access-for-cluster-nodes",
 	} {
-		if oldShoot.Annotations[key] != shoot.Annotations[key] {
+		oldValue, oldOk := oldShoot.Annotations[key]
+		newValue, newOk := shoot.Annotations[key]
+		if oldOk && newOk && oldValue != newValue {
 			updateOptionInAccessRestrictions(shoot.Spec.AccessRestrictions, key, shoot.Annotations[key])
 		}
 
-		if hasAccessRestriction(oldShoot.Spec.AccessRestrictions) &&
-			hasAccessRestriction(shoot.Spec.AccessRestrictions) &&
-			oldShoot.Spec.AccessRestrictions[slices.IndexFunc(oldShoot.Spec.AccessRestrictions, filterEUAccessOnlyRestriction)].Options[key] != shoot.Spec.AccessRestrictions[slices.IndexFunc(shoot.Spec.AccessRestrictions, filterEUAccessOnlyRestriction)].Options[key] {
-			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, key, shoot.Spec.AccessRestrictions[slices.IndexFunc(shoot.Spec.AccessRestrictions, filterEUAccessOnlyRestriction)].Options[key])
-		}
-
-		if hasOptionInAccessRestrictions(oldShoot.Spec.AccessRestrictions, key) &&
-			!hasOptionInAccessRestrictions(shoot.Spec.AccessRestrictions, key) {
-			delete(shoot.Annotations, key)
+		if hasAccessRestriction(oldShoot.Spec.AccessRestrictions) && hasAccessRestriction(shoot.Spec.AccessRestrictions) {
+			oldValue, oldOk := oldShoot.Spec.AccessRestrictions[slices.IndexFunc(oldShoot.Spec.AccessRestrictions, filterEUAccessOnlyRestriction)].Options[key]
+			newValue, newOk := shoot.Spec.AccessRestrictions[slices.IndexFunc(shoot.Spec.AccessRestrictions, filterEUAccessOnlyRestriction)].Options[key]
+			if oldOk && newOk && oldValue != newValue {
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, key, shoot.Spec.AccessRestrictions[slices.IndexFunc(shoot.Spec.AccessRestrictions, filterEUAccessOnlyRestriction)].Options[key])
+			}
 		}
 
 		if oldShoot.Annotations[key] != "" &&
