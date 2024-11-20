@@ -128,9 +128,8 @@ var _ = BeforeSuite(func() {
 	})
 
 	Expect((&gardenaccess.Reconciler{
-		FS:                       fs,
-		Config:                   &config.OperatorConfiguration{},
-		GardenletControllerAdded: true,
+		FS:     fs,
+		Config: &config.OperatorConfiguration{},
 	}).AddToManager(mgr, testSecret.Name, testSecret.Name)).To(Succeed())
 
 	By("Start manager")

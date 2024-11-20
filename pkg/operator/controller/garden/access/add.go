@@ -17,7 +17,7 @@ import (
 )
 
 // ControllerName is the name of this controller.
-const ControllerName = "garden-access"
+const ControllerName = "virtual-cluster-access"
 
 // AddToManager adds Reconciler to the given manager.
 func (r *Reconciler) AddToManager(mgr manager.Manager, namespace, secretName string) error {
@@ -33,20 +33,21 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, namespace, secretName str
 		r.FS = afero.NewOsFs()
 	}
 
-	accessSecretPredicates := predicate.NewPredicateFuncs(func(o client.Object) bool {
-		_, hasRenewAnnotation := o.GetAnnotations()[resourcesv1alpha1.ServiceAccountTokenRenewTimestamp]
-
-		return o.GetNamespace() == namespace &&
-			o.GetName() == secretName &&
-			hasRenewAnnotation
-	})
-
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
-		For(&corev1.Secret{}, builder.WithPredicates(accessSecretPredicates)).
+		For(&corev1.Secret{}, builder.WithPredicates(HasRenewAnnotationPredicate(secretName, namespace))).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 1,
 		}).
 		Complete(r)
+}
+
+// HasRenewAnnotationPredicate is a predicate that returns true if the object has a 'resourcesv1alpha1.ServiceAccountTokenRenewTimestamp' annotation.
+func HasRenewAnnotationPredicate(name, namespace string) predicate.Predicate {
+	return predicate.NewPredicateFuncs(func(o client.Object) bool {
+		_, hasRenewAnnotation := o.GetAnnotations()[resourcesv1alpha1.ServiceAccountTokenRenewTimestamp]
+
+		return o.GetNamespace() == namespace && o.GetName() == name && hasRenewAnnotation
+	})
 }

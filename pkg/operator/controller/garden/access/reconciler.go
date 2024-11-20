@@ -30,15 +30,15 @@ type Reconciler struct {
 	Client  client.Client
 	Manager manager.Manager
 	Config  *config.OperatorConfiguration
+	FS      afero.Fs
 
-	FS             afero.Fs
 	tokenFilePath  string
 	virtualCluster cluster.Cluster
 }
 
 // Reconcile processes the given access secret in the request.
 // It extracts the included Kubeconfig, and prepares a dedicated REST config
-// where the inline Bearer Token is replaced by a BearerTokenFile with the said token persisted.
+// where the inline bearer token is replaced by a bearer token file.
 // Any subsequent reconciliation run causes the content of the BearerTokenFile to be updated with the token found
 // in the access secret.
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
@@ -53,13 +53,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	kubeConfigBytes, ok := secret.Data[kubernetesclient.KubeConfig]
+	kubeConfigRaw, ok := secret.Data[kubernetesclient.KubeConfig]
 	if !ok {
 		log.Info("Secret does not contain kubeconfig")
 		return reconcile.Result{}, nil
 	}
 
-	restConfig, err := clientcmd.RESTConfigFromKubeConfig(kubeConfigBytes)
+	restConfig, err := clientcmd.RESTConfigFromKubeConfig(kubeConfigRaw)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("error creating REST config: %w", err)
 	}

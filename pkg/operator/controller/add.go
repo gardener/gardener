@@ -7,7 +7,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"net"
 	"os"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -84,21 +83,14 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 			}},
 			{AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, garden *operatorv1alpha1.Garden) (bool, error) {
 				log := logf.FromContext(ctx)
-				secretName := v1beta1constants.SecretNameGardener
 
-				// Prefer the internal host if available
-				addr, err := net.LookupHost(fmt.Sprintf("virtual-garden-%s.%s.svc.cluster.local", v1beta1constants.DeploymentNameKubeAPIServer, v1beta1constants.GardenNamespace))
-				if len(addr) == 0 && !gardenerutils.IsGardenSuccessfullyReconciled(garden) {
-					log.Info("Service DNS name lookup of virtual-garden-kube-apiserver is tried again because garden is still being created")
+				if !gardenerutils.IsGardenSuccessfullyReconciled(garden) {
+					log.Info("Garden is being created - adding the access reconciler will be tried again")
 					return false, nil
-				} else if err != nil {
-					log.Info("Service DNS name lookup of virtual-garden-kube-apiserver failed, falling back to external kubeconfig", "error", err)
-				} else {
-					log.Info("Service DNS name lookup of virtual-garden-kube-apiserver successfull, using internal kubeconfig", "error", err)
-					secretName = v1beta1constants.SecretNameGardenerInternal
 				}
 
 				accessReconciler = &gardenaccess.Reconciler{Config: cfg}
+				secretName := clientmap.GardenerSecretName(log, v1beta1constants.GardenNamespace)
 
 				return true, accessReconciler.AddToManager(mgr, v1beta1constants.GardenNamespace, secretName)
 			}},

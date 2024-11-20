@@ -31,6 +31,7 @@ import (
 var _ = Describe("GardenClientMap", func() {
 	var (
 		ctx               context.Context
+		log               logr.Logger
 		ctrl              *gomock.Controller
 		mockRuntimeClient *mockclient.MockClient
 
@@ -44,7 +45,8 @@ var _ = Describe("GardenClientMap", func() {
 	)
 
 	BeforeEach(func() {
-		ctx = context.TODO()
+		ctx = context.Background()
+		log = logr.Discard()
 		ctrl = gomock.NewController(GinkgoT())
 		mockRuntimeClient = mockclient.NewMockClient(ctrl)
 
@@ -73,14 +75,14 @@ var _ = Describe("GardenClientMap", func() {
 			RuntimeClient:          mockRuntimeClient,
 			ClientConnectionConfig: clientConnectionConfig,
 		}
-		cm = NewGardenClientMap(logr.Discard(), factory)
+		cm = NewGardenClientMap(log, factory)
 	})
 
 	AfterEach(func() {
 		ctrl.Finish()
 	})
 
-	Context("#GetClient", func() {
+	Describe("#GetClient", func() {
 		It("should fail if ClientSetKey type is unsupported", func() {
 			key = fakeKey{}
 			cs, err := cm.GetClient(ctx, key)
@@ -211,7 +213,33 @@ var _ = Describe("GardenClientMap", func() {
 		})
 	})
 
-	Context("#CalculateClientSetHash", func() {
+	Describe("#GardenerSecretName", func() {
+		It("should return the internal secret name if lookup is successful", func() {
+			LookupHost = func(_ string) ([]string, error) {
+				return []string{"10.0.1.1"}, nil
+			}
+
+			Expect(GardenerSecretName(log, "garden")).To(Equal("gardener-internal"))
+		})
+
+		It("should return the external secret name if no address is returned", func() {
+			LookupHost = func(_ string) ([]string, error) {
+				return []string{}, nil
+			}
+
+			Expect(GardenerSecretName(log, "garden")).To(Equal("gardener"))
+		})
+
+		It("should return the external if lookup failed", func() {
+			LookupHost = func(_ string) ([]string, error) {
+				return []string{"10.0.1.1"}, errors.New("fake")
+			}
+
+			Expect(GardenerSecretName(log, "garden")).To(Equal("gardener"))
+		})
+	})
+
+	Describe("#CalculateClientSetHash", func() {
 		It("should fail if ClientSetKey type is unsupported", func() {
 			key = fakeKey{}
 			hash, err := factory.CalculateClientSetHash(ctx, key)

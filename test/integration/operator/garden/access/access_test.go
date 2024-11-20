@@ -16,9 +16,7 @@ import (
 )
 
 var _ = Describe("Garden Access controller tests", func() {
-	var (
-		config *clientcmdapi.Config
-	)
+	var config *clientcmdapi.Config
 
 	BeforeEach(func() {
 		config = clientcmdapi.NewConfig()

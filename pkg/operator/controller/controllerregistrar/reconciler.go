@@ -29,8 +29,7 @@ type Controller struct {
 	added            bool
 }
 
-// RequeueAfter is the time the request is requeued in case a controller is not added yet. Exposed for testing.
-var RequeueAfter = 2 * time.Second
+const requeueAfter = 2 * time.Second
 
 // Reconcile performs the controller registration.
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
@@ -56,7 +55,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 				return reconcile.Result{}, err
 			}
 			if !done {
-				return reconcile.Result{RequeueAfter: RequeueAfter}, nil
+				return reconcile.Result{RequeueAfter: requeueAfter}, nil
 			}
 			r.Controllers[i].added = true
 		}
