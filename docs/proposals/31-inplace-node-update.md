@@ -381,7 +381,7 @@ In-place updates will support (2) and (3) but will disallow (1) with validations
 
 Instead of using both the `machine-controller-manager` and the `gardener-node-agent` for in-place updates, use only `gardener-node-agent`. However, this method has the following drawbacks:
 
-- `machine-controller-manager` natively provides rolling update logic through `Machine Deployment` and `Machine Set`, which helps track the progress of updated and pending nodes. Additionally, `machine-controller-manager` includes logic to select machines based on `maxUnavailable/maxSurge`, ensuring machines are rolled in a controlled manner. If only `gardener-node-agent` is used, new logic would need to be implemented to track node update progress and to manage the number of nodes updated at a time before proceeding to the next set.
+- `machine-controller-manager` natively provides rolling update logic through `Machine Deployment` and `Machine Set`, which helps track the progress of updated and pending nodes. Additionally, `machine-controller-manager` includes logic to select machines based on `maxUnavailable/maxSurge`, ensuring machines are rolled in a controlled manner. If only `gardener-node-agent` was used, new logic would need to be implemented to track node update progress and to manage the number of nodes updated at a time before proceeding to the next set.
 - `machine-controller-manager`'s drain logic, which offers special handling, cannot be utilized.
 
 ### Using the same name for Machine Class
