@@ -129,12 +129,6 @@ func syncLegacyAccessRestrictionLabelWithNewField(cloudProfile *core.CloudProfil
 }
 
 func syncLegacyAccessRestrictionLabelWithNewFieldOnUpdate(cloudProfile, oldCloudProfile *core.CloudProfile) {
-	hasAccessRestriction := func(accessRestrictions []core.AccessRestriction, name string) bool {
-		return slices.ContainsFunc(accessRestrictions, func(accessRestriction core.AccessRestriction) bool {
-			return accessRestriction.Name == name
-		})
-	}
-
 	removeAccessRestriction := func(accessRestrictions []core.AccessRestriction, name string) []core.AccessRestriction {
 		var updatedAccessRestrictions []core.AccessRestriction
 		for _, accessRestriction := range accessRestrictions {
@@ -156,11 +150,6 @@ func syncLegacyAccessRestrictionLabelWithNewFieldOnUpdate(cloudProfile, oldCloud
 		if oldRegion.Labels["seed.gardener.cloud/eu-access"] == "true" &&
 			cloudProfile.Spec.Regions[i].Labels["seed.gardener.cloud/eu-access"] != "true" {
 			cloudProfile.Spec.Regions[i].AccessRestrictions = removeAccessRestriction(cloudProfile.Spec.Regions[i].AccessRestrictions, "eu-access-only")
-		}
-
-		if hasAccessRestriction(oldRegion.AccessRestrictions, "eu-access-only") &&
-			!hasAccessRestriction(cloudProfile.Spec.Regions[i].AccessRestrictions, "eu-access-only") {
-			delete(cloudProfile.Spec.Regions[i].Labels, "seed.gardener.cloud/eu-access")
 		}
 	}
 }
