@@ -4,6 +4,7 @@ kind: Kustomization
 resources:
 - https://github.com/kyverno/kyverno/releases/download/v1.13.1/install.yaml
 - kyverno-poddisruptionbudget.yaml
+- kyverno-rbac.yaml
 
 patches:
 - path: kyverno-configmap.yaml
