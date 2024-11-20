@@ -129,7 +129,7 @@ var _ = Describe("Strategy", func() {
 					Expect(newSeed.Labels).To(BeEmpty())
 				})
 
-				It("should remove the label when the access restriction is dropped", func() {
+				It("should not remove the label when the access restriction is dropped", func() {
 					oldSeed.Labels = map[string]string{"seed.gardener.cloud/eu-access": "true"}
 					oldSeed.Spec.AccessRestrictions = []core.AccessRestriction{{Name: "eu-access-only"}}
 					newSeed.Labels = map[string]string{"seed.gardener.cloud/eu-access": "true"}
@@ -137,7 +137,7 @@ var _ = Describe("Strategy", func() {
 					strategy.PrepareForUpdate(ctx, newSeed, oldSeed)
 
 					Expect(newSeed.Spec.AccessRestrictions).To(BeEmpty())
-					Expect(newSeed.Labels).To(BeEmpty())
+					Expect(newSeed.Labels).To(Equal(map[string]string{"seed.gardener.cloud/eu-access": "true"}))
 				})
 			})
 		})
