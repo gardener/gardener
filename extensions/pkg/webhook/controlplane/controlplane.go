@@ -20,8 +20,8 @@ import (
 const (
 	// WebhookName is the webhook name.
 	WebhookName = "controlplane"
-	// ExposureWebhookName is the exposure webhook name.
-	ExposureWebhookName = "controlplaneexposure"
+	// SeedProviderWebhookName is the seed provider webhook name.
+	SeedProviderWebhookName = "seedprovider"
 	// BackupWebhookName is the backup webhook name.
 	BackupWebhookName = "controlplanebackup"
 
@@ -83,7 +83,7 @@ func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 func getName(kind string) string {
 	switch kind {
 	case KindSeed:
-		return ExposureWebhookName
+		return SeedProviderWebhookName
 	case KindBackup:
 		return BackupWebhookName
 	default:
