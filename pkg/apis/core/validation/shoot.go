@@ -1974,8 +1974,8 @@ func validateKubeletConfigReserved(reserved *core.KubeletConfigReserved, fldPath
 
 var reservedTaintKeys = sets.New(v1beta1constants.TaintNodeCriticalComponentsNotReady)
 
-func validateClusterAutoscalerTaints(taints []string, featureGate string, version string, fldPath *field.Path) field.ErrorList {
-	var featureGateVersionRanges = map[string]*featuresvalidation.FeatureGateVersionRange{
+func validateClusterAutoscalerTaints(taints []string, option string, version string, fldPath *field.Path) field.ErrorList {
+	var optionVersionRanges = map[string]*featuresvalidation.FeatureGateVersionRange{
 		"IgnoreTaints":  {VersionRange: versionutils.VersionRange{AddedInVersion: "1.14", RemovedInVersion: "1.32"}},
 		"StartupTaints": {VersionRange: versionutils.VersionRange{AddedInVersion: "1.29"}},
 		"StatusTaints":  {VersionRange: versionutils.VersionRange{AddedInVersion: "1.29"}},
@@ -1983,11 +1983,11 @@ func validateClusterAutoscalerTaints(taints []string, featureGate string, versio
 
 	allErrs := field.ErrorList{}
 
-	supported, err := featureGateVersionRanges[featureGate].Contains(version)
+	supported, err := optionVersionRanges[option].Contains(version)
 	if err != nil {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child(featureGate), featureGate, err.Error()))
+		allErrs = append(allErrs, field.Invalid(fldPath.Child(option), option, err.Error()))
 	} else if !supported {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child(featureGate), "not supported in Kubernetes version "+version))
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child(option), "not supported in Kubernetes version "+version))
 	}
 
 	taintKeySet := make(map[string]struct{})

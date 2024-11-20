@@ -2900,8 +2900,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 			taintsUnique                        = []string{"taint-1", "taint-2"}
 			taintsDuplicate                     = []string{"taint-1", "taint-1"}
 			taintsInvalid                       = []string{"taint 1", "taint-1"}
-			version                             = "1.28.4"
-			newVersion                          = "1.30.0"
+			version_1_28                        = "1.28.4"
+			version_1_30                        = "1.30.0"
 		)
 
 		Context("ClusterAutoscaler validation", func() {
@@ -2909,54 +2909,54 @@ var _ = Describe("Shoot Validation Tests", func() {
 				func(clusterAutoscaler core.ClusterAutoscaler, version string, matcher gomegatypes.GomegaMatcher) {
 					Expect(ValidateClusterAutoscaler(clusterAutoscaler, version, nil)).To(matcher)
 				},
-				Entry("valid", core.ClusterAutoscaler{}, version, BeEmpty()),
-				Entry("valid", core.ClusterAutoscaler{}, newVersion, BeEmpty()),
+				Entry("valid", core.ClusterAutoscaler{}, version_1_28, BeEmpty()),
+				Entry("valid", core.ClusterAutoscaler{}, version_1_30, BeEmpty()),
 				Entry("valid with threshold", core.ClusterAutoscaler{
 					ScaleDownUtilizationThreshold: ptr.To(float64(0.5)),
-				}, version, BeEmpty()),
+				}, version_1_28, BeEmpty()),
 				Entry("invalid negative threshold", core.ClusterAutoscaler{
 					ScaleDownUtilizationThreshold: ptr.To(float64(-0.5)),
-				}, version, ConsistOf(field.Invalid(field.NewPath("scaleDownUtilizationThreshold"), -0.5, "can not be negative"))),
+				}, version_1_28, ConsistOf(field.Invalid(field.NewPath("scaleDownUtilizationThreshold"), -0.5, "can not be negative"))),
 				Entry("invalid > 1 threshold", core.ClusterAutoscaler{
 					ScaleDownUtilizationThreshold: ptr.To(float64(1.5)),
-				}, version, ConsistOf(field.Invalid(field.NewPath("scaleDownUtilizationThreshold"), 1.5, "can not be greater than 1.0"))),
+				}, version_1_28, ConsistOf(field.Invalid(field.NewPath("scaleDownUtilizationThreshold"), 1.5, "can not be greater than 1.0"))),
 				Entry("valid with maxNodeProvisionTime", core.ClusterAutoscaler{
 					MaxNodeProvisionTime: &metav1.Duration{Duration: time.Minute},
-				}, version, BeEmpty()),
+				}, version_1_28, BeEmpty()),
 				Entry("invalid with negative maxNodeProvisionTime", core.ClusterAutoscaler{
 					MaxNodeProvisionTime: &negativeDuration,
-				}, version, ConsistOf(field.Invalid(field.NewPath("maxNodeProvisionTime"), negativeDuration, "can not be negative"))),
+				}, version_1_28, ConsistOf(field.Invalid(field.NewPath("maxNodeProvisionTime"), negativeDuration, "can not be negative"))),
 				Entry("valid with maxGracefulTerminationSeconds", core.ClusterAutoscaler{
 					MaxGracefulTerminationSeconds: &positiveInteger,
-				}, version, BeEmpty()),
+				}, version_1_28, BeEmpty()),
 				Entry("invalid with negative maxGracefulTerminationSeconds", core.ClusterAutoscaler{
 					MaxGracefulTerminationSeconds: &negativeInteger,
-				}, version, ConsistOf(field.Invalid(field.NewPath("maxGracefulTerminationSeconds"), negativeInteger, "can not be negative"))),
+				}, version_1_28, ConsistOf(field.Invalid(field.NewPath("maxGracefulTerminationSeconds"), negativeInteger, "can not be negative"))),
 				Entry("valid with expander least waste", core.ClusterAutoscaler{
 					Expander: &expanderLeastWaste,
-				}, version, BeEmpty()),
+				}, version_1_28, BeEmpty()),
 				Entry("valid with expander most pods", core.ClusterAutoscaler{
 					Expander: &expanderMostPods,
-				}, version, BeEmpty()),
+				}, version_1_28, BeEmpty()),
 				Entry("valid with expander priority", core.ClusterAutoscaler{
 					Expander: &expanderPriority,
-				}, version, BeEmpty()),
+				}, version_1_28, BeEmpty()),
 				Entry("valid with expander random", core.ClusterAutoscaler{
 					Expander: &expanderRandom,
-				}, version, BeEmpty()),
+				}, version_1_28, BeEmpty()),
 				Entry("invalid with startup taint on K8S v1.28", core.ClusterAutoscaler{
 					StartupTaints: taintsUnique,
-				}, version, ConsistOf(field.Forbidden(field.NewPath("startupTaints.StartupTaints"), "not supported in Kubernetes version 1.28.4"))),
+				}, version_1_28, ConsistOf(field.Forbidden(field.NewPath("startupTaints.StartupTaints"), "not supported in Kubernetes version 1.28.4"))),
 				Entry("valid with startup taint", core.ClusterAutoscaler{
 					StartupTaints: taintsUnique,
-				}, newVersion, BeEmpty()),
+				}, version_1_30, BeEmpty()),
 				Entry("duplicate startup taint", core.ClusterAutoscaler{
 					StartupTaints: taintsDuplicate,
-				}, newVersion, ConsistOf(field.Duplicate(field.NewPath("startupTaints").Index(1), taintsDuplicate[1]))),
+				}, version_1_30, ConsistOf(field.Duplicate(field.NewPath("startupTaints").Index(1), taintsDuplicate[1]))),
 				Entry("invalid with startup taint",
 					core.ClusterAutoscaler{
 						StartupTaints: taintsInvalid,
-					}, newVersion,
+					}, version_1_30,
 					ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("startupTaints[0]"),
@@ -2964,17 +2964,17 @@ var _ = Describe("Shoot Validation Tests", func() {
 				),
 				Entry("invalid with startup taint on K8S v1.28", core.ClusterAutoscaler{
 					StatusTaints: taintsUnique,
-				}, version, ConsistOf(field.Forbidden(field.NewPath("statusTaints.StatusTaints"), "not supported in Kubernetes version 1.28.4"))),
+				}, version_1_28, ConsistOf(field.Forbidden(field.NewPath("statusTaints.StatusTaints"), "not supported in Kubernetes version 1.28.4"))),
 				Entry("valid with status taint", core.ClusterAutoscaler{
 					StatusTaints: taintsUnique,
-				}, newVersion, BeEmpty()),
+				}, version_1_30, BeEmpty()),
 				Entry("duplicate status taint", core.ClusterAutoscaler{
 					StatusTaints: taintsDuplicate,
-				}, newVersion, ConsistOf(field.Duplicate(field.NewPath("statusTaints").Index(1), taintsDuplicate[1]))),
+				}, version_1_30, ConsistOf(field.Duplicate(field.NewPath("statusTaints").Index(1), taintsDuplicate[1]))),
 				Entry("invalid with status taint",
 					core.ClusterAutoscaler{
 						StatusTaints: taintsInvalid,
-					}, newVersion,
+					}, version_1_30,
 					ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("statusTaints[0]"),
@@ -2982,24 +2982,24 @@ var _ = Describe("Shoot Validation Tests", func() {
 				),
 				Entry("valid with ignore taint", core.ClusterAutoscaler{
 					IgnoreTaints: taintsUnique,
-				}, version, BeEmpty()),
+				}, version_1_28, BeEmpty()),
 				Entry("duplicate ignore taint", core.ClusterAutoscaler{
 					IgnoreTaints: taintsDuplicate,
-				}, version, ConsistOf(field.Duplicate(field.NewPath("ignoreTaints").Index(1), taintsDuplicate[1]))),
+				}, version_1_28, ConsistOf(field.Duplicate(field.NewPath("ignoreTaints").Index(1), taintsDuplicate[1]))),
 				Entry("invalid with ignore taint",
 					core.ClusterAutoscaler{
 						IgnoreTaints: taintsInvalid,
-					}, version,
+					}, version_1_28,
 					ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("ignoreTaints[0]"),
 					}))),
 				),
-				Entry("valid with expander priority and least-waste", core.ClusterAutoscaler{Expander: &expanderPriorityAndLeastWaste}, version, BeEmpty()),
+				Entry("valid with expander priority and least-waste", core.ClusterAutoscaler{Expander: &expanderPriorityAndLeastWaste}, version_1_28, BeEmpty()),
 				Entry("invalid expander in multiple expander string",
 					core.ClusterAutoscaler{
 						Expander: &invalidExpander,
-					}, version,
+					}, version_1_28,
 					ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeNotSupported),
 						"Field": Equal("expander"),
@@ -3008,7 +3008,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("incorrect multiple expander string",
 					core.ClusterAutoscaler{
 						Expander: &invalidMultipleExpanderString,
-					}, version,
+					}, version_1_28,
 					ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeNotSupported),
 						"Field": Equal("expander"),
@@ -3016,16 +3016,16 @@ var _ = Describe("Shoot Validation Tests", func() {
 				),
 				Entry("valid with newPodScaleUpDelay", core.ClusterAutoscaler{
 					NewPodScaleUpDelay: &metav1.Duration{Duration: time.Minute},
-				}, version, BeEmpty()),
+				}, version_1_28, BeEmpty()),
 				Entry("invalid with negative newPodScaleUpDelay", core.ClusterAutoscaler{
 					NewPodScaleUpDelay: &negativeDuration,
-				}, version, ConsistOf(field.Invalid(field.NewPath("newPodScaleUpDelay"), negativeDuration, "can not be negative"))),
+				}, version_1_28, ConsistOf(field.Invalid(field.NewPath("newPodScaleUpDelay"), negativeDuration, "can not be negative"))),
 				Entry("valid with maxEmptyBulkDelete", core.ClusterAutoscaler{
 					MaxEmptyBulkDelete: &positiveInteger,
-				}, version, BeEmpty()),
+				}, version_1_28, BeEmpty()),
 				Entry("invalid with negative maxEmptyBulkDelete", core.ClusterAutoscaler{
 					MaxEmptyBulkDelete: &negativeInteger,
-				}, version, ConsistOf(field.Invalid(field.NewPath("maxEmptyBulkDelete"), negativeInteger, "can not be negative"))),
+				}, version_1_28, ConsistOf(field.Invalid(field.NewPath("maxEmptyBulkDelete"), negativeInteger, "can not be negative"))),
 			)
 
 			Describe("taint validation", func() {
