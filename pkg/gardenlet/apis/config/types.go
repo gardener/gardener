@@ -16,7 +16,7 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // GardenletConfiguration defines the configuration for the Gardenlet.
-// Note: Most fields that are pointers are used as optionals in logic for merging with parent
+// Note: Most fields need to be pointers for merging with the parent gardenlet configuration
 type GardenletConfiguration struct {
 	metav1.TypeMeta
 	// GardenClientConnection specifies the kubeconfig file and the client connection settings
