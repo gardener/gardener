@@ -101,7 +101,7 @@ storage management functionality is envisioned in `etcd-druid`. For details, see
 The existing, recently implemented Gardener PVC autoscaler application[[1]], hereafter referred to as `pvc-autoscaler`,
 is deployed to seeds, and takes the responsibility of scaling PVs. PVCs (seed and shoot `vali` and `prometheus` at this time) are
 annotated as to instruct the autoscaler to act on them, and to prescribe specific settings. New volumes are deployed with
-smaller initial capacity. Each time the free space of a volume drops below 90% (referred to as "trigger threshold"),
+smaller initial capacity. Each time the free space of a volume drops below 10% (referred to as "trigger threshold"),
 `pvc-autoscaler` expands capacity by 10%.
 
 ### PVC Autoscaler - Runtime Structure
@@ -155,16 +155,16 @@ annotations are removed from the shoot control plane observability StatefulSets,
 
 #### Initial volume size and MaxAllowed
 
-| Component type | Component            | Old size | Initial size    | Max size |
-|----------------|----------------------|----------|-----------------|----------|
-| Shoot          | prometheus           | 20Gi     | 1Gi             | 40Gi     |
-| Shoot          | vali                 | 30Gi     | 1Gi             | 60Gi     |
-| Seed           | prometheus-aggregate | 20Gi     | 2Gi             | 40Gi     |
-| Seed           | prometheus-cache     | 10Gi     | 6Gi<sup>*</sup> | 20Gi     |
-| Seed           | prometheus-seed      | 100Gi    | 5Gi             | 200Gi    |
-| Seed           | vali                 | 100Gi    | 5Gi             | 200Gi    |
+| Component type | Component            | Old size | Initial size | Max size | Min threshold    |
+|----------------|----------------------|----------|--------------|----------|------------------|
+| Shoot          | prometheus           | 20Gi     | 1Gi          | 40Gi     | 600Mi            |
+| Shoot          | vali                 | 30Gi     | 1Gi          | 60Gi     | 200Mi            |
+| Seed           | prometheus-aggregate | 20Gi     | 2Gi          | 40Gi     | 600Mi            |
+| Seed           | prometheus-cache     | 10Gi     | 2Gi          | 20Gi     | 1Gi <sup>*</sup> |
+| Seed           | prometheus-seed      | 100Gi    | 5Gi          | 200Gi    | 600Mi            |
+| Seed           | vali                 | 100Gi    | 5Gi          | 200Gi    | 600Mi            |
 
-<sup>*</sup> The greater initial size mitigates [risk due to circular dependency](#reliance-on-prometheus). 
+<sup>*</sup> The greater minimal threshold mitigates [risk due to circular dependency](#reliance-on-prometheus). 
 ### Transition Strategy
 The following steps will be executed over time, to minimise the risk of disruption to existing Gardener instances:
 
@@ -295,9 +295,8 @@ in one mode of persistent failure:
 3. `pvc-autoscaler` enters fault loop, due to driving metrics signal unavailable
 4. At this point, autoscaling seizes for all PVs on the seed
 
-To mitigate the risk of such failure, a larger initial storage request is used for `prometheus-cache` - 6Gi. It offers a
-1Gi headroom over the 5Gi storage retention limit, configured on `prometheus-cache`. Field data suggests 1Gi should
-suffice to accommodate the occasional usage spikes which exceed the data retention limit.
+To mitigate the risk of such failure, a minimum free space threshold of 1Gi will be used for `prometheus-cache`.
+Field data suggests 1Gi should suffice to accommodate the occasional usage spikes which exceed the data retention limit.
 
 #### Latency
 The pipeline which propagates the volume metrics, driving `pvc-autoscaler`, is as follows:
