@@ -1307,6 +1307,15 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 			if err != nil || (issuer != nil && len(issuer.Host) == 0) {
 				allErrs = append(allErrs, field.Invalid(oidcPath.Child("issuerURL"), oidc.IssuerURL, "must be a valid URL and have https scheme"))
 			}
+			if issuer != nil && issuer.Fragment != "" {
+				allErrs = append(allErrs, field.Invalid(oidcPath.Child("issuerURL"), oidc.IssuerURL, "must not contain a fragment"))
+			}
+			if issuer != nil && issuer.User != nil {
+				allErrs = append(allErrs, field.Invalid(oidcPath.Child("issuerURL"), oidc.IssuerURL, "must not contain a username or password"))
+			}
+			if issuer != nil && len(issuer.RawQuery) > 0 {
+				allErrs = append(allErrs, field.Invalid(oidcPath.Child("issuerURL"), oidc.IssuerURL, "must not contain a query"))
+			}
 			if issuer != nil && issuer.Scheme != "https" {
 				allErrs = append(allErrs, field.Invalid(oidcPath.Child("issuerURL"), oidc.IssuerURL, "must have https scheme"))
 			}

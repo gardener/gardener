@@ -1821,22 +1821,28 @@ var _ = Describe("Shoot Validation Tests", func() {
 						"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.issuerURL"),
 					}))
 				},
-					Entry("should add error if clientID is set but issuerURL is nil ", 1, nil),
+					Entry("should add error if clientID is set but issuerURL is nil", 1, nil),
 					Entry("should add error if clientID is set but issuerURL is empty string", 2, ptr.To("")),
 				)
 
-				It("should forbid issuerURL which is not HTTPS schema", func() {
-					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = ptr.To("http://issuer.com")
+				DescribeTable("should forbid issuerURL which doesn't follow the proper URL format", func(issuerURL *string, detail string) {
+					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = issuerURL
 					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = ptr.To("someClientID")
 
 					errorList := ValidateShoot(shoot)
 
 					Expect(errorList).To(HaveLen(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.issuerURL"),
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.kubernetes.kubeAPIServer.oidcConfig.issuerURL"),
+						"Detail": Equal(detail),
 					}))
-				})
+				},
+					Entry("should add error if issuerURL URL scheme is not https", ptr.To("http://issuer.com"), "must have https scheme"),
+					Entry("should add error if issuerURL URL contains a fragment", ptr.To("https://issuer.com#fragment"), "must not contain a fragment"),
+					Entry("should add error if issuerURL URL contains a username and password", ptr.To("https://user:pass@issuer.com"), "must not contain a username or password"),
+					Entry("should add error if issuerURL URL contains a query", ptr.To("https://issuer.com?query=value"), "must not contain a query"),
+				)
 
 				It("should not fail if both clientID and issuerURL are set", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = ptr.To("https://issuer.com")
