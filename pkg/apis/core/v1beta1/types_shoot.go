@@ -15,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
@@ -141,13 +140,6 @@ type ShootSpec struct {
 	// AccessRestrictions describe a list of access restrictions for this shoot cluster.
 	// +optional
 	AccessRestrictions []AccessRestrictionWithOptions `json:"accessRestrictions,omitempty" protobuf:"bytes,24,rep,name=accessRestrictions"`
-}
-
-var _ gardencore.Object = (*Shoot)(nil)
-
-// GetProviderType gets the type of the provider.
-func (s *Shoot) GetProviderType() string {
-	return s.Spec.Provider.Type
 }
 
 // ShootStatus holds the most recently observed status of the Shoot cluster.

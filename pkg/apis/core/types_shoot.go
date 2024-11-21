@@ -111,13 +111,6 @@ type ShootSpec struct {
 	AccessRestrictions []AccessRestrictionWithOptions
 }
 
-var _ Object = (*Shoot)(nil)
-
-// GetProviderType gets the type of the provider.
-func (s *Shoot) GetProviderType() string {
-	return s.Spec.Provider.Type
-}
-
 // ShootStatus holds the most recently observed status of the Shoot cluster.
 type ShootStatus struct {
 	// Conditions represents the latest available observations of a Shoot's current state.

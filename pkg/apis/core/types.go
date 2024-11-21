@@ -14,11 +14,9 @@ const (
 	GardenerSeedLeaseNamespace = "gardener-system-seed-lease"
 )
 
-// Object is an core object resource.
+// Object is a core object resource.
 type Object interface {
 	metav1.Object
-	// GetProviderType gets the type of the provider.
-	GetProviderType() string
 }
 
 // IPFamily is a type for specifying an IP protocol version to use in Gardener clusters.

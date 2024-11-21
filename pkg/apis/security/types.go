@@ -11,6 +11,4 @@ import (
 // Object is a security object resource.
 type Object interface {
 	metav1.Object
-	// GetProviderType gets the type of the provider.
-	GetProviderType() string
 }

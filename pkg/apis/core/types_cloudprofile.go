@@ -63,13 +63,6 @@ type CloudProfileSpec struct {
 	Bastion *Bastion
 }
 
-var _ Object = (*CloudProfile)(nil)
-
-// GetProviderType gets the type of the provider.
-func (c *CloudProfile) GetProviderType() string {
-	return c.Spec.Type
-}
-
 // SeedSelector contains constraints for selecting seed to be usable for shoots using a profile
 type SeedSelector struct {
 	// LabelSelector is optional and can be used to select seeds by their label settings
