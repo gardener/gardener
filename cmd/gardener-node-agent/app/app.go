@@ -6,7 +6,6 @@ package app
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io/fs"
 	"net"
@@ -112,77 +111,9 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 	}
 
 	log.Info("Getting rest config")
-	var (
-		restConfig *rest.Config
-		err        error
-	)
-
-	var mustBootstrap bool
-	if len(cfg.ClientConnection.Kubeconfig) > 0 {
-		restConfig, err = kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.ClientConnection, nil, kubernetes.AuthTokenFile)
-		if err != nil {
-			return fmt.Errorf("failed getting REST config from client connection configuration: %w", err)
-		}
-	} else {
-		var migrateKubeconfig bool
-		if features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) {
-			restConfig, mustBootstrap, err = getRESTConfig(log, fs, cfg)
-			if err != nil {
-				log.Info("Failed to get REST config for node-agent. Starting migration from access token kubeconfig")
-				migrateKubeconfig = true
-			}
-			if !migrateKubeconfig {
-				log.Info("Deleting obsolete access token file (in case it still exists)")
-				if err := fs.Remove(nodeagentv1alpha1.TokenFilePath); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
-					return fmt.Errorf("failed removing access token file: %w", err)
-				}
-			}
-		} else {
-			var mustFetchAccessToken bool
-			restConfig, mustFetchAccessToken, err = getRESTConfigAccessToken(log, cfg)
-			if err != nil {
-				log.Info("Failed to get REST config for access token. Starting migration from node-authorizer kubeconfig")
-				migrateKubeconfig = true
-			}
-
-			if mustFetchAccessToken && !migrateKubeconfig {
-				log.Info("Fetching access token")
-				if err := fetchAccessToken(ctx, log, restConfig); err != nil {
-					return fmt.Errorf("failed fetching access token: %w", err)
-				}
-			}
-		}
-
-		// TODO(oliver-goetz): Remove migration code when NodeAgentAuthorizer feature gate is removed
-		// Migration from access token kubeconfig to node-authorizer kubeconfig or vice versa
-		if migrateKubeconfig {
-			if features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) {
-				var mustFetchAccessToken bool
-				restConfig, mustFetchAccessToken, err = getRESTConfigAccessToken(log, cfg)
-				if err != nil || mustFetchAccessToken {
-					return fmt.Errorf("failed getting REST config - migrating kubeconfig failed: %w", err)
-				}
-			} else {
-				restConfig, mustBootstrap, err = getRESTConfig(log, fs, cfg)
-				if err != nil || mustBootstrap {
-					return fmt.Errorf("failed getting REST config - migrating kubeconfig failed: %w", err)
-				}
-				log.Info("Fetching access token")
-				if err := fetchAccessToken(ctx, log, restConfig); err != nil {
-					return fmt.Errorf("failed fetching access token: %w", err)
-				}
-				var mustFetchAccessToken bool
-				restConfig, mustFetchAccessToken, err = getRESTConfigAccessToken(log, cfg)
-				if err != nil || mustFetchAccessToken {
-					return fmt.Errorf("failed getting REST config - migrating kubeconfig failed: %w", err)
-				}
-				log.Info("Deleting obsolete node-authorizer kubeconfig")
-				if err := fs.Remove(nodeagentv1alpha1.KubeconfigFilePath); err != nil {
-					return fmt.Errorf("failed removing kubeconfig file: %w", err)
-				}
-			}
-			log.Info("Migrating kubeconfig complete")
-		}
+	restConfig, err := getRESTConfig(ctx, log, fs, cfg)
+	if err != nil {
+		return fmt.Errorf("failed getting REST config: %w", err)
 	}
 
 	var extraHandlers map[string]http.Handler
@@ -200,13 +131,10 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 	}
 	log.Info("Fetched hostname", "hostname", hostName)
 
-	var nodeName string
-	if !mustBootstrap {
-		log.Info("Fetching name of node (if already registered)")
-		nodeName, err = fetchNodeName(ctx, restConfig, hostName)
-		if err != nil {
-			return fmt.Errorf("failed fetching name of node: %w", err)
-		}
+	log.Info("Fetching name of node (if already registered)")
+	nodeName, err := fetchNodeName(ctx, restConfig, hostName)
+	if err != nil {
+		return fmt.Errorf("failed fetching name of node: %w", err)
 	}
 
 	var (
@@ -260,38 +188,17 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		return fmt.Errorf("unable to create directory for temporary files %q: %w", nodeagentv1alpha1.TempDir, err)
 	}
 
-	bootstrapRunnables := []manager.Runnable{
-		&bootstrappers.KubeletBootstrapKubeconfig{Log: log.WithName("kubelet-bootstrap-kubeconfig-creator"), FS: fs, APIServerConfig: cfg.APIServer},
-	}
-
-	var machineName string
-	if features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) {
-		machineName, err = fetchMachineNameFromFile(fs)
-		// TODO(oliver-goetz): Fetching the machine name from node label is migration code. Remove this migration code when feature gate NodeAgentAuthorizer is removed.
-		// Fetching the machine name from node label is for migrating existing nodes when the feature gate is activated, because there is no file with the machine name yet.
-		if errors.Is(err, afero.ErrFileNotFound) {
-			machineName, err = fetchAndStoreMachineNameFromNode(ctx, restConfig, fs, nodeName)
-			if err != nil {
-				return err
-			}
-		} else if err != nil {
-			return err
-		}
-		bootstrapRunnables = append(bootstrapRunnables,
-			&bootstrappers.NodeAgentKubeconfig{
-				Log:         log.WithName("nodeagent-kubeconfig-creator"),
-				FS:          fs,
-				Cancel:      cancel,
-				MachineName: machineName,
-				Config:      restConfig,
-			},
-		)
+	machineName, err := fetchMachineNameFromFile(fs)
+	if err != nil {
+		return fmt.Errorf("failed fetching machine name from file: %w", err)
 	}
 
 	log.Info("Adding runnables to manager")
 	if err := mgr.Add(&controllerutils.ControlledRunner{
-		Manager:            mgr,
-		BootstrapRunnables: bootstrapRunnables,
+		Manager: mgr,
+		BootstrapRunnables: []manager.Runnable{
+			&bootstrappers.KubeletBootstrapKubeconfig{Log: log.WithName("kubelet-bootstrap-kubeconfig-creator"), FS: fs, APIServerConfig: cfg.APIServer},
+		},
 		ActualRunnables: []manager.Runnable{
 			manager.RunnableFunc(func(ctx context.Context) error {
 				return controller.AddToManager(ctx, cancel, mgr, cfg, hostName, machineName, nodeName)
@@ -305,38 +212,138 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 	return mgr.Start(ctx)
 }
 
-func getRESTConfig(log logr.Logger, fs afero.Afero, cfg *config.NodeAgentConfiguration) (*rest.Config, bool, error) {
-	if kubeconfig, err := fs.ReadFile(nodeagentv1alpha1.KubeconfigFilePath); err == nil {
-		log.Info("Kubeconfig file exists, using it")
-		restConfig, err := kubernetes.RESTConfigFromKubeconfig(kubeconfig)
-		return restConfig, false, err
-	} else if !errors.Is(err, afero.ErrFileNotFound) {
-		return nil, false, err
+func getRESTConfig(ctx context.Context, log logr.Logger, fs afero.Afero, cfg *config.NodeAgentConfiguration) (*rest.Config, error) {
+	if len(cfg.ClientConnection.Kubeconfig) > 0 {
+		log.Info("Creating REST config from client configuration")
+		restConfig, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.ClientConnection, nil, kubernetes.AuthTokenFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed getting REST config from client connection configuration: %w", err)
+		}
+		return restConfig, nil
 	}
 
-	restConfig := &rest.Config{
-		Burst: int(cfg.ClientConnection.Burst),
-		QPS:   cfg.ClientConnection.QPS,
-		ContentConfig: rest.ContentConfig{
-			AcceptContentTypes: cfg.ClientConnection.AcceptContentTypes,
-			ContentType:        cfg.ClientConnection.ContentType,
-		},
-		Host:            cfg.APIServer.Server,
-		TLSClientConfig: rest.TLSClientConfig{CAData: cfg.APIServer.CABundle},
-		BearerTokenFile: nodeagentv1alpha1.BootstrapTokenFilePath,
+	// TODO(oliver-goetz): Remove this block when NodeAgentAuthorizer feature gate is removed.
+	if !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) {
+		log.Info("Creating REST config for gardener-node-agent access token")
+
+		migrate, err := fs.Exists(nodeagentv1alpha1.KubeconfigFilePath)
+		if err != nil {
+			return nil, fmt.Errorf("failed checking whether kubeconfig file %q exists: %w", nodeagentv1alpha1.KubeconfigFilePath, err)
+		}
+
+		if migrate {
+			log.Info("Start migrating from node-agent-authorizer to access token kubeconfig")
+
+			migrationRESTConfig, err := getRESTConfigNodeAgentAuthorizer(ctx, log, fs, cfg)
+			if err != nil {
+				return nil, fmt.Errorf("failed getting node-agent-authorizer REST config for migration: %w", err)
+			}
+
+			if err := fetchAccessToken(ctx, log, migrationRESTConfig); err != nil {
+				return nil, fmt.Errorf("failed fetching access token: %w", err)
+			}
+
+			log.Info("Deleting obsolete node-authorizer kubeconfig")
+			if err := fs.Remove(nodeagentv1alpha1.KubeconfigFilePath); err != nil {
+				return nil, fmt.Errorf("failed removing kubeconfig file: %w", err)
+			}
+		}
+		return getRESTConfigAccessToken(log, cfg)
 	}
 
-	if ok, err := fs.Exists(nodeagentv1alpha1.BootstrapTokenFilePath); err != nil {
-		return nil, false, fmt.Errorf("failed checking whether bootstrap token file %q exists: %w", nodeagentv1alpha1.BootstrapTokenFilePath, err)
-	} else if ok {
-		log.Info("Kubeconfig file does not exist, but bootstrap token file does - using it", "path", nodeagentv1alpha1.BootstrapTokenFilePath)
-		return restConfig, true, nil
+	log.Info("Creating REST config for node-agent-authorizer")
+	// TODO(oliver-goetz): Remove this migration code when NodeAgentAuthorizer feature gate is removed.
+	migrate, err := fs.Exists(nodeagentv1alpha1.TokenFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed checking whether token file %q exists: %w", nodeagentv1alpha1.TokenFilePath, err)
+	}
+	if migrate {
+		log.Info("Start migrating from access token to node-agent-authorizer kubeconfig")
+
+		migrationRESTConfig, err := getRESTConfigAccessToken(log, cfg)
+		if err != nil {
+			return nil, fmt.Errorf("failed getting access token REST config for migration: %w", err)
+		}
+
+		hostName, err := nodeagent.GetHostName()
+		if err != nil {
+			return nil, fmt.Errorf("failed fetching hostname: %w", err)
+		}
+		log.Info("Fetched hostname", "hostname", hostName)
+
+		log.Info("Fetching name of node (if already registered)")
+		nodeName, err := fetchNodeName(ctx, migrationRESTConfig, hostName)
+		if err != nil {
+			return nil, fmt.Errorf("failed fetching name of node: %w", err)
+		}
+
+		machineName, err := fetchAndStoreMachineNameFromNode(ctx, migrationRESTConfig, fs, nodeName)
+		if err != nil {
+			return nil, fmt.Errorf("failed fetching and storing machine name from node %s: %w", nodeName, err)
+		}
+
+		if err := nodeagent.RequestAndStoreKubeconfig(ctx, log, fs, migrationRESTConfig, machineName); err != nil {
+			return nil, fmt.Errorf("failed requesting and storing node-agent-authorizer kubeconfig: %w", err)
+		}
+
+		log.Info("Deleting obsolete access token file")
+		if err := fs.Remove(nodeagentv1alpha1.TokenFilePath); err != nil {
+			return nil, fmt.Errorf("failed removing access token file: %w", err)
+		}
 	}
 
-	return nil, false, fmt.Errorf("unable to construct REST config (neither kubeconfig file %q nor bootstrap token file %q exist)", nodeagentv1alpha1.TokenFilePath, nodeagentv1alpha1.BootstrapTokenFilePath)
+	return getRESTConfigNodeAgentAuthorizer(ctx, log, fs, cfg)
 }
 
-func getRESTConfigAccessToken(log logr.Logger, cfg *config.NodeAgentConfiguration) (*rest.Config, bool, error) {
+func getRESTConfigNodeAgentAuthorizer(ctx context.Context, log logr.Logger, fs afero.Afero, cfg *config.NodeAgentConfiguration) (*rest.Config, error) {
+	if kubeconfigExists, err := fs.Exists(nodeagentv1alpha1.KubeconfigFilePath); err != nil {
+		return nil, fmt.Errorf("failed checking whether kubeconfig file %q exists: %w", nodeagentv1alpha1.KubeconfigFilePath, err)
+	} else if !kubeconfigExists {
+		restConfig := &rest.Config{
+			Burst: int(cfg.ClientConnection.Burst),
+			QPS:   cfg.ClientConnection.QPS,
+			ContentConfig: rest.ContentConfig{
+				AcceptContentTypes: cfg.ClientConnection.AcceptContentTypes,
+				ContentType:        cfg.ClientConnection.ContentType,
+			},
+			Host:            cfg.APIServer.Server,
+			TLSClientConfig: rest.TLSClientConfig{CAData: cfg.APIServer.CABundle},
+			BearerTokenFile: nodeagentv1alpha1.BootstrapTokenFilePath,
+		}
+
+		if bootstrapTokenExists, err := fs.Exists(nodeagentv1alpha1.BootstrapTokenFilePath); err != nil {
+			return nil, fmt.Errorf("failed checking whether bootstrap token file %q exists: %w", nodeagentv1alpha1.BootstrapTokenFilePath, err)
+		} else if !bootstrapTokenExists {
+			return nil, fmt.Errorf("unable to construct REST config (neither kubeconfig file %q nor bootstrap token file %q exist)", nodeagentv1alpha1.TokenFilePath, nodeagentv1alpha1.BootstrapTokenFilePath)
+		}
+		log.Info("Kubeconfig file does not exist, but bootstrap token file does - using it to request certificate", "path", nodeagentv1alpha1.BootstrapTokenFilePath)
+
+		machineName, err := fetchMachineNameFromFile(fs)
+		if err != nil {
+			return nil, fmt.Errorf("failed fetching machine name from file: %w", err)
+		}
+
+		if err := nodeagent.RequestAndStoreKubeconfig(ctx, log, fs, restConfig, machineName); err != nil {
+			return nil, fmt.Errorf("failed requesting and storing kubeconfig: %w", err)
+		}
+	}
+
+	kubeconfig, err := fs.ReadFile(nodeagentv1alpha1.KubeconfigFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed reading kubeconfig file %q: %w", nodeagentv1alpha1.KubeconfigFilePath, err)
+	}
+
+	log.Info("Kubeconfig file exists, using it")
+	restConfig, err := kubernetes.RESTConfigFromKubeconfig(kubeconfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed creating REST config from kubeconfig file %q: %w", nodeagentv1alpha1.KubeconfigFilePath, err)
+	}
+
+	return restConfig, nil
+}
+
+// TODO(oliver-goetz): Remove this function when NodeAgentAuthorizer feature gate is removed.
+func getRESTConfigAccessToken(log logr.Logger, cfg *config.NodeAgentConfiguration) (*rest.Config, error) {
 	restConfig := &rest.Config{
 		Burst: int(cfg.ClientConnection.Burst),
 		QPS:   cfg.ClientConnection.QPS,
@@ -350,23 +357,29 @@ func getRESTConfigAccessToken(log logr.Logger, cfg *config.NodeAgentConfiguratio
 	}
 
 	if _, err := os.Stat(restConfig.BearerTokenFile); err != nil && !os.IsNotExist(err) {
-		return nil, false, fmt.Errorf("failed checking whether token file %q exists: %w", restConfig.BearerTokenFile, err)
+		return nil, fmt.Errorf("failed checking whether token file %q exists: %w", restConfig.BearerTokenFile, err)
 	} else if err == nil {
 		log.Info("Token file already exists, nothing to be done", "path", restConfig.BearerTokenFile)
-		return restConfig, false, nil
+		return restConfig, nil
 	}
 
 	if _, err := os.Stat(nodeagentv1alpha1.BootstrapTokenFilePath); err != nil && !os.IsNotExist(err) {
-		return nil, false, fmt.Errorf("failed checking whether bootstrap token file %q exists: %w", nodeagentv1alpha1.BootstrapTokenFilePath, err)
+		return nil, fmt.Errorf("failed checking whether bootstrap token file %q exists: %w", nodeagentv1alpha1.BootstrapTokenFilePath, err)
 	} else if err == nil {
-		log.Info("Token file does not exist, but bootstrap token file does - using it", "path", nodeagentv1alpha1.BootstrapTokenFilePath)
+		log.Info("Token file does not exist, but bootstrap token file does - using it to fetch access token", "path", nodeagentv1alpha1.BootstrapTokenFilePath)
 		restConfig.BearerTokenFile = nodeagentv1alpha1.BootstrapTokenFilePath
-		return restConfig, true, nil
+
+		if err := fetchAccessToken(context.Background(), log, restConfig); err != nil {
+			return nil, fmt.Errorf("failed fetching access token: %w", err)
+		}
+
+		return restConfig, nil
 	}
 
-	return nil, false, fmt.Errorf("unable to construct REST config (neither token file %q nor bootstrap token file %q exist)", nodeagentv1alpha1.TokenFilePath, nodeagentv1alpha1.BootstrapTokenFilePath)
+	return nil, fmt.Errorf("unable to construct REST config (neither token file %q nor bootstrap token file %q exist)", nodeagentv1alpha1.TokenFilePath, nodeagentv1alpha1.BootstrapTokenFilePath)
 }
 
+// TODO(oliver-goetz): Remove this function when NodeAgentAuthorizer feature gate is removed.
 func fetchAccessToken(ctx context.Context, log logr.Logger, restConfig *rest.Config) error {
 	c, err := client.New(restConfig, client.Options{})
 	if err != nil {
