@@ -202,11 +202,6 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Fn:     component.OpDestroyAndWait(c.verticalPodAutoscaler).Destroy,
 			SkipIf: seedIsGarden,
 		})
-		destroyHVPA = g.Add(flow.Task{
-			Name:   "Destroy HVPA controller",
-			Fn:     component.OpDestroyAndWait(c.hvpaController).Destroy,
-			SkipIf: seedIsGarden,
-		})
 		destroyKubeStateMetrics = g.Add(flow.Task{
 			Name: "Destroy kube-state-metrics",
 			Fn:   component.OpDestroyAndWait(c.kubeStateMetrics).Destroy,
@@ -261,7 +256,6 @@ func (r *Reconciler) runDeleteSeedFlow(
 			destroyPlutono,
 			destroyKubeStateMetrics,
 			destroyEtcdDruid,
-			destroyHVPA,
 			destroyVPA,
 			destroyFluentBit,
 			destroyFluentOperator,

@@ -227,11 +227,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Fn:     c.vpaCRD.Deploy,
 			SkipIf: seedIsGarden || !vpaEnabled(seed.GetInfo().Spec.Settings),
 		})
-		reconcileHVPACRD = g.Add(flow.Task{
-			Name:   "Reconciling HVPA-related custom resource definitions",
-			Fn:     c.hvpaCRD.Deploy,
-			SkipIf: seedIsGarden,
-		})
 		deployFluentCRD = g.Add(flow.Task{
 			Name:   "Deploying logging-related custom resource definitions",
 			Fn:     c.fluentCRD.Deploy,
@@ -248,7 +243,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 			deployEtcdCRD,
 			deployIstioCRD,
 			deployVPACRD,
-			reconcileHVPACRD,
 			deployFluentCRD,
 			deployPrometheusCRD,
 		)
@@ -403,12 +397,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 		_ = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes vertical pod autoscaler",
 			Fn:           c.verticalPodAutoscaler.Deploy,
-			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
-			SkipIf:       seedIsGarden,
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Deploying HVPA controller",
-			Fn:           c.hvpaController.Deploy,
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
 			SkipIf:       seedIsGarden,
 		})

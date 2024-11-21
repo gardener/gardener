@@ -193,7 +193,6 @@ Other system components are:
 - runtime garden system resources ([`PriorityClass`es](../development/priority-classes.md) for the workload resources)
 - virtual garden system resources (RBAC rules)
 - Vertical Pod Autoscaler (if enabled via `.spec.runtimeCluster.settings.verticalPodAutoscaler.enabled=true` in the `Garden`)
-- HVPA Controller (when `HVPA` feature gate is enabled)
 - ETCD Druid
 - Istio
 
@@ -630,7 +629,6 @@ As of today, this applies to:
 
 - `gardener-resource-manager`
 - `vpa-{admission-controller,recommender,updater}`
-- `hvpa-controller` (when `HVPA` feature gate is enabled)
 - `etcd-druid`
 - `istio` control-plane
 - `nginx-ingress-controller`

@@ -83,8 +83,6 @@ build:
             - pkg/client/kubernetes/clientmap/keys
             - pkg/component
             - pkg/component/apiserver
-            - pkg/component/autoscaling/hvpa
-            - pkg/component/autoscaling/hvpa/templates/crd-autoscaling.k8s.io_hvpas.yaml
             - pkg/component/autoscaling/vpa
             - pkg/component/autoscaling/vpa/constants
             - pkg/component/autoscaling/vpa/templates/crd-autoscaling.k8s.io_verticalpodautoscalercheckpoints.yaml

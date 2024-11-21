@@ -6,7 +6,6 @@ package logging
 
 import (
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/autoscaling/hvpa"
 	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/containerd"
@@ -28,7 +27,6 @@ var GardenCentralLoggingConfigurations = []component.CentralLoggingConfiguration
 	// garden system components
 	resourcemanager.CentralLoggingConfiguration,
 	nginxingress.CentralLoggingConfiguration,
-	hvpa.CentralLoggingConfiguration,
 	vpa.CentralLoggingConfiguration,
 	vali.CentralLoggingConfiguration,
 	kubestatemetrics.CentralLoggingConfiguration,

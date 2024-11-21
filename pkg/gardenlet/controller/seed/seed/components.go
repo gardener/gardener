@@ -26,7 +26,6 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/autoscaling/clusterautoscaler"
-	"github.com/gardener/gardener/pkg/component/autoscaling/hvpa"
 	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
 	"github.com/gardener/gardener/pkg/component/clusteridentity"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
@@ -78,7 +77,6 @@ type components struct {
 	etcdCRD       component.Deployer
 	istioCRD      component.Deployer
 	vpaCRD        component.Deployer
-	hvpaCRD       component.Deployer
 	fluentCRD     component.Deployer
 	prometheusCRD component.DeployWaiter
 
@@ -90,7 +88,6 @@ type components struct {
 	istioDefaultNamespace    string
 	nginxIngressController   component.DeployWaiter
 	verticalPodAutoscaler    component.DeployWaiter
-	hvpaController           component.DeployWaiter
 	etcdDruid                component.DeployWaiter
 	clusterAutoscaler        component.DeployWaiter
 	machineControllerManager component.DeployWaiter
@@ -135,10 +132,6 @@ func (r *Reconciler) instantiateComponents(
 	c.etcdCRD = etcd.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
 	c.istioCRD = istio.NewCRD(r.SeedClientSet.ChartApplier())
 	c.vpaCRD = vpa.NewCRD(r.SeedClientSet.Applier(), nil)
-	c.hvpaCRD = hvpa.NewCRD(r.SeedClientSet.Applier())
-	if !hvpaEnabled() {
-		c.hvpaCRD = component.OpDestroy(c.hvpaCRD)
-	}
 	c.fluentCRD = fluentoperator.NewCRDs(r.SeedClientSet.Applier())
 	c.prometheusCRD, err = prometheusoperator.NewCRDs(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
 	if err != nil {
@@ -164,10 +157,6 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.verticalPodAutoscaler, err = r.newVerticalPodAutoscaler(seed.GetInfo().Spec.Settings, secretsManager)
-	if err != nil {
-		return
-	}
-	c.hvpaController, err = r.newHVPA()
 	if err != nil {
 		return
 	}
@@ -706,16 +695,6 @@ func (r *Reconciler) newVerticalPodAutoscaler(settings *gardencorev1beta1.SeedSe
 		v1beta1constants.SecretNameCASeed,
 		v1beta1constants.PriorityClassNameSeedSystem800,
 		v1beta1constants.PriorityClassNameSeedSystem700,
-		v1beta1constants.PriorityClassNameSeedSystem700,
-	)
-}
-
-func (r *Reconciler) newHVPA() (component.DeployWaiter, error) {
-	return sharedcomponent.NewHVPA(
-		r.SeedClientSet.Client(),
-		r.GardenNamespace,
-		hvpaEnabled(),
-		r.SeedVersion,
 		v1beta1constants.PriorityClassNameSeedSystem700,
 	)
 }

@@ -38,10 +38,6 @@ spec:
     - record: seed:kube_pod_container_resource_limits_memory_bytes:sum_by_container
       expr: sum(kube_pod_container_resource_limits{resource="memory", unit="byte"}) by (container)
 
-    # Recording rules for the sum of hvpa applied recommendations per container
-    - record: seed:hvpa_status_applied_vpa_recommendation_target:sum_by_container
-      expr: sum(hvpa_status_applied_vpa_recommendation{recommendation="target"}) by (container, resource)
-
     # Recording rules for the count of apiserver containers which have CPU usage at or above 80% of their request.
     # 1. This helps evaluate if memory-based HPA should be re-introduced at 120%. And if it is re-opened what will be the impact on the avg number of replicas per active shoot in the seed clusters.
     # 2. This helps evaluate the benefit in reducing HPA scale down stabilization period (currently, 24h) to gain better resource utilization.
@@ -142,10 +138,6 @@ spec:
 
     - record: seed:kube_pod_container_resource_limits_memory_bytes:sum
       expr: sum(kube_pod_container_resource_limits{resource="memory", unit="byte"})
-
-    # Recording rules for the sum of hvpa applied recommendations for the entire seed
-    - record: seed:hvpa_status_applied_vpa_recommendation_target:sum
-      expr: sum(hvpa_status_applied_vpa_recommendation{recommendation="target"}) by (resource)
 
     # Recording rules for pod count for the entire seed
     - record: seed:kube_pod_info:count
@@ -272,10 +264,6 @@ spec:
 
     - record: seed:kube_pod_container_resource_limits_memory_bytes:sum_cp
       expr: sum(kube_pod_container_resource_limits{resource="memory", unit="byte", namespace=~"((shoot-|shoot--)(\\w.+))"})
-
-    # Recording rules for the sum of hvpa applied recommendations for all the control-planes
-    - record: seed:hvpa_status_applied_vpa_recommendation_target:sum_cp
-      expr: sum(hvpa_status_applied_vpa_recommendation{recommendation="target", namespace=~"((shoot-|shoot--)(\\w.+))"}) by (resource)
 
     # Recording rules for pod count for all the control-planes
     - record: seed:kube_pod_info:count_cp
