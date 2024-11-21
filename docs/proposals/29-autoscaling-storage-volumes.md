@@ -38,7 +38,7 @@ infrastructure supports it.
 Logs are vital for understanding and troubleshooting Gardener clusters. Yet we operate under tight resource constraints
 and logging stack PVs default to a static size of 30GB, for ALL shoots. To prevent reaching this limit and bringing down
 the logging stack, there is a curator sidecar which periodically removes older logs. As a result, in some very large or
-busy clusters, this strategy allows retention of logs for only for 2-3 days.
+busy clusters, this strategy allows retention of logs only for 2-3 days.
 
 On the other hand, while some clusters experience storage starvation, others operate with just 5-10% of their observability
 volumes utilised.
