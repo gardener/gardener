@@ -541,26 +541,16 @@ func selectIPAddress(addresses []string, preferIPv6 bool) string {
 
 func (n *nodeLocalDNS) bindIP() string {
 	if len(n.values.DNSServers) > 0 {
-		if n.values.IPFamilies[0] == gardencorev1beta1.IPFamilyIPv4 {
-			dnsAddress := selectIPAddress(n.values.DNSServers, false)
-			return n.getIPVSAddress() + " " + dnsAddress
-		} else {
-			dnsAddress := selectIPAddress(n.values.DNSServers, true)
-			return n.getIPVSAddress() + " " + dnsAddress
-		}
+		dnsAddress := selectIPAddress(n.values.DNSServers, n.values.IPFamilies[0] != gardencorev1beta1.IPFamilyIPv4)
+		return n.getIPVSAddress() + " " + dnsAddress
 	}
 	return n.getIPVSAddress()
 }
 
 func (n *nodeLocalDNS) containerArg() string {
 	if len(n.values.DNSServers) > 0 {
-		if n.values.IPFamilies[0] == gardencorev1beta1.IPFamilyIPv4 {
-			dnsAddress := selectIPAddress(n.values.DNSServers, false)
-			return n.getIPVSAddress() + "," + dnsAddress
-		} else {
-			dnsAddress := selectIPAddress(n.values.DNSServers, true)
-			return n.getIPVSAddress() + "," + dnsAddress
-		}
+		dnsAddress := selectIPAddress(n.values.DNSServers, n.values.IPFamilies[0] != gardencorev1beta1.IPFamilyIPv4)
+		return n.getIPVSAddress() + "," + dnsAddress
 	}
 	return n.getIPVSAddress()
 }
@@ -613,10 +603,9 @@ func (n *nodeLocalDNS) getHealthAddress() (healthAddress string) {
 func (n *nodeLocalDNS) getAddress(useIPv6Brackets bool) string {
 	if n.values.IPFamilies[0] == gardencorev1beta1.IPFamilyIPv4 {
 		return nodelocaldnsconstants.IPVSAddress
-	} else {
-		if useIPv6Brackets {
-			return fmt.Sprintf("[%s]", nodelocaldnsconstants.IPVSIPv6Address)
-		}
-		return nodelocaldnsconstants.IPVSIPv6Address
 	}
+	if useIPv6Brackets {
+		return fmt.Sprintf("[%s]", nodelocaldnsconstants.IPVSIPv6Address)
+	}
+	return nodelocaldnsconstants.IPVSIPv6Address
 }
