@@ -57,10 +57,10 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 				},
 			},
 		}
-		Expect(sourceClient.Create(ctx, machine)).To(Succeed())
+		Expect(testClient.Create(ctx, machine)).To(Succeed())
 		DeferCleanup(func() {
 			By("Delete Machine")
-			Expect(sourceClient.Delete(ctx, machine)).To(Or(Succeed(), BeNotFoundError()))
+			Expect(testClient.Delete(ctx, machine)).To(Or(Succeed(), BeNotFoundError()))
 		})
 
 		otherMachine = &machinev1alpha1.Machine{
@@ -76,10 +76,10 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 				},
 			},
 		}
-		Expect(sourceClient.Create(ctx, otherMachine)).To(Succeed())
+		Expect(testClient.Create(ctx, otherMachine)).To(Succeed())
 		DeferCleanup(func() {
 			By("Delete other Machine")
-			Expect(sourceClient.Delete(ctx, otherMachine)).To(Or(Succeed(), BeNotFoundError()))
+			Expect(testClient.Delete(ctx, otherMachine)).To(Or(Succeed(), BeNotFoundError()))
 		})
 
 		node = &corev1.Node{
@@ -90,7 +90,7 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 		}
 		DeferCleanup(func() {
 			By("Delete Node")
-			Expect(targetClient.Delete(ctx, node)).To(Or(Succeed(), BeNotFoundError()))
+			Expect(testClient.Delete(ctx, node)).To(Or(Succeed(), BeNotFoundError()))
 		})
 	})
 
@@ -123,46 +123,46 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 
 			DeferCleanup(func() {
 				By("Delete CertificateSigningRequest")
-				Expect(targetClient.Delete(ctx, csr)).To(Or(Succeed(), BeNotFoundError()))
+				Expect(testClient.Delete(ctx, csr)).To(Or(Succeed(), BeNotFoundError()))
 			})
 		})
 
 		It("should be able to create a CertificateSigningRequest, get it but not change or delete it", func() {
-			Expect(targetClientNodeAgent.Create(ctx, csr)).To(Succeed())
+			Expect(testClientNodeAgent.Create(ctx, csr)).To(Succeed())
 
-			Expect(targetClientNodeAgent.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(Succeed())
+			Expect(testClientNodeAgent.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(Succeed())
 
 			csrUpdate := csr.DeepCopy()
 			csrUpdate.SetLabels(map[string]string{"foo": "bar"})
-			Expect(targetClientNodeAgent.Update(ctx, csrUpdate)).To(BeForbiddenError())
+			Expect(testClientNodeAgent.Update(ctx, csrUpdate)).To(BeForbiddenError())
 
 			patch := client.MergeFrom(csr)
 			csrPatch := csr.DeepCopy()
 			csrPatch.SetLabels(map[string]string{"foo": "bar"})
-			Expect(targetClientNodeAgent.Patch(ctx, csrPatch, patch)).To(BeForbiddenError())
+			Expect(testClientNodeAgent.Patch(ctx, csrPatch, patch)).To(BeForbiddenError())
 
-			Expect(targetClientNodeAgent.Delete(ctx, csr)).To(BeForbiddenError())
+			Expect(testClientNodeAgent.Delete(ctx, csr)).To(BeForbiddenError())
 		})
 
 		It("should forbid to access a CertificateSigningRequest created by a different user", func() {
-			Expect(targetClient.Create(ctx, csr)).To(Succeed())
+			Expect(testClient.Create(ctx, csr)).To(Succeed())
 
-			Expect(targetClientNodeAgent.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(BeForbiddenError())
+			Expect(testClientNodeAgent.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(BeForbiddenError())
 
 			csrUpdate := csr.DeepCopy()
 			csrUpdate.SetLabels(map[string]string{"foo": "bar"})
-			Expect(targetClientNodeAgent.Update(ctx, csrUpdate)).To(BeForbiddenError())
+			Expect(testClientNodeAgent.Update(ctx, csrUpdate)).To(BeForbiddenError())
 
 			patch := client.MergeFrom(csr)
 			csrPatch := csr.DeepCopy()
 			csrPatch.SetLabels(map[string]string{"foo": "bar"})
-			Expect(targetClientNodeAgent.Patch(ctx, csrPatch, patch)).To(BeForbiddenError())
+			Expect(testClientNodeAgent.Patch(ctx, csrPatch, patch)).To(BeForbiddenError())
 
-			Expect(targetClientNodeAgent.Delete(ctx, csr)).To(BeForbiddenError())
+			Expect(testClientNodeAgent.Delete(ctx, csr)).To(BeForbiddenError())
 		})
 
 		It("should forbid to list CertificateSigningRequests", func() {
-			Expect(targetClientNodeAgent.List(ctx, &certificatesv1.CertificateSigningRequestList{})).To(BeForbiddenError())
+			Expect(testClientNodeAgent.List(ctx, &certificatesv1.CertificateSigningRequestList{})).To(BeForbiddenError())
 		})
 	})
 
@@ -172,11 +172,11 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 		)
 
 		BeforeEach(func() {
-			corev1Client, err := corev1client.NewForConfig(targetRestConfigNodeAgent)
+			corev1Client, err := corev1client.NewForConfig(testRestConfigNodeAgent)
 			Expect(err).ToNot(HaveOccurred())
 			broadcaster := record.NewBroadcaster()
 			broadcaster.StartRecordingToSink(&corev1client.EventSinkImpl{Interface: corev1Client.Events("")})
-			recorder = broadcaster.NewRecorder(targetClientNodeAgent.Scheme(), corev1.EventSource{Component: "nodeagentauthorizer-test"})
+			recorder = broadcaster.NewRecorder(testClientNodeAgent.Scheme(), corev1.EventSource{Component: "nodeagentauthorizer-test"})
 
 			node.Name = fmt.Sprintf("event-node-%s", utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:16])
 			createNodeForMachine(node, machine)
@@ -187,7 +187,7 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 
 			Eventually(func(g Gomega) {
 				eventList := &corev1.EventList{}
-				g.Expect(targetClient.List(ctx, eventList, client.MatchingFields{"involvedObject.name": node.Name})).To(Succeed())
+				g.Expect(testClient.List(ctx, eventList, client.MatchingFields{"involvedObject.name": node.Name})).To(Succeed())
 				g.Expect(eventList.Items).To(HaveLen(1))
 				g.Expect(eventList.Items[0].Type).To(Equal("Normal"))
 				g.Expect(eventList.Items[0].Reason).To(Equal("test-reason"))
@@ -204,7 +204,7 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 
 			Eventually(func(g Gomega) {
 				eventList := &corev1.EventList{}
-				g.Expect(targetClient.List(ctx, eventList, client.MatchingFields{"involvedObject.name": node.Name})).To(Succeed())
+				g.Expect(testClient.List(ctx, eventList, client.MatchingFields{"involvedObject.name": node.Name})).To(Succeed())
 				g.Expect(eventList.Items).To(HaveLen(1))
 				g.Expect(eventList.Items[0].Type).To(Equal("Normal"))
 				g.Expect(eventList.Items[0].Reason).To(Equal("test-reason"))
@@ -214,15 +214,15 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 		})
 
 		It("should forbid to list events", func() {
-			Expect(targetClientNodeAgent.List(ctx, &corev1.EventList{})).To(BeForbiddenError())
+			Expect(testClientNodeAgent.List(ctx, &corev1.EventList{})).To(BeForbiddenError())
 		})
 
 		It("should forbid to update an event", func() {
-			Expect(targetClientNodeAgent.Update(ctx, &corev1.Event{ObjectMeta: metav1.ObjectMeta{Name: "foo-event", Namespace: "default"}})).To(BeForbiddenError())
+			Expect(testClientNodeAgent.Update(ctx, &corev1.Event{ObjectMeta: metav1.ObjectMeta{Name: "foo-event", Namespace: "default"}})).To(BeForbiddenError())
 		})
 
 		It("should forbid to delete an event", func() {
-			Expect(targetClientNodeAgent.Delete(ctx, &corev1.Event{ObjectMeta: metav1.ObjectMeta{Name: "foo-event", Namespace: "default"}})).To(BeForbiddenError())
+			Expect(testClientNodeAgent.Delete(ctx, &corev1.Event{ObjectMeta: metav1.ObjectMeta{Name: "foo-event", Namespace: "default"}})).To(BeForbiddenError())
 		})
 	})
 
@@ -244,7 +244,7 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 			}
 			DeferCleanup(func() {
 				By("Delete other Node")
-				Expect(targetClient.Delete(ctx, otherNode)).To(Or(Succeed(), BeNotFoundError()))
+				Expect(testClient.Delete(ctx, otherNode)).To(Or(Succeed(), BeNotFoundError()))
 			})
 			createNodeForMachine(otherNode, otherMachine)
 		})
@@ -264,11 +264,11 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 						Namespace: namespace,
 					},
 				}
-				Expect(targetClient.Create(ctx, lease)).To(Succeed())
+				Expect(testClient.Create(ctx, lease)).To(Succeed())
 				DeferCleanup(func() {
-					Expect(targetClient.Delete(ctx, lease)).To(Or(Succeed(), BeNotFoundError()))
+					Expect(testClient.Delete(ctx, lease)).To(Or(Succeed(), BeNotFoundError()))
 				})
-				Expect(targetClientNodeAgent.Get(ctx, client.ObjectKeyFromObject(lease), &coordinationv1.Lease{})).To(matcher)
+				Expect(testClientNodeAgent.Get(ctx, client.ObjectKeyFromObject(lease), &coordinationv1.Lease{})).To(matcher)
 			},
 			Entry("allow own gardener-node-agent", nodeAgentLeaseName, "kube-system", true, true),
 			Entry("forbid if no own node", nodeAgentLeaseName, "kube-system", false, false),
@@ -293,12 +293,12 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 						Namespace: namespace,
 					},
 				}
-				Expect(targetClient.Create(ctx, lease)).To(Succeed())
+				Expect(testClient.Create(ctx, lease)).To(Succeed())
 				DeferCleanup(func() {
-					Expect(targetClient.Delete(ctx, lease)).To(Or(Succeed(), BeNotFoundError()))
+					Expect(testClient.Delete(ctx, lease)).To(Or(Succeed(), BeNotFoundError()))
 				})
 				lease.SetLabels(map[string]string{"foo": "bar"})
-				Expect(targetClientNodeAgent.Update(ctx, lease.DeepCopy())).To(matcher)
+				Expect(testClientNodeAgent.Update(ctx, lease.DeepCopy())).To(matcher)
 			},
 			Entry("allow own gardener-node-agent", nodeAgentLeaseName, "kube-system", true, true),
 			Entry("forbid if no own node", nodeAgentLeaseName, "kube-system", false, false),
@@ -319,13 +319,13 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 						Namespace: namespace,
 					},
 				}
-				Expect(targetClient.Create(ctx, lease)).To(Succeed())
+				Expect(testClient.Create(ctx, lease)).To(Succeed())
 				DeferCleanup(func() {
-					Expect(targetClient.Delete(ctx, lease)).To(Or(Succeed(), BeNotFoundError()))
+					Expect(testClient.Delete(ctx, lease)).To(Or(Succeed(), BeNotFoundError()))
 				})
 				patch := client.MergeFrom(lease)
 				lease.SetLabels(map[string]string{"foo": "bar"})
-				Expect(targetClientNodeAgent.Patch(ctx, lease.DeepCopy(), patch)).To(BeForbiddenError())
+				Expect(testClientNodeAgent.Patch(ctx, lease.DeepCopy(), patch)).To(BeForbiddenError())
 			},
 			Entry("forbid own gardener-node-agent", nodeAgentLeaseName, "kube-system", true),
 			Entry("forbid if no own node", nodeAgentLeaseName, "kube-system", false),
@@ -346,11 +346,11 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 						Namespace: namespace,
 					},
 				}
-				Expect(targetClient.Create(ctx, lease)).To(Succeed())
+				Expect(testClient.Create(ctx, lease)).To(Succeed())
 				DeferCleanup(func() {
-					Expect(targetClient.Delete(ctx, lease)).To(Or(Succeed(), BeNotFoundError()))
+					Expect(testClient.Delete(ctx, lease)).To(Or(Succeed(), BeNotFoundError()))
 				})
-				Expect(targetClientNodeAgent.Delete(ctx, lease.DeepCopy())).To(BeForbiddenError())
+				Expect(testClientNodeAgent.Delete(ctx, lease.DeepCopy())).To(BeForbiddenError())
 			},
 			Entry("forbid own gardener-node-agent", nodeAgentLeaseName, "kube-system", true),
 			Entry("forbid if no own node", nodeAgentLeaseName, "kube-system", false),
@@ -376,7 +376,7 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 				if namespace != "" {
 					listOptions = append(listOptions, client.InNamespace(namespace))
 				}
-				Expect(targetClientNodeAgent.List(ctx, &coordinationv1.LeaseList{}, listOptions...)).To(matcher)
+				Expect(testClientNodeAgent.List(ctx, &coordinationv1.LeaseList{}, listOptions...)).To(matcher)
 			},
 			Entry("allow own gardener-node-agent", nodeAgentLeaseName, "kube-system", true, true),
 			Entry("forbid if no own node", nodeAgentLeaseName, "kube-system", false, false),
@@ -405,9 +405,9 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 						Namespace: namespace,
 					},
 				}
-				Expect(targetClientNodeAgent.Create(ctx, lease)).To(matcher)
+				Expect(testClientNodeAgent.Create(ctx, lease)).To(matcher)
 				DeferCleanup(func() {
-					Expect(targetClient.Delete(ctx, lease)).To(Or(Succeed(), BeNotFoundError()))
+					Expect(testClient.Delete(ctx, lease)).To(Or(Succeed(), BeNotFoundError()))
 				})
 			},
 			Entry("allow own gardener-node-agent", nodeAgentLeaseName, "kube-system", true, true),
@@ -433,7 +433,7 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 			}
 			DeferCleanup(func() {
 				By("Delete other Node")
-				Expect(targetClient.Delete(ctx, otherNode)).To(Or(Succeed(), BeNotFoundError()))
+				Expect(testClient.Delete(ctx, otherNode)).To(Or(Succeed(), BeNotFoundError()))
 			})
 			createNodeForMachine(otherNode, otherMachine)
 		})
@@ -447,7 +447,7 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 				if createNode {
 					createNodeForMachine(node, machine)
 				}
-				Expect(targetClientNodeAgent.Get(ctx, client.ObjectKey{Name: name}, &corev1.Node{})).To(matcher)
+				Expect(testClientNodeAgent.Get(ctx, client.ObjectKey{Name: name}, &corev1.Node{})).To(matcher)
 			},
 			Entry("allow own node", nodeName, true, true),
 			Entry("forbid if no own node", nodeName, false, false),
@@ -465,9 +465,9 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 				createNodeForMachine(node, machine)
 
 				testNode := &corev1.Node{}
-				Expect(targetClient.Get(ctx, client.ObjectKey{Name: name}, testNode)).To(Succeed())
+				Expect(testClient.Get(ctx, client.ObjectKey{Name: name}, testNode)).To(Succeed())
 				testNode.Labels["foo"] = "bar"
-				Expect(targetClientNodeAgent.Update(ctx, testNode)).To(matcher)
+				Expect(testClientNodeAgent.Update(ctx, testNode)).To(matcher)
 			},
 			Entry("allow own node", nodeName, true),
 			Entry("forbid other node", otherNodeName, false),
@@ -483,10 +483,10 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 				createNodeForMachine(node, machine)
 
 				testNode := &corev1.Node{}
-				Expect(targetClient.Get(ctx, client.ObjectKey{Name: name}, testNode)).To(Succeed())
+				Expect(testClient.Get(ctx, client.ObjectKey{Name: name}, testNode)).To(Succeed())
 				patch := client.MergeFrom(testNode)
 				testNode.Labels["foo"] = "bar"
-				Expect(targetClientNodeAgent.Patch(ctx, testNode, patch)).To(matcher)
+				Expect(testClientNodeAgent.Patch(ctx, testNode, patch)).To(matcher)
 			},
 			Entry("allow own node", nodeName, true),
 			Entry("forbid other node", otherNodeName, false),
@@ -497,15 +497,15 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 				createNodeForMachine(node, machine)
 
 				testNode := &corev1.Node{}
-				Expect(targetClient.Get(ctx, client.ObjectKey{Name: name}, testNode)).To(Succeed())
-				Expect(targetClientNodeAgent.Delete(ctx, testNode)).To(BeForbiddenError())
+				Expect(testClient.Get(ctx, client.ObjectKey{Name: name}, testNode)).To(Succeed())
+				Expect(testClientNodeAgent.Delete(ctx, testNode)).To(BeForbiddenError())
 			},
 			Entry("forbid own node", nodeName),
 			Entry("forbid other node", otherNodeName),
 		)
 
 		It("should allow listing nodes unconditionally", func() {
-			Expect(targetClientNodeAgent.List(ctx, &corev1.NodeList{})).To(Succeed())
+			Expect(testClientNodeAgent.List(ctx, &corev1.NodeList{})).To(Succeed())
 		})
 	})
 
@@ -517,10 +517,10 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 					Namespace: "kube-system",
 				},
 			}
-			Expect(targetClient.Create(ctx, machineSecret)).To(Succeed())
+			Expect(testClient.Create(ctx, machineSecret)).To(Succeed())
 			DeferCleanup(func() {
 				By("Delete machine Secret")
-				Expect(targetClient.Delete(ctx, machineSecret)).To(Or(Succeed(), BeNotFoundError()))
+				Expect(testClient.Delete(ctx, machineSecret)).To(Or(Succeed(), BeNotFoundError()))
 			})
 
 			otherMachineSecret := &corev1.Secret{
@@ -529,10 +529,10 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 					Namespace: "kube-system",
 				},
 			}
-			Expect(targetClient.Create(ctx, otherMachineSecret)).To(Succeed())
+			Expect(testClient.Create(ctx, otherMachineSecret)).To(Succeed())
 			DeferCleanup(func() {
 				By("Delete other machine Secret")
-				Expect(targetClient.Delete(ctx, otherMachineSecret)).To(Or(Succeed(), BeNotFoundError()))
+				Expect(testClient.Delete(ctx, otherMachineSecret)).To(Or(Succeed(), BeNotFoundError()))
 			})
 
 			valitailSecret := &corev1.Secret{
@@ -541,10 +541,10 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 					Namespace: "kube-system",
 				},
 			}
-			Expect(targetClient.Create(ctx, valitailSecret)).To(Succeed())
+			Expect(testClient.Create(ctx, valitailSecret)).To(Succeed())
 			DeferCleanup(func() {
 				By("Delete valitail Secret")
-				Expect(targetClient.Delete(ctx, valitailSecret)).To(Or(Succeed(), BeNotFoundError()))
+				Expect(testClient.Delete(ctx, valitailSecret)).To(Or(Succeed(), BeNotFoundError()))
 			})
 
 			fooSecret := &corev1.Secret{
@@ -553,10 +553,10 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 					Namespace: "default",
 				},
 			}
-			Expect(targetClient.Create(ctx, fooSecret)).To(Succeed())
+			Expect(testClient.Create(ctx, fooSecret)).To(Succeed())
 			DeferCleanup(func() {
 				By("Delete foo Secret")
-				Expect(targetClient.Delete(ctx, fooSecret)).To(Or(Succeed(), BeNotFoundError()))
+				Expect(testClient.Delete(ctx, fooSecret)).To(Or(Succeed(), BeNotFoundError()))
 			})
 		})
 
@@ -566,7 +566,7 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 				if allow {
 					matcher = Succeed()
 				}
-				Expect(targetClientNodeAgent.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, &corev1.Secret{})).To(matcher)
+				Expect(testClientNodeAgent.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, &corev1.Secret{})).To(matcher)
 			},
 			Entry("allow valitail secret", valitailSecretName, "kube-system", true),
 			Entry("allow machine secret", machineSecretName, "kube-system", true),
@@ -577,9 +577,9 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 		DescribeTable("#update",
 			func(name, namespace string) {
 				secret := &corev1.Secret{}
-				Expect(targetClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, secret)).To(Succeed())
+				Expect(testClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, secret)).To(Succeed())
 				secret.SetLabels(map[string]string{"foo": "bar"})
-				Expect(targetClientNodeAgent.Update(ctx, secret)).To(BeForbiddenError())
+				Expect(testClientNodeAgent.Update(ctx, secret)).To(BeForbiddenError())
 			},
 			Entry("forbid valitail secret", valitailSecretName, "kube-system"),
 			Entry("forbid machine secret", machineSecretName, "kube-system"),
@@ -590,10 +590,10 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 		DescribeTable("#patch",
 			func(name, namespace string) {
 				secret := &corev1.Secret{}
-				Expect(targetClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, secret)).To(Succeed())
+				Expect(testClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, secret)).To(Succeed())
 				patch := client.MergeFrom(secret.DeepCopy())
 				secret.SetLabels(map[string]string{"foo": "bar"})
-				Expect(targetClientNodeAgent.Patch(ctx, secret, patch)).To(BeForbiddenError())
+				Expect(testClientNodeAgent.Patch(ctx, secret, patch)).To(BeForbiddenError())
 			},
 			Entry("forbid valitail secret", valitailSecretName, "kube-system"),
 			Entry("forbid machine secret", machineSecretName, "kube-system"),
@@ -604,8 +604,8 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 		DescribeTable("#delete",
 			func(name, namespace string) {
 				secret := &corev1.Secret{}
-				Expect(targetClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, secret)).To(Succeed())
-				Expect(targetClientNodeAgent.Delete(ctx, secret)).To(BeForbiddenError())
+				Expect(testClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, secret)).To(Succeed())
+				Expect(testClientNodeAgent.Delete(ctx, secret)).To(BeForbiddenError())
 			},
 			Entry("forbid valitail secret", valitailSecretName, "kube-system"),
 			Entry("forbid machine secret", machineSecretName, "kube-system"),
@@ -626,7 +626,7 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 				if namespace != "" {
 					listOptions = append(listOptions, client.InNamespace(namespace))
 				}
-				Expect(targetClientNodeAgent.List(ctx, &corev1.SecretList{}, listOptions...)).To(matcher)
+				Expect(testClientNodeAgent.List(ctx, &corev1.SecretList{}, listOptions...)).To(matcher)
 			},
 			Entry("allow valitail secret", valitailSecretName, "kube-system", true),
 			Entry("allow machine secret", machineSecretName, "kube-system", true),
@@ -638,7 +638,7 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 })
 
 func createNodeForMachine(node *corev1.Node, machine *machinev1alpha1.Machine) {
-	ExpectWithOffset(1, targetClient.Create(ctx, node)).To(Succeed())
+	ExpectWithOffset(1, testClient.Create(ctx, node)).To(Succeed())
 	machine.SetLabels(map[string]string{machinev1alpha1.NodeLabelKey: node.Name})
-	ExpectWithOffset(1, sourceClient.Update(ctx, machine)).To(Succeed())
+	ExpectWithOffset(1, testClient.Update(ctx, machine)).To(Succeed())
 }
