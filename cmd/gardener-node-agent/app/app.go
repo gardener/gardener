@@ -188,9 +188,12 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		return fmt.Errorf("unable to create directory for temporary files %q: %w", nodeagentv1alpha1.TempDir, err)
 	}
 
-	machineName, err := fetchMachineNameFromFile(fs)
-	if err != nil {
-		return fmt.Errorf("failed fetching machine name from file: %w", err)
+	var machineName string
+	if features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) {
+		machineName, err = fetchMachineNameFromFile(fs)
+		if err != nil {
+			return fmt.Errorf("failed fetching machine name from file: %w", err)
+		}
 	}
 
 	log.Info("Adding runnables to manager")
