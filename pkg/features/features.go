@@ -17,27 +17,6 @@ const (
 	// // alpha: v5.X
 	// MyFeature featuregate.Feature = "MyFeature"
 
-	// HVPA enables simultaneous horizontal and vertical scaling in Seed Clusters.
-	// Deprecated: The feature gate is deprecated and locked to false. It will be removed in a future release.
-	// owner @shreyas-s-rao @voelzmo
-	// alpha: v0.31.0
-	// deprecated: v1.106.0
-	HVPA featuregate.Feature = "HVPA"
-
-	// HVPAForShootedSeed enables simultaneous horizontal and vertical scaling in shooted seed Clusters.
-	// Deprecated: The feature gate is deprecated and locked to false. It will be removed in a future release.
-	// owner @shreyas-s-rao @voelzmo
-	// alpha: v0.32.0
-	// deprecated: v1.106.0
-	HVPAForShootedSeed featuregate.Feature = "HVPAForShootedSeed"
-
-	// VPAForETCD enables using plain VPA for etcd-main and etcd-events.
-	// owner @voelzmo
-	// alpha: v1.94.0
-	// beta: v1.97.0
-	// GA: v1.105.0
-	VPAForETCD featuregate.Feature = "VPAForETCD"
-
 	// DefaultSeccompProfile defaults the seccomp profile for Gardener managed workload in the seed to RuntimeDefault.
 	// owner: @dimityrmirchev
 	// alpha: v1.54.0
@@ -61,17 +40,6 @@ const (
 	// owner: @dimityrmirchev
 	// alpha: v1.93.0
 	ShootManagedIssuer featuregate.Feature = "ShootManagedIssuer"
-
-	// VPAAndHPAForAPIServer an autoscaling mechanism for kube-apiserver of shoot or virtual garden clusters, and the gardener-apiserver.
-	// They are scaled simultaneously by VPA and HPA on the same metric (CPU and memory usage).
-	// The pod-trashing cycle between VPA and HPA scaling on the same metric is avoided
-	// by configuring the HPA to scale on average usage (not on average utilization) and
-	// by picking the target average utilization values in sync with VPA's allowed maximums.
-	// owner: @ialidzhikov
-	// alpha: v1.95.0
-	// beta: v1.101.0
-	// GA: v1.105.0
-	VPAAndHPAForAPIServer featuregate.Feature = "VPAAndHPAForAPIServer"
 
 	// ShootCredentialsBinding enables the usage of the CredentialsBindingName API in shoot spec.
 	// owner: @vpnachev @dimityrmirchev
@@ -118,14 +86,10 @@ var DefaultFeatureGate = utilfeature.DefaultMutableFeatureGate
 
 // AllFeatureGates is the list of all feature gates.
 var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
-	HVPA:                      {Default: false, PreRelease: featuregate.Deprecated, LockToDefault: true},
-	HVPAForShootedSeed:        {Default: false, PreRelease: featuregate.Deprecated, LockToDefault: true},
-	VPAForETCD:                {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	DefaultSeccompProfile:     {Default: false, PreRelease: featuregate.Alpha},
 	ShootManagedIssuer:        {Default: false, PreRelease: featuregate.Alpha},
 	ShootForceDeletion:        {Default: true, PreRelease: featuregate.Beta},
 	UseNamespacedCloudProfile: {Default: false, PreRelease: featuregate.Alpha},
-	VPAAndHPAForAPIServer:     {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	ShootCredentialsBinding:   {Default: true, PreRelease: featuregate.Beta},
 	NewWorkerPoolHash:         {Default: false, PreRelease: featuregate.Alpha},
 	NewVPN:                    {Default: false, PreRelease: featuregate.Alpha},
