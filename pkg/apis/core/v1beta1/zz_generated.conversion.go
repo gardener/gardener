@@ -2657,6 +2657,8 @@ func autoConvert_v1beta1_ClusterAutoscaler_To_core_ClusterAutoscaler(in *Cluster
 	out.MaxEmptyBulkDelete = (*int32)(unsafe.Pointer(in.MaxEmptyBulkDelete))
 	out.IgnoreDaemonsetsUtilization = (*bool)(unsafe.Pointer(in.IgnoreDaemonsetsUtilization))
 	out.Verbosity = (*int32)(unsafe.Pointer(in.Verbosity))
+	out.StartupTaints = *(*[]string)(unsafe.Pointer(&in.StartupTaints))
+	out.StatusTaints = *(*[]string)(unsafe.Pointer(&in.StatusTaints))
 	return nil
 }
 
@@ -2675,6 +2677,8 @@ func autoConvert_core_ClusterAutoscaler_To_v1beta1_ClusterAutoscaler(in *core.Cl
 	out.Expander = (*ExpanderMode)(unsafe.Pointer(in.Expander))
 	out.MaxNodeProvisionTime = (*metav1.Duration)(unsafe.Pointer(in.MaxNodeProvisionTime))
 	out.MaxGracefulTerminationSeconds = (*int32)(unsafe.Pointer(in.MaxGracefulTerminationSeconds))
+	out.StartupTaints = *(*[]string)(unsafe.Pointer(&in.StartupTaints))
+	out.StatusTaints = *(*[]string)(unsafe.Pointer(&in.StatusTaints))
 	out.IgnoreTaints = *(*[]string)(unsafe.Pointer(&in.IgnoreTaints))
 	out.NewPodScaleUpDelay = (*metav1.Duration)(unsafe.Pointer(in.NewPodScaleUpDelay))
 	out.MaxEmptyBulkDelete = (*int32)(unsafe.Pointer(in.MaxEmptyBulkDelete))
@@ -4138,7 +4142,15 @@ func Convert_core_KubeletConfigReserved_To_v1beta1_KubeletConfigReserved(in *cor
 }
 
 func autoConvert_v1beta1_Kubernetes_To_core_Kubernetes(in *Kubernetes, out *core.Kubernetes, s conversion.Scope) error {
-	out.ClusterAutoscaler = (*core.ClusterAutoscaler)(unsafe.Pointer(in.ClusterAutoscaler))
+	if in.ClusterAutoscaler != nil {
+		in, out := &in.ClusterAutoscaler, &out.ClusterAutoscaler
+		*out = new(core.ClusterAutoscaler)
+		if err := Convert_v1beta1_ClusterAutoscaler_To_core_ClusterAutoscaler(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.ClusterAutoscaler = nil
+	}
 	if in.KubeAPIServer != nil {
 		in, out := &in.KubeAPIServer, &out.KubeAPIServer
 		*out = new(core.KubeAPIServerConfig)
@@ -4172,7 +4184,15 @@ func Convert_v1beta1_Kubernetes_To_core_Kubernetes(in *Kubernetes, out *core.Kub
 }
 
 func autoConvert_core_Kubernetes_To_v1beta1_Kubernetes(in *core.Kubernetes, out *Kubernetes, s conversion.Scope) error {
-	out.ClusterAutoscaler = (*ClusterAutoscaler)(unsafe.Pointer(in.ClusterAutoscaler))
+	if in.ClusterAutoscaler != nil {
+		in, out := &in.ClusterAutoscaler, &out.ClusterAutoscaler
+		*out = new(ClusterAutoscaler)
+		if err := Convert_core_ClusterAutoscaler_To_v1beta1_ClusterAutoscaler(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.ClusterAutoscaler = nil
+	}
 	if in.KubeAPIServer != nil {
 		in, out := &in.KubeAPIServer, &out.KubeAPIServer
 		*out = new(KubeAPIServerConfig)

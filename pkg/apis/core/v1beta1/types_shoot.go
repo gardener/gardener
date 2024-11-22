@@ -634,8 +634,10 @@ type ClusterAutoscaler struct {
 	// +optional
 	MaxGracefulTerminationSeconds *int32 `json:"maxGracefulTerminationSeconds,omitempty" protobuf:"varint,9,opt,name=maxGracefulTerminationSeconds"`
 	// IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
+	// Deprecated: Ignore taints are deprecated as of K8S 1.29 and treated as startup taints
 	// +optional
 	IgnoreTaints []string `json:"ignoreTaints,omitempty" protobuf:"bytes,10,opt,name=ignoreTaints"`
+
 	// NewPodScaleUpDelay specifies how long CA should ignore newly created pods before they have to be considered for scale-up (default: 0s).
 	// +optional
 	NewPodScaleUpDelay *metav1.Duration `json:"newPodScaleUpDelay,omitempty" protobuf:"bytes,11,opt,name=newPodScaleUpDelay"`
@@ -648,6 +650,14 @@ type ClusterAutoscaler struct {
 	// Verbosity allows CA to modify its log level (default: 2).
 	// +optional
 	Verbosity *int32 `json:"verbosity,omitempty" protobuf:"varint,14,opt,name=verbosity"`
+	// StartupTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
+	// Cluster Autoscaler treats nodes tainted with startup taints as unready, but taken into account during scale up logic, assuming they will become ready shortly.
+	// +optional
+	StartupTaints []string `json:"startupTaints,omitempty" protobuf:"bytes,15,opt,name=startupTaints"`
+	// StatusTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
+	// Cluster Autoscaler internally treats nodes tainted with status taints as ready, but filtered out during scale up logic.
+	// +optional
+	StatusTaints []string `json:"statusTaints,omitempty" protobuf:"bytes,16,opt,name=statusTaints"`
 }
 
 // ExpanderMode is type used for Expander values

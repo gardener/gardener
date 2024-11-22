@@ -3676,7 +3676,8 @@ int32
 </td>
 <td>
 <em>(Optional)</em>
-<p>IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.</p>
+<p>IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
+Deprecated: Ignore taints are deprecated as of K8S 1.29 and treated as startup taints</p>
 </td>
 </tr>
 <tr>
@@ -3727,6 +3728,32 @@ int32
 <td>
 <em>(Optional)</em>
 <p>Verbosity allows CA to modify its log level (default: 2).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>startupTaints</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>StartupTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
+Cluster Autoscaler treats nodes tainted with startup taints as unready, but taken into account during scale up logic, assuming they will become ready shortly.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>statusTaints</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>StatusTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
+Cluster Autoscaler internally treats nodes tainted with status taints as ready, but filtered out during scale up logic.</p>
 </td>
 </tr>
 </tbody>

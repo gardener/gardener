@@ -296,9 +296,11 @@ spec:
   #   scaleDownDelayAfterFailure: 3m
   #   scaleDownDelayAfterDelete: 0s
   #   scanInterval: 10s
-  #   ignoreTaints: 
+  #   startupTaints:
   #     - "node.kubernetes.io/memory-pressure"
   #     - "node.kubernetes.io/disk-pressure"
+  #   statusTaints:
+  #     - "reservedForTenant"
   #   newPodScaleUpDelay: 0s
   #   maxEmptyBulkDelete: 10
   #   ignoreDaemonsetsUtilization: false

@@ -458,6 +458,7 @@ message ClusterAutoscaler {
   optional int32 maxGracefulTerminationSeconds = 9;
 
   // IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
+  // Deprecated: Ignore taints are deprecated as of K8S 1.29 and treated as startup taints
   // +optional
   repeated string ignoreTaints = 10;
 
@@ -476,6 +477,16 @@ message ClusterAutoscaler {
   // Verbosity allows CA to modify its log level (default: 2).
   // +optional
   optional int32 verbosity = 14;
+
+  // StartupTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
+  // Cluster Autoscaler treats nodes tainted with startup taints as unready, but taken into account during scale up logic, assuming they will become ready shortly.
+  // +optional
+  repeated string startupTaints = 15;
+
+  // StatusTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
+  // Cluster Autoscaler internally treats nodes tainted with status taints as ready, but filtered out during scale up logic.
+  // +optional
+  repeated string statusTaints = 16;
 }
 
 // ClusterAutoscalerOptions contains the cluster autoscaler configurations for a worker pool.
