@@ -7,6 +7,7 @@ package nodeagentauthorizer_test
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -41,6 +42,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	"github.com/gardener/gardener/pkg/utils/test/port"
 	"github.com/gardener/gardener/test/framework"
 )
 
@@ -55,15 +57,11 @@ var (
 	ctx = context.Background()
 	log logr.Logger
 
-	sourceRestConfig *rest.Config
-	sourceEnv        *envtest.Environment
-	sourceClient     client.Client
-
-	targetRestConfig          *rest.Config
-	targetRestConfigNodeAgent *rest.Config
-	targetEnv                 *envtest.Environment
-	targetClient              client.Client
-	targetClientNodeAgent     client.Client
+	testRestConfig          *rest.Config
+	testRestConfigNodeAgent *rest.Config
+	testEnv                 *envtest.Environment
+	testClient              client.Client
+	testClientNodeAgent     client.Client
 
 	testRunID     string
 	testNamespace *corev1.Namespace
@@ -80,28 +78,67 @@ var _ = BeforeSuite(func() {
 	// determine a unique namespace name for test environment
 	testNamespaceName := testID + "-" + testRunID[:8]
 
-	By("Start source environment")
-	sourceEnv = &envtest.Environment{
+	By("Create kubeconfig file for the authorization webhook")
+	webhookAddress, err := net.ResolveTCPAddr("tcp", net.JoinHostPort("localhost", "0"))
+	Expect(err).NotTo(HaveOccurred())
+	webhookPort, _, err := port.SuggestPort("")
+	Expect(err).ToNot(HaveOccurred())
+	kubeconfigFileName, err := createKubeconfigFileForAuthorizationWebhook(webhookAddress.IP.String(), webhookPort)
+	Expect(err).ToNot(HaveOccurred())
+	DeferCleanup(func() {
+		By("Delete kubeconfig file for authorization webhook")
+		Expect(os.Remove(kubeconfigFileName)).To(Succeed())
+	})
+
+	By("Start test environment")
+	Expect(framework.FileExists(kubeconfigFileName)).To(BeTrue())
+	testAPIServer := &envtest.APIServer{}
+	testAPIServer.Configure().
+		Set("authorization-mode", "RBAC", "Webhook").
+		Set("authorization-webhook-config-file", kubeconfigFileName).
+		Set("authorization-webhook-cache-authorized-ttl", "0").
+		Set("authorization-webhook-cache-unauthorized-ttl", "0")
+
+	testEnv = &envtest.Environment{
+		ControlPlane: envtest.ControlPlane{
+			APIServer: testAPIServer,
+		},
 		CRDInstallOptions: envtest.CRDInstallOptions{
 			Paths: []string{
 				filepath.Join("..", "..", "..", "..", "example", "seed-crds", "10-crd-machine.sapcloud.io_machines.yaml"),
 			},
 		},
 		ErrorIfCRDPathMissing: true,
+		WebhookInstallOptions: envtest.WebhookInstallOptions{
+			LocalServingHost: webhookAddress.IP.String(),
+			LocalServingPort: webhookPort,
+		},
 	}
 
-	var err error
-	sourceRestConfig, err = sourceEnv.Start()
+	testRestConfig, err = testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
-	Expect(sourceRestConfig).NotTo(BeNil())
+	Expect(testRestConfig).NotTo(BeNil())
 
 	DeferCleanup(func() {
-		By("Stop source environment")
-		Expect(sourceEnv.Stop()).To(Succeed())
+		By("Stop target environment")
+		Expect(testEnv.Stop()).To(Succeed())
 	})
 
-	By("Create source client")
-	sourceClient, err = client.New(sourceRestConfig, client.Options{Scheme: resourcemanagerclient.CombinedScheme})
+	By("Create target clients")
+	testClient, err = client.New(testRestConfig, client.Options{Scheme: resourcemanagerclient.CombinedScheme})
+	Expect(err).NotTo(HaveOccurred())
+
+	machineName = "machine-" + testRunID
+	userNameNodeAgent = "gardener.cloud:node-agent:machine:" + machineName
+
+	user, err := testEnv.AddUser(
+		envtest.User{Name: userNameNodeAgent, Groups: []string{v1beta1constants.NodeAgentsGroup}},
+		&rest.Config{QPS: 1000.0, Burst: 2000.0},
+	)
+	Expect(err).NotTo(HaveOccurred())
+	testRestConfigNodeAgent = user.Config()
+
+	testClientNodeAgent, err = client.New(user.Config(), client.Options{Scheme: resourcemanagerclient.CombinedScheme})
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Create test Namespace")
@@ -111,69 +148,20 @@ var _ = BeforeSuite(func() {
 			Name: testNamespaceName,
 		},
 	}
-	Expect(sourceClient.Create(ctx, testNamespace)).To(Succeed())
-	log.Info("Created test Namespace in source cluster", "namespaceName", testNamespace.Name)
+	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
+	log.Info("Created test Namespace in test cluster", "namespaceName", testNamespace.Name)
 
 	DeferCleanup(func() {
-		By("Delete test Namespace from source cluster")
-		Expect(sourceClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
+		By("Delete test Namespace from test cluster")
+		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
 	})
-
-	By("Create kubeconfig file for source cluster")
-	kubeconfigFileName, err := createKubeconfigFileForAuthorizationWebhook(sourceEnv.WebhookInstallOptions)
-	Expect(err).ToNot(HaveOccurred())
-	DeferCleanup(func() {
-		By("Delete kubeconfig file for source cluster")
-		Expect(os.Remove(kubeconfigFileName)).To(Succeed())
-	})
-
-	By("Start target environment")
-	Expect(framework.FileExists(kubeconfigFileName)).To(BeTrue())
-	testAPIServer := &envtest.APIServer{}
-	testAPIServer.Configure().
-		Set("authorization-mode", "RBAC", "Webhook").
-		Set("authorization-webhook-config-file", kubeconfigFileName).
-		Set("authorization-webhook-cache-authorized-ttl", "0").
-		Set("authorization-webhook-cache-unauthorized-ttl", "0")
-
-	targetEnv = &envtest.Environment{
-		ControlPlane: envtest.ControlPlane{
-			APIServer: testAPIServer,
-		},
-	}
-
-	targetRestConfig, err = targetEnv.Start()
-	Expect(err).NotTo(HaveOccurred())
-	Expect(targetRestConfig).NotTo(BeNil())
-
-	DeferCleanup(func() {
-		By("Stop target environment")
-		Expect(targetEnv.Stop()).To(Succeed())
-	})
-
-	By("Create target clients")
-	targetClient, err = client.New(targetRestConfig, client.Options{Scheme: resourcemanagerclient.CombinedScheme})
-	Expect(err).NotTo(HaveOccurred())
-
-	machineName = "machine-" + testRunID
-	userNameNodeAgent = "gardener.cloud:node-agent:machine:" + machineName
-
-	user, err := targetEnv.AddUser(
-		envtest.User{Name: userNameNodeAgent, Groups: []string{v1beta1constants.NodeAgentsGroup}},
-		&rest.Config{QPS: 1000.0, Burst: 2000.0},
-	)
-	Expect(err).NotTo(HaveOccurred())
-	targetRestConfigNodeAgent = user.Config()
-
-	targetClientNodeAgent, err = client.New(user.Config(), client.Options{Scheme: resourcemanagerclient.CombinedScheme})
-	Expect(err).NotTo(HaveOccurred())
 
 	By("Setup manager")
-	mgr, err := manager.New(sourceRestConfig, manager.Options{
+	mgr, err := manager.New(testRestConfig, manager.Options{
 		WebhookServer: webhook.NewServer(webhook.Options{
-			Port:    sourceEnv.WebhookInstallOptions.LocalServingPort,
-			Host:    sourceEnv.WebhookInstallOptions.LocalServingHost,
-			CertDir: sourceEnv.WebhookInstallOptions.LocalServingCertDir,
+			Port:    testEnv.WebhookInstallOptions.LocalServingPort,
+			Host:    testEnv.WebhookInstallOptions.LocalServingHost,
+			CertDir: testEnv.WebhookInstallOptions.LocalServingCertDir,
 		}),
 		Metrics: metricsserver.Options{BindAddress: "0"},
 		Cache: cache.Options{
@@ -192,7 +180,7 @@ var _ = BeforeSuite(func() {
 			Enabled:          true,
 			MachineNamespace: testNamespaceName,
 		},
-	}).AddToManager(mgr, sourceClient, targetClient)).To(Succeed())
+	}).AddToManager(mgr, testClient, testClient)).To(Succeed())
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
@@ -214,12 +202,12 @@ var _ = BeforeSuite(func() {
 	})
 })
 
-func createKubeconfigFileForAuthorizationWebhook(webhookInstallOptions envtest.WebhookInstallOptions) (string, error) {
+func createKubeconfigFileForAuthorizationWebhook(address string, port int) (string, error) {
 	kubeconfig, err := runtime.Encode(clientcmdlatest.Codec, kubernetesutils.NewKubeconfig(
 		"authorization-webhook",
 		clientcmdv1.Cluster{
-			Server:                   fmt.Sprintf("https://%s:%d%s", webhookInstallOptions.LocalServingHost, webhookInstallOptions.LocalServingPort, nodeagentauthorizer.WebhookPath),
-			CertificateAuthorityData: webhookInstallOptions.LocalServingCAData,
+			Server:                fmt.Sprintf("https://%s:%d%s", address, port, nodeagentauthorizer.WebhookPath),
+			InsecureSkipTLSVerify: true,
 		},
 		clientcmdv1.AuthInfo{},
 	))
