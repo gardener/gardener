@@ -233,13 +233,15 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, _ adm
 	// On DELETE operations we want to verify that the Shoot is not in Restore or Migrate phase
 
 	// Exit early if shoot spec hasn't changed
-	if a.GetOperation() == admission.Update {
-		old, ok := a.GetOldObject().(*core.Shoot)
+	if a.GetOperation() == admission.Update || a.GetOperation() == admission.Delete {
+		var ok bool
+		oldShoot, ok = a.GetOldObject().(*core.Shoot)
 		if !ok {
 			return apierrors.NewInternalError(errors.New("could not convert old resource into Shoot object"))
 		}
-		oldShoot = old
+	}
 
+	if a.GetOperation() == admission.Update {
 		if a.GetSubresource() == "binding" && reflect.DeepEqual(oldShoot.Spec.SeedName, shoot.Spec.SeedName) {
 			return fmt.Errorf("update of binding rejected, shoot is already assigned to the same seed")
 		}
@@ -259,8 +261,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, _ adm
 		return fmt.Errorf("new shoot can only specify either cloudProfileName or cloudProfile reference")
 	}
 
-	err = admissionutils.ValidateCloudProfileChanges(v.cloudProfileLister, v.namespacedCloudProfileLister, shoot, oldShoot)
-	if err != nil {
+	if err := admissionutils.ValidateCloudProfileChanges(v.cloudProfileLister, v.namespacedCloudProfileLister, shoot, oldShoot); err != nil {
 		return err
 	}
 
