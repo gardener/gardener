@@ -202,6 +202,17 @@
         '/.+gardener-discovery-server$/'
       ],
     },
+        {
+      // Group machine-controller-manager updates in one PR.
+      groupName: 'machine-controller-manager',
+      matchDatasources: [
+        'github-releases',
+        'go',
+      ],
+      matchPackageNames: [
+        '/.*gardener\/machine-controller-manager$/'
+      ],
+    },
     {
       // Ask for manual approval to create PRs for minor and major updates of dependencies which most likely
       // require manual adaptations of the code.
