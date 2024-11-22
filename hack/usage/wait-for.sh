@@ -33,7 +33,7 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 NO_COLOR='\033[0m'
 
-echo "⏳ Checking last operation state and conditions for ${RESOURCE_TYPE}/${OBJECT_NAME}..."
+echo "⏳ Checking last operation state and conditions for ${RESOURCE_TYPE}/${OBJECT_NAME} with a timeout of ${TIMEOUT} seconds..."
 retries=0
 while [ "${retries}" -lt "${TIMEOUT}" ]; do
   LAST_OPERATION_SUCCEEDED=true
