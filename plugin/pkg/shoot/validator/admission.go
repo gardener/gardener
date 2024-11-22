@@ -1309,7 +1309,8 @@ func (c *validationContext) validateDNSDomainUniqueness(shootLister gardencorev1
 	}
 
 	for _, shoot := range shoots {
-		if shoot.Name == c.shoot.Name {
+		if shoot.Name == c.shoot.Name &&
+			shoot.Namespace == c.shoot.Namespace {
 			continue
 		}
 
