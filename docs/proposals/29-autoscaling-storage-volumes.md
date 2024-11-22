@@ -144,11 +144,7 @@ Shrinking existing PVCs is beyond the scope of the present initiative.
 
 _Fig.2: Operator structure_
 
-VPA is used to scale `pvc-autoscaler`. For the future security enhancement scenario, where `kube-rbac-proxy` is used
-(see [section 'Future Enhancements'](#future-enhancements)),
-that container is expected to be excluded from autoscaling, and to run with fixed resource requests. Pod evictions
-driven by that lean container are unjustified, as they would only achieve minimal resource savings, and disrupt
-the main container.
+VPA is used to scale `pvc-autoscaler`.
 
 The feature is deployed behind a dedicated feature gate. When disabled, `pvc-autoscaler` is removed, and related
 annotations are removed from the shoot control plane observability StatefulSets, and the seed observability StatefulSets.
@@ -188,18 +184,7 @@ in order to evaluate the economical effect, and the reliability of the scaling s
    - Observability volume average size and count (before)
 
 ### Future Enhancements
-#### Metrics authorization
-`pvc-autoscaler` supports access control over its `/metrics` endpoint. This feature will not be utilised by the first
-implementation round. It is envisioned as a future enhancement. In that operation mode,
-the primary `pvc-autoscaler` container publishes unauthorized, plain text metrics only on the loopback interface.
-Peer pods are configured to look for `/metrics` at a different port, which is served by a secondary container, running
-the `kube-rbac-proxy`[[2]] application. It serves HTTPS and authenticates and authorizes each request against the runtime
-cluster via the TokenReview[[3]] and SubjectAccessReview[[4]] K8s APIs, before forwarding it to the internal, insecure
-loopback port.
-
-![03-runtime_structure_secure_metrics.png](assets/gep29-03-runtime_structure_secure_metrics.png)
-
-_Fig.3: Runtime structure with secure metrics_
+The proposed design can easily be extended to apply TLS and authorisation to `pvc-autoscaler` metrics.[[7]]
 
 ## Discussion and Limitations
 ### Alternatives
@@ -321,6 +306,7 @@ as a scaling trigger threshold.
 - [[4]] Kubernetes SubjectAccessReview API
 - [[5]] Kubernetes Blog: Resizing Persistent Volumes using Kubernetes
 - [[6]] Kubernetes Documentation: Storage Classes, section "Volume expansion"
+- [[7]] Notes on Autoscaling Storage Volumes
 
 [1]: https://github.com/gardener/pvc-autoscaler
 [2]: https://github.com/brancz/kube-rbac-proxy
@@ -328,3 +314,4 @@ as a scaling trigger threshold.
 [4]: https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/subject-access-review-v1/
 [5]: https://kubernetes.io/blog/2018/07/12/resizing-persistent-volumes-using-kubernetes/
 [6]: https://kubernetes.io/docs/concepts/storage/storage-classes/#allow-volume-expansion
+[7]: https://github.com/andrerun/notes/blob/main/gardener/pvc-autoscaler/gep-29-notes.md
