@@ -493,7 +493,7 @@ func deployBackupBucketInGarden(ctx context.Context, k8sGardenClient client.Clie
 
 	ownerRef := metav1.NewControllerRef(seed, gardencorev1beta1.SchemeGroupVersion.WithKind("Seed"))
 
-	_, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, k8sGardenClient, backupBucket, func() error {
+	_, err := controllerutils.CreateOrGetAndMergePatch(ctx, k8sGardenClient, backupBucket, func() error {
 		metav1.SetMetaDataAnnotation(&backupBucket.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 		backupBucket.OwnerReferences = []metav1.OwnerReference{*ownerRef}
 		backupBucket.Spec = gardencorev1beta1.BackupBucketSpec{
