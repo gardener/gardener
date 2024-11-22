@@ -52,13 +52,18 @@ var _ = Describe("ClusterAutoscaler", func() {
 		sm                secretsmanager.Interface
 		clusterAutoscaler Interface
 
-		ctx          = context.Background()
-		consistOf    func(...client.Object) gomegatypes.GomegaMatcher
-		fakeErr            = fmt.Errorf("fake error")
-		namespace          = "shoot--foo--bar"
-		namespaceUID       = types.UID("1234567890")
-		image              = "registry.k8s.io/cluster-autoscaler:v1.2.3"
-		replicas     int32 = 1
+		ctx                   = context.Background()
+		consistOf             func(...client.Object) gomegatypes.GomegaMatcher
+		fakeErr                     = fmt.Errorf("fake error")
+		namespace                   = "shoot--foo--bar"
+		projectNamespace            = "garden-bar"
+		namespaceUID                = types.UID("1234567890")
+		image                       = "registry.k8s.io/cluster-autoscaler:v1.2.3"
+		replicas              int32 = 1
+		expanderConfigMapName       = "priority-configmap"
+		expanderConfigContent       = map[string]string{
+			"foo": "bar",
+		}
 
 		machineDeployment1Name       = "pool1"
 		machineDeployment1Min  int32 = 2
@@ -102,6 +107,9 @@ var _ = Describe("ClusterAutoscaler", func() {
 			NewPodScaleUpDelay:            configNewPodScaleUpDelay,
 		}
 
+		configExpanderConfig = &gardencorev1beta1.ExpanderConfig{
+			ConfigMapName: &expanderConfigMapName,
+		}
 		genericTokenKubeconfigSecretName = "generic-token-kubeconfig"
 		serviceAccountName               = "cluster-autoscaler"
 		secretName                       = "shoot-access-cluster-autoscaler"
@@ -111,6 +119,14 @@ var _ = Describe("ClusterAutoscaler", func() {
 		serviceName                      = "cluster-autoscaler"
 		deploymentName                   = "cluster-autoscaler"
 		managedResourceName              = "shoot-core-cluster-autoscaler"
+
+		expanderConfigMap = corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      expanderConfigMapName,
+				Namespace: projectNamespace,
+			},
+			Data: expanderConfigContent,
+		}
 
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{Name: vpaName, Namespace: namespace, ResourceVersion: "1"},
@@ -229,8 +245,12 @@ var _ = Describe("ClusterAutoscaler", func() {
 			},
 			Type: corev1.SecretTypeOpaque,
 		}
-		deploymentFor = func(withConfig bool) *appsv1.Deployment {
+		deploymentFor = func(withConfig bool, withExpanderConfigMap bool) *appsv1.Deployment {
 			var commandConfigFlags []string
+			expanderMode := string(configExpander)
+			if withExpanderConfigMap {
+				expanderMode = string(gardencorev1beta1.ClusterAutoscalerExpanderPriority)
+			}
 			if !withConfig {
 				commandConfigFlags = append(commandConfigFlags,
 					"--expander=least-waste",
@@ -250,7 +270,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 				)
 			} else {
 				commandConfigFlags = append(commandConfigFlags,
-					"--expander="+string(configExpander),
+					"--expander="+string(expanderMode),
 					fmt.Sprintf("--max-graceful-termination-sec=%d", configMaxGracefulTerminationSeconds),
 					fmt.Sprintf("--max-node-provision-time=%s", configMaxNodeProvisionTime.Duration),
 					fmt.Sprintf("--scale-down-utilization-threshold=%f", *configScaleDownUtilizationThreshold),
@@ -573,7 +593,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
 
-		clusterAutoscaler = New(c, namespace, sm, image, replicas, nil, 1337, nil)
+		clusterAutoscaler = New(c, c, namespace, projectNamespace, sm, image, replicas, nil, 1337, nil)
 		clusterAutoscaler.SetNamespaceUID(namespaceUID)
 		clusterAutoscaler.SetMachineDeployments(machineDeployments)
 	})
@@ -584,16 +604,22 @@ var _ = Describe("ClusterAutoscaler", func() {
 
 	Describe("#Deploy", func() {
 		Context("should successfully deploy all the resources", func() {
-			test := func(withConfig bool, runtimeVersionGreaterEquals126 bool) {
+			test := func(withConfig bool, runtimeVersionGreaterEquals126 bool, expanderConfigMapSpecified bool) {
 				var config *gardencorev1beta1.ClusterAutoscaler
 				if withConfig {
 					config = configFull
 				}
 
+				if expanderConfigMapSpecified {
+					Expect(fakeClient.Create(ctx, &expanderConfigMap)).To(Succeed())
+					config.Expander = ptr.To(gardencorev1beta1.ClusterAutoscalerExpanderPriority)
+					config.ExpanderConfig = configExpanderConfig
+				}
+
 				if runtimeVersionGreaterEquals126 {
-					clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, config, 0, semver.MustParse("1.26.1"))
+					clusterAutoscaler = New(fakeClient, fakeClient, namespace, projectNamespace, sm, image, replicas, config, 0, semver.MustParse("1.26.1"))
 				} else {
-					clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, config, 0, semver.MustParse("1.25.0"))
+					clusterAutoscaler = New(fakeClient, fakeClient, namespace, projectNamespace, sm, image, replicas, config, 0, semver.MustParse("1.25.0"))
 				}
 				clusterAutoscaler.SetNamespaceUID(namespaceUID)
 				clusterAutoscaler.SetMachineDeployments(machineDeployments)
@@ -626,7 +652,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 				Expect(actualSecret).To(DeepEqual(secret))
 
 				actualDeployment := &appsv1.Deployment{}
-				deploy := deploymentFor(withConfig)
+				deploy := deploymentFor(withConfig, expanderConfigMapSpecified)
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deploy), actualDeployment)).To(Succeed())
 				Expect(actualDeployment).To(DeepEqual(deploy))
 
@@ -649,11 +675,18 @@ var _ = Describe("ClusterAutoscaler", func() {
 				actualServiceMonitor := &monitoringv1.ServiceMonitor{}
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(serviceMonitor), actualServiceMonitor)).To(Succeed())
 				Expect(actualServiceMonitor).To(DeepEqual(serviceMonitor))
+
+				if expanderConfigMapSpecified {
+					actualConfigMap := &corev1.ConfigMap{}
+					Expect(fakeClient.Get(ctx, client.ObjectKey{Name: ClusterAutoScalerPriorityConfigMapName, Namespace: namespace}, actualConfigMap)).To(Succeed())
+					Expect(actualConfigMap.Data).To(Equal(expanderConfigContent))
+				}
 			}
 
-			It("w/o config", func() { test(false, false) })
-			It("w/ config, kubernetes version < 1.26", func() { test(true, false) })
-			It("w/ config, kubernetes version >= 1.26", func() { test(true, true) })
+			It("w/o config", func() { test(false, false, false) })
+			It("w/ config, kubernetes version < 1.26", func() { test(true, false, false) })
+			It("w/ config, kubernetes version >= 1.26", func() { test(true, true, false) })
+			It("w/ config, kubernetes version >= 1.26, w/ expander configmap", func() { test(true, true, true) })
 		})
 	})
 

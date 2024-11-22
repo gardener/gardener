@@ -29,8 +29,10 @@ func (b *Botanist) DefaultClusterAutoscaler() (clusterautoscaler.Interface, erro
 	}
 
 	return clusterautoscaler.New(
+		b.GardenClient,
 		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
+		b.Shoot.GetInfo().Namespace,
 		b.SecretsManager,
 		image.String(),
 		b.Shoot.GetReplicas(1),

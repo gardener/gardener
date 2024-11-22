@@ -136,6 +136,14 @@ func (g *graph) handleShootCreateOrUpdate(ctx context.Context, shoot *gardencore
 		g.addEdge(exposureClassVertex, shootVertex)
 	}
 
+	if configMapName := shoot.Spec.Kubernetes.ClusterAutoscaler.ExpanderConfig.ConfigMapName; configMapName != nil {
+		if shoot.Status.SeedName != nil {
+			configMapVertex := g.getOrCreateVertex(VertexTypeConfigMap, shoot.Namespace, *configMapName)
+			seedVertex := g.getOrCreateVertex(VertexTypeSeed, "", *shoot.Status.SeedName)
+			g.addEdge(configMapVertex, seedVertex)
+		}
+	}
+
 	if kubeAPIServer := shoot.Spec.Kubernetes.KubeAPIServer; kubeAPIServer != nil {
 		if configMapName := v1beta1helper.GetShootAuditPolicyConfigMapName(kubeAPIServer); len(configMapName) > 0 {
 			configMapVertex := g.getOrCreateVertex(VertexTypeConfigMap, shoot.Namespace, configMapName)

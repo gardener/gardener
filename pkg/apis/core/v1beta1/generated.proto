@@ -449,6 +449,10 @@ message ClusterAutoscaler {
   // +optional
   optional string expander = 7;
 
+  // ExpanderConfig defines the configuration of the CA expander
+  // +optional
+  optional ExpanderConfig expanderConfig = 15;
+
   // MaxNodeProvisionTime defines how long CA waits for node to be provisioned (default: 20 mins).
   // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration maxNodeProvisionTime = 8;
@@ -878,6 +882,13 @@ message EncryptionConfig {
   // Wildcards are not supported for now.
   // See https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md for more details.
   repeated string resources = 1;
+}
+
+message ExpanderConfig {
+  // ConfigMapName specifies the name of the expander configuration, according to the priority expander.
+  // See: https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/expander/priority/readme.md
+  // +optional
+  optional string configMapName = 1;
 }
 
 // ExpirableVersion contains a version and an expiration date.

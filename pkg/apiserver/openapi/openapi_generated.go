@@ -89,6 +89,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DualApprovalForDeletion":                    schema_pkg_apis_core_v1beta1_DualApprovalForDeletion(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCDEncryptionKeyRotation":                  schema_pkg_apis_core_v1beta1_ETCDEncryptionKeyRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionConfig":                           schema_pkg_apis_core_v1beta1_EncryptionConfig(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpanderConfig":                             schema_pkg_apis_core_v1beta1_ExpanderConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersion":                           schema_pkg_apis_core_v1beta1_ExpirableVersion(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExposureClass":                              schema_pkg_apis_core_v1beta1_ExposureClass(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExposureClassList":                          schema_pkg_apis_core_v1beta1_ExposureClassList(ref),
@@ -2242,6 +2243,12 @@ func schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref common.ReferenceCallback
 							Format:      "",
 						},
 					},
+					"expanderConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ExpanderConfig defines the configuration of the CA expander",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpanderConfig"),
+						},
+					},
 					"maxNodeProvisionTime": {
 						SchemaProps: spec.SchemaProps{
 							Description: "MaxNodeProvisionTime defines how long CA waits for node to be provisioned (default: 20 mins).",
@@ -2301,7 +2308,7 @@ func schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref common.ReferenceCallback
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpanderConfig", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
@@ -3414,6 +3421,25 @@ func schema_pkg_apis_core_v1beta1_EncryptionConfig(ref common.ReferenceCallback)
 					},
 				},
 				Required: []string{"resources"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ExpanderConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"configMapName": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ConfigMapName specifies the name of the expander configuration, according to the priority expander. See: https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/expander/priority/readme.md",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
 			},
 		},
 	}

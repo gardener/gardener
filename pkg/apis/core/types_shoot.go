@@ -500,6 +500,9 @@ type ClusterAutoscaler struct {
 	// Expander defines the algorithm to use during scale up (default: least-waste).
 	// See: https://github.com/gardener/autoscaler/blob/machine-controller-manager-provider/cluster-autoscaler/FAQ.md#what-are-expanders.
 	Expander *ExpanderMode
+	// ExpanderConfig defines the configuration of the CA expander
+	// +optional
+	ExpanderConfig *ExpanderConfig `json:"expanderConfig,omitempty"`
 	// MaxNodeProvisionTime defines how long CA waits for node to be provisioned (default: 20 mins).
 	MaxNodeProvisionTime *metav1.Duration
 	// MaxGracefulTerminationSeconds is the number of seconds CA waits for pod termination when trying to scale down a node (default: 600).
@@ -514,6 +517,13 @@ type ClusterAutoscaler struct {
 	IgnoreDaemonsetsUtilization *bool
 	// Verbosity allows CA to modify its log level.
 	Verbosity *int32
+}
+
+type ExpanderConfig struct {
+	// ConfigMapName specifies the name of the expander configuration, according to the priority expander.
+	// See: https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/expander/priority/readme.md
+	// +optional
+	ConfigMapName *string `json:"configMapName,omitempty"`
 }
 
 // ExpanderMode is type used for Expander values
