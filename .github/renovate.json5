@@ -111,6 +111,7 @@
       matchPackageNames: [
         '/.+/api/.+/',
         '/.+/apis/.+/',
+        '/.*gardener\/machine-controller-manager$/'
       ],
     },
     {
