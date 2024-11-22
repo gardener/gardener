@@ -68,7 +68,7 @@ require (
 	k8s.io/cluster-bootstrap v0.31.3
 	k8s.io/code-generator v0.31.3
 	k8s.io/component-base v0.31.3
-	k8s.io/component-helpers v0.31.2
+	k8s.io/component-helpers v0.31.3
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/kube-aggregator v0.31.3
 	k8s.io/kube-openapi v0.0.0-20240808142205-8e686545bdb8
