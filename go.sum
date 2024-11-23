@@ -190,8 +190,8 @@ github.com/gardener/etcd-druid v0.24.1 h1:BfFQXOevuJ5oOvM3rkQSJ5XITMJzY/a2j54e7X
 github.com/gardener/etcd-druid v0.24.1/go.mod h1:6C0eyfdlw6CowLm/l4ZiKwrvkc+5NHrnc/rY2wCUwys=
 github.com/gardener/hvpa-controller/api v0.17.0 h1:1mNeP+xsnjPH6GhewugU5srslXiTCJgYIFCMuRXwI7w=
 github.com/gardener/hvpa-controller/api v0.17.0/go.mod h1:eKrL7j6/YX8PaoP80xxi3+UFmQgHVf/QCPsGwNnmDeE=
-github.com/gardener/machine-controller-manager v0.54.0 h1:V7EOODiaBO9VesskdCgxMvo5vgMAmtmUTdb9Y9Nwp50=
-github.com/gardener/machine-controller-manager v0.54.0/go.mod h1:RPpnU8gmTrhDAd79+iKqKlbANiXCRkXoJW+z+5zSTME=
+github.com/gardener/machine-controller-manager v0.55.0 h1:99wYhSMLKS5s0cYjKG6jEGIGq12QWdHYQLjaWsggDyM=
+github.com/gardener/machine-controller-manager v0.55.0/go.mod h1:RPpnU8gmTrhDAd79+iKqKlbANiXCRkXoJW+z+5zSTME=
 github.com/gardener/terminal-controller-manager v0.33.0 h1:XxRVD9zrO1loFHFYeJG0+1XRLik2KOjQvwahHX19K28=
 github.com/gardener/terminal-controller-manager v0.33.0/go.mod h1:QEfUme8xXfye0fo/6dKSp9PowkdJ7jm5uXgeC9j8GfY=
 github.com/ghodss/yaml v0.0.0-20150909031657-73d445a93680/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
