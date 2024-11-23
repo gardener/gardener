@@ -21,11 +21,8 @@ const ControllerName = "garbage-collector"
 
 // AddToManager adds Reconciler to the given manager.
 func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Cluster) error {
-	if r.TargetReader == nil {
-		r.TargetReader = targetCluster.GetAPIReader()
-	}
-	if r.TargetWriter == nil {
-		r.TargetWriter = targetCluster.GetClient()
+	if r.TargetClient == nil {
+		r.TargetClient = targetCluster.GetClient()
 	}
 	if r.MinimumObjectLifetime == nil {
 		r.MinimumObjectLifetime = ptr.To(10 * time.Minute)

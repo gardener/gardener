@@ -42,8 +42,7 @@ var _ = Describe("Collector", func() {
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		gc = &Reconciler{
-			TargetReader:          c,
-			TargetWriter:          c,
+			TargetClient:          c,
 			Config:                config.GarbageCollectorControllerConfig{SyncPeriod: &metav1.Duration{}},
 			Clock:                 fakeClock,
 			MinimumObjectLifetime: &minimumObjectLifetime,

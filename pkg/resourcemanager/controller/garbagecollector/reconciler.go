@@ -30,8 +30,7 @@ import (
 
 // Reconciler performs garbage collection.
 type Reconciler struct {
-	TargetReader          client.Reader
-	TargetWriter          client.Writer
+	TargetClient          client.Client
 	Config                config.GarbageCollectorControllerConfig
 	Clock                 clock.Clock
 	MinimumObjectLifetime *time.Duration
@@ -61,7 +60,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 	} {
 		objList := &metav1.PartialObjectMetadataList{}
 		objList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind(resource.listKind))
-		if err := r.TargetReader.List(ctx, objList, labels); err != nil {
+		if err := r.TargetClient.List(ctx, objList, labels); err != nil {
 			return reconcile.Result{}, err
 		}
 
@@ -91,7 +90,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 	for _, gvk := range groupVersionKinds {
 		objList := &metav1.PartialObjectMetadataList{}
 		objList.SetGroupVersionKind(gvk)
-		if err := r.TargetReader.List(ctx, objList); err != nil {
+		if err := r.TargetClient.List(ctx, objList); err != nil {
 			if !meta.IsNoMatchError(err) {
 				return reconcile.Result{}, err
 			}
@@ -140,7 +139,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 				"name", objId.name,
 			)
 
-			if err := r.TargetWriter.Delete(ctx, obj); client.IgnoreNotFound(err) != nil {
+			if err := r.TargetClient.Delete(ctx, obj); client.IgnoreNotFound(err) != nil {
 				results <- err
 			}
 		})
