@@ -6202,7 +6202,7 @@ in favor of the kube-apiserver flags <code>--default-not-ready-toleration-second
 The <code>--pod-eviction-timeout</code> flag does not have effect when the taint based eviction is enabled. The taint
 based eviction is beta (enabled by default) since Kubernetes 1.13 and GA since Kubernetes 1.18. Hence,
 instead of setting this field, set the <code>spec.kubernetes.kubeAPIServer.defaultNotReadyTolerationSeconds</code> and
-<code>spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds</code>. This field will be removed in gardener v1.112.</p>
+<code>spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds</code>. This field will be removed in gardener v1.118.</p>
 </td>
 </tr>
 <tr>
@@ -7203,7 +7203,7 @@ bool
 <em>(Optional)</em>
 <p>EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret will be created for the Shoot cluster.
 Setting this field to true is not supported.</p>
-<p>Deprecated: This field is deprecated and will be removed in gardener v1.112</p>
+<p>Deprecated: This field is deprecated and will be removed in gardener v1.118</p>
 </td>
 </tr>
 </tbody>
@@ -11648,7 +11648,7 @@ ShootKubeconfigRotation
 <td>
 <em>(Optional)</em>
 <p>Kubeconfig contains information about the kubeconfig credential rotation.</p>
-<p>Deprecated: This field is deprecated and will be removed in gardener v1.112</p>
+<p>Deprecated: This field is deprecated and will be removed in gardener v1.118</p>
 </td>
 </tr>
 <tr>
