@@ -4458,7 +4458,7 @@ func schema_pkg_apis_core_v1beta1_KubeControllerManagerConfig(ref common.Referen
 					},
 					"podEvictionTimeout": {
 						SchemaProps: spec.SchemaProps{
-							Description: "PodEvictionTimeout defines the grace period for deleting pods on failed nodes. Defaults to 2m.\n\nDeprecated: The corresponding kube-controller-manager flag `--pod-eviction-timeout` is deprecated in favor of the kube-apiserver flags `--default-not-ready-toleration-seconds` and `--default-unreachable-toleration-seconds`. The `--pod-eviction-timeout` flag does not have effect when the taint based eviction is enabled. The taint based eviction is beta (enabled by default) since Kubernetes 1.13 and GA since Kubernetes 1.18. Hence, instead of setting this field, set the `spec.kubernetes.kubeAPIServer.defaultNotReadyTolerationSeconds` and `spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds`. This field will be removed in gardener v1.112.",
+							Description: "PodEvictionTimeout defines the grace period for deleting pods on failed nodes. Defaults to 2m.\n\nDeprecated: The corresponding kube-controller-manager flag `--pod-eviction-timeout` is deprecated in favor of the kube-apiserver flags `--default-not-ready-toleration-seconds` and `--default-unreachable-toleration-seconds`. The `--pod-eviction-timeout` flag does not have effect when the taint based eviction is enabled. The taint based eviction is beta (enabled by default) since Kubernetes 1.13 and GA since Kubernetes 1.18. Hence, instead of setting this field, set the `spec.kubernetes.kubeAPIServer.defaultNotReadyTolerationSeconds` and `spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds`. This field will be removed in gardener v1.120.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
@@ -4986,7 +4986,7 @@ func schema_pkg_apis_core_v1beta1_Kubernetes(ref common.ReferenceCallback) commo
 					},
 					"enableStaticTokenKubeconfig": {
 						SchemaProps: spec.SchemaProps{
-							Description: "EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret will be created for the Shoot cluster. Setting this field to true is not supported.\n\nDeprecated: This field is deprecated and will be removed in gardener v1.112",
+							Description: "EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret will be created for the Shoot cluster. Setting this field to true is not supported.\n\nDeprecated: This field is deprecated and will be removed in gardener v1.120",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
@@ -8688,7 +8688,7 @@ func schema_pkg_apis_core_v1beta1_ShootCredentialsRotation(ref common.ReferenceC
 					},
 					"kubeconfig": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Kubeconfig contains information about the kubeconfig credential rotation.\n\nDeprecated: This field is deprecated and will be removed in gardener v1.112",
+							Description: "Kubeconfig contains information about the kubeconfig credential rotation.\n\nDeprecated: This field is deprecated and will be removed in gardener v1.120",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootKubeconfigRotation"),
 						},
 					},

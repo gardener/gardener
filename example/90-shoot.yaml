@@ -151,7 +151,7 @@ spec:
   #     enabled: false
   kubernetes:
   # version: 1.27.3
-  # enableStaticTokenKubeconfig: false # Deprecated, will be removed in gardener v1.112
+  # enableStaticTokenKubeconfig: false # Deprecated, will be removed in gardener v1.120
   # kubeAPIServer:
   #   eventTTL: 1h
   #   featureGates:
@@ -225,7 +225,7 @@ spec:
   #     - customresource.fancyoperator.io
   # kubeControllerManager:
   #   nodeCIDRMaskSize: 24
-  #   podEvictionTimeout: 2m0s # This field is no-op and will be removed in gardener v1.112
+  #   podEvictionTimeout: 2m0s # This field is no-op and will be removed in gardener v1.120
   #   nodeMonitorGracePeriod: 40s
   #   featureGates:
   #     SomeKubernetesFeature: true

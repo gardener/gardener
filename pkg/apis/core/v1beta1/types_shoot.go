@@ -262,7 +262,7 @@ type ShootCredentialsRotation struct {
 	// Kubeconfig contains information about the kubeconfig credential rotation.
 	// +optional
 	//
-	// Deprecated: This field is deprecated and will be removed in gardener v1.112
+	// Deprecated: This field is deprecated and will be removed in gardener v1.120
 	Kubeconfig *ShootKubeconfigRotation `json:"kubeconfig,omitempty" protobuf:"bytes,2,opt,name=kubeconfig"`
 	// SSHKeypair contains information about the ssh-keypair credential rotation.
 	// +optional
@@ -620,7 +620,7 @@ type Kubernetes struct {
 	// Setting this field to true is not supported.
 	// +optional
 	//
-	// Deprecated: This field is deprecated and will be removed in gardener v1.112
+	// Deprecated: This field is deprecated and will be removed in gardener v1.120
 	EnableStaticTokenKubeconfig *bool `json:"enableStaticTokenKubeconfig,omitempty" protobuf:"varint,10,opt,name=enableStaticTokenKubeconfig"`
 }
 
@@ -1119,7 +1119,7 @@ type KubeControllerManagerConfig struct {
 	// The `--pod-eviction-timeout` flag does not have effect when the taint based eviction is enabled. The taint
 	// based eviction is beta (enabled by default) since Kubernetes 1.13 and GA since Kubernetes 1.18. Hence,
 	// instead of setting this field, set the `spec.kubernetes.kubeAPIServer.defaultNotReadyTolerationSeconds` and
-	// `spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds`. This field will be removed in gardener v1.112.
+	// `spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds`. This field will be removed in gardener v1.120.
 	PodEvictionTimeout *metav1.Duration `json:"podEvictionTimeout,omitempty" protobuf:"bytes,4,opt,name=podEvictionTimeout"`
 	// NodeMonitorGracePeriod defines the grace period before an unresponsive node is marked unhealthy.
 	// +optional

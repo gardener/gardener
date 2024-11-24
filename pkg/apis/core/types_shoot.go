@@ -202,7 +202,7 @@ type ShootCredentialsRotation struct {
 	CertificateAuthorities *CARotation
 	// Kubeconfig contains information about the kubeconfig credential rotation.
 	//
-	// Deprecated: This field is deprecated and will be removed in gardener v1.112
+	// Deprecated: This field is deprecated and will be removed in gardener v1.120
 	Kubeconfig *ShootKubeconfigRotation
 	// SSHKeypair contains information about the ssh-keypair credential rotation.
 	SSHKeypair *ShootSSHKeypairRotation
@@ -498,7 +498,7 @@ type Kubernetes struct {
 	// EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret will be created for the Shoot cluster.
 	// Setting this field to true is not supported.
 	//
-	// Deprecated: This field is deprecated and will be removed in gardener v1.112
+	// Deprecated: This field is deprecated and will be removed in gardener v1.120
 	EnableStaticTokenKubeconfig *bool
 }
 
@@ -859,7 +859,7 @@ type KubeControllerManagerConfig struct {
 	// The `--pod-eviction-timeout` flag does not have effect when the taint based eviction is enabled. The taint
 	// based eviction is beta (enabled by default) since Kubernetes 1.13 and GA since Kubernetes 1.18. Hence,
 	// instead of setting this field, set the `spec.kubernetes.kubeAPIServer.defaultNotReadyTolerationSeconds` and
-	// `spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds`. This field will be removed in gardener v1.112.
+	// `spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds`. This field will be removed in gardener v1.120.
 	PodEvictionTimeout *metav1.Duration
 	// NodeMonitorGracePeriod defines the grace period before an unresponsive node is marked unhealthy.
 	NodeMonitorGracePeriod *metav1.Duration
