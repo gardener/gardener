@@ -111,6 +111,8 @@
       matchPackageNames: [
         '/.+/api/.+/',
         '/.+/apis/.+/',
+        '/.*gardener\/machine-controller-manager$/',
+        '/.*gardener\/etcd-druid$/',
       ],
     },
     {
@@ -200,6 +202,17 @@
       ],
       matchPackageNames: [
         '/.+gardener-discovery-server$/'
+      ],
+    },
+        {
+      // Group machine-controller-manager updates in one PR.
+      groupName: 'machine-controller-manager',
+      matchDatasources: [
+        'github-releases',
+        'go',
+      ],
+      matchPackageNames: [
+        '/.*gardener\/machine-controller-manager$/'
       ],
     },
     {
