@@ -1788,9 +1788,29 @@ var _ = Describe("validator", func() {
 				shoot.Spec.AccessRestrictions = nil
 
 				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-				err := admissionHandler.Admit(ctx, attrs, nil)
+				Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+			})
 
-				Expect(err).NotTo(HaveOccurred())
+			It("should allow deletion even if shoot access restrictions are (no longer) supported in this region", func() {
+				seed.Spec.AccessRestrictions = []gardencorev1beta1.AccessRestriction{{Name: "foo"}}
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Update(&seed)).To(Succeed())
+
+				shoot.Spec.AccessRestrictions = []core.AccessRestrictionWithOptions{{AccessRestriction: core.AccessRestriction{Name: "foo"}}}
+
+				oldShoot = shoot.DeepCopy()
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.UpdateOptions{}, false, nil)
+				Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+			})
+
+			It("should allow deletion even if shoot access restrictions are (no longer) supported by the seed", func() {
+				cloudProfile.Spec.Regions[0].AccessRestrictions = []gardencorev1beta1.AccessRestriction{{Name: "foo"}}
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Update(&cloudProfile)).To(Succeed())
+
+				shoot.Spec.AccessRestrictions = []core.AccessRestrictionWithOptions{{AccessRestriction: core.AccessRestriction{Name: "foo"}}}
+
+				oldShoot = shoot.DeepCopy()
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.UpdateOptions{}, false, nil)
+				Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
 			})
 		})
 
