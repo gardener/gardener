@@ -69,7 +69,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	// If no Seed is referenced, we try to determine an adequate one.
-	seed, err := r.determineSeed(ctx, log, shoot)
+	seed, err := r.DetermineSeed(ctx, log, shoot)
 	if err != nil {
 		r.reportFailedScheduling(ctx, log, shoot, err)
 		return reconcile.Result{}, fmt.Errorf("failed to determine seed for shoot: %w", err)
@@ -114,8 +114,8 @@ func (r *Reconciler) reportEvent(shoot *gardencorev1beta1.Shoot, eventType strin
 	r.Recorder.Eventf(shoot, eventType, eventReason, messageFmt, args...)
 }
 
-// determineSeed returns an appropriate Seed cluster (or nil).
-func (r *Reconciler) determineSeed(
+// DetermineSeed returns an appropriate Seed cluster (or nil).
+func (r *Reconciler) DetermineSeed(
 	ctx context.Context,
 	log logr.Logger,
 	shoot *gardencorev1beta1.Shoot,
