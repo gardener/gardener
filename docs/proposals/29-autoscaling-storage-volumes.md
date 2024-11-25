@@ -75,9 +75,9 @@ storage management functionality is envisioned in `etcd-druid`. For details, see
 - Absolute upper scaling limit configured on each observability volume.
 - If autoscaling is enabled for a newly created volume, reduce the initial size of that volume, as long as such reduction
   does not contradict Gardener's overall reliability goals. For instance, Prometheus instances display sharp storage
-  allocation spikes; the choice of initial size must should accommodate those in an acceptable manner.
-- Some metrics, which represent an overview of the PVC autoscaling state per seed, available through one or more of the seed
-  system's Prometheus instances.
+  allocation spikes; the choice of initial size must accommodate those in an acceptable manner.
+- A set of metrics, which represent an overview of the PVC autoscaling state per seed, available through one or more of
+  the seed system's Prometheus instances.
 - Provide operational documentation for Gardener Operators.
 - Ability to enable/disable the feature per seed, via feature gate.
 
@@ -165,9 +165,9 @@ annotations are removed from the shoot control plane observability StatefulSets,
 The following steps will be executed over time, to minimise the risk of disruption to existing Gardener instances:
 
 1. The proposed scaling approach will be deployed behind a feature gate and disabled by default.
-2. The new feature will be gradually enabled on seed-by-seed basis:
-   1. The feature gate will be enabled for the seed
-   2. Correct operation will be verified via direct observation
+2. At this point, operators have the option to gradually enable the feature on a seed-by-seed basis:
+   1. Enable the feature gate for the seed
+   2. Verify correct operation via direct observation
 3. The feature flag will be promoted and eventually removed.
 
 The following metrics will be recorded before and/or after the transition of the seed to the new functionality,
@@ -187,6 +187,13 @@ in order to evaluate the economical effect, and the reliability of the scaling s
 The proposed design can easily be extended to apply TLS and authorisation to `pvc-autoscaler` metrics.[[7]]
 
 ## Discussion and Limitations
+`pvc-autoscaler` offers a simple, robust solution which expands a volume when its free space drops below a certain
+threshold. Both the threshold and the expansion step are expressed as percentage of the volume's current capacity, and 
+are configurable per PVC. The autoscaler uses metrics from a Prometheus as a source of information regarding volumes'
+current free space level. It emits events upon faults and other relevant circumstances to aid operations, and exposes
+a set of its own metrics in the Prometheus format. Configuration input is accepted as a set of annotations on PVC
+objects. Similarly, status is reported back by setting the values of few annotations on the PVC.
+
 ### Alternatives
 The following existing 3rd party PVC autoscalers were evaluated:
 - [topolvm/pvc-autoresizer](https://github.com/topolvm/pvc-autoresizer)
