@@ -84,8 +84,8 @@ func (p *namespacedCloudProfile) validateNamespacedCloudProfileProviderConfig(pr
 			continue
 		}
 		for _, version := range machineImage.Versions {
-			_, existsInParent := parentImages.GetImageVersion(machineImage.Name, version.Version)
-			if _, exists := providerImages.GetImageVersion(machineImage.Name, version.Version); !existsInParent && !exists {
+			_, existsInParent := parentImages.GetImageVersionAnyArchitecture(machineImage.Name, version.Version)
+			if _, exists := providerImages.GetImageVersionAnyArchitecture(machineImage.Name, version.Version); !existsInParent && !exists {
 				allErrs = append(allErrs, field.Required(
 					field.NewPath("spec.providerConfig.machineImages"),
 					fmt.Sprintf("machine image version %s@%s is not defined in the NamespacedCloudProfile providerConfig", machineImage.Name, version.Version),
@@ -97,7 +97,7 @@ func (p *namespacedCloudProfile) validateNamespacedCloudProfileProviderConfig(pr
 		// Check that the machine image version is not already defined in the parent CloudProfile.
 		if _, exists := parentImages.GetImage(machineImage.Name); exists {
 			for versionIdx, version := range machineImage.Versions {
-				if _, exists := parentImages.GetImageVersion(machineImage.Name, version.Version); exists {
+				if _, exists := parentImages.GetImageVersionAnyArchitecture(machineImage.Name, version.Version); exists {
 					allErrs = append(allErrs, field.Forbidden(
 						field.NewPath("spec.providerConfig.machineImages").Index(imageIdx).Child("versions").Index(versionIdx),
 						fmt.Sprintf("machine image version %s@%s is already defined in the parent CloudProfile", machineImage.Name, version.Version),
@@ -115,7 +115,7 @@ func (p *namespacedCloudProfile) validateNamespacedCloudProfileProviderConfig(pr
 			continue
 		}
 		for versionIdx, version := range machineImage.Versions {
-			if _, exists := profileImages.GetImageVersion(machineImage.Name, version.Version); !exists {
+			if _, exists := profileImages.GetImageVersionAnyArchitecture(machineImage.Name, version.Version); !exists {
 				allErrs = append(allErrs, field.Invalid(
 					field.NewPath("spec.providerConfig.machineImages").Index(imageIdx).Child("versions").Index(versionIdx),
 					fmt.Sprintf("%s@%s", machineImage.Name, version.Version),
@@ -131,8 +131,13 @@ func (p *namespacedCloudProfile) validateNamespacedCloudProfileProviderConfig(pr
 func newProviderImagesContext(providerImages []api.MachineImages) *util.ImagesContext[api.MachineImages, api.MachineImageVersion] {
 	return util.NewImagesContext(
 		utils.CreateMapFromSlice(providerImages, func(mi api.MachineImages) string { return mi.Name }),
-		func(mi api.MachineImages) map[string]api.MachineImageVersion {
-			return utils.CreateMapFromSlice(mi.Versions, func(v api.MachineImageVersion) string { return v.Version })
+		func(mi api.MachineImages) map[string]map[string]api.MachineImageVersion {
+			mapped := make(map[string]map[string]api.MachineImageVersion)
+			for _, value := range mi.Versions {
+				mapped[value.Version] = make(map[string]api.MachineImageVersion)
+				mapped[value.Version][""] = value
+			}
+			return mapped
 		},
 	)
 }

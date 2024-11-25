@@ -237,7 +237,7 @@ func (c *validationContext) validateMachineImageOverrides(attr admission.Attribu
 			}
 
 			for imageVersionIndex, imageVersion := range image.Versions {
-				if _, isExistingVersion := parentImages.GetImageVersion(image.Name, imageVersion.Version); isExistingVersion {
+				if _, isExistingVersion := parentImages.GetImageVersionAnyArchitecture(image.Name, imageVersion.Version); isExistingVersion {
 					// An image with the specified version is already present in the parent CloudProfile.
 					// Ensure that only the expiration date is overridden.
 					// For new versions added to an existing image, the validation will be done on the simulated merge result.
@@ -254,7 +254,7 @@ func (c *validationContext) validateMachineImageOverrides(attr admission.Attribu
 							exists   bool
 						)
 						if currentVersionsMerged != nil {
-							override, exists = currentVersionsMerged.GetImageVersion(image.Name, imageVersion.Version)
+							override, exists = currentVersionsMerged.GetImageVersionAnyArchitecture(image.Name, imageVersion.Version)
 						}
 						if !exists || !override.ExpirationDate.Equal(imageVersion.ExpirationDate) {
 							allErrs = append(allErrs, field.Invalid(imageVersionIndexPath.Child("expirationDate"), imageVersion.ExpirationDate, fmt.Sprintf("expiration date for version %q is in the past", imageVersion.Version)))
