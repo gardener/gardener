@@ -111,7 +111,8 @@
       matchPackageNames: [
         '/.+/api/.+/',
         '/.+/apis/.+/',
-        '/.*gardener\/machine-controller-manager$/'
+        '/.*gardener\/machine-controller-manager$/',
+        '/.*gardener\/etcd-druid$/',
       ],
     },
     {
