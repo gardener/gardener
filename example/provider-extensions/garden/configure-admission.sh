@@ -40,8 +40,22 @@ for p in $(yq '. | select(.kind == "ControllerDeployment") | select(.metadata.na
     ADMISSION_FILE=$(mktemp)
     curl --fail -L -o "$ADMISSION_FILE" "https://github.com/gardener/gardener-extension-$p/archive/refs/tags/$LATEST_RELEASE.tar.gz"
     tar xfz "$ADMISSION_FILE" -C "$ADMISSION_GIT_ROOT" --strip-components 1
-    helm template --namespace garden --set global.image.tag="$LATEST_RELEASE" gardener-extension-"$ADMISSION_NAME" "$ADMISSION_GIT_ROOT"/charts/gardener-extension-"$ADMISSION_NAME"/charts/application > "$ADMISSION_GIT_ROOT"/virtual-resources.yaml
-    helm template --namespace garden --set global.image.tag="$LATEST_RELEASE" --set global.kubeconfig="$(cat "$garden_kubeconfig" | sed 's/127.0.0.1:.*$/kubernetes.default.svc.cluster.local/g')" --set global.vpa.enabled="false" gardener-extension-"$ADMISSION_NAME" "$ADMISSION_GIT_ROOT"/charts/gardener-extension-"$ADMISSION_NAME"/charts/runtime > "$ADMISSION_GIT_ROOT"/runtime-resources.yaml
+    ADMISSION_CHARTS_DIR="$ADMISSION_GIT_ROOT/charts/gardener-extension-$ADMISSION_NAME/charts"
+    set +e
+    grep -r '.Values.global.' "$ADMISSION_CHARTS_DIR" > /dev/null
+    NEW_VALUES=$?
+    set -e
+    if [ $NEW_VALUES == 0 ]; then
+      # Found .Values.global.* in the chart. Deploy it with "global" values...
+      echo "Deploying $ADMISSION_NAME with deprecated global values..."
+      helm template --namespace garden --set global.image.tag="$LATEST_RELEASE" gardener-extension-"$ADMISSION_NAME" "$ADMISSION_CHARTS_DIR"/application > "$ADMISSION_GIT_ROOT"/virtual-resources.yaml
+      helm template --namespace garden --set global.image.tag="$LATEST_RELEASE" --set global.kubeconfig="$(cat "$garden_kubeconfig" | sed 's/127.0.0.1:.*$/kubernetes.default.svc.cluster.local/g')" --set global.vpa.enabled="false" gardener-extension-"$ADMISSION_NAME" "$ADMISSION_CHARTS_DIR"/runtime > "$ADMISSION_GIT_ROOT"/runtime-resources.yaml
+    else
+      # No .Values.global.* found in the chart. Deploy it with new values...
+      echo "Deploying $ADMISSION_NAME with new values..."
+      helm template --namespace garden --set image.tag="$LATEST_RELEASE" --set gardener.virtualCluster.enabled="false" gardener-extension-"$ADMISSION_NAME" "$ADMISSION_CHARTS_DIR"/application > "$ADMISSION_GIT_ROOT"/virtual-resources.yaml
+      helm template --namespace garden --set image.tag="$LATEST_RELEASE" --set gardener.virtualCluster.enabled="false" --set kubeconfig="$(cat "$garden_kubeconfig" | sed 's/127.0.0.1:.*$/kubernetes.default.svc.cluster.local/g')" --set vpa.enabled="false" gardener-extension-"$ADMISSION_NAME" "$ADMISSION_CHARTS_DIR"/runtime > "$ADMISSION_GIT_ROOT"/runtime-resources.yaml
+    fi
     kubectl --kubeconfig "$garden_kubeconfig" "$command" "$@" -f "$ADMISSION_GIT_ROOT/virtual-resources.yaml"
     kubectl --kubeconfig "$garden_kubeconfig" "$command" "$@" -f "$ADMISSION_GIT_ROOT/runtime-resources.yaml"
     if [ "$command" == "apply" ]; then
