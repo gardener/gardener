@@ -388,6 +388,10 @@ func (r *Reconciler) applyChangedUnits(ctx context.Context, log logr.Logger, uni
 
 func (r *Reconciler) removeDeletedUnits(ctx context.Context, log logr.Logger, node client.Object, units []extensionsv1alpha1.Unit) error {
 	for _, unit := range units {
+		// The unit has been created by gardener-node-agent if it has content.
+		// Otherwise, it might be a default OS unit which was enabled/disabled or where drop-ins were added.
+		unitCreatedByNodeAgent := unit.Content != nil
+
 		unitFilePath := path.Join(etcSystemdSystem, unit.Name)
 
 		unitFileExists, err := r.FS.Exists(unitFilePath)
@@ -395,7 +399,10 @@ func (r *Reconciler) removeDeletedUnits(ctx context.Context, log logr.Logger, no
 			return fmt.Errorf("unable to check whether unit file %q exists: %w", unitFilePath, err)
 		}
 
-		if unitFileExists {
+		// Only stop and remove the unit file if it was created by gardener-node-agent. Otherwise, this could affect
+		// default OS units where we add and remove drop-ins only. If operators want to stop and disable units,
+		// they can do it by adding a unit to OSC which applies the `stop` command.
+		if unitFileExists && unitCreatedByNodeAgent {
 			if err := r.DBus.Disable(ctx, unit.Name); err != nil {
 				return fmt.Errorf("unable to disable deleted unit %q: %w", unit.Name, err)
 			}
@@ -406,11 +413,30 @@ func (r *Reconciler) removeDeletedUnits(ctx context.Context, log logr.Logger, no
 
 			if err := r.FS.Remove(unitFilePath); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
 				return fmt.Errorf("unable to delete systemd unit file of deleted unit %q: %w", unit.Name, err)
+			} else {
+				log.Info("Unit was not created by gardener-node-agent, skipping deletion of unit file", "unitName", unit.Name)
 			}
 		}
 
-		if err := r.FS.RemoveAll(unitFilePath + ".d"); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
-			return fmt.Errorf("unable to delete systemd drop-in folder of deleted unit %q: %w", unit.Name, err)
+		dropInFolder := unitFilePath + ".d"
+
+		if exists, err := r.FS.Exists(dropInFolder); err != nil {
+			return fmt.Errorf("unable to check whether drop-in folder %q exists: %w", dropInFolder, err)
+		} else if exists {
+			for _, dropIn := range unit.DropIns {
+				dropInFilePath := path.Join(dropInFolder, dropIn.Name)
+				if err := r.FS.Remove(dropInFilePath); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
+					return fmt.Errorf("unable to delete drop-in file %q of deleted unit %q: %w", dropInFilePath, unit.Name, err)
+				}
+			}
+
+			if empty, err := r.FS.IsEmpty(dropInFolder); err != nil {
+				return fmt.Errorf("unable to check whether drop-in folder %q is empty: %w", dropInFolder, err)
+			} else if empty {
+				if err := r.FS.RemoveAll(dropInFolder); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
+					return fmt.Errorf("unable to delete systemd drop-in folder of deleted unit %q: %w", unit.Name, err)
+				}
+			}
 		}
 
 		log.Info("Successfully removed no longer needed unit", "unitName", unit.Name)
