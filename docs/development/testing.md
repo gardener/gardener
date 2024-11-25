@@ -371,7 +371,7 @@ stress -ignore "unable to grab random port" -p 16 ./bastion.test
     - This avoids conflicts between test cases and cascading failures which distract from the actual root failures
   - Don't tolerate already existing resources (~dirty test environment), code smell: ignoring already exist errors
 - Don't use a cached client in test code (e.g., the one from a controller-runtime manager), always construct a dedicated test client (uncached): [example test](https://github.com/gardener/gardener/blob/ee3e50387fc7e6298908242f59894a7ea6f91fa7/test/integration/resourcemanager/managedresource/resource_suite_test.go#L96-L97)
-- Don't use the `Object` field when you want to have a client-like behaviour and communicate through a network. You should encode and use the `Raw` field of `runtime.RawExtension` since `Object` doesn't have a protobuf tag, and `Raw` does, which allows it to be serialized. 
+- When creating/updating an object with `runtime.RawExtension` field against a real cluster (not fake or mocked client), pass the field definition in the `Raw` field of the `runtime.RawExtension`. The `Object` field of `runtime.RawExtension` doesn't have a protobuf tag, and the `Raw` field does, which allows it to be serialized.
 - Use [asynchronous assertions](https://onsi.github.io/gomega/#making-asynchronous-assertions): `Eventually` and `Consistently`.
   - Never `Expect` anything to happen synchronously (immediately).
   - Don't use retry or wait until functions -> use `Eventually`, `Consistently` instead: [example test](https://github.com/gardener/gardener/blob/ee3e50387fc7e6298908242f59894a7ea6f91fa7/test/integration/controllermanager/shootmaintenance/utils_test.go#L36-L48)
