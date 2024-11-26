@@ -528,7 +528,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				shoot.DeletionTimestamp = &metav1.Time{Time: time.Now()}
 				newShoot := shoot.DeepCopy()
 
-				Expect(ValidateForceDeletion(newShoot, shoot)).NotTo(HaveOccurred())
+				Expect(ValidateForceDeletion(newShoot, shoot)).To(BeNil())
 			})
 
 			It("should forbid to remove the annotation once set", func() {
@@ -557,7 +557,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 				}
 
-				Expect(ValidateForceDeletion(newShoot, shoot)).NotTo(HaveOccurred())
+				Expect(ValidateForceDeletion(newShoot, shoot)).To(BeNil())
 			})
 		})
 
