@@ -6,6 +6,7 @@ package nodelocaldns_test
 
 import (
 	"context"
+	"net"
 	"strconv"
 	"strings"
 
@@ -21,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -1281,55 +1281,70 @@ ip6.arpa:53 {
 			})
 		})
 	})
-
 })
 
 func healthAddress(values Values) string {
-	ipFamiliesSet := sets.New[gardencorev1beta1.IPFamily](values.IPFamilies...)
-	if ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv4) && !ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv6) {
+	if values.IPFamilies[0] == gardencorev1beta1.IPFamilyIPv4 {
 		return "169.254.20.10"
-	}
-	if ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv6) && !ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv4) {
+	} else {
 		if len(values.DNSServers) > 0 {
 			return "fd30:1319:f1e:230b::1 " + strings.Join(values.DNSServers, " ")
 		}
 		return "[fd30:1319:f1e:230b::1]"
 	}
-	return ""
+}
+
+func selectIPAddress(addresses []string, preferIPv6 bool) string {
+	if len(addresses) == 1 {
+		return addresses[0]
+	}
+	var ipv4, ipv6 string
+	for _, addr := range addresses {
+		ip := net.ParseIP(addr)
+		if ip.To4() != nil {
+			ipv4 = addr
+		} else {
+			ipv6 = addr
+		}
+	}
+	if preferIPv6 {
+		return ipv6
+	}
+	return ipv4
 }
 
 func bindIP(values Values) string {
-	ipFamiliesSet := sets.New[gardencorev1beta1.IPFamily](values.IPFamilies...)
-	if ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv4) && !ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv6) {
+	if values.IPFamilies[0] == gardencorev1beta1.IPFamilyIPv4 {
 		if len(values.DNSServers) > 0 {
-			return "169.254.20.10 " + strings.Join(values.DNSServers, " ")
+			dnsAddress := selectIPAddress(values.DNSServers, false)
+			return "169.254.20.10" + " " + dnsAddress
 		}
 		return "169.254.20.10"
-	}
-	if ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv6) && !ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv4) {
+	} else {
 		if len(values.DNSServers) > 0 {
-			return "fd30:1319:f1e:230b::1 " + strings.Join(values.DNSServers, " ")
+			dnsAddress := selectIPAddress(values.DNSServers, true)
+			return "fd30:1319:f1e:230b::1" + " " + dnsAddress
 		}
 		return "fd30:1319:f1e:230b::1"
 	}
-	return ""
 }
 
 func containerArg(values Values) string {
-	ipFamiliesSet := sets.New[gardencorev1beta1.IPFamily](values.IPFamilies...)
-	if ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv4) && !ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv6) {
+	if values.IPFamilies[0] == gardencorev1beta1.IPFamilyIPv4 {
 		if len(values.DNSServers) > 0 {
-			return "169.254.20.10," + strings.Join(values.DNSServers, ",")
+			dnsAddress := selectIPAddress(values.DNSServers, false)
+			return "169.254.20.10" + "," + dnsAddress
+		} else {
+			return "169.254.20.10"
 		}
-		return "169.254.20.10"
-	}
-	if ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv6) && !ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv4) {
+	} else {
 		if len(values.DNSServers) > 0 {
-			return "fd30:1319:f1e:230b::1," + strings.Join(values.DNSServers, ",")
+			dnsAddress := selectIPAddress(values.DNSServers, true)
+			return "fd30:1319:f1e:230b::1" + "," + dnsAddress
+		} else {
+			return "fd30:1319:f1e:230b::1"
 		}
-		return "fd30:1319:f1e:230b::1"
 	}
-	return ""
 }
 
 func extractDaemonSet(manifests []string, decoder runtime.Decoder) (*appsv1.DaemonSet, error) {
