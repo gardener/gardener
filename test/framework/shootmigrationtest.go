@@ -160,9 +160,9 @@ func appendToleration(tolerations []gardencorev1beta1.Toleration, key string, va
 	if tolerations == nil {
 		tolerations = make([]gardencorev1beta1.Toleration, 0)
 	} else {
-		for _, t := range tolerations {
+		for i, t := range tolerations {
 			if t.Key == key {
-				t.Value = value
+				tolerations[i].Value = value
 				return tolerations
 			}
 		}
