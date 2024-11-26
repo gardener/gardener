@@ -34,12 +34,7 @@ func AddToManager(
 		return fmt.Errorf("failed adding %s webhook handler: %w", auditpolicy.HandlerName, err)
 	}
 
-	if err := (&authenticationconfig.Handler{
-		Logger:    mgr.GetLogger().WithName("webhook").WithName(authenticationconfig.HandlerName),
-		APIReader: mgr.GetAPIReader(),
-		Client:    mgr.GetClient(),
-		Decoder:   admission.NewDecoder(mgr.GetScheme()),
-	}).AddToManager(mgr); err != nil {
+	if err := authenticationconfig.AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding %s webhook handler: %w", authenticationconfig.HandlerName, err)
 	}
 

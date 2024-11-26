@@ -40,7 +40,7 @@ var _ = Describe("handler", func() {
 
 		request admission.Request
 		decoder admission.Decoder
-		handler *Handler
+		handler admission.Handler
 
 		ctrl       *gomock.Controller
 		mockReader *mockclient.MockReader
@@ -150,7 +150,7 @@ jwt:
 
 		decoder = admission.NewDecoder(kubernetes.GardenScheme)
 
-		handler = &Handler{Logger: log, APIReader: mockReader, Client: fakeClient, Decoder: decoder}
+		handler = NewHandler(log, mockReader, fakeClient, decoder)
 
 		request = admission.Request{}
 
@@ -191,27 +191,27 @@ jwt:
 
 		if oldObj != nil {
 			objData, err := runtime.Encode(testEncoder, oldObj)
-			Expect(err).NotTo(HaveOccurred())
+			ExpectWithOffset(1, err).NotTo(HaveOccurred())
 			request.OldObject.Raw = objData
 		}
 
 		if obj != nil {
 			objData, err := runtime.Encode(testEncoder, obj)
-			Expect(err).NotTo(HaveOccurred())
+			ExpectWithOffset(1, err).NotTo(HaveOccurred())
 			request.Object.Raw = objData
 		}
 
 		response := handler.Handle(ctx, request)
-		Expect(response).To(Not(BeNil()))
-		Expect(response.Allowed).To(Equal(expectedAllowed))
-		Expect(response.Result.Code).To(Equal(expectedStatusCode))
+		ExpectWithOffset(1, response).To(Not(BeNil()))
+		ExpectWithOffset(1, response.Allowed).To(Equal(expectedAllowed))
+		ExpectWithOffset(1, response.Result.Code).To(Equal(expectedStatusCode))
 		if expectedMsg != "" {
-			Expect(response.Result.Message).To(ContainSubstring(expectedMsg))
+			ExpectWithOffset(1, response.Result.Message).To(ContainSubstring(expectedMsg))
 		}
 		if expectedReason != "" {
-			Expect(string(response.Result.Reason)).To(ContainSubstring(expectedReason))
+			ExpectWithOffset(1, string(response.Result.Reason)).To(ContainSubstring(expectedReason))
 		}
-		Expect(response.Patches).To(BeEmpty())
+		ExpectWithOffset(1, response.Patches).To(BeEmpty())
 	}
 
 	Context("Shoots", func() {
@@ -222,17 +222,17 @@ jwt:
 		Context("Allow", func() {
 			It("has no KubeAPIServer config", func() {
 				shootv1beta1.Spec.Kubernetes.KubeAPIServer = nil
-				test(admissionv1.Create, nil, shootv1beta1, true, statusCodeAllowed, "shoot resource is not specifying any authentication configuration", "")
+				test(admissionv1.Create, nil, shootv1beta1, true, statusCodeAllowed, "Shoot resource does not specify any authentication configuration ConfigMap", "")
 			})
 
 			It("has no Structured Authentication", func() {
 				shootv1beta1.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication = nil
-				test(admissionv1.Create, nil, shootv1beta1, true, statusCodeAllowed, "shoot resource is not specifying any authentication configuration", "")
+				test(admissionv1.Create, nil, shootv1beta1, true, statusCodeAllowed, "Shoot resource does not specify any authentication configuration ConfigMap", "")
 			})
 
 			It("has no authentication configuration cm Ref", func() {
 				shootv1beta1.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication.ConfigMapName = ""
-				test(admissionv1.Create, nil, shootv1beta1, true, statusCodeAllowed, "shoot resource is not specifying any authentication configuration", "")
+				test(admissionv1.Create, nil, shootv1beta1, true, statusCodeAllowed, "Shoot resource does not specify any authentication configuration ConfigMap", "")
 			})
 
 			It("references a valid authenticationConfiguration (CREATE)", func() {
@@ -292,7 +292,7 @@ jwt:
 			It("referenced authenticationConfiguration name was removed (UPDATE)", func() {
 				newShoot := shootv1beta1.DeepCopy()
 				newShoot.Spec.Kubernetes.KubeAPIServer = nil
-				test(admissionv1.Update, shootv1beta1, newShoot, true, statusCodeAllowed, "shoot resource is not specifying any authentication configuration", "")
+				test(admissionv1.Update, shootv1beta1, newShoot, true, statusCodeAllowed, "Shoot resource does not specify any authentication configuration ConfigMap", "")
 			})
 
 			It("should not validate authenticationConfiguration if already marked for deletion (UPDATE)", func() {
@@ -319,14 +319,14 @@ jwt:
 				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: shootNamespace, Name: cmName}, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, _ *corev1.ConfigMap, _ ...client.GetOption) error {
 					return apierrors.NewNotFound(schema.GroupResource{Resource: "configmaps"}, cmName)
 				})
-				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInvalid, "could not retrieve configmap: configmaps \"fake-cm-name\" not found", "")
+				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInvalid, "referenced authentication configuration ConfigMap fake-cm-namespace/fake-cm-name does not exist: configmaps \"fake-cm-name\" not found", "")
 			})
 
 			It("fails getting cm", func() {
 				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: shootNamespace, Name: cmName}, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, _ *corev1.ConfigMap, _ ...client.GetOption) error {
 					return errors.New("fake")
 				})
-				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInternalError, "could not retrieve configmap: fake", "")
+				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInternalError, "could not retrieve authentication configuration ConfigMap fake-cm-namespace/fake-cm-name: fake", "")
 			})
 
 			It("references configmap without a config.yaml key", func() {
@@ -336,7 +336,7 @@ jwt:
 					}
 					return nil
 				})
-				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInvalid, "missing '.data[config.yaml]' in authentication configuration configmap", "")
+				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInvalid, "error getting authentication configuration from ConfigMap /: missing authentication configuration key in config.yaml ConfigMap data", "")
 			})
 
 			It("references authentication configuration which breaks validation rules", func() {
@@ -412,12 +412,12 @@ jwt:
 					shootInDifferentNamespaceAndReferencing.Namespace = shootNamespace + "other"
 					Expect(fakeClient.Create(ctx, shootInDifferentNamespaceAndReferencing)).To(Succeed())
 
-					test(admissionv1.Update, cm, cm, true, statusCodeAllowed, "configmap is not referenced by a Shoot", "")
+					test(admissionv1.Update, cm, cm, true, statusCodeAllowed, "ConfigMap is not referenced by a Shoot", "")
 				})
 
 				It("did not change config.yaml field", func() {
 					Expect(fakeClient.Create(ctx, shootv1beta1)).To(Succeed())
-					test(admissionv1.Update, cm, cm, true, statusCodeAllowed, "authentication configuration not changed", "")
+					test(admissionv1.Update, cm, cm, true, statusCodeAllowed, "authentication configuration did not change", "")
 				})
 
 				It("should allow if the authenticationConfiguration is changed to something valid", func() {
@@ -426,7 +426,7 @@ jwt:
 					newCm := cm.DeepCopy()
 					newCm.Data["config.yaml"] = anotherValidAuthenticationConfiguration
 
-					test(admissionv1.Update, cm, newCm, true, statusCodeAllowed, "configmap change is valid", "")
+					test(admissionv1.Update, cm, newCm, true, statusCodeAllowed, "referenced authentication configuration is valid", "")
 				})
 			})
 
@@ -438,13 +438,13 @@ jwt:
 				It("has no data key", func() {
 					newCm := cm.DeepCopy()
 					newCm.Data = nil
-					test(admissionv1.Update, cm, newCm, false, statusCodeInvalid, "missing '.data[config.yaml]' in authentication configuration configmap", "")
+					test(admissionv1.Update, cm, newCm, false, statusCodeInvalid, "error getting authentication configuration from ConfigMap fake-cm-namespace/fake-cm-name: missing authentication configuration key in config.yaml ConfigMap data", "")
 				})
 
 				It("has empty config.yaml", func() {
 					newCm := cm.DeepCopy()
 					newCm.Data["config.yaml"] = ""
-					test(admissionv1.Update, cm, newCm, false, statusCodeInvalid, "empty authentication configuration. Provide non-empty authentication configuration", "")
+					test(admissionv1.Update, cm, newCm, false, statusCodeInvalid, "error getting authentication configuration from ConfigMap fake-cm-namespace/fake-cm-name: authentication configuration in config.yaml key is empty", "")
 				})
 
 				It("holds authentication configuration which breaks validation rules", func() {
