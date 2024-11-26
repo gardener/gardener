@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -26,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
+	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -33,6 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/gardener/secretsrotation"
 	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 	"github.com/gardener/gardener/pkg/utils/gardener/tokenrequest"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 )
 
@@ -125,6 +128,11 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
 		}
 		o.Shoot.Networks = networks
+	}
+
+	nodeAgentAuthorizerWebhookReady, err := botanist.NodeAgentAuthorizerWebhookReady(ctx)
+	if err != nil {
+		return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
 	}
 
 	var (
@@ -337,6 +345,22 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			SkipIf:       o.Shoot.HibernationEnabled || skipReadiness,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
+		// TODO(oliver-goetz): Consider removing this two-step deployment once we only support Kubernetes 1.32+ (in this
+		//  version, the structured authorization feature has been promoted to GA). We already use structured authz for
+		//  1.30+ clusters. This is similar to kube-apiserver deployment in gardener-operator.
+		//  See https://github.com/gardener/gardener/pull/10682#discussion_r1816324389 for more information.
+		deployKubeAPIServerWithNodeAgentAuthorizer = g.Add(flow.Task{
+			Name:         "Deploying Kubernetes API server with node-agent-authorizer",
+			Fn:           flow.TaskFn(botanist.DeployKubeAPIServer).RetryUntilTimeout(defaultInterval, deployKubeAPIServerTaskTimeout),
+			SkipIf:       !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) || nodeAgentAuthorizerWebhookReady,
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
+		})
+		waitUntilKubeAPIServerWithNodeAgentAuthorizerIsReady = g.Add(flow.Task{
+			Name:         "Waiting until Kubernetes API server with node-agent-authorizer rolled out",
+			Fn:           botanist.Shoot.Components.ControlPlane.KubeAPIServer.Wait,
+			SkipIf:       !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) || o.Shoot.HibernationEnabled || nodeAgentAuthorizerWebhookReady || skipReadiness,
+			Dependencies: flow.NewTaskIDs(deployKubeAPIServerWithNodeAgentAuthorizer),
+		})
 		_ = g.Add(flow.Task{
 			Name: "Renewing shoot access secrets after creation of new ServiceAccount signing key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
@@ -346,13 +370,13 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 				)
 			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       v1beta1helper.GetShootServiceAccountKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) != gardencorev1beta1.RotationPreparing,
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, waitUntilGardenerResourceManagerReady),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerWithNodeAgentAuthorizerIsReady, waitUntilGardenerResourceManagerReady),
 		})
 		deployControlPlane = g.Add(flow.Task{
 			Name:         "Deploying shoot control plane components",
 			Fn:           flow.TaskFn(botanist.DeployControlPlane).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       o.Shoot.IsWorkerless,
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, waitUntilGardenerResourceManagerReady),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerWithNodeAgentAuthorizerIsReady, waitUntilGardenerResourceManagerReady),
 		})
 		waitUntilControlPlaneReady = g.Add(flow.Task{
 			Name: "Waiting until shoot control plane has been reconciled",
@@ -382,13 +406,13 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Name:         "Deploying vpn-seed-server",
 			Fn:           flow.TaskFn(botanist.DeployVPNServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       o.Shoot.IsWorkerless,
-			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployNamespace, waitUntilKubeAPIServerIsReady),
+			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployNamespace, waitUntilKubeAPIServerWithNodeAgentAuthorizerIsReady),
 		})
 		deployControlPlaneExposure = g.Add(flow.Task{
 			Name:         "Deploying shoot control plane exposure components",
 			Fn:           flow.TaskFn(botanist.DeployControlPlaneExposure).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       o.Shoot.IsWorkerless || useDNS,
-			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerIsReady),
+			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerWithNodeAgentAuthorizerIsReady),
 		})
 		waitUntilControlPlaneExposureReady = g.Add(flow.Task{
 			Name: "Waiting until Shoot control plane exposure has been reconciled",
@@ -404,7 +428,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 				return botanist.Shoot.Components.Extensions.ControlPlaneExposure.Destroy(ctx)
 			}),
 			SkipIf:       o.Shoot.IsWorkerless || !useDNS,
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerWithNodeAgentAuthorizerIsReady),
 		})
 		waitUntilControlPlaneExposureDeleted = g.Add(flow.Task{
 			Name: "Waiting until shoot control plane exposure has been destroyed",
@@ -422,7 +446,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		initializeShootClients = g.Add(flow.Task{
 			Name:         "Initializing connection to Shoot",
 			Fn:           flow.TaskFn(botanist.InitializeDesiredShootClients).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, waitUntilControlPlaneExposureReady, waitUntilControlPlaneExposureDeleted, deployInternalDomainDNSRecord, deployGardenerAccess),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerWithNodeAgentAuthorizerIsReady, waitUntilControlPlaneExposureReady, waitUntilControlPlaneExposureDeleted, deployInternalDomainDNSRecord, deployGardenerAccess),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Sync public service account signing keys to Garden cluster",
@@ -506,7 +530,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		deployKubeControllerManager = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes controller manager",
 			Fn:           flow.TaskFn(botanist.DeployKubeControllerManager).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployCloudProviderSecret, waitUntilKubeAPIServerIsReady),
+			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployCloudProviderSecret, waitUntilKubeAPIServerWithNodeAgentAuthorizerIsReady),
 		})
 		waitUntilKubeControllerManagerReady = g.Add(flow.Task{
 			Name:         "Waiting until kube-controller-manager reports readiness",
@@ -813,11 +837,20 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			SkipIf:       o.Shoot.IsWorkerless || o.Shoot.HibernationEnabled || skipReadiness,
 			Dependencies: flow.NewTaskIDs(syncPointAllSystemComponentsDeployed, waitUntilNetworkIsReady, waitUntilWorkerReady),
 		})
-		_ = g.Add(flow.Task{
+		waitUntilOperatingSystemConfigUpdated = g.Add(flow.Task{
 			Name:         "Waiting until all shoot worker nodes have updated the operating system config",
 			Fn:           botanist.WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools,
 			SkipIf:       o.Shoot.IsWorkerless || o.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady, waitUntilTunnelConnectionExists),
+		})
+		// TODO(oliver-goetz): Remove this when removing NodeAgentAuthorizer feature gate.
+		_ = g.Add(flow.Task{
+			Name: "Delete gardener-node-agent shoot access secret because NodeAgentAuthorizer feature gate is enabled",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return deleteGardenerNodeAgentShootAccess(ctx, o)
+			}),
+			SkipIf:       !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) || o.Shoot.IsWorkerless || o.Shoot.HibernationEnabled,
+			Dependencies: flow.NewTaskIDs(waitUntilOperatingSystemConfigUpdated),
 		})
 		deployAlertmanager = g.Add(flow.Task{
 			Name:         "Reconciling Shoot Alertmanager",
@@ -1003,4 +1036,32 @@ func removeTaskAnnotation(ctx context.Context, o *operation.Operation, generatio
 		controllerutils.RemoveTasks(shoot.Annotations, tasksToRemove...)
 		return nil
 	})
+}
+
+// TODO(oliver-goetz): Remove this when removing NodeAgentAuthorizer feature gate.
+func deleteGardenerNodeAgentShootAccess(ctx context.Context, o *operation.Operation) error {
+	if err := kubernetesutils.DeleteObject(
+		ctx,
+		o.SeedClientSet.Client(),
+		gardenerutils.NewShootAccessSecret(nodeagentv1alpha1.AccessSecretName, o.Shoot.SeedNamespace).Secret,
+	); err != nil {
+		return fmt.Errorf("failed to delete gardener-node-agent shoot access secret in seed namespace: %w", err)
+	}
+
+	return kubernetesutils.DeleteObjects(
+		ctx,
+		o.ShootClientSet.Client(),
+		&corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      nodeagentv1alpha1.AccessSecretName,
+				Namespace: metav1.NamespaceSystem,
+			},
+		},
+		&corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      nodeagentv1alpha1.AccessSecretName,
+				Namespace: metav1.NamespaceSystem,
+			},
+		},
+	)
 }

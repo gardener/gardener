@@ -322,6 +322,8 @@ type Values struct {
 	// operating system configs on nodes. When this is provided, the respective controller is enabled in
 	// resource-manager.
 	NodeAgentReconciliationMaxDelay *metav1.Duration
+	// NodeAgentAuthorizerEnabled specifies if node-agent-authorizer webhook should be enabled
+	NodeAgentAuthorizerEnabled bool
 }
 
 func (r *resourceManager) Deploy(ctx context.Context) error {
@@ -562,6 +564,9 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 			ProjectedTokenMount: resourcemanagerv1alpha1.ProjectedTokenMountWebhookConfig{
 				Enabled: true,
 			},
+			NodeAgentAuthorizer: resourcemanagerv1alpha1.NodeAgentAuthorizerWebhookConfig{
+				Enabled: r.values.NodeAgentAuthorizerEnabled,
+			},
 			SeccompProfile: resourcemanagerv1alpha1.SeccompProfileWebhookConfig{
 				Enabled: r.values.DefaultSeccompProfileEnabled,
 			},
@@ -570,6 +575,9 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 
 	if r.values.WatchedNamespace != nil {
 		config.SourceClientConnection.Namespaces = []string{*r.values.WatchedNamespace}
+		if r.values.NodeAgentAuthorizerEnabled {
+			config.Webhooks.NodeAgentAuthorizer.MachineNamespace = *r.values.WatchedNamespace
+		}
 	}
 
 	if r.values.TargetDiffersFromSourceCluster {

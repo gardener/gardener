@@ -12,5 +12,5 @@ import (
 
 // RegisterFeatureGates registers the feature gates of gardener-node-agent.
 func RegisterFeatureGates() {
-	utilruntime.Must(features.DefaultFeatureGate.Add(features.GetFeatures()))
+	utilruntime.Must(features.DefaultFeatureGate.Add(features.GetFeatures(features.NodeAgentAuthorizer)))
 }

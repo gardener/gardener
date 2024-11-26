@@ -2,19 +2,16 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package nodeagent_test
+package certificatesigningrequest_test
 
 import (
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
-	"github.com/gardener/gardener/pkg/gardenlet/features"
 )
 
-func TestNodeAgent(t *testing.T) {
-	features.RegisterFeatureGates()
+func TestCSR(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Component Extensions OperatingSystemConfig Original Components NodeAgent Suite")
+	RunSpecs(t, "Utils Kubernetes CertificateSigningRequest Suite")
 }

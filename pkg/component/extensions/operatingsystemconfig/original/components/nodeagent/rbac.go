@@ -11,8 +11,10 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
+	"github.com/gardener/gardener/pkg/features"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
@@ -22,6 +24,7 @@ import (
 // Kubernetes TLS bootstrapping process will be returned.
 func RBACResourcesData(secretNames []string) (map[string][]byte, error) {
 	var (
+		// TODO(oliver-goetz): Remove when NodeAgentAuthorizer feature gate is going to be removed
 		clusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener-node-agent",
@@ -40,6 +43,7 @@ func RBACResourcesData(secretNames []string) (map[string][]byte, error) {
 			},
 		}
 
+		// TODO(oliver-goetz): Remove when NodeAgentAuthorizer feature gate is going to be removed
 		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener-node-agent",
@@ -56,6 +60,7 @@ func RBACResourcesData(secretNames []string) (map[string][]byte, error) {
 			}},
 		}
 
+		// TODO(oliver-goetz): Remove when NodeAgentAuthorizer feature gate is going to be removed
 		role = &rbacv1.Role{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "gardener-node-agent",
@@ -76,6 +81,7 @@ func RBACResourcesData(secretNames []string) (map[string][]byte, error) {
 			},
 		}
 
+		// TODO(oliver-goetz): Remove when NodeAgentAuthorizer feature gate is going to be removed
 		roleBinding = &rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "gardener-node-agent",
@@ -147,6 +153,29 @@ func RBACResourcesData(secretNames []string) (map[string][]byte, error) {
 			}},
 		}
 	)
+
+	if features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) {
+		// When the feature gate is enabled, gardener-node-agent service account needs permissions to create an CSR on
+		// existing nodes for migration.
+		clusterRole.Rules = append(clusterRole.Rules, rbacv1.PolicyRule{
+			APIGroups: []string{"certificates.k8s.io"},
+			Resources: []string{"certificatesigningrequests"},
+			Verbs:     []string{"create", "get"},
+		})
+	} else {
+		// For the case that NodeAgentAuthorizer feature gate is disabled again node-agents group have to be added to
+		// (cluster) role binding that node-agents which are already migrated do not lose access.
+		clusterRoleBinding.Subjects = append(clusterRoleBinding.Subjects, rbacv1.Subject{
+			APIGroup: rbacv1.SchemeGroupVersion.Group,
+			Kind:     rbacv1.GroupKind,
+			Name:     v1beta1constants.NodeAgentsGroup,
+		})
+		roleBinding.Subjects = append(roleBinding.Subjects, rbacv1.Subject{
+			APIGroup: rbacv1.SchemeGroupVersion.Group,
+			Kind:     rbacv1.GroupKind,
+			Name:     v1beta1constants.NodeAgentsGroup,
+		})
+	}
 
 	return managedresources.
 		NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer).

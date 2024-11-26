@@ -15,6 +15,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
+	"github.com/gardener/gardener/pkg/features"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 )
@@ -73,6 +74,7 @@ WantedBy=multi-user.target`),
 						// machine, and it will replace this "magic" string with the actual token in the user data. See
 						// https://github.com/gardener/gardener/blob/master/docs/extensions/resources/operatingsystemconfig.md#bootstrap-tokens
 						// for more details.
+						// TODO(oliver-goetz): Replace string with constant when machine-controller-manager v0.55.0 is released.
 						Data: "<<BOOTSTRAP_TOKEN>>",
 					},
 					TransmitUnencoded: ptr.To(true),
@@ -90,6 +92,24 @@ WantedBy=multi-user.target`),
 			},
 		}
 	)
+
+	if features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) {
+		nodeInitFiles = append(nodeInitFiles,
+			extensionsv1alpha1.File{
+				Path:        nodeagentv1alpha1.MachineNameFilePath,
+				Permissions: ptr.To[uint32](0640),
+				Content: extensionsv1alpha1.FileContent{
+					Inline: &extensionsv1alpha1.FileContentInline{
+						// The machine name will be created by the machine-controller-manager when creating an actual
+						// machine, and it will replace this "magic" string with the machine name in the user data.
+						// This works similar to the replacement of <<BOOTSTRAP_TOKEN>>.
+						// TODO(oliver-goetz): Replace string with constant when machine-controller-manager v0.55.0 is released.
+						Data: "<<MACHINE_NAME>>",
+					},
+					TransmitUnencoded: ptr.To(true),
+				},
+			})
+	}
 
 	// The gardener-node-init script above will bootstrap the gardener-node-agent. This means that the unit file for
 	// the gardener-node-agent unit will be written and eventually started (whilst gardener-node-init disables and stops

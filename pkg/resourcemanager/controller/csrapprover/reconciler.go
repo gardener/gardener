@@ -249,8 +249,12 @@ func (r *Reconciler) mustApproveKubeAPIServerClient(ctx context.Context, csr *ce
 
 	switch {
 	case strings.HasPrefix(csr.Spec.Username, "system:bootstrap:"):
-		if _, found := machine.Labels[machinev1alpha1.NodeLabelKey]; found {
-			return fmt.Sprintf("Cannot use bootstrap token since gardener-node-agent for machine %q is already bootstrapped", machineName), csrDenied, nil
+		if nodeName, found := machine.Labels[machinev1alpha1.NodeLabelKey]; found {
+			if err := r.TargetClient.Get(ctx, client.ObjectKey{Name: nodeName}, &corev1.Node{}); err == nil {
+				return fmt.Sprintf("Cannot use bootstrap token since gardener-node-agent for machine %q is already bootstrapped", machineName), csrDenied, nil
+			} else if !apierrors.IsNotFound(err) {
+				return "", csrNoOpinion, fmt.Errorf("error getting node object with name %q: %w", nodeName, err)
+			}
 		}
 	case strings.HasPrefix(csr.Spec.Username, v1beta1constants.NodeAgentUserNamePrefix):
 		if csr.Spec.Username != x509cr.Subject.CommonName {

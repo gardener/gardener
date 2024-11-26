@@ -119,6 +119,7 @@ func NewTargetGardenerResourceManager(
 	isWorkerless bool,
 	targetNamespaces []string,
 	nodeAgentReconciliationMaxDelay *metav1.Duration,
+	nodeAgentAuthorizerEnabled bool,
 ) (
 	resourcemanager.Interface,
 	error,
@@ -158,6 +159,7 @@ func NewTargetGardenerResourceManager(
 		TopologyAwareRoutingEnabled:          topologyAwareRoutingEnabled,
 		IsWorkerless:                         isWorkerless,
 		NodeAgentReconciliationMaxDelay:      nodeAgentReconciliationMaxDelay,
+		NodeAgentAuthorizerEnabled:           nodeAgentAuthorizerEnabled,
 	}
 
 	return resourcemanager.New(

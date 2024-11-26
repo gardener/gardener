@@ -147,6 +147,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			DBus:          fakeDBus,
 			FS:            fakeFS,
 			HostName:      hostName,
+			NodeName:      node.Name,
 			Extractor:     fakeregistry.NewExtractor(fakeFS, imageMountDirectory),
 			CancelContext: cancelFunc.cancel,
 		}).AddToManager(ctx, mgr)).To(Succeed())

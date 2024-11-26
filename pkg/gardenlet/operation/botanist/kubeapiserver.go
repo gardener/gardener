@@ -9,10 +9,15 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	apiserverv1beta1 "k8s.io/apiserver/pkg/apis/apiserver/v1beta1"
+	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -22,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/component/apiserver"
+	resourcemanagerconstants "github.com/gardener/gardener/pkg/component/gardener/resourcemanager/constants"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/features"
@@ -158,6 +164,50 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	serviceAccountConfig, err := b.computeKubeAPIServerServiceAccountConfig(externalHostname)
 	if err != nil {
 		return err
+	}
+
+	if features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) {
+		nodeAgentAuthorizerWebhookReady, err := b.NodeAgentAuthorizerWebhookReady(ctx)
+		if err != nil {
+			return err
+		}
+
+		if nodeAgentAuthorizerWebhookReady {
+			caSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
+			if !found {
+				return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
+			}
+
+			kubeconfig, err := runtime.Encode(clientcmdlatest.Codec, kubernetesutils.NewKubeconfig(
+				"authorization-webhook",
+				clientcmdv1.Cluster{
+					Server:                   fmt.Sprintf("https://%s/webhooks/auth/nodeagent", resourcemanagerconstants.ServiceName),
+					CertificateAuthorityData: caSecret.Data[secretsutils.DataKeyCertificateBundle],
+				},
+				clientcmdv1.AuthInfo{},
+			))
+			if err != nil {
+				return fmt.Errorf("failed generating authorization webhook kubeconfig: %w", err)
+			}
+
+			b.Shoot.Components.ControlPlane.KubeAPIServer.AppendAuthorizationWebhook(
+				kubeapiserver.AuthorizationWebhook{
+					Name:       "node-agent-authorizer",
+					Kubeconfig: kubeconfig,
+					WebhookConfiguration: apiserverv1beta1.WebhookConfiguration{
+						AuthorizedTTL:                            metav1.Duration{Duration: 0},
+						UnauthorizedTTL:                          metav1.Duration{Duration: 0},
+						Timeout:                                  metav1.Duration{Duration: 10 * time.Second},
+						FailurePolicy:                            apiserverv1beta1.FailurePolicyDeny,
+						SubjectAccessReviewVersion:               "v1",
+						MatchConditionSubjectAccessReviewVersion: "v1",
+						MatchConditions: []apiserverv1beta1.WebhookMatchCondition{{
+							// Only intercept request node-agents
+							Expression: fmt.Sprintf("'%s' in request.groups", v1beta1constants.NodeAgentsGroup),
+						}},
+					},
+				})
+		}
 	}
 
 	if err := shared.DeployKubeAPIServer(
