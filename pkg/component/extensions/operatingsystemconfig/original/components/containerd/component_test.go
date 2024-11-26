@@ -28,6 +28,11 @@ var _ = Describe("Component", func() {
 
 			Expect(err).NotTo(HaveOccurred())
 
+			containerdUnit := extensionsv1alpha1.Unit{
+				Name:      "containerd.service",
+				FilePaths: []string{"/var/lib/ca-certificates-local/ROOTcerts.crt"},
+			}
+
 			monitorUnit := extensionsv1alpha1.Unit{
 				Name:    "containerd-monitor.service",
 				Command: ptr.To(extensionsv1alpha1.CommandStart),
@@ -91,7 +96,7 @@ WantedBy=multi-user.target`),
 				},
 			}
 
-			Expect(units).To(ConsistOf(monitorUnit, logrotateUnit, logrotateTimerUnit))
+			Expect(units).To(ConsistOf(containerdUnit, monitorUnit, logrotateUnit, logrotateTimerUnit))
 			Expect(files).To(ConsistOf(monitorFile, logrotateConfigFile))
 		})
 	})
