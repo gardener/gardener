@@ -14,8 +14,6 @@ The `spec.kubernetes.kubeAPIServer.encryptionConfig` field in the Shoot API allo
 - Adding an item to this list will cause patch requests for all the resources of that kind to encrypt them in the etcd. See [Encrypting Confidential Data at Rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data) for more details.
 - Removing an item from this list will cause patch requests for all the resources of that type to decrypt and rewrite the resource as plain text. See [Decrypt Confidential Data that is Already Encrypted at Rest](https://kubernetes.io/docs/tasks/administer-cluster/decrypt-data/) for more details.
 
-> ℹ️ Note that configuring encryption for a custom resource is only supported for Kubernetes versions >= 1.26.
-
 ## Example Usage in a `Shoot`
 
 ```yaml

@@ -344,7 +344,6 @@ func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden,
 	return sharedcomponent.NewRuntimeGardenerResourceManager(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
-		r.RuntimeVersion,
 		secretsManager,
 		r.Config.LogLevel, r.Config.LogFormat,
 		operatorv1alpha1.SecretNameCARuntime,
@@ -367,7 +366,6 @@ func (r *Reconciler) newVirtualGardenGardenerResourceManager(secretsManager secr
 		nil,
 		nil,
 		nil,
-		r.RuntimeVersion,
 		r.Config.LogLevel, r.Config.LogFormat,
 		namePrefix,
 		false,
@@ -488,7 +486,6 @@ func (r *Reconciler) newEtcd(
 			StorageClassName:            storageClassName,
 			DefragmentationSchedule:     &defragmentationSchedule,
 			CARotationPhase:             helper.GetCARotationPhase(garden.Status.Credentials),
-			RuntimeKubernetesVersion:    r.RuntimeVersion,
 			MaintenanceTimeWindow:       garden.Spec.VirtualCluster.Maintenance.TimeWindow,
 			EvictionRequirement:         evictionRequirement,
 			PriorityClassName:           v1beta1constants.PriorityClassNameGardenSystem500,
@@ -615,7 +612,6 @@ func (r *Reconciler) newKubeAPIServer(
 		kubeapiserver.VPNConfig{Enabled: false},
 		v1beta1constants.PriorityClassNameGardenSystem500,
 		true,
-		ptr.To(false),
 		auditWebhookConfig,
 		authenticationWebhookConfig,
 		authorizationWebhookConfigs,
@@ -975,7 +971,6 @@ func (r *Reconciler) newGardenerAdmissionController(garden *operatorv1alpha1.Gar
 	values := gardeneradmissioncontroller.Values{
 		Image:                       image.String(),
 		LogLevel:                    logger.InfoLevel,
-		RuntimeVersion:              r.RuntimeVersion,
 		SeedRestrictionEnabled:      enableSeedRestriction,
 		TopologyAwareRoutingEnabled: helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
 	}
@@ -998,9 +993,8 @@ func (r *Reconciler) newGardenerControllerManager(garden *operatorv1alpha1.Garde
 	image.WithOptionalTag(version.Get().GitVersion)
 
 	values := gardenercontrollermanager.Values{
-		Image:          image.String(),
-		LogLevel:       logger.InfoLevel,
-		RuntimeVersion: r.RuntimeVersion,
+		Image:    image.String(),
+		LogLevel: logger.InfoLevel,
 	}
 
 	if config := garden.Spec.VirtualCluster.Gardener.ControllerManager; config != nil {
@@ -1028,9 +1022,8 @@ func (r *Reconciler) newGardenerScheduler(garden *operatorv1alpha1.Garden, secre
 	image.WithOptionalTag(version.Get().GitVersion)
 
 	values := gardenerscheduler.Values{
-		Image:          image.String(),
-		LogLevel:       logger.InfoLevel,
-		RuntimeVersion: r.RuntimeVersion,
+		Image:    image.String(),
+		LogLevel: logger.InfoLevel,
 	}
 
 	if config := garden.Spec.VirtualCluster.Gardener.Scheduler; config != nil {
@@ -1052,7 +1045,6 @@ func (r *Reconciler) newGardenerDashboard(garden *operatorv1alpha1.Garden, secre
 	values := gardenerdashboard.Values{
 		Image:            image.String(),
 		LogLevel:         logger.InfoLevel,
-		RuntimeVersion:   r.RuntimeVersion,
 		APIServerURL:     gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0].Name),
 		EnableTokenLogin: true,
 		Ingress: gardenerdashboard.IngressValues{
@@ -1107,7 +1099,6 @@ func (r *Reconciler) newTerminalControllerManager(garden *operatorv1alpha1.Garde
 
 	values := terminal.Values{
 		Image:                       image.String(),
-		RuntimeVersion:              r.RuntimeVersion,
 		TopologyAwareRoutingEnabled: helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
 	}
 
@@ -1295,10 +1286,9 @@ func (r *Reconciler) newBlackboxExporter(garden *operatorv1alpha1.Garden, secret
 		secretsManager,
 		r.GardenNamespace,
 		blackboxexporter.Values{
-			ClusterType:       component.ClusterTypeSeed,
-			IsGardenCluster:   true,
-			VPAEnabled:        true,
-			KubernetesVersion: r.RuntimeVersion,
+			ClusterType:     component.ClusterTypeSeed,
+			IsGardenCluster: true,
+			VPAEnabled:      true,
 			PodLabels: map[string]string{
 				v1beta1constants.LabelNetworkPolicyToPublicNetworks: v1beta1constants.LabelNetworkPolicyAllowed,
 				v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
@@ -1331,7 +1321,6 @@ func (r *Reconciler) newGardenerDiscoveryServer(
 		secretsManager,
 		gardenerdiscoveryserver.Values{
 			Image:                       image.String(),
-			RuntimeVersion:              r.RuntimeVersion,
 			Domain:                      domain,
 			TLSSecretName:               wildcardCertSecretName,
 			WorkloadIdentityTokenIssuer: workloadIdentityTokenIssuer,

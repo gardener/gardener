@@ -90,8 +90,7 @@ var _ = Describe("ManagedSeed", func() {
 						Domain: ptr.To(domain),
 					},
 					Kubernetes: gardencorev1beta1.Kubernetes{
-						EnableStaticTokenKubeconfig: ptr.To(true),
-						Version:                     "1.27.5",
+						Version: "1.27.5",
 						VerticalPodAutoscaler: &gardencorev1beta1.VerticalPodAutoscaler{
 							Enabled: true,
 						},

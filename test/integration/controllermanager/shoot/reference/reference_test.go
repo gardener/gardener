@@ -81,7 +81,7 @@ var _ = Describe("Shoot Reference controller tests", func() {
 					},
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{
-					Version: "1.30.1",
+					Version: "1.31.1",
 					KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
 						AdmissionPlugins: []gardencorev1beta1.AdmissionPlugin{{
 							Name:                 "ValidatingAdmissionWebhook",
