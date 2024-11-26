@@ -35,26 +35,23 @@ reviewers:
 - [Alternatives](#alternatives)
 
 ## Summary
-This proposal addresses a critical security vulnerability in the Gardener's API server proxy configuration when used with opaque or intransparent LoadBalancers, particularly in conjunction with the ACL extension. The issue involves the potential for dual proxy protocol headers, which can lead to misrouting, information leakage, and possible unauthorized access attempts. The proposed solution is to implement a custom header for secure routing using HTTP CONNECT (as currently used by the VPN listener), introduce a new port or path for API traffic, and gradually transition to this system through a feature gate.
+This proposal introduces secure routing mechanisms for Gardener's API server proxy to prevent security vulnerabilities when using opaque LoadBalancers.
 
 ## Motivation
-The current architecture of Gardener, when used with opaque/instransparent LoadBalancer configurations and the ACL extension, can result in a security vulnerability. This vulnerability stems from the addition of multiple proxy protocol headers to network packets, which can lead to:
+The current architecture of Gardener, when used with opaque/instransparent LoadBalancer configurations and the ACL extension, can result in a security vulnerability. This vulnerability stems from the addition of multiple proxy protocol headers to network packets, which can lead to possible unauthorized access attempts to incorrect kube-api servers.
 
-1. Misrouting of traffic
-2. Potential information leakage
-3. Possible unauthorized access attempts to incorrect kube-api servers
+Alternatively, reducing the number of supported connection architectures by removing the proxy protocol method would simplify the system. The remaining two architectures already utilize HTTP CONNECT and are inherently immune to these security concerns, making them more reliable choices for secure communication.
+
+The proposed solution involves implementing a custom header for secure routing using HTTP CONNECT (as currently used by the VPN listener), introducing a new port or path for API traffic, and gradually transitioning to this system through a feature gate.
 
 ### Goals
 - Eliminate the vulnerability caused by dual proxy protocol headers
 - Ensure secure routing of traffic to the correct API server
 - Provide a clear migration path for existing Gardener deployments
-- Maintain or improve the overall performance and reliability of the system
-- Allow `gardener-extension-acl` to be used with proxy protocol on (non-transparent) LoadBalancers
+- Allow [`gardener-extension-acl`](https://github.com/stackitcloud/gardener-extension-acl) to be used with proxy protocol on (non-transparent) LoadBalancers
 
 ### Non-Goals
 - Modifying the core functionality of the ACL extension
-- Addressing security issues unrelated to the proxy protocol headers and API server routing
-- Reusing existing VPN or tunnel-related infrastructure
 
 ## Proposal
 
@@ -67,24 +64,37 @@ The proposed solution involves the following key changes:
 - Develop a feature gate to control the rollout of the new routing mechanism
 - Provide a phased implementation approach for gradual adoption
 
-## Current Architecture
-With the current architecture, the `apiserver-proxy` creates a proxy protocol header, which gets forwarded by the LoadBalancer towards the `istio-ingressgateway`.
+## Concerns with the [Current Architecture](./11-apiserver-network-proxy.md)
+The `apiserver-proxy` creates a proxy protocol header for each connection, containing information about the source and destination of the traffic. This header gets forwarded by the LoadBalancer towards the `istio-ingressgateway`.
 
-A second proxy protocol header is created by the LoadBalancer, which is configured through the ACL extension.
-At this point, we need the destination IP address from the `apiserver-proxy` proxy protocol header and the source IP from the LoadBalancer proxy protocol header.
+A second proxy protocol header may be created when:
+- The LoadBalancer is configured through the [ACL extension](https://github.com/stackitcloud/gardener-extension-acl)
+- The LoadBalancer is operating in an opaque/intransparent mode
+- Proxy protocol is explicitly enabled in the LoadBalancer configuration
 
-Unfortunately, the `istio-ingressgateway` will read the first proxy protocol header and then overwrites the information with the second proxy protocol header and only uses these source and destination IP addresses.
+In cases where dual proxy protocol headers exist, we require specific information from each header:
+- The destination IP address from the `apiserver-proxy`'s proxy protocol header
+- The source IP address from the LoadBalancer's proxy protocol header
 
-These source IP addresses will be used for filtering allowed traffic.
+However, the `istio-ingressgateway` processes these headers sequentially, reading the first proxy protocol header and then overwriting its information with the second proxy protocol header. This behavior means only the information from the second header is ultimately used for traffic filtering decisions in the [ACL extension](https://github.com/stackitcloud/gardener-extension-acl).
 
-Instead of the public IP address from the router *(here 10.1.0.1)* it will allow traffic from the client-pod *(here 10.3.0.1)*. This causes other clients in other shoots with the same IP address to bypass the list of allowed clients by the ACL extension and cause unauthorized requests to the `kube-apiserver`.
+This situation becomes problematic under these conditions:
+- When [ACL extension](https://github.com/stackitcloud/gardener-extension-acl) is actively filtering traffic based on source IP addresses
+- When multiple shoot clusters are using overlapping private IP ranges
+- When the LoadBalancer is not maintaining the original client source IP information
+
+The issue does not impact environments where:
+- The LoadBalancer operates in transparent mode
+- Only a single proxy protocol header is present
+- Alternative authentication methods are the primary security control
+- Client IP ranges are strictly segregated between shoots
 
 ![Current State with opaque LB](./assets/30-current-architecture.png "Current State with opaque LB")
 
 ## Proposed Changes
 
 1. Custom Header Implementation
-    - Introduce a new custom header, e.g. `X-Gardener-API-Route`
+    - Introduce a new custom header `X-Gardener-API-Route`
     - Define the structure and encoding of the header value to include necessary routing information
 
 2. New Port/Path
@@ -105,11 +115,8 @@ Instead of the public IP address from the router *(here 10.1.0.1)* it will allow
     - Phase 2: Gradually reconfigure shoots to use the new routing method
     - Phase 3: Deprecate and remove the old routing method
 
-6. Component Reconfigurations:
-    - Modify `istio-ingressgateway` to process the new header and route traffic accordingly
-    - Update `apiserver-proxy` to add the new custom header
-
-![Proposed Architecture](./assets/30-proposed-architecture.png "Proposed Architecture")
+![Proposed Architecture](./assets/30-proposed-architecture-http-connect.png "Proposed Architecture")
+![Proposed Architecture](./assets/30-proposed-architecture-tls.png "Proposed Architecture")
     
     
 ## Custom Header Specification
@@ -122,15 +129,6 @@ X-Gardener-API-Route: <routing-information>
 
 The routing information will be a concatenated string, joined by pipes, containing the following fields:
 
-```json
-{
-  "direction": "outbound",
-  "port": "8134",
-  "subset": null,
-  "destination": "kube-apiserver.{{ .namespace }}.svc.cluster.local"
-}
-```
-
 - `direction`: The direction of traffic.
 - `port`: The destination port.
 - `subset`: Istio subset/version.
@@ -138,14 +136,7 @@ The routing information will be a concatenated string, joined by pipes, containi
 
 Putting this to practice should result in a header formatted like this:
 
-`X-Gardener-API-Route: outbound|8134||kube-apiserver.{{ .namespace }}.svc.cluster.local`
-
-Or formatted in YAML in a potential deployment manifest
-
-```yaml
-- name: X-Gardener-API-Route
-  value: outbound|8134||kube-apiserver.{{ .namespace }}.svc.cluster.local
-```
+`X-Gardener-API-Route: outbound|8134||kube-apiserver.foobar.svc.cluster.local`
 
 During the transition period, the system should be able to handle both the new custom header and the existing routing method. This can be controlled via the feature gate.
 
@@ -157,7 +148,7 @@ The `apiserver-proxy` will be reconfigured to use HTTP CONNECT for establishing 
 
 1. Initiating an HTTP CONNECT request to the new port/path on the `istio-ingressgateway`
 2. Including the new custom header in the CONNECT request
-3. Establishing a secure tunnel once the CONNECT request is accepted
+3. Creating a secure connection over the established tunnel once the CONNECT request is accepted
 4. Forwarding the original API server request through this secure tunnel
 
 ### Technical Implementation Details
@@ -197,7 +188,6 @@ spec:
     istio: ingressgateway
   servers:
     ...
-    ...
 ---
 apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
@@ -205,7 +195,6 @@ metadata:
   name: api-routes
   namespace: istio-system
 spec:
-  ...
   ...
   gateways:
   - api-gateway
@@ -216,7 +205,6 @@ spec:
       headers:
         X-Gardener-API-Route:
           regex: ".*"
-    ...
     ...
 ```
 
@@ -258,60 +246,23 @@ spec:
 The implementation will be controlled by two distinct feature gates that handle different aspects of the solution. Each feature gate can be disabled per shoot to allow testing of the old implementation via E2E tests.
 
 ### Feature Gate 1: `APIServerSecureRouting`
-Controls the enablement of the new routing implementation using HTTP CONNECT and custom headers.
+Controls whether shoots use the new secure routing implementation with HTTP CONNECT and custom headers.
 
-#### Alpha
-- **Default:** Disabled
-- **Actions:**
-    - Introduces new port for HTTP CONNECT
-    - Deploys new custom header processing
-    - Configures mTLS for new routing path
-    - Enables E2E testing of the feature
-    - Implementation of all unit and integration tests
-    - Documentation completion
-
-#### Beta
-- **Default:** Enabled
-- New shoots automatically use new implementation
-- Existing shoots continue using old implementation
-
-#### GA
-- **Default:** Always enabled
-- All shoots use new implementation
-- Existing shoots automatically migrated during reconciliation
+**Rollout Plan:**
+- Initially introduced as disabled by default
+- Once stability is proven in production environments, enabled by default for new shoots
+- Existing shoots will retain their previous setting until explicitly migrated
+- When fully proven, the feature gate will be removed and the functionality will become permanent
 
 ### Feature Gate 2: `APIServerLegacyPortDisable`
-Controls the disabling of the legacy port. Can only progress once `APIServerSecureRouting` is GA.
+Controls whether the legacy port is available. This feature gate can only be enabled after `APIServerSecureRouting` has been fully rolled out.
 
-#### Alpha
-- **Default:** Disabled
-- **Prerequisites:**
-    - Feature gate `APIServerSecureRouting` is in GA state
-    - All monitored shoots successfully using the new implementation
-- **Actions:**
-    - Marks port as deprecated
-    - Implementation of E2E tests with legacy port disabled
-
-#### Beta
-- **Default:** Enabled
-- Automatically closes legacy port for new shoots
-- Existing shoots prompted for migration during reconciliation
-
-#### GA
-- **Default:** Always enabled
-- Legacy port completely disabled
-- All configuration for legacy port removed
-
-### Testing Strategy
-- Feature gates can be switched off per shoot to allow testing of the old implementation
-- E2E tests will cover both new and old implementations
-- All testing functionality is implemented and validated in alpha phase
+**Rollout Plan:**
+- Introduced as disabled by default
+- Once all shoots have migrated to secure routing, enabled by default for new shoots
+- Existing shoots will be notified to migrate during reconciliation
+- When migration is complete, the feature gate will be removed and the legacy port will be permanently disabled
 
 ## Alternatives
 
-- Implement stricter filtering of proxy protocol headers at the istio-ingress gateway level
-- Use a custom LoadBalancer solution that is transparent or aware of the Gardener architecture
-
-In all seriousness, we are not aware of any other or real alternative solution to address this issue.
-
----
+We are not aware of any other alternative solution to address this issue, as requiring a transparent Load Balancer for Gardener is no solution.
