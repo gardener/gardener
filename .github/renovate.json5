@@ -32,6 +32,7 @@
         '^example/.+\\.yaml$',
         '^hack/.+\\.yaml$',
         '^\\.test-defs/.+\\.yaml$',
+        '^charts/.+\\.yaml$',
       ],
       matchStrings: [
         'image: ["|\']?(?<depName>.*?):(?<currentValue>.*?)["|\']?\\s',
