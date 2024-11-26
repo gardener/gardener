@@ -39,7 +39,7 @@ var _ = Describe("handler", func() {
 
 		request admission.Request
 		decoder admission.Decoder
-		handler *Handler
+		handler admission.Handler
 
 		ctrl       *gomock.Controller
 		mockReader *mockclient.MockReader
@@ -129,7 +129,7 @@ authorizers:
 
 		decoder = admission.NewDecoder(kubernetes.GardenScheme)
 
-		handler = &Handler{Logger: log, APIReader: mockReader, Client: fakeClient, Decoder: decoder}
+		handler = NewHandler(log, mockReader, fakeClient, decoder)
 
 		request = admission.Request{}
 
@@ -165,27 +165,27 @@ authorizers:
 
 		if oldObj != nil {
 			objData, err := runtime.Encode(testEncoder, oldObj)
-			Expect(err).NotTo(HaveOccurred())
+			ExpectWithOffset(1, err).NotTo(HaveOccurred())
 			request.OldObject.Raw = objData
 		}
 
 		if obj != nil {
 			objData, err := runtime.Encode(testEncoder, obj)
-			Expect(err).NotTo(HaveOccurred())
+			ExpectWithOffset(1, err).NotTo(HaveOccurred())
 			request.Object.Raw = objData
 		}
 
 		response := handler.Handle(ctx, request)
-		Expect(response).To(Not(BeNil()))
+		ExpectWithOffset(1, response).To(Not(BeNil()))
 		if expectedMsg != "" {
-			Expect(response.Result.Message).To(ContainSubstring(expectedMsg))
+			ExpectWithOffset(1, response.Result.Message).To(ContainSubstring(expectedMsg))
 		}
 		if expectedReason != "" {
-			Expect(string(response.Result.Reason)).To(ContainSubstring(expectedReason))
+			ExpectWithOffset(1, string(response.Result.Reason)).To(ContainSubstring(expectedReason))
 		}
-		Expect(response.Result.Code).To(Equal(expectedStatusCode))
-		Expect(response.Allowed).To(Equal(expectedAllowed))
-		Expect(response.Patches).To(BeEmpty())
+		ExpectWithOffset(1, response.Result.Code).To(Equal(expectedStatusCode))
+		ExpectWithOffset(1, response.Allowed).To(Equal(expectedAllowed))
+		ExpectWithOffset(1, response.Patches).To(BeEmpty())
 	}
 
 	Context("Shoots", func() {
@@ -196,17 +196,17 @@ authorizers:
 		Context("Allow", func() {
 			It("has no KubeAPIServer config", func() {
 				shoot.Spec.Kubernetes.KubeAPIServer = nil
-				test(admissionv1.Create, nil, shoot, true, statusCodeAllowed, "shoot resource is not specifying any authorization configuration", "")
+				test(admissionv1.Create, nil, shoot, true, statusCodeAllowed, "Shoot resource does not specify any authorization configuration ConfigMap", "")
 			})
 
 			It("has no Structured Authorization", func() {
 				shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization = nil
-				test(admissionv1.Create, nil, shoot, true, statusCodeAllowed, "shoot resource is not specifying any authorization configuration", "")
+				test(admissionv1.Create, nil, shoot, true, statusCodeAllowed, "Shoot resource does not specify any authorization configuration ConfigMap", "")
 			})
 
 			It("has no authorization configuration ConfigMap Ref", func() {
 				shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization.ConfigMapName = ""
-				test(admissionv1.Create, nil, shoot, true, statusCodeAllowed, "shoot resource is not specifying any authorization configuration", "")
+				test(admissionv1.Create, nil, shoot, true, statusCodeAllowed, "Shoot resource does not specify any authorization configuration ConfigMap", "")
 			})
 
 			It("references a valid AuthorizationConfig (CREATE)", func() {
@@ -253,7 +253,7 @@ authorizers:
 			It("referenced AuthorizationConfig name was removed (UPDATE)", func() {
 				newShoot := shoot.DeepCopy()
 				newShoot.Spec.Kubernetes.KubeAPIServer = nil
-				test(admissionv1.Update, shoot, newShoot, true, statusCodeAllowed, "shoot resource is not specifying any authorization configuration", "")
+				test(admissionv1.Update, shoot, newShoot, true, statusCodeAllowed, "Shoot resource does not specify any authorization configuration ConfigMap", "")
 			})
 
 			It("should not validate AuthorizationConfig if already marked for deletion (UPDATE)", func() {
@@ -280,14 +280,14 @@ authorizers:
 				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: shootNamespace, Name: configMapName}, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, _ *corev1.ConfigMap, _ ...client.GetOption) error {
 					return apierrors.NewNotFound(schema.GroupResource{Resource: "configmaps"}, configMapName)
 				})
-				test(admissionv1.Create, nil, shoot, false, statusCodeInvalid, "could not retrieve ConfigMap: configmaps \"fake-cm-name\" not found", "")
+				test(admissionv1.Create, nil, shoot, false, statusCodeInvalid, "referenced authorization configuration ConfigMap fake-cm-namespace/fake-cm-name does not exist: configmaps \"fake-cm-name\" not found", "")
 			})
 
 			It("fails getting ConfigMap", func() {
 				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: shootNamespace, Name: configMapName}, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, _ *corev1.ConfigMap, _ ...client.GetOption) error {
 					return errors.New("fake")
 				})
-				test(admissionv1.Create, nil, shoot, false, statusCodeInternalError, "could not retrieve ConfigMap: fake", "")
+				test(admissionv1.Create, nil, shoot, false, statusCodeInternalError, "could not retrieve authorization configuration ConfigMap fake-cm-namespace/fake-cm-name: fake", "")
 			})
 
 			It("references ConfigMap without a config.yaml key", func() {
@@ -297,7 +297,7 @@ authorizers:
 					}
 					return nil
 				})
-				test(admissionv1.Create, nil, shoot, false, statusCodeInvalid, "missing '.data[config.yaml]' in authorization configuration ConfigMap", "")
+				test(admissionv1.Create, nil, shoot, false, statusCodeInvalid, "error getting authorization configuration from ConfigMap /: missing authorization configuration key in config.yaml ConfigMap data", "")
 			})
 
 			It("references ConfigMap with a webhook for which no kubeconfig secret name is specified", func() {
@@ -376,7 +376,7 @@ authorizers:
 
 				It("did not change config.yaml field", func() {
 					Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
-					test(admissionv1.Update, configMap, configMap, true, statusCodeAllowed, "authorization configuration not changed", "")
+					test(admissionv1.Update, configMap, configMap, true, statusCodeAllowed, "authorization configuration did not change", "")
 				})
 
 				It("should allow if the AuthorizationConfig is changed to something valid", func() {
@@ -385,7 +385,7 @@ authorizers:
 					newCm := configMap.DeepCopy()
 					newCm.Data["config.yaml"] = anotherValidAuthorizationConfiguration
 
-					test(admissionv1.Update, configMap, newCm, true, statusCodeAllowed, "ConfigMap change is valid", "")
+					test(admissionv1.Update, configMap, newCm, true, statusCodeAllowed, "referenced authorization configuration is valid", "")
 				})
 			})
 
@@ -397,13 +397,13 @@ authorizers:
 				It("has no data key", func() {
 					newCm := configMap.DeepCopy()
 					newCm.Data = nil
-					test(admissionv1.Update, configMap, newCm, false, statusCodeInvalid, "missing '.data[config.yaml]' in authorization configuration ConfigMap", "")
+					test(admissionv1.Update, configMap, newCm, false, statusCodeInvalid, "error getting authorization configuration from ConfigMap fake-cm-namespace/fake-cm-name: missing authorization configuration key in config.yaml ConfigMap data", "")
 				})
 
 				It("has empty config.yaml", func() {
 					newCm := configMap.DeepCopy()
 					newCm.Data["config.yaml"] = ""
-					test(admissionv1.Update, configMap, newCm, false, statusCodeInvalid, "empty authorization configuration. Provide non-empty authorization configuration", "")
+					test(admissionv1.Update, configMap, newCm, false, statusCodeInvalid, "error getting authorization configuration from ConfigMap fake-cm-namespace/fake-cm-name: authorization configuration in config.yaml key is empty", "")
 				})
 
 				It("holds authorization configuration which breaks validation rules", func() {
