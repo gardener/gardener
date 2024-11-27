@@ -115,7 +115,8 @@ The issue does not impact environments where:
     - Phase 2: Gradually reconfigure shoots to use the new routing method
     - Phase 3: Deprecate and remove the old routing method
 
-![Proposed Architecture](./assets/30-proposed-architecture.png "Proposed Architecture")
+![Proposed Architecture](./assets/30-proposed-architecture-http-connect.png "Proposed Architecture")
+![Proposed Architecture](./assets/30-proposed-architecture-tls.png "Proposed Architecture")
     
     
 ## Custom Header Specification
