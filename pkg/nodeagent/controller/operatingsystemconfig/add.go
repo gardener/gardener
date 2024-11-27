@@ -50,7 +50,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 		r.FS = afero.Afero{Fs: afero.NewOsFs()}
 	}
 	if r.Extractor == nil {
-		r.Extractor = registry.NewExtractor()
+		r.Extractor = registry.NewExtractor(r.FS)
 	}
 
 	return builder.
