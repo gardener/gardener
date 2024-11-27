@@ -317,6 +317,11 @@ func (b *bootstrapper) getClusterRolePolicyRules() []rbacv1.PolicyRule {
 				Resources: []string{"deployments", "deployments/scale"},
 				Verbs:     []string{"get", "list", "watch", "update", "patch"},
 			},
+			{
+				APIGroups: []string{"machine.sapcloud.io"},
+				Resources: []string{"machines"},
+				Verbs:     []string{"get", "list", "watch"},
+			},
 		}
 	}
 
