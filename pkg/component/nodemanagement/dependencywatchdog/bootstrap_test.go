@@ -128,6 +128,14 @@ rules:`
   - watch
   - update
   - patch
+- apiGroups:
+  - machine.sapcloud.io
+  resources:
+  - machines
+  verbs:
+  - get
+  - list
+  - watch
 `
 					}
 
