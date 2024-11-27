@@ -184,8 +184,8 @@ github.com/fxamacker/cbor/v2 v2.7.0 h1:iM5WgngdRBanHcxugY4JySA0nk1wZorNOpTgCMedv
 github.com/fxamacker/cbor/v2 v2.7.0/go.mod h1:pxXPTn3joSm21Gbwsv0w9OSA2y1HFR9qXEeXQVeNoDQ=
 github.com/gardener/cert-management v0.16.0 h1:OlE8nnPgqUii5jBknwASy5EtQlJ3Udy2f7VKIk35A4Q=
 github.com/gardener/cert-management v0.16.0/go.mod h1:09sH/cxbK3o4xdwCjM7HE9gGX2wq2lLhhVIqiMpmZy4=
-github.com/gardener/dependency-watchdog v1.2.3 h1:G1gihyMxHLKtkb+/iAme8v5KuN0XNt4Z2+9aNgs/Vcs=
-github.com/gardener/dependency-watchdog v1.2.3/go.mod h1:DzjPnXWcDHmboMudqNZ1VXHfHLkgHy4jxPdyab/37oQ=
+github.com/gardener/dependency-watchdog v1.3.0 h1:C5EO/4GKv1TosvqVepJfzGssu8dDR06q1y05b11ozqI=
+github.com/gardener/dependency-watchdog v1.3.0/go.mod h1:KNUla1c54x6AGh7SXK/OlM0LrghMXXZG0f+d7+XojaA=
 github.com/gardener/etcd-druid v0.24.1 h1:BfFQXOevuJ5oOvM3rkQSJ5XITMJzY/a2j54e7XcBIos=
 github.com/gardener/etcd-druid v0.24.1/go.mod h1:6C0eyfdlw6CowLm/l4ZiKwrvkc+5NHrnc/rY2wCUwys=
 github.com/gardener/hvpa-controller/api v0.17.0 h1:1mNeP+xsnjPH6GhewugU5srslXiTCJgYIFCMuRXwI7w=
