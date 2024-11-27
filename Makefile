@@ -80,6 +80,13 @@ start-envtest: $(SETUP_ENVTEST)
 install:
 	@EFFECTIVE_VERSION=$(EFFECTIVE_VERSION) ./hack/install.sh ./...
 
+BUILD_OUTPUT_FILE ?= .
+BUILD_PACKAGES ?= ./...
+
+.PHONY: build
+build:
+	@EFFECTIVE_VERSION=$(EFFECTIVE_VERSION) ./hack/build.sh -o $(BUILD_OUTPUT_FILE) $(BUILD_PACKAGES)
+
 .PHONY: docker-images
 docker-images:
 	@echo "Building docker images with version and tag $(EFFECTIVE_VERSION)"
