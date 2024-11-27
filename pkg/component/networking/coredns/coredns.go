@@ -474,7 +474,7 @@ import custom/*.server
 							SecurityContext: &corev1.SecurityContext{
 								AllowPrivilegeEscalation: ptr.To(false),
 								Capabilities: &corev1.Capabilities{
-									Add:  []corev1.Capability{"NET_BIND_SERVICE"},
+									Add:  []corev1.Capability{"NET_BIND_SERVICE"}, // TODO(marc1404): When updating coredns to v1.13.x check if the NET_BIND_SERVICE capability can be removed.
 									Drop: []corev1.Capability{"all"},
 								},
 								ReadOnlyRootFilesystem: ptr.To(true),
