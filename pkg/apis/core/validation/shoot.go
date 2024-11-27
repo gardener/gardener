@@ -2602,6 +2602,7 @@ func ValidateForceDeletion(newShoot, oldShoot *core.Shoot) field.ErrorList {
 		for _, lastError := range newShoot.Status.LastErrors {
 			if errorCodesAllowingForceDeletion.HasAny(lastError.Codes...) {
 				errorCodePresent = true
+				break
 			}
 		}
 		if !errorCodePresent {
