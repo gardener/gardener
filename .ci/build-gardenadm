@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+
+# SPDX-FileCopyrightText: 2024 SAP SE or an SAP affiliate company and Gardener contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+
+set -e
+
+if [[ -z "${MAIN_REPO_DIR}" ]]; then
+  export MAIN_REPO_DIR="$(readlink -f $(dirname ${0})/..)"
+else
+  export MAIN_REPO_DIR="$(readlink -f "${MAIN_REPO_DIR}")"
+fi
+
+if [[ -z "${BINARY_PATH}" ]]; then
+  export BINARY_PATH="$(readlink -f $(dirname ${0})/../bin)"
+else
+  export BINARY_PATH="$(readlink -f "${BINARY_PATH}")"
+fi
+
+pushd "${MAIN_REPO_DIR}" > /dev/null
+
+echo "Fetching LD flags for build..."
+ld_flags="$(hack/get-build-ld-flags.sh)"
+
+for os in linux darwin windows; do
+  for arch in amd64 arm64; do
+    out_file="${BINARY_PATH}/gardenadm-${os}-${arch}"
+    if [[ "${os}" == "windows" ]]; then
+      out_file="${out_file}.exe"
+    fi
+
+    echo "Building gardenadm for ${os}-${arch} and writing output to ${out_file}..."
+    GOOS="${os}" GOARCH="${arch}" LD_FLAGS="${ld_flags}" BUILD_OUTPUT_FILE="${out_file}" BUILD_PACKAGES="./cmd/gardenadm" make build
+  done
+done
+
+popd > /dev/null
