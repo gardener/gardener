@@ -58,7 +58,7 @@ func NewHandler(log logr.Logger, apiReader, c client.Reader, decoder admission.D
 		Client:    c,
 		Decoder:   decoder,
 
-		ConfigMapKind:    "authentication configuration",
+		ConfigMapPurpose: "authentication configuration",
 		ConfigMapDataKey: "config.yaml",
 		GetConfigMapNameFromShoot: func(shoot *gardencore.Shoot) string {
 			return gardencorehelper.GetShootAuthenticationConfigurationConfigMapName(shoot.Spec.Kubernetes.KubeAPIServer)

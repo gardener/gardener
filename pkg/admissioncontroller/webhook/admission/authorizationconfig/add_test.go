@@ -387,6 +387,18 @@ authorizers:
 
 					test(admissionv1.Update, configMap, newCm, true, statusCodeAllowed, "referenced authorization configuration is valid", "")
 				})
+
+				It("should allow if the AuthorizationConfig is changed to something valid even when multiple shoots reference it", func() {
+					newCm := configMap.DeepCopy()
+					newCm.Data["config.yaml"] = anotherValidAuthorizationConfiguration
+
+					shoot2 := shoot.DeepCopy()
+					shoot2.Name = "shoot2"
+					shoot2.ResourceVersion = ""
+					Expect(fakeClient.Create(ctx, shoot2)).To(Succeed())
+
+					test(admissionv1.Update, configMap, newCm, true, statusCodeAllowed, "referenced authorization configuration is valid", "")
+				})
 			})
 
 			Context("Deny", func() {
@@ -418,6 +430,19 @@ authorizers:
 					newCm.Data["config.yaml"] = missingKeyConfiguration
 
 					test(admissionv1.Update, configMap, newCm, false, statusCodeInvalid, "provided invalid authorization configuration: [[].authorizers[0].subjectAccessReviewVersion: Required value]", "")
+				})
+
+				It("references ConfigMap with a webhook for which no kubeconfig secret name is specified", func() {
+					newCm := configMap.DeepCopy()
+					newCm.Data["config.yaml"] = anotherValidAuthorizationConfiguration
+
+					shoot2 := shoot.DeepCopy()
+					shoot2.Name = "shoot2"
+					shoot2.ResourceVersion = ""
+					shoot2.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization.Kubeconfigs = nil
+					Expect(fakeClient.Create(ctx, shoot2)).To(Succeed())
+
+					test(admissionv1.Update, configMap, newCm, false, statusCodeInvalid, "provided invalid authorization configuration: must provide kubeconfig secret name reference for webhook authorizer \"webhook\" in shoot fake-cm-namespace/shoot2", "")
 				})
 			})
 		})

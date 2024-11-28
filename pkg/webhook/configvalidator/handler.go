@@ -48,7 +48,7 @@ type Handler struct {
 	Client    client.Reader
 	Decoder   admission.Decoder
 
-	ConfigMapKind               string
+	ConfigMapPurpose            string
 	ConfigMapDataKey            string
 	GetConfigMapNameFromShoot   func(shoot *gardencore.Shoot) string
 	SkipValidationOnShootUpdate func(shoot, oldShoot *gardencore.Shoot) bool
@@ -83,7 +83,7 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 
 	configMapName := h.GetConfigMapNameFromShoot(shoot)
 	if configMapName == "" {
-		return admissionwebhook.Allowed(fmt.Sprintf("Shoot resource does not specify any %s ConfigMap", h.ConfigMapKind))
+		return admissionwebhook.Allowed(fmt.Sprintf("Shoot resource does not specify any %s ConfigMap", h.ConfigMapPurpose))
 	}
 
 	var oldShoot *gardencore.Shoot
@@ -108,27 +108,27 @@ func (h *Handler) admitShoot(ctx context.Context, request admission.Request) adm
 		h.GetConfigMapNameFromShoot(oldShoot) == configMapName &&
 		oldShoot.Spec.Kubernetes.Version == shoot.Spec.Kubernetes.Version &&
 		(h.SkipValidationOnShootUpdate == nil || h.SkipValidationOnShootUpdate(shoot, oldShoot)) {
-		return admissionwebhook.Allowed(fmt.Sprintf("Neither %s ConfigMap nor Kubernetes version or other relevant fields were changed", h.ConfigMapKind))
+		return admissionwebhook.Allowed(fmt.Sprintf("Neither %s ConfigMap nor Kubernetes version or other relevant fields were changed", h.ConfigMapPurpose))
 	}
 
 	configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: shoot.Namespace, Name: configMapName}}
 	if err := h.APIReader.Get(ctx, client.ObjectKeyFromObject(configMap), configMap); err != nil {
 		if apierrors.IsNotFound(err) {
-			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("referenced %s ConfigMap %s does not exist: %w", h.ConfigMapKind, client.ObjectKeyFromObject(configMap), err))
+			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("referenced %s ConfigMap %s does not exist: %w", h.ConfigMapPurpose, client.ObjectKeyFromObject(configMap), err))
 		}
-		return admission.Errored(http.StatusInternalServerError, fmt.Errorf("could not retrieve %s ConfigMap %s: %w", h.ConfigMapKind, client.ObjectKeyFromObject(configMap), err))
+		return admission.Errored(http.StatusInternalServerError, fmt.Errorf("could not retrieve %s ConfigMap %s: %w", h.ConfigMapPurpose, client.ObjectKeyFromObject(configMap), err))
 	}
 
 	configRaw, err := h.rawConfigurationFromConfigMap(configMap.Data)
 	if err != nil {
-		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("error getting %s from ConfigMap %s: %w", h.ConfigMapKind, client.ObjectKeyFromObject(configMap), err))
+		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("error getting %s from ConfigMap %s: %w", h.ConfigMapPurpose, client.ObjectKeyFromObject(configMap), err))
 	}
 
 	if errCode, err := h.AdmitConfig(configRaw, []*gardencore.Shoot{shoot}); err != nil {
 		return admission.Errored(errCode, err)
 	}
 
-	return admissionwebhook.Allowed(fmt.Sprintf("referenced %s is valid", h.ConfigMapKind))
+	return admissionwebhook.Allowed(fmt.Sprintf("referenced %s is valid", h.ConfigMapPurpose))
 }
 
 func (h *Handler) admitConfigMap(ctx context.Context, request admission.Request) admission.Response {
@@ -169,7 +169,7 @@ func (h *Handler) admitConfigMap(ctx context.Context, request admission.Request)
 
 	configRaw, err := h.rawConfigurationFromConfigMap(newConfigMap.Data)
 	if err != nil {
-		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("error getting %s from ConfigMap %s: %w", h.ConfigMapKind, client.ObjectKeyFromObject(newConfigMap), err))
+		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("error getting %s from ConfigMap %s: %w", h.ConfigMapPurpose, client.ObjectKeyFromObject(newConfigMap), err))
 	}
 
 	if err = h.Decoder.DecodeRaw(request.OldObject, oldConfigMap); err != nil {
@@ -177,24 +177,24 @@ func (h *Handler) admitConfigMap(ctx context.Context, request admission.Request)
 	}
 
 	if oldConfigRaw, ok := oldConfigMap.Data[h.ConfigMapDataKey]; ok && oldConfigRaw == configRaw {
-		return admissionwebhook.Allowed(fmt.Sprintf("%s did not change", h.ConfigMapKind))
+		return admissionwebhook.Allowed(fmt.Sprintf("%s did not change", h.ConfigMapPurpose))
 	}
 
 	if errCode, err := h.AdmitConfig(configRaw, shoots); err != nil {
 		return admission.Errored(errCode, err)
 	}
 
-	return admissionwebhook.Allowed(fmt.Sprintf("referenced %s is valid", h.ConfigMapKind))
+	return admissionwebhook.Allowed(fmt.Sprintf("referenced %s is valid", h.ConfigMapPurpose))
 }
 
 func (h *Handler) rawConfigurationFromConfigMap(data map[string]string) (string, error) {
 	configRaw, ok := data[h.ConfigMapDataKey]
 	if !ok {
-		return "", fmt.Errorf("missing %s key in %s ConfigMap data", h.ConfigMapKind, h.ConfigMapDataKey)
+		return "", fmt.Errorf("missing %s key in %s ConfigMap data", h.ConfigMapPurpose, h.ConfigMapDataKey)
 	}
 
 	if len(configRaw) == 0 {
-		return "", fmt.Errorf("%s in %s key is empty", h.ConfigMapKind, h.ConfigMapDataKey)
+		return "", fmt.Errorf("%s in %s key is empty", h.ConfigMapPurpose, h.ConfigMapDataKey)
 	}
 
 	return configRaw, nil

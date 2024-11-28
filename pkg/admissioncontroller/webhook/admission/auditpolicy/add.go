@@ -56,7 +56,7 @@ func NewHandler(log logr.Logger, apiReader, c client.Reader, decoder admission.D
 		Client:    c,
 		Decoder:   decoder,
 
-		ConfigMapKind:    "audit policy",
+		ConfigMapPurpose: "audit policy",
 		ConfigMapDataKey: "policy",
 		GetConfigMapNameFromShoot: func(shoot *gardencore.Shoot) string {
 			return gardencorehelper.GetShootAuditPolicyConfigMapName(shoot.Spec.Kubernetes.KubeAPIServer)

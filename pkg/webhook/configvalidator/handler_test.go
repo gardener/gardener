@@ -79,7 +79,7 @@ var _ = Describe("Handler", func() {
 			Client:    fakeClient,
 			Decoder:   decoder,
 
-			ConfigMapKind:    "test config",
+			ConfigMapPurpose: "test config",
 			ConfigMapDataKey: "config.yaml",
 			GetConfigMapNameFromShoot: func(_ *core.Shoot) string {
 				return configMap.Name

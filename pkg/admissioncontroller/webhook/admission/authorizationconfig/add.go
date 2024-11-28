@@ -61,7 +61,7 @@ func NewHandler(log logr.Logger, apiReader, c client.Reader, decoder admission.D
 		Client:    c,
 		Decoder:   decoder,
 
-		ConfigMapKind:    "authorization configuration",
+		ConfigMapPurpose: "authorization configuration",
 		ConfigMapDataKey: "config.yaml",
 		GetConfigMapNameFromShoot: func(shoot *gardencore.Shoot) string {
 			return gardencorehelper.GetShootAuthorizationConfigurationConfigMapName(shoot.Spec.Kubernetes.KubeAPIServer)
@@ -105,12 +105,12 @@ func admitConfig(authorizationConfigurationRaw string, shoots []*gardencore.Shoo
 		}
 	}
 
-	if len(shoots) == 1 {
+	for _, shoot := range shoots {
 		for _, authorizerName := range authorizerNames {
-			if !slices.ContainsFunc(shoots[0].Spec.Kubernetes.KubeAPIServer.StructuredAuthorization.Kubeconfigs, func(ref gardencore.AuthorizerKubeconfigReference) bool {
+			if !slices.ContainsFunc(shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization.Kubeconfigs, func(ref gardencore.AuthorizerKubeconfigReference) bool {
 				return ref.AuthorizerName == authorizerName
 			}) {
-				return http.StatusUnprocessableEntity, fmt.Errorf("provided invalid authorization configuration: must provide kubeconfig secret name reference for webhook authorizer %q", authorizerName)
+				return http.StatusUnprocessableEntity, fmt.Errorf("provided invalid authorization configuration: must provide kubeconfig secret name reference for webhook authorizer %q in shoot %s", authorizerName, client.ObjectKeyFromObject(shoot))
 			}
 		}
 	}
