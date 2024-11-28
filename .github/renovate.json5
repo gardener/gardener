@@ -32,6 +32,7 @@
         '^example/.+\\.yaml$',
         '^hack/.+\\.yaml$',
         '^\\.test-defs/.+\\.yaml$',
+        '^charts/.+\\.yaml$',
       ],
       matchStrings: [
         'image: ["|\']?(?<depName>.*?):(?<currentValue>.*?)["|\']?\\s',
@@ -389,7 +390,6 @@
     {
       // Ignore paths which most likely create false positives.
       matchFileNames: [
-        'chart/**',
         'cmd/**',
         'extensions/**',
         'pkg/**',
