@@ -34,20 +34,26 @@ func AddToManager(cfg *config.OperatorConfiguration) ([]controllerregistrar.Cont
 	)
 
 	return []controllerregistrar.Controller{
-		{AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, _ *operatorv1alpha1.Garden) (bool, error) {
-			return true, virtualClusterReconciler.AddToManager(mgr)
-		}},
-		{AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, garden *operatorv1alpha1.Garden) (bool, error) {
-			log := logf.FromContext(ctx)
+		{
+			Name: virtualcluster.ControllerName,
+			AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, _ *operatorv1alpha1.Garden) (bool, error) {
+				return true, virtualClusterReconciler.AddToManager(mgr)
+			},
+		},
+		{
+			Name: access.ControllerName,
+			AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, garden *operatorv1alpha1.Garden) (bool, error) {
+				log := logf.FromContext(ctx)
 
-			if !gardenerutils.IsGardenSuccessfullyReconciled(garden) {
-				log.Info("Garden is being reconciled - adding the access reconciler will be tried again")
-				return false, nil
-			}
+				if !gardenerutils.IsGardenSuccessfullyReconciled(garden) {
+					log.Info("Garden is still being reconciled, waiting for it to finish")
+					return false, nil
+				}
 
-			return true, (&access.Reconciler{
-				Channel: channel,
-			}).AddToManager(mgr, v1beta1constants.GardenNamespace, clientmap.GardenerSecretName(log, v1beta1constants.GardenNamespace))
-		}},
+				return true, (&access.Reconciler{
+					Channel: channel,
+				}).AddToManager(mgr, v1beta1constants.GardenNamespace, clientmap.GardenerSecretName(log, v1beta1constants.GardenNamespace))
+			},
+		},
 	}, virtualClusterReconciler.GetVirtualCluster
 }

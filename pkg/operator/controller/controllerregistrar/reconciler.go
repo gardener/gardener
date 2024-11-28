@@ -25,11 +25,10 @@ type Reconciler struct {
 
 // Controller contains a function for registering a controller.
 type Controller struct {
+	Name             string
 	AddToManagerFunc func(context.Context, manager.Manager, *operatorv1alpha1.Garden) (bool, error)
 	added            bool
 }
-
-const requeueAfter = 2 * time.Second
 
 // Reconcile performs the controller registration.
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
@@ -48,19 +47,23 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
+	var requeueAfter time.Duration
+
 	for i, controller := range r.Controllers {
 		if !controller.added {
-			done, err := controller.AddToManagerFunc(ctx, r.Manager, garden)
-			if err != nil {
-				return reconcile.Result{}, err
+			if done, err := controller.AddToManagerFunc(ctx, r.Manager, garden); err != nil {
+				return reconcile.Result{}, fmt.Errorf("failed adding %s controller to manager: %w", controller.Name, err)
+			} else if done {
+				log.Info("Successfully added controller to manager", "controllerName", controller.Name)
+				r.Controllers[i].added = true
+			} else {
+				log.Info("Controller is not yet ready to be added to the manager", "controllerName", controller.Name)
+				requeueAfter = 2 * time.Second
 			}
-			if !done {
-				return reconcile.Result{RequeueAfter: requeueAfter}, nil
-			}
-			r.Controllers[i].added = true
 		}
 	}
-	return reconcile.Result{}, nil
+
+	return reconcile.Result{RequeueAfter: requeueAfter}, nil
 }
 
 func (r *Reconciler) allControllersAdded() bool {

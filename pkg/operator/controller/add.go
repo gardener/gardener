@@ -50,45 +50,57 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 
 	if err := (&controllerregistrar.Reconciler{
 		Controllers: append([]controllerregistrar.Controller{
-			{AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, garden *operatorv1alpha1.Garden) (bool, error) {
-				var nodes []string
-				if garden.Spec.RuntimeCluster.Networking.Nodes != nil {
-					nodes = []string{*garden.Spec.RuntimeCluster.Networking.Nodes}
-				}
+			{
+				Name: networkpolicy.ControllerName,
+				AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, garden *operatorv1alpha1.Garden) (bool, error) {
+					var nodes []string
+					if garden.Spec.RuntimeCluster.Networking.Nodes != nil {
+						nodes = []string{*garden.Spec.RuntimeCluster.Networking.Nodes}
+					}
 
-				return true, (&networkpolicy.Reconciler{
-					ConcurrentSyncs:              cfg.Controllers.NetworkPolicy.ConcurrentSyncs,
-					AdditionalNamespaceSelectors: cfg.Controllers.NetworkPolicy.AdditionalNamespaceSelectors,
-					RuntimeNetworks: networkpolicy.RuntimeNetworkConfig{
-						// gardener-operator only supports IPv4 single-stack networking in the runtime cluster for now.
-						IPFamilies: []gardencore.IPFamily{gardencore.IPFamilyIPv4},
-						Nodes:      nodes,
-						Pods:       []string{garden.Spec.RuntimeCluster.Networking.Pods},
-						Services:   []string{garden.Spec.RuntimeCluster.Networking.Services},
-						BlockCIDRs: garden.Spec.RuntimeCluster.Networking.BlockCIDRs,
-					},
-				}).AddToManager(ctx, mgr, mgr)
-			}},
-			{AddToManagerFunc: func(_ context.Context, mgr manager.Manager, _ *operatorv1alpha1.Garden) (bool, error) {
-				return true, (&vpaevictionrequirements.Reconciler{
-					ConcurrentSyncs: cfg.Controllers.VPAEvictionRequirements.ConcurrentSyncs,
-				}).AddToManager(mgr, mgr)
-			}},
-			{AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, _ *operatorv1alpha1.Garden) (bool, error) {
-				return true, (&required.Reconciler{
-					Config: cfg,
-				}).AddToManager(ctx, mgr)
-			}},
-			{AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, _ *operatorv1alpha1.Garden) (bool, error) {
-				if getVirtualCluster() == nil {
-					logf.FromContext(ctx).Info("Virtual cluster object has not been created yet, cannot add Gardenlet reconciler")
-					return false, nil
-				}
+					return true, (&networkpolicy.Reconciler{
+						ConcurrentSyncs:              cfg.Controllers.NetworkPolicy.ConcurrentSyncs,
+						AdditionalNamespaceSelectors: cfg.Controllers.NetworkPolicy.AdditionalNamespaceSelectors,
+						RuntimeNetworks: networkpolicy.RuntimeNetworkConfig{
+							// gardener-operator only supports IPv4 single-stack networking in the runtime cluster for now.
+							IPFamilies: []gardencore.IPFamily{gardencore.IPFamilyIPv4},
+							Nodes:      nodes,
+							Pods:       []string{garden.Spec.RuntimeCluster.Networking.Pods},
+							Services:   []string{garden.Spec.RuntimeCluster.Networking.Services},
+							BlockCIDRs: garden.Spec.RuntimeCluster.Networking.BlockCIDRs,
+						},
+					}).AddToManager(ctx, mgr, mgr)
+				},
+			},
+			{
+				Name: vpaevictionrequirements.ControllerName,
+				AddToManagerFunc: func(_ context.Context, mgr manager.Manager, _ *operatorv1alpha1.Garden) (bool, error) {
+					return true, (&vpaevictionrequirements.Reconciler{
+						ConcurrentSyncs: cfg.Controllers.VPAEvictionRequirements.ConcurrentSyncs,
+					}).AddToManager(mgr, mgr)
+				},
+			},
+			{
+				Name: required.ControllerName,
+				AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, _ *operatorv1alpha1.Garden) (bool, error) {
+					return true, (&required.Reconciler{
+						Config: cfg,
+					}).AddToManager(ctx, mgr)
+				},
+			},
+			{
+				Name: gardenlet.ControllerName,
+				AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, _ *operatorv1alpha1.Garden) (bool, error) {
+					if getVirtualCluster() == nil {
+						logf.FromContext(ctx).Info("Virtual cluster object has not been created yet, cannot add Gardenlet reconciler")
+						return false, nil
+					}
 
-				return true, (&gardenlet.Reconciler{
-					Config: cfg.Controllers.GardenletDeployer,
-				}).AddToManager(ctx, mgr, getVirtualCluster())
-			}},
+					return true, (&gardenlet.Reconciler{
+						Config: cfg.Controllers.GardenletDeployer,
+					}).AddToManager(ctx, mgr, getVirtualCluster())
+				},
+			},
 		}, addVirtualClusterControllerToManager...),
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding Registrar controller: %w", err)
