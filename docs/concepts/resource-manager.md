@@ -984,7 +984,7 @@ The controller adds the `node-agent.gardener.cloud/reconciliation-delay` annotat
 This webhook is used to conveniently apply the configuration to make components deployed to seed or shoot clusters highly available.
 The details and scenarios are described in [High Availability Of Deployed Components](../development/high-availability-of-components.md).
 
-The webhook reacts on creation/update of `Deployment`s, `StatefulSet`s, `HorizontalPodAutoscaler`s and `HVPA`s in namespaces labeled with `high-availability-config.resources.gardener.cloud/consider=true`.
+The webhook reacts on creation/update of `Deployment`s, `StatefulSet`s and `HorizontalPodAutoscaler`s in namespaces labeled with `high-availability-config.resources.gardener.cloud/consider=true`.
 
 
 The webhook performs the following actions:
@@ -999,7 +999,7 @@ The webhook performs the following actions:
    - The replica count values can be overwritten by the `high-availability-config.resources.gardener.cloud/replicas` annotation.
    - It does NOT mutate the replicas when:
      - the replicas are already set to `0` (hibernation case), or
-     - when the resource is scaled horizontally by `HorizontalPodAutoscaler` or `Hvpa`, and the current replica count is higher than what was computed above.
+     - when the resource is scaled horizontally by `HorizontalPodAutoscaler`, and the current replica count is higher than what was computed above.
 
 2. When the `high-availability-config.resources.gardener.cloud/zones` annotation is NOT empty and either the `high-availability-config.resources.gardener.cloud/failure-tolerance-type` annotation is set or the `high-availability-config.resources.gardener.cloud/zone-pinning` annotation is set to `true`, then it adds a [node affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity) to the pod template spec:
 

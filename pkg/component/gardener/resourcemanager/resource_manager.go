@@ -12,7 +12,6 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
-	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	admissionv1 "k8s.io/api/admission/v1"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
@@ -1887,17 +1886,6 @@ func GetHighAvailabilityConfigMutatingWebhook(namespaceSelector, objectSelector 
 					APIGroups:   []string{autoscalingv2.GroupName},
 					APIVersions: []string{autoscalingv2beta1.SchemeGroupVersion.Version, autoscalingv2.SchemeGroupVersion.Version},
 					Resources:   []string{"horizontalpodautoscalers"},
-				},
-				Operations: []admissionregistrationv1.OperationType{
-					admissionregistrationv1.Create,
-					admissionregistrationv1.Update,
-				},
-			},
-			{
-				Rule: admissionregistrationv1.Rule{
-					APIGroups:   []string{hvpav1alpha1.GroupName},
-					APIVersions: []string{hvpav1alpha1.SchemeGroupVersionHvpa.Version},
-					Resources:   []string{"hvpas"},
 				},
 				Operations: []admissionregistrationv1.OperationType{
 					admissionregistrationv1.Create,

@@ -7,7 +7,6 @@ package client
 import (
 	certv1alpha1 "github.com/gardener/cert-management/pkg/apis/cert/v1alpha1"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
-	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	volumesnapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -44,7 +43,6 @@ func init() {
 		)
 		targetSchemeBuilder = runtime.NewSchemeBuilder(
 			kubernetesscheme.AddToScheme,
-			hvpav1alpha1.AddToScheme,
 			volumesnapshotv1.AddToScheme,
 			monitoringv1alpha1.AddToScheme,
 			monitoringv1beta1.AddToScheme,

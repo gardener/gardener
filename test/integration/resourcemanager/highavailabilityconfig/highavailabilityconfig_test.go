@@ -8,13 +8,11 @@ import (
 	"fmt"
 	"strings"
 
-	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
-	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
@@ -61,7 +59,6 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 			deployment  *appsv1.Deployment
 			statefulSet *appsv1.StatefulSet
 			hpa         *autoscalingv2.HorizontalPodAutoscaler
-			hvpa        *hvpav1alpha1.Hvpa
 
 			labels = map[string]string{"foo": "bar", "app": "foo"}
 			zones  = []string{"a", "b", "c"}
@@ -120,23 +117,6 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 					},
 				},
 			}
-
-			hvpa = &hvpav1alpha1.Hvpa{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      testIDPrefix + "-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8],
-					Namespace: namespace.Name,
-				},
-				Spec: hvpav1alpha1.HvpaSpec{
-					Hpa: hvpav1alpha1.HpaSpec{
-						Deploy: true,
-					},
-					TargetRef: &autoscalingv2beta1.CrossVersionObjectReference{
-						APIVersion: "apps/v1",
-						Kind:       "something",
-						Name:       "something",
-					},
-				},
-			}
 		})
 
 		JustBeforeEach(func() {
@@ -144,15 +124,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 			Expect(testClient.Create(ctx, hpa)).To(Succeed())
 			log.Info("Created HorizontalPodAutoscaler", "horizontalPodAutoscaler", client.ObjectKeyFromObject(hpa))
 
-			By("Create HVPA")
-			Expect(testClient.Create(ctx, hvpa)).To(Succeed())
-			log.Info("Created HVPA", "hvpa", client.ObjectKeyFromObject(hvpa))
-
 			DeferCleanup(func() {
-				By("Delete HVPA")
-				Expect(testClient.Delete(ctx, hvpa)).To(Succeed())
-				log.Info("Deleted HorizontalPodAutoscaler", "hvpa", client.ObjectKeyFromObject(hvpa))
-
 				By("Delete HorizontalPodAutoscaler")
 				Expect(testClient.Delete(ctx, hpa)).To(Succeed())
 				log.Info("Deleted HorizontalPodAutoscaler", "horizontalPodAutoscaler", client.ObjectKeyFromObject(hpa))
@@ -191,28 +163,6 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 						Context("via HPA", func() {
 							BeforeEach(func() {
 								hpa.Spec.ScaleTargetRef.Name = getObj().GetName()
-							})
-
-							Context("current replicas lower than the computed replicas", func() {
-								It("should mutate the replicas", func() {
-									Expect(getReplicas()).To(PointTo(Equal(expectedReplicas)))
-								})
-							})
-
-							Context("current replicas are higher than the computed replicas", func() {
-								BeforeEach(func() {
-									setReplicas(ptr.To[int32](5))
-								})
-
-								It("should not mutate the replicas", func() {
-									Expect(getReplicas()).To(PointTo(Equal(int32(5))))
-								})
-							})
-						})
-
-						Context("via HVPA", func() {
-							BeforeEach(func() {
-								hvpa.Spec.TargetRef.Name = getObj().GetName()
 							})
 
 							Context("current replicas lower than the computed replicas", func() {
@@ -705,8 +655,6 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 									var maxReplicas *int32
 									if hpa != nil {
 										maxReplicas = &hpa.Spec.MaxReplicas
-									} else if hvpa != nil {
-										maxReplicas = &hvpa.Spec.Hpa.Template.Spec.MaxReplicas
 									}
 
 									minDomains := ptr.To(int32(len(zones)))
@@ -736,15 +684,6 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 								BeforeEach(func() {
 									hpa.Spec.ScaleTargetRef.Name = getObj().GetName()
 									hpa.Spec.MaxReplicas = int32(2 * len(zones))
-								})
-
-								test()
-							})
-
-							Context("scaled w/ HVPA", func() {
-								BeforeEach(func() {
-									hvpa.Spec.TargetRef.Name = getObj().GetName()
-									hvpa.Spec.Hpa.Template.Spec.MaxReplicas = int32(2 * len(zones))
 								})
 
 								test()
@@ -897,7 +836,6 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 		Context("for deployments", func() {
 			BeforeEach(func() {
 				hpa.Spec.ScaleTargetRef.Kind = "Deployment"
-				hvpa.Spec.TargetRef.Kind = "Deployment"
 			})
 
 			JustBeforeEach(func() {
@@ -917,7 +855,6 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 		Context("for statefulsets", func() {
 			BeforeEach(func() {
 				hpa.Spec.ScaleTargetRef.Kind = "StatefulSet"
-				hvpa.Spec.TargetRef.Kind = "StatefulSet"
 			})
 
 			JustBeforeEach(func() {
@@ -1038,32 +975,6 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 				})
 			})
 		}
-
-		Context("for HVPAs", func() {
-			var hvpa *hvpav1alpha1.Hvpa
-
-			BeforeEach(func() {
-				hvpa = &hvpav1alpha1.Hvpa{
-					ObjectMeta: objectMeta,
-					Spec: hvpav1alpha1.HvpaSpec{
-						TargetRef: &autoscalingv2beta1.CrossVersionObjectReference{
-							Kind: "someKind",
-							Name: "someName",
-						},
-					},
-				}
-
-				scalingObject = hvpa
-			})
-
-			tests(
-				func() *metav1.ObjectMeta { return &hvpa.ObjectMeta },
-				func() *int32 { return hvpa.Spec.Hpa.Template.Spec.MinReplicas },
-				func(n *int32) { hvpa.Spec.Hpa.Template.Spec.MinReplicas = n },
-				func() int32 { return hvpa.Spec.Hpa.Template.Spec.MaxReplicas },
-				func(n int32) { hvpa.Spec.Hpa.Template.Spec.MaxReplicas = n },
-			)
-		})
 
 		Context("for HPAs", func() {
 			Context("with version v2", func() {
