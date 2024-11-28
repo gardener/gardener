@@ -194,7 +194,6 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 				ResourceNames: []string{
 					"etcds.druid.gardener.cloud",
 					"etcdcopybackupstasks.druid.gardener.cloud",
-					"hvpas.autoscaling.k8s.io",
 					"destinationrules.networking.istio.io",
 					"envoyfilters.networking.istio.io",
 					"gateways.networking.istio.io",
@@ -235,17 +234,6 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 				APIGroups: []string{"autoscaling"},
 				Resources: []string{"horizontalpodautoscalers"},
 				Verbs:     []string{"create", "delete", "get", "list", "watch", "patch", "update"},
-			},
-			{
-				APIGroups: []string{"autoscaling.k8s.io"},
-				Resources: []string{"hvpas"},
-				Verbs:     []string{"create", "get", "list", "watch"},
-			},
-			{
-				APIGroups:     []string{"autoscaling.k8s.io"},
-				Resources:     []string{"hvpas"},
-				ResourceNames: []string{"etcd-events", "etcd-main", "kube-apiserver", "kube-controller-manager", "aggregate-prometheus", "prometheus", "vali"},
-				Verbs:         []string{"delete", "patch", "update"},
 			},
 			{
 				APIGroups: []string{"autoscaling.k8s.io"},

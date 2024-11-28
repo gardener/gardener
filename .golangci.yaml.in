@@ -123,8 +123,6 @@ linters-settings:
       - pkg: github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2/plugins/input
         alias: fluentbitv1alpha2input
       # Gradener external imported packages
-      - pkg: github.com/gardener/hvpa-controller/api/v1alpha1
-        alias: hvpav1alpha1
       - pkg: github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1
         alias: machinev1alpha1
       - pkg: github.com/gardener/etcd-druid/api/v1alpha1
