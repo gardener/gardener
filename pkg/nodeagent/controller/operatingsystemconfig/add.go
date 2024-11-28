@@ -7,6 +7,7 @@ package operatingsystemconfig
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -29,6 +30,7 @@ import (
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
+	filespkg "github.com/gardener/gardener/pkg/nodeagent/files"
 	"github.com/gardener/gardener/pkg/nodeagent/registry"
 )
 
@@ -46,11 +48,15 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	if r.DBus == nil {
 		r.DBus = dbus.New(mgr.GetLogger().WithValues("controller", ControllerName))
 	}
-	if r.FS.Fs == nil {
-		r.FS = afero.Afero{Fs: afero.NewOsFs()}
+	if r.FS == nil {
+		var err error
+		r.FS, err = filespkg.NewNodeAgentFileSystem(afero.Afero{Fs: afero.NewOsFs()})
+		if err != nil {
+			return fmt.Errorf("failed to create node agent file system: %w", err)
+		}
 	}
 	if r.Extractor == nil {
-		r.Extractor = registry.NewExtractor(r.FS)
+		r.Extractor = registry.NewExtractor(r.afero())
 	}
 
 	return builder.

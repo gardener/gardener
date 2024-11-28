@@ -32,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/operatingsystemconfig"
 	fakedbus "github.com/gardener/gardener/pkg/nodeagent/dbus/fake"
+	nodeagentfiles "github.com/gardener/gardener/pkg/nodeagent/files"
 	fakeregistry "github.com/gardener/gardener/pkg/nodeagent/registry/fake"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -71,6 +72,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 
 		fakeDBus = fakedbus.New()
 		fakeFS = afero.Afero{Fs: afero.NewMemMapFs()}
+		fakeFsNodeAgent, err := nodeagentfiles.NewNodeAgentFileSystem(fakeFS)
+		Expect(err).NotTo(HaveOccurred())
 
 		imageMountDirectory, err = fakeFS.TempDir("", "fake-node-agent-")
 		Expect(err).NotTo(HaveOccurred())
@@ -145,10 +148,10 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 				KubernetesVersion: kubernetesVersion,
 			},
 			DBus:          fakeDBus,
-			FS:            fakeFS,
+			FS:            fakeFsNodeAgent,
 			HostName:      hostName,
 			NodeName:      node.Name,
-			Extractor:     fakeregistry.NewExtractor(fakeFS, imageMountDirectory),
+			Extractor:     fakeregistry.NewExtractor(afero.Afero{Fs: fakeFsNodeAgent}, imageMountDirectory),
 			CancelContext: cancelFunc.cancel,
 		}).AddToManager(ctx, mgr)).To(Succeed())
 

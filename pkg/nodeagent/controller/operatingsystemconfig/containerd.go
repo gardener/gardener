@@ -113,7 +113,7 @@ var Exec = func(ctx context.Context, command string, arg ...string) ([]byte, err
 
 // ensureContainerdDefaultConfig invokes the 'containerd' and saves the resulting default configuration.
 func (r *Reconciler) ensureContainerdDefaultConfig(ctx context.Context) error {
-	exists, err := r.FS.Exists(configFile)
+	exists, err := r.afero().Exists(configFile)
 	if err != nil {
 		return err
 	}
@@ -127,7 +127,7 @@ func (r *Reconciler) ensureContainerdDefaultConfig(ctx context.Context) error {
 		return err
 	}
 
-	return r.FS.WriteFile(configFile, output, 0644)
+	return r.afero().WriteFile(configFile, output, 0644)
 }
 
 // ensureContainerdEnvironment sets the environment for the 'containerd' service.
@@ -139,7 +139,7 @@ Environment="PATH=` + extensionsv1alpha1.ContainerDRuntimeContainersBinFolder + 
 	)
 
 	containerdEnvFilePath := path.Join(dropinDir, "30-env_config.conf")
-	exists, err := r.FS.Exists(containerdEnvFilePath)
+	exists, err := r.afero().Exists(containerdEnvFilePath)
 	if err != nil {
 		return err
 	}
@@ -148,7 +148,7 @@ Environment="PATH=` + extensionsv1alpha1.ContainerDRuntimeContainersBinFolder + 
 		return nil
 	}
 
-	err = r.FS.WriteFile(containerdEnvFilePath, []byte(unitDropin), 0644)
+	err = r.afero().WriteFile(containerdEnvFilePath, []byte(unitDropin), 0644)
 	if err != nil {
 		return fmt.Errorf("unable to write unit dropin: %w", err)
 	}
@@ -158,7 +158,7 @@ Environment="PATH=` + extensionsv1alpha1.ContainerDRuntimeContainersBinFolder + 
 
 // ensureContainerdConfiguration sets the configuration for containerd.
 func (r *Reconciler) ensureContainerdConfiguration(log logr.Logger, criConfig *extensionsv1alpha1.CRIConfig) error {
-	config, err := r.FS.ReadFile(configFile)
+	config, err := r.afero().ReadFile(configFile)
 	if err != nil {
 		return fmt.Errorf("unable to read containerd config.toml: %w", err)
 	}
@@ -307,7 +307,7 @@ func (r *Reconciler) ensureContainerdRegistries(ctx context.Context, log logr.Lo
 	// Registries without readiness probes can directly and synchronously be added here
 	// since there is no longer blocking operation involved.
 	for _, registryConfig := range registriesWithoutReadiness {
-		if err := addRegistryToContainerdFunc(ctx, log, registryConfig, r.FS); err != nil {
+		if err := addRegistryToContainerdFunc(ctx, log, registryConfig, r.afero()); err != nil {
 			errChan <- err
 			return errChan
 		}
@@ -316,7 +316,7 @@ func (r *Reconciler) ensureContainerdRegistries(ctx context.Context, log logr.Lo
 	fns := make([]flow.TaskFn, 0, len(registriesWithReadiness))
 	for _, registryConfig := range registriesWithReadiness {
 		fns = append(fns, func(ctx context.Context) error {
-			return addRegistryToContainerdFunc(ctx, log, registryConfig, r.FS)
+			return addRegistryToContainerdFunc(ctx, log, registryConfig, r.afero())
 		})
 	}
 
