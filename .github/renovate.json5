@@ -390,7 +390,6 @@
     {
       // Ignore paths which most likely create false positives.
       matchFileNames: [
-        'chart/**',
         'cmd/**',
         'extensions/**',
         'pkg/**',
