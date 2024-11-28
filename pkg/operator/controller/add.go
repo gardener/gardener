@@ -85,7 +85,7 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 				log := logf.FromContext(ctx)
 
 				if !gardenerutils.IsGardenSuccessfullyReconciled(garden) {
-					log.Info("Garden is being created - adding the access reconciler will be tried again")
+					log.Info("Garden is being reconciled - adding the access reconciler will be tried again")
 					return false, nil
 				}
 
@@ -117,7 +117,7 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 			}},
 		},
 	}).AddToManager(mgr); err != nil {
-		return fmt.Errorf("failed adding NetworkPolicy Registrar controller: %w", err)
+		return fmt.Errorf("failed adding controller registrar: %w", err)
 	}
 
 	if os.Getenv("GARDENER_OPERATOR_LOCAL") == "true" {
