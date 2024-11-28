@@ -253,11 +253,13 @@ build:
             - pkg/operator/controller/extension/extension/runtime
             - pkg/operator/controller/extension/required
             - pkg/operator/controller/garden
-            - pkg/operator/controller/garden/access
             - pkg/operator/controller/garden/care
             - pkg/operator/controller/garden/garden
             - pkg/operator/controller/garden/reference
             - pkg/operator/controller/gardenlet
+            - pkg/operator/controller/virtual
+            - pkg/operator/controller/virtual/access
+            - pkg/operator/controller/virtual/cluster
             - pkg/operator/features
             - pkg/operator/predicate
             - pkg/operator/webhook

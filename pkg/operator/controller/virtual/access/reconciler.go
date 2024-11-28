@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-logr/logr"
 	"github.com/spf13/afero"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -59,17 +60,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	if restConfig.BearerToken == "" {
-		log.Info("BearerToken is not yet populated in kubeconfig")
+		log.Info("BearerToken has not been populated yet in gardener-operator's virtual cluster kubeconfig")
 		return reconcile.Result{}, nil
 	}
 
-	if err := r.writeTokenToFile(restConfig.BearerToken); err != nil {
+	if err := r.writeTokenToFile(log, restConfig.BearerToken); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error writing bearer token to file: %w", err)
 	}
 
 	restConfig.BearerToken = ""
 	restConfig.BearerTokenFile = r.tokenFilePath
 
+	log.Info("Notifying virtual cluster creation reconciler about new REST config")
 	r.Channel <- event.TypedGenericEvent[*rest.Config]{Object: restConfig}
 	return reconcile.Result{}, nil
 }
@@ -77,7 +79,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 // CreateTemporaryFile creates a temporary file. Exposed for testing.
 var CreateTemporaryFile = afero.TempFile
 
-func (r *Reconciler) writeTokenToFile(token string) error {
+func (r *Reconciler) writeTokenToFile(log logr.Logger, token string) error {
 	if r.tokenFilePath == "" {
 		tokenFile, err := CreateTemporaryFile(r.FS, "", "garden-access")
 		if err != nil {
@@ -89,5 +91,6 @@ func (r *Reconciler) writeTokenToFile(token string) error {
 		}
 	}
 
+	log.Info("Writing virtual garden access token to file", "path", r.tokenFilePath)
 	return afero.WriteFile(r.FS, r.tokenFilePath, []byte(token), 0o600)
 }

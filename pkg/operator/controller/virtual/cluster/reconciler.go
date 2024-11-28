@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package virtual
+package cluster
 
 import (
 	"context"
@@ -45,11 +45,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request Request) (reconcile.
 	)
 
 	if r.virtualCluster == nil {
+		log.Info("Instantiating cluster.Cluster object for virtual cluster")
 		kubernetesclient.ApplyClientConnectionConfigurationToRESTConfig(&r.VirtualClientConnection, restConfig)
 
 		virtualCluster, err := cluster.New(restConfig, func(opts *cluster.Options) {
 			opts.Scheme = operatorclient.VirtualScheme
-			opts.Logger = log
+			opts.Logger = r.Manager.GetLogger()
 		})
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not instantiate virtual cluster: %w", err)
@@ -60,6 +61,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request Request) (reconcile.
 		}
 
 		r.virtualCluster = virtualCluster
+		log.Info("Cluster object has been added to the manager")
 	}
 
 	return reconcile.Result{}, nil
