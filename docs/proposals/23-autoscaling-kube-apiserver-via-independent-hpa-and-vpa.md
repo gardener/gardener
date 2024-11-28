@@ -2,7 +2,7 @@
 title: Autoscaling Shoot `kube-apiserver` via Independently Driven HPA and VPA
 gep-number: 23
 creation-date: 2023-01-31
-status: implementable
+status: replaced
 authors:
 - "@andrerun"
 - "@voelzmo"
@@ -12,6 +12,12 @@ reviewers:
 ---
 
 # GEP-23: Autoscaling Shoot kube-apiserver via Independently Driven HPA and VPA
+
+📌 **Replacement Notice**
+
+The GEP is replaced by an autoscaling solution for Kubernetes API server based on native HPA and VPA resources. Kubernetes API server is scaled simultaneously by HPA and VPA on the same metric (CPU and memory usage). For more details, see the [Autoscaling Specifics for Components documentation](../development/autoscaling-specifics-for-components.md). The implementation PR of the replacement feature is [gardener/gardener#9678](https://github.com/gardener/gardener/pull/9678).
+
+---
 
 ## Table of Contents
 - [GEP-23: Autoscaling Shoot kube-apiserver via Independently Driven HPA and VPA](#gep-23-autoscaling-shoot-kube-apiserver-via-independently-driven-hpa-and-vpa)
