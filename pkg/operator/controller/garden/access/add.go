@@ -25,10 +25,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, namespace, secretName str
 		r.Client = mgr.GetClient()
 	}
 
-	if r.Manager == nil {
-		r.Manager = mgr
-	}
-
 	if r.FS == nil {
 		r.FS = afero.NewOsFs()
 	}

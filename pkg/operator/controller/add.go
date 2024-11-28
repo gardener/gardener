@@ -10,7 +10,8 @@ import (
 	"os"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/cluster"
+	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -29,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/operator/controller/extension/required"
 	"github.com/gardener/gardener/pkg/operator/controller/garden"
 	gardenaccess "github.com/gardener/gardener/pkg/operator/controller/garden/access"
+	"github.com/gardener/gardener/pkg/operator/controller/garden/virtual"
 	"github.com/gardener/gardener/pkg/operator/controller/gardenlet"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -48,7 +50,13 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 		return err
 	}
 
-	var accessReconciler *gardenaccess.Reconciler
+	var (
+		channel                  = make(chan event.TypedGenericEvent[*rest.Config])
+		virtualClusterReconciler = &virtual.Reconciler{
+			Channel:                 channel,
+			VirtualClientConnection: cfg.VirtualClientConnection,
+		}
+	)
 
 	if err := (&controllerregistrar.Reconciler{
 		Controllers: []controllerregistrar.Controller{
@@ -81,6 +89,9 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 					Config: cfg,
 				}).AddToManager(ctx, mgr)
 			}},
+			{AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, _ *operatorv1alpha1.Garden) (bool, error) {
+				return true, virtualClusterReconciler.AddToManager(mgr)
+			}},
 			{AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, garden *operatorv1alpha1.Garden) (bool, error) {
 				log := logf.FromContext(ctx)
 
@@ -89,25 +100,14 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 					return false, nil
 				}
 
-				accessReconciler = &gardenaccess.Reconciler{Config: cfg}
-				secretName := clientmap.GardenerSecretName(log, v1beta1constants.GardenNamespace)
-
-				return true, accessReconciler.AddToManager(mgr, v1beta1constants.GardenNamespace, secretName)
+				return true, (&gardenaccess.Reconciler{
+					Channel: channel,
+				}).AddToManager(mgr, v1beta1constants.GardenNamespace, clientmap.GardenerSecretName(log, v1beta1constants.GardenNamespace))
 			}},
 			{AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, _ *operatorv1alpha1.Garden) (bool, error) {
-				var (
-					log            = logf.FromContext(ctx)
-					virtualCluster cluster.Cluster
-				)
-
-				if accessReconciler == nil {
-					log.Info("Garden access reconciler is not yet started")
-					return false, nil
-				}
-
-				virtualCluster = accessReconciler.GetVirtualCluster()
+				virtualCluster := virtualClusterReconciler.GetVirtualCluster()
 				if virtualCluster == nil {
-					log.Info("Virtual cluster is not yet created")
+					logf.FromContext(ctx).Info("Virtual cluster object has not been created yet, cannot add Gardenlet reconciler")
 					return false, nil
 				}
 
@@ -117,7 +117,7 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 			}},
 		},
 	}).AddToManager(mgr); err != nil {
-		return fmt.Errorf("failed adding controller registrar: %w", err)
+		return fmt.Errorf("failed adding Registrar controller: %w", err)
 	}
 
 	if os.Getenv("GARDENER_OPERATOR_LOCAL") == "true" {

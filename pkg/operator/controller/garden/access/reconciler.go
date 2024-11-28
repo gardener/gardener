@@ -8,32 +8,26 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/go-logr/logr"
 	"github.com/spf13/afero"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/cluster"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/operator/apis/config"
-	operatorclient "github.com/gardener/gardener/pkg/operator/client"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
 // Reconciler reconciles garden access secrets.
 type Reconciler struct {
 	Client  client.Client
-	Manager manager.Manager
-	Config  *config.OperatorConfiguration
 	FS      afero.Fs
+	Channel chan event.TypedGenericEvent[*rest.Config]
 
-	tokenFilePath  string
-	virtualCluster cluster.Cluster
+	tokenFilePath string
 }
 
 // Reconcile processes the given access secret in the request.
@@ -53,7 +47,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	kubeConfigRaw, ok := secret.Data[kubernetesclient.KubeConfig]
+	kubeConfigRaw, ok := secret.Data[kubernetes.KubeConfig]
 	if !ok {
 		log.Info("Secret does not contain kubeconfig")
 		return reconcile.Result{}, nil
@@ -73,12 +67,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error writing bearer token to file: %w", err)
 	}
 
-	return reconcile.Result{}, r.createVirtualCluster(log, restConfig)
-}
+	restConfig.BearerToken = ""
+	restConfig.BearerTokenFile = r.tokenFilePath
 
-// GetVirtualCluster returns the virtual cluster object.
-func (r *Reconciler) GetVirtualCluster() cluster.Cluster {
-	return r.virtualCluster
+	r.Channel <- event.TypedGenericEvent[*rest.Config]{Object: restConfig}
+	return reconcile.Result{}, nil
 }
 
 // CreateTemporaryFile creates a temporary file. Exposed for testing.
@@ -97,36 +90,4 @@ func (r *Reconciler) writeTokenToFile(token string) error {
 	}
 
 	return afero.WriteFile(r.FS, r.tokenFilePath, []byte(token), 0o600)
-}
-
-func (r *Reconciler) createVirtualCluster(log logr.Logger, restConfig *rest.Config) error {
-	if r.virtualCluster != nil {
-		return nil
-	}
-
-	// prepare REST config
-	conf := &kubernetesclient.Config{}
-	if err := kubernetesclient.WithRESTConfig(restConfig)(conf); err != nil {
-		return fmt.Errorf("error setting rest config: %w", err)
-	}
-	if err := kubernetesclient.WithClientConnectionOptions(r.Config.VirtualClientConnection)(conf); err != nil {
-		return fmt.Errorf("error setting client connection configuration: %w", err)
-	}
-	restConfig.BearerToken = ""
-	restConfig.BearerTokenFile = r.tokenFilePath
-
-	virtualCluster, err := cluster.New(restConfig, func(opts *cluster.Options) {
-		opts.Scheme = operatorclient.VirtualScheme
-		opts.Logger = log
-	})
-	if err != nil {
-		return fmt.Errorf("could not instantiate virtual cluster: %w", err)
-	}
-	if err := r.Manager.Add(virtualCluster); err != nil {
-		return fmt.Errorf("failed adding virtual cluster to manager: %w", err)
-	}
-
-	r.virtualCluster = virtualCluster
-
-	return nil
 }
