@@ -221,5 +221,19 @@ var _ = Describe("PrepareForCreate", func() {
 
 			Expect(newNamespacedCloudProfile.Generation).To(Equal(oldNamespacedCloudProfile.Generation + 1))
 		})
+
+		It("should prevent manual updates of the status field", func() {
+			namespacedCloudProfile.Status = core.NamespacedCloudProfileStatus{
+				CloudProfileSpec: core.CloudProfileSpec{
+					Kubernetes: core.KubernetesSettings{Versions: []core.ExpirableVersion{
+						{Version: "1.27.3"},
+					}},
+				},
+			}
+
+			namespacedcloudprofileregistry.Strategy.PrepareForUpdate(context.Background(), namespacedCloudProfile, oldNamespacedCloudProfile)
+
+			Expect(namespacedCloudProfile.Status).To(Equal(oldNamespacedCloudProfile.Status))
+		})
 	})
 })
