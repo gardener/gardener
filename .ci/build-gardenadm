@@ -6,17 +6,8 @@
 
 set -e
 
-if [[ -z "${MAIN_REPO_DIR}" ]]; then
-  export MAIN_REPO_DIR="$(readlink -f $(dirname ${0})/..)"
-else
-  export MAIN_REPO_DIR="$(readlink -f "${MAIN_REPO_DIR}")"
-fi
-
-if [[ -z "${BINARY_PATH}" ]]; then
-  export BINARY_PATH="$(readlink -f $(dirname ${0})/../bin)"
-else
-  export BINARY_PATH="$(readlink -f "${BINARY_PATH}")"
-fi
+export MAIN_REPO_DIR="$(readlink -f "${MAIN_REPO_DIR:-$(dirname ${0})/..}")"
+export BINARY_PATH="$(readlink -f "${BINARY_PATH:-$(dirname ${0})/../bin}")"
 
 pushd "${MAIN_REPO_DIR}" > /dev/null
 
