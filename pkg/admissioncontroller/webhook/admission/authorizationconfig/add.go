@@ -66,6 +66,9 @@ func NewHandler(log logr.Logger, apiReader, c client.Reader, decoder admission.D
 		GetConfigMapNameFromShoot: func(shoot *gardencore.Shoot) string {
 			return gardencorehelper.GetShootAuthorizationConfigurationConfigMapName(shoot.Spec.Kubernetes.KubeAPIServer)
 		},
+		SkipValidationOnShootUpdate: func(shoot, oldShoot *gardencore.Shoot) bool {
+			return sets.New[string](getKubeconfigAuthorizerNamesFromShoot(shoot)...).Equal(sets.New[string](getKubeconfigAuthorizerNamesFromShoot(oldShoot)...))
+		},
 		AdmitConfig: admitConfig,
 	}
 }
@@ -120,4 +123,16 @@ func admitConfig(authorizationConfigurationRaw string, shoots []*gardencore.Shoo
 	}
 
 	return 0, nil
+}
+
+func getKubeconfigAuthorizerNamesFromShoot(shoot *gardencore.Shoot) []string {
+	var authorizerNames []string
+
+	if shoot.Spec.Kubernetes.KubeAPIServer != nil && shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization != nil {
+		for _, kubeconfig := range shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization.Kubeconfigs {
+			authorizerNames = append(authorizerNames, kubeconfig.AuthorizerName)
+		}
+	}
+
+	return authorizerNames
 }

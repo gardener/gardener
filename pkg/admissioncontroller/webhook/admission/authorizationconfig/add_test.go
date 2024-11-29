@@ -300,7 +300,7 @@ authorizers:
 				test(admissionv1.Create, nil, shoot, false, statusCodeInvalid, "error getting authorization configuration from ConfigMap /: missing authorization configuration key in config.yaml ConfigMap data", "")
 			})
 
-			It("references ConfigMap with a webhook for which no kubeconfig secret name is specified", func() {
+			It("references ConfigMap with a webhook for which no kubeconfig secret name is specified (CREATE)", func() {
 				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: shootNamespace, Name: configMapName}, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
 					*cm = corev1.ConfigMap{
 						Data: map[string]string{"config.yaml": validAuthorizationConfiguration},
@@ -309,6 +309,19 @@ authorizers:
 				})
 				shoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization.Kubeconfigs = nil
 				test(admissionv1.Create, nil, shoot, false, statusCodeInvalid, `provided invalid authorization configuration: must provide kubeconfig secret name reference for webhook authorizer "webhook"`, "")
+			})
+
+			It("references ConfigMap with a webhook for which no kubeconfig secret name is specified (UPDATE)", func() {
+				returnedCm := corev1.ConfigMap{
+					Data: map[string]string{"config.yaml": validAuthorizationConfiguration},
+				}
+				newShoot := shoot.DeepCopy()
+				newShoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization.Kubeconfigs[0].AuthorizerName = "does-not-exist"
+				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: shootNamespace, Name: configMapName}, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
+					*cm = returnedCm
+					return nil
+				})
+				test(admissionv1.Update, shoot, newShoot, false, statusCodeInvalid, "provided invalid authorization configuration: must provide kubeconfig secret name reference for webhook authorizer \"webhook\" in shoot fake-cm-namespace/fake-shoot-name", "")
 			})
 
 			It("references authorization configuration which breaks validation rules", func() {
