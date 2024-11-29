@@ -248,8 +248,9 @@ func validateSeedNetworks(seedNetworks core.SeedNetworks, fldPath *field.Path, i
 	}
 
 	var (
-		primaryIPFamily = helper.DeterminePrimaryIPFamily(seedNetworks.IPFamilies)
-		networks        []cidrvalidation.CIDR
+		primaryIPFamily          = helper.DeterminePrimaryIPFamily(seedNetworks.IPFamilies)
+		networks                 []cidrvalidation.CIDR
+		reservedSeedServiceRange = cidrvalidation.NewCIDR(v1beta1constants.ReservedSeedServiceRange, field.NewPath(""))
 	)
 
 	if !inTemplate || len(seedNetworks.Pods) > 0 {
@@ -260,7 +261,8 @@ func validateSeedNetworks(seedNetworks core.SeedNetworks, fldPath *field.Path, i
 		networks = append(networks, services)
 		// Service range must not be larger than /8 for ipv4
 		if len(services.ValidateIPFamily(cidrvalidation.IPFamilyIPv4)) == 0 {
-			allErrs = append(allErrs, services.ValidateMaxSize(v1beta1constants.SeedServiceRangeMaxSizeBits)...)
+			maxSize, _ := reservedSeedServiceRange.GetIPNet().Mask.Size()
+			allErrs = append(allErrs, services.ValidateMaxSize(maxSize)...)
 		}
 	}
 	if seedNetworks.Nodes != nil {
@@ -282,8 +284,7 @@ func validateSeedNetworks(seedNetworks core.SeedNetworks, fldPath *field.Path, i
 	}
 	allErrs = append(allErrs, cidrvalidation.ValidateCIDROverlap(networks, false)...)
 
-	apiServerProxyRange := cidrvalidation.NewCIDR(v1beta1constants.ReservedRangeApiServerProxy, field.NewPath(""))
-	allErrs = append(allErrs, apiServerProxyRange.ValidateNotOverlap(networks...)...)
+	allErrs = append(allErrs, reservedSeedServiceRange.ValidateNotOverlap(networks...)...)
 	vpnRange := cidrvalidation.NewCIDR(v1beta1constants.DefaultVPNRange, field.NewPath(""))
 	allErrs = append(allErrs, vpnRange.ValidateNotOverlap(networks...)...)
 	vpnRangeV6 := cidrvalidation.NewCIDR(v1beta1constants.DefaultVPNRangeV6, field.NewPath(""))

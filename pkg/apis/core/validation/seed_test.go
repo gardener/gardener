@@ -536,7 +536,7 @@ var _ = Describe("Seed Validation Tests", func() {
 					}))
 				})
 
-				It("should forbid Seed with overlap to reserved apiserver-proxy range", func() {
+				It("should forbid Seed with overlap to reserved range", func() {
 					// Service CIDR overlaps with reserved range
 					seed.Spec.Networks.Pods = "240.0.0.0/16" // 240.0.0.0 -> 240.0.255.255
 
@@ -545,7 +545,7 @@ var _ = Describe("Seed Validation Tests", func() {
 					Expect(errorList).To(ConsistOfFields(Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.networks.pods"),
-						"Detail": Equal(`must not overlap with "[]" ("240.0.0.0/4")`),
+						"Detail": Equal(`must not overlap with "[]" ("240.0.0.0/8")`),
 					}))
 				})
 

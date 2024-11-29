@@ -76,10 +76,9 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 			// in local networks.
 			b.APIServerClusterIP = "64:ff9b:1::" + clusterIP
 		} else {
-			// prevent leakage of real cluster ip to shoot. we use the reserved range 240.0.0.0/4 as prefix instead.
-			prefixIp, _, _ := net.ParseCIDR(v1beta1constants.ReservedRangeApiServerProxy)
+			// prevent leakage of real cluster ip to shoot. we use the reserved range 240.0.0.0/8 as prefix instead.
+			prefixIp, _, _ := net.ParseCIDR(v1beta1constants.ReservedSeedServiceRange)
 			prefix := prefixIp.To4()
-			// we are foregoing 4 bits for readability. still leaves 16.7m possible shoots in a seed.
 			b.APIServerClusterIP = net.IPv4(prefix[0], clusterIPv4[1], clusterIPv4[2], clusterIPv4[3]).String()
 		}
 	} else {
