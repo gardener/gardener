@@ -930,7 +930,7 @@ func validateNetworking(networking *core.Networking, workerless bool, fldPath *f
 	}
 
 	primaryIPFamily := helper.DeterminePrimaryIPFamily(networking.IPFamilies)
-	apiServerProxyRange := cidrvalidation.NewCIDR(v1beta1constants.ReservedRangeApiServerProxy, field.NewPath(""))
+	apiServerProxyRange := cidrvalidation.NewCIDR(v1beta1constants.ReservedSeedServiceRange, field.NewPath(""))
 
 	if networking.Nodes != nil {
 		path := fldPath.Child("nodes")
