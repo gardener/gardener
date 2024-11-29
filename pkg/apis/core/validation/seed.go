@@ -256,7 +256,7 @@ func validateSeedNetworks(seedNetworks core.SeedNetworks, fldPath *field.Path, i
 		networks = append(networks, cidrvalidation.NewCIDR(seedNetworks.Pods, fldPath.Child("pods")))
 	}
 	if !inTemplate || len(seedNetworks.Services) > 0 {
-		servicesNw := cidrvalidation.NewCIDR(seedNetworks.Services, fldPath.Child("services"))
+		services := cidrvalidation.NewCIDR(seedNetworks.Services, fldPath.Child("services"))
 		networks = append(networks, servicesNw)
 		// Service range must not be larger than /8 for ipv4
 		if len(servicesNw.ValidateIPFamily(cidrvalidation.IPFamilyIPv4)) == 0 {
