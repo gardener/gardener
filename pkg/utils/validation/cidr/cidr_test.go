@@ -283,6 +283,7 @@ var _ = Describe("cidr", func() {
 
 				Expect(good.ValidateMaxSize(16)).To(BeEmpty())
 			})
+
 			It("should return no errors if cidr is smaller than limit", func() {
 				goodPath := field.NewPath("good")
 				goodCIDR := "11.12.0.0/17"
@@ -290,6 +291,7 @@ var _ = Describe("cidr", func() {
 
 				Expect(good.ValidateMaxSize(16)).To(BeEmpty())
 			})
+
 			It("should return an error if cidr is larger than limit", func() {
 				badPath := field.NewPath("bad")
 				badCIDR := "11.12.0.0/15"
@@ -300,35 +302,6 @@ var _ = Describe("cidr", func() {
 					"Field":    Equal(badPath.String()),
 					"BadValue": Equal(badCIDR),
 					"Detail":   Equal(`cannot be larger than /16`),
-				}))
-			})
-		})
-
-		Describe("ValidateMinSize", func() {
-			It("should return no errors if cidr is same size than limit", func() {
-				goodPath := field.NewPath("good")
-				goodCIDR := "11.12.0.0/16"
-				good := NewCIDR(goodCIDR, goodPath)
-
-				Expect(good.ValidateMinSize(16)).To(BeEmpty())
-			})
-			It("should return no errors if cidr is larger than limit", func() {
-				goodPath := field.NewPath("good")
-				goodCIDR := "11.12.0.0/15"
-				good := NewCIDR(goodCIDR, goodPath)
-
-				Expect(good.ValidateMinSize(16)).To(BeEmpty())
-			})
-			It("should return an error if cidr is smaller than limit", func() {
-				badPath := field.NewPath("bad")
-				badCIDR := "11.12.0.0/17"
-				bad := NewCIDR(badCIDR, badPath)
-
-				Expect(bad.ValidateMinSize(16)).To(ConsistOfFields(Fields{
-					"Type":     Equal(field.ErrorTypeInvalid),
-					"Field":    Equal(badPath.String()),
-					"BadValue": Equal(badCIDR),
-					"Detail":   Equal(`cannot be smaller than /16`),
 				}))
 			})
 		})
@@ -587,6 +560,7 @@ var _ = Describe("cidr", func() {
 
 				Expect(good.ValidateMaxSize(32)).To(BeEmpty())
 			})
+
 			It("should return no errors if cidr is smaller than limit", func() {
 				goodPath := field.NewPath("good")
 				goodCIDR := "2001:1db8::/33"
@@ -594,6 +568,7 @@ var _ = Describe("cidr", func() {
 
 				Expect(good.ValidateMaxSize(32)).To(BeEmpty())
 			})
+
 			It("should return an error if cidr is larger than limit", func() {
 				badPath := field.NewPath("bad")
 				badCIDR := "2001:1db8::/31"
@@ -604,35 +579,6 @@ var _ = Describe("cidr", func() {
 					"Field":    Equal(badPath.String()),
 					"BadValue": Equal(badCIDR),
 					"Detail":   Equal(`cannot be larger than /32`),
-				}))
-			})
-		})
-
-		Describe("ValidateMinSize", func() {
-			It("should return no errors if cidr is same size as limit", func() {
-				goodPath := field.NewPath("good")
-				goodCIDR := "2001:1db8::/32"
-				good := NewCIDR(goodCIDR, goodPath)
-
-				Expect(good.ValidateMinSize(32)).To(BeEmpty())
-			})
-			It("should return no errors if cidr is larger than limit", func() {
-				goodPath := field.NewPath("good")
-				goodCIDR := "2001:1db8::/31"
-				good := NewCIDR(goodCIDR, goodPath)
-
-				Expect(good.ValidateMinSize(32)).To(BeEmpty())
-			})
-			It("should return an error if cidr is smaller than limit", func() {
-				badPath := field.NewPath("bad")
-				badCIDR := "2001:1db8::/33"
-				bad := NewCIDR(badCIDR, badPath)
-
-				Expect(bad.ValidateMinSize(32)).To(ConsistOfFields(Fields{
-					"Type":     Equal(field.ErrorTypeInvalid),
-					"Field":    Equal(badPath.String()),
-					"BadValue": Equal(badCIDR),
-					"Detail":   Equal(`cannot be smaller than /32`),
 				}))
 			})
 		})
