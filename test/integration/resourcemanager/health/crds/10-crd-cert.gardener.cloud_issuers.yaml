@@ -176,6 +176,9 @@ spec:
                 description: RequestsPerDayQuota is the maximum number of certificate
                   requests per days allowed for this issuer
                 type: integer
+              selfSigned:
+                description: SelfSigned is the self signed specific spec.
+                type: object
             type: object
           status:
             description: IssuerStatus is the status of the issuer.
@@ -204,8 +207,8 @@ spec:
                 description: State is either empty, 'Pending', 'Error', or 'Ready'.
                 type: string
               type:
-                description: Type is the issuer type. Currently only 'acme' and 'ca'
-                  are supported.
+                description: Type is the issuer type. Currently only 'acme', 'ca'
+                  and 'selfSigned' are supported.
                 type: string
             required:
             - state
