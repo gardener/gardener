@@ -103,27 +103,27 @@ images:
     tag: "v1.13.4"
     targetVersion: "1.29.x"
     labels:
-      - name: 'gardener.cloud/cve-categorisation'
+      - name: "gardener.cloud/cve-categorisation"
         value:
-          network_exposure: 'public'
+          network_exposure: "public"
           authentication_enforced: true
-          user_interaction: 'end-user'
-          confidentiality_requirement: 'high'
-          integrity_requirement: 'high'
-          availability_requirement: 'low'
+          user_interaction: "end-user"
+          confidentiality_requirement: "high"
+          integrity_requirement: "high"
+          availability_requirement: "low"
   - name: ingress-default-backend
     sourceRepository: github.com/gardener/ingress-default-backend
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/ingress-default-backend
     tag: "0.24.0"
     labels:
-      - name: 'gardener.cloud/cve-categorisation'
+      - name: "gardener.cloud/cve-categorisation"
         value:
-          network_exposure: 'private'
+          network_exposure: "private"
           authentication_enforced: false
-          user_interaction: 'end-user'
-          confidentiality_requirement: 'none'
-          integrity_requirement: 'none'
-          availability_requirement: 'none'
+          user_interaction: "end-user"
+          confidentiality_requirement: "none"
+          integrity_requirement: "none"
+          availability_requirement: "none"
           comment: Show static page when no path is found
   # Seed controlplane
   #   hyperkube is used for kubectl + kubelet binaries on the worker nodes
@@ -190,18 +190,18 @@ images:
     repository: europe-docker.pkg.dev/gardener-project/releases/3rd/opentelemetry-operator/opentelemetry-operator
     tag: "v0.139.0"
     labels:
-      - name: 'gardener.cloud/cve-categorisation'
+      - name: "gardener.cloud/cve-categorisation"
         value:
-          network_exposure: 'private'
+          network_exposure: "private"
           authentication_enforced: false
-          user_interaction: 'gardener-operator'
-          confidentiality_requirement: 'low'
-          integrity_requirement: 'low'
-          availability_requirement: 'low'
-      - name: 'cloud.gardener.cnudie/responsibles'
+          user_interaction: "gardener-operator"
+          confidentiality_requirement: "low"
+          integrity_requirement: "low"
+          availability_requirement: "low"
+      - name: "cloud.gardener.cnudie/responsibles"
         value:
-          - type: 'githubTeam'
-            teamname: 'gardener/logging-maintainers'
+          - type: "githubTeam"
+            teamname: "gardener/logging-maintainers"
   - name: opentelemetry-collector
     sourceRepository: github.com/gardener/opentelemetry-collector
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/observability/opentelemetry-collector
@@ -212,18 +212,18 @@ images:
     repository: quay.io/prometheus-operator/prometheus-operator
     tag: v0.86.2
     labels:
-      - name: 'gardener.cloud/cve-categorisation'
+      - name: "gardener.cloud/cve-categorisation"
         value:
-          network_exposure: 'private'
+          network_exposure: "private"
           authentication_enforced: false
-          user_interaction: 'gardener-operator'
-          confidentiality_requirement: 'low'
-          integrity_requirement: 'low'
-          availability_requirement: 'low'
-      - name: 'cloud.gardener.cnudie/responsibles'
+          user_interaction: "gardener-operator"
+          confidentiality_requirement: "low"
+          integrity_requirement: "low"
+          availability_requirement: "low"
+      - name: "cloud.gardener.cnudie/responsibles"
         value:
-          - type: 'githubTeam'
-            teamname: 'gardener/monitoring-maintainers'
+          - type: "githubTeam"
+            teamname: "gardener/monitoring-maintainers"
   - name: alertmanager
     sourceRepository: github.com/prometheus/alertmanager
     repository: quay.io/prometheus/alertmanager
@@ -237,10 +237,10 @@ images:
           confidentiality_requirement: high
           integrity_requirement: high
           availability_requirement: low
-      - name: 'cloud.gardener.cnudie/responsibles'
+      - name: "cloud.gardener.cnudie/responsibles"
         value:
-          - type: 'githubTeam'
-            teamname: 'gardener/monitoring-maintainers'
+          - type: "githubTeam"
+            teamname: "gardener/monitoring-maintainers"
   - name: prometheus
     sourceRepository: github.com/prometheus/prometheus
     repository: quay.io/prometheus/prometheus
@@ -254,10 +254,10 @@ images:
           confidentiality_requirement: high
           integrity_requirement: high
           availability_requirement: low
-      - name: 'cloud.gardener.cnudie/responsibles'
+      - name: "cloud.gardener.cnudie/responsibles"
         value:
-          - type: 'githubTeam'
-            teamname: 'gardener/monitoring-maintainers'
+          - type: "githubTeam"
+            teamname: "gardener/monitoring-maintainers"
   - name: configmap-reloader
     sourceRepository: github.com/prometheus-operator/prometheus-operator
     repository: quay.io/prometheus-operator/prometheus-config-reloader
@@ -271,10 +271,10 @@ images:
           confidentiality_requirement: high
           integrity_requirement: high
           availability_requirement: low
-      - name: 'cloud.gardener.cnudie/responsibles'
+      - name: "cloud.gardener.cnudie/responsibles"
         value:
-          - type: 'githubTeam'
-            teamname: 'gardener/monitoring-maintainers'
+          - type: "githubTeam"
+            teamname: "gardener/monitoring-maintainers"
   - name: cortex
     repository: quay.io/cortexproject/cortex
     tag: v1.19.1
@@ -287,10 +287,10 @@ images:
           confidentiality_requirement: high
           integrity_requirement: high
           availability_requirement: low
-      - name: 'cloud.gardener.cnudie/responsibles'
+      - name: "cloud.gardener.cnudie/responsibles"
         value:
-          - type: 'githubTeam'
-            teamname: 'gardener/monitoring-maintainers'
+          - type: "githubTeam"
+            teamname: "gardener/monitoring-maintainers"
   - name: kube-state-metrics
     sourceRepository: github.com/kubernetes/kube-state-metrics
     repository: registry.k8s.io/kube-state-metrics/kube-state-metrics
@@ -304,10 +304,10 @@ images:
           confidentiality_requirement: high
           integrity_requirement: high
           availability_requirement: low
-      - name: 'cloud.gardener.cnudie/responsibles'
+      - name: "cloud.gardener.cnudie/responsibles"
         value:
-          - type: 'githubTeam'
-            teamname: 'gardener/monitoring-maintainers'
+          - type: "githubTeam"
+            teamname: "gardener/monitoring-maintainers"
   - name: gardener-metrics-exporter
     sourceRepository: github.com/gardener/gardener-metrics-exporter
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/metrics-exporter
@@ -328,10 +328,10 @@ images:
           integrity_requirement: high
           availability_requirement: low
           comment: the node-exporter is also deployed to the shoot cluster
-      - name: 'cloud.gardener.cnudie/responsibles'
+      - name: "cloud.gardener.cnudie/responsibles"
         value:
-          - type: 'githubTeam'
-            teamname: 'gardener/monitoring-maintainers'
+          - type: "githubTeam"
+            teamname: "gardener/monitoring-maintainers"
   - name: plutono
     sourceRepository: github.com/credativ/plutono
     repository: europe-docker.pkg.dev/gardener-project/releases/3rd/credativ/plutono
@@ -345,27 +345,27 @@ images:
           confidentiality_requirement: high
           integrity_requirement: high
           availability_requirement: low
-      - name: 'cloud.gardener.cnudie/responsibles'
+      - name: "cloud.gardener.cnudie/responsibles"
         value:
-          - type: 'githubTeam'
-            teamname: 'gardener/monitoring-maintainers'
+          - type: "githubTeam"
+            teamname: "gardener/monitoring-maintainers"
   - name: plutono-data-refresher
     sourceRepository: github.com/kiwigrid/k8s-sidecar
     repository: quay.io/kiwigrid/k8s-sidecar
     tag: "2.1.2"
     labels:
-      - name: 'gardener.cloud/cve-categorisation'
+      - name: "gardener.cloud/cve-categorisation"
         value:
-          network_exposure: 'private'
+          network_exposure: "private"
           authentication_enforced: false
-          user_interaction: 'gardener-operator'
-          confidentiality_requirement: 'low'
-          integrity_requirement: 'low'
-          availability_requirement: 'low'
-      - name: 'cloud.gardener.cnudie/responsibles'
+          user_interaction: "gardener-operator"
+          confidentiality_requirement: "low"
+          integrity_requirement: "low"
+          availability_requirement: "low"
+      - name: "cloud.gardener.cnudie/responsibles"
         value:
-          - type: 'githubTeam'
-            teamname: 'gardener/monitoring-maintainers'
+          - type: "githubTeam"
+            teamname: "gardener/monitoring-maintainers"
   - name: blackbox-exporter
     sourceRepository: github.com/prometheus/blackbox_exporter
     repository: quay.io/prometheus/blackbox-exporter
@@ -380,10 +380,10 @@ images:
           integrity_requirement: high
           availability_requirement: low
           comment: the blackbox-exporter is also deployed to the shoot cluster
-      - name: 'cloud.gardener.cnudie/responsibles'
+      - name: "cloud.gardener.cnudie/responsibles"
         value:
-          - type: 'githubTeam'
-            teamname: 'gardener/monitoring-maintainers'
+          - type: "githubTeam"
+            teamname: "gardener/monitoring-maintainers"
   - name: metrics-server
     sourceRepository: github.com/kubernetes-sigs/metrics-server
     repository: registry.k8s.io/metrics-server/metrics-server
@@ -398,10 +398,10 @@ images:
           confidentiality_requirement: high
           integrity_requirement: high
           availability_requirement: low
-      - name: 'cloud.gardener.cnudie/responsibles'
+      - name: "cloud.gardener.cnudie/responsibles"
         value:
-          - type: 'githubTeam'
-            teamname: 'gardener/monitoring-maintainers'
+          - type: "githubTeam"
+            teamname: "gardener/monitoring-maintainers"
   - name: metrics-server
     sourceRepository: github.com/kubernetes-sigs/metrics-server
     repository: registry.k8s.io/metrics-server/metrics-server
@@ -416,10 +416,10 @@ images:
           confidentiality_requirement: high
           integrity_requirement: high
           availability_requirement: low
-      - name: 'cloud.gardener.cnudie/responsibles'
+      - name: "cloud.gardener.cnudie/responsibles"
         value:
-          - type: 'githubTeam'
-            teamname: 'gardener/monitoring-maintainers'
+          - type: "githubTeam"
+            teamname: "gardener/monitoring-maintainers"
   - name: perses
     sourceRepository: github.com/perses/perses
     repository: europe-docker.pkg.dev/gardener-project/releases/3rd/persesdev/perses
@@ -433,27 +433,27 @@ images:
           confidentiality_requirement: high
           integrity_requirement: high
           availability_requirement: low
-      - name: 'cloud.gardener.cnudie/responsibles'
+      - name: "cloud.gardener.cnudie/responsibles"
         value:
-          - type: 'githubTeam'
-            teamname: 'gardener/monitoring-maintainers'
+          - type: "githubTeam"
+            teamname: "gardener/monitoring-maintainers"
   - name: perses-operator
     sourceRepository: github.com/perses/perses-operator
     repository: europe-docker.pkg.dev/gardener-project/releases/3rd/persesdev/perses-operator
     tag: v0.2.0
     labels:
-      - name: 'gardener.cloud/cve-categorisation'
+      - name: "gardener.cloud/cve-categorisation"
         value:
-          network_exposure: 'private'
+          network_exposure: "private"
           authentication_enforced: false
-          user_interaction: 'gardener-operator'
-          confidentiality_requirement: 'low'
-          integrity_requirement: 'low'
-          availability_requirement: 'low'
-      - name: 'cloud.gardener.cnudie/responsibles'
+          user_interaction: "gardener-operator"
+          confidentiality_requirement: "low"
+          integrity_requirement: "low"
+          availability_requirement: "low"
+      - name: "cloud.gardener.cnudie/responsibles"
         value:
-          - type: 'githubTeam'
-            teamname: 'gardener/monitoring-maintainers'
+          - type: "githubTeam"
+            teamname: "gardener/monitoring-maintainers"
   # Shoot core addons
   - name: vpn-client
     sourceRepository: github.com/gardener/vpn2
@@ -464,53 +464,53 @@ images:
     repository: registry.k8s.io/coredns/coredns
     tag: "v1.13.1"
     labels:
-      - name: 'gardener.cloud/cve-categorisation'
+      - name: "gardener.cloud/cve-categorisation"
         value:
-          network_exposure: 'protected'
+          network_exposure: "protected"
           authentication_enforced: false
-          user_interaction: 'end-user'
-          confidentiality_requirement: 'low'
-          integrity_requirement: 'high'
-          availability_requirement: 'high'
-      - name: 'cloud.gardener.cnudie/responsibles'
+          user_interaction: "end-user"
+          confidentiality_requirement: "low"
+          integrity_requirement: "high"
+          availability_requirement: "high"
+      - name: "cloud.gardener.cnudie/responsibles"
         value:
-          - type: 'githubTeam'
-            teamname: 'gardener/gardener-core-networking-maintainers'
+          - type: "githubTeam"
+            teamname: "gardener/gardener-core-networking-maintainers"
   # TODO(vicwicker): A node-local-dns version that uses coredns 1.11 or higher requires adapting the node-local-dns Plutono dashboards.
   - name: node-local-dns
     sourceRepository: github.com/kubernetes/kubernetes/blob/master/cluster/addons/dns/nodelocaldns
     repository: registry.k8s.io/dns/k8s-dns-node-cache
     tag: "1.26.5"
     labels:
-      - name: 'gardener.cloud/cve-categorisation'
+      - name: "gardener.cloud/cve-categorisation"
         value:
-          network_exposure: 'private'
+          network_exposure: "private"
           authentication_enforced: false
-          user_interaction: 'end-user'
-          confidentiality_requirement: 'low'
-          integrity_requirement: 'high'
-          availability_requirement: 'high'
-      - name: 'cloud.gardener.cnudie/responsibles'
+          user_interaction: "end-user"
+          confidentiality_requirement: "low"
+          integrity_requirement: "high"
+          availability_requirement: "high"
+      - name: "cloud.gardener.cnudie/responsibles"
         value:
-          - type: 'githubTeam'
-            teamname: 'gardener/gardener-core-networking-maintainers'
+          - type: "githubTeam"
+            teamname: "gardener/gardener-core-networking-maintainers"
   - name: coredns-config-adapter
     sourceRepository: github.com/gardener/coredns-config-adapter
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/coredns-config-adapter
     tag: "v0.4.0"
     labels:
-      - name: 'gardener.cloud/cve-categorisation'
+      - name: "gardener.cloud/cve-categorisation"
         value:
-          network_exposure: 'private'
+          network_exposure: "private"
           authentication_enforced: false
-          user_interaction: 'end-user'
-          confidentiality_requirement: 'low'
-          integrity_requirement: 'high'
-          availability_requirement: 'high'
-      - name: 'cloud.gardener.cnudie/responsibles'
+          user_interaction: "end-user"
+          confidentiality_requirement: "low"
+          integrity_requirement: "high"
+          availability_requirement: "high"
+      - name: "cloud.gardener.cnudie/responsibles"
         value:
-          - type: 'githubTeam'
-            teamname: 'gardener/gardener-core-networking-maintainers'
+          - type: "githubTeam"
+            teamname: "gardener/gardener-core-networking-maintainers"
   - name: node-problem-detector
     sourceRepository: github.com/kubernetes/node-problem-detector
     repository: registry.k8s.io/node-problem-detector/node-problem-detector
@@ -535,18 +535,18 @@ images:
     tag: "v0.8.22"
     targetVersion: "< 1.34"
     labels:
-      - name: 'gardener.cloud/cve-categorisation'
+      - name: "gardener.cloud/cve-categorisation"
         value:
-          network_exposure: 'private'
+          network_exposure: "private"
           authentication_enforced: false
-          user_interaction: 'end-user'
-          confidentiality_requirement: 'low'
-          integrity_requirement: 'high'
-          availability_requirement: 'low'
-      - name: 'cloud.gardener.cnudie/responsibles'
+          user_interaction: "end-user"
+          confidentiality_requirement: "low"
+          integrity_requirement: "high"
+          availability_requirement: "low"
+      - name: "cloud.gardener.cnudie/responsibles"
         value:
-          - type: 'githubTeam'
-            teamname: 'gardener/mcm-maintainers'
+          - type: "githubTeam"
+            teamname: "gardener/mcm-maintainers"
   # Shoot optional addons
   - name: kubernetes-dashboard
     sourceRepository: github.com/kubernetes/dashboard
@@ -579,35 +579,35 @@ images:
     repository: europe-docker.pkg.dev/gardener-project/releases/3rd/fluent-operator/fluent-operator
     tag: "v3.5.0"
     labels:
-      - name: 'gardener.cloud/cve-categorisation'
+      - name: "gardener.cloud/cve-categorisation"
         value:
-          network_exposure: 'private'
+          network_exposure: "private"
           authentication_enforced: false
-          user_interaction: 'gardener-operator'
-          confidentiality_requirement: 'low'
-          integrity_requirement: 'low'
-          availability_requirement: 'low'
-      - name: 'cloud.gardener.cnudie/responsibles'
+          user_interaction: "gardener-operator"
+          confidentiality_requirement: "low"
+          integrity_requirement: "low"
+          availability_requirement: "low"
+      - name: "cloud.gardener.cnudie/responsibles"
         value:
-          - type: 'githubTeam'
-            teamname: 'gardener/logging-maintainers'
+          - type: "githubTeam"
+            teamname: "gardener/logging-maintainers"
   - name: fluent-bit
     sourceRepository: github.com/fluent/fluent-operator
     repository: europe-docker.pkg.dev/gardener-project/releases/3rd/fluent-operator/fluent-bit
     tag: "v4.1.1"
     labels:
-      - name: 'gardener.cloud/cve-categorisation'
+      - name: "gardener.cloud/cve-categorisation"
         value:
-          network_exposure: 'private'
+          network_exposure: "private"
           authentication_enforced: false
-          user_interaction: 'gardener-operator'
-          confidentiality_requirement: 'high'
-          integrity_requirement: 'low'
-          availability_requirement: 'low'
-      - name: 'cloud.gardener.cnudie/responsibles'
+          user_interaction: "gardener-operator"
+          confidentiality_requirement: "high"
+          integrity_requirement: "low"
+          availability_requirement: "low"
+      - name: "cloud.gardener.cnudie/responsibles"
         value:
-          - type: 'githubTeam'
-            teamname: 'gardener/logging-maintainers'
+          - type: "githubTeam"
+            teamname: "gardener/logging-maintainers"
   - name: fluent-bit-plugin-installer
     resourceId:
       name: fluent-bit-to-vali
@@ -615,90 +615,90 @@ images:
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/fluent-bit-to-vali
     tag: "v0.69.0"
     labels:
-      - name: 'gardener.cloud/cve-categorisation'
+      - name: "gardener.cloud/cve-categorisation"
         value:
-          network_exposure: 'private'
+          network_exposure: "private"
           authentication_enforced: false
-          user_interaction: 'gardener-operator'
-          confidentiality_requirement: 'none'
-          integrity_requirement: 'none'
-          availability_requirement: 'none'
+          user_interaction: "gardener-operator"
+          confidentiality_requirement: "none"
+          integrity_requirement: "none"
+          availability_requirement: "none"
           comment: no data is stored or processed by the installer
-      - name: 'cloud.gardener.cnudie/responsibles'
+      - name: "cloud.gardener.cnudie/responsibles"
         value:
-          - type: 'githubTeam'
-            teamname: 'gardener/logging-maintainers'
+          - type: "githubTeam"
+            teamname: "gardener/logging-maintainers"
   - name: vali
     sourceRepository: github.com/credativ/vali
     repository: europe-docker.pkg.dev/gardener-project/releases/3rd/credativ/vali
     tag: "v2.2.28"
     labels:
-      - name: 'gardener.cloud/cve-categorisation'
+      - name: "gardener.cloud/cve-categorisation"
         value:
-          network_exposure: 'private'
+          network_exposure: "private"
           authentication_enforced: false
-          user_interaction: 'gardener-operator'
-          confidentiality_requirement: 'high'
-          integrity_requirement: 'high'
-          availability_requirement: 'low'
-      - name: 'cloud.gardener.cnudie/responsibles'
+          user_interaction: "gardener-operator"
+          confidentiality_requirement: "high"
+          integrity_requirement: "high"
+          availability_requirement: "low"
+      - name: "cloud.gardener.cnudie/responsibles"
         value:
-          - type: 'githubTeam'
-            teamname: 'gardener/logging-maintainers'
+          - type: "githubTeam"
+            teamname: "gardener/logging-maintainers"
   - name: vali-curator
     sourceRepository: github.com/gardener/logging
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/vali-curator
     tag: "v0.69.0"
     labels:
-      - name: 'gardener.cloud/cve-categorisation'
+      - name: "gardener.cloud/cve-categorisation"
         value:
-          network_exposure: 'private'
+          network_exposure: "private"
           authentication_enforced: false
-          user_interaction: 'gardener-operator'
-          confidentiality_requirement: 'none'
-          integrity_requirement: 'high'
-          availability_requirement: 'low'
-      - name: 'cloud.gardener.cnudie/responsibles'
+          user_interaction: "gardener-operator"
+          confidentiality_requirement: "none"
+          integrity_requirement: "high"
+          availability_requirement: "low"
+      - name: "cloud.gardener.cnudie/responsibles"
         value:
-          - type: 'githubTeam'
-            teamname: 'gardener/logging-maintainers'
+          - type: "githubTeam"
+            teamname: "gardener/logging-maintainers"
   - name: kube-rbac-proxy
     sourceRepository: github.com/brancz/kube-rbac-proxy
     repository: quay.io/brancz/kube-rbac-proxy
     tag: v0.20.0
     labels:
-      - name: 'gardener.cloud/cve-categorisation'
+      - name: "gardener.cloud/cve-categorisation"
         value:
-          network_exposure: 'public'
+          network_exposure: "public"
           authentication_enforced: true
-          user_interaction: 'end-user'
-          confidentiality_requirement: 'high'
-          integrity_requirement: 'high'
-          availability_requirement: 'low'
+          user_interaction: "end-user"
+          confidentiality_requirement: "high"
+          integrity_requirement: "high"
+          availability_requirement: "low"
           comment: kube-rbac-proxy is an authentication proxy working with credentials
-      - name: 'cloud.gardener.cnudie/responsibles'
+      - name: "cloud.gardener.cnudie/responsibles"
         value:
-          - type: 'githubTeam'
-            teamname: 'gardener/logging-maintainers'
+          - type: "githubTeam"
+            teamname: "gardener/logging-maintainers"
   - name: valitail
     sourceRepository: github.com/credativ/vali
     repository: europe-docker.pkg.dev/gardener-project/releases/3rd/credativ/valitail
     # Do not update valitail version due to hard dependency on glibc version of the target nodes.
     tag: "v2.2.15"
     labels:
-      - name: 'gardener.cloud/cve-categorisation'
+      - name: "gardener.cloud/cve-categorisation"
         value:
-          network_exposure: 'private'
+          network_exposure: "private"
           authentication_enforced: false
-          user_interaction: 'end-user'
-          confidentiality_requirement: 'high'
-          integrity_requirement: 'high'
-          availability_requirement: 'low'
+          user_interaction: "end-user"
+          confidentiality_requirement: "high"
+          integrity_requirement: "high"
+          availability_requirement: "low"
           comment: valitail is running as a client (not as a server) and as such is not publicly exposed to the internet. Vulnerabilities with Attack Vector:Network are not exploitable.
-      - name: 'cloud.gardener.cnudie/responsibles'
+      - name: "cloud.gardener.cnudie/responsibles"
         value:
-          - type: 'githubTeam'
-            teamname: 'gardener/logging-maintainers'
+          - type: "githubTeam"
+            teamname: "gardener/logging-maintainers"
   - name: telegraf
     resourceId:
       name: telegraf-iptables
@@ -706,140 +706,140 @@ images:
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/telegraf-iptables
     tag: "v0.69.0"
     labels:
-      - name: 'gardener.cloud/cve-categorisation'
+      - name: "gardener.cloud/cve-categorisation"
         value:
-          network_exposure: 'private'
+          network_exposure: "private"
           authentication_enforced: false
-          user_interaction: 'gardener-operator'
-          confidentiality_requirement: 'none'
-          integrity_requirement: 'none'
-          availability_requirement: 'none'
+          user_interaction: "gardener-operator"
+          confidentiality_requirement: "none"
+          integrity_requirement: "none"
+          availability_requirement: "none"
           comment: >
             telegraf is not accessible from outside the seed cluster and does not interact with confidential data
 
-      - name: 'cloud.gardener.cnudie/responsibles'
+      - name: "cloud.gardener.cnudie/responsibles"
         value:
-          - type: 'githubTeam'
-            teamname: 'gardener/logging-maintainers'
+          - type: "githubTeam"
+            teamname: "gardener/logging-maintainers"
   - name: event-logger
     sourceRepository: github.com/gardener/logging
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/event-logger
     tag: "v0.69.0"
     labels:
-      - name: 'gardener.cloud/cve-categorisation'
+      - name: "gardener.cloud/cve-categorisation"
         value:
-          network_exposure: 'private'
+          network_exposure: "private"
           authentication_enforced: false
-          user_interaction: 'gardener-operator'
-          confidentiality_requirement: 'high'
-          integrity_requirement: 'high'
-          availability_requirement: 'low'
-      - name: 'cloud.gardener.cnudie/responsibles'
+          user_interaction: "gardener-operator"
+          confidentiality_requirement: "high"
+          integrity_requirement: "high"
+          availability_requirement: "low"
+      - name: "cloud.gardener.cnudie/responsibles"
         value:
-          - type: 'githubTeam'
-            teamname: 'gardener/logging-maintainers'
+          - type: "githubTeam"
+            teamname: "gardener/logging-maintainers"
   - name: tune2fs
     sourceRepository: github.com/gardener/logging
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/tune2fs
     tag: "v0.69.0"
     labels:
-      - name: 'gardener.cloud/cve-categorisation'
+      - name: "gardener.cloud/cve-categorisation"
         value:
-          network_exposure: 'private'
+          network_exposure: "private"
           authentication_enforced: false
-          user_interaction: 'gardener-operator'
-          confidentiality_requirement: 'none'
-          integrity_requirement: 'none'
-          availability_requirement: 'low'
-      - name: 'cloud.gardener.cnudie/responsibles'
+          user_interaction: "gardener-operator"
+          confidentiality_requirement: "none"
+          integrity_requirement: "none"
+          availability_requirement: "low"
+      - name: "cloud.gardener.cnudie/responsibles"
         value:
-          - type: 'githubTeam'
-            teamname: 'gardener/logging-maintainers'
+          - type: "githubTeam"
+            teamname: "gardener/logging-maintainers"
   # VPA
   - name: vpa-admission-controller
     sourceRepository: github.com/kubernetes/autoscaler
     repository: registry.k8s.io/autoscaling/vpa-admission-controller
     tag: "1.5.1"
     labels:
-      - name: 'gardener.cloud/cve-categorisation'
+      - name: "gardener.cloud/cve-categorisation"
         value:
-          network_exposure: 'private'
+          network_exposure: "private"
           authentication_enforced: false
-          user_interaction: 'gardener-operator'
-          confidentiality_requirement: 'low'
-          integrity_requirement: 'high'
-          availability_requirement: 'high'
+          user_interaction: "gardener-operator"
+          confidentiality_requirement: "low"
+          integrity_requirement: "high"
+          availability_requirement: "high"
   - name: vpa-recommender
     sourceRepository: github.com/kubernetes/autoscaler
     repository: registry.k8s.io/autoscaling/vpa-recommender
     tag: "1.5.1"
     labels:
-      - name: 'gardener.cloud/cve-categorisation'
+      - name: "gardener.cloud/cve-categorisation"
         value:
-          network_exposure: 'private'
+          network_exposure: "private"
           authentication_enforced: false
-          user_interaction: 'gardener-operator'
-          confidentiality_requirement: 'low'
-          integrity_requirement: 'high'
-          availability_requirement: 'high'
+          user_interaction: "gardener-operator"
+          confidentiality_requirement: "low"
+          integrity_requirement: "high"
+          availability_requirement: "high"
   - name: vpa-updater
     sourceRepository: github.com/kubernetes/autoscaler
     repository: registry.k8s.io/autoscaling/vpa-updater
     tag: "1.5.1"
     labels:
-      - name: 'gardener.cloud/cve-categorisation'
+      - name: "gardener.cloud/cve-categorisation"
         value:
-          network_exposure: 'private'
+          network_exposure: "private"
           authentication_enforced: false
-          user_interaction: 'gardener-operator'
-          confidentiality_requirement: 'low'
-          integrity_requirement: 'high'
-          availability_requirement: 'high'
+          user_interaction: "gardener-operator"
+          confidentiality_requirement: "low"
+          integrity_requirement: "high"
+          availability_requirement: "high"
   # Horizontal cluster-proportional-autoscaler
   - name: cluster-proportional-autoscaler
     sourceRepository: https://github.com/kubernetes-sigs/cluster-proportional-autoscaler
     repository: registry.k8s.io/cpa/cluster-proportional-autoscaler
     tag: "v1.9.0"
     labels:
-      - name: 'cloud.gardener.cnudie/responsibles'
+      - name: "cloud.gardener.cnudie/responsibles"
         value:
-          - type: 'githubTeam'
-            teamname: 'gardener/gardener-core-networking-maintainers'
+          - type: "githubTeam"
+            teamname: "gardener/gardener-core-networking-maintainers"
   # Istio
   - name: istio-proxy
     sourceRepository: github.com/istio/istio
     repository: gcr.io/istio-release/proxyv2
     tag: "1.27.3-distroless"
     labels:
-      - name: 'gardener.cloud/cve-categorisation'
+      - name: "gardener.cloud/cve-categorisation"
         value:
-          network_exposure: 'public'
+          network_exposure: "public"
           authentication_enforced: false
-          user_interaction: 'end-user'
-          confidentiality_requirement: 'low'
-          integrity_requirement: 'high'
-          availability_requirement: 'high'
-      - name: 'cloud.gardener.cnudie/responsibles'
+          user_interaction: "end-user"
+          confidentiality_requirement: "low"
+          integrity_requirement: "high"
+          availability_requirement: "high"
+      - name: "cloud.gardener.cnudie/responsibles"
         value:
-          - type: 'githubTeam'
-            teamname: 'gardener/gardener-core-networking-maintainers'
+          - type: "githubTeam"
+            teamname: "gardener/gardener-core-networking-maintainers"
   - name: istio-istiod
     sourceRepository: github.com/istio/istio
     repository: gcr.io/istio-release/pilot
     tag: "1.27.3-distroless"
     labels:
-      - name: 'gardener.cloud/cve-categorisation'
+      - name: "gardener.cloud/cve-categorisation"
         value:
-          network_exposure: 'protected'
+          network_exposure: "protected"
           authentication_enforced: false
-          user_interaction: 'gardener-operator'
-          confidentiality_requirement: 'low'
-          integrity_requirement: 'high'
-          availability_requirement: 'low'
-      - name: 'cloud.gardener.cnudie/responsibles'
+          user_interaction: "gardener-operator"
+          confidentiality_requirement: "low"
+          integrity_requirement: "high"
+          availability_requirement: "low"
+      - name: "cloud.gardener.cnudie/responsibles"
         value:
-          - type: 'githubTeam'
-            teamname: 'gardener/gardener-core-networking-maintainers'
+          - type: "githubTeam"
+            teamname: "gardener/gardener-core-networking-maintainers"
   # API Server SNI, VPN-SeedServer and Kube-ApiServer Proxy
   - name: envoy-proxy
     sourceRepository: github.com/envoyproxy/envoy
@@ -847,48 +847,53 @@ images:
     tag: "distroless-v1.36.2"
     resourceId:
       version-template:
-        type: 'jq'
+        type: "jq"
         expr: '.tag | ltrimstr("distroless-")' # must yield single, semver-compliant, str
     labels:
-      - name: 'gardener.cloud/cve-categorisation'
+      - name: "gardener.cloud/cve-categorisation"
         value:
-          network_exposure: 'protected'
+          network_exposure: "protected"
           authentication_enforced: false
-          user_interaction: 'end-user'
-          confidentiality_requirement: 'low'
-          integrity_requirement: 'high'
-          availability_requirement: 'high'
-      - name: 'cloud.gardener.cnudie/responsibles'
+          user_interaction: "end-user"
+          confidentiality_requirement: "low"
+          integrity_requirement: "high"
+          availability_requirement: "high"
+      - name: "cloud.gardener.cnudie/responsibles"
         value:
-          - type: 'githubTeam'
-            teamname: 'gardener/gardener-core-networking-maintainers'
-      - name: 'cloud.gardener.cnudie/dso/scanning-hints/package-versions'
+          - type: "githubTeam"
+            teamname: "gardener/gardener-core-networking-maintainers"
+      - name: "cloud.gardener.cnudie/dso/scanning-hints/package-versions"
         value:
           # https://www.envoyproxy.io/docs/envoy/v1.35.0/intro/arch_overview/security/external_deps
-          - name: 'v8'
-            version: '13.8.258.26'
-          - name: 'grpc'
-            version: '1.72.0'
-          - name: 'luajit'
-            version: '19878ec'
-          - name: 'nghttp2'
-            version: '1.66.0'
-          - name: 'protobuf'
-            version: '29.3'
-          - name: 'fmt'
-            version: '11.2.0'
-          - name: 'boringssl'
-            version: '0.20250514.0'
+          - name: "v8"
+            version: "13.8.258.26"
+          - name: "grpc"
+            version: "1.72.0"
+          - name: "luajit"
+            version: "19878ec"
+          - name: "nghttp2"
+            version: "1.66.0"
+          - name: "protobuf"
+            version: "29.3"
+          - name: "fmt"
+            version: "11.2.0"
+          - name: "boringssl"
+            version: "0.20250514.0"
           # lua version is unclear. lua runtime is luajit.
           # luajit is compatible with lua 5.1 but contains feature of lua 5.2 and 5.3
           # https://luajit.org/extensions.html
-          - name: 'lua'
-            version: '5.1'
-          - name: 'yaml-cpp'
-            version: '0.8.0'
+          - name: "lua"
+            version: "5.1"
+          - name: "yaml-cpp"
+            version: "0.8.0"
   - name: apiserver-proxy-sidecar
     resourceId:
       name: apiserver-proxy
     sourceRepository: github.com/gardener/apiserver-proxy
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/apiserver-proxy
     tag: "v0.19.0"
+
+  - name: x509-certificate-exporter
+    sourceRepository: github.com/enix/x509-certificate-exporter
+    repository: docker.io/enix/x509-certificate-exporter
+    tag: 3.18.0

@@ -11,7 +11,7 @@ import (
 	x "github.com/gardener/gardener/pkg/component/observability/monitoring/x509certificateexporter"
 )
 
-var _ = Describe("x509 certificate exporter", func() {
+var _ = Describe("x509 certificate exporter - arg calculation", func() {
 	Describe("CertificatePath", func() {
 		It("Should calculate string correctly", func() {
 			Expect(x.CertificatePath("/path/to/cert").AsArg()).To(Equal("--watch-file=/path/to/cert"))
