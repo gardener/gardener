@@ -5,178 +5,48 @@
 package x509certificateexporter
 
 import (
+	"context"
 	"errors"
 	"fmt"
-	"path/filepath"
-	"sort"
+	"time"
 
-	"github.com/gardener/gardener/pkg/component"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/component"
+	operatorclient "github.com/gardener/gardener/pkg/operator/client"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 const (
-	containerName                = "x509-certificate-exporter"
-	inClusterManagedResourceName = "x509-certificate-exporter"
-	nodeManagedResourceName      = "x509-certificate-exporter-node"
-	port                         = 9793
+	containerName                    = "x509-certificate-exporter"
+	managedResourceName              = "x509-certificate-exporter"
+	promRuleName                     = "-x509-certificate-exporter"
+	inClusterManagedResourceName     = "x509-certificate-exporter"
+	nodeManagedResourceName          = "x509-certificate-exporter-node"
+	clusterRoleName                  = "gardener-cloud:x509-certificate-exporter"
+	clusterRoleBindingName           = "gardener-cloud:x509-certificate-exporter"
+	port                             = 9793
+	portName                         = "metrics"
+	certificateSourceLabelName       = "certificate-source"
+	inClusterCertificateLabelValue   = "api"
+	nodeCertificateLabelValue        = "node"
+	SuffixSeed                       = "-seed"
+	SuffixRuntime                    = "-runtime"
+	SuffixShoot                      = "-shoot"
+	labelComponent                   = "x509-certificate-exporter"
+	defuaultCertificateRenewalDays   = 14
+	defaultCertificateExpirationDays = 7
 )
 
-func defaultDeploymentArgs() []string {
-	return []string{
-		"--expose-relative-metrics",
-		"--watch-kube-secrets",
-		"--expose-per-cert-error-metrics",
-		fmt.Sprintf("--listen_address=%d", port),
-	}
-}
-
-func defaultDaemonSetArgs() []string {
-	return []string{
-		"--expose-relative-metrics",
-		"--trim-path-components=3",
-		"--expose-per-cert-error-metrics",
-		fmt.Sprintf("--listen_address=%d", port),
-	}
-}
-
-type X509CertificateArg interface {
-	AsArg() string
-}
-
-type X509CertificateArgSet interface {
-	AsArgs() []string
-}
-
-type CertificatePath string
-
-func (c CertificatePath) AsArg() string {
-	return "--watch-file=" + string(c)
-}
-
-type CertificateDirPath string
-
-func (c CertificateDirPath) AsArg() string {
-	return "--watch-dir=" + string(c)
-}
-
-// HostCertificates describes certificates that will be configured for monitoring
-// from the host nodes
-type HostCertificates struct {
-	// MountPath is the host path that will be mounted
-	MountPath string
-	// Certificate paths is a list of certificates withion the specified mount
-	// All relative paths are configured base on the specified mount
-	CertificatePaths []CertificatePath
-	// Similat to CertificatePaths but for dirs
-	CertificateDirPaths []CertificateDirPath
-}
-
-// Produces `*hostCertificates`,
-// will fail if mountPath is not an absolute dir
-// if any certificatePath is not an abs path, mountPath will be prepend
-// mountPath: host path that will be mounted from the node
-// filePaths: paths that will be configured in certificate exporter ds. Paths can be either file paths or dirs. If not absolute - mountPath is prepended.
-// dirPaths: similar as above, but will be configured as dirs
-func NewHostCertificates(
-	mountPath string, filePaths []string, dirPaths []string,
-) (*HostCertificates, error) {
-	ensureAbsolutePaths := func(paths []string) {
-		for idx, path := range paths {
-			if !filepath.IsAbs(path) {
-				paths[idx] = filepath.Join(mountPath, path)
-			}
-		}
-		sort.Strings(paths)
-	}
-
-	if !filepath.IsAbs(mountPath) {
-		return nil, errors.New("Path " + mountPath + "is not absolute file path")
-	}
-	ensureAbsolutePaths(filePaths)
-	if len(dirPaths) == 0 {
-		dirPaths = []string{mountPath}
-	}
-	ensureAbsolutePaths(dirPaths)
-
-	certificateDirs := make([]CertificateDirPath, len(dirPaths))
-	for i, path := range dirPaths {
-		certificateDirs[i] = CertificateDirPath(path)
-	}
-
-	certificatePaths := make([]CertificatePath, len(filePaths))
-	for i, path := range filePaths {
-		certificatePaths[i] = CertificatePath(path)
-	}
-
-	return &HostCertificates{
-		MountPath:           mountPath,
-		CertificatePaths:    certificatePaths,
-		CertificateDirPaths: certificateDirs,
-	}, nil
-}
-
-func (h HostCertificates) AsArgs() []string {
-	offset := len(h.CertificatePaths)
-	args := make([]string, offset+len(h.CertificateDirPaths))
-	for idx, arg := range h.CertificatePaths {
-		args[idx] = arg.AsArg()
-	}
-	for idx, arg := range h.CertificateDirPaths {
-		args[offset+idx] = arg.AsArg()
-	}
-	return args
-}
-
-// Secret types and the key name contained within that secret
-type SecretType struct {
-	// Type of the secrets that should be searched
-	Type string
-	// Key within the secret that should be checked
-	Key string
-}
-
-func (s SecretType) String() string {
-	return s.Type + ":" + s.Key
-}
-
-func (s SecretType) AsArg() string {
-	return fmt.Sprintf("--secret-type=%s", s)
-}
-
-type SecretTypeList []SecretType
-
-func (s SecretTypeList) AsArgs() []string {
-	args := make([]string, len(s))
-	for idx, arg := range s {
-		args[idx] = arg.AsArg()
-	}
-	return args
-}
-
-func labelsToArgs(argPrefix string, data map[string]string) []string {
-	args := []string{}
-	for k, v := range data {
-		arg := argPrefix + k
-		if v != "" {
-			arg += "=" + v
-		}
-		args = append(args, arg)
-	}
-	sort.Strings(args)
-	return args
-}
-
-type IncludeLabels labels.Set
-
-func (il IncludeLabels) AsArgs() []string {
-	return labelsToArgs("--include-label=", map[string]string(il))
-}
-
-type ExcludeLabels labels.Set
-
-func (el ExcludeLabels) AsArgs() []string {
-	return labelsToArgs("--exclude-label=", el)
+type x509CertificateExporter struct {
+	client         client.Client
+	secretsManager secretsmanager.Interface
+	namespace      string
+	values         Values
 }
 
 // Configurations for the x509 certificate exporter
@@ -196,16 +66,127 @@ type Values struct {
 	NameSuffix string
 	// Namespaces from which secrets are monitored.
 	// If non-zero len excludes all else.
-	IncludeNamespaces []string
+	IncludeNamespaces IncludeNamespaces
 	// Namespaces from which secrets are not monitored.
 	// If non-zero len includes all else.
-	ExcludeNamespaces []string
+	ExcludeNamespaces ExcludeNamespaces
 	// Includes labels, similar to the namespaces vars.
-	IncludeLabels labels.Set
+	IncludeLabels IncludeLabels
 	// Enclude labels, similar to the namespaces vars.
-	ExcludeLabels labels.Set
-	// ClusterType specifies the type of the cluster to which x509-certificate-exporter is being deployed.
-	ClusterType component.ClusterType
-	// Host HostCertificates that should be monitored from hosts
-	HostCertificates *HostCertificates
+	ExcludeLabels ExcludeLabels
+	// HostCertificates that should be monitored from hosts
+	HostCertificates []HostCertificates
+	// CertificateExpirationDays is the number of days before expiration that will trigger a critical alert
+	CertificateExpirationDays uint
+	// CertificateRenewalDays is the number of days bedfore expiration that will trigger a warning alert
+	CertificateRenewalDays uint
+	// PrometheusInstance is the label for thje prometheus instance
+	PrometheusInstance string
+}
+
+func New(
+	client client.Client,
+	secretsManager secretsmanager.Interface,
+	namespace string,
+	values Values,
+) component.DeployWaiter {
+	if values.CertificateRenewalDays == 0 {
+		values.CertificateRenewalDays = defuaultCertificateRenewalDays
+	}
+	if values.CertificateExpirationDays == 0 {
+		values.CertificateExpirationDays = defaultCertificateExpirationDays
+	}
+	if values.Replicas == 0 {
+		values.Replicas = 1
+	}
+	if values.CacheDuration.Duration == 0 {
+		values.CacheDuration.Duration = 24 * time.Hour
+	}
+	return &x509CertificateExporter{
+		client:         client,
+		secretsManager: secretsManager,
+		namespace:      namespace,
+		values:         values,
+	}
+}
+
+func (x *x509CertificateExporter) Deploy(ctx context.Context) error {
+	if x.values.NameSuffix != SuffixRuntime && x.values.NameSuffix != SuffixSeed {
+		return errors.New("x509CertificateExporter is currently supported only on the seed and runtime clusters")
+	}
+	var (
+		res                 []client.Object
+		hostResources       []client.Object
+		registry            *managedresources.Registry
+		serializedResources map[string][]byte
+		err                 error
+	)
+
+	if res, err = x.getInClusterCertificateMonitoringResources(); err != nil {
+		return fmt.Errorf("failed to get in-cluster certificate monitoring resources: %w", err)
+	}
+	res = append(res, x.prometheusRule(x.getGenericLabels("any"), x.values.CertificateRenewalDays, x.values.CertificateExpirationDays))
+
+	if len(x.values.HostCertificates) > 0 {
+		if hostResources, err = x.getHostCertificateMonitoringResources(); err != nil {
+			return fmt.Errorf("failed to get host certificate monitoring resources: %w", err)
+		}
+		res = append(res, hostResources...)
+	}
+	if x.values.NameSuffix == SuffixSeed {
+		registry = managedresources.NewRegistry(kubernetes.GardenScheme, kubernetes.GardenCodec, kubernetes.GardenSerializer)
+	}
+
+	if x.values.NameSuffix == SuffixRuntime {
+		registry = managedresources.NewRegistry(operatorclient.RuntimeScheme, operatorclient.RuntimeCodec, operatorclient.RuntimeSerializer)
+	}
+
+	if err := registry.Add(res...); err != nil {
+		return err
+	}
+
+	serializedResources, err = registry.SerializedObjects()
+	if err != nil {
+		return err
+	}
+
+	if err := managedresources.CreateForSeedWithLabels(
+		ctx,
+		x.client,
+		x.namespace,
+		managedResourceName+x.values.NameSuffix,
+		false,
+		map[string]string{v1beta1constants.LabelCareConditionType: v1beta1constants.ObservabilityComponentsHealthy},
+		serializedResources,
+	); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (x *x509CertificateExporter) Destroy(ctx context.Context) error {
+	if err := managedresources.DeleteForSeed(ctx, x.client, x.namespace, managedResourceName); err != nil {
+		return err
+	}
+	return nil
+}
+
+// TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
+// or deleted.
+var TimeoutWaitForManagedResource = 2 * time.Minute
+
+func (x *x509CertificateExporter) Wait(ctx context.Context) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
+	defer cancel()
+
+	return managedresources.WaitUntilHealthy(timeoutCtx, x.client, x.namespace, managedResourceName)
+}
+
+func (x *x509CertificateExporter) WaitCleanup(ctx context.Context) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
+	defer cancel()
+
+	return managedresources.WaitUntilDeleted(timeoutCtx, x.client, x.namespace, managedResourceName)
+
 }

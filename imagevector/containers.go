@@ -133,4 +133,6 @@ const (
 	ContainerImageNameVpnServer = "vpn-server"
 	// ContainerImageNameVpnShootClient is a constant for an image in the image vector with name 'vpn-shoot-client'.
 	ContainerImageNameVpnShootClient = "vpn-shoot-client"
+	// ContainerImageNameX509CertificateExporter is a constant for an image in the image vector with name 'x509-certificate-exporter'.
+	ContainerImageNameX509CertificateExporter = "x509-certificate-exporter"
 )
