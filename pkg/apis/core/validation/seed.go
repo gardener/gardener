@@ -257,10 +257,10 @@ func validateSeedNetworks(seedNetworks core.SeedNetworks, fldPath *field.Path, i
 	}
 	if !inTemplate || len(seedNetworks.Services) > 0 {
 		services := cidrvalidation.NewCIDR(seedNetworks.Services, fldPath.Child("services"))
-		networks = append(networks, servicesNw)
+		networks = append(networks, services)
 		// Service range must not be larger than /8 for ipv4
-		if len(servicesNw.ValidateIPFamily(cidrvalidation.IPFamilyIPv4)) == 0 {
-			allErrs = append(allErrs, servicesNw.ValidateMaxSize(v1beta1constants.SeedServiceRangeMaxSizeBits)...)
+		if len(services.ValidateIPFamily(cidrvalidation.IPFamilyIPv4)) == 0 {
+			allErrs = append(allErrs, services.ValidateMaxSize(v1beta1constants.SeedServiceRangeMaxSizeBits)...)
 		}
 	}
 	if seedNetworks.Nodes != nil {
