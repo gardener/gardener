@@ -261,7 +261,7 @@ var _ = Describe("Certificates tests", func() {
 			Eventually(func() error {
 				checker := mgr.GetWebhookServer().StartedChecker()
 				return checker(&http.Request{})
-			}).Should(BeNil())
+			}).Should(Succeed())
 
 			DeferCleanup(func() {
 				By("Stop manager")
@@ -456,7 +456,7 @@ var _ = Describe("Certificates tests", func() {
 			Eventually(func() error {
 				checker := defaultServer.StartedChecker()
 				return checker(&http.Request{})
-			}).Should(BeNil())
+			}).Should(Succeed())
 
 			DeferCleanup(func() {
 				By("Stop manager")

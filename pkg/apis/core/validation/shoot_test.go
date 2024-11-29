@@ -483,11 +483,18 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				metav1.SetMetaDataAnnotation(&newShoot.ObjectMeta, v1beta1constants.AnnotationConfirmationForceDeletion, "1")
 
-				Expect(ValidateForceDeletion(newShoot, shoot)).To(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("metadata.annotations[confirmation.gardener.cloud/force-deletion]"),
-					"Detail": Equal("force-deletion annotation cannot be set when Shoot deletionTimestamp is nil"),
-				})))
+				Expect(ValidateForceDeletion(newShoot, shoot)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("metadata.annotations[confirmation.gardener.cloud/force-deletion]"),
+						"Detail": Equal("force-deletion annotation cannot be set when Shoot deletionTimestamp is nil"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("metadata.annotations[confirmation.gardener.cloud/force-deletion]"),
+						"Detail": Equal("force-deletion annotation cannot be set when Shoot status does not contain one of these error codes: [ERR_CLEANUP_CLUSTER_RESOURCES ERR_CONFIGURATION_PROBLEM ERR_INFRA_DEPENDENCIES ERR_INFRA_UNAUTHENTICATED ERR_INFRA_UNAUTHORIZED]"),
+					})),
+				))
 			})
 
 			It("should not allow setting the force-deletion annotation if the Shoot status does not have an error code", func() {
@@ -496,11 +503,13 @@ var _ = Describe("Shoot Validation Tests", func() {
 				metav1.SetMetaDataAnnotation(&newShoot.ObjectMeta, v1beta1constants.AnnotationConfirmationForceDeletion, "T")
 				newShoot.DeletionTimestamp = &metav1.Time{Time: time.Now()}
 
-				Expect(ValidateForceDeletion(newShoot, shoot)).To(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("metadata.annotations[confirmation.gardener.cloud/force-deletion]"),
-					"Detail": Equal("force-deletion annotation cannot be set when Shoot status does not contain one of these error codes: [ERR_CLEANUP_CLUSTER_RESOURCES ERR_CONFIGURATION_PROBLEM ERR_INFRA_DEPENDENCIES ERR_INFRA_UNAUTHENTICATED ERR_INFRA_UNAUTHORIZED]"),
-				})))
+				Expect(ValidateForceDeletion(newShoot, shoot)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("metadata.annotations[confirmation.gardener.cloud/force-deletion]"),
+						"Detail": Equal("force-deletion annotation cannot be set when Shoot status does not contain one of these error codes: [ERR_CLEANUP_CLUSTER_RESOURCES ERR_CONFIGURATION_PROBLEM ERR_INFRA_DEPENDENCIES ERR_INFRA_UNAUTHENTICATED ERR_INFRA_UNAUTHORIZED]"),
+					})),
+				))
 			})
 
 			It("should not allow setting the force-deletion annotation if the Shoot status does not have a required error code", func() {
@@ -516,11 +525,13 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 				}
 
-				Expect(ValidateForceDeletion(newShoot, shoot)).To(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("metadata.annotations[confirmation.gardener.cloud/force-deletion]"),
-					"Detail": Equal("force-deletion annotation cannot be set when Shoot status does not contain one of these error codes: [ERR_CLEANUP_CLUSTER_RESOURCES ERR_CONFIGURATION_PROBLEM ERR_INFRA_DEPENDENCIES ERR_INFRA_UNAUTHENTICATED ERR_INFRA_UNAUTHORIZED]"),
-				})))
+				Expect(ValidateForceDeletion(newShoot, shoot)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("metadata.annotations[confirmation.gardener.cloud/force-deletion]"),
+						"Detail": Equal("force-deletion annotation cannot be set when Shoot status does not contain one of these error codes: [ERR_CLEANUP_CLUSTER_RESOURCES ERR_CONFIGURATION_PROBLEM ERR_INFRA_DEPENDENCIES ERR_INFRA_UNAUTHENTICATED ERR_INFRA_UNAUTHORIZED]"),
+					})),
+				))
 			})
 
 			It("should not do anything if the both new and old Shoot have the annotation", func() {
@@ -528,7 +539,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				shoot.DeletionTimestamp = &metav1.Time{Time: time.Now()}
 				newShoot := shoot.DeepCopy()
 
-				Expect(ValidateForceDeletion(newShoot, shoot)).NotTo(HaveOccurred())
+				Expect(ValidateForceDeletion(newShoot, shoot)).To(BeEmpty())
 			})
 
 			It("should forbid to remove the annotation once set", func() {
@@ -538,11 +549,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 				newShoot.DeletionTimestamp = &metav1.Time{Time: time.Now()}
 
 				err := ValidateForceDeletion(newShoot, shoot)
-				Expect(err).To(PointTo(MatchFields(IgnoreExtras, Fields{
+				Expect(err).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("metadata.annotations[confirmation.gardener.cloud/force-deletion]"),
 					"Detail": Equal("force-deletion annotation cannot be removed once set"),
-				})))
+				}))))
 			})
 
 			It("should allow setting the force-deletion annotation if the Shoot has a deletionTimestamp and the status has a required ErrorCode", func() {
@@ -557,7 +568,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 				}
 
-				Expect(ValidateForceDeletion(newShoot, shoot)).NotTo(HaveOccurred())
+				Expect(ValidateForceDeletion(newShoot, shoot)).To(BeEmpty())
 			})
 		})
 

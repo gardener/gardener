@@ -117,13 +117,15 @@ var _ = Describe("Aggregator", func() {
 		It("should get informer for Secret from special cache", func() {
 			secret := &corev1.Secret{}
 			secretCache.EXPECT().GetInformer(ctx, secret)
-			Expect(aggregator.GetInformer(ctx, secret)).To(Succeed())
+			_, err := aggregator.GetInformer(ctx, secret)
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should get informer for ConfigMap from fallback cache", func() {
 			cm := &corev1.ConfigMap{}
 			fallback.EXPECT().GetInformer(ctx, cm)
-			Expect(aggregator.GetInformer(ctx, cm)).To(Succeed())
+			_, err := aggregator.GetInformer(ctx, cm)
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 
@@ -131,19 +133,22 @@ var _ = Describe("Aggregator", func() {
 		It("should get informer for Secret from special cache", func() {
 			gvk := corev1.SchemeGroupVersion.WithKind("Secret")
 			secretCache.EXPECT().GetInformerForKind(ctx, gvk)
-			Expect(aggregator.GetInformerForKind(ctx, gvk)).To(Succeed())
+			_, err := aggregator.GetInformerForKind(ctx, gvk)
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should get informer for SecretList from special cache", func() {
 			gvk := corev1.SchemeGroupVersion.WithKind("SecretList")
 			secretCache.EXPECT().GetInformerForKind(ctx, gvk)
-			Expect(aggregator.GetInformerForKind(ctx, gvk)).To(Succeed())
+			_, err := aggregator.GetInformerForKind(ctx, gvk)
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should get informer for ConfigMap from fallback cache", func() {
 			gvk := corev1.SchemeGroupVersion.WithKind("ConfigMap")
 			fallback.EXPECT().GetInformerForKind(ctx, gvk)
-			Expect(aggregator.GetInformerForKind(ctx, gvk)).To(Succeed())
+			_, err := aggregator.GetInformerForKind(ctx, gvk)
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 
