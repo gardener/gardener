@@ -2879,12 +2879,6 @@ var _ = Describe("validator", func() {
 				It("should throw an error because of an invalid major version", func() {
 					shoot.Spec.Kubernetes.Version = "foo"
 
-					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-					Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
-
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
@@ -2893,12 +2887,6 @@ var _ = Describe("validator", func() {
 
 				It("should throw an error because of an invalid minor version", func() {
 					shoot.Spec.Kubernetes.Version = "1.bar"
-
-					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-					Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
 
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
@@ -2918,12 +2906,6 @@ var _ = Describe("validator", func() {
 
 				It("should default a major kubernetes version to latest minor.patch version", func() {
 					shoot.Spec.Kubernetes.Version = "1"
-
-					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-					Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
 
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
@@ -3653,6 +3635,10 @@ var _ = Describe("validator", func() {
 					latestNonExpiredVersion = "2.1.0"
 					previewVersion          = "3.0.0"
 
+					cloudProfileMachineImages []gardencorev1beta1.MachineImage
+				)
+
+				BeforeEach(func() {
 					cloudProfileMachineImages = []gardencorev1beta1.MachineImage{
 						{
 							Name: validMachineImageName,
@@ -3742,16 +3728,7 @@ var _ = Describe("validator", func() {
 							},
 						},
 					}
-				)
-
-				BeforeEach(func() {
 					cloudProfile.Spec.MachineImages = cloudProfileMachineImages
-
-					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-					Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
 				})
 
 				Context("create Shoot", func() {
@@ -3773,6 +3750,12 @@ var _ = Describe("validator", func() {
 							},
 							Zones: []string{"europe-a"},
 						})
+
+						Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+						Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
 					})
 
 					It("should reject due to an invalid machine image (not present in cloudprofile)", func() {
@@ -3785,7 +3768,7 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
 						Expect(err).To(BeForbiddenError())
-						Expect(err.Error()).To(ContainSubstring("machine image version is not supported"))
+						Expect(err.Error()).To(ContainSubstring("image is not supported"))
 					})
 
 					It("should reject due to an invalid machine image (version unset)", func() {
@@ -4001,6 +3984,144 @@ var _ = Describe("validator", func() {
 						}))
 					})
 
+					Context("default machine image version", func() {
+						var (
+							suffixedVersion = "2.1.1-suffixed"
+						)
+
+						BeforeEach(func() {
+							cloudProfile.Spec.MachineImages[0].Versions = append(cloudProfile.Spec.MachineImages[0].Versions,
+								gardencorev1beta1.MachineImageVersion{
+									ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: suffixedVersion},
+									Architectures:    []string{"amd64", "arm64"},
+								},
+							)
+						})
+
+						It("should throw an error because of an invalid major version", func() {
+							shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+								Name:    imageName1,
+								Version: "foo",
+							}
+
+							attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+							err := admissionHandler.Admit(ctx, attrs, nil)
+
+							Expect(err).To(MatchError(ContainSubstring("must be a semantic version")))
+						})
+
+						It("should throw an error because of an invalid minor version", func() {
+							shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+								Name:    imageName1,
+								Version: "1.bar",
+							}
+
+							attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+							err := admissionHandler.Admit(ctx, attrs, nil)
+
+							Expect(err).To(MatchError(ContainSubstring("must be a semantic version")))
+						})
+
+						It("should throw an error because of an invalid patch version", func() {
+							shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+								Name:    imageName1,
+								Version: "1.2.baz",
+							}
+
+							attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+							err := admissionHandler.Admit(ctx, attrs, nil)
+
+							Expect(err).To(MatchError(ContainSubstring("machine image version is not supported")))
+						})
+
+						It("should default a machine image version to latest major.minor.patch version", func() {
+							shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+								Name: imageName1,
+							}
+
+							attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+							err := admissionHandler.Admit(ctx, attrs, nil)
+
+							Expect(err).To(Not(HaveOccurred()))
+							Expect(shoot.Spec.Provider.Workers[0].Machine.Image.Version).To(Equal(suffixedVersion))
+						})
+
+						It("should default a major machine image version to latest minor.patch version", func() {
+							shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+								Name:    imageName1,
+								Version: "1",
+							}
+
+							attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+							err := admissionHandler.Admit(ctx, attrs, nil)
+
+							Expect(err).To(Not(HaveOccurred()))
+							Expect(shoot.Spec.Provider.Workers[0].Machine.Image.Version).To(Equal(expiringVersion))
+						})
+
+						It("should default a major.minor machine image version to latest patch version", func() {
+							shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+								Name:    imageName1,
+								Version: "2.0",
+							}
+
+							attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+							err := admissionHandler.Admit(ctx, attrs, nil)
+
+							Expect(err).To(Not(HaveOccurred()))
+							Expect(shoot.Spec.Provider.Workers[0].Machine.Image.Version).To(Equal(nonExpiredVersion2))
+						})
+
+						It("should reject defaulting a major.minor machine image version if there is no higher non-preview version available for defaulting", func() {
+							shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+								Name:    imageName1,
+								Version: "3",
+							}
+
+							attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+							err := admissionHandler.Admit(ctx, attrs, nil)
+
+							Expect(err).To(MatchError(ContainSubstring("failed to determine latest machine image from cloud profile")))
+						})
+
+						It("should be able to explicitly pick preview versions", func() {
+							shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+								Name:    imageName1,
+								Version: "3.0.0",
+							}
+
+							attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+							err := admissionHandler.Admit(ctx, attrs, nil)
+
+							Expect(err).To(Not(HaveOccurred()))
+							Expect(shoot.Spec.Provider.Workers[0].Machine.Image.Version).To(Equal(previewVersion))
+						})
+
+						It("should reject: default only exactly matching minor machine image version", func() {
+							shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+								Name:    imageName1,
+								Version: "1.0",
+							}
+
+							attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+							err := admissionHandler.Admit(ctx, attrs, nil)
+
+							Expect(err).To(MatchError(ContainSubstring("failed to determine latest machine image from cloud profile")))
+						})
+
+						It("should reject to create a worker group with an expired machine image version", func() {
+							shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+								Name:    imageName1,
+								Version: "1.1.1",
+							}
+
+							attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+							err := admissionHandler.Admit(ctx, attrs, nil)
+
+							Expect(err).To(MatchError(ContainSubstring("machine image version 'some-machineimage:%s' is expired", expiredVersion)))
+						})
+					})
+
 					It("should allow supported CRI and CRs", func() {
 						shoot.Spec.Provider.Workers = []core.Worker{
 							{
@@ -4170,6 +4291,12 @@ var _ = Describe("validator", func() {
 							Version: nonExpiredVersion1,
 						}
 						shoot.Spec.Provider.Workers[0].Machine.Architecture = ptr.To("amd64")
+
+						Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+						Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
 					})
 
 					It("should deny updating to an MachineImage which does not support the selected container runtime", func() {
@@ -4689,6 +4816,12 @@ var _ = Describe("validator", func() {
 
 				Context("delete Shoot", func() {
 					It("should allow even if a machine image has an expiration date in the past", func() {
+						Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+						Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
 						shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
 							Name:    imageName1,
 							Version: expiredVersion,
