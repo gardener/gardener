@@ -45,7 +45,7 @@ tests:
       exp_annotations:
         description: Etcd3 cluster main is unavailable (due to possible quorum loss) or cannot be scraped. As long as etcd3 main is down, the cluster is unreachable.
         summary: Etcd3 main cluster down.
-  - eval_time: 15m
+  - eval_time: 10m
     alertname: KubeEtcd3MainNoLeader
     exp_alerts:
     - exp_labels:
