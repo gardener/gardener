@@ -705,6 +705,11 @@ images:
   sourceRepository: https://github.com/kubernetes-sigs/cluster-proportional-autoscaler
   repository: registry.k8s.io/cpa/cluster-proportional-autoscaler
   tag: "v1.9.0"
+  labels:
+  - name: 'cloud.gardener.cnudie/responsibles'
+    value:
+    - type: 'githubTeam'
+      teamname: 'gardener/gardener-core-networking-maintainers'
 
 # Istio
 - name: istio-proxy
