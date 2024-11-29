@@ -48,6 +48,7 @@ func (g *graph) setupShootWatch(ctx context.Context, informer cache.Informer) er
 				!apiequality.Semantic.DeepEqual(oldShoot.Spec.CredentialsBindingName, newShoot.Spec.CredentialsBindingName) ||
 				!apiequality.Semantic.DeepEqual(oldShoot.Spec.CloudProfileName, newShoot.Spec.CloudProfileName) ||
 				!apiequality.Semantic.DeepEqual(oldShoot.Spec.CloudProfile, newShoot.Spec.CloudProfile) ||
+				!apiequality.Semantic.DeepEqual(oldShoot.Spec.Kubernetes.ClusterAutoscaler, newShoot.Spec.Kubernetes.ClusterAutoscaler) ||
 				v1beta1helper.GetShootAuditPolicyConfigMapName(oldShoot.Spec.Kubernetes.KubeAPIServer) != v1beta1helper.GetShootAuditPolicyConfigMapName(newShoot.Spec.Kubernetes.KubeAPIServer) ||
 				v1beta1helper.GetShootAuthenticationConfigurationConfigMapName(oldShoot.Spec.Kubernetes.KubeAPIServer) != v1beta1helper.GetShootAuthenticationConfigurationConfigMapName(newShoot.Spec.Kubernetes.KubeAPIServer) ||
 				!apiequality.Semantic.DeepEqual(v1beta1helper.GetShootAuthorizationConfiguration(oldShoot.Spec.Kubernetes.KubeAPIServer), v1beta1helper.GetShootAuthorizationConfiguration(newShoot.Spec.Kubernetes.KubeAPIServer)) ||
@@ -136,11 +137,15 @@ func (g *graph) handleShootCreateOrUpdate(ctx context.Context, shoot *gardencore
 		g.addEdge(exposureClassVertex, shootVertex)
 	}
 
-	if configMapName := shoot.Spec.Kubernetes.ClusterAutoscaler.ExpanderConfig.ConfigMapName; configMapName != nil {
-		if shoot.Status.SeedName != nil {
-			configMapVertex := g.getOrCreateVertex(VertexTypeConfigMap, shoot.Namespace, *configMapName)
-			seedVertex := g.getOrCreateVertex(VertexTypeSeed, "", *shoot.Status.SeedName)
-			g.addEdge(configMapVertex, seedVertex)
+	// TODO(tobschli): There needs to be a better way to do this, right?
+	if caConfig := shoot.Spec.Kubernetes.ClusterAutoscaler; caConfig != nil {
+		if expanderConfig := caConfig.ExpanderConfig; expanderConfig != nil {
+			if configMapName := expanderConfig.ConfigMapName; len(configMapName) != 0 {
+				if shoot.Status.SeedName != nil {
+					configMapVertex := g.getOrCreateVertex(VertexTypeConfigMap, shoot.Namespace, configMapName)
+					g.addEdge(configMapVertex, shootVertex)
+				}
+			}
 		}
 	}
 

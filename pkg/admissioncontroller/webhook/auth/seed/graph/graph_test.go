@@ -71,6 +71,7 @@ var _ = Describe("graph", func() {
 		shootIssuerNamespace = "gardener-system-shoot-issuer"
 
 		shoot1                           *gardencorev1beta1.Shoot
+		shoot1ExpanderConfigMap          *corev1.ConfigMap
 		shoot1DNSProvider1               = gardencorev1beta1.DNSProvider{SecretName: ptr.To("dnssecret1")}
 		shoot1DNSProvider2               = gardencorev1beta1.DNSProvider{SecretName: ptr.To("dnssecret2")}
 		shoot1AuditPolicyConfigMapRef    = corev1.ObjectReference{Name: "auditpolicy1"}
@@ -194,6 +195,17 @@ var _ = Describe("graph", func() {
 		}
 		Expect(fakeClient.Create(ctx, namespace1)).To(Succeed())
 
+		shoot1ExpanderConfigMap = &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "expanderConfig",
+				Namespace: namespace1.Name,
+			},
+			Data: map[string]string{
+				"Foo": "bar",
+			},
+		}
+		Expect(fakeClient.Create(ctx, shoot1ExpanderConfigMap)).To(Succeed())
+
 		shoot1 = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "shoot1",
@@ -213,6 +225,11 @@ var _ = Describe("graph", func() {
 					Providers: []gardencorev1beta1.DNSProvider{shoot1DNSProvider1, shoot1DNSProvider2},
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{
+					ClusterAutoscaler: &gardencorev1beta1.ClusterAutoscaler{
+						ExpanderConfig: &gardencorev1beta1.ExpanderConfig{
+							ConfigMapName: "expanderConfig",
+						},
+					},
 					KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
 						AuditConfig: &gardencorev1beta1.AuditConfig{
 							AuditPolicy: &gardencorev1beta1.AuditPolicy{
@@ -946,8 +963,8 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		shoot1Copy = shoot1.DeepCopy()
 		shoot1.Status.SeedName = ptr.To("seed-in-status")
 		fakeInformerShoot.Update(shoot1Copy, shoot1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(16))
-		Expect(graph.graph.Edges().Len()).To(Equal(15))
+		Expect(graph.graph.Nodes().Len()).To(Equal(17))
+		Expect(graph.graph.Edges().Len()).To(Equal(16))
 		Expect(graph.HasPathFrom(VertexTypeNamespace, "", shoot1.Namespace, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeCloudProfile, "", shoot1.Spec.CloudProfile.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecretBinding, shoot1.Namespace, *shoot1.Spec.SecretBindingName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
@@ -972,13 +989,14 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.HasPathFrom(VertexTypeShoot, shoot1.Namespace, shoot1.Name, VertexTypeSeed, "", "seed-in-status")).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeConfigMap, shoot1.Namespace, shoot1ConfigMapNameCACluster, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeShootState, shoot1.Namespace, shoot1.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeConfigMap, shoot1.Namespace, shoot1ExpanderConfigMap.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 
 		By("Remove managed issuer annotation")
 		shoot1Copy = shoot1.DeepCopy()
 		shoot1.Annotations = map[string]string{}
 		fakeInformerShoot.Update(shoot1Copy, shoot1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(15))
-		Expect(graph.graph.Edges().Len()).To(Equal(14))
+		Expect(graph.graph.Nodes().Len()).To(Equal(16))
+		Expect(graph.graph.Edges().Len()).To(Equal(15))
 		Expect(graph.HasPathFrom(VertexTypeNamespace, "", shoot1.Namespace, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeCloudProfile, "", shoot1.Spec.CloudProfile.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecretBinding, shoot1.Namespace, *shoot1.Spec.SecretBindingName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())

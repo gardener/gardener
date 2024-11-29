@@ -65,7 +65,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 		})
 
 		It("should successfully create a cluster-autoscaler interface", func() {
-			clusterAutoscaler, err := botanist.DefaultClusterAutoscaler()
+			clusterAutoscaler, err := botanist.DefaultClusterAutoscaler(ctx)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(clusterAutoscaler).NotTo(BeNil())
 		})

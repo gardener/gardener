@@ -3643,20 +3643,6 @@ See: <a href="https://github.com/gardener/autoscaler/blob/machine-controller-man
 </tr>
 <tr>
 <td>
-<code>expanderConfig</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.ExpanderConfig">
-ExpanderConfig
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ExpanderConfig defines the configuration of the CA expander</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>maxNodeProvisionTime</code></br>
 <em>
 <a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
@@ -3741,6 +3727,20 @@ int32
 <td>
 <em>(Optional)</em>
 <p>Verbosity allows CA to modify its log level (default: 2).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>expanderConfig</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ExpanderConfig">
+ExpanderConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ExpanderConfig defines the configuration of the CA expander.</p>
 </td>
 </tr>
 </tbody>
@@ -5072,7 +5072,6 @@ string
 </em>
 </td>
 <td>
-<em>(Optional)</em>
 <p>ConfigMapName specifies the name of the expander configuration, according to the priority expander.
 See: <a href="https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/expander/priority/readme.md">https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/expander/priority/readme.md</a></p>
 </td>

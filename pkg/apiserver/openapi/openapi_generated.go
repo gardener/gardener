@@ -2243,12 +2243,6 @@ func schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref common.ReferenceCallback
 							Format:      "",
 						},
 					},
-					"expanderConfig": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ExpanderConfig defines the configuration of the CA expander",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpanderConfig"),
-						},
-					},
 					"maxNodeProvisionTime": {
 						SchemaProps: spec.SchemaProps{
 							Description: "MaxNodeProvisionTime defines how long CA waits for node to be provisioned (default: 20 mins).",
@@ -2302,6 +2296,12 @@ func schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref common.ReferenceCallback
 							Description: "Verbosity allows CA to modify its log level (default: 2).",
 							Type:        []string{"integer"},
 							Format:      "int32",
+						},
+					},
+					"expanderConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ExpanderConfig defines the configuration of the CA expander.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpanderConfig"),
 						},
 					},
 				},
@@ -3435,11 +3435,13 @@ func schema_pkg_apis_core_v1beta1_ExpanderConfig(ref common.ReferenceCallback) c
 					"configMapName": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ConfigMapName specifies the name of the expander configuration, according to the priority expander. See: https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/expander/priority/readme.md",
+							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 				},
+				Required: []string{"configMapName"},
 			},
 		},
 	}

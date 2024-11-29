@@ -118,7 +118,7 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 		return nil, err
 	}
 	if !o.Shoot.IsWorkerless {
-		o.Shoot.Components.ControlPlane.ClusterAutoscaler, err = b.DefaultClusterAutoscaler()
+		o.Shoot.Components.ControlPlane.ClusterAutoscaler, err = b.DefaultClusterAutoscaler(ctx)
 		if err != nil {
 			return nil, err
 		}

@@ -108,7 +108,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 		}
 
 		configExpanderConfig = &gardencorev1beta1.ExpanderConfig{
-			ConfigMapName: &expanderConfigMapName,
+			ConfigMapName: expanderConfigMapName,
 		}
 		genericTokenKubeconfigSecretName = "generic-token-kubeconfig"
 		serviceAccountName               = "cluster-autoscaler"
@@ -120,10 +120,21 @@ var _ = Describe("ClusterAutoscaler", func() {
 		deploymentName                   = "cluster-autoscaler"
 		managedResourceName              = "shoot-core-cluster-autoscaler"
 
-		expanderConfigMap = corev1.ConfigMap{
+		expanderConfigMap = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      expanderConfigMapName,
 				Namespace: projectNamespace,
+			},
+			Data: expanderConfigContent,
+		}
+
+		expanderTargetConfigMap = &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "cluster-autoscaler-priority-expander",
+				Namespace: "kube-system",
+				Annotations: map[string]string{
+					"resources.gardener.cloud/ignore": "true",
+				},
 			},
 			Data: expanderConfigContent,
 		}
@@ -270,7 +281,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 				)
 			} else {
 				commandConfigFlags = append(commandConfigFlags,
-					"--expander="+string(expanderMode),
+					"--expander="+expanderMode,
 					fmt.Sprintf("--max-graceful-termination-sec=%d", configMaxGracefulTerminationSeconds),
 					fmt.Sprintf("--max-node-provision-time=%s", configMaxNodeProvisionTime.Duration),
 					fmt.Sprintf("--scale-down-utilization-threshold=%f", *configScaleDownUtilizationThreshold),
@@ -593,7 +604,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
 
-		clusterAutoscaler = New(c, c, namespace, projectNamespace, sm, image, replicas, nil, 1337, nil)
+		clusterAutoscaler = New(c, namespace, sm, image, replicas, nil, nil, 1337, nil)
 		clusterAutoscaler.SetNamespaceUID(namespaceUID)
 		clusterAutoscaler.SetMachineDeployments(machineDeployments)
 	})
@@ -606,20 +617,22 @@ var _ = Describe("ClusterAutoscaler", func() {
 		Context("should successfully deploy all the resources", func() {
 			test := func(withConfig bool, runtimeVersionGreaterEquals126 bool, expanderConfigMapSpecified bool) {
 				var config *gardencorev1beta1.ClusterAutoscaler
+				var caConfigMap *corev1.ConfigMap
 				if withConfig {
 					config = configFull
 				}
 
 				if expanderConfigMapSpecified {
-					Expect(fakeClient.Create(ctx, &expanderConfigMap)).To(Succeed())
+					Expect(fakeClient.Create(ctx, expanderConfigMap)).To(Succeed())
 					config.Expander = ptr.To(gardencorev1beta1.ClusterAutoscalerExpanderPriority)
 					config.ExpanderConfig = configExpanderConfig
+					caConfigMap = expanderConfigMap
 				}
 
 				if runtimeVersionGreaterEquals126 {
-					clusterAutoscaler = New(fakeClient, fakeClient, namespace, projectNamespace, sm, image, replicas, config, 0, semver.MustParse("1.26.1"))
+					clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, config, caConfigMap, 0, semver.MustParse("1.26.1"))
 				} else {
-					clusterAutoscaler = New(fakeClient, fakeClient, namespace, projectNamespace, sm, image, replicas, config, 0, semver.MustParse("1.25.0"))
+					clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, config, caConfigMap, 0, semver.MustParse("1.25.0"))
 				}
 				clusterAutoscaler.SetNamespaceUID(namespaceUID)
 				clusterAutoscaler.SetMachineDeployments(machineDeployments)
@@ -633,7 +646,11 @@ var _ = Describe("ClusterAutoscaler", func() {
 				utilruntime.Must(references.InjectAnnotations(managedResource))
 				Expect(actualMr).To(DeepEqual(managedResource))
 
-				Expect(managedResource).To(consistOf(clusterRoleShoot, clusterRoleBindingShoot, roleShoot, roleBindingShoot))
+				if expanderConfigMapSpecified {
+					Expect(managedResource).To(consistOf(clusterRoleShoot, clusterRoleBindingShoot, roleShoot, roleBindingShoot, expanderTargetConfigMap))
+				} else {
+					Expect(managedResource).To(consistOf(clusterRoleShoot, clusterRoleBindingShoot, roleShoot, roleBindingShoot))
+				}
 
 				actualServiceAccount := &corev1.ServiceAccount{}
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), actualServiceAccount)).To(Succeed())
@@ -675,12 +692,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 				actualServiceMonitor := &monitoringv1.ServiceMonitor{}
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(serviceMonitor), actualServiceMonitor)).To(Succeed())
 				Expect(actualServiceMonitor).To(DeepEqual(serviceMonitor))
-
-				if expanderConfigMapSpecified {
-					actualConfigMap := &corev1.ConfigMap{}
-					Expect(fakeClient.Get(ctx, client.ObjectKey{Name: ClusterAutoScalerPriorityConfigMapName, Namespace: namespace}, actualConfigMap)).To(Succeed())
-					Expect(actualConfigMap.Data).To(Equal(expanderConfigContent))
-				}
 			}
 
 			It("w/o config", func() { test(false, false, false) })

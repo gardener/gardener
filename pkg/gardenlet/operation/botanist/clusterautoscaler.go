@@ -10,6 +10,7 @@ import (
 	"math"
 	"math/big"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -22,21 +23,28 @@ import (
 )
 
 // DefaultClusterAutoscaler returns a deployer for the cluster-autoscaler.
-func (b *Botanist) DefaultClusterAutoscaler() (clusterautoscaler.Interface, error) {
+func (b *Botanist) DefaultClusterAutoscaler(ctx context.Context) (clusterautoscaler.Interface, error) {
 	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameClusterAutoscaler, imagevectorutils.RuntimeVersion(b.SeedVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}
 
+	var expanderConfigMap *corev1.ConfigMap = nil
+	if b.Shoot.GetInfo().Spec.Kubernetes.ClusterAutoscaler != nil &&
+		b.Shoot.GetInfo().Spec.Kubernetes.ClusterAutoscaler.ExpanderConfig != nil {
+		err = b.GardenClient.Get(ctx, client.ObjectKey{Name: b.Shoot.GetInfo().Spec.Kubernetes.ClusterAutoscaler.ExpanderConfig.ConfigMapName, Namespace: b.Shoot.GetInfo().Namespace}, expanderConfigMap)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return clusterautoscaler.New(
-		b.GardenClient,
 		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
-		b.Shoot.GetInfo().Namespace,
 		b.SecretsManager,
 		image.String(),
 		b.Shoot.GetReplicas(1),
 		b.Shoot.GetInfo().Spec.Kubernetes.ClusterAutoscaler,
+		expanderConfigMap,
 		0,
 		b.Seed.KubernetesVersion,
 	), nil

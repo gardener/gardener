@@ -449,10 +449,6 @@ message ClusterAutoscaler {
   // +optional
   optional string expander = 7;
 
-  // ExpanderConfig defines the configuration of the CA expander
-  // +optional
-  optional ExpanderConfig expanderConfig = 15;
-
   // MaxNodeProvisionTime defines how long CA waits for node to be provisioned (default: 20 mins).
   // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration maxNodeProvisionTime = 8;
@@ -480,6 +476,10 @@ message ClusterAutoscaler {
   // Verbosity allows CA to modify its log level (default: 2).
   // +optional
   optional int32 verbosity = 14;
+
+  // ExpanderConfig defines the configuration of the CA expander.
+  // +optional
+  optional ExpanderConfig expanderConfig = 15;
 }
 
 // ClusterAutoscalerOptions contains the cluster autoscaler configurations for a worker pool.
@@ -887,7 +887,6 @@ message EncryptionConfig {
 message ExpanderConfig {
   // ConfigMapName specifies the name of the expander configuration, according to the priority expander.
   // See: https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/expander/priority/readme.md
-  // +optional
   optional string configMapName = 1;
 }
 
