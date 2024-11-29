@@ -11,7 +11,7 @@ require (
 	github.com/coreos/go-systemd/v22 v22.5.0
 	github.com/distribution/distribution/v3 v3.0.0-rc.1
 	github.com/fluent/fluent-operator/v2 v2.9.0
-	github.com/gardener/cert-management v0.16.0
+	github.com/gardener/cert-management v0.17.1
 	github.com/gardener/dependency-watchdog v1.3.0
 	github.com/gardener/etcd-druid v0.25.0
 	github.com/gardener/machine-controller-manager v0.55.0
@@ -56,7 +56,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.16.3
 	istio.io/api v1.23.3
-	istio.io/client-go v1.23.2
+	istio.io/client-go v1.23.3
 	k8s.io/api v0.31.3
 	k8s.io/apiextensions-apiserver v0.31.3
 	k8s.io/apimachinery v0.31.3
@@ -70,7 +70,7 @@ require (
 	k8s.io/component-helpers v0.31.3
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/kube-aggregator v0.31.3
-	k8s.io/kube-openapi v0.0.0-20240808142205-8e686545bdb8
+	k8s.io/kube-openapi v0.0.0-20240903163716-9e1beecbcb38
 	k8s.io/kube-proxy v0.31.3
 	k8s.io/kube-state-metrics/v2 v2.13.0
 	k8s.io/kubelet v0.31.3
@@ -150,7 +150,7 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/handlers v1.5.2 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
-	github.com/gorilla/websocket v1.5.0 // indirect
+	github.com/gorilla/websocket v1.5.1 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.22.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
@@ -245,16 +245,16 @@ require (
 	golang.org/x/sys v0.27.0 // indirect
 	golang.org/x/term v0.26.0 // indirect
 	google.golang.org/genproto v0.0.0-20240903143218-8af14fe29dc1 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20240903143218-8af14fe29dc1 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240903143218-8af14fe29dc1 // indirect
-	google.golang.org/grpc v1.66.2 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20241015192408-796eee8c2d53 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20241007155032-5fefd90f89a9 // indirect
+	google.golang.org/grpc v1.67.1 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	k8s.io/gengo v0.0.0-20230829151522-9cce18d56c01 // indirect
-	k8s.io/gengo/v2 v2.0.0-20240228010128-51d4e06bde70 // indirect
+	k8s.io/gengo/v2 v2.0.0-20240826214909-a7b603a56eb7 // indirect
 	k8s.io/klog v1.0.0 // indirect
 	k8s.io/kms v0.31.3 // indirect
 	k8s.io/sample-controller v0.30.3 // indirect
