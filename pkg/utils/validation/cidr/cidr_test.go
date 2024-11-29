@@ -303,6 +303,7 @@ var _ = Describe("cidr", func() {
 				}))
 			})
 		})
+
 		Describe("ValidateMinSize", func() {
 			It("should return no errors if cidr is same size than limit", func() {
 				goodPath := field.NewPath("good")
@@ -577,6 +578,7 @@ var _ = Describe("cidr", func() {
 				Expect(cdr.ValidateOverlap(other)).To(BeEmpty())
 			})
 		})
+
 		Describe("ValidateMaxSize", func() {
 			It("should return no errors if cidr is same size as limit", func() {
 				goodPath := field.NewPath("good")
@@ -605,6 +607,7 @@ var _ = Describe("cidr", func() {
 				}))
 			})
 		})
+
 		Describe("ValidateMinSize", func() {
 			It("should return no errors if cidr is same size as limit", func() {
 				goodPath := field.NewPath("good")
