@@ -27,9 +27,29 @@ const (
 	OperationModified FileSystemOperation = "modified"
 	// OperationDeleted represents the file system operation of deleting an object.
 	OperationDeleted FileSystemOperation = "deleted"
+	// OperationNone represents the file system operation of the object not being touched.
+	OperationNone FileSystemOperation = ""
 
 	nodeAgentFileSystemPath = nodeagentv1alpha1.BaseDir + "/node-agent-filesystem.yaml"
+	getStateErrorMessage    = "unable to get state of %q: %w"
+	saveStateErrorMessage   = "unable to save state of %q: %w"
 )
+
+// NodeAgentAfero is similar to afero.Afero but offers additional functionality to track file operations.
+type NodeAgentAfero struct {
+	afero.Afero
+	NodeAgentFileSystem
+}
+
+// NewNodeAgentAfero creates a new NodeAgentAfero for a given afero.Fs.
+func NewNodeAgentAfero(fs afero.Fs) (*NodeAgentAfero, error) {
+	nodeAgentFileSystem, err := NewNodeAgentFileSystem(afero.Afero{Fs: fs})
+	if err != nil {
+		return nil, fmt.Errorf("unable to create NodeAgentFileSystem: %w", err)
+	}
+
+	return &NodeAgentAfero{Afero: afero.Afero{Fs: nodeAgentFileSystem}, NodeAgentFileSystem: nodeAgentFileSystem}, nil
+}
 
 // NodeAgentFileSystem is a file system that keeps track of the file operations performed on the files.
 type NodeAgentFileSystem interface {
@@ -56,13 +76,13 @@ func NewNodeAgentFileSystem(fs afero.Afero) (NodeAgentFileSystem, error) {
 			},
 		}, nil
 	} else if err != nil {
-		return nil, fmt.Errorf("unable to read %q file: %w", nodeAgentFileSystemPath, err)
+		return nil, fmt.Errorf("unable to read file system state file %q: %w", nodeAgentFileSystemPath, err)
 	}
 
 	fsOperations := nodeAgentFsOperations{}
 	err = yaml.Unmarshal(fsOperationsRaw, &fsOperations)
 	if err != nil {
-		return nil, fmt.Errorf("unable to unmarshal %q file: %w", nodeAgentFileSystemPath, err)
+		return nil, fmt.Errorf("unable to unmarshal file system state file %q: %w", nodeAgentFileSystemPath, err)
 	}
 
 	return &nodeAgentFileSystem{
@@ -97,7 +117,7 @@ func (n *nodeAgentFileSystem) RemoveCreated(name string) error {
 
 // RemoveAllCreated removes all files created by this file system in the given directory.
 func (n *nodeAgentFileSystem) RemoveAllCreated(path string) error {
-	isDir, err := afero.IsDir(n.fs, path)
+	isDir, err := n.fs.IsDir(path)
 	if err != nil {
 		return fmt.Errorf("unable to check if %q is a directory: %w", path, err)
 	}
@@ -110,20 +130,33 @@ func (n *nodeAgentFileSystem) RemoveAllCreated(path string) error {
 		return nil
 	}
 
-	files, err := afero.ReadDir(n.fs, path)
+	files, err := n.fs.ReadDir(path)
 	if err != nil {
 		return fmt.Errorf("unable to read directory %q: %w", path, err)
 	}
 
 	for _, file := range files {
-		if err := n.Remove(filepath.Join(path, file.Name())); err != nil {
-			return fmt.Errorf("unable to remove file %q: %w", filepath.Join(path, file.Name()), err)
+		fileName := filepath.Join(path, file.Name())
+
+		if n.GetFileSystemOperation(fileName) != OperationCreated {
+			continue
+		}
+
+		if file.IsDir() {
+			if err := n.RemoveAll(fileName); err != nil {
+				return fmt.Errorf("unable to remove directory %q: %w", fileName, err)
+			}
+			continue
+		}
+
+		if err := n.Remove(fileName); err != nil {
+			return fmt.Errorf("unable to remove file %q: %w", fileName, err)
 		}
 	}
 
-	if empty, err := afero.IsEmpty(n.fs, path); err != nil {
+	if empty, err := n.fs.IsEmpty(path); err != nil {
 		return fmt.Errorf("unable to check if directory %q is empty: %w", path, err)
-	} else if empty {
+	} else if empty && n.GetFileSystemOperation(path) == OperationCreated {
 		return n.RemoveAll(path)
 	}
 
@@ -133,9 +166,9 @@ func (n *nodeAgentFileSystem) RemoveAllCreated(path string) error {
 // Create creates a file in the filesystem, returning the file and an
 // error, if any happens.
 func (n *nodeAgentFileSystem) Create(name string) (afero.File, error) {
-	operation, err := n.beforeWrite(name)
+	operation, err := n.getState(name)
 	if err != nil {
-		return nil, fmt.Errorf("unable to prepare file %q for writing: %w", name, err)
+		return nil, fmt.Errorf(getStateErrorMessage, name, err)
 	}
 	file, err := n.fs.Create(name)
 	if err != nil {
@@ -143,7 +176,7 @@ func (n *nodeAgentFileSystem) Create(name string) (afero.File, error) {
 	}
 
 	if err := n.saveState(name, operation); err != nil {
-		return nil, fmt.Errorf("unable to save state %q: %w", name, err)
+		return nil, fmt.Errorf("unable to save state for file %q: %w", name, err)
 	}
 
 	return file, nil
@@ -152,9 +185,9 @@ func (n *nodeAgentFileSystem) Create(name string) (afero.File, error) {
 // Mkdir creates a directory in the filesystem, return an error if any
 // happens.
 func (n *nodeAgentFileSystem) Mkdir(name string, perm os.FileMode) error {
-	operation, err := n.beforeWrite(name)
+	operation, err := n.getState(name)
 	if err != nil {
-		return fmt.Errorf("unable to prepare directory %q for writing: %w", name, err)
+		return fmt.Errorf(getStateErrorMessage, name, err)
 	}
 
 	if err := n.fs.Mkdir(name, perm); err != nil {
@@ -162,7 +195,7 @@ func (n *nodeAgentFileSystem) Mkdir(name string, perm os.FileMode) error {
 	}
 
 	if err := n.saveState(name, operation); err != nil {
-		return fmt.Errorf("unable to save state for directory %q: %w", name, err)
+		return fmt.Errorf(saveStateErrorMessage, name, err)
 	}
 
 	return nil
@@ -171,17 +204,34 @@ func (n *nodeAgentFileSystem) Mkdir(name string, perm os.FileMode) error {
 // MkdirAll creates a directory path and all parents that does not exist
 // yet.
 func (n *nodeAgentFileSystem) MkdirAll(path string, perm os.FileMode) error {
-	operation, err := n.beforeWrite(path)
+	operation, err := n.getState(path)
 	if err != nil {
-		return fmt.Errorf("unable to prepare directory %q for writing: %w", path, err)
+		return fmt.Errorf(getStateErrorMessage, path, err)
+	}
+	pathOperation := map[string]*FileSystemOperation{path: operation}
+
+	for i := range len(path) {
+		if path[i] == filepath.Separator {
+			subPath := path[:i]
+			if len(subPath) == 0 {
+				continue
+			}
+			operation, err := n.getState(subPath)
+			if err != nil {
+				return fmt.Errorf(getStateErrorMessage, subPath, err)
+			}
+			pathOperation[subPath] = operation
+		}
 	}
 
 	if err := n.fs.MkdirAll(path, perm); err != nil {
 		return err
 	}
 
-	if err := n.saveState(path, operation); err != nil {
-		return fmt.Errorf("unable to save state for path %q: %w", path, err)
+	for path, operation := range pathOperation {
+		if err := n.saveState(path, operation); err != nil {
+			return fmt.Errorf(saveStateErrorMessage, path, err)
+		}
 	}
 
 	return nil
@@ -198,9 +248,9 @@ func (n *nodeAgentFileSystem) OpenFile(name string, flag int, perm os.FileMode) 
 		return n.fs.OpenFile(name, flag, perm)
 	}
 
-	operation, err := n.beforeWrite(name)
+	operation, err := n.getState(name)
 	if err != nil {
-		return nil, fmt.Errorf("unable to prepare file %q for writing: %w", name, err)
+		return nil, fmt.Errorf(getStateErrorMessage, name, err)
 	}
 
 	file, err := n.fs.OpenFile(name, flag, perm)
@@ -209,7 +259,7 @@ func (n *nodeAgentFileSystem) OpenFile(name string, flag int, perm os.FileMode) 
 	}
 
 	if err := n.saveState(name, operation); err != nil {
-		return nil, fmt.Errorf("unable to save state for file %q: %w", name, err)
+		return nil, fmt.Errorf(saveStateErrorMessage, name, err)
 	}
 
 	return file, nil
@@ -223,7 +273,7 @@ func (n *nodeAgentFileSystem) Remove(name string) error {
 	}
 
 	if err := n.deleteState(name); err != nil {
-		return fmt.Errorf("unable to save state for removing file %q: %w", name, err)
+		return fmt.Errorf(saveStateErrorMessage, name, err)
 	}
 
 	return nil
@@ -236,12 +286,16 @@ func (n *nodeAgentFileSystem) RemoveAll(path string) error {
 		return err
 	}
 
+	if err := n.deleteState(path); err != nil {
+		return fmt.Errorf(saveStateErrorMessage, path, err)
+	}
+
 	for nodeAgentFile := range n.nodeAgentFsOperations.FileSystemOperations {
 		if !strings.HasPrefix(nodeAgentFile, path) {
 			continue
 		}
 		if err := n.deleteState(nodeAgentFile); err != nil {
-			return fmt.Errorf("unable to save state for removing path %q: %w", nodeAgentFile, err)
+			return fmt.Errorf(saveStateErrorMessage, nodeAgentFile, err)
 		}
 	}
 
@@ -250,9 +304,9 @@ func (n *nodeAgentFileSystem) RemoveAll(path string) error {
 
 // Rename renames a file.
 func (n *nodeAgentFileSystem) Rename(oldname, newname string) error {
-	operation, err := n.beforeWrite(newname)
+	operation, err := n.getState(newname)
 	if err != nil {
-		return fmt.Errorf("unable to prepare file %q for writing: %w", newname, err)
+		return fmt.Errorf(getStateErrorMessage, newname, err)
 	}
 
 	if err := n.fs.Rename(oldname, newname); err != nil {
@@ -260,11 +314,11 @@ func (n *nodeAgentFileSystem) Rename(oldname, newname string) error {
 	}
 
 	if err := n.saveState(newname, operation); err != nil {
-		return fmt.Errorf("unable to save state for renaming file %q: %w", newname, err)
+		return fmt.Errorf(saveStateErrorMessage, newname, err)
 	}
 
 	if err := n.deleteState(oldname); err != nil {
-		return fmt.Errorf("unable to save state for renaming old file %q: %w", oldname, err)
+		return fmt.Errorf(saveStateErrorMessage, oldname, err)
 	}
 
 	return nil
@@ -296,7 +350,7 @@ func (n *nodeAgentFileSystem) Chtimes(name string, atime time.Time, mtime time.T
 	return n.fs.Chtimes(name, atime, mtime)
 }
 
-func (n *nodeAgentFileSystem) beforeWrite(path string) (*FileSystemOperation, error) {
+func (n *nodeAgentFileSystem) getState(path string) (*FileSystemOperation, error) {
 	if operation, ok := n.nodeAgentFsOperations.FileSystemOperations[path]; operation == OperationDeleted {
 		return ptr.To(OperationDeleted), nil
 	} else if ok {
@@ -305,11 +359,17 @@ func (n *nodeAgentFileSystem) beforeWrite(path string) (*FileSystemOperation, er
 
 	exists, err := n.fs.Exists(path)
 	if err != nil {
-		return nil, fmt.Errorf("unable to check if file %q exists: %w", path, err)
+		return nil, fmt.Errorf("unable to check if path %q exists: %w", path, err)
 	}
 
 	operation := OperationCreated
 	if exists {
+		if isDir, err := n.fs.IsDir(path); err != nil {
+			return nil, fmt.Errorf("unable to check if path %q is a directory: %w", path, err)
+		} else if isDir {
+			// A directory cannot be modified but only its content.
+			return nil, nil
+		}
 		operation = OperationModified
 	}
 
@@ -345,11 +405,11 @@ func (n *nodeAgentFileSystem) saveState(path string, operation *FileSystemOperat
 func (n *nodeAgentFileSystem) marshallStateAndSave() error {
 	nodeAgentFilesRaw, err := yaml.Marshal(n.nodeAgentFsOperations)
 	if err != nil {
-		return fmt.Errorf("unable to marshal file %q: %w", nodeAgentFileSystemPath, err)
+		return fmt.Errorf("unable to marshal file system state file %q: %w", nodeAgentFileSystemPath, err)
 	}
 
 	if err = n.fs.WriteFile(nodeAgentFileSystemPath, nodeAgentFilesRaw, 0600); err != nil {
-		return fmt.Errorf("unable to write file %q: %w", nodeAgentFileSystemPath, err)
+		return fmt.Errorf("unable to write file system state file %q: %w", nodeAgentFileSystemPath, err)
 	}
 
 	return nil
