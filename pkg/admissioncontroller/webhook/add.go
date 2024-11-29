@@ -30,30 +30,15 @@ func AddToManager(
 	mgr manager.Manager,
 	cfg *config.AdmissionControllerConfiguration,
 ) error {
-	if err := (&auditpolicy.Handler{
-		Logger:    mgr.GetLogger().WithName("webhook").WithName(auditpolicy.HandlerName),
-		APIReader: mgr.GetAPIReader(),
-		Client:    mgr.GetClient(),
-		Decoder:   admission.NewDecoder(mgr.GetScheme()),
-	}).AddToManager(mgr); err != nil {
+	if err := auditpolicy.AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding %s webhook handler: %w", auditpolicy.HandlerName, err)
 	}
 
-	if err := (&authenticationconfig.Handler{
-		Logger:    mgr.GetLogger().WithName("webhook").WithName(authenticationconfig.HandlerName),
-		APIReader: mgr.GetAPIReader(),
-		Client:    mgr.GetClient(),
-		Decoder:   admission.NewDecoder(mgr.GetScheme()),
-	}).AddToManager(mgr); err != nil {
+	if err := authenticationconfig.AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding %s webhook handler: %w", authenticationconfig.HandlerName, err)
 	}
 
-	if err := (&authorizationconfig.Handler{
-		Logger:    mgr.GetLogger().WithName("webhook").WithName(authorizationconfig.HandlerName),
-		APIReader: mgr.GetAPIReader(),
-		Client:    mgr.GetClient(),
-		Decoder:   admission.NewDecoder(mgr.GetScheme()),
-	}).AddToManager(mgr); err != nil {
+	if err := authorizationconfig.AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding %s webhook handler: %w", authorizationconfig.HandlerName, err)
 	}
 
