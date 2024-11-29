@@ -50,13 +50,13 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 	if r.FS == nil {
 		var err error
-		r.FS, err = filespkg.NewNodeAgentFileSystem(afero.Afero{Fs: afero.NewOsFs()})
+		r.FS, err = filespkg.NewNodeAgentAfero(afero.NewOsFs())
 		if err != nil {
 			return fmt.Errorf("failed to create node agent file system: %w", err)
 		}
 	}
 	if r.Extractor == nil {
-		r.Extractor = registry.NewExtractor(r.afero())
+		r.Extractor = registry.NewExtractor(r.FS.Afero)
 	}
 
 	return builder.

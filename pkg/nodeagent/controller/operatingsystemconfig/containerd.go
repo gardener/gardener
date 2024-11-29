@@ -22,12 +22,12 @@ import (
 	"github.com/Masterminds/sprig/v3"
 	"github.com/go-logr/logr"
 	"github.com/pelletier/go-toml"
-	"github.com/spf13/afero"
 	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
+	filespkg "github.com/gardener/gardener/pkg/nodeagent/files"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/structuredmap"
@@ -134,7 +134,7 @@ var Exec = func(ctx context.Context, command string, arg ...string) ([]byte, err
 
 // ensureContainerdDefaultConfig invokes the 'containerd' and saves the resulting default configuration.
 func (r *Reconciler) ensureContainerdDefaultConfig(ctx context.Context) error {
-	exists, err := r.afero().Exists(configFile)
+	exists, err := r.FS.Exists(configFile)
 	if err != nil {
 		return err
 	}
@@ -148,12 +148,12 @@ func (r *Reconciler) ensureContainerdDefaultConfig(ctx context.Context) error {
 		return err
 	}
 
-	return r.afero().WriteFile(configFile, output, 0644)
+	return r.FS.WriteFile(configFile, output, 0644)
 }
 
 // ensureContainerdConfiguration sets the configuration for containerd.
 func (r *Reconciler) ensureContainerdConfiguration(log logr.Logger, criConfig *extensionsv1alpha1.CRIConfig) error {
-	config, err := r.afero().ReadFile(configFile)
+	config, err := r.FS.ReadFile(configFile)
 	if err != nil {
 		return fmt.Errorf("unable to read containerd config.toml: %w", err)
 	}
@@ -302,7 +302,7 @@ func (r *Reconciler) ensureContainerdRegistries(ctx context.Context, log logr.Lo
 	// Registries without readiness probes can directly and synchronously be added here
 	// since there is no longer blocking operation involved.
 	for _, registryConfig := range registriesWithoutReadiness {
-		if err := addRegistryToContainerdFunc(ctx, log, registryConfig, r.afero()); err != nil {
+		if err := addRegistryToContainerdFunc(ctx, log, registryConfig, r.FS); err != nil {
 			errChan <- err
 			return errChan
 		}
@@ -311,7 +311,7 @@ func (r *Reconciler) ensureContainerdRegistries(ctx context.Context, log logr.Lo
 	fns := make([]flow.TaskFn, 0, len(registriesWithReadiness))
 	for _, registryConfig := range registriesWithReadiness {
 		fns = append(fns, func(ctx context.Context) error {
-			return addRegistryToContainerdFunc(ctx, log, registryConfig, r.afero())
+			return addRegistryToContainerdFunc(ctx, log, registryConfig, r.FS)
 		})
 	}
 
@@ -335,7 +335,7 @@ func init() {
 		Parse(tplContentContainerdHosts))
 }
 
-func addRegistryToContainerdFunc(ctx context.Context, log logr.Logger, registryConfig extensionsv1alpha1.RegistryConfig, fs afero.Afero) error {
+func addRegistryToContainerdFunc(ctx context.Context, log logr.Logger, registryConfig extensionsv1alpha1.RegistryConfig, fs *filespkg.NodeAgentAfero) error {
 	httpClient := http.Client{Timeout: 1 * time.Second}
 
 	baseDir := path.Join(certsDir, registryConfig.Upstream)

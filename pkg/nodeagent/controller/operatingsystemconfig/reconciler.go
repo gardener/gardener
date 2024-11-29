@@ -50,7 +50,7 @@ type Reconciler struct {
 	Config        config.OperatingSystemConfigControllerConfig
 	Recorder      record.EventRecorder
 	DBus          dbus.DBus
-	FS            filespkg.NodeAgentFileSystem
+	FS            *filespkg.NodeAgentAfero
 	Extractor     registry.Extractor
 	CancelContext context.CancelFunc
 	HostName      string
@@ -90,7 +90,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("failed extracting OSC from secret: %w", err)
 	}
 
-	oscChanges, err := computeOperatingSystemConfigChanges(r.afero(), osc)
+	oscChanges, err := computeOperatingSystemConfigChanges(r.FS.Afero, osc)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed calculating the OSC changes: %w", err)
 	}
@@ -170,7 +170,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	)
 
 	log.Info("Persisting current operating system config as 'last-applied' file to the disk", "path", lastAppliedOperatingSystemConfigFilePath)
-	if err := r.afero().WriteFile(lastAppliedOperatingSystemConfigFilePath, oscRaw, 0600); err != nil {
+	if err := r.FS.WriteFile(lastAppliedOperatingSystemConfigFilePath, oscRaw, 0600); err != nil {
 		return reconcile.Result{}, fmt.Errorf("unable to write current OSC to file path %q: %w", lastAppliedOperatingSystemConfigFilePath, err)
 	}
 
@@ -255,7 +255,7 @@ func (r *Reconciler) applyChangedImageRefFiles(ctx context.Context, log logr.Log
 }
 
 func (r *Reconciler) applyChangedInlineFiles(log logr.Logger, files []extensionsv1alpha1.File) error {
-	tmpDir, err := r.afero().TempDir(nodeagentv1alpha1.TempDir, "osc-reconciliation-file-")
+	tmpDir, err := r.FS.TempDir(nodeagentv1alpha1.TempDir, "osc-reconciliation-file-")
 	if err != nil {
 		return fmt.Errorf("unable to create temporary directory: %w", err)
 	}
@@ -277,11 +277,11 @@ func (r *Reconciler) applyChangedInlineFiles(log logr.Logger, files []extensions
 		}
 
 		tmpFilePath := filepath.Join(tmpDir, filepath.Base(file.Path))
-		if err := r.afero().WriteFile(tmpFilePath, data, getFilePermissions(file)); err != nil {
+		if err := r.FS.WriteFile(tmpFilePath, data, getFilePermissions(file)); err != nil {
 			return fmt.Errorf("unable to create temporary file %q: %w", tmpFilePath, err)
 		}
 
-		if err := filespkg.Move(r.afero(), tmpFilePath, file.Path); err != nil {
+		if err := filespkg.Move(r.FS.Afero, tmpFilePath, file.Path); err != nil {
 			return fmt.Errorf("unable to rename temporary file %q to %q: %w", tmpFilePath, file.Path, err)
 		}
 
@@ -308,14 +308,14 @@ func (r *Reconciler) applyChangedUnits(ctx context.Context, log logr.Logger, uni
 		unitFilePath := path.Join(etcSystemdSystem, unit.Name)
 
 		if unit.Content != nil {
-			oldUnitContent, err := r.afero().ReadFile(unitFilePath)
+			oldUnitContent, err := r.FS.ReadFile(unitFilePath)
 			if err != nil && !errors.Is(err, afero.ErrFileNotFound) {
 				return fmt.Errorf("unable to read existing unit file %q for %q: %w", unitFilePath, unit.Name, err)
 			}
 
 			newUnitContent := []byte(*unit.Content)
 			if !bytes.Equal(newUnitContent, oldUnitContent) {
-				if err := r.afero().WriteFile(unitFilePath, newUnitContent, defaultFilePermissions); err != nil {
+				if err := r.FS.WriteFile(unitFilePath, newUnitContent, defaultFilePermissions); err != nil {
 					return fmt.Errorf("unable to write unit file %q for %q: %w", unitFilePath, unit.Name, err)
 				}
 				log.Info("Successfully applied new or changed unit file", "path", unitFilePath)
@@ -334,21 +334,21 @@ func (r *Reconciler) applyChangedUnits(ctx context.Context, log logr.Logger, uni
 				return fmt.Errorf("unable to delete systemd drop-in folder for unit %q: %w", unit.Name, err)
 			}
 		} else {
-			if err := r.afero().MkdirAll(dropInDirectory, defaultDirPermissions); err != nil {
+			if err := r.FS.MkdirAll(dropInDirectory, defaultDirPermissions); err != nil {
 				return fmt.Errorf("unable to create drop-in directory %q for unit %q: %w", dropInDirectory, unit.Name, err)
 			}
 
 			for _, dropIn := range unit.dropIns.changed {
 				dropInFilePath := path.Join(dropInDirectory, dropIn.Name)
 
-				oldDropInContent, err := r.afero().ReadFile(dropInFilePath)
+				oldDropInContent, err := r.FS.ReadFile(dropInFilePath)
 				if err != nil && !errors.Is(err, afero.ErrFileNotFound) {
 					return fmt.Errorf("unable to read existing drop-in file %q for unit %q: %w", dropInFilePath, unit.Name, err)
 				}
 
 				newDropInContent := []byte(dropIn.Content)
 				if !bytes.Equal(newDropInContent, oldDropInContent) {
-					if err := r.afero().WriteFile(dropInFilePath, newDropInContent, defaultFilePermissions); err != nil {
+					if err := r.FS.WriteFile(dropInFilePath, newDropInContent, defaultFilePermissions); err != nil {
 						return fmt.Errorf("unable to write drop-in file %q for unit %q: %w", dropInFilePath, unit.Name, err)
 					}
 					log.Info("Successfully applied new or changed drop-in file for unit", "path", dropInFilePath, "unit", unit.Name)
@@ -390,7 +390,7 @@ func (r *Reconciler) removeDeletedUnits(ctx context.Context, log logr.Logger, no
 		unitFilePath := path.Join(etcSystemdSystem, unit.Name)
 
 		if r.FS.GetFileSystemOperation(unitFilePath) == filespkg.OperationCreated {
-			unitFileExists, err := r.afero().Exists(unitFilePath)
+			unitFileExists, err := r.FS.Exists(unitFilePath)
 			if err != nil {
 				return fmt.Errorf("unable to check whether unit file %q exists: %w", unitFilePath, err)
 			}
@@ -469,8 +469,4 @@ func (r *Reconciler) executeUnitCommands(ctx context.Context, log logr.Logger, n
 	}
 
 	return mustRestartGardenerNodeAgent, flow.Parallel(fns...)(ctx)
-}
-
-func (r *Reconciler) afero() afero.Afero {
-	return afero.Afero{Fs: r.FS}
 }

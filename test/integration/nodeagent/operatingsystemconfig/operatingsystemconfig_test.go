@@ -72,7 +72,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 
 		fakeDBus = fakedbus.New()
 		fakeFS = afero.Afero{Fs: afero.NewMemMapFs()}
-		fakeFsNodeAgent, err := nodeagentfiles.NewNodeAgentFileSystem(fakeFS)
+		fakeFsNodeAgent, err := nodeagentfiles.NewNodeAgentAfero(fakeFS)
 		Expect(err).NotTo(HaveOccurred())
 
 		imageMountDirectory, err = fakeFS.TempDir("", "fake-node-agent-")
