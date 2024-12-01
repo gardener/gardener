@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/spf13/afero"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
@@ -60,6 +61,10 @@ type NodeAgentFileSystem interface {
 	RemoveCreated(name string) error
 	// RemoveAllCreated removes all files created by this file system in the given directory.
 	RemoveAllCreated(path string) error
+
+	// CreateStateFromFiles creates the file system state a slice of file names if it does not exist yet.
+	// TODO(oliver-goetz): Remove this method when Gardener v1.111 is released.
+	CreateStateFromFiles(log logr.Logger, files []string) error
 }
 
 // FileSystemOperation represents the file operation performed by NodeAgentFileSystem.
@@ -411,6 +416,38 @@ func (n *nodeAgentFileSystem) marshallStateAndSave() error {
 	if err = n.fs.WriteFile(nodeAgentFileSystemPath, nodeAgentFilesRaw, 0600); err != nil {
 		return fmt.Errorf("unable to write file system state file %q: %w", nodeAgentFileSystemPath, err)
 	}
+
+	return nil
+}
+
+// CreateStateFromFiles creates the file system state a slice of file names if it does not exist yet.
+// TODO(oliver-goetz): Remove this method when Gardener v1.111 is released.
+func (n *nodeAgentFileSystem) CreateStateFromFiles(log logr.Logger, files []string) error {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+
+	stateSaved, err := n.fs.Exists(nodeAgentFileSystemPath)
+	if err != nil {
+		return fmt.Errorf("unable to check whether file system state file exists: %w", err)
+	}
+
+	// State has already been saved, nothing to migrate.
+	if stateSaved {
+		return nil
+	}
+
+	log.Info("Creating node-agent file system state from units and files")
+
+	for _, file := range files {
+		// All files should have been created by gardener-node-agent.
+		n.nodeAgentFsOperations.FileSystemOperations[file] = OperationCreated
+	}
+
+	if err := n.marshallStateAndSave(); err != nil {
+		return err
+	}
+
+	log.Info("Successfully created node-agent file system state from units and files")
 
 	return nil
 }
