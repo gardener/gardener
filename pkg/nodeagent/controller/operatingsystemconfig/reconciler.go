@@ -90,6 +90,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("failed extracting OSC from secret: %w", err)
 	}
 
+	log.Info("Applying containerd configuration")
+	oscRaw, err = r.ReconcileContainerdConfig(ctx, log, osc, oscRaw)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed reconciling containerd configuration: %w", err)
+	}
+
 	oscChanges, err := computeOperatingSystemConfigChanges(r.FS.Afero, osc)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed calculating the OSC changes: %w", err)
@@ -98,11 +104,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	if node != nil && node.Annotations[nodeagentv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig] == oscChecksum {
 		log.Info("Configuration on this node is up to date, nothing to be done")
 		return reconcile.Result{}, nil
-	}
-
-	log.Info("Applying containerd configuration")
-	if err := r.ReconcileContainerdConfig(ctx, log, osc.Spec.CRIConfig); err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed reconciling containerd configuration: %w", err)
 	}
 
 	log.Info("Applying new or changed inline files")

@@ -22,36 +22,60 @@ import (
 	"github.com/Masterminds/sprig/v3"
 	"github.com/go-logr/logr"
 	"github.com/pelletier/go-toml"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	jsonserializer "k8s.io/apimachinery/pkg/runtime/serializer/json"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
+	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	filespkg "github.com/gardener/gardener/pkg/nodeagent/files"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/structuredmap"
 )
 
+var codec runtime.Codec
+
+func init() {
+	scheme := runtime.NewScheme()
+	utilruntime.Must(extensionsv1alpha1.AddToScheme(scheme))
+	ser := jsonserializer.NewSerializerWithOptions(jsonserializer.DefaultMetaFactory, scheme, scheme, jsonserializer.SerializerOptions{Yaml: true, Pretty: false, Strict: false})
+	versions := schema.GroupVersions([]schema.GroupVersion{nodeagentv1alpha1.SchemeGroupVersion, extensionsv1alpha1.SchemeGroupVersion})
+	codec = serializer.NewCodecFactory(scheme).CodecForVersions(ser, ser, versions, versions)
+}
+
 // ReconcileContainerdConfig sets required values of the given containerd configuration.
-func (r *Reconciler) ReconcileContainerdConfig(ctx context.Context, log logr.Logger, criConfig *extensionsv1alpha1.CRIConfig) error {
-	if !extensionsv1alpha1helper.HasContainerdConfiguration(criConfig) {
-		return nil
+func (r *Reconciler) ReconcileContainerdConfig(ctx context.Context, log logr.Logger, osc *extensionsv1alpha1.OperatingSystemConfig, oscRaw []byte) ([]byte, error) {
+	if !extensionsv1alpha1helper.HasContainerdConfiguration(osc.Spec.CRIConfig) {
+		return oscRaw, nil
 	}
 
 	if err := r.ensureContainerdConfigDirectories(); err != nil {
-		return fmt.Errorf("failed to ensure containerd config directories: %w", err)
+		return nil, fmt.Errorf("failed to ensure containerd config directories: %w", err)
 	}
 
 	if err := r.ensureContainerdDefaultConfig(ctx); err != nil {
-		return fmt.Errorf("failed to ensure containerd default config: %w", err)
+		return nil, fmt.Errorf("failed to ensure containerd default config: %w", err)
 	}
 
-	if err := r.ensureContainerdConfiguration(log, criConfig); err != nil {
-		return fmt.Errorf("failed to ensure containerd config: %w", err)
+	if err := r.ensureContainerdConfiguration(log, osc.Spec.CRIConfig); err != nil {
+		return nil, fmt.Errorf("failed to ensure containerd config: %w", err)
 	}
 
-	return nil
+	// Ingest the containerd drop-in into the OSC to prevent side effects when containerd.service is changed by extensions too.
+	ingestContainerdEnvironmentDropIn(osc)
+
+	oscRawContainerd, err := runtime.Encode(codec, osc)
+	if err != nil {
+		return nil, fmt.Errorf("unable to encode OSC after ingesting containerd drop-in: %w", err)
+	}
+
+	return oscRawContainerd, nil
 }
 
 // ReconcileContainerdRegistries configures desired registries for containerd and cleans up abandoned ones.
