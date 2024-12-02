@@ -19,6 +19,9 @@ import (
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 )
 
+// StoreCluster is a function that stores the given cluster object.
+type StoreCluster func(cluster.Cluster)
+
 // Request contains the information necessary to create the cluster.Cluster object for the virtual garden.
 type Request struct {
 	// RESTConfig is the rest.Config for the virtual garden cluster.
@@ -29,6 +32,7 @@ type Request struct {
 // received the rest.Config via the Channel.
 type Reconciler struct {
 	Manager                 manager.Manager
+	StoreCluster            StoreCluster
 	VirtualClientConnection componentbaseconfig.ClientConnectionConfiguration
 
 	virtualCluster cluster.Cluster
@@ -59,13 +63,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request Request) (reconcile.
 		}
 
 		r.virtualCluster = virtualCluster
+		r.StoreCluster(virtualCluster)
 		log.Info("Cluster object has been added to the manager")
 	}
 
 	return reconcile.Result{}, nil
-}
-
-// GetVirtualCluster returns the virtual cluster object.
-func (r *Reconciler) GetVirtualCluster() cluster.Cluster {
-	return r.virtualCluster
 }

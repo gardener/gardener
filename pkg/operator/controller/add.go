@@ -10,6 +10,7 @@ import (
 	"os"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -46,7 +47,11 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 		return err
 	}
 
-	addVirtualClusterControllerToManager, getVirtualCluster := virtual.AddToManager(cfg)
+	var virtualCluster cluster.Cluster
+
+	addVirtualClusterControllerToManager := virtual.AddToManagerFuncs(cfg, func(cluster cluster.Cluster) {
+		virtualCluster = cluster
+	})
 
 	if err := (&controllerregistrar.Reconciler{
 		Controllers: append([]controllerregistrar.Controller{
@@ -91,14 +96,14 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 			{
 				Name: gardenlet.ControllerName,
 				AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, _ *operatorv1alpha1.Garden) (bool, error) {
-					if getVirtualCluster() == nil {
+					if virtualCluster == nil {
 						logf.FromContext(ctx).Info("Virtual cluster object has not been created yet, cannot add Gardenlet reconciler")
 						return false, nil
 					}
 
 					return true, (&gardenlet.Reconciler{
 						Config: cfg.Controllers.GardenletDeployer,
-					}).AddToManager(ctx, mgr, getVirtualCluster())
+					}).AddToManager(ctx, mgr, virtualCluster)
 				},
 			},
 		}, addVirtualClusterControllerToManager...),

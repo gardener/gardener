@@ -8,7 +8,6 @@ import (
 	"context"
 
 	"k8s.io/client-go/rest"
-	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -23,11 +22,12 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
-// AddToManager adds all virtual garden cluster controllers to the given manager (via the controller registrar).
-func AddToManager(cfg *config.OperatorConfiguration) ([]controllerregistrar.Controller, func() cluster.Cluster) {
+// AddToManagerFuncs returns all virtual garden cluster controllers for a registration via the controller registrar.
+func AddToManagerFuncs(cfg *config.OperatorConfiguration, storeCluster virtualcluster.StoreCluster) []controllerregistrar.Controller {
 	var (
 		channel                  = make(chan event.TypedGenericEvent[*rest.Config])
 		virtualClusterReconciler = &virtualcluster.Reconciler{
+			StoreCluster:            storeCluster,
 			VirtualClientConnection: cfg.VirtualClientConnection,
 		}
 	)
@@ -54,5 +54,5 @@ func AddToManager(cfg *config.OperatorConfiguration) ([]controllerregistrar.Cont
 				}).AddToManager(mgr, v1beta1constants.GardenNamespace, clientmap.GardenerSecretName(log, v1beta1constants.GardenNamespace))
 			},
 		},
-	}, virtualClusterReconciler.GetVirtualCluster
+	}
 }
