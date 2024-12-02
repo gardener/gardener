@@ -67,7 +67,7 @@ var _ = Describe("Reconciler", func() {
 			sourceClient = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 
 			targetClient = fakeclient.NewClientBuilder().WithInterceptorFuncs(interceptor.Funcs{
-				SubResourceCreate: func(ctx context.Context, c client.Client, subResourceName string, obj client.Object, subResource client.Object, opts ...client.SubResourceCreateOption) error {
+				SubResourceCreate: func(ctx context.Context, c client.Client, _ string, obj client.Object, subResource client.Object, _ ...client.SubResourceCreateOption) error {
 					tokenRequest, isTokenRequest := subResource.(*authenticationv1.TokenRequest)
 					if !isTokenRequest {
 						return apierrors.NewBadRequest(fmt.Sprintf("got invalid type %T, expected TokenRequest", subResource))
