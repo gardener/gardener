@@ -98,21 +98,21 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 		switch requestResource {
 		case backupBucketResource:
 			return a.authorize(requestLog, seedName, graph.VertexTypeBackupBucket, attrs,
-				[]string{"update", "patch", "delete"},
-				[]string{"create", "get", "list", "watch"},
-				[]string{"status"},
+				withAllowedVerbs("update", "patch", "delete"),
+				withAlwaysAllowedVerbs("create", "get", "list", "watch"),
+				withAllowedSubresources("status"),
 			)
 		case backupEntryResource:
 			return a.authorize(requestLog, seedName, graph.VertexTypeBackupEntry, attrs,
-				[]string{"update", "patch", "delete"},
-				[]string{"create", "get", "list", "watch"},
-				[]string{"status"},
+				withAllowedVerbs("update", "patch", "delete"),
+				withAlwaysAllowedVerbs("create", "get", "list", "watch"),
+				withAllowedSubresources("status"),
 			)
 		case bastionResource:
 			return a.authorize(requestLog, seedName, graph.VertexTypeBastion, attrs,
-				[]string{"update", "patch"},
-				[]string{"create", "get", "list", "watch"},
-				[]string{"status"},
+				withAllowedVerbs("update", "patch"),
+				withAlwaysAllowedVerbs("create", "get", "list", "watch"),
+				withAllowedSubresources("status"),
 			)
 		case certificateSigningRequestResource:
 			if userType == seedidentity.UserTypeExtension {
@@ -120,9 +120,9 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			}
 
 			return a.authorize(requestLog, seedName, graph.VertexTypeCertificateSigningRequest, attrs,
-				[]string{"get", "list", "watch"},
-				[]string{"create"},
-				[]string{"seedclient"},
+				withAllowedVerbs("get", "list", "watch"),
+				withAlwaysAllowedVerbs("create"),
+				withAllowedSubresources("seedclient"),
 			)
 		case cloudProfileResource:
 			return a.authorizeRead(requestLog, seedName, graph.VertexTypeCloudProfile, attrs)
@@ -133,9 +133,7 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 				// We don't use authorizeRead here, as it would also grant list and watch permissions, which gardenlet doesn't
 				// have. We want to grant the read-only subset of gardenlet's permissions.
 				return a.authorize(requestLog, seedName, graph.VertexTypeClusterRoleBinding, attrs,
-					[]string{"get"},
-					nil,
-					nil,
+					withAllowedVerbs("get"),
 				)
 			}
 
@@ -146,39 +144,38 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			return a.authorizeRead(requestLog, seedName, graph.VertexTypeControllerDeployment, attrs)
 		case controllerInstallationResource:
 			return a.authorize(requestLog, seedName, graph.VertexTypeControllerInstallation, attrs,
-				[]string{"update", "patch"},
-				[]string{"get", "list", "watch"},
-				[]string{"status"},
+				withAllowedVerbs("update", "patch"),
+				withAlwaysAllowedVerbs("get", "list", "watch"),
+				withAllowedSubresources("status"),
 			)
 		case controllerRegistrationResource:
 			return a.authorize(requestLog, seedName, graph.VertexTypeControllerRegistration, attrs,
-				nil,
-				[]string{"get", "list", "watch"},
-				nil,
+				withAlwaysAllowedVerbs("get", "list", "watch"),
 			)
+		case credentialsBindingResource:
+			return a.authorizeRead(requestLog, seedName, graph.VertexTypeCredentialsBinding, attrs)
 		case eventCoreResource, eventResource:
 			return a.authorizeEvent(requestLog, attrs)
 		case exposureClassResource:
 			return a.authorizeRead(requestLog, seedName, graph.VertexTypeExposureClass, attrs)
 		case internalSecretResource:
 			return a.authorize(requestLog, seedName, graph.VertexTypeInternalSecret, attrs,
-				[]string{"get", "update", "patch", "delete", "list", "watch"},
-				[]string{"create"},
-				nil,
+				withAllowedVerbs("get", "update", "patch", "delete", "list", "watch"),
+				withAlwaysAllowedVerbs("create"),
 			)
 		case leaseResource:
 			return a.authorizeLease(requestLog, seedName, userType, attrs)
 		case gardenletResource:
 			return a.authorize(requestLog, seedName, graph.VertexTypeGardenlet, attrs,
-				[]string{"update", "patch"},
-				[]string{"get", "list", "watch", "create"},
-				[]string{"status"},
+				withAllowedVerbs("update", "patch"),
+				withAlwaysAllowedVerbs("get", "list", "watch", "create"),
+				withAllowedSubresources("status"),
 			)
 		case managedSeedResource:
 			return a.authorize(requestLog, seedName, graph.VertexTypeManagedSeed, attrs,
-				[]string{"update", "patch"},
-				[]string{"get", "list", "watch"},
-				[]string{"status"},
+				withAllowedVerbs("update", "patch"),
+				withAlwaysAllowedVerbs("get", "list", "watch"),
+				withAllowedSubresources("status"),
 			)
 		case namespaceResource:
 			return a.authorizeRead(requestLog, seedName, graph.VertexTypeNamespace, attrs)
@@ -186,45 +183,44 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			return a.authorizeRead(requestLog, seedName, graph.VertexTypeProject, attrs)
 		case secretBindingResource:
 			return a.authorizeRead(requestLog, seedName, graph.VertexTypeSecretBinding, attrs)
-		case credentialsBindingResource:
-			return a.authorizeRead(requestLog, seedName, graph.VertexTypeCredentialsBinding, attrs)
 		case secretResource:
 			return a.authorizeSecret(requestLog, seedName, attrs)
 		case workloadIdentityResource:
 			return a.authorize(requestLog, seedName, graph.VertexTypeWorkloadIdentity, attrs,
-				[]string{"get", "list", "watch", "create", "patch"},
-				nil,
-				[]string{"token"},
+				withAllowedVerbs("get", "list", "watch", "create", "patch"),
+				withAllowedSubresources("token"),
 			)
 		case seedResource:
 			return a.authorize(requestLog, seedName, graph.VertexTypeSeed, attrs,
-				[]string{"update", "patch", "delete"},
-				[]string{"create", "get", "list", "watch"},
-				[]string{"status"},
+				withAllowedVerbs("update", "patch", "delete"),
+				withAlwaysAllowedVerbs("create", "get", "list", "watch"),
+				withAllowedSubresources("status"),
 			)
 		case serviceAccountResource:
 			if userType == seedidentity.UserTypeExtension {
 				// We don't use authorizeRead here, as it would also grant list and watch permissions, which gardenlet doesn't
 				// have. We want to grant the read-only subset of gardenlet's permissions.
 				return a.authorize(requestLog, seedName, graph.VertexTypeServiceAccount, attrs,
-					[]string{"get"},
-					nil,
-					nil,
+					withAllowedVerbs("get"),
 				)
 			}
 
 			return a.authorizeServiceAccount(requestLog, seedName, attrs)
 		case shootResource:
 			return a.authorize(requestLog, seedName, graph.VertexTypeShoot, attrs,
-				[]string{"update", "patch"},
-				[]string{"get", "list", "watch"},
-				[]string{"status"},
+				withAllowedVerbs("update", "patch"),
+				withAlwaysAllowedVerbs("get", "list", "watch"),
+				withAllowedSubresources("status"),
 			)
 		case shootStateResource:
 			return a.authorize(requestLog, seedName, graph.VertexTypeShootState, attrs,
-				[]string{"get", "update", "patch", "delete", "list", "watch"},
-				[]string{"create"},
-				nil,
+				withAllowedVerbs("get", "update", "patch", "delete", "list", "watch"),
+				withAlwaysAllowedVerbs("create"),
+			)
+		case workloadIdentityResource:
+			return a.authorize(requestLog, seedName, graph.VertexTypeWorkloadIdentity, attrs,
+				withAllowedVerbs("get", "list", "watch", "create"),
+				withAllowedSubresources("token"),
 			)
 		default:
 			a.logger.Info(
@@ -253,9 +249,8 @@ func (a *authorizer) authorizeClusterRoleBinding(log logr.Logger, seedName strin
 	}
 
 	return a.authorize(log, seedName, graph.VertexTypeClusterRoleBinding, attrs,
-		[]string{"get", "patch", "update"},
-		[]string{"create"},
-		nil,
+		withAllowedVerbs("get", "patch", "update"),
+		withAlwaysAllowedVerbs("create"),
 	)
 }
 
@@ -292,9 +287,8 @@ func (a *authorizer) authorizeLease(log logr.Logger, seedName string, userType s
 	}
 
 	return a.authorize(log, seedName, graph.VertexTypeLease, attrs,
-		[]string{"get", "update", "patch", "list", "watch"},
-		[]string{"create"},
-		nil,
+		withAllowedVerbs("get", "update", "patch", "list", "watch"),
+		withAlwaysAllowedVerbs("create"),
 	)
 }
 
@@ -314,9 +308,8 @@ func (a *authorizer) authorizeSecret(log logr.Logger, seedName string, attrs aut
 	}
 
 	return a.authorize(log, seedName, graph.VertexTypeSecret, attrs,
-		[]string{"get", "patch", "update", "delete"},
-		[]string{"create"},
-		nil,
+		withAllowedVerbs("get", "patch", "update", "delete"),
+		withAlwaysAllowedVerbs("create"),
 	)
 }
 
@@ -328,9 +321,8 @@ func (a *authorizer) authorizeConfigMap(log logr.Logger, seedName string, attrs 
 	}
 
 	return a.authorize(log, seedName, graph.VertexTypeConfigMap, attrs,
-		[]string{"get", "patch", "update", "delete", "list", "watch"},
-		[]string{"create"},
-		nil,
+		withAllowedVerbs("get", "patch", "update", "delete", "list", "watch"),
+		withAlwaysAllowedVerbs("create"),
 	)
 }
 
@@ -350,49 +342,75 @@ func (a *authorizer) authorizeServiceAccount(log logr.Logger, seedName string, a
 	}
 
 	return a.authorize(log, seedName, graph.VertexTypeServiceAccount, attrs,
-		[]string{"get", "patch", "update"},
-		[]string{"create"},
-		nil,
+		withAllowedVerbs("get", "patch", "update"),
+		withAlwaysAllowedVerbs("create"),
 	)
 }
 
 func (a *authorizer) authorizeRead(log logr.Logger, seedName string, fromType graph.VertexType, attrs auth.Attributes) (auth.Decision, string, error) {
 	return a.authorize(log, seedName, fromType, attrs,
-		[]string{"get", "list", "watch"},
-		nil,
-		nil,
+		withAllowedVerbs("get", "list", "watch"),
 	)
 }
+
+type authzRequest struct {
+	allowedVerbs        []string
+	alwaysAllowedVerbs  []string
+	allowedSubresources []string
+}
+
+type configFunc func(req *authzRequest)
 
 func (a *authorizer) authorize(
 	log logr.Logger,
 	seedName string,
 	fromType graph.VertexType,
 	attrs auth.Attributes,
-	allowedVerbs []string,
-	alwaysAllowedVerbs []string,
-	allowedSubresources []string,
+	fns ...configFunc,
 ) (
 	auth.Decision,
 	string,
 	error,
 ) {
-	if ok, reason := a.checkSubresource(log, attrs, allowedSubresources...); !ok {
+	req := &authzRequest{}
+	for _, f := range fns {
+		f(req)
+	}
+
+	if ok, reason := a.checkSubresource(log, attrs, req.allowedSubresources...); !ok {
 		return auth.DecisionNoOpinion, reason, nil
 	}
 
 	// When a new object is created then it doesn't yet exist in the graph, so usually such requests are always allowed
 	// as the 'create case' is typically handled in the SeedRestriction admission handler. Similarly, resources for
 	// which the gardenlet has a controller need to be listed/watched, so those verbs would also be allowed here.
-	if slices.Contains(alwaysAllowedVerbs, attrs.GetVerb()) {
+	if slices.Contains(req.alwaysAllowedVerbs, attrs.GetVerb()) {
 		return auth.DecisionAllow, "", nil
 	}
 
-	if ok, reason := a.checkVerb(log, attrs, append(alwaysAllowedVerbs, allowedVerbs...)...); !ok {
+	if ok, reason := a.checkVerb(log, attrs, append(req.alwaysAllowedVerbs, req.allowedVerbs...)...); !ok {
 		return auth.DecisionNoOpinion, reason, nil
 	}
 
 	return a.hasPathFrom(log, seedName, fromType, attrs)
+}
+
+func withAllowedVerbs(verbs ...string) configFunc {
+	return func(req *authzRequest) {
+		req.allowedVerbs = verbs
+	}
+}
+
+func withAlwaysAllowedVerbs(verbs ...string) configFunc {
+	return func(req *authzRequest) {
+		req.alwaysAllowedVerbs = verbs
+	}
+}
+
+func withAllowedSubresources(resources ...string) configFunc {
+	return func(req *authzRequest) {
+		req.allowedSubresources = resources
+	}
 }
 
 func (a *authorizer) hasPathFrom(log logr.Logger, seedName string, fromType graph.VertexType, attrs auth.Attributes) (auth.Decision, string, error) {
