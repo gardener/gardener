@@ -3538,9 +3538,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 						ProviderConfig: &runtime.RawExtension{
 							Raw: []byte("foo"),
 						},
-						Pods:       ptr.To("10.0.0.0/8"),
-						Nodes:      ptr.To("11.0.0.0/8"),
-						Services:   ptr.To("12.0.0.0/8"),
+						Pods:       ptr.To("0.0.0.0/0"),
+						Nodes:      ptr.To("0.0.0.0/0"),
+						Services:   ptr.To("0.0.0.0/0"),
 						IPFamilies: []core.IPFamily{core.IPFamilyIPv4},
 					}
 

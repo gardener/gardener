@@ -930,7 +930,6 @@ func validateNetworking(networking *core.Networking, workerless bool, fldPath *f
 	}
 
 	primaryIPFamily := helper.DeterminePrimaryIPFamily(networking.IPFamilies)
-	apiServerProxyRange := cidrvalidation.NewCIDR(v1beta1constants.ReservedSeedServiceRange, field.NewPath(""))
 
 	if networking.Nodes != nil {
 		path := fldPath.Child("nodes")
@@ -942,7 +941,6 @@ func validateNetworking(networking *core.Networking, workerless bool, fldPath *f
 			allErrs = append(allErrs, cidr.ValidateIPFamily(string(primaryIPFamily))...)
 		}
 		allErrs = append(allErrs, cidrvalidation.ValidateCIDRIsCanonical(path, cidr.GetCIDR())...)
-		allErrs = append(allErrs, apiServerProxyRange.ValidateNotOverlap(cidr)...)
 	}
 
 	if networking.Pods != nil {
@@ -955,7 +953,6 @@ func validateNetworking(networking *core.Networking, workerless bool, fldPath *f
 			allErrs = append(allErrs, cidr.ValidateIPFamily(string(primaryIPFamily))...)
 		}
 		allErrs = append(allErrs, cidrvalidation.ValidateCIDRIsCanonical(path, cidr.GetCIDR())...)
-		allErrs = append(allErrs, apiServerProxyRange.ValidateNotOverlap(cidr)...)
 	}
 
 	if networking.Services != nil {
@@ -968,7 +965,6 @@ func validateNetworking(networking *core.Networking, workerless bool, fldPath *f
 			allErrs = append(allErrs, cidr.ValidateIPFamily(string(primaryIPFamily))...)
 		}
 		allErrs = append(allErrs, cidrvalidation.ValidateCIDRIsCanonical(path, cidr.GetCIDR())...)
-		allErrs = append(allErrs, apiServerProxyRange.ValidateNotOverlap(cidr)...)
 	}
 
 	return allErrs
