@@ -17,7 +17,9 @@ import (
 	eventsv1 "k8s.io/api/events/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/selection"
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 
@@ -354,9 +356,15 @@ func (a *authorizer) authorizeRead(log logr.Logger, seedName string, fromType gr
 }
 
 type authzRequest struct {
-	allowedVerbs        []string
-	alwaysAllowedVerbs  []string
-	allowedSubresources []string
+	allowedVerbs          []string
+	alwaysAllowedVerbs    []string
+	allowedSubresources   []string
+	listWatchSeedSelector seedSelector
+}
+
+type seedSelector struct {
+	fieldNames []string
+	labelKeys  []string
 }
 
 type configFunc func(req *authzRequest)
@@ -392,6 +400,22 @@ func (a *authorizer) authorize(
 		return auth.DecisionNoOpinion, reason, nil
 	}
 
+	// TODO(rfranzke, see subsequent commit): Backwards-compatibility: If Kubernetes < 1.32 then skip this
+	if (attrs.GetVerb() == "list" || attrs.GetVerb() == "watch") &&
+		// A resource name is also set when a specific object is read with `.metadata.name` field selector (e.g., in the
+		// single object cache), even for the list verb.
+		// If we have a resource name then we want to consult the graph. There is an exception, though, which is when
+		// the request specifies `.metadata.name` as field name for a seed selector. This means that the client wants
+		// to list/watch the resource with the seed name as field selector. This is a valid scenario and needs to be
+		// handled by the below check function.
+		(attrs.GetName() == "" || slices.Contains(req.listWatchSeedSelector.fieldNames, metav1.ObjectNameField)) {
+		if ok, reason := a.checkListWatchRequests(log, attrs, seedName, req.listWatchSeedSelector); !ok {
+			return auth.DecisionNoOpinion, reason, nil
+		} else {
+			return auth.DecisionAllow, "", nil
+		}
+	}
+
 	return a.hasPathFrom(log, seedName, fromType, attrs)
 }
 
@@ -410,6 +434,24 @@ func withAlwaysAllowedVerbs(verbs ...string) configFunc {
 func withAllowedSubresources(resources ...string) configFunc {
 	return func(req *authzRequest) {
 		req.allowedSubresources = resources
+	}
+}
+
+// TODO: Remove this 'nolint' annotation once the function is used.
+//
+//nolint:unused
+func withSeedFieldSelectorFields(fieldNames ...string) configFunc {
+	return func(req *authzRequest) {
+		req.listWatchSeedSelector.fieldNames = append(req.listWatchSeedSelector.fieldNames, fieldNames...)
+	}
+}
+
+// TODO: Remove this 'nolint' annotation once the function is used.
+//
+//nolint:unused
+func withSeedLabelSelectorKeys(labelKeys ...string) configFunc {
+	return func(req *authzRequest) {
+		req.listWatchSeedSelector.labelKeys = append(req.listWatchSeedSelector.labelKeys, labelKeys...)
 	}
 }
 
@@ -456,4 +498,32 @@ func (a *authorizer) checkSubresource(log logr.Logger, attrs auth.Attributes, al
 	}
 
 	return true, ""
+}
+
+func (a *authorizer) checkListWatchRequests(log logr.Logger, attrs auth.Attributes, seedName string, seedSelector seedSelector) (bool, string) {
+	// The authorization request originates from the kube-apiserver. It has already parsed the field/label selector
+	// and converted it to {fields,labels}.Requirements. Hence, it is safe to ignore the error here. Furthermore, we
+	// require at least one selector. When the parsing failed, the list of selectors would be empty, resulting in
+	// below code to deny the request anyway.
+	fieldSelectorRequirements, _ := attrs.GetFieldSelector()
+	labelSelectorRequirements, _ := attrs.GetLabelSelector()
+
+	for _, req := range fieldSelectorRequirements {
+		if (req.Operator == selection.Equals || req.Operator == selection.DoubleEquals || req.Operator == selection.In) &&
+			req.Value == seedName &&
+			slices.Contains(seedSelector.fieldNames, req.Field) {
+			return true, "field selector provided and matches seed name"
+		}
+	}
+
+	for _, req := range labelSelectorRequirements {
+		if slices.ContainsFunc(seedSelector.labelKeys, func(key string) bool {
+			return req.Matches(labels.Set{key: "true"})
+		}) {
+			return true, "label selector provided and matches seed name"
+		}
+	}
+
+	log.Info("Denying authorization because field/label selectors don't select seed name", "fieldNames", seedSelector.fieldNames, "labelKeys", seedSelector.labelKeys)
+	return false, "must specify field or label selector for seed name " + seedName
 }
