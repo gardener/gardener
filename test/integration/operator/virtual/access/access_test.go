@@ -11,11 +11,14 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/spf13/afero"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 )
 
-var _ = Describe("Garden Access controller tests", func() {
+var _ = Describe("Access controller tests", func() {
 	var config *clientcmdapi.Config
 
 	BeforeEach(func() {
@@ -109,11 +112,14 @@ var _ = Describe("Garden Access controller tests", func() {
 			}
 			Expect(mgrClient.Update(ctx, testSecret)).To(Succeed())
 
+			var event event.TypedGenericEvent[*rest.Config]
 			Eventually(func(g Gomega) {
 				token, err := afero.ReadFile(fs, tokenFilePath)
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(string(token)).To(Equal("Z2FyZGVuZXIK"))
+				g.Expect(channel).To(Receive(&event))
 			}).Should(Succeed())
+			Expect(event.Object).To(Equal(restConfigWithTokenPath(kubeConfigData, tokenFilePath)))
 
 			By("Update token in kubeconfig")
 			addTokenToConfig(config, "Ym90YW5pc3QK")
@@ -126,7 +132,9 @@ var _ = Describe("Garden Access controller tests", func() {
 				token, err := afero.ReadFile(fs, tokenFilePath)
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(string(token)).To(Equal("Ym90YW5pc3QK"))
+				g.Expect(channel).To(Receive(&event))
 			}).Should(Succeed())
+			Expect(event.Object).To(Equal(restConfigWithTokenPath(kubeConfigData, tokenFilePath)))
 		})
 	})
 })
@@ -139,4 +147,12 @@ func marshalConfig(config *clientcmdapi.Config) ([]byte, error) {
 	buf := &bytes.Buffer{}
 	err := clientcmdlatest.Codec.Encode(config, buf)
 	return buf.Bytes(), err
+}
+
+func restConfigWithTokenPath(kubeConfigRaw []byte, tokenPath string) *rest.Config {
+	restConfig, err := clientcmd.RESTConfigFromKubeConfig(kubeConfigRaw)
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+	restConfig.BearerToken = ""
+	restConfig.BearerTokenFile = tokenPath
+	return restConfig
 }

@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	. "github.com/gardener/gardener/pkg/operator/controller/garden/access"
+	. "github.com/gardener/gardener/pkg/operator/controller/virtual/access"
 )
 
 var _ = Describe("Add", func() {

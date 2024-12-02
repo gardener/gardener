@@ -35,7 +35,7 @@ func AddToManagerFuncs(cfg *config.OperatorConfiguration, storeCluster virtualcl
 	return []controllerregistrar.Controller{
 		{
 			Name: virtualcluster.ControllerName,
-			AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, _ *operatorv1alpha1.Garden) (bool, error) {
+			AddToManagerFunc: func(_ context.Context, mgr manager.Manager, _ *operatorv1alpha1.Garden) (bool, error) {
 				return true, virtualClusterReconciler.AddToManager(mgr, channel)
 			},
 		},

@@ -15,26 +15,27 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operator/apis/config"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
-	gardenaccess "github.com/gardener/gardener/pkg/operator/controller/garden/access"
+	"github.com/gardener/gardener/pkg/operator/controller/virtual/access"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 func TestAccess(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Test Integration Operator Garden Access Suite")
+	RunSpecs(t, "Test Integration Operator Virtual Access Suite")
 }
 
 const testID = "garden-access-controller-test"
@@ -51,7 +52,8 @@ var (
 	testSecret    *corev1.Secret
 	tokenFilePath string
 
-	fs afero.Fs
+	fs      afero.Fs
+	channel chan event.TypedGenericEvent[*rest.Config]
 )
 
 var _ = BeforeSuite(func() {
@@ -115,21 +117,19 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	mgrClient = mgr.GetClient()
 
-	fs = afero.NewOsFs()
+	fs = afero.NewMemMapFs()
 	tokenFilePath = testRunID + ".test"
 
-	By("Register controller")
-	DeferCleanup(test.WithVar(&gardenaccess.CreateTemporaryFile, func(fs afero.Fs, _, _ string) (afero.File, error) {
+	DeferCleanup(test.WithVar(&access.CreateTemporaryFile, func(fs afero.Fs, _, _ string) (afero.File, error) {
 		return fs.Create(tokenFilePath)
 	}))
 
-	DeferCleanup(func() {
-		Expect(fs.Remove(tokenFilePath)).To(Succeed())
-	})
+	channel = make(chan event.TypedGenericEvent[*rest.Config])
 
-	Expect((&gardenaccess.Reconciler{
-		FS:     fs,
-		Config: &config.OperatorConfiguration{},
+	By("Register controller")
+	Expect((&access.Reconciler{
+		FS:      fs,
+		Channel: channel,
 	}).AddToManager(mgr, testSecret.Name, testSecret.Name)).To(Succeed())
 
 	By("Start manager")

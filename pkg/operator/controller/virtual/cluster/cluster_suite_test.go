@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package access_test
+package cluster_test
 
 import (
 	"testing"
@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestAccess(t *testing.T) {
+func TestCluster(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Operator Controller Virtual Access Suite")
+	RunSpecs(t, "Operator Controller Virtual Cluster Suite")
 }

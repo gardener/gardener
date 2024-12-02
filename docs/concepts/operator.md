@@ -546,23 +546,15 @@ This reconciler inspects the following references:
 
 Further checks might be added in the future.
 
-### [`Access` Reconciler](../../pkg/operator/controller/garden/access)
-
-This reconciler performs actions related to the garden access secret (`gardener` or `gardener-internal`) for the virtual garden cluster.
-
-It extracts the included Kubeconfig, and prepares a dedicated REST config, where the inline bearer token is replaced by a bearer token file.
-Any subsequent reconciliation run, mostly triggered by a token replacement, causes the content of the bearer token file to be updated with the token found in the access secret.
-
-Together with the adjusted config and the token file, related controllers can continuously run their operations, even after credentials rotation.
-
-### [`Controller Registrar` controller](../../pkg/operator/controller/controllerregistrar)
+### [`Controller Registrar` Controller](../../pkg/operator/controller/controllerregistrar)
 
 Some controllers may only be instantiated or added later, because they need the `Garden` resource to be available (e.g. network configuration) or even the entire virtual garden cluster to run:
 
 * [`NetworkPolicy` controller](gardenlet.md#networkpolicy-controller)
 * [`VPA EvictionRequirements` controller](gardenlet.md#vpaevictionrequirements-controller)
-* [`Garden Access` reconciler](#access-reconciler)
-* [`Gardenlet` Controller](#gardenlet-controller)
+* [`Access` controller](#access-controller)
+* [`Virtual-Cluster-Registrar` controller](#virtual-cluster-registrar-controller)
+* [`Gardenlet` controller](#gardenlet-controller)
 
 > [!NOTE]
 > Some of the listed controllers are part of `gardenlet`, as well.
@@ -585,6 +577,22 @@ Currently, this logic handles the following scenarios:
 This reconciler reacts on events from `BackupBucket`, `DNSRecord` and `Extension` resources.
 Based on these resources and the related `Extension` specification, it is checked if the extension deployment is required in the garden runtime cluster.
 The result is then put into the `RuntimeRequired` condition and added to the `Extension` status.
+
+### [`Access` Controller](../../pkg/operator/controller/virtual/access)
+
+This controller performs actions related to the garden access secret (`gardener` or `gardener-internal`) for the virtual garden cluster.
+
+It extracts the included Kubeconfig, and prepares a dedicated REST config, where the inline bearer token is replaced by a bearer token file.
+Any subsequent reconciliation run, mostly triggered by a token replacement, causes the content of the bearer token file to be updated with the token found in the access secret.
+At the end, the prepared REST config is passed to the [`Virtual-Cluster-Registrar` controller](#virtual-cluster-registrar-controller).
+
+Together with the adjusted config and the token file, related controllers can continuously run their operations, even after credentials rotation.
+
+### [`Virtual-Cluster-Registrar` Controller](../../pkg/operator/controller/virtual/cluster)
+
+The `Virtual-Cluster-Registrar` controller watches for events on a dedicated channel that is shared with the [`Access` controller](#access-controller).
+Once a REST config is sent to the channel, the reconciliation loop picks up the request, creates a [Cluster](https://pkg.go.dev/sigs.k8s.io/controller-runtime/pkg/cluster) object and stores in memory.
+This `Cluster` object points to the virtual garden cluster and is used to register further controllers, e.g. [`Gardenlet` controller](#gardenlet-controller).
 
 ### [`Gardenlet` Controller](../../pkg/operator/controller/gardenlet)
 
