@@ -761,6 +761,8 @@ const (
 	DefaultRecommendationLowerBoundMemoryPercentile = 0.5
 	// DefaultRecommendationUpperBoundMemoryPercentile is the default value for the RecommendationUpperBoundMemoryPercentile field in the VPA configuration.
 	DefaultRecommendationUpperBoundMemoryPercentile = 0.95
+	// DefaultMemoryHistogramDecayHalfLife is the default value for the MemoryHistogramDecayHalfLife field in the VPA configuration.
+	DefaultMemoryHistogramDecayHalfLife = "24h"
 )
 
 var (

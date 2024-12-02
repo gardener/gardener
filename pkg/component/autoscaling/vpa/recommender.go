@@ -57,6 +57,8 @@ type ValuesRecommender struct {
 	RecommendationLowerBoundMemoryPercentile *float64
 	// RecommendationUpperBoundMemoryPercentile is the usage percentile that will be used for the upper bound on memory recommendation.
 	RecommendationUpperBoundMemoryPercentile *float64
+	// MemoryHistogramDecayHalfLife is the amount of time it takes a historical memory usage sample to lose half of its weight.
+	MemoryHistogramDecayHalfLife *metav1.Duration
 	// Image is the container image.
 	Image string
 	// Interval is the interval how often the recommender should run.
@@ -268,6 +270,7 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 						fmt.Sprintf("--target-memory-percentile=%f", ptr.Deref(v.values.Recommender.TargetMemoryPercentile, gardencorev1beta1.DefaultTargetMemoryPercentile)),
 						fmt.Sprintf("--recommendation-lower-bound-memory-percentile=%f", ptr.Deref(v.values.Recommender.RecommendationLowerBoundMemoryPercentile, gardencorev1beta1.DefaultRecommendationLowerBoundMemoryPercentile)),
 						fmt.Sprintf("--recommendation-upper-bound-memory-percentile=%f", ptr.Deref(v.values.Recommender.RecommendationUpperBoundMemoryPercentile, gardencorev1beta1.DefaultRecommendationUpperBoundMemoryPercentile)),
+						fmt.Sprintf("--memory-histogram-decay-half-life=%s", ptr.Deref(v.values.Recommender.MemoryHistogramDecayHalfLife, gardencorev1beta1.DefaultMemoryHistogramDecayHalfLife).Duration),
 						"--leader-elect=true",
 						fmt.Sprintf("--leader-elect-resource-namespace=%s", v.namespaceForApplicationClassResource()),
 					},
