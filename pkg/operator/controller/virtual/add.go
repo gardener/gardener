@@ -28,7 +28,6 @@ func AddToManager(cfg *config.OperatorConfiguration) ([]controllerregistrar.Cont
 	var (
 		channel                  = make(chan event.TypedGenericEvent[*rest.Config])
 		virtualClusterReconciler = &virtualcluster.Reconciler{
-			Channel:                 channel,
 			VirtualClientConnection: cfg.VirtualClientConnection,
 		}
 	)
@@ -37,7 +36,7 @@ func AddToManager(cfg *config.OperatorConfiguration) ([]controllerregistrar.Cont
 		{
 			Name: virtualcluster.ControllerName,
 			AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, _ *operatorv1alpha1.Garden) (bool, error) {
-				return true, virtualClusterReconciler.AddToManager(mgr)
+				return true, virtualClusterReconciler.AddToManager(mgr, channel)
 			},
 		},
 		{

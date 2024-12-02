@@ -21,7 +21,7 @@ import (
 const ControllerName = "virtual-cluster-registrar"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(mgr manager.Manager) error {
+func (r *Reconciler) AddToManager(mgr manager.Manager, channel <-chan event.TypedGenericEvent[*rest.Config]) error {
 	if r.Manager == nil {
 		r.Manager = mgr
 	}
@@ -29,7 +29,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	return builder.
 		TypedControllerManagedBy[Request](mgr).
 		Named(ControllerName).
-		WatchesRawSource(source.TypedChannel[*rest.Config, Request](r.Channel, r.EventHandler())).
+		WatchesRawSource(source.TypedChannel[*rest.Config, Request](channel, r.EventHandler())).
 		WithOptions(controller.TypedOptions[Request]{
 			MaxConcurrentReconciles: 1,
 		}).

@@ -11,7 +11,6 @@ import (
 	"k8s.io/client-go/rest"
 	componentbaseconfig "k8s.io/component-base/config"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -29,7 +28,6 @@ type Request struct {
 // Reconciler creates the cluster.Cluster object for the virtual garden cluster and adds it to the manager after it
 // received the rest.Config via the Channel.
 type Reconciler struct {
-	Channel                 <-chan event.TypedGenericEvent[*rest.Config]
 	Manager                 manager.Manager
 	VirtualClientConnection componentbaseconfig.ClientConnectionConfiguration
 
