@@ -354,7 +354,7 @@ gardener-ha-single-zone%: export SKAFFOLD_PROFILE=ha-single-zone
 gardener-ha-multi-zone%: export SKAFFOLD_PROFILE=ha-multi-zone
 
 gardener-up gardener-ha-single-zone-up gardener-ha-multi-zone-up: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
-	$(SKAFFOLD) run
+	$(SKAFFOLD) run --cache-artifacts=$(shell ./hack/get-skaffold-cache-artifacts.sh)
 gardener-dev gardener-ha-single-zone-dev gardener-ha-multi-zone-dev: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
 	$(SKAFFOLD) dev
 gardener-debug gardener-ha-single-zone-debug gardener-ha-multi-zone-debug: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
@@ -393,7 +393,7 @@ gardenlet-kind2-down gardenlet-kind2-ha-single-zone-down: $(SKAFFOLD) $(HELM) $(
 operator-%: export SKAFFOLD_FILENAME = skaffold-operator.yaml
 
 operator-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	$(SKAFFOLD) run
+	$(SKAFFOLD) run --cache-artifacts=$(shell ./hack/get-skaffold-cache-artifacts.sh operator)
 operator-dev: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	$(SKAFFOLD) dev
 operator-debug: $(SKAFFOLD) $(HELM) $(KUBECTL)
