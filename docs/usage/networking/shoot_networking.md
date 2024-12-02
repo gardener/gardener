@@ -85,3 +85,17 @@ Number of IPs per podCIDRs: 128
 ```
 
 With the configuration above, a Shoot cluster can at most have **32 nodes** which are ready to run workload in the Pod network.
+
+## Reserved Networks
+
+Some network ranges are reserved for specific use-cases in the communication between seeds and shoots.
+
+| IPv  | CIDR                  | Name                         | Purpose                                                                                                                              |
+|------|-----------------------|------------------------------|--------------------------------------------------------------------------------------------------------------------------------------|
+| IPv4 | 192.168.123.0/24      | Default VPN Range            | Used for communication between seed API server and shoot resources via VPN. Will be removed once feature gate `NewVPN` is graduated. |
+| IPv6 | fd8f:6d53:b97a:1::/96 | Default VPN Range            |                                                                                                                                      |
+| IPv4 | 240.0.0.0/8           | Kube-ApiServer Mapping Range | Used for the `kubernetes.default.svc.cluster.local` service in a shoot                                                               |
+
+> :warning: Do not use any of the CIDR ranges mentioned above for any of the node, pod or service networks.
+> Gardener will prevent their creation. Pre-existing shoots using reserved ranges will still work, though it is recommended
+> to recreate them with compatible network ranges.
