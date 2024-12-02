@@ -726,20 +726,20 @@ type VerticalPodAutoscaler struct {
 	// CPUHistogramDecayHalfLife is the amount of time it takes a historical CPU usage sample to lose half of its weight.
 	// (default: 24h)
 	// +optional
-	CPUHistogramDecayHalfLife *metav1.Duration `json:"cpuHistogramDecayHalfLife,omitempty" protobuf:"bytes,12,opt,name=cpuHistogramDecayHalfLife"`
+	CPUHistogramDecayHalfLife *metav1.Duration `json:"cpuHistogramDecayHalfLife,omitempty" protobuf:"bytes,15,opt,name=cpuHistogramDecayHalfLife"`
 	// TargetMemoryPercentile is the usage percentile that will be used as a base for memory target recommendation.
 	// Doesn't affect memory lower bound nor memory upper bound.
 	// (default: 0.9)
 	// +optional
-	TargetMemoryPercentile *float64 `json:"targetMemoryPercentile,omitempty" protobuf:"fixed64,13,opt,name=targetMemoryPercentile"`
+	TargetMemoryPercentile *float64 `json:"targetMemoryPercentile,omitempty" protobuf:"fixed64,12,opt,name=targetMemoryPercentile"`
 	// RecommendationLowerBoundMemoryPercentile is the usage percentile that will be used for the lower bound on memory recommendation.
 	// (default: 0.5)
 	// +optional
-	RecommendationLowerBoundMemoryPercentile *float64 `json:"recommendationLowerBoundMemoryPercentile,omitempty" protobuf:"fixed64,14,opt,name=recommendationLowerBoundMemoryPercentile"`
+	RecommendationLowerBoundMemoryPercentile *float64 `json:"recommendationLowerBoundMemoryPercentile,omitempty" protobuf:"fixed64,13,opt,name=recommendationLowerBoundMemoryPercentile"`
 	// RecommendationUpperBoundMemoryPercentile is the usage percentile that will be used for the upper bound on memory recommendation.
 	// (default: 0.95)
 	// +optional
-	RecommendationUpperBoundMemoryPercentile *float64 `json:"recommendationUpperBoundMemoryPercentile,omitempty" protobuf:"fixed64,15,opt,name=recommendationUpperBoundMemoryPercentile"`
+	RecommendationUpperBoundMemoryPercentile *float64 `json:"recommendationUpperBoundMemoryPercentile,omitempty" protobuf:"fixed64,14,opt,name=recommendationUpperBoundMemoryPercentile"`
 	// MemoryHistogramDecayHalfLife is the amount of time it takes a historical memory usage sample to lose half of its weight.
 	// (default: 24h)
 	// +optional
