@@ -102,7 +102,7 @@
       // Run make generate when Go API packages have been changed because CRDs might have changed.
       matchDatasources: [
         'go',
-        'github-releases',
+        'github-releases', // Required for the `etc-druid` and `machine-controller-manager` groups.
       ],
       postUpgradeTasks: {
         commands: [
