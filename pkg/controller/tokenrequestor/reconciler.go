@@ -16,7 +16,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	corev1clientset "k8s.io/client-go/kubernetes/typed/core/v1"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/utils/clock"
@@ -37,14 +36,13 @@ const (
 
 // Reconciler requests and refreshes tokens via the TokenRequest API.
 type Reconciler struct {
-	SourceClient       client.Client
-	TargetClient       client.Client
-	TargetCoreV1Client corev1clientset.CoreV1Interface
-	ConcurrentSyncs    int
-	Clock              clock.Clock
-	JitterFunc         func(time.Duration, float64) time.Duration
-	Class              *string
-	APIAudiences       []string
+	SourceClient    client.Client
+	TargetClient    client.Client
+	ConcurrentSyncs int
+	Clock           clock.Clock
+	JitterFunc      func(time.Duration, float64) time.Duration
+	Class           *string
+	APIAudiences    []string
 	// TargetNamespace is the namespace that requested ServiceAccounts should be created in.
 	// If TargetNamespace is empty, the controller uses the namespace specified in the
 	// serviceaccount.resources.gardener.cloud/namespace annotation.
@@ -185,8 +183,11 @@ func (r *Reconciler) createServiceAccountToken(ctx context.Context, sa *corev1.S
 		},
 	}
 
-	// TODO (shafeeqes): Use SubResourceClient once fakeSubResourceClient supports Create
-	return r.TargetCoreV1Client.ServiceAccounts(sa.Namespace).CreateToken(ctx, sa.Name, tokenRequest, metav1.CreateOptions{})
+	if err := r.TargetClient.SubResource("token").Create(ctx, sa, tokenRequest); err != nil {
+		return nil, err
+	}
+
+	return tokenRequest, nil
 }
 
 func (r *Reconciler) requeue(ctx context.Context, secret *corev1.Secret) (bool, time.Duration, error) {
