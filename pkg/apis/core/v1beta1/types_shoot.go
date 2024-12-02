@@ -753,6 +753,8 @@ const (
 	DefaultRecommendationLowerBoundCPUPercentile = 0.5
 	// DefaultRecommendationUpperBoundCPUPercentile is the default value for the RecommendationUpperBoundCPUPercentile field in the VPA configuration.
 	DefaultRecommendationUpperBoundCPUPercentile = 0.95
+	// DefaultCPUHistogramDecayHalfLife is the default value for the CPUHistogramDecayHalfLife field in the VPA configuration.
+	DefaultCPUHistogramDecayHalfLife = "24h"
 	// DefaultTargetMemoryPercentile is the default value for the TargetMemoryPercentile field in the VPA configuration.
 	DefaultTargetMemoryPercentile = 0.9
 	// DefaultRecommendationLowerBoundMemoryPercentile is the default value for the RecommendationLowerBoundMemoryPercentile field in the VPA configuration.

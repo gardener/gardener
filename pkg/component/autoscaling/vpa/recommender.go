@@ -48,6 +48,8 @@ type ValuesRecommender struct {
 	RecommendationLowerBoundCPUPercentile *float64
 	// RecommendationUpperBoundCPUPercentile is the usage percentile that will be used for the upper bound on CPU recommendation.
 	RecommendationUpperBoundCPUPercentile *float64
+	// CPUHistogramDecayHalfLife is the amount of time it takes a historical CPU usage sample to lose half of its weight.
+	CPUHistogramDecayHalfLife *metav1.Duration
 	// TargetMemoryPercentile is the usage percentile that will be used as a base for memory target recommendation.
 	// Doesn't affect memory lower bound nor memory upper bound.
 	TargetMemoryPercentile *float64
@@ -262,6 +264,7 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 						fmt.Sprintf("--target-cpu-percentile=%f", ptr.Deref(v.values.Recommender.TargetCPUPercentile, gardencorev1beta1.DefaultTargetCPUPercentile)),
 						fmt.Sprintf("--recommendation-lower-bound-cpu-percentile=%f", ptr.Deref(v.values.Recommender.RecommendationLowerBoundCPUPercentile, gardencorev1beta1.DefaultRecommendationLowerBoundCPUPercentile)),
 						fmt.Sprintf("--recommendation-upper-bound-cpu-percentile=%f", ptr.Deref(v.values.Recommender.RecommendationUpperBoundCPUPercentile, gardencorev1beta1.DefaultRecommendationUpperBoundCPUPercentile)),
+						fmt.Sprintf("--cpu-histogram-decay-half-life=%s", ptr.Deref(v.values.Recommender.CPUHistogramDecayHalfLife, gardencorev1beta1.DefaultCPUHistogramDecayHalfLife).Duration),
 						fmt.Sprintf("--target-memory-percentile=%f", ptr.Deref(v.values.Recommender.TargetMemoryPercentile, gardencorev1beta1.DefaultTargetMemoryPercentile)),
 						fmt.Sprintf("--recommendation-lower-bound-memory-percentile=%f", ptr.Deref(v.values.Recommender.RecommendationLowerBoundMemoryPercentile, gardencorev1beta1.DefaultRecommendationLowerBoundMemoryPercentile)),
 						fmt.Sprintf("--recommendation-upper-bound-memory-percentile=%f", ptr.Deref(v.values.Recommender.RecommendationUpperBoundMemoryPercentile, gardencorev1beta1.DefaultRecommendationUpperBoundMemoryPercentile)),

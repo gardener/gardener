@@ -136,7 +136,7 @@ var _ = Describe("VPA", func() {
 		roleBindingLeaderLockingRecommender          *rbacv1.RoleBinding
 		serviceRecommenderFor                        func(component.ClusterType) *corev1.Service
 		shootAccessSecretRecommender                 *corev1.Secret
-		deploymentRecommenderFor                     func(bool, *metav1.Duration, *float64, component.ClusterType, *float64, *float64, *float64, *float64, *float64, *float64, string) *appsv1.Deployment
+		deploymentRecommenderFor                     func(bool, *metav1.Duration, *float64, component.ClusterType, *float64, *float64, *float64, *metav1.Duration, *float64, *float64, *float64, string) *appsv1.Deployment
 		podDisruptionBudgetRecommender               *policyv1.PodDisruptionBudget
 		vpaRecommender                               *vpaautoscalingv1.VerticalPodAutoscaler
 		serviceMonitorRecommenderFor                 func(clusterType component.ClusterType) *monitoringv1.ServiceMonitor
@@ -671,6 +671,7 @@ var _ = Describe("VPA", func() {
 			targetCPUPercentile *float64,
 			recommendationLowerBoundCPUPercentile *float64,
 			recommendationUpperBoundCPUPercentile *float64,
+			cpuHistogramDecayHalfLife *metav1.Duration,
 			targetMemoryPercentile *float64,
 			recommendationLowerBoundMemoryPercentile *float64,
 			recommendationUpperBoundMemoryPercentile *float64,
@@ -733,6 +734,7 @@ var _ = Describe("VPA", func() {
 									fmt.Sprintf("--target-cpu-percentile=%f", ptr.Deref(targetCPUPercentile, 0.9)),
 									fmt.Sprintf("--recommendation-lower-bound-cpu-percentile=%f", ptr.Deref(recommendationLowerBoundCPUPercentile, 0.5)),
 									fmt.Sprintf("--recommendation-upper-bound-cpu-percentile=%f", ptr.Deref(recommendationUpperBoundCPUPercentile, 0.95)),
+									fmt.Sprintf("--cpu-histogram-decay-half-life=%s", ptr.Deref(cpuHistogramDecayHalfLife, metav1.Duration{Duration: 24 * time.Hour}).Duration),
 									fmt.Sprintf("--target-memory-percentile=%f", ptr.Deref(targetMemoryPercentile, 0.9)),
 									fmt.Sprintf("--recommendation-lower-bound-memory-percentile=%f", ptr.Deref(recommendationLowerBoundMemoryPercentile, 0.5)),
 									fmt.Sprintf("--recommendation-upper-bound-memory-percentile=%f", ptr.Deref(recommendationUpperBoundMemoryPercentile, 0.95)),
@@ -1457,7 +1459,7 @@ var _ = Describe("VPA", func() {
 					roleBindingLeaderLockingRecommender.Name = replaceTargetSubstrings(roleBindingLeaderLockingRecommender.Name)
 					roleBindingLeaderLockingRecommender.RoleRef.Name = replaceTargetSubstrings(roleBindingLeaderLockingRecommender.RoleRef.Name)
 
-					deploymentRecommender := deploymentRecommenderFor(true, nil, nil, component.ClusterTypeSeed, nil, nil, nil, nil, nil, nil, namespace)
+					deploymentRecommender := deploymentRecommenderFor(true, nil, nil, component.ClusterTypeSeed, nil, nil, nil, nil, nil, nil, nil, namespace)
 					adaptNetworkPolicyLabelsForClusterTypeSeed(deploymentRecommender.Spec.Template.Labels)
 
 					expectedObjects = append(expectedObjects,
@@ -1565,6 +1567,7 @@ var _ = Describe("VPA", func() {
 				valuesRecommender.TargetCPUPercentile = ptr.To(float64(0.333))
 				valuesRecommender.RecommendationLowerBoundCPUPercentile = ptr.To(float64(0.303))
 				valuesRecommender.RecommendationUpperBoundCPUPercentile = ptr.To(float64(0.393))
+				valuesRecommender.CPUHistogramDecayHalfLife = &metav1.Duration{Duration: 42 * time.Minute}
 				valuesRecommender.TargetMemoryPercentile = ptr.To(float64(0.444))
 				valuesRecommender.RecommendationLowerBoundCPUPercentile = ptr.To(float64(0.404))
 				valuesRecommender.RecommendationUpperBoundCPUPercentile = ptr.To(float64(0.494))
@@ -1628,6 +1631,7 @@ var _ = Describe("VPA", func() {
 					valuesRecommender.TargetCPUPercentile,
 					valuesRecommender.RecommendationLowerBoundCPUPercentile,
 					valuesRecommender.RecommendationUpperBoundCPUPercentile,
+					valuesRecommender.CPUHistogramDecayHalfLife,
 					valuesRecommender.TargetMemoryPercentile,
 					valuesRecommender.RecommendationLowerBoundMemoryPercentile,
 					valuesRecommender.RecommendationUpperBoundMemoryPercentile,
@@ -1744,7 +1748,7 @@ var _ = Describe("VPA", func() {
 
 					deployment = &appsv1.Deployment{}
 					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-recommender"}, deployment)).To(Succeed())
-					deploymentRecommender := deploymentRecommenderFor(false, nil, nil, component.ClusterTypeShoot, nil, nil, nil, nil, nil, nil, "kube-system")
+					deploymentRecommender := deploymentRecommenderFor(false, nil, nil, component.ClusterTypeShoot, nil, nil, nil, nil, nil, nil, nil, "kube-system")
 					deploymentRecommender.ResourceVersion = "1"
 					Expect(deployment).To(Equal(deploymentRecommender))
 
@@ -1926,7 +1930,7 @@ var _ = Describe("VPA", func() {
 
 				By("Create vpa-recommender runtime resources")
 				Expect(c.Create(ctx, serviceRecommenderFor(component.ClusterTypeShoot))).To(Succeed())
-				Expect(c.Create(ctx, deploymentRecommenderFor(true, nil, nil, component.ClusterTypeShoot, nil, nil, nil, nil, nil, nil, "kube-system"))).To(Succeed())
+				Expect(c.Create(ctx, deploymentRecommenderFor(true, nil, nil, component.ClusterTypeShoot, nil, nil, nil, nil, nil, nil, nil, "kube-system"))).To(Succeed())
 				Expect(c.Create(ctx, podDisruptionBudgetRecommender)).To(Succeed())
 				Expect(c.Create(ctx, vpaRecommender)).To(Succeed())
 				Expect(c.Create(ctx, serviceMonitorRecommenderFor(component.ClusterTypeShoot))).To(Succeed())
@@ -1949,7 +1953,7 @@ var _ = Describe("VPA", func() {
 
 				By("Verify vpa-recommender runtime resources")
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceRecommenderFor(component.ClusterTypeShoot)), &appsv1.Deployment{})).To(BeNotFoundError())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentRecommenderFor(true, nil, nil, component.ClusterTypeShoot, nil, nil, nil, nil, nil, nil, "kube-system")), &appsv1.Deployment{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentRecommenderFor(true, nil, nil, component.ClusterTypeShoot, nil, nil, nil, nil, nil, nil, nil, "kube-system")), &appsv1.Deployment{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudgetRecommender), &policyv1.PodDisruptionBudget{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaRecommender), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceMonitorRecommenderFor(component.ClusterTypeShoot)), &monitoringv1.ServiceMonitor{})).To(BeNotFoundError())
