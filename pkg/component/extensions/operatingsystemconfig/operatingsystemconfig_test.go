@@ -974,7 +974,6 @@ var _ = Describe("OperatingSystemConfig", func() {
 						},
 						Original: Data{
 							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker1Name + "-77ac3",
-							SecretName:                  ptr.To("cc-" + expected[1].Name),
 							Object:                      worker1OSCOriginal,
 						},
 					},
@@ -986,7 +985,6 @@ var _ = Describe("OperatingSystemConfig", func() {
 						},
 						Original: Data{
 							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker2Name + "-d9e53",
-							SecretName:                  ptr.To("cc-" + expected[3].Name),
 							Object:                      worker2OSCOriginal,
 						},
 					},
