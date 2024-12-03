@@ -1781,23 +1781,20 @@ func getDefaultMachineImage(machineImages []gardencorev1beta1.MachineImage, imag
 	)
 
 	if image != nil {
+		var err error
 		versionParts := strings.Split(strings.TrimPrefix(image.Version, "v"), ".")
 		if len(versionParts) == 3 {
 			return image, nil
 		}
 		if len(versionParts) == 2 && len(versionParts[1]) > 0 {
-			v, err := strconv.ParseUint(versionParts[1], 10, 0)
-			if err != nil {
-				return nil, field.Invalid(fldPath, image.Version, fmt.Sprintf("must be a semantic version `%s`", *arch))
+			if machineImageVersionMinor, err = parseSemanticVersionPart(versionParts[1]); err != nil {
+				return nil, field.Invalid(fldPath, image.Version, err.Error())
 			}
-			machineImageVersionMinor = ptr.To(v)
 		}
 		if len(versionParts) >= 1 && len(versionParts[0]) > 0 {
-			v, err := strconv.ParseUint(versionParts[0], 10, 0)
-			if err != nil {
-				return nil, field.Invalid(fldPath, image.Version, fmt.Sprintf("must be a semantic version `%s`", *arch))
+			if machineImageVersionMajor, err = parseSemanticVersionPart(versionParts[0]); err != nil {
+				return nil, field.Invalid(fldPath, image.Version, err.Error())
 			}
-			machineImageVersionMajor = ptr.To(v)
 		}
 	}
 
@@ -1825,6 +1822,14 @@ func getDefaultMachineImage(machineImages []gardencorev1beta1.MachineImage, imag
 		providerConfig = image.ProviderConfig
 	}
 	return &core.ShootMachineImage{Name: defaultImage.Name, ProviderConfig: providerConfig, Version: latestMachineImageVersion.Version}, nil
+}
+
+func parseSemanticVersionPart(part string) (*uint64, error) {
+	v, err := strconv.ParseUint(part, 10, 0)
+	if err != nil {
+		return nil, fmt.Errorf("must be a semantic version")
+	}
+	return ptr.To(v), nil
 }
 
 func validateMachineImagesConstraints(a admission.Attributes, constraints []gardencorev1beta1.MachineImage, isNewWorkerPool bool, machine, oldMachine core.Machine) (bool, bool, bool, []string) {
