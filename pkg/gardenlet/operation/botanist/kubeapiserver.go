@@ -33,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 // DefaultKubeAPIServer returns a deployer for the kube-apiserver.
