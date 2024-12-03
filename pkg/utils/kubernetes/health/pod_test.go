@@ -58,7 +58,7 @@ var _ = Describe("Pod", func() {
 
 		Entry("No conditions", nil, BeFalse()),
 		Entry("No ready condition", []corev1.PodCondition{{}}, BeFalse()),
-		Entry("Not completed", []corev1.PodCondition{{Type: "Ready"}}, BeFalse()),
-		Entry("Completed", []corev1.PodCondition{{Type: "Ready", Status: "PodCompleted"}}, BeTrue()),
+		Entry("Not completed", []corev1.PodCondition{{Type: "Ready", Status: "False", Reason: "Failed"}}, BeFalse()),
+		Entry("Completed", []corev1.PodCondition{{Type: "Ready", Status: "False", Reason: "PodCompleted"}}, BeTrue()),
 	)
 })
