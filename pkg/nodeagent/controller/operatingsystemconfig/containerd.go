@@ -16,6 +16,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"slices"
 	"text/template"
 	"time"
 
@@ -60,15 +61,15 @@ func (r *Reconciler) ReconcileContainerdConfig(ctx context.Context, log logr.Log
 // ReconcileContainerdRegistries configures desired registries for containerd and cleans up abandoned ones.
 // Registries without readiness probes are added synchronously and related errors are returned immediately.
 // Registries with configured readiness probes are added asynchronously and must be waited for by invoking the returned function.
-func (r *Reconciler) ReconcileContainerdRegistries(ctx context.Context, log logr.Logger, containerdChanges containerd) (func() error, error) {
-	errChan := r.ensureContainerdRegistries(ctx, log, containerdChanges.registries.desired)
+func (r *Reconciler) ReconcileContainerdRegistries(ctx context.Context, log logr.Logger, changes *operatingSystemConfigChanges) (func() error, error) {
+	errChan := r.ensureContainerdRegistries(ctx, log, changes)
 
 	select {
 	case err := <-errChan:
 		// Return immediately if a result was already sent to the err channel.
 		// Note: err can still be nil here, thus the cleanup function call must be returned.
 		return func() error {
-			return r.cleanupUnusedContainerdRegistries(log, containerdChanges.registries.deleted)
+			return r.cleanupUnusedContainerdRegistries(log, changes)
 		}, err
 	default:
 		return func() error {
@@ -76,7 +77,7 @@ func (r *Reconciler) ReconcileContainerdRegistries(ctx context.Context, log logr
 			if err := <-errChan; err != nil {
 				return err
 			}
-			return r.cleanupUnusedContainerdRegistries(log, containerdChanges.registries.deleted)
+			return r.cleanupUnusedContainerdRegistries(log, changes)
 		}, nil
 	}
 }
@@ -286,7 +287,7 @@ func (r *Reconciler) ensureContainerdConfiguration(log logr.Logger, criConfig *e
 }
 
 // ensureContainerdRegistries configures containerd to use the desired image registries.
-func (r *Reconciler) ensureContainerdRegistries(ctx context.Context, log logr.Logger, newRegistries []extensionsv1alpha1.RegistryConfig) <-chan error {
+func (r *Reconciler) ensureContainerdRegistries(ctx context.Context, log logr.Logger, changes *operatingSystemConfigChanges) <-chan error {
 	var (
 		errChan = make(chan error, 1)
 
@@ -294,7 +295,7 @@ func (r *Reconciler) ensureContainerdRegistries(ctx context.Context, log logr.Lo
 		registriesWithReadiness    []extensionsv1alpha1.RegistryConfig
 	)
 
-	for _, registryConfig := range newRegistries {
+	for _, registryConfig := range changes.Containerd.Registries.Desired {
 		if ptr.Deref(registryConfig.ReadinessProbe, false) {
 			registriesWithReadiness = append(registriesWithReadiness, registryConfig)
 		} else {
@@ -309,12 +310,19 @@ func (r *Reconciler) ensureContainerdRegistries(ctx context.Context, log logr.Lo
 			errChan <- err
 			return errChan
 		}
+		if err := changes.completedContainerdRegistriesDesired(registryConfig.Upstream); err != nil {
+			errChan <- err
+			return errChan
+		}
 	}
 
 	fns := make([]flow.TaskFn, 0, len(registriesWithReadiness))
 	for _, registryConfig := range registriesWithReadiness {
 		fns = append(fns, func(ctx context.Context) error {
-			return addRegistryToContainerdFunc(ctx, log, registryConfig, r.FS)
+			if err := addRegistryToContainerdFunc(ctx, log, registryConfig, r.FS); err != nil {
+				return err
+			}
+			return changes.completedContainerdRegistriesDesired(registryConfig.Upstream)
 		})
 	}
 
@@ -434,14 +442,21 @@ func addRegistryToContainerdFunc(ctx context.Context, log logr.Logger, registryC
 		values["hostConfigs"] = append(values["hostConfigs"].([]any), hostConfig)
 	}
 
-	return tplContainerdHosts.Execute(f, values)
+	if err := tplContainerdHosts.Execute(f, values); err != nil {
+		return err
+	}
+	log.Info("Configured registryConfig", "upstream", registryConfig.Upstream)
+	return nil
 }
 
-func (r *Reconciler) cleanupUnusedContainerdRegistries(log logr.Logger, registriesToRemove []extensionsv1alpha1.RegistryConfig) error {
-	for _, registryConfig := range registriesToRemove {
+func (r *Reconciler) cleanupUnusedContainerdRegistries(log logr.Logger, changes *operatingSystemConfigChanges) error {
+	for _, registryConfig := range slices.Clone(changes.Containerd.Registries.Deleted) {
 		log.Info("Removing obsolete registry directory", "upstream", registryConfig.Upstream)
 		if err := r.FS.RemoveAll(path.Join(certsDir, registryConfig.Upstream)); err != nil {
 			return fmt.Errorf("failed to cleanup obsolete registry directory: %w", err)
+		}
+		if err := changes.completedContainerdRegistriesDeleted(registryConfig.Upstream); err != nil {
+			return err
 		}
 	}
 

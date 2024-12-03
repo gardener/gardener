@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/go-logr/logr"
 	"github.com/spf13/afero"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -16,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
@@ -45,46 +47,34 @@ func extractOSCFromSecret(secret *corev1.Secret) (*extensionsv1alpha1.OperatingS
 	return osc, secret.Annotations[nodeagentconfigv1alpha1.AnnotationKeyChecksumDownloadedOperatingSystemConfig], nil
 }
 
-type operatingSystemConfigChanges struct {
-	units      units
-	files      files
-	containerd containerd
-}
+func computeOperatingSystemConfigChanges(log logr.Logger, fs afero.Afero, newOSC *extensionsv1alpha1.OperatingSystemConfig, newOSCChecksum string) (*operatingSystemConfigChanges, error) {
+	changes := &operatingSystemConfigChanges{
+		fs:          fs,
+		OSCChecksum: newOSCChecksum,
+	}
 
-type units struct {
-	changed []changedUnit
-	deleted []extensionsv1alpha1.Unit
-}
+	oldChanges, err := loadOSCChanges(fs)
+	if err != nil {
+		if !errors.Is(err, afero.ErrFileNotFound) {
+			return nil, fmt.Errorf("failed to load old osc changes file: %w", err)
+		}
+		// there is no file (yet), set to an empty file, the hashes will mismatch
+		oldChanges = &operatingSystemConfigChanges{}
+	}
 
-type changedUnit struct {
-	extensionsv1alpha1.Unit
-	dropIns dropIns
-}
+	if oldChanges.OSCChecksum == changes.OSCChecksum {
+		log.Info("Found OSC changes on disk, remaining work",
+			"changedFiles", len(oldChanges.Files.Changed),
+			"deletedFiles", len(oldChanges.Files.Deleted),
+			"changedUnits", len(oldChanges.Units.Changed),
+			"deletedUnits", len(oldChanges.Units.Deleted),
+			"unitCommands", len(oldChanges.Units.Commands),
+		)
+		// we already computed the changes, and might have partially applied them
+		return oldChanges, nil
+	}
 
-type dropIns struct {
-	changed []extensionsv1alpha1.DropIn
-	deleted []extensionsv1alpha1.DropIn
-}
-
-type files struct {
-	changed []extensionsv1alpha1.File
-	deleted []extensionsv1alpha1.File
-}
-
-type containerd struct {
-	// configFileChange tracks if the config file of containerd will change, so that GNA can restart the unit.
-	configFileChange bool
-	// registries tracks the changes of configured registries.
-	registries containerdRegistries
-}
-
-type containerdRegistries struct {
-	desired []extensionsv1alpha1.RegistryConfig
-	deleted []extensionsv1alpha1.RegistryConfig
-}
-
-func computeOperatingSystemConfigChanges(fs afero.Afero, newOSC *extensionsv1alpha1.OperatingSystemConfig) (*operatingSystemConfigChanges, error) {
-	changes := &operatingSystemConfigChanges{}
+	log.Info("OSC changes checksum did not match, computing new changes")
 
 	// osc.files and osc.unit.files should be changed the same way by OSC controller.
 	// The reason for assigning files to units is the detection of changes which require the restart of a unit.
@@ -97,25 +87,31 @@ func computeOperatingSystemConfigChanges(fs afero.Afero, newOSC *extensionsv1alp
 		}
 
 		var unitChanges []changedUnit
+		var unitCommands []unitCommand
 		for _, unit := range mergeUnits(newOSC.Spec.Units, newOSC.Status.ExtensionUnits) {
+			unitCommands = append(unitCommands, unitCommand{
+				Name:    unit.Name,
+				Command: getCommandToExecute(unit),
+			})
 			unitChanges = append(unitChanges, changedUnit{
-				Unit:    unit,
-				dropIns: dropIns{changed: unit.DropIns},
+				Unit:           unit,
+				DropInsChanges: dropIns{Changed: unit.DropIns},
 			})
 		}
 
-		changes.files.changed = newOSCFiles
-		changes.units.changed = unitChanges
+		changes.Files.Changed = newOSCFiles
+		changes.Units.Changed = unitChanges
+		changes.Units.Commands = unitCommands
 
 		// On new nodes, the deprecated containerd-initializer service can safely be removed.
 		// TODO(timuthy): Remove this block after Gardener v1.114 was released.
 		removeContainerdInit(changes)
 
-		changes.containerd.configFileChange = true
+		changes.Containerd.ConfigFileChange = true
 		if extensionsv1alpha1helper.HasContainerdConfiguration(newOSC.Spec.CRIConfig) {
-			changes.containerd.registries.desired = newOSC.Spec.CRIConfig.Containerd.Registries
+			changes.Containerd.Registries.Desired = newOSC.Spec.CRIConfig.Containerd.Registries
 		}
-		return changes, nil
+		return changes, changes.persist()
 	}
 
 	oldOSC := &extensionsv1alpha1.OperatingSystemConfig{}
@@ -126,12 +122,12 @@ func computeOperatingSystemConfigChanges(fs afero.Afero, newOSC *extensionsv1alp
 	oldOSCFiles := collectAllFiles(oldOSC)
 	// File changes have to be computed in one step for all files,
 	// because moving a file from osc.unit.files to osc.files or vice versa should not result in a change and a delete event.
-	changes.files = computeFileDiffs(oldOSCFiles, newOSCFiles)
+	changes.Files = computeFileDiffs(oldOSCFiles, newOSCFiles)
 
-	changes.units = computeUnitDiffs(
+	changes.Units = computeUnitDiffs(
 		mergeUnits(oldOSC.Spec.Units, oldOSC.Status.ExtensionUnits),
 		mergeUnits(newOSC.Spec.Units, newOSC.Status.ExtensionUnits),
-		changes.files,
+		changes.Files,
 	)
 
 	var (
@@ -142,35 +138,40 @@ func computeOperatingSystemConfigChanges(fs afero.Afero, newOSC *extensionsv1alp
 	if extensionsv1alpha1helper.HasContainerdConfiguration(newOSC.Spec.CRIConfig) {
 		newRegistries = newOSC.Spec.CRIConfig.Containerd.Registries
 		if !extensionsv1alpha1helper.HasContainerdConfiguration(oldOSC.Spec.CRIConfig) {
-			changes.containerd.configFileChange = true
+			changes.Containerd.ConfigFileChange = true
 		} else {
 			var (
 				newContainerd = newOSC.Spec.CRIConfig.Containerd
 				oldContainerd = oldOSC.Spec.CRIConfig.Containerd
 			)
 
-			changes.containerd.configFileChange = !apiequality.Semantic.DeepEqual(newContainerd.SandboxImage, oldContainerd.SandboxImage) ||
+			changes.Containerd.ConfigFileChange = !apiequality.Semantic.DeepEqual(newContainerd.SandboxImage, oldContainerd.SandboxImage) ||
 				!apiequality.Semantic.DeepEqual(newContainerd.Plugins, oldContainerd.Plugins) ||
 				!apiequality.Semantic.DeepEqual(newOSC.Spec.CRIConfig.CgroupDriver, oldOSC.Spec.CRIConfig.CgroupDriver)
 
 			oldRegistries = oldOSC.Spec.CRIConfig.Containerd.Registries
 		}
 	}
-	changes.containerd.registries = computeContainerdRegistryDiffs(newRegistries, oldRegistries)
+	changes.Containerd.Registries = computeContainerdRegistryDiffs(newRegistries, oldRegistries)
 
-	return changes, nil
+	return changes, changes.persist()
 }
 
 // TODO(timuthy): Remove this block after Gardener v1.114 was released.
 func removeContainerdInit(changes *operatingSystemConfigChanges) {
-	for i, file := range changes.files.changed {
+	for i, file := range changes.Files.Changed {
 		if file.Path == componentscontainerd.InitializerScriptPath {
-			changes.files.changed = slices.Delete(changes.files.changed, i, i+1)
+			changes.Files.Changed = slices.Delete(changes.Files.Changed, i, i+1)
 		}
 	}
-	for i, unit := range changes.units.changed {
+	for i, unit := range changes.Units.Changed {
 		if unit.Name == componentscontainerd.InitializerUnitName {
-			changes.units.changed = slices.Delete(changes.units.changed, i, i+1)
+			changes.Units.Changed = slices.Delete(changes.Units.Changed, i, i+1)
+		}
+	}
+	for i, unit := range changes.Units.Commands {
+		if unit.Name == componentscontainerd.InitializerUnitName {
+			changes.Units.Commands = slices.Delete(changes.Units.Commands, i, i+1)
 		}
 	}
 }
@@ -180,7 +181,7 @@ func computeUnitDiffs(oldUnits, newUnits []extensionsv1alpha1.Unit, fileDiffs fi
 
 	var changedFiles = sets.New[string]()
 	// Only changed files are relevant here. Deleted files must be removed from `Unit.FilePaths` too which leads to a semantic difference.
-	for _, file := range fileDiffs.changed {
+	for _, file := range fileDiffs.Changed {
 		changedFiles.Insert(file.Path)
 	}
 
@@ -188,7 +189,7 @@ func computeUnitDiffs(oldUnits, newUnits []extensionsv1alpha1.Unit, fileDiffs fi
 		if !slices.ContainsFunc(newUnits, func(newUnit extensionsv1alpha1.Unit) bool {
 			return oldUnit.Name == newUnit.Name
 		}) {
-			u.deleted = append(u.deleted, oldUnit)
+			u.Deleted = append(u.Deleted, oldUnit)
 		}
 	}
 
@@ -203,11 +204,16 @@ func computeUnitDiffs(oldUnits, newUnits []extensionsv1alpha1.Unit, fileDiffs fi
 				fileContentChanged = true
 			}
 		}
+		commandToExecute := getCommandToExecute(newUnit)
 
 		if oldUnitIndex == -1 {
-			u.changed = append(u.changed, changedUnit{
-				Unit:    newUnit,
-				dropIns: dropIns{changed: newUnit.DropIns},
+			u.Changed = append(u.Changed, changedUnit{
+				Unit:           newUnit,
+				DropInsChanges: dropIns{Changed: newUnit.DropIns},
+			})
+			u.Commands = append(u.Commands, unitCommand{
+				Name:    newUnit.Name,
+				Command: commandToExecute,
 			})
 		} else if !apiequality.Semantic.DeepEqual(oldUnits[oldUnitIndex], newUnit) || fileContentChanged {
 			var d dropIns
@@ -216,7 +222,7 @@ func computeUnitDiffs(oldUnits, newUnits []extensionsv1alpha1.Unit, fileDiffs fi
 				if !slices.ContainsFunc(newUnit.DropIns, func(newDropIn extensionsv1alpha1.DropIn) bool {
 					return oldDropIn.Name == newDropIn.Name
 				}) {
-					d.deleted = append(d.deleted, oldDropIn)
+					d.Deleted = append(d.Deleted, oldDropIn)
 				}
 			}
 
@@ -226,14 +232,18 @@ func computeUnitDiffs(oldUnits, newUnits []extensionsv1alpha1.Unit, fileDiffs fi
 				})
 
 				if oldDropInIndex == -1 || !apiequality.Semantic.DeepEqual(oldUnits[oldUnitIndex].DropIns[oldDropInIndex], newDropIn) {
-					d.changed = append(d.changed, newDropIn)
+					d.Changed = append(d.Changed, newDropIn)
 					continue
 				}
 			}
 
-			u.changed = append(u.changed, changedUnit{
-				Unit:    newUnit,
-				dropIns: d,
+			u.Changed = append(u.Changed, changedUnit{
+				Unit:           newUnit,
+				DropInsChanges: d,
+			})
+			u.Commands = append(u.Commands, unitCommand{
+				Name:    newUnit.Name,
+				Command: commandToExecute,
 			})
 		}
 	}
@@ -248,7 +258,7 @@ func computeFileDiffs(oldFiles, newFiles []extensionsv1alpha1.File) files {
 		if !slices.ContainsFunc(newFiles, func(newFile extensionsv1alpha1.File) bool {
 			return oldFile.Path == newFile.Path
 		}) {
-			f.deleted = append(f.deleted, oldFile)
+			f.Deleted = append(f.Deleted, oldFile)
 		}
 	}
 
@@ -258,7 +268,7 @@ func computeFileDiffs(oldFiles, newFiles []extensionsv1alpha1.File) files {
 		})
 
 		if oldFileIndex == -1 || !apiequality.Semantic.DeepEqual(oldFiles[oldFileIndex], newFile) {
-			f.changed = append(f.changed, newFile)
+			f.Changed = append(f.Changed, newFile)
 			continue
 		}
 	}
@@ -301,17 +311,25 @@ func collectAllFiles(osc *extensionsv1alpha1.OperatingSystemConfig) []extensions
 
 func computeContainerdRegistryDiffs(newRegistries, oldRegistries []extensionsv1alpha1.RegistryConfig) containerdRegistries {
 	r := containerdRegistries{
-		desired: newRegistries,
+		Desired: newRegistries,
 	}
 
 	upstreamsInUse := sets.New[string]()
-	for _, registryConfig := range r.desired {
+	for _, registryConfig := range r.Desired {
 		upstreamsInUse.Insert(registryConfig.Upstream)
 	}
 
-	r.deleted = slices.DeleteFunc(oldRegistries, func(config extensionsv1alpha1.RegistryConfig) bool {
+	r.Deleted = slices.DeleteFunc(oldRegistries, func(config extensionsv1alpha1.RegistryConfig) bool {
 		return upstreamsInUse.Has(config.Upstream)
 	})
 
 	return r
+}
+
+func getCommandToExecute(newUnit extensionsv1alpha1.Unit) extensionsv1alpha1.UnitCommand {
+	commandToExecute := extensionsv1alpha1.CommandRestart
+	if !ptr.Deref(newUnit.Enable, true) || ptr.Deref(newUnit.Command, "") == extensionsv1alpha1.CommandStop {
+		commandToExecute = extensionsv1alpha1.CommandStop
+	}
+	return commandToExecute
 }
