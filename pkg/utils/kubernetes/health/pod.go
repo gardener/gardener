@@ -72,6 +72,6 @@ func IsPodStale(reason string) bool {
 // IsPodCompleted returns true when the pod ready condition indicates completeness.
 func IsPodCompleted(conditions []corev1.PodCondition) bool {
 	return slices.ContainsFunc(conditions, func(condition corev1.PodCondition) bool {
-		return condition.Type == corev1.PodReady && condition.Status == "PodCompleted"
+		return condition.Type == corev1.PodReady && condition.Status == corev1.ConditionFalse && condition.Reason == "PodCompleted"
 	})
 }
