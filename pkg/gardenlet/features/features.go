@@ -24,5 +24,6 @@ func GetFeatures() []featuregate.Feature {
 		features.NewVPN,
 		features.NodeAgentAuthorizer,
 		features.RemoveAPIServerProxyLegacyPort,
+		features.IstioTLSTermination,
 	}
 }
