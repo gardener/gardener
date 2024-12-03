@@ -172,7 +172,7 @@ check_registry_cache_availability() {
   fi
   echo "Registry-cache enabled. Checking if registry-cache instances are deployed in prow cluster."
   for registry_cache_dns in $(kubectl create -k "$(dirname "$0")/../example/gardener-local/registry-prow" --dry-run=client -o yaml | grep kube-system.svc.cluster.local | awk '{ print $2 }' | sed -e "s/^http:\/\///" -e "s/:5000$//"); do
-    registry_cache_ip=$(getent hosts "$registry_cache_dns" | awk '{ print $1 }')
+    registry_cache_ip=$(getent hosts "$registry_cache_dns" | awk '{ print $1 }' || true)
     if [[ "$registry_cache_ip" == "" ]]; then
       echo "Unable to resolve IP of $registry_cache_dns in prow cluster. Disabling registry-cache."
       REGISTRY_CACHE=false
