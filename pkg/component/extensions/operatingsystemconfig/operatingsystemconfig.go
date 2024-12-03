@@ -419,15 +419,6 @@ func (o *operatingSystemConfig) Wait(ctx context.Context) error {
 			o.waitSevereThreshold,
 			o.waitTimeout,
 			func() error {
-				if osc.Status.CloudConfig == nil {
-					return fmt.Errorf("no cloud config information provided in status")
-				}
-
-				secret := &corev1.Secret{}
-				if err := o.client.Get(ctx, client.ObjectKey{Namespace: osc.Status.CloudConfig.SecretRef.Namespace, Name: osc.Status.CloudConfig.SecretRef.Name}, secret); err != nil {
-					return err
-				}
-
 				oscKey, err := o.calculateKeyForVersion(hashVersion, &worker)
 				if err != nil {
 					return err
@@ -437,7 +428,19 @@ func (o *operatingSystemConfig) Wait(ctx context.Context) error {
 					Object:                        osc,
 					IncludeSecretNameInWorkerPool: hashVersion > 1,
 					GardenerNodeAgentSecretName:   oscKey,
-					SecretName:                    &secret.Name,
+				}
+
+				if purpose == extensionsv1alpha1.OperatingSystemConfigPurposeProvision {
+					if osc.Status.CloudConfig == nil {
+						return fmt.Errorf("no cloud config information provided in status")
+					}
+
+					secret := &corev1.Secret{}
+					if err := o.client.Get(ctx, client.ObjectKey{Namespace: osc.Status.CloudConfig.SecretRef.Namespace, Name: osc.Status.CloudConfig.SecretRef.Name}, secret); err != nil {
+						return err
+					}
+
+					data.SecretName = &secret.Name
 				}
 
 				o.lock.Lock()
