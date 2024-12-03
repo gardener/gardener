@@ -70,13 +70,6 @@ type SeedSpec struct {
 	AccessRestrictions []AccessRestriction
 }
 
-var _ Object = (*Seed)(nil)
-
-// GetProviderType gets the type of the provider.
-func (s *Seed) GetProviderType() string {
-	return s.Spec.Provider.Type
-}
-
 // SeedStatus is the status of a Seed.
 type SeedStatus struct {
 	// Gardener holds information about the Gardener which last acted on the Shoot.

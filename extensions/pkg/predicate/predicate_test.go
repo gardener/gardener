@@ -18,17 +18,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	. "github.com/gardener/gardener/extensions/pkg/predicate"
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	gardensecurity "github.com/gardener/gardener/pkg/apis/security"
 )
 
 var _ = Describe("Predicate", func() {
 	var (
-		providerType  = "provider-type"
 		extensionType = "extension-type"
-		version       = "1.18"
 	)
 
 	Describe("#HasType", func() {
@@ -338,130 +334,6 @@ var _ = Describe("Predicate", func() {
 			Expect(predicate.Generic(genericEvent)).To(BeTrue())
 		})
 	})
-
-	Describe("#ClusterShootProviderType", func() {
-		It("should match the type", func() {
-			var (
-				predicate                                           = ClusterShootProviderType(extensionType)
-				createEvent, updateEvent, deleteEvent, genericEvent = computeEvents(extensionType, version, nil)
-			)
-
-			Expect(predicate.Create(createEvent)).To(BeTrue())
-			Expect(predicate.Update(updateEvent)).To(BeTrue())
-			Expect(predicate.Delete(deleteEvent)).To(BeTrue())
-			Expect(predicate.Generic(genericEvent)).To(BeTrue())
-		})
-
-		It("should not match the type", func() {
-			var (
-				predicate                                           = ClusterShootProviderType(extensionType)
-				createEvent, updateEvent, deleteEvent, genericEvent = computeEvents("other-extension-type", version, nil)
-			)
-
-			Expect(predicate.Create(createEvent)).To(BeFalse())
-			Expect(predicate.Update(updateEvent)).To(BeFalse())
-			Expect(predicate.Delete(deleteEvent)).To(BeFalse())
-			Expect(predicate.Generic(genericEvent)).To(BeFalse())
-		})
-	})
-
-	Describe("#GardenCoreProviderType", func() {
-		var (
-			object       client.Object
-			createEvent  event.CreateEvent
-			updateEvent  event.UpdateEvent
-			deleteEvent  event.DeleteEvent
-			genericEvent event.GenericEvent
-		)
-
-		BeforeEach(func() {
-			object = &gardencore.CloudProfile{
-				Spec: gardencore.CloudProfileSpec{
-					Type: providerType,
-				},
-			}
-			createEvent = event.CreateEvent{
-				Object: object,
-			}
-			updateEvent = event.UpdateEvent{
-				ObjectOld: object,
-				ObjectNew: object,
-			}
-			deleteEvent = event.DeleteEvent{
-				Object: object,
-			}
-			genericEvent = event.GenericEvent{
-				Object: object,
-			}
-		})
-
-		It("the predicate should return true for the same providerType", func() {
-			predicate := GardenCoreProviderType(providerType)
-
-			Expect(predicate.Create(createEvent)).To(BeTrue())
-			Expect(predicate.Update(updateEvent)).To(BeTrue())
-			Expect(predicate.Delete(deleteEvent)).To(BeTrue())
-			Expect(predicate.Generic(genericEvent)).To(BeTrue())
-		})
-
-		It("the predicate should return false for different providerType", func() {
-			predicate := GardenCoreProviderType("other-extension")
-
-			Expect(predicate.Create(createEvent)).To(BeFalse())
-			Expect(predicate.Update(updateEvent)).To(BeFalse())
-			Expect(predicate.Delete(deleteEvent)).To(BeFalse())
-			Expect(predicate.Generic(genericEvent)).To(BeFalse())
-		})
-	})
-
-	Describe("#GardenSecurityProviderType", func() {
-		var (
-			object       client.Object
-			createEvent  event.CreateEvent
-			updateEvent  event.UpdateEvent
-			deleteEvent  event.DeleteEvent
-			genericEvent event.GenericEvent
-		)
-
-		BeforeEach(func() {
-			object = &gardensecurity.CredentialsBinding{
-				Provider: gardensecurity.CredentialsBindingProvider{
-					Type: providerType,
-				},
-			}
-			createEvent = event.CreateEvent{
-				Object: object,
-			}
-			updateEvent = event.UpdateEvent{
-				ObjectOld: object,
-				ObjectNew: object,
-			}
-			deleteEvent = event.DeleteEvent{
-				Object: object,
-			}
-			genericEvent = event.GenericEvent{
-				Object: object,
-			}
-		})
-
-		It("the predicate should return true for the same providerType", func() {
-			predicate := GardenSecurityProviderType(providerType)
-
-			Expect(predicate.Create(createEvent)).To(BeTrue())
-			Expect(predicate.Update(updateEvent)).To(BeTrue())
-			Expect(predicate.Delete(deleteEvent)).To(BeTrue())
-			Expect(predicate.Generic(genericEvent)).To(BeTrue())
-		})
-
-		It("the predicate should return false for different providerType", func() {
-			predicate := GardenSecurityProviderType("other-type")
-
-			Expect(predicate.Create(createEvent)).To(BeFalse())
-			Expect(predicate.Update(updateEvent)).To(BeFalse())
-			Expect(predicate.Delete(deleteEvent)).To(BeFalse())
-			Expect(predicate.Generic(genericEvent)).To(BeFalse())
-		})
-	})
 })
 
 func computeClusterWithShoot(
@@ -498,40 +370,4 @@ func computeClusterWithShoot(
 			Shoot: runtime.RawExtension{Raw: shootJSON},
 		},
 	}
-}
-
-func computeEvents(
-	extensionType string,
-	kubernetesVersion string,
-	kubernetesVersionOverwriteAnnotation *string,
-) (
-	event.CreateEvent,
-	event.UpdateEvent,
-	event.DeleteEvent,
-	event.GenericEvent,
-) {
-	spec := gardencorev1beta1.ShootSpec{
-		Provider: gardencorev1beta1.Provider{
-			Type: extensionType,
-		},
-		Kubernetes: gardencorev1beta1.Kubernetes{
-			Version: kubernetesVersion,
-		},
-	}
-
-	var meta *metav1.ObjectMeta
-	if kubernetesVersionOverwriteAnnotation != nil {
-		meta = &metav1.ObjectMeta{
-			Annotations: map[string]string{
-				"alpha.csimigration.shoot.extensions.gardener.cloud/kubernetes-version": *kubernetesVersionOverwriteAnnotation,
-			},
-		}
-	}
-
-	cluster := computeClusterWithShoot("", meta, &spec, nil)
-
-	return event.CreateEvent{Object: cluster},
-		event.UpdateEvent{ObjectOld: cluster, ObjectNew: cluster},
-		event.DeleteEvent{Object: cluster},
-		event.GenericEvent{Object: cluster}
 }
