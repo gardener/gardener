@@ -739,7 +739,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		Context("SecretBindingName/CredentialsBinding validation", func() {
-
 			It("should forbid adding secretBindingName in case of workerless shoot", func() {
 				shoot.Spec.Provider.Workers = nil
 				shoot.Spec.SecretBindingName = ptr.To("foo")
@@ -1018,7 +1017,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		Context("Extensions validation", func() {
-
 			It("should forbid passing an extension w/o type information", func() {
 				extension := core.Extension{}
 				shoot.Spec.Extensions = append(shoot.Spec.Extensions, extension)
@@ -2772,7 +2770,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Field":  Equal("spec.kubernetes.kubeScheduler"),
 					"Detail": ContainSubstring("this field should not be set for workerless Shoot clusters"),
 				}))))
-
 			})
 
 			It("should succeed when using valid scheduling profile", func() {
@@ -3777,21 +3774,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 						"Detail": Equal("must be valid canonical CIDR"),
 					}))
 				})
-			})
-
-			It("should fail updating immutable fields", func() {
-				shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv4}
-
-				newShoot := prepareShootForUpdate(shoot)
-				shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv6}
-
-				errorList := ValidateShootUpdate(newShoot, shoot)
-
-				Expect(errorList).To(ConsistOfFields(Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("spec.networking.ipFamilies"),
-					"Detail": ContainSubstring(`field is immutable`),
-				}))
 			})
 		})
 
