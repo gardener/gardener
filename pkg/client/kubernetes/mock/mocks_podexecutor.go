@@ -42,9 +42,13 @@ func (m *MockPodExecutor) EXPECT() *MockPodExecutorMockRecorder {
 }
 
 // Execute mocks base method.
-func (m *MockPodExecutor) Execute(ctx context.Context, namespace, name, containerName, command string) (io.Reader, io.Reader, error) {
+func (m *MockPodExecutor) Execute(ctx context.Context, namespace, name, containerName string, command ...string) (io.Reader, io.Reader, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Execute", ctx, namespace, name, containerName, command)
+	varargs := []any{ctx, namespace, name, containerName}
+	for _, a := range command {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Execute", varargs...)
 	ret0, _ := ret[0].(io.Reader)
 	ret1, _ := ret[1].(io.Reader)
 	ret2, _ := ret[2].(error)
@@ -52,7 +56,27 @@ func (m *MockPodExecutor) Execute(ctx context.Context, namespace, name, containe
 }
 
 // Execute indicates an expected call of Execute.
-func (mr *MockPodExecutorMockRecorder) Execute(ctx, namespace, name, containerName, command any) *gomock.Call {
+func (mr *MockPodExecutorMockRecorder) Execute(ctx, namespace, name, containerName any, command ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockPodExecutor)(nil).Execute), ctx, namespace, name, containerName, command)
+	varargs := append([]any{ctx, namespace, name, containerName}, command...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockPodExecutor)(nil).Execute), varargs...)
+}
+
+// ExecuteWithStreams mocks base method.
+func (m *MockPodExecutor) ExecuteWithStreams(ctx context.Context, namespace, name, containerName string, stdin io.Reader, stdout, stderr io.Writer, command ...string) error {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, namespace, name, containerName, stdin, stdout, stderr}
+	for _, a := range command {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ExecuteWithStreams", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ExecuteWithStreams indicates an expected call of ExecuteWithStreams.
+func (mr *MockPodExecutorMockRecorder) ExecuteWithStreams(ctx, namespace, name, containerName, stdin, stdout, stderr any, command ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, namespace, name, containerName, stdin, stdout, stderr}, command...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteWithStreams", reflect.TypeOf((*MockPodExecutor)(nil).ExecuteWithStreams), varargs...)
 }

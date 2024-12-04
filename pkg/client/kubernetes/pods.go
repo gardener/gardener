@@ -33,20 +33,20 @@ func NewPodExecutor(config *rest.Config) PodExecutor {
 // PodExecutor is the pod executor interface
 type PodExecutor interface {
 	Execute(ctx context.Context, namespace, name, containerName string, command ...string) (io.Reader, io.Reader, error)
+	ExecuteWithStreams(ctx context.Context, namespace, name, containerName string, stdin io.Reader, stdout, stderr io.Writer, command ...string) error
 }
 
 type podExecutor struct {
 	config *rest.Config
 }
 
-// Execute executes a command on a pod
-func (p *podExecutor) Execute(ctx context.Context, namespace, name, containerName string, command ...string) (io.Reader, io.Reader, error) {
+// ExecuteWithStreams executes a command on a pod with the given streams.
+func (p *podExecutor) ExecuteWithStreams(ctx context.Context, namespace, name, containerName string, stdin io.Reader, stdout, stderr io.Writer, command ...string) error {
 	client, err := corev1client.NewForConfig(p.config)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed creating corev1 client: %w", err)
+		return fmt.Errorf("failed creating corev1 client: %w", err)
 	}
 
-	var stdout, stderr bytes.Buffer
 	request := client.RESTClient().
 		Post().
 		Resource("pods").
@@ -54,8 +54,9 @@ func (p *podExecutor) Execute(ctx context.Context, namespace, name, containerNam
 		Namespace(namespace).
 		SubResource("exec")
 	request.VersionedParams(&corev1.PodExecOptions{
-		Stdout:    true,
-		Stderr:    true,
+		Stdin:     stdin != nil,
+		Stdout:    stdout != nil,
+		Stderr:    stderr != nil,
 		TTY:       false,
 		Container: containerName,
 		Command:   command,
@@ -63,18 +64,25 @@ func (p *podExecutor) Execute(ctx context.Context, namespace, name, containerNam
 
 	executor, err := remotecommand.NewSPDYExecutor(p.config, http.MethodPost, request.URL())
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to initialized the command executor: %w", err)
+		return fmt.Errorf("failed to initialized the command executor: %w", err)
 	}
 
 	if err := executor.StreamWithContext(ctx, remotecommand.StreamOptions{
-		Stdout: &stdout,
-		Stderr: &stderr,
+		Stdin:  stdin,
+		Stdout: stdout,
+		Stderr: stderr,
 		Tty:    false,
 	}); err != nil {
-		return nil, nil, fmt.Errorf("failed to execute command: %w", err)
+		return fmt.Errorf("failed to execute command: %w", err)
 	}
 
-	return &stdout, &stderr, nil
+	return nil
+}
+
+// Execute executes a command on a pod.
+func (p *podExecutor) Execute(ctx context.Context, namespace, name, containerName string, command ...string) (io.Reader, io.Reader, error) {
+	var stdout, stderr bytes.Buffer
+	return &stdout, &stderr, p.ExecuteWithStreams(ctx, namespace, name, containerName, nil, &stdout, &stderr, command...)
 }
 
 // GetPodLogs retrieves the pod logs of the pod of the given name with the given options.

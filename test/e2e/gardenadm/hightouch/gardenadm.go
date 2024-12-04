@@ -5,11 +5,14 @@
 package hightouch
 
 import (
+	"context"
+	"io"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
+	"github.com/onsi/gomega/gexec"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
@@ -42,21 +45,38 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 
 	Describe("Single-node control plane", Ordered, Label("single"), func() {
 		It("should initialize the control plane node", func(ctx SpecContext) {
-			stdout, _, err := RuntimeClient.PodExecutor().Execute(ctx, namespace, machinePodName(0), ContainerName,
+			stdOut, _ := execute(ctx, 0,
 				"gardenadm", "init",
 			)
-			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(ctx, gbytes.BufferReader(stdout)).Should(gbytes.Say("not implemented"))
+			Eventually(ctx, stdOut).Should(gbytes.Say("not implemented"))
 		}, SpecTimeout(time.Minute))
 
 		It("should join the worker node", func(ctx SpecContext) {
-			stdout, _, err := RuntimeClient.PodExecutor().Execute(ctx, namespace, machinePodName(1), ContainerName,
+			stdOut, _ := execute(ctx, 1,
 				"gardenadm", "join",
 			)
-			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(ctx, gbytes.BufferReader(stdout)).Should(gbytes.Say("not implemented either"))
+			Eventually(ctx, stdOut).Should(gbytes.Say("not implemented either"))
 		}, SpecTimeout(time.Minute))
 	})
 })
+
+// nolint:unparam
+func execute(ctx context.Context, ordinal int, command ...string) (*gbytes.Buffer, *gbytes.Buffer) {
+	GinkgoHelper()
+	var stdOutBuffer, stdErrBuffer = gbytes.NewBuffer(), gbytes.NewBuffer()
+
+	Expect(RuntimeClient.PodExecutor().ExecuteWithStreams(
+		ctx,
+		namespace,
+		machinePodName(ordinal),
+		ContainerName,
+		nil,
+		io.MultiWriter(stdOutBuffer, gexec.NewPrefixedWriter("[out] ", GinkgoWriter)),
+		io.MultiWriter(stdErrBuffer, gexec.NewPrefixedWriter("[err] ", GinkgoWriter)),
+		command...,
+	)).To(Succeed())
+
+	return stdOutBuffer, stdErrBuffer
+}

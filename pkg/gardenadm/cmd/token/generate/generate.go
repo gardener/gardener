@@ -43,6 +43,6 @@ gardenadm token generate`,
 }
 
 func run(_ context.Context, ioStreams genericiooptions.IOStreams, _ *Options) error {
-	fmt.Fprint(ioStreams.Out, "not implemented")
+	fmt.Fprintln(ioStreams.Out, "not implemented")
 	return nil
 }
