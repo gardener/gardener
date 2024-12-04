@@ -1,0 +1,5 @@
+# Enable containerd to reach registry at garden.local.gardener.cloud:5001 via HTTP.
+server = "http://garden.local.gardener.cloud:5001"
+
+[host."http://garden.local.gardener.cloud:5001"]
+  capabilities = ["pull", "resolve"]
