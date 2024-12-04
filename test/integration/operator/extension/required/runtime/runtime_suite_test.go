@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package required_test
+package runtime_test
 
 import (
 	"context"
@@ -30,7 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
-	"github.com/gardener/gardener/pkg/operator/controller/extension/required"
+	requiredruntime "github.com/gardener/gardener/pkg/operator/controller/extension/required/runtime"
 	"github.com/gardener/gardener/pkg/operator/features"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -38,12 +38,12 @@ import (
 	"github.com/gardener/gardener/test/framework"
 )
 
-func TestExtensionRequired(t *testing.T) {
+func TestExtensionRequiredRuntime(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Test Integration Operator Extension Required Suite")
+	RunSpecs(t, "Test Integration Operator Extension Required Required Suite")
 }
 
-const testID = "extension-test"
+const testID = "extension-required-runtime-test"
 
 var (
 	ctx = context.Background()
@@ -70,10 +70,10 @@ var _ = BeforeSuite(func() {
 		Environment: &envtest.Environment{
 			CRDInstallOptions: envtest.CRDInstallOptions{
 				Paths: []string{
-					filepath.Join("..", "..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_extensions.yaml"),
-					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_backupbuckets.yaml"),
-					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_dnsrecords.yaml"),
-					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_extensions.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_extensions.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_backupbuckets.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_dnsrecords.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_extensions.yaml"),
 				},
 			},
 			ErrorIfCRDPathMissing: true,
@@ -132,9 +132,9 @@ var _ = BeforeSuite(func() {
 	mgrClient = mgr.GetClient()
 
 	By("Register controller")
-	DeferCleanup(test.WithVar(&required.RequeueExtensionKindNotCalculated, 10*time.Millisecond))
+	DeferCleanup(test.WithVar(&requiredruntime.RequeueExtensionKindNotCalculated, 10*time.Millisecond))
 
-	Expect((&required.Reconciler{
+	Expect((&requiredruntime.Reconciler{
 		Config: &config.OperatorConfiguration{
 			Controllers: config.ControllerConfiguration{},
 		},

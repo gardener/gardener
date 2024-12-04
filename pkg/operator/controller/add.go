@@ -25,7 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	"github.com/gardener/gardener/pkg/operator/controller/controllerregistrar"
 	"github.com/gardener/gardener/pkg/operator/controller/extension"
-	"github.com/gardener/gardener/pkg/operator/controller/extension/required"
+	requiredruntime "github.com/gardener/gardener/pkg/operator/controller/extension/required/runtime"
 	"github.com/gardener/gardener/pkg/operator/controller/garden"
 	"github.com/gardener/gardener/pkg/operator/controller/gardenlet"
 	"github.com/gardener/gardener/pkg/operator/controller/virtual"
@@ -86,9 +86,9 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 				},
 			},
 			{
-				Name: required.ControllerName,
+				Name: requiredruntime.ControllerName,
 				AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, _ *operatorv1alpha1.Garden) (bool, error) {
-					return true, (&required.Reconciler{
+					return true, (&requiredruntime.Reconciler{
 						Config: cfg,
 					}).AddToManager(ctx, mgr)
 				},

@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package required
+package runtime
 
 import (
 	"context"
@@ -33,7 +33,7 @@ import (
 )
 
 // ControllerName is the name of this controller.
-const ControllerName = "extension-required"
+const ControllerName = "extension-required-runtime"
 
 type extension struct {
 	objectKind        string
