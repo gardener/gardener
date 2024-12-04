@@ -65,20 +65,20 @@ var _ = ginkgo.Describe("Shoot network testing", func() {
 		err = f.ShootClient.Client().List(ctx, pods, client.InNamespace(f.Namespace), client.MatchingLabels{"app": "net-nginx"})
 		framework.ExpectNoError(err)
 
-		podExecutor := framework.NewPodExecutor(f.ShootClient)
-
 		// check if all webservers can be reached from all nodes
 		ginkgo.By("Check connectivity to webservers")
 		var allErrs error
 		for _, from := range pods.Items {
 			for _, to := range pods.Items {
 				ginkgo.By(fmt.Sprintf("Testing %s to %s", from.GetName(), to.GetName()))
-				reader, err := podExecutor.Execute(ctx, from.Namespace, from.Name, "pause", fmt.Sprintf("curl -L %s:80 --fail -m 10", to.Status.PodIP))
+				stdout, _, err := f.ShootClient.PodExecutor().Execute(ctx, from.Namespace, from.Name, "pause",
+					"curl", "-L", to.Status.PodIP+":80", "--fail", "-m", "10",
+				)
 				if err != nil {
 					allErrs = multierror.Append(allErrs, fmt.Errorf("%s to %s: %w", from.GetName(), to.GetName(), err))
 					continue
 				}
-				data, err := io.ReadAll(reader)
+				data, err := io.ReadAll(stdout)
 				if err != nil {
 					allErrs = multierror.Append(allErrs, fmt.Errorf("cannot to read the command output: %w", err))
 					continue
