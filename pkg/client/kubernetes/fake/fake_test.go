@@ -61,6 +61,13 @@ var _ = Describe("Fake ClientSet", func() {
 		Expect(cs.ChartApplier()).To(BeIdenticalTo(chartApplier))
 	})
 
+	It("should correctly set podExecutor attribute", func() {
+		podExecutor := kubernetesmock.NewMockPodExecutor(ctrl)
+		cs := builder.WithPodExecutor(podExecutor).Build()
+
+		Expect(cs.PodExecutor()).To(BeIdenticalTo(podExecutor))
+	})
+
 	It("should correctly set restConfig attribute", func() {
 		restConfig := &rest.Config{}
 		cs := builder.WithRESTConfig(restConfig).Build()

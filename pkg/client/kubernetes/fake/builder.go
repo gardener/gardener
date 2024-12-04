@@ -19,6 +19,7 @@ type ClientSetBuilder struct {
 	applier       kubernetes.Applier
 	chartRenderer chartrenderer.Interface
 	chartApplier  kubernetes.ChartApplier
+	podExecutor   kubernetes.PodExecutor
 	restConfig    *rest.Config
 	client        client.Client
 	apiReader     client.Reader
@@ -48,6 +49,12 @@ func (b *ClientSetBuilder) WithChartRenderer(chartRenderer chartrenderer.Interfa
 // WithChartApplier sets the chartApplier attribute of the builder.
 func (b *ClientSetBuilder) WithChartApplier(chartApplier kubernetes.ChartApplier) *ClientSetBuilder {
 	b.chartApplier = chartApplier
+	return b
+}
+
+// WithPodExecutor sets the podExecutor attribute of the builder.
+func (b *ClientSetBuilder) WithPodExecutor(podExecutor kubernetes.PodExecutor) *ClientSetBuilder {
+	b.podExecutor = podExecutor
 	return b
 }
 
@@ -99,6 +106,7 @@ func (b *ClientSetBuilder) Build() *ClientSet {
 		applier:       b.applier,
 		chartRenderer: b.chartRenderer,
 		chartApplier:  b.chartApplier,
+		podExecutor:   b.podExecutor,
 		restConfig:    b.restConfig,
 		client:        b.client,
 		apiReader:     b.apiReader,

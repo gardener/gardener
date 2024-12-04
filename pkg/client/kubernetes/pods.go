@@ -10,10 +10,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/kubernetes/scheme"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
@@ -32,7 +32,7 @@ func NewPodExecutor(config *rest.Config) PodExecutor {
 
 // PodExecutor is the pod executor interface
 type PodExecutor interface {
-	Execute(ctx context.Context, namespace, name, containerName, command, commandArg string) (io.Reader, error)
+	Execute(ctx context.Context, namespace, name, containerName string, command ...string) (io.Reader, io.Reader, error)
 }
 
 type podExecutor struct {
@@ -40,10 +40,10 @@ type podExecutor struct {
 }
 
 // Execute executes a command on a pod
-func (p *podExecutor) Execute(ctx context.Context, namespace, name, containerName, command, commandArg string) (io.Reader, error) {
+func (p *podExecutor) Execute(ctx context.Context, namespace, name, containerName string, command ...string) (io.Reader, io.Reader, error) {
 	client, err := corev1client.NewForConfig(p.config)
 	if err != nil {
-		return nil, err
+		return nil, nil, fmt.Errorf("failed creating corev1 client: %w", err)
 	}
 
 	var stdout, stderr bytes.Buffer
@@ -52,30 +52,29 @@ func (p *podExecutor) Execute(ctx context.Context, namespace, name, containerNam
 		Resource("pods").
 		Name(name).
 		Namespace(namespace).
-		SubResource("exec").
-		Param("container", containerName).
-		Param("command", command).
-		Param("stdin", "true").
-		Param("stdout", "true").
-		Param("stderr", "true").
-		Param("tty", "false")
+		SubResource("exec")
+	request.VersionedParams(&corev1.PodExecOptions{
+		Stdout:    true,
+		Stderr:    true,
+		TTY:       false,
+		Container: containerName,
+		Command:   command,
+	}, scheme.ParameterCodec)
 
 	executor, err := remotecommand.NewSPDYExecutor(p.config, http.MethodPost, request.URL())
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialized the command executor: %w", err)
+		return nil, nil, fmt.Errorf("failed to initialized the command executor: %w", err)
 	}
 
-	err = executor.StreamWithContext(ctx, remotecommand.StreamOptions{
-		Stdin:  strings.NewReader(commandArg),
+	if err := executor.StreamWithContext(ctx, remotecommand.StreamOptions{
 		Stdout: &stdout,
 		Stderr: &stderr,
 		Tty:    false,
-	})
-	if err != nil {
-		return &stderr, err
+	}); err != nil {
+		return nil, nil, fmt.Errorf("failed to execute command: %w", err)
 	}
 
-	return &stdout, nil
+	return &stdout, &stderr, nil
 }
 
 // GetPodLogs retrieves the pod logs of the pod of the given name with the given options.

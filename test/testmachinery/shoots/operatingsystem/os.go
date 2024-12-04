@@ -65,7 +65,7 @@ var _ = ginkgo.Describe("Operating system testing", func() {
 			// deploy root pod on the node with the load
 			rootPodExecutor = framework.NewRootPodExecutor(f.Logger, f.ShootClient, &nodes.Items[0].Name, f.Namespace)
 
-			response, err := rootPodExecutor.Execute(ctx, "journalctl --no-pager")
+			response, err := rootPodExecutor.Execute(ctx, "journalctl", "--no-pager")
 			framework.ExpectNoError(err)
 			g.Expect(response).ToNot(g.BeNil())
 
