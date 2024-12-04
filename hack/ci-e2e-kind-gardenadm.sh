@@ -20,6 +20,6 @@ trap "
   ( make kind-down )
 " EXIT
 
-make gardenadm-high-touch-up
+make gardenadm-high-touch-up gardenadm-medium-touch-up
 make test-e2e-local-gardenadm
-make gardenadm-high-touch-down
+make gardenadm-high-touch-down gardenadm-medium-touch-down
