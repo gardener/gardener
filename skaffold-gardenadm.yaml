@@ -88,8 +88,9 @@ deploy:
                 #!/usr/bin/env bash
 
                 kubectl -n gardenadm cp example/gardenadm-local/.skaffold-image machine-0:/tmp/.skaffold-image
+                kubectl -n gardenadm cp example/gardenadm-local/.skaffold-image machine-1:/tmp/.skaffold-image
         - container:
-            podName: machine-0
+            podName: machine-*
             containerName: node
             command:
               - bash
