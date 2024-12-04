@@ -16,8 +16,8 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 25,
-  "iteration": 1733259548940,
+  "id": 2,
+  "iteration": 1733305994807,
   "links": [],
   "panels": [
     {
@@ -89,7 +89,7 @@
       ],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Average Shoot $operation_type time",
+      "title": "Average Shoot $operation_type Time",
       "type": "gauge"
     },
     {
@@ -141,9 +141,10 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(gardenlet_shoot_operation_duration_seconds_bucket{operation=~\"$operation_type\",workerless=~\"$workerless\",hibernated=~\"$hibernated\"}) by (le)",
+          "expr": "sum(rate(gardenlet_shoot_operation_duration_seconds_bucket{operation=~\"$operation_type\",workerless=~\"$workerless\",hibernated=~\"$hibernated\"}[$__rate_interval])) by (le)",
           "format": "heatmap",
-          "instant": true,
+          "hide": false,
+          "instant": false,
           "interval": "",
           "legendFormat": "{{le}}",
           "refId": "A"
@@ -235,7 +236,7 @@
       {
         "allValue": null,
         "current": {
-          "selected": false,
+          "selected": true,
           "text": "Create",
           "value": "Create"
         },
@@ -250,12 +251,12 @@
         "name": "operation_type",
         "options": [
           {
-            "selected": false,
+            "selected": true,
             "text": "Create",
             "value": "Create"
           },
           {
-            "selected": true,
+            "selected": false,
             "text": "Delete",
             "value": "Delete"
           }
@@ -350,12 +351,12 @@
     ]
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-12h",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
   "title": "Shoot Operation Duration",
   "uid": "Oa2rLH4Nz",
-  "version": 70
+  "version": 1
 }
