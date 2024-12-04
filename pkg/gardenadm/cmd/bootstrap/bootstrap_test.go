@@ -36,7 +36,7 @@ var _ = Describe("Bootstrap", func() {
 
 			output, err := io.ReadAll(out)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(string(output)).To(Equal("not implemented"))
+			Expect(string(output)).To(Equal("not implemented as well\n"))
 		})
 	})
 })
