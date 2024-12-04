@@ -107,7 +107,7 @@ func mergeAndPatchCloudProfile(ctx context.Context, c client.Client, namespacedC
 	patch := client.MergeFrom(namespacedCloudProfile.DeepCopy())
 	MergeCloudProfiles(namespacedCloudProfile, parentCloudProfile)
 	namespacedCloudProfile.Status.ObservedGeneration = namespacedCloudProfile.Generation
-	return c.Patch(ctx, namespacedCloudProfile, patch)
+	return c.Status().Patch(ctx, namespacedCloudProfile, patch)
 }
 
 // MergeCloudProfiles merges the cloud profile spec from a base CloudProfile and a NamespacedCloudProfile

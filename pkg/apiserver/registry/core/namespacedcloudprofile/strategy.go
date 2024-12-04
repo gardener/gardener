@@ -54,6 +54,8 @@ func (namespacedCloudProfileStrategy) PrepareForUpdate(_ context.Context, newObj
 	oldNamespacedCloudProfile := oldObj.(*core.NamespacedCloudProfile)
 	newNamespacedCloudProfile := newObj.(*core.NamespacedCloudProfile)
 
+	newNamespacedCloudProfile.Status = oldNamespacedCloudProfile.Status // can only be changed by status subresource
+
 	if mustIncreaseGeneration(oldNamespacedCloudProfile, newNamespacedCloudProfile) {
 		newNamespacedCloudProfile.Generation = oldNamespacedCloudProfile.Generation + 1
 	}
@@ -82,7 +84,7 @@ func (namespacedCloudProfileStrategy) ValidateUpdate(_ context.Context, newObj, 
 	return validation.ValidateNamespacedCloudProfileUpdate(newProfile, oldProfile)
 }
 
-// WarningsOnCreate returns warnings to the client performing the create.
+// WarningsOnCreate returns warnings to the client performing the creation.
 func (namespacedCloudProfileStrategy) WarningsOnCreate(_ context.Context, _ runtime.Object) []string {
 	return nil
 }
