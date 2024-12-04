@@ -1,0 +1,120 @@
+---
+apiVersion: skaffold/v4beta7
+kind: Config
+metadata:
+  name: gardenadm
+build:
+  insecureRegistries:
+    - garden.local.gardener.cloud:5001
+  tagPolicy:
+    customTemplate:
+      template: "{{.version}}-{{.sha}}"
+      components:
+        - name: version
+          envTemplate:
+            template: "{{.GARDENER_VERSION}}"
+        - name: sha
+          gitCommit:
+            variant: AbbrevCommitSha
+  artifacts:
+    - image: local-skaffold/gardenadm
+      ko:
+        dependencies:
+          paths:
+            - cmd/gardenadm
+            - cmd/gardenadm/app
+            - cmd/utils
+            - pkg/gardenadm/cmd/bootstrap
+            - pkg/gardenadm/cmd/connect
+            - pkg/gardenadm/cmd/discover
+            - pkg/gardenadm/cmd/init
+            - pkg/gardenadm/cmd/join
+            - pkg/gardenadm/cmd/token
+            - pkg/gardenadm/cmd/token/create
+            - pkg/gardenadm/cmd/token/delete
+            - pkg/gardenadm/cmd/token/generate
+            - pkg/gardenadm/cmd/token/list
+            - pkg/gardenadm/cmd/version
+            - VERSION
+        ldflags:
+          - '{{.LD_FLAGS}}'
+        main: ./cmd/gardenadm
+      hooks:
+        after:
+          - command:
+              - bash
+              - -ec
+              - |
+                echo "$SKAFFOLD_IMAGE" > example/gardenadm-local/.skaffold-image
+---
+apiVersion: skaffold/v4beta7
+kind: Config
+metadata:
+  name: machine
+build:
+  insecureRegistries:
+    - garden.local.gardener.cloud:5001
+  tagPolicy:
+    customTemplate:
+      template: "{{.version}}-{{.sha}}"
+      components:
+        - name: version
+          envTemplate:
+            template: "{{.GARDENER_VERSION}}"
+        - name: sha
+          gitCommit:
+            variant: AbbrevCommitSha
+  artifacts:
+    - image: local-skaffold/gardener-extension-provider-local-node
+      context: pkg/provider-local/node
+      docker: {}
+manifests:
+  kustomize:
+    paths:
+      - example/gardenadm-local/high-touch
+deploy:
+  kubectl:
+    flags:
+      apply:
+        - --server-side
+        - --force-conflicts
+    hooks:
+      after:
+        - host:
+            command:
+              - bash
+              - -ec
+              - |
+                #!/usr/bin/env bash
+
+                kubectl -n gardenadm cp example/gardenadm-local/.skaffold-image machine-0:/tmp/.skaffold-image
+        - container:
+            podName: machine-0
+            containerName: node
+            command:
+              - bash
+              - -ec
+              - |
+                #!/usr/bin/env bash
+
+                set -o errexit
+                set -o nounset
+                set -o pipefail
+
+                echo "> Prepare temporary directory for image pull and mount"
+                tmp_dir="$(mktemp -d)"
+                unmount() {
+                  ctr images unmount "$tmp_dir" && rm -rf "$tmp_dir"
+                }
+                trap unmount EXIT
+
+                image="$(cat /tmp/.skaffold-image)"
+
+                echo "> Pull gardenadm image and mount it to the temporary directory"
+                ctr images pull  "$image" --hosts-dir "/etc/containerd/certs.d"
+                ctr images mount "$image" "$tmp_dir"
+
+                echo "> Copy gardenadm binary to host (/usr/local/bin) and make it executable"
+                mkdir -p "/usr/local/bin"
+                cp -f "$tmp_dir/ko-app/gardenadm" "/usr/local/bin"
+                chmod +x "/usr/local/bin/gardenadm"

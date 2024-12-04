@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: machine-0
+  labels:
+    app: machine
+spec:
+  containers:
+  - name: node
+    image: local-skaffold/gardener-extension-provider-local-node
+    imagePullPolicy: IfNotPresent
+    securityContext:
+      privileged: true
+    volumeMounts:
+    - name: containerd
+      mountPath: /var/lib/containerd
+    - name: modules
+      mountPath: /lib/modules
+      readOnly: true
+  securityContext:
+    seccompProfile:
+      type: RuntimeDefault
+  volumes:
+  - name: containerd
+    emptyDir: {}
+  - name: modules
+    hostPath:
+      path: /lib/modules
+      type: ""
