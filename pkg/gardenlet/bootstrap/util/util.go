@@ -16,7 +16,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	corev1clientset "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -205,7 +204,7 @@ func ComputeGardenletKubeconfigWithBootstrapToken(ctx context.Context, gardenCli
 // ComputeGardenletKubeconfigWithServiceAccountToken creates a kubeconfig containing the token of a service account
 // Creates the required service account in the Garden cluster and puts the associated token into a Kubeconfig
 // tailored to the Gardenlet
-func ComputeGardenletKubeconfigWithServiceAccountToken(ctx context.Context, gardenClient client.Client, coreV1Client corev1clientset.CoreV1Interface, gardenClientRestConfig *rest.Config, serviceAccountName, serviceAccountNamespace string) ([]byte, error) {
+func ComputeGardenletKubeconfigWithServiceAccountToken(ctx context.Context, gardenClient client.Client, gardenClientRestConfig *rest.Config, serviceAccountName, serviceAccountNamespace string) ([]byte, error) {
 	// Create a temporary service account
 	serviceAccount := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
@@ -223,8 +222,7 @@ func ComputeGardenletKubeconfigWithServiceAccountToken(ctx context.Context, gard
 			ExpirationSeconds: ptr.To[int64](600),
 		},
 	}
-	result, err := coreV1Client.ServiceAccounts(serviceAccount.Namespace).CreateToken(ctx, serviceAccount.Name, tokenRequest, metav1.CreateOptions{})
-	if err != nil {
+	if err := gardenClient.SubResource("token").Create(ctx, serviceAccount, tokenRequest); err != nil {
 		return nil, fmt.Errorf("failed creating a token for ServiceAccount %q: %w", client.ObjectKeyFromObject(serviceAccount), err)
 	}
 
@@ -253,7 +251,7 @@ func ComputeGardenletKubeconfigWithServiceAccountToken(ctx context.Context, gard
 	}
 
 	// Get bootstrap kubeconfig from service account secret
-	return CreateGardenletKubeconfigWithToken(gardenClientRestConfig, result.Status.Token)
+	return CreateGardenletKubeconfigWithToken(gardenClientRestConfig, tokenRequest.Status.Token)
 }
 
 // TokenID returns the token id based on the given metadata.

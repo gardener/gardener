@@ -6,7 +6,6 @@ package util_test
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -19,17 +18,15 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
-	corev1fake "k8s.io/client-go/kubernetes/typed/core/v1/fake"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/testing"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 	bootstraptokenutil "k8s.io/cluster-bootstrap/token/util"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -379,28 +376,24 @@ var _ = Describe("Util", func() {
 							Namespace: "garden",
 						},
 					}
-					fakeClient   = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
-					coreV1Client = &corev1fake.FakeCoreV1{Fake: &testing.Fake{}}
+					fakeClient = fakeclient.NewClientBuilder().WithInterceptorFuncs(interceptor.Funcs{
+						SubResourceCreate: func(ctx context.Context, c client.Client, _ string, obj client.Object, subResource client.Object, _ ...client.SubResourceCreateOption) error {
+							tokenRequest, isTokenRequest := subResource.(*authenticationv1.TokenRequest)
+							if !isTokenRequest {
+								return apierrors.NewBadRequest(fmt.Sprintf("got invalid type %T, expected TokenRequest", subResource))
+							}
+							if _, isServiceAccount := obj.(*corev1.ServiceAccount); !isServiceAccount {
+								return apierrors.NewNotFound(schema.GroupResource{}, "")
+							}
+
+							tokenRequest.Status.Token = "some-token"
+
+							return c.Get(ctx, client.ObjectKeyFromObject(obj), obj)
+						},
+					}).WithScheme(kubernetesscheme.Scheme).Build()
 				)
 
-				coreV1Client.AddReactor("create", "serviceaccounts", func(action testing.Action) (bool, runtime.Object, error) {
-					if action.GetSubresource() != "token" {
-						return false, nil, errors.New("subresource should be 'token'")
-					}
-
-					cAction, ok := action.(testing.CreateAction)
-					if !ok {
-						return false, nil, fmt.Errorf("could not convert action (type %T) to type testing.CreateAction", cAction)
-					}
-
-					return true, &authenticationv1.TokenRequest{
-						Status: authenticationv1.TokenRequestStatus{
-							Token: "some-token",
-						},
-					}, nil
-				})
-
-				kubeconfig, err := ComputeGardenletKubeconfigWithServiceAccountToken(ctx, fakeClient, coreV1Client, restConfig, serviceAccount.Name, serviceAccount.Namespace)
+				kubeconfig, err := ComputeGardenletKubeconfigWithServiceAccountToken(ctx, fakeClient, restConfig, serviceAccount.Name, serviceAccount.Namespace)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(kubeconfig).ToNot(BeNil())
 
