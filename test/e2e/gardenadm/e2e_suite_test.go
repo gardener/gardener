@@ -15,6 +15,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/test/e2e/gardenadm/common"
 	_ "github.com/gardener/gardener/test/e2e/gardenadm/hightouch"
+	_ "github.com/gardener/gardener/test/e2e/gardenadm/mediumtouch"
 )
 
 func TestE2E(t *testing.T) {
