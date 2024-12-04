@@ -739,7 +739,7 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 		}
 
 		topologyAwareRoutingEnabled := r.values.TopologyAwareRoutingEnabled && r.values.TargetDiffersFromSourceCluster
-		gardenerutils.ReconcileTopologyAwareRoutingMetadata(service, topologyAwareRoutingEnabled, r.values.RuntimeKubernetesVersion)
+		gardenerutils.ReconcileTopologyAwareRouting(service, topologyAwareRoutingEnabled, r.values.RuntimeKubernetesVersion)
 
 		service.Spec.Selector = r.appLabel()
 		service.Spec.Type = corev1.ServiceTypeClusterIP
