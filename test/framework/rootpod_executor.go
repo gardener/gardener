@@ -7,7 +7,6 @@ package framework
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"time"
 
@@ -23,15 +22,14 @@ import (
 // The executor deploys a pod with root privileged on a specified node.
 // This pod is then used to execute commands on the host operating system.
 type RootPodExecutor interface {
-	Execute(ctx context.Context, command string) ([]byte, error)
+	Execute(ctx context.Context, command ...string) ([]byte, error)
 	Clean(ctx context.Context) error
 }
 
 // rootPodExecutor is the RootPodExecutor implementation
 type rootPodExecutor struct {
-	log      logr.Logger
-	client   kubernetes.Interface
-	executor PodExecutor
+	log    logr.Logger
+	client kubernetes.Interface
 
 	nodeName  *string
 	namespace string
@@ -41,11 +39,9 @@ type rootPodExecutor struct {
 
 // NewRootPodExecutor creates a new root pod executor to run commands on a node.
 func NewRootPodExecutor(log logr.Logger, c kubernetes.Interface, nodeName *string, namespace string) RootPodExecutor {
-	executor := NewPodExecutor(c)
 	return &rootPodExecutor{
 		log:       log,
 		client:    c,
-		executor:  executor,
 		nodeName:  nodeName,
 		namespace: namespace,
 	}
@@ -61,7 +57,7 @@ func (e *rootPodExecutor) Clean(ctx context.Context) error {
 }
 
 // Execute executes a command on the node the root pod is running
-func (e *rootPodExecutor) Execute(ctx context.Context, command string) ([]byte, error) {
+func (e *rootPodExecutor) Execute(ctx context.Context, command ...string) ([]byte, error) {
 	isRunning, err := e.checkPodRunning(ctx)
 	if err != nil {
 		return nil, err
@@ -72,17 +68,18 @@ func (e *rootPodExecutor) Execute(ctx context.Context, command string) ([]byte, 
 		}
 	}
 
-	command = fmt.Sprintf("chroot /hostroot %s", command)
-	reader, err := e.executor.Execute(ctx, e.Pod.Namespace, e.Pod.Name, e.Pod.Spec.Containers[0].Name, command)
+	stdout, _, err := e.client.PodExecutor().Execute(ctx, e.Pod.Namespace, e.Pod.Name, e.Pod.Spec.Containers[0].Name,
+		append([]string{"chroot", "/hostroot"}, command...)...,
+	)
 	if err != nil {
-		if reader != nil {
-			response, readErr := io.ReadAll(reader)
+		if stdout != nil {
+			response, readErr := io.ReadAll(stdout)
 			return response, errors.Join(err, readErr)
 		}
 
 		return nil, err
 	}
-	response, err := io.ReadAll(reader)
+	response, err := io.ReadAll(stdout)
 	if err != nil {
 		return nil, err
 	}

@@ -323,7 +323,8 @@ func newClientSet(conf *Config) (Interface, error) {
 		config:     conf.restConfig,
 		restClient: kubernetes.Discovery().RESTClient(),
 
-		applier: NewApplier(runtimeClient, conf.clientOptions.Mapper),
+		applier:     NewApplier(runtimeClient, conf.clientOptions.Mapper),
+		podExecutor: NewPodExecutor(conf.restConfig),
 
 		client:    runtimeClient,
 		apiReader: runtimeAPIReader,
