@@ -258,7 +258,7 @@ verify-extended: check-generate check format test-cov test-cov-clean test-integr
 
 kind-% kind2-% gardener-%: export IPFAMILY := $(IPFAMILY)
 # KUBECONFIG
-kind-up kind-down gardener-up gardener-dev gardener-debug gardener-down gardenadm-high-touch-up gardenadm-high-touch-down: export KUBECONFIG = $(GARDENER_LOCAL_KUBECONFIG)
+kind-up kind-down gardener-up gardener-dev gardener-debug gardener-down gardenadm%up gardenadm%down: export KUBECONFIG = $(GARDENER_LOCAL_KUBECONFIG)
 test-e2e-local-simple test-e2e-local-migration test-e2e-local-workerless test-e2e-local test-e2e-local-gardenadm ci-e2e-kind ci-e2e-kind-upgrade ci-e2e-kind-gardenadm: export KUBECONFIG = $(GARDENER_LOCAL_KUBECONFIG)
 kind2-up kind2-down gardenlet-kind2-up gardenlet-kind2-dev gardenlet-kind2-debug gardenlet-kind2-down: export KUBECONFIG = $(GARDENER_LOCAL2_KUBECONFIG)
 kind-extensions-up kind-extensions-down gardener-extensions-up gardener-extensions-down: export KUBECONFIG = $(GARDENER_EXTENSIONS_KUBECONFIG)
@@ -418,9 +418,13 @@ operator-seed-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	./hack/operator-seed-down.sh --path-kind-kubeconfig $(KUBECONFIG) --path-garden-kubeconfig $(VIRTUAL_GARDEN_KUBECONFIG)
 
 gardenadm-high-touch-up: $(SKAFFOLD) $(KUBECTL)
-	$(SKAFFOLD) run -n gardenadm-high-touch -f=skaffold-gardenadm.yaml
+	$(SKAFFOLD) run -n gardenadm-high-touch -f=skaffold-gardenadm.yaml -m gardenadm,provider-local-node,machine
 gardenadm-high-touch-down: $(SKAFFOLD) $(KUBECTL)
 	$(SKAFFOLD) delete -n gardenadm-high-touch -f=skaffold-gardenadm.yaml
+gardenadm-medium-touch-up: $(SKAFFOLD) $(KUBECTL)
+	$(SKAFFOLD) build -f=skaffold-gardenadm.yaml -m gardenadm,provider-local-node,provider-local -q | $(SKAFFOLD) render -f=skaffold-gardenadm.yaml -m provider-local-node,provider-local -o ./example/gardenadm-local/medium-touch/config.yaml --build-artifacts -
+gardenadm-medium-touch-down: $(SKAFFOLD) $(KUBECTL)
+	$(SKAFFOLD) delete -n gardenadm-medium-touch -f=skaffold-gardenadm.yaml
 
 test-e2e-local: $(GINKGO)
 	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="default" ./test/e2e/gardener/...

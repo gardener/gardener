@@ -50,7 +50,7 @@ build:
 apiVersion: skaffold/v4beta7
 kind: Config
 metadata:
-  name: machine
+  name: provider-local-node
 build:
   insecureRegistries:
     - garden.local.gardener.cloud:5001
@@ -62,12 +62,249 @@ build:
           envTemplate:
             template: "{{.GARDENER_VERSION}}"
         - name: sha
-          gitCommit:
-            variant: AbbrevCommitSha
+          inputDigest: {}
   artifacts:
     - image: local-skaffold/gardener-extension-provider-local-node
       context: pkg/provider-local/node
       docker: {}
+---
+apiVersion: skaffold/v4beta7
+kind: Config
+metadata:
+  name: provider-local
+build:
+  insecureRegistries:
+    - garden.local.gardener.cloud:5001
+  tagPolicy:
+    customTemplate:
+      template: "{{.version}}-{{.sha}}"
+      components:
+        - name: version
+          envTemplate:
+            template: "{{.GARDENER_VERSION}}"
+        - name: sha
+          inputDigest: {}
+  artifacts:
+    - image: local-skaffold/gardener-extension-provider-local
+      ko:
+        dependencies:
+          paths:
+            - cmd/gardener-extension-provider-local
+            - cmd/gardener-extension-provider-local/app
+            - cmd/utils
+            - extensions/pkg/apis/config
+            - extensions/pkg/controller
+            - extensions/pkg/controller/backupbucket
+            - extensions/pkg/controller/backupentry
+            - extensions/pkg/controller/backupentry/genericactuator
+            - extensions/pkg/controller/cmd
+            - extensions/pkg/controller/controlplane
+            - extensions/pkg/controller/controlplane/genericactuator
+            - extensions/pkg/controller/dnsrecord
+            - extensions/pkg/controller/extension
+            - extensions/pkg/controller/healthcheck
+            - extensions/pkg/controller/healthcheck/worker
+            - extensions/pkg/controller/heartbeat
+            - extensions/pkg/controller/heartbeat/cmd
+            - extensions/pkg/controller/infrastructure
+            - extensions/pkg/controller/operatingsystemconfig
+            - extensions/pkg/controller/worker
+            - extensions/pkg/controller/worker/genericactuator
+            - extensions/pkg/controller/worker/helper
+            - extensions/pkg/predicate
+            - extensions/pkg/util
+            - extensions/pkg/util/secret/manager
+            - extensions/pkg/webhook
+            - extensions/pkg/webhook/certificates
+            - extensions/pkg/webhook/cmd
+            - extensions/pkg/webhook/context
+            - extensions/pkg/webhook/controlplane
+            - extensions/pkg/webhook/controlplane/genericmutator
+            - extensions/pkg/webhook/shoot
+            - imagevector
+            - imagevector/charts.yaml
+            - imagevector/containers.yaml
+            - pkg/api/extensions
+            - pkg/apis/core
+            - pkg/apis/core/install
+            - pkg/apis/core/v1
+            - pkg/apis/core/v1beta1
+            - pkg/apis/core/v1beta1/constants
+            - pkg/apis/core/v1beta1/helper
+            - pkg/apis/extensions
+            - pkg/apis/extensions/v1alpha1
+            - pkg/apis/extensions/v1alpha1/helper
+            - pkg/apis/operations
+            - pkg/apis/operations/install
+            - pkg/apis/operations/v1alpha1
+            - pkg/apis/operator
+            - pkg/apis/operator/v1alpha1
+            - pkg/apis/resources
+            - pkg/apis/resources/v1alpha1
+            - pkg/apis/security
+            - pkg/apis/security/install
+            - pkg/apis/security/v1alpha1
+            - pkg/apis/seedmanagement
+            - pkg/apis/seedmanagement/encoding
+            - pkg/apis/seedmanagement/install
+            - pkg/apis/seedmanagement/v1alpha1
+            - pkg/apis/settings
+            - pkg/apis/settings/install
+            - pkg/apis/settings/v1alpha1
+            - pkg/chartrenderer
+            - pkg/client/kubernetes
+            - pkg/client/kubernetes/cache
+            - pkg/component
+            - pkg/component/extensions/operatingsystemconfig/nodeinit
+            - pkg/component/extensions/operatingsystemconfig/nodeinit/templates/scripts/init.tpl.sh
+            - pkg/component/extensions/operatingsystemconfig/original/components
+            - pkg/component/extensions/operatingsystemconfig/original/components/containerd
+            - pkg/component/extensions/operatingsystemconfig/original/components/containerd/logrotate
+            - pkg/component/extensions/operatingsystemconfig/original/components/containerd/templates/scripts/health-monitor.tpl.sh
+            - pkg/component/extensions/operatingsystemconfig/original/components/containerd/templates/scripts/init.sh
+            - pkg/component/extensions/operatingsystemconfig/original/components/kubelet
+            - pkg/component/extensions/operatingsystemconfig/original/components/nodeagent
+            - pkg/component/extensions/operatingsystemconfig/original/components/rootcertificates
+            - pkg/component/extensions/operatingsystemconfig/original/components/rootcertificates/templates/scripts/update-local-ca-certificates.tpl.sh
+            - pkg/component/extensions/operatingsystemconfig/original/components/valitail
+            - pkg/component/extensions/operatingsystemconfig/original/components/valitail/templates/valitail-config.tpl.yaml
+            - pkg/component/extensions/operatingsystemconfig/utils
+            - pkg/component/kubernetes/apiserver/constants
+            - pkg/component/kubernetes/proxy
+            - pkg/component/kubernetes/proxy/resources/cleanup.sh
+            - pkg/component/kubernetes/proxy/resources/conntrack-fix.sh
+            - pkg/component/nodemanagement/machinecontrollermanager
+            - pkg/component/nodemanagement/machinecontrollermanager/templates/crd-machine.sapcloud.io_machineclasses.yaml
+            - pkg/component/nodemanagement/machinecontrollermanager/templates/crd-machine.sapcloud.io_machinedeployments.yaml
+            - pkg/component/nodemanagement/machinecontrollermanager/templates/crd-machine.sapcloud.io_machines.yaml
+            - pkg/component/nodemanagement/machinecontrollermanager/templates/crd-machine.sapcloud.io_machinesets.yaml
+            - pkg/component/observability/logging/vali/constants
+            - pkg/component/observability/monitoring/alertmanager
+            - pkg/component/observability/monitoring/prometheus/shoot
+            - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/optional/alertmanager.yaml
+            - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/prometheus.yaml
+            - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/worker/kube-kubelet.yaml
+            - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/worker/kube-pods.yaml
+            - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/worker/networking.yaml
+            - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/workerless/kube-pods.yaml
+            - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/workerless/networking.yaml
+            - pkg/component/observability/monitoring/utils
+            - pkg/controller/service
+            - pkg/controllerutils
+            - pkg/controllerutils/mapper
+            - pkg/controllerutils/predicate
+            - pkg/controllerutils/reconciler
+            - pkg/extensions
+            - pkg/features
+            - pkg/gardenlet/apis/config
+            - pkg/gardenlet/apis/config/v1alpha1
+            - pkg/healthz
+            - pkg/logger
+            - pkg/nodeagent/apis/config
+            - pkg/nodeagent/apis/config/v1alpha1
+            - pkg/provider-local/apis/local
+            - pkg/provider-local/apis/local/helper
+            - pkg/provider-local/apis/local/install
+            - pkg/provider-local/apis/local/v1alpha1
+            - pkg/provider-local/charts
+            - pkg/provider-local/charts/shoot-storageclasses
+            - pkg/provider-local/charts/shoot-system-components
+            - pkg/provider-local/controller/backupbucket
+            - pkg/provider-local/controller/backupentry
+            - pkg/provider-local/controller/backupoptions
+            - pkg/provider-local/controller/controlplane
+            - pkg/provider-local/controller/dnsrecord
+            - pkg/provider-local/controller/extension/seed
+            - pkg/provider-local/controller/extension/shoot
+            - pkg/provider-local/controller/extension/shootafterworker
+            - pkg/provider-local/controller/healthcheck
+            - pkg/provider-local/controller/infrastructure
+            - pkg/provider-local/controller/ingress
+            - pkg/provider-local/controller/networkpolicy
+            - pkg/provider-local/controller/operatingsystemconfig
+            - pkg/provider-local/controller/service
+            - pkg/provider-local/controller/worker
+            - pkg/provider-local/imagevector
+            - pkg/provider-local/imagevector/images.yaml
+            - pkg/provider-local/local
+            - pkg/provider-local/webhook/controlplane
+            - pkg/provider-local/webhook/dnsconfig
+            - pkg/provider-local/webhook/networkpolicy
+            - pkg/provider-local/webhook/node
+            - pkg/provider-local/webhook/nodeagentosc
+            - pkg/provider-local/webhook/shoot
+            - pkg/resourcemanager/controller/garbagecollector/references
+            - pkg/utils
+            - pkg/utils/chart
+            - pkg/utils/context
+            - pkg/utils/errors
+            - pkg/utils/flow
+            - pkg/utils/gardener
+            - pkg/utils/gardener/shootstate
+            - pkg/utils/imagevector
+            - pkg/utils/kubernetes
+            - pkg/utils/kubernetes/client
+            - pkg/utils/kubernetes/health
+            - pkg/utils/kubernetes/unstructured
+            - pkg/utils/managedresources
+            - pkg/utils/managedresources/builder
+            - pkg/utils/net
+            - pkg/utils/retry
+            - pkg/utils/secrets
+            - pkg/utils/secrets/manager
+            - pkg/utils/time
+            - pkg/utils/timewindow
+            - pkg/utils/validation/kubernetesversion
+            - pkg/utils/version
+            - third_party/gopkg.in/yaml.v2
+            - VERSION
+        ldflags:
+          - '{{.LD_FLAGS}}'
+        main: ./cmd/gardener-extension-provider-local
+    - image: local-skaffold/machine-controller-manager-provider-local
+      ko:
+        dependencies:
+          paths:
+            - cmd/machine-controller-manager-provider-local
+            - pkg/provider-local/machine-provider/api/v1alpha1
+            - pkg/provider-local/machine-provider/api/validation
+            - pkg/provider-local/machine-provider/local
+            - VERSION
+        ldflags:
+          - '{{.LD_FLAGS}}'
+        main: ./cmd/machine-controller-manager-provider-local
+      hooks:
+        after:
+          - command:
+              - bash
+              - hack/generate-kustomize-patch-controllerdeployment-provider-local.sh
+    - image: local-skaffold/gardener-extension-provider-local/charts/extension
+      custom:
+        dependencies:
+          paths:
+            - charts/gardener/provider-local
+        buildCommand: |
+          ./hack/push-helm.sh
+      requires:
+        - image: local-skaffold/gardener-extension-provider-local
+          alias: IMG
+resourceSelector:
+  allow:
+    # instruct skaffold to inject the built image reference into the image field in our ControllerDeployment
+    - groupKind: ControllerDeployment.core.gardener.cloud
+      image:
+        - ".helm.ociRepository.ref"
+    - groupKind: CloudProfile.core.gardener.cloud
+      image: [".*"]
+manifests:
+  kustomize:
+    paths:
+      - example/provider-local/gardenadm
+---
+apiVersion: skaffold/v4beta7
+kind: Config
+metadata:
+  name: machine
 manifests:
   kustomize:
     paths:
@@ -85,8 +322,6 @@ deploy:
               - bash
               - -ec
               - |
-                #!/usr/bin/env bash
-
                 kubectl -n $SKAFFOLD_NAMESPACES cp example/gardenadm-local/.skaffold-image machine-0:/tmp/.skaffold-image
                 kubectl -n $SKAFFOLD_NAMESPACES cp example/gardenadm-local/.skaffold-image machine-1:/tmp/.skaffold-image
         - container:
@@ -96,8 +331,6 @@ deploy:
               - bash
               - -ec
               - |
-                #!/usr/bin/env bash
-
                 set -o errexit
                 set -o nounset
                 set -o pipefail
