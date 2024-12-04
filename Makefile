@@ -418,9 +418,9 @@ operator-seed-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	./hack/operator-seed-down.sh --path-kind-kubeconfig $(KUBECONFIG) --path-garden-kubeconfig $(VIRTUAL_GARDEN_KUBECONFIG)
 
 gardenadm-high-touch-up: $(SKAFFOLD) $(KUBECTL)
-	$(SKAFFOLD) run -f=skaffold-gardenadm.yaml
+	$(SKAFFOLD) run -n gardenadm-high-touch -f=skaffold-gardenadm.yaml
 gardenadm-high-touch-down: $(SKAFFOLD) $(KUBECTL)
-	$(SKAFFOLD) delete -f=skaffold-gardenadm.yaml
+	$(SKAFFOLD) delete -n gardenadm-high-touch -f=skaffold-gardenadm.yaml
 
 test-e2e-local: $(GINKGO)
 	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="default" ./test/e2e/gardener/...
@@ -441,7 +441,7 @@ test-e2e-local-operator: $(GINKGO)
 test-e2e-local-operator-seed: $(GINKGO)
 	USE_PROVIDER_LOCAL_COREDNS_SERVER=true ./hack/test-e2e-local.sh operator-seed --procs=$(PARALLEL_E2E_TESTS) --label-filter="default && ManagedSeed" ./test/e2e/gardener/...
 test-e2e-local-gardenadm: $(GINKGO)
-	./hack/test-e2e-local.sh gardenadm --procs=1 --label-filter="default" ./test/e2e/gardenadm/...
+	./hack/test-e2e-local.sh gardenadm --procs=1 ./test/e2e/gardenadm/...
 
 test-non-ha-pre-upgrade: $(GINKGO)
 	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="pre-upgrade && !high-availability" ./test/e2e/gardener/...
