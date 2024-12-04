@@ -259,7 +259,7 @@ verify-extended: check-generate check format test-cov test-cov-clean test-integr
 kind-% kind2-% gardener-%: export IPFAMILY := $(IPFAMILY)
 # KUBECONFIG
 kind-up kind-down gardener-up gardener-dev gardener-debug gardener-down gardenadm-high-touch-up gardenadm-high-touch-down: export KUBECONFIG = $(GARDENER_LOCAL_KUBECONFIG)
-test-e2e-local-simple test-e2e-local-migration test-e2e-local-workerless test-e2e-local ci-e2e-kind ci-e2e-kind-upgrade: export KUBECONFIG = $(GARDENER_LOCAL_KUBECONFIG)
+test-e2e-local-simple test-e2e-local-migration test-e2e-local-workerless test-e2e-local test-e2e-local-gardenadm ci-e2e-kind ci-e2e-kind-upgrade ci-e2e-kind-gardenadm: export KUBECONFIG = $(GARDENER_LOCAL_KUBECONFIG)
 kind2-up kind2-down gardenlet-kind2-up gardenlet-kind2-dev gardenlet-kind2-debug gardenlet-kind2-down: export KUBECONFIG = $(GARDENER_LOCAL2_KUBECONFIG)
 kind-extensions-up kind-extensions-down gardener-extensions-up gardener-extensions-down: export KUBECONFIG = $(GARDENER_EXTENSIONS_KUBECONFIG)
 kind-ha-single-zone-up kind-ha-single-zone-down gardener-ha-single-zone-up gardener-ha-single-zone-down: export KUBECONFIG = $(GARDENER_LOCAL_HA_SINGLE_ZONE_KUBECONFIG)
@@ -440,6 +440,8 @@ test-e2e-local-operator: $(GINKGO)
 	./hack/test-e2e-local.sh operator --procs=1 --label-filter="default" ./test/e2e/operator/...
 test-e2e-local-operator-seed: $(GINKGO)
 	USE_PROVIDER_LOCAL_COREDNS_SERVER=true ./hack/test-e2e-local.sh operator-seed --procs=$(PARALLEL_E2E_TESTS) --label-filter="default && ManagedSeed" ./test/e2e/gardener/...
+test-e2e-local-gardenadm: $(GINKGO)
+	./hack/test-e2e-local.sh gardenadm --procs=1 --label-filter="default" ./test/e2e/gardenadm/...
 
 test-non-ha-pre-upgrade: $(GINKGO)
 	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="pre-upgrade && !high-availability" ./test/e2e/gardener/...
@@ -465,6 +467,8 @@ ci-e2e-kind-operator: $(KIND) $(YQ)
 	./hack/ci-e2e-kind-operator.sh
 ci-e2e-kind-operator-seed: $(KIND) $(YQ)
 	./hack/ci-e2e-kind-operator-seed.sh
+ci-e2e-kind-gardenadm: $(KIND) $(YQ)
+	./hack/ci-e2e-kind-gardenadm.sh
 
 ci-e2e-kind-upgrade: $(KIND) $(YQ)
 	SHOOT_FAILURE_TOLERANCE_TYPE= GARDENER_PREVIOUS_RELEASE=$(GARDENER_PREVIOUS_RELEASE) GARDENER_RELEASE_DOWNLOAD_PATH=$(GARDENER_RELEASE_DOWNLOAD_PATH) GARDENER_NEXT_RELEASE=$(GARDENER_NEXT_RELEASE) ./hack/ci-e2e-kind-upgrade.sh
