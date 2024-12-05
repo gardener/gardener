@@ -5,25 +5,17 @@
 package helper
 
 import (
-	"fmt"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
-
-// ShouldPrepareShootForMigration determines whether the controller should prepare the shoot control plane for migration
-// to another seed.
-func ShouldPrepareShootForMigration(shoot *gardencorev1beta1.Shoot) bool {
-	return shoot.Status.SeedName != nil && shoot.Spec.SeedName != nil && *shoot.Spec.SeedName != *shoot.Status.SeedName
-}
 
 // ComputeOperationType determines which operation should be executed when acting on the given shoot.
 func ComputeOperationType(shoot *gardencorev1beta1.Shoot) gardencorev1beta1.LastOperationType {
-	if ShouldPrepareShootForMigration(shoot) {
+	if v1beta1helper.ShouldPrepareShootForMigration(shoot) {
 		return gardencorev1beta1.LastOperationTypeMigrate
 	}
 
@@ -43,13 +35,4 @@ func GetEtcdDeployTimeout(shoot *shoot.Shoot, defaultDuration time.Duration) tim
 		timeout = etcd.DefaultTimeout
 	}
 	return timeout
-}
-
-// IsSeedReadyForMigration checks if the seed can be used as a target seed for migrating a shoot control plane.
-// If the seed is ready, it returns nil. Otherwise, it returns an error with a description.
-func IsSeedReadyForMigration(seed *gardencorev1beta1.Seed, identity *gardencorev1beta1.Gardener) error {
-	if seed.DeletionTimestamp != nil {
-		return fmt.Errorf("seed is marked to be deleted")
-	}
-	return health.CheckSeedForMigration(seed, identity)
 }

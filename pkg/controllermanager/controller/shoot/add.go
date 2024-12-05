@@ -14,6 +14,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/conditions"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/hibernation"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/maintenance"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/migration"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/quota"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/reference"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/retry"
@@ -44,6 +45,12 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg config.Controlle
 		Config: *cfg.Controllers.ShootQuota,
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding quota reconciler: %w", err)
+	}
+
+	if err := (&migration.Reconciler{
+		Config: *cfg.Controllers.ShootMigration,
+	}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding migration reconciler: %w", err)
 	}
 
 	if err := reference.AddToManager(mgr, *cfg.Controllers.ShootReference); err != nil {

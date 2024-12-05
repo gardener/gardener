@@ -1847,6 +1847,8 @@ const (
 	// ShootCRDsWithProblematicConversionWebhooks is a constant for a condition type indicating that the Shoot cluster has
 	// CRDs with conversion webhooks and multiple stored versions which can break the reconciliation flow of the cluster.
 	ShootCRDsWithProblematicConversionWebhooks ConditionType = "CRDsWithProblematicConversionWebhooks"
+	// ShootReadyForMigration is a constant for a condition type indicating whether the Shoot can be migrated.
+	ShootReadyForMigration ConditionType = "ReadyForMigration"
 )
 
 // ShootPurpose is a type alias for string.
