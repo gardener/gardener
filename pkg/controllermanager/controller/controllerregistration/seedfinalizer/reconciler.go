@@ -58,7 +58,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 
 		if len(controllerInstallationList.Items) > 0 {
-			return reconcile.Result{}, fmt.Errorf("cannot remove finalizer of Seed %q because still found ControllerInstallations: %s", seed.Name, controllerutils.GetControllerInstallationNames(controllerInstallationList.Items))
+			// cannot remove finalizer yet, requeue will happen via watch on controllerinstallations
+			return reconcile.Result{}, nil
 		}
 
 		log.Info("Removing finalizer")

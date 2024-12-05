@@ -90,7 +90,7 @@ var _ = Describe("Reconciler", func() {
 				Expect(c.Delete(ctx, seed)).To(Succeed())
 			})
 
-			It("should return an error because installation referencing seed exists", func() {
+			It("should not remove finalizer while installation referencing seed exists", func() {
 				controllerInstallation := &gardencorev1beta1.ControllerInstallation{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "controllerInstallation",
@@ -106,7 +106,10 @@ var _ = Describe("Reconciler", func() {
 
 				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: seedName}})
 				Expect(result).To(Equal(reconcile.Result{}))
-				Expect(err).To(MatchError(ContainSubstring("cannot remove finalizer of Seed %q because still found ControllerInstallations: [%s]", seed.Name, controllerInstallation.Name)))
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
+				Expect(seed.Finalizers).To(ConsistOf("core.gardener.cloud/controllerregistration"))
 			})
 
 			It("should remove the finalizer", func() {
