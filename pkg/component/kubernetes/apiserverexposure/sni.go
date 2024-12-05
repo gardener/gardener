@@ -15,7 +15,6 @@ import (
 	istionetworkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -54,7 +53,6 @@ type SNIValues struct {
 
 // APIServerProxy contains values for the APIServer proxy protocol configuration.
 type APIServerProxy struct {
-	NamespaceUID       types.UID
 	APIServerClusterIP string
 }
 
@@ -170,7 +168,6 @@ func (s *sni) Destroy(ctx context.Context) error {
 		ctx,
 		s.client,
 		s.emptyDestinationRule(),
-		s.emptyEnvoyFilter(),
 		s.emptyGateway(),
 		s.emptyVirtualService(),
 	)

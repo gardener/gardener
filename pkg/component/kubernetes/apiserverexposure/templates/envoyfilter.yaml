@@ -4,13 +4,6 @@ kind: EnvoyFilter
 metadata:
   name: {{ .Name }}
   namespace: {{ .Namespace }}
-  ownerReferences:
-  - apiVersion: v1
-    kind: Namespace
-    name: {{ .Name }}
-    uid: {{ .NamespaceUID | quote }}
-    controller: false
-    blockOwnerDeletion: false
 spec:
   workloadSelector:
     labels:
