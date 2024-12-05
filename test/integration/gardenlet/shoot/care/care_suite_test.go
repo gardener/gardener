@@ -68,6 +68,7 @@ var (
 	testClientSet  kubernetes.Interface
 	shootClientMap clientmap.ClientMap
 	mgrClient      client.Client
+	syncPeriod     *metav1.Duration
 
 	project       *gardencorev1beta1.Project
 	seed          *gardencorev1beta1.Seed
@@ -252,13 +253,14 @@ var _ = BeforeSuite(func() {
 	fakeClock = testclock.NewFakeClock(time.Now().Round(time.Second))
 
 	By("Register controller")
+	syncPeriod = &metav1.Duration{Duration: 500 * time.Millisecond}
 	Expect((&care.Reconciler{
 		SeedClientSet:  testClientSet,
 		ShootClientMap: shootClientMap,
 		Config: gardenletconfigv1alpha1.GardenletConfiguration{
 			Controllers: &gardenletconfigv1alpha1.GardenletControllerConfiguration{
 				ShootCare: &gardenletconfigv1alpha1.ShootCareControllerConfiguration{
-					SyncPeriod: &metav1.Duration{Duration: 500 * time.Millisecond},
+					SyncPeriod: syncPeriod,
 				},
 			},
 			SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
