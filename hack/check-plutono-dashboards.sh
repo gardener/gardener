@@ -12,7 +12,7 @@ set -o pipefail
 echo "> Checking Plutono dashboards"
 
 function check_dashboards {
-  find . -path '*/dashboards/*' -name '*.json' -type f \
+  find . -path './dev/local-backupbuckets' -prune -o -path '*/dashboards/*' -name '*.json' -type f -print \
   | while IFS= read -r file; do
 
       jq -c -r '{title: (.title // error("title is not set")),
