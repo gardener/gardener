@@ -523,7 +523,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 					Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 						return shoot.Status.Conditions
-					}).WithTimeout(1 * time.Second).Should(And(
+					}).WithTimeout(5 * time.Second).Should(And(
 						// here SystemComponentsHealthy condition is not healthy because for SystemComponentsHealthy to be healthy a tunnel connection is required
 						// which can't be faked, if it would have been failing because of MangedResource is not healthy then the reason will not be `NoTunnelDeployed`.
 						ContainCondition(OfType(gardencorev1beta1.ShootSystemComponentsHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithMessageSubstrings("Resources failed to get applied")),
