@@ -89,7 +89,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return r.deleteShoot(ctx, log, shoot)
 	}
 
-	if helper.ShouldPrepareShootForMigration(shoot) {
+	if v1beta1helper.ShouldPrepareShootForMigration(shoot) {
 		return r.migrateShoot(ctx, log, shoot)
 	}
 
@@ -158,13 +158,12 @@ func (r *Reconciler) reconcileShoot(ctx context.Context, log logr.Logger, shoot 
 func (r *Reconciler) migrateShoot(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) (reconcile.Result, error) {
 	log = log.WithValues("operation", "migrate")
 
-	destinationSeed := &gardencorev1beta1.Seed{}
-	if err := r.GardenClient.Get(ctx, client.ObjectKey{Name: *shoot.Spec.SeedName}, destinationSeed); err != nil {
-		return reconcile.Result{}, err
+	readyForMigrationConstraint := v1beta1helper.GetCondition(shoot.Status.Constraints, gardencorev1beta1.ShootReadyForMigration)
+	if readyForMigrationConstraint == nil {
+		return reconcile.Result{}, fmt.Errorf("waiting for confirmation that destination Seed is available to host the control plane of Shoot %s", shoot.GetName())
 	}
-
-	if err := helper.IsSeedReadyForMigration(destinationSeed, r.Identity); err != nil {
-		return reconcile.Result{}, fmt.Errorf("destination Seed is not available to host the control plane of Shoot %s: %w", shoot.GetName(), err)
+	if readyForMigrationConstraint.Status != gardencorev1beta1.ConditionTrue {
+		return reconcile.Result{}, fmt.Errorf("destination Seed is not available to host the control plane of Shoot %s: %s", shoot.GetName(), readyForMigrationConstraint.Message)
 	}
 
 	hasBastions, err := r.shootHasBastions(ctx, shoot)

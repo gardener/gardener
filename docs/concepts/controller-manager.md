@@ -366,3 +366,11 @@ Currently, the reconciler retries only failed `Shoot`s with an error code `ERR_I
 #### ["Status Label" Reconciler](../../pkg/controllermanager/controller/shoot/statuslabel)
 
 This reconciler is responsible for maintaining the `shoot.gardener.cloud/status` label on `Shoot`s. See [Shoot Status](../usage/shoot/shoot_status.md#status-label) for more details.
+
+#### ["Migration" Reconciler](../../pkg/controllermanager/controller/shoot/migration)
+
+This reconciler is triggered for `Shoot`s currently in migration (i.e., `.spec.seedName != .status.seedName`).
+It maintains the `ReadyForMigration` constraint in the `.status.constraints[]` list.
+A `Shoot` is considered ready for migration if the destination `Seed` is up-to-date and healthy.
+
+The main purpose of this constraint is to allow the `gardenlet` running in the source seed cluster to check if it can start with the migration flow without that it needs to directly read the destination `Seed` resource (for which it won't have permissions).

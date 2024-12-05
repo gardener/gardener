@@ -324,6 +324,7 @@ build:
             - pkg/controllermanager/controller/shoot/conditions
             - pkg/controllermanager/controller/shoot/hibernation
             - pkg/controllermanager/controller/shoot/maintenance
+            - pkg/controllermanager/controller/shoot/migration
             - pkg/controllermanager/controller/shoot/quota
             - pkg/controllermanager/controller/shoot/reference
             - pkg/controllermanager/controller/shoot/retry

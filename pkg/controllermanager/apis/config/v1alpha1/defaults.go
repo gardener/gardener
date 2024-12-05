@@ -283,6 +283,13 @@ func SetDefaults_ShootStatusLabelControllerConfiguration(obj *ShootStatusLabelCo
 	}
 }
 
+// SetDefaults_ShootMigrationControllerConfiguration sets defaults for the ShootMigrationControllerConfiguration.
+func SetDefaults_ShootMigrationControllerConfiguration(obj *ShootMigrationControllerConfiguration) {
+	if obj.ConcurrentSyncs == nil {
+		obj.ConcurrentSyncs = ptr.To(DefaultControllerConcurrentSyncs)
+	}
+}
+
 // SetDefaults_ManagedSeedSetControllerConfiguration sets defaults for the ManagedSeedSetControllerConfiguration.
 func SetDefaults_ManagedSeedSetControllerConfiguration(obj *ManagedSeedSetControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
@@ -351,6 +358,9 @@ func SetDefaults_ControllerManagerControllerConfiguration(obj *ControllerManager
 	}
 	if obj.ShootStatusLabel == nil {
 		obj.ShootStatusLabel = &ShootStatusLabelControllerConfiguration{}
+	}
+	if obj.ShootMigration == nil {
+		obj.ShootMigration = &ShootMigrationControllerConfiguration{}
 	}
 
 	if obj.ManagedSeedSet == nil {

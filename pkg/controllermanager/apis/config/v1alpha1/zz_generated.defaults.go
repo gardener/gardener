@@ -89,6 +89,9 @@ func SetObjectDefaults_ControllerManagerConfiguration(in *ControllerManagerConfi
 	if in.Controllers.ShootStatusLabel != nil {
 		SetDefaults_ShootStatusLabelControllerConfiguration(in.Controllers.ShootStatusLabel)
 	}
+	if in.Controllers.ShootMigration != nil {
+		SetDefaults_ShootMigrationControllerConfiguration(in.Controllers.ShootMigration)
+	}
 	if in.Controllers.ManagedSeedSet != nil {
 		SetDefaults_ManagedSeedSetControllerConfiguration(in.Controllers.ManagedSeedSet)
 	}

@@ -1424,4 +1424,41 @@ var _ = Describe("Helper", func() {
 			false,
 		),
 	)
+
+	Describe("#ShouldPrepareShootForMigration", func() {
+		var shoot *gardencorev1beta1.Shoot
+
+		BeforeEach(func() {
+			shoot = &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					SeedName: ptr.To("seed"),
+				},
+				Status: gardencorev1beta1.ShootStatus{
+					SeedName: ptr.To("seed"),
+				},
+			}
+		})
+
+		It("should return false if spec.seedName is not set", func() {
+			shoot.Spec.SeedName = nil
+			Expect(ShouldPrepareShootForMigration(shoot)).To(BeFalse())
+
+			shoot.Status.SeedName = nil
+			Expect(ShouldPrepareShootForMigration(shoot)).To(BeFalse())
+		})
+
+		It("should return false if status.seedName is not set", func() {
+			shoot.Status.SeedName = nil
+			Expect(ShouldPrepareShootForMigration(shoot)).To(BeFalse())
+		})
+
+		It("should return false if spec.seedName and status.seedName are equal", func() {
+			Expect(ShouldPrepareShootForMigration(shoot)).To(BeFalse())
+		})
+
+		It("should return true if spec.seedName and status.seedName differ", func() {
+			shoot.Spec.SeedName = ptr.To("other")
+			Expect(ShouldPrepareShootForMigration(shoot)).To(BeTrue())
+		})
+	})
 })

@@ -656,3 +656,9 @@ func AccessRestrictionsAreSupported(seedAccessRestrictions []gardencorev1beta1.A
 
 	return true
 }
+
+// ShouldPrepareShootForMigration determines whether the controller should prepare the shoot control plane for migration
+// to another seed.
+func ShouldPrepareShootForMigration(shoot *gardencorev1beta1.Shoot) bool {
+	return shoot.Status.SeedName != nil && shoot.Spec.SeedName != nil && *shoot.Spec.SeedName != *shoot.Status.SeedName
+}
