@@ -191,6 +191,24 @@ var _ = Describe("Machines", func() {
 			It("when changing additional data for V2", func() {
 				additionalDataV2 = []string{"test"}
 			})
+
+			It("when a shoot CA rotation is triggered but worker pool rollout is pending", func() {
+				newRotationTime := metav1.Time{Time: lastCARotationInitiation.Add(time.Hour)}
+				c.Shoot.Status.Credentials.Rotation.CertificateAuthorities.LastInitiationTime = &newRotationTime
+				c.Shoot.Status.Credentials.Rotation.CertificateAuthorities.PendingWorkersRollouts = []gardencorev1beta1.PendingWorkersRollout{{
+					Name:               p.Name,
+					LastInitiationTime: &lastCARotationInitiation,
+				}}
+			})
+
+			It("when a shoot service account key rotation is triggered but worker pool rollout is pending", func() {
+				newRotationTime := metav1.Time{Time: lastSAKeyRotationInitiation.Add(time.Hour)}
+				c.Shoot.Status.Credentials.Rotation.ServiceAccountKey.LastInitiationTime = &newRotationTime
+				c.Shoot.Status.Credentials.Rotation.ServiceAccountKey.PendingWorkersRollouts = []gardencorev1beta1.PendingWorkersRollout{{
+					Name:               p.Name,
+					LastInitiationTime: &lastSAKeyRotationInitiation,
+				}}
+			})
 		})
 
 		Context("hash value should change", func() {
