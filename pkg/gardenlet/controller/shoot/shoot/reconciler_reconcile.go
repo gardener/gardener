@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -374,7 +375,10 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 					client.MatchingLabels{resourcesv1alpha1.ResourceManagerClass: resourcesv1alpha1.ResourceManagerClassShoot},
 				)
 			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       v1beta1helper.GetShootServiceAccountKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) != gardencorev1beta1.RotationPreparing,
+			SkipIf: !sets.New[gardencorev1beta1.CredentialsRotationPhase](
+				gardencorev1beta1.RotationPreparing,
+				gardencorev1beta1.RotationPreparingWithoutWorkersRollout,
+			).Has(v1beta1helper.GetShootServiceAccountKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials)),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerWithNodeAgentAuthorizerIsReady, waitUntilGardenerResourceManagerReady),
 		})
 		deployControlPlane = g.Add(flow.Task{
@@ -532,9 +536,12 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployCloudProviderSecret, waitUntilKubeAPIServerWithNodeAgentAuthorizerIsReady),
 		})
 		waitUntilKubeControllerManagerReady = g.Add(flow.Task{
-			Name:         "Waiting until kube-controller-manager reports readiness",
-			Fn:           botanist.Shoot.Components.ControlPlane.KubeControllerManager.Wait,
-			SkipIf:       skipReadiness || v1beta1helper.GetShootServiceAccountKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) != gardencorev1beta1.RotationPreparing,
+			Name: "Waiting until kube-controller-manager reports readiness",
+			Fn:   botanist.Shoot.Components.ControlPlane.KubeControllerManager.Wait,
+			SkipIf: skipReadiness || !sets.New[gardencorev1beta1.CredentialsRotationPhase](
+				gardencorev1beta1.RotationPreparing,
+				gardencorev1beta1.RotationPreparingWithoutWorkersRollout,
+			).Has(v1beta1helper.GetShootServiceAccountKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials)),
 			Dependencies: flow.NewTaskIDs(deployKubeControllerManager),
 		})
 		createNewServiceAccountSecrets = g.Add(flow.Task{
@@ -542,7 +549,10 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return secretsrotation.CreateNewServiceAccountSecrets(ctx, o.Logger, o.ShootClientSet.Client(), o.SecretsManager)
 			}).RetryUntilTimeout(30*time.Second, 10*time.Minute),
-			SkipIf:       v1beta1helper.GetShootServiceAccountKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) != gardencorev1beta1.RotationPreparing,
+			SkipIf: !sets.New[gardencorev1beta1.CredentialsRotationPhase](
+				gardencorev1beta1.RotationPreparing,
+				gardencorev1beta1.RotationPreparingWithoutWorkersRollout,
+			).Has(v1beta1helper.GetShootServiceAccountKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials)),
 			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilKubeControllerManagerReady),
 		})
 		_ = g.Add(flow.Task{

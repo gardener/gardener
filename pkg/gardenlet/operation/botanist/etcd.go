@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -111,7 +112,10 @@ func (b *Botanist) DeployEtcd(ctx context.Context) error {
 	// Roll out the new peer CA first so that every member in the cluster trusts the old and the new CA.
 	// This is required because peer certificates which are used for client and server authentication at the same time,
 	// are re-created with the new CA in the `Deploy` step.
-	if v1beta1helper.GetShootCARotationPhase(b.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationPreparing {
+	if sets.New[gardencorev1beta1.CredentialsRotationPhase](
+		gardencorev1beta1.RotationPreparing,
+		gardencorev1beta1.RotationPreparingWithoutWorkersRollout,
+	).Has(v1beta1helper.GetShootCARotationPhase(b.Shoot.GetInfo().Status.Credentials)) {
 		if err := flow.Parallel(
 			b.Shoot.Components.ControlPlane.EtcdMain.RolloutPeerCA,
 			b.Shoot.Components.ControlPlane.EtcdEvents.RolloutPeerCA,
