@@ -88,6 +88,8 @@ func (r *Reconciler) AddToManager(
 
 // ManagedSeedPredicate returns the predicate for ManagedSeed events.
 func (r *Reconciler) ManagedSeedPredicate(ctx context.Context, seedName string) predicate.Predicate {
+	// TODO(rfranzke): Drop this predicate (in favor of the label selector on manager.Manager level) after v1.113 has
+	//  been released.
 	return &managedSeedPredicate{
 		ctx:      ctx,
 		reader:   r.GardenClient,
