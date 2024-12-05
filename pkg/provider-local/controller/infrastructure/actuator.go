@@ -51,13 +51,6 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure 
 					PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "machine"}},
 				},
 				{
-					NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"role": "garden"}},
-					PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
-						"app":       "nginx-ingress",
-						"component": "controller",
-					}},
-				},
-				{
 					NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "registry"}},
 					PodSelector:       &metav1.LabelSelector{MatchLabels: map[string]string{"app": "registry"}},
 				},
