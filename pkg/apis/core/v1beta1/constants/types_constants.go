@@ -363,6 +363,10 @@ const (
 	// shall be started. This includes CAs, certificates, kubeconfigs, SSH keypairs, observability credentials, and
 	// ServiceAccount signing key.
 	OperationRotateCredentialsStart = "rotate-credentials-start" // #nosec G101 -- No credential.
+	// OperationRotateCredentialsStartWithoutWorkersRollout is a constant for an annotation indicating that the rotation
+	// of all credentials shall be started without rolling out the workers. This includes CAs, certificates,
+	// kubeconfigs, SSH keypairs, observability credentials, and ServiceAccount signing key.
+	OperationRotateCredentialsStartWithoutWorkersRollout = "rotate-credentials-start-without-workers-rollout" // #nosec G101 -- No credential.
 	// OperationRotateCredentialsComplete is a constant for an annotation indicating that the rotation of the
 	// credentials shall be completed.
 	OperationRotateCredentialsComplete = "rotate-credentials-complete" // #nosec G101 -- No credential.
@@ -375,6 +379,9 @@ const (
 	// OperationRotateCAStart is a constant for an annotation indicating that the rotation of the certificate
 	// authorities shall be started.
 	OperationRotateCAStart = "rotate-ca-start"
+	// OperationRotateCAStartWithoutWorkersRollout is a constant for an annotation indicating that the rotation of the
+	// certificate authorities shall be started without rolling out the workers.
+	OperationRotateCAStartWithoutWorkersRollout = "rotate-ca-start-without-workers-rollout"
 	// OperationRotateCAComplete is a constant for an annotation indicating that the rotation of the certificate
 	// authorities shall be completed.
 	OperationRotateCAComplete = "rotate-ca-complete"
@@ -385,6 +392,9 @@ const (
 	// OperationRotateServiceAccountKeyStart is a constant for an annotation on a Shoot indicating that the
 	// rotation of the service account signing key shall be started.
 	OperationRotateServiceAccountKeyStart = "rotate-serviceaccount-key-start"
+	// OperationRotateServiceAccountKeyStartWithoutWorkersRollout is a constant for an annotation on a Shoot indicating that the
+	// rotation of the service account signing key shall be started without rolling out the workers.
+	OperationRotateServiceAccountKeyStartWithoutWorkersRollout = "rotate-serviceaccount-key-start-without-workers-rollout"
 	// OperationRotateServiceAccountKeyComplete is a constant for an annotation on a Shoot indicating that the
 	// rotation of the service account signing key shall be completed.
 	OperationRotateServiceAccountKeyComplete = "rotate-serviceaccount-key-complete"
