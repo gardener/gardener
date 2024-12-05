@@ -139,7 +139,7 @@ spec:
       # the reconciler will evaluate the classification status to supported
       - version: 1.27.0
 
-      # when introducing a new version it may not contain any deprecation or expiration date yet
+      # when introducing a new version it doesn't have to contain a deprecation or expiration date
       - version: 1.28.0
         lifecycle:
           - classification: preview
