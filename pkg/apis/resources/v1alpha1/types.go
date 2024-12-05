@@ -102,9 +102,13 @@ const (
 	// ServiceAccountTokenRenewTimestamp is the key of an annotation of a secret whose value contains the timestamp when
 	// the token needs to be renewed.
 	ServiceAccountTokenRenewTimestamp = "serviceaccount.resources.gardener.cloud/token-renew-timestamp"
+	// ServiceAccountInjectCABundle instucts the Token Requester to also write the CA bundle.
+	ServiceAccountInjectCABundle = "serviceaccount.resources.gardener.cloud/inject-ca-bundle"
 
 	// DataKeyToken is the data key whose value contains a service account token.
 	DataKeyToken = "token"
+	// DataKeyCaBundle is the data key where the ca bundle is stored.
+	DataKeyCaBundle = "bundle.crt"
 	// DataKeyKubeconfig is the data key whose value contains a kubeconfig with a service account token.
 	DataKeyKubeconfig = "kubeconfig"
 
