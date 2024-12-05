@@ -688,6 +688,12 @@ func validateNetworkingUpdate(newNetworking, oldNetworking *core.Networking, fld
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworking.Services, oldNetworking.Services, fldPath.Child("services"))...)
 	}
 
+	// From Dual-stack to Single stack is not allowed
+	if !core.IsDualStack(newNetworking.IPFamilies) && core.IsDualStack(oldNetworking.IPFamilies) {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("ipFamilies"),
+			"transition from dual-stack to single-stack is not allowed"))
+	}
+
 	return allErrs
 }
 
