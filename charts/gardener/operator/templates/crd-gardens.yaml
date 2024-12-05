@@ -1910,6 +1910,28 @@ spec:
                               initiated.
                             format: date-time
                             type: string
+                          pendingWorkersRollouts:
+                            description: |-
+                              PendingWorkersRollouts contains the name of a worker pool and the initiation time of their last rollout due to
+                              credentials rotation.
+                            items:
+                              description: |-
+                                PendingWorkersRollout contains the name of a worker pool and the initiation time of their last rollout due to
+                                credentials rotation.
+                              properties:
+                                lastInitiationTime:
+                                  description: LastInitiationTime is the most recent
+                                    time when the certificate authority credential
+                                    rotation was initiated.
+                                  format: date-time
+                                  type: string
+                                name:
+                                  description: Name is the name of a worker pool.
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            type: array
                           phase:
                             description: Phase describes the phase of the certificate
                               authority credential rotation.
@@ -1996,6 +2018,28 @@ spec:
                               initiated.
                             format: date-time
                             type: string
+                          pendingWorkersRollouts:
+                            description: |-
+                              PendingWorkersRollouts contains the name of a worker pool and the initiation time of their last rollout due to
+                              credentials rotation.
+                            items:
+                              description: |-
+                                PendingWorkersRollout contains the name of a worker pool and the initiation time of their last rollout due to
+                                credentials rotation.
+                              properties:
+                                lastInitiationTime:
+                                  description: LastInitiationTime is the most recent
+                                    time when the certificate authority credential
+                                    rotation was initiated.
+                                  format: date-time
+                                  type: string
+                                name:
+                                  description: Name is the name of a worker pool.
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            type: array
                           phase:
                             description: Phase describes the phase of the service
                               account key credential rotation.
