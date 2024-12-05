@@ -404,6 +404,10 @@ const (
 	// OperationRotateETCDEncryptionKeyComplete is a constant for an annotation on a Shoot indicating that the
 	// rotation of the ETCD encryption key shall be completed.
 	OperationRotateETCDEncryptionKeyComplete = "rotate-etcd-encryption-key-complete"
+	// OperationRotateRolloutWorkers is a constant for an annotation triggering the rollout of one or more worker pools
+	// (comma-separated) when the certificate authorities or service account signing key credentials rotation is in
+	// WaitingForWorkersRollout phase.
+	OperationRotateRolloutWorkers = "rotate-rollout-workers"
 	// SeedOperationRenewGardenAccessSecrets is a constant for an annotation on a Seed indicating that
 	// all garden access secrets on the seed shall be renewed.
 	SeedOperationRenewGardenAccessSecrets = "renew-garden-access-secrets" // #nosec G101 -- No credential.

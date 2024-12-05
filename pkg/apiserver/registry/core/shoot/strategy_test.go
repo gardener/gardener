@@ -669,6 +669,13 @@ var _ = Describe("Strategy", func() {
 					true,
 					true,
 				),
+
+				Entry("rotate-rollout-workers",
+					v1beta1constants.OperationRotateRolloutWorkers+"=foo",
+					nil,
+					true,
+					true,
+				),
 			)
 		})
 

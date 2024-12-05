@@ -70,6 +70,7 @@ var (
 		v1beta1constants.ShootOperationRotateKubeconfigCredentials,
 		v1beta1constants.OperationRotateObservabilityCredentials,
 		v1beta1constants.ShootOperationRotateSSHKeypair,
+		v1beta1constants.OperationRotateRolloutWorkers,
 	).Union(forbiddenShootOperationsWhenHibernated)
 	forbiddenShootOperationsWhenHibernated = sets.New(
 		v1beta1constants.OperationRotateCredentialsStart,
@@ -2455,10 +2456,11 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 	}
 
 	if operation != "" {
-		if !availableShootOperations.Has(operation) {
+		if !availableShootOperations.Has(operation) && !strings.HasPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers) {
 			allErrs = append(allErrs, field.NotSupported(fldPathOp, operation, sets.List(availableShootOperations)))
 		}
-		if helper.IsShootInHibernation(shoot) && (forbiddenShootOperationsWhenHibernated.Has(operation)) {
+		if helper.IsShootInHibernation(shoot) &&
+			(forbiddenShootOperationsWhenHibernated.Has(operation) || strings.HasPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers)) {
 			allErrs = append(allErrs, field.Forbidden(fldPathOp, "operation is not permitted when shoot is hibernated or is waking up"))
 		}
 		if !apiequality.Semantic.DeepEqual(getResourcesForEncryption(shoot.Spec.Kubernetes.KubeAPIServer), shoot.Status.EncryptedResources) &&
@@ -2468,10 +2470,11 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 	}
 
 	if maintenanceOperation != "" {
-		if !availableShootMaintenanceOperations.Has(maintenanceOperation) {
+		if !availableShootMaintenanceOperations.Has(maintenanceOperation) && !strings.HasPrefix(maintenanceOperation, v1beta1constants.OperationRotateRolloutWorkers) {
 			allErrs = append(allErrs, field.NotSupported(fldPathMaintOp, maintenanceOperation, sets.List(availableShootMaintenanceOperations)))
 		}
-		if helper.IsShootInHibernation(shoot) && forbiddenShootOperationsWhenHibernated.Has(maintenanceOperation) {
+		if helper.IsShootInHibernation(shoot) &&
+			(forbiddenShootOperationsWhenHibernated.Has(maintenanceOperation) || strings.HasPrefix(maintenanceOperation, v1beta1constants.OperationRotateRolloutWorkers)) {
 			allErrs = append(allErrs, field.Forbidden(fldPathMaintOp, "operation is not permitted when shoot is hibernated or is waking up"))
 		}
 		if !apiequality.Semantic.DeepEqual(getResourcesForEncryption(shoot.Spec.Kubernetes.KubeAPIServer), shoot.Status.EncryptedResources) && forbiddenShootOperationsWhenEncryptionChangeIsRollingOut.Has(maintenanceOperation) {
@@ -2577,6 +2580,32 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete ETCD encryption key rotation if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Prepared'"))
 		}
 	}
+
+	if strings.HasPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers) {
+		if caPhase, serviceAccountKeyPhase := helper.GetShootCARotationPhase(shoot.Status.Credentials), helper.GetShootServiceAccountKeyRotationPhase(shoot.Status.Credentials); caPhase != core.RotationWaitingForWorkersRollout && serviceAccountKeyPhase != core.RotationWaitingForWorkersRollout {
+			allErrs = append(allErrs, field.Forbidden(fldPath, "either .status.credentials.rotation.certificateAuthorities.phase or .status.credentials.rotation.serviceAccountKey.phase must be in 'WaitingForWorkersRollout' in order to trigger workers rollout"))
+		}
+
+		poolNames := strings.Split(strings.TrimPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers+"="), ",")
+		if len(poolNames) == 0 || sets.New(poolNames...).Has("") {
+			allErrs = append(allErrs, field.Required(fldPath, "must provide at least one pool name via "+v1beta1constants.OperationRotateRolloutWorkers+"=<poolName1>[,<poolName2>,...]"))
+		}
+
+		names := sets.New[string]()
+		for _, poolName := range poolNames {
+			if names.Has(poolName) {
+				allErrs = append(allErrs, field.Duplicate(fldPath, "pool name "+poolName+" was specified multiple times"))
+			}
+			names.Insert(poolName)
+
+			if !slices.ContainsFunc(shoot.Spec.Provider.Workers, func(worker core.Worker) bool {
+				return worker.Name == poolName
+			}) {
+				allErrs = append(allErrs, field.Invalid(fldPath, poolName, "worker pool name "+poolName+" does not exist in .spec.provider.workers[]"))
+			}
+		}
+	}
+
 	return allErrs
 }
 

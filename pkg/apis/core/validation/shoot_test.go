@@ -4982,7 +4982,101 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("rotate-serviceaccount-key-start", "rotate-serviceaccount-key-start"),
 				Entry("rotate-serviceaccount-key-start-without-workers-rollout", "rotate-serviceaccount-key-start-without-workers-rollout"),
 				Entry("rotate-serviceaccount-key-complete", "rotate-serviceaccount-key-complete"),
+				Entry("rotate-rollout-workers", "rotate-rollout-workers=worker-name"),
 			)
+
+			Context("trigger workers rollout", func() {
+				It("should forbid triggering workers rollout when pool does not exist", func() {
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "rotate-rollout-workers=foo")
+
+					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+						"Detail": Equal("worker pool name foo does not exist in .spec.provider.workers[]"),
+					}))))
+				})
+
+				It("should forbid triggering workers rollout when rotation phase is not in 'WaitingForWorkersRollout'", func() {
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "rotate-rollout-workers=worker-name")
+
+					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+						"Detail": Equal("either .status.credentials.rotation.certificateAuthorities.phase or .status.credentials.rotation.serviceAccountKey.phase must be in 'WaitingForWorkersRollout' in order to trigger workers rollout"),
+					}))))
+				})
+
+				It("should forbid triggering workers rollout when shoot is hibernated", func() {
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "rotate-rollout-workers=worker-name")
+					shoot.Status.Credentials = &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							CertificateAuthorities: &core.CARotation{
+								Phase: core.RotationWaitingForWorkersRollout,
+							},
+						},
+					}
+					shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
+
+					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+						"Detail": Equal("operation is not permitted when shoot is hibernated or is waking up"),
+					}))))
+				})
+
+				It("should forbid triggering workers rollout when shoot is waking up", func() {
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "rotate-rollout-workers=worker-name")
+					shoot.Status.Credentials = &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							CertificateAuthorities: &core.CARotation{
+								Phase: core.RotationWaitingForWorkersRollout,
+							},
+						},
+					}
+					shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)}
+					shoot.Status = core.ShootStatus{IsHibernated: true}
+
+					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+						"Detail": Equal("operation is not permitted when shoot is hibernated or is waking up"),
+					}))))
+				})
+
+				It("should forbid triggering workers rollout without stating any pool", func() {
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "rotate-rollout-workers=")
+					shoot.Status.Credentials = &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							CertificateAuthorities: &core.CARotation{
+								Phase: core.RotationWaitingForWorkersRollout,
+							},
+						},
+					}
+
+					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeRequired),
+						"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+						"Detail": Equal("must provide at least one pool name via rotate-rollout-workers=<poolName1>[,<poolName2>,...]"),
+					}))))
+				})
+
+				It("should forbid triggering workers rollout with duplicate pool names", func() {
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "rotate-rollout-workers=worker-name,worker-name")
+					shoot.Status.Credentials = &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							CertificateAuthorities: &core.CARotation{
+								Phase: core.RotationWaitingForWorkersRollout,
+							},
+						},
+					}
+
+					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":     Equal(field.ErrorTypeDuplicate),
+						"Field":    Equal("metadata.annotations[gardener.cloud/operation]"),
+						"BadValue": Equal("pool name worker-name was specified multiple times"),
+					}))))
+				})
+			})
 
 			DescribeTable("forbid certain rotation operations when shoot is waking up",
 				func(operation string) {

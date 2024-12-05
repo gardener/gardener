@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -143,6 +144,12 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 				} else {
 					mustIncrease, mustRemoveOperationAnnotation = true, false
 				}
+			}
+
+			if strings.HasPrefix(newShoot.Annotations[v1beta1constants.GardenerOperation], v1beta1constants.OperationRotateRolloutWorkers) {
+				// We don't want to remove the annotation so that the gardenlet can pick it up and perform
+				// the rotation. It has to remove the annotation after it is done.
+				mustIncrease, mustRemoveOperationAnnotation = true, false
 			}
 		}
 
