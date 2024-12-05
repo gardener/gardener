@@ -87,7 +87,6 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 				},
 				APIServerProxy: &kubeapiserverexposure.APIServerProxy{
 					APIServerClusterIP: b.APIServerClusterIP,
-					NamespaceUID:       b.SeedNamespaceObject.UID,
 				},
 				IstioIngressGateway: kubeapiserverexposure.IstioIngressGateway{
 					Namespace: b.IstioNamespace(),
