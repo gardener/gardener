@@ -10,7 +10,7 @@
 package v1
 
 import (
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	helm "github.com/gardener/gardener/pkg/apis/types/helm"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -88,7 +88,7 @@ func (in *HelmControllerDeployment) DeepCopyInto(out *HelmControllerDeployment) 
 	}
 	if in.Values != nil {
 		in, out := &in.Values, &out.Values
-		*out = new(apiextensionsv1.JSON)
+		*out = new(helm.Values)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.OCIRepository != nil {

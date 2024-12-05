@@ -9,7 +9,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
@@ -18,6 +17,7 @@ import (
 	gardencoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/types/helm"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -46,7 +46,7 @@ var _ = Describe("ControllerDeployment roundtrip conversion", func() {
 		BeforeEach(func() {
 			rawChart := []byte("foo")
 			values := `{"foo":{"bar":"baz"},"boom":42}`
-			valuesJSON := &apiextensionsv1.JSON{
+			valuesJSON := &helm.Values{
 				Raw: []byte(values),
 			}
 
@@ -81,7 +81,7 @@ var _ = Describe("ControllerDeployment roundtrip conversion", func() {
 	Context("helm type with OCI", func() {
 		BeforeEach(func() {
 			values := `{"foo":{"bar":"baz"},"boom":42}`
-			valuesJSON := &apiextensionsv1.JSON{
+			valuesJSON := &helm.Values{
 				Raw: []byte(values),
 			}
 

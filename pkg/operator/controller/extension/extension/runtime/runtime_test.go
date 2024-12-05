@@ -14,7 +14,6 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -24,6 +23,7 @@ import (
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/apis/types/helm"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	mockchartrenderer "github.com/gardener/gardener/pkg/chartrenderer/mock"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
@@ -76,7 +76,7 @@ var _ = Describe("Deployment", func() {
 			Spec: operatorv1alpha1.ExtensionSpec{
 				Deployment: &operatorv1alpha1.Deployment{
 					ExtensionDeployment: &operatorv1alpha1.ExtensionDeploymentSpec{
-						RuntimeClusterValues: &apiextensionsv1.JSON{Raw: []byte("{}")},
+						RuntimeClusterValues: &helm.Values{Raw: []byte("{}")},
 						DeploymentSpec: operatorv1alpha1.DeploymentSpec{
 							Helm: &operatorv1alpha1.ExtensionHelm{
 								OCIRepository: &gardencorev1.OCIRepository{Ref: &ociRef},
@@ -98,7 +98,7 @@ var _ = Describe("Deployment", func() {
 		})
 
 		It("should succeed reconciling the extension resources", func() {
-			extension.Spec.Deployment.ExtensionDeployment.RuntimeClusterValues = &apiextensionsv1.JSON{
+			extension.Spec.Deployment.ExtensionDeployment.RuntimeClusterValues = &helm.Values{
 				Raw: []byte(`{"foo": "bar"}`),
 			}
 

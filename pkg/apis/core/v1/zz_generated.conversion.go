@@ -13,7 +13,7 @@ import (
 	unsafe "unsafe"
 
 	core "github.com/gardener/gardener/pkg/apis/core"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	helm "github.com/gardener/gardener/pkg/apis/types/helm"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -126,7 +126,7 @@ func Convert_core_ControllerDeploymentList_To_v1_ControllerDeploymentList(in *co
 
 func autoConvert_v1_HelmControllerDeployment_To_core_HelmControllerDeployment(in *HelmControllerDeployment, out *core.HelmControllerDeployment, s conversion.Scope) error {
 	out.RawChart = *(*[]byte)(unsafe.Pointer(&in.RawChart))
-	out.Values = (*apiextensionsv1.JSON)(unsafe.Pointer(in.Values))
+	out.Values = (*helm.Values)(unsafe.Pointer(in.Values))
 	out.OCIRepository = (*core.OCIRepository)(unsafe.Pointer(in.OCIRepository))
 	return nil
 }
@@ -138,7 +138,7 @@ func Convert_v1_HelmControllerDeployment_To_core_HelmControllerDeployment(in *He
 
 func autoConvert_core_HelmControllerDeployment_To_v1_HelmControllerDeployment(in *core.HelmControllerDeployment, out *HelmControllerDeployment, s conversion.Scope) error {
 	out.RawChart = *(*[]byte)(unsafe.Pointer(&in.RawChart))
-	out.Values = (*apiextensionsv1.JSON)(unsafe.Pointer(in.Values))
+	out.Values = (*helm.Values)(unsafe.Pointer(in.Values))
 	out.OCIRepository = (*OCIRepository)(unsafe.Pointer(in.OCIRepository))
 	return nil
 }

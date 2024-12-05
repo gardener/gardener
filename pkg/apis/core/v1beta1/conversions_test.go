@@ -8,12 +8,12 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	rbacv1 "k8s.io/api/rbac/v1"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	helm "github.com/gardener/gardener/pkg/apis/types/helm"
 )
 
 var _ = Describe("Conversion", func() {
@@ -551,7 +551,7 @@ var _ = Describe("Conversion", func() {
 					Expect(out.ProviderConfig).To(BeNil(), "providerConfig is empty for non-custom type")
 					Expect(out.Helm).To(Equal(&core.HelmControllerDeployment{
 						RawChart: []byte("foo"),
-						Values: &apiextensionsv1.JSON{
+						Values: &helm.Values{
 							Raw: []byte(`{"foo":["bar","baz"]}`),
 						},
 					}))
@@ -605,7 +605,7 @@ var _ = Describe("Conversion", func() {
 				BeforeEach(func() {
 					in.Helm = &core.HelmControllerDeployment{
 						RawChart: []byte("foo"),
-						Values: &apiextensionsv1.JSON{
+						Values: &helm.Values{
 							Raw: []byte(`{"foo":["bar","baz"]}`),
 						},
 					}
@@ -629,7 +629,7 @@ var _ = Describe("Conversion", func() {
 							Tag:        ptr.To("1.0.0"),
 							Digest:     ptr.To("sha256:foo"),
 						},
-						Values: &apiextensionsv1.JSON{
+						Values: &helm.Values{
 							Raw: []byte(`{"foo":["bar","baz"]}`),
 						},
 					}

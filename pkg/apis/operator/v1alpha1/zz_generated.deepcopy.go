@@ -12,10 +12,10 @@ package v1alpha1
 import (
 	corev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	helm "github.com/gardener/gardener/pkg/apis/types/helm"
 	apicorev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -34,7 +34,7 @@ func (in *AdmissionDeploymentSpec) DeepCopyInto(out *AdmissionDeploymentSpec) {
 	}
 	if in.Values != nil {
 		in, out := &in.Values, &out.Values
-		*out = new(v1.JSON)
+		*out = new(helm.Values)
 		(*in).DeepCopyInto(*out)
 	}
 	return
@@ -102,7 +102,7 @@ func (in *AuthenticationWebhook) DeepCopyInto(out *AuthenticationWebhook) {
 	*out = *in
 	if in.CacheTTL != nil {
 		in, out := &in.CacheTTL, &out.CacheTTL
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	if in.Version != nil {
@@ -328,7 +328,7 @@ func (in *DashboardGitHub) DeepCopyInto(out *DashboardGitHub) {
 	out.SecretRef = in.SecretRef
 	if in.PollInterval != nil {
 		in, out := &in.PollInterval, &out.PollInterval
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	return
@@ -349,7 +349,7 @@ func (in *DashboardOIDC) DeepCopyInto(out *DashboardOIDC) {
 	*out = *in
 	if in.SessionLifetime != nil {
 		in, out := &in.SessionLifetime, &out.SessionLifetime
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	if in.AdditionalScopes != nil {
@@ -568,12 +568,12 @@ func (in *ExtensionDeploymentSpec) DeepCopyInto(out *ExtensionDeploymentSpec) {
 	in.DeploymentSpec.DeepCopyInto(&out.DeploymentSpec)
 	if in.Values != nil {
 		in, out := &in.Values, &out.Values
-		*out = new(v1.JSON)
+		*out = new(helm.Values)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.RuntimeClusterValues != nil {
 		in, out := &in.RuntimeClusterValues, &out.RuntimeClusterValues
-		*out = new(v1.JSON)
+		*out = new(helm.Values)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.Policy != nil {
@@ -583,7 +583,7 @@ func (in *ExtensionDeploymentSpec) DeepCopyInto(out *ExtensionDeploymentSpec) {
 	}
 	if in.SeedSelector != nil {
 		in, out := &in.SeedSelector, &out.SeedSelector
-		*out = new(metav1.LabelSelector)
+		*out = new(v1.LabelSelector)
 		(*in).DeepCopyInto(*out)
 	}
 	return
@@ -1187,7 +1187,7 @@ func (in *KubeControllerManagerConfig) DeepCopyInto(out *KubeControllerManagerCo
 	}
 	if in.CertificateSigningDuration != nil {
 		in, out := &in.CertificateSigningDuration, &out.CertificateSigningDuration
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	return
@@ -1268,7 +1268,7 @@ func (in *ProjectQuotaConfiguration) DeepCopyInto(out *ProjectQuotaConfiguration
 	in.Config.DeepCopyInto(&out.Config)
 	if in.ProjectSelector != nil {
 		in, out := &in.ProjectSelector, &out.ProjectSelector
-		*out = new(metav1.LabelSelector)
+		*out = new(v1.LabelSelector)
 		(*in).DeepCopyInto(*out)
 	}
 	return

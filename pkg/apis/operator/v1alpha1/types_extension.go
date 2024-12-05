@@ -5,12 +5,12 @@
 package v1alpha1
 
 import (
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/types/helm"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -71,10 +71,10 @@ type ExtensionDeploymentSpec struct {
 	DeploymentSpec `json:",inline"`
 	// Values are the deployment values used in the creation of the ControllerDeployment in the virtual garden cluster.
 	// +optional
-	Values *apiextensionsv1.JSON `json:"values,omitempty"`
+	Values *helm.Values `json:"values,omitempty"`
 	// RuntimeClusterValues are the deployment values for the extension deployment running in the runtime garden cluster.
 	// +optional
-	RuntimeClusterValues *apiextensionsv1.JSON `json:"runtimeClusterValues,omitempty"`
+	RuntimeClusterValues *helm.Values `json:"runtimeClusterValues,omitempty"`
 	// Policy controls how the controller is deployed. It defaults to 'OnDemand'.
 	// +optional
 	Policy *gardencorev1beta1.ControllerDeploymentPolicy `json:"policy,omitempty"`
@@ -97,7 +97,7 @@ type AdmissionDeploymentSpec struct {
 	VirtualCluster *DeploymentSpec `json:"virtualCluster,omitempty"`
 	// Values are the deployment values. The values will be applied to both admission deployments.
 	// +optional
-	Values *apiextensionsv1.JSON `json:"values,omitempty"`
+	Values *helm.Values `json:"values,omitempty"`
 }
 
 // DeploymentSpec is the specification for the deployment of a component.

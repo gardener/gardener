@@ -61,7 +61,7 @@ installs necessary resources in the virtual garden cluster e.g. RBAC that are ne
 <td>
 <code>values</code></br>
 <em>
-k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON
+github.com/gardener/gardener/pkg/apis/types/helm.Values
 </em>
 </td>
 <td>
@@ -1172,7 +1172,7 @@ DeploymentSpec
 <td>
 <code>values</code></br>
 <em>
-k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON
+github.com/gardener/gardener/pkg/apis/types/helm.Values
 </em>
 </td>
 <td>
@@ -1184,7 +1184,7 @@ k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON
 <td>
 <code>runtimeClusterValues</code></br>
 <em>
-k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON
+github.com/gardener/gardener/pkg/apis/types/helm.Values
 </em>
 </td>
 <td>

@@ -10,6 +10,7 @@
 package openapi
 
 import (
+	helm "github.com/gardener/gardener/pkg/apis/types/helm"
 	v1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
@@ -266,6 +267,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/settings/v1alpha1.OpenIDConnectPreset":                   schema_pkg_apis_settings_v1alpha1_OpenIDConnectPreset(ref),
 		"github.com/gardener/gardener/pkg/apis/settings/v1alpha1.OpenIDConnectPresetList":               schema_pkg_apis_settings_v1alpha1_OpenIDConnectPresetList(ref),
 		"github.com/gardener/gardener/pkg/apis/settings/v1alpha1.OpenIDConnectPresetSpec":               schema_pkg_apis_settings_v1alpha1_OpenIDConnectPresetSpec(ref),
+		"github.com/gardener/gardener/pkg/apis/types/helm.Values":                                       schema_pkg_apis_types_helm_Values(ref),
 		"k8s.io/api/autoscaling/v1.ContainerResourceMetricSource":                                       schema_k8sio_api_autoscaling_v1_ContainerResourceMetricSource(ref),
 		"k8s.io/api/autoscaling/v1.ContainerResourceMetricStatus":                                       schema_k8sio_api_autoscaling_v1_ContainerResourceMetricStatus(ref),
 		"k8s.io/api/autoscaling/v1.CrossVersionObjectReference":                                         schema_k8sio_api_autoscaling_v1_CrossVersionObjectReference(ref),
@@ -951,7 +953,7 @@ func schema_pkg_apis_core_v1_HelmControllerDeployment(ref common.ReferenceCallba
 					"values": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Values are the chart values.",
-							Ref:         ref("k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON"),
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/types/helm.Values"),
 						},
 					},
 					"ociRepository": {
@@ -964,7 +966,7 @@ func schema_pkg_apis_core_v1_HelmControllerDeployment(ref common.ReferenceCallba
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1.OCIRepository", "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON"},
+			"github.com/gardener/gardener/pkg/apis/core/v1.OCIRepository", "github.com/gardener/gardener/pkg/apis/types/helm.Values"},
 	}
 }
 
@@ -3855,7 +3857,7 @@ func schema_pkg_apis_core_v1beta1_HelmControllerDeployment(ref common.ReferenceC
 					"values": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Values is a map of values for the given chart.",
-							Ref:         ref("k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON"),
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/types/helm.Values"),
 						},
 					},
 					"ociRepository": {
@@ -3868,7 +3870,7 @@ func schema_pkg_apis_core_v1beta1_HelmControllerDeployment(ref common.ReferenceC
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.OCIRepository", "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.OCIRepository", "github.com/gardener/gardener/pkg/apis/types/helm.Values"},
 	}
 }
 
@@ -12277,6 +12279,18 @@ func schema_pkg_apis_settings_v1alpha1_OpenIDConnectPresetSpec(ref common.Refere
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/settings/v1alpha1.KubeAPIServerOpenIDConnect", "github.com/gardener/gardener/pkg/apis/settings/v1alpha1.OpenIDConnectClientAuthentication", "k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"},
+	}
+}
+
+func schema_pkg_apis_types_helm_Values(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Values represents any valid Helm values. Must be of type map[string]interface{}.",
+				Type:        helm.Values{}.OpenAPISchemaType(),
+				Format:      helm.Values{}.OpenAPISchemaFormat(),
+			},
+		},
 	}
 }
 

@@ -9,7 +9,6 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -17,6 +16,7 @@ import (
 
 	. "github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
+	"github.com/gardener/gardener/pkg/apis/types/helm"
 )
 
 var _ = Describe("#ValidateControllerDeployment", func() {
@@ -83,7 +83,7 @@ var _ = Describe("#ValidateControllerDeployment", func() {
 	Context("helm type", func() {
 		BeforeEach(func() {
 			controllerDeployment.Helm = &HelmControllerDeployment{
-				Values: &apiextensionsv1.JSON{
+				Values: &helm.Values{
 					Raw: []byte(`{"foo":["bar","baz"]}`),
 				},
 			}

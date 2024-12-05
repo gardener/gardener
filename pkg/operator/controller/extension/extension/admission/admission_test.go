@@ -15,7 +15,6 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -25,6 +24,7 @@ import (
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/apis/types/helm"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	mockchartrenderer "github.com/gardener/gardener/pkg/chartrenderer/mock"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
@@ -129,7 +129,7 @@ var _ = Describe("Deployment", func() {
 		})
 
 		It("should succeed reconciling the admission resources", func() {
-			extension.Spec.Deployment.AdmissionDeployment.Values = &apiextensionsv1.JSON{
+			extension.Spec.Deployment.AdmissionDeployment.Values = &helm.Values{
 				Raw: []byte(`{"foo": "bar"}`),
 			}
 
