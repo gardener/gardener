@@ -120,7 +120,8 @@ There are rules for the new lifecycle, some of them need to be ensured through v
 - Classification stages in a lifecycle must only appear ordered from `unavailable` to `expired` as described in the list above.
 - It is not required that every classification stage is present in the lifecycle.
 - Start times are always monotonically increasing.
-- The first start date is optional and interpreted as zero time, meaning it has already started.
+- In case two stages have the same `startTime`, the last stage is favored.
+- The leading start dates are optional and interpreted as zero time, meaning it has already started.
 - If no lifecycle is given, it defaults to a lifecycle definition with one `supported` stage.
 - If all start times are in the future, the resulting classification is `unavailable`.
 
@@ -150,6 +151,8 @@ spec:
       - version: 1.18.0
         lifecycle:
           - classification: supported
+          - classification: deprecated
+            startTime: "2022-01-01T00:00:00Z"
           - classification: expired
             startTime: "2022-06-01T00:00:00Z"
 
@@ -178,6 +181,84 @@ status:
 The existing fields continue to function as before but are deprecated. `lifecycle` cannot be combined with the usage of the existing `classification` and `expirationDate` fields though.
 
 The `status` always reflects the current state of a classification no matter if the new or deprecated API is used. Specifically when using the old API this means that if the `expirationDate` has passed, the resulting status is evaluated as `expired`, overwriting the actual `classification` value.
+
+### Compatibility with Namespaced Cloud Profiles
+
+Of course the new version classification lifecycles must be compatible with `NamespacedCloudProfile`s. This leads to some special cases to ensure the overridden `CloudProfile` inside `NamespacedCloudProfile.Status` itself always produces a valid `CloudProfile`.
+
+In the previous implementation a version's `classification` could not be changed, while changing the `expirationDate` is allowed. We try to retain this intention.
+Hence changing the `startTime` of a stage is possible, but introducing new lifecycle stages isn't.
+
+
+Given the `CloudProfile` from above, the following `NamespacedCloudProfile` is valid:
+
+```yaml
+apiVersion: core.gardener.cloud/v1beta1
+kind: NamespacedCloudProfile
+metadata:
+  name: local
+  namespace: shoot
+spec:
+  kubernetes:
+    versions:
+      # omitted versions will not be changed
+
+      - version: 1.28.0
+        lifecycle:
+          # preview stage will stay as is
+          - classification: supported
+            startTime: "2025-12-01T00:00:00Z" # postpones the start time
+
+      - version: 1.18.0
+        lifecycle:
+          - classification: supported
+            startTime: "2022-01-01T00:00:00Z" # adds a startTime to supported
+          - classification: deprecated
+            startTime: "2024-06-01T00:00:00Z" # postpones deprecated even after expired
+          # expired stage will be adjusted to the startTime of deprecated to avoid the version to expire before deprecation
+status:
+  cloudProfileSpec:
+      kubernetes:
+      versions:
+        - version: 1.27.0 # from base
+
+        - version: 1.28.0
+          lifecycle:
+            - classification: preview # from base
+            - classification: supported
+              startTime: "2025-12-01T00:00:00Z" # override
+  
+        - version: 1.18.0
+          lifecycle:
+            - classification: supported
+              startTime: "2022-01-01T00:00:00Z" # override
+            - classification: deprecated
+              startTime: "2024-06-01T00:00:00Z" # override
+            - classification: expired
+              startTime: "2024-06-01T00:00:00Z" # implicit override, explained below
+
+        # from base
+        - version: 2.0.0
+          lifecycle:
+            - classification: preview
+              startTime: "2036-02-07T06:28:16Z"
+```
+
+Declaring and updating a `NamespacedCloudProfile` is straightforward and creating an invalid `NamespacedCloudProfile.Status` is prevented by our existing validations.
+
+Though introducing new stages or changing their `startTime` in the `CloudProfile` might lead to conflicts like the following:
+
+1. The start time of the deprecated stage might be between the ones of preview or supported.
+2. The start time of expired might be before deprecated.
+
+To solve these contradictions, the `startTime` of the base profile's stages will implicitly be overridden in `NamespacedCloudProfile.Status`.
+In case of the two examples above, this means:
+
+1. `preview`'s `startTime` will be set to the one of the `deprecated` override.
+2. `expired`'s `startTime` will be set to the one of the `deprecated` override.
+
+This way the administrator is always capable of introducing or changing the `startTime` of new lifecycle stages for existing versions in the parent `CloudProfile`.
+But as long as any `NamespacedCloudProfile` overrides one lifecycle stage, the stage itself cannot be deleted.
 
 ## Considered Alternatives
 
