@@ -1018,11 +1018,15 @@ func KeyV2(
 	}
 
 	if credentialsRotation != nil {
-		if credentialsRotation.CertificateAuthorities != nil && credentialsRotation.CertificateAuthorities.LastInitiationTime != nil {
-			data = append(data, credentialsRotation.CertificateAuthorities.LastInitiationTime.Time.String())
+		if credentialsRotation.CertificateAuthorities != nil {
+			if lastInitiationTime := v1beta1helper.LastInitiationTimeForWorkerPool(worker.Name, credentialsRotation.CertificateAuthorities.PendingWorkersRollouts, credentialsRotation.CertificateAuthorities.LastInitiationTime); lastInitiationTime != nil {
+				data = append(data, lastInitiationTime.Time.String())
+			}
 		}
-		if credentialsRotation.ServiceAccountKey != nil && credentialsRotation.ServiceAccountKey.LastInitiationTime != nil {
-			data = append(data, credentialsRotation.ServiceAccountKey.LastInitiationTime.Time.String())
+		if credentialsRotation.ServiceAccountKey != nil {
+			if lastInitiationTime := v1beta1helper.LastInitiationTimeForWorkerPool(worker.Name, credentialsRotation.ServiceAccountKey.PendingWorkersRollouts, credentialsRotation.ServiceAccountKey.LastInitiationTime); lastInitiationTime != nil {
+				data = append(data, lastInitiationTime.Time.String())
+			}
 		}
 	}
 
