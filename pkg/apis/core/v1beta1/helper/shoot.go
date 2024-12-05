@@ -6,11 +6,13 @@ package helper
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 
 	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -661,4 +663,15 @@ func AccessRestrictionsAreSupported(seedAccessRestrictions []gardencorev1beta1.A
 // to another seed.
 func ShouldPrepareShootForMigration(shoot *gardencorev1beta1.Shoot) bool {
 	return shoot.Status.SeedName != nil && shoot.Spec.SeedName != nil && *shoot.Spec.SeedName != *shoot.Status.SeedName
+}
+
+// LastInitiationTimeForWorkerPool returns the last initiation time for the worker pool when found in the given list of
+// pending workers rollouts. If the worker pool is not found in the list, the global last initiation time is returned.
+func LastInitiationTimeForWorkerPool(name string, pendingWorkersRollout []gardencorev1beta1.PendingWorkersRollout, globalLastInitiationTime *metav1.Time) *metav1.Time {
+	if i := slices.IndexFunc(pendingWorkersRollout, func(rollout gardencorev1beta1.PendingWorkersRollout) bool {
+		return rollout.Name == name
+	}); i != -1 {
+		return pendingWorkersRollout[i].LastInitiationTime
+	}
+	return globalLastInitiationTime
 }

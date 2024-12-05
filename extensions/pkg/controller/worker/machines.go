@@ -19,7 +19,7 @@ import (
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/util"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
@@ -140,15 +140,19 @@ func WorkerPoolHashV1(pool extensionsv1alpha1.WorkerPool, cluster *extensionscon
 	}
 
 	if status := cluster.Shoot.Status; status.Credentials != nil && status.Credentials.Rotation != nil {
-		if status.Credentials.Rotation.CertificateAuthorities != nil && status.Credentials.Rotation.CertificateAuthorities.LastInitiationTime != nil {
-			data = append(data, status.Credentials.Rotation.CertificateAuthorities.LastInitiationTime.Time.String())
+		if status.Credentials.Rotation.CertificateAuthorities != nil {
+			if lastInitiationTime := v1beta1helper.LastInitiationTimeForWorkerPool(pool.Name, status.Credentials.Rotation.CertificateAuthorities.PendingWorkersRollouts, status.Credentials.Rotation.CertificateAuthorities.LastInitiationTime); lastInitiationTime != nil {
+				data = append(data, lastInitiationTime.Time.String())
+			}
 		}
-		if status.Credentials.Rotation.ServiceAccountKey != nil && status.Credentials.Rotation.ServiceAccountKey.LastInitiationTime != nil {
-			data = append(data, status.Credentials.Rotation.ServiceAccountKey.LastInitiationTime.Time.String())
+		if status.Credentials.Rotation.ServiceAccountKey != nil {
+			if lastInitiationTime := v1beta1helper.LastInitiationTimeForWorkerPool(pool.Name, status.Credentials.Rotation.ServiceAccountKey.PendingWorkersRollouts, status.Credentials.Rotation.ServiceAccountKey.LastInitiationTime); lastInitiationTime != nil {
+				data = append(data, lastInitiationTime.Time.String())
+			}
 		}
 	}
 
-	if helper.IsNodeLocalDNSEnabled(cluster.Shoot.Spec.SystemComponents) {
+	if v1beta1helper.IsNodeLocalDNSEnabled(cluster.Shoot.Spec.SystemComponents) {
 		data = append(data, "node-local-dns")
 	}
 
