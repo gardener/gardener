@@ -13,6 +13,7 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -55,7 +56,8 @@ type Reconciler struct {
 	GardenClusterIdentity string
 	SeedName              string
 
-	gardenSecrets map[string]*corev1.Secret
+	namespaceToShootName sync.Map
+	gardenSecrets        map[string]*corev1.Secret
 }
 
 // Reconcile executes care operations, e.g. health checks or garbage collection.
@@ -70,6 +72,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	shoot := &gardencorev1beta1.Shoot{}
 	if err := r.GardenClient.Get(ctx, req.NamespacedName, shoot); err != nil {
 		if apierrors.IsNotFound(err) {
+			r.namespaceToShootName.Range(func(nsName, shoot any) bool {
+				// the request does not contain the namespace name, thus drop everything for this target
+				if shoot.(types.NamespacedName) == req.NamespacedName {
+					r.namespaceToShootName.Delete(nsName)
+				}
+				return true
+			})
+
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
@@ -85,7 +95,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	// if shoot is no longer managed by this gardenlet (e.g., due to migration to another seed) then don't requeue.
 	if ptr.Deref(shoot.Status.SeedName, "") != r.SeedName {
+		if shoot.Status.TechnicalID != "" {
+			// cleanup mapping
+			r.namespaceToShootName.Delete(shoot.Status.TechnicalID)
+		}
 		return reconcile.Result{}, nil
+	}
+
+	if shoot.Status.TechnicalID != "" {
+		r.namespaceToShootName.Store(shoot.Status.TechnicalID, req.NamespacedName)
 	}
 
 	careCtx, cancel := controllerutils.GetChildReconciliationContext(ctx, r.Config.Controllers.ShootCare.SyncPeriod.Duration)
