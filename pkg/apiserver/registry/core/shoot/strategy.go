@@ -120,10 +120,13 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 				mustIncrease, mustRemoveOperationAnnotation = true, true
 
 			case v1beta1constants.OperationRotateCredentialsStart,
+				v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout,
 				v1beta1constants.OperationRotateCredentialsComplete,
 				v1beta1constants.OperationRotateCAStart,
+				v1beta1constants.OperationRotateCAStartWithoutWorkersRollout,
 				v1beta1constants.OperationRotateCAComplete,
 				v1beta1constants.OperationRotateServiceAccountKeyStart,
+				v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout,
 				v1beta1constants.OperationRotateServiceAccountKeyComplete,
 				v1beta1constants.OperationRotateETCDEncryptionKeyStart,
 				v1beta1constants.OperationRotateETCDEncryptionKeyComplete,

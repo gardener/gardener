@@ -4932,7 +4932,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 				},
 
 				Entry("rotate-ca-start", "rotate-credentials-start", "rotate-ca-start", "operation 'rotate-ca-start' is not permitted when maintenance operation is 'rotate-credentials-start'"),
+				Entry("rotate-ca-start-without-workers-rollout", "rotate-credentials-start", "rotate-ca-start-without-workers-rollout", "operation 'rotate-ca-start-without-workers-rollout' is not permitted when maintenance operation is 'rotate-credentials-start'"),
 				Entry("rotate-serviceaccount-key-start", "rotate-credentials-start", "rotate-serviceaccount-key-start", "operation 'rotate-serviceaccount-key-start' is not permitted when maintenance operation is 'rotate-credentials-start'"),
+				Entry("rotate-serviceaccount-key-start-without-workers-rollout", "rotate-credentials-start", "rotate-serviceaccount-key-start-without-workers-rollout", "operation 'rotate-serviceaccount-key-start-without-workers-rollout' is not permitted when maintenance operation is 'rotate-credentials-start'"),
 				Entry("rotate-etcd-encryption-key-start", "rotate-credentials-start", "rotate-etcd-encryption-key-start", "operation 'rotate-etcd-encryption-key-start' is not permitted when maintenance operation is 'rotate-credentials-start'"),
 
 				Entry("rotate-ca-complete", "rotate-credentials-complete", "rotate-ca-complete", "operation 'rotate-ca-complete' is not permitted when maintenance operation is 'rotate-credentials-complete'"),
@@ -4942,6 +4944,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("rotate-credentials-start", "rotate-ca-start", "rotate-credentials-start", "operation 'rotate-credentials-start' is not permitted when maintenance operation is 'rotate-ca-start'"),
 				Entry("rotate-credentials-start", "rotate-serviceaccount-key-start", "rotate-credentials-start", "operation 'rotate-credentials-start' is not permitted when maintenance operation is 'rotate-serviceaccount-key-start'"),
 				Entry("rotate-credentials-start", "rotate-etcd-encryption-key-start", "rotate-credentials-start", "operation 'rotate-credentials-start' is not permitted when maintenance operation is 'rotate-etcd-encryption-key-start'"),
+				Entry("rotate-credentials-start-without-workers-rollout", "rotate-ca-start", "rotate-credentials-start-without-workers-rollout", "operation 'rotate-credentials-start-without-workers-rollout' is not permitted when maintenance operation is 'rotate-ca-start'"),
+				Entry("rotate-credentials-start-without-workers-rollout", "rotate-serviceaccount-key-start", "rotate-credentials-start-without-workers-rollout", "operation 'rotate-credentials-start-without-workers-rollout' is not permitted when maintenance operation is 'rotate-serviceaccount-key-start'"),
+				Entry("rotate-credentials-start-without-workers-rollout", "rotate-etcd-encryption-key-start", "rotate-credentials-start-without-workers-rollout", "operation 'rotate-credentials-start-without-workers-rollout' is not permitted when maintenance operation is 'rotate-etcd-encryption-key-start'"),
 
 				Entry("rotate-credentials-complete", "rotate-ca-complete", "rotate-credentials-complete", "operation 'rotate-credentials-complete' is not permitted when maintenance operation is 'rotate-ca-complete'"),
 				Entry("rotate-credentials-complete", "rotate-serviceaccount-key-complete", "rotate-credentials-complete", "operation 'rotate-credentials-complete' is not permitted when maintenance operation is 'rotate-serviceaccount-key-complete'"),
@@ -4970,10 +4975,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 				},
 
 				Entry("rotate-credentials-start", "rotate-credentials-start"),
+				Entry("rotate-credentials-start-without-workers-rollout", "rotate-credentials-start-without-workers-rollout"),
 				Entry("rotate-credentials-complete", "rotate-credentials-complete"),
 				Entry("rotate-etcd-encryption-key-start", "rotate-etcd-encryption-key-start"),
 				Entry("rotate-etcd-encryption-key-complete", "rotate-etcd-encryption-key-complete"),
 				Entry("rotate-serviceaccount-key-start", "rotate-serviceaccount-key-start"),
+				Entry("rotate-serviceaccount-key-start-without-workers-rollout", "rotate-serviceaccount-key-start-without-workers-rollout"),
 				Entry("rotate-serviceaccount-key-complete", "rotate-serviceaccount-key-complete"),
 			)
 
@@ -5002,10 +5009,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 				},
 
 				Entry("rotate-credentials-start", "rotate-credentials-start"),
+				Entry("rotate-credentials-start-without-workers-rollout", "rotate-credentials-start-without-workers-rollout"),
 				Entry("rotate-credentials-complete", "rotate-credentials-complete"),
 				Entry("rotate-etcd-encryption-key-start", "rotate-etcd-encryption-key-start"),
 				Entry("rotate-etcd-encryption-key-complete", "rotate-etcd-encryption-key-complete"),
 				Entry("rotate-serviceaccount-key-start", "rotate-serviceaccount-key-start"),
+				Entry("rotate-serviceaccount-key-start-without-workers-rollout", "rotate-serviceaccount-key-start-without-workers-rollout"),
 				Entry("rotate-serviceaccount-key-complete", "rotate-serviceaccount-key-complete"),
 			)
 
@@ -5019,10 +5028,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 				},
 
 				Entry("rotate-credentials-start", "rotate-credentials-start"),
+				Entry("rotate-credentials-start-without-workers-rollout", "rotate-credentials-start-without-workers-rollout"),
 				Entry("rotate-credentials-complete", "rotate-credentials-complete"),
 				Entry("rotate-etcd-encryption-key-start", "rotate-etcd-encryption-key-start"),
 				Entry("rotate-etcd-encryption-key-complete", "rotate-etcd-encryption-key-complete"),
 				Entry("rotate-serviceaccount-key-start", "rotate-serviceaccount-key-start"),
+				Entry("rotate-serviceaccount-key-start-without-workers-rollout", "rotate-serviceaccount-key-start-without-workers-rollout"),
 				Entry("rotate-serviceaccount-key-complete", "rotate-serviceaccount-key-complete"),
 			)
 
@@ -5039,10 +5050,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 				},
 
 				Entry("rotate-credentials-start", "rotate-credentials-start"),
+				Entry("rotate-credentials-start-without-workers-rollout", "rotate-credentials-start-without-workers-rollout"),
 				Entry("rotate-credentials-complete", "rotate-credentials-complete"),
 				Entry("rotate-etcd-encryption-key-start", "rotate-etcd-encryption-key-start"),
 				Entry("rotate-etcd-encryption-key-complete", "rotate-etcd-encryption-key-complete"),
 				Entry("rotate-serviceaccount-key-start", "rotate-serviceaccount-key-start"),
+				Entry("rotate-serviceaccount-key-start-without-workers-rollout", "rotate-serviceaccount-key-start-without-workers-rollout"),
 				Entry("rotate-serviceaccount-key-complete", "rotate-serviceaccount-key-complete"),
 			)
 
@@ -5103,6 +5116,31 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 				}),
 			)
+
+			It("should forbid hibernating the shoot when ServiceAccount key rotation is in PreparingWithoutWorkersRollout phase", func() {
+				shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(true)}
+				shoot.Status = core.ShootStatus{
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							ServiceAccountKey: &core.ServiceAccountKeyRotation{
+								Phase: core.RotationPreparingWithoutWorkersRollout,
+							},
+						},
+					},
+				}
+
+				oldShoot := shoot.DeepCopy()
+				oldShoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)}
+
+				Expect(ValidateShootUpdate(shoot, oldShoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.hibernation.enabled"),
+					"Detail": And(
+						ContainSubstring("shoot cannot be hibernated"),
+						ContainSubstring("phase is %q", "PreparingWithoutWorkersRollout"),
+					),
+				}))))
+			})
 
 			It("should forbid hibernation when the spec encryption config and status encryption config are different", func() {
 				shoot.Spec.Hibernation = &core.Hibernation{Enabled: ptr.To(false)}
