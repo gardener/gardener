@@ -46,7 +46,7 @@ This command sets up a new KinD cluster named `gardener-local` and stores the ku
 > It might be helpful to copy this file to `$HOME/.kube/config`, since you will need to target this KinD cluster multiple times.
 Alternatively, make sure to set your `KUBECONFIG` environment variable to `./example/gardener-local/kind/local/kubeconfig` for all future steps via `export KUBECONFIG=$PWD/example/gardener-local/kind/local/kubeconfig`.
 
-All of the following steps assume that you are using this kubeconfig.
+All following steps assume that you are using this kubeconfig.
 
 Additionally, this command also deploys a local container registry to the cluster, as well as a few registry mirrors, that are set up as a pull-through cache for all upstream registries Gardener uses by default.
 This is done to speed up image pulls across local clusters.
@@ -424,7 +424,7 @@ However, the development loop has limitations and the debugging setup is not wor
 
 ## Remote Local Setup
 
-Just like Prow is executing the KinD based integration tests in a K8s pod, it is
+Just like Prow is executing the KinD-based e2e tests in a K8s pod, it is
 possible to interactively run this KinD based Gardener development environment,
 aka "local setup", in a "remote" K8s pod.
 
