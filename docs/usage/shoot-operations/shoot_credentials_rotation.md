@@ -9,7 +9,7 @@ This page explains how the varieties of credentials can be rotated so that the c
 ### Cloud Provider Keys
 
 End-users must provide credentials such that Gardener and Kubernetes controllers can communicate with the respective cloud provider APIs in order to perform infrastructure operations.
-For example, Gardener uses them to setup and maintain the networks, security groups, subnets, etc., while the [cloud-controller-manager](https://kubernetes.io/docs/concepts/architecture/cloud-controller/) uses them to reconcile load balancers and routes, and the [CSI controller](https://kubernetes-csi.github.io/docs/) uses them to reconcile volumes and disks.
+For example, Gardener uses them to set up and maintain the networks, security groups, subnets, etc., while the [cloud-controller-manager](https://kubernetes.io/docs/concepts/architecture/cloud-controller/) uses them to reconcile load balancers and routes, and the [CSI controller](https://kubernetes-csi.github.io/docs/) uses them to reconcile volumes and disks.
 
 Depending on the cloud provider, the required [data keys of the `Secret` differ](../../../example/70-secret-provider.yaml).
 Please consult the documentation of the respective provider extension documentation to get to know the concrete data keys (e.g., [this document for AWS](https://github.com/gardener/gardener-extension-provider-aws/blob/master/docs/usage/usage.md#provider-secret-data)).
@@ -102,8 +102,8 @@ This is the same certificate that is also contained in the `kubeconfig`'s `certi
 
 > `Shoot`s created with Gardener >= v1.45 have a dedicated client CA which verifies the legitimacy of client certificates. For older `Shoot`s, the client CA is equal to the cluster CA. With the first CA rotation, such clusters will get a dedicated client CA as well.
 
-All of the certificates are valid for 10 years.
-Since it requires adaptation for the consumers of the `Shoot`, there is no automatic rotation and **it is the responsibility of the end-user to regularly rotate the CA certificates.**
+All the certificates are valid for 10 years.
+Since it requires adaptation for the consumers of the `Shoot`, there is no automatic rotation, and **it is the responsibility of the end-user to regularly rotate the CA certificates.**
 
 The rotation happens in three stages (see also [GEP-18](../../proposals/18-shoot-CA-rotation.md) for the full details):
 
@@ -151,9 +151,9 @@ The Plutono instance is exposed via `Ingress` and accessible for end-users via b
 
 Those credentials are stored in a `Secret` with the name `<shoot-name>.monitoring` in the project namespace in the garden cluster and has multiple data keys:
 
-- `username`: the user name
+- `username`: the username
 - `password`: the password
-- `auth`: the user name with SHA-1 representation of the password
+- `auth`: the username with SHA-1 representation of the password
 
 **It is the responsibility of the end-user to regularly rotate those credentials.**
 In order to rotate the `password`, annotate the `Shoot` with `gardener.cloud/operation=rotate-observability-credentials`.
@@ -192,7 +192,7 @@ The old key is stored in a `Secret` with the name `<shoot-name>.ssh-keypair.old`
 This key is used to encrypt the data of `Secret` resources inside etcd (see [upstream Kubernetes documentation](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/)).
 
 The encryption key has no expiration date.
-There is no automatic rotation and **it is the responsibility of the end-user to regularly rotate the encryption key.**
+There is no automatic rotation, and **it is the responsibility of the end-user to regularly rotate the encryption key.**
 
 The rotation happens in three stages:
 
@@ -230,7 +230,7 @@ Those tokens are typically used by workload `Pod`s running inside the cluster in
 This also includes system components running in the `kube-system` namespace.
 
 The token signing key has no expiration date.
-Since it might require adaptation for the consumers of the `Shoot`, there is no automatic rotation and **it is the responsibility of the end-user to regularly rotate the signing key.**
+Since it might require adaptation for the consumers of the `Shoot`, there is no automatic rotation, and **it is the responsibility of the end-user to regularly rotate the signing key.**
 
 The rotation happens in three stages, similar to how the [CA certificates](#certificate-authorities) are rotated:
 
