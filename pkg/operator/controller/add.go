@@ -89,7 +89,7 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 				Name: requiredruntime.ControllerName,
 				AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, _ *operatorv1alpha1.Garden) (bool, error) {
 					return true, (&requiredruntime.Reconciler{
-						Config: cfg,
+						Config: cfg.Controllers.ExtensionRequired,
 					}).AddToManager(ctx, mgr)
 				},
 			},

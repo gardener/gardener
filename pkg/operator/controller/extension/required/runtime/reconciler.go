@@ -31,7 +31,7 @@ var RequeueExtensionKindNotCalculated = 2 * time.Second
 // Reconciler reconciles Extensions to determine their required state.
 type Reconciler struct {
 	Client client.Client
-	Config *config.OperatorConfiguration
+	Config config.ExtensionRequiredControllerConfiguration
 
 	Lock                *sync.RWMutex
 	KindToRequiredTypes map[string]sets.Set[string]

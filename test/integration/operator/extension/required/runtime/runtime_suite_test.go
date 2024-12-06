@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -135,9 +136,7 @@ var _ = BeforeSuite(func() {
 	DeferCleanup(test.WithVar(&requiredruntime.RequeueExtensionKindNotCalculated, 10*time.Millisecond))
 
 	Expect((&requiredruntime.Reconciler{
-		Config: &config.OperatorConfiguration{
-			Controllers: config.ControllerConfiguration{},
-		},
+		Config: config.ExtensionRequiredControllerConfiguration{ConcurrentSyncs: ptr.To(5)},
 	}).AddToManager(ctx, mgr)).Should(Succeed())
 
 	By("Start manager")
