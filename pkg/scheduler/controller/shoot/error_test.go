@@ -18,8 +18,8 @@ var _ = Describe("DetermineSeedError", func() {
 	It("Should convert string to DetermineSeedError", func() {
 		errMsg := fmt.Sprintf("the 1st error message %s", Unknown.suffix())
 		dsErr, err := DetermineSeedErrorFromString(errMsg)
-		Expect(err).To(BeNil())
-		Expect(dsErr).To(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred())
+		Expect(dsErr).NotTo(BeNil())
 		Expect(dsErr).To(BeAssignableToTypeOf(&DetermineSeedError{}))
 		Expect(dsErr.reason).To(Equal(Unknown))
 	})
