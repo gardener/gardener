@@ -68,7 +68,7 @@ If the `.spec.kubernetes.enableStaticTokenKubeconfig` field is set to `true` (de
 This `Secret` is stored with the name `<shoot-name>.kubeconfig` in the project namespace in the garden cluster and has multiple data keys:
 
 - `kubeconfig`: the completed kubeconfig
-- `ca.crt`: the CA bundle for establishing trust to the API server (same as in the [Cluster CA bundle secret](#cluster-certificate-authority-bundle))
+- `ca.crt`: the CA bundle for establishing trust to the API server (same as in the [Cluster CA bundle secret](#certificate-authorities))
 
 > `Shoots` created with Gardener <= 0.28 used to have a `kubeconfig` based on a client certificate instead of a static token. With the first kubeconfig rotation, such clusters will get a static token as well.
 >
