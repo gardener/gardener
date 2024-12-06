@@ -65,7 +65,7 @@ func AddToManager(
 		Identity:              identity,
 		GardenClusterIdentity: gardenClusterIdentity,
 		SeedName:              cfg.SeedConfig.Name,
-	}).AddToManager(ctx, mgr, gardenCluster); err != nil {
+	}).AddToManager(mgr, gardenCluster); err != nil {
 		return fmt.Errorf("failed adding care reconciler: %w", err)
 	}
 

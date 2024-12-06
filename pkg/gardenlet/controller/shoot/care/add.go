@@ -24,17 +24,15 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/go-logr/logr"
 )
 
 // ControllerName is the name of this controller.
 const ControllerName = "shoot-care"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gardenCluster cluster.Cluster) error {
+func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Cluster) error {
 	if r.GardenClient == nil {
 		r.GardenClient = gardenCluster.GetClient()
 	}
@@ -42,7 +40,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 		r.Clock = clock.RealClock{}
 	}
 
-	c, err := builder.
+	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
@@ -56,17 +54,13 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 				r.EventHandler(),
 				r.ShootPredicate()),
 		).
-		Build(r)
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		source.Kind[client.Object](r.SeedClientSet.Cache(),
-			&resourcesv1alpha1.ManagedResource{},
-			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapManagedResourceToShoot), mapper.UpdateWithNew, c.GetLogger()),
-			predicateutils.ManagedResourceConditionsChanged()),
-	)
+		WatchesRawSource(
+			source.Kind[client.Object](r.SeedClientSet.Cache(),
+				&resourcesv1alpha1.ManagedResource{},
+				handler.EnqueueRequestsFromMapFunc(r.MapManagedResourceToShoot),
+				predicateutils.ManagedResourceConditionsChanged()),
+		).
+		Complete(r)
 }
 
 // RandomDurationWithMetaDuration is an alias for utils.RandomDurationWithMetaDuration.
@@ -136,7 +130,7 @@ func seedGotAssigned(oldShoot, newShoot *gardencorev1beta1.Shoot) bool {
 }
 
 // MapManagedResourceToShoot is a mapper.MapFunc for mapping a ManagedResource to the owning Shoot.
-func (r *Reconciler) MapManagedResourceToShoot(_ context.Context, _ logr.Logger, _ client.Reader, mr client.Object) []reconcile.Request {
+func (r *Reconciler) MapManagedResourceToShoot(_ context.Context, mr client.Object) []reconcile.Request {
 	if name, ok := r.namespaceToShootName.Load(mr.GetNamespace()); ok {
 		return []reconcile.Request{{NamespacedName: name.(types.NamespacedName)}}
 	}
