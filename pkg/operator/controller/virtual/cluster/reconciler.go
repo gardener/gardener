@@ -10,11 +10,13 @@ import (
 
 	"k8s.io/client-go/rest"
 	componentbaseconfig "k8s.io/component-base/config"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/gardener/gardener/pkg/api/indexer"
 	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 )
@@ -58,6 +60,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request Request) (reconcile.
 			return reconcile.Result{}, fmt.Errorf("could not instantiate virtual cluster: %w", err)
 		}
 
+		log.Info("Adding field indexes to informers")
+		if err := addAllFieldIndexes(ctx, virtualCluster.GetFieldIndexer()); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed adding indexes: %w", err)
+		}
+
 		if err := r.Manager.Add(virtualCluster); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed adding virtual cluster to manager: %w", err)
 		}
@@ -68,4 +75,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, request Request) (reconcile.
 	}
 
 	return reconcile.Result{}, nil
+}
+
+func addAllFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
+	for _, fn := range []func(context.Context, client.FieldIndexer) error{
+		indexer.AddControllerInstallationRegistrationRefName,
+	} {
+		if err := fn(ctx, i); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

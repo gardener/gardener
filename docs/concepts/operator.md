@@ -553,6 +553,7 @@ Some controllers may only be instantiated or added later, because they need the 
 * [`NetworkPolicy` controller](gardenlet.md#networkpolicy-controller)
 * [`VPA EvictionRequirements` controller](gardenlet.md#vpaevictionrequirements-controller)
 * [`Required Runtime` reconciler](#required-runtime-reconciler)
+* [`Required Virtual` reconciler](#required-virtual-reconciler)
 * [`Access` controller](#access-controller)
 * [`Virtual-Cluster-Registrar` controller](#virtual-cluster-registrar-controller)
 * [`Gardenlet` controller](#gardenlet-controller)
@@ -578,6 +579,11 @@ Currently, this logic handles the following scenarios:
 This reconciler reacts on events from `BackupBucket`, `DNSRecord` and `Extension` resources.
 Based on these resources and the related `Extension` specification, it is checked if the extension deployment is required in the garden runtime cluster.
 The result is then put into the `RequiredRuntime` condition and added to the `Extension` status.
+
+#### [`Required Virtual` Reconciler](../../pkg/operator/controller/extension/required/virtual)
+
+This reconciler reacts on events from `ControllerInstallation` and `Extension` resources.
+It updates the `RequiredVirtual` condition of `Extension` objects, based on the existence of related `ControllerInstallation`s and whether they are marked as required.
 
 ### [`Access` Controller](../../pkg/operator/controller/virtual/access)
 
