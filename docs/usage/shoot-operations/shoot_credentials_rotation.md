@@ -38,6 +38,9 @@ Those include:
 
 While it is possible to rotate them one by one, there is also a convenient method to combine the rotation of all of those credentials.
 The rotation happens in two phases since it might be required to update some API clients (e.g., when CAs are rotated).
+
+### Prepare Rotation of All Credentials
+
 In order to start the rotation (first phase), you have to annotate the shoot with the `rotate-credentials-start` operation:
 
 ```bash
@@ -49,6 +52,8 @@ kubectl -n <shoot-namespace> annotate shoot <shoot-name> gardener.cloud/operatio
 
 Kindly consider the detailed descriptions below to learn how the rotation is performed and what your responsibilities are.
 Please note that all respective individual actions apply for this combined rotation as well (e.g., worker nodes are rolled out in the first phase).
+
+### Complete Rotation of All Credentials
 
 You can complete the rotation (second phase) by annotating the shoot with the `rotate-credentials-complete` operation:
 
