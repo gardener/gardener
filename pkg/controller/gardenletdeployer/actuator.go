@@ -15,7 +15,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/clock"
@@ -775,13 +774,7 @@ func createBootstrapKubeconfig(
 			serviceAccountNamespace = obj.GetNamespace()
 		)
 
-		// Create a kubeconfig containing a valid service account token as client credentials
-		kubernetesClientSet, err := kubernetesclientset.NewForConfig(gardenClientRestConfig)
-		if err != nil {
-			return "", fmt.Errorf("failed creating Kubernetes client: %w", err)
-		}
-
-		bootstrapKubeconfig, err = gardenletbootstraputil.ComputeGardenletKubeconfigWithServiceAccountToken(ctx, gardenClient, kubernetesClientSet.CoreV1(), gardenClientRestConfig, serviceAccountName, serviceAccountNamespace)
+		bootstrapKubeconfig, err = gardenletbootstraputil.ComputeGardenletKubeconfigWithServiceAccountToken(ctx, gardenClient, gardenClientRestConfig, serviceAccountName, serviceAccountNamespace)
 		if err != nil {
 			return "", err
 		}

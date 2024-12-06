@@ -5,10 +5,7 @@
 package tokenrequestor
 
 import (
-	"fmt"
-
 	corev1 "k8s.io/api/core/v1"
-	corev1clientset "k8s.io/client-go/kubernetes/typed/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -30,14 +27,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 	}
 	if r.TargetClient == nil {
 		r.TargetClient = targetCluster.GetClient()
-	}
-	if r.TargetCoreV1Client == nil {
-		var err error
-
-		r.TargetCoreV1Client, err = corev1clientset.NewForConfig(targetCluster.GetConfig())
-		if err != nil {
-			return fmt.Errorf("could not create coreV1Client: %w", err)
-		}
 	}
 
 	return builder.
