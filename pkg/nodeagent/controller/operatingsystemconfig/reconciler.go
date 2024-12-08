@@ -20,6 +20,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
@@ -50,7 +51,7 @@ type Reconciler struct {
 	Config        config.OperatingSystemConfigControllerConfig
 	Recorder      record.EventRecorder
 	DBus          dbus.DBus
-	FS            afero.Afero
+	FS            *filespkg.NodeAgentAfero
 	Extractor     registry.Extractor
 	CancelContext context.CancelFunc
 	HostName      string
@@ -64,6 +65,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	ctx, cancel := controllerutils.GetMainReconciliationContext(ctx, controllerutils.DefaultReconciliationTimeout)
 	defer cancel()
+
+	// TODO(oliver-goetz): Remove this migration step when Gardener v1.111 is released.
+	if err := r.migrateToNodeAgentFS(log); err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed migrating to node agent filesystem: %w", err)
+	}
 
 	secret := &corev1.Secret{}
 	if err := r.Client.Get(ctx, request.NamespacedName, secret); err != nil {
@@ -90,7 +96,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("failed extracting OSC from secret: %w", err)
 	}
 
-	oscChanges, err := computeOperatingSystemConfigChanges(r.FS, osc)
+	log.Info("Applying containerd configuration")
+	oscRaw, err = r.ReconcileContainerdConfig(ctx, log, osc, oscRaw)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed reconciling containerd configuration: %w", err)
+	}
+
+	oscChanges, err := computeOperatingSystemConfigChanges(r.FS.Afero, osc)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed calculating the OSC changes: %w", err)
 	}
@@ -98,11 +110,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	if node != nil && node.Annotations[nodeagentv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig] == oscChecksum {
 		log.Info("Configuration on this node is up to date, nothing to be done")
 		return reconcile.Result{}, nil
-	}
-
-	log.Info("Applying containerd configuration")
-	if err := r.ReconcileContainerdConfig(ctx, log, osc.Spec.CRIConfig); err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed reconciling containerd configuration: %w", err)
 	}
 
 	log.Info("Applying new or changed inline files")
@@ -170,7 +177,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	)
 
 	log.Info("Persisting current operating system config as 'last-applied' file to the disk", "path", lastAppliedOperatingSystemConfigFilePath)
-	if err := r.FS.WriteFile(lastAppliedOperatingSystemConfigFilePath, oscRaw, 0644); err != nil {
+	if err := r.FS.WriteFile(lastAppliedOperatingSystemConfigFilePath, oscRaw, 0600); err != nil {
 		return reconcile.Result{}, fmt.Errorf("unable to write current OSC to file path %q: %w", lastAppliedOperatingSystemConfigFilePath, err)
 	}
 
@@ -281,7 +288,7 @@ func (r *Reconciler) applyChangedInlineFiles(log logr.Logger, files []extensions
 			return fmt.Errorf("unable to create temporary file %q: %w", tmpFilePath, err)
 		}
 
-		if err := filespkg.Move(r.FS, tmpFilePath, file.Path); err != nil {
+		if err := filespkg.Move(r.FS.Afero, tmpFilePath, file.Path); err != nil {
 			return fmt.Errorf("unable to rename temporary file %q to %q: %w", tmpFilePath, file.Path, err)
 		}
 
@@ -293,7 +300,7 @@ func (r *Reconciler) applyChangedInlineFiles(log logr.Logger, files []extensions
 
 func (r *Reconciler) removeDeletedFiles(log logr.Logger, files []extensionsv1alpha1.File) error {
 	for _, file := range files {
-		if err := r.FS.Remove(file.Path); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
+		if err := r.FS.RemoveCreated(file.Path); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
 			return fmt.Errorf("unable to delete no longer needed file %q: %w", file.Path, err)
 		}
 
@@ -330,7 +337,7 @@ func (r *Reconciler) applyChangedUnits(ctx context.Context, log logr.Logger, uni
 		dropInDirectory := unitFilePath + ".d"
 
 		if len(unit.DropIns) == 0 {
-			if err := r.FS.RemoveAll(dropInDirectory); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
+			if err := r.FS.RemoveAllCreated(dropInDirectory); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
 				return fmt.Errorf("unable to delete systemd drop-in folder for unit %q: %w", unit.Name, err)
 			}
 		} else {
@@ -362,7 +369,7 @@ func (r *Reconciler) applyChangedUnits(ctx context.Context, log logr.Logger, uni
 
 			for _, dropIn := range unit.dropIns.deleted {
 				dropInFilePath := path.Join(dropInDirectory, dropIn.Name)
-				if err := r.FS.Remove(dropInFilePath); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
+				if err := r.FS.RemoveCreated(dropInFilePath); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
 					return fmt.Errorf("unable to delete drop-in file %q for unit %q: %w", dropInFilePath, unit.Name, err)
 				}
 				log.Info("Successfully removed no longer needed drop-in file for unit", "path", dropInFilePath, "unitName", unit.Name)
@@ -389,26 +396,28 @@ func (r *Reconciler) removeDeletedUnits(ctx context.Context, log logr.Logger, no
 	for _, unit := range units {
 		unitFilePath := path.Join(etcSystemdSystem, unit.Name)
 
-		unitFileExists, err := r.FS.Exists(unitFilePath)
-		if err != nil {
-			return fmt.Errorf("unable to check whether unit file %q exists: %w", unitFilePath, err)
+		if r.FS.GetFileSystemOperation(unitFilePath) == filespkg.OperationCreated {
+			unitFileExists, err := r.FS.Exists(unitFilePath)
+			if err != nil {
+				return fmt.Errorf("unable to check whether unit file %q exists: %w", unitFilePath, err)
+			}
+
+			if unitFileExists {
+				if err := r.DBus.Disable(ctx, unit.Name); err != nil {
+					return fmt.Errorf("unable to disable deleted unit %q: %w", unit.Name, err)
+				}
+
+				if err := r.DBus.Stop(ctx, r.Recorder, node, unit.Name); err != nil {
+					return fmt.Errorf("unable to stop deleted unit %q: %w", unit.Name, err)
+				}
+
+				if err := r.FS.RemoveCreated(unitFilePath); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
+					return fmt.Errorf("unable to delete systemd unit file of deleted unit %q: %w", unit.Name, err)
+				}
+			}
 		}
 
-		if unitFileExists {
-			if err := r.DBus.Disable(ctx, unit.Name); err != nil {
-				return fmt.Errorf("unable to disable deleted unit %q: %w", unit.Name, err)
-			}
-
-			if err := r.DBus.Stop(ctx, r.Recorder, node, unit.Name); err != nil {
-				return fmt.Errorf("unable to stop deleted unit %q: %w", unit.Name, err)
-			}
-
-			if err := r.FS.Remove(unitFilePath); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
-				return fmt.Errorf("unable to delete systemd unit file of deleted unit %q: %w", unit.Name, err)
-			}
-		}
-
-		if err := r.FS.RemoveAll(unitFilePath + ".d"); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
+		if err := r.FS.RemoveAllCreated(unitFilePath + ".d"); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
 			return fmt.Errorf("unable to delete systemd drop-in folder of deleted unit %q: %w", unit.Name, err)
 		}
 
@@ -467,4 +476,75 @@ func (r *Reconciler) executeUnitCommands(ctx context.Context, log logr.Logger, n
 	}
 
 	return mustRestartGardenerNodeAgent, flow.Parallel(fns...)(ctx)
+}
+
+// migrateToNodeAgentFS creates the node agent file system state for a node that has been provisioned with a previous version of Gardener.
+// TODO(oliver-goetz): Remove this method when Gardener v1.111 is released.
+func (r *Reconciler) migrateToNodeAgentFS(log logr.Logger) error {
+	oscRaw, err := r.FS.ReadFile(lastAppliedOperatingSystemConfigFilePath)
+	if errors.Is(err, afero.ErrFileNotFound) {
+		// OSC has never been saved before. This is a new node and there is nothing to migrate.
+		return nil
+	} else if err != nil {
+		return fmt.Errorf("unable to read the old OSC from file path %s: %w", lastAppliedOperatingSystemConfigFilePath, err)
+	}
+
+	osc := &extensionsv1alpha1.OperatingSystemConfig{}
+	if err := runtime.DecodeInto(decoder, oscRaw, osc); err != nil {
+		return fmt.Errorf("unable to decode the old OSC read from file path %s: %w", lastAppliedOperatingSystemConfigFilePath, err)
+	}
+
+	migrationUnits := mergeUnits(osc.Spec.Units, osc.Status.ExtensionUnits)
+	migrationFiles := collectAllFiles(osc)
+
+	var nodeAgentFiles []string
+
+	for _, unit := range migrationUnits {
+		unitFilePath := path.Join(path.Join("/", "etc", "systemd", "system"), unit.Name)
+		dropInDirectory := unitFilePath + ".d"
+
+		if unit.Content != nil {
+			// All units with content should have been created by gardener-node-agent.
+			nodeAgentFiles = append(nodeAgentFiles, unitFilePath)
+		}
+
+		for _, dropIn := range unit.DropIns {
+			dropInFilePath := path.Join(dropInDirectory, dropIn.Name)
+			// All drop-ins should have been created by gardener-node-agent.
+			nodeAgentFiles = append(nodeAgentFiles, dropInFilePath)
+		}
+	}
+
+	for _, file := range migrationFiles {
+		// All files should have been created by gardener-node-agent.
+		nodeAgentFiles = append(nodeAgentFiles, file.Path)
+	}
+
+	// All containerd files from containerd.go should have been created by gardener-node-agent.
+	nodeAgentFiles = append(nodeAgentFiles, path.Join("/", "etc", "systemd", "system", "containerd.service.d", "30-env_config.conf"))
+	nodeAgentFiles = append(nodeAgentFiles, configFile)
+
+	certsDirExists, err := r.FS.Exists(certsDir)
+	if err != nil {
+		return fmt.Errorf("unable to check %q directory exists: %w", certsDir, err)
+	}
+
+	if certsDirExists {
+		certsDirFiles, err := r.FS.ReadDir(certsDir)
+		if err != nil {
+			return fmt.Errorf("unable to read %q directory: %w", certsDir, err)
+		}
+		for _, file := range certsDirFiles {
+			if file.IsDir() {
+				nodeAgentFiles = append(nodeAgentFiles, path.Join(certsDir, file.Name()))
+				nodeAgentFiles = append(nodeAgentFiles, path.Join(certsDir, file.Name(), "hosts.toml"))
+			}
+		}
+	}
+
+	if err := r.FS.CreateStateFromFiles(log, nodeAgentFiles); err != nil {
+		return fmt.Errorf("unable to create node agents filesystem state from units and files: %w", err)
+	}
+
+	return nil
 }
