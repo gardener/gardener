@@ -2700,6 +2700,21 @@ kind: AuthorizationConfiguration
 			})
 
 			haVPNClientContainerFor := func(index int, disableNewVPN bool) corev1.Container {
+
+				var serviceCIDRs, podCIDRs, nodeCIDRs []string
+
+				for _, v := range values.ServiceNetworkCIDRs {
+					serviceCIDRs = append(serviceCIDRs, v.String())
+				}
+
+				for _, v := range values.VPN.PodNetworkCIDRs {
+					podCIDRs = append(podCIDRs, v.String())
+				}
+
+				for _, v := range values.VPN.NodeNetworkCIDRs {
+					nodeCIDRs = append(nodeCIDRs, v.String())
+				}
+
 				container := corev1.Container{
 					Name:            fmt.Sprintf("vpn-client-%d", index),
 					Image:           "vpn-client-image:really-latest",
@@ -2720,6 +2735,18 @@ kind: AuthorizationConfiguration
 						{
 							Name:  "NODE_NETWORK",
 							Value: values.VPN.NodeNetworkCIDRs[0].String(),
+						},
+						{
+							Name:  "SERVICE_NETWORKS",
+							Value: strings.Join(serviceCIDRs, ","),
+						},
+						{
+							Name:  "POD_NETWORKS",
+							Value: strings.Join(podCIDRs, ","),
+						},
+						{
+							Name:  "NODE_NETWORKS",
+							Value: strings.Join(nodeCIDRs, ","),
 						},
 						{
 							Name:  "VPN_SERVER_INDEX",
@@ -2868,6 +2895,17 @@ kind: AuthorizationConfiguration
 					Expect(deployment.Spec.Template.Labels).To(HaveKeyWithValue(labelKey, "allowed"))
 					Expect(deployment.Spec.Template.Spec.Containers[i+1]).To(DeepEqual(haVPNClientContainerFor(i, disableNewVPN)))
 				}
+
+				var serviceCIDRs, podCIDRs, nodeCIDRs []string
+				for _, v := range values.ServiceNetworkCIDRs {
+					serviceCIDRs = append(serviceCIDRs, v.String())
+				}
+				for _, v := range values.VPN.PodNetworkCIDRs {
+					podCIDRs = append(podCIDRs, v.String())
+				}
+				for _, v := range values.VPN.NodeNetworkCIDRs {
+					nodeCIDRs = append(nodeCIDRs, v.String())
+				}
 				pathControllerContainer := corev1.Container{
 					Name:            "vpn-path-controller",
 					Image:           "vpn-client-image:really-latest",
@@ -2885,6 +2923,18 @@ kind: AuthorizationConfiguration
 						{
 							Name:  "NODE_NETWORK",
 							Value: values.VPN.NodeNetworkCIDRs[0].String(),
+						},
+						{
+							Name:  "SERVICE_NETWORKS",
+							Value: strings.Join(serviceCIDRs, ","),
+						},
+						{
+							Name:  "POD_NETWORKS",
+							Value: strings.Join(podCIDRs, ","),
+						},
+						{
+							Name:  "NODE_NETWORKS",
+							Value: strings.Join(nodeCIDRs, ","),
 						},
 						{
 							Name:  "IS_HA",

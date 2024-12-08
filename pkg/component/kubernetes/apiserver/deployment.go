@@ -774,9 +774,21 @@ func (k *kubeAPIServer) vpnSeedClientInitContainer() *corev1.Container {
 }
 
 func (k *kubeAPIServer) vpnSeedClientContainer(index int) *corev1.Container {
-	nodes := ""
+	var serviceCIDRs, podCIDRs, nodeCIDRs []string
+	nodeCIDR := ""
 	if len(k.values.VPN.NodeNetworkCIDRs) > 0 {
-		nodes = k.values.VPN.NodeNetworkCIDRs[0].String()
+		nodeCIDR = k.values.VPN.NodeNetworkCIDRs[0].String()
+		for _, v := range k.values.VPN.NodeNetworkCIDRs {
+			nodeCIDRs = append(nodeCIDRs, v.String())
+		}
+	}
+
+	for _, v := range k.values.ServiceNetworkCIDRs {
+		serviceCIDRs = append(serviceCIDRs, v.String())
+	}
+
+	for _, v := range k.values.VPN.PodNetworkCIDRs {
+		podCIDRs = append(podCIDRs, v.String())
 	}
 
 	container := &corev1.Container{
@@ -798,7 +810,19 @@ func (k *kubeAPIServer) vpnSeedClientContainer(index int) *corev1.Container {
 			},
 			{
 				Name:  "NODE_NETWORK",
-				Value: nodes,
+				Value: nodeCIDR,
+			},
+			{
+				Name:  "SERVICE_NETWORKS",
+				Value: strings.Join(serviceCIDRs, ","),
+			},
+			{
+				Name:  "POD_NETWORKS",
+				Value: strings.Join(podCIDRs, ","),
+			},
+			{
+				Name:  "NODE_NETWORKS",
+				Value: strings.Join(nodeCIDRs, ","),
 			},
 			{
 				Name:  "VPN_SERVER_INDEX",
@@ -875,9 +899,21 @@ func (k *kubeAPIServer) vpnSeedClientContainer(index int) *corev1.Container {
 }
 
 func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
-	nodes := ""
+	var serviceCIDRs, podCIDRs, nodeCIDRs []string
+	nodeCIDR := ""
 	if len(k.values.VPN.NodeNetworkCIDRs) > 0 {
-		nodes = k.values.VPN.NodeNetworkCIDRs[0].String()
+		nodeCIDR = k.values.VPN.NodeNetworkCIDRs[0].String()
+		for _, v := range k.values.VPN.NodeNetworkCIDRs {
+			nodeCIDRs = append(nodeCIDRs, v.String())
+		}
+	}
+
+	for _, v := range k.values.ServiceNetworkCIDRs {
+		serviceCIDRs = append(serviceCIDRs, v.String())
+	}
+
+	for _, v := range k.values.VPN.PodNetworkCIDRs {
+		podCIDRs = append(podCIDRs, v.String())
 	}
 
 	container := &corev1.Container{
@@ -896,7 +932,19 @@ func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
 			},
 			{
 				Name:  "NODE_NETWORK",
-				Value: nodes,
+				Value: nodeCIDR,
+			},
+			{
+				Name:  "SERVICE_NETWORKS",
+				Value: strings.Join(serviceCIDRs, ","),
+			},
+			{
+				Name:  "POD_NETWORKS",
+				Value: strings.Join(podCIDRs, ","),
+			},
+			{
+				Name:  "NODE_NETWORKS",
+				Value: strings.Join(nodeCIDRs, ","),
 			},
 			{
 				Name:  "IS_HA",
