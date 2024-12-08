@@ -81,10 +81,7 @@ func WithClientConnectionOptions(cfg componentbaseconfig.ClientConnectionConfigu
 		if config.restConfig == nil {
 			return errors.New("REST config must be set before setting connection options")
 		}
-		config.restConfig.Burst = int(cfg.Burst)
-		config.restConfig.QPS = cfg.QPS
-		config.restConfig.AcceptContentTypes = cfg.AcceptContentTypes
-		config.restConfig.ContentType = cfg.ContentType
+		ApplyClientConnectionConfigurationToRESTConfig(&cfg, config.restConfig)
 		return nil
 	}
 }

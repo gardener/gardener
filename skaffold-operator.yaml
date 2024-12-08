@@ -257,6 +257,9 @@ build:
             - pkg/operator/controller/garden/garden
             - pkg/operator/controller/garden/reference
             - pkg/operator/controller/gardenlet
+            - pkg/operator/controller/virtual
+            - pkg/operator/controller/virtual/access
+            - pkg/operator/controller/virtual/cluster
             - pkg/operator/features
             - pkg/operator/predicate
             - pkg/operator/webhook
