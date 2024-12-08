@@ -45,6 +45,11 @@ controllers:
     renewIntervalSeconds: 30
   ignoreOperationAnnotation: false
 
+webhooks:
+  prometheus:
+    remoteWriteURLs: []
+    externalLabels: {}
+
 disableControllers: []
 disableWebhooks: []
 ignoreResources: false

@@ -14,6 +14,7 @@ import (
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/spf13/cobra"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -52,6 +53,7 @@ import (
 	localservice "github.com/gardener/gardener/pkg/provider-local/controller/service"
 	localworker "github.com/gardener/gardener/pkg/provider-local/controller/worker"
 	"github.com/gardener/gardener/pkg/provider-local/local"
+	prometheuswebhook "github.com/gardener/gardener/pkg/provider-local/webhook/prometheus"
 	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
@@ -145,6 +147,9 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			Namespace: os.Getenv("WEBHOOK_CONFIG_NAMESPACE"),
 		}
 
+		// options for the prometheus webhook
+		prometheusWebhookOptions = &prometheuswebhook.WebhookOptions{}
+
 		controllerSwitches = ControllerSwitchOptions()
 		webhookSwitches    = WebhookSwitchOptions()
 		webhookOptions     = extensionscmdwebhook.NewAddToManagerOptions(
@@ -169,6 +174,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			extensionscmdcontroller.PrefixOption("operatingsystemconfig-", operatingSystemConfigCtrlOpts),
 			extensionscmdcontroller.PrefixOption("healthcheck-", healthCheckCtrlOpts),
 			extensionscmdcontroller.PrefixOption("heartbeat-", heartbeatCtrlOptions),
+			extensionscmdcontroller.PrefixOption("prometheus-", prometheusWebhookOptions),
 			controllerSwitches,
 			reconcileOpts,
 			webhookOptions,
@@ -209,6 +215,9 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 				return fmt.Errorf("could not update manager scheme: %w", err)
 			}
 			if err := druidv1alpha1.AddToScheme(scheme); err != nil {
+				return fmt.Errorf("could not update manager scheme: %w", err)
+			}
+			if err := monitoringv1.AddToScheme(scheme); err != nil {
 				return fmt.Errorf("could not update manager scheme: %w", err)
 			}
 			// add common meta types to schema for controller-runtime to use v1.ListOptions
@@ -256,6 +265,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			localBackupBucketOptions.Completed().Apply(&localbackupbucket.DefaultAddOptions)
 			localBackupBucketOptions.Completed().Apply(&localbackupentry.DefaultAddOptions)
 			heartbeatCtrlOptions.Completed().Apply(&heartbeat.DefaultAddOptions)
+			prometheusWebhookOptions.Completed().Apply(&prometheuswebhook.DefaultAddOptions)
 
 			reconcileOpts.Completed().Apply(&localbackupbucket.DefaultAddOptions.IgnoreOperationAnnotation, &localbackupbucket.DefaultAddOptions.ExtensionClass)
 			reconcileOpts.Completed().Apply(&localcontrolplane.DefaultAddOptions.IgnoreOperationAnnotation, &localcontrolplane.DefaultAddOptions.ExtensionClass)
