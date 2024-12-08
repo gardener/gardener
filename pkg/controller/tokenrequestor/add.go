@@ -28,6 +28,9 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 	if r.TargetClient == nil {
 		r.TargetClient = targetCluster.GetClient()
 	}
+	if len(r.CAData) == 0 {
+		r.CAData = targetCluster.GetConfig().CAData
+	}
 
 	return builder.
 		ControllerManagedBy(mgr).
