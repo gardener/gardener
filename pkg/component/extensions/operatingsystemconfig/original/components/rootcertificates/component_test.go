@@ -57,7 +57,6 @@ After=systemd-tmpfiles-setup.service clean-ca-certificates.service
 Before=sysinit.target kubelet.service
 ConditionPathIsReadWrite=/etc/ssl/certs
 ConditionPathIsReadWrite=/var/lib/ca-certificates-local
-ConditionPathExists=!/var/lib/kubelet/kubeconfig-real
 [Service]
 Type=oneshot
 ExecStart=/var/lib/ssl/update-local-ca-certificates.sh

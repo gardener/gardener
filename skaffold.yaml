@@ -709,6 +709,8 @@ build:
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd/templates/scripts/init.sh
             - pkg/component/extensions/operatingsystemconfig/original/components/kubelet
             - pkg/component/extensions/operatingsystemconfig/original/components/nodeagent
+            - pkg/component/extensions/operatingsystemconfig/original/components/rootcertificates
+            - pkg/component/extensions/operatingsystemconfig/original/components/rootcertificates/templates/scripts/update-local-ca-certificates.tpl.sh
             - pkg/component/extensions/operatingsystemconfig/original/components/valitail
             - pkg/component/extensions/operatingsystemconfig/original/components/valitail/templates/valitail-config.tpl.yaml
             - pkg/component/extensions/operatingsystemconfig/utils
@@ -1480,6 +1482,8 @@ build:
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd/templates/scripts/init.sh
             - pkg/component/extensions/operatingsystemconfig/original/components/kubelet
             - pkg/component/extensions/operatingsystemconfig/original/components/nodeagent
+            - pkg/component/extensions/operatingsystemconfig/original/components/rootcertificates
+            - pkg/component/extensions/operatingsystemconfig/original/components/rootcertificates/templates/scripts/update-local-ca-certificates.tpl.sh
             - pkg/component/extensions/operatingsystemconfig/original/components/valitail
             - pkg/component/extensions/operatingsystemconfig/original/components/valitail/templates/valitail-config.tpl.yaml
             - pkg/component/extensions/operatingsystemconfig/utils
