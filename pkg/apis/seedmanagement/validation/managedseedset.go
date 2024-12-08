@@ -175,11 +175,7 @@ func ValidateManagedSeedTemplateForManagedSeedSet(template *seedmanagement.Manag
 			allErrs = append(allErrs, field.Invalid(configPath, template.Spec.Gardenlet.Config, fmt.Sprintf("could not convert gardenlet config: %v", err)))
 			return allErrs
 		}
-		if gardenletConfig.SeedConfig == nil {
-			allErrs = append(allErrs, field.Required(configPath.Child("seedConfig"), "seedConfig is required"))
-		} else {
-			allErrs = append(allErrs, validateSeedTemplateLabels(&gardenletConfig.SeedConfig.SeedTemplate, selector, configPath.Child("seedConfig"))...)
-		}
+		allErrs = append(allErrs, validateSeedTemplateLabels(&gardenletConfig.SeedConfig.SeedTemplate, selector, configPath.Child("seedConfig"))...)
 	}
 
 	return allErrs
