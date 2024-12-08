@@ -7,7 +7,7 @@ metadata:
   labels:
     app: gardener
     role: admission-controller
-    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
     release: "{{ .Release.Name }}"
     heritage: "{{ .Release.Service }}"
 spec:
@@ -28,7 +28,7 @@ spec:
       labels:
         app: gardener
         role: admission-controller
-        chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+        chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
         release: "{{ .Release.Name }}"
         heritage: "{{ .Release.Service }}"
         {{- if .Values.global.admission.podLabels }}
