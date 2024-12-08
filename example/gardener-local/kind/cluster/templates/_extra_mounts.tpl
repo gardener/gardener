@@ -1,3 +1,9 @@
+{{- define "extraMounts.kind.kubeAPIServer" -}}
+- hostPath: {{.Values.gardener.repositoryRoot}}/example/gardener-local/kube-apiserver
+  containerPath: /etc/gardener-local/kube-apiserver
+  readOnly: true
+{{- end -}}
+
 {{- define "extraMounts.gardener.controlPlane" -}}
 {{- if and .Values.gardener.controlPlane.deployed .Values.gardener.controlPlane.kindIsGardenCluster }}
 - hostPath: {{.Values.gardener.repositoryRoot}}/example/gardener-local/controlplane
