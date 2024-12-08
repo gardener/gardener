@@ -34,7 +34,7 @@ var _ = Describe("Version", func() {
 
 			output, err := io.ReadAll(out)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(string(output)).To(Equal("gardenadm version v0.0.0-master+$Format:%H$"))
+			Expect(string(output)).To(Equal("gardenadm version v0.0.0-master+$Format:%H$\n"))
 		})
 	})
 })

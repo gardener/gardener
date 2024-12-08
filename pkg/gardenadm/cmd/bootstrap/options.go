@@ -6,6 +6,7 @@ package bootstrap
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/spf13/pflag"
 )
@@ -17,7 +18,13 @@ type Options struct {
 }
 
 // Complete completes the options.
-func (o *Options) Complete() error { return nil }
+func (o *Options) Complete() error {
+	if o.Kubeconfig == "" {
+		o.Kubeconfig = os.Getenv("KUBECONFIG")
+	}
+
+	return nil
+}
 
 // Validate validates the options.
 func (o *Options) Validate() error {
