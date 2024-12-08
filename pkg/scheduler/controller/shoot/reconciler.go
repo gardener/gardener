@@ -220,7 +220,7 @@ func filterUsableSeeds(seedList []gardencorev1beta1.Seed) ([]gardencorev1beta1.S
 	}
 
 	if len(matchingSeeds) == 0 {
-		return nil, fmt.Errorf("none of the %d seeds is valid for scheduling (not deleting, visible and ready)", len(seedList))
+		return nil, newDetermineSeedError(NoMatchingSeed, "none of the %d seeds is valid for scheduling (not deleting, visible and ready)", len(seedList))
 	}
 	return matchingSeeds, nil
 }
@@ -231,7 +231,7 @@ func filterSeedsMatchingLabelSelector(seedList []gardencorev1beta1.Seed, seedSel
 	}
 	selector, err := metav1.LabelSelectorAsSelector(&seedSelector.LabelSelector)
 	if err != nil {
-		return nil, fmt.Errorf("label selector conversion failed: %v for seedSelector: %w", seedSelector.LabelSelector, err)
+		return nil, newDetermineSeedError(LabelSelectorConversionFailed, "label selector conversion failed: %v for seedSelector: %w", seedSelector.LabelSelector, err)
 	}
 
 	var matchingSeeds []gardencorev1beta1.Seed
@@ -242,7 +242,7 @@ func filterSeedsMatchingLabelSelector(seedList []gardencorev1beta1.Seed, seedSel
 	}
 
 	if len(matchingSeeds) == 0 {
-		return nil, fmt.Errorf("none out of the %d seeds has the matching labels required by seed selector of '%s' (selector: '%s')", len(seedList), kind, selector.String())
+		return nil, newDetermineSeedError(NoMatchingLabels, "none out of the %d seeds has the matching labels required by seed selector of '%s' (selector: '%s')", len(seedList), kind, selector.String())
 	}
 	return matchingSeeds, nil
 }
@@ -261,7 +261,7 @@ func filterSeedsMatchingProviders(cloudProfile *gardencorev1beta1.CloudProfile, 
 	}
 
 	if len(matchingSeeds) == 0 {
-		return nil, fmt.Errorf("none out of the %d seeds has a matching provider for %q", len(seedList), shoot.Spec.Provider.Type)
+		return nil, newDetermineSeedError(NoMatchingProvider, "none out of the %d seeds has a matching provider for %q", len(seedList), shoot.Spec.Provider.Type)
 	}
 	return matchingSeeds, nil
 }
@@ -277,7 +277,7 @@ func filterSeedsForZonalShootControlPlanes(seedList []gardencorev1beta1.Seed, sh
 			}
 		}
 		if len(seedsWithAtLeastThreeZones) == 0 {
-			return nil, fmt.Errorf("none of the %d seeds has at least 3 zones for hosting a shoot control plane with failure tolerance type 'zone'", len(seedList))
+			return nil, newDetermineSeedError(NoHASeedInZone, "none of the %d seeds has at least 3 zones for hosting a shoot control plane with failure tolerance type 'zone'", len(seedList))
 		}
 		return seedsWithAtLeastThreeZones, nil
 	}
@@ -294,7 +294,7 @@ func filterSeedsForAccessRestrictions(seedList []gardencorev1beta1.Seed, shoot *
 	}
 
 	if len(seedsSupportingAccessRestrictions) == 0 {
-		return nil, fmt.Errorf("none of the %d seeds supports the access restrictions configured in the shoot specification", len(seedList))
+		return nil, newDetermineSeedError(NoSeedWithAccessRestriction, "none of the %d seeds supports the access restrictions configured in the shoot specification", len(seedList))
 	}
 	return seedsSupportingAccessRestrictions, nil
 }
@@ -314,7 +314,7 @@ func applyStrategy(log logr.Logger, shoot *gardencorev1beta1.Shoot, seedList []g
 			return nil, err
 		}
 	default:
-		return nil, fmt.Errorf("failed to determine seed candidates. shoot purpose: '%s', strategy: '%s', valid strategies are: %v", *shoot.Spec.Purpose, strategy, config.Strategies)
+		return nil, newDetermineSeedError(NoSeedForPurposeAndStrategy, "failed to determine seed candidates. shoot purpose: '%s', strategy: '%s', valid strategies are: %v", *shoot.Spec.Purpose, strategy, config.Strategies)
 	}
 
 	if candidates == nil {
