@@ -663,6 +663,8 @@ func (r *Reconciler) updateShootStatusOperationStart(
 		}
 	}
 
+	removeNonExistentPoolsFromPendingWorkersRollouts(shoot.Status.Credentials, shoot.Spec.Provider.Workers)
+
 	if err := r.GardenClient.Status().Update(ctx, shoot); err != nil {
 		return err
 	}
@@ -896,6 +898,29 @@ func (r *Reconciler) patchShootStatusOperationError(
 	shoot.Status.LastOperation.LastUpdateTime = now
 
 	return r.GardenClient.Status().Patch(ctx, shoot, statusPatch)
+}
+
+func removeNonExistentPoolsFromPendingWorkersRollouts(credentials *gardencorev1beta1.ShootCredentials, workerPools []gardencorev1beta1.Worker) {
+	if credentials == nil || credentials.Rotation == nil {
+		return
+	}
+
+	poolNames := sets.New[string]()
+	for _, pool := range workerPools {
+		poolNames.Insert(pool.Name)
+	}
+
+	if credentials.Rotation.CertificateAuthorities != nil {
+		credentials.Rotation.CertificateAuthorities.PendingWorkersRollouts = slices.DeleteFunc(credentials.Rotation.CertificateAuthorities.PendingWorkersRollouts, func(rollout gardencorev1beta1.PendingWorkersRollout) bool {
+			return !poolNames.Has(rollout.Name)
+		})
+	}
+
+	if credentials.Rotation.ServiceAccountKey != nil {
+		credentials.Rotation.ServiceAccountKey.PendingWorkersRollouts = slices.DeleteFunc(credentials.Rotation.ServiceAccountKey.PendingWorkersRollouts, func(rollout gardencorev1beta1.PendingWorkersRollout) bool {
+			return !poolNames.Has(rollout.Name)
+		})
+	}
 }
 
 func (r *Reconciler) shootHasBastions(ctx context.Context, shoot *gardencorev1beta1.Shoot) (bool, error) {
