@@ -715,6 +715,10 @@ type VerticalPodAutoscaler struct {
 	// (default: 0.95)
 	// +optional
 	RecommendationUpperBoundCPUPercentile *float64 `json:"recommendationUpperBoundCPUPercentile,omitempty" protobuf:"fixed64,11,opt,name=recommendationUpperBoundCPUPercentile"`
+	// CPUHistogramDecayHalfLife is the amount of time it takes a historical CPU usage sample to lose half of its weight.
+	// (default: 24h)
+	// +optional
+	CPUHistogramDecayHalfLife *metav1.Duration `json:"cpuHistogramDecayHalfLife,omitempty" protobuf:"bytes,15,opt,name=cpuHistogramDecayHalfLife"`
 	// TargetMemoryPercentile is the usage percentile that will be used as a base for memory target recommendation.
 	// Doesn't affect memory lower bound nor memory upper bound.
 	// (default: 0.9)
@@ -728,6 +732,10 @@ type VerticalPodAutoscaler struct {
 	// (default: 0.95)
 	// +optional
 	RecommendationUpperBoundMemoryPercentile *float64 `json:"recommendationUpperBoundMemoryPercentile,omitempty" protobuf:"fixed64,14,opt,name=recommendationUpperBoundMemoryPercentile"`
+	// MemoryHistogramDecayHalfLife is the amount of time it takes a historical memory usage sample to lose half of its weight.
+	// (default: 24h)
+	// +optional
+	MemoryHistogramDecayHalfLife *metav1.Duration `json:"memoryHistogramDecayHalfLife,omitempty" protobuf:"bytes,16,opt,name=memoryHistogramDecayHalfLife"`
 }
 
 const (
@@ -760,6 +768,10 @@ var (
 	DefaultUpdaterInterval = metav1.Duration{Duration: time.Minute}
 	// DefaultRecommenderInterval is the default value for the RecommenderInterval field in the VPA configuration.
 	DefaultRecommenderInterval = metav1.Duration{Duration: time.Minute}
+	// DefaultCPUHistogramDecayHalfLife is the default value for the CPUHistogramDecayHalfLife field in the VPA configuration.
+	DefaultCPUHistogramDecayHalfLife = metav1.Duration{Duration: 24 * time.Hour}
+	// DefaultMemoryHistogramDecayHalfLife is the default value for the MemoryHistogramDecayHalfLife field in the VPA configuration.
+	DefaultMemoryHistogramDecayHalfLife = metav1.Duration{Duration: 24 * time.Hour}
 )
 
 // KubernetesConfig contains common configuration fields for the control plane components.
