@@ -141,6 +141,7 @@
 * [GEP-26: Workload Identity - Trust Based Authentication](proposals/26-workload-identity.md)
 * [GEP-27: Add Optional Bastion Section To CloudProfile](proposals/27-cloudprofile-bastion-section.md)
 * [GEP-28: Autonomous Shoot Clusters](proposals/28-autonomous-shoot-clusters.md)
+* [GEP-30: Rework apiserver-proxy to drop PROXY protocol](proposals/30-apiserver-proxy.md)
 
 ## Development
 
