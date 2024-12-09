@@ -39,6 +39,27 @@ func IsIPv6SingleStack(ipFamilies []IPFamily) bool {
 	return len(ipFamilies) == 1 && ipFamilies[0] == IPFamilyIPv6
 }
 
+// IsDualStack determines whether the given list of IP families specifies dual-stack networking.
+func IsDualStack(ipFamilies []IPFamily) bool {
+	if len(ipFamilies) != 2 {
+		return false
+	}
+
+	hasIPv4 := false
+	hasIPv6 := false
+
+	for _, ipFamily := range ipFamilies {
+		switch ipFamily {
+		case IPFamilyIPv4:
+			hasIPv4 = true
+		case IPFamilyIPv6:
+			hasIPv6 = true
+		}
+	}
+
+	return hasIPv4 && hasIPv6
+}
+
 // AccessRestriction describes an access restriction for a Kubernetes cluster (e.g., EU access-only).
 type AccessRestriction struct {
 	// Name is the name of the restriction.
