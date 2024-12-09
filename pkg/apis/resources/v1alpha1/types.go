@@ -107,8 +107,8 @@ const (
 
 	// DataKeyToken is the data key whose value contains a service account token.
 	DataKeyToken = "token"
-	// DataKeyCaBundle is the data key where the ca bundle is stored.
-	DataKeyCaBundle = "bundle.crt"
+	// DataKeyCABundle is the data key where the ca bundle is stored.
+	DataKeyCABundle = "bundle.crt"
 	// DataKeyKubeconfig is the data key whose value contains a kubeconfig with a service account token.
 	DataKeyKubeconfig = "kubeconfig"
 

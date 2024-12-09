@@ -181,7 +181,7 @@ func (r *Reconciler) populateSecretData(log logr.Logger, secret *corev1.Secret, 
 func (r *Reconciler) depopulateToken(secret *corev1.Secret) func() error {
 	return func() error {
 		delete(secret.Data, resourcesv1alpha1.DataKeyToken)
-		delete(secret.Data, resourcesv1alpha1.DataKeyCaBundle)
+		delete(secret.Data, resourcesv1alpha1.DataKeyCABundle)
 		delete(secret.Data, resourcesv1alpha1.DataKeyKubeconfig)
 		return nil
 	}
@@ -233,7 +233,7 @@ func (r *Reconciler) requeue(ctx context.Context, secret *corev1.Secret) (bool, 
 		return false, 0, nil
 	}
 	if checkBundle {
-		isBundleOk, err := r.isBundleOk(secretContainingToken.Data)
+		isBundleOk, err := r.isCABundleUpdated(secretContainingToken.Data)
 		if err != nil {
 			return false, 0, fmt.Errorf("could not check whether the caBundle is up to date: %w", err)
 		}
@@ -293,18 +293,21 @@ func (r *Reconciler) getServiceAccountFromAnnotations(annotations map[string]str
 	}
 }
 
-func (r *Reconciler) isBundleOk(data map[string][]byte) (bool, error) {
+func (r *Reconciler) isCABundleUpdated(data map[string][]byte) (bool, error) {
 	if _, ok := data[resourcesv1alpha1.DataKeyKubeconfig]; !ok {
-		return bytes.Equal(data[resourcesv1alpha1.DataKeyCaBundle], r.CAData), nil
+		return bytes.Equal(data[resourcesv1alpha1.DataKeyCABundle], r.CAData), nil
 	}
-	kc, err := decodeKubeconfig(data[resourcesv1alpha1.DataKeyKubeconfig])
+
+	kubeconfig, err := decodeKubeconfig(data[resourcesv1alpha1.DataKeyKubeconfig])
 	if err != nil {
 		return false, err
 	}
-	cluster, err := getCluster(kc)
+
+	cluster, err := getCluster(kubeconfig)
 	if err != nil {
 		return false, err
 	}
+
 	return bytes.Equal(cluster.CertificateAuthorityData, r.CAData), nil
 }
 
@@ -331,9 +334,9 @@ func updateSecretData(log logr.Logger, data map[string][]byte, token string, caD
 		log.Info("Writing token to data")
 		data[resourcesv1alpha1.DataKeyToken] = []byte(token)
 		if len(caData) > 0 {
-			data[resourcesv1alpha1.DataKeyCaBundle] = caData
+			data[resourcesv1alpha1.DataKeyCABundle] = caData
 		} else {
-			delete(data, resourcesv1alpha1.DataKeyCaBundle)
+			delete(data, resourcesv1alpha1.DataKeyCABundle)
 		}
 		return nil
 	}
@@ -344,6 +347,7 @@ func updateSecretData(log logr.Logger, data map[string][]byte, token string, caD
 	if err != nil {
 		return err
 	}
+
 	authInfo, err := getAuthInfo(kubeconfig)
 	if err != nil {
 		return err
@@ -375,11 +379,12 @@ func tokenExistsInSecretData(data map[string][]byte) (bool, error) {
 		return data[resourcesv1alpha1.DataKeyToken] != nil, nil
 	}
 
-	kc, err := decodeKubeconfig(data[resourcesv1alpha1.DataKeyKubeconfig])
+	kubeconfig, err := decodeKubeconfig(data[resourcesv1alpha1.DataKeyKubeconfig])
 	if err != nil {
 		return false, err
 	}
-	authInfo, err := getAuthInfo(kc)
+
+	authInfo, err := getAuthInfo(kubeconfig)
 	if err != nil {
 		return false, err
 	}
@@ -415,11 +420,13 @@ func getCluster(kubeconfig *clientcmdv1.Config) (*clientcmdv1.Cluster, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	for i, cluster := range kubeconfig.Clusters {
 		if cluster.Name == ctx.Cluster {
 			return &kubeconfig.Clusters[i].Cluster, nil
 		}
 	}
+
 	return nil, fmt.Errorf("did not find cluster of current context named %s", ctx.Cluster)
 }
 
