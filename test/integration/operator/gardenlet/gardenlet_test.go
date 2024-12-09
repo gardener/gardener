@@ -70,7 +70,7 @@ var _ = Describe("Gardenlet controller test", func() {
 				APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
 				Kind:       "GardenletConfiguration",
 			},
-			SeedConfig: &gardenletv1alpha1.SeedConfig{
+			SeedConfig: gardenletv1alpha1.SeedConfig{
 				SeedTemplate: gardencorev1beta1.SeedTemplate{
 					ObjectMeta: seed.ObjectMeta,
 					Spec:       seed.Spec,

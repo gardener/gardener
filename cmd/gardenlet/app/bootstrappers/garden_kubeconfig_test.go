@@ -46,7 +46,7 @@ var _ = Describe("GardenKubeconfig", func() {
 					Validity: &metav1.Duration{Duration: kubeconfigValidity},
 				},
 			},
-			SeedConfig: &config.SeedConfig{
+			SeedConfig: config.SeedConfig{
 				SeedTemplate: core.SeedTemplate{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: seedName,

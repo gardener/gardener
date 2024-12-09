@@ -46,7 +46,7 @@ var _ = Describe("Helper", func() {
 							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
 							Kind:       "GardenletConfiguration",
 						},
-						SeedConfig: &gardenletv1alpha1.SeedConfig{
+						SeedConfig: gardenletv1alpha1.SeedConfig{
 							SeedTemplate: gardencorev1beta1.SeedTemplate{
 								Spec: gardencorev1beta1.SeedSpec{
 									Backup: &gardencorev1beta1.SeedBackup{},
@@ -77,20 +77,6 @@ var _ = Describe("Helper", func() {
 
 			It("should fail when gardenlet config is not defined", func() {
 				managedSeed.Spec.Gardenlet = seedmanagement.GardenletConfig{}
-
-				_, err := ExtractSeedSpec(managedSeed)
-				Expect(err).To(HaveOccurred())
-			})
-
-			It("should fail when seedConfig is not defined in gardenlet config", func() {
-				managedSeed.Spec.Gardenlet = seedmanagement.GardenletConfig{
-					Config: &gardenletv1alpha1.GardenletConfiguration{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
-							Kind:       "GardenletConfiguration",
-						},
-					},
-				}
 
 				_, err := ExtractSeedSpec(managedSeed)
 				Expect(err).To(HaveOccurred())

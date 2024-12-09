@@ -158,7 +158,7 @@ var _ = Describe("Seed controller tests", func() {
 						Workers: ptr.To[int64](1),
 					},
 				},
-				SeedConfig: &config.SeedConfig{
+				SeedConfig: config.SeedConfig{
 					SeedTemplate: gardencore.SeedTemplate{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: seedName,
