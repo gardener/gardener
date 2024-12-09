@@ -246,13 +246,13 @@ func GetFirstRunningPodWithLabels(ctx context.Context, labelsMap labels.Selector
 }
 
 // PodExecByLabel executes a command inside pods filtered by label
-func PodExecByLabel(ctx context.Context, podLabels labels.Selector, podContainer, command, namespace string, client kubernetes.Interface) (io.Reader, error) {
+func PodExecByLabel(ctx context.Context, client kubernetes.Interface, namespace string, podLabels labels.Selector, podContainer string, command ...string) (io.Reader, io.Reader, error) {
 	pod, err := GetFirstRunningPodWithLabels(ctx, podLabels, namespace, client)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return NewPodExecutor(client).Execute(ctx, pod.Namespace, pod.Name, podContainer, command)
+	return client.PodExecutor().Execute(ctx, pod.Namespace, pod.Name, podContainer, command...)
 }
 
 // DeleteAndWaitForResource deletes a kubernetes resource and waits for its deletion

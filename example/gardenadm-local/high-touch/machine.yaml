@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: machine
+  labels:
+    app: machine
+spec:
+  replicas: 2
+  serviceName: "machine"
+  selector:
+    matchLabels:
+      app: machine
+  template:
+    metadata:
+      labels:
+        app: machine
+    spec:
+      containers:
+      - name: node
+        image: local-skaffold/gardener-extension-provider-local-node
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          privileged: true
+        env:
+          - name: PATH
+            value: /gardenadm:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+        volumeMounts:
+        - name: containerd
+          mountPath: /var/lib/containerd
+        - name: modules
+          mountPath: /lib/modules
+          readOnly: true
+        - name: gardenadm
+          mountPath: /gardenadm
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      volumes:
+      - name: containerd
+        emptyDir: {}
+      - name: modules
+        hostPath:
+          path: /lib/modules
+          type: ""
+  volumeClaimTemplates:
+  - metadata:
+      name: gardenadm
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 1Gi

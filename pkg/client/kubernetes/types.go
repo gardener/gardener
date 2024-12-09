@@ -176,6 +176,8 @@ type Interface interface {
 	ChartRenderer() chartrenderer.Interface
 	// ChartApplier returns a ChartApplier using the ClientSet's ChartRenderer and Applier.
 	ChartApplier() ChartApplier
+	// PodExecutor returns a PodExecutor for executing into pods.
+	PodExecutor() PodExecutor
 
 	Kubernetes() kubernetesclientset.Interface
 

@@ -34,7 +34,7 @@ var _ = Describe("List", func() {
 
 			output, err := io.ReadAll(out)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(string(output)).To(Equal("not implemented"))
+			Expect(string(output)).To(Equal("not implemented\n"))
 		})
 	})
 })

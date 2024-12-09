@@ -5,7 +5,7 @@ sortOptions:
   order: fifo
 
 resources:
-- cloudprofile.yaml
+- ../cloudprofile
 - project.yaml
 - secret-backup.yaml
 - secretbinding.yaml
