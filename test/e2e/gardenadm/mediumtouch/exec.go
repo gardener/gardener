@@ -29,7 +29,7 @@ func PrepareBinary() {
 }
 
 // NewCommand creates a new exec.Cmd for gardenadm.
-func NewCommand(args ...string) *exec.Cmd {
+func NewCommand(args ...string) *exec.Cmd { // #nosec G204 -- Used for e2e tests only.
 	return exec.Command(binaryPath, args...)
 }
 
