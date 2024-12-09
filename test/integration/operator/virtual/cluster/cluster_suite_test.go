@@ -21,7 +21,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
-	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -31,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	virtualcluster "github.com/gardener/gardener/pkg/operator/controller/virtual/cluster"
+	gardenerenvtest "github.com/gardener/gardener/test/envtest"
 	mockmanager "github.com/gardener/gardener/third_party/mock/controller-runtime/manager"
 )
 
@@ -45,9 +45,10 @@ var (
 	ctx = context.Background()
 	log logr.Logger
 
-	testEnv   *envtest.Environment
-	ctrl      *gomock.Controller
-	testRunID string
+	testEnv    *gardenerenvtest.GardenerTestEnvironment
+	restConfig *rest.Config
+	ctrl       *gomock.Controller
+	testRunID  string
 
 	channel chan event.TypedGenericEvent[*rest.Config]
 
@@ -61,11 +62,16 @@ var _ = BeforeSuite(func() {
 	log = logf.Log.WithName(testID)
 
 	By("Start test environment")
-	testEnv = &envtest.Environment{
-		ErrorIfCRDPathMissing: true,
+	testEnv = &gardenerenvtest.GardenerTestEnvironment{
+		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
+			Args: []string{
+				"--disable-admission-plugins=ResourceReferenceManager,ExtensionValidator,SeedValidator",
+			},
+		},
 	}
 
-	restConfig, err := testEnv.Start()
+	var err error
+	restConfig, err = testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(restConfig).NotTo(BeNil())
 
@@ -97,8 +103,8 @@ var _ = BeforeSuite(func() {
 	ctrl = gomock.NewController(GinkgoT())
 	mockManager = mockmanager.NewMockManager(ctrl)
 	virtualClientConnection = componentbaseconfig.ClientConnectionConfiguration{
-		AcceptContentTypes: "application/test-json",
-		ContentType:        "application/test-json",
+		AcceptContentTypes: "application/json",
+		ContentType:        "application/json",
 		Burst:              42,
 		QPS:                321,
 	}
