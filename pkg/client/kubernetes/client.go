@@ -194,11 +194,7 @@ func RESTConfigFromKubeconfig(kubeconfig []byte, allowedFields ...string) (*rest
 		return nil, err
 	}
 
-	restConfig, err := clientConfig.ClientConfig()
-	if err != nil {
-		return nil, err
-	}
-	return restConfig, nil
+	return clientConfig.ClientConfig()
 }
 
 func validateClientConfig(clientConfig clientcmd.ClientConfig, allowedFields []string) error {
@@ -406,4 +402,17 @@ func (d *FallbackClient) Get(ctx context.Context, key client.ObjectKey, obj clie
 // List retrieves list of objects for a given namespace and list options.
 func (d *FallbackClient) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
 	return d.Client.List(ctx, list, opts...)
+}
+
+// ApplyClientConnectionConfigurationToRESTConfig applies the given client connection configurations to the given
+// REST config.
+func ApplyClientConnectionConfigurationToRESTConfig(clientConnection *componentbaseconfig.ClientConnectionConfiguration, rest *rest.Config) {
+	if clientConnection == nil {
+		return
+	}
+
+	rest.AcceptContentTypes = clientConnection.AcceptContentTypes
+	rest.ContentType = clientConnection.ContentType
+	rest.Burst = int(clientConnection.Burst)
+	rest.QPS = clientConnection.QPS
 }

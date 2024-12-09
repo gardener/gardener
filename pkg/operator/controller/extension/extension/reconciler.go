@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/operator/controller/extension/extension/admission"
 	"github.com/gardener/gardener/pkg/operator/controller/extension/extension/controllerregistration"
 	"github.com/gardener/gardener/pkg/operator/controller/extension/extension/runtime"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/oci"
 )
 
@@ -184,16 +185,10 @@ func newGardenInfo(garden *operatorv1alpha1.Garden) *gardenInfo {
 
 	return &gardenInfo{
 		garden:                           garden,
-		reconciled:                       gardenReconciledSuccessfully(garden),
+		reconciled:                       gardenerutils.IsGardenSuccessfullyReconciled(garden),
 		deleting:                         gardenInDeletion(garden),
 		genericTokenKubeconfigSecretName: kubeconfigSecretName,
 	}
-}
-
-func gardenReconciledSuccessfully(garden *operatorv1alpha1.Garden) bool {
-	lastOp := garden.Status.LastOperation
-	return lastOp != nil &&
-		lastOp.Type == gardencorev1beta1.LastOperationTypeReconcile && lastOp.State == gardencorev1beta1.LastOperationStateSucceeded && lastOp.Progress == 100
 }
 
 func gardenInDeletion(garden *operatorv1alpha1.Garden) bool {
