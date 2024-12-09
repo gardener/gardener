@@ -115,7 +115,7 @@ var _ = BeforeSuite(func() {
 
 	By("Register Controller")
 	Expect((&requiredvirtual.Reconciler{
-		Config:        config.ExtensionRequiredControllerConfiguration{ConcurrentSyncs: ptr.To(5)},
+		Config:        config.ExtensionRequiredVirtualControllerConfiguration{ConcurrentSyncs: ptr.To(5)},
 		RuntimeClient: mgr.GetClient(),
 		VirtualClient: mgr.GetClient(),
 	}).AddToManager(ctx, mgr, mgr)).To(Succeed())

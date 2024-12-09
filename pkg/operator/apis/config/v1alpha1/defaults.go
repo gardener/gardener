@@ -113,8 +113,15 @@ func SetDefaults_ExtensionControllerConfiguration(obj *ExtensionControllerConfig
 	}
 }
 
-// SetDefaults_ExtensionRequiredControllerConfiguration sets defaults for the ExtensionRequiredControllerConfiguration object.
-func SetDefaults_ExtensionRequiredControllerConfiguration(obj *ExtensionRequiredControllerConfiguration) {
+// SetDefaults_ExtensionRequiredRuntimeControllerConfiguration sets defaults for the ExtensionRequiredControllerRuntimeConfiguration object.
+func SetDefaults_ExtensionRequiredRuntimeControllerConfiguration(obj *ExtensionRequiredRuntimeControllerConfiguration) {
+	if obj.ConcurrentSyncs == nil {
+		obj.ConcurrentSyncs = ptr.To(5)
+	}
+}
+
+// SetDefaults_ExtensionRequiredVirtualControllerConfiguration sets defaults for the ExtensionRequiredControllerVirtualConfiguration object.
+func SetDefaults_ExtensionRequiredVirtualControllerConfiguration(obj *ExtensionRequiredVirtualControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
 		obj.ConcurrentSyncs = ptr.To(5)
 	}

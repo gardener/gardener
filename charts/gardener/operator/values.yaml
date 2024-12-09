@@ -98,7 +98,9 @@ config:
       concurrentSyncs: 5
     extension:
       concurrentSyncs: 5
-    extensionRequired:
+    extensionRequiredRuntime:
+      concurrentSyncs: 5
+    extensionRequiredVirtual:
       concurrentSyncs: 5
 nodeToleration:
   defaultNotReadyTolerationSeconds: 60

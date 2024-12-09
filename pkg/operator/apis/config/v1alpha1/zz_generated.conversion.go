@@ -59,13 +59,23 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ExtensionRequiredControllerConfiguration)(nil), (*config.ExtensionRequiredControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha1_ExtensionRequiredControllerConfiguration_To_config_ExtensionRequiredControllerConfiguration(a.(*ExtensionRequiredControllerConfiguration), b.(*config.ExtensionRequiredControllerConfiguration), scope)
+	if err := s.AddGeneratedConversionFunc((*ExtensionRequiredRuntimeControllerConfiguration)(nil), (*config.ExtensionRequiredRuntimeControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ExtensionRequiredRuntimeControllerConfiguration_To_config_ExtensionRequiredRuntimeControllerConfiguration(a.(*ExtensionRequiredRuntimeControllerConfiguration), b.(*config.ExtensionRequiredRuntimeControllerConfiguration), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*config.ExtensionRequiredControllerConfiguration)(nil), (*ExtensionRequiredControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_config_ExtensionRequiredControllerConfiguration_To_v1alpha1_ExtensionRequiredControllerConfiguration(a.(*config.ExtensionRequiredControllerConfiguration), b.(*ExtensionRequiredControllerConfiguration), scope)
+	if err := s.AddGeneratedConversionFunc((*config.ExtensionRequiredRuntimeControllerConfiguration)(nil), (*ExtensionRequiredRuntimeControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_ExtensionRequiredRuntimeControllerConfiguration_To_v1alpha1_ExtensionRequiredRuntimeControllerConfiguration(a.(*config.ExtensionRequiredRuntimeControllerConfiguration), b.(*ExtensionRequiredRuntimeControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ExtensionRequiredVirtualControllerConfiguration)(nil), (*config.ExtensionRequiredVirtualControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ExtensionRequiredVirtualControllerConfiguration_To_config_ExtensionRequiredVirtualControllerConfiguration(a.(*ExtensionRequiredVirtualControllerConfiguration), b.(*config.ExtensionRequiredVirtualControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.ExtensionRequiredVirtualControllerConfiguration)(nil), (*ExtensionRequiredVirtualControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_ExtensionRequiredVirtualControllerConfiguration_To_v1alpha1_ExtensionRequiredVirtualControllerConfiguration(a.(*config.ExtensionRequiredVirtualControllerConfiguration), b.(*ExtensionRequiredVirtualControllerConfiguration), scope)
 	}); err != nil {
 		return err
 	}
@@ -203,7 +213,10 @@ func autoConvert_v1alpha1_ControllerConfiguration_To_config_ControllerConfigurat
 	if err := Convert_v1alpha1_ExtensionControllerConfiguration_To_config_ExtensionControllerConfiguration(&in.Extension, &out.Extension, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha1_ExtensionRequiredControllerConfiguration_To_config_ExtensionRequiredControllerConfiguration(&in.ExtensionRequired, &out.ExtensionRequired, s); err != nil {
+	if err := Convert_v1alpha1_ExtensionRequiredRuntimeControllerConfiguration_To_config_ExtensionRequiredRuntimeControllerConfiguration(&in.ExtensionRequiredRuntime, &out.ExtensionRequiredRuntime, s); err != nil {
+		return err
+	}
+	if err := Convert_v1alpha1_ExtensionRequiredVirtualControllerConfiguration_To_config_ExtensionRequiredVirtualControllerConfiguration(&in.ExtensionRequiredVirtual, &out.ExtensionRequiredVirtual, s); err != nil {
 		return err
 	}
 	return nil
@@ -233,7 +246,10 @@ func autoConvert_config_ControllerConfiguration_To_v1alpha1_ControllerConfigurat
 	if err := Convert_config_ExtensionControllerConfiguration_To_v1alpha1_ExtensionControllerConfiguration(&in.Extension, &out.Extension, s); err != nil {
 		return err
 	}
-	if err := Convert_config_ExtensionRequiredControllerConfiguration_To_v1alpha1_ExtensionRequiredControllerConfiguration(&in.ExtensionRequired, &out.ExtensionRequired, s); err != nil {
+	if err := Convert_config_ExtensionRequiredRuntimeControllerConfiguration_To_v1alpha1_ExtensionRequiredRuntimeControllerConfiguration(&in.ExtensionRequiredRuntime, &out.ExtensionRequiredRuntime, s); err != nil {
+		return err
+	}
+	if err := Convert_config_ExtensionRequiredVirtualControllerConfiguration_To_v1alpha1_ExtensionRequiredVirtualControllerConfiguration(&in.ExtensionRequiredVirtual, &out.ExtensionRequiredVirtual, s); err != nil {
 		return err
 	}
 	return nil
@@ -264,24 +280,44 @@ func Convert_config_ExtensionControllerConfiguration_To_v1alpha1_ExtensionContro
 	return autoConvert_config_ExtensionControllerConfiguration_To_v1alpha1_ExtensionControllerConfiguration(in, out, s)
 }
 
-func autoConvert_v1alpha1_ExtensionRequiredControllerConfiguration_To_config_ExtensionRequiredControllerConfiguration(in *ExtensionRequiredControllerConfiguration, out *config.ExtensionRequiredControllerConfiguration, s conversion.Scope) error {
+func autoConvert_v1alpha1_ExtensionRequiredRuntimeControllerConfiguration_To_config_ExtensionRequiredRuntimeControllerConfiguration(in *ExtensionRequiredRuntimeControllerConfiguration, out *config.ExtensionRequiredRuntimeControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	return nil
 }
 
-// Convert_v1alpha1_ExtensionRequiredControllerConfiguration_To_config_ExtensionRequiredControllerConfiguration is an autogenerated conversion function.
-func Convert_v1alpha1_ExtensionRequiredControllerConfiguration_To_config_ExtensionRequiredControllerConfiguration(in *ExtensionRequiredControllerConfiguration, out *config.ExtensionRequiredControllerConfiguration, s conversion.Scope) error {
-	return autoConvert_v1alpha1_ExtensionRequiredControllerConfiguration_To_config_ExtensionRequiredControllerConfiguration(in, out, s)
+// Convert_v1alpha1_ExtensionRequiredRuntimeControllerConfiguration_To_config_ExtensionRequiredRuntimeControllerConfiguration is an autogenerated conversion function.
+func Convert_v1alpha1_ExtensionRequiredRuntimeControllerConfiguration_To_config_ExtensionRequiredRuntimeControllerConfiguration(in *ExtensionRequiredRuntimeControllerConfiguration, out *config.ExtensionRequiredRuntimeControllerConfiguration, s conversion.Scope) error {
+	return autoConvert_v1alpha1_ExtensionRequiredRuntimeControllerConfiguration_To_config_ExtensionRequiredRuntimeControllerConfiguration(in, out, s)
 }
 
-func autoConvert_config_ExtensionRequiredControllerConfiguration_To_v1alpha1_ExtensionRequiredControllerConfiguration(in *config.ExtensionRequiredControllerConfiguration, out *ExtensionRequiredControllerConfiguration, s conversion.Scope) error {
+func autoConvert_config_ExtensionRequiredRuntimeControllerConfiguration_To_v1alpha1_ExtensionRequiredRuntimeControllerConfiguration(in *config.ExtensionRequiredRuntimeControllerConfiguration, out *ExtensionRequiredRuntimeControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	return nil
 }
 
-// Convert_config_ExtensionRequiredControllerConfiguration_To_v1alpha1_ExtensionRequiredControllerConfiguration is an autogenerated conversion function.
-func Convert_config_ExtensionRequiredControllerConfiguration_To_v1alpha1_ExtensionRequiredControllerConfiguration(in *config.ExtensionRequiredControllerConfiguration, out *ExtensionRequiredControllerConfiguration, s conversion.Scope) error {
-	return autoConvert_config_ExtensionRequiredControllerConfiguration_To_v1alpha1_ExtensionRequiredControllerConfiguration(in, out, s)
+// Convert_config_ExtensionRequiredRuntimeControllerConfiguration_To_v1alpha1_ExtensionRequiredRuntimeControllerConfiguration is an autogenerated conversion function.
+func Convert_config_ExtensionRequiredRuntimeControllerConfiguration_To_v1alpha1_ExtensionRequiredRuntimeControllerConfiguration(in *config.ExtensionRequiredRuntimeControllerConfiguration, out *ExtensionRequiredRuntimeControllerConfiguration, s conversion.Scope) error {
+	return autoConvert_config_ExtensionRequiredRuntimeControllerConfiguration_To_v1alpha1_ExtensionRequiredRuntimeControllerConfiguration(in, out, s)
+}
+
+func autoConvert_v1alpha1_ExtensionRequiredVirtualControllerConfiguration_To_config_ExtensionRequiredVirtualControllerConfiguration(in *ExtensionRequiredVirtualControllerConfiguration, out *config.ExtensionRequiredVirtualControllerConfiguration, s conversion.Scope) error {
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
+	return nil
+}
+
+// Convert_v1alpha1_ExtensionRequiredVirtualControllerConfiguration_To_config_ExtensionRequiredVirtualControllerConfiguration is an autogenerated conversion function.
+func Convert_v1alpha1_ExtensionRequiredVirtualControllerConfiguration_To_config_ExtensionRequiredVirtualControllerConfiguration(in *ExtensionRequiredVirtualControllerConfiguration, out *config.ExtensionRequiredVirtualControllerConfiguration, s conversion.Scope) error {
+	return autoConvert_v1alpha1_ExtensionRequiredVirtualControllerConfiguration_To_config_ExtensionRequiredVirtualControllerConfiguration(in, out, s)
+}
+
+func autoConvert_config_ExtensionRequiredVirtualControllerConfiguration_To_v1alpha1_ExtensionRequiredVirtualControllerConfiguration(in *config.ExtensionRequiredVirtualControllerConfiguration, out *ExtensionRequiredVirtualControllerConfiguration, s conversion.Scope) error {
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
+	return nil
+}
+
+// Convert_config_ExtensionRequiredVirtualControllerConfiguration_To_v1alpha1_ExtensionRequiredVirtualControllerConfiguration is an autogenerated conversion function.
+func Convert_config_ExtensionRequiredVirtualControllerConfiguration_To_v1alpha1_ExtensionRequiredVirtualControllerConfiguration(in *config.ExtensionRequiredVirtualControllerConfiguration, out *ExtensionRequiredVirtualControllerConfiguration, s conversion.Scope) error {
+	return autoConvert_config_ExtensionRequiredVirtualControllerConfiguration_To_v1alpha1_ExtensionRequiredVirtualControllerConfiguration(in, out, s)
 }
 
 func autoConvert_v1alpha1_GardenCareControllerConfiguration_To_config_GardenCareControllerConfiguration(in *GardenCareControllerConfiguration, out *config.GardenCareControllerConfiguration, s conversion.Scope) error {
