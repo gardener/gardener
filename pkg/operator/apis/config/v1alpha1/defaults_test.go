@@ -283,17 +283,17 @@ var _ = Describe("Defaults", func() {
 			})
 		})
 
-		Describe("ExtensionRequired controller defaulting", func() {
-			It("should default the ExtensionRequired controller config", func() {
+		Describe("ExtensionRequiredRuntime controller defaulting", func() {
+			It("should default the ExtensionRequiredRuntime controller config", func() {
 				SetObjectDefaults_OperatorConfiguration(obj)
 
-				Expect(obj.Controllers.ExtensionRequired.ConcurrentSyncs).To(PointTo(Equal(5)))
+				Expect(obj.Controllers.ExtensionRequiredRuntime.ConcurrentSyncs).To(PointTo(Equal(5)))
 			})
 
 			It("should not overwrite already set values for GardenCare controller config", func() {
 				obj = &OperatorConfiguration{
 					Controllers: ControllerConfiguration{
-						ExtensionRequired: ExtensionRequiredControllerConfiguration{
+						ExtensionRequiredRuntime: ExtensionRequiredRuntimeControllerConfiguration{
 							ConcurrentSyncs: ptr.To(2),
 						},
 					},
@@ -301,7 +301,29 @@ var _ = Describe("Defaults", func() {
 
 				SetObjectDefaults_OperatorConfiguration(obj)
 
-				Expect(obj.Controllers.ExtensionRequired.ConcurrentSyncs).To(PointTo(Equal(2)))
+				Expect(obj.Controllers.ExtensionRequiredRuntime.ConcurrentSyncs).To(PointTo(Equal(2)))
+			})
+		})
+
+		Describe("ExtensionRequiredVirtual controller defaulting", func() {
+			It("should default the ExtensionRequiredVirtual controller config", func() {
+				SetObjectDefaults_OperatorConfiguration(obj)
+
+				Expect(obj.Controllers.ExtensionRequiredVirtual.ConcurrentSyncs).To(PointTo(Equal(5)))
+			})
+
+			It("should not overwrite already set values for GardenCare controller config", func() {
+				obj = &OperatorConfiguration{
+					Controllers: ControllerConfiguration{
+						ExtensionRequiredVirtual: ExtensionRequiredVirtualControllerConfiguration{
+							ConcurrentSyncs: ptr.To(2),
+						},
+					},
+				}
+
+				SetObjectDefaults_OperatorConfiguration(obj)
+
+				Expect(obj.Controllers.ExtensionRequiredVirtual.ConcurrentSyncs).To(PointTo(Equal(2)))
 			})
 		})
 	})

@@ -90,7 +90,7 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 				Name: requiredruntime.ControllerName,
 				AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, _ *operatorv1alpha1.Garden) (bool, error) {
 					return true, (&requiredruntime.Reconciler{
-						Config: cfg.Controllers.ExtensionRequired,
+						Config: cfg.Controllers.ExtensionRequiredRuntime,
 					}).AddToManager(ctx, mgr)
 				},
 			},
@@ -115,7 +115,9 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 						return false, nil
 					}
 
-					return true, (&requiredvirtual.Reconciler{}).AddToManager(ctx, mgr, virtualCluster)
+					return true, (&requiredvirtual.Reconciler{
+						Config: cfg.Controllers.ExtensionRequiredVirtual,
+					}).AddToManager(ctx, mgr, virtualCluster)
 				},
 			},
 		}, addVirtualClusterControllerToManager...),

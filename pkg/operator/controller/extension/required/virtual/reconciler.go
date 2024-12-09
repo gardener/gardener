@@ -24,7 +24,7 @@ import (
 
 // Reconciler reconciles Extensions to determine their required state.
 type Reconciler struct {
-	Config        config.ExtensionRequiredControllerConfiguration
+	Config        config.ExtensionRequiredVirtualControllerConfiguration
 	RuntimeClient client.Client
 	VirtualClient client.Client
 
