@@ -16,11 +16,7 @@ import (
 
 var _ = Describe("Cluster controller tests", func() {
 	It("should create and add the virtual cluster", func() {
-		restConfig := &rest.Config{Burst: 12}
-
-		channel <- event.TypedGenericEvent[*rest.Config]{Object: restConfig}
-
-		mockManager.EXPECT().GetLogger()
+		mockManager.EXPECT().GetLogger().AnyTimes()
 
 		var virtualClusterToManager cluster.Cluster
 		mockManager.EXPECT().Add(gomock.Any()).Do(func(r manager.Runnable) {
@@ -28,6 +24,8 @@ var _ = Describe("Cluster controller tests", func() {
 			virtualClusterToManager, ok = r.(cluster.Cluster)
 			Expect(ok).To(BeTrue())
 		})
+
+		channel <- event.TypedGenericEvent[*rest.Config]{Object: restConfig}
 
 		Eventually(func(g Gomega) {
 			g.Expect(virtualCluster).ToNot(BeNil())
