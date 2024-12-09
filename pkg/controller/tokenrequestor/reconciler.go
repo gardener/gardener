@@ -5,9 +5,11 @@
 package tokenrequestor
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -43,6 +45,7 @@ type Reconciler struct {
 	JitterFunc      func(time.Duration, float64) time.Duration
 	Class           *string
 	APIAudiences    []string
+	CAData          []byte
 	// TargetNamespace is the namespace that requested ServiceAccounts should be created in.
 	// If TargetNamespace is empty, the controller uses the namespace specified in the
 	// serviceaccount.resources.gardener.cloud/namespace annotation.
@@ -134,11 +137,15 @@ func (r *Reconciler) reconcileSecret(ctx context.Context, log logr.Logger, sourc
 	// ref https://github.com/gardener/gardener/issues/6092#issuecomment-1152434616
 	patch := client.MergeFromWithOptions(sourceSecret.DeepCopy(), client.MergeFromWithOptimisticLock{})
 	metav1.SetMetaDataAnnotation(&sourceSecret.ObjectMeta, resourcesv1alpha1.ServiceAccountTokenRenewTimestamp, r.Clock.Now().UTC().Add(renewDuration).Format(time.RFC3339))
+	shouldInjectCA, _ := strconv.ParseBool(sourceSecret.Annotations[resourcesv1alpha1.ServiceAccountInjectCABundle])
+	if shouldInjectCA {
+		log.Info("Injecting CA bundle into secret")
+	}
 
 	if targetSecret := getTargetSecretFromAnnotations(sourceSecret.Annotations); targetSecret != nil {
 		log.Info("Populating the token to the target secret", "targetSecret", client.ObjectKeyFromObject(targetSecret))
 
-		if _, err := controllerutil.CreateOrUpdate(ctx, r.TargetClient, targetSecret, r.populateToken(log, targetSecret, token)); err != nil {
+		if _, err := controllerutil.CreateOrUpdate(ctx, r.TargetClient, targetSecret, r.populateSecretData(log, targetSecret, token, shouldInjectCA)); err != nil {
 			return err
 		}
 
@@ -150,7 +157,7 @@ func (r *Reconciler) reconcileSecret(ctx context.Context, log logr.Logger, sourc
 	} else {
 		log.Info("Populating the token to the source secret")
 
-		if err := r.populateToken(log, sourceSecret, token)(); err != nil {
+		if err := r.populateSecretData(log, sourceSecret, token, shouldInjectCA)(); err != nil {
 			return err
 		}
 	}
@@ -158,18 +165,23 @@ func (r *Reconciler) reconcileSecret(ctx context.Context, log logr.Logger, sourc
 	return r.SourceClient.Patch(ctx, sourceSecret, patch)
 }
 
-func (r *Reconciler) populateToken(log logr.Logger, secret *corev1.Secret, token string) func() error {
+func (r *Reconciler) populateSecretData(log logr.Logger, secret *corev1.Secret, token string, shouldInjectCA bool) func() error {
 	return func() error {
 		if secret.Data == nil {
 			secret.Data = make(map[string][]byte, 1)
 		}
-		return updateTokenInSecretData(log, secret.Data, token)
+		var ca []byte
+		if shouldInjectCA {
+			ca = r.CAData
+		}
+		return updateSecretData(log, secret.Data, token, ca)
 	}
 }
 
 func (r *Reconciler) depopulateToken(secret *corev1.Secret) func() error {
 	return func() error {
 		delete(secret.Data, resourcesv1alpha1.DataKeyToken)
+		delete(secret.Data, resourcesv1alpha1.DataKeyCABundle)
 		delete(secret.Data, resourcesv1alpha1.DataKeyKubeconfig)
 		return nil
 	}
@@ -194,6 +206,7 @@ func (r *Reconciler) requeue(ctx context.Context, secret *corev1.Secret) (bool, 
 	var (
 		secretContainingToken = secret // token is expected in source secret by default
 		renewTimestamp        = secret.Annotations[resourcesv1alpha1.ServiceAccountTokenRenewTimestamp]
+		checkBundle, _        = strconv.ParseBool(secret.Annotations[resourcesv1alpha1.ServiceAccountInjectCABundle])
 	)
 
 	if len(renewTimestamp) == 0 {
@@ -218,6 +231,15 @@ func (r *Reconciler) requeue(ctx context.Context, secret *corev1.Secret) (bool, 
 	}
 	if !tokenExists {
 		return false, 0, nil
+	}
+	if checkBundle {
+		isBundleOk, err := r.isCABundleUpdated(secretContainingToken.Data)
+		if err != nil {
+			return false, 0, fmt.Errorf("could not check whether the caBundle is up to date: %w", err)
+		}
+		if !isBundleOk {
+			return false, 0, nil
+		}
 	}
 
 	renewTime, err := time.Parse(time.RFC3339, renewTimestamp)
@@ -271,6 +293,24 @@ func (r *Reconciler) getServiceAccountFromAnnotations(annotations map[string]str
 	}
 }
 
+func (r *Reconciler) isCABundleUpdated(data map[string][]byte) (bool, error) {
+	if _, ok := data[resourcesv1alpha1.DataKeyKubeconfig]; !ok {
+		return bytes.Equal(data[resourcesv1alpha1.DataKeyCABundle], r.CAData), nil
+	}
+
+	kubeconfig, err := decodeKubeconfig(data[resourcesv1alpha1.DataKeyKubeconfig])
+	if err != nil {
+		return false, err
+	}
+
+	cluster, err := getCluster(kubeconfig)
+	if err != nil {
+		return false, err
+	}
+
+	return bytes.Equal(cluster.CertificateAuthorityData, r.CAData), nil
+}
+
 func getTargetSecretFromAnnotations(annotations map[string]string) *corev1.Secret {
 	var (
 		name      = annotations[resourcesv1alpha1.TokenRequestorTargetSecretName]
@@ -289,23 +329,40 @@ func getTargetSecretFromAnnotations(annotations map[string]string) *corev1.Secre
 	}
 }
 
-func updateTokenInSecretData(log logr.Logger, data map[string][]byte, token string) error {
+func updateSecretData(log logr.Logger, data map[string][]byte, token string, caData []byte) error {
 	if _, ok := data[resourcesv1alpha1.DataKeyKubeconfig]; !ok {
 		log.Info("Writing token to data")
 		data[resourcesv1alpha1.DataKeyToken] = []byte(token)
-
+		if len(caData) > 0 {
+			data[resourcesv1alpha1.DataKeyCABundle] = caData
+		} else {
+			delete(data, resourcesv1alpha1.DataKeyCABundle)
+		}
 		return nil
 	}
 
 	log.Info("Writing token as part of kubeconfig to data")
 
-	kubeconfig, authInfo, err := decodeKubeconfigAndGetUser(data[resourcesv1alpha1.DataKeyKubeconfig])
+	kubeconfig, err := decodeKubeconfig(data[resourcesv1alpha1.DataKeyKubeconfig])
+	if err != nil {
+		return err
+	}
+
+	authInfo, err := getAuthInfo(kubeconfig)
 	if err != nil {
 		return err
 	}
 
 	if authInfo != nil {
 		authInfo.Token = token
+	}
+
+	if len(caData) > 0 {
+		cluster, err := getCluster(kubeconfig)
+		if err != nil {
+			return err
+		}
+		cluster.CertificateAuthorityData = caData
 	}
 
 	kubeconfigEncoded, err := runtime.Encode(clientcmdlatest.Codec, kubeconfig)
@@ -322,7 +379,12 @@ func tokenExistsInSecretData(data map[string][]byte) (bool, error) {
 		return data[resourcesv1alpha1.DataKeyToken] != nil, nil
 	}
 
-	_, authInfo, err := decodeKubeconfigAndGetUser(data[resourcesv1alpha1.DataKeyKubeconfig])
+	kubeconfig, err := decodeKubeconfig(data[resourcesv1alpha1.DataKeyKubeconfig])
+	if err != nil {
+		return false, err
+	}
+
+	authInfo, err := getAuthInfo(kubeconfig)
 	if err != nil {
 		return false, err
 	}
@@ -330,25 +392,49 @@ func tokenExistsInSecretData(data map[string][]byte) (bool, error) {
 	return authInfo != nil && authInfo.Token != "", nil
 }
 
-func decodeKubeconfigAndGetUser(data []byte) (*clientcmdv1.Config, *clientcmdv1.AuthInfo, error) {
+func decodeKubeconfig(data []byte) (*clientcmdv1.Config, error) {
 	kubeconfig := &clientcmdv1.Config{}
 	if _, _, err := clientcmdlatest.Codec.Decode(data, nil, kubeconfig); err != nil {
-		return nil, nil, err
+		return nil, err
+	}
+	return kubeconfig, nil
+}
+
+func getAuthInfo(kubeconfig *clientcmdv1.Config) (*clientcmdv1.AuthInfo, error) {
+	ctx, err := getCurrentContext(kubeconfig)
+	if err != nil {
+		return nil, err
 	}
 
-	var userName string
+	for i, authInfo := range kubeconfig.AuthInfos {
+		if authInfo.Name == ctx.AuthInfo {
+			return &kubeconfig.AuthInfos[i].AuthInfo, nil
+		}
+	}
+
+	return nil, fmt.Errorf("did not find authInfo of current context named %s", ctx.AuthInfo)
+}
+
+func getCluster(kubeconfig *clientcmdv1.Config) (*clientcmdv1.Cluster, error) {
+	ctx, err := getCurrentContext(kubeconfig)
+	if err != nil {
+		return nil, err
+	}
+
+	for i, cluster := range kubeconfig.Clusters {
+		if cluster.Name == ctx.Cluster {
+			return &kubeconfig.Clusters[i].Cluster, nil
+		}
+	}
+
+	return nil, fmt.Errorf("did not find cluster of current context named %s", ctx.Cluster)
+}
+
+func getCurrentContext(kubeconfig *clientcmdv1.Config) (clientcmdv1.Context, error) {
 	for _, namedContext := range kubeconfig.Contexts {
 		if namedContext.Name == kubeconfig.CurrentContext {
-			userName = namedContext.Context.AuthInfo
-			break
+			return namedContext.Context, nil
 		}
 	}
-
-	for i, users := range kubeconfig.AuthInfos {
-		if users.Name == userName {
-			return kubeconfig, &kubeconfig.AuthInfos[i].AuthInfo, nil
-		}
-	}
-
-	return nil, nil, nil
+	return clientcmdv1.Context{}, fmt.Errorf("did not find context defined in current context")
 }
