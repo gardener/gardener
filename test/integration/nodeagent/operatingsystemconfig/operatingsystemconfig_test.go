@@ -32,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/operatingsystemconfig"
 	fakedbus "github.com/gardener/gardener/pkg/nodeagent/dbus/fake"
+	nodeagentfiles "github.com/gardener/gardener/pkg/nodeagent/files"
 	fakeregistry "github.com/gardener/gardener/pkg/nodeagent/registry/fake"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -71,6 +72,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 
 		fakeDBus = fakedbus.New()
 		fakeFS = afero.Afero{Fs: afero.NewMemMapFs()}
+		fakeFsNodeAgent, err := nodeagentfiles.NewNodeAgentAfero(fakeFS)
+		Expect(err).NotTo(HaveOccurred())
 
 		imageMountDirectory, err = fakeFS.TempDir("", "fake-node-agent-")
 		Expect(err).NotTo(HaveOccurred())
@@ -145,10 +148,10 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 				KubernetesVersion: kubernetesVersion,
 			},
 			DBus:          fakeDBus,
-			FS:            fakeFS,
+			FS:            fakeFsNodeAgent,
 			HostName:      hostName,
 			NodeName:      node.Name,
-			Extractor:     fakeregistry.NewExtractor(fakeFS, imageMountDirectory),
+			Extractor:     fakeregistry.NewExtractor(afero.Afero{Fs: fakeFsNodeAgent}, imageMountDirectory),
 			CancelContext: cancelFunc.cancel,
 		}).AddToManager(ctx, mgr)).To(Succeed())
 
@@ -436,7 +439,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		test.AssertDirectoryOnDisk(fakeFS, "/etc/containerd/conf.d")
 		test.AssertDirectoryOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d")
 		test.AssertFileOnDisk(fakeFS, "/etc/containerd/config.toml", containerdConfigFileContent, 0644)
-		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d/30-env_config.conf", "[Service]\nEnvironment=\"PATH=/var/bin/containerruntimes:"+os.Getenv("PATH")+"\"\n", 0644)
+		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d/30-env_config.conf", "[Service]\nEnvironment=\"PATH=/var/bin/containerruntimes:"+os.Getenv("PATH")+"\"\n", 0600)
 		test.AssertFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig1.Upstream+"/hosts.toml", "# managed by gardener-node-agent\nserver = \"https://registry.hub.docker.com\"\n\n[host.\"https://10.10.10.100:8080\"]\n  capabilities = [\"pull\",\"resolve\"]\n\n[host.\"https://10.10.10.200:8080\"]\n  capabilities = [\"pull\",\"resolve\"]\n\n", 0644)
 		test.AssertFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig2.Upstream+"/hosts.toml", "# managed by gardener-node-agent\nserver = \"https://registry.k8s.io\"\n\n[host.\"https://10.10.10.101:8080\"]\n  capabilities = [\"pull\"]\n  ca = [\"/var/certs/ca.crt\"]\n\n", 0644)
 
@@ -452,6 +455,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit7.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit8.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit9.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{"containerd.service"}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionDaemonReload},
 			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit1.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionStop, UnitNames: []string{unit2.Name}},
@@ -572,7 +576,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		test.AssertDirectoryOnDisk(fakeFS, "/etc/containerd/conf.d")
 		test.AssertDirectoryOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d")
 		test.AssertFileOnDisk(fakeFS, "/etc/containerd/config.toml", containerdConfigFileContent, 0644)
-		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d/30-env_config.conf", "[Service]\nEnvironment=\"PATH=/var/bin/containerruntimes:"+os.Getenv("PATH")+"\"\n", 0644)
+		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d/30-env_config.conf", "[Service]\nEnvironment=\"PATH=/var/bin/containerruntimes:"+os.Getenv("PATH")+"\"\n", 0600)
 		test.AssertFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig1.Upstream+"/hosts.toml", "# managed by gardener-node-agent\nserver = \"https://registry.hub.docker.com\"\n\n[host.\"https://10.10.10.100:8080\"]\n  capabilities = [\"pull\",\"resolve\"]\n\n[host.\"https://10.10.10.200:8080\"]\n  capabilities = [\"pull\",\"resolve\"]\n\n", 0644)
 		test.AssertFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig2.Upstream+"/hosts.toml", "# managed by gardener-node-agent\nserver = \"https://registry.k8s.io\"\n\n[host.\"https://10.10.10.101:8080\"]\n  capabilities = [\"pull\"]\n  ca = [\"/var/certs/ca.crt\"]\n\n", 0644)
 
