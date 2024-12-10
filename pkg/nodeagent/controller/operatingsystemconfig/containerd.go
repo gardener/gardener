@@ -23,38 +23,59 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/pelletier/go-toml"
 	"github.com/spf13/afero"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	jsonserializer "k8s.io/apimachinery/pkg/runtime/serializer/json"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
+	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/structuredmap"
 )
 
+var codec runtime.Codec
+
+func init() {
+	scheme := runtime.NewScheme()
+	utilruntime.Must(extensionsv1alpha1.AddToScheme(scheme))
+	ser := jsonserializer.NewSerializerWithOptions(jsonserializer.DefaultMetaFactory, scheme, scheme, jsonserializer.SerializerOptions{Yaml: true, Pretty: false, Strict: false})
+	versions := schema.GroupVersions([]schema.GroupVersion{nodeagentv1alpha1.SchemeGroupVersion, extensionsv1alpha1.SchemeGroupVersion})
+	codec = serializer.NewCodecFactory(scheme).CodecForVersions(ser, ser, versions, versions)
+}
+
 // ReconcileContainerdConfig sets required values of the given containerd configuration.
-func (r *Reconciler) ReconcileContainerdConfig(ctx context.Context, log logr.Logger, criConfig *extensionsv1alpha1.CRIConfig) error {
-	if !extensionsv1alpha1helper.HasContainerdConfiguration(criConfig) {
-		return nil
+func (r *Reconciler) ReconcileContainerdConfig(ctx context.Context, log logr.Logger, osc *extensionsv1alpha1.OperatingSystemConfig, oscRaw []byte) ([]byte, error) {
+	if !extensionsv1alpha1helper.HasContainerdConfiguration(osc.Spec.CRIConfig) {
+		return oscRaw, nil
 	}
 
 	if err := r.ensureContainerdConfigDirectories(); err != nil {
-		return fmt.Errorf("failed to ensure containerd config directories: %w", err)
+		return nil, fmt.Errorf("failed to ensure containerd config directories: %w", err)
 	}
 
 	if err := r.ensureContainerdDefaultConfig(ctx); err != nil {
-		return fmt.Errorf("failed to ensure containerd default config: %w", err)
+		return nil, fmt.Errorf("failed to ensure containerd default config: %w", err)
 	}
 
-	if err := r.ensureContainerdEnvironment(); err != nil {
-		return fmt.Errorf("failed to ensure containerd environment: %w", err)
+	if err := r.ensureContainerdConfiguration(log, osc.Spec.CRIConfig); err != nil {
+		return nil, fmt.Errorf("failed to ensure containerd config: %w", err)
 	}
 
-	if err := r.ensureContainerdConfiguration(log, criConfig); err != nil {
-		return fmt.Errorf("failed to ensure containerd config: %w", err)
+	// Ingest the containerd drop-in into the OSC to prevent side effects when containerd.service is changed by extensions too.
+	ingestContainerdEnvironmentDropIn(osc)
+
+	oscRawContainerd, err := runtime.Encode(codec, osc)
+	if err != nil {
+		return nil, fmt.Errorf("unable to encode OSC after ingesting containerd drop-in: %w", err)
 	}
 
-	return nil
+	return oscRawContainerd, nil
 }
 
 // ReconcileContainerdRegistries configures desired registries for containerd and cleans up abandoned ones.
@@ -81,11 +102,36 @@ func (r *Reconciler) ReconcileContainerdRegistries(ctx context.Context, log logr
 	}
 }
 
+// ingestContainerdEnvironmentDropIn ingests a drop-in to set the environment for the 'containerd' service.
+func ingestContainerdEnvironmentDropIn(osc *extensionsv1alpha1.OperatingSystemConfig) {
+	if osc.Spec.CRIConfig == nil {
+		return
+	}
+
+	unitDropIn := extensionsv1alpha1.DropIn{
+		Name: "30-env_config.conf",
+		Content: `[Service]
+Environment="PATH=` + extensionsv1alpha1.ContainerDRuntimeContainersBinFolder + `:` + os.Getenv("PATH") + `"
+`,
+	}
+
+	for i, unit := range osc.Spec.Units {
+		if unit.Name == v1beta1constants.OperatingSystemConfigUnitNameContainerDService {
+			osc.Spec.Units[i].DropIns = append(osc.Spec.Units[i].DropIns, unitDropIn)
+			return
+		}
+	}
+
+	osc.Spec.Units = append(osc.Spec.Units, extensionsv1alpha1.Unit{
+		Name:    v1beta1constants.OperatingSystemConfigUnitNameContainerDService,
+		DropIns: []extensionsv1alpha1.DropIn{unitDropIn},
+	})
+}
+
 const (
 	baseDir   = "/etc/containerd"
 	certsDir  = baseDir + "/certs.d"
 	configDir = baseDir + "/conf.d"
-	dropinDir = "/etc/systemd/system/containerd.service.d"
 )
 
 func (r *Reconciler) ensureContainerdConfigDirectories() error {
@@ -94,7 +140,6 @@ func (r *Reconciler) ensureContainerdConfigDirectories() error {
 		baseDir,
 		configDir,
 		certsDir,
-		dropinDir,
 	} {
 		if err := r.FS.MkdirAll(dir, defaultDirPermissions); err != nil {
 			return fmt.Errorf("failure for directory %q: %w", dir, err)
@@ -128,32 +173,6 @@ func (r *Reconciler) ensureContainerdDefaultConfig(ctx context.Context) error {
 	}
 
 	return r.FS.WriteFile(configFile, output, 0644)
-}
-
-// ensureContainerdEnvironment sets the environment for the 'containerd' service.
-func (r *Reconciler) ensureContainerdEnvironment() error {
-	var (
-		unitDropin = `[Service]
-Environment="PATH=` + extensionsv1alpha1.ContainerDRuntimeContainersBinFolder + `:` + os.Getenv("PATH") + `"
-`
-	)
-
-	containerdEnvFilePath := path.Join(dropinDir, "30-env_config.conf")
-	exists, err := r.FS.Exists(containerdEnvFilePath)
-	if err != nil {
-		return err
-	}
-
-	if exists {
-		return nil
-	}
-
-	err = r.FS.WriteFile(containerdEnvFilePath, []byte(unitDropin), 0644)
-	if err != nil {
-		return fmt.Errorf("unable to write unit dropin: %w", err)
-	}
-
-	return nil
 }
 
 // ensureContainerdConfiguration sets the configuration for containerd.
