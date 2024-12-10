@@ -22,7 +22,7 @@ reviewers:
   - [Motivation](#motivation)
   - [Goals](#goals)
   - [Non-Goals](#non-goals)
-  - [High Availablity](#high-availablity)
+  - [High Availability](#high-availability)
     - [Topologies](#topologies)
     - [Recommended Number of Nodes and Zones](#recommended-number-of-nodes-and-zones)
     - [Recommended Number of Replicas](#recommended-number-of-replicas)
@@ -102,7 +102,7 @@ Each consumer therefore needs to decide on the degree of failure isolation that 
 - In the current scope, three control plane components - `Kube Apiserver`, `etcd`, and `Gardener Resource Manager` will be highly available. In the future, other components could be set up in HA mode.
 - To achieve HA we consider components to have at least three replicas. Greater failure tolerance is not targeted by this GEP.
 
-## High Availablity
+## High Availability
 
 ### Topologies
 
@@ -166,7 +166,7 @@ A scheduling request could be for a HA shoot with failure tolerance of `node` or
 
 _Proposed Changes_
 
-**Fitering candidate seeds**
+**Filtering candidate seeds**
 
 A new `filter step` needs to be introduced in the [reconciler](https://github.com/gardener/gardener/blob/4dbba56e24b5999fd728cb84b09a4d6d54f64479/pkg/scheduler/controller/shoot/reconciler.go#L110) which selects candidate seeds. It ensures that shoots with `zone` tolerance are only scheduled to seeds which have worker nodes across multiple availability tones (aka `multi-zonal seeds`).
 
@@ -190,11 +190,11 @@ _Proposed Change_
 
 ## Setting Up a Seed for HA
 
-As mentioned in [High-Availablity](#high-availablity), certain aspects need to be considered for a seed cluster to host HA shoots. The following sections explain the requirements for a seed cluster to host a single or multi zonal HA shoot cluster.
+As mentioned in [High-Availability](#high-availability), certain aspects need to be considered for a seed cluster to host HA shoots. The following sections explain the requirements for a seed cluster to host a single or multi zonal HA shoot cluster.
 
 ### Hosting an HA Shoot Control Plane with `node` Failure Tolerance
 
-To host an HA shoot control plane within a single zone, it should be ensured that each worker pool that potentially runs seed system or shoot control plane components should have at least **three nodes**. This is also the minium size that is required by an HA `etcd` cluster with a failure tolerance of a single node. Furthermore, the nodes must run in a single zone only (see [Recommended Number of Nodes and Zones](#recommended-number-of-nodes-and-zones)).
+To host an HA shoot control plane within a single zone, it should be ensured that each worker pool that potentially runs seed system or shoot control plane components should have at least **three nodes**. This is also the minimum size that is required by an HA `etcd` cluster with a failure tolerance of a single node. Furthermore, the nodes must run in a single zone only (see [Recommended Number of Nodes and Zones](#recommended-number-of-nodes-and-zones)).
 
 ### Hosting an HA Shoot Control Plane with `zone` Failure Tolerance
 
@@ -220,7 +220,7 @@ The above list is not an exhaustive list and is just indicative that the current
 
 ### Zone Pinning
 
-HA shoot clusters with failure tolerance of `node`, as well as non-HA shoot clusters, can be scheduled on `single-zonal` and `multi-zonal` seeds alike. On a `multi-zonal` seed it's desireable to place components of the same control plane in **one zone only** to reduce cost and latency effects due to cross network traffic.
+HA shoot clusters with failure tolerance of `node`, as well as non-HA shoot clusters, can be scheduled on `single-zonal` and `multi-zonal` seeds alike. On a `multi-zonal` seed it's desirable to place components of the same control plane in **one zone only** to reduce cost and latency effects due to cross network traffic.
 Thus, it's essential to add [Pod affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity) rules to control plane component with multiple replicas:
 
 ```yaml
@@ -511,7 +511,7 @@ taints:
 The taints have the following effect:
 * New pods will not be scheduled unless they have a toleration added which is all permissive or matches the effect and/or key.
 
-For Deployments, once a Pod managed by a Deployment transitions to `Terminating` state, the `kube-controller-manager` creates a new Pod (replica) right away to fullfil the desired replica count of the Deployment. Hence, in case of a Seed Node/zone outage for the Deployments `kube-controller-manager` creates new Pods in place of the Pods that are evicted due to the outage. The newly created Pods are scheduled on healthy Nodes and start successfully after a short period of time.
+For Deployments, once a Pod managed by a Deployment transitions to `Terminating` state, the `kube-controller-manager` creates a new Pod (replica) right away to fulfil the desired replica count of the Deployment. Hence, in case of a Seed Node/zone outage for the Deployments `kube-controller-manager` creates new Pods in place of the Pods that are evicted due to the outage. The newly created Pods are scheduled on healthy Nodes and start successfully after a short period of time.
 For StatefulSets, once a Pod managed by a StatefulSet transitions to `Terminating` state the `kube-controller-manager` waits until the Pod is removed from store and only after that it creates the replacement Pod. In case of a Seed node/zone outage, the StatefulSet Pods in the Shoot control plane stay in `Terminating` state for 5min. After 5min, the `shoot-care-controller` of `gardenlet` forcefully deletes (garbage collects) the `Terminating` Pods from the Shoot control plane. Alternatively, `machine-controller-manager` deletes the unhealthy Nodes after `--machine-health-timeout` (10min by default) and the `Terminating` Pods are removed from store shortly after the Node removal. `kube-controller-manager` creates new StatefulSet Pods. Depending on the outage type (`node` or `zone`), the new StatefulSet Pods respectively succeed or fail to recover. For `node`, the Pods will likely recover, whereas for `zone` it's usual that Pods remain in `Pending` state as long as the outage lasts, since depending volumes cannot be moved across availability zones.
 
 #### Recovery from Node Failure
@@ -565,7 +565,7 @@ _Cons_:
 
 > **Note:** Prerequisite for this option is to have the ability to detect an outage and recover from it.
 
-Kube Apiserver, Gardener Resource Manager, etcd, and [seed system compontents](#seed-system-components) will be setup with multiple replicas spread across zones. The rest of the control plane components will continue to have a single replica. However, in this option etcd cluster members will be rebalanced to ensure that the desired replicas are available at all times.
+Kube Apiserver, Gardener Resource Manager, etcd, and [seed system components](#seed-system-components) will be setup with multiple replicas spread across zones. The rest of the control plane components will continue to have a single replica. However, in this option etcd cluster members will be rebalanced to ensure that the desired replicas are available at all times.
 
 _Recovering etcd cluster to its full strength_
 
@@ -679,7 +679,7 @@ When connections and clients were increased keeping the payload size fixed, then
 
 _Range requests to fetch all keys per request_
 
-For these tests - for payload size = 1MB, the total number of key-value pairs retrieved per request are 1000 and for payload-size = 256 bytes, the total number of key-value pairs retrived per request are 100000.
+For these tests - for payload size = 1MB, the total number of key-value pairs retrieved per request are 1000 and for payload-size = 256 bytes, the total number of key-value pairs retrieved per request are 100000.
 
 * The `sn-sz` latency is around 5% lesser than both `mn-sz` and `mn-mz`. This is a deviation for smaller payloads (see above), but for larger payloads this finding is consistent.
 * There is hardly any difference in latency between `mn-sz` and `mn-mz`.
@@ -780,7 +780,7 @@ There are three options to setup an `active-passive` etcd.
 
 <img src="assets/activepassive-option1.png">
 
-`Primary etcd` will periodically take a snapshot (full and delta) and will push these snapshots to the backup-bucket. `Hot-Standy etcd` instances will periodically query the backup-bucket and sync its database accordingly. If a new full snapshot is available which has a higher revision number than what is available in its local etcd database, then it will restore from a full snapshot. It will additionally check if there are delta snapshots having a higher revision number. If that is the case, then it will apply the delta snapshots directly to its local etcd database.
+`Primary etcd` will periodically take a snapshot (full and delta) and will push these snapshots to the backup-bucket. `Hot-Standby etcd` instances will periodically query the backup-bucket and sync its database accordingly. If a new full snapshot is available which has a higher revision number than what is available in its local etcd database, then it will restore from a full snapshot. It will additionally check if there are delta snapshots having a higher revision number. If that is the case, then it will apply the delta snapshots directly to its local etcd database.
 > **Note:** There is no need to run an embedded etcd to apply delta snapshots.
 
 For the sake of illustration only, assume that there are two etcd pods `etcd-0` and `etcd-1` with corresponding labels which uniquely identify each pod. Assume that `etcd-0` is the current `primary/active` etcd instance.
@@ -795,9 +795,9 @@ For the sake of illustration only, assume that there are two etcd pods `etcd-0` 
 **Cons**
 * As compared to an `active-active` etcd cluster, there is not much difference in cost of compute resources (CPU, Memory, Storage).
 * The `etcd-druid` will have to periodically check the health of both the `primary` and `hot-standby` nodes and ensure that these are up and running.
-* There will be a potential delay in determining that a `primary` etcd instance is no longer healthy, thereby increasing the delay in switching to the `hot-standy` etcd instance, causing longer downtime. It is also possible that at the same time `hot-standy` has also went down or is otherwise unhealthy, resulting in a complete downtime. The amount of time it will take to recover from such a situation would be several minutes (time to start etcd pod + time to restore either from full snapshot or apply delta snapshots).
+* There will be a potential delay in determining that a `primary` etcd instance is no longer healthy, thereby increasing the delay in switching to the `hot-standby` etcd instance, causing longer downtime. It is also possible that at the same time `hot-standby` has also went down or is otherwise unhealthy, resulting in a complete downtime. The amount of time it will take to recover from such a situation would be several minutes (time to start etcd pod + time to restore either from full snapshot or apply delta snapshots).
 * Synchronization is always via backup-bucket, which will be less frequent as compared to an `active-active` etcd cluster where there is real-time synchronization done for any updates by the leader to majority or all of its followers.<!-- If the primary crashes, the time. -->
-* During the switchover from `primary` to `hot-standby`, if the `hot-standy` etcd is in the process of applying delta snaphots or restoring from a new full snapshot, then `hot-standby` should ensure that the backup-restore container sets the readiness probe to indicate that it is not ready yet, causing additional downtime.
+* During the switchover from `primary` to `hot-standby`, if the `hot-standby` etcd is in the process of applying delta snaphots or restoring from a new full snapshot, then `hot-standby` should ensure that the backup-restore container sets the readiness probe to indicate that it is not ready yet, causing additional downtime.
 </details>
 
 <details>

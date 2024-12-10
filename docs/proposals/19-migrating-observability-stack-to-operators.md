@@ -342,7 +342,7 @@ similar to the shoot monitoring.
             type: seed
             visibility: all
           annotations:
-            description: All infrastruture specific operations cannot be completed (e.g. creating loadbalancers or persistent volumes).
+            description: All infrastructure specific operations cannot be completed (e.g. creating loadbalancers or persistent volumes).
             summary: Cloud controller manager is down.
       observedComponents: |
         observedPods:
@@ -431,7 +431,7 @@ similar to the shoot monitoring.
           type: seed
           visibility: all
         annotations:
-          description: All infrastruture specific operations cannot be completed (e.g. creating loadbalancers or persistent volumes).
+          description: All infrastructure specific operations cannot be completed (e.g. creating loadbalancers or persistent volumes).
           summary: Cloud controller manager is down.
   ```
 
@@ -558,7 +558,7 @@ In its current state, the fluent-bit operator can be used by Gardener "as is", w
 
 ### Fluent-bit Filters and Parsers
 
-The second major function of the fluent-bit operator is to compile a valid application configuration aggregating declarations supplied by fluent-bit custom resources such as ClusterFitlers, ClusterParsers, and so on, as shown by the example.
+The second major function of the fluent-bit operator is to compile a valid application configuration aggregating declarations supplied by fluent-bit custom resources such as ClusterFilters, ClusterParsers, and so on, as shown by the example.
 
 1. Fluent-Bit Inputs, Outputs, Filters and Parsers
 

@@ -135,7 +135,7 @@ The `gardener-resource-manager` can manage a resource in the following supported
 
 The mode for a resource can be specified with the `resources.gardener.cloud/mode` annotation. The annotation should be specified in the encoded resource manifest in the Secret that is referenced by the `ManagedResource`.
 
-#### Resource Class and Reconcilation Scope
+#### Resource Class and Reconciliation Scope
 
 By default, the `gardener-resource-manager` controller watches for `ManagedResource`s in all namespaces.
 The `.sourceClientConnection.namespace` field in the component configuration restricts the watch to `ManagedResource`s in a single namespace only.

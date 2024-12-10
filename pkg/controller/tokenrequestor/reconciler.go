@@ -112,7 +112,7 @@ func (r *Reconciler) reconcileServiceAccount(ctx context.Context, secret *corev1
 	if labelsJSON := secret.Annotations[resourcesv1alpha1.ServiceAccountLabels]; labelsJSON != "" {
 		labels = make(map[string]string)
 		if err := json.Unmarshal([]byte(labelsJSON), &labels); err != nil {
-			return nil, fmt.Errorf("failed unmarshaling service account labels from secret annotation %q (%s): %w", resourcesv1alpha1.ServiceAccountLabels, labelsJSON, err)
+			return nil, fmt.Errorf("failed unmarshalling service account labels from secret annotation %q (%s): %w", resourcesv1alpha1.ServiceAccountLabels, labelsJSON, err)
 		}
 	}
 

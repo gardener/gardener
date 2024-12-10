@@ -361,7 +361,7 @@ var _ = Describe("Vali", func() {
 			objectOfTypeSTS       = gomock.AssignableToTypeOf(&appsv1.StatefulSet{})
 			objectOfTypeMR        = gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})
 			objectOfTypeSecret    = gomock.AssignableToTypeOf(&corev1.Secret{})
-			skipedManagedResource = &resourcesv1alpha1.ManagedResource{
+			skippedManagedResource = &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      managedResourceName,
 					Namespace: gardenNamespace,
@@ -397,7 +397,7 @@ var _ = Describe("Vali", func() {
 				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
 					Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-						Expect(obj).To(DeepEqual(skipedManagedResource))
+						Expect(obj).To(DeepEqual(skippedManagedResource))
 					}),
 				// Scale Vali StatefulSet to zero
 				sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch),
@@ -434,7 +434,7 @@ var _ = Describe("Vali", func() {
 				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
 					Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-						Expect(obj).To(DeepEqual(skipedManagedResource))
+						Expect(obj).To(DeepEqual(skippedManagedResource))
 					}),
 				// Scale Vali StatefulSet to zero
 				sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch),
@@ -523,7 +523,7 @@ var _ = Describe("Vali", func() {
 				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
 					Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-						Expect(obj).To(DeepEqual(skipedManagedResource))
+						Expect(obj).To(DeepEqual(skippedManagedResource))
 					}),
 				// Scale Vali StatefulSet to zero
 				sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch).Return(errNotFound),
@@ -559,7 +559,7 @@ var _ = Describe("Vali", func() {
 				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
 					Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-						Expect(obj).To(DeepEqual(skipedManagedResource))
+						Expect(obj).To(DeepEqual(skippedManagedResource))
 					}),
 				// Scale Vali StatefulSet to zero
 				sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch),
@@ -596,7 +596,7 @@ var _ = Describe("Vali", func() {
 				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
 					Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-						Expect(obj).To(DeepEqual(skipedManagedResource))
+						Expect(obj).To(DeepEqual(skippedManagedResource))
 					}),
 				// Scale Vali StatefulSet to zero
 				sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch),
@@ -641,7 +641,7 @@ var _ = Describe("Vali", func() {
 				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
 					Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-						Expect(obj).To(DeepEqual(skipedManagedResource))
+						Expect(obj).To(DeepEqual(skippedManagedResource))
 					}),
 				// Scale Vali StatefulSet to zero
 				sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch).Return(errForbidden),
@@ -657,7 +657,7 @@ var _ = Describe("Vali", func() {
 				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
 					Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-						Expect(obj).To(DeepEqual(skipedManagedResource))
+						Expect(obj).To(DeepEqual(skippedManagedResource))
 					}),
 				// Scale Vali StatefulSet to zero
 				sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch),
@@ -674,7 +674,7 @@ var _ = Describe("Vali", func() {
 				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
 					Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-						Expect(obj).To(DeepEqual(skipedManagedResource))
+						Expect(obj).To(DeepEqual(skippedManagedResource))
 					}),
 				// Scale Vali StatefulSet to zero
 				sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch),
@@ -693,7 +693,7 @@ var _ = Describe("Vali", func() {
 				runtimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: managedResourceName}, objectOfTypeMR),
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
 					Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-						Expect(obj).To(DeepEqual(skipedManagedResource))
+						Expect(obj).To(DeepEqual(skippedManagedResource))
 					}),
 				// Scale Vali StatefulSet to zero
 				sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch),

@@ -228,7 +228,7 @@ var _ = Describe("Reconciler", func() {
 
 		Context("error", func() {
 			It("provided context object cannot be parsed", func() {
-				secret.Annotations["workloadidentity.security.gardener.cloud/context-object"] = "unparseable"
+				secret.Annotations["workloadidentity.security.gardener.cloud/context-object"] = "unparsable"
 
 				Expect(seedClient.Create(ctx, secret)).To(Succeed())
 				Expect(gardenClient.Create(ctx, workloadIdentity)).To(Succeed())

@@ -63,7 +63,7 @@ allowedMetrics:
 
 ## Adding Alerts
 
-The alert definitons are located in `charts/seed-monitoring/charts/core/charts/prometheus/rules`. There are two approaches for adding new alerts.
+The alert definitions are located in `charts/seed-monitoring/charts/core/charts/prometheus/rules`. There are two approaches for adding new alerts.
 
 1. Adding additional alerts for a component which already has a set of alerts. In this case you have to extend the existing rule file for the component.
 1. Adding alerts for a new component. In this case a new rule file with name scheme `example-component.rules.yaml` needs to be added.

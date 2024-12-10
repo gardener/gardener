@@ -100,7 +100,7 @@ spec:
                 type: string
               followCNAME:
                 description: FollowCNAME if true delegated domain for DNS01 challenge
-                  is used if CNAME record for DNS01 challange domain `_acme-challenge.<domain>`
+                  is used if CNAME record for DNS01 challenge domain `_acme-challenge.<domain>`
                   is set.
                 type: boolean
               isCA:

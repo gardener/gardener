@@ -248,12 +248,12 @@ EOF
     openssl genrsa -out ca.key 3072
     openssl req -x509 -new -nodes -key ca.key -days 1 -out ca.crt -subj "/CN=quic-tunnel-ca"
 
-    # Create a server certiticate
+    # Create a server certificate
     openssl genrsa -out tls.key 3072
     openssl req -new -key tls.key -out server.csr -subj "/CN=quic-tunnel-server" -config server.conf
     openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out tls.crt -days 1 -extensions v3_req -extfile server.conf
 
-    # Create a client certiticate
+    # Create a client certificate
     openssl genrsa -out client.key 3072
     openssl req -new -key client.key -out client.csr -subj "/CN=quic-tunnel-client" -config client.conf
     openssl x509 -req -in client.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out client.crt -days 1 -extensions v3_req -extfile client.conf
@@ -413,7 +413,7 @@ if [[ "${BASH_SOURCE[0]}" = "$0" ]]; then
 
             echo "[STEP 9] Initializing the quic client";
             echo "[Info] Quic initialized, you are ready to go ahead and run \"make EXTENSION_NAMESPACE=$namespace WEBHOOK_CONFIG_MODE=service start\""
-            echo "[Info] It will take about 5 seconds for the connection to succeeed!"
+            echo "[Info] It will take about 5 seconds for the connection to succeed!"
 
             echo "[Step 10] Running quic client"
             docker run \

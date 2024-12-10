@@ -24,7 +24,7 @@ spec:
           offset 1m)
         < bool 1
 
-    # if we don't trust a single failure, we can assert that in the preceeding
+    # if we don't trust a single failure, we can assert that in the preceding
     # minutes, there were at least n failures (n==1 is a NOOP)
     - record: probe_failure:run
       expr: |

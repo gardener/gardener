@@ -574,7 +574,7 @@ var _ = Describe("handler", func() {
 								be := &gardencorev1beta1.BackupEntry{
 									Spec: gardencorev1beta1.BackupEntrySpec{
 										BucketName: "some-different-bucket",
-										SeedName:   ptr.To("some-differnet-seedname"),
+										SeedName:   ptr.To("some-different-seedname"),
 									},
 								}
 								be.DeepCopyInto(obj)

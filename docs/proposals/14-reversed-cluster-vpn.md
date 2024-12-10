@@ -136,7 +136,7 @@ Shoot OpenVPN clients (`vpn-shoot-client`) connect to the correct OpenVPN Server
 
 The `kube-apiserver` to shoot cluster connections are established using the API server proxy feature via an envoy proxy sidecar container of the `vpn-seed-server` container.
 
-The restriction regarding the `192.168.123.0/24` network range in the current VPN solution still applies to this proposal. No other restrictions are introduced. In the context of this GEP a pull requst has been filed to block usage of that range by shoot clusters.
+The restriction regarding the `192.168.123.0/24` network range in the current VPN solution still applies to this proposal. No other restrictions are introduced. In the context of this GEP a pull request has been filed to block usage of that range by shoot clusters.
 
 ### Performance and Scalability
 
@@ -272,7 +272,7 @@ Based on this, we have no reason to believe that one router will not be able to 
 
 #### Further Research
 
-Based on feedback on this proposal and while working on this implementation, we identified two additinal approaches that we have not thought of so far. The first idea can be used to replace the "inner" OpenVPN implementation and the second can be used to replace WireGuard with OpenVPN and get rid of the single point of failure.
+Based on feedback on this proposal and while working on this implementation, we identified two additional approaches that we have not thought of so far. The first idea can be used to replace the "inner" OpenVPN implementation and the second can be used to replace WireGuard with OpenVPN and get rid of the single point of failure.
 
 1. Instead of using OpenVPN for the inner seed/shoot communication, we can use the proxy protocol and use a TCP proxy (e.g. envoy) in the shoot cluster to broker the seed-shoot connections. The advantage is that with this solution, seed- and shoot cluster network ranges are allowed to overlap. Disadvantages are increased implementation effort and less efficient network in terms of throughput and scalability. We believe, however, that the reduced network efficiency does not invalidate this option.
 

@@ -821,7 +821,7 @@ message DNSProvider {
 
 // DataVolume contains information about a data volume.
 message DataVolume {
-  // Name of the volume to make it referencable.
+  // Name of the volume to make it referenceable.
   optional string name = 1;
 
   // Type is the type of the volume.
@@ -3320,7 +3320,7 @@ message VerticalPodAutoscaler {
 
 // Volume contains information about the volume type, size, and encryption.
 message Volume {
-  // Name of the volume to make it referencable.
+  // Name of the volume to make it referenceable.
   // +optional
   optional string name = 1;
 

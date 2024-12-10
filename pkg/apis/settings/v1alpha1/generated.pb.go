@@ -2580,7 +2580,7 @@ func skipGenerated(dAtA []byte) (n int, err error) {
 }
 
 var (
-	ErrInvalidLengthGenerated        = fmt.Errorf("proto: negative length found during unmarshaling")
+	ErrInvalidLengthGenerated        = fmt.Errorf("proto: negative length found during unmarshalling")
 	ErrIntOverflowGenerated          = fmt.Errorf("proto: integer overflow")
 	ErrUnexpectedEndOfGroupGenerated = fmt.Errorf("proto: unexpected end of group")
 )

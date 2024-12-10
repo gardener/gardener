@@ -49,7 +49,7 @@ test
    │  ├── operatingsystem
    │  ├── operations
    │  └── vpntunnel
-   ├── suites     # suites that run agains a running garden or shoot cluster
+   ├── suites     # suites that run against a running garden or shoot cluster
    │  ├── gardener
    │  └── shoot
    └── system     # suites that are used for building a full test flow
@@ -70,7 +70,7 @@ to control the execution of specific labeled test. See the example below:
 go test -timeout=0 ./test/testmachinery/suites/shoot \
       --v -ginkgo.v -ginkgo.show-node-events -ginkgo.no-color \
       --report-file=/tmp/report.json \                     # write elasticsearch formatted output to a file
-      --disable-dump=false \                               # disables dumping of teh current state if a test fails
+      --disable-dump=false \                               # disables dumping of the current state if a test fails
       -kubecfg=/path/to/gardener/kubeconfig \
       -shoot-name=<shoot-name> \                           # Name of the shoot to test
       -project-namespace=<gardener project namespace> \    # Name of the gardener project the test shoot resides

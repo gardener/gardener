@@ -177,7 +177,7 @@ var _ = Describe("Worker Reconcile", func() {
 			want:    reconcile.Result{},
 			wantErr: true,
 		}),
-		Entry("test Migrate after unssuccesful Migrate", &test{
+		Entry("test Migrate after unsuccessful Migrate", &test{
 			fields: fields{
 				logger:   logger,
 				actuator: newMockActuator("migrate", nil),
@@ -194,7 +194,7 @@ var _ = Describe("Worker Reconcile", func() {
 			want:    reconcile.Result{},
 			wantErr: false,
 		}),
-		Entry("test error during Migrate after unssuccesful Migrate", &test{
+		Entry("test error during Migrate after unsuccessful Migrate", &test{
 			fields: fields{
 				logger:   logger,
 				actuator: newMockActuator("migrate", errors.New("test")),

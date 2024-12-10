@@ -530,13 +530,13 @@ func ValidateNodeCIDRMaskWithMaxPod(maxPod int32, nodeCIDRMaskSize int32, networ
 
 	// Calculate how many addresses a single podCIDR subnet contains.
 	// This will overflow uint64 if nodeCIDRMaskSize <= 64 (subnetBitLen >= 64, default in IPv6), so use big.Int
-	ipAdressesAvailable := &big.Int{}
-	ipAdressesAvailable.Exp(big.NewInt(2), big.NewInt(int64(subnetBitLen)), nil)
+	ipAddressesAvailable := &big.Int{}
+	ipAddressesAvailable.Exp(big.NewInt(2), big.NewInt(int64(subnetBitLen)), nil)
 	// first and last ips are reserved, subtract 2
-	ipAdressesAvailable.Sub(ipAdressesAvailable, big.NewInt(2))
+	ipAddressesAvailable.Sub(ipAddressesAvailable, big.NewInt(2))
 
-	if ipAdressesAvailable.Cmp(big.NewInt(int64(maxPod))) < 0 {
-		allErrs = append(allErrs, field.Invalid(field.NewPath("spec").Child("kubernetes").Child("kubeControllerManager").Child("nodeCIDRMaskSize"), nodeCIDRMaskSize, fmt.Sprintf("kubelet or kube-controller-manager configuration incorrect. Please adjust the nodeCIDRMaskSize to support the highest maxPod on any worker pool. The nodeCIDRMaskSize of %d (default: %d) only supports %d IP addresses. The highest maxPod setting is %d (default: 110). Please choose a nodeCIDRMaskSize that at least supports %d IP addresses", nodeCIDRMaskSize, defaultNodeCIDRMaskSize, ipAdressesAvailable, maxPod, maxPod)))
+	if ipAddressesAvailable.Cmp(big.NewInt(int64(maxPod))) < 0 {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec").Child("kubernetes").Child("kubeControllerManager").Child("nodeCIDRMaskSize"), nodeCIDRMaskSize, fmt.Sprintf("kubelet or kube-controller-manager configuration incorrect. Please adjust the nodeCIDRMaskSize to support the highest maxPod on any worker pool. The nodeCIDRMaskSize of %d (default: %d) only supports %d IP addresses. The highest maxPod setting is %d (default: 110). Please choose a nodeCIDRMaskSize that at least supports %d IP addresses", nodeCIDRMaskSize, defaultNodeCIDRMaskSize, ipAddressesAvailable, maxPod, maxPod)))
 	}
 
 	return allErrs

@@ -251,7 +251,7 @@ var _ = Describe("migration", func() {
 				Expect(copyRequired).To(BeFalse())
 			})
 
-			It("should return error if retrieval of etcd main resource fials", func() {
+			It("should return error if retrieval of etcd main resource fails", func() {
 				etcdMain.EXPECT().Get(ctx).Return(nil, fakeErr)
 				copyRequired, err := botanist.IsCopyOfBackupsRequired(ctx)
 				Expect(err).To(MatchError(fakeErr))

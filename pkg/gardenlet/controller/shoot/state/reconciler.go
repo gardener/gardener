@@ -34,7 +34,7 @@ type Reconciler struct {
 }
 
 var (
-	// RequeueWhenShootIsNotReadyForBackup is the duration for the requeueing when a shoot is not yet ready for a backup
+	// RequeueWhenShootIsNotReadyForBackup is the duration for the requeuing when a shoot is not yet ready for a backup
 	// of its state.
 	RequeueWhenShootIsNotReadyForBackup = 10 * time.Minute
 	// JitterDuration is the duration for jittering when scheduling the next periodic backup.

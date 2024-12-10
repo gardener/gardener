@@ -21,12 +21,12 @@ import (
 var _ = Describe("Builder", func() {
 	const (
 		conditionType = gardencorev1beta1.ConditionType("Test")
-		// re-decalared so the underlying constant is not changed
+		// re-declared so the underlying constant is not changed
 		unknowStatus       = gardencorev1beta1.ConditionStatus("Unknown")
 		fooStatus          = gardencorev1beta1.ConditionStatus("Foo")
 		bazReason          = "Baz"
 		fubarMessage       = "FuBar"
-		unitializedMessage = `The condition has been initialized but its semantic check has not been performed yet.`
+		uninitializedMessage = `The condition has been initialized but its semantic check has not been performed yet.`
 		unspecifiedMessage = `No message given.`
 		unspecifiedReason  = "Unspecified"
 		initializedReason  = "ConditionInitialized"
@@ -88,7 +88,7 @@ var _ = Describe("Builder", func() {
 					LastTransitionTime: defaultTime,
 					LastUpdateTime:     defaultTime,
 					Reason:             initializedReason,
-					Message:            unitializedMessage,
+					Message:            uninitializedMessage,
 				}))
 			})
 		})
@@ -112,7 +112,7 @@ var _ = Describe("Builder", func() {
 					LastTransitionTime: defaultTime,
 					LastUpdateTime:     defaultTime,
 					Reason:             initializedReason,
-					Message:            unitializedMessage,
+					Message:            uninitializedMessage,
 				}))
 			})
 		})
@@ -135,7 +135,7 @@ var _ = Describe("Builder", func() {
 					LastTransitionTime: defaultTime,
 					LastUpdateTime:     defaultTime,
 					Reason:             expectedReason,
-					Message:            unitializedMessage,
+					Message:            uninitializedMessage,
 				}))
 			},
 				Entry("reason is not set", nil, initializedReason),
@@ -208,7 +208,7 @@ var _ = Describe("Builder", func() {
 					Message:            expectedMessage,
 				}))
 			},
-				Entry("message is not set", nil, unitializedMessage),
+				Entry("message is not set", nil, uninitializedMessage),
 				Entry("empty message is set", ptr.To(""), unspecifiedMessage),
 				Entry("message is set", ptr.To(fubarMessage), fubarMessage),
 			)
@@ -250,7 +250,7 @@ var _ = Describe("Builder", func() {
 				}))
 			},
 				Entry("message is not set", nil, fubarMessage, fubarMessage),
-				Entry("message was previously empty", nil, "", unitializedMessage),
+				Entry("message was previously empty", nil, "", uninitializedMessage),
 				Entry("empty message is set", ptr.To(""), fubarMessage, unspecifiedMessage),
 				Entry("message is the same", ptr.To("another message"), "another message", "another message"),
 				Entry("message changed", ptr.To("another message"), fubarMessage, "another message"),
@@ -276,7 +276,7 @@ var _ = Describe("Builder", func() {
 					LastTransitionTime: defaultTime,
 					LastUpdateTime:     defaultTime,
 					Reason:             initializedReason,
-					Message:            unitializedMessage,
+					Message:            uninitializedMessage,
 					Codes:              codes,
 				}))
 			})

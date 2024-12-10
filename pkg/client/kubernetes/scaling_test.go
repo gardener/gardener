@@ -27,7 +27,7 @@ var _ = Describe("scale", func() {
 		runtimeClient *mockclient.MockClient
 		sw            *mockclient.MockSubResourceClient
 		key           = client.ObjectKey{Name: "foo", Namespace: "bar"}
-		statefullSet  = &appsv1.StatefulSet{
+		statefulSet  = &appsv1.StatefulSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      key.Name,
 				Namespace: key.Namespace,
@@ -39,7 +39,7 @@ var _ = Describe("scale", func() {
 				Namespace: key.Namespace,
 			},
 		}
-		statefullSetWith2Replicas = appsv1.StatefulSet{
+		statefulSetWith2Replicas = appsv1.StatefulSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Generation: 2,
 			},
@@ -67,7 +67,7 @@ var _ = Describe("scale", func() {
 	Context("ScaleStatefulSet", func() {
 		It("sets scale to 2", func() {
 			runtimeClient.EXPECT().SubResource("scale").Return(sw)
-			sw.EXPECT().Patch(context.TODO(), statefullSet, getPatch(2))
+			sw.EXPECT().Patch(context.TODO(), statefulSet, getPatch(2))
 			Expect(ScaleStatefulSet(context.TODO(), runtimeClient, key, 2)).To(Succeed(), "scale succeeds")
 		})
 	})
@@ -107,7 +107,7 @@ var _ = Describe("scale", func() {
 		It("should wait until statefulset was scaled", func() {
 			runtimeClient.EXPECT().Get(gomock.Any(), key, gomock.AssignableToTypeOf(&appsv1.StatefulSet{})).DoAndReturn(
 				func(_ context.Context, _ types.NamespacedName, deploy *appsv1.StatefulSet, _ ...client.GetOption) error {
-					*deploy = statefullSetWith2Replicas
+					*deploy = statefulSetWith2Replicas
 					return nil
 				})
 			Expect(WaitUntilStatefulSetScaledToDesiredReplicas(context.TODO(), runtimeClient, key, 2)).To(Succeed(), "scale done")
@@ -117,10 +117,10 @@ var _ = Describe("scale", func() {
 	Describe("#ScaleStatefulSetAndWaitUntilScaled", func() {
 		It("should scale and wait until statefulset was scaled", func() {
 			runtimeClient.EXPECT().SubResource("scale").Return(sw)
-			sw.EXPECT().Patch(context.TODO(), statefullSet, getPatch(2))
+			sw.EXPECT().Patch(context.TODO(), statefulSet, getPatch(2))
 			runtimeClient.EXPECT().Get(gomock.Any(), key, gomock.AssignableToTypeOf(&appsv1.StatefulSet{})).DoAndReturn(
 				func(_ context.Context, _ types.NamespacedName, deploy *appsv1.StatefulSet, _ ...client.GetOption) error {
-					*deploy = statefullSetWith2Replicas
+					*deploy = statefulSetWith2Replicas
 					return nil
 				})
 			Expect(ScaleStatefulSetAndWaitUntilScaled(context.TODO(), runtimeClient, key, 2)).To(Succeed(), "scale done")

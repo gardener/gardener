@@ -334,7 +334,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 			ptr.To[int64](12288),
 		),
 		Entry(
-			"Nodes network is restriction (with mutliple networks)",
+			"Nodes network is restriction (with multiple networks)",
 			&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
 					Kubernetes: gardencorev1beta1.Kubernetes{

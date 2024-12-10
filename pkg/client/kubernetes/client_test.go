@@ -42,7 +42,7 @@ var _ = Describe("Client", func() {
 			Expect(err).ToNot(HaveOccurred())
 		})
 
-		DescribeTable("kubeconfig shoud be validated properly",
+		DescribeTable("kubeconfig should be validated properly",
 			func(config clientcmdapi.Config, matcher gomegatypes.GomegaMatcher) {
 				err := kubernetes.ValidateConfig(config)
 

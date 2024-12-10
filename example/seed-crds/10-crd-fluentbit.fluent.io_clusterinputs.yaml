@@ -638,7 +638,7 @@ spec:
                     type: string
                   parserFirstline:
                     description: |-
-                      Name of the parser that matchs the beginning of a multiline message.
+                      Name of the parser that matches the beginning of a multiline message.
                       Note that the regular expression defined in the parser must include a group name (named capture)
                     type: string
                   parserN:
@@ -700,7 +700,7 @@ spec:
                       E.g. kube.<namespace_name>.<pod_name>.<container_name>
                     type: string
                   tagRegex:
-                    description: Set a regex to exctract fields from the file
+                    description: Set a regex to extract fields from the file
                     type: string
                 type: object
               tcp:

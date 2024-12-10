@@ -50,7 +50,7 @@ func UnmarshalRawState(rawState any) (*RawState, error) {
 	case nil:
 		rawData = nil
 	default:
-		return nil, fmt.Errorf("unsupported type '%T' for unmarshaling Raw Terraform State", rawState)
+		return nil, fmt.Errorf("unsupported type '%T' for unmarshalling Raw Terraform State", rawState)
 	}
 
 	terraformStateObj, err := buildRawState(rawData)

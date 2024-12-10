@@ -550,7 +550,7 @@ var _ = Describe("extensions", func() {
 		})
 
 		Describe("#RestoreExtensionWithDeployFunction", func() {
-			It("should restore the extension object state with the provided deploy fuction and annotate it for restoration", func() {
+			It("should restore the extension object state with the provided deploy function and annotate it for restoration", func() {
 				defer test.WithVars(
 					&TimeNow, mockNow.Do,
 				)()
