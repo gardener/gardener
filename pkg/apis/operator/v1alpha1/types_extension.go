@@ -133,4 +133,6 @@ const (
 	ExtensionInstalled gardencorev1beta1.ConditionType = "Installed"
 	// ExtensionRequiredRuntime is a condition type for indicating whether the extension is required in the garden runtime cluster.
 	ExtensionRequiredRuntime gardencorev1beta1.ConditionType = "RequiredRuntime"
+	// ExtensionRequiredVirtual is a condition type for indicating whether the extension is required in the virtual garden cluster.
+	ExtensionRequiredVirtual gardencorev1beta1.ConditionType = "RequiredVirtual"
 )

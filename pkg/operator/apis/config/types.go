@@ -64,8 +64,10 @@ type ControllerConfiguration struct {
 	VPAEvictionRequirements VPAEvictionRequirementsControllerConfiguration
 	// Extension defines the configuration of the extension controller.
 	Extension ExtensionControllerConfiguration
-	// ExtensionRequired defines the configuration of the ExtensionRequired controller.
-	ExtensionRequired ExtensionRequiredControllerConfiguration
+	// ExtensionRequiredRuntime defines the configuration of the ExtensionRequiredRuntime controller.
+	ExtensionRequiredRuntime ExtensionRequiredRuntimeControllerConfiguration
+	// ExtensionRequiredVirtual defines the configuration of the ExtensionRequiredVirtual controller.
+	ExtensionRequiredVirtual ExtensionRequiredVirtualControllerConfiguration
 }
 
 // GardenCareControllerConfiguration defines the configuration of the GardenCare controller.
@@ -115,8 +117,14 @@ type ExtensionControllerConfiguration struct {
 	ConcurrentSyncs *int
 }
 
-// ExtensionRequiredControllerConfiguration defines the configuration of the extension-required controller.
-type ExtensionRequiredControllerConfiguration struct {
+// ExtensionRequiredRuntimeControllerConfiguration defines the configuration of the extension-required-runtime controller.
+type ExtensionRequiredRuntimeControllerConfiguration struct {
+	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
+	ConcurrentSyncs *int
+}
+
+// ExtensionRequiredVirtualControllerConfiguration defines the configuration of the extension-required-virtual controller.
+type ExtensionRequiredVirtualControllerConfiguration struct {
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
 	ConcurrentSyncs *int
 }

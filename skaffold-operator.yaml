@@ -39,6 +39,7 @@ build:
             - pkg/admissioncontroller/apis/config/v1alpha1
             - pkg/admissioncontroller/apis/config/validation
             - pkg/api/extensions
+            - pkg/api/indexer
             - pkg/apis/core
             - pkg/apis/core/helper
             - pkg/apis/core/install
@@ -253,7 +254,8 @@ build:
             - pkg/operator/controller/extension/extension/admission
             - pkg/operator/controller/extension/extension/controllerregistration
             - pkg/operator/controller/extension/extension/runtime
-            - pkg/operator/controller/extension/required
+            - pkg/operator/controller/extension/required/runtime
+            - pkg/operator/controller/extension/required/virtual
             - pkg/operator/controller/garden
             - pkg/operator/controller/garden/care
             - pkg/operator/controller/garden/garden

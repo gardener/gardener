@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package required_test
+package runtime_test
 
 import (
 	"context"
@@ -26,7 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	"github.com/gardener/gardener/pkg/logger"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
-	. "github.com/gardener/gardener/pkg/operator/controller/extension/required"
+	. "github.com/gardener/gardener/pkg/operator/controller/extension/required/runtime"
 )
 
 var _ = Describe("Add", func() {
