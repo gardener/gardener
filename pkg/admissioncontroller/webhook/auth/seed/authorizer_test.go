@@ -710,10 +710,11 @@ var _ = Describe("Seed", func() {
 					}
 				})
 
-				DescribeTable("should return correct result for always allowed verbs",
+				DescribeTable("should return correct result if path exists",
 					func(verb string) {
 						attrs.Verb = verb
 
+						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeNamespacedCloudProfile, namespace, namespacedCloudProfileName, graphpkg.VertexTypeSeed, "", seedName).Return(true)
 						decision, reason, err := authorizer.Authorize(ctx, attrs)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(decision).To(Equal(auth.DecisionAllow))
@@ -739,6 +740,16 @@ var _ = Describe("Seed", func() {
 					Entry("delete", "delete"),
 					Entry("deletecollection", "deletecollection"),
 				)
+
+				It("should have no opinion because path to seed does not exists", func() {
+					graph.EXPECT().HasPathFrom(graphpkg.VertexTypeNamespacedCloudProfile, namespace, namespacedCloudProfileName, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("no relationship found"))
+				})
 			})
 
 			Context("when requested for Namespaces", func() {
