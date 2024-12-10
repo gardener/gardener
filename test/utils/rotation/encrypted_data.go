@@ -35,6 +35,12 @@ func (v *EncryptedDataVerifier) Before(ctx context.Context) {
 // ExpectPreparingStatus is called while waiting for the Preparing status.
 func (v *EncryptedDataVerifier) ExpectPreparingStatus(_ Gomega) {}
 
+// ExpectPreparingWithoutWorkersRolloutStatus is called while waiting for the PreparingWithoutWorkersRollout status.
+func (v *EncryptedDataVerifier) ExpectPreparingWithoutWorkersRolloutStatus(_ Gomega) {}
+
+// ExpectWaitingForWorkersRolloutStatus is called while waiting for the WaitingForWorkersRollout status.
+func (v *EncryptedDataVerifier) ExpectWaitingForWorkersRolloutStatus(_ Gomega) {}
+
 // AfterPrepared is called when the Shoot is in Prepared status.
 func (v *EncryptedDataVerifier) AfterPrepared(ctx context.Context) {
 	By("Verify encrypted data after preparing credentials rotation")
