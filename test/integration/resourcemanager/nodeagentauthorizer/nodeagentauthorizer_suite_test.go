@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -20,6 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/uuid"
+	apiserverv1beta1 "k8s.io/apiserver/pkg/apis/apiserver/v1beta1"
 	"k8s.io/client-go/rest"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
@@ -35,6 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
@@ -90,14 +93,22 @@ var _ = BeforeSuite(func() {
 		Expect(os.Remove(kubeconfigFileName)).To(Succeed())
 	})
 
+	By("Create authorization configuration file")
+	authorizerConfigFileName, err := createAuthorizationConfigurationFile(kubeconfigFileName)
+	Expect(err).ToNot(HaveOccurred())
+	DeferCleanup(func() {
+		By("Delete authorization configuration file")
+		Expect(os.Remove(authorizerConfigFileName)).To(Succeed())
+	})
+
 	By("Start test environment")
 	Expect(framework.FileExists(kubeconfigFileName)).To(BeTrue())
 	testAPIServer := &envtest.APIServer{}
 	testAPIServer.Configure().
-		Set("authorization-mode", "RBAC", "Webhook").
-		Set("authorization-webhook-config-file", kubeconfigFileName).
-		Set("authorization-webhook-cache-authorized-ttl", "0").
-		Set("authorization-webhook-cache-unauthorized-ttl", "0")
+		Set("authorization-config", authorizerConfigFileName).
+		Disable("authorization-mode").
+		Disable("authorization-webhook-cache-authorized-ttl").
+		Disable("authorization-webhook-cache-unauthorized-ttl")
 
 	testEnv = &envtest.Environment{
 		ControlPlane: envtest.ControlPlane{
@@ -221,4 +232,49 @@ func createKubeconfigFileForAuthorizationWebhook(address string, port int) (stri
 	}
 
 	return kubeConfigFile.Name(), os.WriteFile(kubeConfigFile.Name(), kubeconfig, 0600)
+}
+
+func createAuthorizationConfigurationFile(kubeconfigFileName string) (string, error) {
+	authorizationConfiguration := &apiserverv1beta1.AuthorizationConfiguration{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: apiserverv1beta1.ConfigSchemeGroupVersion.String(),
+			Kind:       "AuthorizationConfiguration",
+		},
+		Authorizers: []apiserverv1beta1.AuthorizerConfiguration{
+			{Type: "RBAC", Name: "rbac"},
+			{
+				Type: "Webhook",
+				Name: "node-agent-authorizer",
+				Webhook: &apiserverv1beta1.WebhookConfiguration{
+					// Set TTL to a very low value since it cannot be set to 0 because of defaulting.
+					// See https://github.com/kubernetes/apiserver/blob/3658357fea9fa8b36173d072f2d548f135049e05/pkg/apis/apiserver/v1/defaults.go#L52-L59
+					AuthorizedTTL:                            metav1.Duration{Duration: 1 * time.Nanosecond},
+					UnauthorizedTTL:                          metav1.Duration{Duration: 1 * time.Nanosecond},
+					Timeout:                                  metav1.Duration{Duration: 1 * time.Second},
+					FailurePolicy:                            apiserverv1beta1.FailurePolicyDeny,
+					SubjectAccessReviewVersion:               "v1",
+					MatchConditionSubjectAccessReviewVersion: "v1",
+					MatchConditions: []apiserverv1beta1.WebhookMatchCondition{{
+						Expression: fmt.Sprintf("'%s' in request.groups", v1beta1constants.NodeAgentsGroup),
+					}},
+					ConnectionInfo: apiserverv1beta1.WebhookConnectionInfo{
+						Type:           apiserverv1beta1.AuthorizationWebhookConnectionInfoTypeKubeConfigFile,
+						KubeConfigFile: ptr.To(kubeconfigFileName),
+					},
+				},
+			},
+		},
+	}
+
+	authorizationConfigurationRaw, err := runtime.Encode(apiserver.ConfigCodec, authorizationConfiguration)
+	if err != nil {
+		return "", fmt.Errorf("unable to encode authorization configuration: %w", err)
+	}
+
+	authorizerConfigFile, err := os.CreateTemp("", "authorizer-configuration-")
+	if err != nil {
+		return "", err
+	}
+
+	return authorizerConfigFile.Name(), os.WriteFile(authorizerConfigFile.Name(), authorizationConfigurationRaw, 0600)
 }
