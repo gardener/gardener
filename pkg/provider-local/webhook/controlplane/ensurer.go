@@ -81,12 +81,6 @@ func (e *ensurer) EnsureAdditionalProvisionFiles(_ context.Context, _ extensions
 			UpstreamHost: "localhost:5001",
 			MirrorHost:   "http://garden.local.gardener.cloud:5001",
 		},
-		// europe-docker.pkg.dev upstream is required for loading the Hyperkube image.
-		// Further registries are supposed to be added via the `EnsureCRIConfig` function (reconcile OSC).
-		{
-			UpstreamHost: "europe-docker.pkg.dev",
-			MirrorHost:   "http://garden.local.gardener.cloud:5008",
-		},
 		// Enable containerd to reach registry at garden.local.gardener.cloud:5001 via HTTP.
 		{
 			UpstreamHost: "garden.local.gardener.cloud:5001",
@@ -133,6 +127,12 @@ func (e *ensurer) EnsureCRIConfig(_ context.Context, _ extensionscontextwebhook.
 			Upstream: "garden.local.gardener.cloud:5001",
 			Server:   ptr.To("http://garden.local.gardener.cloud:5001"),
 			Hosts:    []extensionsv1alpha1.RegistryHost{{URL: "http://garden.local.gardener.cloud:5001"}},
+		},
+		// europe-docker.pkg.dev upstream is required for loading the Hyperkube image.
+		{
+			Upstream: "europe-docker.pkg.dev",
+			Server:   ptr.To("https://europe-docker.pkg.dev"),
+			Hosts:    []extensionsv1alpha1.RegistryHost{{URL: "http://garden.local.gardener.cloud:5008"}},
 		},
 	} {
 		// Only add registry when it is not already set in the OSC.
