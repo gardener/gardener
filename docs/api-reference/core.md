@@ -13329,21 +13329,6 @@ float64
 </tr>
 <tr>
 <td>
-<code>cpuHistogramDecayHalfLife</code></br>
-<em>
-<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
-Kubernetes meta/v1.Duration
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>CPUHistogramDecayHalfLife is the amount of time it takes a historical CPU usage sample to lose half of its weight.
-(default: 24h)</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>targetMemoryPercentile</code></br>
 <em>
 float64
@@ -13380,6 +13365,21 @@ float64
 <em>(Optional)</em>
 <p>RecommendationUpperBoundMemoryPercentile is the usage percentile that will be used for the upper bound on memory recommendation.
 (default: 0.95)</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>cpuHistogramDecayHalfLife</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CPUHistogramDecayHalfLife is the amount of time it takes a historical CPU usage sample to lose half of its weight.
+(default: 24h)</p>
 </td>
 </tr>
 <tr>

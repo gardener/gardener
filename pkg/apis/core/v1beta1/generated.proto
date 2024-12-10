@@ -3301,11 +3301,6 @@ message VerticalPodAutoscaler {
   // +optional
   optional double recommendationUpperBoundCPUPercentile = 11;
 
-  // CPUHistogramDecayHalfLife is the amount of time it takes a historical CPU usage sample to lose half of its weight.
-  // (default: 24h)
-  // +optional
-  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration cpuHistogramDecayHalfLife = 15;
-
   // TargetMemoryPercentile is the usage percentile that will be used as a base for memory target recommendation.
   // Doesn't affect memory lower bound nor memory upper bound.
   // (default: 0.9)
@@ -3321,6 +3316,11 @@ message VerticalPodAutoscaler {
   // (default: 0.95)
   // +optional
   optional double recommendationUpperBoundMemoryPercentile = 14;
+
+  // CPUHistogramDecayHalfLife is the amount of time it takes a historical CPU usage sample to lose half of its weight.
+  // (default: 24h)
+  // +optional
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration cpuHistogramDecayHalfLife = 15;
 
   // MemoryHistogramDecayHalfLife is the amount of time it takes a historical memory usage sample to lose half of its weight.
   // (default: 24h)

@@ -5579,11 +5579,6 @@ func (in *VerticalPodAutoscaler) DeepCopyInto(out *VerticalPodAutoscaler) {
 		*out = new(float64)
 		**out = **in
 	}
-	if in.CPUHistogramDecayHalfLife != nil {
-		in, out := &in.CPUHistogramDecayHalfLife, &out.CPUHistogramDecayHalfLife
-		*out = new(metav1.Duration)
-		**out = **in
-	}
 	if in.TargetMemoryPercentile != nil {
 		in, out := &in.TargetMemoryPercentile, &out.TargetMemoryPercentile
 		*out = new(float64)
@@ -5597,6 +5592,11 @@ func (in *VerticalPodAutoscaler) DeepCopyInto(out *VerticalPodAutoscaler) {
 	if in.RecommendationUpperBoundMemoryPercentile != nil {
 		in, out := &in.RecommendationUpperBoundMemoryPercentile, &out.RecommendationUpperBoundMemoryPercentile
 		*out = new(float64)
+		**out = **in
+	}
+	if in.CPUHistogramDecayHalfLife != nil {
+		in, out := &in.CPUHistogramDecayHalfLife, &out.CPUHistogramDecayHalfLife
+		*out = new(metav1.Duration)
 		**out = **in
 	}
 	if in.MemoryHistogramDecayHalfLife != nil {

@@ -9562,12 +9562,6 @@ func schema_pkg_apis_core_v1beta1_VerticalPodAutoscaler(ref common.ReferenceCall
 							Format:      "double",
 						},
 					},
-					"cpuHistogramDecayHalfLife": {
-						SchemaProps: spec.SchemaProps{
-							Description: "CPUHistogramDecayHalfLife is the amount of time it takes a historical CPU usage sample to lose half of its weight. (default: 24h)",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
-						},
-					},
 					"targetMemoryPercentile": {
 						SchemaProps: spec.SchemaProps{
 							Description: "TargetMemoryPercentile is the usage percentile that will be used as a base for memory target recommendation. Doesn't affect memory lower bound nor memory upper bound. (default: 0.9)",
@@ -9587,6 +9581,12 @@ func schema_pkg_apis_core_v1beta1_VerticalPodAutoscaler(ref common.ReferenceCall
 							Description: "RecommendationUpperBoundMemoryPercentile is the usage percentile that will be used for the upper bound on memory recommendation. (default: 0.95)",
 							Type:        []string{"number"},
 							Format:      "double",
+						},
+					},
+					"cpuHistogramDecayHalfLife": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CPUHistogramDecayHalfLife is the amount of time it takes a historical CPU usage sample to lose half of its weight. (default: 24h)",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 					"memoryHistogramDecayHalfLife": {

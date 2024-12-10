@@ -6768,10 +6768,10 @@ func autoConvert_v1beta1_VerticalPodAutoscaler_To_core_VerticalPodAutoscaler(in 
 	out.TargetCPUPercentile = (*float64)(unsafe.Pointer(in.TargetCPUPercentile))
 	out.RecommendationLowerBoundCPUPercentile = (*float64)(unsafe.Pointer(in.RecommendationLowerBoundCPUPercentile))
 	out.RecommendationUpperBoundCPUPercentile = (*float64)(unsafe.Pointer(in.RecommendationUpperBoundCPUPercentile))
-	out.CPUHistogramDecayHalfLife = (*metav1.Duration)(unsafe.Pointer(in.CPUHistogramDecayHalfLife))
 	out.TargetMemoryPercentile = (*float64)(unsafe.Pointer(in.TargetMemoryPercentile))
 	out.RecommendationLowerBoundMemoryPercentile = (*float64)(unsafe.Pointer(in.RecommendationLowerBoundMemoryPercentile))
 	out.RecommendationUpperBoundMemoryPercentile = (*float64)(unsafe.Pointer(in.RecommendationUpperBoundMemoryPercentile))
+	out.CPUHistogramDecayHalfLife = (*metav1.Duration)(unsafe.Pointer(in.CPUHistogramDecayHalfLife))
 	out.MemoryHistogramDecayHalfLife = (*metav1.Duration)(unsafe.Pointer(in.MemoryHistogramDecayHalfLife))
 	return nil
 }
@@ -6793,10 +6793,10 @@ func autoConvert_core_VerticalPodAutoscaler_To_v1beta1_VerticalPodAutoscaler(in 
 	out.TargetCPUPercentile = (*float64)(unsafe.Pointer(in.TargetCPUPercentile))
 	out.RecommendationLowerBoundCPUPercentile = (*float64)(unsafe.Pointer(in.RecommendationLowerBoundCPUPercentile))
 	out.RecommendationUpperBoundCPUPercentile = (*float64)(unsafe.Pointer(in.RecommendationUpperBoundCPUPercentile))
-	out.CPUHistogramDecayHalfLife = (*metav1.Duration)(unsafe.Pointer(in.CPUHistogramDecayHalfLife))
 	out.TargetMemoryPercentile = (*float64)(unsafe.Pointer(in.TargetMemoryPercentile))
 	out.RecommendationLowerBoundMemoryPercentile = (*float64)(unsafe.Pointer(in.RecommendationLowerBoundMemoryPercentile))
 	out.RecommendationUpperBoundMemoryPercentile = (*float64)(unsafe.Pointer(in.RecommendationUpperBoundMemoryPercentile))
+	out.CPUHistogramDecayHalfLife = (*metav1.Duration)(unsafe.Pointer(in.CPUHistogramDecayHalfLife))
 	out.MemoryHistogramDecayHalfLife = (*metav1.Duration)(unsafe.Pointer(in.MemoryHistogramDecayHalfLife))
 	return nil
 }
