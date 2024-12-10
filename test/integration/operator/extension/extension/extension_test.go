@@ -319,7 +319,7 @@ var _ = Describe("Extension controller tests", func() {
 				LastUpdateTime:     metav1.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 				LastTransitionTime: metav1.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 				Type:               "RequiredRuntime",
-				Status:             "Flase",
+				Status:             "False",
 			})
 
 			return testClient.Status().Update(ctx, extensionBar)
@@ -450,7 +450,7 @@ var _ = Describe("Extension controller tests", func() {
 				LastUpdateTime:     metav1.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 				LastTransitionTime: metav1.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 				Type:               "RequiredRuntime",
-				Status:             "Flase",
+				Status:             "False",
 			})
 
 			return testClient.Status().Update(ctx, extensionFoo)

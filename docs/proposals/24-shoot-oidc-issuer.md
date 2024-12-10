@@ -114,7 +114,7 @@ data:
             {
                 "use": "sig",
                 "kty": "RSA",
-                "kid": "<THE_KEY_INDENTIFIER>",
+                "kid": "<THE_KEY_IDENTIFIER>",
                 "alg": "RS256",
                 "n": "<THE_PUBLIC_KEY>",
                 "e": "AQAB"

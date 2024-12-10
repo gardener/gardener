@@ -3277,7 +3277,7 @@ func schema_pkg_apis_core_v1beta1_DataVolume(ref common.ReferenceCallback) commo
 				Properties: map[string]spec.Schema{
 					"name": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Name of the volume to make it referencable.",
+							Description: "Name of the volume to make it referenceable.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -4405,7 +4405,7 @@ func schema_pkg_apis_core_v1beta1_KubeControllerManagerConfig(ref common.Referen
 					},
 					"podEvictionTimeout": {
 						SchemaProps: spec.SchemaProps{
-							Description: "PodEvictionTimeout defines the grace period for deleting pods on failed nodes. Defaults to 2m.\n\nDeprecated: The corresponding kube-controller-manager flag `--pod-eviction-timeout` is deprecated in favor of the kube-apiserver flags `--default-not-ready-toleration-seconds` and `--default-unreachable-toleration-seconds`. The `--pod-eviction-timeout` flag does not have effect when the taint besed eviction is enabled. The taint based eviction is beta (enabled by default) since Kubernetes 1.13 and GA since Kubernetes 1.18. Hence, instead of setting this field, set the `spec.kubernetes.kubeAPIServer.defaultNotReadyTolerationSeconds` and `spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds`.",
+							Description: "PodEvictionTimeout defines the grace period for deleting pods on failed nodes. Defaults to 2m.\n\nDeprecated: The corresponding kube-controller-manager flag `--pod-eviction-timeout` is deprecated in favor of the kube-apiserver flags `--default-not-ready-toleration-seconds` and `--default-unreachable-toleration-seconds`. The `--pod-eviction-timeout` flag does not have effect when the taint based eviction is enabled. The taint based eviction is beta (enabled by default) since Kubernetes 1.13 and GA since Kubernetes 1.18. Hence, instead of setting this field, set the `spec.kubernetes.kubeAPIServer.defaultNotReadyTolerationSeconds` and `spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds`.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
@@ -9601,7 +9601,7 @@ func schema_pkg_apis_core_v1beta1_Volume(ref common.ReferenceCallback) common.Op
 				Properties: map[string]spec.Schema{
 					"name": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Name of the volume to make it referencable.",
+							Description: "Name of the volume to make it referenceable.",
 							Type:        []string{"string"},
 							Format:      "",
 						},

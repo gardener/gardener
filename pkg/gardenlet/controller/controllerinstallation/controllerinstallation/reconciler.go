@@ -51,7 +51,7 @@ import (
 
 const finalizerName = "core.gardener.cloud/controllerinstallation"
 
-// RequeueDurationWhenResourceDeletionStillPresent is the duration used for requeueing when owned resources are still in
+// RequeueDurationWhenResourceDeletionStillPresent is the duration used for requeuing when owned resources are still in
 // the process of being deleted when deleting a ControllerInstallation.
 var RequeueDurationWhenResourceDeletionStillPresent = 5 * time.Second
 

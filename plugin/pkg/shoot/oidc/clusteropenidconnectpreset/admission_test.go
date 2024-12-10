@@ -299,7 +299,7 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 			plugin = &ClusterOpenIDConnectPreset{}
 		})
 
-		Context("error occures", func() {
+		Context("error occurs", func() {
 			It("when clusterOIDCLister is not set", func() {
 				err := plugin.ValidateInitialization()
 				Expect(err).To(HaveOccurred())

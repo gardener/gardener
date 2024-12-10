@@ -33,7 +33,7 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-// RequeueDurationWhenResourceDeletionStillPresent is the duration used for requeueing when owned resources are still in
+// RequeueDurationWhenResourceDeletionStillPresent is the duration used for requeuing when owned resources are still in
 // the process of being deleted when deleting a Bastion.
 var RequeueDurationWhenResourceDeletionStillPresent = 5 * time.Second
 

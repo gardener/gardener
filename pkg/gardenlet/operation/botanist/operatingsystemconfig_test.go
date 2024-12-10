@@ -159,7 +159,7 @@ var _ = Describe("operatingsystemconfig", func() {
 				Expect(botanist.DeployOperatingSystemConfig(ctx)).To(Succeed())
 			})
 
-			It("should deploy successfully with ipFamiliy IPv6", func() {
+			It("should deploy successfully with ipFamily IPv6", func() {
 
 				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 					Spec: gardencorev1beta1.ShootSpec{

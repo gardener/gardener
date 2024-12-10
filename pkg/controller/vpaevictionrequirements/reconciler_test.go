@@ -215,7 +215,7 @@ var _ = Describe("Reconciler", func() {
 	Context("VPA is annotated with an un-parsable maintenance window time", func() {
 		BeforeEach(func() {
 			metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, constants.AnnotationVPAEvictionRequirementDownscaleRestriction, constants.EvictionRequirementInMaintenanceWindowOnly)
-			metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, constants.AnnotationShootMaintenanceWindow, "unparseable start time"+","+maintenanceWindowEnd)
+			metav1.SetMetaDataAnnotation(&vpa.ObjectMeta, constants.AnnotationShootMaintenanceWindow, "unparsable start time"+","+maintenanceWindowEnd)
 		})
 
 		It("should log an error, but not return it, such that it doesn't retry", func() {

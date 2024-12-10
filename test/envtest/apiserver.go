@@ -73,7 +73,7 @@ type GardenerAPIServer struct {
 	// be used.
 	Args []string
 	// StartTimeout, StopTimeout specify the time the APIServer is allowed to
-	// take when starting and stoppping before an error is emitted.
+	// take when starting and stopping before an error is emitted.
 	// If not specified, these default to 20 seconds.
 	StartTimeout time.Duration
 	StopTimeout  time.Duration

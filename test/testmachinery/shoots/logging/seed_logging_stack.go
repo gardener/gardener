@@ -369,7 +369,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		)
 
 		for i := 0; i < numberOfSimulatedClusters; i++ {
-			shootNamespace := getShootNamesapce(i)
+			shootNamespace := getShootNamespace(i)
 
 			// Create shoot namespace
 			ginkgo.By(fmt.Sprintf("Create shoot namespace %s", shootNamespace.Name))
@@ -443,7 +443,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 	}, getLogsFromValiTimeout, framework.WithCAfterTest(func(ctx context.Context) {
 		ginkgo.By("Cleanup logger app resources")
 		for i := 0; i < numberOfSimulatedClusters; i++ {
-			shootNamespace := getShootNamesapce(i)
+			shootNamespace := getShootNamespace(i)
 
 			loggerDeploymentToDelete := &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{

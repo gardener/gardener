@@ -79,7 +79,7 @@ func New(mgr manager.Manager, args Args) (*Webhook, error) {
 	}
 	if len(args.Validators) > 0 {
 		// Mutators and validators must not be configured at the same time because mutators are supposed to be placed in
-		// a 'MutatingWebhookConfiugration' while validators should reside in a 'ValidatingWebhookConfiguration'.
+		// a 'MutatingWebhookConfiguration' while validators should reside in a 'ValidatingWebhookConfiguration'.
 		if actionType == ActionMutating {
 			return nil, fmt.Errorf("failed to create webhook because a mixture of mutating and validating functions is not permitted")
 		}

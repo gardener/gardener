@@ -36,8 +36,8 @@ global:
       requests:
         cpu: 100m
         memory: 100Mi
-  # podAnnotations: # YAML formated annotations used for pod template
-  # podLabels: # YAML formated labels used for pod template
+  # podAnnotations: # YAML formatted annotations used for pod template
+  # podLabels: # YAML formatted labels used for pod template
     minReadySeconds: 30
     rollingUpdate:
       maxSurge: 1
@@ -274,8 +274,8 @@ global:
       # clusterIP: 1.2.3.4
       topologyAwareRouting:
         enabled: false
-  # podAnnotations: # YAML formated annotations used for pod template
-  # podLabels: # YAML formated labels used for pod template
+  # podAnnotations: # YAML formatted annotations used for pod template
+  # podLabels: # YAML formatted labels used for pod template
     vpa: false
     config:
       gardenClientConnection:
@@ -343,8 +343,8 @@ global:
       requests:
         cpu: 100m
         memory: 100Mi
-  # podAnnotations: # YAML formated annotations used for pod template
-  # podLabels: # YAML formated labels used for pod template
+  # podAnnotations: # YAML formatted annotations used for pod template
+  # podLabels: # YAML formatted labels used for pod template
     additionalVolumes: []
     additionalVolumeMounts: []
     env: []

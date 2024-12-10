@@ -2782,7 +2782,7 @@ string
 </em>
 </td>
 <td>
-<p>Name of the volume to make it referencable.</p>
+<p>Name of the volume to make it referenceable.</p>
 </td>
 </tr>
 <tr>
@@ -4375,7 +4375,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Name of the volume to make it referencable.</p>
+<p>Name of the volume to make it referenceable.</p>
 </td>
 </tr>
 <tr>

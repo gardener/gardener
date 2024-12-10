@@ -583,7 +583,7 @@ var _ = Describe("validator", func() {
 				oldShoot           *core.Shoot
 				confineEnabled     = true
 				specUpdate         = true
-				operationFaild     = &core.LastOperation{State: core.LastOperationStateFailed}
+				operationFailed    = &core.LastOperation{State: core.LastOperationStateFailed}
 				operationSucceeded = &core.LastOperation{State: core.LastOperationStateSucceeded}
 			)
 			BeforeEach(func() {
@@ -617,22 +617,22 @@ var _ = Describe("validator", func() {
 				},
 				Entry(
 					"should add annotation for failed shoot",
-					specUpdate, confineEnabled, confineEnabled, operationFaild, operationFaild,
+					specUpdate, confineEnabled, confineEnabled, operationFailed, operationFailed,
 					HaveKeyWithValue(v1beta1constants.FailedShootNeedsRetryOperation, "true"),
 				),
 				Entry(
 					"should not add annotation for failed shoot because of missing spec change",
-					!specUpdate, confineEnabled, confineEnabled, operationFaild, operationFaild,
+					!specUpdate, confineEnabled, confineEnabled, operationFailed, operationFailed,
 					Not(HaveKey(v1beta1constants.FailedShootNeedsRetryOperation)),
 				),
 				Entry(
 					"should not add annotation for succeeded shoot",
-					specUpdate, confineEnabled, confineEnabled, operationFaild, operationSucceeded,
+					specUpdate, confineEnabled, confineEnabled, operationFailed, operationSucceeded,
 					Not(HaveKey(v1beta1constants.FailedShootNeedsRetryOperation)),
 				),
 				Entry(
 					"should not add annotation for shoot w/o confine spec roll-out enabled",
-					specUpdate, confineEnabled, !confineEnabled, operationFaild, operationFaild,
+					specUpdate, confineEnabled, !confineEnabled, operationFailed, operationFailed,
 					Not(HaveKey(v1beta1constants.FailedShootNeedsRetryOperation)),
 				),
 				Entry(

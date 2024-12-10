@@ -125,7 +125,7 @@ var _ = Describe("Add", func() {
 			Expect(Predicate(oldShoot, garden)).To(BeTrue())
 		})
 
-		It("should return true because the kube-apiserver structured authroization kubeconfig secret fields changed", func() {
+		It("should return true because the kube-apiserver structured authorization kubeconfig secret fields changed", func() {
 			oldShoot := garden.DeepCopy()
 			garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.StructuredAuthorization = &gardencorev1beta1.StructuredAuthorization{Kubeconfigs: []gardencorev1beta1.AuthorizerKubeconfigReference{{SecretName: "foo"}}}
 			Expect(Predicate(oldShoot, garden)).To(BeTrue())

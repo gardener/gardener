@@ -104,9 +104,9 @@ var _ = Describe("EtcdCopyBackupsTask", func() {
 						Timeout: &metav1.Duration{Duration: etcdcopybackupstask.DefaultTimeout},
 					},
 				}),
-				expectedWaitInterval:       Equal(etcdcopybackupstask.DefaultInterval),
-				expectedWaitSevereTreshold: Equal(etcdcopybackupstask.DefaultSevereThreshold),
-				expectedWaitTimeout:        Equal(etcdcopybackupstask.DefaultTimeout),
+				expectedWaitInterval:        Equal(etcdcopybackupstask.DefaultInterval),
+				expectedWaitSevereThreshold: Equal(etcdcopybackupstask.DefaultSevereThreshold),
+				expectedWaitTimeout:         Equal(etcdcopybackupstask.DefaultTimeout),
 			}
 
 			defer test.WithVars(&NewEtcdCopyBackupsTask, validator.NewEtcdCopyBackupsTask)()
@@ -229,12 +229,12 @@ var _ = Describe("EtcdCopyBackupsTask", func() {
 type newEtcdCopyBackupsTaskValidator struct {
 	etcdcopybackupstask.Interface
 
-	expectedClient             gomegatypes.GomegaMatcher
-	expectedLogger             gomegatypes.GomegaMatcher
-	expectedValues             gomegatypes.GomegaMatcher
-	expectedWaitInterval       gomegatypes.GomegaMatcher
-	expectedWaitSevereTreshold gomegatypes.GomegaMatcher
-	expectedWaitTimeout        gomegatypes.GomegaMatcher
+	expectedClient              gomegatypes.GomegaMatcher
+	expectedLogger              gomegatypes.GomegaMatcher
+	expectedValues              gomegatypes.GomegaMatcher
+	expectedWaitInterval        gomegatypes.GomegaMatcher
+	expectedWaitSevereThreshold gomegatypes.GomegaMatcher
+	expectedWaitTimeout         gomegatypes.GomegaMatcher
 }
 
 func (v *newEtcdCopyBackupsTaskValidator) NewEtcdCopyBackupsTask(
@@ -249,7 +249,7 @@ func (v *newEtcdCopyBackupsTaskValidator) NewEtcdCopyBackupsTask(
 	Expect(logger).To(v.expectedLogger)
 	Expect(values).To(v.expectedValues)
 	Expect(waitInterval).To(v.expectedWaitInterval)
-	Expect(waitSevereThreshold).To(v.expectedWaitSevereTreshold)
+	Expect(waitSevereThreshold).To(v.expectedWaitSevereThreshold)
 	Expect(waitTimeout).To(v.expectedWaitTimeout)
 
 	return v

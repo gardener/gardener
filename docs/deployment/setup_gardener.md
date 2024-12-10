@@ -17,7 +17,7 @@ In order to deploy the control plane components, please first deploy [`gardener-
 The [configuration values](../../charts/gardener/controlplane/values.yaml) depict the various options to configure the different components.
 Please consult [Gardener Configuration and Usage](../operations/configuration.md) for component specific configurations and [Authentication of Gardener Control Plane Components Against the Garden Cluster](./authentication_gardener_control_plane.md) for authentication related specifics.
 
-Also, note that all resources and deployments need to be created in the `garden` namespace (not overrideable).
+Also, note that all resources and deployments need to be created in the `garden` namespace (not overridable).
 If you enable the Gardener admission controller as part of you setup, please make sure the `garden` namespace is labelled with `app: gardener`.
 Otherwise, the backing service account for the admission controller Pod might not be created successfully.
 No action is necessary if you deploy the `garden` namespace with the Gardener control plane Helm chart.

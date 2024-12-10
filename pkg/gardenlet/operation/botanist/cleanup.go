@@ -41,7 +41,7 @@ const (
 	// KubeAggregatorAutoManaged is the label whether an APIService is automanaged by kube-aggregator.
 	KubeAggregatorAutoManaged = autoregister.AutoRegisterManagedLabel
 
-	// MetadataNameField ist the `metadata.name` field for a field selector.
+	// MetadataNameField is the `metadata.name` field for a field selector.
 	MetadataNameField = "metadata.name"
 )
 

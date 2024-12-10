@@ -24,7 +24,7 @@ const (
 // AddToManager adds Handler to the given manager.
 func (h *Handler) AddToManager(ctx context.Context, mgr manager.Manager) error {
 	// Initialize caches here to ensure the readyz informer check will only succeed once informers required for this
-	// handler have synced so that http requests can be served quicker with pre-syncronized caches.
+	// handler have synced so that http requests can be served quicker with pre-synchronized caches.
 	if _, err := mgr.GetCache().GetInformer(ctx, &corev1.Namespace{}); err != nil {
 		return err
 	}

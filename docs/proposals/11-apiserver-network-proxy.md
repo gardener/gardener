@@ -44,7 +44,7 @@ There are, however, quite a few problems with the above approach. Some of them a
 
 ## Proposal
 
-There are mutliple ways to tackle the directional connectivity issue mentioned above, one way would be to invert the connection between the API server and the system components, i.e., instead of having the API server side-car establish a tunnel, we would have an agent residing in the shoot cluster initiate the connection itself. This way we don't need a Loadbalancer for every shoot and from the security perspective, there is no ingress from outside, only controlled egress.
+There are multiple ways to tackle the directional connectivity issue mentioned above, one way would be to invert the connection between the API server and the system components, i.e., instead of having the API server side-car establish a tunnel, we would have an agent residing in the shoot cluster initiate the connection itself. This way we don't need a Loadbalancer for every shoot and from the security perspective, there is no ingress from outside, only controlled egress.
 
 We want to replace this:
 

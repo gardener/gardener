@@ -49,7 +49,7 @@ In addition, if the Seed is to run on the given provider, it also must have an A
 
 The current integration with cloud providers is to add their API calls to Gardener and the Machine Controller Manager. As both Gardener and the Machine Controller Manager are written in [go](https://golang.org), the cloud provider should have a go SDK. However, if it has an API that is wrappable in go, e.g. a REST API, then you can use that to integrate.
 
-The Gardener team is working on bringing cloud provider integrations out-of-tree, making them plugable, which should simplify the process and make it possible to use other SDKs.
+The Gardener team is working on bringing cloud provider integrations out-of-tree, making them pluggable, which should simplify the process and make it possible to use other SDKs.
 
 ## Summary
 

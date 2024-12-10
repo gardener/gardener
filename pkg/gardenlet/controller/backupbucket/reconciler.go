@@ -37,7 +37,7 @@ import (
 // finalizerName is the backupbucket controller finalizer.
 const finalizerName = "core.gardener.cloud/backupbucket"
 
-// RequeueDurationWhenResourceDeletionStillPresent is the duration used for requeueing when owned resources are still in
+// RequeueDurationWhenResourceDeletionStillPresent is the duration used for requeuing when owned resources are still in
 // the process of being deleted when deleting a BackupBucket.
 var RequeueDurationWhenResourceDeletionStillPresent = 5 * time.Second
 

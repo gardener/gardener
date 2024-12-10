@@ -62,7 +62,7 @@ func (p *podExecutor) Execute(ctx context.Context, namespace, name, containerNam
 
 	executor, err := remotecommand.NewSPDYExecutor(p.config, http.MethodPost, request.URL())
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialized the command exector: %w", err)
+		return nil, fmt.Errorf("failed to initialized the command executor: %w", err)
 	}
 
 	err = executor.StreamWithContext(ctx, remotecommand.StreamOptions{

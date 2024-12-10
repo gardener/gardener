@@ -481,7 +481,7 @@ var _ = Describe("Reconciler", func() {
 
 		Context("error", func() {
 			It("provided token expiration duration cannot be parsed", func() {
-				metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "serviceaccount.resources.gardener.cloud/token-expiration-duration", "unparseable")
+				metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "serviceaccount.resources.gardener.cloud/token-expiration-duration", "unparsable")
 
 				Expect(sourceClient.Create(ctx, secret)).To(Succeed())
 

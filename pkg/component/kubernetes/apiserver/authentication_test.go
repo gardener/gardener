@@ -17,11 +17,11 @@ import (
 var _ = Describe("Authentication", func() {
 	Describe("#ComputeAuthenticationConfigRawConfig", func() {
 		DescribeTable("should compute correct AuthenticationConfiguration",
-			func(oidc *gardencorev1beta1.OIDCConfig, exptectedResult string, errorMatcher gomegatypes.GomegaMatcher) {
+			func(oidc *gardencorev1beta1.OIDCConfig, expectetedResult string, errorMatcher gomegatypes.GomegaMatcher) {
 				res, err := ComputeAuthenticationConfigRawConfig(oidc)
 
 				Expect(err).To(errorMatcher)
-				Expect(res).To(Equal(exptectedResult))
+				Expect(res).To(Equal(expectetedResult))
 			},
 			Entry("should return correct configuration when all values are present", &gardencorev1beta1.OIDCConfig{
 				CABundle:     ptr.To("some-ca-bundle"),
@@ -54,7 +54,7 @@ jwt:
     url: https://issuer.url.com
 kind: AuthenticationConfiguration
 `, BeNil()),
-			Entry("should retrun configuration with defaulted username values", &gardencorev1beta1.OIDCConfig{
+			Entry("should return configuration with defaulted username values", &gardencorev1beta1.OIDCConfig{
 				ClientID:  ptr.To("some-client-id"),
 				IssuerURL: ptr.To("https://issuer.url.com"),
 			}, `apiVersion: apiserver.config.k8s.io/v1beta1
@@ -71,7 +71,7 @@ jwt:
     url: https://issuer.url.com
 kind: AuthenticationConfiguration
 `, BeNil()),
-			Entry("should retrun correct configuration when usernamePrefix is '-'", &gardencorev1beta1.OIDCConfig{
+			Entry("should return correct configuration when usernamePrefix is '-'", &gardencorev1beta1.OIDCConfig{
 				ClientID:       ptr.To("some-client-id"),
 				IssuerURL:      ptr.To("https://issuer.url.com"),
 				UsernameClaim:  ptr.To("claim"),
@@ -90,7 +90,7 @@ jwt:
     url: https://issuer.url.com
 kind: AuthenticationConfiguration
 `, BeNil()),
-			Entry("should retrun correct configuration when usernameClaim is 'email' and prefix not specified", &gardencorev1beta1.OIDCConfig{
+			Entry("should return correct configuration when usernameClaim is 'email' and prefix not specified", &gardencorev1beta1.OIDCConfig{
 				ClientID:       ptr.To("some-client-id"),
 				IssuerURL:      ptr.To("https://issuer.url.com"),
 				UsernameClaim:  ptr.To("email"),
@@ -109,7 +109,7 @@ jwt:
     url: https://issuer.url.com
 kind: AuthenticationConfiguration
 `, BeNil()),
-			Entry("should retrun correct configuration when groupsClaim is set but prefix is not", &gardencorev1beta1.OIDCConfig{
+			Entry("should return correct configuration when groupsClaim is set but prefix is not", &gardencorev1beta1.OIDCConfig{
 				ClientID:    ptr.To("some-client-id"),
 				IssuerURL:   ptr.To("https://issuer.url.com"),
 				GroupsClaim: ptr.To("some-groups-claim"),

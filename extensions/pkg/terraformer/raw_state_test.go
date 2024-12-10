@@ -19,23 +19,23 @@ const (
 var _ = Describe("raw_state", func() {
 
 	Describe("#UnmarshalRawState", func() {
-		It("shoud unmarshal successfully json string and have NoneEncoding", func() {
+		It("should unmarshal successfully json string and have NoneEncoding", func() {
 			rs, err := terraformer.UnmarshalRawState(testJsonArray)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(rs.Encoding).To(Equal(terraformer.NoneEncoding))
 		})
 
-		It("shoud unmarshal successfully nill and have NoneEncoding", func() {
+		It("should unmarshal successfully nill and have NoneEncoding", func() {
 			rs, err := terraformer.UnmarshalRawState(nil)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(rs.Encoding).To(Equal(terraformer.NoneEncoding))
 		})
-		It("shoud unmarshal successfully []byte and have NoneEncoding", func() {
+		It("should unmarshal successfully []byte and have NoneEncoding", func() {
 			rs, err := terraformer.UnmarshalRawState([]byte(testJsonArray))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(rs.Encoding).To(Equal(terraformer.NoneEncoding))
 		})
-		It("shoud unmarshal successfully RawExtension and have NoneEncoding", func() {
+		It("should unmarshal successfully RawExtension and have NoneEncoding", func() {
 			re := &runtime.RawExtension{
 				Raw: []byte(testJsonArray),
 			}
@@ -43,18 +43,18 @@ var _ = Describe("raw_state", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(rs.Encoding).To(Equal(terraformer.NoneEncoding))
 		})
-		It("shoud not unmarshal successfully RawExtension because of invalid data type", func() {
+		It("should not unmarshal successfully RawExtension because of invalid data type", func() {
 			_, err := terraformer.UnmarshalRawState(1)
 			Expect(err).To(HaveOccurred())
 		})
-		It("shoud not unmarshal successfully RawExtension because of invalid data", func() {
+		It("should not unmarshal successfully RawExtension because of invalid data", func() {
 			_, err := terraformer.UnmarshalRawState("NOT JSON")
 			Expect(err).To(HaveOccurred())
 		})
 	})
 
 	Describe("#MarshalRawState", func() {
-		It("shoud marshal and then unmarshall successfully RawExtension", func() {
+		It("should marshal and then unmarshall successfully RawExtension", func() {
 			re := &terraformer.RawState{
 				Data: testJsonArray,
 			}

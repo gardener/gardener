@@ -66,8 +66,8 @@ var _ = Describe("VerifyVersion", func() {
 				Expect(VerifyGardenerVersion(ctx, log, fakeClient)).To(matcher)
 			},
 
-			Entry("fail because old version cannot be parsed", "unparseable$version", "v1.2.3", MatchError(ContainSubstring("failed parsing old Garden version"))),
-			Entry("fail because current version cannot be parsed", "v1.2.3", "unparseable$version", MatchError(ContainSubstring("failed comparing versions for downgrade check"))),
+			Entry("fail because old version cannot be parsed", "unparsable$version", "v1.2.3", MatchError(ContainSubstring("failed parsing old Garden version"))),
+			Entry("fail because current version cannot be parsed", "v1.2.3", "unparsable$version", MatchError(ContainSubstring("failed comparing versions for downgrade check"))),
 
 			Entry("fail because downgrade is unsupported", "v1.2.3", "v1.1.1", MatchError(ContainSubstring("downgrading Gardener is not supported"))),
 			Entry("fail because downgrade is unsupported (old version suffixed with '-dev')", "v1.2.3-dev", "v1.1.1", MatchError(ContainSubstring("downgrading Gardener is not supported"))),

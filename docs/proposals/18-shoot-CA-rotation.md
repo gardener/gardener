@@ -174,7 +174,7 @@ Apart from the kube-apiserver CA (and the client CA), we also use 5 other CAs as
 
 You can find Gardener managed CAs listed in [wanted_secrets.go](https://github.com/gardener/gardener/blob/04d2b3f459d198e8db0ab57180ca2fea18e84da9/pkg/operation/botanist/wanted_secrets.go#L48).
 
-Regarding the rotation steps, we want to follow a similar approach to the one we defined for the kube-apiserver CA. Exemplary, we are going to show the timeline for ETCD_CA but the logic should be similiar for all the above listed CAs.
+Regarding the rotation steps, we want to follow a similar approach to the one we defined for the kube-apiserver CA. Exemplary, we are going to show the timeline for ETCD_CA but the logic should be similar for all the above listed CAs.
 
 - `t0`:
   - etcd trusts client certificates signed by  `ETCD_CA0` and uses a server certificate signed by `ETCD_CA0`

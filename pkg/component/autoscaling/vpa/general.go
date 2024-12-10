@@ -53,7 +53,7 @@ func (v *vpa) generalResourceConfigs() component.ResourceConfigs {
 		clusterRoleBindingActor        = v.emptyClusterRoleBinding("actor")
 		clusterRoleTargetReader        = v.emptyClusterRole("target-reader")
 		clusterRoleBindingTargetReader = v.emptyClusterRoleBinding("target-reader")
-		mutatingWebhookConfguration    = v.emptyMutatingWebhookConfiguration()
+		mutatingWebhookConfiguration   = v.emptyMutatingWebhookConfiguration()
 	)
 
 	return component.ResourceConfigs{
@@ -63,7 +63,7 @@ func (v *vpa) generalResourceConfigs() component.ResourceConfigs {
 		{Obj: clusterRoleBindingTargetReader, Class: component.Application, MutateFn: func() {
 			v.reconcileGeneralClusterRoleBindingTargetReader(clusterRoleBindingTargetReader, clusterRoleTargetReader)
 		}},
-		{Obj: mutatingWebhookConfguration, Class: component.Application, MutateFn: func() { v.reconcileGeneralMutatingWebhookConfiguration(mutatingWebhookConfguration) }},
+		{Obj: mutatingWebhookConfiguration, Class: component.Application, MutateFn: func() { v.reconcileGeneralMutatingWebhookConfiguration(mutatingWebhookConfiguration) }},
 	}
 }
 
