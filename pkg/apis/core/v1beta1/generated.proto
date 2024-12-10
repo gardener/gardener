@@ -3316,6 +3316,16 @@ message VerticalPodAutoscaler {
   // (default: 0.95)
   // +optional
   optional double recommendationUpperBoundMemoryPercentile = 14;
+
+  // CPUHistogramDecayHalfLife is the amount of time it takes a historical CPU usage sample to lose half of its weight.
+  // (default: 24h)
+  // +optional
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration cpuHistogramDecayHalfLife = 15;
+
+  // MemoryHistogramDecayHalfLife is the amount of time it takes a historical memory usage sample to lose half of its weight.
+  // (default: 24h)
+  // +optional
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration memoryHistogramDecayHalfLife = 16;
 }
 
 // Volume contains information about the volume type, size, and encryption.

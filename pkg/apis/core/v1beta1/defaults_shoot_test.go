@@ -881,9 +881,11 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.TargetCPUPercentile).To(PointTo(Equal(0.9)))
 			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.RecommendationLowerBoundCPUPercentile).To(PointTo(Equal(0.5)))
 			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.RecommendationUpperBoundCPUPercentile).To(PointTo(Equal(0.95)))
+			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.CPUHistogramDecayHalfLife).To(PointTo(Equal(metav1.Duration{Duration: 24 * time.Hour})))
 			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.TargetMemoryPercentile).To(PointTo(Equal(0.9)))
 			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.RecommendationLowerBoundMemoryPercentile).To(PointTo(Equal(0.5)))
 			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.RecommendationUpperBoundMemoryPercentile).To(PointTo(Equal(0.95)))
+			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.MemoryHistogramDecayHalfLife).To(PointTo(Equal(metav1.Duration{Duration: 24 * time.Hour})))
 		})
 
 		It("should not overwrite the already set values for VerticalPodAutoscaler field", func() {
@@ -898,9 +900,11 @@ var _ = Describe("Shoot defaulting", func() {
 				TargetCPUPercentile:                      ptr.To(0.333),
 				RecommendationLowerBoundCPUPercentile:    ptr.To(0.303),
 				RecommendationUpperBoundCPUPercentile:    ptr.To(0.393),
+				CPUHistogramDecayHalfLife:                &metav1.Duration{Duration: 2 * time.Minute},
 				TargetMemoryPercentile:                   ptr.To(0.444),
 				RecommendationLowerBoundMemoryPercentile: ptr.To(0.404),
 				RecommendationUpperBoundMemoryPercentile: ptr.To(0.494),
+				MemoryHistogramDecayHalfLife:             &metav1.Duration{Duration: 7 * time.Second},
 			}
 
 			SetObjectDefaults_Shoot(obj)
@@ -916,9 +920,11 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.TargetCPUPercentile).To(PointTo(Equal(0.333)))
 			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.RecommendationLowerBoundCPUPercentile).To(PointTo(Equal(0.303)))
 			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.RecommendationUpperBoundCPUPercentile).To(PointTo(Equal(0.393)))
+			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.CPUHistogramDecayHalfLife).To(PointTo(Equal(metav1.Duration{Duration: 2 * time.Minute})))
 			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.TargetMemoryPercentile).To(PointTo(Equal(0.444)))
 			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.RecommendationLowerBoundMemoryPercentile).To(PointTo(Equal(0.404)))
 			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.RecommendationUpperBoundMemoryPercentile).To(PointTo(Equal(0.494)))
+			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.MemoryHistogramDecayHalfLife).To(PointTo(Equal(metav1.Duration{Duration: 7 * time.Second})))
 		})
 	})
 })

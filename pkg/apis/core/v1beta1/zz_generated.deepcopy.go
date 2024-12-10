@@ -5594,6 +5594,16 @@ func (in *VerticalPodAutoscaler) DeepCopyInto(out *VerticalPodAutoscaler) {
 		*out = new(float64)
 		**out = **in
 	}
+	if in.CPUHistogramDecayHalfLife != nil {
+		in, out := &in.CPUHistogramDecayHalfLife, &out.CPUHistogramDecayHalfLife
+		*out = new(metav1.Duration)
+		**out = **in
+	}
+	if in.MemoryHistogramDecayHalfLife != nil {
+		in, out := &in.MemoryHistogramDecayHalfLife, &out.MemoryHistogramDecayHalfLife
+		*out = new(metav1.Duration)
+		**out = **in
+	}
 	return
 }
 
