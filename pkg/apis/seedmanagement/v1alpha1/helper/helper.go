@@ -39,9 +39,5 @@ func ExtractSeedTemplateAndGardenletConfig(name string, config *runtime.RawExten
 		return nil, nil, fmt.Errorf("could not decode gardenlet configuration: %w", err)
 	}
 
-	if gardenletConfig.SeedConfig == nil {
-		return nil, nil, fmt.Errorf("no seed config found for managedseed %s", name)
-	}
-
 	return &gardenletConfig.SeedConfig.SeedTemplate, gardenletConfig, nil
 }

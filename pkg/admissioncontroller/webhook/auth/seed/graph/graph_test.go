@@ -332,7 +332,7 @@ var _ = Describe("graph", func() {
 					Bootstrap: &managedSeedBootstrapMode,
 					Config: runtime.RawExtension{
 						Object: &gardenletv1alpha1.GardenletConfiguration{
-							SeedConfig: seedConfig1,
+							SeedConfig: *seedConfig1,
 						},
 					},
 				},
@@ -344,7 +344,7 @@ var _ = Describe("graph", func() {
 			Spec: seedmanagementv1alpha1.GardenletSpec{
 				Config: runtime.RawExtension{
 					Object: &gardenletv1alpha1.GardenletConfiguration{
-						SeedConfig: seedConfig2,
+						SeedConfig: *seedConfig2,
 					},
 				},
 			},

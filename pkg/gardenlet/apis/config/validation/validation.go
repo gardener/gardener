@@ -79,13 +79,7 @@ func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath 
 		}
 	}
 
-	if !inTemplate && cfg.SeedConfig == nil {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("seedConfig"), cfg, "seed config must be set"))
-	}
-
-	if cfg.SeedConfig != nil {
-		allErrs = append(allErrs, gardencorevalidation.ValidateSeedTemplate(&cfg.SeedConfig.SeedTemplate, fldPath.Child("seedConfig"))...)
-	}
+	allErrs = append(allErrs, gardencorevalidation.ValidateSeedTemplate(&cfg.SeedConfig.SeedTemplate, fldPath.Child("seedConfig"))...)
 
 	resourcesPath := fldPath.Child("resources")
 	if cfg.Resources != nil {
@@ -137,9 +131,7 @@ func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath 
 func ValidateGardenletConfigurationUpdate(newCfg, oldCfg *config.GardenletConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if newCfg.SeedConfig != nil && oldCfg.SeedConfig != nil {
-		allErrs = append(allErrs, gardencorevalidation.ValidateSeedTemplateUpdate(&newCfg.SeedConfig.SeedTemplate, &oldCfg.SeedConfig.SeedTemplate, fldPath.Child("seedConfig"))...)
-	}
+	allErrs = append(allErrs, gardencorevalidation.ValidateSeedTemplateUpdate(&newCfg.SeedConfig.SeedTemplate, &oldCfg.SeedConfig.SeedTemplate, fldPath.Child("seedConfig"))...)
 
 	return allErrs
 }

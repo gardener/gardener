@@ -46,7 +46,6 @@ var _ = Describe("Defaults", func() {
 							gardencorev1beta1.ResourceShoots: resource.MustParse("250"),
 						},
 					},
-					SeedConfig: &gardenletv1alpha1.SeedConfig{},
 				}}))
 		})
 
@@ -57,7 +56,7 @@ var _ = Describe("Defaults", func() {
 						APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
 						Kind:       "GardenletConfiguration",
 					},
-					SeedConfig: &gardenletv1alpha1.SeedConfig{
+					SeedConfig: gardenletv1alpha1.SeedConfig{
 						SeedTemplate: gardencorev1beta1.SeedTemplate{
 							Spec: gardencorev1beta1.SeedSpec{
 								Backup: &gardencorev1beta1.SeedBackup{},
@@ -81,7 +80,7 @@ var _ = Describe("Defaults", func() {
 								gardencorev1beta1.ResourceShoots: resource.MustParse("250"),
 							},
 						},
-						SeedConfig: &gardenletv1alpha1.SeedConfig{
+						SeedConfig: gardenletv1alpha1.SeedConfig{
 							SeedTemplate: gardencorev1beta1.SeedTemplate{
 								Spec: gardencorev1beta1.SeedSpec{
 									Backup: &gardencorev1beta1.SeedBackup{
@@ -110,7 +109,7 @@ var _ = Describe("Defaults", func() {
 							gardencorev1beta1.ResourceShoots: resource.MustParse("300"),
 						},
 					},
-					SeedConfig: &gardenletv1alpha1.SeedConfig{
+					SeedConfig: gardenletv1alpha1.SeedConfig{
 						SeedTemplate: gardencorev1beta1.SeedTemplate{
 							Spec: gardencorev1beta1.SeedSpec{
 								Backup: &gardencorev1beta1.SeedBackup{
@@ -144,7 +143,7 @@ var _ = Describe("Defaults", func() {
 								gardencorev1beta1.ResourceShoots: resource.MustParse("300"),
 							},
 						},
-						SeedConfig: &gardenletv1alpha1.SeedConfig{
+						SeedConfig: gardenletv1alpha1.SeedConfig{
 							SeedTemplate: gardencorev1beta1.SeedTemplate{
 								Spec: gardencorev1beta1.SeedSpec{
 									Backup: &gardencorev1beta1.SeedBackup{

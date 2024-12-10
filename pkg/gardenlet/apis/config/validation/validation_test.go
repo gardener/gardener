@@ -61,7 +61,7 @@ var _ = Describe("GardenletConfiguration", func() {
 				},
 			},
 			FeatureGates: map[string]bool{},
-			SeedConfig: &config.SeedConfig{
+			SeedConfig: config.SeedConfig{
 				SeedTemplate: gardencore.SeedTemplate{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
@@ -409,19 +409,6 @@ var _ = Describe("GardenletConfiguration", func() {
 						"Field": Equal("controllers.networkPolicy.additionalNamespaceSelectors[1].matchLabels"),
 					})),
 				))
-			})
-		})
-
-		Context("seed config", func() {
-			It("should require a seedConfig", func() {
-				cfg.SeedConfig = nil
-
-				errorList := ValidateGardenletConfiguration(cfg, nil, false)
-
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("seedConfig"),
-				}))))
 			})
 		})
 

@@ -114,11 +114,6 @@ func setDefaultsGardenletConfiguration(obj *gardenletv1alpha1.GardenletConfigura
 	// Set resources defaults
 	setDefaultsResources(obj.Resources)
 
-	// Initialize seed config
-	if obj.SeedConfig == nil {
-		obj.SeedConfig = &gardenletv1alpha1.SeedConfig{}
-	}
-
 	// Set seed spec defaults
 	setDefaultsSeedSpec(&obj.SeedConfig.SeedTemplate.Spec, name, namespace)
 }

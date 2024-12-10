@@ -179,7 +179,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		BootstrapRunnables: []manager.Runnable{
 			&bootstrappers.SeedConfigChecker{
 				SeedClient: mgr.GetClient(),
-				SeedConfig: cfg.SeedConfig,
+				SeedConfig: &cfg.SeedConfig,
 			},
 			&bootstrappers.GardenKubeconfig{
 				SeedClient: mgr.GetClient(),

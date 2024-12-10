@@ -62,7 +62,7 @@ var _ = Describe("Replica", func() {
 						Gardenlet: seedmanagementv1alpha1.GardenletConfig{
 							Config: runtime.RawExtension{
 								Object: &gardenletv1alpha1.GardenletConfiguration{
-									SeedConfig: &gardenletv1alpha1.SeedConfig{
+									SeedConfig: gardenletv1alpha1.SeedConfig{
 										SeedTemplate: gardencorev1beta1.SeedTemplate{
 											Spec: gardencorev1beta1.SeedSpec{
 												Ingress: &gardencorev1beta1.Ingress{
@@ -353,7 +353,7 @@ var _ = Describe("Replica", func() {
 							Gardenlet: seedmanagementv1alpha1.GardenletConfig{
 								Config: runtime.RawExtension{
 									Object: &gardenletv1alpha1.GardenletConfiguration{
-										SeedConfig: &gardenletv1alpha1.SeedConfig{
+										SeedConfig: gardenletv1alpha1.SeedConfig{
 											SeedTemplate: gardencorev1beta1.SeedTemplate{
 												Spec: gardencorev1beta1.SeedSpec{
 													Ingress: &gardencorev1beta1.Ingress{

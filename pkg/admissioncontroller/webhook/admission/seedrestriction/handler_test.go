@@ -1759,7 +1759,7 @@ var _ = Describe("handler", func() {
 										Gardenlet: seedmanagementv1alpha1.GardenletConfig{
 											Config: runtime.RawExtension{
 												Object: &gardenletv1alpha1.GardenletConfiguration{
-													SeedConfig: seedConfig1,
+													SeedConfig: *seedConfig1,
 												},
 											},
 										},
@@ -1772,7 +1772,7 @@ var _ = Describe("handler", func() {
 										Gardenlet: seedmanagementv1alpha1.GardenletConfig{
 											Config: runtime.RawExtension{
 												Object: &gardenletv1alpha1.GardenletConfiguration{
-													SeedConfig: seedConfig2,
+													SeedConfig: *seedConfig2,
 												},
 											},
 										},
@@ -1808,39 +1808,6 @@ var _ = Describe("handler", func() {
 									Result: &metav1.Status{
 										Code:    int32(http.StatusInternalServerError),
 										Message: fakeErr.Error(),
-									},
-								},
-							}))
-						})
-
-						It("should return an error because extracting the seed template failed", func() {
-							managedSeeds[1].Spec.Gardenlet = seedmanagementv1alpha1.GardenletConfig{
-								Config: runtime.RawExtension{
-									Object: &gardenletv1alpha1.GardenletConfiguration{
-										SeedConfig: nil,
-									},
-								},
-							}
-
-							mockCache.EXPECT().List(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeedList{})).DoAndReturn(func(_ context.Context, list *seedmanagementv1alpha1.ManagedSeedList, _ ...client.ListOption) error {
-								(&seedmanagementv1alpha1.ManagedSeedList{Items: managedSeeds}).DeepCopyInto(list)
-								return nil
-							})
-							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeed1Namespace, Name: shoot1.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
-								shoot1.DeepCopyInto(obj)
-								return nil
-							})
-							mockCache.EXPECT().Get(ctx, client.ObjectKey{Namespace: managedSeed1Namespace, Name: shoot2.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
-								shoot2.DeepCopyInto(obj)
-								return nil
-							})
-
-							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
-								AdmissionResponse: admissionv1.AdmissionResponse{
-									Allowed: false,
-									Result: &metav1.Status{
-										Code:    int32(http.StatusInternalServerError),
-										Message: "no seed config found for managedseed ",
 									},
 								},
 							}))
@@ -1897,6 +1864,12 @@ var _ = Describe("handler", func() {
 								SecretRef: corev1.SecretReference{
 									Name:      secretName,
 									Namespace: secretNamespace,
+								},
+							}
+
+							managedSeeds[1].Spec.Gardenlet.Config = runtime.RawExtension{
+								Object: &gardenletv1alpha1.GardenletConfiguration{
+									SeedConfig: *seedConfig2,
 								},
 							}
 
