@@ -16,7 +16,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/test/framework"
 )
@@ -128,21 +127,18 @@ func (v *SSHKeypairVerifier) readAuthorizedKeysFile(ctx context.Context) (string
 		return "", fmt.Errorf("expected exactly one result when listing all machine pods: %+v", podList.Items)
 	}
 
-	podExecutor := kubernetes.NewPodExecutor(v.ShootFramework.SeedClient.RESTConfig())
-
-	reader, err := podExecutor.Execute(
+	stdout, _, err := v.ShootFramework.SeedClient.PodExecutor().Execute(
 		ctx,
 		v.Shoot.Status.TechnicalID,
 		podList.Items[0].Name,
 		"node",
-		"/bin/sh",
-		"cat /home/gardener/.ssh/authorized_keys",
+		"cat", "/home/gardener/.ssh/authorized_keys",
 	)
 	if err != nil {
 		return "", err
 	}
 
-	result, err := io.ReadAll(reader)
+	result, err := io.ReadAll(stdout)
 	if err != nil {
 		return "", err
 	}

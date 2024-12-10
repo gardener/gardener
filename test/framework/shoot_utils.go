@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -44,14 +45,13 @@ func (f *ShootFramework) GetValiLogs(ctx context.Context, valiLabels map[string]
 
 	log := f.Logger.WithValues("namespace", valiNamespace, "labels", valiLabels, "q", query)
 
-	command := fmt.Sprintf("wget 'http://localhost:%d/vali/api/v1/query' -O- --post-data='%s'", valiPort, query)
-
-	var reader io.Reader
+	var stdout io.Reader
 	log.Info("Fetching logs")
 	if err := retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (bool, error) {
 		var err error
-		reader, err = PodExecByLabel(ctx, valiLabelsSelector, valiLogging, command, valiNamespace, client)
-
+		stdout, _, err = PodExecByLabel(ctx, client, valiNamespace, valiLabelsSelector, valiLogging,
+			"wget", "http://localhost:"+strconv.Itoa(valiPort)+"/vali/api/v1/query", "-O-", "--post-data="+query,
+		)
 		if err != nil {
 			log.Error(err, "Error fetching logs")
 			return retry.MinorError(err)
@@ -63,7 +63,7 @@ func (f *ShootFramework) GetValiLogs(ctx context.Context, valiLabels map[string]
 
 	search := &SearchResponse{}
 
-	if err := json.NewDecoder(reader).Decode(search); err != nil {
+	if err := json.NewDecoder(stdout).Decode(search); err != nil {
 		return nil, err
 	}
 
