@@ -119,16 +119,35 @@ var _ = Describe("TokenRequestor tests", func() {
 		It("should be able to authenticate with the created token", func() {
 			Expect(testClient.Create(ctx, secret)).To(Succeed())
 
-			Eventually(func() error {
-				return testClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)
-			}).Should(Succeed())
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).To(Succeed())
 
-			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+				g.Expect(secret.Annotations).To(HaveKey("serviceaccount.resources.gardener.cloud/token-renew-timestamp"))
+			}).Should(Succeed())
 
 			newRestConfig = &rest.Config{
 				Host:            restConfig.Host,
 				BearerToken:     string(secret.Data["token"]),
 				TLSClientConfig: rest.TLSClientConfig{CAData: restConfig.TLSClientConfig.CAData},
+			}
+		})
+
+		It("should be able to authenticate with the created token and CABundle", func() {
+			secret.Annotations["serviceaccount.resources.gardener.cloud/inject-ca-bundle"] = "true"
+			Expect(testClient.Create(ctx, secret)).To(Succeed())
+
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).To(Succeed())
+
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+				g.Expect(secret.Annotations).To(HaveKey("serviceaccount.resources.gardener.cloud/token-renew-timestamp"))
+			}).Should(Succeed())
+
+			newRestConfig = &rest.Config{
+				Host:            restConfig.Host,
+				BearerToken:     string(secret.Data["token"]),
+				TLSClientConfig: rest.TLSClientConfig{CAData: secret.Data["bundle.crt"]},
 			}
 		})
 
@@ -160,11 +179,51 @@ var _ = Describe("TokenRequestor tests", func() {
 			secret.Labels = map[string]string{"resources.gardener.cloud/purpose": "token-requestor"}
 			Expect(testClient.Create(ctx, secret)).To(Succeed())
 
-			Eventually(func() error {
-				return testClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).Should(Succeed())
+
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+				g.Expect(secret.Annotations).To(HaveKey("serviceaccount.resources.gardener.cloud/token-renew-timestamp"))
 			}).Should(Succeed())
 
-			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+			newRestConfig, err = kubernetes.RESTConfigFromClientConnectionConfiguration(nil, secret.Data["kubeconfig"])
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should be able to authenticate with the updated kubeconfig (including CABundle)", func() {
+			kubeconfig := &clientcmdv1.Config{
+				CurrentContext: "config",
+				Clusters: []clientcmdv1.NamedCluster{{
+					Name: "config",
+					Cluster: clientcmdv1.Cluster{
+						Server: restConfig.Host,
+					},
+				}},
+				AuthInfos: []clientcmdv1.NamedAuthInfo{{
+					Name: "config",
+				}},
+				Contexts: []clientcmdv1.NamedContext{{
+					Name: "config",
+					Context: clientcmdv1.Context{
+						Cluster:  "config",
+						AuthInfo: "config",
+					},
+				}},
+			}
+			kubeconfigRaw, err := runtime.Encode(clientcmdlatest.Codec, kubeconfig)
+			Expect(err).NotTo(HaveOccurred())
+
+			secret.Data = map[string][]byte{"kubeconfig": kubeconfigRaw}
+			secret.Labels = map[string]string{"resources.gardener.cloud/purpose": "token-requestor"}
+			secret.Annotations["serviceaccount.resources.gardener.cloud/inject-ca-bundle"] = "true"
+			Expect(testClient.Create(ctx, secret)).To(Succeed())
+
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).Should(Succeed())
+
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+				g.Expect(secret.Annotations).To(HaveKey("serviceaccount.resources.gardener.cloud/token-renew-timestamp"))
+			}).Should(Succeed())
 
 			newRestConfig, err = kubernetes.RESTConfigFromClientConnectionConfiguration(nil, secret.Data["kubeconfig"])
 			Expect(err).NotTo(HaveOccurred())
