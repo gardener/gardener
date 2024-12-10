@@ -28,10 +28,16 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
+	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("Shoot Validation Tests", func() {
+	BeforeEach(func() {
+		DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.CredentialsRotationWithoutWorkersRollout, true))
+	})
+
 	Describe("#ValidateShoot, #ValidateShootUpdate", func() {
 		var (
 			shoot *core.Shoot
@@ -3902,6 +3908,50 @@ var _ = Describe("Shoot Validation Tests", func() {
 		Context("operation validation", func() {
 			It("should do nothing if the operation annotation is not set", func() {
 				Expect(ValidateShoot(shoot)).To(BeEmpty())
+			})
+
+			Context("CredentialsRotationWithoutWorkersRollout feature gate", func() {
+				table := func(allow bool) {
+					DescribeTable("validate specifying some operation annotations",
+						func(key, value string) {
+							matcher := ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal(field.ErrorTypeForbidden),
+								"Field":  Equal(fmt.Sprintf("metadata.annotations[%s]", key)),
+								"Detail": ContainSubstring(fmt.Sprintf("the %s operation can only be used when the CredentialsRotationWithoutWorkersRollout feature gate is enabled", value)),
+							})))
+
+							metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, key, value)
+							if !allow {
+								Expect(ValidateShoot(shoot)).To(matcher)
+							} else {
+								Expect(ValidateShoot(shoot)).NotTo(matcher)
+							}
+						},
+
+						Entry("gardener.cloud/operation=rotate-credentials-start-without-workers-rollout", "gardener.cloud/operation", "rotate-credentials-start-without-workers-rollout"),
+						Entry("gardener.cloud/operation=rotate-ca-start-without-workers-rollout", "gardener.cloud/operation", "rotate-ca-start-without-workers-rollout"),
+						Entry("gardener.cloud/operation=rotate-serviceaccount-key-start-without-workers-rollout", "gardener.cloud/operation", "rotate-serviceaccount-key-start-without-workers-rollout"),
+						Entry("maintenance.gardener.cloud/operation=rotate-credentials-start-without-workers-rollout", "maintenance.gardener.cloud/operation", "rotate-credentials-start-without-workers-rollout"),
+						Entry("maintenance.gardener.cloud/operation=rotate-ca-start-without-workers-rollout", "maintenance.gardener.cloud/operation", "rotate-ca-start-without-workers-rollout"),
+						Entry("maintenance.gardener.cloud/operation=rotate-serviceaccount-key-start-without-workers-rollout", "maintenance.gardener.cloud/operation", "rotate-serviceaccount-key-start-without-workers-rollout"),
+					)
+				}
+
+				When("feature gate is disabled", func() {
+					BeforeEach(func() {
+						DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.CredentialsRotationWithoutWorkersRollout, false))
+					})
+
+					table(false)
+				})
+
+				When("feature gate is enabled", func() {
+					BeforeEach(func() {
+						DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.CredentialsRotationWithoutWorkersRollout, true))
+					})
+
+					table(true)
+				})
 			})
 
 			DescribeTable("starting rotation of all credentials",

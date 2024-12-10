@@ -160,6 +160,7 @@ global:
     featureGates:
       ShootForceDeletion: true
       UseNamespacedCloudProfile: true
+      CredentialsRotationWithoutWorkersRollout: true
     resources: {}
     podLabels:
       networking.resources.gardener.cloud/to-all-webhook-targets: allowed
