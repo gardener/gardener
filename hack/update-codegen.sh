@@ -11,6 +11,7 @@ set -o pipefail
 CODEGEN_GROUPS=""
 MODE="sequential"
 AVAILABLE_CODEGEN_OPTIONS=(
+  "types_groups"
   "authentication_groups"
   "core_groups"
   "extensions_groups"
@@ -67,6 +68,17 @@ parse_flags() {
     shift
   done
 }
+
+# Shared API types
+
+types_groups() {
+  echo "Generating API groups for pkg/apis/types"
+  
+  kube::codegen::gen_helpers \
+    --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
+    "${PROJECT_ROOT}/pkg/apis/types"
+}
+export -f types_groups
 
 # core.gardener.cloud APIs
 
@@ -420,6 +432,7 @@ openapi_definitions() {
     "github.com/gardener/gardener/pkg/apis/core/v1" \
     "github.com/gardener/gardener/pkg/apis/core/v1beta1" \
     "github.com/gardener/gardener/pkg/apis/settings/v1alpha1" \
+    "github.com/gardener/gardener/pkg/apis/types/helm" \
     "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1" \
     "github.com/gardener/gardener/pkg/apis/security/v1alpha1" \
     "github.com/gardener/gardener/pkg/apis/operations/v1alpha1" \

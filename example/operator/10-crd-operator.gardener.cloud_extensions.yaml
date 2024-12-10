@@ -89,7 +89,7 @@ spec:
                       values:
                         description: Values are the deployment values. The values
                           will be applied to both admission deployments.
-                        x-kubernetes-preserve-unknown-fields: true
+                        type: object
                       virtualCluster:
                         description: |-
                           VirtualCluster is the deployment configuration for the admission deployment in the garden cluster. The garden deployment
@@ -160,7 +160,7 @@ spec:
                         description: RuntimeClusterValues are the deployment values
                           for the extension deployment running in the runtime garden
                           cluster.
-                        x-kubernetes-preserve-unknown-fields: true
+                        type: object
                       seedSelector:
                         description: |-
                           SeedSelector contains an optional label selector for seeds. Only if the labels match then this controller will be
@@ -214,7 +214,7 @@ spec:
                         description: Values are the deployment values used in the
                           creation of the ControllerDeployment in the virtual garden
                           cluster.
-                        x-kubernetes-preserve-unknown-fields: true
+                        type: object
                     type: object
                 type: object
               resources:

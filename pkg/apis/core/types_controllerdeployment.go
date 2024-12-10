@@ -7,9 +7,10 @@ package core
 import (
 	"strings"
 
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+
+	"github.com/gardener/gardener/pkg/apis/types/helm"
 )
 
 // +genclient
@@ -53,7 +54,7 @@ type HelmControllerDeployment struct {
 	// RawChart is the base64-encoded, gzip'ed, tar'ed extension controller chart.
 	RawChart []byte
 	// Values are the chart values.
-	Values *apiextensionsv1.JSON
+	Values *helm.Values
 	// OCIRepository defines where to pull the chart.
 	OCIRepository *OCIRepository
 }

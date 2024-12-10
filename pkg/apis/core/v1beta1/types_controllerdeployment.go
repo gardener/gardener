@@ -5,9 +5,10 @@
 package v1beta1
 
 import (
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+
+	"github.com/gardener/gardener/pkg/apis/types/helm"
 )
 
 // +genclient
@@ -52,7 +53,7 @@ type HelmControllerDeployment struct {
 	// Chart is a Helm chart tarball.
 	Chart []byte `json:"chart,omitempty" protobuf:"bytes,1,opt,name=chart"`
 	// Values is a map of values for the given chart.
-	Values *apiextensionsv1.JSON `json:"values,omitempty" protobuf:"bytes,2,opt,name=values"`
+	Values *helm.Values `json:"values,omitempty" protobuf:"bytes,2,opt,name=values"`
 	// OCIRepository defines where to pull the chart.
 	// +optional
 	OCIRepository *OCIRepository `json:"ociRepository,omitempty" protobuf:"bytes,3,opt,name=ociRepository"`
