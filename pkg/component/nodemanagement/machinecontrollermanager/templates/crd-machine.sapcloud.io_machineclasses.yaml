@@ -35,7 +35,7 @@ spec:
           credentialsSecretRef:
             description: |-
               CredentialsSecretRef can optionally store the credentials (in this case the SecretRef does not need to store them).
-              This might be useful if multiple machine classes with the same credentials but different user-data are used.
+              This might be useful if multiple machine classes with the same credentials but different user-datas are used.
             properties:
               name:
                 description: name is unique within a namespace to reference a secret

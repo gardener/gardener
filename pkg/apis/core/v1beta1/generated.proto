@@ -1277,7 +1277,7 @@ message KubeControllerManagerConfig {
   //
   // Deprecated: The corresponding kube-controller-manager flag `--pod-eviction-timeout` is deprecated
   // in favor of the kube-apiserver flags `--default-not-ready-toleration-seconds` and `--default-unreachable-toleration-seconds`.
-  // The `--pod-eviction-timeout` flag does not have effect when the taint besed eviction is enabled. The taint
+  // The `--pod-eviction-timeout` flag does not have effect when the taint based eviction is enabled. The taint
   // based eviction is beta (enabled by default) since Kubernetes 1.13 and GA since Kubernetes 1.18. Hence,
   // instead of setting this field, set the `spec.kubernetes.kubeAPIServer.defaultNotReadyTolerationSeconds` and
   // `spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds`.

@@ -27,7 +27,7 @@ var _ = Describe("scale", func() {
 		runtimeClient *mockclient.MockClient
 		sw            *mockclient.MockSubResourceClient
 		key           = client.ObjectKey{Name: "foo", Namespace: "bar"}
-		statefulSet  = &appsv1.StatefulSet{
+		statefulSet   = &appsv1.StatefulSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      key.Name,
 				Namespace: key.Namespace,

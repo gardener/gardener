@@ -357,10 +357,10 @@ var _ = Describe("Vali", func() {
 				}
 				return nil
 			}
-			objectOfTypePVC       = gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})
-			objectOfTypeSTS       = gomock.AssignableToTypeOf(&appsv1.StatefulSet{})
-			objectOfTypeMR        = gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})
-			objectOfTypeSecret    = gomock.AssignableToTypeOf(&corev1.Secret{})
+			objectOfTypePVC        = gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})
+			objectOfTypeSTS        = gomock.AssignableToTypeOf(&appsv1.StatefulSet{})
+			objectOfTypeMR         = gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})
+			objectOfTypeSecret     = gomock.AssignableToTypeOf(&corev1.Secret{})
 			skippedManagedResource = &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      managedResourceName,

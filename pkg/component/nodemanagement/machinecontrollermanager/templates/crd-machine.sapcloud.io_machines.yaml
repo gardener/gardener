@@ -267,7 +267,7 @@ spec:
               lastKnownState:
                 description: |-
                   LastKnownState can store details of the last known state of the VM by the plugins.
-                  It can be used by future operation calls to determine current infrastructure state
+                  It can be used by future operation calls to determine current infrastucture state
                 type: string
               lastOperation:
                 description: Last operation refers to the status of the last operation

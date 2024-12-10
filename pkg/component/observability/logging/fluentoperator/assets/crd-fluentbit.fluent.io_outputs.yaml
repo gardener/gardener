@@ -3087,7 +3087,7 @@ spec:
                     description: Set resource types of data
                     type: string
                   resourceLabels:
-                    description: Optional list of comma separated strings. Setting
+                    description: Optional list of comma seperated strings. Setting
                       these fields overrides the Stackdriver monitored resource API
                       values
                     items:

@@ -583,7 +583,7 @@ var _ = Describe("validator", func() {
 				oldShoot           *core.Shoot
 				confineEnabled     = true
 				specUpdate         = true
-				operationFailed     = &core.LastOperation{State: core.LastOperationStateFailed}
+				operationFailed    = &core.LastOperation{State: core.LastOperationStateFailed}
 				operationSucceeded = &core.LastOperation{State: core.LastOperationStateSucceeded}
 			)
 			BeforeEach(func() {

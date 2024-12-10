@@ -22,14 +22,14 @@ var _ = Describe("Builder", func() {
 	const (
 		conditionType = gardencorev1beta1.ConditionType("Test")
 		// re-declared so the underlying constant is not changed
-		unknowStatus       = gardencorev1beta1.ConditionStatus("Unknown")
-		fooStatus          = gardencorev1beta1.ConditionStatus("Foo")
-		bazReason          = "Baz"
-		fubarMessage       = "FuBar"
+		unknowStatus         = gardencorev1beta1.ConditionStatus("Unknown")
+		fooStatus            = gardencorev1beta1.ConditionStatus("Foo")
+		bazReason            = "Baz"
+		fubarMessage         = "FuBar"
 		uninitializedMessage = `The condition has been initialized but its semantic check has not been performed yet.`
-		unspecifiedMessage = `No message given.`
-		unspecifiedReason  = "Unspecified"
-		initializedReason  = "ConditionInitialized"
+		unspecifiedMessage   = `No message given.`
+		unspecifiedReason    = "Unspecified"
+		initializedReason    = "ConditionInitialized"
 	)
 
 	var (

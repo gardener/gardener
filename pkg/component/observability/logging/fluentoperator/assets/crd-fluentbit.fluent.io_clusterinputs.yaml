@@ -83,7 +83,7 @@ spec:
                     format: int32
                     type: integer
                   tag:
-                    description: Tag name associated to all records coming from this
+                    description: Tag name associated to all records comming from this
                       plugin.
                     type: string
                 type: object
@@ -106,7 +106,7 @@ spec:
                 properties:
                   bufferMaxSize:
                     description: |-
-                      Specify maximum buffer memory size used to receive a forward message.
+                      Specify maximum buffer memory size used to recieve a forward message.
                       The value must be according to the Unit Size specification.
                     pattern: ^\d+(k|K|KB|kb|m|M|MB|mb|g|G|GB|gb)?$
                     type: string
@@ -138,7 +138,7 @@ spec:
                       a separate thread which helps to desaturate the main pipeline.
                     type: string
                   unixPath:
-                    description: Specify the path to unix socket to receive a forward
+                    description: Specify the path to unix socket to recieve a forward
                       message. If set, Listen and port are ignnored.
                     type: string
                   unixPerm:
@@ -316,7 +316,7 @@ spec:
                       host operating system, default is 5 seconds.
                     type: string
                   tag:
-                    description: Tag name associated to all records coming from this
+                    description: Tag name associated to all records comming from this
                       plugin.
                     type: string
                 type: object
@@ -367,7 +367,7 @@ spec:
                     type: string
                   metricsPath:
                     description: 'The metrics URI endpoint, that must start with a
-                      forward slash, default: /metrics'
+                      forward slash, deflaut: /metrics'
                     type: string
                   port:
                     description: The port of the promethes metric endpoint that you
@@ -380,7 +380,7 @@ spec:
                     description: 'The interval to scrape metrics, default: 10s'
                     type: string
                   tag:
-                    description: Tag name associated to all records coming from this
+                    description: Tag name associated to all records comming from this
                       plugin
                     type: string
                 type: object
@@ -603,7 +603,7 @@ spec:
                       Ignores records which are older than this time in seconds.
                       Supports m,h,d (minutes, hours, days) syntax.
                       Default behavior is to read all records from specified files.
-                      Only available when a Parser is specified and it can parse the time of a record.
+                      Only available when a Parser is specificied and it can parse the time of a record.
                     pattern: ^\d+(m|h|d)?$
                     type: string
                   key:
@@ -638,7 +638,7 @@ spec:
                     type: string
                   parserFirstline:
                     description: |-
-                      Name of the parser that matches the beginning of a multiline message.
+                      Name of the parser that matchs the beginning of a multiline message.
                       Note that the regular expression defined in the parser must include a group name (named capture)
                     type: string
                   parserN:
@@ -700,7 +700,7 @@ spec:
                       E.g. kube.<namespace_name>.<pod_name>.<container_name>
                     type: string
                   tagRegex:
-                    description: Set a regex to extract fields from the file
+                    description: Set a regex to exctract fields from the file
                     type: string
                 type: object
               tcp:

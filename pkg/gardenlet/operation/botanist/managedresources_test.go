@@ -30,10 +30,10 @@ import (
 
 var _ = Describe("ManagedResources", func() {
 	var (
-		fakeClient                                                                    client.Client
-		botanist                                                                      *Botanist
-		namespace                                                                     *corev1.Namespace
-		ctx                                                                           = context.TODO()
+		fakeClient                                                                      client.Client
+		botanist                                                                        *Botanist
+		namespace                                                                       *corev1.Namespace
+		ctx                                                                             = context.TODO()
 		seedManagedResource, shootManagedResourceZeroClass, shootManagedResourceNoClass *resourcesv1alpha1.ManagedResource
 
 		deleteManagedResourcesWithDelay = func(ctx context.Context, delay time.Duration, managedResources ...*resourcesv1alpha1.ManagedResource) {
