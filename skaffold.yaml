@@ -777,6 +777,7 @@ build:
             - pkg/provider-local/webhook/networkpolicy
             - pkg/provider-local/webhook/node
             - pkg/provider-local/webhook/nodeagentosc
+            - pkg/provider-local/webhook/prometheus
             - pkg/provider-local/webhook/shoot
             - pkg/resourcemanager/controller/garbagecollector/references
             - pkg/utils
@@ -851,6 +852,12 @@ manifests:
     paths:
       - example/provider-local/garden/skaffold
       - example/provider-local/seed-kind/skaffold
+  hooks:
+    before:
+      - host:
+          command:
+          - bash
+          - hack/generate-kustomize-patch-controllerdeployment-provider-local-prow.sh
 deploy:
   kubectl:
     flags:
