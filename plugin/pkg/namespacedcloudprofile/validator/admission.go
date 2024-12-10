@@ -112,14 +112,16 @@ func (v *ValidateNamespacedCloudProfile) Validate(_ context.Context, a admission
 		return apierrors.NewInternalError(errors.New("could not convert object to NamespacedCloudProfile"))
 	}
 
-	// Exit early if the spec hasn't changed
-	if a.GetOperation() == admission.Update {
-		old, ok := a.GetOldObject().(*gardencore.NamespacedCloudProfile)
+	if a.GetOperation() == admission.Update || a.GetOperation() == admission.Delete {
+		var ok bool
+		oldNamespacedCloudProfile, ok = a.GetOldObject().(*gardencore.NamespacedCloudProfile)
 		if !ok {
 			return apierrors.NewInternalError(errors.New("could not convert old resource into NamespacedCloudProfile object"))
 		}
-		oldNamespacedCloudProfile = old
+	}
 
+	// Exit early if the spec hasn't changed
+	if a.GetOperation() == admission.Update {
 		// do not ignore metadata updates to detect and prevent removal of the gardener finalizer or unwanted changes to annotations
 		if reflect.DeepEqual(namespacedCloudProfile.Spec, oldNamespacedCloudProfile.Spec) && reflect.DeepEqual(namespacedCloudProfile.ObjectMeta, oldNamespacedCloudProfile.ObjectMeta) {
 			return nil
