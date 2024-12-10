@@ -7,6 +7,7 @@ package operatingsystemconfig
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"slices"
 
 	"github.com/go-logr/logr"
@@ -321,6 +322,9 @@ func collectAllFiles(osc *extensionsv1alpha1.OperatingSystemConfig) []extensions
 }
 
 func computeContainerdRegistryDiffs(newRegistries, oldRegistries []extensionsv1alpha1.RegistryConfig) containerdRegistries {
+	// suppress host probing if no Hosts changes are detected
+	suppressHostsProbing(newRegistries, oldRegistries)
+
 	r := containerdRegistries{
 		Desired: newRegistries,
 	}
@@ -343,4 +347,17 @@ func getCommandToExecute(newUnit extensionsv1alpha1.Unit) extensionsv1alpha1.Uni
 		commandToExecute = extensionsv1alpha1.CommandStop
 	}
 	return commandToExecute
+}
+
+func suppressHostsProbing(newRegistries, oldRegistries []extensionsv1alpha1.RegistryConfig) {
+	for i := 0; i < len(newRegistries); i++ {
+		if ptr.Deref(newRegistries[i].ReadinessProbe, false) {
+			index := slices.IndexFunc(oldRegistries, func(config extensionsv1alpha1.RegistryConfig) bool {
+				return newRegistries[i].Upstream == config.Upstream
+			})
+			if index != -1 && reflect.DeepEqual(newRegistries[i].Hosts, oldRegistries[index].Hosts) {
+				newRegistries[i].ReadinessProbe = ptr.To(false)
+			}
+		}
+	}
 }

@@ -354,16 +354,10 @@ func addRegistryToContainerdFunc(ctx context.Context, log logr.Logger, registryC
 		return fmt.Errorf("unable to ensure registry config base directory: %w", err)
 	}
 
-	hostsTomlFilePath := path.Join(baseDir, "hosts.toml")
-	exists, err := fs.Exists(hostsTomlFilePath)
-	if err != nil {
-		return fmt.Errorf("unable to check if registry config file exists: %w", err)
-	}
-
-	// Check if registry endpoints are reachable if the config is new.
+	// Check if registry endpoints are reachable if the config is new or changed.
 	// This is especially required when registries run within the cluster and during bootstrap,
 	// the Kubernetes deployments are not ready yet.
-	if !exists && ptr.Deref(registryConfig.ReadinessProbe, false) {
+	if ptr.Deref(registryConfig.ReadinessProbe, false) {
 		log.Info("Probing endpoints for image registry", "upstream", registryConfig.Upstream)
 		if err := retry.Until(ctx, 2*time.Second, func(ctx context.Context) (done bool, err error) {
 			for _, registryHost := range registryConfig.Hosts {
@@ -405,6 +399,7 @@ func addRegistryToContainerdFunc(ctx context.Context, log logr.Logger, registryC
 		log.Info("Probing endpoints for image registry succeeded", "upstream", registryConfig.Upstream)
 	}
 
+	hostsTomlFilePath := path.Join(baseDir, "hosts.toml")
 	f, err := fs.OpenFile(hostsTomlFilePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
 		return fmt.Errorf("unable to open hosts.toml: %w", err)
