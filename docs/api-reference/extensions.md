@@ -4019,7 +4019,8 @@ CloudConfig
 <td>
 <em>(Optional)</em>
 <p>CloudConfig is a structure for containing the generated output for the given operating system
-config spec. It contains a reference to a secret as the result may contain confidential data.</p>
+config spec. It contains a reference to a secret as the result may contain confidential data.
+After Gardener v1.112, this will be only set for OperatingSystemConfigs with purpose &lsquo;provision&rsquo;.</p>
 </td>
 </tr>
 </tbody>
