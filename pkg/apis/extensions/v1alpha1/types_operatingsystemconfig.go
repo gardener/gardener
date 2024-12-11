@@ -200,7 +200,7 @@ type OperatingSystemConfigStatus struct {
 	ExtensionFiles []File `json:"extensionFiles,omitempty" patchStrategy:"merge" patchMergeKey:"path"`
 	// CloudConfig is a structure for containing the generated output for the given operating system
 	// config spec. It contains a reference to a secret as the result may contain confidential data.
-	// After Gardener v1.112, this will be only set of OperatingSystemConfigs with purpose 'provision'.
+	// After Gardener v1.112, this will be only set for OperatingSystemConfigs with purpose 'provision'.
 	// +optional
 	CloudConfig *CloudConfig `json:"cloudConfig,omitempty"`
 }
