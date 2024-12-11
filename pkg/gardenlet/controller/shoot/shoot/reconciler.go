@@ -663,7 +663,7 @@ func (r *Reconciler) updateShootStatusOperationStart(
 		}
 	}
 
-	removeNonExistentPoolsFromPendingWorkersRollouts(shoot.Status.Credentials, shoot.Spec.Provider.Workers)
+	removeNonExistentPoolsFromPendingWorkersRollouts(shoot.Status.Credentials, shoot.Spec.Provider.Workers, v1beta1helper.HibernationIsEnabled(shoot))
 
 	if err := r.GardenClient.Status().Update(ctx, shoot); err != nil {
 		return err
@@ -900,14 +900,16 @@ func (r *Reconciler) patchShootStatusOperationError(
 	return r.GardenClient.Status().Patch(ctx, shoot, statusPatch)
 }
 
-func removeNonExistentPoolsFromPendingWorkersRollouts(credentials *gardencorev1beta1.ShootCredentials, workerPools []gardencorev1beta1.Worker) {
+func removeNonExistentPoolsFromPendingWorkersRollouts(credentials *gardencorev1beta1.ShootCredentials, workerPools []gardencorev1beta1.Worker, hibernationEnabled bool) {
 	if credentials == nil || credentials.Rotation == nil {
 		return
 	}
 
 	poolNames := sets.New[string]()
-	for _, pool := range workerPools {
-		poolNames.Insert(pool.Name)
+	if !hibernationEnabled {
+		for _, pool := range workerPools {
+			poolNames.Insert(pool.Name)
+		}
 	}
 
 	if credentials.Rotation.CertificateAuthorities != nil {
