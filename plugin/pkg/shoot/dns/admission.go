@@ -334,13 +334,13 @@ func checkDefaultDomainFormat(a admission.Attributes, shoot *core.Shoot, project
 			if len(shoot.GenerateName) > 0 && (len(shoot.Name) == 0 || strings.HasPrefix(shoot.Name, shoot.GenerateName)) {
 				// Case where shoot name is generated or to be generated
 				if !strings.HasSuffix(*shootDomain, fmt.Sprintf(".%s.%s", project.Name, domain)) {
-					fieldErr := field.Invalid(field.NewPath("spec", "dns"), shoot.Name, "shoot with 'metadata.generateName' uses a default domain but does not match expected scheme: <random-subdomain>.<project-name>.<default-domain>")
+					fieldErr := field.Invalid(field.NewPath("spec", "dns"), shoot.Name, fmt.Sprintf("shoot with 'metadata.generateName' uses a default domain but does not match expected scheme: <random-subdomain>.<project-name>.<default-domain> (expected '.%s.%s' to be a suffix of '%s')", project.Name, domain, *shootDomain))
 					return apierrors.NewInvalid(a.GetKind().GroupKind(), shoot.Name, field.ErrorList{fieldErr})
 				}
 				return nil
 			}
 			if *shootDomain != fmt.Sprintf("%s.%s.%s", shoot.Name, project.Name, domain) {
-				fieldErr := field.Invalid(field.NewPath("spec", "dns"), shoot.Name, "shoot uses a default domain but does not match expected scheme: <shoot-name>.<project-name>.<default-domain>")
+				fieldErr := field.Invalid(field.NewPath("spec", "dns"), shoot.Name, fmt.Sprintf("shoot uses a default domain but does not match expected scheme: <shoot-name>.<project-name>.<default-domain> (expected '%s.%s.%s', but got '%s')", shoot.Name, project.Name, domain, *shootDomain))
 				return apierrors.NewInvalid(a.GetKind().GroupKind(), shoot.Name, field.ErrorList{fieldErr})
 			}
 
