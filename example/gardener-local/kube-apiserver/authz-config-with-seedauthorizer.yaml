@@ -8,8 +8,8 @@ authorizers:
 - type: Webhook
   name: seed-authorizer
   webhook:
-    authorizedTTL: 0s
-    unauthorizedTTL: 0s
+    authorizedTTL: 1ns
+    unauthorizedTTL: 1ns
     timeout: 10s
     failurePolicy: Deny
     subjectAccessReviewVersion: v1
