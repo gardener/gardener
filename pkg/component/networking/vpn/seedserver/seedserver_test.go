@@ -335,28 +335,6 @@ var _ = Describe("VpnSeedServer", func() {
 					},
 					VolumeMounts: []corev1.VolumeMount{mount},
 				}
-				if !disableNewVPN {
-					template.Spec.InitContainers = []corev1.Container{
-						{
-							Name:            "setup",
-							Image:           vpnSeedServerImage,
-							ImagePullPolicy: corev1.PullIfNotPresent,
-							Command: []string{
-								"/bin/vpn-server",
-								"setup",
-							},
-							Env: []corev1.EnvVar{
-								{
-									Name:  "IS_HA",
-									Value: "true",
-								},
-							},
-							SecurityContext: &corev1.SecurityContext{
-								Privileged: ptr.To(true),
-							},
-						},
-					}
-				}
 				if disableNewVPN {
 					exporterContainer.Command = []string{
 						"/openvpn-exporter",
@@ -438,6 +416,24 @@ var _ = Describe("VpnSeedServer", func() {
 					},
 				})
 			}
+
+			if !disableNewVPN {
+				template.Spec.InitContainers = []corev1.Container{
+					{
+						Name:            "setup",
+						Image:           vpnSeedServerImage,
+						ImagePullPolicy: corev1.PullIfNotPresent,
+						Command: []string{
+							"/bin/vpn-server",
+							"setup",
+						},
+						SecurityContext: &corev1.SecurityContext{
+							Privileged: ptr.To(true),
+						},
+					},
+				}
+			}
+
 			return template
 		}
 
