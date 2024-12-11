@@ -1288,7 +1288,7 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 	// TODO(AleksandarSavchev): Remove this check as soon as v1.32 is the least supported Kubernetes version in Gardener.
 	k8sGreaterEqual132, _ := versionutils.CheckVersionMeetsConstraint(version, ">= 1.32")
 	if oidc := kubeAPIServer.OIDCConfig; k8sGreaterEqual132 && oidc != nil {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("oidcConfig"), *oidc, "for Kubernetes versions >= 1.31, oidcConfig field is no longer supported"))
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("oidcConfig"), *oidc, "for Kubernetes versions >= 1.32, oidcConfig field is no longer supported"))
 	} else if oidc != nil {
 		oidcPath := fldPath.Child("oidcConfig")
 
