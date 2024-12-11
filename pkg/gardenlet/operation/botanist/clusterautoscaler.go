@@ -72,7 +72,7 @@ func (b *Botanist) CalculateMaxNodesForShoot(shoot *gardencorev1beta1.Shoot) (*i
 	if err != nil {
 		return nil, err
 	}
-	maxNodesForNodesNetwork, err := b.calculateMaxNodesForNodesNetwork(shoot)
+	maxNodesForNodesNetwork, err := b.calculateMaxNodesForNodesNetwork()
 	if err != nil {
 		return nil, err
 	}
@@ -97,13 +97,20 @@ func (b *Botanist) calculateMaxNodesForPodsNetwork(shoot *gardencorev1beta1.Shoo
 		// Calculate how many subnets with nodeCIDRMaskSize can be allocated out of the pod network (with podCIDRMaskSize).
 		// This indicates how many Nodes we can host at max from a networking perspective.
 		var maxNodeCount = &big.Int{}
-		exp := int64(*shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize) - int64(podCIDRMaskSize)
+		// For dual-stack, we use 80 as nodeCIDRMaskSize for IPv6. In general, for ipv6 nodeCIDRMaskSize and podCIDRMaskSize are dependent on the infrastructure provider.
+		// For AWS, it is nodeCIDRMaskSize 80 and podCIDRMaskSize 56, for GCP nodeCIDRMaskSize 112 and podCIDRMaskSize 64.
+		// With 80 as node nodeCIDRMaskSize in this calculation, IPv6 is not a limitation for the number of nodes.
+		exp := 80 - int64(podCIDRMaskSize)
+		if podNetwork.IP.To4() != nil || gardencorev1beta1.IsIPv6SingleStack(shoot.Spec.Networking.IPFamilies) {
+			exp = int64(*shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize) - int64(podCIDRMaskSize)
+		}
 		// Bigger numbers than 2^62 do not fit into an int64 variable and big.Int{}.Int64() is undefined in such cases.
 		// The pod network is no limitation in this case anyway.
 		if exp > 62 {
-			return nil, nil
+			maxNodeCount = big.NewInt(math.MaxInt64)
+		} else {
+			maxNodeCount.Exp(big.NewInt(2), big.NewInt(exp), nil)
 		}
-		maxNodeCount.Exp(big.NewInt(2), big.NewInt(exp), nil)
 
 		if podNetwork.IP.To4() != nil {
 			resultPerIPFamily[gardencorev1beta1.IPFamilyIPv4] += maxNodeCount.Int64()
@@ -120,7 +127,7 @@ func (b *Botanist) calculateMaxNodesForPodsNetwork(shoot *gardencorev1beta1.Shoo
 	return &result, nil
 }
 
-func (b *Botanist) calculateMaxNodesForNodesNetwork(shoot *gardencorev1beta1.Shoot) (*int64, error) {
+func (b *Botanist) calculateMaxNodesForNodesNetwork() (*int64, error) {
 	if len(b.Shoot.Networks.Nodes) == 0 {
 		return nil, nil
 	}
@@ -131,9 +138,9 @@ func (b *Botanist) calculateMaxNodesForNodesNetwork(shoot *gardencorev1beta1.Sho
 		if nodeCIDRMaskSize == 0 {
 			return nil, fmt.Errorf("node CIDR is not in its canonical form")
 		}
-		ipCIDRMaskSize := int64(32)
-		if gardencorev1beta1.IsIPv6SingleStack(shoot.Spec.Networking.IPFamilies) {
-			ipCIDRMaskSize = 128
+		ipCIDRMaskSize := int64(128)
+		if nodeNetwork.IP.To4() != nil {
+			ipCIDRMaskSize = int64(32)
 		}
 		// Calculate how many "single IP" subnets fit into the node network
 		var maxNodeCount = &big.Int{}
@@ -141,9 +148,10 @@ func (b *Botanist) calculateMaxNodesForNodesNetwork(shoot *gardencorev1beta1.Sho
 		// Bigger numbers than 2^62 do not fit into an int64 variable and big.Int{}.Int64() is undefined in such cases.
 		// The node network is no limitation in this case anyway.
 		if exp > 62 {
-			return nil, nil
+			maxNodeCount = big.NewInt(math.MaxInt64)
+		} else {
+			maxNodeCount.Exp(big.NewInt(2), big.NewInt(exp), nil)
 		}
-		maxNodeCount.Exp(big.NewInt(2), big.NewInt(exp), nil)
 
 		if nodeNetwork.IP.To4() != nil {
 			// Subtract the broadcast addresses

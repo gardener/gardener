@@ -356,5 +356,49 @@ var _ = Describe("ClusterAutoscaler", func() {
 			},
 			ptr.To[int64](8188),
 		),
+		Entry(
+			"Dual-stack - IPv4 nodes network is restriction",
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeControllerManager: &gardencorev1beta1.KubeControllerManagerConfig{
+							NodeCIDRMaskSize: ptr.To[int32](24),
+						},
+					},
+					Networking: &gardencorev1beta1.Networking{
+						IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6, gardencorev1beta1.IPFamilyIPv4},
+					},
+				},
+				Status: gardencorev1beta1.ShootStatus{
+					Networking: &gardencorev1beta1.NetworkingStatus{
+						Pods:  []string{"100.96.0.0/11", "2001:db8:1::/48"},
+						Nodes: []string{"10.251.0.0/20", "2001:db8:1::/48"},
+					},
+				},
+			},
+			ptr.To[int64](4094),
+		),
+		Entry(
+			"Dual-stack - IPv4 pods network is restriction",
+			&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeControllerManager: &gardencorev1beta1.KubeControllerManagerConfig{
+							NodeCIDRMaskSize: ptr.To[int32](24),
+						},
+					},
+					Networking: &gardencorev1beta1.Networking{
+						IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6, gardencorev1beta1.IPFamilyIPv4},
+					},
+				},
+				Status: gardencorev1beta1.ShootStatus{
+					Networking: &gardencorev1beta1.NetworkingStatus{
+						Pods:  []string{"100.64.0.0/12", "2001:db8:1::/56"},
+						Nodes: []string{"10.250.0.0/16", "2001:db8:1::/56"},
+					},
+				},
+			},
+			ptr.To[int64](4096),
+		),
 	)
 })
