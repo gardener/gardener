@@ -3820,6 +3820,20 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(BeEmpty())
 			})
 
+			It("should fail changing single-stack shoot to dual-stack without annotation", func() {
+				shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv4}
+
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv6, core.IPFamilyIPv4}
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeRequired),
+					"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+					"Detail": ContainSubstring(`"gardener.cloud/operation"="maintain"`),
+				}))
+			})
+
 			It("should fail changing dual-stack shoot to single-stack", func() {
 				newShoot := prepareShootForUpdate(shoot)
 

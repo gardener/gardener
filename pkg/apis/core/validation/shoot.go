@@ -377,7 +377,7 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 		allErrs = append(allErrs, ValidateKubernetesVersionUpdate(newKubernetesVersion, oldKubernetesVersion, true, idxPath.Child("kubernetes", "version"))...)
 	}
 
-	allErrs = append(allErrs, validateNetworkingUpdate(newSpec.Networking, oldSpec.Networking, fldPath.Child("networking"))...)
+	allErrs = append(allErrs, validateNetworkingUpdate(newSpec.Networking, oldSpec.Networking, newObjectMeta, fldPath.Child("networking"))...)
 
 	if !reflect.DeepEqual(oldSpec.SchedulerName, newSpec.SchedulerName) {
 		// only allow to set an empty scheduler name to the default scheduler
@@ -668,7 +668,7 @@ func ValidateKubernetesVersionUpdate(new, old string, skipMinorVersionAllowed bo
 	return allErrs
 }
 
-func validateNetworkingUpdate(newNetworking, oldNetworking *core.Networking, fldPath *field.Path) field.ErrorList {
+func validateNetworkingUpdate(newNetworking, oldNetworking *core.Networking, newObjectMeta metav1.ObjectMeta, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if oldNetworking == nil {
@@ -699,6 +699,14 @@ func validateNetworkingUpdate(newNetworking, oldNetworking *core.Networking, fld
 		// Dual-stack to Single Stack is not allowed
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("ipFamilies"),
 			"transition from dual-stack to single-stack is not allowed"))
+
+		// Single Stack to Dual-stack is allowed but we must ensure that our shoot is annotated "gardener.cloud/operation"="maintain"
+	} else if core.IsDualStack(newNetworking.IPFamilies) && !core.IsDualStack(oldNetworking.IPFamilies) {
+		// Single Stack to Dual-stack is allowed but requires "gardener.cloud/operation"="maintain" annotation
+		if newObjectMeta.Annotations == nil || newObjectMeta.Annotations["gardener.cloud/operation"] != "maintain" {
+			allErrs = append(allErrs, field.Required(field.NewPath("metadata", "annotations").Key("gardener.cloud/operation"),
+				`transition from single-stack to dual-stack requires annotation "gardener.cloud/operation"="maintain"`))
+		}
 	}
 
 	return allErrs
