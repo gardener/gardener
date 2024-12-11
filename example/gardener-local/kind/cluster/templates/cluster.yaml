@@ -12,6 +12,7 @@ nodes:
 {{ include "extraPortMappings.registry" . | indent 2 }}
 {{ include "extraPortMappings.gardener.seed.dns" . | indent 2 }}
   extraMounts:
+{{ include "extraMounts.kind.kubeAPIServer" . | indent 2 }}
 {{ include "extraMounts.gardener.controlPlane" . | indent 2 }}
 {{ include "extraMounts.backupBucket" . | indent 2 }}
 {{ include "extraMounts.registry" . | indent 2 }}

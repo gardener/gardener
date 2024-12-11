@@ -1,0 +1,22 @@
+apiVersion: apiserver.config.k8s.io/v1beta1
+kind: AuthorizationConfiguration
+authorizers:
+- type: RBAC
+  name: rbac
+- type: Node
+  name: node
+- type: Webhook
+  name: seed-authorizer
+  webhook:
+    authorizedTTL: 1ns
+    unauthorizedTTL: 1ns
+    timeout: 10s
+    failurePolicy: Deny
+    subjectAccessReviewVersion: v1
+    connectionInfo:
+      type: KubeConfigFile
+      kubeConfigFile: /etc/gardener-local/kube-apiserver/authz-webhook-kubeconfig.yaml
+    matchConditionSubjectAccessReviewVersion: v1
+    matchConditions:
+    # only intercept request from gardenlets and service accounts from seed namespaces
+    - expression: "'gardener.cloud:system:seeds' in request.groups || request.groups.exists(e, e.startsWith('system:serviceaccounts:seed-'))"

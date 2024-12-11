@@ -364,17 +364,6 @@ for node in $nodes; do
   docker exec "$node" sh -c "sysctl fs.inotify.max_user_instances=8192"
 done
 
-authorization_webhook_config_file=$(kubectl -n kube-system get configmap kubeadm-config -o yaml | yq '.data.ClusterConfiguration' | yq '.apiServer.extraVolumes[0].hostPath')
-if [[ -n "$authorization_webhook_config_file" && "$authorization_webhook_config_file" != "null" ]]; then
-  kubectl -n kube-system get configmap kubeadm-config -o yaml | \
-    sed -e "s#value: RBAC,Node#value: RBAC,Node,Webhook\n      - name: authorization-webhook-config-file\n        value: $authorization_webhook_config_file#" | \
-    kubectl apply -f -
-
-  for node in $nodes; do
-    docker exec "$node" bash -c "kubeadm upgrade node"
-  done
-fi
-
 if [[ "$KUBECONFIG" != "$PATH_KUBECONFIG" ]]; then
   cp "$KUBECONFIG" "$PATH_KUBECONFIG"
 fi
