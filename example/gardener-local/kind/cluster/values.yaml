@@ -1,4 +1,4 @@
-image: kindest/node:v1.31.2
+image: kindest/node:v1.31.4
 
 gardener:
   apiserverRelay:
