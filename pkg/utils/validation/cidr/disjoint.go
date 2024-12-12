@@ -66,8 +66,8 @@ func validateOverlapWithSeed(fldPath *field.Path, shootNetwork []string, network
 			allErrs = append(allErrs, field.Invalid(fldPath, network, fmt.Sprintf("shoot %s network intersects with default vpn network (%s)", networkType, v1beta1constants.DefaultVPNRangeV6)))
 		}
 
-		if NetworksIntersect(v1beta1constants.ReservedSeedServiceRange, network) {
-			allErrs = append(allErrs, field.Invalid(fldPath, network, fmt.Sprintf("shoot %s network intersects with reserved seed service range (%s)", networkType, v1beta1constants.ReservedSeedServiceRange)))
+		if NetworksIntersect(v1beta1constants.ReservedKubeApiServerMappingRange, network) {
+			allErrs = append(allErrs, field.Invalid(fldPath, network, fmt.Sprintf("shoot %s network intersects with reserved kube-apiserver mapping range (%s)", networkType, v1beta1constants.ReservedKubeApiServerMappingRange)))
 		}
 	}
 	if len(shootNetwork) == 0 && networkRequired {

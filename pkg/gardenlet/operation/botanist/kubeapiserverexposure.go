@@ -77,7 +77,8 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 			b.APIServerClusterIP = "64:ff9b:1::" + clusterIP
 		} else {
 			// prevent leakage of real cluster ip to shoot. we use the reserved range 240.0.0.0/8 as prefix instead.
-			prefixIp, _, _ := net.ParseCIDR(v1beta1constants.ReservedSeedServiceRange)
+			// e.g. cluster ip in seed:  192.168.102.23 => ip in shoot:  240.168.102.23
+			prefixIp, _, _ := net.ParseCIDR(v1beta1constants.ReservedKubeApiServerMappingRange)
 			prefix := prefixIp.To4()
 			b.APIServerClusterIP = net.IPv4(prefix[0], clusterIPv4[1], clusterIPv4[2], clusterIPv4[3]).String()
 		}

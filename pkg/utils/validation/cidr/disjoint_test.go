@@ -219,7 +219,7 @@ var _ = Describe("utils", func() {
 			}))))
 		})
 
-		It("should fail due to reserved seed service range overlap in pod cidr", func() {
+		It("should fail due to reserved kube-apiserver mapping range overlap in pod cidr", func() {
 			var (
 				podsCIDR     = "240.100.0.0/16"
 				servicesCIDR = "10.242.0.0/17"
@@ -240,11 +240,11 @@ var _ = Describe("utils", func() {
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal("[].pods"),
-				"Detail": ContainSubstring("pod network intersects with reserved seed service range"),
+				"Detail": ContainSubstring("pod network intersects with reserved kube-apiserver mapping range"),
 			}))))
 		})
 
-		It("should fail due to reserved seed service range overlap in services cidr", func() {
+		It("should fail due to reserved kube-apiserver mapping range overlap in services cidr", func() {
 			var (
 				podsCIDR     = "10.242.128.0/17"
 				servicesCIDR = "240.100.0.0/16"
@@ -265,11 +265,11 @@ var _ = Describe("utils", func() {
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal("[].services"),
-				"Detail": ContainSubstring("service network intersects with reserved seed service range"),
+				"Detail": ContainSubstring("service network intersects with reserved kube-apiserver mapping range"),
 			}))))
 		})
 
-		It("should fail due to reserved seed service range overlap in nodes cidr", func() {
+		It("should fail due to rreserved kube-apiserver mapping range overlap in nodes cidr", func() {
 			var (
 				podsCIDR     = "10.242.128.0/17"
 				servicesCIDR = "10.242.0.0/17"
@@ -290,7 +290,7 @@ var _ = Describe("utils", func() {
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal("[].nodes"),
-				"Detail": ContainSubstring("node network intersects with reserved seed service range"),
+				"Detail": ContainSubstring("node network intersects with reserved kube-apiserver mapping range"),
 			}))))
 		})
 

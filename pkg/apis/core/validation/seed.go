@@ -250,7 +250,7 @@ func validateSeedNetworks(seedNetworks core.SeedNetworks, fldPath *field.Path, i
 	var (
 		primaryIPFamily          = helper.DeterminePrimaryIPFamily(seedNetworks.IPFamilies)
 		networks                 []cidrvalidation.CIDR
-		reservedSeedServiceRange = cidrvalidation.NewCIDR(v1beta1constants.ReservedSeedServiceRange, field.NewPath(""))
+		reservedSeedServiceRange = cidrvalidation.NewCIDR(v1beta1constants.ReservedKubeApiServerMappingRange, field.NewPath(""))
 	)
 
 	if !inTemplate || len(seedNetworks.Pods) > 0 {
