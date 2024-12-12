@@ -7,9 +7,11 @@ package virtual
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -51,27 +53,27 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error listing controllerinstallations: %w", err)
 	}
 
-	var required bool
+	requiredSeeds := sets.New[string]()
 	for _, ctrlInstallation := range controllerInstallation.Items {
 		requiredCondition := v1beta1helper.GetCondition(ctrlInstallation.Status.Conditions, gardencorev1beta1.ControllerInstallationRequired)
 		if requiredCondition != nil && requiredCondition.Status == gardencorev1beta1.ConditionTrue {
-			required = true
-			break
+			requiredSeeds.Insert(ctrlInstallation.Spec.SeedRef.Name)
 		}
 	}
 
-	if err := r.updateCondition(ctx, log, extension, required); err != nil {
+	if err := r.updateCondition(ctx, log, extension, requiredSeeds); err != nil {
 		return reconcile.Result{}, fmt.Errorf("could not update extension status: %w", err)
 	}
 
 	return reconcile.Result{}, nil
 }
 
-func (r *Reconciler) updateCondition(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension, extensionRequired bool) error {
+func (r *Reconciler) updateCondition(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension, seedNames sets.Set[string]) error {
 	requiredCondition := v1beta1helper.GetOrInitConditionWithClock(r.clock, extension.Status.Conditions, operatorv1alpha1.ExtensionRequiredVirtual)
 
-	if extensionRequired {
-		requiredCondition = v1beta1helper.UpdatedConditionWithClock(r.clock, requiredCondition, gardencorev1beta1.ConditionTrue, "RequiredControllerInstallation", "Extension has required ControllerInstallations for seed clusters")
+	if seedNames.Len() > 0 {
+		sortedSeedNames := slices.Sorted(slices.Values(seedNames.UnsortedList()))
+		requiredCondition = v1beta1helper.UpdatedConditionWithClock(r.clock, requiredCondition, gardencorev1beta1.ConditionTrue, "RequiredControllerInstallation", fmt.Sprintf("Extension has required ControllerInstallations for seed clusters %s", sortedSeedNames))
 		log.Info("Extension required for seed cluster")
 	} else {
 		requiredCondition = v1beta1helper.UpdatedConditionWithClock(r.clock, requiredCondition, gardencorev1beta1.ConditionFalse, "NoRequiredControllerInstallation", "Extension does not have required ControllerInstallations for seed clusters")
