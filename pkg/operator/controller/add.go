@@ -111,7 +111,7 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 				Name: requiredvirtual.ControllerName,
 				AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, _ *operatorv1alpha1.Garden) (bool, error) {
 					if virtualCluster == nil {
-						logf.FromContext(ctx).Info("Virtual cluster object has not been created yet, cannot add Gardenlet reconciler")
+						logf.FromContext(ctx).Info("Virtual cluster object has not been created yet, cannot add RequiredVirtual reconciler")
 						return false, nil
 					}
 
