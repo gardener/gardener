@@ -260,7 +260,7 @@ func validateSeedNetworks(seedNetworks core.SeedNetworks, fldPath *field.Path, i
 		services := cidrvalidation.NewCIDR(seedNetworks.Services, fldPath.Child("services"))
 		networks = append(networks, services)
 		// Service range must not be larger than /8 for ipv4
-		if len(services.ValidateIPFamily(cidrvalidation.IPFamilyIPv4)) == 0 {
+		if services.IsIPv4() {
 			maxSize, _ := reservedSeedServiceRange.GetIPNet().Mask.Size()
 			allErrs = append(allErrs, services.ValidateMaxSize(maxSize)...)
 		}

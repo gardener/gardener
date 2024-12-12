@@ -305,6 +305,38 @@ var _ = Describe("cidr", func() {
 				}))
 			})
 		})
+
+		Describe("IsIPv4", func() {
+			It("should return true on a valid IPv4 cidr", func() {
+				goodPath := field.NewPath("good")
+				goodCIDR := "10.100.0.0/16"
+				good := NewCIDR(goodCIDR, goodPath)
+
+				Expect(good.Parse()).To(BeTrue())
+				Expect(good.IsIPv4()).To(BeTrue())
+				Expect(good.IsIPv6()).To(BeFalse())
+			})
+
+			It("should return false on a malformed IPv4 cidr", func() {
+				badPath := field.NewPath("bad")
+				badCIDR := "10.100.0.0/123"
+				bad := NewCIDR(badCIDR, badPath)
+
+				Expect(bad.Parse()).To(BeFalse())
+				Expect(bad.IsIPv4()).To(BeFalse())
+				Expect(bad.IsIPv6()).To(BeFalse())
+			})
+
+			It("should return false on a valid IPv6 cidr", func() {
+				wrongPath := field.NewPath("wrong")
+				wrongCIDR := "2001:0db8::/16"
+				wrong := NewCIDR(wrongCIDR, wrongPath)
+
+				Expect(wrong.Parse()).To(BeTrue())
+				Expect(wrong.IsIPv4()).To(BeFalse())
+				Expect(wrong.IsIPv6()).To(BeTrue())
+			})
+		})
 	})
 
 	Context("IPv6", func() {
@@ -580,6 +612,38 @@ var _ = Describe("cidr", func() {
 					"BadValue": Equal(badCIDR),
 					"Detail":   Equal(`cannot be larger than /32`),
 				}))
+			})
+		})
+
+		Describe("IsIPv6", func() {
+			It("should return true on a valid IPv6 cidr", func() {
+				goodPath := field.NewPath("good")
+				goodCIDR := "2001:0db8::/16"
+				good := NewCIDR(goodCIDR, goodPath)
+
+				Expect(good.Parse()).To(BeTrue())
+				Expect(good.IsIPv4()).To(BeFalse())
+				Expect(good.IsIPv6()).To(BeTrue())
+			})
+
+			It("should return false on a malformed IPv6 cidr", func() {
+				badPath := field.NewPath("bad")
+				badCIDR := "2001:0db8:xxyy:/64"
+				bad := NewCIDR(badCIDR, badPath)
+
+				Expect(bad.Parse()).To(BeFalse())
+				Expect(bad.IsIPv4()).To(BeFalse())
+				Expect(bad.IsIPv6()).To(BeFalse())
+			})
+
+			It("should return false on a valid IPv4 cidr", func() {
+				wrongPath := field.NewPath("wrong")
+				wrongCIDR := "10.100.0.0/16"
+				wrong := NewCIDR(wrongCIDR, wrongPath)
+
+				Expect(wrong.Parse()).To(BeTrue())
+				Expect(wrong.IsIPv4()).To(BeTrue())
+				Expect(wrong.IsIPv6()).To(BeFalse())
 			})
 		})
 	})

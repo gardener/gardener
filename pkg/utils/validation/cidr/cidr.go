@@ -43,6 +43,10 @@ type CIDR interface {
 	ValidateOverlap(subsets ...CIDR) field.ErrorList
 	// ValidateMaxSize returns errors if the subnet is larger than the given bits. e.g. /15 is larger than /16
 	ValidateMaxSize(bits int) field.ErrorList
+	// IsIPv4 returns true if the CIDR is a valid v4 CIDR, false otherwise.
+	IsIPv4() bool
+	// IsIPv6 returns true if the CIDR is a valid v6 CIDR, false otherwise.
+	IsIPv6() bool
 }
 
 type cidrPath struct {
@@ -193,4 +197,18 @@ func (c *cidrPath) LastIPInRange() net.IP {
 	}
 
 	return res
+}
+
+func (c *cidrPath) IsIPv4() bool {
+	if c.ParseError == nil && len(c.ValidateIPFamily(IPFamilyIPv4)) == 0 {
+		return true
+	}
+	return false
+}
+
+func (c *cidrPath) IsIPv6() bool {
+	if c.ParseError == nil && len(c.ValidateIPFamily(IPFamilyIPv6)) == 0 {
+		return true
+	}
+	return false
 }
