@@ -44,7 +44,7 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 	}, NodeTimeout(time.Minute))
 
 	Describe("Single-node control plane", Ordered, Label("single"), func() {
-		It("should initialize the control plane node", func(ctx SpecContext) {
+		It("should initialize as control plane node", func(ctx SpecContext) {
 			stdOut, _ := execute(ctx, 0,
 				"gardenadm", "init",
 			)
@@ -52,7 +52,7 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 			Eventually(ctx, stdOut).Should(gbytes.Say("not implemented"))
 		}, SpecTimeout(time.Minute))
 
-		It("should join the worker node", func(ctx SpecContext) {
+		It("should join as worker node", func(ctx SpecContext) {
 			stdOut, _ := execute(ctx, 1,
 				"gardenadm", "join",
 			)

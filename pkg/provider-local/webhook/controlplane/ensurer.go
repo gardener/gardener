@@ -100,6 +100,12 @@ func (e *ensurer) EnsureCRIConfig(_ context.Context, _ extensionscontextwebhook.
 			Server:   ptr.To("http://garden.local.gardener.cloud:5001"),
 			Hosts:    []extensionsv1alpha1.RegistryHost{{URL: "http://garden.local.gardener.cloud:5001"}},
 		},
+		// europe-docker.pkg.dev upstream is required for loading the Hyperkube image.
+		{
+			Upstream: "europe-docker.pkg.dev",
+			Server:   ptr.To("https://europe-docker.pkg.dev"),
+			Hosts:    []extensionsv1alpha1.RegistryHost{{URL: "http://garden.local.gardener.cloud:5008"}},
+		},
 	} {
 		// Only add registry when it is not already set in the OSC.
 		// This way, it is not added repeatably and extensions (e.g. registry cache) in the local setup may decide

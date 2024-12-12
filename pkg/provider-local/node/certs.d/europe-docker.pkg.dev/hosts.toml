@@ -1,6 +1,0 @@
-# europe-docker.pkg.dev upstream is required for loading the hyperkube image.
-# Further registries are supposed to be added via provider-local
-server = "http://europe.docker.pkg.dev"
-
-[host."http://garden.local.gardener.cloud:5008"]
-  capabilities = ["pull", "resolve"]

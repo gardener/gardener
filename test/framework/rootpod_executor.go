@@ -79,11 +79,7 @@ func (e *rootPodExecutor) Execute(ctx context.Context, command ...string) ([]byt
 
 		return nil, err
 	}
-	response, err := io.ReadAll(stdout)
-	if err != nil {
-		return nil, err
-	}
-	return response, nil
+	return io.ReadAll(stdout)
 }
 
 // deploy deploys a root pod on the specified node and waits until it is running
