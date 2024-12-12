@@ -20,6 +20,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	jsonserializer "k8s.io/apimachinery/pkg/runtime/serializer/json"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
@@ -42,6 +46,16 @@ import (
 )
 
 const lastAppliedOperatingSystemConfigFilePath = nodeagentv1alpha1.BaseDir + "/last-applied-osc.yaml"
+
+var codec runtime.Codec
+
+func init() {
+	scheme := runtime.NewScheme()
+	utilruntime.Must(extensionsv1alpha1.AddToScheme(scheme))
+	ser := jsonserializer.NewSerializerWithOptions(jsonserializer.DefaultMetaFactory, scheme, scheme, jsonserializer.SerializerOptions{Yaml: true, Pretty: false, Strict: false})
+	versions := schema.GroupVersions([]schema.GroupVersion{nodeagentv1alpha1.SchemeGroupVersion, extensionsv1alpha1.SchemeGroupVersion})
+	codec = serializer.NewCodecFactory(scheme).CodecForVersions(ser, ser, versions, versions)
+}
 
 // Reconciler decodes the OperatingSystemConfig resources from secrets and applies the systemd units and files to the
 // node.
@@ -85,13 +99,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, nil
 	}
 
-	osc, oscRaw, oscChecksum, err := extractOSCFromSecret(secret)
+	osc, oscChecksum, err := extractOSCFromSecret(secret)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed extracting OSC from secret: %w", err)
 	}
 
 	log.Info("Applying containerd configuration")
-	oscRaw, err = r.ReconcileContainerdConfig(ctx, log, osc, oscRaw)
+	err = r.ReconcileContainerdConfig(ctx, log, osc)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed reconciling containerd configuration: %w", err)
 	}
@@ -171,6 +185,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	)
 
 	log.Info("Persisting current operating system config as 'last-applied' file to the disk", "path", lastAppliedOperatingSystemConfigFilePath)
+	oscRaw, err := runtime.Encode(codec, osc)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("unable to encode OSC: %w", err)
+	}
+
 	if err := r.FS.WriteFile(lastAppliedOperatingSystemConfigFilePath, oscRaw, 0600); err != nil {
 		return reconcile.Result{}, fmt.Errorf("unable to write current OSC to file path %q: %w", lastAppliedOperatingSystemConfigFilePath, err)
 	}
@@ -436,6 +455,13 @@ func (r *Reconciler) removeDeletedUnits(ctx context.Context, log logr.Logger, no
 				if err := r.FS.RemoveAll(dropInFolder); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
 					return fmt.Errorf("unable to delete systemd drop-in folder of deleted unit %q: %w", unit.Name, err)
 				}
+			}
+		}
+
+		// If the unit was not created by gardener-node-agent, but it exists on the node and was removed from OSC. Restart it to apply changes.
+		if unitFileExists && !unitCreatedByNodeAgent {
+			if err := r.DBus.Restart(ctx, r.Recorder, node, unit.Name); err != nil {
+				return fmt.Errorf("unable to restart unit %q removed from OSC but not created by gardener-node-agent: %w", unit.Name, err)
 			}
 		}
 
