@@ -22,9 +22,9 @@ type WebhookOptions struct {
 
 // AddFlags implements Flagger.AddFlags.
 func (w *WebhookOptions) AddFlags(fs *pflag.FlagSet) {
-	// if w.ExternalLabels == nil {
-	// 	w.ExternalLabels = MapFlag{}
-	// }
+	if w.ExternalLabels == nil {
+		w.ExternalLabels = MapFlag{}
+	}
 
 	fs.StringSliceVar(&w.RemoteWriteURLs, "remote-write-url", w.RemoteWriteURLs, "Remote write URLs to inject into Prometheus objects")
 	fs.Var(&w.ExternalLabels, "external-labels", "External labels to inject into Prometheus objects")
@@ -61,9 +61,7 @@ func (w *WebhookConfig) Apply(opts *AddOptions) {
 type MapFlag map[string]string
 
 // Set parses a string of the form "key1=value1,key2=value2,..." into a map[string]string.
-func (m *MapFlag) Set(value string) error {
-	*m = make(map[string]string)
-
+func (m MapFlag) Set(value string) error {
 	for _, pair := range strings.Split(value, ",") {
 		if len(pair) == 0 {
 			continue
@@ -73,20 +71,20 @@ func (m *MapFlag) Set(value string) error {
 		if len(parts) != 2 {
 			return fmt.Errorf("missing value for key %q", key)
 		}
-		(*m)[key] = strings.TrimSpace(parts[1])
+		m[key] = strings.TrimSpace(parts[1])
 	}
 
 	return nil
 }
 
 // String returns a string containing all map values, formatted as "key1=value1,key2=value2,...".
-func (m *MapFlag) String() string {
+func (m MapFlag) String() string {
 	if m == nil {
 		return ""
 	}
 
 	var pairs []string
-	for k, v := range *m {
+	for k, v := range m {
 		pairs = append(pairs, fmt.Sprintf("%s=%s", k, v))
 	}
 	sort.Strings(pairs)
@@ -94,6 +92,6 @@ func (m *MapFlag) String() string {
 }
 
 // Type implements the pflag.Value interface.
-func (m *MapFlag) Type() string {
+func (m MapFlag) Type() string {
 	return "mapStringString"
 }
