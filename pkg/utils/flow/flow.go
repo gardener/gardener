@@ -53,6 +53,7 @@ func (ns nodes) getOrCreate(id TaskID) *node {
 type Flow struct {
 	name  string
 	nodes nodes
+
 	// Clock is used to retrieve the current time.
 	Clock clock.Clock
 	start time.Time
