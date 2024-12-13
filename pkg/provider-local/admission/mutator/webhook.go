@@ -6,6 +6,7 @@ package mutator
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -31,7 +32,7 @@ func New(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
 		Path:     "/webhooks/mutate",
 		Mutators: map[extensionswebhook.Mutator][]extensionswebhook.Type{
 			NewShootMutator(mgr):                  {{Obj: &gardencorev1beta1.Shoot{}}},
-			NewNamespacedCloudProfileMutator(mgr): {{Obj: &gardencorev1beta1.NamespacedCloudProfile{}}},
+			NewNamespacedCloudProfileMutator(mgr): {{Obj: &gardencorev1beta1.NamespacedCloudProfile{}, Subresource: ptr.To("status")}},
 		},
 		Target: extensionswebhook.TargetSeed,
 		ObjectSelector: &metav1.LabelSelector{
