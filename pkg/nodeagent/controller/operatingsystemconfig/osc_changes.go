@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: SAP SE or an SAP affiliate company and Gardener contributors
+// SPDX-FileCopyrightText: 2024 SAP SE or an SAP affiliate company and Gardener contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -23,7 +23,7 @@ type operatingSystemConfigChanges struct {
 	Units           units      `json:"units"`
 	Files           files      `json:"files"`
 	Containerd      containerd `json:"containerd"`
-	RestartRequired bool       `json:"restartSelf"`
+	RestartRequired bool       `json:"restartRequired"`
 }
 
 type units struct {
@@ -65,135 +65,138 @@ type containerdRegistries struct {
 	Deleted []extensionsv1alpha1.RegistryConfig `json:"deleted,omitempty"`
 }
 
+// persist the operatingSystemConfigChanges to disk. persist() requires the caller to ensure no concurrent actions are
+// taking place by holding the lock.
 func (o *operatingSystemConfigChanges) persist() error {
-	o.lock.Lock()
-	defer o.lock.Unlock()
-
 	out, err := yaml.Marshal(o)
 	if err != nil {
 		return err
 	}
-	return o.fs.WriteFile(operatingSystemConfigChangesFilePath, out, 0644)
+	return o.fs.WriteFile(operatingSystemConfigChangesFilePath, out, 0600)
 }
 
 func (o *operatingSystemConfigChanges) setRestartRequired(restart bool) error {
+	o.lock.Lock()
+	defer o.lock.Unlock()
+
 	o.RestartRequired = restart
 	return o.persist()
 }
 
 func (o *operatingSystemConfigChanges) completedUnitCommand(name string) error {
 	o.lock.Lock()
+	defer o.lock.Unlock()
 
 	o.Units.Commands = slices.DeleteFunc(o.Units.Commands, func(c unitCommand) bool {
 		return c.Name == name
 	})
 
-	o.lock.Unlock()
 	return o.persist()
 }
 
 func (o *operatingSystemConfigChanges) completedUnitChanged(name string) error {
 	o.lock.Lock()
+	defer o.lock.Unlock()
 
 	o.Units.Changed = slices.DeleteFunc(o.Units.Changed, func(c changedUnit) bool {
 		return c.Name == name
 	})
-	o.lock.Unlock()
 	return o.persist()
 }
 
 func (o *operatingSystemConfigChanges) completedUnitDeleted(name string) error {
 	o.lock.Lock()
+	defer o.lock.Unlock()
 
 	o.Units.Deleted = slices.DeleteFunc(o.Units.Deleted, func(c extensionsv1alpha1.Unit) bool {
 		return c.Name == name
 	})
 
-	o.lock.Unlock()
 	return o.persist()
 }
 
 func (o *operatingSystemConfigChanges) completedUnitDropInChanged(unitName, dropInName string) error {
 	o.lock.Lock()
+	defer o.lock.Unlock()
 
 	i := slices.IndexFunc(o.Units.Changed, func(u changedUnit) bool {
 		return u.Name == unitName
 	})
 	if i < 0 {
-		o.lock.Unlock()
 		return fmt.Errorf("expected to find unit with name %q", unitName)
 	}
 	o.Units.Changed[i].DropIns = slices.DeleteFunc(o.Units.Changed[i].DropIns, func(d extensionsv1alpha1.DropIn) bool {
 		return d.Name == dropInName
 	})
 
-	o.lock.Unlock()
 	return o.persist()
 }
 
 func (o *operatingSystemConfigChanges) completedUnitDropInDeleted(unitName, dropInName string) error {
 	o.lock.Lock()
+	defer o.lock.Unlock()
 
 	i := slices.IndexFunc(o.Units.Changed, func(u changedUnit) bool {
 		return u.Name == unitName
 	})
 	if i < 0 {
-		o.lock.Unlock()
 		return fmt.Errorf("expected to find unit with name %q", unitName)
 	}
 	o.Units.Changed[i].DropIns = slices.DeleteFunc(o.Units.Changed[i].DropIns, func(d extensionsv1alpha1.DropIn) bool {
 		return d.Name == dropInName
 	})
 
-	o.lock.Unlock()
 	return o.persist()
 }
 
 func (o *operatingSystemConfigChanges) completedFileDeleted(path string) error {
 	o.lock.Lock()
+	defer o.lock.Unlock()
 
 	o.Files.Deleted = slices.DeleteFunc(o.Files.Deleted, func(f extensionsv1alpha1.File) bool {
 		return f.Path == path
 	})
 
-	o.lock.Unlock()
 	return o.persist()
 }
 
 func (o *operatingSystemConfigChanges) completedFileChanged(path string) error {
 	o.lock.Lock()
+	defer o.lock.Unlock()
 
 	o.Files.Changed = slices.DeleteFunc(o.Files.Changed, func(f extensionsv1alpha1.File) bool {
 		return f.Path == path
 	})
 
-	o.lock.Unlock()
 	return o.persist()
 }
 func (o *operatingSystemConfigChanges) completedContainerdConfigFileChange() error {
+	o.lock.Lock()
+	defer o.lock.Unlock()
+
 	o.Containerd.ConfigFileChange = false
 	return o.persist()
 }
 
 func (o *operatingSystemConfigChanges) completedContainerdRegistriesDesired(upstream string) error {
 	o.lock.Lock()
+	defer o.lock.Unlock()
 
 	o.Containerd.Registries.Desired = slices.DeleteFunc(o.Containerd.Registries.Desired, func(c extensionsv1alpha1.RegistryConfig) bool {
 		return c.Upstream == upstream
 	})
 
-	o.lock.Unlock()
 	return o.persist()
 }
 
 func (o *operatingSystemConfigChanges) completedContainerdRegistriesDeleted(upstream string) error {
 	o.lock.Lock()
+	defer o.lock.Unlock()
 
 	o.Containerd.Registries.Deleted = slices.DeleteFunc(o.Containerd.Registries.Deleted, func(c extensionsv1alpha1.RegistryConfig) bool {
 		return c.Upstream == upstream
 	})
 
-	o.lock.Unlock()
 	return o.persist()
 }
 

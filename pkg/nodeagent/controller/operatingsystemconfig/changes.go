@@ -111,6 +111,8 @@ func computeOperatingSystemConfigChanges(log logr.Logger, fs afero.Afero, newOSC
 		if extensionsv1alpha1helper.HasContainerdConfiguration(newOSC.Spec.CRIConfig) {
 			changes.Containerd.Registries.Desired = newOSC.Spec.CRIConfig.Containerd.Registries
 		}
+		changes.lock.Lock()
+		defer changes.lock.Unlock()
 		return changes, changes.persist()
 	}
 
@@ -154,6 +156,8 @@ func computeOperatingSystemConfigChanges(log logr.Logger, fs afero.Afero, newOSC
 	}
 	changes.Containerd.Registries = computeContainerdRegistryDiffs(newRegistries, oldRegistries)
 
+	changes.lock.Lock()
+	defer changes.lock.Unlock()
 	return changes, changes.persist()
 }
 

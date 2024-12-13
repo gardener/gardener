@@ -48,7 +48,7 @@ import (
 
 const (
 	lastAppliedOperatingSystemConfigFilePath = nodeagentconfigv1alpha1.BaseDir + "/last-applied-osc.yaml"
-	operatingSystemConfigChangesFilePath     = nodeagentconfigv1alpha1.BaseDir + "/oscc.yaml"
+	operatingSystemConfigChangesFilePath     = nodeagentconfigv1alpha1.BaseDir + "/osc-changes.yaml"
 )
 
 var codec runtime.Codec
