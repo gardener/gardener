@@ -59,9 +59,9 @@ func (i *ingress) Deploy(ctx context.Context) error {
 		virtualService  = i.emptyVirtualService()
 	)
 
-	tlsMode := istioapinetworkingv1beta1.ClientTLSSettings_DISABLE
+	tlsMode := istioapinetworkingv1beta1.ClientTLSSettings{Mode: istioapinetworkingv1beta1.ClientTLSSettings_DISABLE}
 	if i.values.TLSSecretName != nil {
-		tlsMode = istioapinetworkingv1beta1.ClientTLSSettings_SIMPLE
+		tlsMode = istioapinetworkingv1beta1.ClientTLSSettings{Mode: istioapinetworkingv1beta1.ClientTLSSettings_SIMPLE}
 	}
 
 	serviceNamespace := i.namespace
@@ -71,7 +71,7 @@ func (i *ingress) Deploy(ctx context.Context) error {
 
 	destinationHost := kubernetesutils.FQDNForService(i.values.ServiceName, serviceNamespace)
 
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, i.client, destinationRule, istio.DestinationRuleWithLocalityPreferenceAndTLS(destinationRule, getLabels(), destinationHost, tlsMode)); err != nil {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, i.client, destinationRule, istio.DestinationRuleWithLocalityPreferenceAndTLS(destinationRule, getLabels(), destinationHost, &tlsMode)); err != nil {
 		return err
 	}
 
