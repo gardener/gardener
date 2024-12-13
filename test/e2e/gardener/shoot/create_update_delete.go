@@ -6,11 +6,15 @@ package shoot
 
 import (
 	"context"
+	"crypto/tls"
+	"fmt"
+	"net/http"
 	"strconv"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	authenticationv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -86,6 +90,40 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				g.Expect(readOnlyShootClient.Client().Update(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "kube-root-ca.crt", Namespace: metav1.NamespaceDefault}})).To(BeForbiddenError())
 				g.Expect(readOnlyShootClient.Client().Patch(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "kube-root-ca.crt", Namespace: metav1.NamespaceDefault}}, client.RawPatch(types.MergePatchType, []byte("{}")))).To(BeForbiddenError())
 				g.Expect(readOnlyShootClient.Client().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "kube-root-ca.crt", Namespace: metav1.NamespaceDefault}})).To(BeForbiddenError())
+			}).Should(Succeed())
+
+			By("Verify no auth bypass with istio tls termination")
+			Eventually(func(g Gomega) {
+				externalAddress, client, err := unsafeHttpClientForShoot(f.Shoot)
+				g.Expect(err).To(Succeed())
+
+				req, err := http.NewRequestWithContext(ctx, http.MethodGet, externalAddress, http.NoBody)
+				g.Expect(err).To(Succeed())
+				req.Header = map[string][]string{
+					"X-Remote-User":  {"kubernetes-admin"},
+					"X-Remote-Group": {"system:masters"},
+				}
+
+				resp, err := client.Do(req)
+				g.Expect(err).To(Succeed())
+				g.Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
+			}).Should(Succeed())
+
+			By("Verify no tls client auth bypass with istio tls termination")
+			Eventually(func(g Gomega) {
+				client, err := clientWithCustomTransport(ctx, f, &injectHeaderTransport{
+					Headers: map[string]string{
+						"X-Remote-User":  "fake-kubernetes-admin",
+						"X-Remote-Group": "system:masters",
+					},
+				})
+				g.Expect(err).ToNot(HaveOccurred())
+
+				res, err := client.Kubernetes().AuthenticationV1().SelfSubjectReviews().
+					Create(context.TODO(), &authenticationv1.SelfSubjectReview{}, metav1.CreateOptions{})
+				g.Expect(err).ToNot(HaveOccurred())
+				g.Expect(res.Status.UserInfo.Username).To(Equal("kubernetes-admin"))
+				g.Expect(res.Status.UserInfo.Groups).To(Equal([]string{"gardener.cloud:system:viewers", "system:authenticated"}))
 			}).Should(Succeed())
 
 			if !v1beta1helper.IsWorkerless(f.Shoot) {
@@ -195,3 +233,56 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		test(e2e.DefaultWorkerlessShoot("e2e-default"))
 	})
 })
+
+func unsafeHttpClientForShoot(shoot *gardencorev1beta1.Shoot) (string, *http.Client, error) {
+	var externalAddress string
+	for _, addr := range shoot.Status.AdvertisedAddresses {
+		if addr.Name == "external" {
+			externalAddress = addr.URL
+		}
+	}
+	if externalAddress == "" {
+		return "", nil, fmt.Errorf("no external address found for shoot")
+	}
+
+	return externalAddress, &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true, // #nosec: G402 -- Test only.
+			},
+		},
+	}, nil
+}
+
+func clientWithCustomTransport(ctx context.Context, f *framework.ShootCreationFramework, transport http.RoundTripper) (kubernetes.Interface, error) {
+	viewer, err := access.RequestViewerKubeconfigForShoot(ctx, f.GardenClient, f.Shoot, ptr.To[int64](7200))
+	if err != nil {
+		return nil, fmt.Errorf("failed to request viewer kubeconfig: %w", err)
+	}
+
+	client, err := kubernetes.NewClientFromBytes(
+		viewer,
+		kubernetes.WithClientOptions(client.Options{
+			HTTPClient: &http.Client{
+				Transport: transport,
+			},
+			Scheme: kubernetes.ShootScheme,
+		}),
+		kubernetes.WithDisabledCachedClient(),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create client: %w", err)
+	}
+	return client, err
+}
+
+type injectHeaderTransport struct {
+	Headers map[string]string
+}
+
+func (c *injectHeaderTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	for key, value := range c.Headers {
+		req.Header.Add(key, value)
+	}
+	return http.DefaultTransport.RoundTrip(req)
+}
