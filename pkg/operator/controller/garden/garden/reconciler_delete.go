@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/garden/system/virtual"
 	gardeneraccess "github.com/gardener/gardener/pkg/component/gardener/access"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
+	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/component/kubernetes/controllermanager"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
 	gardenprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
@@ -204,7 +205,12 @@ func (r *Reconciler) delete(
 		})
 		destroyKubeAPIServer = g.Add(flow.Task{
 			Name:         "Destroying Kubernetes API Server",
-			Fn:           component.OpDestroyAndWait(c.kubeAPIServer).Destroy,
+			Fn:           r.destroyKubeAPIServerFunc(c.kubeAPIServer),
+			Dependencies: flow.NewTaskIDs(destroyVirtualGardenGardenerResourceManager),
+		})
+		waitUntilKubeAPIServerIsDestroyed = g.Add(flow.Task{
+			Name:         "Waiting until Kubernetes API server has been destroyed",
+			Fn:           c.kubeAPIServer.WaitCleanup,
 			Dependencies: flow.NewTaskIDs(destroyVirtualGardenGardenerResourceManager),
 		})
 		destroyEtcd = g.Add(flow.Task{
@@ -213,19 +219,19 @@ func (r *Reconciler) delete(
 				component.OpDestroyAndWait(c.etcdMain).Destroy,
 				component.OpDestroyAndWait(c.etcdEvents).Destroy,
 			),
-			Dependencies: flow.NewTaskIDs(destroyKubeAPIServer),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsDestroyed),
 		})
 		cleanupGenericTokenKubeconfig = g.Add(flow.Task{
 			Name:         "Cleaning up generic token kubeconfig",
 			Fn:           func(ctx context.Context) error { return r.cleanupGenericTokenKubeconfig(ctx, secretsManager) },
-			Dependencies: flow.NewTaskIDs(destroyKubeAPIServer, destroyVirtualGardenGardenerResourceManager),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsDestroyed, destroyVirtualGardenGardenerResourceManager),
 		})
 		invalidateClient = g.Add(flow.Task{
 			Name: "Invalidate client for virtual garden",
 			Fn: func(_ context.Context) error {
 				return r.GardenClientMap.InvalidateClient(keys.ForGarden(garden))
 			},
-			Dependencies: flow.NewTaskIDs(destroyKubeAPIServer, destroyVirtualGardenGardenerResourceManager),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsDestroyed, destroyVirtualGardenGardenerResourceManager),
 		})
 		syncPointVirtualGardenControlPlaneDestroyed = flow.NewTaskIDs(
 			cleanupGenericTokenKubeconfig,
@@ -235,6 +241,7 @@ func (r *Reconciler) delete(
 			destroyKubeAPIServer,
 			destroyEtcd,
 			invalidateClient,
+			waitUntilKubeAPIServerIsDestroyed,
 		)
 
 		deleteExtensionResources = g.Add(flow.Task{
@@ -511,4 +518,9 @@ func (r *Reconciler) cleanupGarbageCollectableResources(ctx context.Context) err
 	}
 
 	return nil
+}
+
+func (r *Reconciler) destroyKubeAPIServerFunc(kubeAPIServer kubeapiserver.Interface) flow.TaskFn {
+	kubeAPIServer.SetSNIConfig(kubeapiserver.SNIConfig{IstioIngressGatewayNamespace: namePrefix + v1beta1constants.DefaultSNIIngressNamespace})
+	return kubeAPIServer.Destroy
 }
