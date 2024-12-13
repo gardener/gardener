@@ -152,6 +152,8 @@ func (b *Botanist) computeKubeAPIServerSNIConfig() kubeapiserver.SNIConfig {
 		config.TLS = append(config.TLS, kubeapiserver.TLSSNIConfig{SecretName: &b.ControlPlaneWildcardCert.Name, DomainPatterns: []string{b.ComputeKubeAPIServerHost()}})
 	}
 
+	config.IstioIngressGatewayNamespace = b.IstioNamespace()
+
 	return config
 }
 
@@ -304,6 +306,8 @@ func (b *Botanist) DeleteKubeAPIServer(ctx context.Context) error {
 		return err
 	}
 	b.ShootClientSet = nil
+
+	b.Shoot.Components.ControlPlane.KubeAPIServer.SetSNIConfig(b.computeKubeAPIServerSNIConfig())
 
 	return b.Shoot.Components.ControlPlane.KubeAPIServer.Destroy(ctx)
 }
