@@ -39,4 +39,29 @@ var _ = Describe("VirtualService", func() {
 		Entry("Nil values", nil, nil, "", uint32(0), ""),
 		Entry("Some values", map[string]string{"foo": "bar", "key": "value"}, []string{"host-1", "host-2"}, "my-gateway", uint32(123456), "destination.namespace.svc.cluster.local"),
 	)
+
+	DescribeTable("#VirtualServiceForTLSTermination", func(labels map[string]string, hosts []string, gatewayName string, port uint32, destinationHost string) {
+		virtualService := &istionetworkingv1beta1.VirtualService{}
+
+		function := VirtualServiceForTLSTermination(virtualService, labels, hosts, gatewayName, port, destinationHost)
+
+		Expect(function).NotTo(BeNil())
+
+		err := function()
+
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(virtualService.Labels).To(Equal(labels))
+		Expect(virtualService.Spec.Hosts).To(Equal(hosts))
+		Expect(virtualService.Spec.Gateways).To(HaveLen(1))
+		Expect(virtualService.Spec.Gateways[0]).To(Equal(gatewayName))
+		Expect(virtualService.Spec.Http).To(HaveLen(1))
+		Expect(virtualService.Spec.Http[0].Match).To(BeEmpty())
+		Expect(virtualService.Spec.Http[0].Route).To(HaveLen(1))
+		Expect(virtualService.Spec.Http[0].Route[0].Destination.Host).To(Equal(destinationHost))
+		Expect(virtualService.Spec.Http[0].Route[0].Destination.Port.Number).To(Equal(port))
+	},
+
+		Entry("Nil values", nil, nil, "", uint32(0), ""),
+		Entry("Some values", map[string]string{"foo": "bar", "key": "value"}, []string{"host-1", "host-2"}, "my-gateway", uint32(123456), "destination.namespace.svc.cluster.local"),
+	)
 })
