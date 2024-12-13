@@ -6,7 +6,7 @@ package framework
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"io"
 	"time"
 
@@ -68,18 +68,21 @@ func (e *rootPodExecutor) Execute(ctx context.Context, command ...string) ([]byt
 		}
 	}
 
-	stdout, _, err := e.client.PodExecutor().Execute(ctx, e.Pod.Namespace, e.Pod.Name, e.Pod.Spec.Containers[0].Name,
+	stdout, stderr, err := e.client.PodExecutor().Execute(ctx, e.Pod.Namespace, e.Pod.Name, e.Pod.Spec.Containers[0].Name,
 		append([]string{"chroot", "/hostroot"}, command...)...,
 	)
 	if err != nil {
-		if stdout != nil {
-			response, readErr := io.ReadAll(stdout)
-			return response, errors.Join(err, readErr)
-		}
-
 		return nil, err
 	}
-	return io.ReadAll(stdout)
+
+	if stderr != nil {
+		return io.ReadAll(stderr)
+	}
+	if stdout != nil {
+		return io.ReadAll(stdout)
+	}
+
+	return nil, fmt.Errorf("no output from command execution")
 }
 
 // deploy deploys a root pod on the specified node and waits until it is running
