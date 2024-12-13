@@ -417,8 +417,8 @@ func (k *kubeAPIServer) computeKubeAPIServerArgs() []string {
 	out = append(out, fmt.Sprintf("--proxy-client-key-file=%s/%s", volumeMountPathKubeAggregator, secrets.DataKeyPrivateKey))
 	out = append(out, fmt.Sprintf("--requestheader-client-ca-file=%s/%s", volumeMountPathCAFrontProxy, secrets.DataKeyCertificateBundle))
 	out = append(out, "--requestheader-extra-headers-prefix=X-Remote-Extra-")
-	out = append(out, "--requestheader-group-headers=X-Remote-Group")
-	out = append(out, "--requestheader-username-headers=X-Remote-User")
+	out = append(out, fmt.Sprintf("--requestheader-group-headers=%s", kubeapiserverconstants.RequestHeaderGroupHeaders))
+	out = append(out, fmt.Sprintf("--requestheader-username-headers=%s", kubeapiserverconstants.RequestHeaderUserNameHeaders))
 
 	if k.values.IsWorkerless {
 		disableAPIs := map[string]bool{

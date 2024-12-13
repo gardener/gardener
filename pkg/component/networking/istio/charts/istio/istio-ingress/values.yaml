@@ -28,8 +28,11 @@ maxReplicas: 9
 enforceSpreadAcrossHosts: false
 
 # Istio Ingress Configuration Resources
+apiServerRequestHeaderUserName: X-Remote-User
+apiServerRequestHeaderGroup: X-Remote-Group
+apiServerAuthenticationDynamicMetadataKey: authenticated-kube-apiserver-host
 proxyProtocolEnabled: false
+terminateLoadBalancerAPIServer: false
 terminateLoadBalancerProxyProtocol: false
 vpn:
   enabled: false
-

@@ -6,6 +6,7 @@ package apiserverexposure_test
 
 import (
 	"context"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -28,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
 	comptest "github.com/gardener/gardener/pkg/component/test"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -47,11 +49,12 @@ var _ = Describe("#SNI", func() {
 
 		apiServerProxyValues *APIServerProxy
 
-		expectedDestinationRule       *istionetworkingv1beta1.DestinationRule
-		expectedGateway               *istionetworkingv1beta1.Gateway
-		expectedVirtualService        *istionetworkingv1beta1.VirtualService
-		expectedEnvoyFilterObjectMeta metav1.ObjectMeta
-		expectedManagedResource       *resourcesv1alpha1.ManagedResource
+		expectedDestinationRule                          *istionetworkingv1beta1.DestinationRule
+		expectedGateway                                  *istionetworkingv1beta1.Gateway
+		expectedVirtualService                           *istionetworkingv1beta1.VirtualService
+		expectedEnvoyFilterObjectMetaAPIServerProxy      metav1.ObjectMeta
+		expectedEnvoyFilterObjectMetaIstioTLSTermination metav1.ObjectMeta
+		expectedManagedResource                          *resourcesv1alpha1.ManagedResource
 	)
 
 	BeforeEach(func() {
@@ -105,8 +108,12 @@ var _ = Describe("#SNI", func() {
 				},
 			},
 		}
-		expectedEnvoyFilterObjectMeta = metav1.ObjectMeta{
-			Name:      namespace,
+		expectedEnvoyFilterObjectMetaAPIServerProxy = metav1.ObjectMeta{
+			Name:      namespace + "-apiserver-proxy",
+			Namespace: istioNamespace,
+		}
+		expectedEnvoyFilterObjectMetaIstioTLSTermination = metav1.ObjectMeta{
+			Name:      namespace + "-istio-tls-termination",
 			Namespace: istioNamespace,
 		}
 		expectedGateway = &istionetworkingv1beta1.Gateway{
@@ -191,7 +198,7 @@ var _ = Describe("#SNI", func() {
 	})
 
 	Describe("#Deploy", func() {
-		test := func() {
+		testFunc := func() {
 			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
 			actualDestinationRule := &istionetworkingv1beta1.DestinationRule{}
@@ -213,7 +220,7 @@ var _ = Describe("#SNI", func() {
 				},
 			}
 
-			if apiServerProxyValues != nil {
+			if apiServerProxyValues != nil || features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				expectedManagedResource.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: managedResource.Spec.SecretRefs[0].Name}}
 				utilruntime.Must(references.InjectAnnotations(expectedManagedResource))
@@ -230,12 +237,27 @@ var _ = Describe("#SNI", func() {
 				mrData, err := test.BrotliDecompression(managedResourceSecret.Data["data.yaml.br"])
 				Expect(err).NotTo(HaveOccurred())
 
-				managedResourceEnvoyFilter, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(mrData, nil, &istionetworkingv1alpha3.EnvoyFilter{})
-				Expect(err).ToNot(HaveOccurred())
-				Expect(managedResourceEnvoyFilter.GetObjectKind()).To(Equal(&metav1.TypeMeta{Kind: "EnvoyFilter", APIVersion: "networking.istio.io/v1alpha3"}))
-				actualEnvoyFilter := managedResourceEnvoyFilter.(*istionetworkingv1alpha3.EnvoyFilter)
-				// cannot validate the Spec as there is no meaningful way to unmarshal the data into the Golang structure
-				Expect(actualEnvoyFilter.ObjectMeta).To(DeepEqual(expectedEnvoyFilterObjectMeta))
+				var envoyFilterObjectsMetas []metav1.ObjectMeta
+				for _, mrDataSet := range strings.Split(string(mrData), "---\n") {
+					if mrDataSet == "" {
+						continue
+					}
+
+					managedResourceEnvoyFilter, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode([]byte(mrDataSet), nil, &istionetworkingv1alpha3.EnvoyFilter{})
+					Expect(err).ToNot(HaveOccurred())
+					Expect(managedResourceEnvoyFilter.GetObjectKind()).To(Equal(&metav1.TypeMeta{Kind: "EnvoyFilter", APIVersion: "networking.istio.io/v1alpha3"}))
+					actualEnvoyFilter := managedResourceEnvoyFilter.(*istionetworkingv1alpha3.EnvoyFilter)
+					// cannot validate the Spec as there is no meaningful way to unmarshal the data into the Golang structure
+					envoyFilterObjectsMetas = append(envoyFilterObjectsMetas, actualEnvoyFilter.ObjectMeta)
+				}
+
+				if apiServerProxyValues != nil {
+					Expect(envoyFilterObjectsMetas).To(ContainElement(expectedEnvoyFilterObjectMetaAPIServerProxy))
+				}
+
+				if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
+					Expect(envoyFilterObjectsMetas).To(ContainElement(expectedEnvoyFilterObjectMetaIstioTLSTermination))
+				}
 			} else {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError(), "should delete EnvoyFilter for apiserver-proxy")
 			}
@@ -243,7 +265,7 @@ var _ = Describe("#SNI", func() {
 
 		Context("when APIServer Proxy is configured", func() {
 			It("should succeed deploying", func() {
-				test()
+				testFunc()
 			})
 		})
 
@@ -253,14 +275,56 @@ var _ = Describe("#SNI", func() {
 
 				// create EnvoyFilter to ensure that Deploy deletes it
 				envoyFilter := &istionetworkingv1alpha3.EnvoyFilter{
-					ObjectMeta: *expectedEnvoyFilterObjectMeta.DeepCopy(),
+					ObjectMeta: *expectedEnvoyFilterObjectMetaAPIServerProxy.DeepCopy(),
 				}
 				envoyFilter.ResourceVersion = ""
 				Expect(c.Create(ctx, envoyFilter)).To(Succeed())
 			})
 
 			It("should succeed deploying", func() {
-				test()
+				testFunc()
+			})
+		})
+
+		Context("when IstioTLSTermination feature gate is true", func() {
+			BeforeEach(func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.IstioTLSTermination, true))
+
+				expectedDestinationRule.Spec.TrafficPolicy.LoadBalancer = &istioapinetworkingv1beta1.LoadBalancerSettings{
+					LbPolicy: &istioapinetworkingv1beta1.LoadBalancerSettings_Simple{
+						Simple: istioapinetworkingv1beta1.LoadBalancerSettings_LEAST_REQUEST,
+					},
+				}
+				expectedDestinationRule.Spec.TrafficPolicy.OutlierDetection = nil
+				expectedDestinationRule.Spec.TrafficPolicy.Tls = &istioapinetworkingv1beta1.ClientTLSSettings{
+					Mode:           istioapinetworkingv1beta1.ClientTLSSettings_SIMPLE,
+					CredentialName: namespace + "-kube-apiserver-ca",
+					Sni:            "foo.bar",
+				}
+
+				expectedGateway.Spec.Servers[0].Port.Protocol = "HTTPS"
+				expectedGateway.Spec.Servers[0].Tls = &istioapinetworkingv1beta1.ServerTLSSettings{
+					Mode:           istioapinetworkingv1beta1.ServerTLSSettings_OPTIONAL_MUTUAL,
+					CredentialName: namespace + "-kube-apiserver-tls",
+				}
+
+				expectedVirtualService.Spec.Tls = nil
+				expectedVirtualService.Spec.Http = []*istioapinetworkingv1beta1.HTTPRoute{
+					{
+						Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{
+							{
+								Destination: &istioapinetworkingv1beta1.Destination{
+									Host: hostName,
+									Port: &istioapinetworkingv1beta1.PortSelector{Number: 443},
+								},
+							},
+						},
+					},
+				}
+			})
+
+			It("should succeed deploying", func() {
+				testFunc()
 			})
 		})
 	})
