@@ -50,11 +50,11 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 
 		containerdConfigFileContent string
 
-		file1, file2, file3, file4, file5, file6, file7, file8                                           extensionsv1alpha1.File
-		gnaUnit, unit1, unit2, unit3, unit4, unit5, unit5DropInsOnly, unit6, unit7, unit8, unit9, unit10 extensionsv1alpha1.Unit
-		cgroupDriver                                                                                     extensionsv1alpha1.CgroupDriverName
-		registryConfig1, registryConfig2                                                                 extensionsv1alpha1.RegistryConfig
-		pluginConfig1, pluginConfig2, pluginConfig3                                                      extensionsv1alpha1.PluginConfig
+		file1, file2, file3, file4, file5, file6, file7, file8                                                                                 extensionsv1alpha1.File
+		gnaUnit, unit1, unit2, unit3, unit4, unit5, unit5DropInsOnly, unit6, unit7, unit8, unit9, unit10, existingUnitDropIn, containerdDropIn extensionsv1alpha1.Unit
+		cgroupDriver                                                                                                                           extensionsv1alpha1.CgroupDriverName
+		registryConfig1, registryConfig2                                                                                                       extensionsv1alpha1.RegistryConfig
+		pluginConfig1, pluginConfig2, pluginConfig3                                                                                            extensionsv1alpha1.PluginConfig
 
 		operatingSystemConfig *extensionsv1alpha1.OperatingSystemConfig
 		oscRaw                []byte
@@ -304,6 +304,20 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			Name:      "containerd-initializer.service",
 			FilePaths: []string{file8.Path},
 		}
+		existingUnitDropIn = extensionsv1alpha1.Unit{
+			Name: "existing-unit.service",
+			DropIns: []extensionsv1alpha1.DropIn{{
+				Name:    "drop",
+				Content: "#unit11drop",
+			}},
+		}
+		containerdDropIn = extensionsv1alpha1.Unit{
+			Name: "containerd.service",
+			DropIns: []extensionsv1alpha1.DropIn{{
+				Name:    "extensionsdrop.conf",
+				Content: "#containerdextensionsdrop",
+			}},
+		}
 
 		cgroupDriver = "systemd"
 
@@ -351,13 +365,20 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			},
 			Status: extensionsv1alpha1.OperatingSystemConfigStatus{
 				ExtensionFiles: []extensionsv1alpha1.File{file2, file4, file6, file7},
-				ExtensionUnits: []extensionsv1alpha1.Unit{unit3, unit4, unit8, unit9},
+				ExtensionUnits: []extensionsv1alpha1.Unit{unit3, unit4, unit8, unit9, existingUnitDropIn},
 			},
 		}
 
 	})
 
 	JustBeforeEach(func() {
+		if operatingSystemConfig.Spec.CRIConfig != nil {
+			operatingSystemConfig.Status.ExtensionUnits = append(operatingSystemConfig.Status.ExtensionUnits, containerdDropIn)
+		}
+
+		Expect(fakeFS.WriteFile("/etc/systemd/system/existing-unit.service", []byte("#existingunit"), 0600)).To(Succeed())
+		Expect(fakeFS.WriteFile("/etc/systemd/system/existing-unit.service.d/existing-dropin.conf", []byte("#existingdropin"), 0600)).To(Succeed())
+
 		var err error
 		oscRaw, err = runtime.Encode(codec, operatingSystemConfig)
 		Expect(err).NotTo(HaveOccurred())
@@ -436,9 +457,13 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		test.AssertDirectoryOnDisk(fakeFS, "/etc/containerd/conf.d")
 		test.AssertDirectoryOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d")
 		test.AssertFileOnDisk(fakeFS, "/etc/containerd/config.toml", containerdConfigFileContent, 0644)
-		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d/30-env_config.conf", "[Service]\nEnvironment=\"PATH=/var/bin/containerruntimes:"+os.Getenv("PATH")+"\"\n", 0644)
+		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d/30-env_config.conf", "[Service]\nEnvironment=\"PATH=/var/bin/containerruntimes:"+os.Getenv("PATH")+"\"\n", 0600)
+		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d/"+containerdDropIn.DropIns[0].Name, containerdDropIn.DropIns[0].Content, 0600)
 		test.AssertFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig1.Upstream+"/hosts.toml", "# managed by gardener-node-agent\nserver = \"https://registry.hub.docker.com\"\n\n[host.\"https://10.10.10.100:8080\"]\n  capabilities = [\"pull\",\"resolve\"]\n\n[host.\"https://10.10.10.200:8080\"]\n  capabilities = [\"pull\",\"resolve\"]\n\n", 0644)
 		test.AssertFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig2.Upstream+"/hosts.toml", "# managed by gardener-node-agent\nserver = \"https://registry.k8s.io\"\n\n[host.\"https://10.10.10.101:8080\"]\n  capabilities = [\"pull\"]\n  ca = [\"/var/certs/ca.crt\"]\n\n", 0644)
+		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/existing-unit.service", "#existingunit", 0600)
+		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/existing-unit.service.d/existing-dropin.conf", "#existingdropin", 0600)
+		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+existingUnitDropIn.Name+".d/"+existingUnitDropIn.DropIns[0].Name, "#unit11drop", 0600)
 
 		By("Assert that unit actions have been applied")
 		Expect(fakeDBus.Actions).To(ConsistOf(
@@ -452,6 +477,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit7.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit8.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit9.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{"containerd.service"}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{"existing-unit.service"}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionDaemonReload},
 			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit1.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionStop, UnitNames: []string{unit2.Name}},
@@ -463,6 +490,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit8.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit9.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{"containerd.service"}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{"existing-unit.service"}},
 		))
 
 		By("Assert that bootstrap files have been deleted")
@@ -507,6 +535,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		// the content of file6 (belonging to unit8) is changed, so unit8 is restarting
 		// the content of file7 (belonging to unit9) is changed, so unit9 is restarting
 		// file1, unit3, and gardener-node-agent unit are unchanged, so unit3 is not restarting and cancel func is not called
+		// remove existingUnitDropIn, so the drop-in file should be removed, but the existing unit should not be affected
+		// remove containerd drop-in extension unit, the other containerd drop-in should not be affected
 		unit2.Enable = ptr.To(true)
 		unit2.Command = ptr.To(extensionsv1alpha1.CommandStart)
 		unit2.DropIns = []extensionsv1alpha1.DropIn{{Name: "dropdropdrop", Content: "#unit2drop"}}
@@ -572,9 +602,13 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		test.AssertDirectoryOnDisk(fakeFS, "/etc/containerd/conf.d")
 		test.AssertDirectoryOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d")
 		test.AssertFileOnDisk(fakeFS, "/etc/containerd/config.toml", containerdConfigFileContent, 0644)
-		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d/30-env_config.conf", "[Service]\nEnvironment=\"PATH=/var/bin/containerruntimes:"+os.Getenv("PATH")+"\"\n", 0644)
+		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d/30-env_config.conf", "[Service]\nEnvironment=\"PATH=/var/bin/containerruntimes:"+os.Getenv("PATH")+"\"\n", 0600)
+		test.AssertNoFileOnDisk(fakeFS, "/etc/systemd/system/containerd.service.d/"+containerdDropIn.DropIns[0].Name)
 		test.AssertFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig1.Upstream+"/hosts.toml", "# managed by gardener-node-agent\nserver = \"https://registry.hub.docker.com\"\n\n[host.\"https://10.10.10.100:8080\"]\n  capabilities = [\"pull\",\"resolve\"]\n\n[host.\"https://10.10.10.200:8080\"]\n  capabilities = [\"pull\",\"resolve\"]\n\n", 0644)
 		test.AssertFileOnDisk(fakeFS, "/etc/containerd/certs.d/"+registryConfig2.Upstream+"/hosts.toml", "# managed by gardener-node-agent\nserver = \"https://registry.k8s.io\"\n\n[host.\"https://10.10.10.101:8080\"]\n  capabilities = [\"pull\"]\n  ca = [\"/var/certs/ca.crt\"]\n\n", 0644)
+		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/existing-unit.service", "#existingunit", 0600)
+		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/existing-unit.service.d/existing-dropin.conf", "#existingdropin", 0600)
+		test.AssertNoFileOnDisk(fakeFS, "/etc/systemd/system/"+existingUnitDropIn.Name+".d/"+existingUnitDropIn.DropIns[0].Name)
 
 		By("Assert that unit actions have been applied")
 		Expect(fakeDBus.Actions).To(ConsistOf(
@@ -585,6 +619,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit7.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit8.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit9.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{"containerd.service"}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionDisable, UnitNames: []string{unit4.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionDisable, UnitNames: []string{unit1.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionStop, UnitNames: []string{unit1.Name}},
@@ -596,6 +631,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit7.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit8.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit9.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{"containerd.service"}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{"existing-unit.service"}},
 		))
 
 		By("Assert that cancel func has not been called")

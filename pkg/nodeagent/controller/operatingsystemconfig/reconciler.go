@@ -20,6 +20,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	jsonserializer "k8s.io/apimachinery/pkg/runtime/serializer/json"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
@@ -42,6 +46,16 @@ import (
 )
 
 const lastAppliedOperatingSystemConfigFilePath = nodeagentv1alpha1.BaseDir + "/last-applied-osc.yaml"
+
+var codec runtime.Codec
+
+func init() {
+	scheme := runtime.NewScheme()
+	utilruntime.Must(extensionsv1alpha1.AddToScheme(scheme))
+	ser := jsonserializer.NewSerializerWithOptions(jsonserializer.DefaultMetaFactory, scheme, scheme, jsonserializer.SerializerOptions{Yaml: true, Pretty: false, Strict: false})
+	versions := schema.GroupVersions([]schema.GroupVersion{nodeagentv1alpha1.SchemeGroupVersion, extensionsv1alpha1.SchemeGroupVersion})
+	codec = serializer.NewCodecFactory(scheme).CodecForVersions(ser, ser, versions, versions)
+}
 
 // Reconciler decodes the OperatingSystemConfig resources from secrets and applies the systemd units and files to the
 // node.
@@ -85,9 +99,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, nil
 	}
 
-	osc, oscRaw, oscChecksum, err := extractOSCFromSecret(secret)
+	osc, oscChecksum, err := extractOSCFromSecret(secret)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed extracting OSC from secret: %w", err)
+	}
+
+	log.Info("Applying containerd configuration")
+	if err := r.ReconcileContainerdConfig(ctx, log, osc); err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed reconciling containerd configuration: %w", err)
 	}
 
 	oscChanges, err := computeOperatingSystemConfigChanges(r.FS, osc)
@@ -98,11 +117,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	if node != nil && node.Annotations[nodeagentv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig] == oscChecksum {
 		log.Info("Configuration on this node is up to date, nothing to be done")
 		return reconcile.Result{}, nil
-	}
-
-	log.Info("Applying containerd configuration")
-	if err := r.ReconcileContainerdConfig(ctx, log, osc.Spec.CRIConfig); err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed reconciling containerd configuration: %w", err)
 	}
 
 	log.Info("Applying new or changed inline files")
@@ -170,7 +184,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	)
 
 	log.Info("Persisting current operating system config as 'last-applied' file to the disk", "path", lastAppliedOperatingSystemConfigFilePath)
-	if err := r.FS.WriteFile(lastAppliedOperatingSystemConfigFilePath, oscRaw, 0644); err != nil {
+	oscRaw, err := runtime.Encode(codec, osc)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("unable to encode OSC: %w", err)
+	}
+
+	if err := r.FS.WriteFile(lastAppliedOperatingSystemConfigFilePath, oscRaw, 0600); err != nil {
 		return reconcile.Result{}, fmt.Errorf("unable to write current OSC to file path %q: %w", lastAppliedOperatingSystemConfigFilePath, err)
 	}
 
@@ -387,6 +406,10 @@ func (r *Reconciler) applyChangedUnits(ctx context.Context, log logr.Logger, uni
 
 func (r *Reconciler) removeDeletedUnits(ctx context.Context, log logr.Logger, node client.Object, units []extensionsv1alpha1.Unit) error {
 	for _, unit := range units {
+		// The unit has been created by gardener-node-agent if it has content.
+		// Otherwise, it might be a default OS unit which was enabled/disabled or where drop-ins were added.
+		unitCreatedByNodeAgent := unit.Content != nil
+
 		unitFilePath := path.Join(etcSystemdSystem, unit.Name)
 
 		unitFileExists, err := r.FS.Exists(unitFilePath)
@@ -394,7 +417,10 @@ func (r *Reconciler) removeDeletedUnits(ctx context.Context, log logr.Logger, no
 			return fmt.Errorf("unable to check whether unit file %q exists: %w", unitFilePath, err)
 		}
 
-		if unitFileExists {
+		// Only stop and remove the unit file if it was created by gardener-node-agent. Otherwise, this could affect
+		// default OS units where we add and remove drop-ins only. If operators want to stop and disable units,
+		// they can do it by adding a unit to OSC which applies the `stop` command.
+		if unitFileExists && unitCreatedByNodeAgent {
 			if err := r.DBus.Disable(ctx, unit.Name); err != nil {
 				return fmt.Errorf("unable to disable deleted unit %q: %w", unit.Name, err)
 			}
@@ -405,11 +431,37 @@ func (r *Reconciler) removeDeletedUnits(ctx context.Context, log logr.Logger, no
 
 			if err := r.FS.Remove(unitFilePath); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
 				return fmt.Errorf("unable to delete systemd unit file of deleted unit %q: %w", unit.Name, err)
+			} else {
+				log.Info("Unit was not created by gardener-node-agent, skipping deletion of unit file", "unitName", unit.Name)
 			}
 		}
 
-		if err := r.FS.RemoveAll(unitFilePath + ".d"); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
-			return fmt.Errorf("unable to delete systemd drop-in folder of deleted unit %q: %w", unit.Name, err)
+		dropInFolder := unitFilePath + ".d"
+
+		if exists, err := r.FS.Exists(dropInFolder); err != nil {
+			return fmt.Errorf("unable to check whether drop-in folder %q exists: %w", dropInFolder, err)
+		} else if exists {
+			for _, dropIn := range unit.DropIns {
+				dropInFilePath := path.Join(dropInFolder, dropIn.Name)
+				if err := r.FS.Remove(dropInFilePath); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
+					return fmt.Errorf("unable to delete drop-in file %q of deleted unit %q: %w", dropInFilePath, unit.Name, err)
+				}
+			}
+
+			if empty, err := r.FS.IsEmpty(dropInFolder); err != nil {
+				return fmt.Errorf("unable to check whether drop-in folder %q is empty: %w", dropInFolder, err)
+			} else if empty {
+				if err := r.FS.RemoveAll(dropInFolder); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
+					return fmt.Errorf("unable to delete systemd drop-in folder of deleted unit %q: %w", unit.Name, err)
+				}
+			}
+		}
+
+		// If the unit was not created by gardener-node-agent, but it exists on the node and was removed from OSC. Restart it to apply changes.
+		if unitFileExists && !unitCreatedByNodeAgent {
+			if err := r.DBus.Restart(ctx, r.Recorder, node, unit.Name); err != nil {
+				return fmt.Errorf("unable to restart unit %q removed from OSC but not created by gardener-node-agent: %w", unit.Name, err)
+			}
 		}
 
 		log.Info("Successfully removed no longer needed unit", "unitName", unit.Name)
