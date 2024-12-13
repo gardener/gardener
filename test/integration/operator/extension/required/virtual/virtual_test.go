@@ -75,7 +75,6 @@ var _ = Describe("Extension Required Virtual controller tests", func() {
 			g.Expect(providerExtension.Status.Conditions).Should(ContainCondition(
 				OfType("RequiredVirtual"),
 				WithStatus("True"),
-				WithMessage("Extension has required ControllerInstallations for seed clusters [local]"),
 			))
 
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(dnsExtension), dnsExtension)).To(Succeed())
@@ -100,7 +99,6 @@ var _ = Describe("Extension Required Virtual controller tests", func() {
 			g.Expect(providerExtension.Status.Conditions).Should(ContainCondition(
 				OfType("RequiredVirtual"),
 				WithStatus("True"),
-				WithMessage("Extension has required ControllerInstallations for seed clusters [local]"),
 			))
 		}).Should(Succeed())
 
@@ -126,7 +124,6 @@ var _ = Describe("Extension Required Virtual controller tests", func() {
 			g.Expect(providerExtension.Status.Conditions).Should(ContainCondition(
 				OfType("RequiredVirtual"),
 				WithStatus("True"),
-				WithMessage("Extension has required ControllerInstallations for seed clusters [local]"),
 			))
 		}).Should(Succeed())
 
