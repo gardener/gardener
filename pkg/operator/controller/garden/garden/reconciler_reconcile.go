@@ -759,7 +759,7 @@ func (r *Reconciler) deployKubeAPIServerFunc(garden *operatorv1alpha1.Garden, ku
 	return func(ctx context.Context) error {
 		var (
 			serviceAccountConfig *gardencorev1beta1.ServiceAccountConfig
-			sniConfig            = kubeapiserver.SNIConfig{Enabled: false}
+			sniConfig            = kubeapiserver.SNIConfig{Enabled: false, IstioIngressGatewayNamespace: namePrefix + v1beta1constants.DefaultSNIIngressNamespace}
 			services             []net.IPNet
 		)
 
