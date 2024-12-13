@@ -158,7 +158,7 @@ annotations are removed from the shoot control plane observability StatefulSets,
 | Seed           | prometheus-aggregate | 20Gi     | 2Gi          | 40Gi     | 600Mi            |
 | Seed           | prometheus-cache     | 10Gi     | 2Gi          | 20Gi     | 1Gi <sup>*</sup> |
 | Seed           | prometheus-seed      | 100Gi    | 5Gi          | 200Gi    | 600Mi            |
-| Seed           | vali                 | 100Gi    | 5Gi          | 200Gi    | 600Mi            |
+| Seed           | vali                 | 100Gi    | 5Gi          | 200Gi    | 1Gi              |
 
 <sup>*</sup> The greater minimal threshold mitigates [risk due to circular dependency](#reliance-on-prometheus). 
 ### Transition Strategy
