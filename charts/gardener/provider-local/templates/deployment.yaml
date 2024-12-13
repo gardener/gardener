@@ -76,6 +76,12 @@ spec:
         - --webhook-config-namespace={{ .Release.Namespace }}
         - --webhook-config-service-port={{ .Values.webhookConfig.servicePort }}
         - --webhook-config-server-port={{ .Values.webhookConfig.serverPort }}
+        {{- range .Values.webhooks.prometheus.remoteWriteURLs }}
+        - --prometheus-remote-write-url={{ . }}
+        {{- end }}
+        {{- with .Values.webhooks.prometheus.externalLabels }}
+        - --prometheus-external-labels={{ range $k, $v := . }}{{ $k }}={{ $v }},{{ end }}
+        {{- end }}
         - --disable-controllers={{ .Values.disableControllers | join "," }}
         - --disable-webhooks={{ .Values.disableWebhooks | join "," }}
         {{- end }}
