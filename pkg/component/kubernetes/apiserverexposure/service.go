@@ -46,6 +46,8 @@ type ServiceValues struct {
 	AnnotationsFunc func() map[string]string
 	// NamePrefix is the prefix for the service name.
 	NamePrefix string
+	// NameSuffix is the suffix for the service name.
+	NameSuffix string
 	// TopologyAwareRoutingEnabled indicates whether topology-aware routing is enabled for the kube-apiserver service.
 	TopologyAwareRoutingEnabled bool
 	// RuntimeKubernetesVersion is the Kubernetes version of the runtime cluster.
@@ -58,6 +60,7 @@ type ServiceValues struct {
 type serviceValues struct {
 	annotationsFunc             func() map[string]string
 	namePrefix                  string
+	nameSuffix                  string
 	topologyAwareRoutingEnabled bool
 	runtimeKubernetesVersion    *semver.Version
 }
@@ -98,6 +101,7 @@ func NewService(
 
 		internalValues.annotationsFunc = values.AnnotationsFunc
 		internalValues.namePrefix = values.NamePrefix
+		internalValues.nameSuffix = values.NameSuffix
 		internalValues.topologyAwareRoutingEnabled = values.TopologyAwareRoutingEnabled
 		internalValues.runtimeKubernetesVersion = values.RuntimeKubernetesVersion
 	}
@@ -210,7 +214,7 @@ func (s *service) WaitCleanup(ctx context.Context) error {
 }
 
 func (s *service) emptyService() *corev1.Service {
-	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: s.values.namePrefix + v1beta1constants.DeploymentNameKubeAPIServer, Namespace: s.namespace}}
+	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: s.values.namePrefix + v1beta1constants.DeploymentNameKubeAPIServer + s.values.nameSuffix, Namespace: s.namespace}}
 }
 
 func getLabels() map[string]string {
