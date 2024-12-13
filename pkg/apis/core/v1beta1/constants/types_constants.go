@@ -781,6 +781,8 @@ const (
 	DefaultVPNRange = "192.168.123.0/24"
 	// DefaultVPNRangeV6 is the default IPv6 network range for the VPN between seed and shoot cluster.
 	DefaultVPNRangeV6 = "fd8f:6d53:b97a:1::/96"
+	// ReservedKubeApiServerMappingRange is the IPv4 network range for the "kubernetes" service used by apiserver-proxy
+	ReservedKubeApiServerMappingRange = "240.0.0.0/8"
 
 	// BackupSecretName is the name of secret having credentials for etcd backups.
 	BackupSecretName string = "etcd-backup"

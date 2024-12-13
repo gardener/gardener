@@ -274,6 +274,69 @@ var _ = Describe("cidr", func() {
 				Expect(other.ValidateOverlap(cdr)).To(BeEmpty())
 			})
 		})
+
+		Describe("ValidateMaxSize", func() {
+			It("should return no errors if cidr is same size than limit", func() {
+				goodPath := field.NewPath("good")
+				goodCIDR := "11.12.0.0/16"
+				good := NewCIDR(goodCIDR, goodPath)
+
+				Expect(good.ValidateMaxSize(16)).To(BeEmpty())
+			})
+
+			It("should return no errors if cidr is smaller than limit", func() {
+				goodPath := field.NewPath("good")
+				goodCIDR := "11.12.0.0/17"
+				good := NewCIDR(goodCIDR, goodPath)
+
+				Expect(good.ValidateMaxSize(16)).To(BeEmpty())
+			})
+
+			It("should return an error if cidr is larger than limit", func() {
+				badPath := field.NewPath("bad")
+				badCIDR := "11.12.0.0/15"
+				bad := NewCIDR(badCIDR, badPath)
+
+				Expect(bad.ValidateMaxSize(16)).To(ConsistOfFields(Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal(badPath.String()),
+					"BadValue": Equal(badCIDR),
+					"Detail":   Equal(`cannot be larger than /16`),
+				}))
+			})
+		})
+
+		Describe("IsIPv4", func() {
+			It("should return true on a valid IPv4 cidr", func() {
+				goodPath := field.NewPath("good")
+				goodCIDR := "10.100.0.0/16"
+				good := NewCIDR(goodCIDR, goodPath)
+
+				Expect(good.Parse()).To(BeTrue())
+				Expect(good.IsIPv4()).To(BeTrue())
+				Expect(good.IsIPv6()).To(BeFalse())
+			})
+
+			It("should return false on a malformed IPv4 cidr", func() {
+				badPath := field.NewPath("bad")
+				badCIDR := "10.100.0.0/123"
+				bad := NewCIDR(badCIDR, badPath)
+
+				Expect(bad.Parse()).To(BeFalse())
+				Expect(bad.IsIPv4()).To(BeFalse())
+				Expect(bad.IsIPv6()).To(BeFalse())
+			})
+
+			It("should return false on a valid IPv6 cidr", func() {
+				wrongPath := field.NewPath("wrong")
+				wrongCIDR := "2001:0db8::/16"
+				wrong := NewCIDR(wrongCIDR, wrongPath)
+
+				Expect(wrong.Parse()).To(BeTrue())
+				Expect(wrong.IsIPv4()).To(BeFalse())
+				Expect(wrong.IsIPv6()).To(BeTrue())
+			})
+		})
 	})
 
 	Context("IPv6", func() {
@@ -518,6 +581,69 @@ var _ = Describe("cidr", func() {
 				cdr := NewCIDR(validGardenCIDR, path)
 				other := NewCIDR("2001:0db8::/32", field.NewPath("other"))
 				Expect(cdr.ValidateOverlap(other)).To(BeEmpty())
+			})
+		})
+
+		Describe("ValidateMaxSize", func() {
+			It("should return no errors if cidr is same size as limit", func() {
+				goodPath := field.NewPath("good")
+				goodCIDR := "2001:1db8::/32"
+				good := NewCIDR(goodCIDR, goodPath)
+
+				Expect(good.ValidateMaxSize(32)).To(BeEmpty())
+			})
+
+			It("should return no errors if cidr is smaller than limit", func() {
+				goodPath := field.NewPath("good")
+				goodCIDR := "2001:1db8::/33"
+				good := NewCIDR(goodCIDR, goodPath)
+
+				Expect(good.ValidateMaxSize(32)).To(BeEmpty())
+			})
+
+			It("should return an error if cidr is larger than limit", func() {
+				badPath := field.NewPath("bad")
+				badCIDR := "2001:1db8::/31"
+				bad := NewCIDR(badCIDR, badPath)
+
+				Expect(bad.ValidateMaxSize(32)).To(ConsistOfFields(Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal(badPath.String()),
+					"BadValue": Equal(badCIDR),
+					"Detail":   Equal(`cannot be larger than /32`),
+				}))
+			})
+		})
+
+		Describe("IsIPv6", func() {
+			It("should return true on a valid IPv6 cidr", func() {
+				goodPath := field.NewPath("good")
+				goodCIDR := "2001:0db8::/16"
+				good := NewCIDR(goodCIDR, goodPath)
+
+				Expect(good.Parse()).To(BeTrue())
+				Expect(good.IsIPv4()).To(BeFalse())
+				Expect(good.IsIPv6()).To(BeTrue())
+			})
+
+			It("should return false on a malformed IPv6 cidr", func() {
+				badPath := field.NewPath("bad")
+				badCIDR := "2001:0db8:xxyy:/64"
+				bad := NewCIDR(badCIDR, badPath)
+
+				Expect(bad.Parse()).To(BeFalse())
+				Expect(bad.IsIPv4()).To(BeFalse())
+				Expect(bad.IsIPv6()).To(BeFalse())
+			})
+
+			It("should return false on a valid IPv4 cidr", func() {
+				wrongPath := field.NewPath("wrong")
+				wrongCIDR := "10.100.0.0/16"
+				wrong := NewCIDR(wrongCIDR, wrongPath)
+
+				Expect(wrong.Parse()).To(BeTrue())
+				Expect(wrong.IsIPv4()).To(BeTrue())
+				Expect(wrong.IsIPv6()).To(BeFalse())
 			})
 		})
 	})
