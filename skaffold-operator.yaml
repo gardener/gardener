@@ -952,6 +952,7 @@ deploy:
           nodeToleration.defaultNotReadyTolerationSeconds: "60"
           nodeToleration.defaultUnreachableTolerationSeconds: "60"
           replicaCount: "2"
+          config.featureGates.IstioTLSTermination: true
         createNamespace: true
         wait: true
 profiles:
