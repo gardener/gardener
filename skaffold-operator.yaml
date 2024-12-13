@@ -948,6 +948,7 @@ deploy:
           nodeToleration:
             defaultNotReadyTolerationSeconds: 60
             defaultUnreachableTolerationSeconds: 60
+          config.featureGates.IstioTLSTermination: true
         createNamespace: true
         wait: true
 profiles:
