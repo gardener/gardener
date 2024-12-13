@@ -33,3 +33,28 @@ func VirtualServiceWithSNIMatch(virtualService *istionetworkingv1beta1.VirtualSe
 		return nil
 	}
 }
+
+// VirtualServiceForTLSTermination returns a function for use with a gateway that performs TLS termination.
+func VirtualServiceForTLSTermination(virtualService *istionetworkingv1beta1.VirtualService, labels map[string]string, hosts []string, gatewayName string, port uint32, destinationHost string) func() error {
+	return func() error {
+		virtualService.Labels = labels
+		virtualService.Spec = istioapinetworkingv1beta1.VirtualService{
+			ExportTo: []string{"*"},
+			Hosts:    hosts,
+			Gateways: []string{gatewayName},
+			Http: []*istioapinetworkingv1beta1.HTTPRoute{
+				{
+					Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{
+						{
+							Destination: &istioapinetworkingv1beta1.Destination{
+								Host: destinationHost,
+								Port: &istioapinetworkingv1beta1.PortSelector{Number: port},
+							},
+						},
+					},
+				},
+			},
+		}
+		return nil
+	}
+}
