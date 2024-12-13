@@ -8,7 +8,7 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -41,14 +41,6 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, virt
 	}
 	r.clock = clock.RealClock{}
 
-	eventHandler := mapper.EnqueueRequestsFrom(
-		ctx,
-		mgr.GetCache(),
-		r.MapControllerInstallationToExtension(),
-		mapper.UpdateWithNew,
-		mgr.GetLogger(),
-	)
-
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
@@ -58,9 +50,9 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, virt
 		For(&operatorv1alpha1.Extension{}, builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create))).
 		WatchesRawSource(
 			source.Kind[client.Object](virtualCluster.GetCache(), &gardencorev1beta1.ControllerInstallation{},
-				eventHandler,
+				mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), r.MapControllerInstallationToExtension(), mapper.UpdateWithNew, mgr.GetLogger()),
 				predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update, predicateutils.Delete),
-				RequiredConditionChangedPredicate(),
+				r.RequiredConditionChangedPredicate(),
 			),
 		).
 		Complete(r)
@@ -80,7 +72,7 @@ func (r *Reconciler) MapControllerInstallationToExtension() mapper.MapFunc {
 		)
 
 		if err := r.RuntimeClient.Get(ctx, client.ObjectKey{Name: controllerInstallation.Spec.RegistrationRef.Name}, extension); err != nil {
-			if errors.IsNotFound(err) {
+			if apierrors.IsNotFound(err) {
 				return nil
 			}
 			log.Error(err, "Unable to get extension", "extension", extensionName)
@@ -91,7 +83,7 @@ func (r *Reconciler) MapControllerInstallationToExtension() mapper.MapFunc {
 }
 
 // RequiredConditionChangedPredicate is a predicate that returns true if the ControllerInstallationRequired changed for ControllerInstallations.
-func RequiredConditionChangedPredicate() predicate.Predicate {
+func (r *Reconciler) RequiredConditionChangedPredicate() predicate.Predicate {
 	return predicate.Funcs{
 		UpdateFunc: func(e event.TypedUpdateEvent[client.Object]) bool {
 			controllerInstallationOld, ok := e.ObjectOld.(*gardencorev1beta1.ControllerInstallation)

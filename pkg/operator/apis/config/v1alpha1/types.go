@@ -133,13 +133,15 @@ type ExtensionControllerConfiguration struct {
 // ExtensionRequiredRuntimeControllerConfiguration defines the configuration of the extension-required-runtime controller.
 type ExtensionRequiredRuntimeControllerConfiguration struct {
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
+	// +optional
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 }
 
 // ExtensionRequiredVirtualControllerConfiguration defines the configuration of the extension-required-virtual controller.
 type ExtensionRequiredVirtualControllerConfiguration struct {
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
-	ConcurrentSyncs *int `json:"concurrent_syncs,omitempty"`
+	// +optional
+	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.

@@ -122,7 +122,7 @@ var _ = Describe("Add", func() {
 		)
 
 		BeforeEach(func() {
-			predicate = RequiredConditionChangedPredicate()
+			predicate = (&Reconciler{}).RequiredConditionChangedPredicate()
 			controllerInstallation = &gardencorev1beta1.ControllerInstallation{
 				Status: gardencorev1beta1.ControllerInstallationStatus{
 					Conditions: []gardencorev1beta1.Condition{

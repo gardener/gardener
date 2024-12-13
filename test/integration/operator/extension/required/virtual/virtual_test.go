@@ -6,6 +6,7 @@ package virtual_test
 
 import (
 	"context"
+	"fmt"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -20,7 +21,12 @@ import (
 )
 
 var _ = Describe("Extension Required Virtual controller tests", func() {
-	var extension *operatorv1alpha1.Extension
+	var (
+		extension *operatorv1alpha1.Extension
+
+		providerControllerInstallation, providerControllerInstallation2 *gardencorev1beta1.ControllerInstallation
+		dnsControllerInstallation                                       *gardencorev1beta1.ControllerInstallation
+	)
 
 	BeforeEach(func() {
 		extension = &operatorv1alpha1.Extension{
@@ -31,6 +37,34 @@ var _ = Describe("Extension Required Virtual controller tests", func() {
 				},
 			},
 		}
+
+		providerControllerInstallation = &gardencorev1beta1.ControllerInstallation{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: testRunID + "-1",
+			},
+		}
+
+		providerControllerInstallation2 = &gardencorev1beta1.ControllerInstallation{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: testRunID + "-2",
+			},
+		}
+
+		dnsControllerInstallation = &gardencorev1beta1.ControllerInstallation{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: testRunID + "-3",
+			},
+		}
+
+		DeferCleanup(func() {
+			for _, controllerInstallation := range []*gardencorev1beta1.ControllerInstallation{
+				providerControllerInstallation,
+				providerControllerInstallation2,
+				dnsControllerInstallation,
+			} {
+				Expect(testClient.Delete(ctx, controllerInstallation)).To(Or(Succeed(), BeNotFoundError()), fmt.Sprintf("ControllerInstallation %s should get deleted", controllerInstallation.Name))
+			}
+		})
 	})
 
 	It("should reconcile the extensions and calculate the expected required status", func() {
@@ -61,12 +95,6 @@ var _ = Describe("Extension Required Virtual controller tests", func() {
 		}).Should(Succeed())
 
 		By("Ensure provider extension is reported as required when at least one required ControllerInstallation exist")
-		providerControllerInstallation := &gardencorev1beta1.ControllerInstallation{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: testRunID + "-1",
-			},
-		}
-
 		Expect(createControllerInstallation(ctx, testClient, providerControllerInstallation, providerExtension.Name)).To(Succeed())
 		Expect(updateRequiredCondition(ctx, testClient, providerControllerInstallation, "True")).To(Succeed())
 
@@ -85,12 +113,6 @@ var _ = Describe("Extension Required Virtual controller tests", func() {
 		}).Should(Succeed())
 
 		By("Ensure provider extension is still reported as required when at least one required ControllerInstallation exist")
-		providerControllerInstallation2 := &gardencorev1beta1.ControllerInstallation{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: testRunID + "-2",
-			},
-		}
-
 		Expect(createControllerInstallation(ctx, testClient, providerControllerInstallation2, providerExtension.Name)).To(Succeed())
 		Expect(updateRequiredCondition(ctx, testClient, providerControllerInstallation2, "False")).To(Succeed())
 
@@ -139,12 +161,6 @@ var _ = Describe("Extension Required Virtual controller tests", func() {
 		}).Should(Succeed())
 
 		By("Ensure provider extension is reported as not required when at least one not required ControllerInstallation exist")
-		dnsControllerInstallation := &gardencorev1beta1.ControllerInstallation{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: testRunID + "-3",
-			},
-		}
-
 		Expect(createControllerInstallation(ctx, testClient, dnsControllerInstallation, dnsExtension.Name)).To(Succeed())
 		Consistently(func(g Gomega) {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(dnsExtension), dnsExtension)).To(Succeed())

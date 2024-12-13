@@ -37,7 +37,7 @@ import (
 
 func TestExtensionRequiredVirtual(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Test Integration Operator Extension Required Suite")
+	RunSpecs(t, "Test Integration Operator Extension Required Virtual Suite")
 }
 
 const testID = "extension-required-virtual-test"

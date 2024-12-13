@@ -41,7 +41,7 @@ import (
 
 func TestExtensionRequiredRuntime(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Test Integration Operator Extension Required Required Suite")
+	RunSpecs(t, "Test Integration Operator Extension Required Runtime Suite")
 }
 
 const testID = "extension-required-runtime-test"
