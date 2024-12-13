@@ -105,8 +105,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	log.Info("Applying containerd configuration")
-	err = r.ReconcileContainerdConfig(ctx, log, osc)
-	if err != nil {
+	if err := r.ReconcileContainerdConfig(ctx, log, osc); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed reconciling containerd configuration: %w", err)
 	}
 
