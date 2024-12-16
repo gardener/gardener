@@ -101,11 +101,6 @@ type GardenletDeployment struct {
 	AdditionalVolumeMounts []corev1.VolumeMount
 	// Env is the list of environment variables to set in the gardenlet container.
 	Env []corev1.EnvVar
-	// VPA specifies whether to enable VPA for gardenlet. Defaults to true.
-	//
-	// Deprecated: This field is deprecated and has no effect anymore. It will be removed in the future.
-	// TODO(rfranzke): Remove this field after v1.110 has been released.
-	VPA *bool
 }
 
 // Image specifies container image parameters.

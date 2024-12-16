@@ -138,11 +138,6 @@ func (in *GardenletDeployment) DeepCopyInto(out *GardenletDeployment) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.VPA != nil {
-		in, out := &in.VPA, &out.VPA
-		*out = new(bool)
-		**out = **in
-	}
 	return
 }
 
