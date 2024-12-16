@@ -46,7 +46,7 @@ import (
 //     Returns true when a daemonset should continue running on a node if a daemonset pod is already
 //     running on that node.
 //
-// Copied from https://github.com/kubernetes/kubernetes/blob/v1.31.0/pkg/controller/daemon/daemon_controller.go#L1275-L1330
+// Copied from https://github.com/kubernetes/kubernetes/blob/v1.32.0/pkg/controller/daemon/daemon_controller.go#L1275-L1306
 func NodeShouldRunDaemonPod(node *corev1.Node, ds *appsv1.DaemonSet) (bool, bool) {
 	pod := NewPod(ds, node.Name)
 
@@ -73,7 +73,7 @@ func NodeShouldRunDaemonPod(node *corev1.Node, ds *appsv1.DaemonSet) (bool, bool
 }
 
 // predicates checks if a DaemonSet's pod can run on a node.
-// Copied from https://github.com/kubernetes/kubernetes/blob/v1.31.0/pkg/controller/daemon/daemon_controller.go#L1275-L1330
+// Copied from https://github.com/kubernetes/kubernetes/blob/v1.32.0/pkg/controller/daemon/daemon_controller.go#L1308-L1318
 func predicates(pod *corev1.Pod, node *corev1.Node, taints []corev1.Taint) (fitsNodeName, fitsNodeAffinity, fitsTaints bool) {
 	fitsNodeName = len(pod.Spec.NodeName) == 0 || pod.Spec.NodeName == node.Name
 	// Ignore parsing errors for backwards compatibility.
@@ -86,7 +86,7 @@ func predicates(pod *corev1.Pod, node *corev1.Node, taints []corev1.Taint) (fits
 }
 
 // NewPod creates a new pod
-// Copied from https://github.com/kubernetes/kubernetes/blob/v1.31.0/pkg/controller/daemon/daemon_controller.go#L1275-L1330
+// Copied from https://github.com/kubernetes/kubernetes/blob/v1.32.0/pkg/controller/daemon/daemon_controller.go#L1320-L1330
 func NewPod(ds *appsv1.DaemonSet, nodeName string) *corev1.Pod {
 	newPod := &corev1.Pod{Spec: ds.Spec.Template.Spec, ObjectMeta: ds.Spec.Template.ObjectMeta}
 	newPod.Namespace = ds.Namespace
@@ -99,7 +99,7 @@ func NewPod(ds *appsv1.DaemonSet, nodeName string) *corev1.Pod {
 }
 
 // AddOrUpdateDaemonPodTolerations apply necessary tolerations to DaemonSet Pods, e.g. node.kubernetes.io/not-ready:NoExecute.
-// Copied from https://github.com/kubernetes/kubernetes/blob/v1.31.0/pkg/controller/daemon/util/daemonset_util.go#L47-L102
+// Copied from https://github.com/kubernetes/kubernetes/blob/v1.32.0/pkg/controller/daemon/util/daemonset_util.go#L47-L102
 func AddOrUpdateDaemonPodTolerations(spec *corev1.PodSpec) {
 	// DaemonSet pods shouldn't be deleted by NodeController in case of node problems.
 	// Add infinite toleration for taint notReady:NoExecute here
@@ -158,7 +158,7 @@ func AddOrUpdateDaemonPodTolerations(spec *corev1.PodSpec) {
 
 // AddOrUpdateTolerationInPodSpec tries to add a toleration to the toleration list in PodSpec.
 // Returns true if something was updated, false otherwise.
-// Copied from https://github.com/kubernetes/kubernetes/blob/v1.31.0/pkg/apis/core/v1/helper/helpers.go#L261-L287
+// Copied from https://github.com/kubernetes/kubernetes/blob/v1.32.0/pkg/apis/core/v1/helper/helpers.go#L261-L287
 func AddOrUpdateTolerationInPodSpec(spec *corev1.PodSpec, toleration *corev1.Toleration) bool {
 	podTolerations := spec.Tolerations
 
@@ -187,7 +187,7 @@ func AddOrUpdateTolerationInPodSpec(spec *corev1.PodSpec, toleration *corev1.Tol
 
 // Semantic can do semantic deep equality checks for core objects.
 // Example: apiequality.Semantic.DeepEqual(aPod, aPodWithNonNilButEmptyMaps) == true
-// Copied from https://github.com/kubernetes/kubernetes/blob/v1.31.0/pkg/apis/core/helper/helpers.go#L92-L114
+// Copied from https://github.com/kubernetes/kubernetes/blob/v1.32.0/pkg/apis/core/helper/helpers.go#L92-L114
 var Semantic = conversion.EqualitiesOrDie(
 	func(a, b resource.Quantity) bool {
 		// Ignore formatting, only care that numeric value stayed the same.
