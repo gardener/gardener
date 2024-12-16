@@ -6,6 +6,5 @@ resources:
 - controllerregistration.yaml
 
 patches:
-# patch-controllerdeployment-prow.yaml must be enlisted first because it contains an empty values map when running in a non-prow environment.
-- path: patch-controllerdeployment-prow.yaml
 - path: patch-imagevector-overwrite.yaml
+- path: patch-controllerdeployment-prow.yaml

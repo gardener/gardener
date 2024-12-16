@@ -29,4 +29,8 @@ if [ -n "${CI:-}" ]; then
               prow_job: "${JOB_NAME}"
               prow_build_id: "${BUILD_ID}"
 EOF
+else
+  cat <<EOF >> $patch_file
+        {}
+EOF
 fi

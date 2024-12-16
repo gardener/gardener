@@ -5,6 +5,5 @@ resources:
 - extension.yaml
 
 patches:
-# patch-extension-prow.yaml must be enlisted first because it contains an empty values map when running in a non-prow environment.
-- path: patch-extension-prow.yaml
 - path: patch-imagevector-overwrite.yaml
+- path: patch-extension-prow.yaml
