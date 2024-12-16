@@ -1604,6 +1604,9 @@ type Worker struct {
 	// ClusterAutoscaler contains the cluster autoscaler configurations for the worker pool.
 	// +optional
 	ClusterAutoscaler *ClusterAutoscalerOptions `json:"clusterAutoscaler,omitempty" protobuf:"bytes,21,opt,name=clusterAutoscaler"`
+	// Priority (or weight) is the importance by which this worker group will be scaled by cluster autoscaling.
+	// +optional
+	Priority *int32 `json:"priority,omitempty" protobuf:"varint,22,opt,name=priority"`
 }
 
 // ClusterAutoscalerOptions contains the cluster autoscaler configurations for a worker pool.
@@ -1768,6 +1771,8 @@ var (
 	DefaultWorkerMaxUnavailable = intstr.FromInt32(0)
 	// DefaultWorkerSystemComponentsAllow is the default value for Worker AllowSystemComponents
 	DefaultWorkerSystemComponentsAllow = true
+	// DefaultWorkerPriority is the default value for Worker Priority
+	DefaultWorkerPriority = int32(0)
 )
 
 // SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.

@@ -1234,6 +1234,8 @@ type Worker struct {
 	Sysctls map[string]string
 	// ClusterAutoscaler contains the cluster autoscaler configurations for the worker pool.
 	ClusterAutoscaler *ClusterAutoscalerOptions
+	// Priority (or weight) is the importance by which this worker group will be scaled by cluster autoscaling.
+	Priority *int32
 }
 
 // ClusterAutoscalerOptions contains the cluster autoscaler configurations for a worker pool.
