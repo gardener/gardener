@@ -49,6 +49,7 @@ var (
 		"ImagePolicyWebhook":                   {},
 		"LimitPodHardAntiAffinityTopology":     {},
 		"LimitRanger":                          {},
+		"MutatingAdmissionPolicy":              {VersionRange: versionutils.VersionRange{AddedInVersion: "1.32"}},
 		"MutatingAdmissionWebhook":             {Required: true},
 		"NamespaceAutoProvision":               {},
 		"NamespaceExists":                      {},
