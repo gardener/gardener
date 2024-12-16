@@ -17,14 +17,30 @@ import (
 	namespacedcloudprofileregistry "github.com/gardener/gardener/pkg/apiserver/registry/core/namespacedcloudprofile"
 )
 
-var _ = Describe("PrepareForCreate", func() {
+var _ = Describe("NamespacedCloudProfile Strategy", func() {
 	var (
-		validExpirationDate1   = &metav1.Time{Time: time.Now().Add(144 * time.Hour)}
-		validExpirationDate2   = &metav1.Time{Time: time.Now().Add(24 * time.Hour)}
-		expiredExpirationDate1 = &metav1.Time{Time: time.Now().Add(-time.Hour)}
-		expiredExpirationDate2 = &metav1.Time{Time: time.Now().Add(-24 * time.Hour)}
+		ctx context.Context
 
 		namespacedCloudProfile *core.NamespacedCloudProfile
+
+		validExpirationDate1   *metav1.Time
+		validExpirationDate2   *metav1.Time
+		expiredExpirationDate1 *metav1.Time
+		expiredExpirationDate2 *metav1.Time
+
+		kubernetesSettings *core.KubernetesSettings
+		machineImages      []core.MachineImage
+	)
+
+	BeforeEach(func() {
+		ctx = context.Background()
+
+		namespacedCloudProfile = &core.NamespacedCloudProfile{}
+
+		validExpirationDate1 = &metav1.Time{Time: time.Now().Add(144 * time.Hour)}
+		validExpirationDate2 = &metav1.Time{Time: time.Now().Add(24 * time.Hour)}
+		expiredExpirationDate1 = &metav1.Time{Time: time.Now().Add(-time.Hour)}
+		expiredExpirationDate2 = &metav1.Time{Time: time.Now().Add(-24 * time.Hour)}
 
 		kubernetesSettings = &core.KubernetesSettings{
 			Versions: []core.ExpirableVersion{
@@ -96,130 +112,239 @@ var _ = Describe("PrepareForCreate", func() {
 				},
 			},
 		}
-	)
+	})
 
-	DescribeTable("should drop expired versions from the NamespacedCloudProfile",
-		func(useKubernetesSettings, useMachineImages bool) {
-			namespacedCloudProfile = &core.NamespacedCloudProfile{}
+	Describe("#PrepareForCreate", func() {
+		DescribeTable("should drop expired versions from the NamespacedCloudProfile",
+			func(useKubernetesSettings, useMachineImages bool) {
+				namespacedCloudProfile = &core.NamespacedCloudProfile{}
 
-			if useKubernetesSettings {
-				namespacedCloudProfile.Spec.Kubernetes = kubernetesSettings
-			}
-			if useMachineImages {
-				namespacedCloudProfile.Spec.MachineImages = machineImages
+				if useKubernetesSettings {
+					namespacedCloudProfile.Spec.Kubernetes = kubernetesSettings
+				}
+				if useMachineImages {
+					namespacedCloudProfile.Spec.MachineImages = machineImages
+				}
+
+				namespacedcloudprofileregistry.Strategy.PrepareForCreate(context.TODO(), namespacedCloudProfile)
+
+				if useKubernetesSettings {
+					Expect(namespacedCloudProfile.Spec.Kubernetes.Versions).To(ConsistOf(
+						MatchFields(IgnoreExtras, Fields{
+							"Version": Equal("1.27.3"),
+						}), MatchFields(IgnoreExtras, Fields{
+							"Version": Equal("1.26.4"),
+						}), MatchFields(IgnoreExtras, Fields{
+							"Version": Equal("1.25.6"),
+						}),
+					))
+				}
+				if useMachineImages {
+					Expect(namespacedCloudProfile.Spec.MachineImages).To(ConsistOf(
+						MatchFields(IgnoreExtras, Fields{
+							"Name": Equal("machineImage1"),
+							"Versions": ConsistOf(MatchFields(IgnoreExtras, Fields{
+								"ExpirableVersion": MatchFields(IgnoreExtras, Fields{
+									"Version": Equal("2.1.0"),
+								})},
+							), MatchFields(IgnoreExtras, Fields{
+								"ExpirableVersion": MatchFields(IgnoreExtras, Fields{
+									"Version": Equal("2.0.3"),
+								})},
+							)),
+						}), MatchFields(IgnoreExtras, Fields{
+							"Name": Equal("machineImage2"),
+							"Versions": ConsistOf(MatchFields(IgnoreExtras, Fields{
+								"ExpirableVersion": MatchFields(IgnoreExtras, Fields{
+									"Version": Equal("4.3.0"),
+								})},
+							), MatchFields(IgnoreExtras, Fields{
+								"ExpirableVersion": MatchFields(IgnoreExtras, Fields{
+									"Version": Equal("4.2.3"),
+								})},
+							)),
+						}),
+					))
+				}
+			},
+
+			Entry("only machineImage set", false, true),
+			Entry("only kubernetes set", true, false),
+			Entry("both kubernetes and machineImages set", true, true),
+		)
+
+		It("should drop empty machine image entries from NamespacedCloudProfile after dropping expired versions", func() {
+			namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
+				{Name: "machineImage1", Versions: []core.MachineImageVersion{
+					{ExpirableVersion: core.ExpirableVersion{Version: "1.0.0", ExpirationDate: expiredExpirationDate1}},
+				}},
+				{Name: "machineImage2", Versions: []core.MachineImageVersion{
+					{ExpirableVersion: core.ExpirableVersion{Version: "1.2.0"}},
+				}},
 			}
 
 			namespacedcloudprofileregistry.Strategy.PrepareForCreate(context.TODO(), namespacedCloudProfile)
 
-			if useKubernetesSettings {
-				Expect(namespacedCloudProfile.Spec.Kubernetes.Versions).To(ConsistOf(
-					MatchFields(IgnoreExtras, Fields{
-						"Version": Equal("1.27.3"),
-					}), MatchFields(IgnoreExtras, Fields{
-						"Version": Equal("1.26.4"),
-					}), MatchFields(IgnoreExtras, Fields{
-						"Version": Equal("1.25.6"),
-					}),
-				))
-			}
-			if useMachineImages {
-				Expect(namespacedCloudProfile.Spec.MachineImages).To(ConsistOf(
-					MatchFields(IgnoreExtras, Fields{
-						"Name": Equal("machineImage1"),
-						"Versions": ConsistOf(MatchFields(IgnoreExtras, Fields{
-							"ExpirableVersion": MatchFields(IgnoreExtras, Fields{
-								"Version": Equal("2.1.0"),
-							})},
-						), MatchFields(IgnoreExtras, Fields{
-							"ExpirableVersion": MatchFields(IgnoreExtras, Fields{
-								"Version": Equal("2.0.3"),
-							})},
-						)),
-					}), MatchFields(IgnoreExtras, Fields{
-						"Name": Equal("machineImage2"),
-						"Versions": ConsistOf(MatchFields(IgnoreExtras, Fields{
-							"ExpirableVersion": MatchFields(IgnoreExtras, Fields{
-								"Version": Equal("4.3.0"),
-							})},
-						), MatchFields(IgnoreExtras, Fields{
-							"ExpirableVersion": MatchFields(IgnoreExtras, Fields{
-								"Version": Equal("4.2.3"),
-							})},
-						)),
-					}),
-				))
-			}
-		},
+			Expect(namespacedCloudProfile.Spec.MachineImages).To(Equal([]core.MachineImage{
+				{Name: "machineImage2", Versions: []core.MachineImageVersion{
+					{ExpirableVersion: core.ExpirableVersion{Version: "1.2.0"}},
+				}},
+			}))
+		})
 
-		Entry("only machineImage set", false, true),
-		Entry("only kubernetes set", true, false),
-		Entry("both kubernetes and machineImages set", true, true),
-	)
+		Describe("generation increment", func() {
+			It("should set generation to 1 initially", func() {
+				namespacedcloudprofileregistry.Strategy.PrepareForCreate(ctx, namespacedCloudProfile)
 
-	It("should drop empty machine image entries from NamespacedCloudProfile after dropping expired versions", func() {
-		namespacedCloudProfile = &core.NamespacedCloudProfile{}
-		namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
-			{Name: "machineImage1", Versions: []core.MachineImageVersion{
-				{ExpirableVersion: core.ExpirableVersion{Version: "1.0.0", ExpirationDate: expiredExpirationDate1}},
-			}},
-			{Name: "machineImage2", Versions: []core.MachineImageVersion{
-				{ExpirableVersion: core.ExpirableVersion{Version: "1.2.0"}},
-			}},
-		}
-
-		namespacedcloudprofileregistry.Strategy.PrepareForCreate(context.TODO(), namespacedCloudProfile)
-
-		Expect(namespacedCloudProfile.Spec.MachineImages).To(Equal([]core.MachineImage{
-			{Name: "machineImage2", Versions: []core.MachineImageVersion{
-				{ExpirableVersion: core.ExpirableVersion{Version: "1.2.0"}},
-			}},
-		}))
+				Expect(namespacedCloudProfile.Generation).To(Equal(int64(1)))
+			})
+		})
 	})
 
-	Describe("generation increment", func() {
+	Describe("#PrepareForUpdate", func() {
 		var (
-			ctx context.Context
-
 			oldNamespacedCloudProfile *core.NamespacedCloudProfile
-			newNamespacedCloudProfile *core.NamespacedCloudProfile
 		)
 
 		BeforeEach(func() {
-			ctx = context.TODO()
-
 			oldNamespacedCloudProfile = &core.NamespacedCloudProfile{}
-			newNamespacedCloudProfile = &core.NamespacedCloudProfile{}
 		})
 
-		It("should set generation to 1 initially", func() {
-			namespacedcloudprofileregistry.Strategy.PrepareForCreate(ctx, newNamespacedCloudProfile)
+		It("should drop expired Kubernetes versions not already present in the NamespacedCloudProfile", func() {
+			namespacedCloudProfile.Spec.Kubernetes = kubernetesSettings
 
-			Expect(newNamespacedCloudProfile.Generation).To(Equal(int64(1)))
+			namespacedcloudprofileregistry.Strategy.PrepareForUpdate(ctx, namespacedCloudProfile, oldNamespacedCloudProfile)
+
+			Expect(namespacedCloudProfile.Spec.Kubernetes.Versions).To(ConsistOf(
+				MatchFields(IgnoreExtras, Fields{
+					"Version": Equal("1.27.3"),
+				}), MatchFields(IgnoreExtras, Fields{
+					"Version": Equal("1.26.4"),
+				}), MatchFields(IgnoreExtras, Fields{
+					"Version": Equal("1.25.6"),
+				}),
+			))
 		})
 
-		It("should not increment generation if spec has not changed", func() {
-			namespacedcloudprofileregistry.Strategy.PrepareForUpdate(ctx, newNamespacedCloudProfile, oldNamespacedCloudProfile)
+		It("should not drop expired Kubernetes versions already present in the NamespacedCloudProfile", func() {
+			oldNamespacedCloudProfile.Spec.Kubernetes = kubernetesSettings
+			namespacedCloudProfile.Spec.Kubernetes = kubernetesSettings
 
-			Expect(newNamespacedCloudProfile.Generation).To(Equal(oldNamespacedCloudProfile.Generation))
+			namespacedcloudprofileregistry.Strategy.PrepareForUpdate(ctx, namespacedCloudProfile, oldNamespacedCloudProfile)
+
+			Expect(namespacedCloudProfile.Spec.Kubernetes.Versions).To(ConsistOf(
+				MatchFields(IgnoreExtras, Fields{
+					"Version": Equal("1.27.3"),
+				}), MatchFields(IgnoreExtras, Fields{
+					"Version": Equal("1.26.4"),
+				}), MatchFields(IgnoreExtras, Fields{
+					"Version": Equal("1.25.6"),
+				}), MatchFields(IgnoreExtras, Fields{
+					"Version": Equal("1.24.8"),
+				}), MatchFields(IgnoreExtras, Fields{
+					"Version": Equal("1.24.6"),
+				}),
+			))
 		})
 
-		It("should increment generation if spec has changed", func() {
-			newNamespacedCloudProfile.Spec.Parent = core.CloudProfileReference{
-				Kind: "abc",
-				Name: "def",
-			}
+		It("should drop expired MachineImage versions not already present in the NamespacedCloudProfile", func() {
+			namespacedCloudProfile.Spec.MachineImages = machineImages
 
-			namespacedcloudprofileregistry.Strategy.PrepareForUpdate(ctx, newNamespacedCloudProfile, oldNamespacedCloudProfile)
+			namespacedcloudprofileregistry.Strategy.PrepareForUpdate(ctx, namespacedCloudProfile, oldNamespacedCloudProfile)
 
-			Expect(newNamespacedCloudProfile.Generation).To(Equal(oldNamespacedCloudProfile.Generation + 1))
+			Expect(namespacedCloudProfile.Spec.MachineImages).To(ConsistOf(
+				MatchFields(IgnoreExtras, Fields{
+					"Name": Equal("machineImage1"),
+					"Versions": ConsistOf(MatchFields(IgnoreExtras, Fields{
+						"ExpirableVersion": MatchFields(IgnoreExtras, Fields{
+							"Version": Equal("2.1.0"),
+						})},
+					), MatchFields(IgnoreExtras, Fields{
+						"ExpirableVersion": MatchFields(IgnoreExtras, Fields{
+							"Version": Equal("2.0.3"),
+						})},
+					)),
+				}), MatchFields(IgnoreExtras, Fields{
+					"Name": Equal("machineImage2"),
+					"Versions": ConsistOf(MatchFields(IgnoreExtras, Fields{
+						"ExpirableVersion": MatchFields(IgnoreExtras, Fields{
+							"Version": Equal("4.3.0"),
+						})},
+					), MatchFields(IgnoreExtras, Fields{
+						"ExpirableVersion": MatchFields(IgnoreExtras, Fields{
+							"Version": Equal("4.2.3"),
+						})},
+					)),
+				}),
+			))
 		})
 
-		It("should increment generation if deletion timestamp is set", func() {
-			newNamespacedCloudProfile.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+		It("should not drop expired MachineImage versions already present in the NamespacedCloudProfile", func() {
+			oldNamespacedCloudProfile.Spec.MachineImages = machineImages
+			namespacedCloudProfile.Spec.MachineImages = machineImages
 
-			namespacedcloudprofileregistry.Strategy.PrepareForUpdate(ctx, newNamespacedCloudProfile, oldNamespacedCloudProfile)
+			namespacedcloudprofileregistry.Strategy.PrepareForUpdate(ctx, namespacedCloudProfile, oldNamespacedCloudProfile)
 
-			Expect(newNamespacedCloudProfile.Generation).To(Equal(oldNamespacedCloudProfile.Generation + 1))
+			Expect(namespacedCloudProfile.Spec.MachineImages).To(ConsistOf(
+				MatchFields(IgnoreExtras, Fields{
+					"Name": Equal("machineImage1"),
+					"Versions": ConsistOf(MatchFields(IgnoreExtras, Fields{
+						"ExpirableVersion": MatchFields(IgnoreExtras, Fields{
+							"Version": Equal("2.1.0"),
+						})},
+					), MatchFields(IgnoreExtras, Fields{
+						"ExpirableVersion": MatchFields(IgnoreExtras, Fields{
+							"Version": Equal("2.0.3"),
+						})},
+					), MatchFields(IgnoreExtras, Fields{
+						"ExpirableVersion": MatchFields(IgnoreExtras, Fields{
+							"Version": Equal("1.9.7"),
+						})},
+					)),
+				}), MatchFields(IgnoreExtras, Fields{
+					"Name": Equal("machineImage2"),
+					"Versions": ConsistOf(MatchFields(IgnoreExtras, Fields{
+						"ExpirableVersion": MatchFields(IgnoreExtras, Fields{
+							"Version": Equal("4.3.0"),
+						})},
+					), MatchFields(IgnoreExtras, Fields{
+						"ExpirableVersion": MatchFields(IgnoreExtras, Fields{
+							"Version": Equal("4.2.3"),
+						})},
+					), MatchFields(IgnoreExtras, Fields{
+						"ExpirableVersion": MatchFields(IgnoreExtras, Fields{
+							"Version": Equal("4.1.8"),
+						})},
+					)),
+				}),
+			))
+		})
+
+		Describe("generation increment", func() {
+			It("should not increment generation if spec has not changed", func() {
+				namespacedcloudprofileregistry.Strategy.PrepareForUpdate(ctx, namespacedCloudProfile, oldNamespacedCloudProfile)
+
+				Expect(namespacedCloudProfile.Generation).To(Equal(oldNamespacedCloudProfile.Generation))
+			})
+
+			It("should increment generation if spec has changed", func() {
+				namespacedCloudProfile.Spec.Parent = core.CloudProfileReference{
+					Kind: "abc",
+					Name: "def",
+				}
+
+				namespacedcloudprofileregistry.Strategy.PrepareForUpdate(ctx, namespacedCloudProfile, oldNamespacedCloudProfile)
+
+				Expect(namespacedCloudProfile.Generation).To(Equal(oldNamespacedCloudProfile.Generation + 1))
+			})
+
+			It("should increment generation if deletion timestamp is set", func() {
+				namespacedCloudProfile.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+
+				namespacedcloudprofileregistry.Strategy.PrepareForUpdate(ctx, namespacedCloudProfile, oldNamespacedCloudProfile)
+
+				Expect(namespacedCloudProfile.Generation).To(Equal(oldNamespacedCloudProfile.Generation + 1))
+			})
 		})
 
 		It("should prevent manual updates of the status field", func() {
@@ -231,7 +356,7 @@ var _ = Describe("PrepareForCreate", func() {
 				},
 			}
 
-			namespacedcloudprofileregistry.Strategy.PrepareForUpdate(context.Background(), namespacedCloudProfile, oldNamespacedCloudProfile)
+			namespacedcloudprofileregistry.Strategy.PrepareForUpdate(ctx, namespacedCloudProfile, oldNamespacedCloudProfile)
 
 			Expect(namespacedCloudProfile.Status).To(Equal(oldNamespacedCloudProfile.Status))
 		})
