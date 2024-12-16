@@ -24,6 +24,7 @@ import (
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -70,6 +71,7 @@ func New(
 	image string,
 	replicas int32,
 	config *gardencorev1beta1.ClusterAutoscaler,
+	workerConfig []gardencorev1beta1.Worker,
 	maxNodesTotal int64,
 	runtimeVersion *semver.Version,
 ) Interface {
@@ -80,6 +82,7 @@ func New(
 		image:          image,
 		replicas:       replicas,
 		config:         config,
+		workerConfig:   workerConfig,
 		maxNodesTotal:  maxNodesTotal,
 		runtimeVersion: runtimeVersion,
 	}
@@ -92,6 +95,7 @@ type clusterAutoscaler struct {
 	image          string
 	replicas       int32
 	config         *gardencorev1beta1.ClusterAutoscaler
+	workerConfig   []gardencorev1beta1.Worker
 	maxNodesTotal  int64
 	runtimeVersion *semver.Version
 
@@ -425,6 +429,15 @@ func (c *clusterAutoscaler) emptyManagedResource() *resourcesv1alpha1.ManagedRes
 	return &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceTargetName, Namespace: c.namespace}}
 }
 
+func (c *clusterAutoscaler) workersHavePriorityConfigured() bool {
+	for _, worker := range c.workerConfig {
+		if worker.Priority != nil {
+			return true
+		}
+	}
+	return false
+}
+
 func (c *clusterAutoscaler) computeCommand() []string {
 	var (
 		command = []string{
@@ -449,8 +462,13 @@ func (c *clusterAutoscaler) computeCommand() []string {
 	}
 	gardencorev1beta1.SetDefaults_ClusterAutoscaler(c.config)
 
+	expanderMode := *c.config.Expander
+	if c.workersHavePriorityConfigured() {
+		expanderMode = "priority," + expanderMode
+	}
+
 	command = append(command,
-		fmt.Sprintf("--expander=%s", *c.config.Expander),
+		fmt.Sprintf("--expander=%s", expanderMode),
 		fmt.Sprintf("--max-graceful-termination-sec=%d", *c.config.MaxGracefulTerminationSeconds),
 		fmt.Sprintf("--max-node-provision-time=%s", c.config.MaxNodeProvisionTime.Duration),
 		fmt.Sprintf("--scale-down-utilization-threshold=%f", *c.config.ScaleDownUtilizationThreshold),
@@ -617,11 +635,38 @@ func (c *clusterAutoscaler) computeShootResourcesData(serviceAccountName string)
 			},
 		}
 	)
+	objects := []client.Object{clusterRole, clusterRoleBinding, role, rolebinding}
 
-	return registry.AddAllAndSerialize(
-		clusterRole,
-		clusterRoleBinding,
-		role,
-		rolebinding,
-	)
+	if c.workersHavePriorityConfigured() {
+		configMap, err := c.generatePriorityExpanderConfigMap()
+		if err != nil {
+			return nil, err
+		}
+		objects = append(objects, configMap)
+	}
+	return registry.AddAllAndSerialize(objects...)
+}
+
+func (c *clusterAutoscaler) generatePriorityExpanderConfigMap() (*corev1.ConfigMap, error) {
+	priorities := map[int32][]string{}
+	for _, machineDeployment := range c.machineDeployments {
+		priorities[machineDeployment.Priority] = append(priorities[machineDeployment.Priority], fmt.Sprintf("%s.%s", c.namespace, machineDeployment.Name))
+	}
+
+	priorityConfig, err := yaml.Marshal(priorities)
+	if err != nil {
+		return nil, err
+	}
+
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cluster-autoscaler-priority-expander",
+			Namespace: metav1.NamespaceSystem,
+		},
+		Data: map[string]string{
+			"priorities": string(priorityConfig),
+		},
+	}
+
+	return configMap, nil
 }
