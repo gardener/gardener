@@ -19,6 +19,8 @@ import (
 
 var _ = Describe("NamespacedCloudProfile Strategy", func() {
 	var (
+		ctx context.Context
+
 		namespacedCloudProfile *core.NamespacedCloudProfile
 
 		validExpirationDate1   *metav1.Time
@@ -31,6 +33,8 @@ var _ = Describe("NamespacedCloudProfile Strategy", func() {
 	)
 
 	BeforeEach(func() {
+		ctx = context.Background()
+
 		namespacedCloudProfile = &core.NamespacedCloudProfile{}
 
 		validExpirationDate1 = &metav1.Time{Time: time.Now().Add(144 * time.Hour)}
@@ -110,7 +114,7 @@ var _ = Describe("NamespacedCloudProfile Strategy", func() {
 		}
 	})
 
-	Describe("PrepareForCreate", func() {
+	Describe("#PrepareForCreate", func() {
 		DescribeTable("should drop expired versions from the NamespacedCloudProfile",
 			func(useKubernetesSettings, useMachineImages bool) {
 				namespacedCloudProfile = &core.NamespacedCloudProfile{}
@@ -190,14 +194,14 @@ var _ = Describe("NamespacedCloudProfile Strategy", func() {
 
 		Describe("generation increment", func() {
 			It("should set generation to 1 initially", func() {
-				namespacedcloudprofileregistry.Strategy.PrepareForCreate(context.Background(), namespacedCloudProfile)
+				namespacedcloudprofileregistry.Strategy.PrepareForCreate(ctx, namespacedCloudProfile)
 
 				Expect(namespacedCloudProfile.Generation).To(Equal(int64(1)))
 			})
 		})
 	})
 
-	Describe("PrepareForUpdate", func() {
+	Describe("#PrepareForUpdate", func() {
 		var (
 			oldNamespacedCloudProfile *core.NamespacedCloudProfile
 		)
@@ -209,7 +213,7 @@ var _ = Describe("NamespacedCloudProfile Strategy", func() {
 		It("should drop expired Kubernetes versions not already present in the NamespacedCloudProfile", func() {
 			namespacedCloudProfile.Spec.Kubernetes = kubernetesSettings
 
-			namespacedcloudprofileregistry.Strategy.PrepareForUpdate(context.Background(), namespacedCloudProfile, oldNamespacedCloudProfile)
+			namespacedcloudprofileregistry.Strategy.PrepareForUpdate(ctx, namespacedCloudProfile, oldNamespacedCloudProfile)
 
 			Expect(namespacedCloudProfile.Spec.Kubernetes.Versions).To(ConsistOf(
 				MatchFields(IgnoreExtras, Fields{
@@ -226,7 +230,7 @@ var _ = Describe("NamespacedCloudProfile Strategy", func() {
 			oldNamespacedCloudProfile.Spec.Kubernetes = kubernetesSettings
 			namespacedCloudProfile.Spec.Kubernetes = kubernetesSettings
 
-			namespacedcloudprofileregistry.Strategy.PrepareForUpdate(context.Background(), namespacedCloudProfile, oldNamespacedCloudProfile)
+			namespacedcloudprofileregistry.Strategy.PrepareForUpdate(ctx, namespacedCloudProfile, oldNamespacedCloudProfile)
 
 			Expect(namespacedCloudProfile.Spec.Kubernetes.Versions).To(ConsistOf(
 				MatchFields(IgnoreExtras, Fields{
@@ -246,7 +250,7 @@ var _ = Describe("NamespacedCloudProfile Strategy", func() {
 		It("should drop expired MachineImage versions not already present in the NamespacedCloudProfile", func() {
 			namespacedCloudProfile.Spec.MachineImages = machineImages
 
-			namespacedcloudprofileregistry.Strategy.PrepareForUpdate(context.Background(), namespacedCloudProfile, oldNamespacedCloudProfile)
+			namespacedcloudprofileregistry.Strategy.PrepareForUpdate(ctx, namespacedCloudProfile, oldNamespacedCloudProfile)
 
 			Expect(namespacedCloudProfile.Spec.MachineImages).To(ConsistOf(
 				MatchFields(IgnoreExtras, Fields{
@@ -279,7 +283,7 @@ var _ = Describe("NamespacedCloudProfile Strategy", func() {
 			oldNamespacedCloudProfile.Spec.MachineImages = machineImages
 			namespacedCloudProfile.Spec.MachineImages = machineImages
 
-			namespacedcloudprofileregistry.Strategy.PrepareForUpdate(context.Background(), namespacedCloudProfile, oldNamespacedCloudProfile)
+			namespacedcloudprofileregistry.Strategy.PrepareForUpdate(ctx, namespacedCloudProfile, oldNamespacedCloudProfile)
 
 			Expect(namespacedCloudProfile.Spec.MachineImages).To(ConsistOf(
 				MatchFields(IgnoreExtras, Fields{
@@ -318,7 +322,7 @@ var _ = Describe("NamespacedCloudProfile Strategy", func() {
 
 		Describe("generation increment", func() {
 			It("should not increment generation if spec has not changed", func() {
-				namespacedcloudprofileregistry.Strategy.PrepareForUpdate(context.Background(), namespacedCloudProfile, oldNamespacedCloudProfile)
+				namespacedcloudprofileregistry.Strategy.PrepareForUpdate(ctx, namespacedCloudProfile, oldNamespacedCloudProfile)
 
 				Expect(namespacedCloudProfile.Generation).To(Equal(oldNamespacedCloudProfile.Generation))
 			})
@@ -329,7 +333,7 @@ var _ = Describe("NamespacedCloudProfile Strategy", func() {
 					Name: "def",
 				}
 
-				namespacedcloudprofileregistry.Strategy.PrepareForUpdate(context.Background(), namespacedCloudProfile, oldNamespacedCloudProfile)
+				namespacedcloudprofileregistry.Strategy.PrepareForUpdate(ctx, namespacedCloudProfile, oldNamespacedCloudProfile)
 
 				Expect(namespacedCloudProfile.Generation).To(Equal(oldNamespacedCloudProfile.Generation + 1))
 			})
@@ -337,7 +341,7 @@ var _ = Describe("NamespacedCloudProfile Strategy", func() {
 			It("should increment generation if deletion timestamp is set", func() {
 				namespacedCloudProfile.DeletionTimestamp = &metav1.Time{Time: time.Now()}
 
-				namespacedcloudprofileregistry.Strategy.PrepareForUpdate(context.Background(), namespacedCloudProfile, oldNamespacedCloudProfile)
+				namespacedcloudprofileregistry.Strategy.PrepareForUpdate(ctx, namespacedCloudProfile, oldNamespacedCloudProfile)
 
 				Expect(namespacedCloudProfile.Generation).To(Equal(oldNamespacedCloudProfile.Generation + 1))
 			})
@@ -352,7 +356,7 @@ var _ = Describe("NamespacedCloudProfile Strategy", func() {
 				},
 			}
 
-			namespacedcloudprofileregistry.Strategy.PrepareForUpdate(context.Background(), namespacedCloudProfile, oldNamespacedCloudProfile)
+			namespacedcloudprofileregistry.Strategy.PrepareForUpdate(ctx, namespacedCloudProfile, oldNamespacedCloudProfile)
 
 			Expect(namespacedCloudProfile.Status).To(Equal(oldNamespacedCloudProfile.Status))
 		})
