@@ -2327,6 +2327,13 @@ func schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref common.ReferenceCallback
 							},
 						},
 					},
+					"skipNodesWithLocalStorage": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SkipNodesWithLocalStorage allows CA delete nodes with pods with local storage (default: false).",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},

@@ -514,6 +514,8 @@ type ClusterAutoscaler struct {
 	IgnoreDaemonsetsUtilization *bool
 	// Verbosity allows CA to modify its log level.
 	Verbosity *int32
+	// SkipNodesWithLocalStorage allows CA delete nodes with pods with local storage (default: false).
+	SkipNodesWithLocalStorage *bool
 }
 
 // ExpanderMode is type used for Expander values

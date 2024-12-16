@@ -888,6 +888,11 @@ func (in *ClusterAutoscaler) DeepCopyInto(out *ClusterAutoscaler) {
 		*out = new(int32)
 		**out = **in
 	}
+	if in.SkipNodesWithLocalStorage != nil {
+		in, out := &in.SkipNodesWithLocalStorage, &out.SkipNodesWithLocalStorage
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

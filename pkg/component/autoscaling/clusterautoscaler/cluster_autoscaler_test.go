@@ -81,6 +81,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 		configScaleDownUtilizationThreshold       = ptr.To(float64(1.2345))
 		configScanInterval                        = &metav1.Duration{Duration: time.Second}
 		configIgnoreDaemonsetsUtilization   bool  = true
+		configSkipNodesWithLocalStorage     bool  = true
 		configVerbosity                     int32 = 4
 		configMaxEmptyBulkDelete                  = ptr.To[int32](20)
 		configNewPodScaleUpDelay                  = &metav1.Duration{Duration: time.Second}
@@ -99,6 +100,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 			StatusTaints:                  configTaints,
 			IgnoreTaints:                  configTaints,
 			IgnoreDaemonsetsUtilization:   &configIgnoreDaemonsetsUtilization,
+			SkipNodesWithLocalStorage:     &configSkipNodesWithLocalStorage,
 			Verbosity:                     &configVerbosity,
 			MaxEmptyBulkDelete:            configMaxEmptyBulkDelete,
 			NewPodScaleUpDelay:            configNewPodScaleUpDelay,
@@ -245,6 +247,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					"--scale-down-delay-after-failure=3m0s",
 					"--scan-interval=10s",
 					"--ignore-daemonsets-utilization=false",
+					"--skip-nodes-with-local-storage=false",
 					"--v=2",
 					"--max-empty-bulk-delete=10",
 					"--new-pod-scale-up-delay=0s",
@@ -262,6 +265,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					fmt.Sprintf("--scale-down-delay-after-failure=%s", configScaleDownDelayAfterFailure.Duration),
 					fmt.Sprintf("--scan-interval=%s", configScanInterval.Duration),
 					fmt.Sprintf("--ignore-daemonsets-utilization=%t", configIgnoreDaemonsetsUtilization),
+					fmt.Sprintf("--skip-nodes-with-local-storage=%t", configSkipNodesWithLocalStorage),
 					fmt.Sprintf("--v=%d", configVerbosity),
 					fmt.Sprintf("--max-empty-bulk-delete=%d", *configMaxEmptyBulkDelete),
 					fmt.Sprintf("--new-pod-scale-up-delay=%s", configNewPodScaleUpDelay.Duration),
@@ -282,7 +286,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 				"--cloud-provider=mcm",
 				"--stderrthreshold=info",
 				"--skip-nodes-with-system-pods=false",
-				"--skip-nodes-with-local-storage=false",
 				"--expendable-pods-priority-cutoff=-10",
 				"--balance-similar-node-groups=true",
 				"--ignore-taint=node.gardener.cloud/critical-components-not-ready",

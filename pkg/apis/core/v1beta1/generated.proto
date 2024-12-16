@@ -487,6 +487,10 @@ message ClusterAutoscaler {
   // Cluster Autoscaler internally treats nodes tainted with status taints as ready, but filtered out during scale up logic.
   // +optional
   repeated string statusTaints = 16;
+
+  // SkipNodesWithLocalStorage allows CA delete nodes with pods with local storage (default: false).
+  // +optional
+  optional bool skipNodesWithLocalStorage = 17;
 }
 
 // ClusterAutoscalerOptions contains the cluster autoscaler configurations for a worker pool.

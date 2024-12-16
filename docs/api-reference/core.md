@@ -3756,6 +3756,18 @@ Cluster Autoscaler treats nodes tainted with startup taints as unready, but take
 Cluster Autoscaler internally treats nodes tainted with status taints as ready, but filtered out during scale up logic.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>skipNodesWithLocalStorage</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SkipNodesWithLocalStorage allows CA delete nodes with pods with local storage (default: false).</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.ClusterAutoscalerOptions">ClusterAutoscalerOptions

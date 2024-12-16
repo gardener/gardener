@@ -650,6 +650,9 @@ type ClusterAutoscaler struct {
 	// Cluster Autoscaler internally treats nodes tainted with status taints as ready, but filtered out during scale up logic.
 	// +optional
 	StatusTaints []string `json:"statusTaints,omitempty" protobuf:"bytes,16,opt,name=statusTaints"`
+	// SkipNodesWithLocalStorage allows CA delete nodes with pods with local storage (default: false).
+	// +optional
+	SkipNodesWithLocalStorage *bool `json:"skipNodesWithLocalStorage,omitempty" protobuf:"varint,17,opt,name=skipNodesWithLocalStorage"`
 }
 
 // ExpanderMode is type used for Expander values

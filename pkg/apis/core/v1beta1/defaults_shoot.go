@@ -324,6 +324,9 @@ func SetDefaults_ClusterAutoscaler(obj *ClusterAutoscaler) {
 	if obj.IgnoreDaemonsetsUtilization == nil {
 		obj.IgnoreDaemonsetsUtilization = ptr.To(false)
 	}
+	if obj.SkipNodesWithLocalStorage == nil {
+		obj.SkipNodesWithLocalStorage = ptr.To(false)
+	}
 	if obj.Verbosity == nil {
 		obj.Verbosity = ptr.To[int32](2)
 	}

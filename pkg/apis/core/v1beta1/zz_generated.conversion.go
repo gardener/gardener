@@ -2659,6 +2659,7 @@ func autoConvert_v1beta1_ClusterAutoscaler_To_core_ClusterAutoscaler(in *Cluster
 	out.Verbosity = (*int32)(unsafe.Pointer(in.Verbosity))
 	out.StartupTaints = *(*[]string)(unsafe.Pointer(&in.StartupTaints))
 	out.StatusTaints = *(*[]string)(unsafe.Pointer(&in.StatusTaints))
+	out.SkipNodesWithLocalStorage = (*bool)(unsafe.Pointer(in.SkipNodesWithLocalStorage))
 	return nil
 }
 
@@ -2684,6 +2685,7 @@ func autoConvert_core_ClusterAutoscaler_To_v1beta1_ClusterAutoscaler(in *core.Cl
 	out.MaxEmptyBulkDelete = (*int32)(unsafe.Pointer(in.MaxEmptyBulkDelete))
 	out.IgnoreDaemonsetsUtilization = (*bool)(unsafe.Pointer(in.IgnoreDaemonsetsUtilization))
 	out.Verbosity = (*int32)(unsafe.Pointer(in.Verbosity))
+	out.SkipNodesWithLocalStorage = (*bool)(unsafe.Pointer(in.SkipNodesWithLocalStorage))
 	return nil
 }
 
