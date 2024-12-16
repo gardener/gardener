@@ -76,6 +76,10 @@ func computeOperatingSystemConfigChanges(log logr.Logger, fs afero.Afero, newOSC
 
 	log.Info("OSC changes checksum did not match, computing new changes")
 
+	// create copy so that we don't accidentally update the `newOSC` when items are removed from the
+	// `operatingSystemConfigChanges` when they are marked as completed.
+	newOSC = newOSC.DeepCopy()
+
 	// osc.files and osc.unit.files should be changed the same way by OSC controller.
 	// The reason for assigning files to units is the detection of changes which require the restart of a unit.
 	newOSCFiles := collectAllFiles(newOSC)
