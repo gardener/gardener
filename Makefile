@@ -418,11 +418,11 @@ operator-seed-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	./hack/operator-seed-down.sh --path-kind-kubeconfig $(KUBECONFIG) --path-garden-kubeconfig $(VIRTUAL_GARDEN_KUBECONFIG)
 
 gardenadm-high-touch-up: $(SKAFFOLD) $(KUBECTL)
-	$(SKAFFOLD) run -n gardenadm-high-touch -f=skaffold-gardenadm.yaml -m gardenadm,provider-local-node,machine
+	$(SKAFFOLD) run -n gardenadm-high-touch -f=skaffold-gardenadm.yaml -m gardenadm,provider-local-node,machine --cache-artifacts=$(shell ./hack/get-skaffold-cache-artifacts.sh)
 gardenadm-high-touch-down: $(SKAFFOLD) $(KUBECTL)
 	$(SKAFFOLD) delete -n gardenadm-high-touch -f=skaffold-gardenadm.yaml
 gardenadm-medium-touch-up: $(SKAFFOLD) $(KUBECTL)
-	$(SKAFFOLD) build -f=skaffold-gardenadm.yaml -m gardenadm,provider-local-node,provider-local -q | $(SKAFFOLD) render -f=skaffold-gardenadm.yaml -m provider-local-node,provider-local -o ./example/gardenadm-local/medium-touch/config.yaml --build-artifacts -
+	$(SKAFFOLD) build -f=skaffold-gardenadm.yaml -m gardenadm,provider-local-node,provider-local -q | $(SKAFFOLD) render -f=skaffold-gardenadm.yaml -m provider-local-node,provider-local -o ./example/gardenadm-local/medium-touch/config.yaml --cache-artifacts=$(shell ./hack/get-skaffold-cache-artifacts.sh) --build-artifacts -
 gardenadm-medium-touch-down: $(SKAFFOLD) $(KUBECTL)
 	$(SKAFFOLD) delete -n gardenadm-medium-touch -f=skaffold-gardenadm.yaml
 
