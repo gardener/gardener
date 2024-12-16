@@ -856,8 +856,8 @@ manifests:
     before:
       - host:
           command:
-          - bash
-          - hack/generate-kustomize-patch-controllerdeployment-provider-local-prow.sh
+            - bash
+            - hack/generate-kustomize-patch-controllerdeployment-provider-local-prow.sh
 deploy:
   kubectl:
     flags:

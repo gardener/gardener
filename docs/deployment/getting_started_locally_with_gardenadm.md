@@ -26,8 +26,9 @@ This also includes the `gardenadm` CLI, which is installed on the machine pods b
 - Make sure that you have followed the [Local Setup guide](../development/local_setup.md) up until the [Get the sources](../development/local_setup.md#get-the-sources) step.
 - Make sure your Docker daemon is up-to-date, up and running and has enough resources (at least `8` CPUs and `8Gi` memory; see [here](https://docs.docker.com/desktop/mac/#resources) how to configure the resources for Docker for Mac).
   > Additionally, please configure at least `120Gi` of disk size for the Docker daemon.
-  > [!TIP]
-  > You can clean up unused data with `docker system df` and `docker system prune -a`.
+
+> [!TIP]
+> You can clean up unused data with `docker system df` and `docker system prune -a`.
 
 ## Setting Up the KinD Cluster
 
