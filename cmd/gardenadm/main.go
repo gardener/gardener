@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+//go:generate go run ../../hack/tools/cli-reference-generator -O ../../docs/cli-reference/gardenadm gardenadm
+
 package main
 
 import (

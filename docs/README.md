@@ -109,6 +109,10 @@
 * [`seedmanagement.gardener.cloud` API Group](api-reference/seedmanagement.md)
 * [`settings.gardener.cloud` API Group](api-reference/settings.md)
 
+## [CLI Reference](cli-reference/README.md)
+
+* [`gardenadm`](cli-reference/gardenadm/gardenadm.md)
+
 ## Gardener Enhancement Proposals
 
 * [GEP: Gardener Enhancement Proposal Description](proposals/README.md)
