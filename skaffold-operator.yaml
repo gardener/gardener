@@ -1307,9 +1307,9 @@ manifests:
       - example/provider-local/garden/operator
   hooks:
     before:
-    - host:
-        command:
-        - bash
-        - hack/generate-kustomize-patch-extension-provider-local-prow.sh
+      - host:
+          command:
+            - bash
+            - hack/generate-kustomize-patch-extension-provider-local-prow.sh
 deploy:
   kubectl: {}

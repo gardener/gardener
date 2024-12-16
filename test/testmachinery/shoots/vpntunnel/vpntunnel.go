@@ -82,14 +82,13 @@ var _ = ginkgo.Describe("Shoot vpn tunnel testing", func() {
 		framework.ExpectNoError(err)
 
 		ginkgo.By("Check until we get all logs from logging-pod")
-		podExecutor := framework.NewPodExecutor(f.ShootClient)
 		for _, pod := range pods.Items {
 			log := f.Logger.WithValues("pod", client.ObjectKeyFromObject(&pod))
 
 			i := 0
 			for ; i < maxIterations; i++ {
 				f.Logger.Info("Using address", "iteration", i+1, "address", f.Shoot.Status.AdvertisedAddresses[0].Name)
-				reader, err := podExecutor.Execute(
+				stdout, _, err := f.ShootClient.PodExecutor().Execute(
 					ctx,
 					pod.Namespace,
 					pod.Name,
@@ -101,7 +100,7 @@ var _ = ginkgo.Describe("Shoot vpn tunnel testing", func() {
 					break
 				}
 				framework.ExpectNoError(err)
-				scanner := bufio.NewScanner(reader)
+				scanner := bufio.NewScanner(stdout)
 				counter := 0
 				for scanner.Scan() {
 					counter++
@@ -171,18 +170,19 @@ var _ = ginkgo.Describe("Shoot vpn tunnel testing", func() {
 		err = f.ShootClient.Client().List(ctx, pods, client.InNamespace(namespace), client.MatchingLabels{"app": copyLabel})
 		framework.ExpectNoError(err)
 
-		podExecutor := framework.NewPodExecutor(f.ShootClient)
 		for _, pod := range pods.Items {
 			log := f.Logger.WithValues("pod", client.ObjectKeyFromObject(&pod))
 
 			ginkgo.By("Copy data to target-container in pod " + pod.Name)
-			reader, err := podExecutor.Execute(ctx, pod.Namespace, pod.Name, "source-container", fmt.Sprintf("/data/kubectl cp /data/data %s/%s:/data/data -c target-container", pod.Namespace, pod.Name))
+			stdout, _, err := f.ShootClient.PodExecutor().Execute(ctx, pod.Namespace, pod.Name, "source-container",
+				"/data/kubectl", "cp", "/data/data", pod.Namespace+"/"+pod.Name, "/data/data", "-c", "target-container",
+			)
 			if apierrors.IsNotFound(err) {
 				log.Error(err, "Aborting as pod was not found anymore")
 				break
 			}
 			framework.ExpectNoError(err)
-			output, err := io.ReadAll(reader)
+			output, err := io.ReadAll(stdout)
 			framework.ExpectNoError(err)
 			log.Info("Got output from 'kubectl cp' command", "output", string(output))
 		}

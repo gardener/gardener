@@ -160,6 +160,20 @@ func (mr *MockInterfaceMockRecorder) Kubernetes() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Kubernetes", reflect.TypeOf((*MockInterface)(nil).Kubernetes))
 }
 
+// PodExecutor mocks base method.
+func (m *MockInterface) PodExecutor() kubernetes.PodExecutor {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PodExecutor")
+	ret0, _ := ret[0].(kubernetes.PodExecutor)
+	return ret0
+}
+
+// PodExecutor indicates an expected call of PodExecutor.
+func (mr *MockInterfaceMockRecorder) PodExecutor() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PodExecutor", reflect.TypeOf((*MockInterface)(nil).PodExecutor))
+}
+
 // RESTClient mocks base method.
 func (m *MockInterface) RESTClient() rest.Interface {
 	m.ctrl.T.Helper()

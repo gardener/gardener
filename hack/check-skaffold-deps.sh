@@ -41,6 +41,11 @@ run "skaffold-operator.yaml" "gardener-extension-provider-local"         "provid
 run "skaffold-operator.yaml" "machine-controller-manager-provider-local" "provider-local"
 run "skaffold-operator.yaml" "gardener-extension-admission-local"        "provider-local"
 
+# skaffold-gardenadm.yaml
+run "skaffold-gardenadm.yaml" "gardenadm"                                 "gardenadm"
+run "skaffold-gardenadm.yaml" "gardener-extension-provider-local"         "provider-local"
+run "skaffold-gardenadm.yaml" "machine-controller-manager-provider-local" "provider-local"
+
 if ! $success ; then
   exit 1
 fi

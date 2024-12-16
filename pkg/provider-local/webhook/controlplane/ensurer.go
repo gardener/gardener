@@ -6,7 +6,6 @@ package controlplane
 
 import (
 	"context"
-	"path/filepath"
 	"slices"
 
 	"github.com/Masterminds/semver/v3"
@@ -74,39 +73,6 @@ func (e *ensurer) EnsureKubeletConfiguration(_ context.Context, _ extensionscont
 	return nil
 }
 
-func (e *ensurer) EnsureAdditionalProvisionFiles(_ context.Context, _ extensionscontextwebhook.GardenContext, new, _ *[]extensionsv1alpha1.File) error {
-	for _, mirror := range []RegistryMirror{
-		// localhost upstream is required for loading the GNA image.
-		{
-			UpstreamHost: "localhost:5001",
-			MirrorHost:   "http://garden.local.gardener.cloud:5001",
-		},
-		// europe-docker.pkg.dev upstream is required for loading the Hyperkube image.
-		// Further registries are supposed to be added via the `EnsureCRIConfig` function (reconcile OSC).
-		{
-			UpstreamHost: "europe-docker.pkg.dev",
-			MirrorHost:   "http://garden.local.gardener.cloud:5008",
-		},
-		// Enable containerd to reach registry at garden.local.gardener.cloud:5001 via HTTP.
-		{
-			UpstreamHost: "garden.local.gardener.cloud:5001",
-			MirrorHost:   "http://garden.local.gardener.cloud:5001",
-		},
-	} {
-		*new = webhook.EnsureFileWithPath(*new, extensionsv1alpha1.File{
-			Path:        filepath.Join("/etc/containerd/certs.d", mirror.UpstreamHost, "hosts.toml"),
-			Permissions: ptr.To[uint32](0644),
-			Content: extensionsv1alpha1.FileContent{
-				Inline: &extensionsv1alpha1.FileContentInline{
-					Data: mirror.HostsTOML(),
-				},
-			},
-		})
-	}
-
-	return nil
-}
-
 func (e *ensurer) EnsureCRIConfig(_ context.Context, _ extensionscontextwebhook.GardenContext, new, _ *extensionsv1alpha1.CRIConfig) error {
 	if !extensionsv1alpha1helper.HasContainerdConfiguration(new) {
 		return nil
@@ -133,6 +99,12 @@ func (e *ensurer) EnsureCRIConfig(_ context.Context, _ extensionscontextwebhook.
 			Upstream: "garden.local.gardener.cloud:5001",
 			Server:   ptr.To("http://garden.local.gardener.cloud:5001"),
 			Hosts:    []extensionsv1alpha1.RegistryHost{{URL: "http://garden.local.gardener.cloud:5001"}},
+		},
+		// europe-docker.pkg.dev upstream is required for loading the Hyperkube image.
+		{
+			Upstream: "europe-docker.pkg.dev",
+			Server:   ptr.To("https://europe-docker.pkg.dev"),
+			Hosts:    []extensionsv1alpha1.RegistryHost{{URL: "http://garden.local.gardener.cloud:5008"}},
 		},
 	} {
 		// Only add registry when it is not already set in the OSC.

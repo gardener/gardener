@@ -33,6 +33,7 @@ type clientSet struct {
 	applier       Applier
 	chartApplier  ChartApplier
 	chartRenderer chartrenderer.Interface
+	podExecutor   PodExecutor
 
 	// client is the default controller-runtime client which uses SharedIndexInformers to keep its cache in sync
 	client client.Client
@@ -61,9 +62,10 @@ func (c *clientSet) ChartRenderer() chartrenderer.Interface {
 }
 
 // ChartApplier returns a ChartApplier using the ClientSet's ChartRenderer and Applier.
-func (c *clientSet) ChartApplier() ChartApplier {
-	return c.chartApplier
-}
+func (c *clientSet) ChartApplier() ChartApplier { return c.chartApplier }
+
+// PodExecutor returns a PodExecutor for executing into pods.
+func (c *clientSet) PodExecutor() PodExecutor { return c.podExecutor }
 
 // RESTConfig will return the config attribute of the Client object.
 func (c *clientSet) RESTConfig() *rest.Config {
