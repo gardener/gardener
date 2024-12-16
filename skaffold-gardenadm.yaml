@@ -301,6 +301,12 @@ manifests:
   kustomize:
     paths:
       - example/provider-local/gardenadm
+  hooks:
+    before:
+      - host:
+          command:
+            - bash
+            - hack/generate-kustomize-patch-controllerdeployment-provider-local-prow.sh
 ---
 apiVersion: skaffold/v4beta7
 kind: Config
