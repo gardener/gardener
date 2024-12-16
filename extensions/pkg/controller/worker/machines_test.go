@@ -144,6 +144,10 @@ var _ = Describe("Machines", func() {
 				p.Maximum = 2
 			})
 
+			It("when changing priority", func() {
+				p.Priority = ptr.To(int32(1337))
+			})
+
 			It("when changing max surge", func() {
 				p.MaxSurge.StrVal = "new-val"
 			})
@@ -322,6 +326,10 @@ var _ = Describe("Machines", func() {
 				actual, err := WorkerPoolHash(p, nil, additionalDataV1, additionalDataV2)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(actual).To(Equal(hash))
+			})
+
+			It("when changing priority", func() {
+				p.Priority = ptr.To(int32(1337))
 			})
 
 			It("when changing annotations", func() {

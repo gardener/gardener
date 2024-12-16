@@ -432,9 +432,10 @@ func (a *genericActuator) updateWorkerStatusMachineDeployments(ctx context.Conte
 	var statusMachineDeployments []extensionsv1alpha1.MachineDeployment
 	for _, machineDeployment := range machineDeployments {
 		statusMachineDeployments = append(statusMachineDeployments, extensionsv1alpha1.MachineDeployment{
-			Name:    machineDeployment.Name,
-			Minimum: machineDeployment.Minimum,
-			Maximum: machineDeployment.Maximum,
+			Name:     machineDeployment.Name,
+			Minimum:  machineDeployment.Minimum,
+			Maximum:  machineDeployment.Maximum,
+			Priority: machineDeployment.Priority,
 		})
 	}
 	updateTime := metav1.Now()
