@@ -1,15 +1,13 @@
 ---
 title: Machine Image Capabilities
 gep-number: 33
-creation-date: 2024-12-24
+creation-date: 2024-12-16
 status: implementable
 authors:
-
-- "@MrBatschner"
-- "@Roncossek"
-  reviewers:
-- "@main-reviewer-1"
-- "@main-reviewer-2"
+  - "@MrBatschner"
+  - "@Roncossek"
+reviewers:
+  - "@rfranzke"
 
 ---
 
