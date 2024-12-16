@@ -276,7 +276,10 @@ var _ = Describe("Worker", func() {
 		Entry("checksum annotation missing",
 			[]gardencorev1beta1.Worker{{Name: "pool1"}},
 			map[string][]corev1.Node{"pool1": {{ObjectMeta: metav1.ObjectMeta{
-				Labels: map[string]string{"worker.gardener.cloud/kubernetes-version": "1.24.0"},
+				Labels: map[string]string{
+					"worker.gardener.cloud/kubernetes-version":              "1.24.0",
+					"worker.gardener.cloud/gardener-node-agent-secret-name": "gardener-node-agent--c63c0",
+				},
 			}}}},
 			map[string]metav1.ObjectMeta{"pool1": {
 				Name:        "gardener-node-agent--c63c0",
@@ -361,24 +364,6 @@ var _ = Describe("Worker", func() {
 				},
 			},
 			BeNil(),
-		),
-		Entry("detect outdated nodes without gardener node agent secret name label",
-			[]gardencorev1beta1.Worker{{Name: "pool1"}},
-			map[string][]corev1.Node{
-				"pool1": {{ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{"checksum/cloud-config-data": "outdated"},
-					Labels: map[string]string{
-						"worker.gardener.cloud/kubernetes-version": "1.24.0",
-					},
-				}}},
-			},
-			map[string]metav1.ObjectMeta{
-				"pool1": {
-					Name:        "gardener-node-agent--c63c0",
-					Annotations: map[string]string{"checksum/data-script": "foo"},
-				},
-			},
-			MatchError(ContainSubstring("is outdated")),
 		),
 	)
 
