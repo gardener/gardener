@@ -12,74 +12,72 @@ import (
 var (
 	registerOnce = make(chan struct{})
 
-	flowTaskTimingsDelay    *prometheus.HistogramVec
+	flowTaskDelaySeconds    *prometheus.HistogramVec
 	flowTaskTimingsDuration *prometheus.HistogramVec
-	flowTaskTotalDuration   *prometheus.HistogramVec
 	flowTaskResults         *prometheus.CounterVec
+	flowDurationSeconds     *prometheus.HistogramVec
 )
 
 // Namespace is the metric namespace for the flow library.
-const Namespace = "flow"
+const metricsNamespace = "flow"
 
 // RegisterMetrics registers the metrics for the flow library on the passed registry.
+// This function can only be called once.
+// If this function is not called, no metrics are collected in this package.
 func RegisterMetrics(r prometheus.Registerer) {
 	close(registerOnce) // Metrics can only be registered once on a registry.
 
 	factory := promauto.With(r)
 
-	// flowTaskTimingsDelay defines the histogram to record the delay in seconds from flow start until task start.
-	flowTaskTimingsDelay = factory.NewHistogramVec(
+	flowTaskDelaySeconds = factory.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Namespace: Namespace,
+			Namespace: metricsNamespace,
 			Name:      "task_delay_seconds",
 			Help:      "Delay until invocation of a flow task.",
 			Buckets:   prometheus.ExponentialBuckets(0.01, 3, 12),
 		},
 		[]string{
 			"flow",
-			"taskid",
+			"task_id",
 			"skipped",
 		},
 	)
 
-	// flowTaskTimingsDuration defines the histogram to record the duration in seconds of a flow task.
 	flowTaskTimingsDuration = factory.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Namespace: Namespace,
+			Namespace: metricsNamespace,
 			Name:      "task_duration_seconds",
 			Help:      "Duration of a flow task.",
 			Buckets:   prometheus.ExponentialBuckets(0.01, 3, 12),
 		},
 		[]string{
 			"flow",
-			"taskid",
+			"task_id",
 		},
 	)
 
-	// flowTaskTotalDuration defines the histogram to record the total duration in seconds of a flow.
-	flowTaskTotalDuration = factory.NewHistogramVec(
+	flowTaskResults = factory.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: metricsNamespace,
+			Name:      "task_results_total",
+			Help:      "Flow task result counter. The value of the label 'result' can either be 'success' or 'error'.",
+		},
+		[]string{
+			"flow",
+			"task_id",
+			"result",
+		},
+	)
+
+	flowDurationSeconds = factory.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Namespace: Namespace,
-			Name:      "total_duration_seconds",
+			Namespace: metricsNamespace,
+			Name:      "duration_seconds",
 			Help:      "Total duration of a flow.",
 			Buckets:   prometheus.ExponentialBuckets(0.02, 3, 12),
 		},
 		[]string{
 			"flow",
-		},
-	)
-
-	// flowTaskErrors defines the histogram to record errors occurred during execution of a flow task.
-	flowTaskResults = factory.NewCounterVec(
-		prometheus.CounterOpts{
-			Namespace: Namespace,
-			Name:      "task_result_total",
-			Help:      "Flow task result counter.",
-		},
-		[]string{
-			"flow",
-			"taskid",
-			"result",
 		},
 	)
 }

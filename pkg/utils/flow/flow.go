@@ -54,8 +54,7 @@ type Flow struct {
 	name  string
 	nodes nodes
 
-	// Clock is used to retrieve the current time.
-	Clock clock.Clock
+	clock clock.Clock
 	start time.Time
 }
 
@@ -208,7 +207,7 @@ type execution struct {
 
 func (e *execution) runNode(ctx context.Context, id TaskID) {
 	log := e.log.WithValues(logKeyTask, id)
-	taskStartDelay := e.flow.Clock.Now().UTC().Sub(e.flow.start.UTC())
+	taskStartDelay := e.flow.clock.Now().UTC().Sub(e.flow.start.UTC())
 
 	node := e.flow.nodes[id]
 	if node.skip {
@@ -230,12 +229,10 @@ func (e *execution) runNode(ctx context.Context, id TaskID) {
 	e.stats.Running.Insert(id)
 
 	go func() {
-		start := e.flow.Clock.Now().UTC()
-
+		start := e.flow.clock.Now().UTC()
 		log.V(1).Info("Started")
 		err := node.fn(ctx)
-		end := e.flow.Clock.Now().UTC()
-		duration := end.Sub(start)
+		duration := e.flow.clock.Now().UTC().Sub(start)
 		log.V(1).Info("Finished", "duration", duration)
 
 		if err != nil {
@@ -282,7 +279,7 @@ func (e *execution) reportProgress(ctx context.Context) {
 }
 
 func (e *execution) run(ctx context.Context) error {
-	e.flow.start = e.flow.Clock.Now()
+	e.flow.start = e.flow.clock.Now()
 	defer close(e.done)
 
 	if e.progressReporter != nil {
@@ -357,24 +354,22 @@ func (e *execution) result(cancelErr error) error {
 }
 
 func (e *execution) reportTaskMetrics(r *nodeResult) {
-	if flowTaskTimingsDelay != nil {
-		flowTaskTimingsDelay.
+	if flowTaskDelaySeconds != nil {
+		flowTaskDelaySeconds.
 			WithLabelValues(e.flow.name, string(r.TaskID), utils.IifString(r.skipped, "true", "false")).
 			Observe(r.delay.Seconds())
 	}
-	if flowTaskTimingsDuration != nil && r.duration != 0 {
+	if flowTaskTimingsDuration != nil && !r.skipped {
 		flowTaskTimingsDuration.WithLabelValues(e.flow.name, string(r.TaskID)).Observe(r.duration.Seconds())
 	}
 	if flowTaskResults != nil {
-		result := utils.IifString(r.Error == nil, "success", "error")
-		flowTaskResults.WithLabelValues(e.flow.name, string(r.TaskID), result).Inc()
+		flowTaskResults.WithLabelValues(e.flow.name, string(r.TaskID), utils.IifString(r.Error == nil, "success", "error")).Inc()
 	}
 }
 
 func (e *execution) reportFlowMetrics() {
-	if flowTaskTotalDuration != nil {
-		duration := e.flow.Clock.Now().UTC().Sub(e.flow.start.UTC())
-		flowTaskTotalDuration.WithLabelValues(e.flow.name).Observe(duration.Seconds())
+	if flowDurationSeconds != nil {
+		flowDurationSeconds.WithLabelValues(e.flow.name).Observe(e.flow.clock.Now().UTC().Sub(e.flow.start.UTC()).Seconds())
 	}
 }
 

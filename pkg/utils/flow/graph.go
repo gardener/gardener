@@ -97,6 +97,6 @@ func (g *Graph) Compile() *Flow {
 	return &Flow{
 		name:  g.name,
 		nodes: nodes,
-		Clock: g.Clock,
+		clock: g.Clock,
 	}
 }
