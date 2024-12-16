@@ -7,129 +7,32 @@
 package fake
 
 import (
-	"context"
-
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/typed/seedmanagement/v1alpha1"
+	gentype "k8s.io/client-go/gentype"
 )
 
-// FakeGardenlets implements GardenletInterface
-type FakeGardenlets struct {
+// fakeGardenlets implements GardenletInterface
+type fakeGardenlets struct {
+	*gentype.FakeClientWithList[*v1alpha1.Gardenlet, *v1alpha1.GardenletList]
 	Fake *FakeSeedmanagementV1alpha1
-	ns   string
 }
 
-var gardenletsResource = v1alpha1.SchemeGroupVersion.WithResource("gardenlets")
-
-var gardenletsKind = v1alpha1.SchemeGroupVersion.WithKind("Gardenlet")
-
-// Get takes name of the gardenlet, and returns the corresponding gardenlet object, and an error if there is any.
-func (c *FakeGardenlets) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.Gardenlet, err error) {
-	emptyResult := &v1alpha1.Gardenlet{}
-	obj, err := c.Fake.
-		Invokes(testing.NewGetActionWithOptions(gardenletsResource, c.ns, name, options), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
+func newFakeGardenlets(fake *FakeSeedmanagementV1alpha1, namespace string) seedmanagementv1alpha1.GardenletInterface {
+	return &fakeGardenlets{
+		gentype.NewFakeClientWithList[*v1alpha1.Gardenlet, *v1alpha1.GardenletList](
+			fake.Fake,
+			namespace,
+			v1alpha1.SchemeGroupVersion.WithResource("gardenlets"),
+			v1alpha1.SchemeGroupVersion.WithKind("Gardenlet"),
+			func() *v1alpha1.Gardenlet { return &v1alpha1.Gardenlet{} },
+			func() *v1alpha1.GardenletList { return &v1alpha1.GardenletList{} },
+			func(dst, src *v1alpha1.GardenletList) { dst.ListMeta = src.ListMeta },
+			func(list *v1alpha1.GardenletList) []*v1alpha1.Gardenlet { return gentype.ToPointerSlice(list.Items) },
+			func(list *v1alpha1.GardenletList, items []*v1alpha1.Gardenlet) {
+				list.Items = gentype.FromPointerSlice(items)
+			},
+		),
+		fake,
 	}
-	return obj.(*v1alpha1.Gardenlet), err
-}
-
-// List takes label and field selectors, and returns the list of Gardenlets that match those selectors.
-func (c *FakeGardenlets) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.GardenletList, err error) {
-	emptyResult := &v1alpha1.GardenletList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewListActionWithOptions(gardenletsResource, gardenletsKind, c.ns, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-
-	label, _, _ := testing.ExtractFromListOptions(opts)
-	if label == nil {
-		label = labels.Everything()
-	}
-	list := &v1alpha1.GardenletList{ListMeta: obj.(*v1alpha1.GardenletList).ListMeta}
-	for _, item := range obj.(*v1alpha1.GardenletList).Items {
-		if label.Matches(labels.Set(item.Labels)) {
-			list.Items = append(list.Items, item)
-		}
-	}
-	return list, err
-}
-
-// Watch returns a watch.Interface that watches the requested gardenlets.
-func (c *FakeGardenlets) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewWatchActionWithOptions(gardenletsResource, c.ns, opts))
-
-}
-
-// Create takes the representation of a gardenlet and creates it.  Returns the server's representation of the gardenlet, and an error, if there is any.
-func (c *FakeGardenlets) Create(ctx context.Context, gardenlet *v1alpha1.Gardenlet, opts v1.CreateOptions) (result *v1alpha1.Gardenlet, err error) {
-	emptyResult := &v1alpha1.Gardenlet{}
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateActionWithOptions(gardenletsResource, c.ns, gardenlet, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.Gardenlet), err
-}
-
-// Update takes the representation of a gardenlet and updates it. Returns the server's representation of the gardenlet, and an error, if there is any.
-func (c *FakeGardenlets) Update(ctx context.Context, gardenlet *v1alpha1.Gardenlet, opts v1.UpdateOptions) (result *v1alpha1.Gardenlet, err error) {
-	emptyResult := &v1alpha1.Gardenlet{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateActionWithOptions(gardenletsResource, c.ns, gardenlet, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.Gardenlet), err
-}
-
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeGardenlets) UpdateStatus(ctx context.Context, gardenlet *v1alpha1.Gardenlet, opts v1.UpdateOptions) (result *v1alpha1.Gardenlet, err error) {
-	emptyResult := &v1alpha1.Gardenlet{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceActionWithOptions(gardenletsResource, "status", c.ns, gardenlet, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.Gardenlet), err
-}
-
-// Delete takes name of the gardenlet and deletes it. Returns an error if one occurs.
-func (c *FakeGardenlets) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(gardenletsResource, c.ns, name, opts), &v1alpha1.Gardenlet{})
-
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *FakeGardenlets) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionActionWithOptions(gardenletsResource, c.ns, opts, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1alpha1.GardenletList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched gardenlet.
-func (c *FakeGardenlets) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.Gardenlet, err error) {
-	emptyResult := &v1alpha1.Gardenlet{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(gardenletsResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.Gardenlet), err
 }

@@ -7,9 +7,9 @@
 package v1
 
 import (
-	"context"
+	context "context"
 
-	v1 "github.com/gardener/gardener/pkg/apis/core/v1"
+	corev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	scheme "github.com/gardener/gardener/pkg/client/core/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -25,31 +25,32 @@ type ControllerDeploymentsGetter interface {
 
 // ControllerDeploymentInterface has methods to work with ControllerDeployment resources.
 type ControllerDeploymentInterface interface {
-	Create(ctx context.Context, controllerDeployment *v1.ControllerDeployment, opts metav1.CreateOptions) (*v1.ControllerDeployment, error)
-	Update(ctx context.Context, controllerDeployment *v1.ControllerDeployment, opts metav1.UpdateOptions) (*v1.ControllerDeployment, error)
+	Create(ctx context.Context, controllerDeployment *corev1.ControllerDeployment, opts metav1.CreateOptions) (*corev1.ControllerDeployment, error)
+	Update(ctx context.Context, controllerDeployment *corev1.ControllerDeployment, opts metav1.UpdateOptions) (*corev1.ControllerDeployment, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.ControllerDeployment, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.ControllerDeploymentList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*corev1.ControllerDeployment, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*corev1.ControllerDeploymentList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.ControllerDeployment, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *corev1.ControllerDeployment, err error)
 	ControllerDeploymentExpansion
 }
 
 // controllerDeployments implements ControllerDeploymentInterface
 type controllerDeployments struct {
-	*gentype.ClientWithList[*v1.ControllerDeployment, *v1.ControllerDeploymentList]
+	*gentype.ClientWithList[*corev1.ControllerDeployment, *corev1.ControllerDeploymentList]
 }
 
 // newControllerDeployments returns a ControllerDeployments
 func newControllerDeployments(c *CoreV1Client) *controllerDeployments {
 	return &controllerDeployments{
-		gentype.NewClientWithList[*v1.ControllerDeployment, *v1.ControllerDeploymentList](
+		gentype.NewClientWithList[*corev1.ControllerDeployment, *corev1.ControllerDeploymentList](
 			"controllerdeployments",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v1.ControllerDeployment { return &v1.ControllerDeployment{} },
-			func() *v1.ControllerDeploymentList { return &v1.ControllerDeploymentList{} }),
+			func() *corev1.ControllerDeployment { return &corev1.ControllerDeployment{} },
+			func() *corev1.ControllerDeploymentList { return &corev1.ControllerDeploymentList{} },
+		),
 	}
 }

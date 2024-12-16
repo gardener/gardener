@@ -17,11 +17,11 @@ type FakeSecurityV1alpha1 struct {
 }
 
 func (c *FakeSecurityV1alpha1) CredentialsBindings(namespace string) v1alpha1.CredentialsBindingInterface {
-	return &FakeCredentialsBindings{c, namespace}
+	return newFakeCredentialsBindings(c, namespace)
 }
 
 func (c *FakeSecurityV1alpha1) WorkloadIdentities(namespace string) v1alpha1.WorkloadIdentityInterface {
-	return &FakeWorkloadIdentities{c, namespace}
+	return newFakeWorkloadIdentities(c, namespace)
 }
 
 // RESTClient returns a RESTClient that is used to communicate

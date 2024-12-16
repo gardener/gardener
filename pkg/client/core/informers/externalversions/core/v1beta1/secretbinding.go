@@ -7,13 +7,13 @@
 package v1beta1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	corev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	apiscorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	versioned "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	internalinterfaces "github.com/gardener/gardener/pkg/client/core/informers/externalversions/internalinterfaces"
-	v1beta1 "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	corev1beta1 "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -24,7 +24,7 @@ import (
 // SecretBindings.
 type SecretBindingInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1beta1.SecretBindingLister
+	Lister() corev1beta1.SecretBindingLister
 }
 
 type secretBindingInformer struct {
@@ -59,7 +59,7 @@ func NewFilteredSecretBindingInformer(client versioned.Interface, namespace stri
 				return client.CoreV1beta1().SecretBindings(namespace).Watch(context.TODO(), options)
 			},
 		},
-		&corev1beta1.SecretBinding{},
+		&apiscorev1beta1.SecretBinding{},
 		resyncPeriod,
 		indexers,
 	)
@@ -70,9 +70,9 @@ func (f *secretBindingInformer) defaultInformer(client versioned.Interface, resy
 }
 
 func (f *secretBindingInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&corev1beta1.SecretBinding{}, f.defaultInformer)
+	return f.factory.InformerFor(&apiscorev1beta1.SecretBinding{}, f.defaultInformer)
 }
 
-func (f *secretBindingInformer) Lister() v1beta1.SecretBindingLister {
-	return v1beta1.NewSecretBindingLister(f.Informer().GetIndexer())
+func (f *secretBindingInformer) Lister() corev1beta1.SecretBindingLister {
+	return corev1beta1.NewSecretBindingLister(f.Informer().GetIndexer())
 }

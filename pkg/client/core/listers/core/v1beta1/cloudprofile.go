@@ -7,10 +7,10 @@
 package v1beta1
 
 import (
-	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	corev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // CloudProfileLister helps list CloudProfiles.
@@ -18,19 +18,19 @@ import (
 type CloudProfileLister interface {
 	// List lists all CloudProfiles in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1beta1.CloudProfile, err error)
+	List(selector labels.Selector) (ret []*corev1beta1.CloudProfile, err error)
 	// Get retrieves the CloudProfile from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1beta1.CloudProfile, error)
+	Get(name string) (*corev1beta1.CloudProfile, error)
 	CloudProfileListerExpansion
 }
 
 // cloudProfileLister implements the CloudProfileLister interface.
 type cloudProfileLister struct {
-	listers.ResourceIndexer[*v1beta1.CloudProfile]
+	listers.ResourceIndexer[*corev1beta1.CloudProfile]
 }
 
 // NewCloudProfileLister returns a new CloudProfileLister.
 func NewCloudProfileLister(indexer cache.Indexer) CloudProfileLister {
-	return &cloudProfileLister{listers.New[*v1beta1.CloudProfile](indexer, v1beta1.Resource("cloudprofile"))}
+	return &cloudProfileLister{listers.New[*corev1beta1.CloudProfile](indexer, corev1beta1.Resource("cloudprofile"))}
 }

@@ -7,13 +7,13 @@
 package v1beta1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	corev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	apiscorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	versioned "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	internalinterfaces "github.com/gardener/gardener/pkg/client/core/informers/externalversions/internalinterfaces"
-	v1beta1 "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	corev1beta1 "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -24,7 +24,7 @@ import (
 // ControllerInstallations.
 type ControllerInstallationInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1beta1.ControllerInstallationLister
+	Lister() corev1beta1.ControllerInstallationLister
 }
 
 type controllerInstallationInformer struct {
@@ -58,7 +58,7 @@ func NewFilteredControllerInstallationInformer(client versioned.Interface, resyn
 				return client.CoreV1beta1().ControllerInstallations().Watch(context.TODO(), options)
 			},
 		},
-		&corev1beta1.ControllerInstallation{},
+		&apiscorev1beta1.ControllerInstallation{},
 		resyncPeriod,
 		indexers,
 	)
@@ -69,9 +69,9 @@ func (f *controllerInstallationInformer) defaultInformer(client versioned.Interf
 }
 
 func (f *controllerInstallationInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&corev1beta1.ControllerInstallation{}, f.defaultInformer)
+	return f.factory.InformerFor(&apiscorev1beta1.ControllerInstallation{}, f.defaultInformer)
 }
 
-func (f *controllerInstallationInformer) Lister() v1beta1.ControllerInstallationLister {
-	return v1beta1.NewControllerInstallationLister(f.Informer().GetIndexer())
+func (f *controllerInstallationInformer) Lister() corev1beta1.ControllerInstallationLister {
+	return corev1beta1.NewControllerInstallationLister(f.Informer().GetIndexer())
 }

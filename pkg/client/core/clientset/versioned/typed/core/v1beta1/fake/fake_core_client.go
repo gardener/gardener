@@ -17,63 +17,63 @@ type FakeCoreV1beta1 struct {
 }
 
 func (c *FakeCoreV1beta1) BackupBuckets() v1beta1.BackupBucketInterface {
-	return &FakeBackupBuckets{c}
+	return newFakeBackupBuckets(c)
 }
 
 func (c *FakeCoreV1beta1) BackupEntries(namespace string) v1beta1.BackupEntryInterface {
-	return &FakeBackupEntries{c, namespace}
+	return newFakeBackupEntries(c, namespace)
 }
 
 func (c *FakeCoreV1beta1) CloudProfiles() v1beta1.CloudProfileInterface {
-	return &FakeCloudProfiles{c}
+	return newFakeCloudProfiles(c)
 }
 
 func (c *FakeCoreV1beta1) ControllerDeployments() v1beta1.ControllerDeploymentInterface {
-	return &FakeControllerDeployments{c}
+	return newFakeControllerDeployments(c)
 }
 
 func (c *FakeCoreV1beta1) ControllerInstallations() v1beta1.ControllerInstallationInterface {
-	return &FakeControllerInstallations{c}
+	return newFakeControllerInstallations(c)
 }
 
 func (c *FakeCoreV1beta1) ControllerRegistrations() v1beta1.ControllerRegistrationInterface {
-	return &FakeControllerRegistrations{c}
+	return newFakeControllerRegistrations(c)
 }
 
 func (c *FakeCoreV1beta1) ExposureClasses() v1beta1.ExposureClassInterface {
-	return &FakeExposureClasses{c}
+	return newFakeExposureClasses(c)
 }
 
 func (c *FakeCoreV1beta1) InternalSecrets(namespace string) v1beta1.InternalSecretInterface {
-	return &FakeInternalSecrets{c, namespace}
+	return newFakeInternalSecrets(c, namespace)
 }
 
 func (c *FakeCoreV1beta1) NamespacedCloudProfiles(namespace string) v1beta1.NamespacedCloudProfileInterface {
-	return &FakeNamespacedCloudProfiles{c, namespace}
+	return newFakeNamespacedCloudProfiles(c, namespace)
 }
 
 func (c *FakeCoreV1beta1) Projects() v1beta1.ProjectInterface {
-	return &FakeProjects{c}
+	return newFakeProjects(c)
 }
 
 func (c *FakeCoreV1beta1) Quotas(namespace string) v1beta1.QuotaInterface {
-	return &FakeQuotas{c, namespace}
+	return newFakeQuotas(c, namespace)
 }
 
 func (c *FakeCoreV1beta1) SecretBindings(namespace string) v1beta1.SecretBindingInterface {
-	return &FakeSecretBindings{c, namespace}
+	return newFakeSecretBindings(c, namespace)
 }
 
 func (c *FakeCoreV1beta1) Seeds() v1beta1.SeedInterface {
-	return &FakeSeeds{c}
+	return newFakeSeeds(c)
 }
 
 func (c *FakeCoreV1beta1) Shoots(namespace string) v1beta1.ShootInterface {
-	return &FakeShoots{c, namespace}
+	return newFakeShoots(c, namespace)
 }
 
 func (c *FakeCoreV1beta1) ShootStates(namespace string) v1beta1.ShootStateInterface {
-	return &FakeShootStates{c, namespace}
+	return newFakeShootStates(c, namespace)
 }
 
 // RESTClient returns a RESTClient that is used to communicate

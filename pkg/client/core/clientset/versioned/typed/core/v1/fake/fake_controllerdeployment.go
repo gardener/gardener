@@ -7,108 +7,34 @@
 package fake
 
 import (
-	"context"
-
 	v1 "github.com/gardener/gardener/pkg/apis/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	corev1 "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1"
+	gentype "k8s.io/client-go/gentype"
 )
 
-// FakeControllerDeployments implements ControllerDeploymentInterface
-type FakeControllerDeployments struct {
+// fakeControllerDeployments implements ControllerDeploymentInterface
+type fakeControllerDeployments struct {
+	*gentype.FakeClientWithList[*v1.ControllerDeployment, *v1.ControllerDeploymentList]
 	Fake *FakeCoreV1
 }
 
-var controllerdeploymentsResource = v1.SchemeGroupVersion.WithResource("controllerdeployments")
-
-var controllerdeploymentsKind = v1.SchemeGroupVersion.WithKind("ControllerDeployment")
-
-// Get takes name of the controllerDeployment, and returns the corresponding controllerDeployment object, and an error if there is any.
-func (c *FakeControllerDeployments) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.ControllerDeployment, err error) {
-	emptyResult := &v1.ControllerDeployment{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootGetActionWithOptions(controllerdeploymentsResource, name, options), emptyResult)
-	if obj == nil {
-		return emptyResult, err
+func newFakeControllerDeployments(fake *FakeCoreV1) corev1.ControllerDeploymentInterface {
+	return &fakeControllerDeployments{
+		gentype.NewFakeClientWithList[*v1.ControllerDeployment, *v1.ControllerDeploymentList](
+			fake.Fake,
+			"",
+			v1.SchemeGroupVersion.WithResource("controllerdeployments"),
+			v1.SchemeGroupVersion.WithKind("ControllerDeployment"),
+			func() *v1.ControllerDeployment { return &v1.ControllerDeployment{} },
+			func() *v1.ControllerDeploymentList { return &v1.ControllerDeploymentList{} },
+			func(dst, src *v1.ControllerDeploymentList) { dst.ListMeta = src.ListMeta },
+			func(list *v1.ControllerDeploymentList) []*v1.ControllerDeployment {
+				return gentype.ToPointerSlice(list.Items)
+			},
+			func(list *v1.ControllerDeploymentList, items []*v1.ControllerDeployment) {
+				list.Items = gentype.FromPointerSlice(items)
+			},
+		),
+		fake,
 	}
-	return obj.(*v1.ControllerDeployment), err
-}
-
-// List takes label and field selectors, and returns the list of ControllerDeployments that match those selectors.
-func (c *FakeControllerDeployments) List(ctx context.Context, opts metav1.ListOptions) (result *v1.ControllerDeploymentList, err error) {
-	emptyResult := &v1.ControllerDeploymentList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootListActionWithOptions(controllerdeploymentsResource, controllerdeploymentsKind, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-
-	label, _, _ := testing.ExtractFromListOptions(opts)
-	if label == nil {
-		label = labels.Everything()
-	}
-	list := &v1.ControllerDeploymentList{ListMeta: obj.(*v1.ControllerDeploymentList).ListMeta}
-	for _, item := range obj.(*v1.ControllerDeploymentList).Items {
-		if label.Matches(labels.Set(item.Labels)) {
-			list.Items = append(list.Items, item)
-		}
-	}
-	return list, err
-}
-
-// Watch returns a watch.Interface that watches the requested controllerDeployments.
-func (c *FakeControllerDeployments) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewRootWatchActionWithOptions(controllerdeploymentsResource, opts))
-}
-
-// Create takes the representation of a controllerDeployment and creates it.  Returns the server's representation of the controllerDeployment, and an error, if there is any.
-func (c *FakeControllerDeployments) Create(ctx context.Context, controllerDeployment *v1.ControllerDeployment, opts metav1.CreateOptions) (result *v1.ControllerDeployment, err error) {
-	emptyResult := &v1.ControllerDeployment{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateActionWithOptions(controllerdeploymentsResource, controllerDeployment, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.ControllerDeployment), err
-}
-
-// Update takes the representation of a controllerDeployment and updates it. Returns the server's representation of the controllerDeployment, and an error, if there is any.
-func (c *FakeControllerDeployments) Update(ctx context.Context, controllerDeployment *v1.ControllerDeployment, opts metav1.UpdateOptions) (result *v1.ControllerDeployment, err error) {
-	emptyResult := &v1.ControllerDeployment{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateActionWithOptions(controllerdeploymentsResource, controllerDeployment, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.ControllerDeployment), err
-}
-
-// Delete takes name of the controllerDeployment and deletes it. Returns an error if one occurs.
-func (c *FakeControllerDeployments) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteActionWithOptions(controllerdeploymentsResource, name, opts), &v1.ControllerDeployment{})
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *FakeControllerDeployments) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionActionWithOptions(controllerdeploymentsResource, opts, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1.ControllerDeploymentList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched controllerDeployment.
-func (c *FakeControllerDeployments) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.ControllerDeployment, err error) {
-	emptyResult := &v1.ControllerDeployment{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(controllerdeploymentsResource, name, pt, data, opts, subresources...), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.ControllerDeployment), err
 }

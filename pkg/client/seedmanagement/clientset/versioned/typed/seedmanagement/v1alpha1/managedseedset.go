@@ -7,9 +7,9 @@
 package v1alpha1
 
 import (
-	"context"
+	context "context"
 
-	v1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	scheme "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -25,33 +25,34 @@ type ManagedSeedSetsGetter interface {
 
 // ManagedSeedSetInterface has methods to work with ManagedSeedSet resources.
 type ManagedSeedSetInterface interface {
-	Create(ctx context.Context, managedSeedSet *v1alpha1.ManagedSeedSet, opts v1.CreateOptions) (*v1alpha1.ManagedSeedSet, error)
-	Update(ctx context.Context, managedSeedSet *v1alpha1.ManagedSeedSet, opts v1.UpdateOptions) (*v1alpha1.ManagedSeedSet, error)
+	Create(ctx context.Context, managedSeedSet *seedmanagementv1alpha1.ManagedSeedSet, opts v1.CreateOptions) (*seedmanagementv1alpha1.ManagedSeedSet, error)
+	Update(ctx context.Context, managedSeedSet *seedmanagementv1alpha1.ManagedSeedSet, opts v1.UpdateOptions) (*seedmanagementv1alpha1.ManagedSeedSet, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, managedSeedSet *v1alpha1.ManagedSeedSet, opts v1.UpdateOptions) (*v1alpha1.ManagedSeedSet, error)
+	UpdateStatus(ctx context.Context, managedSeedSet *seedmanagementv1alpha1.ManagedSeedSet, opts v1.UpdateOptions) (*seedmanagementv1alpha1.ManagedSeedSet, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.ManagedSeedSet, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.ManagedSeedSetList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*seedmanagementv1alpha1.ManagedSeedSet, error)
+	List(ctx context.Context, opts v1.ListOptions) (*seedmanagementv1alpha1.ManagedSeedSetList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ManagedSeedSet, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *seedmanagementv1alpha1.ManagedSeedSet, err error)
 	ManagedSeedSetExpansion
 }
 
 // managedSeedSets implements ManagedSeedSetInterface
 type managedSeedSets struct {
-	*gentype.ClientWithList[*v1alpha1.ManagedSeedSet, *v1alpha1.ManagedSeedSetList]
+	*gentype.ClientWithList[*seedmanagementv1alpha1.ManagedSeedSet, *seedmanagementv1alpha1.ManagedSeedSetList]
 }
 
 // newManagedSeedSets returns a ManagedSeedSets
 func newManagedSeedSets(c *SeedmanagementV1alpha1Client, namespace string) *managedSeedSets {
 	return &managedSeedSets{
-		gentype.NewClientWithList[*v1alpha1.ManagedSeedSet, *v1alpha1.ManagedSeedSetList](
+		gentype.NewClientWithList[*seedmanagementv1alpha1.ManagedSeedSet, *seedmanagementv1alpha1.ManagedSeedSetList](
 			"managedseedsets",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			namespace,
-			func() *v1alpha1.ManagedSeedSet { return &v1alpha1.ManagedSeedSet{} },
-			func() *v1alpha1.ManagedSeedSetList { return &v1alpha1.ManagedSeedSetList{} }),
+			func() *seedmanagementv1alpha1.ManagedSeedSet { return &seedmanagementv1alpha1.ManagedSeedSet{} },
+			func() *seedmanagementv1alpha1.ManagedSeedSetList { return &seedmanagementv1alpha1.ManagedSeedSetList{} },
+		),
 	}
 }

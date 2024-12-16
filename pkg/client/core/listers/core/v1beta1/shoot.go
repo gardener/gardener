@@ -7,10 +7,10 @@
 package v1beta1
 
 import (
-	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	corev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // ShootLister helps list Shoots.
@@ -18,7 +18,7 @@ import (
 type ShootLister interface {
 	// List lists all Shoots in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1beta1.Shoot, err error)
+	List(selector labels.Selector) (ret []*corev1beta1.Shoot, err error)
 	// Shoots returns an object that can list and get Shoots.
 	Shoots(namespace string) ShootNamespaceLister
 	ShootListerExpansion
@@ -26,17 +26,17 @@ type ShootLister interface {
 
 // shootLister implements the ShootLister interface.
 type shootLister struct {
-	listers.ResourceIndexer[*v1beta1.Shoot]
+	listers.ResourceIndexer[*corev1beta1.Shoot]
 }
 
 // NewShootLister returns a new ShootLister.
 func NewShootLister(indexer cache.Indexer) ShootLister {
-	return &shootLister{listers.New[*v1beta1.Shoot](indexer, v1beta1.Resource("shoot"))}
+	return &shootLister{listers.New[*corev1beta1.Shoot](indexer, corev1beta1.Resource("shoot"))}
 }
 
 // Shoots returns an object that can list and get Shoots.
 func (s *shootLister) Shoots(namespace string) ShootNamespaceLister {
-	return shootNamespaceLister{listers.NewNamespaced[*v1beta1.Shoot](s.ResourceIndexer, namespace)}
+	return shootNamespaceLister{listers.NewNamespaced[*corev1beta1.Shoot](s.ResourceIndexer, namespace)}
 }
 
 // ShootNamespaceLister helps list and get Shoots.
@@ -44,15 +44,15 @@ func (s *shootLister) Shoots(namespace string) ShootNamespaceLister {
 type ShootNamespaceLister interface {
 	// List lists all Shoots in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1beta1.Shoot, err error)
+	List(selector labels.Selector) (ret []*corev1beta1.Shoot, err error)
 	// Get retrieves the Shoot from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1beta1.Shoot, error)
+	Get(name string) (*corev1beta1.Shoot, error)
 	ShootNamespaceListerExpansion
 }
 
 // shootNamespaceLister implements the ShootNamespaceLister
 // interface.
 type shootNamespaceLister struct {
-	listers.ResourceIndexer[*v1beta1.Shoot]
+	listers.ResourceIndexer[*corev1beta1.Shoot]
 }

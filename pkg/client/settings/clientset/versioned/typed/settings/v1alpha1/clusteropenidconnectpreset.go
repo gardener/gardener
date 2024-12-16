@@ -7,9 +7,9 @@
 package v1alpha1
 
 import (
-	"context"
+	context "context"
 
-	v1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
+	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	scheme "github.com/gardener/gardener/pkg/client/settings/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -25,31 +25,36 @@ type ClusterOpenIDConnectPresetsGetter interface {
 
 // ClusterOpenIDConnectPresetInterface has methods to work with ClusterOpenIDConnectPreset resources.
 type ClusterOpenIDConnectPresetInterface interface {
-	Create(ctx context.Context, clusterOpenIDConnectPreset *v1alpha1.ClusterOpenIDConnectPreset, opts v1.CreateOptions) (*v1alpha1.ClusterOpenIDConnectPreset, error)
-	Update(ctx context.Context, clusterOpenIDConnectPreset *v1alpha1.ClusterOpenIDConnectPreset, opts v1.UpdateOptions) (*v1alpha1.ClusterOpenIDConnectPreset, error)
+	Create(ctx context.Context, clusterOpenIDConnectPreset *settingsv1alpha1.ClusterOpenIDConnectPreset, opts v1.CreateOptions) (*settingsv1alpha1.ClusterOpenIDConnectPreset, error)
+	Update(ctx context.Context, clusterOpenIDConnectPreset *settingsv1alpha1.ClusterOpenIDConnectPreset, opts v1.UpdateOptions) (*settingsv1alpha1.ClusterOpenIDConnectPreset, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.ClusterOpenIDConnectPreset, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.ClusterOpenIDConnectPresetList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*settingsv1alpha1.ClusterOpenIDConnectPreset, error)
+	List(ctx context.Context, opts v1.ListOptions) (*settingsv1alpha1.ClusterOpenIDConnectPresetList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ClusterOpenIDConnectPreset, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *settingsv1alpha1.ClusterOpenIDConnectPreset, err error)
 	ClusterOpenIDConnectPresetExpansion
 }
 
 // clusterOpenIDConnectPresets implements ClusterOpenIDConnectPresetInterface
 type clusterOpenIDConnectPresets struct {
-	*gentype.ClientWithList[*v1alpha1.ClusterOpenIDConnectPreset, *v1alpha1.ClusterOpenIDConnectPresetList]
+	*gentype.ClientWithList[*settingsv1alpha1.ClusterOpenIDConnectPreset, *settingsv1alpha1.ClusterOpenIDConnectPresetList]
 }
 
 // newClusterOpenIDConnectPresets returns a ClusterOpenIDConnectPresets
 func newClusterOpenIDConnectPresets(c *SettingsV1alpha1Client) *clusterOpenIDConnectPresets {
 	return &clusterOpenIDConnectPresets{
-		gentype.NewClientWithList[*v1alpha1.ClusterOpenIDConnectPreset, *v1alpha1.ClusterOpenIDConnectPresetList](
+		gentype.NewClientWithList[*settingsv1alpha1.ClusterOpenIDConnectPreset, *settingsv1alpha1.ClusterOpenIDConnectPresetList](
 			"clusteropenidconnectpresets",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v1alpha1.ClusterOpenIDConnectPreset { return &v1alpha1.ClusterOpenIDConnectPreset{} },
-			func() *v1alpha1.ClusterOpenIDConnectPresetList { return &v1alpha1.ClusterOpenIDConnectPresetList{} }),
+			func() *settingsv1alpha1.ClusterOpenIDConnectPreset {
+				return &settingsv1alpha1.ClusterOpenIDConnectPreset{}
+			},
+			func() *settingsv1alpha1.ClusterOpenIDConnectPresetList {
+				return &settingsv1alpha1.ClusterOpenIDConnectPresetList{}
+			},
+		),
 	}
 }

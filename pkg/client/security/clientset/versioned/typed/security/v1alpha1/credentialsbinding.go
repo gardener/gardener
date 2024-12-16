@@ -7,9 +7,9 @@
 package v1alpha1
 
 import (
-	"context"
+	context "context"
 
-	v1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	scheme "github.com/gardener/gardener/pkg/client/security/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -25,31 +25,32 @@ type CredentialsBindingsGetter interface {
 
 // CredentialsBindingInterface has methods to work with CredentialsBinding resources.
 type CredentialsBindingInterface interface {
-	Create(ctx context.Context, credentialsBinding *v1alpha1.CredentialsBinding, opts v1.CreateOptions) (*v1alpha1.CredentialsBinding, error)
-	Update(ctx context.Context, credentialsBinding *v1alpha1.CredentialsBinding, opts v1.UpdateOptions) (*v1alpha1.CredentialsBinding, error)
+	Create(ctx context.Context, credentialsBinding *securityv1alpha1.CredentialsBinding, opts v1.CreateOptions) (*securityv1alpha1.CredentialsBinding, error)
+	Update(ctx context.Context, credentialsBinding *securityv1alpha1.CredentialsBinding, opts v1.UpdateOptions) (*securityv1alpha1.CredentialsBinding, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.CredentialsBinding, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.CredentialsBindingList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*securityv1alpha1.CredentialsBinding, error)
+	List(ctx context.Context, opts v1.ListOptions) (*securityv1alpha1.CredentialsBindingList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.CredentialsBinding, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *securityv1alpha1.CredentialsBinding, err error)
 	CredentialsBindingExpansion
 }
 
 // credentialsBindings implements CredentialsBindingInterface
 type credentialsBindings struct {
-	*gentype.ClientWithList[*v1alpha1.CredentialsBinding, *v1alpha1.CredentialsBindingList]
+	*gentype.ClientWithList[*securityv1alpha1.CredentialsBinding, *securityv1alpha1.CredentialsBindingList]
 }
 
 // newCredentialsBindings returns a CredentialsBindings
 func newCredentialsBindings(c *SecurityV1alpha1Client, namespace string) *credentialsBindings {
 	return &credentialsBindings{
-		gentype.NewClientWithList[*v1alpha1.CredentialsBinding, *v1alpha1.CredentialsBindingList](
+		gentype.NewClientWithList[*securityv1alpha1.CredentialsBinding, *securityv1alpha1.CredentialsBindingList](
 			"credentialsbindings",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			namespace,
-			func() *v1alpha1.CredentialsBinding { return &v1alpha1.CredentialsBinding{} },
-			func() *v1alpha1.CredentialsBindingList { return &v1alpha1.CredentialsBindingList{} }),
+			func() *securityv1alpha1.CredentialsBinding { return &securityv1alpha1.CredentialsBinding{} },
+			func() *securityv1alpha1.CredentialsBindingList { return &securityv1alpha1.CredentialsBindingList{} },
+		),
 	}
 }

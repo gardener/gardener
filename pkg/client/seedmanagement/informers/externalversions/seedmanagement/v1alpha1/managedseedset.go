@@ -7,13 +7,13 @@
 package v1alpha1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	apisseedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	versioned "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	internalinterfaces "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions/internalinterfaces"
-	v1alpha1 "github.com/gardener/gardener/pkg/client/seedmanagement/listers/seedmanagement/v1alpha1"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/client/seedmanagement/listers/seedmanagement/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -24,7 +24,7 @@ import (
 // ManagedSeedSets.
 type ManagedSeedSetInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1alpha1.ManagedSeedSetLister
+	Lister() seedmanagementv1alpha1.ManagedSeedSetLister
 }
 
 type managedSeedSetInformer struct {
@@ -59,7 +59,7 @@ func NewFilteredManagedSeedSetInformer(client versioned.Interface, namespace str
 				return client.SeedmanagementV1alpha1().ManagedSeedSets(namespace).Watch(context.TODO(), options)
 			},
 		},
-		&seedmanagementv1alpha1.ManagedSeedSet{},
+		&apisseedmanagementv1alpha1.ManagedSeedSet{},
 		resyncPeriod,
 		indexers,
 	)
@@ -70,9 +70,9 @@ func (f *managedSeedSetInformer) defaultInformer(client versioned.Interface, res
 }
 
 func (f *managedSeedSetInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&seedmanagementv1alpha1.ManagedSeedSet{}, f.defaultInformer)
+	return f.factory.InformerFor(&apisseedmanagementv1alpha1.ManagedSeedSet{}, f.defaultInformer)
 }
 
-func (f *managedSeedSetInformer) Lister() v1alpha1.ManagedSeedSetLister {
-	return v1alpha1.NewManagedSeedSetLister(f.Informer().GetIndexer())
+func (f *managedSeedSetInformer) Lister() seedmanagementv1alpha1.ManagedSeedSetLister {
+	return seedmanagementv1alpha1.NewManagedSeedSetLister(f.Informer().GetIndexer())
 }

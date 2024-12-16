@@ -7,116 +7,34 @@
 package fake
 
 import (
-	"context"
-
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/client/security/clientset/versioned/typed/security/v1alpha1"
+	gentype "k8s.io/client-go/gentype"
 )
 
-// FakeCredentialsBindings implements CredentialsBindingInterface
-type FakeCredentialsBindings struct {
+// fakeCredentialsBindings implements CredentialsBindingInterface
+type fakeCredentialsBindings struct {
+	*gentype.FakeClientWithList[*v1alpha1.CredentialsBinding, *v1alpha1.CredentialsBindingList]
 	Fake *FakeSecurityV1alpha1
-	ns   string
 }
 
-var credentialsbindingsResource = v1alpha1.SchemeGroupVersion.WithResource("credentialsbindings")
-
-var credentialsbindingsKind = v1alpha1.SchemeGroupVersion.WithKind("CredentialsBinding")
-
-// Get takes name of the credentialsBinding, and returns the corresponding credentialsBinding object, and an error if there is any.
-func (c *FakeCredentialsBindings) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.CredentialsBinding, err error) {
-	emptyResult := &v1alpha1.CredentialsBinding{}
-	obj, err := c.Fake.
-		Invokes(testing.NewGetActionWithOptions(credentialsbindingsResource, c.ns, name, options), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
+func newFakeCredentialsBindings(fake *FakeSecurityV1alpha1, namespace string) securityv1alpha1.CredentialsBindingInterface {
+	return &fakeCredentialsBindings{
+		gentype.NewFakeClientWithList[*v1alpha1.CredentialsBinding, *v1alpha1.CredentialsBindingList](
+			fake.Fake,
+			namespace,
+			v1alpha1.SchemeGroupVersion.WithResource("credentialsbindings"),
+			v1alpha1.SchemeGroupVersion.WithKind("CredentialsBinding"),
+			func() *v1alpha1.CredentialsBinding { return &v1alpha1.CredentialsBinding{} },
+			func() *v1alpha1.CredentialsBindingList { return &v1alpha1.CredentialsBindingList{} },
+			func(dst, src *v1alpha1.CredentialsBindingList) { dst.ListMeta = src.ListMeta },
+			func(list *v1alpha1.CredentialsBindingList) []*v1alpha1.CredentialsBinding {
+				return gentype.ToPointerSlice(list.Items)
+			},
+			func(list *v1alpha1.CredentialsBindingList, items []*v1alpha1.CredentialsBinding) {
+				list.Items = gentype.FromPointerSlice(items)
+			},
+		),
+		fake,
 	}
-	return obj.(*v1alpha1.CredentialsBinding), err
-}
-
-// List takes label and field selectors, and returns the list of CredentialsBindings that match those selectors.
-func (c *FakeCredentialsBindings) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.CredentialsBindingList, err error) {
-	emptyResult := &v1alpha1.CredentialsBindingList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewListActionWithOptions(credentialsbindingsResource, credentialsbindingsKind, c.ns, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-
-	label, _, _ := testing.ExtractFromListOptions(opts)
-	if label == nil {
-		label = labels.Everything()
-	}
-	list := &v1alpha1.CredentialsBindingList{ListMeta: obj.(*v1alpha1.CredentialsBindingList).ListMeta}
-	for _, item := range obj.(*v1alpha1.CredentialsBindingList).Items {
-		if label.Matches(labels.Set(item.Labels)) {
-			list.Items = append(list.Items, item)
-		}
-	}
-	return list, err
-}
-
-// Watch returns a watch.Interface that watches the requested credentialsBindings.
-func (c *FakeCredentialsBindings) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewWatchActionWithOptions(credentialsbindingsResource, c.ns, opts))
-
-}
-
-// Create takes the representation of a credentialsBinding and creates it.  Returns the server's representation of the credentialsBinding, and an error, if there is any.
-func (c *FakeCredentialsBindings) Create(ctx context.Context, credentialsBinding *v1alpha1.CredentialsBinding, opts v1.CreateOptions) (result *v1alpha1.CredentialsBinding, err error) {
-	emptyResult := &v1alpha1.CredentialsBinding{}
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateActionWithOptions(credentialsbindingsResource, c.ns, credentialsBinding, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.CredentialsBinding), err
-}
-
-// Update takes the representation of a credentialsBinding and updates it. Returns the server's representation of the credentialsBinding, and an error, if there is any.
-func (c *FakeCredentialsBindings) Update(ctx context.Context, credentialsBinding *v1alpha1.CredentialsBinding, opts v1.UpdateOptions) (result *v1alpha1.CredentialsBinding, err error) {
-	emptyResult := &v1alpha1.CredentialsBinding{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateActionWithOptions(credentialsbindingsResource, c.ns, credentialsBinding, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.CredentialsBinding), err
-}
-
-// Delete takes name of the credentialsBinding and deletes it. Returns an error if one occurs.
-func (c *FakeCredentialsBindings) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(credentialsbindingsResource, c.ns, name, opts), &v1alpha1.CredentialsBinding{})
-
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *FakeCredentialsBindings) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionActionWithOptions(credentialsbindingsResource, c.ns, opts, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1alpha1.CredentialsBindingList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched credentialsBinding.
-func (c *FakeCredentialsBindings) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.CredentialsBinding, err error) {
-	emptyResult := &v1alpha1.CredentialsBinding{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(credentialsbindingsResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.CredentialsBinding), err
 }

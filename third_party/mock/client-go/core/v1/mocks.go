@@ -548,6 +548,21 @@ func (mr *MockPodInterfaceMockRecorder) UpdateEphemeralContainers(ctx, podName, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEphemeralContainers", reflect.TypeOf((*MockPodInterface)(nil).UpdateEphemeralContainers), ctx, podName, pod, opts)
 }
 
+// UpdateResize mocks base method.
+func (m *MockPodInterface) UpdateResize(ctx context.Context, podName string, pod *v1.Pod, opts v11.UpdateOptions) (*v1.Pod, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateResize", ctx, podName, pod, opts)
+	ret0, _ := ret[0].(*v1.Pod)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateResize indicates an expected call of UpdateResize.
+func (mr *MockPodInterfaceMockRecorder) UpdateResize(ctx, podName, pod, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateResize", reflect.TypeOf((*MockPodInterface)(nil).UpdateResize), ctx, podName, pod, opts)
+}
+
 // UpdateStatus mocks base method.
 func (m *MockPodInterface) UpdateStatus(ctx context.Context, pod *v1.Pod, opts v11.UpdateOptions) (*v1.Pod, error) {
 	m.ctrl.T.Helper()

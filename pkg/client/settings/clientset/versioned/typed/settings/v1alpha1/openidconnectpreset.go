@@ -7,9 +7,9 @@
 package v1alpha1
 
 import (
-	"context"
+	context "context"
 
-	v1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
+	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	scheme "github.com/gardener/gardener/pkg/client/settings/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -25,31 +25,32 @@ type OpenIDConnectPresetsGetter interface {
 
 // OpenIDConnectPresetInterface has methods to work with OpenIDConnectPreset resources.
 type OpenIDConnectPresetInterface interface {
-	Create(ctx context.Context, openIDConnectPreset *v1alpha1.OpenIDConnectPreset, opts v1.CreateOptions) (*v1alpha1.OpenIDConnectPreset, error)
-	Update(ctx context.Context, openIDConnectPreset *v1alpha1.OpenIDConnectPreset, opts v1.UpdateOptions) (*v1alpha1.OpenIDConnectPreset, error)
+	Create(ctx context.Context, openIDConnectPreset *settingsv1alpha1.OpenIDConnectPreset, opts v1.CreateOptions) (*settingsv1alpha1.OpenIDConnectPreset, error)
+	Update(ctx context.Context, openIDConnectPreset *settingsv1alpha1.OpenIDConnectPreset, opts v1.UpdateOptions) (*settingsv1alpha1.OpenIDConnectPreset, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.OpenIDConnectPreset, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.OpenIDConnectPresetList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*settingsv1alpha1.OpenIDConnectPreset, error)
+	List(ctx context.Context, opts v1.ListOptions) (*settingsv1alpha1.OpenIDConnectPresetList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.OpenIDConnectPreset, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *settingsv1alpha1.OpenIDConnectPreset, err error)
 	OpenIDConnectPresetExpansion
 }
 
 // openIDConnectPresets implements OpenIDConnectPresetInterface
 type openIDConnectPresets struct {
-	*gentype.ClientWithList[*v1alpha1.OpenIDConnectPreset, *v1alpha1.OpenIDConnectPresetList]
+	*gentype.ClientWithList[*settingsv1alpha1.OpenIDConnectPreset, *settingsv1alpha1.OpenIDConnectPresetList]
 }
 
 // newOpenIDConnectPresets returns a OpenIDConnectPresets
 func newOpenIDConnectPresets(c *SettingsV1alpha1Client, namespace string) *openIDConnectPresets {
 	return &openIDConnectPresets{
-		gentype.NewClientWithList[*v1alpha1.OpenIDConnectPreset, *v1alpha1.OpenIDConnectPresetList](
+		gentype.NewClientWithList[*settingsv1alpha1.OpenIDConnectPreset, *settingsv1alpha1.OpenIDConnectPresetList](
 			"openidconnectpresets",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			namespace,
-			func() *v1alpha1.OpenIDConnectPreset { return &v1alpha1.OpenIDConnectPreset{} },
-			func() *v1alpha1.OpenIDConnectPresetList { return &v1alpha1.OpenIDConnectPresetList{} }),
+			func() *settingsv1alpha1.OpenIDConnectPreset { return &settingsv1alpha1.OpenIDConnectPreset{} },
+			func() *settingsv1alpha1.OpenIDConnectPresetList { return &settingsv1alpha1.OpenIDConnectPresetList{} },
+		),
 	}
 }

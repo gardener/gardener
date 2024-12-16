@@ -7,9 +7,9 @@
 package v1alpha1
 
 import (
-	"context"
+	context "context"
 
-	v1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	scheme "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -25,33 +25,34 @@ type GardenletsGetter interface {
 
 // GardenletInterface has methods to work with Gardenlet resources.
 type GardenletInterface interface {
-	Create(ctx context.Context, gardenlet *v1alpha1.Gardenlet, opts v1.CreateOptions) (*v1alpha1.Gardenlet, error)
-	Update(ctx context.Context, gardenlet *v1alpha1.Gardenlet, opts v1.UpdateOptions) (*v1alpha1.Gardenlet, error)
+	Create(ctx context.Context, gardenlet *seedmanagementv1alpha1.Gardenlet, opts v1.CreateOptions) (*seedmanagementv1alpha1.Gardenlet, error)
+	Update(ctx context.Context, gardenlet *seedmanagementv1alpha1.Gardenlet, opts v1.UpdateOptions) (*seedmanagementv1alpha1.Gardenlet, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, gardenlet *v1alpha1.Gardenlet, opts v1.UpdateOptions) (*v1alpha1.Gardenlet, error)
+	UpdateStatus(ctx context.Context, gardenlet *seedmanagementv1alpha1.Gardenlet, opts v1.UpdateOptions) (*seedmanagementv1alpha1.Gardenlet, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.Gardenlet, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.GardenletList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*seedmanagementv1alpha1.Gardenlet, error)
+	List(ctx context.Context, opts v1.ListOptions) (*seedmanagementv1alpha1.GardenletList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.Gardenlet, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *seedmanagementv1alpha1.Gardenlet, err error)
 	GardenletExpansion
 }
 
 // gardenlets implements GardenletInterface
 type gardenlets struct {
-	*gentype.ClientWithList[*v1alpha1.Gardenlet, *v1alpha1.GardenletList]
+	*gentype.ClientWithList[*seedmanagementv1alpha1.Gardenlet, *seedmanagementv1alpha1.GardenletList]
 }
 
 // newGardenlets returns a Gardenlets
 func newGardenlets(c *SeedmanagementV1alpha1Client, namespace string) *gardenlets {
 	return &gardenlets{
-		gentype.NewClientWithList[*v1alpha1.Gardenlet, *v1alpha1.GardenletList](
+		gentype.NewClientWithList[*seedmanagementv1alpha1.Gardenlet, *seedmanagementv1alpha1.GardenletList](
 			"gardenlets",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			namespace,
-			func() *v1alpha1.Gardenlet { return &v1alpha1.Gardenlet{} },
-			func() *v1alpha1.GardenletList { return &v1alpha1.GardenletList{} }),
+			func() *seedmanagementv1alpha1.Gardenlet { return &seedmanagementv1alpha1.Gardenlet{} },
+			func() *seedmanagementv1alpha1.GardenletList { return &seedmanagementv1alpha1.GardenletList{} },
+		),
 	}
 }

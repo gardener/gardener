@@ -7,13 +7,13 @@
 package v1alpha1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	apisseedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	versioned "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	internalinterfaces "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions/internalinterfaces"
-	v1alpha1 "github.com/gardener/gardener/pkg/client/seedmanagement/listers/seedmanagement/v1alpha1"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/client/seedmanagement/listers/seedmanagement/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -24,7 +24,7 @@ import (
 // Gardenlets.
 type GardenletInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1alpha1.GardenletLister
+	Lister() seedmanagementv1alpha1.GardenletLister
 }
 
 type gardenletInformer struct {
@@ -59,7 +59,7 @@ func NewFilteredGardenletInformer(client versioned.Interface, namespace string, 
 				return client.SeedmanagementV1alpha1().Gardenlets(namespace).Watch(context.TODO(), options)
 			},
 		},
-		&seedmanagementv1alpha1.Gardenlet{},
+		&apisseedmanagementv1alpha1.Gardenlet{},
 		resyncPeriod,
 		indexers,
 	)
@@ -70,9 +70,9 @@ func (f *gardenletInformer) defaultInformer(client versioned.Interface, resyncPe
 }
 
 func (f *gardenletInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&seedmanagementv1alpha1.Gardenlet{}, f.defaultInformer)
+	return f.factory.InformerFor(&apisseedmanagementv1alpha1.Gardenlet{}, f.defaultInformer)
 }
 
-func (f *gardenletInformer) Lister() v1alpha1.GardenletLister {
-	return v1alpha1.NewGardenletLister(f.Informer().GetIndexer())
+func (f *gardenletInformer) Lister() seedmanagementv1alpha1.GardenletLister {
+	return seedmanagementv1alpha1.NewGardenletLister(f.Informer().GetIndexer())
 }

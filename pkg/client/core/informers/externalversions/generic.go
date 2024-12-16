@@ -7,7 +7,7 @@
 package externalversions
 
 import (
-	"fmt"
+	fmt "fmt"
 
 	v1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"

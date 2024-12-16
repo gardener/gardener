@@ -7,9 +7,9 @@
 package v1beta1
 
 import (
-	"context"
+	context "context"
 
-	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	corev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	scheme "github.com/gardener/gardener/pkg/client/core/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -25,31 +25,32 @@ type InternalSecretsGetter interface {
 
 // InternalSecretInterface has methods to work with InternalSecret resources.
 type InternalSecretInterface interface {
-	Create(ctx context.Context, internalSecret *v1beta1.InternalSecret, opts v1.CreateOptions) (*v1beta1.InternalSecret, error)
-	Update(ctx context.Context, internalSecret *v1beta1.InternalSecret, opts v1.UpdateOptions) (*v1beta1.InternalSecret, error)
+	Create(ctx context.Context, internalSecret *corev1beta1.InternalSecret, opts v1.CreateOptions) (*corev1beta1.InternalSecret, error)
+	Update(ctx context.Context, internalSecret *corev1beta1.InternalSecret, opts v1.UpdateOptions) (*corev1beta1.InternalSecret, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.InternalSecret, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v1beta1.InternalSecretList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*corev1beta1.InternalSecret, error)
+	List(ctx context.Context, opts v1.ListOptions) (*corev1beta1.InternalSecretList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.InternalSecret, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *corev1beta1.InternalSecret, err error)
 	InternalSecretExpansion
 }
 
 // internalSecrets implements InternalSecretInterface
 type internalSecrets struct {
-	*gentype.ClientWithList[*v1beta1.InternalSecret, *v1beta1.InternalSecretList]
+	*gentype.ClientWithList[*corev1beta1.InternalSecret, *corev1beta1.InternalSecretList]
 }
 
 // newInternalSecrets returns a InternalSecrets
 func newInternalSecrets(c *CoreV1beta1Client, namespace string) *internalSecrets {
 	return &internalSecrets{
-		gentype.NewClientWithList[*v1beta1.InternalSecret, *v1beta1.InternalSecretList](
+		gentype.NewClientWithList[*corev1beta1.InternalSecret, *corev1beta1.InternalSecretList](
 			"internalsecrets",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			namespace,
-			func() *v1beta1.InternalSecret { return &v1beta1.InternalSecret{} },
-			func() *v1beta1.InternalSecretList { return &v1beta1.InternalSecretList{} }),
+			func() *corev1beta1.InternalSecret { return &corev1beta1.InternalSecret{} },
+			func() *corev1beta1.InternalSecretList { return &corev1beta1.InternalSecretList{} },
+		),
 	}
 }

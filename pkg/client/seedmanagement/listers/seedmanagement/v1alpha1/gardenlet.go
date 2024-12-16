@@ -7,10 +7,10 @@
 package v1alpha1
 
 import (
-	v1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // GardenletLister helps list Gardenlets.
@@ -18,7 +18,7 @@ import (
 type GardenletLister interface {
 	// List lists all Gardenlets in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1alpha1.Gardenlet, err error)
+	List(selector labels.Selector) (ret []*seedmanagementv1alpha1.Gardenlet, err error)
 	// Gardenlets returns an object that can list and get Gardenlets.
 	Gardenlets(namespace string) GardenletNamespaceLister
 	GardenletListerExpansion
@@ -26,17 +26,17 @@ type GardenletLister interface {
 
 // gardenletLister implements the GardenletLister interface.
 type gardenletLister struct {
-	listers.ResourceIndexer[*v1alpha1.Gardenlet]
+	listers.ResourceIndexer[*seedmanagementv1alpha1.Gardenlet]
 }
 
 // NewGardenletLister returns a new GardenletLister.
 func NewGardenletLister(indexer cache.Indexer) GardenletLister {
-	return &gardenletLister{listers.New[*v1alpha1.Gardenlet](indexer, v1alpha1.Resource("gardenlet"))}
+	return &gardenletLister{listers.New[*seedmanagementv1alpha1.Gardenlet](indexer, seedmanagementv1alpha1.Resource("gardenlet"))}
 }
 
 // Gardenlets returns an object that can list and get Gardenlets.
 func (s *gardenletLister) Gardenlets(namespace string) GardenletNamespaceLister {
-	return gardenletNamespaceLister{listers.NewNamespaced[*v1alpha1.Gardenlet](s.ResourceIndexer, namespace)}
+	return gardenletNamespaceLister{listers.NewNamespaced[*seedmanagementv1alpha1.Gardenlet](s.ResourceIndexer, namespace)}
 }
 
 // GardenletNamespaceLister helps list and get Gardenlets.
@@ -44,15 +44,15 @@ func (s *gardenletLister) Gardenlets(namespace string) GardenletNamespaceLister 
 type GardenletNamespaceLister interface {
 	// List lists all Gardenlets in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1alpha1.Gardenlet, err error)
+	List(selector labels.Selector) (ret []*seedmanagementv1alpha1.Gardenlet, err error)
 	// Get retrieves the Gardenlet from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1alpha1.Gardenlet, error)
+	Get(name string) (*seedmanagementv1alpha1.Gardenlet, error)
 	GardenletNamespaceListerExpansion
 }
 
 // gardenletNamespaceLister implements the GardenletNamespaceLister
 // interface.
 type gardenletNamespaceLister struct {
-	listers.ResourceIndexer[*v1alpha1.Gardenlet]
+	listers.ResourceIndexer[*seedmanagementv1alpha1.Gardenlet]
 }

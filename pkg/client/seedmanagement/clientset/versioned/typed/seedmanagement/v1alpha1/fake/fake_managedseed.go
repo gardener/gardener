@@ -7,129 +7,34 @@
 package fake
 
 import (
-	"context"
-
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/typed/seedmanagement/v1alpha1"
+	gentype "k8s.io/client-go/gentype"
 )
 
-// FakeManagedSeeds implements ManagedSeedInterface
-type FakeManagedSeeds struct {
+// fakeManagedSeeds implements ManagedSeedInterface
+type fakeManagedSeeds struct {
+	*gentype.FakeClientWithList[*v1alpha1.ManagedSeed, *v1alpha1.ManagedSeedList]
 	Fake *FakeSeedmanagementV1alpha1
-	ns   string
 }
 
-var managedseedsResource = v1alpha1.SchemeGroupVersion.WithResource("managedseeds")
-
-var managedseedsKind = v1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")
-
-// Get takes name of the managedSeed, and returns the corresponding managedSeed object, and an error if there is any.
-func (c *FakeManagedSeeds) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ManagedSeed, err error) {
-	emptyResult := &v1alpha1.ManagedSeed{}
-	obj, err := c.Fake.
-		Invokes(testing.NewGetActionWithOptions(managedseedsResource, c.ns, name, options), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
+func newFakeManagedSeeds(fake *FakeSeedmanagementV1alpha1, namespace string) seedmanagementv1alpha1.ManagedSeedInterface {
+	return &fakeManagedSeeds{
+		gentype.NewFakeClientWithList[*v1alpha1.ManagedSeed, *v1alpha1.ManagedSeedList](
+			fake.Fake,
+			namespace,
+			v1alpha1.SchemeGroupVersion.WithResource("managedseeds"),
+			v1alpha1.SchemeGroupVersion.WithKind("ManagedSeed"),
+			func() *v1alpha1.ManagedSeed { return &v1alpha1.ManagedSeed{} },
+			func() *v1alpha1.ManagedSeedList { return &v1alpha1.ManagedSeedList{} },
+			func(dst, src *v1alpha1.ManagedSeedList) { dst.ListMeta = src.ListMeta },
+			func(list *v1alpha1.ManagedSeedList) []*v1alpha1.ManagedSeed {
+				return gentype.ToPointerSlice(list.Items)
+			},
+			func(list *v1alpha1.ManagedSeedList, items []*v1alpha1.ManagedSeed) {
+				list.Items = gentype.FromPointerSlice(items)
+			},
+		),
+		fake,
 	}
-	return obj.(*v1alpha1.ManagedSeed), err
-}
-
-// List takes label and field selectors, and returns the list of ManagedSeeds that match those selectors.
-func (c *FakeManagedSeeds) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.ManagedSeedList, err error) {
-	emptyResult := &v1alpha1.ManagedSeedList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewListActionWithOptions(managedseedsResource, managedseedsKind, c.ns, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-
-	label, _, _ := testing.ExtractFromListOptions(opts)
-	if label == nil {
-		label = labels.Everything()
-	}
-	list := &v1alpha1.ManagedSeedList{ListMeta: obj.(*v1alpha1.ManagedSeedList).ListMeta}
-	for _, item := range obj.(*v1alpha1.ManagedSeedList).Items {
-		if label.Matches(labels.Set(item.Labels)) {
-			list.Items = append(list.Items, item)
-		}
-	}
-	return list, err
-}
-
-// Watch returns a watch.Interface that watches the requested managedSeeds.
-func (c *FakeManagedSeeds) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewWatchActionWithOptions(managedseedsResource, c.ns, opts))
-
-}
-
-// Create takes the representation of a managedSeed and creates it.  Returns the server's representation of the managedSeed, and an error, if there is any.
-func (c *FakeManagedSeeds) Create(ctx context.Context, managedSeed *v1alpha1.ManagedSeed, opts v1.CreateOptions) (result *v1alpha1.ManagedSeed, err error) {
-	emptyResult := &v1alpha1.ManagedSeed{}
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateActionWithOptions(managedseedsResource, c.ns, managedSeed, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.ManagedSeed), err
-}
-
-// Update takes the representation of a managedSeed and updates it. Returns the server's representation of the managedSeed, and an error, if there is any.
-func (c *FakeManagedSeeds) Update(ctx context.Context, managedSeed *v1alpha1.ManagedSeed, opts v1.UpdateOptions) (result *v1alpha1.ManagedSeed, err error) {
-	emptyResult := &v1alpha1.ManagedSeed{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateActionWithOptions(managedseedsResource, c.ns, managedSeed, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.ManagedSeed), err
-}
-
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeManagedSeeds) UpdateStatus(ctx context.Context, managedSeed *v1alpha1.ManagedSeed, opts v1.UpdateOptions) (result *v1alpha1.ManagedSeed, err error) {
-	emptyResult := &v1alpha1.ManagedSeed{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceActionWithOptions(managedseedsResource, "status", c.ns, managedSeed, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.ManagedSeed), err
-}
-
-// Delete takes name of the managedSeed and deletes it. Returns an error if one occurs.
-func (c *FakeManagedSeeds) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(managedseedsResource, c.ns, name, opts), &v1alpha1.ManagedSeed{})
-
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *FakeManagedSeeds) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionActionWithOptions(managedseedsResource, c.ns, opts, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1alpha1.ManagedSeedList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched managedSeed.
-func (c *FakeManagedSeeds) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ManagedSeed, err error) {
-	emptyResult := &v1alpha1.ManagedSeed{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(managedseedsResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1alpha1.ManagedSeed), err
 }

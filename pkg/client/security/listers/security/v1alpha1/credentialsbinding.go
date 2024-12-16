@@ -7,10 +7,10 @@
 package v1alpha1
 
 import (
-	v1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // CredentialsBindingLister helps list CredentialsBindings.
@@ -18,7 +18,7 @@ import (
 type CredentialsBindingLister interface {
 	// List lists all CredentialsBindings in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1alpha1.CredentialsBinding, err error)
+	List(selector labels.Selector) (ret []*securityv1alpha1.CredentialsBinding, err error)
 	// CredentialsBindings returns an object that can list and get CredentialsBindings.
 	CredentialsBindings(namespace string) CredentialsBindingNamespaceLister
 	CredentialsBindingListerExpansion
@@ -26,17 +26,17 @@ type CredentialsBindingLister interface {
 
 // credentialsBindingLister implements the CredentialsBindingLister interface.
 type credentialsBindingLister struct {
-	listers.ResourceIndexer[*v1alpha1.CredentialsBinding]
+	listers.ResourceIndexer[*securityv1alpha1.CredentialsBinding]
 }
 
 // NewCredentialsBindingLister returns a new CredentialsBindingLister.
 func NewCredentialsBindingLister(indexer cache.Indexer) CredentialsBindingLister {
-	return &credentialsBindingLister{listers.New[*v1alpha1.CredentialsBinding](indexer, v1alpha1.Resource("credentialsbinding"))}
+	return &credentialsBindingLister{listers.New[*securityv1alpha1.CredentialsBinding](indexer, securityv1alpha1.Resource("credentialsbinding"))}
 }
 
 // CredentialsBindings returns an object that can list and get CredentialsBindings.
 func (s *credentialsBindingLister) CredentialsBindings(namespace string) CredentialsBindingNamespaceLister {
-	return credentialsBindingNamespaceLister{listers.NewNamespaced[*v1alpha1.CredentialsBinding](s.ResourceIndexer, namespace)}
+	return credentialsBindingNamespaceLister{listers.NewNamespaced[*securityv1alpha1.CredentialsBinding](s.ResourceIndexer, namespace)}
 }
 
 // CredentialsBindingNamespaceLister helps list and get CredentialsBindings.
@@ -44,15 +44,15 @@ func (s *credentialsBindingLister) CredentialsBindings(namespace string) Credent
 type CredentialsBindingNamespaceLister interface {
 	// List lists all CredentialsBindings in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1alpha1.CredentialsBinding, err error)
+	List(selector labels.Selector) (ret []*securityv1alpha1.CredentialsBinding, err error)
 	// Get retrieves the CredentialsBinding from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1alpha1.CredentialsBinding, error)
+	Get(name string) (*securityv1alpha1.CredentialsBinding, error)
 	CredentialsBindingNamespaceListerExpansion
 }
 
 // credentialsBindingNamespaceLister implements the CredentialsBindingNamespaceLister
 // interface.
 type credentialsBindingNamespaceLister struct {
-	listers.ResourceIndexer[*v1alpha1.CredentialsBinding]
+	listers.ResourceIndexer[*securityv1alpha1.CredentialsBinding]
 }

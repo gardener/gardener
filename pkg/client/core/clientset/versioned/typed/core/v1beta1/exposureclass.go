@@ -7,9 +7,9 @@
 package v1beta1
 
 import (
-	"context"
+	context "context"
 
-	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	corev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	scheme "github.com/gardener/gardener/pkg/client/core/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -25,31 +25,32 @@ type ExposureClassesGetter interface {
 
 // ExposureClassInterface has methods to work with ExposureClass resources.
 type ExposureClassInterface interface {
-	Create(ctx context.Context, exposureClass *v1beta1.ExposureClass, opts v1.CreateOptions) (*v1beta1.ExposureClass, error)
-	Update(ctx context.Context, exposureClass *v1beta1.ExposureClass, opts v1.UpdateOptions) (*v1beta1.ExposureClass, error)
+	Create(ctx context.Context, exposureClass *corev1beta1.ExposureClass, opts v1.CreateOptions) (*corev1beta1.ExposureClass, error)
+	Update(ctx context.Context, exposureClass *corev1beta1.ExposureClass, opts v1.UpdateOptions) (*corev1beta1.ExposureClass, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.ExposureClass, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v1beta1.ExposureClassList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*corev1beta1.ExposureClass, error)
+	List(ctx context.Context, opts v1.ListOptions) (*corev1beta1.ExposureClassList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.ExposureClass, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *corev1beta1.ExposureClass, err error)
 	ExposureClassExpansion
 }
 
 // exposureClasses implements ExposureClassInterface
 type exposureClasses struct {
-	*gentype.ClientWithList[*v1beta1.ExposureClass, *v1beta1.ExposureClassList]
+	*gentype.ClientWithList[*corev1beta1.ExposureClass, *corev1beta1.ExposureClassList]
 }
 
 // newExposureClasses returns a ExposureClasses
 func newExposureClasses(c *CoreV1beta1Client) *exposureClasses {
 	return &exposureClasses{
-		gentype.NewClientWithList[*v1beta1.ExposureClass, *v1beta1.ExposureClassList](
+		gentype.NewClientWithList[*corev1beta1.ExposureClass, *corev1beta1.ExposureClassList](
 			"exposureclasses",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v1beta1.ExposureClass { return &v1beta1.ExposureClass{} },
-			func() *v1beta1.ExposureClassList { return &v1beta1.ExposureClassList{} }),
+			func() *corev1beta1.ExposureClass { return &corev1beta1.ExposureClass{} },
+			func() *corev1beta1.ExposureClassList { return &corev1beta1.ExposureClassList{} },
+		),
 	}
 }

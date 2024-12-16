@@ -7,108 +7,34 @@
 package fake
 
 import (
-	"context"
-
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	corev1beta1 "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
+	gentype "k8s.io/client-go/gentype"
 )
 
-// FakeExposureClasses implements ExposureClassInterface
-type FakeExposureClasses struct {
+// fakeExposureClasses implements ExposureClassInterface
+type fakeExposureClasses struct {
+	*gentype.FakeClientWithList[*v1beta1.ExposureClass, *v1beta1.ExposureClassList]
 	Fake *FakeCoreV1beta1
 }
 
-var exposureclassesResource = v1beta1.SchemeGroupVersion.WithResource("exposureclasses")
-
-var exposureclassesKind = v1beta1.SchemeGroupVersion.WithKind("ExposureClass")
-
-// Get takes name of the exposureClass, and returns the corresponding exposureClass object, and an error if there is any.
-func (c *FakeExposureClasses) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.ExposureClass, err error) {
-	emptyResult := &v1beta1.ExposureClass{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootGetActionWithOptions(exposureclassesResource, name, options), emptyResult)
-	if obj == nil {
-		return emptyResult, err
+func newFakeExposureClasses(fake *FakeCoreV1beta1) corev1beta1.ExposureClassInterface {
+	return &fakeExposureClasses{
+		gentype.NewFakeClientWithList[*v1beta1.ExposureClass, *v1beta1.ExposureClassList](
+			fake.Fake,
+			"",
+			v1beta1.SchemeGroupVersion.WithResource("exposureclasses"),
+			v1beta1.SchemeGroupVersion.WithKind("ExposureClass"),
+			func() *v1beta1.ExposureClass { return &v1beta1.ExposureClass{} },
+			func() *v1beta1.ExposureClassList { return &v1beta1.ExposureClassList{} },
+			func(dst, src *v1beta1.ExposureClassList) { dst.ListMeta = src.ListMeta },
+			func(list *v1beta1.ExposureClassList) []*v1beta1.ExposureClass {
+				return gentype.ToPointerSlice(list.Items)
+			},
+			func(list *v1beta1.ExposureClassList, items []*v1beta1.ExposureClass) {
+				list.Items = gentype.FromPointerSlice(items)
+			},
+		),
+		fake,
 	}
-	return obj.(*v1beta1.ExposureClass), err
-}
-
-// List takes label and field selectors, and returns the list of ExposureClasses that match those selectors.
-func (c *FakeExposureClasses) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.ExposureClassList, err error) {
-	emptyResult := &v1beta1.ExposureClassList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootListActionWithOptions(exposureclassesResource, exposureclassesKind, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-
-	label, _, _ := testing.ExtractFromListOptions(opts)
-	if label == nil {
-		label = labels.Everything()
-	}
-	list := &v1beta1.ExposureClassList{ListMeta: obj.(*v1beta1.ExposureClassList).ListMeta}
-	for _, item := range obj.(*v1beta1.ExposureClassList).Items {
-		if label.Matches(labels.Set(item.Labels)) {
-			list.Items = append(list.Items, item)
-		}
-	}
-	return list, err
-}
-
-// Watch returns a watch.Interface that watches the requested exposureClasses.
-func (c *FakeExposureClasses) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewRootWatchActionWithOptions(exposureclassesResource, opts))
-}
-
-// Create takes the representation of a exposureClass and creates it.  Returns the server's representation of the exposureClass, and an error, if there is any.
-func (c *FakeExposureClasses) Create(ctx context.Context, exposureClass *v1beta1.ExposureClass, opts v1.CreateOptions) (result *v1beta1.ExposureClass, err error) {
-	emptyResult := &v1beta1.ExposureClass{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateActionWithOptions(exposureclassesResource, exposureClass, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.ExposureClass), err
-}
-
-// Update takes the representation of a exposureClass and updates it. Returns the server's representation of the exposureClass, and an error, if there is any.
-func (c *FakeExposureClasses) Update(ctx context.Context, exposureClass *v1beta1.ExposureClass, opts v1.UpdateOptions) (result *v1beta1.ExposureClass, err error) {
-	emptyResult := &v1beta1.ExposureClass{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateActionWithOptions(exposureclassesResource, exposureClass, opts), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.ExposureClass), err
-}
-
-// Delete takes name of the exposureClass and deletes it. Returns an error if one occurs.
-func (c *FakeExposureClasses) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteActionWithOptions(exposureclassesResource, name, opts), &v1beta1.ExposureClass{})
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *FakeExposureClasses) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionActionWithOptions(exposureclassesResource, opts, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1beta1.ExposureClassList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched exposureClass.
-func (c *FakeExposureClasses) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.ExposureClass, err error) {
-	emptyResult := &v1beta1.ExposureClass{}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceActionWithOptions(exposureclassesResource, name, pt, data, opts, subresources...), emptyResult)
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.ExposureClass), err
 }

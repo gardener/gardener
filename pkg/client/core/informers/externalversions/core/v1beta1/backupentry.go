@@ -7,13 +7,13 @@
 package v1beta1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	corev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	apiscorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	versioned "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	internalinterfaces "github.com/gardener/gardener/pkg/client/core/informers/externalversions/internalinterfaces"
-	v1beta1 "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	corev1beta1 "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -24,7 +24,7 @@ import (
 // BackupEntries.
 type BackupEntryInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1beta1.BackupEntryLister
+	Lister() corev1beta1.BackupEntryLister
 }
 
 type backupEntryInformer struct {
@@ -59,7 +59,7 @@ func NewFilteredBackupEntryInformer(client versioned.Interface, namespace string
 				return client.CoreV1beta1().BackupEntries(namespace).Watch(context.TODO(), options)
 			},
 		},
-		&corev1beta1.BackupEntry{},
+		&apiscorev1beta1.BackupEntry{},
 		resyncPeriod,
 		indexers,
 	)
@@ -70,9 +70,9 @@ func (f *backupEntryInformer) defaultInformer(client versioned.Interface, resync
 }
 
 func (f *backupEntryInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&corev1beta1.BackupEntry{}, f.defaultInformer)
+	return f.factory.InformerFor(&apiscorev1beta1.BackupEntry{}, f.defaultInformer)
 }
 
-func (f *backupEntryInformer) Lister() v1beta1.BackupEntryLister {
-	return v1beta1.NewBackupEntryLister(f.Informer().GetIndexer())
+func (f *backupEntryInformer) Lister() corev1beta1.BackupEntryLister {
+	return corev1beta1.NewBackupEntryLister(f.Informer().GetIndexer())
 }

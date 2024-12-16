@@ -17,11 +17,11 @@ type FakeSettingsV1alpha1 struct {
 }
 
 func (c *FakeSettingsV1alpha1) ClusterOpenIDConnectPresets() v1alpha1.ClusterOpenIDConnectPresetInterface {
-	return &FakeClusterOpenIDConnectPresets{c}
+	return newFakeClusterOpenIDConnectPresets(c)
 }
 
 func (c *FakeSettingsV1alpha1) OpenIDConnectPresets(namespace string) v1alpha1.OpenIDConnectPresetInterface {
-	return &FakeOpenIDConnectPresets{c, namespace}
+	return newFakeOpenIDConnectPresets(c, namespace)
 }
 
 // RESTClient returns a RESTClient that is used to communicate

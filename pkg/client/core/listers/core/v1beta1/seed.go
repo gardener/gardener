@@ -7,10 +7,10 @@
 package v1beta1
 
 import (
-	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	corev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // SeedLister helps list Seeds.
@@ -18,19 +18,19 @@ import (
 type SeedLister interface {
 	// List lists all Seeds in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1beta1.Seed, err error)
+	List(selector labels.Selector) (ret []*corev1beta1.Seed, err error)
 	// Get retrieves the Seed from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1beta1.Seed, error)
+	Get(name string) (*corev1beta1.Seed, error)
 	SeedListerExpansion
 }
 
 // seedLister implements the SeedLister interface.
 type seedLister struct {
-	listers.ResourceIndexer[*v1beta1.Seed]
+	listers.ResourceIndexer[*corev1beta1.Seed]
 }
 
 // NewSeedLister returns a new SeedLister.
 func NewSeedLister(indexer cache.Indexer) SeedLister {
-	return &seedLister{listers.New[*v1beta1.Seed](indexer, v1beta1.Resource("seed"))}
+	return &seedLister{listers.New[*corev1beta1.Seed](indexer, corev1beta1.Resource("seed"))}
 }

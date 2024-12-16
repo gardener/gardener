@@ -7,8 +7,8 @@
 package versioned
 
 import (
-	"fmt"
-	"net/http"
+	fmt "fmt"
+	http "net/http"
 
 	corev1 "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1"
 	corev1beta1 "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"

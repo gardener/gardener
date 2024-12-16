@@ -7,9 +7,9 @@
 package v1beta1
 
 import (
-	"context"
+	context "context"
 
-	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	corev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	scheme "github.com/gardener/gardener/pkg/client/core/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -25,31 +25,32 @@ type QuotasGetter interface {
 
 // QuotaInterface has methods to work with Quota resources.
 type QuotaInterface interface {
-	Create(ctx context.Context, quota *v1beta1.Quota, opts v1.CreateOptions) (*v1beta1.Quota, error)
-	Update(ctx context.Context, quota *v1beta1.Quota, opts v1.UpdateOptions) (*v1beta1.Quota, error)
+	Create(ctx context.Context, quota *corev1beta1.Quota, opts v1.CreateOptions) (*corev1beta1.Quota, error)
+	Update(ctx context.Context, quota *corev1beta1.Quota, opts v1.UpdateOptions) (*corev1beta1.Quota, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.Quota, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v1beta1.QuotaList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*corev1beta1.Quota, error)
+	List(ctx context.Context, opts v1.ListOptions) (*corev1beta1.QuotaList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.Quota, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *corev1beta1.Quota, err error)
 	QuotaExpansion
 }
 
 // quotas implements QuotaInterface
 type quotas struct {
-	*gentype.ClientWithList[*v1beta1.Quota, *v1beta1.QuotaList]
+	*gentype.ClientWithList[*corev1beta1.Quota, *corev1beta1.QuotaList]
 }
 
 // newQuotas returns a Quotas
 func newQuotas(c *CoreV1beta1Client, namespace string) *quotas {
 	return &quotas{
-		gentype.NewClientWithList[*v1beta1.Quota, *v1beta1.QuotaList](
+		gentype.NewClientWithList[*corev1beta1.Quota, *corev1beta1.QuotaList](
 			"quotas",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			namespace,
-			func() *v1beta1.Quota { return &v1beta1.Quota{} },
-			func() *v1beta1.QuotaList { return &v1beta1.QuotaList{} }),
+			func() *corev1beta1.Quota { return &corev1beta1.Quota{} },
+			func() *corev1beta1.QuotaList { return &corev1beta1.QuotaList{} },
+		),
 	}
 }

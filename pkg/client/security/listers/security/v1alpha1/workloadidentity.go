@@ -7,10 +7,10 @@
 package v1alpha1
 
 import (
-	v1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // WorkloadIdentityLister helps list WorkloadIdentities.
@@ -18,7 +18,7 @@ import (
 type WorkloadIdentityLister interface {
 	// List lists all WorkloadIdentities in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1alpha1.WorkloadIdentity, err error)
+	List(selector labels.Selector) (ret []*securityv1alpha1.WorkloadIdentity, err error)
 	// WorkloadIdentities returns an object that can list and get WorkloadIdentities.
 	WorkloadIdentities(namespace string) WorkloadIdentityNamespaceLister
 	WorkloadIdentityListerExpansion
@@ -26,17 +26,17 @@ type WorkloadIdentityLister interface {
 
 // workloadIdentityLister implements the WorkloadIdentityLister interface.
 type workloadIdentityLister struct {
-	listers.ResourceIndexer[*v1alpha1.WorkloadIdentity]
+	listers.ResourceIndexer[*securityv1alpha1.WorkloadIdentity]
 }
 
 // NewWorkloadIdentityLister returns a new WorkloadIdentityLister.
 func NewWorkloadIdentityLister(indexer cache.Indexer) WorkloadIdentityLister {
-	return &workloadIdentityLister{listers.New[*v1alpha1.WorkloadIdentity](indexer, v1alpha1.Resource("workloadidentity"))}
+	return &workloadIdentityLister{listers.New[*securityv1alpha1.WorkloadIdentity](indexer, securityv1alpha1.Resource("workloadidentity"))}
 }
 
 // WorkloadIdentities returns an object that can list and get WorkloadIdentities.
 func (s *workloadIdentityLister) WorkloadIdentities(namespace string) WorkloadIdentityNamespaceLister {
-	return workloadIdentityNamespaceLister{listers.NewNamespaced[*v1alpha1.WorkloadIdentity](s.ResourceIndexer, namespace)}
+	return workloadIdentityNamespaceLister{listers.NewNamespaced[*securityv1alpha1.WorkloadIdentity](s.ResourceIndexer, namespace)}
 }
 
 // WorkloadIdentityNamespaceLister helps list and get WorkloadIdentities.
@@ -44,15 +44,15 @@ func (s *workloadIdentityLister) WorkloadIdentities(namespace string) WorkloadId
 type WorkloadIdentityNamespaceLister interface {
 	// List lists all WorkloadIdentities in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1alpha1.WorkloadIdentity, err error)
+	List(selector labels.Selector) (ret []*securityv1alpha1.WorkloadIdentity, err error)
 	// Get retrieves the WorkloadIdentity from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1alpha1.WorkloadIdentity, error)
+	Get(name string) (*securityv1alpha1.WorkloadIdentity, error)
 	WorkloadIdentityNamespaceListerExpansion
 }
 
 // workloadIdentityNamespaceLister implements the WorkloadIdentityNamespaceLister
 // interface.
 type workloadIdentityNamespaceLister struct {
-	listers.ResourceIndexer[*v1alpha1.WorkloadIdentity]
+	listers.ResourceIndexer[*securityv1alpha1.WorkloadIdentity]
 }

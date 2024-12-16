@@ -7,10 +7,10 @@
 package v1
 
 import (
-	v1 "github.com/gardener/gardener/pkg/apis/core/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	corev1 "github.com/gardener/gardener/pkg/apis/core/v1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // ControllerDeploymentLister helps list ControllerDeployments.
@@ -18,19 +18,19 @@ import (
 type ControllerDeploymentLister interface {
 	// List lists all ControllerDeployments in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1.ControllerDeployment, err error)
+	List(selector labels.Selector) (ret []*corev1.ControllerDeployment, err error)
 	// Get retrieves the ControllerDeployment from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1.ControllerDeployment, error)
+	Get(name string) (*corev1.ControllerDeployment, error)
 	ControllerDeploymentListerExpansion
 }
 
 // controllerDeploymentLister implements the ControllerDeploymentLister interface.
 type controllerDeploymentLister struct {
-	listers.ResourceIndexer[*v1.ControllerDeployment]
+	listers.ResourceIndexer[*corev1.ControllerDeployment]
 }
 
 // NewControllerDeploymentLister returns a new ControllerDeploymentLister.
 func NewControllerDeploymentLister(indexer cache.Indexer) ControllerDeploymentLister {
-	return &controllerDeploymentLister{listers.New[*v1.ControllerDeployment](indexer, v1.Resource("controllerdeployment"))}
+	return &controllerDeploymentLister{listers.New[*corev1.ControllerDeployment](indexer, corev1.Resource("controllerdeployment"))}
 }

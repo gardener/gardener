@@ -7,13 +7,13 @@
 package v1alpha1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
+	apissecurityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	versioned "github.com/gardener/gardener/pkg/client/security/clientset/versioned"
 	internalinterfaces "github.com/gardener/gardener/pkg/client/security/informers/externalversions/internalinterfaces"
-	v1alpha1 "github.com/gardener/gardener/pkg/client/security/listers/security/v1alpha1"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/client/security/listers/security/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -24,7 +24,7 @@ import (
 // CredentialsBindings.
 type CredentialsBindingInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1alpha1.CredentialsBindingLister
+	Lister() securityv1alpha1.CredentialsBindingLister
 }
 
 type credentialsBindingInformer struct {
@@ -59,7 +59,7 @@ func NewFilteredCredentialsBindingInformer(client versioned.Interface, namespace
 				return client.SecurityV1alpha1().CredentialsBindings(namespace).Watch(context.TODO(), options)
 			},
 		},
-		&securityv1alpha1.CredentialsBinding{},
+		&apissecurityv1alpha1.CredentialsBinding{},
 		resyncPeriod,
 		indexers,
 	)
@@ -70,9 +70,9 @@ func (f *credentialsBindingInformer) defaultInformer(client versioned.Interface,
 }
 
 func (f *credentialsBindingInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&securityv1alpha1.CredentialsBinding{}, f.defaultInformer)
+	return f.factory.InformerFor(&apissecurityv1alpha1.CredentialsBinding{}, f.defaultInformer)
 }
 
-func (f *credentialsBindingInformer) Lister() v1alpha1.CredentialsBindingLister {
-	return v1alpha1.NewCredentialsBindingLister(f.Informer().GetIndexer())
+func (f *credentialsBindingInformer) Lister() securityv1alpha1.CredentialsBindingLister {
+	return securityv1alpha1.NewCredentialsBindingLister(f.Informer().GetIndexer())
 }
