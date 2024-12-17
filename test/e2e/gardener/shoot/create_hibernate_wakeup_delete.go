@@ -6,7 +6,6 @@ package shoot
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -23,7 +22,6 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	api "github.com/gardener/gardener/pkg/provider-local/apis/local"
 	"github.com/gardener/gardener/pkg/provider-local/apis/local/install"
-	"github.com/gardener/gardener/pkg/utils/retry"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/node"
@@ -40,8 +38,9 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 			if shoot.Spec.CloudProfileName == nil && shoot.Spec.CloudProfile != nil && shoot.Spec.CloudProfile.Kind == "NamespacedCloudProfile" {
 				By("Create NamespacedCloudProfile")
-				namespacedCloudProfile := addCustomMachineImage(e2e.DefaultNamespacedCloudProfile())
-				Expect(f.GardenClient.Client().Create(ctx, namespacedCloudProfile)).To(Or(Succeed()))
+				originalNamespacedCloudProfile := e2e.DefaultNamespacedCloudProfile()
+				namespacedCloudProfile := addCustomMachineImage(originalNamespacedCloudProfile.DeepCopy())
+				Expect(f.GardenClient.Client().Create(ctx, namespacedCloudProfile)).To(Succeed())
 				DeferCleanup(func() {
 					By("Delete NamespacedCloudProfile")
 					ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
@@ -50,23 +49,16 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				})
 
 				By("Wait for new NamespacedCloudProfile to be reconciled")
-				Expect(retry.UntilTimeout(ctx, 10*time.Second, 60*time.Second, func(ctx context.Context) (done bool, err error) {
-					err = f.GardenClient.Client().Get(ctx, k8sclient.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)
-					if err != nil {
-						return retry.SevereError(err)
-					}
-					if namespacedCloudProfile.Status.ObservedGeneration != namespacedCloudProfile.Generation {
-						return retry.MinorError(fmt.Errorf("namespaced cloud profile exists but has not been reconciled yet"))
-					}
-					return retry.Ok()
-				})).To(Succeed())
+				Eventually(func(g Gomega) {
+					g.Expect(f.GardenClient.Client().Get(ctx, k8sclient.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
+					g.Expect(namespacedCloudProfile.Generation).To(Equal(namespacedCloudProfile.Status.ObservedGeneration),
+						"NamespacedCloudProfile status has been reconciled")
+				}).WithContext(ctx).WithPolling(10 * time.Second).WithTimeout(60 * time.Second).Should(Succeed())
 
 				By("Check for correct mutation of the status provider config")
-				scheme := f.GardenClient.Client().Scheme()
-				utilruntime.Must(install.AddToScheme(scheme))
-
+				utilruntime.Must(install.AddToScheme(f.GardenClient.Client().Scheme()))
+				decoder := serializer.NewCodecFactory(f.GardenClient.Client().Scheme(), serializer.EnableStrict).UniversalDecoder()
 				cloudProfileConfig := &api.CloudProfileConfig{}
-				decoder := serializer.NewCodecFactory(scheme, serializer.EnableStrict).UniversalDecoder()
 				Expect(namespacedCloudProfile.Status.CloudProfileSpec.ProviderConfig).To(Not(BeNil()))
 				Expect(util.Decode(decoder, namespacedCloudProfile.Status.CloudProfileSpec.ProviderConfig.Raw, cloudProfileConfig)).To(Succeed())
 				Expect(cloudProfileConfig.MachineImages).To(ContainElement(MatchFields(IgnoreExtras, Fields{
@@ -75,6 +67,13 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 						api.MachineImageVersion{Version: "1.1", Image: "local/image:1.1"},
 					),
 				})))
+
+				By("Remove custom machine image again")
+				Expect(f.GardenClient.Client().Update(ctx, originalNamespacedCloudProfile)).To(Succeed())
+				Eventually(func(g Gomega) {
+					g.Expect(f.GardenClient.Client().Get(ctx, k8sclient.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
+					g.Expect(namespacedCloudProfile.Generation).To(Equal(namespacedCloudProfile.Status.ObservedGeneration))
+				}).Should(Succeed())
 			}
 
 			By("Create Shoot")
