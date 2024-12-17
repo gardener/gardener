@@ -216,7 +216,7 @@ func GetCurrentCertificate(log logr.Logger, gardenKubeconfig []byte, gardenClien
 	}
 
 	// get a rest config from either the `gardenClientConnection.KubeconfigSecret` or from the fallback kubeconfig specified in `gardenClientConnection.Kubeconfig`
-	restConfig, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&gardenClientConnection.ClientConnectionConfiguration, gardenKubeconfig)
+	restConfig, err := kubernetes.RESTConfigFromInternalClientConnectionConfiguration(&gardenClientConnection.ClientConnectionConfiguration, gardenKubeconfig)
 	if err != nil {
 		return nil, err
 	}

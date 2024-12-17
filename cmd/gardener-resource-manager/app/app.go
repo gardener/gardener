@@ -78,7 +78,7 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfig
 		cfg.SourceClientConnection.Kubeconfig = kubeconfig
 	}
 
-	sourceRESTConfig, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.SourceClientConnection.ClientConnectionConfiguration, nil, kubernetes.AuthTokenFile)
+	sourceRESTConfig, err := kubernetes.RESTConfigFromInternalClientConnectionConfiguration(&cfg.SourceClientConnection.ClientConnectionConfiguration, nil, kubernetes.AuthTokenFile)
 	if err != nil {
 		return err
 	}
@@ -94,7 +94,7 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfig
 		}
 
 		var err error
-		targetRESTConfig, err = kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.TargetClientConnection.ClientConnectionConfiguration, nil, kubernetes.AuthTokenFile)
+		targetRESTConfig, err = kubernetes.RESTConfigFromInternalClientConnectionConfiguration(&cfg.TargetClientConnection.ClientConnectionConfiguration, nil, kubernetes.AuthTokenFile)
 		if err != nil {
 			return err
 		}

@@ -7,7 +7,7 @@ package util
 import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	componentbaseconfig "k8s.io/component-base/config"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
@@ -29,7 +29,7 @@ var ApplyClientConnectionConfigurationToRESTConfig = kubernetes.ApplyClientConne
 
 // createRESTConfig creates a Config object for a rest client. If a clientConnection configuration object is passed
 // as well then the specified fields will be taken over as well.
-func createRESTConfig(clientConfig clientcmd.ClientConfig, clientConnection *componentbaseconfig.ClientConnectionConfiguration) (*rest.Config, error) {
+func createRESTConfig(clientConfig clientcmd.ClientConfig, clientConnection *componentbaseconfigv1alpha1.ClientConnectionConfiguration) (*rest.Config, error) {
 	config, err := clientConfig.ClientConfig()
 	if err != nil {
 		return nil, err
