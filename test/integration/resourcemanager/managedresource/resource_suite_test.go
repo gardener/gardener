@@ -29,7 +29,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
-	resourcemanagerv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/managedresource"
 	resourcemanagerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
@@ -115,7 +115,7 @@ var _ = BeforeSuite(func() {
 
 	By("Register controller")
 	fakeClock = testclock.NewFakeClock(time.Now())
-	filter = resourcemanagerpredicate.NewClassFilter(resourcemanagerv1alpha1.DefaultResourceClass)
+	filter = resourcemanagerpredicate.NewClassFilter(resourcemanagerconfigv1alpha1.DefaultResourceClass)
 
 	Expect((&managedresource.Reconciler{
 		Config: config.ManagedResourceControllerConfig{
