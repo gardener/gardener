@@ -1827,7 +1827,7 @@ func getDefaultMachineImage(machineImages []gardencorev1beta1.MachineImage, imag
 func parseSemanticVersionPart(part string) (*uint64, error) {
 	v, err := strconv.ParseUint(part, 10, 0)
 	if err != nil {
-		return nil, fmt.Errorf("must be a semantic version")
+		return nil, fmt.Errorf("%s must be a semantic version: %w", part, err)
 	}
 	return ptr.To(v), nil
 }
