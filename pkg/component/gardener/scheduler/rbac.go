@@ -10,7 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	schedulerv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
+	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 )
 
 const (
@@ -71,7 +71,7 @@ func (g *gardenerScheduler) clusterRole() *rbacv1.ClusterRole {
 					"leases",
 				},
 				ResourceNames: []string{
-					schedulerv1alpha1.SchedulerDefaultLockObjectName,
+					schedulerconfigv1alpha1.SchedulerDefaultLockObjectName,
 				},
 				Verbs: []string{"get", "watch", "update"},
 			},
