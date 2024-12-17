@@ -49,8 +49,8 @@ func extractOSCFromSecret(secret *corev1.Secret) (*extensionsv1alpha1.OperatingS
 
 func computeOperatingSystemConfigChanges(log logr.Logger, fs afero.Afero, newOSC *extensionsv1alpha1.OperatingSystemConfig, newOSCChecksum string) (*operatingSystemConfigChanges, error) {
 	changes := &operatingSystemConfigChanges{
-		fs:          fs,
-		OSCChecksum: newOSCChecksum,
+		fs:                            fs,
+		OperatingSystemConfigChecksum: newOSCChecksum,
 	}
 
 	oldChanges, err := loadOSCChanges(fs)
@@ -62,8 +62,8 @@ func computeOperatingSystemConfigChanges(log logr.Logger, fs afero.Afero, newOSC
 		oldChanges = &operatingSystemConfigChanges{}
 	}
 
-	if oldChanges.OSCChecksum == changes.OSCChecksum {
-		log.Info("Found OSC changes on disk, remaining work",
+	if oldChanges.OperatingSystemConfigChecksum == changes.OperatingSystemConfigChecksum {
+		log.Info("Found previously computed OperatingSystemConfig changes on disk, remaining work",
 			"changedFiles", len(oldChanges.Files.Changed),
 			"deletedFiles", len(oldChanges.Files.Deleted),
 			"changedUnits", len(oldChanges.Units.Changed),
@@ -74,7 +74,7 @@ func computeOperatingSystemConfigChanges(log logr.Logger, fs afero.Afero, newOSC
 		return oldChanges, nil
 	}
 
-	log.Info("OSC changes checksum did not match, computing new changes")
+	log.Info("OperatingSystemConfig changes checksum does not match, computing new changes")
 
 	// create copy so that we don't accidentally update the `newOSC` when items are removed from the
 	// `operatingSystemConfigChanges` when they are marked as completed.
@@ -90,8 +90,11 @@ func computeOperatingSystemConfigChanges(log logr.Logger, fs afero.Afero, newOSC
 			return nil, fmt.Errorf("error reading last applied OSC from file path %s: %w", lastAppliedOperatingSystemConfigFilePath, err)
 		}
 
-		var unitChanges []changedUnit
-		var unitCommands []unitCommand
+		var (
+			unitChanges  []changedUnit
+			unitCommands []unitCommand
+		)
+
 		for _, unit := range mergeUnits(newOSC.Spec.Units, newOSC.Status.ExtensionUnits) {
 			unitCommands = append(unitCommands, unitCommand{
 				Name:    unit.Name,
@@ -111,7 +114,7 @@ func computeOperatingSystemConfigChanges(log logr.Logger, fs afero.Afero, newOSC
 		// TODO(timuthy): Remove this block after Gardener v1.114 was released.
 		removeContainerdInit(changes)
 
-		changes.Containerd.ConfigFileChange = true
+		changes.Containerd.ConfigFileChanged = true
 		if extensionsv1alpha1helper.HasContainerdConfiguration(newOSC.Spec.CRIConfig) {
 			changes.Containerd.Registries.Desired = newOSC.Spec.CRIConfig.Containerd.Registries
 		}
@@ -144,14 +147,14 @@ func computeOperatingSystemConfigChanges(log logr.Logger, fs afero.Afero, newOSC
 	if extensionsv1alpha1helper.HasContainerdConfiguration(newOSC.Spec.CRIConfig) {
 		newRegistries = newOSC.Spec.CRIConfig.Containerd.Registries
 		if !extensionsv1alpha1helper.HasContainerdConfiguration(oldOSC.Spec.CRIConfig) {
-			changes.Containerd.ConfigFileChange = true
+			changes.Containerd.ConfigFileChanged = true
 		} else {
 			var (
 				newContainerd = newOSC.Spec.CRIConfig.Containerd
 				oldContainerd = oldOSC.Spec.CRIConfig.Containerd
 			)
 
-			changes.Containerd.ConfigFileChange = !apiequality.Semantic.DeepEqual(newContainerd.SandboxImage, oldContainerd.SandboxImage) ||
+			changes.Containerd.ConfigFileChanged = !apiequality.Semantic.DeepEqual(newContainerd.SandboxImage, oldContainerd.SandboxImage) ||
 				!apiequality.Semantic.DeepEqual(newContainerd.Plugins, oldContainerd.Plugins) ||
 				!apiequality.Semantic.DeepEqual(newOSC.Spec.CRIConfig.CgroupDriver, oldOSC.Spec.CRIConfig.CgroupDriver)
 

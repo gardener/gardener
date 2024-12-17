@@ -19,11 +19,11 @@ type operatingSystemConfigChanges struct {
 	lock sync.Mutex
 	fs   afero.Afero
 
-	OSCChecksum     string     `json:"oscChecksum"`
-	Units           units      `json:"units"`
-	Files           files      `json:"files"`
-	Containerd      containerd `json:"containerd"`
-	RestartRequired bool       `json:"restartRequired"`
+	OperatingSystemConfigChecksum string     `json:"operatingSystemConfigChecksum"`
+	Units                         units      `json:"units"`
+	Files                         files      `json:"files"`
+	Containerd                    containerd `json:"containerd"`
+	MustRestartNodeAgent          bool       `json:"mustRestartNodeAgent"`
 }
 
 type units struct {
@@ -54,8 +54,8 @@ type files struct {
 }
 
 type containerd struct {
-	// ConfigFileChange tracks if the config file of containerd will change, so that GNA can restart the unit.
-	ConfigFileChange bool `json:"configFileChange"`
+	// ConfigFileChanged tracks if the config file of containerd will change, so that GNA can restart the unit.
+	ConfigFileChanged bool `json:"configFileChanged"`
 	// Registries tracks the changes of configured Registries.
 	Registries containerdRegistries `json:"registries"`
 }
@@ -70,16 +70,16 @@ type containerdRegistries struct {
 func (o *operatingSystemConfigChanges) persist() error {
 	out, err := yaml.Marshal(o)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed marshalling the changes into YAML: %w", err)
 	}
-	return o.fs.WriteFile(operatingSystemConfigChangesFilePath, out, 0600)
+	return o.fs.WriteFile(lastComputedOperatingSystemConfigChangesFilePath, out, 0600)
 }
 
-func (o *operatingSystemConfigChanges) setRestartRequired(restart bool) error {
+func (o *operatingSystemConfigChanges) setMustRestartNodeAgent(restart bool) error {
 	o.lock.Lock()
 	defer o.lock.Unlock()
 
-	o.RestartRequired = restart
+	o.MustRestartNodeAgent = restart
 	return o.persist()
 }
 
@@ -174,7 +174,7 @@ func (o *operatingSystemConfigChanges) completedContainerdConfigFileChange() err
 	o.lock.Lock()
 	defer o.lock.Unlock()
 
-	o.Containerd.ConfigFileChange = false
+	o.Containerd.ConfigFileChanged = false
 	return o.persist()
 }
 
@@ -201,14 +201,16 @@ func (o *operatingSystemConfigChanges) completedContainerdRegistriesDeleted(upst
 }
 
 func loadOSCChanges(fs afero.Afero) (*operatingSystemConfigChanges, error) {
-	raw, err := fs.ReadFile(operatingSystemConfigChangesFilePath)
+	raw, err := fs.ReadFile(lastComputedOperatingSystemConfigChangesFilePath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed reading changes file %s: %w", lastComputedOperatingSystemConfigChangesFilePath, err)
 	}
+
 	changes := operatingSystemConfigChanges{}
 	if err := yaml.Unmarshal(raw, &changes); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed unmarshalling the changes: %w", err)
 	}
+
 	changes.fs = fs
 	return &changes, nil
 }

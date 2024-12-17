@@ -47,8 +47,8 @@ import (
 )
 
 const (
-	lastAppliedOperatingSystemConfigFilePath = nodeagentconfigv1alpha1.BaseDir + "/last-applied-osc.yaml"
-	operatingSystemConfigChangesFilePath     = nodeagentconfigv1alpha1.BaseDir + "/osc-changes.yaml"
+	lastAppliedOperatingSystemConfigFilePath         = nodeagentconfigv1alpha1.BaseDir + "/last-applied-osc.yaml"
+	lastComputedOperatingSystemConfigChangesFilePath = nodeagentconfigv1alpha1.BaseDir + "/last-computed-osc-changes.yaml"
 )
 
 var codec runtime.Codec
@@ -191,9 +191,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("unable to write current OSC to file path %q: %w", lastAppliedOperatingSystemConfigFilePath, err)
 	}
 
-	if oscChanges.RestartRequired {
+	if oscChanges.MustRestartNodeAgent {
 		log.Info("Must restart myself (gardener-node-agent unit), canceling the context to initiate graceful shutdown")
-		if err := oscChanges.setRestartRequired(false); err != nil {
+		if err := oscChanges.setMustRestartNodeAgent(false); err != nil {
 			return reconcile.Result{}, err
 		}
 		r.CancelContext()
@@ -518,7 +518,7 @@ func (r *Reconciler) executeUnitCommands(ctx context.Context, log logr.Logger, n
 	for _, unit := range slices.Clone(oscChanges.Units.Commands) {
 		switch unit.Name {
 		case nodeagentconfigv1alpha1.UnitName:
-			if err := oscChanges.setRestartRequired(true); err != nil {
+			if err := oscChanges.setMustRestartNodeAgent(true); err != nil {
 				return err
 			}
 			if err := oscChanges.completedUnitCommand(unit.Name); err != nil {
@@ -542,7 +542,7 @@ func (r *Reconciler) executeUnitCommands(ctx context.Context, log logr.Logger, n
 		})
 	}
 
-	if oscChanges.Containerd.ConfigFileChange && !containerdChanged {
+	if oscChanges.Containerd.ConfigFileChanged && !containerdChanged {
 		fns = append(fns, func(ctx context.Context) error {
 			if err := restart(ctx, v1beta1constants.OperatingSystemConfigUnitNameContainerDService); err != nil {
 				return err

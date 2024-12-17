@@ -445,7 +445,7 @@ func addRegistryToContainerdFunc(ctx context.Context, log logr.Logger, registryC
 	if err := tplContainerdHosts.Execute(f, values); err != nil {
 		return err
 	}
-	log.Info("Configured registryConfig", "upstream", registryConfig.Upstream)
+	log.Info("Configured registry config", "upstream", registryConfig.Upstream)
 	return nil
 }
 
