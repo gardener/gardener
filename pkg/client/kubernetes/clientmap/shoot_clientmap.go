@@ -10,7 +10,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	componentbaseconfig "k8s.io/component-base/config"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -44,7 +44,7 @@ type ShootClientSetFactory struct {
 	// SeedClient is the seed cluster client.
 	SeedClient client.Client
 	// ClientConnectionConfiguration is the configuration that will be used by created ClientSets.
-	ClientConnectionConfig componentbaseconfig.ClientConnectionConfiguration
+	ClientConnectionConfig componentbaseconfigv1alpha1.ClientConnectionConfiguration
 
 	// log is a logger for logging entries related to creating Shoot ClientSets.
 	log logr.Logger
