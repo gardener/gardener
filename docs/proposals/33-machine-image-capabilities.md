@@ -52,62 +52,11 @@ The information given on the Gardener Dashboard provide no information about tha
 
 ![](assets/gep-33-screenshot-dashboard.png)
 
-### Current Workaround
+### Context: Cloud Profile
 
-Multiple workarounds are currently in place:
+For each infrastructure provider Gardener operators must provide CloudProfile. It describes the catalog of machines, images and other resources of the infrastructure provider. Only machines and images that are described in the CloudProfile can be used to create a shoot. 
 
-1. In the Gardener Dashboard and the CloudProfile the pre-release tag is used to distinguish between `gen1` and `gen2` machine images on Azure e.g `gardenLinux:1592.2.0-gen2` or on openstack for the hypervisor type `gardenLinux:1592.2.0-baremetal`. As images with pre-release tag will not be regarded during maintenance operations, the user has to disable Operating System maintenance for the shoot.
-
-2. In the cloud profile only one OS image version can be in state `classification: supported`. When another capability set for that version like Azures `generation` must to be supported, the `classification` key is omitted by Gardener Operators. This will display the version as supported in the Gardener Dashboard. This is not the intended use of the classification key.
-
-3. Currently extension providers define their own capabilities that are processed after shoot admission, like `acceleratedNetworking` in the [gardener-extension-provider-azure](https://github.com/gardener/gardener-extension-provider-azure/blob/28c977612898ed40e9d179052633fee0b9600d3e/pkg/apis/azure/types_cloudprofile.go#L78). This can lead to a situation where the machine supports accelerated networking but the machine image does not. In this case it does not result in an error but to performance loss.
-
-### Goals
-
-- Define a pattern to ensure only shoots with compatible machine types and images are admitted by Gardener.
-- Provide a mechanism to filter out incompatible images for a machine type in the Gardener Dashboard.
-- Provide a pattern and process to add new or remove deprecated capabilities in the future.
-- Minimize the additional data size introduced to cloud profiles to prevent bloating.
-- Obsolete existing workarounds described in the "Current Workarounds" section.
-
-### Non-Goals
-
-- Introduce capability options that are not utilized by Gardener in the future.
-- Introduce feature flag to control the usage of a capability, e.g. secure boot.
-
-## Proposal
-
-Introduce a top level capabilities array in the CloudProfile `spec.capabilities`.
-
-Capabilities are very specific to the provider and the selected catalog offered by Gardener in the cloud profile. To minimize complexity and data size in the cloud profile, the capabilities are defined as a key-value array. The key is the capability name and the value is an array of possible values.
-
-```go
-type Spec struct {
-    Capabilities map[string][]string `json:"capabilities"`
-}
-```
-
-For each cloud profile the capabilities are defined in the `spec.capabilities` array. Here the full set of possible capabilities is defined. As some capabilities can have multiple values at the same time an array of possible values is used instead of a single value.
-
-This structure defines the default set of capabilities. If no further information are provided each machine type and machine image will be assigned the default set of capabilities. Thus being compatible with each other.
-
-```yaml
-# CloudProfile Example
-spec:
-  capabilities:
-    hypervisorType: ["gen2", "gen1"]
-    network: ["accelerated", "standard"]
-    storageAccess: ["NVMe", "SCSI"]
-    secureBoot: ["secure", "none"]
-    bootMode: ["uefi-prefered", "uefi", "legacy-bios"]
-    ...
-```
-
-The array of a capability is ordered. The order defines the priority of the values in case of multiple supported images. The first value in the array is the most preferred value. The last value is the least preferred value.
-
-Example: A machine supports hypervisor `gen2` AND `gen1` and an image version offers `gen1` OR `gen2`. Then the image with `gen2` will be preferred.
-
-There are three places in the CloudProfile where capabilities are defined:
+There are three places in the CloudProfile where metadata is required:
 
 ```Go
 type CloudProfileSpec struct {
@@ -121,9 +70,9 @@ type CloudProfileSpec struct {
 
 The `MachineImages` and `MachineTypes` are visible to Gardener core. This means all information required to decide if an image is compatible with a machine type must be stored in these two arrays.
 
-The `ProviderConfig` is only visible to the Gardener extension, meaning filtering based on these information is not possible in Gardener core or the Gardener dashboard.
+The `ProviderConfig` is only visible to Gardener extensions, meaning filtering based on these information is not possible in Gardener core or the Gardener dashboard.
 
-Here is a CloudProfile example without capabilities for exactly one machineType and one machineImage version. Note that there are two versions in `spec.machineImages.versions` as the pre-release tag is used to distinguish between `gen1` and `gen2` machine images.
+Here is a current CloudProfile example with exactly one machineType and one machineImage version. Note that there are two versions in `spec.machineImages.versions` as the pre-release tag is used to distinguish between `gen1` and `gen2` machine images.
 
 <details>
   <summary>Click to show the example</summary>
@@ -173,19 +122,73 @@ spec:
 
 </details></br>
 
-While a machineType always refers to exactly one resource in the cloud provider, a machineImage defines an operating system, like gardenLinux or SUSE. That operating system in turn can have multiple versions. And going further down, each version can have multiple architectures or other capabilities that are in fact different resources in the cloud provider.
+While a machineType in `spec.machineType` always refers to exactly one resource in the cloud provider, the `spec.machineImages` section is a bit confusing. A machineImage defines an operating system, like gardenLinux or SUSE. That operating system in turn can have multiple versions. And going further down, each version can have multiple architectures or other capabilities that are in fact different resources in the cloud provider.
 
 This means there are three decisions to be made, two by Gardener core, one by the Gardener extension:
 
-- **Gardener Core**: filter the **machineImage version** for a machineType in case of maintenance operations
+- **Gardener Core / Dashboard**: filter the **machineImage version** for a machineType
 - **Gardener Core**: admit the **machineImage version** for a machineType
 - **Provider Extension**: select the correct **machineImage Reference** within a machineImage version
 
 ![](assets/gep-33-capabilities.drawio.svg)
 
-To address these requirements the following structure is proposed:
+### Current Workaround
 
-The `spec.machineType` and the `spec.providerConfig.machineImages` are extended with the `capabilities` array as described above. The image versions in `spec.machineImages` will receive an array of capabilities, one entry for each image reference in the providerConfig.
+Multiple workarounds are currently in place:
+
+1. In the Gardener Dashboard and the CloudProfile the pre-release tag is used to distinguish between `gen1` and `gen2` machine images on Azure e.g `gardenLinux:1592.2.0-gen2` or on openstack for the hypervisor type `gardenLinux:1592.2.0-baremetal`. As images with pre-release tag will not be regarded during maintenance operations, the user has to disable Operating System maintenance for the shoot.
+
+2. In the cloud profile only one OS image version can be in state `classification: supported`. When another capability set for that version like Azures `generation` must to be supported, the `classification` key is omitted by Gardener Operators. This will display the version as supported in the Gardener Dashboard. This is not the intended use of the classification key.
+
+3. Currently extension providers define their own capabilities that are processed after shoot admission, like `acceleratedNetworking` in the [gardener-extension-provider-azure](https://github.com/gardener/gardener-extension-provider-azure/blob/28c977612898ed40e9d179052633fee0b9600d3e/pkg/apis/azure/types_cloudprofile.go#L78). This can lead to a situation where the machine supports accelerated networking but the machine image does not. In this case it does not result in an error but to performance loss.
+
+### Goals
+
+- Define a pattern to ensure only shoots with compatible machine types and images are admitted by Gardener.
+- Provide a mechanism to filter out incompatible images for a machine type in the Gardener Dashboard.
+- Provide a pattern and process to add new or remove deprecated capabilities in the future.
+- Minimize the additional data size introduced to cloud profiles to prevent bloating.
+- Obsolete existing workarounds described in the "Current Workarounds" section.
+
+### Non-Goals
+
+- Introduce capability options that are not utilized by Gardener in the future.
+- Introduce feature flag to control the usage of a capability, e.g. secure boot.
+
+## Proposal
+
+Introduce a top level capabilities array in the CloudProfile `spec.capabilities`.
+
+Capabilities are very specific to the provider and the selected catalog offered by Gardener in the cloud profile. To minimize complexity and data size in the cloud profile, the capabilities are defined as a key-value array. The key is the capability name and the value is an array of possible values.
+
+```go
+type Spec struct {
+    Capabilities map[string][]string `json:"capabilities"`
+}
+```
+
+For each cloud profile the capabilities are defined in the `spec.capabilities` array. The full set of possibilities for each capability is defined here. As some capabilities can have multiple values at the same time an array of possible values is used instead of a single value.
+
+This structure defines the default set of capabilities. If no further information are provided each machine type and machine image will be assigned the default set of capabilities. Thus being compatible with each other.
+
+```yaml
+# CloudProfile Example
+spec:
+  capabilities:
+    hypervisorType: ["gen2", "gen1"]
+    network: ["accelerated", "standard"]
+    storageAccess: ["NVMe", "SCSI"]
+    secureBoot: ["secure", "none"]
+    bootMode: ["uefi-prefered", "uefi", "legacy-bios"]
+    ...
+```
+
+The array of a capability is ordered. The order defines the priority of the values in case of multiple supported images. The first value in the array is the most preferred value. The last value is the least preferred value.
+
+Example: A machine supports hypervisor `gen2` AND `gen1` and an image version offers `gen1` OR `gen2`. Then the image with `gen2` will be preferred.
+
+
+In addition to the default capabilities, the `spec.machineTypes` and the `spec.providerConfig.machineImages.versions` are extended with the `capabilities` structure described above. The image versions in `spec.machineImages.versions` will receive an array of capabilities structures, one entry for each image reference in the providerConfig.
 
 ```yaml
 # CloudProfile
@@ -252,7 +255,7 @@ spec:
     #     name: Standard_S896om
 ```
 
-The algorithm to determine if an image is valid for a machine type is given as follows: For each capability the image must have the same values or a subset of the values of the machine type.
+The algorithm to determine if an image is valid for a machine type is given as follows: For every capability the values of the machineType must be a subset if the values of the image version.
 
 ```js
 // if no (default) capabilities are defined skip the check
@@ -297,7 +300,7 @@ mixed framed ❌.
 
 #### How frequently are new capabilities added?
 
-Of course the capabilities have different lifecycle. The Boot mode [UEFI](https://de.wikipedia.org/wiki/Unified_Extensible_Firmware_Interface) was introduces in 1998 and is still very relevant and critical today. Yet other capability options like NVMe disc support are now supported by all major operating systems.
+Of course the capabilities have different lifecycles. The Boot mode [UEFI](https://de.wikipedia.org/wiki/Unified_Extensible_Firmware_Interface) was introduces in 1998 and is still very relevant and critical today. Yet other capability options like NVMe disc support are now supported by all major operating systems.
 
 This means: **Capabilities might be deprecated and removed**
 
