@@ -22,7 +22,7 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	corefake "github.com/gardener/gardener/pkg/client/core/clientset/versioned/fake"
 	fakeseedmanagement "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/fake"
-	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/managedseed"
 )
@@ -37,7 +37,7 @@ var _ = Describe("ManagedSeed", func() {
 		var (
 			shoot                *core.Shoot
 			managedSeed          *seedmanagementv1alpha1.ManagedSeed
-			gardenletConfig      *gardenletv1alpha1.GardenletConfiguration
+			gardenletConfig      *gardenletconfigv1alpha1.GardenletConfiguration
 			coreClient           *corefake.Clientset
 			seedManagementClient *fakeseedmanagement.Clientset
 			admissionHandler     *ManagedSeed
@@ -86,8 +86,8 @@ var _ = Describe("ManagedSeed", func() {
 				},
 			}
 
-			gardenletConfig = &gardenletv1alpha1.GardenletConfiguration{
-				SeedConfig: &gardenletv1alpha1.SeedConfig{
+			gardenletConfig = &gardenletconfigv1alpha1.GardenletConfiguration{
+				SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
 					SeedTemplate: gardencorev1beta1.SeedTemplate{
 						Spec: gardencorev1beta1.SeedSpec{
 							Provider: gardencorev1beta1.SeedProvider{
@@ -194,7 +194,7 @@ var _ = Describe("ManagedSeed", func() {
 			It("should forbid Shoot update if the seedTemplate is not specified", func() {
 				managedSeed.Spec.Gardenlet = seedmanagementv1alpha1.GardenletConfig{
 					Config: runtime.RawExtension{
-						Object: &gardenletv1alpha1.GardenletConfiguration{},
+						Object: &gardenletconfigv1alpha1.GardenletConfiguration{},
 					},
 				}
 				seedManagementClient.AddReactor("list", "managedseeds", func(_ testing.Action) (bool, runtime.Object, error) {

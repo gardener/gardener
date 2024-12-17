@@ -20,7 +20,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	. "github.com/gardener/gardener/pkg/apis/seedmanagement/validation"
-	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 )
 
 var _ = Describe("Gardenlet Validation Tests", func() {
@@ -265,7 +265,7 @@ var _ = Describe("Gardenlet Validation Tests", func() {
 
 			It("should forbid garden client connection kubeconfig if bootstrap is specified", func() {
 				gardenlet.Spec.Config = gardenletConfiguration(seedx,
-					&gardenletv1alpha1.GardenClientConnection{
+					&gardenletconfigv1alpha1.GardenClientConnection{
 						ClientConnectionConfiguration: v1alpha1.ClientConnectionConfiguration{
 							Kubeconfig: "foo",
 						},

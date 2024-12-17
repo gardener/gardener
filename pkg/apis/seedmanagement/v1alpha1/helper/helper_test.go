@@ -16,7 +16,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	. "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
-	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 )
 
 var _ = Describe("Helper", func() {
@@ -39,9 +39,9 @@ var _ = Describe("Helper", func() {
 					},
 				},
 			}
-			config = &gardenletv1alpha1.GardenletConfiguration{
+			config = &gardenletconfigv1alpha1.GardenletConfiguration{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
+					APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
 					Kind:       "GardenletConfiguration",
 				},
 				LogLevel: "1234",
@@ -78,7 +78,7 @@ var _ = Describe("Helper", func() {
 			})
 
 			It("should return the template from `.spec.gardenlet.seedConfig.seedTemplate", func() {
-				config.SeedConfig = &gardenletv1alpha1.SeedConfig{SeedTemplate: *template}
+				config.SeedConfig = &gardenletconfigv1alpha1.SeedConfig{SeedTemplate: *template}
 				managedSeed.Spec.Gardenlet.Config = runtime.RawExtension{Raw: encode(config)}
 
 				seedTemplate, gardenletConfig, err := ExtractSeedTemplateAndGardenletConfig(managedSeed.Name, &managedSeed.Spec.Gardenlet.Config)

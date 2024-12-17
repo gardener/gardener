@@ -39,7 +39,7 @@ import (
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	mockcache "github.com/gardener/gardener/third_party/mock/controller-runtime/cache"
@@ -1725,7 +1725,7 @@ var _ = Describe("handler", func() {
 						var (
 							managedSeed1Namespace    string
 							shoot1, shoot2           *gardencorev1beta1.Shoot
-							seedConfig1, seedConfig2 *gardenletv1alpha1.SeedConfig
+							seedConfig1, seedConfig2 *gardenletconfigv1alpha1.SeedConfig
 							managedSeeds             []seedmanagementv1alpha1.ManagedSeed
 						)
 
@@ -1745,10 +1745,10 @@ var _ = Describe("handler", func() {
 								},
 								Spec: gardencorev1beta1.ShootSpec{SeedName: &seedName},
 							}
-							seedConfig1 = &gardenletv1alpha1.SeedConfig{
+							seedConfig1 = &gardenletconfigv1alpha1.SeedConfig{
 								SeedTemplate: gardencorev1beta1.SeedTemplate{},
 							}
-							seedConfig2 = &gardenletv1alpha1.SeedConfig{
+							seedConfig2 = &gardenletconfigv1alpha1.SeedConfig{
 								SeedTemplate: gardencorev1beta1.SeedTemplate{},
 							}
 							managedSeeds = []seedmanagementv1alpha1.ManagedSeed{
@@ -1758,7 +1758,7 @@ var _ = Describe("handler", func() {
 										Shoot: &seedmanagementv1alpha1.Shoot{Name: shoot1.Name},
 										Gardenlet: seedmanagementv1alpha1.GardenletConfig{
 											Config: runtime.RawExtension{
-												Object: &gardenletv1alpha1.GardenletConfiguration{
+												Object: &gardenletconfigv1alpha1.GardenletConfiguration{
 													SeedConfig: seedConfig1,
 												},
 											},
@@ -1771,7 +1771,7 @@ var _ = Describe("handler", func() {
 										Shoot: &seedmanagementv1alpha1.Shoot{Name: shoot2.Name},
 										Gardenlet: seedmanagementv1alpha1.GardenletConfig{
 											Config: runtime.RawExtension{
-												Object: &gardenletv1alpha1.GardenletConfiguration{
+												Object: &gardenletconfigv1alpha1.GardenletConfiguration{
 													SeedConfig: seedConfig2,
 												},
 											},
@@ -1816,7 +1816,7 @@ var _ = Describe("handler", func() {
 						It("should return an error because extracting the seed template failed", func() {
 							managedSeeds[1].Spec.Gardenlet = seedmanagementv1alpha1.GardenletConfig{
 								Config: runtime.RawExtension{
-									Object: &gardenletv1alpha1.GardenletConfiguration{
+									Object: &gardenletconfigv1alpha1.GardenletConfiguration{
 										SeedConfig: nil,
 									},
 								},

@@ -32,7 +32,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
-	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -589,9 +589,9 @@ func ComputeExpectedGardenletConfiguration(
 	hasGardenClientConnectionKubeconfig, hasSeedClientConnectionKubeconfig bool,
 	bootstrapKubeconfig *corev1.SecretReference,
 	kubeconfigSecret *corev1.SecretReference,
-	seedConfig *gardenletv1alpha1.SeedConfig,
+	seedConfig *gardenletconfigv1alpha1.SeedConfig,
 	featureGates map[string]bool,
-) gardenletv1alpha1.GardenletConfiguration {
+) gardenletconfigv1alpha1.GardenletConfiguration {
 	var (
 		zero   = 0
 		one    = 1
@@ -604,57 +604,57 @@ func ComputeExpectedGardenletConfiguration(
 		lockObjectNamespace = "garden"
 	)
 
-	config := gardenletv1alpha1.GardenletConfiguration{
+	config := gardenletconfigv1alpha1.GardenletConfiguration{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "GardenletConfiguration",
 			APIVersion: "gardenlet.config.gardener.cloud/v1alpha1",
 		},
-		GardenClientConnection: &gardenletv1alpha1.GardenClientConnection{
+		GardenClientConnection: &gardenletconfigv1alpha1.GardenClientConnection{
 			ClientConnectionConfiguration: baseconfigv1alpha1.ClientConnectionConfiguration{
 				QPS:   100,
 				Burst: 130,
 			},
-			KubeconfigValidity: &gardenletv1alpha1.KubeconfigValidity{
+			KubeconfigValidity: &gardenletconfigv1alpha1.KubeconfigValidity{
 				AutoRotationJitterPercentageMin: ptr.To[int32](70),
 				AutoRotationJitterPercentageMax: ptr.To[int32](90),
 			},
 		},
-		SeedClientConnection: &gardenletv1alpha1.SeedClientConnection{
+		SeedClientConnection: &gardenletconfigv1alpha1.SeedClientConnection{
 			ClientConnectionConfiguration: baseconfigv1alpha1.ClientConnectionConfiguration{
 				QPS:   100,
 				Burst: 130,
 			},
 		},
-		ShootClientConnection: &gardenletv1alpha1.ShootClientConnection{
+		ShootClientConnection: &gardenletconfigv1alpha1.ShootClientConnection{
 			ClientConnectionConfiguration: baseconfigv1alpha1.ClientConnectionConfiguration{
 				QPS:   25,
 				Burst: 50,
 			},
 		},
-		Controllers: &gardenletv1alpha1.GardenletControllerConfiguration{
-			BackupBucket: &gardenletv1alpha1.BackupBucketControllerConfiguration{
+		Controllers: &gardenletconfigv1alpha1.GardenletControllerConfiguration{
+			BackupBucket: &gardenletconfigv1alpha1.BackupBucketControllerConfiguration{
 				ConcurrentSyncs: &twenty,
 			},
-			BackupEntry: &gardenletv1alpha1.BackupEntryControllerConfiguration{
+			BackupEntry: &gardenletconfigv1alpha1.BackupEntryControllerConfiguration{
 				ConcurrentSyncs:          &twenty,
 				DeletionGracePeriodHours: &zero,
 			},
-			Bastion: &gardenletv1alpha1.BastionControllerConfiguration{
+			Bastion: &gardenletconfigv1alpha1.BastionControllerConfiguration{
 				ConcurrentSyncs: &twenty,
 			},
-			Gardenlet: &gardenletv1alpha1.GardenletObjectControllerConfiguration{
+			Gardenlet: &gardenletconfigv1alpha1.GardenletObjectControllerConfiguration{
 				SyncPeriod: &metav1.Duration{
 					Duration: 1 * time.Hour,
 				},
 			},
-			Seed: &gardenletv1alpha1.SeedControllerConfiguration{
+			Seed: &gardenletconfigv1alpha1.SeedControllerConfiguration{
 				SyncPeriod: &metav1.Duration{
 					Duration: 1 * time.Hour,
 				},
 				LeaseResyncSeconds:       ptr.To[int32](2),
 				LeaseResyncMissThreshold: ptr.To[int32](10),
 			},
-			Shoot: &gardenletv1alpha1.ShootControllerConfiguration{
+			Shoot: &gardenletconfigv1alpha1.ShootControllerConfiguration{
 				ReconcileInMaintenanceOnly: ptr.To(false),
 				RespectSyncPeriodOverwrite: ptr.To(false),
 				ConcurrentSyncs:            &twenty,
@@ -666,7 +666,7 @@ func ComputeExpectedGardenletConfiguration(
 				},
 				DNSEntryTTLSeconds: ptr.To[int64](120),
 			},
-			ManagedSeed: &gardenletv1alpha1.ManagedSeedControllerConfiguration{
+			ManagedSeed: &gardenletconfigv1alpha1.ManagedSeedControllerConfiguration{
 				ConcurrentSyncs: &five,
 				JitterUpdates:   ptr.To(false),
 				SyncPeriod: &metav1.Duration{
@@ -679,17 +679,17 @@ func ComputeExpectedGardenletConfiguration(
 					Duration: 300000000000,
 				},
 			},
-			ShootCare: &gardenletv1alpha1.ShootCareControllerConfiguration{
+			ShootCare: &gardenletconfigv1alpha1.ShootCareControllerConfiguration{
 				ConcurrentSyncs: &five,
 				SyncPeriod: &metav1.Duration{
 					Duration: 30 * time.Second,
 				},
-				StaleExtensionHealthChecks: &gardenletv1alpha1.StaleExtensionHealthChecks{
+				StaleExtensionHealthChecks: &gardenletconfigv1alpha1.StaleExtensionHealthChecks{
 					Enabled:   true,
 					Threshold: &metav1.Duration{Duration: 300000000000},
 				},
 				ManagedResourceProgressingThreshold: &metav1.Duration{Duration: time.Hour},
-				ConditionThresholds: []gardenletv1alpha1.ConditionThreshold{
+				ConditionThresholds: []gardenletconfigv1alpha1.ConditionThreshold{
 					{
 						Type: string(gardencorev1beta1.ShootAPIServerAvailable),
 						Duration: metav1.Duration{
@@ -723,11 +723,11 @@ func ComputeExpectedGardenletConfiguration(
 				},
 				WebhookRemediatorEnabled: ptr.To(false),
 			},
-			SeedCare: &gardenletv1alpha1.SeedCareControllerConfiguration{
+			SeedCare: &gardenletconfigv1alpha1.SeedCareControllerConfiguration{
 				SyncPeriod: &metav1.Duration{
 					Duration: 30 * time.Second,
 				},
-				ConditionThresholds: []gardenletv1alpha1.ConditionThreshold{
+				ConditionThresholds: []gardenletconfigv1alpha1.ConditionThreshold{
 					{
 						Type: string(gardencorev1beta1.SeedSystemComponentsHealthy),
 						Duration: metav1.Duration{
@@ -736,30 +736,30 @@ func ComputeExpectedGardenletConfiguration(
 					},
 				},
 			},
-			ShootState: &gardenletv1alpha1.ShootStateControllerConfiguration{
+			ShootState: &gardenletconfigv1alpha1.ShootStateControllerConfiguration{
 				ConcurrentSyncs: &five,
 				SyncPeriod:      &metav1.Duration{Duration: 6 * time.Hour},
 			},
-			TokenRequestorServiceAccount: &gardenletv1alpha1.TokenRequestorServiceAccountControllerConfiguration{
+			TokenRequestorServiceAccount: &gardenletconfigv1alpha1.TokenRequestorServiceAccountControllerConfiguration{
 				ConcurrentSyncs: &five,
 			},
-			TokenRequestorWorkloadIdentity: &gardenletv1alpha1.TokenRequestorWorkloadIdentityControllerConfiguration{
+			TokenRequestorWorkloadIdentity: &gardenletconfigv1alpha1.TokenRequestorWorkloadIdentityControllerConfiguration{
 				ConcurrentSyncs: &five,
 			},
-			VPAEvictionRequirements: &gardenletv1alpha1.VPAEvictionRequirementsControllerConfiguration{
+			VPAEvictionRequirements: &gardenletconfigv1alpha1.VPAEvictionRequirementsControllerConfiguration{
 				ConcurrentSyncs: &five,
 			},
-			ControllerInstallation: &gardenletv1alpha1.ControllerInstallationControllerConfiguration{
+			ControllerInstallation: &gardenletconfigv1alpha1.ControllerInstallationControllerConfiguration{
 				ConcurrentSyncs: &twenty,
 			},
-			ControllerInstallationCare: &gardenletv1alpha1.ControllerInstallationCareControllerConfiguration{
+			ControllerInstallationCare: &gardenletconfigv1alpha1.ControllerInstallationCareControllerConfiguration{
 				ConcurrentSyncs: &twenty,
 				SyncPeriod:      &metav1.Duration{Duration: 30 * time.Second},
 			},
-			ControllerInstallationRequired: &gardenletv1alpha1.ControllerInstallationRequiredControllerConfiguration{
+			ControllerInstallationRequired: &gardenletconfigv1alpha1.ControllerInstallationRequiredControllerConfiguration{
 				ConcurrentSyncs: &one,
 			},
-			NetworkPolicy: &gardenletv1alpha1.NetworkPolicyControllerConfiguration{
+			NetworkPolicy: &gardenletconfigv1alpha1.NetworkPolicyControllerConfiguration{
 				ConcurrentSyncs: &five,
 			},
 		},
@@ -774,23 +774,23 @@ func ComputeExpectedGardenletConfiguration(
 		},
 		LogLevel:  logLevelInfo,
 		LogFormat: logFormatJson,
-		Logging: &gardenletv1alpha1.Logging{
+		Logging: &gardenletconfigv1alpha1.Logging{
 			Enabled: ptr.To(false),
-			Vali: &gardenletv1alpha1.Vali{
+			Vali: &gardenletconfigv1alpha1.Vali{
 				Enabled: ptr.To(false),
-				Garden: &gardenletv1alpha1.GardenVali{
-					Storage: &gardenletv1alpha1.DefaultCentralValiStorage,
+				Garden: &gardenletconfigv1alpha1.GardenVali{
+					Storage: &gardenletconfigv1alpha1.DefaultCentralValiStorage,
 				},
 			},
-			ShootEventLogging: &gardenletv1alpha1.ShootEventLogging{
+			ShootEventLogging: &gardenletconfigv1alpha1.ShootEventLogging{
 				Enabled: ptr.To(false),
 			},
 		},
-		Server: gardenletv1alpha1.ServerConfiguration{
-			HealthProbes: &gardenletv1alpha1.Server{
+		Server: gardenletconfigv1alpha1.ServerConfiguration{
+			HealthProbes: &gardenletconfigv1alpha1.Server{
 				Port: 2728,
 			},
-			Metrics: &gardenletv1alpha1.Server{
+			Metrics: &gardenletconfigv1alpha1.Server{
 				Port: 2729,
 			},
 		},
@@ -799,36 +799,36 @@ func ComputeExpectedGardenletConfiguration(
 			EnableContentionProfiling: ptr.To(false),
 		},
 		FeatureGates: featureGates,
-		Resources: &gardenletv1alpha1.ResourcesConfiguration{
+		Resources: &gardenletconfigv1alpha1.ResourcesConfiguration{
 			Capacity: corev1.ResourceList{
 				"shoots": resource.MustParse("250"),
 			},
 		},
-		SNI: &gardenletv1alpha1.SNI{Ingress: &gardenletv1alpha1.SNIIngress{
+		SNI: &gardenletconfigv1alpha1.SNI{Ingress: &gardenletconfigv1alpha1.SNIIngress{
 			ServiceName: ptr.To(v1beta1constants.DefaultSNIIngressServiceName),
 			Namespace:   ptr.To(v1beta1constants.DefaultSNIIngressNamespace),
 			Labels:      map[string]string{"app": "istio-ingressgateway", "istio": "ingressgateway"},
 		}},
-		Monitoring: &gardenletv1alpha1.MonitoringConfig{
-			Shoot: &gardenletv1alpha1.ShootMonitoringConfig{
+		Monitoring: &gardenletconfigv1alpha1.MonitoringConfig{
+			Shoot: &gardenletconfigv1alpha1.ShootMonitoringConfig{
 				Enabled: ptr.To(true),
 			},
 		},
-		ETCDConfig: &gardenletv1alpha1.ETCDConfig{
-			BackupCompactionController: &gardenletv1alpha1.BackupCompactionController{
+		ETCDConfig: &gardenletconfigv1alpha1.ETCDConfig{
+			BackupCompactionController: &gardenletconfigv1alpha1.BackupCompactionController{
 				EnableBackupCompaction:    ptr.To(false),
 				EventsThreshold:           ptr.To[int64](1000000),
 				MetricsScrapeWaitDuration: &metav1.Duration{Duration: 60 * time.Second},
 				Workers:                   ptr.To[int64](3),
 			},
-			CustodianController: &gardenletv1alpha1.CustodianController{
+			CustodianController: &gardenletconfigv1alpha1.CustodianController{
 				Workers: ptr.To[int64](10),
 			},
-			ETCDController: &gardenletv1alpha1.ETCDController{
+			ETCDController: &gardenletconfigv1alpha1.ETCDController{
 				Workers: ptr.To[int64](50),
 			},
 		},
-		NodeToleration: &gardenletv1alpha1.NodeToleration{
+		NodeToleration: &gardenletconfigv1alpha1.NodeToleration{
 			DefaultNotReadyTolerationSeconds:    ptr.To[int64](60),
 			DefaultUnreachableTolerationSeconds: ptr.To[int64](60),
 		},
@@ -859,7 +859,7 @@ func VerifyGardenletComponentConfigConfigMap(
 	ctx context.Context,
 	c client.Client,
 	universalDecoder runtime.Decoder,
-	expectedGardenletConfig gardenletv1alpha1.GardenletConfiguration,
+	expectedGardenletConfig gardenletconfigv1alpha1.GardenletConfiguration,
 	expectedLabels map[string]string,
 	uniqueName string,
 ) {
@@ -885,7 +885,7 @@ func VerifyGardenletComponentConfigConfigMap(
 	// unmarshal Gardenlet Configuration from deployed Config Map
 	componentConfigYaml := componentConfigCm.Data["config.yaml"]
 	Expect(componentConfigYaml).ToNot(BeEmpty())
-	gardenletConfig := &gardenletv1alpha1.GardenletConfiguration{}
+	gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{}
 	_, _, err := universalDecoder.Decode([]byte(componentConfigYaml), nil, gardenletConfig)
 	Expect(err).ToNot(HaveOccurred())
 	Expect(*gardenletConfig).To(DeepEqual(expectedGardenletConfig))
@@ -910,7 +910,7 @@ func ComputeExpectedGardenletDeploymentSpec(
 	expectedLabels map[string]string,
 	imageVectorOverwrite, componentImageVectorOverwrites *string,
 	uniqueName map[string]string,
-	seedConfig *gardenletv1alpha1.SeedConfig,
+	seedConfig *gardenletconfigv1alpha1.SeedConfig,
 ) (
 	appsv1.DeploymentSpec,
 	error,
