@@ -38,7 +38,7 @@ When applying a shoot manifest to the Gardener API, the shoot admission controll
 
 2. Operating System Maintenance Operations
 
-When performing maintenance operations on a cluster, Gardener has to know which machine image is used for a given machine type. This is important to ensure that the maintenance operation is performed correctly and does not break the worker nodes.
+When performing maintenance operations on a cluster, Gardener has to know which machine image can be used for a given machine type. This is important to ensure that the maintenance operation is performed correctly and does not break the worker nodes.
 
 3. Gardener Dashboard Shoot Creation
 
@@ -46,7 +46,7 @@ During shoot creation via the Gardener Dashboard, the user has to select a machi
 
 ### Use Case Example
 
-One such example is Azure: machine types have a `generation` [attribute](https://learn.microsoft.com/en-us/azure/virtual-machines/generation-2) which - at the time of writing - supports two values `gen1` and `gen2`. While `gen1` machine types boot with legacy BIOS support, `gen2` machine types make use of UEFI. While most machine types actually support both, `gen1` and `gen2`, there are certain machine types which support only one. Machine images in Azure also have the generation in their metadata, however, while a machine type can be `gen1` **and** `gen2`, a machine image can only be `gen1` **or** `gen2`. For machine types, that support either generation, it depends on the selected machine image wether the machine will be booted with legacy BIOS or with UEFI. For those machines however, that only support a single generation, providing a mismatching machine image in the `create_or_update` API call will result in an error.
+One such example is on Azure: machine types have a `generation` [attribute](https://learn.microsoft.com/en-us/azure/virtual-machines/generation-2) which - at the time of writing - supports two values `gen1` and `gen2`. While `gen1` machine types boot with legacy BIOS support, `gen2` machine types make use of UEFI. While most machine types actually support both, `gen1` and `gen2`, there are certain machine types which support only one. Machine images in Azure also have the generation in their metadata, however, while a machine type can be `gen1` **and** `gen2`, a machine image can only be `gen1` **or** `gen2`. For machine types, that support either generation, it depends on the selected machine image wether the machine will be booted with legacy BIOS or with UEFI. For those machines however, that only support a single generation, providing a mismatching machine image in the `create_or_update` API call will result in an error.
 
 The information given on the Gardener Dashboard provide no information about that incompatibility. The user has to know about that and select the proper machine image manually AND disable Operating System maintenance as the machine image might be updated to a version that is incompatible with the machine type.
 
@@ -58,7 +58,7 @@ Multiple workarounds are currently in place:
 
 1. In the Gardener Dashboard and the CloudProfile the pre-release tag is used to distinguish between `gen1` and `gen2` machine images on Azure e.g `gardenLinux:1592.2.0-gen2` or on openstack for the hypervisor type `gardenLinux:1592.2.0-baremetal`. As images with pre-release tag will not be regarded during maintenance operations, the user has to disable Operating System maintenance for the shoot.
 
-2. In the cloud profile only one OS image version be in state `classification: supported`. When another capability set for that version like Azures `generation`wants to be supported, `classification` key is omitted by Gardener Operators. This will display the version as supported in the Gardener Dashboard. This is not the intended use of the classification key.
+2. In the cloud profile only one OS image version can be in state `classification: supported`. When another capability set for that version like Azures `generation` must to be supported, the `classification` key is omitted by Gardener Operators. This will display the version as supported in the Gardener Dashboard. This is not the intended use of the classification key.
 
 3. Currently extension providers define their own capabilities that are processed after shoot admission, like `acceleratedNetworking` in the [gardener-extension-provider-azure](https://github.com/gardener/gardener-extension-provider-azure/blob/28c977612898ed40e9d179052633fee0b9600d3e/pkg/apis/azure/types_cloudprofile.go#L78). This can lead to a situation where the machine supports accelerated networking but the machine image does not. In this case it does not result in an error but to performance loss.
 
@@ -79,7 +79,7 @@ Multiple workarounds are currently in place:
 
 Introduce a top level capabilities array in the CloudProfile `spec.capabilities`.
 
-Capabilities are very specific to the provider and the selected catalog offered by gardener in the cloud profile. To minimize complexity and data size in the cloud profile, the capabilities are defined as a key-value array. The key is the capability name and the value is an array of possible values.
+Capabilities are very specific to the provider and the selected catalog offered by Gardener in the cloud profile. To minimize complexity and data size in the cloud profile, the capabilities are defined as a key-value array. The key is the capability name and the value is an array of possible values.
 
 ```go
 type Spec struct {
@@ -103,7 +103,7 @@ spec:
     ...
 ```
 
-The arrays for a capability is ordered. The order defines the priority of the values in case of multiple supported images. The first value in the array is the most preferred value. The last value is the least preferred value.
+The array of a capability is ordered. The order defines the priority of the values in case of multiple supported images. The first value in the array is the most preferred value. The last value is the least preferred value.
 
 Example: A machine supports hypervisor `gen2` AND `gen1` and an image version offers `gen1` OR `gen2`. Then the image with `gen2` will be preferred.
 
@@ -119,9 +119,9 @@ type CloudProfileSpec struct {
 }
 ```
 
-The `MachineImages` and `MachineTypes` are visible to gardener core. This means all information required to decide if an image is compatible with a machine type must be stored in these two arrays.
+The `MachineImages` and `MachineTypes` are visible to Gardener core. This means all information required to decide if an image is compatible with a machine type must be stored in these two arrays.
 
-The `ProviderConfig` is only visible to the gardener extension, meaning filtering based on these information is not possible in gardener core or the gardener dashboard.
+The `ProviderConfig` is only visible to the Gardener extension, meaning filtering based on these information is not possible in Gardener core or the Gardener dashboard.
 
 Here is a CloudProfile example without capabilities for exactly one machineType and one machineImage version. Note that there are two versions in `spec.machineImages.versions` as the pre-release tag is used to distinguish between `gen1` and `gen2` machine images.
 
@@ -175,7 +175,7 @@ spec:
 
 While a machineType always refers to exactly one resource in the cloud provider, a machineImage defines an operating system, like gardenLinux or SUSE. That operating system in turn can have multiple versions. And going further down, each version can have multiple architectures or other capabilities that are in fact different resources in the cloud provider.
 
-This means there are three decisions to be made, two by gardener core, one by the gardener extension:
+This means there are three decisions to be made, two by Gardener core, one by the Gardener extension:
 
 - **Gardener Core**: filter the **machineImage version** for a machineType in case of maintenance operations
 - **Gardener Core**: admit the **machineImage version** for a machineType
@@ -269,7 +269,7 @@ return true
 
 ### Migration Strategy
 
-Capabilities are **OPT-IN** and not all infrastructure providers or Gardener installation might use them. All API changes in gardener core are backwards compatible. They can be implemented first including its filter and admission logic. In a second step each provider extension can be updated to include the capabilities in the cloud profile. In a third wave cloud profiles and the Gardener Dashboard can be updated to react to the capabilities.
+Capabilities are **OPT-IN** and not all infrastructure providers or Gardener installation might use them. All API changes in Gardener core are backwards compatible. They can be implemented first including its filter and admission logic. In a second step each provider extension can be updated to include the capabilities in the cloud profile. In a third wave cloud profiles and the Gardener Dashboard can be updated to react to the capabilities.
 
 ### Considerations
 
@@ -381,7 +381,7 @@ spec:
 
 #### Cons
 
-- Edge cases are possible where an image version is valid for gardener core but the specific capability combination is not published to the provider.
+- Edge cases are possible where an image version is valid for Gardener core but the specific capability combination is not published to the provider.
 
 <details>
   <summary>Click to show the example</summary>
@@ -483,7 +483,7 @@ spec:
 
 ### 4: Remove Extension Mapping
 
-The whole mapping from ImageVersions to the provider specific image reference is generalized and moved to gardener core.
+The whole mapping from ImageVersions to the provider specific image reference is generalized and moved to Gardener core.
 
 <details>
   <summary>Click to show the example</summary>
