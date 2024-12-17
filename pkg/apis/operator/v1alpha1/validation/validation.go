@@ -21,7 +21,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	admissioncontrollerconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
-	admissioncontrollerv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
+	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	admissioncontrollervalidation "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/validation"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
@@ -45,7 +45,7 @@ var gardenCoreScheme *runtime.Scheme
 func init() {
 	gardenCoreScheme = runtime.NewScheme()
 	utilruntime.Must(gardencoreinstall.AddToScheme(gardenCoreScheme))
-	utilruntime.Must(admissioncontrollerv1alpha1.AddToScheme(gardenCoreScheme))
+	utilruntime.Must(admissioncontrollerconfigv1alpha1.AddToScheme(gardenCoreScheme))
 }
 
 // ValidateGarden contains functionality for performing extended validation of a Garden object which is not possible

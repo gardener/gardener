@@ -5,29 +5,29 @@
 package conversion
 
 import (
-	admissioncontrollerv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
+	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 )
 
 // ConvertToAdmissionControllerResourceAdmissionConfiguration converts the given 'ResourceAdmissionConfiguration' into
-// a 'admissioncontrollerv1alpha1.ResourceAdmissionConfiguration' object.
+// a 'admissioncontrollerconfigv1alpha1.ResourceAdmissionConfiguration' object.
 // Note: References from the given config are re-used, the function does not deep copy the data.
-func ConvertToAdmissionControllerResourceAdmissionConfiguration(config *operatorv1alpha1.ResourceAdmissionConfiguration) *admissioncontrollerv1alpha1.ResourceAdmissionConfiguration {
+func ConvertToAdmissionControllerResourceAdmissionConfiguration(config *operatorv1alpha1.ResourceAdmissionConfiguration) *admissioncontrollerconfigv1alpha1.ResourceAdmissionConfiguration {
 	if config == nil {
 		return nil
 	}
 
-	out := &admissioncontrollerv1alpha1.ResourceAdmissionConfiguration{
+	out := &admissioncontrollerconfigv1alpha1.ResourceAdmissionConfiguration{
 		UnrestrictedSubjects: config.UnrestrictedSubjects,
-		OperationMode:        (*admissioncontrollerv1alpha1.ResourceAdmissionWebhookMode)(config.OperationMode),
+		OperationMode:        (*admissioncontrollerconfigv1alpha1.ResourceAdmissionWebhookMode)(config.OperationMode),
 	}
 
 	for _, limit := range config.Limits {
 		if config.Limits == nil {
-			out.Limits = make([]admissioncontrollerv1alpha1.ResourceLimit, 0, len(config.Limits))
+			out.Limits = make([]admissioncontrollerconfigv1alpha1.ResourceLimit, 0, len(config.Limits))
 		}
 
-		out.Limits = append(out.Limits, admissioncontrollerv1alpha1.ResourceLimit{
+		out.Limits = append(out.Limits, admissioncontrollerconfigv1alpha1.ResourceLimit{
 			APIGroups:   limit.APIGroups,
 			APIVersions: limit.APIVersions,
 			Resources:   limit.Resources,
