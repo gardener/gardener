@@ -15,12 +15,7 @@ import (
 // featureGateVersionRanges contains the version ranges for all Kubernetes feature gates.
 // Extracted from https://raw.githubusercontent.com/kubernetes/kubernetes/release-${version}/pkg/features/kube_features.go.
 // To maintain this list for each new Kubernetes version:
-//   - Run hack/compare-k8s-feature-gates.sh <old-version> <new-version> (e.g. 'hack/compare-k8s-feature-gates.sh 1.26 1.27').
-//     It will present 3 lists of feature gates: those added and those removed in <new-version> compared to <old-version> and
-//     feature gates that got locked to default in `<new-version>`.
-//   - Add all added feature gates to the map with <new-version> as AddedInVersion and no RemovedInVersion.
-//   - For any removed feature gates, add <new-version> as RemovedInVersion to the already existing feature gate in the map.
-//   - For feature gates locked to default, add `<new-version>` as LockedToDefaultInVersion to the already existing feature gate in the map.
+// TODO(marc1404): Create issue for fixing the `compare-k8s-feature-gates.sh` script & describe how to maintain this list.
 var featureGateVersionRanges = map[string]*FeatureGateVersionRange{
 	// These are special feature gates to toggle all alpha or beta feature gates on and off.
 	// They were introduced in version 1.17 (although they are absent from the corresponding kube_features.go file).
