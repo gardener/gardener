@@ -56,11 +56,7 @@ There is a CI/CD job that runs periodically and releases a new `hyperkube` image
   - The list of supported versions is meanwhile maintained [here](../../pkg/utils/validation/kubernetesversion/version.go) in the `SupportedVersions` variable.
 - Maintain the Kubernetes feature gates used for validation of `Shoot` resources:
   - The feature gates are maintained in [this](../../pkg/utils/validation/features/featuregates.go) file.
-  - To maintain this list for new Kubernetes versions, run `hack/compare-k8s-feature-gates.sh <old-version> <new-version>` (e.g. `hack/compare-k8s-feature-gates.sh v1.26 v1.27`).
-  - It will present 3 lists of feature gates: those added and those removed in `<new-version>` compared to `<old-version>` and feature gates that got locked to default in `<new-version>`.
-  - Add all added feature gates to the map with `<new-version>` as `AddedInVersion` and no `RemovedInVersion`.
-  - For any removed feature gates, add `<new-version>` as `RemovedInVersion` to the already existing feature gate in the map.
-  - For feature gates locked to default, add `<new-version>` as `LockedToDefaultInVersion` to the already existing feature gate in the map.
+<!-- // TODO(marc1404): Create issue for fixing the `compare-k8s-feature-gates.sh` script & describe how to maintain this list. -->
   - See [this](https://github.com/gardener/gardener/pull/5255/commits/97923b0604300ff805def8eae981ed388d5e4a83) example commit.
 - Maintain the Kubernetes `kube-apiserver` admission plugins used for validation of `Shoot` resources:
   - The admission plugins are maintained in [this](../../pkg/utils/validation/admissionplugins/admissionplugins.go) file.

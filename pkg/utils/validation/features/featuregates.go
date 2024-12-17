@@ -15,12 +15,22 @@ import (
 // featureGateVersionRanges contains the version ranges for all Kubernetes feature gates.
 // Extracted from https://raw.githubusercontent.com/kubernetes/kubernetes/release-${version}/pkg/features/kube_features.go.
 // To maintain this list for each new Kubernetes version:
-//   - Run hack/compare-k8s-feature-gates.sh <old-version> <new-version> (e.g. 'hack/compare-k8s-feature-gates.sh 1.26 1.27').
-//     It will present 3 lists of feature gates: those added and those removed in <new-version> compared to <old-version> and
-//     feature gates that got locked to default in `<new-version>`.
-//   - Add all added feature gates to the map with <new-version> as AddedInVersion and no RemovedInVersion.
-//   - For any removed feature gates, add <new-version> as RemovedInVersion to the already existing feature gate in the map.
-//   - For feature gates locked to default, add `<new-version>` as LockedToDefaultInVersion to the already existing feature gate in the map.
+// Alpha & Beta Feature Gates
+// 1. Open: https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/#feature-gates-for-alpha-or-beta-features
+// 2. Search the page for the new Kubernetes version, e.g. "1.32".
+// 3. Add new alpha feature gates that have been added "Since" the new Kubernetes version.
+// 4. Change the `Default` for Beta feature gates that have been promoted "Since" the new Kubernetes version.
+//
+// Graduated & Deprecated Feature Gates
+// 1. Open: https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/#feature-gates-for-graduated-or-deprecated-features
+// 2. Search the page for the new Kubernetes version, e.g. "1.32".
+// 3. Change `LockedToDefaultInVersion` for GA and Deprecated feature gates that have been graduated/deprecated "Since" the new Kubernetes version.
+//
+// Removed Feature Gates
+// 1. Open: https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates-removed/#feature-gates-that-are-removed
+// 2. Search the page for the _current_ Kubernetes version, e.g. if the new version is "1.32", search for "1.31".
+// 3. Set `RemovedInVersion` to the _new_ Kubernetes version for feature gates that have been removed after the _current_ Kubernetes version according to the "To" column.
+// TODO(marc1404): Reference the `compare-k8s-feature-gates.sh` script once it has been fixed (https://github.com/gardener/gardener/issues/11198).
 var featureGateVersionRanges = map[string]*FeatureGateVersionRange{
 	// These are special feature gates to toggle all alpha or beta feature gates on and off.
 	// They were introduced in version 1.17 (although they are absent from the corresponding kube_features.go file).
