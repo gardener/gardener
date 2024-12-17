@@ -73,7 +73,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
 	"github.com/gardener/gardener/pkg/component/observability/plutono"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
-	controllermanagerv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
@@ -1013,7 +1013,7 @@ func (r *Reconciler) newGardenerControllerManager(garden *operatorv1alpha1.Garde
 		}
 
 		for _, defaultProjectQuota := range config.DefaultProjectQuotas {
-			values.Quotas = append(values.Quotas, controllermanagerv1alpha1.QuotaConfiguration{
+			values.Quotas = append(values.Quotas, controllermanagerconfigv1alpha1.QuotaConfiguration{
 				Config:          defaultProjectQuota.Config,
 				ProjectSelector: defaultProjectQuota.ProjectSelector,
 			})

@@ -34,7 +34,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/gardener/controllermanager"
-	controllermanagerv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
@@ -705,7 +705,7 @@ var (
 )
 
 func configMap(namespace string, testValues Values) *corev1.ConfigMap {
-	controllerManagerConfig := &controllermanagerv1alpha1.ControllerManagerConfiguration{
+	controllerManagerConfig := &controllermanagerconfigv1alpha1.ControllerManagerConfiguration{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "controllermanager.config.gardener.cloud/v1alpha1",
 			Kind:       "ControllerManagerConfiguration",
@@ -715,57 +715,57 @@ func configMap(namespace string, testValues Values) *corev1.ConfigMap {
 			Burst:      130,
 			Kubeconfig: gardenerutils.PathGenericKubeconfig,
 		},
-		Controllers: controllermanagerv1alpha1.ControllerManagerControllerConfiguration{
-			ControllerRegistration: &controllermanagerv1alpha1.ControllerRegistrationControllerConfiguration{
+		Controllers: controllermanagerconfigv1alpha1.ControllerManagerControllerConfiguration{
+			ControllerRegistration: &controllermanagerconfigv1alpha1.ControllerRegistrationControllerConfiguration{
 				ConcurrentSyncs: ptr.To(20),
 			},
-			Project: &controllermanagerv1alpha1.ProjectControllerConfiguration{
+			Project: &controllermanagerconfigv1alpha1.ProjectControllerConfiguration{
 				ConcurrentSyncs: ptr.To(20),
 				Quotas:          testValues.Quotas,
 			},
-			SecretBinding: &controllermanagerv1alpha1.SecretBindingControllerConfiguration{
+			SecretBinding: &controllermanagerconfigv1alpha1.SecretBindingControllerConfiguration{
 				ConcurrentSyncs: ptr.To(20),
 			},
-			CredentialsBinding: &controllermanagerv1alpha1.CredentialsBindingControllerConfiguration{
+			CredentialsBinding: &controllermanagerconfigv1alpha1.CredentialsBindingControllerConfiguration{
 				ConcurrentSyncs: ptr.To(20),
 			},
-			Seed: &controllermanagerv1alpha1.SeedControllerConfiguration{
+			Seed: &controllermanagerconfigv1alpha1.SeedControllerConfiguration{
 				ConcurrentSyncs:    ptr.To(20),
 				ShootMonitorPeriod: &metav1.Duration{Duration: 300 * time.Second},
 			},
-			SeedExtensionsCheck: &controllermanagerv1alpha1.SeedExtensionsCheckControllerConfiguration{
-				ConditionThresholds: []controllermanagerv1alpha1.ConditionThreshold{{
+			SeedExtensionsCheck: &controllermanagerconfigv1alpha1.SeedExtensionsCheckControllerConfiguration{
+				ConditionThresholds: []controllermanagerconfigv1alpha1.ConditionThreshold{{
 					Duration: metav1.Duration{Duration: 1 * time.Minute},
 					Type:     "ExtensionsReady",
 				}},
 			},
-			SeedBackupBucketsCheck: &controllermanagerv1alpha1.SeedBackupBucketsCheckControllerConfiguration{
-				ConditionThresholds: []controllermanagerv1alpha1.ConditionThreshold{{
+			SeedBackupBucketsCheck: &controllermanagerconfigv1alpha1.SeedBackupBucketsCheckControllerConfiguration{
+				ConditionThresholds: []controllermanagerconfigv1alpha1.ConditionThreshold{{
 					Duration: metav1.Duration{Duration: 1 * time.Minute},
 					Type:     "BackupBucketsReady",
 				}},
 			},
-			Event: &controllermanagerv1alpha1.EventControllerConfiguration{
+			Event: &controllermanagerconfigv1alpha1.EventControllerConfiguration{
 				ConcurrentSyncs:   ptr.To(10),
 				TTLNonShootEvents: &metav1.Duration{Duration: 2 * time.Hour},
 			},
-			ShootMaintenance: controllermanagerv1alpha1.ShootMaintenanceControllerConfiguration{
+			ShootMaintenance: controllermanagerconfigv1alpha1.ShootMaintenanceControllerConfiguration{
 				ConcurrentSyncs: ptr.To(20),
 			},
-			ShootReference: &controllermanagerv1alpha1.ShootReferenceControllerConfiguration{
+			ShootReference: &controllermanagerconfigv1alpha1.ShootReferenceControllerConfiguration{
 				ConcurrentSyncs: ptr.To(20),
 			},
 		},
 		LeaderElection: &componentbaseconfigv1alpha1.LeaderElectionConfiguration{
 			LeaderElect:       ptr.To(true),
-			ResourceName:      controllermanagerv1alpha1.ControllerManagerDefaultLockObjectName,
+			ResourceName:      controllermanagerconfigv1alpha1.ControllerManagerDefaultLockObjectName,
 			ResourceNamespace: metav1.NamespaceSystem,
 		},
 		LogLevel:  testValues.LogLevel,
 		LogFormat: logger.FormatJSON,
-		Server: controllermanagerv1alpha1.ServerConfiguration{
-			HealthProbes: &controllermanagerv1alpha1.Server{Port: 2718},
-			Metrics:      &controllermanagerv1alpha1.Server{Port: 2719},
+		Server: controllermanagerconfigv1alpha1.ServerConfiguration{
+			HealthProbes: &controllermanagerconfigv1alpha1.Server{Port: 2718},
+			Metrics:      &controllermanagerconfigv1alpha1.Server{Port: 2719},
 		},
 		FeatureGates: testValues.FeatureGates,
 	}
