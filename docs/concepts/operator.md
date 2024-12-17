@@ -73,8 +73,6 @@ The `spec.virtualCluster.kubernetes.kubeAPIServer.encryptionConfig` field in the
 - Adding an item to any of the lists will cause patch requests for all the resources of that kind to encrypt them in the etcd. See [Encrypting Confidential Data at Rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data) for more details.
 - Removing an item from any of these lists will cause patch requests for all the resources of that type to decrypt and rewrite the resource as plain text. See [Decrypt Confidential Data that is Already Encrypted at Rest](https://kubernetes.io/docs/tasks/administer-cluster/decrypt-data/) for more details.
 
-> ℹ️ Note that configuring encryption for a custom resource for the `kube-apiserver` is only supported for Kubernetes versions >= 1.26.
-
 ## `Extension` Resource
 
 A Gardener installation relies on extensions to provide support for new cloud providers or to add new capabilities.

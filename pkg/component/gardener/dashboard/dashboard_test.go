@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
@@ -873,7 +872,6 @@ frontend:
 
 		values = Values{
 			LogLevel:              logLevel,
-			RuntimeVersion:        semver.MustParse("1.26.4"),
 			Image:                 image,
 			APIServerURL:          apiServerURL,
 			EnableTokenLogin:      enableTokenLogin,

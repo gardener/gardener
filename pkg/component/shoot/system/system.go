@@ -339,6 +339,7 @@ func (s *shootSystem) getServiceAccountNamesToInvalidate() []string {
 		"replicaset-controller",
 		"replication-controller",
 		"resourcequota-controller",
+		"resource-claim-controller",
 		"root-ca-cert-publisher",
 		"service-account-controller",
 		"shared-informers",
@@ -353,11 +354,6 @@ func (s *shootSystem) getServiceAccountNamesToInvalidate() []string {
 		"node-controller",
 		"route-controller",
 		"service-controller",
-	}
-
-	if versionutils.ConstraintK8sGreaterEqual126.Check(s.values.KubernetesVersion) {
-		kubeControllerManagerServiceAccountNames = append(kubeControllerManagerServiceAccountNames,
-			"resource-claim-controller")
 	}
 
 	if versionutils.ConstraintK8sGreaterEqual128.Check(s.values.KubernetesVersion) {

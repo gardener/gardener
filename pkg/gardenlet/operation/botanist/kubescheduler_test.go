@@ -5,7 +5,6 @@
 package botanist_test
 
 import (
-	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
@@ -27,9 +26,7 @@ var _ = Describe("KubeScheduler", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		botanist = &Botanist{Operation: &operation.Operation{}}
-		botanist.Seed = &seedpkg.Seed{
-			KubernetesVersion: semver.MustParse("1.25.0"),
-		}
+		botanist.Seed = &seedpkg.Seed{}
 	})
 
 	AfterEach(func() {

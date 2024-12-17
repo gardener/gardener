@@ -28,10 +28,10 @@ var _ = Describe("apigroups", func() {
 		},
 		Entry("Unknown API Group Version", "Unknown", "core/v2", false, false),
 		Entry("Unknown API Group Version Resource", "Unknown", "core/v1/random", false, false),
-		Entry("Known API Group Version but kubernetes version not present in supported range", "certificates.k8s.io/v1alpha1", "1.25", false, true),
-		Entry("Known API Group Version Resource but kubernetes version not present in supported range", "resource.k8s.io/v1alpha1/podschedulings", "1.25", false, true),
-		Entry("Known API Group Version and kubernetes version present in supported range", "resource.k8s.io/v1alpha1", "1.26", true, true),
-		Entry("Known API Group Version Resource and kubernetes version present in supported range", "resource.k8s.io/v1alpha1/podschedulings", "1.26", true, true),
+		Entry("Known API Group Version but kubernetes version not present in supported range", "flowcontrol.apiserver.k8s.io/v1alpha1", "1.30", false, true),
+		Entry("Known API Group Version Resource but kubernetes version not present in supported range", "coordination.k8s.io/v1alpha1/leasecandidates", "1.29", false, true),
+		Entry("Known API Group Version and kubernetes version present in supported range", "resource.k8s.io/v1alpha3", "1.31", true, true),
+		Entry("Known API Group Version Resource and kubernetes version present in supported range", "resource.k8s.io/v1alpha2/resourceclaimparameters", "1.30", true, true),
 		Entry("Known API Group Version but kubernetes version range not present", "policy/v1", "1.25", true, true),
 		Entry("Known API Group Version Resource but kubernetes version range not present", "policy/v1/poddisruptionbudgets", "1.25", true, true),
 	)
@@ -64,20 +64,21 @@ var _ = Describe("apigroups", func() {
 				"Detail":   Equal("unknown API group version \"Foo\""),
 			})))),
 			Entry("supported API group version", map[string]bool{"v1": true}, "1.27.1", false, BeEmpty()),
-			Entry("unsupported API group version", map[string]bool{"certificates.k8s.io/v1alpha1": true}, "1.25.10", false, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("supported API group version resource", map[string]bool{"apps/v1/deployments": true}, "1.27.1", false, BeEmpty()),
+			Entry("unsupported API group version", map[string]bool{"flowcontrol.apiserver.k8s.io/v1alpha1": true}, "1.30.1", false, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
-				"Field":  Equal("runtimeConfig[certificates.k8s.io/v1alpha1]"),
-				"Detail": Equal("api \"certificates.k8s.io/v1alpha1\" is not supported in Kubernetes version 1.25.10, only supported in versions >= 1.27"),
+				"Field":  Equal("runtimeConfig[flowcontrol.apiserver.k8s.io/v1alpha1]"),
+				"Detail": Equal("api \"flowcontrol.apiserver.k8s.io/v1alpha1\" is not supported in Kubernetes version 1.30.1, only supported in versions < 1.29"),
 			})))),
-			Entry("unsupported API group version", map[string]bool{"resource.k8s.io/v1alpha1": true}, "1.27.4", false, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("unsupported API group version resource", map[string]bool{"resource.k8s.io/v1alpha2/resourceclaimparameters": true}, "1.28.4", false, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
-				"Field":  Equal("runtimeConfig[resource.k8s.io/v1alpha1]"),
-				"Detail": Equal("api \"resource.k8s.io/v1alpha1\" is not supported in Kubernetes version 1.27.4, only supported in versions >= 1.26, < 1.27"),
+				"Field":  Equal("runtimeConfig[resource.k8s.io/v1alpha2/resourceclaimparameters]"),
+				"Detail": Equal("api \"resource.k8s.io/v1alpha2/resourceclaimparameters\" is not supported in Kubernetes version 1.28.4, only supported in versions >= 1.30, < 1.31"),
 			})))),
-			Entry("unsupported API group version", map[string]bool{"resource.k8s.io/v1alpha2": false}, "1.26.8", false, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("unsupported API group version", map[string]bool{"storagemigration.k8s.io/v1alpha1": false}, "1.29.4", false, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
-				"Field":  Equal("runtimeConfig[resource.k8s.io/v1alpha2]"),
-				"Detail": Equal("api \"resource.k8s.io/v1alpha2\" is not supported in Kubernetes version 1.26.8, only supported in versions >= 1.27, < 1.31"),
+				"Field":  Equal("runtimeConfig[storagemigration.k8s.io/v1alpha1]"),
+				"Detail": Equal("api \"storagemigration.k8s.io/v1alpha1\" is not supported in Kubernetes version 1.29.4, only supported in versions >= 1.30"),
 			})))),
 			Entry("disabling non-required API group version", map[string]bool{"batch/v1": false}, "1.26.8", false, BeEmpty()),
 			Entry("disabling non-required API group version for workerless shoot", map[string]bool{"apps/v1": false}, "1.26.8", true, BeEmpty()),

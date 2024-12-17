@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
@@ -70,10 +69,10 @@ var _ = Describe("GardenerControllerManager", func() {
 		managedResourceSecretRuntime *corev1.Secret
 		managedResourceSecretVirtual *corev1.Secret
 
-		podDisruptionBudgetFor func(bool) *policyv1.PodDisruptionBudget
-		serviceRuntime         *corev1.Service
-		serviceMonitor         *monitoringv1.ServiceMonitor
-		vpa                    *vpaautoscalingv1.VerticalPodAutoscaler
+		podDisruptionBudget *policyv1.PodDisruptionBudget
+		serviceRuntime      *corev1.Service
+		serviceMonitor      *monitoringv1.ServiceMonitor
+		vpa                 *vpaautoscalingv1.VerticalPodAutoscaler
 
 		clusterRole        *rbacv1.ClusterRole
 		clusterRoleBinding *rbacv1.ClusterRoleBinding
@@ -85,9 +84,7 @@ var _ = Describe("GardenerControllerManager", func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).Build()
 		fakeSecretManager = fakesecretsmanager.New(fakeClient, namespace)
 
-		values = Values{
-			RuntimeVersion: semver.MustParse("1.26.1"),
-		}
+		values = Values{}
 
 		fakeOps = &retryfake.Ops{MaxAttempts: 2}
 		DeferCleanup(test.WithVars(
@@ -122,34 +119,25 @@ var _ = Describe("GardenerControllerManager", func() {
 			},
 		}
 
-		podDisruptionBudgetFor = func(k8sGreaterEqual126 bool) *policyv1.PodDisruptionBudget {
-			var (
-				unhealthyPodEvictionPolicyAlwatysAllow = policyv1.AlwaysAllow
-				pdb                                    = &policyv1.PodDisruptionBudget{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gardener-controller-manager",
-						Namespace: namespace,
-						Labels: map[string]string{
-							"app":  "gardener",
-							"role": "controller-manager",
-						},
-					},
-					Spec: policyv1.PodDisruptionBudgetSpec{
-						MaxUnavailable: ptr.To(intstr.FromInt32(1)),
-						Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
-							"app":  "gardener",
-							"role": "controller-manager",
-						}},
-					},
-				}
-			)
-
-			if k8sGreaterEqual126 {
-				pdb.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
-			}
-
-			return pdb
+		podDisruptionBudget = &policyv1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener-controller-manager",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "controller-manager",
+				},
+			},
+			Spec: policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
+					"app":  "gardener",
+					"role": "controller-manager",
+				}},
+				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+			},
 		}
+
 		serviceRuntime = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        "gardener-controller-manager",
@@ -272,8 +260,7 @@ var _ = Describe("GardenerControllerManager", func() {
 			BeforeEach(func() {
 				// test with typical values
 				values = Values{
-					LogLevel:       "info",
-					RuntimeVersion: semver.MustParse("1.27.1"),
+					LogLevel: "info",
 				}
 
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntime), managedResourceRuntime)).To(BeNotFoundError())
@@ -300,7 +287,7 @@ var _ = Describe("GardenerControllerManager", func() {
 				})).To(Succeed())
 			})
 
-			JustBeforeEach(func() {
+			It("should successfully deploy all resources", func() {
 				Expect(deployer.Deploy(ctx)).To(Succeed())
 
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntime), managedResourceRuntime)).To(Succeed())
@@ -331,6 +318,7 @@ var _ = Describe("GardenerControllerManager", func() {
 				Expect(cm.Name).To(Equal("gardener-controller-manager-config-960e3f19"))
 				expectedRuntimeObjects = []client.Object{
 					cm,
+					podDisruptionBudget,
 					serviceRuntime,
 					serviceMonitor,
 					vpa,
@@ -370,26 +358,8 @@ var _ = Describe("GardenerControllerManager", func() {
 				Expect(managedResourceSecretVirtual.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecretVirtual.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
-			})
-
-			Context("Kubernetes version >= 1.26", func() {
-				It("should successfully deploy all resources", func() {
-					expectedRuntimeObjects = append(expectedRuntimeObjects, podDisruptionBudgetFor(true))
-					Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
-					Expect(deployer.Deploy(ctx)).To(Succeed())
-				})
-			})
-
-			Context("Kubernetes version < 1.26", func() {
-				BeforeEach(func() {
-					values.RuntimeVersion = semver.MustParse("1.25.3")
-				})
-
-				It("should successfully deploy all resources", func() {
-					expectedRuntimeObjects = append(expectedRuntimeObjects, podDisruptionBudgetFor(false))
-					Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
-					Expect(deployer.Deploy(ctx)).To(Succeed())
-				})
+				Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
+				Expect(deployer.Deploy(ctx)).To(Succeed())
 			})
 		})
 
