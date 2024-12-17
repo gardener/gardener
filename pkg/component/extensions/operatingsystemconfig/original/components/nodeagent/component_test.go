@@ -17,7 +17,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	. "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
 	"github.com/gardener/gardener/pkg/features"
-	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -29,7 +29,7 @@ var _ = Describe("Component", func() {
 		kubernetesVersion          = semver.MustParse("1.2.3")
 		apiServerURL               = "https://localhost"
 		caBundle                   = []byte("ca-bundle")
-		additionalTokenSyncConfigs = []nodeagentv1alpha1.TokenSecretSyncConfig{{
+		additionalTokenSyncConfigs = []nodeagentconfigv1alpha1.TokenSecretSyncConfig{{
 			SecretName: "gardener-valitail",
 			Path:       "/var/lib/valitail/auth-token",
 		}}
@@ -110,18 +110,18 @@ WantedBy=multi-user.target`))
 
 	Describe("#ComponentConfig", func() {
 		It("should return the expected result", func() {
-			Expect(ComponentConfig(oscSecretName, kubernetesVersion, apiServerURL, caBundle, additionalTokenSyncConfigs)).To(Equal(&nodeagentv1alpha1.NodeAgentConfiguration{
-				APIServer: nodeagentv1alpha1.APIServer{
+			Expect(ComponentConfig(oscSecretName, kubernetesVersion, apiServerURL, caBundle, additionalTokenSyncConfigs)).To(Equal(&nodeagentconfigv1alpha1.NodeAgentConfiguration{
+				APIServer: nodeagentconfigv1alpha1.APIServer{
 					Server:   apiServerURL,
 					CABundle: caBundle,
 				},
-				Controllers: nodeagentv1alpha1.ControllerConfiguration{
-					OperatingSystemConfig: nodeagentv1alpha1.OperatingSystemConfigControllerConfig{
+				Controllers: nodeagentconfigv1alpha1.ControllerConfiguration{
+					OperatingSystemConfig: nodeagentconfigv1alpha1.OperatingSystemConfigControllerConfig{
 						SecretName:        oscSecretName,
 						KubernetesVersion: kubernetesVersion,
 					},
-					Token: nodeagentv1alpha1.TokenControllerConfig{
-						SyncConfigs: []nodeagentv1alpha1.TokenSecretSyncConfig{
+					Token: nodeagentconfigv1alpha1.TokenControllerConfig{
+						SyncConfigs: []nodeagentconfigv1alpha1.TokenSecretSyncConfig{
 							{
 								SecretName: "gardener-valitail",
 								Path:       "/var/lib/valitail/auth-token",
@@ -140,18 +140,18 @@ WantedBy=multi-user.target`))
 
 		It("should return the expected result when NodeAgentAuthorizer feature gate is enabled", func() {
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.NodeAgentAuthorizer, true))
-			Expect(ComponentConfig(oscSecretName, kubernetesVersion, apiServerURL, caBundle, additionalTokenSyncConfigs)).To(Equal(&nodeagentv1alpha1.NodeAgentConfiguration{
-				APIServer: nodeagentv1alpha1.APIServer{
+			Expect(ComponentConfig(oscSecretName, kubernetesVersion, apiServerURL, caBundle, additionalTokenSyncConfigs)).To(Equal(&nodeagentconfigv1alpha1.NodeAgentConfiguration{
+				APIServer: nodeagentconfigv1alpha1.APIServer{
 					Server:   apiServerURL,
 					CABundle: caBundle,
 				},
-				Controllers: nodeagentv1alpha1.ControllerConfiguration{
-					OperatingSystemConfig: nodeagentv1alpha1.OperatingSystemConfigControllerConfig{
+				Controllers: nodeagentconfigv1alpha1.ControllerConfiguration{
+					OperatingSystemConfig: nodeagentconfigv1alpha1.OperatingSystemConfigControllerConfig{
 						SecretName:        oscSecretName,
 						KubernetesVersion: kubernetesVersion,
 					},
-					Token: nodeagentv1alpha1.TokenControllerConfig{
-						SyncConfigs: []nodeagentv1alpha1.TokenSecretSyncConfig{
+					Token: nodeagentconfigv1alpha1.TokenControllerConfig{
+						SyncConfigs: []nodeagentconfigv1alpha1.TokenSecretSyncConfig{
 							{
 								SecretName: "gardener-valitail",
 								Path:       "/var/lib/valitail/auth-token",

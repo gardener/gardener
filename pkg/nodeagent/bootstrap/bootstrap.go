@@ -16,7 +16,7 @@ import (
 
 	nodeagentcomponent "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
 	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
-	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
 )
 
@@ -33,9 +33,9 @@ func Bootstrap(
 ) error {
 	log.Info("Starting bootstrap procedure")
 
-	log.Info("Creating directory for temporary files", "path", nodeagentv1alpha1.TempDir)
-	if err := fs.MkdirAll(nodeagentv1alpha1.TempDir, os.ModeDir); err != nil {
-		return fmt.Errorf("unable to create directory for temporary files %q: %w", nodeagentv1alpha1.TempDir, err)
+	log.Info("Creating directory for temporary files", "path", nodeagentconfigv1alpha1.TempDir)
+	if err := fs.MkdirAll(nodeagentconfigv1alpha1.TempDir, os.ModeDir); err != nil {
+		return fmt.Errorf("unable to create directory for temporary files %q: %w", nodeagentconfigv1alpha1.TempDir, err)
 	}
 
 	if bootstrapConfig != nil && bootstrapConfig.KubeletDataVolumeSize != nil {
@@ -49,10 +49,10 @@ func Bootstrap(
 		}
 	}
 
-	unitFilePath := path.Join("/", "etc", "systemd", "system", nodeagentv1alpha1.UnitName)
+	unitFilePath := path.Join("/", "etc", "systemd", "system", nodeagentconfigv1alpha1.UnitName)
 	log.Info("Writing unit file for gardener-node-agent", "path", unitFilePath)
 	if err := fs.WriteFile(unitFilePath, []byte(nodeagentcomponent.UnitContent()), 0644); err != nil {
-		return fmt.Errorf("unable to write unit file %q to path %q: %w", nodeagentv1alpha1.UnitName, unitFilePath, err)
+		return fmt.Errorf("unable to write unit file %q to path %q: %w", nodeagentconfigv1alpha1.UnitName, unitFilePath, err)
 	}
 
 	log.Info("Reloading systemd daemon")
@@ -61,18 +61,18 @@ func Bootstrap(
 	}
 
 	log.Info("Enabling gardener-node-agent unit")
-	if err := dbus.Enable(ctx, nodeagentv1alpha1.UnitName); err != nil {
-		return fmt.Errorf("unable to enable unit %q: %w", nodeagentv1alpha1.UnitName, err)
+	if err := dbus.Enable(ctx, nodeagentconfigv1alpha1.UnitName); err != nil {
+		return fmt.Errorf("unable to enable unit %q: %w", nodeagentconfigv1alpha1.UnitName, err)
 	}
 
 	log.Info("Starting gardener-node-agent unit")
-	if err := dbus.Start(ctx, nil, nil, nodeagentv1alpha1.UnitName); err != nil {
-		return fmt.Errorf("unable to start unit %q: %w", nodeagentv1alpha1.UnitName, err)
+	if err := dbus.Start(ctx, nil, nil, nodeagentconfigv1alpha1.UnitName); err != nil {
+		return fmt.Errorf("unable to start unit %q: %w", nodeagentconfigv1alpha1.UnitName, err)
 	}
 
 	log.Info("Disabling gardener-node-init unit")
-	if err := dbus.Disable(ctx, nodeagentv1alpha1.InitUnitName); err != nil {
-		return fmt.Errorf("unable to disable system unit %q: %w", nodeagentv1alpha1.InitUnitName, err)
+	if err := dbus.Disable(ctx, nodeagentconfigv1alpha1.InitUnitName); err != nil {
+		return fmt.Errorf("unable to disable system unit %q: %w", nodeagentconfigv1alpha1.InitUnitName, err)
 	}
 
 	// After this line, the execution of the gardener-node-agent bootstrap command terminates. It is not possible to

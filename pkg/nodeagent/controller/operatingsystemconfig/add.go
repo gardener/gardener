@@ -27,7 +27,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
-	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
 	"github.com/gardener/gardener/pkg/nodeagent/registry"
 )
@@ -82,7 +82,7 @@ func (r *Reconciler) SecretPredicate() predicate.Predicate {
 				return false
 			}
 
-			return !bytes.Equal(oldSecret.Data[nodeagentv1alpha1.DataKeyOperatingSystemConfig], newSecret.Data[nodeagentv1alpha1.DataKeyOperatingSystemConfig])
+			return !bytes.Equal(oldSecret.Data[nodeagentconfigv1alpha1.DataKeyOperatingSystemConfig], newSecret.Data[nodeagentconfigv1alpha1.DataKeyOperatingSystemConfig])
 		},
 		DeleteFunc:  func(_ event.DeleteEvent) bool { return false },
 		GenericFunc: func(_ event.GenericEvent) bool { return false },
@@ -122,7 +122,7 @@ func (r *Reconciler) EnqueueWithJitterDelay(ctx context.Context, log logr.Logger
 				return
 			}
 
-			if !bytes.Equal(oldSecret.Data[nodeagentv1alpha1.DataKeyOperatingSystemConfig], newSecret.Data[nodeagentv1alpha1.DataKeyOperatingSystemConfig]) {
+			if !bytes.Equal(oldSecret.Data[nodeagentconfigv1alpha1.DataKeyOperatingSystemConfig], newSecret.Data[nodeagentconfigv1alpha1.DataKeyOperatingSystemConfig]) {
 				duration := delay.fetch(ctx, r.NodeName)
 				log.Info("Enqueued secret with operating system config with a jitter period", "duration", duration)
 				q.AddAfter(reconcileRequest(evt.ObjectNew), duration)

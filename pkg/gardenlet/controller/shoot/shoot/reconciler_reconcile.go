@@ -27,7 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
-	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -1043,7 +1043,7 @@ func deleteGardenerNodeAgentShootAccess(ctx context.Context, o *operation.Operat
 	if err := kubernetesutils.DeleteObject(
 		ctx,
 		o.SeedClientSet.Client(),
-		gardenerutils.NewShootAccessSecret(nodeagentv1alpha1.AccessSecretName, o.Shoot.SeedNamespace).Secret,
+		gardenerutils.NewShootAccessSecret(nodeagentconfigv1alpha1.AccessSecretName, o.Shoot.SeedNamespace).Secret,
 	); err != nil {
 		return fmt.Errorf("failed to delete gardener-node-agent shoot access secret in seed namespace: %w", err)
 	}
@@ -1053,13 +1053,13 @@ func deleteGardenerNodeAgentShootAccess(ctx context.Context, o *operation.Operat
 		o.ShootClientSet.Client(),
 		&corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      nodeagentv1alpha1.AccessSecretName,
+				Name:      nodeagentconfigv1alpha1.AccessSecretName,
 				Namespace: metav1.NamespaceSystem,
 			},
 		},
 		&corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      nodeagentv1alpha1.AccessSecretName,
+				Name:      nodeagentconfigv1alpha1.AccessSecretName,
 				Namespace: metav1.NamespaceSystem,
 			},
 		},
