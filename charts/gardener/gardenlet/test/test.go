@@ -24,7 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
-	baseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -610,7 +610,7 @@ func ComputeExpectedGardenletConfiguration(
 			APIVersion: "gardenlet.config.gardener.cloud/v1alpha1",
 		},
 		GardenClientConnection: &gardenletconfigv1alpha1.GardenClientConnection{
-			ClientConnectionConfiguration: baseconfigv1alpha1.ClientConnectionConfiguration{
+			ClientConnectionConfiguration: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
 				QPS:   100,
 				Burst: 130,
 			},
@@ -620,13 +620,13 @@ func ComputeExpectedGardenletConfiguration(
 			},
 		},
 		SeedClientConnection: &gardenletconfigv1alpha1.SeedClientConnection{
-			ClientConnectionConfiguration: baseconfigv1alpha1.ClientConnectionConfiguration{
+			ClientConnectionConfiguration: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
 				QPS:   100,
 				Burst: 130,
 			},
 		},
 		ShootClientConnection: &gardenletconfigv1alpha1.ShootClientConnection{
-			ClientConnectionConfiguration: baseconfigv1alpha1.ClientConnectionConfiguration{
+			ClientConnectionConfiguration: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
 				QPS:   25,
 				Burst: 50,
 			},
@@ -763,7 +763,7 @@ func ComputeExpectedGardenletConfiguration(
 				ConcurrentSyncs: &five,
 			},
 		},
-		LeaderElection: &baseconfigv1alpha1.LeaderElectionConfiguration{
+		LeaderElection: &componentbaseconfigv1alpha1.LeaderElectionConfiguration{
 			LeaderElect:       ptr.To(true),
 			LeaseDuration:     metav1.Duration{Duration: 15 * time.Second},
 			RenewDeadline:     metav1.Duration{Duration: 10 * time.Second},
@@ -794,7 +794,7 @@ func ComputeExpectedGardenletConfiguration(
 				Port: 2729,
 			},
 		},
-		Debugging: &baseconfigv1alpha1.DebuggingConfiguration{
+		Debugging: &componentbaseconfigv1alpha1.DebuggingConfiguration{
 			EnableProfiling:           ptr.To(false),
 			EnableContentionProfiling: ptr.To(false),
 		},
