@@ -21,6 +21,8 @@ import (
 type Reconciler struct {
 	Manager     manager.Manager
 	Controllers []Controller
+
+	OperatorCancel context.CancelFunc
 }
 
 // Controller contains a function for registering a controller.
@@ -34,17 +36,20 @@ type Controller struct {
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
-	if r.allControllersAdded() {
-		return reconcile.Result{}, nil
-	}
-
 	garden := &operatorv1alpha1.Garden{}
 	if err := r.Manager.GetClient().Get(ctx, request.NamespacedName, garden); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.V(1).Info("Object is gone, stop reconciling")
+			// Shut down Gardener-Operator in case the garden was deleted.
+			// This is a pragmatic way to deregister all controllers that depend on the existence of a garden cluster.
+			log.Info("Terminating Gardener-Operator after garden deletion")
+			r.OperatorCancel()
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
+	}
+
+	if r.allControllersAdded() {
+		return reconcile.Result{}, nil
 	}
 
 	var requeueAfter time.Duration
