@@ -1723,17 +1723,22 @@ func validateZone(constraints []gardencorev1beta1.Region, region, zone string) (
 }
 
 // getDefaultMachineImage determines the latest non-preview machine image version from the first machine image in the CloudProfile and considers that as the default image
-func getDefaultMachineImage(machineImages []gardencorev1beta1.MachineImage, imageName string, arch *string, fldPath *field.Path) (*core.ShootMachineImage, *field.Error) {
+func getDefaultMachineImage(machineImages []gardencorev1beta1.MachineImage, image *core.ShootMachineImage, arch *string, fldPath *field.Path) (*core.ShootMachineImage, *field.Error) {
+	var imageReference string
+	if image != nil {
+		imageReference = fmt.Sprintf("%s@%s", image.Name, image.Version)
+	}
+
 	if len(machineImages) == 0 {
-		return nil, field.Invalid(fldPath, imageName, "the cloud profile does not contain any machine image - cannot create shoot cluster")
+		return nil, field.Invalid(fldPath, imageReference, "the cloud profile does not contain any machine image - cannot create shoot cluster")
 	}
 
 	var defaultImage *core.MachineImage
 
-	if len(imageName) != 0 {
+	if image != nil && len(image.Name) != 0 {
 		for _, mi := range machineImages {
 			machineImage := mi
-			if machineImage.Name == imageName {
+			if machineImage.Name == image.Name {
 				coreMachineImage := &core.MachineImage{}
 				if err := gardencorev1beta1.Convert_v1beta1_MachineImage_To_core_MachineImage(&machineImage, coreMachineImage, nil); err != nil {
 					return nil, field.Invalid(fldPath, machineImage.Name, fmt.Sprintf("failed to convert machine image from cloud profile: %s", err.Error()))
@@ -1744,10 +1749,10 @@ func getDefaultMachineImage(machineImages []gardencorev1beta1.MachineImage, imag
 			}
 		}
 		if defaultImage == nil {
-			return nil, field.Invalid(fldPath, imageName, "image is not supported")
+			return nil, field.Invalid(fldPath, image.Name, "image is not supported")
 		}
 	} else {
-		// select the first image which support the required architecture type
+		// select the first image which supports the required architecture type
 		for _, mi := range machineImages {
 			machineImage := mi
 			for _, version := range machineImage.Versions {
@@ -1766,23 +1771,65 @@ func getDefaultMachineImage(machineImages []gardencorev1beta1.MachineImage, imag
 			}
 		}
 		if defaultImage == nil {
-			return nil, field.Invalid(fldPath, imageName, fmt.Sprintf("no valid machine image found that support architecture `%s`", *arch))
+			return nil, field.Invalid(fldPath, imageReference, fmt.Sprintf("no valid machine image found that supports architecture `%s`", *arch))
+		}
+	}
+
+	var (
+		machineImageVersionMajor *uint64
+		machineImageVersionMinor *uint64
+	)
+
+	if image != nil {
+		var err error
+		versionParts := strings.Split(strings.TrimPrefix(image.Version, "v"), ".")
+		if len(versionParts) == 3 {
+			return image, nil
+		}
+		if len(versionParts) == 2 && len(versionParts[1]) > 0 {
+			if machineImageVersionMinor, err = parseSemanticVersionPart(versionParts[1]); err != nil {
+				return nil, field.Invalid(fldPath, image.Version, err.Error())
+			}
+		}
+		if len(versionParts) >= 1 && len(versionParts[0]) > 0 {
+			if machineImageVersionMajor, err = parseSemanticVersionPart(versionParts[0]); err != nil {
+				return nil, field.Invalid(fldPath, image.Version, err.Error())
+			}
 		}
 	}
 
 	var validVersions []core.MachineImageVersion
 
 	for _, version := range defaultImage.Versions {
-		if slices.Contains(version.Architectures, *arch) {
-			validVersions = append(validVersions, version)
+		if !slices.Contains(version.Architectures, *arch) {
+			continue
 		}
+		// CloudProfile cannot contain invalid semVer machine image version
+		parsedVersion := semver.MustParse(version.Version)
+		if machineImageVersionMajor != nil && parsedVersion.Major() != *machineImageVersionMajor ||
+			machineImageVersionMinor != nil && parsedVersion.Minor() != *machineImageVersionMinor {
+			continue
+		}
+		validVersions = append(validVersions, version)
 	}
 
 	latestMachineImageVersion, err := helper.DetermineLatestMachineImageVersion(validVersions, true)
 	if err != nil {
-		return nil, field.Invalid(fldPath, imageName, fmt.Sprintf("failed to determine latest machine image from cloud profile: %s", err.Error()))
+		return nil, field.Invalid(fldPath, imageReference, fmt.Sprintf("failed to determine latest machine image from cloud profile: %s", err.Error()))
 	}
-	return &core.ShootMachineImage{Name: defaultImage.Name, Version: latestMachineImageVersion.Version}, nil
+	var providerConfig *runtime.RawExtension
+	if image != nil {
+		providerConfig = image.ProviderConfig
+	}
+	return &core.ShootMachineImage{Name: defaultImage.Name, ProviderConfig: providerConfig, Version: latestMachineImageVersion.Version}, nil
+}
+
+func parseSemanticVersionPart(part string) (*uint64, error) {
+	v, err := strconv.ParseUint(part, 10, 0)
+	if err != nil {
+		return nil, fmt.Errorf("%s must be a semantic version: %w", part, err)
+	}
+	return ptr.To(v), nil
 }
 
 func validateMachineImagesConstraints(a admission.Attributes, constraints []gardencorev1beta1.MachineImage, isNewWorkerPool bool, machine, oldMachine core.Machine) (bool, bool, bool, []string) {
@@ -1955,15 +2002,7 @@ func ensureMachineImage(oldWorkers []core.Worker, worker core.Worker, images []g
 		}
 	}
 
-	imageName := ""
-	if worker.Machine.Image != nil {
-		if len(worker.Machine.Image.Version) != 0 {
-			return worker.Machine.Image, nil
-		}
-		imageName = worker.Machine.Image.Name
-	}
-
-	return getDefaultMachineImage(images, imageName, worker.Machine.Architecture, fldPath)
+	return getDefaultMachineImage(images, worker.Machine.Image, worker.Machine.Architecture, fldPath)
 }
 
 func addInfrastructureDeploymentTask(shoot *core.Shoot) {
