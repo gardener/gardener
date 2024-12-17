@@ -20,7 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	extensionsconfig "github.com/gardener/gardener/extensions/pkg/apis/config"
+	extensionsconfigv1alpha1 "github.com/gardener/gardener/extensions/pkg/apis/config/v1alpha1"
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	"github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -62,7 +62,7 @@ type DefaultAddArgs struct {
 	// Controller are the controller.Options.
 	Controller controller.Options
 	// HealthCheckConfig contains additional config for the health check controller
-	HealthCheckConfig extensionsconfig.HealthCheckConfig
+	HealthCheckConfig extensionsconfigv1alpha1.HealthCheckConfig
 	// ExtensionClass defines the extension class this extension is responsible for.
 	ExtensionClass extensionsv1alpha1.ExtensionClass
 }
@@ -119,7 +119,7 @@ func DefaultRegistration(
 		return err
 	}
 
-	var shootRestOptions extensionsconfig.RESTOptions
+	var shootRestOptions extensionsconfigv1alpha1.RESTOptions
 	if opts.HealthCheckConfig.ShootRESTOptions != nil {
 		shootRestOptions = *opts.HealthCheckConfig.ShootRESTOptions
 	}
