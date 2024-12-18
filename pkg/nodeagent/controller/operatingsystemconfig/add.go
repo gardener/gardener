@@ -23,7 +23,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
@@ -56,12 +55,10 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
-		WatchesRawSource(
-			source.Kind[client.Object](mgr.GetCache(),
-				&corev1.Secret{},
-				r.EnqueueWithJitterDelay(ctx, mgr.GetLogger().WithValues("controller", ControllerName).WithName("reconciliation-delayer")),
-				r.SecretPredicate(),
-				predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update)),
+		Watches(
+			&corev1.Secret{},
+			r.EnqueueWithJitterDelay(ctx, mgr.GetLogger().WithValues("controller", ControllerName).WithName("reconciliation-delayer")),
+			builder.WithPredicates(r.SecretPredicate(), predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update)),
 		).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
 		Complete(r)
