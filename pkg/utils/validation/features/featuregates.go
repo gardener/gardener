@@ -68,7 +68,7 @@ var featureGateVersionRanges = map[string]*FeatureGateVersionRange{
 	"ConcurrentWatchObjectDecode":                    {VersionRange: versionutils.VersionRange{AddedInVersion: "1.31"}},
 	"ContainerCheckpoint":                            {},
 	"ContextualLogging":                              {Default: true, LockedToDefaultInVersion: "1.30"},
-	"ControllerManagerLeaderMigration":               {Default: true, LockedToDefaultInVersion: "1.24", VersionRange: versionutils.VersionRange{RemovedInVersion: "1.27"}}, // Missing from docu?
+	"ControllerManagerLeaderMigration":               {Default: true, LockedToDefaultInVersion: "1.24", VersionRange: versionutils.VersionRange{RemovedInVersion: "1.27"}},
 	"ConsistentHTTPGetHandlers":                      {Default: true, LockedToDefaultInVersion: "1.30", VersionRange: versionutils.VersionRange{AddedInVersion: "1.26", RemovedInVersion: "1.31"}},
 	"ConsistentListFromCache":                        {VersionRange: versionutils.VersionRange{AddedInVersion: "1.28"}},
 	"CoordinatedLeaderElection":                      {VersionRange: versionutils.VersionRange{AddedInVersion: "1.31"}},
@@ -97,7 +97,7 @@ var featureGateVersionRanges = map[string]*FeatureGateVersionRange{
 	"CustomCPUCFSQuotaPeriod":                        {},
 	"CustomResourceFieldSelectors":                   {Default: true, LockedToDefaultInVersion: "1.32", VersionRange: versionutils.VersionRange{AddedInVersion: "1.30"}},
 	"CustomResourceValidationExpressions":            {Default: true, LockedToDefaultInVersion: "1.29", VersionRange: versionutils.VersionRange{RemovedInVersion: "1.31"}},
-	"DaemonSetUpdateSurge":                           {Default: true, LockedToDefaultInVersion: "1.25", VersionRange: versionutils.VersionRange{RemovedInVersion: "1.27"}}, // Missing from docu?
+	"DaemonSetUpdateSurge":                           {Default: true, LockedToDefaultInVersion: "1.25", VersionRange: versionutils.VersionRange{RemovedInVersion: "1.27"}},
 	"DefaultHostNetworkHostPortsInPodTemplates":      {VersionRange: versionutils.VersionRange{AddedInVersion: "1.28", RemovedInVersion: "1.31"}},
 	"DefaultPodTopologySpread":                       {Default: true, LockedToDefaultInVersion: "1.24", VersionRange: versionutils.VersionRange{RemovedInVersion: "1.26"}},
 	"DelegateFSGroupToCSIDriver":                     {Default: true, LockedToDefaultInVersion: "1.26", VersionRange: versionutils.VersionRange{RemovedInVersion: "1.28"}},
