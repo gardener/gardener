@@ -7,10 +7,8 @@ package mapper
 import (
 	"context"
 
-	"github.com/go-logr/logr"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -18,34 +16,22 @@ import (
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
-type clusterToObjectMapper struct {
-	reader         cache.Cache
-	newObjListFunc func() client.ObjectList
-	predicates     []predicate.Predicate
-}
+// ClusterToObjectMapper returns a mapper that returns requests for objects whose referenced clusters have been
+// modified.
+func ClusterToObjectMapper(reader client.Reader, newObjListFunc func() client.ObjectList, predicates []predicate.Predicate) handler.MapFunc {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		cluster, ok := obj.(*extensionsv1alpha1.Cluster)
+		if !ok {
+			return nil
+		}
 
-func (m *clusterToObjectMapper) Map(ctx context.Context, _ logr.Logger, reader client.Reader, obj client.Object) []reconcile.Request {
-	cluster, ok := obj.(*extensionsv1alpha1.Cluster)
-	if !ok {
-		return nil
-	}
+		objList := newObjListFunc()
+		if err := reader.List(ctx, objList, client.InNamespace(cluster.Name)); err != nil {
+			return nil
+		}
 
-	objList := m.newObjListFunc()
-	if err := reader.List(ctx, objList, client.InNamespace(cluster.Name)); err != nil {
-		return nil
-	}
-
-	return ObjectListToRequests(objList, func(o client.Object) bool {
-		return predicateutils.EvalGeneric(o, m.predicates...)
-	})
-}
-
-// ClusterToObjectMapper returns a mapper that returns requests for objects whose
-// referenced clusters have been modified.
-func ClusterToObjectMapper(mgr manager.Manager, newObjListFunc func() client.ObjectList, predicates []predicate.Predicate) Mapper {
-	return &clusterToObjectMapper{
-		reader:         mgr.GetCache(),
-		newObjListFunc: newObjListFunc,
-		predicates:     predicates,
+		return ObjectListToRequests(objList, func(o client.Object) bool {
+			return predicateutils.EvalGeneric(o, predicates...)
+		})
 	}
 }
