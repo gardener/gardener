@@ -10,12 +10,12 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
-	admissioncontrollerconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
+	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
 )
 
 // ValidateAdmissionControllerConfiguration validates the given `AdmissionControllerConfiguration`.
-func ValidateAdmissionControllerConfiguration(config *admissioncontrollerconfig.AdmissionControllerConfiguration) field.ErrorList {
+func ValidateAdmissionControllerConfiguration(config *admissioncontrollerconfigv1alpha1.AdmissionControllerConfiguration) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if !sets.New(logger.AllLogLevels...).Has(config.LogLevel) {
@@ -35,9 +35,9 @@ func ValidateAdmissionControllerConfiguration(config *admissioncontrollerconfig.
 }
 
 // ValidateResourceAdmissionConfiguration validates the given `ResourceAdmissionConfiguration`.
-func ValidateResourceAdmissionConfiguration(config *admissioncontrollerconfig.ResourceAdmissionConfiguration, fldPath *field.Path) field.ErrorList {
+func ValidateResourceAdmissionConfiguration(config *admissioncontrollerconfigv1alpha1.ResourceAdmissionConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-	validValues := sets.New(string(admissioncontrollerconfig.AdmissionModeBlock), string(admissioncontrollerconfig.AdmissionModeLog))
+	validValues := sets.New(string(admissioncontrollerconfigv1alpha1.AdmissionModeBlock), string(admissioncontrollerconfigv1alpha1.AdmissionModeLog))
 
 	if config.OperationMode != nil && !validValues.Has(string(*config.OperationMode)) {
 		allErrs = append(allErrs, field.NotSupported(fldPath.Child("mode"), string(*config.OperationMode), validValues.UnsortedList()))

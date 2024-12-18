@@ -12,18 +12,18 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 
-	admissioncontrollerconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
-	. "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/helper"
+	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
+	. "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1/helper"
 )
 
 var _ = Describe("Helpers test", func() {
-	limit := admissioncontrollerconfig.ResourceLimit{
+	limit := admissioncontrollerconfigv1alpha1.ResourceLimit{
 		APIGroups:   []string{"core.gardener.cloud", "extensions.gardener.cloud"},
 		APIVersions: []string{"v1beta1"},
 		Resources:   []string{"shoots"},
 	}
 
-	limitWildcard := admissioncontrollerconfig.ResourceLimit{
+	limitWildcard := admissioncontrollerconfigv1alpha1.ResourceLimit{
 		APIGroups:   []string{"core.gardener.cloud", "*"},
 		APIVersions: []string{"*"},
 		Resources:   []string{"*"},
@@ -66,7 +66,7 @@ var _ = Describe("Helpers test", func() {
 	}
 
 	DescribeTable("#APIGroupMatches",
-		func(limit admissioncontrollerconfig.ResourceLimit, apiGroup string, matcher gomegatypes.GomegaMatcher) {
+		func(limit admissioncontrollerconfigv1alpha1.ResourceLimit, apiGroup string, matcher gomegatypes.GomegaMatcher) {
 			Expect(APIGroupMatches(limit, apiGroup)).To(matcher)
 		},
 		Entry("no match because request is empty", limit, "", BeFalse()),
@@ -77,7 +77,7 @@ var _ = Describe("Helpers test", func() {
 	)
 
 	DescribeTable("#VersionMatches",
-		func(limit admissioncontrollerconfig.ResourceLimit, version string, matcher gomegatypes.GomegaMatcher) {
+		func(limit admissioncontrollerconfigv1alpha1.ResourceLimit, version string, matcher gomegatypes.GomegaMatcher) {
 			Expect(VersionMatches(limit, version)).To(matcher)
 		},
 		Entry("no match because request is empty", limit, "", BeFalse()),
@@ -87,7 +87,7 @@ var _ = Describe("Helpers test", func() {
 	)
 
 	DescribeTable("#ResourceMatches",
-		func(limit admissioncontrollerconfig.ResourceLimit, resource string, matcher gomegatypes.GomegaMatcher) {
+		func(limit admissioncontrollerconfigv1alpha1.ResourceLimit, resource string, matcher gomegatypes.GomegaMatcher) {
 			Expect(ResourceMatches(limit, resource)).To(matcher)
 		},
 		Entry("no match because request is empty", limit, "", BeFalse()),
