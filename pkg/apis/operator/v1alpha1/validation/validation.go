@@ -418,8 +418,29 @@ func validateGardenerDashboardConfig(config *operatorv1alpha1.GardenerDashboardC
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("enableTokenLogin"), "OIDC must be configured when token login is disabled"))
 	}
 
-	if config.OIDC != nil && (kubeAPIServerConfig == nil || kubeAPIServerConfig.OIDCConfig == nil) {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("oidc"), config.OIDC, "must set .spec.virtualCluster.kubernetes.kubeAPIServer.oidcConfig when configuring OIDC config for dashboard"))
+	if oidc := config.OIDC; oidc != nil {
+		oidcPath := fldPath.Child("oidc")
+
+		if kubeAPIServerConfig == nil || (kubeAPIServerConfig.OIDCConfig == nil && kubeAPIServerConfig.StructuredAuthentication == nil) {
+			allErrs = append(allErrs, field.Invalid(oidcPath, config.OIDC, "must set OIDC configuration in .spec.virtualCluster.kubernetes.kubeAPIServer when configuring OIDC config for dashboard"))
+		}
+		if oidc.IssuerURL == nil && (kubeAPIServerConfig == nil || kubeAPIServerConfig.OIDCConfig == nil || kubeAPIServerConfig.OIDCConfig.IssuerURL == nil) {
+			allErrs = append(allErrs, field.Required(oidcPath.Child("issuerURL"), "must provide Issuer URL"))
+		}
+		if oidc.ClientID == nil && (kubeAPIServerConfig == nil || kubeAPIServerConfig.OIDCConfig == nil || kubeAPIServerConfig.OIDCConfig.ClientID == nil) {
+			allErrs = append(allErrs, field.Required(oidcPath.Child("clientID"), "must provide ClientID URL"))
+		}
+
+		if oidc.IssuerURL == nil && oidc.ClientID != nil {
+			allErrs = append(allErrs, field.Required(oidcPath.Child("issuerURL"), "must provide Issuer URL when ClientID is set"))
+		}
+		if oidc.ClientID == nil && oidc.IssuerURL != nil {
+			allErrs = append(allErrs, field.Required(oidcPath.Child("clientID"), "must provide ClientID when Issuer URL is set"))
+		}
+
+		if oidc.IssuerURL != nil {
+			allErrs = append(allErrs, gardencorevalidation.ValidateOIDCIssuerURL(*oidc.IssuerURL, oidcPath.Child("issuerURL"))...)
+		}
 	}
 
 	return allErrs
