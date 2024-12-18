@@ -28,7 +28,7 @@ import (
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	admissioncontrollerconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
+	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/resourcesize"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/logger"
@@ -60,8 +60,8 @@ var _ = Describe("handler", func() {
 		unrestrictedServiceAccountName      = "unrestrictedServiceAccount"
 		unrestrictedServiceAccountNamespace = "unrestricted"
 
-		config = func() *admissioncontrollerconfig.ResourceAdmissionConfiguration {
-			return &admissioncontrollerconfig.ResourceAdmissionConfiguration{
+		config = func() *admissioncontrollerconfigv1alpha1.ResourceAdmissionConfiguration {
+			return &admissioncontrollerconfigv1alpha1.ResourceAdmissionConfiguration{
 				UnrestrictedSubjects: []rbacv1.Subject{
 					{
 						Kind: rbacv1.GroupKind,
@@ -77,7 +77,7 @@ var _ = Describe("handler", func() {
 						Namespace: unrestrictedServiceAccountNamespace,
 					},
 				},
-				Limits: []admissioncontrollerconfig.ResourceLimit{
+				Limits: []admissioncontrollerconfigv1alpha1.ResourceLimit{
 					{
 						APIGroups:   []string{"*"},
 						APIVersions: []string{"*"},

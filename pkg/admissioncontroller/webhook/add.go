@@ -11,7 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	"github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
+	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/auditpolicy"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/authenticationconfig"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/authorizationconfig"
@@ -28,7 +28,7 @@ import (
 func AddToManager(
 	ctx context.Context,
 	mgr manager.Manager,
-	cfg *config.AdmissionControllerConfiguration,
+	cfg *admissioncontrollerconfigv1alpha1.AdmissionControllerConfiguration,
 ) error {
 	if err := auditpolicy.AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding %s webhook handler: %w", auditpolicy.HandlerName, err)
