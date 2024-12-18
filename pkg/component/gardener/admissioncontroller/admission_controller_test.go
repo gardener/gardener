@@ -33,7 +33,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
 
-	admissioncontrollerv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
+	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -92,13 +92,13 @@ var _ = Describe("GardenerAdmissionController", func() {
 
 	Describe("#Deploy", func() {
 		BeforeEach(func() {
-			blockMode := admissioncontrollerv1alpha1.ResourceAdmissionWebhookMode("block")
+			blockMode := admissioncontrollerconfigv1alpha1.ResourceAdmissionWebhookMode("block")
 
 			// These are typical configuration values set for the admission controller and serves as the base for the following tests.
 			testValues = Values{
 				RuntimeVersion: semver.MustParse("v1.27.0"),
-				ResourceAdmissionConfiguration: &admissioncontrollerv1alpha1.ResourceAdmissionConfiguration{
-					Limits: []admissioncontrollerv1alpha1.ResourceLimit{
+				ResourceAdmissionConfiguration: &admissioncontrollerconfigv1alpha1.ResourceAdmissionConfiguration{
+					Limits: []admissioncontrollerconfigv1alpha1.ResourceLimit{
 						{
 							APIGroups:   []string{""},
 							APIVersions: []string{"v1"},
@@ -501,7 +501,7 @@ func verifyExpectations(ctx context.Context, fakeClient client.Client, consistOf
 }
 
 func configMap(namespace string, testValues Values) *corev1.ConfigMap {
-	admissionConfig := &admissioncontrollerv1alpha1.AdmissionControllerConfiguration{
+	admissionConfig := &admissioncontrollerconfigv1alpha1.AdmissionControllerConfiguration{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "admissioncontroller.config.gardener.cloud/v1alpha1",
 			Kind:       "AdmissionControllerConfiguration",
@@ -513,13 +513,13 @@ func configMap(namespace string, testValues Values) *corev1.ConfigMap {
 		},
 		LogLevel:  testValues.LogLevel,
 		LogFormat: logger.FormatJSON,
-		Server: admissioncontrollerv1alpha1.ServerConfiguration{
-			Webhooks: admissioncontrollerv1alpha1.HTTPSServer{
-				Server: admissioncontrollerv1alpha1.Server{Port: 2719},
-				TLS:    admissioncontrollerv1alpha1.TLSServer{ServerCertDir: "/etc/gardener-admission-controller/srv"},
+		Server: admissioncontrollerconfigv1alpha1.ServerConfiguration{
+			Webhooks: admissioncontrollerconfigv1alpha1.HTTPSServer{
+				Server: admissioncontrollerconfigv1alpha1.Server{Port: 2719},
+				TLS:    admissioncontrollerconfigv1alpha1.TLSServer{ServerCertDir: "/etc/gardener-admission-controller/srv"},
 			},
-			HealthProbes:                   &admissioncontrollerv1alpha1.Server{Port: 2722},
-			Metrics:                        &admissioncontrollerv1alpha1.Server{Port: 2723},
+			HealthProbes:                   &admissioncontrollerconfigv1alpha1.Server{Port: 2722},
+			Metrics:                        &admissioncontrollerconfigv1alpha1.Server{Port: 2723},
 			ResourceAdmissionConfiguration: testValues.ResourceAdmissionConfiguration,
 		},
 	}

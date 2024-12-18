@@ -28,7 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -329,7 +329,7 @@ func (a *Actuator) deployGardenlet(
 	targetClient kubernetes.Interface,
 	gardenletDeployment *seedmanagementv1alpha1.GardenletDeployment,
 	seed *gardencorev1beta1.Seed,
-	componentConfig *gardenletv1alpha1.GardenletConfiguration,
+	componentConfig *gardenletconfigv1alpha1.GardenletConfiguration,
 	bootstrap seedmanagementv1alpha1.Bootstrap,
 	mergeWithParent bool,
 ) error {
@@ -373,7 +373,7 @@ func (a *Actuator) deleteGardenlet(
 	targetClient kubernetes.Interface,
 	gardenletDeployment *seedmanagementv1alpha1.GardenletDeployment,
 	seed *gardencorev1beta1.Seed,
-	componentConfig *gardenletv1alpha1.GardenletConfiguration,
+	componentConfig *gardenletconfigv1alpha1.GardenletConfiguration,
 	bootstrap seedmanagementv1alpha1.Bootstrap,
 	mergeWithParent bool,
 ) error {
@@ -524,7 +524,7 @@ func (a *Actuator) prepareGardenletChartValues(
 	targetClient client.Client,
 	gardenletDeployment *seedmanagementv1alpha1.GardenletDeployment,
 	seed *gardencorev1beta1.Seed,
-	componentConfig *gardenletv1alpha1.GardenletConfiguration,
+	componentConfig *gardenletconfigv1alpha1.GardenletConfiguration,
 	bootstrap seedmanagementv1alpha1.Bootstrap,
 	mergeWithParent bool,
 ) (
@@ -576,7 +576,7 @@ func PrepareGardenletChartValues(
 	vp ValuesHelper,
 	bootstrap seedmanagementv1alpha1.Bootstrap,
 	gardenletDeployment *seedmanagementv1alpha1.GardenletDeployment,
-	gardenletConfig *gardenletv1alpha1.GardenletConfiguration,
+	gardenletConfig *gardenletconfigv1alpha1.GardenletConfiguration,
 	gardenNamespaceTargetCluster string,
 ) (
 	map[string]any,
@@ -584,7 +584,7 @@ func PrepareGardenletChartValues(
 ) {
 	// Ensure garden client connection is set
 	if gardenletConfig.GardenClientConnection == nil {
-		gardenletConfig.GardenClientConnection = &gardenletv1alpha1.GardenClientConnection{}
+		gardenletConfig.GardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{}
 	}
 
 	// Prepare garden client connection
@@ -616,7 +616,7 @@ func PrepareGardenletChartValues(
 
 	// Ensure seed config is set
 	if gardenletConfig.SeedConfig == nil {
-		gardenletConfig.SeedConfig = &gardenletv1alpha1.SeedConfig{}
+		gardenletConfig.SeedConfig = &gardenletconfigv1alpha1.SeedConfig{}
 	}
 
 	// Set the seed name
@@ -672,7 +672,7 @@ func prepareGardenClientConnectionWithBootstrap(
 	targetClusterClient client.Client,
 	recorder record.EventRecorder,
 	obj client.Object,
-	gcc *gardenletv1alpha1.GardenClientConnection,
+	gcc *gardenletconfigv1alpha1.GardenClientConnection,
 	seed *gardencorev1beta1.Seed,
 	bootstrap seedmanagementv1alpha1.Bootstrap,
 	gardenNamespaceTargetCluster string,
@@ -738,7 +738,7 @@ func isAlreadyBootstrapped(ctx context.Context, c client.Client, s *corev1.Secre
 	return secret != nil, nil
 }
 
-func removeBootstrapConfigFromGardenClientConnection(gcc *gardenletv1alpha1.GardenClientConnection) {
+func removeBootstrapConfigFromGardenClientConnection(gcc *gardenletconfigv1alpha1.GardenClientConnection) {
 	// Ensure kubeconfig secret and bootstrap kubeconfig secret are not set
 	gcc.KubeconfigSecret = nil
 	gcc.BootstrapKubeconfig = nil

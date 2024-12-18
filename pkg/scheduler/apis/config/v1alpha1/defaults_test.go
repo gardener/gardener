@@ -15,19 +15,19 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/logger"
-	schedulerv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
+	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 )
 
 var _ = Describe("Defaults", func() {
-	var obj *schedulerv1alpha1.SchedulerConfiguration
+	var obj *schedulerconfigv1alpha1.SchedulerConfiguration
 
 	BeforeEach(func() {
-		obj = &schedulerv1alpha1.SchedulerConfiguration{}
+		obj = &schedulerconfigv1alpha1.SchedulerConfiguration{}
 	})
 
 	Describe("SchedulerConfiguration defaulting", func() {
 		It("should default the scheduler configuration", func() {
-			schedulerv1alpha1.SetObjectDefaults_SchedulerConfiguration(obj)
+			schedulerconfigv1alpha1.SetObjectDefaults_SchedulerConfiguration(obj)
 
 			Expect(obj.LogLevel).To(Equal(logger.InfoLevel))
 			Expect(obj.LogFormat).To(Equal(logger.FormatJSON))
@@ -35,12 +35,12 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not overwrite already set values for scheduler configuration", func() {
-			obj = &schedulerv1alpha1.SchedulerConfiguration{
-				LogLevel:  schedulerv1alpha1.LogLevelDebug,
-				LogFormat: schedulerv1alpha1.LogFormatText,
+			obj = &schedulerconfigv1alpha1.SchedulerConfiguration{
+				LogLevel:  schedulerconfigv1alpha1.LogLevelDebug,
+				LogFormat: schedulerconfigv1alpha1.LogFormatText,
 			}
 
-			schedulerv1alpha1.SetObjectDefaults_SchedulerConfiguration(obj)
+			schedulerconfigv1alpha1.SetObjectDefaults_SchedulerConfiguration(obj)
 
 			Expect(obj.LogLevel).To(Equal(logger.DebugLevel))
 			Expect(obj.LogFormat).To(Equal(logger.FormatText))
@@ -50,41 +50,41 @@ var _ = Describe("Defaults", func() {
 
 	Describe("SchedulerControllerConfiguration defaulting", func() {
 		It("should default the scheduler controller configuration", func() {
-			schedulerv1alpha1.SetObjectDefaults_SchedulerConfiguration(obj)
+			schedulerconfigv1alpha1.SetObjectDefaults_SchedulerConfiguration(obj)
 
-			Expect(obj.Schedulers).To(Equal(schedulerv1alpha1.SchedulerControllerConfiguration{
-				BackupBucket: &schedulerv1alpha1.BackupBucketSchedulerConfiguration{
+			Expect(obj.Schedulers).To(Equal(schedulerconfigv1alpha1.SchedulerControllerConfiguration{
+				BackupBucket: &schedulerconfigv1alpha1.BackupBucketSchedulerConfiguration{
 					ConcurrentSyncs: 2,
 				},
-				Shoot: &schedulerv1alpha1.ShootSchedulerConfiguration{
+				Shoot: &schedulerconfigv1alpha1.ShootSchedulerConfiguration{
 					ConcurrentSyncs: 5,
-					Strategy:        schedulerv1alpha1.Default,
+					Strategy:        schedulerconfigv1alpha1.Default,
 				},
 			}))
 		})
 
 		It("should not overwrite already set values for scheduler controller configuration", func() {
-			obj = &schedulerv1alpha1.SchedulerConfiguration{
-				Schedulers: schedulerv1alpha1.SchedulerControllerConfiguration{
-					BackupBucket: &schedulerv1alpha1.BackupBucketSchedulerConfiguration{
+			obj = &schedulerconfigv1alpha1.SchedulerConfiguration{
+				Schedulers: schedulerconfigv1alpha1.SchedulerControllerConfiguration{
+					BackupBucket: &schedulerconfigv1alpha1.BackupBucketSchedulerConfiguration{
 						ConcurrentSyncs: 3,
 					},
-					Shoot: &schedulerv1alpha1.ShootSchedulerConfiguration{
+					Shoot: &schedulerconfigv1alpha1.ShootSchedulerConfiguration{
 						ConcurrentSyncs: 6,
-						Strategy:        schedulerv1alpha1.MinimalDistance,
+						Strategy:        schedulerconfigv1alpha1.MinimalDistance,
 					},
 				},
 			}
 
-			schedulerv1alpha1.SetObjectDefaults_SchedulerConfiguration(obj)
+			schedulerconfigv1alpha1.SetObjectDefaults_SchedulerConfiguration(obj)
 
-			Expect(obj.Schedulers).To(Equal(schedulerv1alpha1.SchedulerControllerConfiguration{
-				BackupBucket: &schedulerv1alpha1.BackupBucketSchedulerConfiguration{
+			Expect(obj.Schedulers).To(Equal(schedulerconfigv1alpha1.SchedulerControllerConfiguration{
+				BackupBucket: &schedulerconfigv1alpha1.BackupBucketSchedulerConfiguration{
 					ConcurrentSyncs: 3,
 				},
-				Shoot: &schedulerv1alpha1.ShootSchedulerConfiguration{
+				Shoot: &schedulerconfigv1alpha1.ShootSchedulerConfiguration{
 					ConcurrentSyncs: 6,
-					Strategy:        schedulerv1alpha1.MinimalDistance,
+					Strategy:        schedulerconfigv1alpha1.MinimalDistance,
 				},
 			}))
 		})
@@ -92,11 +92,11 @@ var _ = Describe("Defaults", func() {
 
 	Describe("ServerConfiguration defaulting", func() {
 		It("should not overwrite already set values for ServerConfiguration", func() {
-			serverConfiguration := &schedulerv1alpha1.ServerConfiguration{
-				HealthProbes: &schedulerv1alpha1.Server{
+			serverConfiguration := &schedulerconfigv1alpha1.ServerConfiguration{
+				HealthProbes: &schedulerconfigv1alpha1.Server{
 					Port: 1234,
 				},
-				Metrics: &schedulerv1alpha1.Server{
+				Metrics: &schedulerconfigv1alpha1.Server{
 					Port: 1235,
 				},
 			}
@@ -104,30 +104,30 @@ var _ = Describe("Defaults", func() {
 
 			expectedServerConfiguration := serverConfiguration.DeepCopy()
 
-			schedulerv1alpha1.SetObjectDefaults_SchedulerConfiguration(obj)
+			schedulerconfigv1alpha1.SetObjectDefaults_SchedulerConfiguration(obj)
 			Expect(obj.Server).To(Equal(*expectedServerConfiguration))
 		})
 
 		It("should default values for ServerConfiguration", func() {
-			obj.Server = schedulerv1alpha1.ServerConfiguration{}
+			obj.Server = schedulerconfigv1alpha1.ServerConfiguration{}
 
-			expectedServerConfiguration := schedulerv1alpha1.ServerConfiguration{
-				HealthProbes: &schedulerv1alpha1.Server{
+			expectedServerConfiguration := schedulerconfigv1alpha1.ServerConfiguration{
+				HealthProbes: &schedulerconfigv1alpha1.Server{
 					Port: 10251,
 				},
-				Metrics: &schedulerv1alpha1.Server{
+				Metrics: &schedulerconfigv1alpha1.Server{
 					Port: 19251,
 				},
 			}
 
-			schedulerv1alpha1.SetObjectDefaults_SchedulerConfiguration(obj)
+			schedulerconfigv1alpha1.SetObjectDefaults_SchedulerConfiguration(obj)
 			Expect(obj.Server).To(Equal(expectedServerConfiguration))
 		})
 	})
 
 	Describe("ClientConnection defaulting", func() {
 		It("should not default ContentType and AcceptContentTypes", func() {
-			schedulerv1alpha1.SetObjectDefaults_SchedulerConfiguration(obj)
+			schedulerconfigv1alpha1.SetObjectDefaults_SchedulerConfiguration(obj)
 
 			// ContentType fields will be defaulted by client constructors / controller-runtime based on whether a
 			// given APIGroup supports protobuf or not. defaults must not touch these, otherwise the intelligent
@@ -137,7 +137,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should correctly default ClientConnection", func() {
-			schedulerv1alpha1.SetObjectDefaults_SchedulerConfiguration(obj)
+			schedulerconfigv1alpha1.SetObjectDefaults_SchedulerConfiguration(obj)
 			Expect(obj.ClientConnection).To(Equal(componentbaseconfigv1alpha1.ClientConnectionConfiguration{
 				QPS:   50.0,
 				Burst: 100,
@@ -150,7 +150,7 @@ var _ = Describe("Defaults", func() {
 				Burst: 110,
 			}
 
-			schedulerv1alpha1.SetObjectDefaults_SchedulerConfiguration(obj)
+			schedulerconfigv1alpha1.SetObjectDefaults_SchedulerConfiguration(obj)
 
 			Expect(obj.ClientConnection).To(Equal(componentbaseconfigv1alpha1.ClientConnectionConfiguration{
 				QPS:   60.0,
@@ -161,7 +161,7 @@ var _ = Describe("Defaults", func() {
 
 	Describe("LeaderElection defaulting", func() {
 		It("should default leader election settings", func() {
-			schedulerv1alpha1.SetObjectDefaults_SchedulerConfiguration(obj)
+			schedulerconfigv1alpha1.SetObjectDefaults_SchedulerConfiguration(obj)
 
 			Expect(obj.LeaderElection).NotTo(BeNil())
 			Expect(obj.LeaderElection.LeaderElect).To(PointTo(BeTrue()))
@@ -184,7 +184,7 @@ var _ = Describe("Defaults", func() {
 				ResourceName:      "lock-object",
 			}
 			obj.LeaderElection = expectedLeaderElection.DeepCopy()
-			schedulerv1alpha1.SetObjectDefaults_SchedulerConfiguration(obj)
+			schedulerconfigv1alpha1.SetObjectDefaults_SchedulerConfiguration(obj)
 
 			Expect(obj.LeaderElection).To(Equal(expectedLeaderElection))
 		})
@@ -193,10 +193,10 @@ var _ = Describe("Defaults", func() {
 
 var _ = Describe("Constants", func() {
 	It("should have the same values as the corresponding constants in the logger package", func() {
-		Expect(schedulerv1alpha1.LogLevelDebug).To(Equal(logger.DebugLevel))
-		Expect(schedulerv1alpha1.LogLevelInfo).To(Equal(logger.InfoLevel))
-		Expect(schedulerv1alpha1.LogLevelError).To(Equal(logger.ErrorLevel))
-		Expect(schedulerv1alpha1.LogFormatJSON).To(Equal(logger.FormatJSON))
-		Expect(schedulerv1alpha1.LogFormatText).To(Equal(logger.FormatText))
+		Expect(schedulerconfigv1alpha1.LogLevelDebug).To(Equal(logger.DebugLevel))
+		Expect(schedulerconfigv1alpha1.LogLevelInfo).To(Equal(logger.InfoLevel))
+		Expect(schedulerconfigv1alpha1.LogLevelError).To(Equal(logger.ErrorLevel))
+		Expect(schedulerconfigv1alpha1.LogFormatJSON).To(Equal(logger.FormatJSON))
+		Expect(schedulerconfigv1alpha1.LogFormatText).To(Equal(logger.FormatText))
 	})
 })

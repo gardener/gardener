@@ -14,7 +14,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 
-	admissioncontrollerv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
+	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -26,7 +26,7 @@ var admissionServerCodec runtime.Codec
 
 func init() {
 	admissionServerScheme := runtime.NewScheme()
-	utilruntime.Must(admissioncontrollerv1alpha1.AddToScheme(admissionServerScheme))
+	utilruntime.Must(admissioncontrollerconfigv1alpha1.AddToScheme(admissionServerScheme))
 
 	var (
 		ser = json.NewSerializerWithOptions(json.DefaultMetaFactory, admissionServerScheme, admissionServerScheme, json.SerializerOptions{
@@ -35,7 +35,7 @@ func init() {
 			Strict: false,
 		})
 		versions = schema.GroupVersions([]schema.GroupVersion{
-			admissioncontrollerv1alpha1.SchemeGroupVersion,
+			admissioncontrollerconfigv1alpha1.SchemeGroupVersion,
 		})
 	)
 
@@ -43,7 +43,7 @@ func init() {
 }
 
 func (a *gardenerAdmissionController) admissionConfigConfigMap() (*corev1.ConfigMap, error) {
-	admissionConfig := &admissioncontrollerv1alpha1.AdmissionControllerConfiguration{
+	admissionConfig := &admissioncontrollerconfigv1alpha1.AdmissionControllerConfiguration{
 		GardenClientConnection: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
 			QPS:        100,
 			Burst:      130,
@@ -51,13 +51,13 @@ func (a *gardenerAdmissionController) admissionConfigConfigMap() (*corev1.Config
 		},
 		LogLevel:  a.values.LogLevel,
 		LogFormat: logger.FormatJSON,
-		Server: admissioncontrollerv1alpha1.ServerConfiguration{
-			Webhooks: admissioncontrollerv1alpha1.HTTPSServer{
-				Server: admissioncontrollerv1alpha1.Server{Port: serverPort},
-				TLS:    admissioncontrollerv1alpha1.TLSServer{ServerCertDir: volumeMountPathServerCert},
+		Server: admissioncontrollerconfigv1alpha1.ServerConfiguration{
+			Webhooks: admissioncontrollerconfigv1alpha1.HTTPSServer{
+				Server: admissioncontrollerconfigv1alpha1.Server{Port: serverPort},
+				TLS:    admissioncontrollerconfigv1alpha1.TLSServer{ServerCertDir: volumeMountPathServerCert},
 			},
-			HealthProbes:                   &admissioncontrollerv1alpha1.Server{Port: probePort},
-			Metrics:                        &admissioncontrollerv1alpha1.Server{Port: metricsPort},
+			HealthProbes:                   &admissioncontrollerconfigv1alpha1.Server{Port: probePort},
+			Metrics:                        &admissioncontrollerconfigv1alpha1.Server{Port: metricsPort},
 			ResourceAdmissionConfiguration: a.values.ResourceAdmissionConfiguration,
 		},
 	}

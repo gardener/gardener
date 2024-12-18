@@ -38,14 +38,14 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/nodeagent"
 	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
-	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
 	filespkg "github.com/gardener/gardener/pkg/nodeagent/files"
 	"github.com/gardener/gardener/pkg/nodeagent/registry"
 	"github.com/gardener/gardener/pkg/utils/flow"
 )
 
-const lastAppliedOperatingSystemConfigFilePath = nodeagentv1alpha1.BaseDir + "/last-applied-osc.yaml"
+const lastAppliedOperatingSystemConfigFilePath = nodeagentconfigv1alpha1.BaseDir + "/last-applied-osc.yaml"
 
 var codec runtime.Codec
 
@@ -53,7 +53,7 @@ func init() {
 	scheme := runtime.NewScheme()
 	utilruntime.Must(extensionsv1alpha1.AddToScheme(scheme))
 	ser := jsonserializer.NewSerializerWithOptions(jsonserializer.DefaultMetaFactory, scheme, scheme, jsonserializer.SerializerOptions{Yaml: true, Pretty: false, Strict: false})
-	versions := schema.GroupVersions([]schema.GroupVersion{nodeagentv1alpha1.SchemeGroupVersion, extensionsv1alpha1.SchemeGroupVersion})
+	versions := schema.GroupVersions([]schema.GroupVersion{nodeagentconfigv1alpha1.SchemeGroupVersion, extensionsv1alpha1.SchemeGroupVersion})
 	codec = serializer.NewCodecFactory(scheme).CodecForVersions(ser, ser, versions, versions)
 }
 
@@ -114,7 +114,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("failed calculating the OSC changes: %w", err)
 	}
 
-	if node != nil && node.Annotations[nodeagentv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig] == oscChecksum {
+	if node != nil && node.Annotations[nodeagentconfigv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig] == oscChecksum {
 		log.Info("Configuration on this node is up to date, nothing to be done")
 		return reconcile.Result{}, nil
 	}
@@ -208,14 +208,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	if err := r.FS.Remove(kubelet.PathKubeconfigBootstrap); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
 		return reconcile.Result{}, fmt.Errorf("failed removing kubelet bootstrap kubeconfig file %q: %w", kubelet.PathKubeconfigBootstrap, err)
 	}
-	if err := r.FS.Remove(nodeagentv1alpha1.BootstrapTokenFilePath); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
-		return reconcile.Result{}, fmt.Errorf("failed removing bootstrap token file %q: %w", nodeagentv1alpha1.BootstrapTokenFilePath, err)
+	if err := r.FS.Remove(nodeagentconfigv1alpha1.BootstrapTokenFilePath); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
+		return reconcile.Result{}, fmt.Errorf("failed removing bootstrap token file %q: %w", nodeagentconfigv1alpha1.BootstrapTokenFilePath, err)
 	}
 
 	r.Recorder.Event(node, corev1.EventTypeNormal, "OSCApplied", "Operating system config has been applied successfully")
 	patch := client.MergeFrom(node.DeepCopy())
 	metav1.SetMetaDataLabel(&node.ObjectMeta, v1beta1constants.LabelWorkerKubernetesVersion, r.Config.KubernetesVersion.String())
-	metav1.SetMetaDataAnnotation(&node.ObjectMeta, nodeagentv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig, oscChecksum)
+	metav1.SetMetaDataAnnotation(&node.ObjectMeta, nodeagentconfigv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig, oscChecksum)
 
 	return reconcile.Result{RequeueAfter: r.Config.SyncPeriod.Duration}, r.Client.Patch(ctx, node, patch)
 }
@@ -274,7 +274,7 @@ func (r *Reconciler) applyChangedImageRefFiles(ctx context.Context, log logr.Log
 }
 
 func (r *Reconciler) applyChangedInlineFiles(log logr.Logger, files []extensionsv1alpha1.File) error {
-	tmpDir, err := r.FS.TempDir(nodeagentv1alpha1.TempDir, "osc-reconciliation-file-")
+	tmpDir, err := r.FS.TempDir(nodeagentconfigv1alpha1.TempDir, "osc-reconciliation-file-")
 	if err != nil {
 		return fmt.Errorf("unable to create temporary directory: %w", err)
 	}
@@ -388,7 +388,7 @@ func (r *Reconciler) applyChangedUnits(ctx context.Context, log logr.Logger, uni
 			}
 		}
 
-		if unit.Name == nodeagentv1alpha1.UnitName || ptr.Deref(unit.Enable, true) {
+		if unit.Name == nodeagentconfigv1alpha1.UnitName || ptr.Deref(unit.Enable, true) {
 			if err := r.DBus.Enable(ctx, unit.Name); err != nil {
 				return fmt.Errorf("unable to enable unit %q: %w", unit.Name, err)
 			}
@@ -497,7 +497,7 @@ func (r *Reconciler) executeUnitCommands(ctx context.Context, log logr.Logger, n
 		unit := u
 
 		switch unit.Name {
-		case nodeagentv1alpha1.UnitName:
+		case nodeagentconfigv1alpha1.UnitName:
 			mustRestartGardenerNodeAgent = true
 			continue
 		case v1beta1constants.OperatingSystemConfigUnitNameContainerDService:

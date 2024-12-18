@@ -21,7 +21,7 @@ import (
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/certificatesigningrequest"
 )
@@ -68,5 +68,5 @@ func RequestAndStoreKubeconfig(ctx context.Context, log logr.Logger, fs afero.Af
 		return fmt.Errorf("unable to encode the gardener-node-agent kubeconfig: %w", err)
 	}
 
-	return fs.WriteFile(nodeagentv1alpha1.KubeconfigFilePath, kubeconfig, 0600)
+	return fs.WriteFile(nodeagentconfigv1alpha1.KubeconfigFilePath, kubeconfig, 0600)
 }

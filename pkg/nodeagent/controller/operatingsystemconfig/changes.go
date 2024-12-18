@@ -20,7 +20,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	componentscontainerd "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/containerd"
-	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 )
 
 var decoder runtime.Decoder
@@ -32,17 +32,17 @@ func init() {
 }
 
 func extractOSCFromSecret(secret *corev1.Secret) (*extensionsv1alpha1.OperatingSystemConfig, string, error) {
-	oscRaw, ok := secret.Data[nodeagentv1alpha1.DataKeyOperatingSystemConfig]
+	oscRaw, ok := secret.Data[nodeagentconfigv1alpha1.DataKeyOperatingSystemConfig]
 	if !ok {
-		return nil, "", fmt.Errorf("no %s key found in OSC secret", nodeagentv1alpha1.DataKeyOperatingSystemConfig)
+		return nil, "", fmt.Errorf("no %s key found in OSC secret", nodeagentconfigv1alpha1.DataKeyOperatingSystemConfig)
 	}
 
 	osc := &extensionsv1alpha1.OperatingSystemConfig{}
 	if err := runtime.DecodeInto(decoder, oscRaw, osc); err != nil {
-		return nil, "", fmt.Errorf("unable to decode OSC from secret data key %s: %w", nodeagentv1alpha1.DataKeyOperatingSystemConfig, err)
+		return nil, "", fmt.Errorf("unable to decode OSC from secret data key %s: %w", nodeagentconfigv1alpha1.DataKeyOperatingSystemConfig, err)
 	}
 
-	return osc, secret.Annotations[nodeagentv1alpha1.AnnotationKeyChecksumDownloadedOperatingSystemConfig], nil
+	return osc, secret.Annotations[nodeagentconfigv1alpha1.AnnotationKeyChecksumDownloadedOperatingSystemConfig], nil
 }
 
 type operatingSystemConfigChanges struct {

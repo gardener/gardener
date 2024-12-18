@@ -36,7 +36,7 @@ import (
 	. "github.com/gardener/gardener/pkg/component/gardener/scheduler"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
-	schedulerv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
+	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -737,7 +737,7 @@ var (
 )
 
 func configMap(namespace string, testValues Values) *corev1.ConfigMap {
-	schedulerConfig := &schedulerv1alpha1.SchedulerConfiguration{
+	schedulerConfig := &schedulerconfigv1alpha1.SchedulerConfiguration{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "scheduler.config.gardener.cloud/v1alpha1",
 			Kind:       "SchedulerConfiguration",
@@ -754,16 +754,16 @@ func configMap(namespace string, testValues Values) *corev1.ConfigMap {
 		},
 		LogLevel:  testValues.LogLevel,
 		LogFormat: "json",
-		Server: schedulerv1alpha1.ServerConfiguration{
-			HealthProbes: &schedulerv1alpha1.Server{
+		Server: schedulerconfigv1alpha1.ServerConfiguration{
+			HealthProbes: &schedulerconfigv1alpha1.Server{
 				Port: 10251,
 			},
-			Metrics: &schedulerv1alpha1.Server{
+			Metrics: &schedulerconfigv1alpha1.Server{
 				Port: 19251,
 			},
 		},
-		Schedulers: schedulerv1alpha1.SchedulerControllerConfiguration{
-			Shoot: &schedulerv1alpha1.ShootSchedulerConfiguration{
+		Schedulers: schedulerconfigv1alpha1.SchedulerControllerConfiguration{
+			Shoot: &schedulerconfigv1alpha1.ShootSchedulerConfiguration{
 				Strategy: "MinimalDistance",
 			},
 		},

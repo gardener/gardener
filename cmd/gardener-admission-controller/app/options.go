@@ -15,7 +15,7 @@ import (
 
 	"github.com/gardener/gardener/cmd/utils/initrun"
 	"github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
-	admissioncontrollerv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
+	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	admissioncontrollervalidation "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/validation"
 )
 
@@ -25,7 +25,7 @@ func init() {
 	configScheme := runtime.NewScheme()
 	schemeBuilder := runtime.NewSchemeBuilder(
 		config.AddToScheme,
-		admissioncontrollerv1alpha1.AddToScheme,
+		admissioncontrollerconfigv1alpha1.AddToScheme,
 	)
 	utilruntime.Must(schemeBuilder.AddToScheme(configScheme))
 	configDecoder = serializer.NewCodecFactory(configScheme).UniversalDecoder()

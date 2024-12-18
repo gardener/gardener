@@ -38,7 +38,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/component"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -82,7 +82,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 		Expect(appsv1.AddToScheme(s)).To(Succeed())
 		// for unmarshal of GardenletConfiguration
 		Expect(gardenletconfig.AddToScheme(s)).To(Succeed())
-		Expect(gardenletv1alpha1.AddToScheme(s)).To(Succeed())
+		Expect(gardenletconfigv1alpha1.AddToScheme(s)).To(Succeed())
 		// for priority class
 		Expect(schedulingv1.AddToScheme(s)).To(Succeed())
 		// for ClusterRole and ClusterRoleBinding
@@ -136,7 +136,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 			bootstrapKubeconfig *corev1.SecretReference,
 			bootstrapKubeconfigSecret *corev1.SecretReference,
 			bootstrapKubeconfigContent *string,
-			seedConfig *gardenletv1alpha1.SeedConfig,
+			seedConfig *gardenletconfigv1alpha1.SeedConfig,
 			deploymentConfiguration *seedmanagement.GardenletDeployment,
 			imageVectorOverwrite *string,
 			componentImageVectorOverwrites *string,
@@ -356,7 +356,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 			"gardenlet-configmap": "gardenlet-configmap-800a10ff",
 		}, false),
 		Entry("verify that the SeedConfig is set in the component config Config Map", nil, nil, nil, nil, nil,
-			&gardenletv1alpha1.SeedConfig{
+			&gardenletconfigv1alpha1.SeedConfig{
 				SeedTemplate: gardencorev1beta1.SeedTemplate{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "sweet-seed",
@@ -367,7 +367,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 				},
 			}, nil, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-7ca44afd"}, false),
 		Entry("verify deployment with two replica and three zones", nil, nil, nil, nil, nil,
-			&gardenletv1alpha1.SeedConfig{
+			&gardenletconfigv1alpha1.SeedConfig{
 				SeedTemplate: gardencorev1beta1.SeedTemplate{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "sweet-seed",
@@ -382,7 +382,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 				ReplicaCount: ptr.To[int32](2),
 			}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-387e51e0"}, false),
 		Entry("verify deployment with only one replica", nil, nil, nil, nil, nil,
-			&gardenletv1alpha1.SeedConfig{
+			&gardenletconfigv1alpha1.SeedConfig{
 				SeedTemplate: gardencorev1beta1.SeedTemplate{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "sweet-seed",
@@ -397,7 +397,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 				ReplicaCount: ptr.To[int32](1),
 			}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-387e51e0"}, false),
 		Entry("verify deployment with only one zone", nil, nil, nil, nil, nil,
-			&gardenletv1alpha1.SeedConfig{
+			&gardenletconfigv1alpha1.SeedConfig{
 				SeedTemplate: gardencorev1beta1.SeedTemplate{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "sweet-seed",

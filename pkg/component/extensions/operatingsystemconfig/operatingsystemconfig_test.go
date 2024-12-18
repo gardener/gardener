@@ -38,7 +38,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/gardeneruser"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/sshdensurer"
 	"github.com/gardener/gardener/pkg/extensions"
-	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -92,7 +92,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			valitailEnabled         = false
 
 			//nolint:unparam
-			initConfigFn = func(worker gardencorev1beta1.Worker, nodeAgentImage string, config *nodeagentv1alpha1.NodeAgentConfiguration) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
+			initConfigFn = func(worker gardencorev1beta1.Worker, nodeAgentImage string, config *nodeagentconfigv1alpha1.NodeAgentConfiguration) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
 				return []extensionsv1alpha1.Unit{
 						{Name: worker.Name},
 						{
@@ -208,7 +208,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				initUnits, initFiles, _ := initConfigFn(
 					worker,
 					imagesCopy["gardener-node-agent"].String(),
-					&nodeagentv1alpha1.NodeAgentConfiguration{APIServer: nodeagentv1alpha1.APIServer{
+					&nodeagentconfigv1alpha1.NodeAgentConfiguration{APIServer: nodeagentconfigv1alpha1.APIServer{
 						Server:   apiServerURL,
 						CABundle: []byte(*caBundle),
 					}},
@@ -597,7 +597,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 			It("should exclude the bootstrap token file if purpose is not provision", func() {
 				bootstrapTokenFile := extensionsv1alpha1.File{Path: "/var/lib/gardener-node-agent/credentials/bootstrap-token"}
-				initConfigFnWithBootstrapToken := func(worker gardencorev1beta1.Worker, nodeAgentImage string, config *nodeagentv1alpha1.NodeAgentConfiguration) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
+				initConfigFnWithBootstrapToken := func(worker gardencorev1beta1.Worker, nodeAgentImage string, config *nodeagentconfigv1alpha1.NodeAgentConfiguration) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
 					units, files, err := initConfigFn(worker, nodeAgentImage, config)
 					return units, append(files, bootstrapTokenFile), err
 				}

@@ -45,7 +45,7 @@ import (
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/nodeagent"
 	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
-	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/bootstrap"
 	"github.com/gardener/gardener/pkg/nodeagent/controller"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
@@ -183,9 +183,9 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		return err
 	}
 
-	log.Info("Creating directory for temporary files", "path", nodeagentv1alpha1.TempDir)
-	if err := fs.MkdirAll(nodeagentv1alpha1.TempDir, os.ModeDir); err != nil {
-		return fmt.Errorf("unable to create directory for temporary files %q: %w", nodeagentv1alpha1.TempDir, err)
+	log.Info("Creating directory for temporary files", "path", nodeagentconfigv1alpha1.TempDir)
+	if err := fs.MkdirAll(nodeagentconfigv1alpha1.TempDir, os.ModeDir); err != nil {
+		return fmt.Errorf("unable to create directory for temporary files %q: %w", nodeagentconfigv1alpha1.TempDir, err)
 	}
 
 	var machineName string
@@ -229,9 +229,9 @@ func getRESTConfig(ctx context.Context, log logr.Logger, fs afero.Afero, cfg *co
 	if !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) {
 		log.Info("Creating REST config for gardener-node-agent access token")
 
-		migrate, err := fs.Exists(nodeagentv1alpha1.KubeconfigFilePath)
+		migrate, err := fs.Exists(nodeagentconfigv1alpha1.KubeconfigFilePath)
 		if err != nil {
-			return nil, fmt.Errorf("failed checking whether kubeconfig file %q exists: %w", nodeagentv1alpha1.KubeconfigFilePath, err)
+			return nil, fmt.Errorf("failed checking whether kubeconfig file %q exists: %w", nodeagentconfigv1alpha1.KubeconfigFilePath, err)
 		}
 
 		if migrate {
@@ -247,7 +247,7 @@ func getRESTConfig(ctx context.Context, log logr.Logger, fs afero.Afero, cfg *co
 			}
 
 			log.Info("Deleting obsolete node-authorizer kubeconfig")
-			if err := fs.Remove(nodeagentv1alpha1.KubeconfigFilePath); err != nil {
+			if err := fs.Remove(nodeagentconfigv1alpha1.KubeconfigFilePath); err != nil {
 				return nil, fmt.Errorf("failed removing kubeconfig file: %w", err)
 			}
 		}
@@ -256,9 +256,9 @@ func getRESTConfig(ctx context.Context, log logr.Logger, fs afero.Afero, cfg *co
 
 	log.Info("Creating REST config for node-agent-authorizer")
 	// TODO(oliver-goetz): Remove this migration code when NodeAgentAuthorizer feature gate is removed.
-	migrate, err := fs.Exists(nodeagentv1alpha1.TokenFilePath)
+	migrate, err := fs.Exists(nodeagentconfigv1alpha1.TokenFilePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed checking whether token file %q exists: %w", nodeagentv1alpha1.TokenFilePath, err)
+		return nil, fmt.Errorf("failed checking whether token file %q exists: %w", nodeagentconfigv1alpha1.TokenFilePath, err)
 	}
 	if migrate {
 		log.Info("Start migrating from access token to node-agent-authorizer kubeconfig")
@@ -290,7 +290,7 @@ func getRESTConfig(ctx context.Context, log logr.Logger, fs afero.Afero, cfg *co
 		}
 
 		log.Info("Deleting obsolete access token file")
-		if err := fs.Remove(nodeagentv1alpha1.TokenFilePath); err != nil {
+		if err := fs.Remove(nodeagentconfigv1alpha1.TokenFilePath); err != nil {
 			return nil, fmt.Errorf("failed removing access token file: %w", err)
 		}
 	}
@@ -299,8 +299,8 @@ func getRESTConfig(ctx context.Context, log logr.Logger, fs afero.Afero, cfg *co
 }
 
 func getRESTConfigNodeAgentAuthorizer(ctx context.Context, log logr.Logger, fs afero.Afero, cfg *config.NodeAgentConfiguration) (*rest.Config, error) {
-	if kubeconfigExists, err := fs.Exists(nodeagentv1alpha1.KubeconfigFilePath); err != nil {
-		return nil, fmt.Errorf("failed checking whether kubeconfig file %q exists: %w", nodeagentv1alpha1.KubeconfigFilePath, err)
+	if kubeconfigExists, err := fs.Exists(nodeagentconfigv1alpha1.KubeconfigFilePath); err != nil {
+		return nil, fmt.Errorf("failed checking whether kubeconfig file %q exists: %w", nodeagentconfigv1alpha1.KubeconfigFilePath, err)
 	} else if !kubeconfigExists {
 		restConfig := &rest.Config{
 			Burst: int(cfg.ClientConnection.Burst),
@@ -311,15 +311,15 @@ func getRESTConfigNodeAgentAuthorizer(ctx context.Context, log logr.Logger, fs a
 			},
 			Host:            cfg.APIServer.Server,
 			TLSClientConfig: rest.TLSClientConfig{CAData: cfg.APIServer.CABundle},
-			BearerTokenFile: nodeagentv1alpha1.BootstrapTokenFilePath,
+			BearerTokenFile: nodeagentconfigv1alpha1.BootstrapTokenFilePath,
 		}
 
-		if bootstrapTokenExists, err := fs.Exists(nodeagentv1alpha1.BootstrapTokenFilePath); err != nil {
-			return nil, fmt.Errorf("failed checking whether bootstrap token file %q exists: %w", nodeagentv1alpha1.BootstrapTokenFilePath, err)
+		if bootstrapTokenExists, err := fs.Exists(nodeagentconfigv1alpha1.BootstrapTokenFilePath); err != nil {
+			return nil, fmt.Errorf("failed checking whether bootstrap token file %q exists: %w", nodeagentconfigv1alpha1.BootstrapTokenFilePath, err)
 		} else if !bootstrapTokenExists {
-			return nil, fmt.Errorf("unable to construct REST config (neither kubeconfig file %q nor bootstrap token file %q exist)", nodeagentv1alpha1.TokenFilePath, nodeagentv1alpha1.BootstrapTokenFilePath)
+			return nil, fmt.Errorf("unable to construct REST config (neither kubeconfig file %q nor bootstrap token file %q exist)", nodeagentconfigv1alpha1.TokenFilePath, nodeagentconfigv1alpha1.BootstrapTokenFilePath)
 		}
-		log.Info("Kubeconfig file does not exist, but bootstrap token file does - using it to request certificate", "path", nodeagentv1alpha1.BootstrapTokenFilePath)
+		log.Info("Kubeconfig file does not exist, but bootstrap token file does - using it to request certificate", "path", nodeagentconfigv1alpha1.BootstrapTokenFilePath)
 
 		machineName, err := fetchMachineNameFromFile(fs)
 		if err != nil {
@@ -331,15 +331,15 @@ func getRESTConfigNodeAgentAuthorizer(ctx context.Context, log logr.Logger, fs a
 		}
 	}
 
-	kubeconfig, err := fs.ReadFile(nodeagentv1alpha1.KubeconfigFilePath)
+	kubeconfig, err := fs.ReadFile(nodeagentconfigv1alpha1.KubeconfigFilePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed reading kubeconfig file %q: %w", nodeagentv1alpha1.KubeconfigFilePath, err)
+		return nil, fmt.Errorf("failed reading kubeconfig file %q: %w", nodeagentconfigv1alpha1.KubeconfigFilePath, err)
 	}
 
 	log.Info("Kubeconfig file exists, using it")
 	restConfig, err := kubernetes.RESTConfigFromKubeconfig(kubeconfig)
 	if err != nil {
-		return nil, fmt.Errorf("failed creating REST config from kubeconfig file %q: %w", nodeagentv1alpha1.KubeconfigFilePath, err)
+		return nil, fmt.Errorf("failed creating REST config from kubeconfig file %q: %w", nodeagentconfigv1alpha1.KubeconfigFilePath, err)
 	}
 
 	return restConfig, nil
@@ -356,7 +356,7 @@ func getRESTConfigAccessToken(log logr.Logger, cfg *config.NodeAgentConfiguratio
 		},
 		Host:            cfg.APIServer.Server,
 		TLSClientConfig: rest.TLSClientConfig{CAData: cfg.APIServer.CABundle},
-		BearerTokenFile: nodeagentv1alpha1.TokenFilePath,
+		BearerTokenFile: nodeagentconfigv1alpha1.TokenFilePath,
 	}
 
 	if _, err := os.Stat(restConfig.BearerTokenFile); err != nil && !os.IsNotExist(err) {
@@ -366,11 +366,11 @@ func getRESTConfigAccessToken(log logr.Logger, cfg *config.NodeAgentConfiguratio
 		return restConfig, nil
 	}
 
-	if _, err := os.Stat(nodeagentv1alpha1.BootstrapTokenFilePath); err != nil && !os.IsNotExist(err) {
-		return nil, fmt.Errorf("failed checking whether bootstrap token file %q exists: %w", nodeagentv1alpha1.BootstrapTokenFilePath, err)
+	if _, err := os.Stat(nodeagentconfigv1alpha1.BootstrapTokenFilePath); err != nil && !os.IsNotExist(err) {
+		return nil, fmt.Errorf("failed checking whether bootstrap token file %q exists: %w", nodeagentconfigv1alpha1.BootstrapTokenFilePath, err)
 	} else if err == nil {
-		log.Info("Token file does not exist, but bootstrap token file does - using it to fetch access token", "path", nodeagentv1alpha1.BootstrapTokenFilePath)
-		restConfig.BearerTokenFile = nodeagentv1alpha1.BootstrapTokenFilePath
+		log.Info("Token file does not exist, but bootstrap token file does - using it to fetch access token", "path", nodeagentconfigv1alpha1.BootstrapTokenFilePath)
+		restConfig.BearerTokenFile = nodeagentconfigv1alpha1.BootstrapTokenFilePath
 
 		if err := fetchAccessToken(context.Background(), log, restConfig); err != nil {
 			return nil, fmt.Errorf("failed fetching access token: %w", err)
@@ -379,7 +379,7 @@ func getRESTConfigAccessToken(log logr.Logger, cfg *config.NodeAgentConfiguratio
 		return restConfig, nil
 	}
 
-	return nil, fmt.Errorf("unable to construct REST config (neither token file %q nor bootstrap token file %q exist)", nodeagentv1alpha1.TokenFilePath, nodeagentv1alpha1.BootstrapTokenFilePath)
+	return nil, fmt.Errorf("unable to construct REST config (neither token file %q nor bootstrap token file %q exist)", nodeagentconfigv1alpha1.TokenFilePath, nodeagentconfigv1alpha1.BootstrapTokenFilePath)
 }
 
 // TODO(oliver-goetz): Remove this function when NodeAgentAuthorizer feature gate is removed.
@@ -389,7 +389,7 @@ func fetchAccessToken(ctx context.Context, log logr.Logger, restConfig *rest.Con
 		return fmt.Errorf("unable to create client with bootstrap token: %w", err)
 	}
 
-	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: nodeagentv1alpha1.AccessSecretName, Namespace: metav1.NamespaceSystem}}
+	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: nodeagentconfigv1alpha1.AccessSecretName, Namespace: metav1.NamespaceSystem}}
 	log.Info("Reading access token secret", "secret", client.ObjectKeyFromObject(secret))
 	if err := c.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
 		return fmt.Errorf("failed fetching access token from API server: %w", err)
@@ -400,23 +400,23 @@ func fetchAccessToken(ctx context.Context, log logr.Logger, restConfig *rest.Con
 		return fmt.Errorf("secret key %q does not exist or empty", resourcesv1alpha1.DataKeyToken)
 	}
 
-	log.Info("Writing downloaded access token to disk", "path", nodeagentv1alpha1.TokenFilePath)
-	if err := os.MkdirAll(filepath.Dir(nodeagentv1alpha1.TokenFilePath), fs.ModeDir); err != nil {
-		return fmt.Errorf("unable to create directory %q: %w", filepath.Dir(nodeagentv1alpha1.TokenFilePath), err)
+	log.Info("Writing downloaded access token to disk", "path", nodeagentconfigv1alpha1.TokenFilePath)
+	if err := os.MkdirAll(filepath.Dir(nodeagentconfigv1alpha1.TokenFilePath), fs.ModeDir); err != nil {
+		return fmt.Errorf("unable to create directory %q: %w", filepath.Dir(nodeagentconfigv1alpha1.TokenFilePath), err)
 	}
-	if err := os.WriteFile(nodeagentv1alpha1.TokenFilePath, token, 0600); err != nil {
-		return fmt.Errorf("unable to write access token to %s: %w", nodeagentv1alpha1.TokenFilePath, err)
+	if err := os.WriteFile(nodeagentconfigv1alpha1.TokenFilePath, token, 0600); err != nil {
+		return fmt.Errorf("unable to write access token to %s: %w", nodeagentconfigv1alpha1.TokenFilePath, err)
 	}
 
 	log.Info("Token written to disk")
-	restConfig.BearerTokenFile = nodeagentv1alpha1.TokenFilePath
+	restConfig.BearerTokenFile = nodeagentconfigv1alpha1.TokenFilePath
 	return nil
 }
 
 func fetchMachineNameFromFile(fs afero.Afero) (string, error) {
-	machineName, err := fs.ReadFile(nodeagentv1alpha1.MachineNameFilePath)
+	machineName, err := fs.ReadFile(nodeagentconfigv1alpha1.MachineNameFilePath)
 	if err != nil {
-		return "", fmt.Errorf("failed reading machine-name file %q: %w", nodeagentv1alpha1.MachineNameFilePath, err)
+		return "", fmt.Errorf("failed reading machine-name file %q: %w", nodeagentconfigv1alpha1.MachineNameFilePath, err)
 	}
 	return strings.Split(string(machineName), "\n")[0], nil
 }
@@ -438,7 +438,7 @@ func fetchAndStoreMachineNameFromNode(ctx context.Context, restConfig *rest.Conf
 		return "", fmt.Errorf("unable to get machine name. No %q label on node %q", machineutils.MachineLabelKey, node.Name)
 	}
 
-	if err := fs.WriteFile(nodeagentv1alpha1.MachineNameFilePath, []byte(machineName), 0600); err != nil {
+	if err := fs.WriteFile(nodeagentconfigv1alpha1.MachineNameFilePath, []byte(machineName), 0600); err != nil {
 		return "", fmt.Errorf("error writing machine name to file %q: %w", nodeName, err)
 	}
 

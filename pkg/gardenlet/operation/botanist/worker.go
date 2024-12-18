@@ -20,7 +20,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/worker"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
-	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -123,7 +123,7 @@ func OperatingSystemConfigUpdatedForAllWorkerPools(
 
 		var (
 			gardenerNodeAgentSecretName = secretMeta.Name
-			secretChecksum              = secretMeta.Annotations[nodeagentv1alpha1.AnnotationKeyChecksumDownloadedOperatingSystemConfig]
+			secretChecksum              = secretMeta.Annotations[nodeagentconfigv1alpha1.AnnotationKeyChecksumDownloadedOperatingSystemConfig]
 		)
 
 		for _, node := range workerPoolToNodes[worker.Name] {
@@ -131,7 +131,7 @@ func OperatingSystemConfigUpdatedForAllWorkerPools(
 				continue
 			}
 
-			if nodeChecksum, ok := node.Annotations[nodeagentv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig]; nodeChecksum != secretChecksum {
+			if nodeChecksum, ok := node.Annotations[nodeagentconfigv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig]; nodeChecksum != secretChecksum {
 				if !ok {
 					result = multierror.Append(result, fmt.Errorf("the last successfully applied operating system config on node %q hasn't been reported yet", node.Name))
 				} else {

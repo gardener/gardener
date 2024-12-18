@@ -20,7 +20,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
-	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -35,12 +35,12 @@ type KubeletBootstrapKubeconfig struct {
 func (k *KubeletBootstrapKubeconfig) Start(_ context.Context) error {
 	k.Log.Info("Checking whether kubelet bootstrap kubeconfig needs to be created")
 
-	bootstrapToken, err := k.FS.ReadFile(nodeagentv1alpha1.BootstrapTokenFilePath)
+	bootstrapToken, err := k.FS.ReadFile(nodeagentconfigv1alpha1.BootstrapTokenFilePath)
 	if err != nil {
 		if !errors.Is(err, afero.ErrFileNotFound) {
-			return fmt.Errorf("failed checking whether bootstrap token file %q already exists: %w", nodeagentv1alpha1.BootstrapTokenFilePath, err)
+			return fmt.Errorf("failed checking whether bootstrap token file %q already exists: %w", nodeagentconfigv1alpha1.BootstrapTokenFilePath, err)
 		}
-		k.Log.Info("Bootstrap token file does not exist, nothing to be done", "path", nodeagentv1alpha1.BootstrapTokenFilePath)
+		k.Log.Info("Bootstrap token file does not exist, nothing to be done", "path", nodeagentconfigv1alpha1.BootstrapTokenFilePath)
 		return nil
 	}
 

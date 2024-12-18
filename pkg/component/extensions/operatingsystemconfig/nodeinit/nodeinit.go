@@ -16,12 +16,12 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
 	"github.com/gardener/gardener/pkg/features"
-	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
 // PathInitScript is the path to the init script.
-const PathInitScript = nodeagentv1alpha1.BaseDir + "/init.sh"
+const PathInitScript = nodeagentconfigv1alpha1.BaseDir + "/init.sh"
 
 // Config returns the init units and the files for the OperatingSystemConfig for bootstrapping the gardener-node-agent.
 // ### !CAUTION! ###
@@ -32,7 +32,7 @@ const PathInitScript = nodeagentv1alpha1.BaseDir + "/init.sh"
 func Config(
 	worker gardencorev1beta1.Worker,
 	nodeAgentImage string,
-	config *nodeagentv1alpha1.NodeAgentConfiguration,
+	config *nodeagentconfigv1alpha1.NodeAgentConfiguration,
 ) (
 	[]extensionsv1alpha1.Unit,
 	[]extensionsv1alpha1.File,
@@ -45,7 +45,7 @@ func Config(
 
 	var (
 		nodeInitUnits = []extensionsv1alpha1.Unit{{
-			Name:    nodeagentv1alpha1.InitUnitName,
+			Name:    nodeagentconfigv1alpha1.InitUnitName,
 			Command: ptr.To(extensionsv1alpha1.CommandStart),
 			Enable:  ptr.To(true),
 			Content: ptr.To(`[Unit]
@@ -66,7 +66,7 @@ WantedBy=multi-user.target`),
 
 		nodeInitFiles = []extensionsv1alpha1.File{
 			{
-				Path:        nodeagentv1alpha1.BootstrapTokenFilePath,
+				Path:        nodeagentconfigv1alpha1.BootstrapTokenFilePath,
 				Permissions: ptr.To[uint32](0640),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
@@ -96,7 +96,7 @@ WantedBy=multi-user.target`),
 	if features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) {
 		nodeInitFiles = append(nodeInitFiles,
 			extensionsv1alpha1.File{
-				Path:        nodeagentv1alpha1.MachineNameFilePath,
+				Path:        nodeagentconfigv1alpha1.MachineNameFilePath,
 				Permissions: ptr.To[uint32](0640),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
@@ -144,8 +144,8 @@ func generateInitScript(nodeAgentImage string) ([]byte, error) {
 	var initScript bytes.Buffer
 	if err := initScriptTpl.Execute(&initScript, map[string]any{
 		"image":           nodeAgentImage,
-		"binaryDirectory": nodeagentv1alpha1.BinaryDir,
-		"configFile":      nodeagentv1alpha1.ConfigFilePath,
+		"binaryDirectory": nodeagentconfigv1alpha1.BinaryDir,
+		"configFile":      nodeagentconfigv1alpha1.ConfigFilePath,
 	}); err != nil {
 		return nil, err
 	}

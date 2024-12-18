@@ -17,7 +17,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
-	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 )
 
 func addConversionFuncs(scheme *runtime.Scheme) error {
@@ -55,7 +55,7 @@ func Convert_seedmanagement_GardenletConfig_To_v1alpha1_GardenletConfig(in *seed
 		return err
 	}
 	if out.Config.Raw == nil && out.Config.Object != nil {
-		cfg, ok := out.Config.Object.(*gardenletv1alpha1.GardenletConfiguration)
+		cfg, ok := out.Config.Object.(*gardenletconfigv1alpha1.GardenletConfiguration)
 		if !ok {
 			return errors.New("unknown gardenlet config object type")
 		}
@@ -87,7 +87,7 @@ func Convert_seedmanagement_GardenletSpec_To_v1alpha1_GardenletSpec(in *seedmana
 		return err
 	}
 	if out.Config.Raw == nil && out.Config.Object != nil {
-		cfg, ok := out.Config.Object.(*gardenletv1alpha1.GardenletConfiguration)
+		cfg, ok := out.Config.Object.(*gardenletconfigv1alpha1.GardenletConfiguration)
 		if !ok {
 			return errors.New("unknown gardenlet config object type")
 		}
