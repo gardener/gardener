@@ -22,13 +22,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/health/utils"
 	resourcemanagerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
@@ -91,11 +91,12 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 			continue
 		}
 
-		if err := c.Watch(
-			source.Kind[client.Object](targetCluster.GetCache(), obj,
-				mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
-				r.ProgressingStatusChanged(ctx)),
-		); err != nil {
+		if err := c.Watch(source.Kind[client.Object](
+			targetCluster.GetCache(),
+			obj,
+			handler.EnqueueRequestsFromMapFunc(utils.MapToOriginManagedResource(c.GetLogger(), clusterID)),
+			r.ProgressingStatusChanged(ctx),
+		)); err != nil {
 			return err
 		}
 
@@ -105,11 +106,12 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 			pod := &metav1.PartialObjectMetadata{}
 			pod.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Pod"))
 
-			if err := c.Watch(
-				source.Kind[client.Object](targetCluster.GetCache(), pod,
-					mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), r.MapPodToDeploymentToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
-					predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Delete)),
-			); err != nil {
+			if err := c.Watch(source.Kind[client.Object](
+				targetCluster.GetCache(),
+				pod,
+				handler.EnqueueRequestsFromMapFunc(r.MapPodToDeploymentToOriginManagedResource(c.GetLogger(), clusterID)),
+				predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Delete),
+			)); err != nil {
 				return err
 			}
 		}
@@ -139,11 +141,11 @@ func (r *Reconciler) ProgressingStatusChanged(ctx context.Context) predicate.Pre
 	}
 }
 
-// MapPodToDeploymentToOriginManagedResource is a mapper.MapFunc for pods to their origin Deployment and origin
+// MapPodToDeploymentToOriginManagedResource is a handler.MapFunc for pods to their origin Deployment and origin
 // ManagedResource.
-func (r *Reconciler) MapPodToDeploymentToOriginManagedResource(clusterID string) mapper.MapFunc {
-	return func(ctx context.Context, log logr.Logger, reader client.Reader, obj client.Object) []reconcile.Request {
-		deployment, err := kubernetesutils.GetDeploymentForPod(ctx, reader, obj.GetNamespace(), obj.GetOwnerReferences())
+func (r *Reconciler) MapPodToDeploymentToOriginManagedResource(log logr.Logger, clusterID string) handler.MapFunc {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		deployment, err := kubernetesutils.GetDeploymentForPod(ctx, r.TargetClient, obj.GetNamespace(), obj.GetOwnerReferences())
 		if err != nil {
 			log.Error(err, "Failed getting Deployment for Pod", "pod", client.ObjectKeyFromObject(obj))
 			return nil
@@ -153,6 +155,6 @@ func (r *Reconciler) MapPodToDeploymentToOriginManagedResource(clusterID string)
 			return nil
 		}
 
-		return utils.MapToOriginManagedResource(clusterID)(ctx, log, reader, deployment)
+		return utils.MapToOriginManagedResource(log, clusterID)(ctx, deployment)
 	}
 }

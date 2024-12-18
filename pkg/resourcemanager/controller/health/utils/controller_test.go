@@ -162,31 +162,31 @@ var _ = Describe("HealthStatusChanged", func() {
 		})
 
 		It("should return nil because the origin annotation is not present", func() {
-			Expect(MapToOriginManagedResource("")(ctx, log, nil, obj)).To(BeNil())
+			Expect(MapToOriginManagedResource(log, "")(ctx, obj)).To(BeNil())
 		})
 
 		It("should return nil because the origin annotation cannot be parsed", func() {
 			obj.Annotations = map[string]string{"resources.gardener.cloud/origin": "foo"}
 
-			Expect(MapToOriginManagedResource("")(ctx, log, nil, obj)).To(BeNil())
+			Expect(MapToOriginManagedResource(log, "")(ctx, obj)).To(BeNil())
 		})
 
 		It("should return nil because the origin does not have a cluster id", func() {
 			obj.Annotations = map[string]string{"resources.gardener.cloud/origin": "foo/bar"}
 
-			Expect(MapToOriginManagedResource("foo")(ctx, log, nil, obj)).To(BeNil())
+			Expect(MapToOriginManagedResource(log, "foo")(ctx, obj)).To(BeNil())
 		})
 
 		It("should return nil because the origin does not match the cluster id", func() {
 			obj.Annotations = map[string]string{"resources.gardener.cloud/origin": "foo:bar/baz"}
 
-			Expect(MapToOriginManagedResource("hugo")(ctx, log, nil, obj)).To(BeNil())
+			Expect(MapToOriginManagedResource(log, "hugo")(ctx, obj)).To(BeNil())
 		})
 
 		It("should return a request because the origin matches the cluster id", func() {
 			obj.Annotations = map[string]string{"resources.gardener.cloud/origin": "foo:bar/baz"}
 
-			Expect(MapToOriginManagedResource("foo")(ctx, log, nil, obj)).To(ConsistOf(reconcile.Request{NamespacedName: types.NamespacedName{Name: "baz", Namespace: "bar"}}))
+			Expect(MapToOriginManagedResource(log, "foo")(ctx, obj)).To(ConsistOf(reconcile.Request{NamespacedName: types.NamespacedName{Name: "baz", Namespace: "bar"}}))
 		})
 	})
 })
