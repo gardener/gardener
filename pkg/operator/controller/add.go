@@ -25,7 +25,8 @@ import (
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	"github.com/gardener/gardener/pkg/operator/controller/controllerregistrar"
 	"github.com/gardener/gardener/pkg/operator/controller/extension"
-	"github.com/gardener/gardener/pkg/operator/controller/extension/required"
+	requiredruntime "github.com/gardener/gardener/pkg/operator/controller/extension/required/runtime"
+	requiredvirtual "github.com/gardener/gardener/pkg/operator/controller/extension/required/virtual"
 	"github.com/gardener/gardener/pkg/operator/controller/garden"
 	"github.com/gardener/gardener/pkg/operator/controller/gardenlet"
 	"github.com/gardener/gardener/pkg/operator/controller/virtual"
@@ -86,10 +87,10 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 				},
 			},
 			{
-				Name: required.ControllerName,
+				Name: requiredruntime.ControllerName,
 				AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, _ *operatorv1alpha1.Garden) (bool, error) {
-					return true, (&required.Reconciler{
-						Config: cfg,
+					return true, (&requiredruntime.Reconciler{
+						Config: cfg.Controllers.ExtensionRequiredRuntime,
 					}).AddToManager(ctx, mgr)
 				},
 			},
@@ -103,6 +104,19 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 
 					return true, (&gardenlet.Reconciler{
 						Config: cfg.Controllers.GardenletDeployer,
+					}).AddToManager(ctx, mgr, virtualCluster)
+				},
+			},
+			{
+				Name: requiredvirtual.ControllerName,
+				AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, _ *operatorv1alpha1.Garden) (bool, error) {
+					if virtualCluster == nil {
+						logf.FromContext(ctx).Info("Virtual cluster object has not been created yet, cannot add RequiredVirtual reconciler")
+						return false, nil
+					}
+
+					return true, (&requiredvirtual.Reconciler{
+						Config: cfg.Controllers.ExtensionRequiredVirtual,
 					}).AddToManager(ctx, mgr, virtualCluster)
 				},
 			},

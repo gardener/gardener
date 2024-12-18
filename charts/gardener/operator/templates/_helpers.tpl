@@ -132,10 +132,16 @@ config.yaml: |
       concurrentSyncs: {{ .Values.config.controllers.extension.concurrentSyncs }}
       {{- end }}
     {{- end }}
-    {{- if .Values.config.controllers.extensionRequired }}
-    extensionRequired:
-      {{- if .Values.config.controllers.extensionRequired.concurrentSyncs }}
-      concurrentSyncs: {{ .Values.config.controllers.extensionRequired.concurrentSyncs }}
+    {{- if .Values.config.controllers.extensionRequiredRuntime }}
+    extensionRequiredRuntime:
+      {{- if .Values.config.controllers.extensionRequiredRuntime.concurrentSyncs }}
+      concurrentSyncs: {{ .Values.config.controllers.extensionRequiredRuntime.concurrentSyncs }}
+      {{- end }}
+    {{- end }}
+    {{- if .Values.config.controllers.extensionRequiredVirtual }}
+    extensionRequiredVirtual:
+      {{- if .Values.config.controllers.extensionRequiredVirtual.concurrentSyncs }}
+      concurrentSyncs: {{ .Values.config.controllers.extensionRequiredVirtual.concurrentSyncs }}
       {{- end }}
     {{- end }}
   {{- if .Values.nodeToleration }}

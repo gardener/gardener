@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package required
+package runtime
 
 import (
 	"context"
@@ -22,6 +22,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 )
 
@@ -31,7 +32,7 @@ var RequeueExtensionKindNotCalculated = 2 * time.Second
 // Reconciler reconciles Extensions to determine their required state.
 type Reconciler struct {
 	Client client.Client
-	Config *config.OperatorConfiguration
+	Config config.ExtensionRequiredRuntimeControllerConfiguration
 
 	Lock                *sync.RWMutex
 	KindToRequiredTypes map[string]sets.Set[string]
@@ -42,6 +43,9 @@ type Reconciler struct {
 // Reconcile performs the main reconciliation logic.
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
+
+	ctx, cancel := controllerutils.GetMainReconciliationContext(ctx, controllerutils.DefaultReconciliationTimeout)
+	defer cancel()
 
 	for _, ext := range runtimeClusterExtensions {
 		r.Lock.RLock()
@@ -78,39 +82,27 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 	}
 
-	requiredRuntimeCondition := r.getRuntimeCondition(log, extension, requiredExtensionKinds)
-	if err := r.updateConditions(ctx, extension, requiredRuntimeCondition); err != nil {
+	if err := r.updateCondition(ctx, log, extension, requiredExtensionKinds); err != nil {
 		return reconcile.Result{}, fmt.Errorf("could not update extension status: %w", err)
 	}
 
 	return reconcile.Result{}, nil
 }
 
-const (
-	// ExtensionRequiredReason is the reason to indicate that the extension is required.
-	ExtensionRequiredReason = "ExtensionRequired"
-	// ExtensionNotRequiredReason is the reason to indicate that the extension is not required.
-	ExtensionNotRequiredReason = "ExtensionNotRequired"
-)
-
-func (r *Reconciler) getRuntimeCondition(log logr.Logger, extension *operatorv1alpha1.Extension, kinds sets.Set[string]) gardencorev1beta1.Condition {
+func (r *Reconciler) updateCondition(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension, kinds sets.Set[string]) error {
 	requiredRuntimeCondition := v1beta1helper.GetOrInitConditionWithClock(r.clock, extension.Status.Conditions, operatorv1alpha1.ExtensionRequiredRuntime)
 
 	if len(kinds) > 0 {
 		sortedKinds := slices.Sorted(slices.Values(kinds.UnsortedList()))
-		requiredRuntimeCondition = v1beta1helper.UpdatedConditionWithClock(r.clock, requiredRuntimeCondition, gardencorev1beta1.ConditionTrue, ExtensionRequiredReason, fmt.Sprintf("Extension required for kinds %s", sortedKinds))
+		requiredRuntimeCondition = v1beta1helper.UpdatedConditionWithClock(r.clock, requiredRuntimeCondition, gardencorev1beta1.ConditionTrue, "ExtensionRequired", fmt.Sprintf("Extension required for kinds %s", sortedKinds))
 		log.Info("Extension required for garden runtime cluster", "kinds", sortedKinds)
 	} else {
-		requiredRuntimeCondition = v1beta1helper.UpdatedConditionWithClock(r.clock, requiredRuntimeCondition, gardencorev1beta1.ConditionFalse, ExtensionNotRequiredReason, "Extension not required for any kind")
+		requiredRuntimeCondition = v1beta1helper.UpdatedConditionWithClock(r.clock, requiredRuntimeCondition, gardencorev1beta1.ConditionFalse, "ExtensionNotRequired", "Extension not required for any kind")
 		log.Info("Extension not required for garden runtime cluster")
 	}
 
-	return requiredRuntimeCondition
-}
-
-func (r *Reconciler) updateConditions(ctx context.Context, extension *operatorv1alpha1.Extension, conditions ...gardencorev1beta1.Condition) error {
 	patch := client.MergeFromWithOptions(extension.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	newConditions := v1beta1helper.MergeConditions(extension.Status.Conditions, conditions...)
+	newConditions := v1beta1helper.MergeConditions(extension.Status.Conditions, requiredRuntimeCondition)
 	if !v1beta1helper.ConditionsNeedUpdate(extension.Status.Conditions, newConditions) {
 		return nil
 	}

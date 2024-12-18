@@ -67,8 +67,10 @@ type ControllerConfiguration struct {
 	VPAEvictionRequirements VPAEvictionRequirementsControllerConfiguration `json:"vpaEvictionRequirements"`
 	// Extension defines the configuration of the extension controller.
 	Extension ExtensionControllerConfiguration `json:"extension"`
-	// ExtensionRequired defines the configuration of the ExtensionRequired controller.
-	ExtensionRequired ExtensionRequiredControllerConfiguration `json:"extensionRequired"`
+	// ExtensionRequiredRuntime defines the configuration of the ExtensionRequiredRuntime controller.
+	ExtensionRequiredRuntime ExtensionRequiredRuntimeControllerConfiguration `json:"extensionRequiredRuntime"`
+	// ExtensionRequiredVirtual defines the configuration of the ExtensionRequiredVirtual controller.
+	ExtensionRequiredVirtual ExtensionRequiredVirtualControllerConfiguration `json:"extensionRequiredVirtual"`
 }
 
 // GardenCareControllerConfiguration defines the configuration of the GardenCare controller.
@@ -128,8 +130,15 @@ type ExtensionControllerConfiguration struct {
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 }
 
-// ExtensionRequiredControllerConfiguration defines the configuration of the extension-required controller.
-type ExtensionRequiredControllerConfiguration struct {
+// ExtensionRequiredRuntimeControllerConfiguration defines the configuration of the extension-required-runtime controller.
+type ExtensionRequiredRuntimeControllerConfiguration struct {
+	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
+	// +optional
+	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+}
+
+// ExtensionRequiredVirtualControllerConfiguration defines the configuration of the extension-required-virtual controller.
+type ExtensionRequiredVirtualControllerConfiguration struct {
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
 	// +optional
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`

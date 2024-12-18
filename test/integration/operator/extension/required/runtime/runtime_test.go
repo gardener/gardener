@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package required_test
+package runtime_test
 
 import (
 	"fmt"
@@ -20,7 +20,7 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-var _ = Describe("Extension Required controller tests", func() {
+var _ = Describe("Extension Required Runtime controller tests", func() {
 	var (
 		providerExtension, dnsExtension *operatorv1alpha1.Extension
 
@@ -127,7 +127,6 @@ var _ = Describe("Extension Required controller tests", func() {
 
 	It("should reconcile the extensions and calculate the expected required status", func() {
 		By("Create extensions")
-
 		for _, ext := range []client.Object{providerExtension, dnsExtension} {
 			Expect(testClient.Create(ctx, ext)).To(Succeed())
 			log.Info("Created extension", "garden", ext.GetName())
