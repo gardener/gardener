@@ -1309,22 +1309,7 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 				allErrs = append(allErrs, field.Invalid(oidcPath.Child("issuerURL"), oidc.IssuerURL, "issuerURL must be set when clientID is provided"))
 			}
 		} else {
-			issuer, err := url.Parse(*oidc.IssuerURL)
-			if err != nil || (issuer != nil && len(issuer.Host) == 0) {
-				allErrs = append(allErrs, field.Invalid(oidcPath.Child("issuerURL"), oidc.IssuerURL, "must be a valid URL and have https scheme"))
-			}
-			if issuer != nil && issuer.Fragment != "" {
-				allErrs = append(allErrs, field.Invalid(oidcPath.Child("issuerURL"), oidc.IssuerURL, "must not contain a fragment"))
-			}
-			if issuer != nil && issuer.User != nil {
-				allErrs = append(allErrs, field.Invalid(oidcPath.Child("issuerURL"), oidc.IssuerURL, "must not contain a username or password"))
-			}
-			if issuer != nil && len(issuer.RawQuery) > 0 {
-				allErrs = append(allErrs, field.Invalid(oidcPath.Child("issuerURL"), oidc.IssuerURL, "must not contain a query"))
-			}
-			if issuer != nil && issuer.Scheme != "https" {
-				allErrs = append(allErrs, field.Invalid(oidcPath.Child("issuerURL"), oidc.IssuerURL, "must have https scheme"))
-			}
+			allErrs = append(allErrs, ValidateOIDCIssuerURL(*oidc.IssuerURL, oidcPath.Child("issuerURL"))...)
 		}
 
 		if oidc.CABundle != nil {
@@ -1458,6 +1443,30 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 	}
 
 	allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(kubeAPIServer.FeatureGates, version, fldPath.Child("featureGates"))...)
+
+	return allErrs
+}
+
+// ValidateOIDCIssuerURL validates if the given issuerURL follow the expected format.
+func ValidateOIDCIssuerURL(issuerURL string, issuerFldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	issuer, err := url.Parse(issuerURL)
+	if err != nil || (issuer != nil && len(issuer.Host) == 0) {
+		allErrs = append(allErrs, field.Invalid(issuerFldPath, issuerURL, "must be a valid URL and have https scheme"))
+	}
+	if issuer != nil && issuer.Fragment != "" {
+		allErrs = append(allErrs, field.Invalid(issuerFldPath, issuerURL, "must not contain a fragment"))
+	}
+	if issuer != nil && issuer.User != nil {
+		allErrs = append(allErrs, field.Invalid(issuerFldPath, issuerURL, "must not contain a username or password"))
+	}
+	if issuer != nil && len(issuer.RawQuery) > 0 {
+		allErrs = append(allErrs, field.Invalid(issuerFldPath, issuerURL, "must not contain a query"))
+	}
+	if issuer != nil && issuer.Scheme != "https" {
+		allErrs = append(allErrs, field.Invalid(issuerFldPath, issuerURL, "must have https scheme"))
+	}
 
 	return allErrs
 }

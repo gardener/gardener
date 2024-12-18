@@ -709,6 +709,32 @@ implicitly defaulted to <code>15m</code>.</p>
 <tbody>
 <tr>
 <td>
+<code>clientID</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ClientIDPublic is the public client ID.
+Falls back to the API server&rsquo;s OIDC configuration if not set here.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>issuerURL</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>The URL of the OpenID issuer, only HTTPS scheme will be accepted. Used to verify the OIDC JSON Web Token (JWT).
+Falls back to the API server&rsquo;s OIDC configuration if not set here.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>sessionLifetime</code></br>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#duration-v1-meta">
