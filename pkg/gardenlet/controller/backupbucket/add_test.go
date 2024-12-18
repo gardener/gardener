@@ -7,7 +7,6 @@ package backupbucket_test
 import (
 	"context"
 
-	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -73,7 +72,6 @@ var _ = Describe("Add", func() {
 	Describe("#MapExtensionBackupBucketToBackupBucket", func() {
 		var (
 			ctx                   = context.TODO()
-			log                   = logr.Discard()
 			extensionBackupBucket *extensionsv1alpha1.BackupBucket
 		)
 
@@ -86,7 +84,7 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should return a request with the core.gardener.cloud/v1beta1.BackupBucket name", func() {
-			Expect(reconciler.MapExtensionBackupBucketToCoreBackupBucket(ctx, log, nil, extensionBackupBucket)).To(ConsistOf(
+			Expect(reconciler.MapExtensionBackupBucketToCoreBackupBucket(ctx, extensionBackupBucket)).To(ConsistOf(
 				reconcile.Request{NamespacedName: types.NamespacedName{Name: extensionBackupBucket.Name}},
 			))
 		})

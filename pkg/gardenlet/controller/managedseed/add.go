@@ -7,7 +7,6 @@ package managedseed
 import (
 	"context"
 
-	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
@@ -26,7 +25,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -66,30 +64,26 @@ func (r *Reconciler) AddToManager(
 		r.GardenNamespaceShoot = v1beta1constants.GardenNamespace
 	}
 
-	c, err := builder.
+	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: ptr.Deref(r.Config.Controllers.ManagedSeed.ConcurrentSyncs, 0),
 		}).
-		WatchesRawSource(
-			source.Kind[client.Object](gardenCluster.GetCache(),
-				&seedmanagementv1alpha1.ManagedSeed{},
-				r.EnqueueWithJitterDelay(),
-				r.ManagedSeedPredicate(ctx, r.Config.SeedConfig.SeedTemplate.Name),
-				&predicate.GenerationChangedPredicate{}),
-		).
-		Build(r)
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		source.Kind[client.Object](gardenCluster.GetCache(),
+		WatchesRawSource(source.Kind[client.Object](
+			gardenCluster.GetCache(),
+			&seedmanagementv1alpha1.ManagedSeed{},
+			r.EnqueueWithJitterDelay(),
+			r.ManagedSeedPredicate(ctx, r.Config.SeedConfig.SeedTemplate.Name),
+			&predicate.GenerationChangedPredicate{},
+		)).
+		WatchesRawSource(source.Kind[client.Object](
+			gardenCluster.GetCache(),
 			&gardencorev1beta1.Seed{},
-			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapSeedToManagedSeed), mapper.UpdateWithNew, c.GetLogger()),
-			r.SeedOfManagedSeedPredicate(ctx, r.Config.SeedConfig.SeedTemplate.Name)),
-	)
+			handler.EnqueueRequestsFromMapFunc(r.MapSeedToManagedSeed),
+			r.SeedOfManagedSeedPredicate(ctx, r.Config.SeedConfig.SeedTemplate.Name),
+		)).
+		Complete(r)
 }
 
 // ManagedSeedPredicate returns the predicate for ManagedSeed events.
@@ -194,8 +188,8 @@ func filterManagedSeed(ctx context.Context, reader client.Reader, managedSeed *s
 	return gardenerutils.GetResponsibleSeedName(specSeedName, statusSeedName) == seedName
 }
 
-// MapSeedToManagedSeed is a mapper.MapFunc for mapping a Seed to the owning ManagedSeed.
-func (r *Reconciler) MapSeedToManagedSeed(_ context.Context, _ logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
+// MapSeedToManagedSeed is a handler.MapFunc for mapping a Seed to the owning ManagedSeed.
+func (r *Reconciler) MapSeedToManagedSeed(_ context.Context, obj client.Object) []reconcile.Request {
 	return []reconcile.Request{{NamespacedName: types.NamespacedName{Namespace: r.GardenNamespaceGarden, Name: obj.GetName()}}}
 }
 

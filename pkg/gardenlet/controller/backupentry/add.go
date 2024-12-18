@@ -35,7 +35,7 @@ import (
 const ControllerName = "backupentry"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gardenCluster, seedCluster cluster.Cluster) error {
+func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluster cluster.Cluster) error {
 	if r.GardenClient == nil {
 		r.GardenClient = gardenCluster.GetClient()
 	}
@@ -52,83 +52,80 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 		r.GardenNamespace = v1beta1constants.GardenNamespace
 	}
 
-	c, err := builder.
+	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
 			RateLimiter:             r.RateLimiter,
 		}).
-		WatchesRawSource(
-			source.Kind[client.Object](gardenCluster.GetCache(),
-				&gardencorev1beta1.BackupEntry{},
-				&handler.EnqueueRequestForObject{},
-				&predicate.GenerationChangedPredicate{},
-				predicateutils.SeedNamePredicate(r.SeedName, gardenerutils.GetBackupEntrySeedNames),
-				predicate.NewPredicateFuncs(backupEntryPredicate)),
-		).
-		Build(r)
-	if err != nil {
-		return err
-	}
-
-	if err := c.Watch(
-		source.Kind[client.Object](gardenCluster.GetCache(),
+		WatchesRawSource(source.Kind[client.Object](
+			gardenCluster.GetCache(),
+			&gardencorev1beta1.BackupEntry{},
+			&handler.EnqueueRequestForObject{},
+			&predicate.GenerationChangedPredicate{},
+			predicateutils.SeedNamePredicate(r.SeedName, gardenerutils.GetBackupEntrySeedNames),
+			predicate.NewPredicateFuncs(backupEntryPredicate),
+		)).
+		WatchesRawSource(source.Kind[client.Object](
+			gardenCluster.GetCache(),
 			&gardencorev1beta1.BackupBucket{},
-			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapBackupBucketToBackupEntry), mapper.UpdateWithNew, c.GetLogger()),
-			predicateutils.LastOperationChanged(getBackupBucketLastOperation)),
-	); err != nil {
-		return err
-	}
-
-	return c.Watch(
-		source.Kind[client.Object](seedCluster.GetCache(),
+			handler.EnqueueRequestsFromMapFunc(r.MapBackupBucketToBackupEntry(mgr.GetLogger().WithValues("controller", ControllerName))),
+			predicateutils.LastOperationChanged(getBackupBucketLastOperation),
+		)).
+		WatchesRawSource(source.Kind[client.Object](
+			seedCluster.GetCache(),
 			&extensionsv1alpha1.BackupEntry{},
-			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapExtensionBackupEntryToCoreBackupEntry), mapper.UpdateWithNew, c.GetLogger()),
-			predicateutils.LastOperationChanged(predicateutils.GetExtensionLastOperation)),
-	)
+			handler.EnqueueRequestsFromMapFunc(r.MapExtensionBackupEntryToCoreBackupEntry(mgr.GetLogger().WithValues("controller", ControllerName))),
+			predicateutils.LastOperationChanged(predicateutils.GetExtensionLastOperation),
+		)).
+		Complete(r)
 }
 
-// MapBackupBucketToBackupEntry is a mapper.MapFunc for mapping a core.gardener.cloud/v1beta1.BackupBucket to the
-// core.gardener.cloud/v1beta1.BackupEntry that references it..
-func (r *Reconciler) MapBackupBucketToBackupEntry(ctx context.Context, log logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
-	backupBucket, ok := obj.(*gardencorev1beta1.BackupBucket)
-	if !ok {
-		return nil
-	}
+// MapBackupBucketToBackupEntry is a handler.MapFunc for mapping a core.gardener.cloud/v1beta1.BackupBucket to the
+// core.gardener.cloud/v1beta1.BackupEntry that references it.
+func (r *Reconciler) MapBackupBucketToBackupEntry(log logr.Logger) handler.MapFunc {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		backupBucket, ok := obj.(*gardencorev1beta1.BackupBucket)
+		if !ok {
+			return nil
+		}
 
-	backupEntryList := &gardencorev1beta1.BackupEntryList{}
-	if err := r.GardenClient.List(ctx, backupEntryList, client.MatchingFields{gardencore.BackupEntryBucketName: backupBucket.Name}); err != nil {
-		log.Error(err, "Failed to list backupentries referencing this bucket", "backupBucketName", backupBucket.Name)
-		return nil
-	}
+		backupEntryList := &gardencorev1beta1.BackupEntryList{}
+		if err := r.GardenClient.List(ctx, backupEntryList, client.MatchingFields{gardencore.BackupEntryBucketName: backupBucket.Name}); err != nil {
+			log.Error(err, "Failed to list backupentries referencing this bucket", "backupBucketName", backupBucket.Name)
+			return nil
+		}
 
-	return mapper.ObjectListToRequests(backupEntryList, backupEntryPredicate)
+		return mapper.ObjectListToRequests(backupEntryList, backupEntryPredicate)
+	}
 }
 
-// MapExtensionBackupEntryToCoreBackupEntry is a mapper.MapFunc for mapping a extensions.gardener.cloud/v1alpha1.BackupEntry to the owning
-// core.gardener.cloud/v1beta1.BackupEntry.
-func (r *Reconciler) MapExtensionBackupEntryToCoreBackupEntry(ctx context.Context, log logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
-	if obj.GetDeletionTimestamp() != nil {
-		return nil
-	}
+// MapExtensionBackupEntryToCoreBackupEntry is a handler.MapFunc for mapping an extensions.gardener.cloud/v1alpha1.BackupEntry
+// to the owning core.gardener.cloud/v1beta1.BackupEntry.
+func (r *Reconciler) MapExtensionBackupEntryToCoreBackupEntry(log logr.Logger) handler.MapFunc {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		if obj.GetDeletionTimestamp() != nil {
+			return nil
+		}
 
-	shootTechnicalID, _ := gardenerutils.ExtractShootDetailsFromBackupEntryName(obj.GetName())
-	if shootTechnicalID == "" {
-		return nil
-	}
+		shootTechnicalID, _ := gardenerutils.ExtractShootDetailsFromBackupEntryName(obj.GetName())
+		if shootTechnicalID == "" {
+			return nil
+		}
 
-	shoot, err := extensions.GetShoot(ctx, r.SeedClient, shootTechnicalID)
-	if err != nil {
-		log.Error(err, "Failed to get shoot from cluster", "shootTechnicalID", shootTechnicalID)
-		return nil
-	}
-	if shoot == nil {
-		log.Info("Shoot is missing in cluster resource", "cluster", client.ObjectKey{Name: shootTechnicalID})
-		return nil
-	}
+		shoot, err := extensions.GetShoot(ctx, r.SeedClient, shootTechnicalID)
+		if err != nil {
+			log.Error(err, "Failed to get shoot from cluster", "shootTechnicalID", shootTechnicalID)
+			return nil
+		}
+		if shoot == nil {
+			log.Info("Shoot is missing in cluster resource", "cluster", client.ObjectKey{Name: shootTechnicalID})
+			return nil
+		}
 
-	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: obj.GetName(), Namespace: shoot.Namespace}}}
+		return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: obj.GetName(), Namespace: shoot.Namespace}}}
+	}
 }
 
 func getBackupBucketLastOperation(obj client.Object) *gardencorev1beta1.LastOperation {

@@ -150,7 +150,7 @@ var _ = BeforeSuite(func() {
 			ConcurrentSyncs: ptr.To(5),
 		},
 		SeedName: seedName,
-	}).AddToManager(ctx, mgr, mgr, mgr)).To(Succeed())
+	}).AddToManager(mgr, mgr, mgr)).To(Succeed())
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)

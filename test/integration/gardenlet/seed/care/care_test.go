@@ -67,7 +67,7 @@ var _ = Describe("Seed Care controller tests", func() {
 			},
 			Namespace: &testNamespace.Name,
 			SeedName:  seedName,
-		}).AddToManager(ctx, mgr, mgr, mgr)).To(Succeed())
+		}).AddToManager(mgr, mgr, mgr)).To(Succeed())
 
 		By("Start manager")
 		mgrContext, mgrCancel := context.WithCancel(ctx)
