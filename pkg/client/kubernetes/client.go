@@ -130,7 +130,7 @@ func NewClientFromSecretObject(secret *corev1.Secret, fns ...ConfigFunc) (Interf
 }
 
 // RESTConfigFromInternalClientConnectionConfiguration creates a *rest.Config from a componentbaseconfig.ClientConnectionConfiguration and the configured kubeconfig.
-// Allowed fields are not considered unsupported if used in the kubeconfig.
+// It takes an optional list of additionally allowed kubeconfig fields.
 // Deprecated: use RESTConfigFromClientConnectionConfiguration instead.
 // TODO(timebertt): delete this when finalizing https://github.com/gardener/gardener/issues/11043
 func RESTConfigFromInternalClientConnectionConfiguration(cfg *componentbaseconfig.ClientConnectionConfiguration, kubeconfig []byte, allowedFields ...string) (*rest.Config, error) {
@@ -152,7 +152,7 @@ func ConvertClientConnectionConfigurationToExternal(cfg *componentbaseconfig.Cli
 }
 
 // RESTConfigFromClientConnectionConfiguration creates a *rest.Config from a componentbaseconfigv1alpha1.ClientConnectionConfiguration and the configured kubeconfig.
-// Allowed fields are not considered unsupported if used in the kubeconfig.
+// It takes an optional list of additionally allowed kubeconfig fields.
 func RESTConfigFromClientConnectionConfiguration(cfg *componentbaseconfigv1alpha1.ClientConnectionConfiguration, kubeconfig []byte, allowedFields ...string) (*rest.Config, error) {
 	var (
 		restConfig *rest.Config
@@ -191,7 +191,7 @@ func RESTConfigFromClientConnectionConfiguration(cfg *componentbaseconfigv1alpha
 }
 
 // RESTConfigFromKubeconfigFile returns a rest.Config from the bytes of a kubeconfig file.
-// Allowed fields are not considered unsupported if used in the kubeconfig.
+// It takes an optional list of additionally allowed kubeconfig fields.
 func RESTConfigFromKubeconfigFile(kubeconfigFile string, allowedFields ...string) (*rest.Config, error) {
 	clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 		&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigFile},
@@ -206,7 +206,7 @@ func RESTConfigFromKubeconfigFile(kubeconfigFile string, allowedFields ...string
 }
 
 // RESTConfigFromKubeconfig returns a rest.Config from the bytes of a kubeconfig.
-// Allowed fields are not considered unsupported if used in the kubeconfig.
+// It takes an optional list of additionally allowed kubeconfig fields.
 func RESTConfigFromKubeconfig(kubeconfig []byte, allowedFields ...string) (*rest.Config, error) {
 	clientConfig, err := clientcmd.NewClientConfigFromBytes(kubeconfig)
 	if err != nil {
