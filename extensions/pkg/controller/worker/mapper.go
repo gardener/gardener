@@ -6,7 +6,7 @@ package worker
 
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -15,6 +15,6 @@ import (
 
 // ClusterToWorkerMapper returns a mapper that returns requests for Worker whose
 // referenced clusters have been modified.
-func ClusterToWorkerMapper(mgr manager.Manager, predicates []predicate.Predicate) mapper.Mapper {
-	return mapper.ClusterToObjectMapper(mgr, func() client.ObjectList { return &extensionsv1alpha1.WorkerList{} }, predicates)
+func ClusterToWorkerMapper(reader client.Reader, predicates []predicate.Predicate) handler.MapFunc {
+	return mapper.ClusterToObjectMapper(reader, func() client.ObjectList { return &extensionsv1alpha1.WorkerList{} }, predicates)
 }

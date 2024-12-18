@@ -33,7 +33,7 @@ type AddOptions struct {
 // AddToManagerWithOptions adds a controller with the given Options to the given manager.
 // The opts.Reconciler is being set with a newly instantiated actuator.
 func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddOptions) error {
-	return infrastructure.Add(ctx, mgr, infrastructure.AddArgs{
+	return infrastructure.Add(mgr, infrastructure.AddArgs{
 		Actuator:          NewActuator(mgr),
 		ControllerOptions: opts.Controller,
 		Predicates:        infrastructure.DefaultPredicates(ctx, mgr, opts.IgnoreOperationAnnotation),

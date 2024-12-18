@@ -7,7 +7,6 @@ package backupentry_test
 import (
 	"context"
 
-	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
@@ -17,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -24,7 +24,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	mockcache "github.com/gardener/gardener/third_party/mock/controller-runtime/cache"
 	mockmanager "github.com/gardener/gardener/third_party/mock/controller-runtime/manager"
 )
@@ -94,17 +93,17 @@ var _ = Describe("Controller Mapper", func() {
 	})
 
 	Describe("#SecretToBackupEntryMapper", func() {
-		var mapper mapper.Mapper
+		var mapper handler.MapFunc
 
 		BeforeEach(func() {
-			mapper = SecretToBackupEntryMapper(nil)
+			mapper = SecretToBackupEntryMapper(fakeClient, nil)
 		})
 
 		It("should find all objects for the passed secret", func() {
 			Expect(fakeClient.Create(ctx, backupEntry)).To(Succeed())
 			Expect(fakeClient.Create(ctx, backupEntry2)).To(Succeed())
 
-			Expect(mapper.Map(ctx, logr.Discard(), fakeClient, secret)).To(ConsistOf(
+			Expect(mapper(ctx, secret)).To(ConsistOf(
 				reconcile.Request{
 					NamespacedName: types.NamespacedName{
 						Name: backupEntry.Name,
@@ -118,40 +117,37 @@ var _ = Describe("Controller Mapper", func() {
 		})
 
 		It("should find no objects for the passed secret because predicates do not match", func() {
-			predicates := []predicate.Predicate{
-				predicate.Funcs{
-					GenericFunc: func(_ event.GenericEvent) bool {
-						return false
-					},
-				},
-			}
-			mapper = SecretToBackupEntryMapper(predicates)
+			mapper = SecretToBackupEntryMapper(fakeClient, []predicate.Predicate{
+				predicate.Funcs{GenericFunc: func(_ event.GenericEvent) bool {
+					return false
+				}},
+			})
 
 			Expect(fakeClient.Create(ctx, backupEntry)).To(Succeed())
-			Expect(mapper.Map(ctx, logr.Discard(), fakeClient, secret)).To(BeEmpty())
+			Expect(mapper(ctx, secret)).To(BeEmpty())
 		})
 
 		It("should return empty request array because there are no backupentry objects present", func() {
-			Expect(mapper.Map(ctx, logr.Discard(), fakeClient, secret)).To(BeEmpty())
+			Expect(mapper(ctx, secret)).To(BeEmpty())
 		})
 
 		It("should find no objects because the passed object is not secret", func() {
-			Expect(mapper.Map(ctx, logr.Discard(), fakeClient, configMap)).To(BeEmpty())
+			Expect(mapper(ctx, configMap)).To(BeEmpty())
 		})
 	})
 
 	Describe("#NamespaceToBackupEntryMapper", func() {
-		var mapper mapper.Mapper
+		var mapper handler.MapFunc
 
 		BeforeEach(func() {
-			mapper = NamespaceToBackupEntryMapper(nil)
+			mapper = NamespaceToBackupEntryMapper(fakeClient, nil)
 		})
 
 		It("should find all objects for the passed namespace", func() {
 			Expect(fakeClient.Create(ctx, backupEntry)).To(Succeed())
 			Expect(fakeClient.Create(ctx, backupEntry2)).To(Succeed())
 
-			Expect(mapper.Map(ctx, logr.Discard(), fakeClient, namespace)).To(ConsistOf(
+			Expect(mapper(ctx, namespace)).To(ConsistOf(
 				reconcile.Request{
 					NamespacedName: types.NamespacedName{
 						Name: backupEntry.Name,
@@ -160,25 +156,22 @@ var _ = Describe("Controller Mapper", func() {
 		})
 
 		It("should find no objects for the passed namespace because predicates do not match", func() {
-			predicates := []predicate.Predicate{
-				predicate.Funcs{
-					GenericFunc: func(_ event.GenericEvent) bool {
-						return false
-					},
-				},
-			}
-			mapper = NamespaceToBackupEntryMapper(predicates)
+			mapper = NamespaceToBackupEntryMapper(fakeClient, []predicate.Predicate{
+				predicate.Funcs{GenericFunc: func(_ event.GenericEvent) bool {
+					return false
+				}},
+			})
 
 			Expect(fakeClient.Create(ctx, backupEntry)).To(Succeed())
-			Expect(mapper.Map(ctx, logr.Discard(), fakeClient, namespace)).To(BeEmpty())
+			Expect(mapper(ctx, namespace)).To(BeEmpty())
 		})
 
 		It("should return empty request array because there are no backupentry objects present", func() {
-			Expect(mapper.Map(ctx, logr.Discard(), fakeClient, namespace)).To(BeEmpty())
+			Expect(mapper(ctx, namespace)).To(BeEmpty())
 		})
 
 		It("should find no objects because the passed object is not namespace", func() {
-			Expect(mapper.Map(ctx, logr.Discard(), fakeClient, configMap)).To(BeEmpty())
+			Expect(mapper(ctx, configMap)).To(BeEmpty())
 		})
 	})
 })
