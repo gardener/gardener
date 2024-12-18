@@ -41,7 +41,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		if apierrors.IsNotFound(err) {
 			// Shut down Gardener-Operator in case the garden was deleted.
 			// This is a pragmatic way to deregister all controllers that depend on the existence of a garden cluster.
-			log.Info("Terminating Gardener-Operator after garden deletion")
+			log.Info("Terminating gardener-operator after garden deletion")
 			r.OperatorCancel()
 			return reconcile.Result{}, nil
 		}
