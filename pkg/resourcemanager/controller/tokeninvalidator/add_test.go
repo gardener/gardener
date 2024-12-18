@@ -7,7 +7,6 @@ package tokeninvalidator_test
 import (
 	"context"
 
-	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -130,13 +129,10 @@ var _ = Describe("Add", func() {
 	})
 
 	Describe("#MapServiceAccountToSecrets", func() {
-		var (
-			ctx = context.TODO()
-			log = logr.Logger{}
-		)
+		ctx := context.TODO()
 
 		It("should return nil because object is not ServiceAccount", func() {
-			Expect((&Reconciler{}).MapServiceAccountToSecrets(ctx, log, nil, &corev1.Secret{})).To(BeNil())
+			Expect((&Reconciler{}).MapServiceAccountToSecrets(ctx, &corev1.Secret{})).To(BeNil())
 		})
 
 		It("should return map ServiceAccount to all referenced secrets", func() {
@@ -148,7 +144,7 @@ var _ = Describe("Add", func() {
 				},
 			}
 
-			Expect((&Reconciler{}).MapServiceAccountToSecrets(ctx, log, nil, serviceAccount)).To(ConsistOf(
+			Expect((&Reconciler{}).MapServiceAccountToSecrets(ctx, serviceAccount)).To(ConsistOf(
 				reconcile.Request{NamespacedName: types.NamespacedName{Name: "secret1", Namespace: "namespace"}},
 				reconcile.Request{NamespacedName: types.NamespacedName{Name: "secret2", Namespace: "namespace"}},
 			))
