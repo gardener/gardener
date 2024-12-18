@@ -57,26 +57,20 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 		}
 		r.ClientCertificateExpirationTimestamp = &metav1.Time{Time: gardenletClientCertificate.Leaf.NotAfter}
 	}
+	mgr.GetLogger().WithValues("controller", ControllerName).Info("The client certificate used to communicate with the garden cluster has expiration date", "expirationDate", r.ClientCertificateExpirationTimestamp)
 
-	c, err := builder.
+	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 1,
 		}).
-		WatchesRawSource(
-			source.Kind[client.Object](gardenCluster.GetCache(),
-				&gardencorev1beta1.Seed{},
-				&handler.EnqueueRequestForObject{},
-				predicateutils.HasName(r.Config.SeedConfig.Name),
-				predicate.GenerationChangedPredicate{}),
-		).
-		Build(r)
-	if err != nil {
-		return err
-	}
-
-	c.GetLogger().Info("The client certificate used to communicate with the garden cluster has expiration date", "expirationDate", r.ClientCertificateExpirationTimestamp)
-
-	return nil
+		WatchesRawSource(source.Kind[client.Object](
+			gardenCluster.GetCache(),
+			&gardencorev1beta1.Seed{},
+			&handler.EnqueueRequestForObject{},
+			predicateutils.HasName(r.Config.SeedConfig.Name),
+			predicate.GenerationChangedPredicate{},
+		)).
+		Complete(r)
 }
