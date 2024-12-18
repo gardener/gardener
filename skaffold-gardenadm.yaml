@@ -92,7 +92,7 @@ build:
             - cmd/gardener-extension-provider-local
             - cmd/gardener-extension-provider-local/app
             - cmd/utils
-            - extensions/pkg/apis/config
+            - extensions/pkg/apis/config/v1alpha1
             - extensions/pkg/controller
             - extensions/pkg/controller/backupbucket
             - extensions/pkg/controller/backupentry
