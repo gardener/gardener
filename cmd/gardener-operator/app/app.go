@@ -61,7 +61,8 @@ func NewCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return run(cmd.Context(), log, opts.config)
+			ctx, cancel := context.WithCancel(cmd.Context())
+			return run(ctx, cancel, log, opts.config)
 		},
 	}
 
@@ -72,7 +73,7 @@ func NewCommand() *cobra.Command {
 	return cmd
 }
 
-func run(ctx context.Context, log logr.Logger, cfg *config.OperatorConfiguration) error {
+func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *config.OperatorConfiguration) error {
 	log.Info("Feature Gates", "featureGates", features.DefaultFeatureGate)
 
 	log.Info("Getting rest config")
@@ -196,7 +197,7 @@ func run(ctx context.Context, log logr.Logger, cfg *config.OperatorConfiguration
 	}
 
 	log.Info("Adding controllers to manager")
-	if err := controller.AddToManager(ctx, mgr, cfg, gardenClientMap); err != nil {
+	if err := controller.AddToManager(ctx, cancel, mgr, cfg, gardenClientMap); err != nil {
 		return fmt.Errorf("failed adding controllers to manager: %w", err)
 	}
 

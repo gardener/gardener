@@ -34,7 +34,7 @@ import (
 )
 
 // AddToManager adds all controllers to the given manager.
-func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.OperatorConfiguration, gardenClientMap clientmap.ClientMap) error {
+func AddToManager(ctx context.Context, operatorCancel context.CancelFunc, mgr manager.Manager, cfg *config.OperatorConfiguration, gardenClientMap clientmap.ClientMap) error {
 	identity, err := gardenerutils.DetermineIdentity()
 	if err != nil {
 		return err
@@ -55,6 +55,7 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 	})
 
 	if err := (&controllerregistrar.Reconciler{
+		OperatorCancel: operatorCancel,
 		Controllers: append([]controllerregistrar.Controller{
 			{
 				Name: networkpolicy.ControllerName,
