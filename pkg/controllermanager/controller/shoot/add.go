@@ -5,7 +5,6 @@
 package shoot
 
 import (
-	"context"
 	"fmt"
 
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -21,10 +20,10 @@ import (
 )
 
 // AddToManager adds all Shoot controllers to the given manager.
-func AddToManager(ctx context.Context, mgr manager.Manager, cfg config.ControllerManagerConfiguration) error {
+func AddToManager(mgr manager.Manager, cfg config.ControllerManagerConfiguration) error {
 	if err := (&conditions.Reconciler{
 		Config: *cfg.Controllers.ShootConditions,
-	}).AddToManager(ctx, mgr); err != nil {
+	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding conditions reconciler: %w", err)
 	}
 

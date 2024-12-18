@@ -120,7 +120,7 @@ var _ = BeforeSuite(func() {
 		Config: config.NamespacedCloudProfileControllerConfiguration{
 			ConcurrentSyncs: ptr.To(5),
 		},
-	}).AddToManager(ctx, mgr)).To(Succeed())
+	}).AddToManager(mgr)).To(Succeed())
 
 	DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, true))
 

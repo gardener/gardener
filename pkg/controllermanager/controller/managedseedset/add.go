@@ -21,12 +21,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
@@ -45,7 +43,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 		r.Actuator = NewActuator(r.Client, replicaGetter, replicaFactory, &r.Config, mgr.GetEventRecorderFor(ControllerName+"-controller"))
 	}
 
-	c, err := builder.
+	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		For(&seedmanagementv1alpha1.ManagedSeedSet{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
@@ -54,35 +52,20 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 		}).
 		Watches(
 			&gardencorev1beta1.Shoot{},
-			handler.EnqueueRequestForOwner(
-				mgr.GetScheme(),
-				mgr.GetRESTMapper(),
-				&seedmanagementv1alpha1.ManagedSeedSet{},
-				handler.OnlyControllerOwner(),
-			),
+			handler.EnqueueRequestForOwner(mgr.GetScheme(), mgr.GetRESTMapper(), &seedmanagementv1alpha1.ManagedSeedSet{}, handler.OnlyControllerOwner()),
 			builder.WithPredicates(r.ShootPredicate(ctx)),
 		).
 		Watches(
 			&seedmanagementv1alpha1.ManagedSeed{},
-			handler.EnqueueRequestForOwner(
-				mgr.GetScheme(),
-				mgr.GetRESTMapper(),
-				&seedmanagementv1alpha1.ManagedSeedSet{},
-				handler.OnlyControllerOwner(),
-			),
+			handler.EnqueueRequestForOwner(mgr.GetScheme(), mgr.GetRESTMapper(), &seedmanagementv1alpha1.ManagedSeedSet{}, handler.OnlyControllerOwner()),
 			builder.WithPredicates(r.ManagedSeedPredicate(ctx)),
 		).
-		Build(r)
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		source.Kind[client.Object](mgr.GetCache(),
+		Watches(
 			&gardencorev1beta1.Seed{},
-			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapSeedToManagedSeedSet), mapper.UpdateWithNew, c.GetLogger()),
-			r.SeedPredicate(ctx),
-		))
+			handler.EnqueueRequestsFromMapFunc(r.MapSeedToManagedSeedSet(mgr.GetLogger().WithValues("controller", ControllerName))),
+			builder.WithPredicates(r.SeedPredicate(ctx)),
+		).
+		Complete(r)
 }
 
 // ShootPredicate returns the predicate for Shoot events.
@@ -351,33 +334,35 @@ func (p *seedPredicate) filterSeed(obj client.Object) bool {
 	}
 }
 
-// MapSeedToManagedSeedSet is a mapper.MapFunc for mapping Seeds to referencing ManagedSeedSet.
-func (r *Reconciler) MapSeedToManagedSeedSet(ctx context.Context, log logr.Logger, reader client.Reader, obj client.Object) []reconcile.Request {
-	seed, ok := obj.(*gardencorev1beta1.Seed)
-	if !ok {
-		return nil
-	}
-
-	managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
-	if err := reader.Get(ctx, client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: seed.Name}, managedSeed); err != nil {
-		if !apierrors.IsNotFound(err) {
-			log.Error(err, "Failed to get ManagedSeed for Seed", "seed", client.ObjectKeyFromObject(seed))
+// MapSeedToManagedSeedSet is a handler.MapFunc for mapping Seeds to referencing ManagedSeedSet.
+func (r *Reconciler) MapSeedToManagedSeedSet(log logr.Logger) handler.MapFunc {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		seed, ok := obj.(*gardencorev1beta1.Seed)
+		if !ok {
+			return nil
 		}
-		return nil
-	}
 
-	controllerRef := metav1.GetControllerOf(managedSeed)
-	if controllerRef == nil {
-		return nil
-	}
-
-	managedSeedSet := &seedmanagementv1alpha1.ManagedSeedSet{}
-	if err := reader.Get(ctx, client.ObjectKey{Namespace: managedSeed.Namespace, Name: controllerRef.Name}, managedSeedSet); err != nil {
-		if !apierrors.IsNotFound(err) {
-			log.Error(err, "Failed to get ManagedSeedSet for ManagedSeed", "managedseed", client.ObjectKeyFromObject(managedSeed))
+		managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
+		if err := r.Client.Get(ctx, client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: seed.Name}, managedSeed); err != nil {
+			if !apierrors.IsNotFound(err) {
+				log.Error(err, "Failed to get ManagedSeed for Seed", "seed", client.ObjectKeyFromObject(seed))
+			}
+			return nil
 		}
-		return nil
-	}
 
-	return []reconcile.Request{{NamespacedName: types.NamespacedName{Namespace: managedSeedSet.Namespace, Name: managedSeedSet.Name}}}
+		controllerRef := metav1.GetControllerOf(managedSeed)
+		if controllerRef == nil {
+			return nil
+		}
+
+		managedSeedSet := &seedmanagementv1alpha1.ManagedSeedSet{}
+		if err := r.Client.Get(ctx, client.ObjectKey{Namespace: managedSeed.Namespace, Name: controllerRef.Name}, managedSeedSet); err != nil {
+			if !apierrors.IsNotFound(err) {
+				log.Error(err, "Failed to get ManagedSeedSet for ManagedSeed", "managedseed", client.ObjectKeyFromObject(managedSeed))
+			}
+			return nil
+		}
+
+		return []reconcile.Request{{NamespacedName: types.NamespacedName{Namespace: managedSeedSet.Namespace, Name: managedSeedSet.Name}}}
+	}
 }

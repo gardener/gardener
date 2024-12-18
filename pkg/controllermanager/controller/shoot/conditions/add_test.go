@@ -119,6 +119,7 @@ var _ = Describe("Add", func() {
 		BeforeEach(func() {
 			log = logr.Discard()
 			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+			reconciler.Client = fakeClient
 
 			seed = &gardencorev1beta1.Seed{
 				ObjectMeta: metav1.ObjectMeta{
@@ -145,29 +146,29 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should do nothing if the object is no Seed", func() {
-			Expect(reconciler.MapSeedToShoot(ctx, log, fakeClient, &corev1.Secret{})).To(BeEmpty())
+			Expect(reconciler.MapSeedToShoot(log)(ctx, &corev1.Secret{})).To(BeEmpty())
 		})
 
 		It("should do nothing if there is no related ManagedSeed", func() {
-			Expect(reconciler.MapSeedToShoot(ctx, log, fakeClient, seed)).To(BeEmpty())
+			Expect(reconciler.MapSeedToShoot(log)(ctx, seed)).To(BeEmpty())
 		})
 
 		It("should do nothing if the ManagedSeed does not reference a Shoot", func() {
 			managedSeed.Spec.Shoot = nil
 			Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
-			Expect(reconciler.MapSeedToShoot(ctx, log, fakeClient, seed)).To(BeEmpty())
+			Expect(reconciler.MapSeedToShoot(log)(ctx, seed)).To(BeEmpty())
 		})
 
 		It("should do nothing if there is no related Shoot", func() {
 			Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
-			Expect(reconciler.MapSeedToShoot(ctx, log, fakeClient, seed)).To(BeEmpty())
+			Expect(reconciler.MapSeedToShoot(log)(ctx, seed)).To(BeEmpty())
 		})
 
 		It("should map the Seed to the Shoot", func() {
 			Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
 			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 
-			Expect(reconciler.MapSeedToShoot(ctx, log, fakeClient, seed)).To(ConsistOf(
+			Expect(reconciler.MapSeedToShoot(log)(ctx, seed)).To(ConsistOf(
 				reconcile.Request{NamespacedName: types.NamespacedName{Name: shoot.Name, Namespace: shoot.Namespace}},
 			))
 		})

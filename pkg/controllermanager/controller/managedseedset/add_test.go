@@ -589,30 +589,30 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should do nothing if the object is no Seed", func() {
-			Expect(reconciler.MapSeedToManagedSeedSet(ctx, log, fakeClient, &corev1.Secret{})).To(BeEmpty())
+			Expect(reconciler.MapSeedToManagedSeedSet(log)(ctx, &corev1.Secret{})).To(BeEmpty())
 		})
 
 		It("should do nothing if there is no related ManagedSeed", func() {
-			Expect(reconciler.MapSeedToManagedSeedSet(ctx, log, fakeClient, seed)).To(BeEmpty())
+			Expect(reconciler.MapSeedToManagedSeedSet(log)(ctx, seed)).To(BeEmpty())
 		})
 
 		It("should do nothing if the ManagedSeed does not reference any ManagedSeedSet", func() {
 			managedSeed.OwnerReferences = nil
 			Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
-			Expect(reconciler.MapSeedToManagedSeedSet(ctx, log, fakeClient, seed)).To(BeEmpty())
+			Expect(reconciler.MapSeedToManagedSeedSet(log)(ctx, seed)).To(BeEmpty())
 		})
 
 		It("should do nothing if the referenced ManagedSeedSet does not exist", func() {
 			managedSeedSet.Name = "foo"
 			Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
-			Expect(reconciler.MapSeedToManagedSeedSet(ctx, log, fakeClient, seed)).To(BeEmpty())
+			Expect(reconciler.MapSeedToManagedSeedSet(log)(ctx, seed)).To(BeEmpty())
 		})
 
 		It("should map the Seed to the ManagedSeedSet", func() {
 			Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
 			Expect(fakeClient.Create(ctx, managedSeedSet)).To(Succeed())
 
-			Expect(reconciler.MapSeedToManagedSeedSet(ctx, log, fakeClient, seed)).To(ConsistOf(
+			Expect(reconciler.MapSeedToManagedSeedSet(log)(ctx, seed)).To(ConsistOf(
 				reconcile.Request{NamespacedName: types.NamespacedName{Name: managedSeedSet.Name, Namespace: managedSeedSet.Namespace}},
 			))
 		})
