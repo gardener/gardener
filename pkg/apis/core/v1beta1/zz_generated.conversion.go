@@ -13,9 +13,9 @@ import (
 	unsafe "unsafe"
 
 	core "github.com/gardener/gardener/pkg/apis/core"
+	helm "github.com/gardener/gardener/pkg/apis/types/helm"
 	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
@@ -3573,14 +3573,14 @@ func Convert_core_GardenerResourceData_To_v1beta1_GardenerResourceData(in *core.
 
 func autoConvert_v1beta1_HelmControllerDeployment_To_core_HelmControllerDeployment(in *HelmControllerDeployment, out *core.HelmControllerDeployment, s conversion.Scope) error {
 	// WARNING: in.Chart requires manual conversion: does not exist in peer-type
-	out.Values = (*apiextensionsv1.JSON)(unsafe.Pointer(in.Values))
+	out.Values = (*helm.Values)(unsafe.Pointer(in.Values))
 	out.OCIRepository = (*core.OCIRepository)(unsafe.Pointer(in.OCIRepository))
 	return nil
 }
 
 func autoConvert_core_HelmControllerDeployment_To_v1beta1_HelmControllerDeployment(in *core.HelmControllerDeployment, out *HelmControllerDeployment, s conversion.Scope) error {
 	// WARNING: in.RawChart requires manual conversion: does not exist in peer-type
-	out.Values = (*apiextensionsv1.JSON)(unsafe.Pointer(in.Values))
+	out.Values = (*helm.Values)(unsafe.Pointer(in.Values))
 	out.OCIRepository = (*OCIRepository)(unsafe.Pointer(in.OCIRepository))
 	return nil
 }

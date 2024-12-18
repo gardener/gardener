@@ -8,7 +8,7 @@ syntax = "proto2";
 
 package github.com.gardener.gardener.pkg.apis.core.v1;
 
-import "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.proto";
+import "github.com/gardener/gardener/pkg/apis/types/helm/generated.proto";
 import "k8s.io/apimachinery/pkg/apis/meta/v1/generated.proto";
 import "k8s.io/apimachinery/pkg/runtime/generated.proto";
 import "k8s.io/apimachinery/pkg/runtime/schema/generated.proto";
@@ -44,7 +44,7 @@ message HelmControllerDeployment {
 
   // Values are the chart values.
   // +optional
-  optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON values = 2;
+  optional .github.com.gardener.gardener.pkg.apis.types.helm.Values values = 2;
 
   // OCIRepository defines where to pull the chart.
   // +optional
