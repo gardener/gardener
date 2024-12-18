@@ -225,7 +225,7 @@ func (b *Botanist) generateCertificateAuthorities(ctx context.Context) error {
 		return err
 	}
 
-	// TODO(petersutter): Remove this code and cleanup Secret after v1.110 has been released. The caBundle is now being stored in a <shootname>.ca-cluster ConfigMap.
+	// TODO(petersutter): Remove this code and cleanup Secret after v1.135 has been released. The caBundle is now being stored in a <shootname>.ca-cluster ConfigMap.
 	if err := b.syncShootCredentialToGarden(
 		ctx,
 		gardenerutils.ShootProjectSecretSuffixCACluster,

@@ -10934,13 +10934,6 @@ func schema_pkg_apis_seedmanagement_v1alpha1_GardenletDeployment(ref common.Refe
 							},
 						},
 					},
-					"vpa": {
-						SchemaProps: spec.SchemaProps{
-							Description: "VPA specifies whether to enable VPA for gardenlet. Defaults to true.\n\nDeprecated: This field is deprecated and has no effect anymore. It will be removed in the future.",
-							Type:        []string{"boolean"},
-							Format:      "",
-						},
-					},
 				},
 			},
 		},
@@ -11135,13 +11128,6 @@ func schema_pkg_apis_seedmanagement_v1alpha1_GardenletSelfDeployment(ref common.
 									},
 								},
 							},
-						},
-					},
-					"vpa": {
-						SchemaProps: spec.SchemaProps{
-							Description: "VPA specifies whether to enable VPA for gardenlet. Defaults to true.\n\nDeprecated: This field is deprecated and has no effect anymore. It will be removed in the future.",
-							Type:        []string{"boolean"},
-							Format:      "",
 						},
 					},
 					"helm": {

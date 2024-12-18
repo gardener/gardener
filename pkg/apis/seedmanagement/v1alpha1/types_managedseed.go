@@ -126,12 +126,6 @@ type GardenletDeployment struct {
 	// Env is the list of environment variables to set in the gardenlet container.
 	// +optional
 	Env []corev1.EnvVar `json:"env,omitempty" protobuf:"bytes,10,rep,name=env"`
-	// VPA specifies whether to enable VPA for gardenlet. Defaults to true.
-	//
-	// Deprecated: This field is deprecated and has no effect anymore. It will be removed in the future.
-	// TODO(rfranzke): Remove this field after v1.110 has been released.
-	// +optional
-	VPA *bool `json:"vpa,omitempty" protobuf:"bytes,11,rep,name=vpa"`
 }
 
 // Image specifies container image parameters.

@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/hashicorp/go-multierror"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,8 +17,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/component/extensions/worker"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
@@ -130,13 +127,7 @@ func OperatingSystemConfigUpdatedForAllWorkerPools(
 		)
 
 		for _, node := range workerPoolToNodes[worker.Name] {
-			nodeWillBeDeleted, err := nodeToBeDeleted(node, gardenerNodeAgentSecretName)
-			if err != nil {
-				result = multierror.Append(result, fmt.Errorf("failed checking whether node %q will be deleted: %w", node.Name, err))
-				continue
-			}
-
-			if nodeWillBeDeleted {
+			if nodeToBeDeleted(node, gardenerNodeAgentSecretName) {
 				continue
 			}
 
@@ -153,17 +144,16 @@ func OperatingSystemConfigUpdatedForAllWorkerPools(
 	return result
 }
 
-func nodeToBeDeleted(node corev1.Node, gardenerNodeAgentSecretName string) (bool, error) {
+func nodeToBeDeleted(node corev1.Node, gardenerNodeAgentSecretName string) bool {
 	if nodeTaintedForNoSchedule(node) {
-		return true, nil
+		return true
 	}
 
 	if val, ok := node.Labels[v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName]; ok {
-		return val != gardenerNodeAgentSecretName, nil
+		return val != gardenerNodeAgentSecretName
 	}
 
-	// TODO(MichaelEischer): Remove this after Gardener v1.101 has been released.
-	return nodeUsesOutdatedGardenerNodeAgentSecret(node, gardenerNodeAgentSecretName)
+	return false
 }
 
 func nodeTaintedForNoSchedule(node corev1.Node) bool {
@@ -178,20 +168,6 @@ func nodeTaintedForNoSchedule(node corev1.Node) bool {
 	}
 
 	return false
-}
-
-func nodeUsesOutdatedGardenerNodeAgentSecret(node corev1.Node, gardenerNodeAgentSecretName string) (bool, error) {
-	kubernetesVersion, err := semver.NewVersion(node.Labels[v1beta1constants.LabelWorkerKubernetesVersion])
-	if err != nil {
-		return false, fmt.Errorf("failed parsing Kubernetes version to semver for node %q: %w", node.Name, err)
-	}
-
-	var criConfig *gardencorev1beta1.CRI
-	if v, ok := node.Labels[extensionsv1alpha1.CRINameWorkerLabel]; ok {
-		criConfig = &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRIName(v)}
-	}
-
-	return operatingsystemconfig.KeyV1(node.Labels[v1beta1constants.LabelWorkerPool], kubernetesVersion, criConfig) != gardenerNodeAgentSecretName, nil
 }
 
 // exposed for testing
