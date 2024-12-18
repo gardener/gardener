@@ -579,6 +579,12 @@ type VerticalPodAutoscaler struct {
 	// RecommendationUpperBoundMemoryPercentile is the usage percentile that will be used for the upper bound on memory recommendation.
 	// (default: 0.95)
 	RecommendationUpperBoundMemoryPercentile *float64
+	// CPUHistogramDecayHalfLife is the amount of time it takes a historical CPU usage sample to lose half of its weight.
+	// (default: 24h)
+	CPUHistogramDecayHalfLife *metav1.Duration
+	// MemoryHistogramDecayHalfLife is the amount of time it takes a historical memory usage sample to lose half of its weight.
+	// (default: 24h)
+	MemoryHistogramDecayHalfLife *metav1.Duration
 }
 
 // KubernetesConfig contains common configuration fields for the control plane components.

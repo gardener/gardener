@@ -262,6 +262,10 @@ func SetDefaults_VerticalPodAutoscaler(obj *VerticalPodAutoscaler) {
 		v := DefaultRecommendationUpperBoundCPUPercentile
 		obj.RecommendationUpperBoundCPUPercentile = &v
 	}
+	if obj.CPUHistogramDecayHalfLife == nil {
+		v := DefaultCPUHistogramDecayHalfLife
+		obj.CPUHistogramDecayHalfLife = &v
+	}
 	if obj.TargetMemoryPercentile == nil {
 		v := DefaultTargetMemoryPercentile
 		obj.TargetMemoryPercentile = &v
@@ -273,6 +277,10 @@ func SetDefaults_VerticalPodAutoscaler(obj *VerticalPodAutoscaler) {
 	if obj.RecommendationUpperBoundMemoryPercentile == nil {
 		v := DefaultRecommendationUpperBoundMemoryPercentile
 		obj.RecommendationUpperBoundMemoryPercentile = &v
+	}
+	if obj.MemoryHistogramDecayHalfLife == nil {
+		v := DefaultMemoryHistogramDecayHalfLife
+		obj.MemoryHistogramDecayHalfLife = &v
 	}
 }
 

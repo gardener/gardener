@@ -9583,6 +9583,18 @@ func schema_pkg_apis_core_v1beta1_VerticalPodAutoscaler(ref common.ReferenceCall
 							Format:      "double",
 						},
 					},
+					"cpuHistogramDecayHalfLife": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CPUHistogramDecayHalfLife is the amount of time it takes a historical CPU usage sample to lose half of its weight. (default: 24h)",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"memoryHistogramDecayHalfLife": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MemoryHistogramDecayHalfLife is the amount of time it takes a historical memory usage sample to lose half of its weight. (default: 24h)",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
 				},
 				Required: []string{"enabled"},
 			},
