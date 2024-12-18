@@ -100,7 +100,7 @@ status:
   kubernetes:
     versions:
       - version: 1.30.6
-        classificationState: supported
+        classification: supported
 ```
 
 In addition to the existing classification stages, we add one more stage with the name `unavailable` to the API. An `unavailable` version is planned to become available in the future. It is not possible to reference this version in this stage and can be used by administrators to schedule a new version release.
@@ -167,13 +167,13 @@ status:
   kubernetes:
     versions:
       - version: 1.27.0
-        classificationState: supported
+        classification: supported
       - version: 1.28.0
-        classificationState: supported
+        classification: supported
       - version: 1.18.0
-        classificationState: expired
+        classification: expired
       - version: 2.0.0
-        classificationState: unavailable
+        classification: unavailable
 ```
 
 ### Backwards Compatibility
