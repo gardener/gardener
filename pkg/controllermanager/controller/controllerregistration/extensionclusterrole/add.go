@@ -21,13 +21,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -50,7 +49,7 @@ func init() {
 }
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) error {
+func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	if r.Client == nil {
 		r.Client = mgr.GetClient()
 	}
@@ -58,24 +57,20 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	clusterRole := &metav1.PartialObjectMetadata{}
 	clusterRole.SetGroupVersionKind(rbacv1.SchemeGroupVersion.WithKind("ClusterRole"))
 
-	c, err := builder.
+	serviceAccount := &metav1.PartialObjectMetadata{}
+	serviceAccount.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("ServiceAccount"))
+
+	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		For(clusterRole, builder.WithPredicates(labelSelectorPredicate)).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 5}).
-		Build(r)
-	if err != nil {
-		return err
-	}
-
-	serviceAccount := &metav1.PartialObjectMetadata{}
-	serviceAccount.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("ServiceAccount"))
-
-	return c.Watch(
-		source.Kind[client.Object](mgr.GetCache(), serviceAccount,
-			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapToMatchingClusterRoles), mapper.UpdateWithNew, c.GetLogger()),
-			r.ServiceAccountPredicate(),
-		))
+		Watches(
+			serviceAccount,
+			handler.EnqueueRequestsFromMapFunc(r.MapToMatchingClusterRoles(mgr.GetLogger().WithValues("controller", ControllerName))),
+			builder.WithPredicates(r.ServiceAccountPredicate()),
+		).
+		Complete(r)
 }
 
 // ServiceAccountPredicate returns true when the namespace is prefixed with `seed-`.
@@ -87,28 +82,30 @@ func (r *Reconciler) ServiceAccountPredicate() predicate.Predicate {
 
 // MapToMatchingClusterRoles returns reconcile.Request objects for all ClusterRoles whose service account selector
 // matches the labels of the given service account object.
-func (r *Reconciler) MapToMatchingClusterRoles(ctx context.Context, log logr.Logger, reader client.Reader, serviceAccount client.Object) []reconcile.Request {
-	clusterRoleList := &metav1.PartialObjectMetadataList{}
-	clusterRoleList.SetGroupVersionKind(rbacv1.SchemeGroupVersion.WithKind("ClusterRoleList"))
-	if err := reader.List(ctx, clusterRoleList, client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(utils.MustNewRequirement(v1beta1constants.LabelAuthorizationCustomExtensionsPermissions, selection.In, "true"))}); err != nil {
-		log.Error(err, "Failed to list ClusterRoles")
-		return nil
-	}
-
-	var requests []reconcile.Request
-	for _, clusterRole := range clusterRoleList.Items {
-		labelSelector, err := clusterRoleServiceAccountLabelSelectorToSelector(clusterRole.Annotations)
-		if err != nil {
-			log.Error(err, "Failed parsing label selector", "clusterRoleName", clusterRole.Name)
-			continue
+func (r *Reconciler) MapToMatchingClusterRoles(log logr.Logger) handler.MapFunc {
+	return func(ctx context.Context, serviceAccount client.Object) []reconcile.Request {
+		clusterRoleList := &metav1.PartialObjectMetadataList{}
+		clusterRoleList.SetGroupVersionKind(rbacv1.SchemeGroupVersion.WithKind("ClusterRoleList"))
+		if err := r.Client.List(ctx, clusterRoleList, client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(utils.MustNewRequirement(v1beta1constants.LabelAuthorizationCustomExtensionsPermissions, selection.In, "true"))}); err != nil {
+			log.Error(err, "Failed to list ClusterRoles")
+			return nil
 		}
 
-		if labelSelector.Matches(labels.Set(serviceAccount.GetLabels())) {
-			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: clusterRole.Name}})
-		}
-	}
+		var requests []reconcile.Request
+		for _, clusterRole := range clusterRoleList.Items {
+			labelSelector, err := clusterRoleServiceAccountLabelSelectorToSelector(clusterRole.Annotations)
+			if err != nil {
+				log.Error(err, "Failed parsing label selector", "clusterRoleName", clusterRole.Name)
+				continue
+			}
 
-	return requests
+			if labelSelector.Matches(labels.Set(serviceAccount.GetLabels())) {
+				requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: clusterRole.Name}})
+			}
+		}
+
+		return requests
+	}
 }
 
 func clusterRoleServiceAccountLabelSelectorToSelector(annotations map[string]string) (labels.Selector, error) {
