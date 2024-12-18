@@ -134,6 +134,8 @@ linters-settings:
         alias: extensionsmock${1}
       - pkg: github.com/gardener/gardener/extensions/pkg/apis/config
         alias: extensionsconfig
+      - pkg: github.com/gardener/gardener/extensions/pkg/apis/config/([\w\d]+)
+        alias: extensionsconfig$1
       - pkg: github.com/gardener/gardener/extensions/pkg/controller
         alias: extensionscontroller
       - pkg: github.com/gardener/gardener/extensions/pkg/predicate

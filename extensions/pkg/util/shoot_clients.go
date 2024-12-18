@@ -18,7 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
-	extensionsconfig "github.com/gardener/gardener/extensions/pkg/apis/config"
+	extensionsconfigv1alpha1 "github.com/gardener/gardener/extensions/pkg/apis/config/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
@@ -60,7 +60,7 @@ func NewShootClients(c client.Client, clientset kubernetes.Interface, gardenerCl
 }
 
 // ApplyRESTOptions applies RESTOptions to the given rest.Config
-func ApplyRESTOptions(restConfig *rest.Config, restOptions extensionsconfig.RESTOptions) *rest.Config {
+func ApplyRESTOptions(restConfig *rest.Config, restOptions extensionsconfigv1alpha1.RESTOptions) *rest.Config {
 	restConfig.QPS = ptr.Deref(restOptions.QPS, restConfig.QPS)
 	restConfig.Burst = ptr.Deref(restOptions.Burst, restConfig.Burst)
 	restConfig.Timeout = ptr.Deref(restOptions.Timeout, restConfig.Timeout)
@@ -73,7 +73,7 @@ func ApplyRESTOptions(restConfig *rest.Config, restOptions extensionsconfig.REST
 // However, if the environment variable GARDENER_SHOOT_CLIENT=external, then it *only* checks for the external endpoint,
 // i.e. v1beta1constants.SecretNameGardener. This is useful when connecting from outside the seed cluster on which the shoot kube-apiserver
 // is running.
-func NewClientForShoot(ctx context.Context, c client.Client, namespace string, opts client.Options, restOptions extensionsconfig.RESTOptions) (*rest.Config, client.Client, error) {
+func NewClientForShoot(ctx context.Context, c client.Client, namespace string, opts client.Options, restOptions extensionsconfigv1alpha1.RESTOptions) (*rest.Config, client.Client, error) {
 	var (
 		gardenerSecret = &corev1.Secret{}
 		err            error
@@ -118,7 +118,7 @@ func NewClientForShoot(ctx context.Context, c client.Client, namespace string, o
 
 // NewClientsForShoot is a utility function that creates a new clientset and a chart applier for the shoot cluster.
 // It uses the 'gardener' secret in the given shoot namespace. It also returns the Kubernetes version of the cluster.
-func NewClientsForShoot(ctx context.Context, c client.Client, namespace string, opts client.Options, restOptions extensionsconfig.RESTOptions) (ShootClients, error) {
+func NewClientsForShoot(ctx context.Context, c client.Client, namespace string, opts client.Options, restOptions extensionsconfigv1alpha1.RESTOptions) (ShootClients, error) {
 	shootRESTConfig, shootClient, err := NewClientForShoot(ctx, c, namespace, opts, restOptions)
 	if err != nil {
 		return nil, err

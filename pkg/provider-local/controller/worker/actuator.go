@@ -21,7 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	extensionsconfig "github.com/gardener/gardener/extensions/pkg/apis/config"
+	extensionsconfigv1alpha1 "github.com/gardener/gardener/extensions/pkg/apis/config/v1alpha1"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	"github.com/gardener/gardener/extensions/pkg/controller/worker/genericactuator"
@@ -84,7 +84,7 @@ func (a *actuator) Restore(ctx context.Context, log logr.Logger, worker *extensi
 }
 
 func (a *actuator) deleteNoLongerNeededMachines(ctx context.Context, log logr.Logger, namespace string) error {
-	_, shootClient, err := util.NewClientForShoot(ctx, a.workerDelegate.seedClient, namespace, client.Options{}, extensionsconfig.RESTOptions{})
+	_, shootClient, err := util.NewClientForShoot(ctx, a.workerDelegate.seedClient, namespace, client.Options{}, extensionsconfigv1alpha1.RESTOptions{})
 	if err != nil {
 		return fmt.Errorf("failed creating client for shoot cluster: %w", err)
 	}
