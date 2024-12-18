@@ -118,7 +118,7 @@ var _ = BeforeSuite(func() {
 		Config:        config.ExtensionRequiredVirtualControllerConfiguration{ConcurrentSyncs: ptr.To(5)},
 		RuntimeClient: mgr.GetClient(),
 		VirtualClient: mgr.GetClient(),
-	}).AddToManager(ctx, mgr, mgr)).To(Succeed())
+	}).AddToManager(mgr, mgr)).To(Succeed())
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)

@@ -17,13 +17,13 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	"github.com/gardener/gardener/pkg/logger"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	. "github.com/gardener/gardener/pkg/operator/controller/extension/required/runtime"
@@ -50,7 +50,7 @@ var _ = Describe("Add", func() {
 				fakeClient          client.Client
 				kindToRequiredTypes map[string]sets.Set[string]
 
-				mapperFunc mapper.MapFunc
+				mapperFunc handler.MapFunc
 			)
 
 			BeforeEach(func() {
@@ -60,13 +60,12 @@ var _ = Describe("Add", func() {
 				reconciler.KindToRequiredTypes = kindToRequiredTypes
 				reconciler.Client = fakeClient
 
-				mapperFunc = reconciler.MapObjectKindToExtensions("BackupBucket", func() client.ObjectList { return &extensionsv1alpha1.BackupBucketList{} })
+				mapperFunc = reconciler.MapObjectKindToExtensions(log, "BackupBucket", func() client.ObjectList { return &extensionsv1alpha1.BackupBucketList{} })
 			})
 
 			Context("without extensions", func() {
 				It("should not return any requests", func() {
-					requests := mapperFunc.Map(ctx, log, nil, nil)
-					Expect(requests).To(BeEmpty())
+					Expect(mapperFunc(ctx, nil)).To(BeEmpty())
 				})
 			})
 
@@ -109,8 +108,7 @@ var _ = Describe("Add", func() {
 				})
 
 				It("should add the kind with an empty set to the map and return the extension", func() {
-					requests := mapperFunc.Map(ctx, log, nil, nil)
-					Expect(requests).To(ConsistOf(Equal(reconcile.Request{NamespacedName: types.NamespacedName{Name: testExtension1.Name, Namespace: testExtension1.Namespace}})))
+					Expect(mapperFunc(ctx, nil)).To(ConsistOf(Equal(reconcile.Request{NamespacedName: types.NamespacedName{Name: testExtension1.Name, Namespace: testExtension1.Namespace}})))
 					Expect(kindToRequiredTypes).To(HaveKeyWithValue(requiredExtensionKind, sets.New[string]()))
 				})
 
@@ -130,19 +128,16 @@ var _ = Describe("Add", func() {
 
 					Expect(fakeClient.Create(ctx, backupBucket)).To(Succeed())
 
-					requests := mapperFunc.Map(ctx, log, nil, nil)
-					Expect(requests).To(ConsistOf(Equal(reconcile.Request{NamespacedName: types.NamespacedName{Name: testExtension1.Name, Namespace: testExtension1.Namespace}})))
+					Expect(mapperFunc(ctx, nil)).To(ConsistOf(Equal(reconcile.Request{NamespacedName: types.NamespacedName{Name: testExtension1.Name, Namespace: testExtension1.Namespace}})))
 					Expect(kindToRequiredTypes).To(HaveKeyWithValue(requiredExtensionKind, sets.New[string](requiredExtensionType)))
 
 					By("Invoke mapper again w/o changes and expect no requests")
-					requests = mapperFunc.Map(ctx, log, nil, nil)
 					Expect(kindToRequiredTypes).To(HaveKeyWithValue(requiredExtensionKind, sets.New[string](requiredExtensionType)))
-					Expect(requests).To(BeEmpty())
+					Expect(mapperFunc(ctx, nil)).To(BeEmpty())
 
 					By("Delete BackupBucket and expect the extension in the requests")
 					Expect(fakeClient.Delete(ctx, backupBucket)).To(Succeed())
-					requests = mapperFunc.Map(ctx, log, nil, nil)
-					Expect(requests).To(ConsistOf(Equal(reconcile.Request{NamespacedName: types.NamespacedName{Name: testExtension1.Name, Namespace: testExtension1.Namespace}})))
+					Expect(mapperFunc(ctx, nil)).To(ConsistOf(Equal(reconcile.Request{NamespacedName: types.NamespacedName{Name: testExtension1.Name, Namespace: testExtension1.Namespace}})))
 					Expect(kindToRequiredTypes).To(HaveKeyWithValue(requiredExtensionKind, sets.New[string]()))
 				})
 			})
