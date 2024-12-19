@@ -1773,9 +1773,45 @@ var _ = Describe("Seed", func() {
 					Entry("list", "list"),
 					Entry("watch", "watch"),
 					Entry("create", "create"),
-					Entry("update", "update"),
-					Entry("patch", "patch"),
-					Entry("delete", "delete"),
+				)
+
+				It("should allow when verb is delete and resource does not exist", func() {
+					attrs.Verb = "delete"
+
+					graph.EXPECT().HasVertex(graphpkg.VertexTypeSeed, "", name).Return(false)
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+				})
+
+				DescribeTable("should return correct result if path exists",
+					func(verb, subresource string) {
+						attrs.Verb = verb
+						attrs.Subresource = subresource
+
+						if verb == "delete" {
+							graph.EXPECT().HasVertex(graphpkg.VertexTypeSeed, "", name).Return(true).Times(2)
+						}
+
+						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeSeed, "", name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionAllow))
+						Expect(reason).To(BeEmpty())
+
+						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeSeed, "", name, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+						decision, reason, err = authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(reason).To(ContainSubstring("no relationship found"))
+					},
+
+					Entry("patch w/o subresource", "patch", ""),
+					Entry("patch w/ subresource", "patch", "status"),
+					Entry("update w/o subresource", "update", ""),
+					Entry("update w/ subresource", "update", "status"),
+					Entry("delete", "delete", ""),
 				)
 
 				It("should have no opinion because no allowed verb", func() {
@@ -1784,7 +1820,7 @@ var _ = Describe("Seed", func() {
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionNoOpinion))
-					Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [create update patch delete get list watch]"))
+					Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [create get list watch update patch delete]"))
 				})
 
 				It("should have no opinion because no allowed subresource", func() {

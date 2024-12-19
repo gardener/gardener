@@ -83,6 +83,12 @@ var _ = Describe("Seed", func() {
 			func(seed *gardencorev1beta1.Seed, identity *gardencorev1beta1.Gardener, matcher types.GomegaMatcher) {
 				Expect(health.CheckSeedForMigration(seed, identity)).To(matcher)
 			},
+			Entry("unhealthy with gardener info nil", &gardencorev1beta1.Seed{}, nil, MatchError(ContainSubstring("missing Gardener version information on source or destination seed"))),
+			Entry("unhealthy with identity info nil", &gardencorev1beta1.Seed{
+				Status: gardencorev1beta1.SeedStatus{
+					Gardener: &gardencorev1beta1.Gardener{Version: "1.12.8"},
+				},
+			}, nil, MatchError(ContainSubstring("missing Gardener version information on source or destination seed"))),
 			Entry("healthy with matching version", &gardencorev1beta1.Seed{
 				Status: gardencorev1beta1.SeedStatus{
 					Gardener: &gardencorev1beta1.Gardener{Version: "1.12.8"},
