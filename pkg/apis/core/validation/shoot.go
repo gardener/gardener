@@ -145,7 +145,6 @@ func ValidateShoot(shoot *core.Shoot) field.ErrorList {
 	allErrs = append(allErrs, validateShootOperation(shoot.Annotations[v1beta1constants.GardenerOperation], shoot.Annotations[v1beta1constants.GardenerMaintenanceOperation], shoot, field.NewPath("metadata", "annotations"))...)
 	allErrs = append(allErrs, ValidateShootSpec(shoot.ObjectMeta, &shoot.Spec, field.NewPath("spec"), false)...)
 	allErrs = append(allErrs, ValidateShootHAConfig(shoot)...)
-	allErrs = append(allErrs, validateShootManagedIssuer(shoot)...)
 
 	return allErrs
 }
@@ -176,10 +175,6 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 	}
 	if newShoot.Spec.Hibernation != nil {
 		hibernationEnabled = ptr.Deref(newShoot.Spec.Hibernation.Enabled, false)
-	}
-
-	if helper.HasManagedIssuer(oldShoot) && !helper.HasManagedIssuer(newShoot) {
-		allErrs = append(allErrs, field.Forbidden(field.NewPath("metadata", "annotations").Key(v1beta1constants.AnnotationAuthenticationIssuer), "once enabled managed shoot issuer cannot be disabled"))
 	}
 
 	allErrs = append(allErrs, ValidateEncryptionConfigUpdate(newEncryptionConfig, oldEncryptionConfig, sets.New(newShoot.Status.EncryptedResources...), etcdEncryptionKeyRotation, hibernationEnabled, field.NewPath("spec", "kubernetes", "kubeAPIServer", "encryptionConfig"))...)
@@ -2687,17 +2682,4 @@ func getResourcesForEncryption(apiServerConfig *core.KubeAPIServerConfig) []stri
 	}
 
 	return sets.List(resources)
-}
-
-func validateShootManagedIssuer(shoot *core.Shoot) field.ErrorList {
-	var allErrors field.ErrorList
-	if helper.HasManagedIssuer(shoot) {
-		if kubeAPIServerConfig := shoot.Spec.Kubernetes.KubeAPIServer; kubeAPIServerConfig != nil &&
-			kubeAPIServerConfig.ServiceAccountConfig != nil &&
-			kubeAPIServerConfig.ServiceAccountConfig.Issuer != nil {
-			allErrors = append(allErrors, field.Forbidden(field.NewPath("metadata", "annotations").Key(v1beta1constants.AnnotationAuthenticationIssuer), "managed shoot issuer cannot be enabled when .kubernetes.kubeAPIServer.serviceAccountConfig.issuer is set"))
-		}
-	}
-
-	return allErrors
 }
