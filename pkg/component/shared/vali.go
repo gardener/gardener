@@ -26,7 +26,7 @@ func NewVali(
 	storage *resource.Quantity,
 	ingressHost string,
 ) (
-	component.Deployer,
+	vali.Interface,
 	error,
 ) {
 	valiImage, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameVali)
