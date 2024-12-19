@@ -24,11 +24,17 @@ func (b *Botanist) DeployLogging(ctx context.Context) error {
 		return b.DestroySeedLogging(ctx)
 	}
 
-	if b.isShootEventLoggerEnabled() {
+	grmIsPresent, err := b.IsGardenerResourceManagerReady(ctx)
+	if err != nil {
+		b.Operation.Logger.Error(err, "Error getting "+v1beta1constants.DeploymentNameGardenerResourceManager+" deployment")
+	}
+	b.Shoot.Components.ControlPlane.Vali.WithAuthenticationProxy(grmIsPresent)
+
+	if b.isShootEventLoggerEnabled() && grmIsPresent {
 		if err := b.Shoot.Components.ControlPlane.EventLogger.Deploy(ctx); err != nil {
 			return err
 		}
-	} else {
+	} else if !b.isShootEventLoggerEnabled() {
 		if err := b.Shoot.Components.ControlPlane.EventLogger.Destroy(ctx); err != nil {
 			return err
 		}
