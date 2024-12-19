@@ -139,7 +139,7 @@
       matchPackageNames: [
         '/gcr\\.io/istio-release/.+/',
         '/istio\\.io/api/',
-        '/istio\\.io/client-go/'
+        '/istio\\.io/client-go/',
       ],
     },
     {
