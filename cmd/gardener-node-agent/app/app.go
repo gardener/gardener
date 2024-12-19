@@ -218,7 +218,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 func getRESTConfig(ctx context.Context, log logr.Logger, fs afero.Afero, cfg *config.NodeAgentConfiguration) (*rest.Config, error) {
 	if len(cfg.ClientConnection.Kubeconfig) > 0 {
 		log.Info("Creating REST config from client configuration")
-		restConfig, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.ClientConnection, nil, kubernetes.AuthTokenFile)
+		restConfig, err := kubernetes.RESTConfigFromInternalClientConnectionConfiguration(&cfg.ClientConnection, nil, kubernetes.AuthTokenFile)
 		if err != nil {
 			return nil, fmt.Errorf("failed getting REST config from client connection configuration: %w", err)
 		}

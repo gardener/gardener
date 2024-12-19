@@ -73,7 +73,7 @@ func run(ctx context.Context, log logr.Logger, cfg *config.SchedulerConfiguratio
 		cfg.ClientConnection.Kubeconfig = kubeconfig
 	}
 
-	restCfg, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.ClientConnection, nil, kubernetes.AuthTokenFile)
+	restCfg, err := kubernetes.RESTConfigFromInternalClientConnectionConfiguration(&cfg.ClientConnection, nil, kubernetes.AuthTokenFile)
 	if err != nil {
 		return err
 	}

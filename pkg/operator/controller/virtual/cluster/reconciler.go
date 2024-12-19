@@ -50,7 +50,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request Request) (reconcile.
 
 	if r.virtualCluster == nil {
 		log.Info("Instantiating cluster.Cluster object for virtual cluster")
-		kubernetesclient.ApplyClientConnectionConfigurationToRESTConfig(&r.VirtualClientConnection, restConfig)
+		kubernetesclient.ApplyClientConnectionConfigurationToRESTConfig(kubernetesclient.ConvertClientConnectionConfigurationToExternal(&r.VirtualClientConnection), restConfig)
 
 		virtualCluster, err := cluster.New(restConfig, func(opts *cluster.Options) {
 			opts.Scheme = operatorclient.VirtualScheme

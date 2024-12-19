@@ -107,7 +107,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 	}
 
 	log.Info("Getting rest config for seed")
-	seedRESTConfig, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.SeedClientConnection.ClientConnectionConfiguration, nil)
+	seedRESTConfig, err := kubernetes.RESTConfigFromInternalClientConnectionConfiguration(&cfg.SeedClientConnection.ClientConnectionConfiguration, nil)
 	if err != nil {
 		return err
 	}
@@ -217,7 +217,7 @@ func (g *garden) Start(ctx context.Context) error {
 	log := g.mgr.GetLogger()
 
 	log.Info("Getting rest config for garden")
-	gardenRESTConfig, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&g.config.GardenClientConnection.ClientConnectionConfiguration, g.kubeconfigBootstrapResult.Kubeconfig)
+	gardenRESTConfig, err := kubernetes.RESTConfigFromInternalClientConnectionConfiguration(&g.config.GardenClientConnection.ClientConnectionConfiguration, g.kubeconfigBootstrapResult.Kubeconfig)
 	if err != nil {
 		return err
 	}
@@ -368,7 +368,7 @@ func (g *garden) Start(ctx context.Context) error {
 		NewShootClientMapBuilder().
 		WithGardenClient(gardenCluster.GetClient()).
 		WithSeedClient(g.mgr.GetClient()).
-		WithClientConnectionConfig(&g.config.ShootClientConnection.ClientConnectionConfiguration).
+		WithInternalClientConnectionConfig(&g.config.ShootClientConnection.ClientConnectionConfiguration).
 		Build(log)
 	if err != nil {
 		return fmt.Errorf("failed to build shoot ClientMap: %w", err)

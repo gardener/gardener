@@ -8,7 +8,7 @@ import (
 	"os"
 
 	. "github.com/onsi/gomega"
-	componentbaseconfig "k8s.io/component-base/config"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
@@ -21,7 +21,7 @@ var RuntimeClient kubernetes.Interface
 
 // SetupRuntimeClient initializes the runtime client.
 func SetupRuntimeClient() {
-	restConfig, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&componentbaseconfig.ClientConnectionConfiguration{Kubeconfig: os.Getenv("KUBECONFIG")}, nil, kubernetes.AuthTokenFile)
+	restConfig, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&componentbaseconfigv1alpha1.ClientConnectionConfiguration{Kubeconfig: os.Getenv("KUBECONFIG")}, nil, kubernetes.AuthTokenFile)
 	ExpectWithOffset(1, err).NotTo(HaveOccurred())
 
 	RuntimeClient, err = kubernetes.NewWithConfig(kubernetes.WithRESTConfig(restConfig), kubernetes.WithDisabledCachedClient())
