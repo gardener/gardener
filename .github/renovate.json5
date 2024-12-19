@@ -3,6 +3,9 @@
   extends: [
     'config:recommended',
   ],
+  ignorePresets: [
+    'group:kubernetes', // handled by our own package rule instead
+  ],
   labels: [
     'kind/enhancement',
   ],
@@ -206,7 +209,7 @@
         '/.+gardener-discovery-server$/'
       ],
     },
-        {
+    {
       // Group machine-controller-manager updates in one PR.
       groupName: 'machine-controller-manager',
       matchDatasources: [
@@ -215,6 +218,49 @@
       ],
       matchPackageNames: [
         '/.*gardener\/machine-controller-manager$/'
+      ],
+    },
+    {
+      // Copied and extended from: https://github.com/renovatebot/renovate/blob/3b8735d68cd02546244026ea028aae6044d598e9/lib/config/presets/internal/group.ts#L301-L339
+      groupName: 'kubernetes packages',
+      groupSlug: 'kubernetes-go',
+      description: 'Group Kubernetes packages together.',
+      matchDatasources: [
+        'go',
+        // the entries below extend the original group:kubernetes preset
+        'github-releases',
+      ],
+      matchPackageNames: [
+        'k8s.io/api**',
+        'k8s.io/apiextensions-apiserver**',
+        'k8s.io/apimachinery**',
+        'k8s.io/apiserver**',
+        'k8s.io/cli-runtime**',
+        'k8s.io/client-go**',
+        'k8s.io/cloud-provider**',
+        'k8s.io/cluster-bootstrap**',
+        'k8s.io/code-generator**',
+        'k8s.io/component-base**',
+        'k8s.io/controller-manager**',
+        'k8s.io/cri-api**',
+        // 'k8s.io/csi-api', has not go.mod set up and does not follow the versioning of other repos
+        'k8s.io/csi-translation-lib**',
+        'k8s.io/kube-aggregator**',
+        'k8s.io/kube-controller-manager**',
+        'k8s.io/kube-proxy**',
+        'k8s.io/kube-scheduler**',
+        'k8s.io/kubectl**',
+        'k8s.io/kubelet**',
+        'k8s.io/legacy-cloud-providers**',
+        'k8s.io/metrics**',
+        'k8s.io/mount-utils**',
+        'k8s.io/pod-security-admission**',
+        'k8s.io/sample-apiserver**',
+        'k8s.io/sample-cli-plugin**',
+        'k8s.io/sample-controller**',
+        // the entries below extend the original group:kubernetes preset
+        'kubernetes/kubernetes',
+        'k8s.io/component-helpers',
       ],
     },
     {
