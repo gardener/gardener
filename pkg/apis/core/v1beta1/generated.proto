@@ -325,11 +325,6 @@ message CARotation {
   // triggered.
   // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTriggeredTime = 5;
-
-  // PendingWorkersRollouts contains the name of a worker pool and the initiation time of their last rollout due to
-  // credentials rotation.
-  // +optional
-  repeated PendingWorkersRollout pendingWorkersRollouts = 6;
 }
 
 // CRI contains information about the Container Runtimes.
@@ -2131,15 +2126,20 @@ message OpenIDConnectClientAuthentication {
   optional string secret = 2;
 }
 
-// PendingWorkersRollout contains the name of a worker pool and the initiation time of their last rollout due to
-// credentials rotation.
-message PendingWorkersRollout {
+// PendingWorkersUpdate contains the name of a worker pool and some metadata for pools that are still to be updated.
+message PendingWorkersUpdate {
   // Name is the name of a worker pool.
   optional string name = 1;
 
-  // LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
+  // LastInitiationTimeCertificateAuthoritiesRotation is the most recent time when the certificate authority
+  // credential rotation was initiated.
   // +optional
-  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 2;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTimeCertificateAuthoritiesRotation = 2;
+
+  // LastInitiationTimeServiceAccountKeyRotation is the most recent time when the service account signing key
+  // credential rotation was initiated.
+  // +optional
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTimeServiceAccountKeyRotation = 3;
 }
 
 // Project holds certain properties about a Gardener project.
@@ -2860,11 +2860,6 @@ message ServiceAccountKeyRotation {
   // triggered.
   // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTriggeredTime = 5;
-
-  // PendingWorkersRollouts contains the name of a worker pool and the initiation time of their last rollout due to
-  // credentials rotation.
-  // +optional
-  repeated PendingWorkersRollout pendingWorkersRollouts = 6;
 }
 
 // Shoot represents a Shoot cluster created and managed by Gardener.
@@ -3218,6 +3213,10 @@ message ShootStatus {
   // Networking contains information about cluster networking such as CIDRs.
   // +optional
   optional NetworkingStatus networking = 19;
+
+  // PendingWorkersUpdates is a list of worker pools and some metadata for pools that are still to be updated.
+  // +optional
+  repeated PendingWorkersUpdate pendingWorkersUpdates = 20;
 }
 
 // ShootTemplate is a template for creating a Shoot object.

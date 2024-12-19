@@ -149,12 +149,12 @@ func testCredentialRotationWithoutWorkersRollout(parentCtx context.Context, v ro
 
 	By("Ensure all worker pools are marked as 'pending for roll out'")
 	for _, worker := range f.Shoot.Spec.Provider.Workers {
-		ExpectWithOffset(1, slices.ContainsFunc(f.Shoot.Status.Credentials.Rotation.CertificateAuthorities.PendingWorkersRollouts, func(rollout gardencorev1beta1.PendingWorkersRollout) bool {
-			return rollout.Name == worker.Name
+		ExpectWithOffset(1, slices.ContainsFunc(f.Shoot.Status.PendingWorkersUpdates, func(update gardencorev1beta1.PendingWorkersUpdate) bool {
+			return update.Name == worker.Name && update.LastInitiationTimeCertificateAuthoritiesRotation != nil
 		})).To(BeTrue(), "worker pool "+worker.Name+" should be pending for roll out in CA rotation status")
 
-		ExpectWithOffset(1, slices.ContainsFunc(f.Shoot.Status.Credentials.Rotation.ServiceAccountKey.PendingWorkersRollouts, func(rollout gardencorev1beta1.PendingWorkersRollout) bool {
-			return rollout.Name == worker.Name
+		ExpectWithOffset(1, slices.ContainsFunc(f.Shoot.Status.PendingWorkersUpdates, func(update gardencorev1beta1.PendingWorkersUpdate) bool {
+			return update.Name == worker.Name && update.LastInitiationTimeServiceAccountKeyRotation != nil
 		})).To(BeTrue(), "worker pool "+worker.Name+" should be pending for roll out in service account key rotation status")
 	}
 
@@ -169,19 +169,19 @@ func testCredentialRotationWithoutWorkersRollout(parentCtx context.Context, v ro
 	ExpectWithOffset(1, f.WaitForShootToBeReconciled(ctx, f.Shoot)).To(Succeed())
 	EventuallyWithOffset(1, func() error { return f.GardenClient.Client().Get(ctx, client.ObjectKeyFromObject(f.Shoot), f.Shoot) }).Should(Succeed())
 
-	ExpectWithOffset(1, slices.ContainsFunc(f.Shoot.Status.Credentials.Rotation.CertificateAuthorities.PendingWorkersRollouts, func(rollout gardencorev1beta1.PendingWorkersRollout) bool {
-		return rollout.Name == lastWorkerPoolName
+	ExpectWithOffset(1, slices.ContainsFunc(f.Shoot.Status.PendingWorkersUpdates, func(update gardencorev1beta1.PendingWorkersUpdate) bool {
+		return update.Name == lastWorkerPoolName
 	})).To(BeFalse())
-	ExpectWithOffset(1, slices.ContainsFunc(f.Shoot.Status.Credentials.Rotation.ServiceAccountKey.PendingWorkersRollouts, func(rollout gardencorev1beta1.PendingWorkersRollout) bool {
-		return rollout.Name == lastWorkerPoolName
+	ExpectWithOffset(1, slices.ContainsFunc(f.Shoot.Status.PendingWorkersUpdates, func(update gardencorev1beta1.PendingWorkersUpdate) bool {
+		return update.Name == lastWorkerPoolName
 	})).To(BeFalse())
 
 	By("Trigger rollout of pending worker pools")
 	workerNames := sets.New[string]()
-	for _, rollout := range f.Shoot.Status.Credentials.Rotation.CertificateAuthorities.PendingWorkersRollouts {
+	for _, rollout := range f.Shoot.Status.PendingWorkersUpdates {
 		workerNames.Insert(rollout.Name)
 	}
-	for _, rollout := range f.Shoot.Status.Credentials.Rotation.ServiceAccountKey.PendingWorkersRollouts {
+	for _, rollout := range f.Shoot.Status.PendingWorkersUpdates {
 		workerNames.Insert(rollout.Name)
 	}
 

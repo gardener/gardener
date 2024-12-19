@@ -212,6 +212,9 @@ type ShootStatus struct {
 	// Networking contains information about cluster networking such as CIDRs.
 	// +optional
 	Networking *NetworkingStatus `json:"networking,omitempty" protobuf:"bytes,19,opt,name=networking"`
+	// PendingWorkersUpdates is a list of worker pools and some metadata for pools that are still to be updated.
+	// +optional
+	PendingWorkersUpdates []PendingWorkersUpdate `json:"pendingWorkersUpdates,omitempty" protobuf:"bytes,20,rep,name=pendingWorkersUpdates"`
 }
 
 // LastMaintenance holds information about a maintenance operation on the Shoot.
@@ -293,10 +296,6 @@ type CARotation struct {
 	// triggered.
 	// +optional
 	LastCompletionTriggeredTime *metav1.Time `json:"lastCompletionTriggeredTime,omitempty" protobuf:"bytes,5,opt,name=lastCompletionTriggeredTime"`
-	// PendingWorkersRollouts contains the name of a worker pool and the initiation time of their last rollout due to
-	// credentials rotation.
-	// +optional
-	PendingWorkersRollouts []PendingWorkersRollout `json:"pendingWorkersRollouts,omitempty" protobuf:"bytes,6,rep,name=pendingWorkersRollouts"`
 }
 
 // ShootKubeconfigRotation contains information about the kubeconfig credential rotation.
@@ -348,10 +347,6 @@ type ServiceAccountKeyRotation struct {
 	// triggered.
 	// +optional
 	LastCompletionTriggeredTime *metav1.Time `json:"lastCompletionTriggeredTime,omitempty" protobuf:"bytes,5,opt,name=lastCompletionTriggeredTime"`
-	// PendingWorkersRollouts contains the name of a worker pool and the initiation time of their last rollout due to
-	// credentials rotation.
-	// +optional
-	PendingWorkersRollouts []PendingWorkersRollout `json:"pendingWorkersRollouts,omitempty" protobuf:"bytes,6,rep,name=pendingWorkersRollouts"`
 }
 
 // ETCDEncryptionKeyRotation contains information about the ETCD encryption key credential rotation.
@@ -396,14 +391,18 @@ const (
 	RotationCompleted CredentialsRotationPhase = "Completed"
 )
 
-// PendingWorkersRollout contains the name of a worker pool and the initiation time of their last rollout due to
-// credentials rotation.
-type PendingWorkersRollout struct {
+// PendingWorkersUpdate contains the name of a worker pool and some metadata for pools that are still to be updated.
+type PendingWorkersUpdate struct {
 	// Name is the name of a worker pool.
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
-	// LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
+	// LastInitiationTimeCertificateAuthoritiesRotation is the most recent time when the certificate authority
+	// credential rotation was initiated.
 	// +optional
-	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty" protobuf:"bytes,2,opt,name=lastInitiationTime"`
+	LastInitiationTimeCertificateAuthoritiesRotation *metav1.Time `json:"lastInitiationTimeCertificateAuthoritiesRotation,omitempty" protobuf:"bytes,2,opt,name=lastInitiationTimeCertificateAuthoritiesRotation"`
+	// LastInitiationTimeServiceAccountKeyRotation is the most recent time when the service account signing key
+	// credential rotation was initiated.
+	// +optional
+	LastInitiationTimeServiceAccountKeyRotation *metav1.Time `json:"lastInitiationTimeServiceAccountKeyRotation,omitempty" protobuf:"bytes,3,opt,name=lastInitiationTimeServiceAccountKeyRotation"`
 }
 
 // ShootAdvertisedAddress contains information for the shoot's Kube API server.

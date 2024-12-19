@@ -163,8 +163,8 @@ Now you can update all API clients outside the cluster (see above) and also trig
 kubectl -n <shoot-namespace> annotate shoot <shoot-name> gardener.cloud/operation=rotate-rollout-workers=<pool1-name>[,<pool2-name>,...]
 ```
 
-You can check which worker pools still need to be rolled by reading `.status.credentials.rotation.certificateAuthorities.pendingWorkersRollouts[].name`.
-Once this list is empty, the `phase` transitions to `Prepared`.
+You can check which worker pools still need to be rolled by reading `.status.pendingWorkersUpdates[]` and checking for those that still set `lastInitiationTimeCertificateAuthoritiesRotation`.
+If the list is empty, or if `lastInitiationTimeCertificateAuthoritiesRotation` is not set for any pool in this list, then the `phase` transitions to `Prepared`.
 Now you can just complete the rotation as usual (see above).
 
 ### Observability Password(s) For Plutono and Prometheus
@@ -295,7 +295,7 @@ After it is completed, the `.status.credentials.rotation.serviceAccountKey.phase
 
 Similar to the rotation of the certificate authorities, you can control the worker node rollout individually.
 Please read [this section](#triggering-worker-node-rollout-individually) to get more information.
-It works the same way for the `ServiceAccount` token signing key (using `rotate-serviceaccount-key-start-without-workers-rollout`).
+It works the same way for the `ServiceAccount` token signing key (using `rotate-serviceaccount-key-start-without-workers-rollout` and looking at the `lastInitiationTimeServiceAccountKeyRotation` field in `.status.pendingWorkersUpdates[]`).
 
 ### OpenVPN TLS Auth Keys
 

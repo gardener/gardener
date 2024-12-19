@@ -3525,23 +3525,39 @@ var _ = Describe("Helper", func() {
 		),
 	)
 
-	Describe("#LastInitiationTimeForWorkerPool", func() {
+	Describe("#LastInitiationTime{CA,ServiceAccountKey}RotationForWorkerPool", func() {
 		var (
 			poolName                 = "pool"
 			globalLastInitiationTime = ptr.To(metav1.Now())
 			poolLastInitiationTime   = ptr.To(metav1.Time{Time: time.Now().Add(-time.Hour)})
 		)
 
-		It("should return the global last initiation time because list is empty", func() {
-			Expect(LastInitiationTimeForWorkerPool(poolName, nil, globalLastInitiationTime)).To(Equal(globalLastInitiationTime))
+		Context("ca", func() {
+			It("should return the global last initiation time because list is empty", func() {
+				Expect(LastInitiationTimeCARotationForWorkerPool(poolName, nil, globalLastInitiationTime)).To(Equal(globalLastInitiationTime))
+			})
+
+			It("should return the global last initiation time because pool is not found in list", func() {
+				Expect(LastInitiationTimeCARotationForWorkerPool(poolName, []gardencorev1beta1.PendingWorkersUpdate{{}}, globalLastInitiationTime)).To(Equal(globalLastInitiationTime))
+			})
+
+			It("should return the pool-specific last initiation time because pool is found in list", func() {
+				Expect(LastInitiationTimeCARotationForWorkerPool(poolName, []gardencorev1beta1.PendingWorkersUpdate{{Name: poolName, LastInitiationTimeCertificateAuthoritiesRotation: poolLastInitiationTime}}, globalLastInitiationTime)).To(Equal(poolLastInitiationTime))
+			})
 		})
 
-		It("should return the global last initiation time because pool is not found in list", func() {
-			Expect(LastInitiationTimeForWorkerPool(poolName, []gardencorev1beta1.PendingWorkersRollout{{}}, globalLastInitiationTime)).To(Equal(globalLastInitiationTime))
-		})
+		Context("service account key", func() {
+			It("should return the global last initiation time because list is empty", func() {
+				Expect(LastInitiationTimeServiceAccountKeyRotationForWorkerPool(poolName, nil, globalLastInitiationTime)).To(Equal(globalLastInitiationTime))
+			})
 
-		It("should return the pool-specific last initiation time because pool is found in list", func() {
-			Expect(LastInitiationTimeForWorkerPool(poolName, []gardencorev1beta1.PendingWorkersRollout{{Name: poolName, LastInitiationTime: poolLastInitiationTime}}, globalLastInitiationTime)).To(Equal(poolLastInitiationTime))
+			It("should return the global last initiation time because pool is not found in list", func() {
+				Expect(LastInitiationTimeServiceAccountKeyRotationForWorkerPool(poolName, []gardencorev1beta1.PendingWorkersUpdate{{}}, globalLastInitiationTime)).To(Equal(globalLastInitiationTime))
+			})
+
+			It("should return the pool-specific last initiation time because pool is found in list", func() {
+				Expect(LastInitiationTimeServiceAccountKeyRotationForWorkerPool(poolName, []gardencorev1beta1.PendingWorkersUpdate{{Name: poolName, LastInitiationTimeServiceAccountKeyRotation: poolLastInitiationTime}}, globalLastInitiationTime)).To(Equal(poolLastInitiationTime))
+			})
 		})
 	})
 })

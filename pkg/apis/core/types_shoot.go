@@ -160,6 +160,8 @@ type ShootStatus struct {
 	EncryptedResources []string
 	// Networking contains information about cluster networking such as CIDRs.
 	Networking *NetworkingStatus
+	// PendingWorkersUpdates is a list of worker pools and some metadata for pools that are still to be updated.
+	PendingWorkersUpdates []PendingWorkersUpdate
 }
 
 // LastMaintenance holds information about a maintenance operation on the Shoot.
@@ -225,9 +227,6 @@ type CARotation struct {
 	// LastCompletionTriggeredTime is the recent time when the certificate authority credential rotation completion was
 	// triggered.
 	LastCompletionTriggeredTime *metav1.Time
-	// PendingWorkersRollouts contains the name of a worker pool and the initiation time of their last rollout due to
-	// credentials rotation.
-	PendingWorkersRollouts []PendingWorkersRollout
 }
 
 // ShootKubeconfigRotation contains information about the kubeconfig credential rotation.
@@ -269,9 +268,6 @@ type ServiceAccountKeyRotation struct {
 	// LastCompletionTriggeredTime is the recent time when the service account key credential rotation completion was
 	// triggered.
 	LastCompletionTriggeredTime *metav1.Time
-	// PendingWorkersRollouts contains the name of a worker pool and the initiation time of their last rollout due to
-	// credentials rotation.
-	PendingWorkersRollouts []PendingWorkersRollout
 }
 
 // ETCDEncryptionKeyRotation contains information about the ETCD encryption key credential rotation.
@@ -312,13 +308,16 @@ const (
 	RotationCompleted CredentialsRotationPhase = "Completed"
 )
 
-// PendingWorkersRollout contains the name of a worker pool and the initiation time of their last rollout due to
-// credentials rotation.
-type PendingWorkersRollout struct {
+// PendingWorkersUpdate contains the name of a worker pool and some metadata for pools that are still to be updated.
+type PendingWorkersUpdate struct {
 	// Name is the name of a worker pool.
 	Name string
-	// LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
-	LastInitiationTime *metav1.Time
+	// LastInitiationTimeCertificateAuthoritiesRotation is the most recent time when the certificate authority
+	// credential rotation was initiated.
+	LastInitiationTimeCertificateAuthoritiesRotation *metav1.Time
+	// LastInitiationTimeServiceAccountKeyRotation is the most recent time when the service account signing key
+	// credential rotation was initiated.
+	LastInitiationTimeServiceAccountKeyRotation *metav1.Time
 }
 
 // ShootAdvertisedAddress contains information for the shoot's Kube API server.

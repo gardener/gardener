@@ -160,6 +160,18 @@ func (mr *MockInterfaceMockRecorder) SetCredentialsRotationStatus(arg0 any) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetCredentialsRotationStatus", reflect.TypeOf((*MockInterface)(nil).SetCredentialsRotationStatus), arg0)
 }
 
+// SetPendingWorkersUpdates mocks base method.
+func (m *MockInterface) SetPendingWorkersUpdates(arg0 []v1beta1.PendingWorkersUpdate) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetPendingWorkersUpdates", arg0)
+}
+
+// SetPendingWorkersUpdates indicates an expected call of SetPendingWorkersUpdates.
+func (mr *MockInterfaceMockRecorder) SetPendingWorkersUpdates(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetPendingWorkersUpdates", reflect.TypeOf((*MockInterface)(nil).SetPendingWorkersUpdates), arg0)
+}
+
 // SetSSHPublicKeys mocks base method.
 func (m *MockInterface) SetSSHPublicKeys(arg0 []string) {
 	m.ctrl.T.Helper()

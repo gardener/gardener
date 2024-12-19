@@ -3271,21 +3271,6 @@ Kubernetes meta/v1.Time
 triggered.</p>
 </td>
 </tr>
-<tr>
-<td>
-<code>pendingWorkersRollouts</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.PendingWorkersRollout">
-[]PendingWorkersRollout
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>PendingWorkersRollouts contains the name of a worker pool and the initiation time of their last rollout due to
-credentials rotation.</p>
-</td>
-</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.CRI">CRI
@@ -9117,16 +9102,14 @@ string
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1beta1.PendingWorkersRollout">PendingWorkersRollout
+<h3 id="core.gardener.cloud/v1beta1.PendingWorkersUpdate">PendingWorkersUpdate
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.CARotation">CARotation</a>, 
-<a href="#core.gardener.cloud/v1beta1.ServiceAccountKeyRotation">ServiceAccountKeyRotation</a>)
+<a href="#core.gardener.cloud/v1beta1.ShootStatus">ShootStatus</a>)
 </p>
 <p>
-<p>PendingWorkersRollout contains the name of a worker pool and the initiation time of their last rollout due to
-credentials rotation.</p>
+<p>PendingWorkersUpdate contains the name of a worker pool and some metadata for pools that are still to be updated.</p>
 </p>
 <table>
 <thead>
@@ -9149,7 +9132,7 @@ string
 </tr>
 <tr>
 <td>
-<code>lastInitiationTime</code></br>
+<code>lastInitiationTimeCertificateAuthoritiesRotation</code></br>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
 Kubernetes meta/v1.Time
@@ -9158,7 +9141,23 @@ Kubernetes meta/v1.Time
 </td>
 <td>
 <em>(Optional)</em>
-<p>LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.</p>
+<p>LastInitiationTimeCertificateAuthoritiesRotation is the most recent time when the certificate authority
+credential rotation was initiated.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>lastInitiationTimeServiceAccountKeyRotation</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastInitiationTimeServiceAccountKeyRotation is the most recent time when the service account signing key
+credential rotation was initiated.</p>
 </td>
 </tr>
 </tbody>
@@ -11595,21 +11594,6 @@ Kubernetes meta/v1.Time
 triggered.</p>
 </td>
 </tr>
-<tr>
-<td>
-<code>pendingWorkersRollouts</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.PendingWorkersRollout">
-[]PendingWorkersRollout
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>PendingWorkersRollouts contains the name of a worker pool and the initiation time of their last rollout due to
-credentials rotation.</p>
-</td>
-</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.ShootAdvertisedAddress">ShootAdvertisedAddress
@@ -12676,6 +12660,20 @@ NetworkingStatus
 <td>
 <em>(Optional)</em>
 <p>Networking contains information about cluster networking such as CIDRs.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>pendingWorkersUpdates</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.PendingWorkersUpdate">
+[]PendingWorkersUpdate
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>PendingWorkersUpdates is a list of worker pools and some metadata for pools that are still to be updated.</p>
 </td>
 </tr>
 </tbody>
