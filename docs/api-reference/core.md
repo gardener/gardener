@@ -9102,6 +9102,66 @@ string
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.PendingWorkersUpdate">PendingWorkersUpdate
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ShootStatus">ShootStatus</a>)
+</p>
+<p>
+<p>PendingWorkersUpdate contains the name of a worker pool and some metadata for pools that are still to be updated.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name is the name of a worker pool.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>lastInitiationTimeCertificateAuthoritiesRotation</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastInitiationTimeCertificateAuthoritiesRotation is the most recent time when the certificate authority
+credential rotation was initiated.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>lastInitiationTimeServiceAccountKeyRotation</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastInitiationTimeServiceAccountKeyRotation is the most recent time when the service account signing key
+credential rotation was initiated.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.ProjectMember">ProjectMember
 </h3>
 <p>
@@ -12600,6 +12660,20 @@ NetworkingStatus
 <td>
 <em>(Optional)</em>
 <p>Networking contains information about cluster networking such as CIDRs.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>pendingWorkersUpdates</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.PendingWorkersUpdate">
+[]PendingWorkersUpdate
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>PendingWorkersUpdates is a list of worker pools and some metadata for pools that are still to be updated.</p>
 </td>
 </tr>
 </tbody>

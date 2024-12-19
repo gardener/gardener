@@ -2126,6 +2126,22 @@ message OpenIDConnectClientAuthentication {
   optional string secret = 2;
 }
 
+// PendingWorkersUpdate contains the name of a worker pool and some metadata for pools that are still to be updated.
+message PendingWorkersUpdate {
+  // Name is the name of a worker pool.
+  optional string name = 1;
+
+  // LastInitiationTimeCertificateAuthoritiesRotation is the most recent time when the certificate authority
+  // credential rotation was initiated.
+  // +optional
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTimeCertificateAuthoritiesRotation = 2;
+
+  // LastInitiationTimeServiceAccountKeyRotation is the most recent time when the service account signing key
+  // credential rotation was initiated.
+  // +optional
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTimeServiceAccountKeyRotation = 3;
+}
+
 // Project holds certain properties about a Gardener project.
 message Project {
   // Standard object metadata.
@@ -3197,6 +3213,10 @@ message ShootStatus {
   // Networking contains information about cluster networking such as CIDRs.
   // +optional
   optional NetworkingStatus networking = 19;
+
+  // PendingWorkersUpdates is a list of worker pools and some metadata for pools that are still to be updated.
+  // +optional
+  repeated PendingWorkersUpdate pendingWorkersUpdates = 20;
 }
 
 // ShootTemplate is a template for creating a Shoot object.

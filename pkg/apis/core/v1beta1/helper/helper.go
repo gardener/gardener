@@ -1621,3 +1621,27 @@ func sumQuantities(left, right *resource.Quantity) *resource.Quantity {
 	copy.Add(*right)
 	return &copy
 }
+
+// LastInitiationTimeCARotationForWorkerPool returns the last initiation time for the worker pool when found in the
+// given list of pending workers updates. If the worker pool is not found in the list, the global last initiation time
+// is returned.
+func LastInitiationTimeCARotationForWorkerPool(name string, pendingWorkersUpdates []gardencorev1beta1.PendingWorkersUpdate, globalLastInitiationTime *metav1.Time) *metav1.Time {
+	if i := slices.IndexFunc(pendingWorkersUpdates, func(update gardencorev1beta1.PendingWorkersUpdate) bool {
+		return update.Name == name
+	}); i != -1 && pendingWorkersUpdates[i].LastInitiationTimeCertificateAuthoritiesRotation != nil {
+		return pendingWorkersUpdates[i].LastInitiationTimeCertificateAuthoritiesRotation
+	}
+	return globalLastInitiationTime
+}
+
+// LastInitiationTimeServiceAccountKeyRotationForWorkerPool returns the last initiation time for the worker pool when
+// found in the given list of pending workers updates. If the worker pool is not found in the list, the global last
+// initiation time is returned.
+func LastInitiationTimeServiceAccountKeyRotationForWorkerPool(name string, pendingWorkersUpdates []gardencorev1beta1.PendingWorkersUpdate, globalLastInitiationTime *metav1.Time) *metav1.Time {
+	if i := slices.IndexFunc(pendingWorkersUpdates, func(update gardencorev1beta1.PendingWorkersUpdate) bool {
+		return update.Name == name
+	}); i != -1 && pendingWorkersUpdates[i].LastInitiationTimeServiceAccountKeyRotation != nil {
+		return pendingWorkersUpdates[i].LastInitiationTimeServiceAccountKeyRotation
+	}
+	return globalLastInitiationTime
+}

@@ -212,6 +212,9 @@ type ShootStatus struct {
 	// Networking contains information about cluster networking such as CIDRs.
 	// +optional
 	Networking *NetworkingStatus `json:"networking,omitempty" protobuf:"bytes,19,opt,name=networking"`
+	// PendingWorkersUpdates is a list of worker pools and some metadata for pools that are still to be updated.
+	// +optional
+	PendingWorkersUpdates []PendingWorkersUpdate `json:"pendingWorkersUpdates,omitempty" protobuf:"bytes,20,rep,name=pendingWorkersUpdates"`
 }
 
 // LastMaintenance holds information about a maintenance operation on the Shoot.
@@ -373,6 +376,12 @@ type CredentialsRotationPhase string
 const (
 	// RotationPreparing is a constant for the credentials rotation phase describing that the procedure is being prepared.
 	RotationPreparing CredentialsRotationPhase = "Preparing"
+	// RotationPreparingWithoutWorkersRollout is a constant for the credentials rotation phase describing that the
+	// procedure is being prepared without triggering a worker pool rollout.
+	RotationPreparingWithoutWorkersRollout CredentialsRotationPhase = "PreparingWithoutWorkersRollout"
+	// RotationWaitingForWorkersRollout is a constant for the credentials rotation phase describing that the procedure
+	// was prepared but is still waiting for the workers to roll out.
+	RotationWaitingForWorkersRollout CredentialsRotationPhase = "WaitingForWorkersRollout"
 	// RotationPrepared is a constant for the credentials rotation phase describing that the procedure was prepared.
 	RotationPrepared CredentialsRotationPhase = "Prepared"
 	// RotationCompleting is a constant for the credentials rotation phase describing that the procedure is being
@@ -381,6 +390,20 @@ const (
 	// RotationCompleted is a constant for the credentials rotation phase describing that the procedure was completed.
 	RotationCompleted CredentialsRotationPhase = "Completed"
 )
+
+// PendingWorkersUpdate contains the name of a worker pool and some metadata for pools that are still to be updated.
+type PendingWorkersUpdate struct {
+	// Name is the name of a worker pool.
+	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+	// LastInitiationTimeCertificateAuthoritiesRotation is the most recent time when the certificate authority
+	// credential rotation was initiated.
+	// +optional
+	LastInitiationTimeCertificateAuthoritiesRotation *metav1.Time `json:"lastInitiationTimeCertificateAuthoritiesRotation,omitempty" protobuf:"bytes,2,opt,name=lastInitiationTimeCertificateAuthoritiesRotation"`
+	// LastInitiationTimeServiceAccountKeyRotation is the most recent time when the service account signing key
+	// credential rotation was initiated.
+	// +optional
+	LastInitiationTimeServiceAccountKeyRotation *metav1.Time `json:"lastInitiationTimeServiceAccountKeyRotation,omitempty" protobuf:"bytes,3,opt,name=lastInitiationTimeServiceAccountKeyRotation"`
+}
 
 // ShootAdvertisedAddress contains information for the shoot's Kube API server.
 type ShootAdvertisedAddress struct {

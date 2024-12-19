@@ -84,8 +84,10 @@ type Interface interface {
 	SetAPIServerURL(string)
 	// SetCABundle sets the CABundle value.
 	SetCABundle(*string)
-	// SetCredentialsRotationStatus sets the credentials rotation status
+	// SetCredentialsRotationStatus sets the credentials rotation status.
 	SetCredentialsRotationStatus(*gardencorev1beta1.ShootCredentialsRotation)
+	// SetPendingWorkersUpdates sets the list of pending worker pool updates.
+	SetPendingWorkersUpdates([]gardencorev1beta1.PendingWorkersUpdate)
 	// SetSSHPublicKeys sets the SSHPublicKeys value.
 	SetSSHPublicKeys([]string)
 	// WorkerPoolNameToOperatingSystemConfigsMap returns a map whose key is a worker pool name and whose value is a structure
@@ -103,8 +105,10 @@ type Values struct {
 	KubernetesVersion *semver.Version
 	// Workers is the list of worker pools.
 	Workers []gardencorev1beta1.Worker
-	// CredentialsRotationStatus
+	// CredentialsRotationStatus is the status of the credentials rotation.
 	CredentialsRotationStatus *gardencorev1beta1.ShootCredentialsRotation
+	// PendingWorkersUpdates is the list of worker pools pending for update (e.g., due to credentials rotation).
+	PendingWorkersUpdates []gardencorev1beta1.PendingWorkersUpdate
 
 	// InitValues are configuration values required for the 'provision' OperatingSystemConfigPurpose.
 	InitValues
@@ -653,6 +657,10 @@ func (o *operatingSystemConfig) SetCredentialsRotationStatus(status *gardencorev
 	o.values.CredentialsRotationStatus = status
 }
 
+func (o *operatingSystemConfig) SetPendingWorkersUpdates(pendingWorkersUpdates []gardencorev1beta1.PendingWorkersUpdate) {
+	o.values.PendingWorkersUpdates = pendingWorkersUpdates
+}
+
 // SetSSHPublicKeys sets the SSHPublicKeys value.
 func (o *operatingSystemConfig) SetSSHPublicKeys(keys []string) {
 	o.values.SSHPublicKeys = keys
@@ -959,7 +967,7 @@ func calculateKeyForVersion(
 		// TODO(MichaelEischer): Remove KeyV1 after support for Kubernetes 1.30 is dropped
 		return KeyV1(worker.Name, kubernetesVersion, worker.CRI), nil
 	case 2:
-		return KeyV2(kubernetesVersion, values.CredentialsRotationStatus, worker, values.NodeLocalDNSEnabled, kubeletConfiguration), nil
+		return KeyV2(kubernetesVersion, values.CredentialsRotationStatus, worker, values.NodeLocalDNSEnabled, kubeletConfiguration, values.PendingWorkersUpdates), nil
 	default:
 		return "", fmt.Errorf("unsupported osc key hash version %v", version)
 	}
@@ -993,6 +1001,7 @@ func KeyV2(
 	worker *gardencorev1beta1.Worker,
 	nodeLocalDNSEnabled bool,
 	kubeletConfiguration *gardencorev1beta1.KubeletConfig,
+	pendingWorkersUpdates []gardencorev1beta1.PendingWorkersUpdate,
 ) string {
 	if kubernetesVersion == nil {
 		return ""
@@ -1018,11 +1027,15 @@ func KeyV2(
 	}
 
 	if credentialsRotation != nil {
-		if credentialsRotation.CertificateAuthorities != nil && credentialsRotation.CertificateAuthorities.LastInitiationTime != nil {
-			data = append(data, credentialsRotation.CertificateAuthorities.LastInitiationTime.Time.String())
+		if credentialsRotation.CertificateAuthorities != nil {
+			if lastInitiationTime := v1beta1helper.LastInitiationTimeCARotationForWorkerPool(worker.Name, pendingWorkersUpdates, credentialsRotation.CertificateAuthorities.LastInitiationTime); lastInitiationTime != nil {
+				data = append(data, lastInitiationTime.Time.String())
+			}
 		}
-		if credentialsRotation.ServiceAccountKey != nil && credentialsRotation.ServiceAccountKey.LastInitiationTime != nil {
-			data = append(data, credentialsRotation.ServiceAccountKey.LastInitiationTime.Time.String())
+		if credentialsRotation.ServiceAccountKey != nil {
+			if lastInitiationTime := v1beta1helper.LastInitiationTimeServiceAccountKeyRotationForWorkerPool(worker.Name, pendingWorkersUpdates, credentialsRotation.ServiceAccountKey.LastInitiationTime); lastInitiationTime != nil {
+				data = append(data, lastInitiationTime.Time.String())
+			}
 		}
 	}
 
