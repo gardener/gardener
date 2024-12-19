@@ -28,7 +28,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/gardener/gardener/pkg/controller/networkpolicy/hostnameresolver"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
@@ -36,7 +35,7 @@ import (
 const ControllerName = "networkpolicy"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, runtimeCluster cluster.Cluster) error {
+func (r *Reconciler) AddToManager(mgr manager.Manager, runtimeCluster cluster.Cluster) error {
 	if r.RuntimeClient == nil {
 		r.RuntimeClient = runtimeCluster.GetClient()
 	}
@@ -71,32 +70,30 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, runt
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: ptr.Deref(r.ConcurrentSyncs, 0),
 		}).
-		WatchesRawSource(
-			source.Kind[client.Object](runtimeCluster.GetCache(),
-				&corev1.Namespace{},
-				&handler.EnqueueRequestForObject{},
-				predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update)),
-		).
+		WatchesRawSource(source.Kind[client.Object](
+			runtimeCluster.GetCache(),
+			&corev1.Namespace{},
+			&handler.EnqueueRequestForObject{},
+			predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
+		)).
+		WatchesRawSource(source.Kind[client.Object](
+			runtimeCluster.GetCache(),
+			&corev1.Endpoints{},
+			handler.EnqueueRequestsFromMapFunc(r.MapToNamespaces(mgr.GetLogger().WithValues("controller", ControllerName))),
+			r.IsKubernetesEndpoint(),
+		)).
+		WatchesRawSource(source.Kind[client.Object](
+			runtimeCluster.GetCache(),
+			&networkingv1.NetworkPolicy{},
+			handler.EnqueueRequestsFromMapFunc(r.MapObjectToNamespace),
+			r.NetworkPolicyPredicate(),
+		)).
+		WatchesRawSource(source.Channel(
+			r.ResolverUpdate,
+			handler.EnqueueRequestsFromMapFunc(r.MapToNamespaces(mgr.GetLogger().WithValues("controller", ControllerName))),
+		)).
 		Build(r)
 	if err != nil {
-		return err
-	}
-
-	if err := c.Watch(
-		source.Kind[client.Object](runtimeCluster.GetCache(),
-			&corev1.Endpoints{},
-			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapToNamespaces), mapper.UpdateWithNew, c.GetLogger()),
-			r.IsKubernetesEndpoint()),
-	); err != nil {
-		return err
-	}
-
-	if err := c.Watch(
-		source.Kind[client.Object](runtimeCluster.GetCache(),
-			&networkingv1.NetworkPolicy{},
-			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapObjectToNamespace), mapper.UpdateWithNew, c.GetLogger()),
-			r.NetworkPolicyPredicate()),
-	); err != nil {
 		return err
 	}
 
@@ -106,10 +103,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, runt
 		}
 	}
 
-	return c.Watch(
-		source.Channel(r.ResolverUpdate,
-			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapToNamespaces), mapper.UpdateWithNew, c.GetLogger())),
-	)
+	return nil
 }
 
 // NetworkPolicyPredicate is a predicate which returns true in case the network policy name matches with one of those
@@ -128,39 +122,41 @@ func (r *Reconciler) NetworkPolicyPredicate() predicate.Predicate {
 }
 
 // MapToNamespaces is a mapper function which returns requests for all relevant namespaces.
-func (r *Reconciler) MapToNamespaces(ctx context.Context, log logr.Logger, _ client.Reader, _ client.Object) []reconcile.Request {
-	var selectors []labels.Selector
-	for _, config := range r.networkPolicyConfigs() {
-		selectors = append(selectors, config.namespaceSelectors...)
-	}
-
-	namespaceList := &corev1.NamespaceList{}
-	if err := r.RuntimeClient.List(ctx, namespaceList); err != nil {
-		log.Error(err, "Unable to list all namespaces")
-		return nil
-	}
-
-	namespaceNames := sets.New[string]()
-	for _, namespace := range namespaceList.Items {
-		if labelsMatchAnySelector(namespace.Labels, selectors) {
-			namespaceNames.Insert(namespace.Name)
+func (r *Reconciler) MapToNamespaces(log logr.Logger) handler.MapFunc {
+	return func(ctx context.Context, _ client.Object) []reconcile.Request {
+		var selectors []labels.Selector
+		for _, config := range r.networkPolicyConfigs() {
+			selectors = append(selectors, config.namespaceSelectors...)
 		}
-	}
 
-	var requests []reconcile.Request
-	for _, namespaceName := range namespaceNames.UnsortedList() {
-		requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespaceName}})
+		namespaceList := &corev1.NamespaceList{}
+		if err := r.RuntimeClient.List(ctx, namespaceList); err != nil {
+			log.Error(err, "Unable to list all namespaces")
+			return nil
+		}
+
+		namespaceNames := sets.New[string]()
+		for _, namespace := range namespaceList.Items {
+			if labelsMatchAnySelector(namespace.Labels, selectors) {
+				namespaceNames.Insert(namespace.Name)
+			}
+		}
+
+		var requests []reconcile.Request
+		for _, namespaceName := range namespaceNames.UnsortedList() {
+			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespaceName}})
+		}
+		return requests
 	}
-	return requests
 }
 
 // MapObjectToName is a mapper function which maps an object to its name.
-func (r *Reconciler) MapObjectToName(_ context.Context, _ logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
+func (r *Reconciler) MapObjectToName(_ context.Context, obj client.Object) []reconcile.Request {
 	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: obj.GetName()}}}
 }
 
 // MapObjectToNamespace is a mapper function which maps an object to its namespace.
-func (r *Reconciler) MapObjectToNamespace(_ context.Context, _ logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
+func (r *Reconciler) MapObjectToNamespace(_ context.Context, obj client.Object) []reconcile.Request {
 	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: obj.GetNamespace()}}}
 }
 

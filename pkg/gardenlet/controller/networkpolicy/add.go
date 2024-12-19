@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -25,7 +26,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controller/networkpolicy"
 	"github.com/gardener/gardener/pkg/controller/networkpolicy/hostnameresolver"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
@@ -72,15 +72,14 @@ func AddToManager(
 	}
 
 	reconciler.WatchRegisterers = append(reconciler.WatchRegisterers, func(c controller.Controller) error {
-		return c.Watch(
-			source.Kind[client.Object](seedCluster.GetCache(),
-				&extensionsv1alpha1.Cluster{},
-				mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(reconciler.MapObjectToName), mapper.UpdateWithNew, mgr.GetLogger()),
-				ClusterPredicate()),
-		)
+		return c.Watch(source.Kind[client.Object](seedCluster.GetCache(),
+			&extensionsv1alpha1.Cluster{},
+			handler.EnqueueRequestsFromMapFunc(reconciler.MapObjectToName),
+			ClusterPredicate(),
+		))
 	})
 
-	if err := reconciler.AddToManager(ctx, mgr, seedCluster); err != nil {
+	if err := reconciler.AddToManager(mgr, seedCluster); err != nil {
 		return err
 	}
 
