@@ -13,9 +13,26 @@ import (
 )
 
 // featureGateVersionRanges contains the version ranges for all Kubernetes feature gates.
-// Extracted from https://raw.githubusercontent.com/kubernetes/kubernetes/release-${version}/pkg/features/kube_features.go.
+// Extracted from:
+// - https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
+// - https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates-removed/
 // To maintain this list for each new Kubernetes version:
-// TODO(marc1404): Create issue for fixing the `compare-k8s-feature-gates.sh` script & describe how to maintain this list.
+// Alpha & Beta Feature Gates
+// 1. Open: https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/#feature-gates-for-alpha-or-beta-features
+// 2. Search the page for the new Kubernetes version, e.g. "1.32".
+// 3. Add new alpha feature gates that have been added "Since" the new Kubernetes version.
+// 4. Change the `Default` for Beta feature gates that have been promoted "Since" the new Kubernetes version.
+//
+// Graduated & Deprecated Feature Gates
+// 1. Open: https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/#feature-gates-for-graduated-or-deprecated-features
+// 2. Search the page for the new Kubernetes version, e.g. "1.32".
+// 3. Change `LockedToDefaultInVersion` for GA and Deprecated feature gates that have been graduated/deprecated "Since" the new Kubernetes version.
+//
+// Removed Feature Gates
+// 1. Open: https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates-removed/#feature-gates-that-are-removed
+// 2. Search the page for the _current_ Kubernetes version, e.g. if the new version is "1.32", search for "1.31".
+// 3. Set `RemovedInVersion` to the _new_ Kubernetes version for feature gates that have been removed after the _current_ Kubernetes version according to the "To" column.
+// TODO(marc1404): Create issue for fixing the `compare-k8s-feature-gates.sh` script
 var featureGateVersionRanges = map[string]*FeatureGateVersionRange{
 	// These are special feature gates to toggle all alpha or beta feature gates on and off.
 	// They were introduced in version 1.17 (although they are absent from the corresponding kube_features.go file).
