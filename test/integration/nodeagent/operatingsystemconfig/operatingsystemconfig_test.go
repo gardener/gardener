@@ -6,6 +6,7 @@ package operatingsystemconfig_test
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path"
 	"path/filepath"
@@ -499,6 +500,68 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 
 		By("Assert that cancel func has not been called")
 		Expect(cancelFunc.called).To(BeFalse())
+	})
+
+	It("should reconcile only parts of the configuration that were not applied yet", func() {
+		By("Wait for node annotations to be updated")
+		Eventually(func(g Gomega) map[string]string {
+			updatedNode := &corev1.Node{}
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), updatedNode)).To(Succeed())
+			return updatedNode.Annotations
+		}).Should(HaveKeyWithValue("checksum/cloud-config-data", utils.ComputeSHA256Hex(oscRaw)))
+
+		By("Wait for node labels to be updated")
+		Eventually(func(g Gomega) map[string]string {
+			updatedNode := &corev1.Node{}
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), updatedNode)).To(Succeed())
+			return updatedNode.Labels
+		}).Should(HaveKeyWithValue("worker.gardener.cloud/kubernetes-version", kubernetesVersion.String()))
+
+		fakeDBus.Actions = nil // reset actions on dbus to not repeat assertions from above for update scenario
+
+		operatingSystemConfig.Spec.Units[0].Command = ptr.To(extensionsv1alpha1.CommandStop)
+		operatingSystemConfig.Spec.Units[1].Enable = ptr.To(true)
+		operatingSystemConfig.Spec.Units[1].Command = ptr.To(extensionsv1alpha1.CommandStart)
+		fakeDBus.InjectRestartFailure(fmt.Errorf("injected failure for unit2"), unit2.Name)
+
+		var err error
+		oscRaw, err = runtime.Encode(codec, operatingSystemConfig)
+		Expect(err).NotTo(HaveOccurred())
+
+		By("Update Secret containing the operating system config")
+		patch := client.MergeFrom(oscSecret.DeepCopy())
+		oscSecret.Annotations["checksum/data-script"] = utils.ComputeSHA256Hex(oscRaw)
+		oscSecret.Data["osc.yaml"] = oscRaw
+		Expect(testClient.Patch(ctx, oscSecret, patch)).To(Succeed())
+
+		By("Wait for node annotations to be updated")
+		Eventually(func(g Gomega) map[string]string {
+			updatedNode := &corev1.Node{}
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), updatedNode)).To(Succeed())
+			return updatedNode.Annotations
+		}).Should(HaveKeyWithValue("checksum/cloud-config-data", utils.ComputeSHA256Hex(oscRaw)))
+
+		By("Wait for node labels to be updated")
+		Eventually(func(g Gomega) map[string]string {
+			updatedNode := &corev1.Node{}
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), updatedNode)).To(Succeed())
+			return updatedNode.Labels
+		}).Should(HaveKeyWithValue("worker.gardener.cloud/kubernetes-version", kubernetesVersion.String()))
+
+		By("Assert that unit actions have been applied")
+		Expect(fakeDBus.Actions).To(ConsistOf(
+			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit1.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit2.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionDaemonReload},
+			fakedbus.SystemdAction{Action: fakedbus.ActionStart, UnitNames: []string{"containerd.service"}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionStop, UnitNames: []string{unit1.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit2.Name}},
+			// failure was injected here, so we expect the next attempt to only retry the failed action (restart unit2)
+			// and the actions that are taken on every reconcile.
+			fakedbus.SystemdAction{Action: fakedbus.ActionDaemonReload},
+			fakedbus.SystemdAction{Action: fakedbus.ActionStart, UnitNames: []string{"containerd.service"}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit2.Name}},
+		))
 	})
 
 	It("should reconcile the configuration when there is a previous OSC", func() {
