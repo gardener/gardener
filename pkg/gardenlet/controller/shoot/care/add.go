@@ -23,6 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/utils"
 )
@@ -52,6 +53,12 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 				&gardencorev1beta1.Shoot{},
 				r.EventHandler(),
 				r.ShootPredicate()),
+		).
+		WatchesRawSource(
+			source.Kind[client.Object](r.SeedClientSet.Cache(),
+				&resourcesv1alpha1.ManagedResource{},
+				handler.EnqueueRequestsFromMapFunc(r.MapManagedResourceToShoot),
+				predicateutils.ManagedResourceConditionsChanged()),
 		).
 		Complete(r)
 }
@@ -120,4 +127,12 @@ func (r *Reconciler) ShootPredicate() predicate.Predicate {
 
 func seedGotAssigned(oldShoot, newShoot *gardencorev1beta1.Shoot) bool {
 	return oldShoot.Spec.SeedName == nil && newShoot.Spec.SeedName != nil
+}
+
+// MapManagedResourceToShoot is a mapper.MapFunc for mapping a ManagedResource to the owning Shoot.
+func (r *Reconciler) MapManagedResourceToShoot(_ context.Context, mr client.Object) []reconcile.Request {
+	if name, ok := r.namespaceToShootName.Load(mr.GetNamespace()); ok {
+		return []reconcile.Request{{NamespacedName: name.(types.NamespacedName)}}
+	}
+	return nil
 }
