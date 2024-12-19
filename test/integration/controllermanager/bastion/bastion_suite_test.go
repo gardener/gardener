@@ -130,7 +130,7 @@ var _ = BeforeSuite(func() {
 			MaxLifetime:     &metav1.Duration{Duration: maxLifeTime},
 		},
 		Clock: fakeClock,
-	}).AddToManager(ctx, mgr)).To(Succeed())
+	}).AddToManager(mgr)).To(Succeed())
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)

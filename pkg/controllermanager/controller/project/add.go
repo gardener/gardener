@@ -5,7 +5,6 @@
 package project
 
 import (
-	"context"
 	"fmt"
 
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -17,10 +16,10 @@ import (
 )
 
 // AddToManager adds all Project controllers to the given manager.
-func AddToManager(ctx context.Context, mgr manager.Manager, cfg config.ControllerManagerConfiguration) error {
+func AddToManager(mgr manager.Manager, cfg config.ControllerManagerConfiguration) error {
 	if err := (&activity.Reconciler{
 		Config: *cfg.Controllers.Project,
-	}).AddToManager(ctx, mgr); err != nil {
+	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding activity reconciler: %w", err)
 	}
 

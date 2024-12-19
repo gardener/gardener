@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -28,7 +29,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	"github.com/gardener/gardener/pkg/extensions"
 )
 
@@ -48,7 +48,7 @@ var runtimeClusterExtensions = []extension{
 }
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) error {
+func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	if r.Client == nil {
 		r.Client = mgr.GetClient()
 	}
@@ -74,13 +74,11 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 
 	for _, extension := range runtimeClusterExtensions {
-		eventHandler := mapper.EnqueueRequestsFrom(
-			ctx,
-			mgr.GetCache(),
-			r.MapObjectKindToExtensions(extension.objectKind, extension.newObjectListFunc),
-			mapper.UpdateWithNew,
-			c.GetLogger(),
-		)
+		eventHandler := handler.EnqueueRequestsFromMapFunc(r.MapObjectKindToExtensions(
+			mgr.GetLogger().WithValues("controller", ControllerName),
+			extension.objectKind,
+			extension.newObjectListFunc,
+		))
 
 		// Execute the mapper function at least once to initialize the `KindToRequiredTypes` map.
 		// This is necessary for extension kinds which are registered but for which no extension objects exist in the
@@ -102,8 +100,8 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 // MapObjectKindToExtensions returns a mapper function for the given 'extensions.gardener.cloud' extension kind
 // that lists all existing resources of the given kind and stores the respective types in the `KindToRequiredTypes` map.
 // Afterwards, it returns all 'operator.gardener.cloud' Extensions that responsible for the given kind.
-func (r *Reconciler) MapObjectKindToExtensions(objectKind string, newObjectListFunc func() client.ObjectList) mapper.MapFunc {
-	return func(ctx context.Context, log logr.Logger, _ client.Reader, _ client.Object) []reconcile.Request {
+func (r *Reconciler) MapObjectKindToExtensions(log logr.Logger, objectKind string, newObjectListFunc func() client.ObjectList) handler.MapFunc {
+	return func(ctx context.Context, _ client.Object) []reconcile.Request {
 		log = log.WithValues("extensionKind", objectKind)
 
 		listObj := newObjectListFunc()
