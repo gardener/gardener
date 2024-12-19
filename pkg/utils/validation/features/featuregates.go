@@ -230,6 +230,7 @@ var featureGateVersionRanges = map[string]*FeatureGateVersionRange{
 	"ReadWriteOncePod":                               {Default: true, LockedToDefaultInVersion: "1.29", VersionRange: versionutils.VersionRange{RemovedInVersion: "1.31"}},
 	"RecoverVolumeExpansionFailure":                  {Default: true, VersionRange: versionutils.VersionRange{AddedInVersion: "1.28"}},
 	"RecursiveReadOnlyMounts":                        {VersionRange: versionutils.VersionRange{AddedInVersion: "1.30"}},
+	"RelaxedDNSSearchValidation":                     {VersionRange: versionutils.VersionRange{AddedInVersion: "1.32"}},
 	"RelaxedEnvironmentVariableValidation":           {Default: true, VersionRange: versionutils.VersionRange{AddedInVersion: "1.30"}},
 	"ReloadKubeletServerCertificateFile":             {VersionRange: versionutils.VersionRange{AddedInVersion: "1.31"}},
 	"RemainingItemCount":                             {Default: true, LockedToDefaultInVersion: "1.29"},
