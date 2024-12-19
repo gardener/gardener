@@ -222,9 +222,9 @@
     },
     {
       // Copied and extended from: https://github.com/renovatebot/renovate/blob/3b8735d68cd02546244026ea028aae6044d598e9/lib/config/presets/internal/group.ts#L301-L339
-      groupName: 'kubernetes packages',
-      groupSlug: 'kubernetes-go',
-      description: 'Group Kubernetes packages together.',
+      groupName: 'kubernetes updates',
+      groupSlug: 'kubernetes-updates',
+      description: 'Group Kubernetes updates together.',
       matchDatasources: [
         'go',
         // the entries below extend the original group:kubernetes preset
