@@ -105,7 +105,7 @@ This design was chosen to leverage the `machine-controller-manager`'s node rollo
 
 ### Prerequisites
 
-The only prerequisite is that the machine image/OS on the node must support in-place updates and provide a tool or utility to initiate the OS update. This update tool/utility should meet the following requirements:
+The only prerequisite is that the machine image/OS on the node must support in-place updates and provide a tool or utility to initiate the OS update and boot into the new version. This update tool/utility should meet the following requirements:
 
 1. **Failure Recovery**: In case of a failure, the OS should be able to revert to the previous version.
 2. **Retry Configuration**: Support for configuring the number of update retries.
@@ -136,7 +136,7 @@ Gardener will introduce two additional update strategies, `AutoInPlaceUpdate` an
 
 ![ManualInPlaceUpdate](assets/31-manual-inplace-update.png "Manual In Place Update Strategy")
 
-A new optional [constraint](https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_status.md#constraints) will be introduced in the Shoot status to indicate that some worker pools are undergoing a manual in-place update. While the Shoot will be marked as successfully reconciled, these worker pools may still be outdated. A new field will be added to the Shoot status to keep track of the pending worker pools.
+A new optional [constraint](https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_status.md#constraints) will be introduced in the Shoot status to indicate that some worker pools are undergoing a manual in-place update. Although the Shoot will be marked as successfully reconciled, these worker pools might remain outdated. Furthermore, a field (can be called `pendingWorkersInPlaceUpdate`) will be introduced in the Shoot status to track worker pools awaiting in-place updates.
 
 Subsequent updates to the worker pool will be blocked by validation if an in-place update is already in progress. This ensures that worker pools do not skip intermediate Kubernetes minor versions or machine image versions. However, if an in-place update fails and a fix—such as a patch to the current updated minor version—is required, it will be allowed if the Shoot has the `shoot.gardener.cloud/force-in-place-update: true` annotation.
 
@@ -213,7 +213,7 @@ spec:
 
 #### `Worker` API
 
-A new field `updateStrategy` is introduced under `.spec.pools[]` in the Worker API. This field will be used to set the `machineDeploymentStrategy` for the `machinev1alpha1.MachineDeployment` resource.
+New field `updateStrategy` and `kubelet` are introduced under `.spec.pools[]` in the Worker API. The `updateStrategy` field will be used to set the `machineDeploymentStrategy` for the `machinev1alpha1.MachineDeployment` resource and `kubelet` field corresponds to the kubelet configuration for this worker pool.
 
 ```yaml
 apiVersion: extensions.gardener.cloud/v1alpha1
@@ -230,7 +230,6 @@ spec:
   infrastructureProviderStatus: <infra-status>
   pools:
     - name: cpu-worker-1
-      machineType: m4.large
       machineImage:
         name: gardenlinux
         version: 1.2.2
@@ -239,20 +238,22 @@ spec:
       maxSurge: 0
       maxUnavailable: 2
       updateStrategy: AutoInPlaceUpdate # AutoReplaceUpdate/AutoInPlaceUpdate/ManualInPlaceUpdate
+      kubelet:
+        evictionHard:
+          memoryAvailable: 100Mi
+          imageFSAvailable: 5%
 ```
 
 #### `OperatingSystemConfig` API
 
-New fields `osVersion`, `kubeletVersion`, and `credentialRotation` are introduced in the `OperatingSystemConfig` spec and `inPlaceUpdateConfig` in the `OperatingSystemConfig` status.
+New fields `osVersion`, `kubeletVersion`, and `credentialsRotation` are introduced in the `OperatingSystemConfig` spec and `inPlaceUpdateConfig` in the `OperatingSystemConfig` status.
 
 - `osVersion` specifies the machine image version.
 - `kubeletVersion` specifies the version of the kubelet.
-- `credentialRotation` contains two subfields:
-  - `caRotationLastInitiationTime` records the timestamp of the most recent Certificate Authority (CA) rotation initiation.
-  - `serviceAccountKeyRotationLastInitiationTime` records the timestamp of the most recent `ServiceAccount` signing key rotation initiation.
-- `inPlaceUpdateConfig` contains two subfields:
-  - `osUpdateScriptPath` defines the path to the script responsible for performing machine image updates.
-  - `osUpdateScriptArgs` provides a mechanism to pass additional arguments or flags to the update script. These can include parameters like the target version or the OCI registry from which the updated machine image should be pulled, offering flexibility tailored to the needs of different OS extensions.
+- `credentialsRotation` contains two subfields:
+  - `certificateAuthorities` contains `lastInitiationTime` which records the timestamp of the most recent Certificate Authority (CA) rotation initiation.
+  - `serviceAccountKey` contains `lastInitiationTime` which records the timestamp of the most recent `ServiceAccount` signing key rotation initiation.
+- `inPlaceUpdateConfig` contains a subfield `osUpdateCommand` which defines the command responsible for performing machine image updates. The command could be invoking an inbuilt utility/tool or a custom script, optionally accompanied by additional arguments or flags like the target version or the OCI registry from which the updated machine image should be pulled, offering flexibility tailored to the needs of different OS extensions.
 
 ```yaml
 apiVersion: extensions.gardener.cloud/v1alpha1
@@ -264,21 +265,18 @@ spec:
   type: gardenlinux
   osVersion: 1631.0
   kubeletVersion: 1.30.4
-  credentialRotation:
-    caRotationLastInitiationTime:
-    serviceAccountKeyRotationLastInitiationTime:
+  credentialsRotation:
+    certificateAuthorities:
+      lastInitiationTime: "2024-01-01T12:30:00Z"
+    serviceAccountKey:
+      lastInitiationTime: "2024-01-01T12:30:00Z"
   units:
     - ...
   files:
     - ...
 status:
   inPlaceUpdateConfig:
-    osUpdateScriptPath: /opt/gardener/bin/inplace-update.sh
-    osUpdateScriptArgs:
-      - --version
-      - 1631.0
-      - --repo
-      - <someOCIregistry>
+    osUpdateCommand: /opt/gardener/bin/inplace-update.sh --version 1631.0 --repo <someOCIregistry>
 ```
 
 #### Gardener Node Agent
@@ -287,12 +285,12 @@ The `gardener-node-agent` will function as the component responsible for carryin
 
 Currently, when a dependency in the Operating System Configuration (OSC) changes, `gardener-node-agent` detects the differences between the current OSC and the last applied OSC and updates any modified units on the node. When the in-place update strategy is configured, if changes are detected that cannot be applied immediately (ie; if the change contains any of the update triggers listed in the [Goals](#goals)), `gardener-node-agent` will pause the update and wait for the `node.machine.sapcloud.io/ready-to-update` label to appear on the node before proceeding with the update.
 
-For OS updates, the OS extensions are responsible for populating the `inPlaceUpdateConfig` field within the OperatingSystemConfig status. This configuration includes the path to the update script (`osUpdateScriptPath`) and any additional arguments (`osUpdateScriptArgs`) required by the script. `gardener-node-agent` triggers the script located at the path specified in `inPlaceUpdateConfig.osUpdateScriptPath` and passes the arguments defined in `inPlaceUpdateConfig.osUpdateScriptArgs`.
+For machine image updates, `gardener-node-agent` executes the command present in the `inPlaceUpdateConfig.osUpdateCommand` field within the OperatingSystemConfig status.
 
 For Kubelet minor version or configuration updates, `gardener-node-agent` will apply the changed files and restart the `kubelet` unit and there are no additional steps involved.
 
 For credential rotation, in the case of Certificate Authority (CA) rotation, the `kubelet` needs to be bootstrapped again so that it can request client certificates signed by the new CA. `gardener-node-agent` will use the existing kubeconfig used by the `kubelet` (passed in the `--kubeconfig` flag. See [`kubelet` Options](https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet/)) and use it as bootstrap kubeconfig (`--bootstrap-kubeconfig` flag in the kubelet). It will remove the kubelet certificate directory (`--cert-dir` flag in the kubelet) `/var/lib/kubelet/pki`, and the `kubelet.service` unit is restarted. This makes the kubelet request new client certificates through [Certificate signing requests (CSR)](https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/#certificate-signing-requests).
-In case of `ServiceAccount` signing key rotation, `gardener-node-agent` will restart itself to load the new service account token using its [`token` controller](https://github.com/gardener/gardener/blob/master/docs/concepts/node-agent.md#token-controller).
+In case of `ServiceAccount` signing key rotation, `gardener-node-agent` will fetch the new service account token using its [`token` controller](https://github.com/gardener/gardener/blob/master/docs/concepts/node-agent.md#token-controller) automatically.
 
 After executing an update, `gardener-node-agent` will determine the outcome and apply the corresponding label to the node: either `node.machine.sapcloud.io/update-successful` or `node.machine.sapcloud.io/update-failed`, indicating the status of the update. In the case of a successful update, before labelling the node as `node.machine.sapcloud.io/update-successful`, the `gardener-node-agent` will restart all pods running on the node. This step ensures that DaemonSet pods and pods with local storage are properly recreated post-update.
 
@@ -351,7 +349,7 @@ Currently, the [`dependency-watchdog`](https://github.com/gardener/dependency-wa
 
 #### OS extensions
 
-The OS extensions are responsible for populating the `inPlaceUpdateConfig` field within the `OperatingSystemConfig` status. This configuration includes the path to the update script (`osUpdateScriptPath`) and any additional arguments (`osUpdateScriptArgs`) required by the script. This script will be executed by the `gardener-node-agent` to perform the update. Internally, this script should trigger the OS-provided update tool/utility to update the OS.
+The OS extensions are responsible for populating the `inPlaceUpdateConfig` field within the `OperatingSystemConfig` status. This configuration specifies the command to be executed by the `gardener-node-agent` to perform the update. The command could be invoking an inbuilt utility/tool or a custom script.
 
 ### Worker pool hash calculations
 
