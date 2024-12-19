@@ -13,7 +13,9 @@ import (
 )
 
 // featureGateVersionRanges contains the version ranges for all Kubernetes feature gates.
-// Extracted from https://raw.githubusercontent.com/kubernetes/kubernetes/release-${version}/pkg/features/kube_features.go.
+// Extracted from:
+// - https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
+// - https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates-removed/
 // To maintain this list for each new Kubernetes version:
 // Alpha & Beta Feature Gates
 // 1. Open: https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/#feature-gates-for-alpha-or-beta-features
