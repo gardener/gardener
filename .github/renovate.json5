@@ -128,24 +128,18 @@
       ],
     },
     {
-      // Group istio image updates in one PR.
-      groupName: 'istio images',
+      // Group Istio updates in one PR.
+      groupName: 'istio',
+      groupSlug: 'istio',
+      description: 'Group Istio updates in one PR.',
       matchDatasources: [
         'docker',
+        'go'
       ],
       matchPackageNames: [
         '/gcr\\.io/istio-release/.+/',
-      ],
-    },
-    {
-      // Group istio module updates in one PR.
-      groupName: 'istio modules',
-      matchDatasources: [
-        'go',
-      ],
-      matchPackageNames: [
         '/istio\\.io/api/',
-        '/istio\\.io/client-go/',
+        '/istio\\.io/client-go/'
       ],
     },
     {
