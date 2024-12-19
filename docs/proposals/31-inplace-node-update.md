@@ -136,7 +136,7 @@ Gardener will introduce two additional update strategies, `AutoInPlaceUpdate` an
 
 ![ManualInPlaceUpdate](assets/31-manual-inplace-update.png "Manual In Place Update Strategy")
 
-A new optional [constraint](https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_status.md#constraints) will be introduced in the Shoot status to indicate that some worker pools are undergoing a manual in-place update. While the Shoot will be marked as successfully reconciled, these worker pools may still be outdated. A new field will be added to the Shoot status to keep track of the pending worker pools.
+A new optional [constraint](https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_status.md#constraints) will be introduced in the Shoot status to indicate that some worker pools are undergoing a manual in-place update. While the Shoot will be marked as successfully reconciled, these worker pools may still be outdated. Additionally, the `pendingWorkersUpdate` API in the Shoot status will be augmented to track worker pools pending in-place updates. At the time of writing this GEP, the PR [#11027](https://github.com/gardener/gardener/pull/11027) introducing this field is still under review.
 
 Subsequent updates to the worker pool will be blocked by validation if an in-place update is already in progress. This ensures that worker pools do not skip intermediate Kubernetes minor versions or machine image versions. However, if an in-place update fails and a fix—such as a patch to the current updated minor version—is required, it will be allowed if the Shoot has the `shoot.gardener.cloud/force-in-place-update: true` annotation.
 
@@ -247,9 +247,9 @@ New fields `osVersion`, `kubeletVersion`, and `credentialRotation` are introduce
 
 - `osVersion` specifies the machine image version.
 - `kubeletVersion` specifies the version of the kubelet.
-- `credentialRotation` contains two subfields:
-  - `caRotationLastInitiationTime` records the timestamp of the most recent Certificate Authority (CA) rotation initiation.
-  - `serviceAccountKeyRotationLastInitiationTime` records the timestamp of the most recent `ServiceAccount` signing key rotation initiation.
+- `credentialsRotation` contains two subfields:
+  - `certificateAuthorities` contains `lastInitiationTime` which records the timestamp of the most recent Certificate Authority (CA) rotation initiation.
+  - `serviceAccountKey` contains `lastInitiationTime` which records the timestamp of the most recent `ServiceAccount` signing key rotation initiation.
 - `inPlaceUpdateConfig` contains two subfields:
   - `osUpdateScriptPath` defines the path to the script responsible for performing machine image updates.
   - `osUpdateScriptArgs` provides a mechanism to pass additional arguments or flags to the update script. These can include parameters like the target version or the OCI registry from which the updated machine image should be pulled, offering flexibility tailored to the needs of different OS extensions.
@@ -264,9 +264,11 @@ spec:
   type: gardenlinux
   osVersion: 1631.0
   kubeletVersion: 1.30.4
-  credentialRotation:
-    caRotationLastInitiationTime:
-    serviceAccountKeyRotationLastInitiationTime:
+  credentialsRotation:
+    certificateAuthorities:
+      lastInitiationTime: "2024-01-01T12:30:00Z"
+    serviceAccountKey:
+      lastInitiationTime: "2024-01-01T12:30:00Z"
   units:
     - ...
   files:
@@ -292,7 +294,7 @@ For OS updates, the OS extensions are responsible for populating the `inPlaceUpd
 For Kubelet minor version or configuration updates, `gardener-node-agent` will apply the changed files and restart the `kubelet` unit and there are no additional steps involved.
 
 For credential rotation, in the case of Certificate Authority (CA) rotation, the `kubelet` needs to be bootstrapped again so that it can request client certificates signed by the new CA. `gardener-node-agent` will use the existing kubeconfig used by the `kubelet` (passed in the `--kubeconfig` flag. See [`kubelet` Options](https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet/)) and use it as bootstrap kubeconfig (`--bootstrap-kubeconfig` flag in the kubelet). It will remove the kubelet certificate directory (`--cert-dir` flag in the kubelet) `/var/lib/kubelet/pki`, and the `kubelet.service` unit is restarted. This makes the kubelet request new client certificates through [Certificate signing requests (CSR)](https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/#certificate-signing-requests).
-In case of `ServiceAccount` signing key rotation, `gardener-node-agent` will restart itself to load the new service account token using its [`token` controller](https://github.com/gardener/gardener/blob/master/docs/concepts/node-agent.md#token-controller).
+In case of `ServiceAccount` signing key rotation, `gardener-node-agent` will fetch the new service account token using its [`token` controller](https://github.com/gardener/gardener/blob/master/docs/concepts/node-agent.md#token-controller) automatically.
 
 After executing an update, `gardener-node-agent` will determine the outcome and apply the corresponding label to the node: either `node.machine.sapcloud.io/update-successful` or `node.machine.sapcloud.io/update-failed`, indicating the status of the update. In the case of a successful update, before labelling the node as `node.machine.sapcloud.io/update-successful`, the `gardener-node-agent` will restart all pods running on the node. This step ensures that DaemonSet pods and pods with local storage are properly recreated post-update.
 
