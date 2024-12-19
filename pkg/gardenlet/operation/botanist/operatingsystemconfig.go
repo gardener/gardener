@@ -97,6 +97,7 @@ func (b *Botanist) DeployOperatingSystemConfig(ctx context.Context) error {
 	b.Shoot.Components.Extensions.OperatingSystemConfig.SetCABundle(b.getOperatingSystemConfigCABundle(clusterCASecret.Data[secretsutils.DataKeyCertificateBundle]))
 
 	shoot := b.Shoot.GetInfo()
+	b.Shoot.Components.Extensions.OperatingSystemConfig.SetPendingWorkersUpdates(shoot.Status.PendingWorkersUpdates)
 	if shoot.Status.Credentials != nil {
 		b.Shoot.Components.Extensions.OperatingSystemConfig.SetCredentialsRotationStatus(shoot.Status.Credentials.Rotation)
 	}
