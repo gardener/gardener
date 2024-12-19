@@ -408,6 +408,7 @@ build:
             - pkg/resourcemanager/webhook/systemcomponentsconfig
             - pkg/resourcemanager/webhook/tokeninvalidator
             - pkg/utils
+            - pkg/utils/chart
             - pkg/utils/context
             - pkg/utils/errors
             - pkg/utils/flow
@@ -416,6 +417,8 @@ build:
             - pkg/utils/kubernetes
             - pkg/utils/kubernetes/client
             - pkg/utils/kubernetes/health
+            - pkg/utils/managedresources
+            - pkg/utils/managedresources/builder
             - pkg/utils/retry
             - pkg/utils/secrets
             - pkg/utils/time

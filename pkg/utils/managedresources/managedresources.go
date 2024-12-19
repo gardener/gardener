@@ -47,6 +47,20 @@ const (
 	LabelValueGardener = "gardener"
 	// LabelValueOperator is a value for an origin label on a managed resource with the value 'gardener-operator'.
 	LabelValueOperator = "gardener-operator"
+
+	// AnnotationKeySuppressGarbageCollectionUntil is the key for an annotation, which can be placed on Secret and
+	// ConfigMap objects. The value of the annotation is a time, represented as a RFC3339 string. When such annotation
+	// is present on a Secret of a ConfigMap, garbage collection on that object will not be initiated before the clock
+	// of at least one garbage collector acting on the object reaches the specified time.
+	//
+	// It is legal to change the value of the annotation, or to remove the annotation.
+	// If the annotation is created or modified when a garbage collection iteration is already in progress,
+	// the changed annotation may or may not affect that current garbage collection iteration.
+	AnnotationKeySuppressGarbageCollectionUntil = "SuppressGarbageCollectionUntil"
+	// AnnotationValueSuppressGarbageCollectionUntilDelay is used to calculate the value when creating an
+	// AnnotationKeySuppressGarbageCollectionUntil annotation. The actual value used is the current time, plus the delay
+	// prescribed by AnnotationValueSuppressGarbageCollectionUntilDelay
+	AnnotationValueSuppressGarbageCollectionUntilDelay = 10 * time.Minute
 )
 
 // New initiates a new ManagedResource object which can be reconciled.
@@ -225,6 +239,11 @@ func CreateForShootWithLabels(ctx context.Context, client client.Client, namespa
 }
 
 func deployManagedResource(ctx context.Context, secret *builder.Secret, managedResource *builder.ManagedResource) error {
+	secret.AddAnnotations(
+		map[string]string{
+			AnnotationKeySuppressGarbageCollectionUntil: time.Now().Add(AnnotationValueSuppressGarbageCollectionUntilDelay).Format(time.RFC3339),
+		})
+
 	if err := secret.Reconcile(ctx); err != nil {
 		return fmt.Errorf("could not create or update secret of managed resources: %w", err)
 	}

@@ -6,6 +6,7 @@ package garbagecollector
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/hashicorp/go-multierror"
@@ -15,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -26,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
+	managedresourcesutils "github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
 // Reconciler performs garbage collection.
@@ -48,7 +51,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 
 	var (
 		labels                  = client.MatchingLabels{references.LabelKeyGarbageCollectable: references.LabelValueGarbageCollectable}
-		objectsToGarbageCollect = map[objectId]struct{}{}
+		objectsToGarbageCollect = map[objectId]objectResourceVersion{}
 	)
 
 	for _, resource := range []struct {
@@ -70,7 +73,37 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 				continue
 			}
 
-			objectsToGarbageCollect[objectId{resource.kind, obj.Namespace, obj.Name}] = struct{}{}
+			if suppressString := obj.Annotations[managedresourcesutils.AnnotationKeySuppressGarbageCollectionUntil]; suppressString != "" {
+				suppressUntilTime, err := time.Parse(time.RFC3339, suppressString)
+				if err != nil {
+					log.Error(
+						err,
+						fmt.Sprintf( //nolint:logcheck // reason: Linter does not realise that message string is a constant
+							"Garbage collector: collective object has invalid '%s' annotation",
+							managedresourcesutils.AnnotationKeySuppressGarbageCollectionUntil),
+						"kind", obj.Kind,
+						"namespace", obj.Namespace,
+						"name", obj.Name,
+					)
+				} else {
+					// TODO: Andrey: P2: Update documentation to reflect maximum supported relative clock skew of 8
+					// minutes between the creator of a MR and any GC acting on that MR's secret.
+					if suppressUntilTime.After(r.Clock.Now()) {
+						log.Info(
+							fmt.Sprintf( //nolint:logcheck // reason: Linter does not realise that message string is a constant
+								"Garbage collector: object collection was suppressed due to a '%s' annotation",
+								managedresourcesutils.AnnotationKeySuppressGarbageCollectionUntil),
+							"kind", obj.Kind,
+							"namespace", obj.Namespace,
+							"name", obj.Name,
+						)
+						continue
+					}
+				}
+			}
+
+			objectsToGarbageCollect[objectId{resource.kind, obj.Namespace, obj.Name}] =
+				objectResourceVersion{obj.UID, obj.ResourceVersion}
 		}
 	}
 
@@ -115,7 +148,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 		errorList = &multierror.Error{ErrorFormat: errorsutils.NewErrorFormatFuncWithPrefix("Could not delete all unused resources")}
 	)
 
-	for id := range objectsToGarbageCollect {
+	for id, resourceVersionClearedForDeletion := range objectsToGarbageCollect {
 		objId := id
 
 		wg.StartWithContext(ctx, func(ctx context.Context) {
@@ -139,7 +172,11 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 				"name", objId.name,
 			)
 
-			if err := r.TargetClient.Delete(ctx, obj); client.IgnoreNotFound(err) != nil {
+			deletionPrecondition := client.Preconditions{
+				UID:             &resourceVersionClearedForDeletion.UID,
+				ResourceVersion: &resourceVersionClearedForDeletion.ResourceVersion,
+			}
+			if err := r.TargetClient.Delete(ctx, obj, deletionPrecondition); client.IgnoreNotFound(err) != nil {
 				results <- err
 			}
 		})
@@ -163,4 +200,9 @@ type objectId struct {
 	kind      string
 	namespace string
 	name      string
+}
+
+type objectResourceVersion struct {
+	UID             types.UID
+	ResourceVersion string
 }
