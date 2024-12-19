@@ -412,6 +412,8 @@ global:
           concurrentSyncs: 5
           retryPeriod: 10m
           retryJitterPeriod: 5m
+        shootMigration:
+          concurrentSyncs: 5
         managedSeedSet:
           concurrentSyncs: 5
           syncPeriod: 30m

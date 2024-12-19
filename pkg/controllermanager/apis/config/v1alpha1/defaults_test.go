@@ -749,6 +749,31 @@ var _ = Describe("Defaults", func() {
 		})
 	})
 
+	Describe("ShootMigrationControllerConfiguration defaulting", func() {
+		It("should default ShootMigrationControllerConfiguration correctly", func() {
+			expected := &ShootMigrationControllerConfiguration{
+				ConcurrentSyncs: ptr.To(DefaultControllerConcurrentSyncs),
+			}
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.ShootMigration).To(Equal(expected))
+		})
+
+		It("should not default fields that are set", func() {
+			obj = &ControllerManagerConfiguration{
+				Controllers: ControllerManagerControllerConfiguration{
+					ShootMigration: &ShootMigrationControllerConfiguration{
+						ConcurrentSyncs: ptr.To(10),
+					},
+				},
+			}
+			expected := obj.Controllers.ShootMigration.DeepCopy()
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.ShootMigration).To(Equal(expected))
+		})
+	})
+
 	Describe("ManagedSeedSetControllerConfiguration defaulting", func() {
 		It("should default ManagedSeedSetControllerConfiguration correctly if nil", func() {
 			expected := &ManagedSeedSetControllerConfiguration{
