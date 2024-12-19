@@ -15,7 +15,7 @@ import (
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	componentbaseconfig "k8s.io/component-base/config"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
@@ -38,7 +38,7 @@ var _ = Describe("GardenClientMap", func() {
 		cm                     ClientMap
 		key                    ClientSetKey
 		factory                *GardenClientSetFactory
-		clientConnectionConfig componentbaseconfig.ClientConnectionConfiguration
+		clientConnectionConfig componentbaseconfigv1alpha1.ClientConnectionConfiguration
 		clientOptions          client.Options
 
 		garden *operatorv1alpha1.Garden
@@ -63,7 +63,7 @@ var _ = Describe("GardenClientMap", func() {
 
 		key = keys.ForGarden(garden)
 
-		clientConnectionConfig = componentbaseconfig.ClientConnectionConfiguration{
+		clientConnectionConfig = componentbaseconfigv1alpha1.ClientConnectionConfiguration{
 			Kubeconfig:         "/var/run/secrets/kubeconfig",
 			AcceptContentTypes: "application/vnd.kubernetes.protobuf;application/json",
 			ContentType:        "application/vnd.kubernetes.protobuf",

@@ -19,7 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
-	componentbaseconfig "k8s.io/component-base/config"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -43,7 +43,7 @@ var _ = Describe("ShootClientMap", func() {
 		cm                     ClientMap
 		key                    ClientSetKey
 		factory                *ShootClientSetFactory
-		clientConnectionConfig componentbaseconfig.ClientConnectionConfiguration
+		clientConnectionConfig componentbaseconfigv1alpha1.ClientConnectionConfiguration
 		clientOptions          client.Options
 
 		shoot *gardencorev1beta1.Shoot
@@ -84,7 +84,7 @@ var _ = Describe("ShootClientMap", func() {
 
 		key = keys.ForShoot(shoot)
 
-		clientConnectionConfig = componentbaseconfig.ClientConnectionConfiguration{
+		clientConnectionConfig = componentbaseconfigv1alpha1.ClientConnectionConfiguration{
 			Kubeconfig:         "/var/run/secrets/kubeconfig",
 			AcceptContentTypes: "application/vnd.kubernetes.protobuf;application/json",
 			ContentType:        "application/vnd.kubernetes.protobuf",

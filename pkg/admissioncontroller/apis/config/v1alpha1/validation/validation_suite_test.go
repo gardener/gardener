@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package helper_test
+package validation_test
 
 import (
 	"testing"
@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestHelper(t *testing.T) {
+func TestValidation(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "AdmissionController APIs Config Helper Suite")
+	RunSpecs(t, "AdmissionController APIs Config V1alpha1 Validation Suite")
 }
