@@ -19,6 +19,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	componentbaseconfig "k8s.io/component-base/config"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -128,9 +129,31 @@ func NewClientFromSecretObject(secret *corev1.Secret, fns ...ConfigFunc) (Interf
 	return nil, errors.New("the secret does not contain a field with name 'kubeconfig'")
 }
 
-// RESTConfigFromClientConnectionConfiguration creates a *rest.Config from a componentbaseconfig.ClientConnectionConfiguration and the configured kubeconfig.
-// Allowed fields are not considered unsupported if used in the kubeconfig.
-func RESTConfigFromClientConnectionConfiguration(cfg *componentbaseconfig.ClientConnectionConfiguration, kubeconfig []byte, allowedFields ...string) (*rest.Config, error) {
+// RESTConfigFromInternalClientConnectionConfiguration creates a *rest.Config from a componentbaseconfig.ClientConnectionConfiguration and the configured kubeconfig.
+// It takes an optional list of additionally allowed kubeconfig fields.
+// Deprecated: use RESTConfigFromClientConnectionConfiguration instead.
+// TODO(timebertt): delete this when finalizing https://github.com/gardener/gardener/issues/11043
+func RESTConfigFromInternalClientConnectionConfiguration(cfg *componentbaseconfig.ClientConnectionConfiguration, kubeconfig []byte, allowedFields ...string) (*rest.Config, error) {
+	return RESTConfigFromClientConnectionConfiguration(ConvertClientConnectionConfigurationToExternal(cfg), kubeconfig, allowedFields...)
+}
+
+// ConvertClientConnectionConfigurationToExternal converts a componentbaseconfig.ClientConnectionConfiguration to componentbaseconfigv1alpha1.ClientConnectionConfiguration.
+// This function is added for supporting the transition to the external version while dropping the internal version of config APIs.
+// Deprecated: use the external version of ClientConnectionConfiguration directly instead.
+// TODO(timebertt): delete this when finalizing https://github.com/gardener/gardener/issues/11043
+func ConvertClientConnectionConfigurationToExternal(cfg *componentbaseconfig.ClientConnectionConfiguration) *componentbaseconfigv1alpha1.ClientConnectionConfiguration {
+	return &componentbaseconfigv1alpha1.ClientConnectionConfiguration{
+		Kubeconfig:         cfg.Kubeconfig,
+		AcceptContentTypes: cfg.AcceptContentTypes,
+		ContentType:        cfg.ContentType,
+		QPS:                cfg.QPS,
+		Burst:              cfg.Burst,
+	}
+}
+
+// RESTConfigFromClientConnectionConfiguration creates a *rest.Config from a componentbaseconfigv1alpha1.ClientConnectionConfiguration and the configured kubeconfig.
+// It takes an optional list of additionally allowed kubeconfig fields.
+func RESTConfigFromClientConnectionConfiguration(cfg *componentbaseconfigv1alpha1.ClientConnectionConfiguration, kubeconfig []byte, allowedFields ...string) (*rest.Config, error) {
 	var (
 		restConfig *rest.Config
 		err        error
@@ -168,7 +191,7 @@ func RESTConfigFromClientConnectionConfiguration(cfg *componentbaseconfig.Client
 }
 
 // RESTConfigFromKubeconfigFile returns a rest.Config from the bytes of a kubeconfig file.
-// Allowed fields are not considered unsupported if used in the kubeconfig.
+// It takes an optional list of additionally allowed kubeconfig fields.
 func RESTConfigFromKubeconfigFile(kubeconfigFile string, allowedFields ...string) (*rest.Config, error) {
 	clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 		&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigFile},
@@ -183,7 +206,7 @@ func RESTConfigFromKubeconfigFile(kubeconfigFile string, allowedFields ...string
 }
 
 // RESTConfigFromKubeconfig returns a rest.Config from the bytes of a kubeconfig.
-// Allowed fields are not considered unsupported if used in the kubeconfig.
+// It takes an optional list of additionally allowed kubeconfig fields.
 func RESTConfigFromKubeconfig(kubeconfig []byte, allowedFields ...string) (*rest.Config, error) {
 	clientConfig, err := clientcmd.NewClientConfigFromBytes(kubeconfig)
 	if err != nil {
@@ -407,7 +430,7 @@ func (d *FallbackClient) List(ctx context.Context, list client.ObjectList, opts 
 
 // ApplyClientConnectionConfigurationToRESTConfig applies the given client connection configurations to the given
 // REST config.
-func ApplyClientConnectionConfigurationToRESTConfig(clientConnection *componentbaseconfig.ClientConnectionConfiguration, rest *rest.Config) {
+func ApplyClientConnectionConfigurationToRESTConfig(clientConnection *componentbaseconfigv1alpha1.ClientConnectionConfiguration, rest *rest.Config) {
 	if clientConnection == nil {
 		return
 	}

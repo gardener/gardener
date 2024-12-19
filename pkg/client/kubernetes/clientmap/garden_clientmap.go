@@ -10,7 +10,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	componentbaseconfig "k8s.io/component-base/config"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -40,7 +40,7 @@ type GardenClientSetFactory struct {
 	// RuntimeClient is the runtime cluster client.
 	RuntimeClient client.Client
 	// ClientConnectionConfiguration is the configuration that will be used by created ClientSets.
-	ClientConnectionConfig componentbaseconfig.ClientConnectionConfiguration
+	ClientConnectionConfig componentbaseconfigv1alpha1.ClientConnectionConfiguration
 	// GardenNamespace is the namespace the virtual gardens run in. Defaults to `garden` if not set.
 	GardenNamespace string
 

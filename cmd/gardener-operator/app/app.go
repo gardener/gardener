@@ -81,7 +81,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		cfg.RuntimeClientConnection.Kubeconfig = kubeconfig
 	}
 
-	restConfig, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.RuntimeClientConnection, nil, kubernetes.AuthTokenFile)
+	restConfig, err := kubernetes.RESTConfigFromInternalClientConnectionConfiguration(&cfg.RuntimeClientConnection, nil, kubernetes.AuthTokenFile)
 	if err != nil {
 		return err
 	}
@@ -186,7 +186,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 	gardenClientMap, err := clientmapbuilder.
 		NewGardenClientMapBuilder().
 		WithRuntimeClient(mgr.GetClient()).
-		WithClientConnectionConfig(&cfg.VirtualClientConnection).
+		WithInternalClientConnectionConfig(&cfg.VirtualClientConnection).
 		WithGardenNamespace(v1beta1constants.GardenNamespace).
 		Build(mgr.GetLogger())
 	if err != nil {
