@@ -159,6 +159,11 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
 		_ = g.Add(flow.Task{
+			Name:         "Deploying initial shoot logging stack in Seed",
+			Fn:           flow.TaskFn(botanist.DeployLogging).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deployNamespace, initializeSecretsManagement).InsertIf(shootControlPlaneLoggingEnabled),
+		})
+		_ = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes API server ingress with trusted certificate in the Seed cluster",
 			Fn:           botanist.DeployKubeAPIServerIngress,
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
