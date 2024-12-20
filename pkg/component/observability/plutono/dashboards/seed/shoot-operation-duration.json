@@ -16,8 +16,8 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 2,
-  "iteration": 1733305994807,
+  "id": 1,
+  "iteration": 1734701406787,
   "links": [],
   "panels": [
     {
@@ -79,79 +79,17 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(gardenlet_shoot_operation_duration_seconds_sum{operation=~\"$operation_type\",workerless=~\"$workerless\",hibernated=~\"$hibernated\"}[$__rate_interval])) / sum(rate(gardenlet_shoot_operation_duration_seconds_count{operation=~\"$operation_type\",workerless=~\"$workerless\",hibernated=~\"$hibernated\"}[$__rate_interval]))",
+          "expr": "rate(gardenlet_shoot_operation_duration_seconds_sum{operation=~\"$operation_type\",workerless=~\"$workerless\",hibernated=~\"$hibernated\"}[$__rate_interval]) / rate(gardenlet_shoot_operation_duration_seconds_count{operation=~\"$operation_type\",workerless=~\"$workerless\",hibernated=~\"$hibernated\"}[$__rate_interval])",
           "hide": false,
-          "instant": false,
           "interval": "",
-          "legendFormat": "",
-          "refId": "A"
+          "legendFormat": "{{workerless}}",
+          "refId": "B"
         }
       ],
       "timeFrom": null,
       "timeShift": null,
       "title": "Average Shoot $operation_type Time",
       "type": "gauge"
-    },
-    {
-      "datasource": "seed-prometheus",
-      "description": "This panel displays the distribution of $operation_type operations.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 0,
-        "y": 10
-      },
-      "id": 8,
-      "options": {
-        "displayMode": "gradient",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showUnfilled": true,
-        "text": {}
-      },
-      "pluginVersion": "7.5.34",
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "sum(rate(gardenlet_shoot_operation_duration_seconds_bucket{operation=~\"$operation_type\",workerless=~\"$workerless\",hibernated=~\"$hibernated\"}[$__rate_interval])) by (le)",
-          "format": "heatmap",
-          "hide": false,
-          "instant": false,
-          "interval": "",
-          "legendFormat": "{{le}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Shoot $operation_type Distribution",
-      "type": "bargauge"
     },
     {
       "cards": {
@@ -175,7 +113,7 @@
       "gridPos": {
         "h": 9,
         "w": 12,
-        "x": 12,
+        "x": 0,
         "y": 10
       },
       "heatmap": {},
@@ -278,9 +216,14 @@
       {
         "allValue": null,
         "current": {
-          "selected": false,
-          "text": "true",
-          "value": "true"
+          "selected": true,
+          "tags": [],
+          "text": [
+            "true"
+          ],
+          "value": [
+            "true"
+          ]
         },
         "description": null,
         "error": null,
@@ -316,8 +259,12 @@
         "current": {
           "selected": true,
           "tags": [],
-          "text": "false",
-          "value": "false"
+          "text": [
+            "false"
+          ],
+          "value": [
+            "false"
+          ]
         },
         "description": null,
         "error": null,
