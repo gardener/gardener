@@ -958,6 +958,18 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              clientIDPublic:
+                                description: |-
+                                  ClientIDPublic is the public client ID.
+                                  Falls back to the API server's OIDC client ID configuration if not set here.
+                                minLength: 1
+                                type: string
+                              issuerURL:
+                                description: |-
+                                  The URL of the OpenID issuer, only HTTPS scheme will be accepted. Used to verify the OIDC JSON Web Token (JWT).
+                                  Falls back to the API server's OIDC issuer URL configuration if not set here.
+                                minLength: 1
+                                type: string
                               secretRef:
                                 description: SecretRef is the reference to a secret
                                   in the garden namespace containing the OIDC client

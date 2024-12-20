@@ -1836,25 +1836,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Entry("should add error if clientID is set but issuerURL is empty string", 2, ptr.To("")),
 				)
 
-				DescribeTable("should forbid issuerURL which doesn't follow the proper URL format", func(issuerURL *string, detail string) {
-					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = issuerURL
-					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = ptr.To("someClientID")
-
-					errorList := ValidateShoot(shoot)
-
-					Expect(errorList).To(HaveLen(1))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.kubernetes.kubeAPIServer.oidcConfig.issuerURL"),
-						"Detail": Equal(detail),
-					}))
-				},
-					Entry("should add error if issuerURL URL scheme is not https", ptr.To("http://issuer.com"), "must have https scheme"),
-					Entry("should add error if issuerURL URL contains a fragment", ptr.To("https://issuer.com#fragment"), "must not contain a fragment"),
-					Entry("should add error if issuerURL URL contains a username and password", ptr.To("https://user:pass@issuer.com"), "must not contain a username or password"),
-					Entry("should add error if issuerURL URL contains a query", ptr.To("https://issuer.com?query=value"), "must not contain a query"),
-				)
-
 				It("should not fail if both clientID and issuerURL are set", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = ptr.To("https://issuer.com")
 					shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = ptr.To("someClientID")
@@ -7063,6 +7044,32 @@ var _ = Describe("Shoot Validation Tests", func() {
 			))
 		})
 	})
+
+	Describe("#ValidateOIDCIssuerURL", func() {
+		DescribeTable("test valid and invalid issuer URLs", func(issuerURL string, detail string) {
+			errorList := ValidateOIDCIssuerURL(issuerURL, field.NewPath("issuerURL"))
+
+			if detail == "" {
+				Expect(errorList).To(BeEmpty())
+			} else {
+				Expect(errorList).To(ConsistOf(PointTo(
+					MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("issuerURL"),
+						"Detail": Equal(detail),
+					}),
+				)))
+			}
+
+		},
+			Entry("should succeed if issuer URL is valid", "https://issuer.com/auth", ""),
+			Entry("should fail if issuerURL URL scheme is not https", "http://issuer.com", "must have https scheme"),
+			Entry("should fail if issuerURL URL contains a fragment", "https://issuer.com#fragment", "must not contain a fragment"),
+			Entry("should fail if issuerURL URL contains a username and password", "https://user:pass@issuer.com", "must not contain a username or password"),
+			Entry("should fail if issuerURL URL contains a query", "https://issuer.com?query=value", "must not contain a query"),
+		)
+	})
+
 })
 
 func prepareShootForUpdate(shoot *core.Shoot) *core.Shoot {
