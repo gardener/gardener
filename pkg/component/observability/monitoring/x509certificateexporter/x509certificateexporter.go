@@ -51,28 +51,30 @@ type x509CertificateExporter struct {
 
 // Configurations for the x509 certificate exporter
 type Values struct {
-	// Secret types that should be watched by the exporter.
+	// SecretTypes that should be watched by the exporter.
 	SecretTypes SecretTypeList
-	// Cache lifespan, usually cache is
+	// ConfigMapKeys that should be watched by the exporter.
+	ConfigMapKeys ConfigMapKeys
+	// CacheDuration sets cache lifespan, usually cache is
 	// regenerated a bit more than half that value.
 	CacheDuration metav1.Duration
-	// Container image.
+	// Image sets container image.
 	Image string
 	// PriorityClassName is the name of the priority class.
 	PriorityClassName string
-	// Number of replicas.
+	// Replicas sets the number of replicas.
 	Replicas int32
 	// NameSuffix is attached to the deployment name and related resources.
 	NameSuffix string
-	// Namespaces from which secrets are monitored.
+	// IncludeNamespaces are namespaces from which secrets are monitored.
 	// If non-zero len excludes all else.
 	IncludeNamespaces IncludeNamespaces
-	// Namespaces from which secrets are not monitored.
+	// ExcludeNamespaces namespaces from which secrets are not monitored.
 	// If non-zero len includes all else.
 	ExcludeNamespaces ExcludeNamespaces
-	// Includes labels, similar to the namespaces vars.
+	// IncludeLabels includes labels, similar to the namespaces vars.
 	IncludeLabels IncludeLabels
-	// Enclude labels, similar to the namespaces vars.
+	// ExcludeLabels exludes labels, similar to the namespaces vars.
 	ExcludeLabels ExcludeLabels
 	// HostCertificates that should be monitored from hosts
 	HostCertificates []HostCertificates
