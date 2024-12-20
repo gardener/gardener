@@ -258,7 +258,7 @@ spec:
     #       name: gardener-dashboard-github
     #     pollInterval: 15m
     #   oidcConfig:
-    #     clientID: client-id
+    #     clientIDPublic: client-id
     #     issuerURL: https://identity.example.com
     #     sessionLifetime: 12h
     #     additionalScopes: [ profile, offline_access ]
