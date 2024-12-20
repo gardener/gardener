@@ -8,12 +8,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"k8s.io/utils/ptr"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
@@ -146,10 +146,6 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 			ProviderSpec: runtime.RawExtension{Raw: providerConfigBytes},
 		})
 
-		if pool.Priority == nil {
-			pool.Priority = pointer.Int32(0)
-		}
-
 		machineDeployments = append(machineDeployments, worker.MachineDeployment{
 			Name:                         deploymentName,
 			ClassName:                    className,
@@ -157,7 +153,7 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 			Minimum:                      pool.Minimum,
 			Maximum:                      pool.Maximum,
 			MaxSurge:                     pool.MaxSurge,
-			Priority:                     *pool.Priority,
+			Priority:                     ptr.Deref(pool.Priority, 0),
 			MaxUnavailable:               pool.MaxUnavailable,
 			Labels:                       pool.Labels,
 			Annotations:                  pool.Annotations,

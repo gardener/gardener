@@ -7,6 +7,7 @@ package clusterautoscaler
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -105,15 +106,16 @@ type clusterAutoscaler struct {
 
 func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 	var (
-		shootAccessSecret   = c.newShootAccessSecret()
-		serviceAccount      = c.emptyServiceAccount()
-		clusterRoleBinding  = c.emptyClusterRoleBinding()
-		vpa                 = c.emptyVPA()
-		service             = c.emptyService()
-		deployment          = c.emptyDeployment()
-		podDisruptionBudget = c.emptyPodDisruptionBudget()
-		serviceMonitor      = c.emptyServiceMonitor()
-		prometheusRule      = c.emptyPrometheusRule()
+		shootAccessSecret             = c.newShootAccessSecret()
+		serviceAccount                = c.emptyServiceAccount()
+		clusterRoleBinding            = c.emptyClusterRoleBinding()
+		vpa                           = c.emptyVPA()
+		service                       = c.emptyService()
+		deployment                    = c.emptyDeployment()
+		podDisruptionBudget           = c.emptyPodDisruptionBudget()
+		serviceMonitor                = c.emptyServiceMonitor()
+		prometheusRule                = c.emptyPrometheusRule()
+		workersHavePriorityConfigured = c.workersHavePriorityConfigured()
 	)
 
 	genericTokenKubeconfigSecret, found := c.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
@@ -205,7 +207,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 						Name:            containerName,
 						Image:           c.image,
 						ImagePullPolicy: corev1.PullIfNotPresent,
-						Command:         c.computeCommand(),
+						Command:         c.computeCommand(workersHavePriorityConfigured),
 						Ports: []corev1.ContainerPort{
 							{
 								Name:          portNameMetrics,
@@ -346,7 +348,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	data, err := c.computeShootResourcesData(shootAccessSecret.ServiceAccountName)
+	data, err := c.computeShootResourcesData(shootAccessSecret.ServiceAccountName, workersHavePriorityConfigured)
 	if err != nil {
 		return err
 	}
@@ -438,7 +440,7 @@ func (c *clusterAutoscaler) workersHavePriorityConfigured() bool {
 	return false
 }
 
-func (c *clusterAutoscaler) computeCommand() []string {
+func (c *clusterAutoscaler) computeCommand(workersHavePriorityConfigured bool) []string {
 	var (
 		command = []string{
 			"./cluster-autoscaler",
@@ -463,8 +465,8 @@ func (c *clusterAutoscaler) computeCommand() []string {
 	gardencorev1beta1.SetDefaults_ClusterAutoscaler(c.config)
 
 	expanderMode := *c.config.Expander
-	if c.workersHavePriorityConfigured() {
-		expanderMode = "priority," + expanderMode
+	if workersHavePriorityConfigured {
+		expanderMode = ensureExpanderInExpanderConfig("priority", expanderMode)
 	}
 
 	command = append(command,
@@ -503,7 +505,7 @@ func (c *clusterAutoscaler) computeCommand() []string {
 	return command
 }
 
-func (c *clusterAutoscaler) computeShootResourcesData(serviceAccountName string) (map[string][]byte, error) {
+func (c *clusterAutoscaler) computeShootResourcesData(serviceAccountName string, workersHavePrioritiesConfigured bool) (map[string][]byte, error) {
 	var (
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
@@ -637,7 +639,7 @@ func (c *clusterAutoscaler) computeShootResourcesData(serviceAccountName string)
 	)
 	objects := []client.Object{clusterRole, clusterRoleBinding, role, rolebinding}
 
-	if c.workersHavePriorityConfigured() {
+	if workersHavePrioritiesConfigured {
 		configMap, err := c.generatePriorityExpanderConfigMap()
 		if err != nil {
 			return nil, err
@@ -669,4 +671,11 @@ func (c *clusterAutoscaler) generatePriorityExpanderConfigMap() (*corev1.ConfigM
 	}
 
 	return configMap, nil
+}
+
+func ensureExpanderInExpanderConfig(expander string, expanderConfig gardencorev1beta1.ExpanderMode) gardencorev1beta1.ExpanderMode {
+	if strings.Contains(expander, string(expanderConfig)) {
+		return expanderConfig
+	}
+	return gardencorev1beta1.ExpanderMode(fmt.Sprintf("%s,%s", expander, string(expanderConfig)))
 }
