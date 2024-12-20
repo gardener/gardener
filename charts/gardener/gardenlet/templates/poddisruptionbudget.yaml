@@ -7,7 +7,7 @@ metadata:
   labels:
     app: gardener
     role: gardenlet
-    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
     release: "{{ .Release.Name }}"
     heritage: "{{ .Release.Service }}"
 spec:
@@ -16,7 +16,7 @@ spec:
     matchLabels:
       app: gardener
       role: gardenlet
-      chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+      chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
       release: "{{ .Release.Name }}"
       heritage: "{{ .Release.Service }}"
 {{- if semverCompare ">= 1.26-0" .Capabilities.KubeVersion.Version }}

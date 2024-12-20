@@ -34,7 +34,7 @@ import (
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/logger"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -108,8 +108,8 @@ var _ = Describe("graph", func() {
 		credentialsBinding1   *securityv1alpha1.CredentialsBinding
 		credentialsBindingRef = corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Namespace: "foobar", Name: "bazfoo"}
 
-		seedConfig1 *gardenletv1alpha1.SeedConfig
-		seedConfig2 *gardenletv1alpha1.SeedConfig
+		seedConfig1 *gardenletconfigv1alpha1.SeedConfig
+		seedConfig2 *gardenletconfigv1alpha1.SeedConfig
 
 		managedSeed1                  *seedmanagementv1alpha1.ManagedSeed
 		managedSeedBootstrapMode      = seedmanagementv1alpha1.BootstrapToken
@@ -304,7 +304,7 @@ var _ = Describe("graph", func() {
 			CredentialsRef: credentialsBindingRef,
 		}
 
-		seedConfig1 = &gardenletv1alpha1.SeedConfig{
+		seedConfig1 = &gardenletconfigv1alpha1.SeedConfig{
 			SeedTemplate: gardencorev1beta1.SeedTemplate{
 				Spec: gardencorev1beta1.SeedSpec{
 					Backup: &gardencorev1beta1.SeedBackup{
@@ -314,7 +314,7 @@ var _ = Describe("graph", func() {
 			},
 		}
 
-		seedConfig2 = &gardenletv1alpha1.SeedConfig{
+		seedConfig2 = &gardenletconfigv1alpha1.SeedConfig{
 			SeedTemplate: gardencorev1beta1.SeedTemplate{
 				Spec: gardencorev1beta1.SeedSpec{
 					Backup: &gardencorev1beta1.SeedBackup{
@@ -331,7 +331,7 @@ var _ = Describe("graph", func() {
 				Gardenlet: seedmanagementv1alpha1.GardenletConfig{
 					Bootstrap: &managedSeedBootstrapMode,
 					Config: runtime.RawExtension{
-						Object: &gardenletv1alpha1.GardenletConfiguration{
+						Object: &gardenletconfigv1alpha1.GardenletConfiguration{
 							SeedConfig: seedConfig1,
 						},
 					},
@@ -343,7 +343,7 @@ var _ = Describe("graph", func() {
 			ObjectMeta: metav1.ObjectMeta{Name: seed1.Name, Namespace: "gardenletnamespace"},
 			Spec: seedmanagementv1alpha1.GardenletSpec{
 				Config: runtime.RawExtension{
-					Object: &gardenletv1alpha1.GardenletConfiguration{
+					Object: &gardenletconfigv1alpha1.GardenletConfiguration{
 						SeedConfig: seedConfig2,
 					},
 				},

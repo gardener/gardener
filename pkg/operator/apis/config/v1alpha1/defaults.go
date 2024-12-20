@@ -11,7 +11,7 @@ import (
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/ptr"
 
-	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
 )
 
@@ -83,13 +83,13 @@ func SetDefaults_GardenControllerConfig(obj *GardenControllerConfig) {
 		obj.SyncPeriod = &metav1.Duration{Duration: time.Hour}
 	}
 	if obj.ETCDConfig == nil {
-		obj.ETCDConfig = &gardenletv1alpha1.ETCDConfig{}
+		obj.ETCDConfig = &gardenletconfigv1alpha1.ETCDConfig{}
 	}
 
-	gardenletv1alpha1.SetDefaults_ETCDConfig(obj.ETCDConfig)
-	gardenletv1alpha1.SetDefaults_ETCDController(obj.ETCDConfig.ETCDController)
-	gardenletv1alpha1.SetDefaults_CustodianController(obj.ETCDConfig.CustodianController)
-	gardenletv1alpha1.SetDefaults_BackupCompactionController(obj.ETCDConfig.BackupCompactionController)
+	gardenletconfigv1alpha1.SetDefaults_ETCDConfig(obj.ETCDConfig)
+	gardenletconfigv1alpha1.SetDefaults_ETCDController(obj.ETCDConfig.ETCDController)
+	gardenletconfigv1alpha1.SetDefaults_CustodianController(obj.ETCDConfig.CustodianController)
+	gardenletconfigv1alpha1.SetDefaults_BackupCompactionController(obj.ETCDConfig.BackupCompactionController)
 }
 
 // SetDefaults_GardenCareControllerConfiguration sets defaults for the GardenCareControllerConfiguration object.
@@ -113,8 +113,15 @@ func SetDefaults_ExtensionControllerConfiguration(obj *ExtensionControllerConfig
 	}
 }
 
-// SetDefaults_ExtensionRequiredControllerConfiguration sets defaults for the ExtensionRequiredControllerConfiguration object.
-func SetDefaults_ExtensionRequiredControllerConfiguration(obj *ExtensionRequiredControllerConfiguration) {
+// SetDefaults_ExtensionRequiredRuntimeControllerConfiguration sets defaults for the ExtensionRequiredControllerRuntimeConfiguration object.
+func SetDefaults_ExtensionRequiredRuntimeControllerConfiguration(obj *ExtensionRequiredRuntimeControllerConfiguration) {
+	if obj.ConcurrentSyncs == nil {
+		obj.ConcurrentSyncs = ptr.To(5)
+	}
+}
+
+// SetDefaults_ExtensionRequiredVirtualControllerConfiguration sets defaults for the ExtensionRequiredControllerVirtualConfiguration object.
+func SetDefaults_ExtensionRequiredVirtualControllerConfiguration(obj *ExtensionRequiredVirtualControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
 		obj.ConcurrentSyncs = ptr.To(5)
 	}

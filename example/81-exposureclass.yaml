@@ -1,4 +1,4 @@
-# ExposureClass allow to expose a Shoot clusters control plane in a certain network enviroment e.g. a restricted corporate network.
+# ExposureClass allow to expose a Shoot clusters control plane in a certain network environment e.g. a restricted corporate network.
 ---
 apiVersion: core.gardener.cloud/v1beta1
 kind: ExposureClass

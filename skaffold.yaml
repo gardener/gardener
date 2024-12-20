@@ -39,7 +39,7 @@ build:
             - cmd/gardener-apiserver
             - cmd/gardener-apiserver/app
             - cmd/utils
-            - extensions/pkg/apis/config
+            - extensions/pkg/apis/config/v1alpha1
             - extensions/pkg/util
             - pkg/api
             - pkg/api/core/shoot
@@ -637,7 +637,7 @@ build:
             - cmd/gardener-extension-provider-local
             - cmd/gardener-extension-provider-local/app
             - cmd/utils
-            - extensions/pkg/apis/config
+            - extensions/pkg/apis/config/v1alpha1
             - extensions/pkg/controller
             - extensions/pkg/controller/backupbucket
             - extensions/pkg/controller/backupentry
@@ -669,9 +669,7 @@ build:
             - imagevector
             - imagevector/charts.yaml
             - imagevector/containers.yaml
-            - pkg/api/core
             - pkg/api/extensions
-            - pkg/api/security
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1
@@ -711,6 +709,8 @@ build:
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd/templates/scripts/init.sh
             - pkg/component/extensions/operatingsystemconfig/original/components/kubelet
             - pkg/component/extensions/operatingsystemconfig/original/components/nodeagent
+            - pkg/component/extensions/operatingsystemconfig/original/components/rootcertificates
+            - pkg/component/extensions/operatingsystemconfig/original/components/rootcertificates/templates/scripts/update-local-ca-certificates.tpl.sh
             - pkg/component/extensions/operatingsystemconfig/original/components/valitail
             - pkg/component/extensions/operatingsystemconfig/original/components/valitail/templates/valitail-config.tpl.yaml
             - pkg/component/extensions/operatingsystemconfig/utils
@@ -777,6 +777,7 @@ build:
             - pkg/provider-local/webhook/networkpolicy
             - pkg/provider-local/webhook/node
             - pkg/provider-local/webhook/nodeagentosc
+            - pkg/provider-local/webhook/prometheus
             - pkg/provider-local/webhook/shoot
             - pkg/resourcemanager/controller/garbagecollector/references
             - pkg/utils
@@ -851,6 +852,12 @@ manifests:
     paths:
       - example/provider-local/garden/skaffold
       - example/provider-local/seed-kind/skaffold
+  hooks:
+    before:
+      - host:
+          command:
+            - bash
+            - hack/generate-kustomize-patch-controllerdeployment-provider-local-prow.sh
 deploy:
   kubectl:
     flags:
@@ -964,10 +971,8 @@ build:
             - imagevector
             - imagevector/charts.yaml
             - imagevector/containers.yaml
-            - pkg/api/core
             - pkg/api/extensions
             - pkg/api/indexer
-            - pkg/api/security
             - pkg/apis/core
             - pkg/apis/core/helper
             - pkg/apis/core/install
@@ -1484,6 +1489,8 @@ build:
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd/templates/scripts/init.sh
             - pkg/component/extensions/operatingsystemconfig/original/components/kubelet
             - pkg/component/extensions/operatingsystemconfig/original/components/nodeagent
+            - pkg/component/extensions/operatingsystemconfig/original/components/rootcertificates
+            - pkg/component/extensions/operatingsystemconfig/original/components/rootcertificates/templates/scripts/update-local-ca-certificates.tpl.sh
             - pkg/component/extensions/operatingsystemconfig/original/components/valitail
             - pkg/component/extensions/operatingsystemconfig/original/components/valitail/templates/valitail-config.tpl.yaml
             - pkg/component/extensions/operatingsystemconfig/utils

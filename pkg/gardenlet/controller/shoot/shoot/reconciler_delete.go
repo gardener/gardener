@@ -128,12 +128,23 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			return err
 		}),
 	)
-
 	if err != nil {
 		return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
 	}
 
-	if !o.Shoot.IsWorkerless {
+	const (
+		defaultTimeout  = 30 * time.Second
+		defaultInterval = 5 * time.Second
+	)
+
+	var (
+		hasNodesCIDR            = o.Shoot.GetInfo().Spec.Networking != nil && o.Shoot.GetInfo().Spec.Networking.Nodes != nil && o.Shoot.GetInfo().Status.Networking != nil
+		useDNS                  = botanist.ShootUsesDNS()
+		nonTerminatingNamespace = botanist.SeedNamespaceObject.UID != "" && botanist.SeedNamespaceObject.Status.Phase != corev1.NamespaceTerminating
+		cleanupShootResources   = nonTerminatingNamespace && kubeAPIServerDeploymentFound && (infrastructure != nil || o.Shoot.IsWorkerless)
+	)
+
+	if hasNodesCIDR {
 		networks, err := shoot.ToNetworks(o.Shoot.GetInfo(), o.Shoot.IsWorkerless)
 		if err != nil {
 			return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
@@ -142,12 +153,6 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 	}
 
 	var (
-		defaultInterval         = 5 * time.Second
-		defaultTimeout          = 30 * time.Second
-		useDNS                  = botanist.ShootUsesDNS()
-		nonTerminatingNamespace = botanist.SeedNamespaceObject.UID != "" && botanist.SeedNamespaceObject.Status.Phase != corev1.NamespaceTerminating
-		cleanupShootResources   = nonTerminatingNamespace && kubeAPIServerDeploymentFound && (infrastructure != nil || o.Shoot.IsWorkerless)
-
 		g = flow.NewGraph("Shoot cluster deletion")
 
 		deployNamespace = g.Add(flow.Task{

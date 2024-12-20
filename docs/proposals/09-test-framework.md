@@ -66,7 +66,7 @@ spec:
 Using this approach, the overall number of testsuites is then reduced to a fixed number (excluding the system steps) of `test suites * labelCombinations`.
 
 ### Framework
-The new framework will consist of a common framework, a Gardener framework (integrating the commom framework), and a shoot framework (integrating the Gardener framework).
+The new framework will consist of a common framework, a Gardener framework (integrating the common framework), and a shoot framework (integrating the Gardener framework).
 
 All of these frameworks will have their own configuration that is exposed via commandline flags so that, for example, the shoot test framework can be executed by `go test -timeout=0 ./test/integration/suite --v -ginkgo.v -ginkgo.focus="[SHOOT]" --kubecfg=/path/to/config --shoot-name=xx`.
 
@@ -102,7 +102,7 @@ var _ = ginkgo.Describe("Shoot network testing", func() {
   f.Release().Default().CIt("should reach all webservers on all nodes", func(ctx context.Context) {
     ginkgo.By("Deploy the net test daemon set")
     templateFilepath := filepath.Join(f.ResourcesDir, "templates", nginxTemplateName)
-    err := f.RenderAndDeployTemplate(f.Namespace(), tempalteFilepath)
+    err := f.RenderAndDeployTemplate(f.Namespace(), templateFilepath)
     Expect(err).ToNot(HaveOccurred())
     err = f.WaitUntilDaemonSetIsRunning(ctx, f.ShootClient.Client(), name, namespace)
     Expect(err).NotTo(HaveOccurred())

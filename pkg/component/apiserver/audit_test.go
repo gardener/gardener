@@ -86,7 +86,7 @@ var _ = Describe("AuditWebhook", func() {
 	})
 
 	Describe("#ReconcileSecretWebhookKubeconfig", func() {
-		It("should successfully delpoy the kubeconfig secret and make it unique", func() {
+		It("should successfully deploy the kubeconfig secret and make it unique", func() {
 			expectedSecret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "apiserver-kubeconfig", Namespace: namespace},
 				Data:       map[string][]byte{"kubeconfig.yaml": kubeconfig},

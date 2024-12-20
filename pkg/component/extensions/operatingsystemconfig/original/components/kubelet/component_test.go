@@ -239,10 +239,8 @@ EnvironmentFile=/etc/environment
 EnvironmentFile=-/var/lib/kubelet/extra_args` + kubeletStartPre + `
 ExecStart=/opt/bin/kubelet \
     ` + utils.Indent(strings.Join(cliFlags, " \\\n"), 4) + ` $KUBELET_EXTRA_ARGS`),
-		FilePaths: []string{"/var/lib/kubelet/ca.crt", "/var/lib/kubelet/config/kubelet"},
+		FilePaths: []string{"/var/lib/kubelet/ca.crt", "/var/lib/kubelet/config/kubelet", "/opt/bin/kubelet", "/var/lib/ca-certificates-local/ROOTcerts.crt"},
 	}
-
-	unit.FilePaths = append(unit.FilePaths, "/opt/bin/kubelet")
 
 	return unit
 }

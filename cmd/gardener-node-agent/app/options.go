@@ -16,7 +16,7 @@ import (
 	"github.com/gardener/gardener/cmd/utils/initrun"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
-	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	nodeagentvalidation "github.com/gardener/gardener/pkg/nodeagent/apis/config/validation"
 )
 
@@ -26,7 +26,7 @@ func init() {
 	configScheme := runtime.NewScheme()
 	schemeBuilder := runtime.NewSchemeBuilder(
 		config.AddToScheme,
-		nodeagentv1alpha1.AddToScheme,
+		nodeagentconfigv1alpha1.AddToScheme,
 	)
 	utilruntime.Must(schemeBuilder.AddToScheme(configScheme))
 	configDecoder = serializer.NewCodecFactory(configScheme).UniversalDecoder()

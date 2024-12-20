@@ -64,7 +64,7 @@ var _ = Describe("Kubelet", func() {
 	})
 
 	Describe("#RevertToggleKubeletState", func() {
-		It("should revert a toogle", func() {
+		It("should revert a toggle", func() {
 			Expect(khc.ToggleKubeletState()).To(BeFalse())
 			Expect(khc.KubeletReadinessToggles).To(HaveLen(1))
 			khc.RevertToggleKubeletState()

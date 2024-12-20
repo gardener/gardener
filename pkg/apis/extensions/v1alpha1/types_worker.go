@@ -203,7 +203,7 @@ type MachineImage struct {
 
 // Volume contains information about the root disks that should be used for worker pools.
 type Volume struct {
-	// Name of the volume to make it referencable.
+	// Name of the volume to make it referenceable.
 	// +optional
 	Name *string `json:"name,omitempty"`
 	// Type is the type of the volume.
@@ -218,7 +218,7 @@ type Volume struct {
 
 // DataVolume contains information about a data volume.
 type DataVolume struct {
-	// Name of the volume to make it referencable.
+	// Name of the volume to make it referenceable.
 	Name string `json:"name"`
 	// Type is the type of the volume.
 	// +optional

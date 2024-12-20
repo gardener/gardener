@@ -153,7 +153,7 @@ See [Dave Cheney's post](https://dave.cheney.net/2015/11/05/lets-talk-about-logg
 - Use `WithValues` instead of repeatedly adding key-value pairs for multiple log statements. `WithValues` creates a new logger from the parent, that carries the given key-value pairs. E.g., use it when acting on one object in multiple steps and logging something for each step:
 
   ```go
-  log := parentLog.WithValues("infrastructure", client.ObjectKeyFromObject(infrastrucutre))
+  log := parentLog.WithValues("infrastructure", client.ObjectKeyFromObject(infrastructure))
   // ...
   log.Info("Creating Infrastructure")
   // ...

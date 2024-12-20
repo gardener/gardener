@@ -15,7 +15,7 @@ import (
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	componentbaseconfig "k8s.io/component-base/config"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
@@ -31,20 +31,22 @@ import (
 var _ = Describe("GardenClientMap", func() {
 	var (
 		ctx               context.Context
+		log               logr.Logger
 		ctrl              *gomock.Controller
 		mockRuntimeClient *mockclient.MockClient
 
 		cm                     ClientMap
 		key                    ClientSetKey
 		factory                *GardenClientSetFactory
-		clientConnectionConfig componentbaseconfig.ClientConnectionConfiguration
+		clientConnectionConfig componentbaseconfigv1alpha1.ClientConnectionConfiguration
 		clientOptions          client.Options
 
 		garden *operatorv1alpha1.Garden
 	)
 
 	BeforeEach(func() {
-		ctx = context.TODO()
+		ctx = context.Background()
+		log = logr.Discard()
 		ctrl = gomock.NewController(GinkgoT())
 		mockRuntimeClient = mockclient.NewMockClient(ctrl)
 
@@ -61,7 +63,7 @@ var _ = Describe("GardenClientMap", func() {
 
 		key = keys.ForGarden(garden)
 
-		clientConnectionConfig = componentbaseconfig.ClientConnectionConfiguration{
+		clientConnectionConfig = componentbaseconfigv1alpha1.ClientConnectionConfiguration{
 			Kubeconfig:         "/var/run/secrets/kubeconfig",
 			AcceptContentTypes: "application/vnd.kubernetes.protobuf;application/json",
 			ContentType:        "application/vnd.kubernetes.protobuf",
@@ -73,14 +75,14 @@ var _ = Describe("GardenClientMap", func() {
 			RuntimeClient:          mockRuntimeClient,
 			ClientConnectionConfig: clientConnectionConfig,
 		}
-		cm = NewGardenClientMap(logr.Discard(), factory)
+		cm = NewGardenClientMap(log, factory)
 	})
 
 	AfterEach(func() {
 		ctrl.Finish()
 	})
 
-	Context("#GetClient", func() {
+	Describe("#GetClient", func() {
 		It("should fail if ClientSetKey type is unsupported", func() {
 			key = fakeKey{}
 			cs, err := cm.GetClient(ctx, key)
@@ -211,7 +213,33 @@ var _ = Describe("GardenClientMap", func() {
 		})
 	})
 
-	Context("#CalculateClientSetHash", func() {
+	Describe("#GardenerSecretName", func() {
+		It("should return the internal secret name if lookup is successful", func() {
+			LookupHost = func(_ string) ([]string, error) {
+				return []string{"10.0.1.1"}, nil
+			}
+
+			Expect(GardenerSecretName(log, "garden")).To(Equal("gardener-internal"))
+		})
+
+		It("should return the external secret name if no address is returned", func() {
+			LookupHost = func(_ string) ([]string, error) {
+				return []string{}, nil
+			}
+
+			Expect(GardenerSecretName(log, "garden")).To(Equal("gardener"))
+		})
+
+		It("should return the external if lookup failed", func() {
+			LookupHost = func(_ string) ([]string, error) {
+				return []string{"10.0.1.1"}, errors.New("fake")
+			}
+
+			Expect(GardenerSecretName(log, "garden")).To(Equal("gardener"))
+		})
+	})
+
+	Describe("#CalculateClientSetHash", func() {
 		It("should fail if ClientSetKey type is unsupported", func() {
 			key = fakeKey{}
 			hash, err := factory.CalculateClientSetHash(ctx, key)

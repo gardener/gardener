@@ -43,7 +43,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
-	resourcemanagerv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -104,7 +104,7 @@ var _ = Describe("ResourceManager", func() {
 		matchPolicyEquivalent                = admissionregistrationv1.Equivalent
 		sideEffect                           = admissionregistrationv1.SideEffectClassNone
 		priorityClassName                    = v1beta1constants.PriorityClassNameSeedSystemCritical
-		ingressControllerSelector            = &resourcemanagerv1alpha1.IngressControllerSelector{
+		ingressControllerSelector            = &resourcemanagerconfigv1alpha1.IngressControllerSelector{
 			Namespace:   "foo",
 			PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{"bar": "baz"}},
 		}
@@ -359,85 +359,85 @@ var _ = Describe("ResourceManager", func() {
 				},
 			}
 
-			config := &resourcemanagerv1alpha1.ResourceManagerConfiguration{
+			config := &resourcemanagerconfigv1alpha1.ResourceManagerConfiguration{
 				LeaderElection: componentbaseconfigv1alpha1.LeaderElectionConfiguration{
 					LeaderElect:       ptr.To(true),
 					ResourceName:      "gardener-resource-manager",
 					ResourceNamespace: deployNamespace,
 				},
-				Server: resourcemanagerv1alpha1.ServerConfiguration{
-					HealthProbes: &resourcemanagerv1alpha1.Server{
+				Server: resourcemanagerconfigv1alpha1.ServerConfiguration{
+					HealthProbes: &resourcemanagerconfigv1alpha1.Server{
 						Port: int(healthPort),
 					},
-					Metrics: &resourcemanagerv1alpha1.Server{
+					Metrics: &resourcemanagerconfigv1alpha1.Server{
 						Port: int(metricsPort),
 					},
-					Webhooks: resourcemanagerv1alpha1.HTTPSServer{
-						Server: resourcemanagerv1alpha1.Server{
+					Webhooks: resourcemanagerconfigv1alpha1.HTTPSServer{
+						Server: resourcemanagerconfigv1alpha1.Server{
 							Port: int(serverPort),
 						},
-						TLS: resourcemanagerv1alpha1.TLSServer{
+						TLS: resourcemanagerconfigv1alpha1.TLSServer{
 							ServerCertDir: secretMountPathServer,
 						},
 					},
 				},
 				LogLevel:  "info",
 				LogFormat: "json",
-				Controllers: resourcemanagerv1alpha1.ResourceManagerControllerConfiguration{
+				Controllers: resourcemanagerconfigv1alpha1.ResourceManagerControllerConfiguration{
 					ClusterID:     &clusterIdentity,
 					ResourceClass: &resourceClass,
-					GarbageCollector: resourcemanagerv1alpha1.GarbageCollectorControllerConfig{
+					GarbageCollector: resourcemanagerconfigv1alpha1.GarbageCollectorControllerConfig{
 						Enabled:    true,
 						SyncPeriod: &metav1.Duration{Duration: 12 * time.Hour},
 					},
-					Health: resourcemanagerv1alpha1.HealthControllerConfig{
+					Health: resourcemanagerconfigv1alpha1.HealthControllerConfig{
 						ConcurrentSyncs: &maxConcurrentHealthWorkers,
 						SyncPeriod:      &healthSyncPeriod,
 					},
-					CSRApprover: resourcemanagerv1alpha1.CSRApproverControllerConfig{
+					CSRApprover: resourcemanagerconfigv1alpha1.CSRApproverControllerConfig{
 						Enabled:         !isWorkerless,
 						ConcurrentSyncs: &maxConcurrentCSRApproverWorkers,
 					},
-					ManagedResource: resourcemanagerv1alpha1.ManagedResourceControllerConfig{
+					ManagedResource: resourcemanagerconfigv1alpha1.ManagedResourceControllerConfig{
 						ConcurrentSyncs: &concurrentSyncs,
 						SyncPeriod:      &syncPeriod,
 						AlwaysUpdate:    &alwaysUpdate,
 					},
-					TokenInvalidator: resourcemanagerv1alpha1.TokenInvalidatorControllerConfig{
+					TokenInvalidator: resourcemanagerconfigv1alpha1.TokenInvalidatorControllerConfig{
 						Enabled:         true,
 						ConcurrentSyncs: &maxConcurrentTokenInvalidatorWorkers,
 					},
-					TokenRequestor: resourcemanagerv1alpha1.TokenRequestorControllerConfig{
+					TokenRequestor: resourcemanagerconfigv1alpha1.TokenRequestorControllerConfig{
 						Enabled:         true,
 						ConcurrentSyncs: &maxConcurrentTokenRequestorWorkers,
 					},
-					NodeCriticalComponents: resourcemanagerv1alpha1.NodeCriticalComponentsControllerConfig{
+					NodeCriticalComponents: resourcemanagerconfigv1alpha1.NodeCriticalComponentsControllerConfig{
 						Enabled: false,
 					},
 				},
-				Webhooks: resourcemanagerv1alpha1.ResourceManagerWebhookConfiguration{
-					HighAvailabilityConfig: resourcemanagerv1alpha1.HighAvailabilityConfigWebhookConfig{
+				Webhooks: resourcemanagerconfigv1alpha1.ResourceManagerWebhookConfiguration{
+					HighAvailabilityConfig: resourcemanagerconfigv1alpha1.HighAvailabilityConfigWebhookConfig{
 						Enabled:                             !isWorkerless,
 						DefaultNotReadyTolerationSeconds:    defaultNotReadyTolerationSeconds,
 						DefaultUnreachableTolerationSeconds: defaultUnreachableTolerationSeconds,
 					},
-					KubernetesServiceHost: resourcemanagerv1alpha1.KubernetesServiceHostWebhookConfig{
+					KubernetesServiceHost: resourcemanagerconfigv1alpha1.KubernetesServiceHostWebhookConfig{
 						Enabled: !isWorkerless,
 						Host:    kubernetesServiceHost,
 					},
-					PodSchedulerName: resourcemanagerv1alpha1.PodSchedulerNameWebhookConfig{
+					PodSchedulerName: resourcemanagerconfigv1alpha1.PodSchedulerNameWebhookConfig{
 						Enabled: false,
 					},
-					PodTopologySpreadConstraints: resourcemanagerv1alpha1.PodTopologySpreadConstraintsWebhookConfig{
+					PodTopologySpreadConstraints: resourcemanagerconfigv1alpha1.PodTopologySpreadConstraintsWebhookConfig{
 						Enabled: !isWorkerless,
 					},
-					ProjectedTokenMount: resourcemanagerv1alpha1.ProjectedTokenMountWebhookConfig{
+					ProjectedTokenMount: resourcemanagerconfigv1alpha1.ProjectedTokenMountWebhookConfig{
 						Enabled: !isWorkerless,
 					},
-					SystemComponentsConfig: resourcemanagerv1alpha1.SystemComponentsConfigWebhookConfig{
+					SystemComponentsConfig: resourcemanagerconfigv1alpha1.SystemComponentsConfigWebhookConfig{
 						Enabled: false,
 					},
-					TokenInvalidator: resourcemanagerv1alpha1.TokenInvalidatorWebhookConfig{
+					TokenInvalidator: resourcemanagerconfigv1alpha1.TokenInvalidatorWebhookConfig{
 						Enabled: true,
 					},
 				},
@@ -449,7 +449,7 @@ var _ = Describe("ResourceManager", func() {
 			}
 
 			if targetKubeconfig != nil {
-				config.TargetClientConnection = &resourcemanagerv1alpha1.ClientConnection{
+				config.TargetClientConnection = &resourcemanagerconfigv1alpha1.ClientConnection{
 					ClientConnectionConfiguration: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
 						Kubeconfig: gardenerutils.PathGenericKubeconfig,
 					},
@@ -457,11 +457,11 @@ var _ = Describe("ResourceManager", func() {
 				}
 
 				config.Controllers.NodeCriticalComponents.Enabled = !isWorkerless
-				config.Webhooks.PodSchedulerName = resourcemanagerv1alpha1.PodSchedulerNameWebhookConfig{
+				config.Webhooks.PodSchedulerName = resourcemanagerconfigv1alpha1.PodSchedulerNameWebhookConfig{
 					Enabled:       !isWorkerless,
 					SchedulerName: ptr.To("bin-packing-scheduler"),
 				}
-				config.Webhooks.SystemComponentsConfig = resourcemanagerv1alpha1.SystemComponentsConfigWebhookConfig{
+				config.Webhooks.SystemComponentsConfig = resourcemanagerconfigv1alpha1.SystemComponentsConfigWebhookConfig{
 					Enabled: !isWorkerless,
 					NodeSelector: map[string]string{
 						"worker.gardener.cloud/system-components": "true",
@@ -476,7 +476,7 @@ var _ = Describe("ResourceManager", func() {
 					},
 				}
 			} else {
-				config.Controllers.NetworkPolicy = resourcemanagerv1alpha1.NetworkPolicyControllerConfig{
+				config.Controllers.NetworkPolicy = resourcemanagerconfigv1alpha1.NetworkPolicyControllerConfig{
 					Enabled:         true,
 					ConcurrentSyncs: &maxConcurrentNetworkPolicyWorkers,
 					NamespaceSelectors: []metav1.LabelSelector{
@@ -2649,7 +2649,7 @@ var (
 
 func init() {
 	scheme = runtime.NewScheme()
-	utilruntime.Must(resourcemanagerv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(resourcemanagerconfigv1alpha1.AddToScheme(scheme))
 
 	var (
 		ser = json.NewSerializerWithOptions(json.DefaultMetaFactory, scheme, scheme, json.SerializerOptions{
@@ -2658,7 +2658,7 @@ func init() {
 			Strict: false,
 		})
 		versions = schema.GroupVersions([]schema.GroupVersion{
-			resourcemanagerv1alpha1.SchemeGroupVersion,
+			resourcemanagerconfigv1alpha1.SchemeGroupVersion,
 		})
 	)
 

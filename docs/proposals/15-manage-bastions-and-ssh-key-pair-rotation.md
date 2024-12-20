@@ -119,7 +119,7 @@ The following is a list of involved components that either need to be newly intr
     - Once the `Bastion` resource in the garden cluster is marked for deletion, it marks the `Bastion` resource in the seed for deletion.
 9. Gardener extension provider <infra> / Bastion Controller on Seed:
     - All created resources will be cleaned up.
-    - On succes, removes finalizer on `Bastion` resource in seed.
+    - On success, removes finalizer on `Bastion` resource in seed.
 10. `gardenlet`:
     - Removes finalizer on `Bastion` resource in garden cluster.
 

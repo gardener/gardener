@@ -19,7 +19,7 @@ import (
 	. "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/nodeinit"
 	nodeagentcomponent "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
 	"github.com/gardener/gardener/pkg/features"
-	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
@@ -30,7 +30,7 @@ var _ = Describe("Init", func() {
 			worker gardencorev1beta1.Worker
 			image  = "gna-repo:gna-tag"
 
-			config            *nodeagentv1alpha1.NodeAgentConfiguration
+			config            *nodeagentconfigv1alpha1.NodeAgentConfiguration
 			oscSecretName     = "osc-secret-name"
 			apiServerURL      = "https://localhost"
 			caBundle          = []byte("cluster-ca")
@@ -48,7 +48,7 @@ var _ = Describe("Init", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(units).To(ConsistOf(extensionsv1alpha1.Unit{
-					Name:    nodeagentv1alpha1.InitUnitName,
+					Name:    nodeagentconfigv1alpha1.InitUnitName,
 					Command: ptr.To(extensionsv1alpha1.CommandStart),
 					Enable:  ptr.To(true),
 					Content: ptr.To(`[Unit]

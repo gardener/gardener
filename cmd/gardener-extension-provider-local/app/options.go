@@ -35,6 +35,7 @@ import (
 	networkpolicywebhook "github.com/gardener/gardener/pkg/provider-local/webhook/networkpolicy"
 	nodewebhook "github.com/gardener/gardener/pkg/provider-local/webhook/node"
 	"github.com/gardener/gardener/pkg/provider-local/webhook/nodeagentosc"
+	prometheuswebhook "github.com/gardener/gardener/pkg/provider-local/webhook/prometheus"
 	shootwebhook "github.com/gardener/gardener/pkg/provider-local/webhook/shoot"
 )
 
@@ -69,5 +70,6 @@ func WebhookSwitchOptions() *extensionscmdwebhook.SwitchOptions {
 		extensionscmdwebhook.Switch(nodewebhook.WebhookName, nodewebhook.AddToManager),
 		extensionscmdwebhook.Switch(nodewebhook.WebhookNameShoot, nodewebhook.AddShootWebhookToManager),
 		extensionscmdwebhook.Switch(nodeagentosc.WebhookName, nodeagentosc.AddToManager),
+		extensionscmdwebhook.Switch(prometheuswebhook.WebhookName, prometheuswebhook.AddToManager),
 	)
 }

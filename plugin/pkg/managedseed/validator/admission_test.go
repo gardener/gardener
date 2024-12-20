@@ -31,7 +31,7 @@ import (
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	securityinformers "github.com/gardener/gardener/pkg/client/security/informers/externalversions"
 	fakeseedmanagement "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/fake"
-	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/managedseed/validator"
@@ -350,12 +350,12 @@ var _ = Describe("ManagedSeed", func() {
 
 			BeforeEach(func() {
 				managedSeed.Spec.Gardenlet = seedmanagement.GardenletConfig{
-					Config: &gardenletv1alpha1.GardenletConfiguration{
+					Config: &gardenletconfigv1alpha1.GardenletConfiguration{
 						TypeMeta: metav1.TypeMeta{
-							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
+							APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
 							Kind:       "GardenletConfiguration",
 						},
-						SeedConfig: &gardenletv1alpha1.SeedConfig{
+						SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
 							SeedTemplate: gardencorev1beta1.SeedTemplate{
 								Spec: gardencorev1beta1.SeedSpec{
 									Backup: &gardencorev1beta1.SeedBackup{},
@@ -377,12 +377,12 @@ var _ = Describe("ManagedSeed", func() {
 
 				seedx.Spec.Ingress.Controller.Kind = v1beta1constants.IngressKindNginx
 				Expect(managedSeed.Spec.Gardenlet).To(Equal(seedmanagement.GardenletConfig{
-					Config: &gardenletv1alpha1.GardenletConfiguration{
+					Config: &gardenletconfigv1alpha1.GardenletConfiguration{
 						TypeMeta: metav1.TypeMeta{
-							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
+							APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
 							Kind:       "GardenletConfiguration",
 						},
-						SeedConfig: &gardenletv1alpha1.SeedConfig{
+						SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
 							SeedTemplate: gardencorev1beta1.SeedTemplate{
 								ObjectMeta: seedx.ObjectMeta,
 								Spec:       seedx.Spec,
@@ -405,12 +405,12 @@ var _ = Describe("ManagedSeed", func() {
 				}
 
 				managedSeed.Spec.Gardenlet = seedmanagement.GardenletConfig{
-					Config: &gardenletv1alpha1.GardenletConfiguration{
+					Config: &gardenletconfigv1alpha1.GardenletConfiguration{
 						TypeMeta: metav1.TypeMeta{
-							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
+							APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
 							Kind:       "GardenletConfiguration",
 						},
-						SeedConfig: &gardenletv1alpha1.SeedConfig{
+						SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
 							SeedTemplate: gardencorev1beta1.SeedTemplate{
 								Spec: seedx.Spec,
 							},
@@ -426,12 +426,12 @@ var _ = Describe("ManagedSeed", func() {
 					SecretRef: corev1.SecretReference{Name: "bar", Namespace: "garden"},
 				}
 				Expect(managedSeed.Spec.Gardenlet).To(Equal(seedmanagement.GardenletConfig{
-					Config: &gardenletv1alpha1.GardenletConfiguration{
+					Config: &gardenletconfigv1alpha1.GardenletConfiguration{
 						TypeMeta: metav1.TypeMeta{
-							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
+							APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
 							Kind:       "GardenletConfiguration",
 						},
-						SeedConfig: &gardenletv1alpha1.SeedConfig{
+						SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
 							SeedTemplate: gardencorev1beta1.SeedTemplate{
 								ObjectMeta: seedx.ObjectMeta,
 								Spec:       seedx.Spec,
@@ -454,12 +454,12 @@ var _ = Describe("ManagedSeed", func() {
 				}
 				shoot.Spec.SecretBindingName = ptr.To(secretBinding.Name)
 				managedSeed.Spec.Gardenlet = seedmanagement.GardenletConfig{
-					Config: &gardenletv1alpha1.GardenletConfiguration{
+					Config: &gardenletconfigv1alpha1.GardenletConfiguration{
 						TypeMeta: metav1.TypeMeta{
-							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
+							APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
 							Kind:       "GardenletConfiguration",
 						},
-						SeedConfig: &gardenletv1alpha1.SeedConfig{
+						SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
 							SeedTemplate: gardencorev1beta1.SeedTemplate{
 								Spec: seedx.Spec,
 							},
@@ -475,12 +475,12 @@ var _ = Describe("ManagedSeed", func() {
 					SecretRef: corev1.SecretReference{Name: "bar", Namespace: "garden"},
 				}
 				Expect(managedSeed.Spec.Gardenlet).To(Equal(seedmanagement.GardenletConfig{
-					Config: &gardenletv1alpha1.GardenletConfiguration{
+					Config: &gardenletconfigv1alpha1.GardenletConfiguration{
 						TypeMeta: metav1.TypeMeta{
-							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
+							APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
 							Kind:       "GardenletConfiguration",
 						},
-						SeedConfig: &gardenletv1alpha1.SeedConfig{
+						SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
 							SeedTemplate: gardencorev1beta1.SeedTemplate{
 								ObjectMeta: seedx.ObjectMeta,
 								Spec:       seedx.Spec,
@@ -503,12 +503,12 @@ var _ = Describe("ManagedSeed", func() {
 				shoot.Spec.CredentialsBindingName = ptr.To(credentialsBinding.Name)
 
 				managedSeed.Spec.Gardenlet = seedmanagement.GardenletConfig{
-					Config: &gardenletv1alpha1.GardenletConfiguration{
+					Config: &gardenletconfigv1alpha1.GardenletConfiguration{
 						TypeMeta: metav1.TypeMeta{
-							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
+							APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
 							Kind:       "GardenletConfiguration",
 						},
-						SeedConfig: &gardenletv1alpha1.SeedConfig{
+						SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
 							SeedTemplate: gardencorev1beta1.SeedTemplate{
 								Spec: seedx.Spec,
 							},
@@ -524,12 +524,12 @@ var _ = Describe("ManagedSeed", func() {
 					SecretRef: corev1.SecretReference{Name: "bar", Namespace: "garden"},
 				}
 				Expect(managedSeed.Spec.Gardenlet).To(Equal(seedmanagement.GardenletConfig{
-					Config: &gardenletv1alpha1.GardenletConfiguration{
+					Config: &gardenletconfigv1alpha1.GardenletConfiguration{
 						TypeMeta: metav1.TypeMeta{
-							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
+							APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
 							Kind:       "GardenletConfiguration",
 						},
-						SeedConfig: &gardenletv1alpha1.SeedConfig{
+						SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
 							SeedTemplate: gardencorev1beta1.SeedTemplate{
 								ObjectMeta: seedx.ObjectMeta,
 								Spec:       seedx.Spec,
@@ -578,12 +578,12 @@ var _ = Describe("ManagedSeed", func() {
 					},
 				}
 
-				managedSeed.Spec.Gardenlet.Config = &gardenletv1alpha1.GardenletConfiguration{
+				managedSeed.Spec.Gardenlet.Config = &gardenletconfigv1alpha1.GardenletConfiguration{
 					TypeMeta: metav1.TypeMeta{
-						APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
+						APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
 						Kind:       "GardenletConfiguration",
 					},
-					SeedConfig: &gardenletv1alpha1.SeedConfig{
+					SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
 						SeedTemplate: gardencorev1beta1.SeedTemplate{
 							Spec: seedSpec,
 						},
@@ -665,12 +665,12 @@ var _ = Describe("ManagedSeed", func() {
 					}
 
 					managedSeed.Spec.Gardenlet = seedmanagement.GardenletConfig{
-						Config: &gardenletv1alpha1.GardenletConfiguration{
+						Config: &gardenletconfigv1alpha1.GardenletConfiguration{
 							TypeMeta: metav1.TypeMeta{
-								APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
+								APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
 								Kind:       "GardenletConfiguration",
 							},
-							SeedConfig: &gardenletv1alpha1.SeedConfig{
+							SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
 								SeedTemplate: gardencorev1beta1.SeedTemplate{
 									Spec: seedx.Spec,
 								},
@@ -723,12 +723,12 @@ var _ = Describe("ManagedSeed", func() {
 					}
 
 					managedSeed.Spec.Gardenlet = seedmanagement.GardenletConfig{
-						Config: &gardenletv1alpha1.GardenletConfiguration{
+						Config: &gardenletconfigv1alpha1.GardenletConfiguration{
 							TypeMeta: metav1.TypeMeta{
-								APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
+								APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
 								Kind:       "GardenletConfiguration",
 							},
-							SeedConfig: &gardenletv1alpha1.SeedConfig{
+							SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
 								SeedTemplate: gardencorev1beta1.SeedTemplate{
 									Spec: seedx.Spec,
 								},
@@ -748,12 +748,12 @@ var _ = Describe("ManagedSeed", func() {
 				)
 
 				BeforeEach(func() {
-					gardenletConfig := &gardenletv1alpha1.GardenletConfiguration{
+					gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{
 						TypeMeta: metav1.TypeMeta{
-							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
+							APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
 							Kind:       "GardenletConfiguration",
 						},
-						SeedConfig: &gardenletv1alpha1.SeedConfig{
+						SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
 							SeedTemplate: gardencorev1beta1.SeedTemplate{
 								Spec: gardencorev1beta1.SeedSpec{
 									Ingress: seedx.Spec.Ingress,
@@ -771,7 +771,7 @@ var _ = Describe("ManagedSeed", func() {
 				})
 
 				It("should allow zone removal when there are no shoots running on seed", func() {
-					newGardenletConfig := newManagedSeed.Spec.Gardenlet.Config.(*gardenletv1alpha1.GardenletConfiguration)
+					newGardenletConfig := newManagedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
 					shoot.Spec.Provider.Workers[0].Zones = []string{zone2}
 					newGardenletConfig.SeedConfig.Spec.Provider.Zones = shoot.Spec.Provider.Workers[0].Zones
 
@@ -782,7 +782,7 @@ var _ = Describe("ManagedSeed", func() {
 				})
 
 				It("should forbid zone removal when at least one shoot is scheduled to seed", func() {
-					newGardenletConfig := newManagedSeed.Spec.Gardenlet.Config.(*gardenletv1alpha1.GardenletConfiguration)
+					newGardenletConfig := newManagedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
 					shoot.Spec.Provider.Workers[0].Zones = []string{zone2}
 					newGardenletConfig.SeedConfig.Spec.Provider.Zones = shoot.Spec.Provider.Workers[0].Zones
 
@@ -809,7 +809,7 @@ var _ = Describe("ManagedSeed", func() {
 					shoot.Spec.Provider.Workers[0].Zones = append(shoot.Spec.Provider.Workers[0].Zones, "zone-bar")
 
 					// add a different zone name to ManagedSeed config
-					gardenletConfig := newManagedSeed.Spec.Gardenlet.Config.(*gardenletv1alpha1.GardenletConfiguration)
+					gardenletConfig := newManagedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
 					gardenletConfig.SeedConfig.Spec.Provider.Zones = append(gardenletConfig.SeedConfig.Spec.Provider.Zones, "zone-foo")
 
 					coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {
@@ -835,11 +835,11 @@ var _ = Describe("ManagedSeed", func() {
 					shoot.Spec.Provider.Workers[0].Zones = append(shoot.Spec.Provider.Workers[0].Zones, "zone-3")
 
 					// create an artificial mismatch in zone names between the seed config and the shoot
-					gardenletConfig := managedSeed.Spec.Gardenlet.Config.(*gardenletv1alpha1.GardenletConfiguration)
+					gardenletConfig := managedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
 					gardenletConfig.SeedConfig.Spec.Provider.Zones = []string{"zone-foo", "zone-bar"}
 
 					// zones should still be configured in new ManagedSeed, plus an additional non-existing one
-					newGardenletConfig := newManagedSeed.Spec.Gardenlet.Config.(*gardenletv1alpha1.GardenletConfiguration)
+					newGardenletConfig := newManagedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
 					newGardenletConfig.SeedConfig.Spec.Provider.Zones = []string{"zone-foo", "zone-bar", "zone-foobar"}
 
 					coreClient.AddReactor("get", "shoots", func(_ testing.Action) (bool, runtime.Object, error) {

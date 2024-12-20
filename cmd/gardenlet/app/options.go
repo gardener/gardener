@@ -18,7 +18,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenletvalidation "github.com/gardener/gardener/pkg/gardenlet/apis/config/validation"
 )
 
@@ -28,7 +28,7 @@ func init() {
 	configScheme := runtime.NewScheme()
 	schemeBuilder := runtime.NewSchemeBuilder(
 		config.AddToScheme,
-		gardenletv1alpha1.AddToScheme,
+		gardenletconfigv1alpha1.AddToScheme,
 		gardencore.AddToScheme,
 		gardencorev1beta1.AddToScheme,
 	)

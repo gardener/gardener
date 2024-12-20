@@ -42,7 +42,7 @@ Instead, the low-priority `pause` pods will be preempted and allow newly created
 In the meantime, the cluster-autoscaler will trigger the scale-up because the preempted `pause` pods want to run again.
 However, this delay doesn't affect the important shoot control plane pods, which will improve the user experience.
 
-Use `.spec.settings.excessCapacityReservation.configs` to create excess capacity reservation deployments which allow to specify custom values for `resources`, `nodeSelector` and `tolerations`. Each config creates a deployment with a minium number of 2 replicas and a maximum equal to the number of zones configured for this seed.
+Use `.spec.settings.excessCapacityReservation.configs` to create excess capacity reservation deployments which allow to specify custom values for `resources`, `nodeSelector` and `tolerations`. Each config creates a deployment with a minimum number of 2 replicas and a maximum equal to the number of zones configured for this seed.
 It defaults to a config reserving 2 CPUs and 6Gi of memory for each pod with no `nodeSelector` and no `tolerations`.
 
 Excess capacity reservation is enabled when `.spec.settings.excessCapacityReservation.enabled` is `true` or not specified while `configs` are present. It can be disabled by setting the field to `false`.

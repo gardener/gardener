@@ -8,7 +8,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-# Create symlinks to local mod chache for logr and controller-runtime log.
+# Create symlinks to local mod cache for logr and controller-runtime log.
 
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 LOGCHECK_DIR="$LOGCHECK_DIR"

@@ -48,7 +48,7 @@ const (
 	ShootCredentialsBinding featuregate.Feature = "ShootCredentialsBinding"
 
 	// NewWorkerPoolHash enables a new calculation method for the worker pool hash. The new
-	// calculation supports rolling worker pools if `kubeReserved`, `systemReserved`, `evicitonHard` or `cpuManagerPolicy`
+	// calculation supports rolling worker pools if `kubeReserved`, `systemReserved`, `evictionHard` or `cpuManagerPolicy`
 	// in the `kubelet` configuration are changed. All provider extensions must be upgraded
 	// to support this feature first.
 	// owner: @MichaelEischer

@@ -634,7 +634,7 @@ var _ = Describe("Reconciler", func() {
 			Expect(actual).To(Equal(expected))
 		})
 
-		It("should only add seed provider type extenions", func() {
+		It("should only add seed provider type extensions", func() {
 			seed := &gardencorev1beta1.Seed{
 				Spec: gardencorev1beta1.SeedSpec{
 					Provider: gardencorev1beta1.SeedProvider{

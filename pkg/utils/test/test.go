@@ -111,16 +111,16 @@ func WithEnvVar(key, value string) func() {
 func WithWd(path string) func() {
 	oldPath, err := os.Getwd()
 	if err != nil {
-		ginkgo.Fail(fmt.Sprintf("Could not obtain current working diretory: %v", err))
+		ginkgo.Fail(fmt.Sprintf("Could not obtain current working directory: %v", err))
 	}
 
 	if err := os.Chdir(path); err != nil {
-		ginkgo.Fail(fmt.Sprintf("Could not change working diretory: %v", err))
+		ginkgo.Fail(fmt.Sprintf("Could not change working directory: %v", err))
 	}
 
 	return func() {
 		if err := os.Chdir(oldPath); err != nil {
-			ginkgo.Fail(fmt.Sprintf("Could not revert working diretory: %v", err))
+			ginkgo.Fail(fmt.Sprintf("Could not revert working directory: %v", err))
 		}
 	}
 }

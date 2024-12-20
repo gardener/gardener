@@ -36,7 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/features"
-	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -236,8 +236,8 @@ func (o *operatingSystemConfig) Restore(ctx context.Context, shootState *gardenc
 func (o *operatingSystemConfig) reconcile(ctx context.Context, reconcileFn func(deployer) error) error {
 	if !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) {
 		if err := gardenerutils.
-			NewShootAccessSecret(nodeagentv1alpha1.AccessSecretName, o.values.Namespace).
-			WithTargetSecret(nodeagentv1alpha1.AccessSecretName, metav1.NamespaceSystem).
+			NewShootAccessSecret(nodeagentconfigv1alpha1.AccessSecretName, o.values.Namespace).
+			WithTargetSecret(nodeagentconfigv1alpha1.AccessSecretName, metav1.NamespaceSystem).
 			WithTokenExpirationDuration("720h").
 			Reconcile(ctx, o.client); err != nil {
 			return err
@@ -419,15 +419,6 @@ func (o *operatingSystemConfig) Wait(ctx context.Context) error {
 			o.waitSevereThreshold,
 			o.waitTimeout,
 			func() error {
-				if osc.Status.CloudConfig == nil {
-					return fmt.Errorf("no cloud config information provided in status")
-				}
-
-				secret := &corev1.Secret{}
-				if err := o.client.Get(ctx, client.ObjectKey{Namespace: osc.Status.CloudConfig.SecretRef.Namespace, Name: osc.Status.CloudConfig.SecretRef.Name}, secret); err != nil {
-					return err
-				}
-
 				oscKey, err := o.calculateKeyForVersion(hashVersion, &worker)
 				if err != nil {
 					return err
@@ -437,7 +428,19 @@ func (o *operatingSystemConfig) Wait(ctx context.Context) error {
 					Object:                        osc,
 					IncludeSecretNameInWorkerPool: hashVersion > 1,
 					GardenerNodeAgentSecretName:   oscKey,
-					SecretName:                    &secret.Name,
+				}
+
+				if purpose == extensionsv1alpha1.OperatingSystemConfigPurposeProvision {
+					if osc.Status.CloudConfig == nil {
+						return fmt.Errorf("no cloud config information provided in status")
+					}
+
+					secret := &corev1.Secret{}
+					if err := o.client.Get(ctx, client.ObjectKey{Namespace: osc.Status.CloudConfig.SecretRef.Namespace, Name: osc.Status.CloudConfig.SecretRef.Name}, secret); err != nil {
+						return err
+					}
+
+					data.SecretName = &secret.Name
 				}
 
 				o.lock.Lock()

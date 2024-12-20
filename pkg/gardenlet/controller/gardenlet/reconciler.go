@@ -27,7 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/controller/gardenletdeployer"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/oci"
 )
 
@@ -110,7 +110,7 @@ func (r *Reconciler) deployGardenlet(
 	log logr.Logger,
 	gardenlet *seedmanagementv1alpha1.Gardenlet,
 	seed *gardencorev1beta1.Seed,
-	gardenletConfig *gardenletv1alpha1.GardenletConfiguration,
+	gardenletConfig *gardenletconfigv1alpha1.GardenletConfiguration,
 ) error {
 	values, err := r.prepareGardenletChartValues(ctx, log, gardenlet, seed, gardenletConfig)
 	if err != nil {
@@ -143,7 +143,7 @@ func (r *Reconciler) prepareGardenletChartValues(
 	log logr.Logger,
 	gardenlet *seedmanagementv1alpha1.Gardenlet,
 	seed *gardencorev1beta1.Seed,
-	gardenletConfig *gardenletv1alpha1.GardenletConfiguration,
+	gardenletConfig *gardenletconfigv1alpha1.GardenletConfiguration,
 ) (
 	map[string]interface{},
 	error,

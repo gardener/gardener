@@ -4800,7 +4800,7 @@ string
 </em>
 </td>
 <td>
-<p>Name of the volume to make it referencable.</p>
+<p>Name of the volume to make it referenceable.</p>
 </td>
 </tr>
 <tr>
@@ -6200,7 +6200,7 @@ Kubernetes meta/v1.Duration
 <p>PodEvictionTimeout defines the grace period for deleting pods on failed nodes. Defaults to 2m.</p>
 <p>Deprecated: The corresponding kube-controller-manager flag <code>--pod-eviction-timeout</code> is deprecated
 in favor of the kube-apiserver flags <code>--default-not-ready-toleration-seconds</code> and <code>--default-unreachable-toleration-seconds</code>.
-The <code>--pod-eviction-timeout</code> flag does not have effect when the taint besed eviction is enabled. The taint
+The <code>--pod-eviction-timeout</code> flag does not have effect when the taint based eviction is enabled. The taint
 based eviction is beta (enabled by default) since Kubernetes 1.13 and GA since Kubernetes 1.18. Hence,
 instead of setting this field, set the <code>spec.kubernetes.kubeAPIServer.defaultNotReadyTolerationSeconds</code> and
 <code>spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds</code>.</p>
@@ -13367,6 +13367,36 @@ float64
 (default: 0.95)</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>cpuHistogramDecayHalfLife</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CPUHistogramDecayHalfLife is the amount of time it takes a historical CPU usage sample to lose half of its weight.
+(default: 24h)</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>memoryHistogramDecayHalfLife</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MemoryHistogramDecayHalfLife is the amount of time it takes a historical memory usage sample to lose half of its weight.
+(default: 24h)</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.Volume">Volume
@@ -13395,7 +13425,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Name of the volume to make it referencable.</p>
+<p>Name of the volume to make it referenceable.</p>
 </td>
 </tr>
 <tr>

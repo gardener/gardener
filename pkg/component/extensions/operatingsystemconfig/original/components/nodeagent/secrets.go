@@ -15,7 +15,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -75,13 +75,13 @@ func OperatingSystemConfigSecret(
 			Name:      secretName,
 			Namespace: metav1.NamespaceSystem,
 			Annotations: map[string]string{
-				nodeagentv1alpha1.AnnotationKeyChecksumDownloadedOperatingSystemConfig: utils.ComputeSHA256Hex(operatingSystemConfigRaw),
+				nodeagentconfigv1alpha1.AnnotationKeyChecksumDownloadedOperatingSystemConfig: utils.ComputeSHA256Hex(operatingSystemConfigRaw),
 			},
 			Labels: map[string]string{
 				v1beta1constants.GardenRole:      v1beta1constants.GardenRoleOperatingSystemConfig,
 				v1beta1constants.LabelWorkerPool: workerPoolName,
 			},
 		},
-		Data: map[string][]byte{nodeagentv1alpha1.DataKeyOperatingSystemConfig: operatingSystemConfigRaw},
+		Data: map[string][]byte{nodeagentconfigv1alpha1.DataKeyOperatingSystemConfig: operatingSystemConfigRaw},
 	}, nil
 }

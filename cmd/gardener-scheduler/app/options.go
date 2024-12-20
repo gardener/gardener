@@ -16,7 +16,7 @@ import (
 	"github.com/gardener/gardener/cmd/utils/initrun"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
-	schedulerv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
+	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 	schedulervalidation "github.com/gardener/gardener/pkg/scheduler/apis/config/validation"
 )
 
@@ -26,7 +26,7 @@ func init() {
 	configScheme := runtime.NewScheme()
 	schemeBuilder := runtime.NewSchemeBuilder(
 		config.AddToScheme,
-		schedulerv1alpha1.AddToScheme,
+		schedulerconfigv1alpha1.AddToScheme,
 	)
 	utilruntime.Must(schemeBuilder.AddToScheme(configScheme))
 	configDecoder = serializer.NewCodecFactory(configScheme).UniversalDecoder()

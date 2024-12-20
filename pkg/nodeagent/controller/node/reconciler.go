@@ -18,7 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/gardener/gardener/pkg/controllerutils"
-	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
 )
 
@@ -61,7 +61,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 		// If the gardener-node-agent itself should be restarted, we have to first remove the annotation from the node.
 		// Otherwise, the annotation is never removed and it restarts itself indefinitely.
-		if serviceName == nodeagentv1alpha1.UnitName {
+		if serviceName == nodeagentconfigv1alpha1.UnitName {
 			restartGardenerNodeAgent = true
 			continue
 		}
@@ -77,7 +77,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	if restartGardenerNodeAgent {
-		r.restartService(ctx, log, node, nodeagentv1alpha1.UnitName)
+		r.restartService(ctx, log, node, nodeagentconfigv1alpha1.UnitName)
 	}
 
 	return reconcile.Result{}, nil

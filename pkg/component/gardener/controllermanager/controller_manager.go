@@ -15,7 +15,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
-	controllermanagerv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -47,7 +47,7 @@ type Values struct {
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
 	LogLevel string
 	// Quotas is the default configuration matching projects are set up with if a quota is not already specified.
-	Quotas []controllermanagerv1alpha1.QuotaConfiguration
+	Quotas []controllermanagerconfigv1alpha1.QuotaConfiguration
 	// RuntimeVersion is the Kubernetes version of the runtime cluster.
 	RuntimeVersion *semver.Version
 	// FeatureGates is the set of feature gates.

@@ -416,7 +416,7 @@ var _ = Describe("Etcd", func() {
 					Expect(botanist.DeployEtcd(ctx)).To(Succeed())
 				})
 
-				It("should not try to restore multi-node etcd from backup if it has alrady been scaled up", func() {
+				It("should not try to restore multi-node etcd from backup if it has already been scaled up", func() {
 					etcdMain.EXPECT().Get(ctx).DoAndReturn(func(_ context.Context) (*druidv1alpha1.Etcd, error) {
 						return &druidv1alpha1.Etcd{
 							Spec: druidv1alpha1.EtcdSpec{
@@ -430,7 +430,7 @@ var _ = Describe("Etcd", func() {
 					Expect(botanist.DeployEtcd(ctx)).To(Succeed())
 				})
 
-				It("should not try to restore multi-node etcd from backup if it has alrady been scaled down and the shoot is hibernated", func() {
+				It("should not try to restore multi-node etcd from backup if it has already been scaled down and the shoot is hibernated", func() {
 					botanist.Shoot.HibernationEnabled = true
 
 					etcdMain.EXPECT().Get(ctx).DoAndReturn(func(_ context.Context) (*druidv1alpha1.Etcd, error) {

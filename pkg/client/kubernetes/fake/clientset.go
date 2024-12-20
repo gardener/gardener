@@ -24,6 +24,7 @@ type ClientSet struct {
 	applier       kubernetes.Applier
 	chartRenderer chartrenderer.Interface
 	chartApplier  kubernetes.ChartApplier
+	podExecutor   kubernetes.PodExecutor
 	restConfig    *rest.Config
 	client        client.Client
 	apiReader     client.Reader
@@ -51,6 +52,11 @@ func (c *ClientSet) ChartRenderer() chartrenderer.Interface {
 // ChartApplier returns a ChartApplier using the ClientSet's ChartRenderer and Applier.
 func (c *ClientSet) ChartApplier() kubernetes.ChartApplier {
 	return c.chartApplier
+}
+
+// PodExecutor returns a PodExecutor.
+func (c *ClientSet) PodExecutor() kubernetes.PodExecutor {
+	return c.podExecutor
 }
 
 // RESTConfig will return the restConfig attribute of the Client object.

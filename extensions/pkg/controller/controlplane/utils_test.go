@@ -39,7 +39,7 @@ var _ = Describe("Utils", func() {
 		})
 	})
 
-	Describe("#ComputeCheckums", func() {
+	Describe("#ComputeChecksums", func() {
 		var (
 			secrets = map[string]*corev1.Secret{
 				"test-secret": getSecret("test-secret", "default", map[string][]byte{"foo": []byte("bar")}),

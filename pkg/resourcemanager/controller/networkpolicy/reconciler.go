@@ -208,7 +208,7 @@ func (r *Reconciler) reconcileDesiredPolicies(ctx context.Context, service *core
 		)
 
 		if err := json.Unmarshal([]byte(allowedPorts), &ports); err != nil {
-			return nil, nil, fmt.Errorf("failed unmarshaling %s: %w", allowedPorts, err)
+			return nil, nil, fmt.Errorf("failed unmarshalling %s: %w", allowedPorts, err)
 		}
 
 		for _, port := range ports {
@@ -332,7 +332,7 @@ func (r *Reconciler) reconcileEgressPolicy(
 func (r *Reconciler) reconcileIngressFromWorldPolicy(ctx context.Context, service *corev1.Service, networkPolicyObjectMeta metav1.ObjectMeta) error {
 	var ports []networkingv1.NetworkPolicyPort
 	if err := json.Unmarshal([]byte(service.Annotations[resourcesv1alpha1.NetworkingFromWorldToPorts]), &ports); err != nil {
-		return fmt.Errorf("failed unmarshaling %s: %w", service.Annotations[resourcesv1alpha1.NetworkingFromWorldToPorts], err)
+		return fmt.Errorf("failed unmarshalling %s: %w", service.Annotations[resourcesv1alpha1.NetworkingFromWorldToPorts], err)
 	}
 
 	networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: networkPolicyObjectMeta}

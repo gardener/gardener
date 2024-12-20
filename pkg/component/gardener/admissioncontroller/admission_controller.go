@@ -12,7 +12,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	admissioncontrollerv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
+	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
@@ -52,7 +52,7 @@ type Values struct {
 	// Image is the container image used for the gardener-admission-controller pods.
 	Image string
 	// ResourceAdmissionConfiguration is the configuration for gardener-admission-controller's resource-size validator.
-	ResourceAdmissionConfiguration *admissioncontrollerv1alpha1.ResourceAdmissionConfiguration
+	ResourceAdmissionConfiguration *admissioncontrollerconfigv1alpha1.ResourceAdmissionConfiguration
 	// RuntimeVersion is the Kubernetes version of the runtime cluster.
 	RuntimeVersion *semver.Version
 	// SeedRestrictionEnabled specifies whether the seed-restriction webhook is enabled.

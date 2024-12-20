@@ -20,7 +20,7 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	seedmanagementv1alpha1constants "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/constants"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
-	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
@@ -61,8 +61,8 @@ var _ = Describe("Replica", func() {
 					Spec: seedmanagementv1alpha1.ManagedSeedSpec{
 						Gardenlet: seedmanagementv1alpha1.GardenletConfig{
 							Config: runtime.RawExtension{
-								Object: &gardenletv1alpha1.GardenletConfiguration{
-									SeedConfig: &gardenletv1alpha1.SeedConfig{
+								Object: &gardenletconfigv1alpha1.GardenletConfiguration{
+									SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
 										SeedTemplate: gardencorev1beta1.SeedTemplate{
 											Spec: gardencorev1beta1.SeedSpec{
 												Ingress: &gardencorev1beta1.Ingress{
@@ -352,8 +352,8 @@ var _ = Describe("Replica", func() {
 							},
 							Gardenlet: seedmanagementv1alpha1.GardenletConfig{
 								Config: runtime.RawExtension{
-									Object: &gardenletv1alpha1.GardenletConfiguration{
-										SeedConfig: &gardenletv1alpha1.SeedConfig{
+									Object: &gardenletconfigv1alpha1.GardenletConfiguration{
+										SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
 											SeedTemplate: gardencorev1beta1.SeedTemplate{
 												Spec: gardencorev1beta1.SeedSpec{
 													Ingress: &gardencorev1beta1.Ingress{

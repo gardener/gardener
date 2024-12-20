@@ -7,7 +7,7 @@ metadata:
   labels:
     app: gardener
     role: operator
-    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
     release: "{{ .Release.Name }}"
     heritage: "{{ .Release.Service }}"
     resources.gardener.cloud/garbage-collectable-reference: "true"

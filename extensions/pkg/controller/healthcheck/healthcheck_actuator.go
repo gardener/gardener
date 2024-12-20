@@ -18,7 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	extensionsconfig "github.com/gardener/gardener/extensions/pkg/apis/config"
+	extensionsconfigv1alpha1 "github.com/gardener/gardener/extensions/pkg/apis/config/v1alpha1"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/util"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -33,11 +33,11 @@ type Actuator struct {
 	extensionKind       string
 	getExtensionObjFunc GetExtensionObjectFunc
 	healthChecks        []ConditionTypeToHealthCheck
-	shootRESTOptions    extensionsconfig.RESTOptions
+	shootRESTOptions    extensionsconfigv1alpha1.RESTOptions
 }
 
 // NewActuator creates a new Actuator.
-func NewActuator(mgr manager.Manager, provider, extensionKind string, getExtensionObjFunc GetExtensionObjectFunc, healthChecks []ConditionTypeToHealthCheck, shootRESTOptions extensionsconfig.RESTOptions) HealthCheckActuator {
+func NewActuator(mgr manager.Manager, provider, extensionKind string, getExtensionObjFunc GetExtensionObjectFunc, healthChecks []ConditionTypeToHealthCheck, shootRESTOptions extensionsconfigv1alpha1.RESTOptions) HealthCheckActuator {
 	return &Actuator{
 		restConfig: mgr.GetConfig(),
 		seedClient: mgr.GetClient(),

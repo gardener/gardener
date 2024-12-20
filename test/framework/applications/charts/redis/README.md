@@ -302,7 +302,7 @@ In case the master crashes, the slaves will wait until the master node is respaw
 
 When installing the chart with `cluster.enabled=true` and `sentinel.enabled=true`, it will deploy a Redis master StatefulSet (only one master allowed) and a Redis slave StatefulSet. In this case, the pods will contain en extra container with Redis Sentinel. This container will form a cluster of Redis Sentinel nodes, which will promote a new master in case the actual one fails. In addition to this, only one service is exposed:
 
-   - Redis service: Exposes port 6379 for Redis read-only operations and port 26379 for accesing Redis Sentinel.
+   - Redis service: Exposes port 6379 for Redis read-only operations and port 26379 for accessing Redis Sentinel.
 
 For read-only operations, access the service using port 6379. For write operations, it's necessary to access the Redis Sentinel cluster and query the current master using the command below (using redis-cli or similar:
 

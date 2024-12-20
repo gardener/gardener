@@ -13,7 +13,7 @@ const (
 	k8sClientInitTimeout      = 5 * time.Minute
 	defaultPollInterval       = 5 * time.Second
 
-	// KubeconfigSecretKeyName ist the name of the key in a secret that holds the kubeconfig of a shoot
+	// KubeconfigSecretKeyName is the name of the key in a secret that holds the kubeconfig of a shoot
 	KubeconfigSecretKeyName = "kubeconfig"
 
 	// LoggingUserName is the admin user name for the vali instance of a shoot

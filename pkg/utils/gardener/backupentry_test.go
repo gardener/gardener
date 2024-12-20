@@ -48,7 +48,7 @@ var _ = Describe("BackupEntry", func() {
 			Expect(uid).To(Equal(shootUID))
 		})
 
-		It("should return the correct parts of the name for soure backupentry", func() {
+		It("should return the correct parts of the name for source backupentry", func() {
 			technicalID, uid := ExtractShootDetailsFromBackupEntryName(sourceBackupEntryName)
 			Expect(technicalID).To(Equal(shootTechnicalID))
 			Expect(uid).To(Equal(shootUID))

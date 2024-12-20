@@ -20,7 +20,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -65,12 +65,12 @@ var _ = Describe("Gardenlet controller test", func() {
 				},
 			},
 		}
-		gardenletConfig, err := encoding.EncodeGardenletConfiguration(&gardenletv1alpha1.GardenletConfiguration{
+		gardenletConfig, err := encoding.EncodeGardenletConfiguration(&gardenletconfigv1alpha1.GardenletConfiguration{
 			TypeMeta: metav1.TypeMeta{
-				APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
+				APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
 				Kind:       "GardenletConfiguration",
 			},
-			SeedConfig: &gardenletv1alpha1.SeedConfig{
+			SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
 				SeedTemplate: gardencorev1beta1.SeedTemplate{
 					ObjectMeta: seed.ObjectMeta,
 					Spec:       seed.Spec,

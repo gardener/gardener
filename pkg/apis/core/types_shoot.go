@@ -111,13 +111,6 @@ type ShootSpec struct {
 	AccessRestrictions []AccessRestrictionWithOptions
 }
 
-var _ Object = (*Shoot)(nil)
-
-// GetProviderType gets the type of the provider.
-func (s *Shoot) GetProviderType() string {
-	return s.Spec.Provider.Type
-}
-
 // ShootStatus holds the most recently observed status of the Shoot cluster.
 type ShootStatus struct {
 	// Conditions represents the latest available observations of a Shoot's current state.
@@ -586,6 +579,12 @@ type VerticalPodAutoscaler struct {
 	// RecommendationUpperBoundMemoryPercentile is the usage percentile that will be used for the upper bound on memory recommendation.
 	// (default: 0.95)
 	RecommendationUpperBoundMemoryPercentile *float64
+	// CPUHistogramDecayHalfLife is the amount of time it takes a historical CPU usage sample to lose half of its weight.
+	// (default: 24h)
+	CPUHistogramDecayHalfLife *metav1.Duration
+	// MemoryHistogramDecayHalfLife is the amount of time it takes a historical memory usage sample to lose half of its weight.
+	// (default: 24h)
+	MemoryHistogramDecayHalfLife *metav1.Duration
 }
 
 // KubernetesConfig contains common configuration fields for the control plane components.
@@ -824,7 +823,7 @@ type KubeControllerManagerConfig struct {
 	//
 	// Deprecated: The corresponding kube-controller-manager flag `--pod-eviction-timeout` is deprecated
 	// in favor of the kube-apiserver flags `--default-not-ready-toleration-seconds` and `--default-unreachable-toleration-seconds`.
-	// The `--pod-eviction-timeout` flag does not have effect when the taint besed eviction is enabled. The taint
+	// The `--pod-eviction-timeout` flag does not have effect when the taint based eviction is enabled. The taint
 	// based eviction is beta (enabled by default) since Kubernetes 1.13 and GA since Kubernetes 1.18. Hence,
 	// instead of setting this field, set the `spec.kubernetes.kubeAPIServer.defaultNotReadyTolerationSeconds` and
 	// `spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds`.
@@ -1054,7 +1053,7 @@ const (
 	// NoSwap is a constant for the kubelet's swap behavior restricting Kubernetes workloads to not use swap.
 	// Only available for Kubernetes versions >= v1.30.
 	NoSwap SwapBehavior = "NoSwap"
-	// LimitedSwap is a constant for the kubelet's swap behavior limitting the amount of swap usable for Kubernetes workloads. Workloads on the node not managed by Kubernetes can still swap.
+	// LimitedSwap is a constant for the kubelet's swap behavior limiting the amount of swap usable for Kubernetes workloads. Workloads on the node not managed by Kubernetes can still swap.
 	// - cgroupsv1 host: Kubernetes workloads can use any combination of memory and swap, up to the pod's memory limit
 	// - cgroupsv2 host: swap is managed independently from memory. Kubernetes workloads cannot use swap memory.
 	LimitedSwap SwapBehavior = "LimitedSwap"
@@ -1287,7 +1286,7 @@ type ShootMachineImage struct {
 
 // Volume contains information about the volume type and size.
 type Volume struct {
-	// Name of the volume to make it referencable.
+	// Name of the volume to make it referenceable.
 	Name *string
 	// Type is the type of the volume.
 	Type *string
@@ -1299,7 +1298,7 @@ type Volume struct {
 
 // DataVolume contains information about a data volume.
 type DataVolume struct {
-	// Name of the volume to make it referencable.
+	// Name of the volume to make it referenceable.
 	Name string
 	// Type is the type of the volume.
 	Type *string

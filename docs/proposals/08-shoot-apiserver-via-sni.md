@@ -373,7 +373,7 @@ stream {
 events { }
 ```
 
-### In-Cluster Communication to the apiserver when ExernalName is Supported
+### In-Cluster Communication to the apiserver when ExternalName is Supported
 
 Even if in future versions of Kubernetes, the master service of type `ExternalName` is supported, we still have the problem that in-cluster workload can talk to the server via DNS. For this to work, we still need the above mentioned proxy (this time listening on another IP address `10.0.0.2`). An additional change to CoreDNS would be needed:
 

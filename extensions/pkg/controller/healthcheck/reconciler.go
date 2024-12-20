@@ -68,7 +68,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	extension := r.registeredExtension.getExtensionObjFunc()
 	if err := r.client.Get(ctx, request.NamespacedName, extension); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.V(1).Info("Object was not found, requeueing")
+			log.V(1).Info("Object was not found, requeuing")
 			return r.resultWithRequeue(), nil
 		}
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)

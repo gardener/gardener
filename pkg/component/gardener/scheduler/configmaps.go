@@ -16,7 +16,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/logger"
-	schedulerv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
+	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -30,7 +30,7 @@ var schedulerCodec runtime.Codec
 
 func init() {
 	schedulerScheme := runtime.NewScheme()
-	utilruntime.Must(schedulerv1alpha1.AddToScheme(schedulerScheme))
+	utilruntime.Must(schedulerconfigv1alpha1.AddToScheme(schedulerScheme))
 
 	var (
 		ser = json.NewSerializerWithOptions(json.DefaultMetaFactory, schedulerScheme, schedulerScheme, json.SerializerOptions{
@@ -39,7 +39,7 @@ func init() {
 			Strict: false,
 		})
 		versions = schema.GroupVersions([]schema.GroupVersion{
-			schedulerv1alpha1.SchemeGroupVersion,
+			schedulerconfigv1alpha1.SchemeGroupVersion,
 		})
 	)
 
@@ -47,7 +47,7 @@ func init() {
 }
 
 func (g *gardenerScheduler) configMapSchedulerConfig() (*corev1.ConfigMap, error) {
-	schedulerConfig := &schedulerv1alpha1.SchedulerConfiguration{
+	schedulerConfig := &schedulerconfigv1alpha1.SchedulerConfiguration{
 		ClientConnection: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
 			QPS:        100,
 			Burst:      130,
@@ -55,18 +55,18 @@ func (g *gardenerScheduler) configMapSchedulerConfig() (*corev1.ConfigMap, error
 		},
 		LeaderElection: &componentbaseconfigv1alpha1.LeaderElectionConfiguration{
 			LeaderElect:       ptr.To(true),
-			ResourceName:      schedulerv1alpha1.SchedulerDefaultLockObjectName,
+			ResourceName:      schedulerconfigv1alpha1.SchedulerDefaultLockObjectName,
 			ResourceNamespace: metav1.NamespaceSystem,
 		},
 		LogLevel:  g.values.LogLevel,
 		LogFormat: logger.FormatJSON,
-		Server: schedulerv1alpha1.ServerConfiguration{
-			HealthProbes: &schedulerv1alpha1.Server{Port: probePort},
-			Metrics:      &schedulerv1alpha1.Server{Port: metricsPort},
+		Server: schedulerconfigv1alpha1.ServerConfiguration{
+			HealthProbes: &schedulerconfigv1alpha1.Server{Port: probePort},
+			Metrics:      &schedulerconfigv1alpha1.Server{Port: metricsPort},
 		},
-		Schedulers: schedulerv1alpha1.SchedulerControllerConfiguration{
-			Shoot: &schedulerv1alpha1.ShootSchedulerConfiguration{
-				Strategy: schedulerv1alpha1.MinimalDistance,
+		Schedulers: schedulerconfigv1alpha1.SchedulerControllerConfiguration{
+			Shoot: &schedulerconfigv1alpha1.ShootSchedulerConfiguration{
+				Strategy: schedulerconfigv1alpha1.MinimalDistance,
 			},
 		},
 		FeatureGates: g.values.FeatureGates,

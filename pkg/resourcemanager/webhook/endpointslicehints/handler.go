@@ -16,7 +16,7 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-// Handler handles admission requests and sets hints in EndpointSlice resouces.
+// Handler handles admission requests and sets hints in EndpointSlice resources.
 type Handler struct {
 	Logger logr.Logger
 }

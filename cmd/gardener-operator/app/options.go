@@ -16,7 +16,7 @@ import (
 	"github.com/gardener/gardener/cmd/utils/initrun"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
-	operatorv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
+	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
 	operatorvalidation "github.com/gardener/gardener/pkg/operator/apis/config/validation"
 )
 
@@ -26,7 +26,7 @@ func init() {
 	configScheme := runtime.NewScheme()
 	schemeBuilder := runtime.NewSchemeBuilder(
 		config.AddToScheme,
-		operatorv1alpha1.AddToScheme,
+		operatorconfigv1alpha1.AddToScheme,
 	)
 	utilruntime.Must(schemeBuilder.AddToScheme(configScheme))
 	configDecoder = serializer.NewCodecFactory(configScheme).UniversalDecoder()

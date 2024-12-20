@@ -63,21 +63,21 @@ GO_ADD_LICENSE_VERSION ?= v1.1.1
 GOIMPORTSREVISER_VERSION ?= v3.8.2
 GO_VULN_CHECK_VERSION ?= latest
 # renovate: datasource=github-releases depName=helm/helm
-HELM_VERSION ?= v3.16.3
+HELM_VERSION ?= v3.16.4
 # renovate: datasource=github-releases depName=kubernetes-sigs/kind
-KIND_VERSION ?= v0.25.0
+KIND_VERSION ?= v0.26.0
 # renovate: datasource=github-releases depName=kubernetes/kubernetes
-KUBECTL_VERSION ?= v1.31.3
+KUBECTL_VERSION ?= v1.32.0
 # renovate: datasource=github-releases depName=kubernetes-sigs/kustomize
 KUSTOMIZE_VERSION ?= v5.3.0
 # renovate: datasource=github-releases depName=prometheus/prometheus
 PROMTOOL_VERSION ?= 2.55.1
 # renovate: datasource=github-releases depName=protocolbuffers/protobuf
-PROTOC_VERSION ?= v29.0
+PROTOC_VERSION ?= v29.2
 # renovate: datasource=github-releases depName=GoogleContainerTools/skaffold
 SKAFFOLD_VERSION ?= v2.13.2
 # renovate: datasource=github-releases depName=mikefarah/yq
-YQ_VERSION ?= v4.44.5
+YQ_VERSION ?= v4.44.6
 # renovate: datasource=github-releases depName=ironcore-dev/vgopath
 VGOPATH_VERSION ?= v0.1.7
 

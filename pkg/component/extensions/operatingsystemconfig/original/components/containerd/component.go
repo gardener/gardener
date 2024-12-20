@@ -16,6 +16,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/containerd/logrotate"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/rootcertificates"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -85,6 +86,12 @@ func (containerd) Config(_ components.Context) ([]extensionsv1alpha1.Unit, []ext
 		},
 	}
 
+	// Unit without content to trigger restart of containerd.service when CAs change.
+	containerdUnit := extensionsv1alpha1.Unit{
+		Name:      UnitName,
+		FilePaths: []string{rootcertificates.PathLocalSSLRootCerts},
+	}
+
 	monitorUnit := extensionsv1alpha1.Unit{
 		Name:    UnitNameMonitor,
 		Command: ptr.To(extensionsv1alpha1.CommandStart),
@@ -101,5 +108,5 @@ ExecStart=` + pathHealthMonitor),
 		FilePaths: []string{monitorFile.Path},
 	}
 
-	return append(logRotateUnits, monitorUnit), append(logRotateFiles, monitorFile), nil
+	return append(logRotateUnits, containerdUnit, monitorUnit), append(logRotateFiles, monitorFile), nil
 }

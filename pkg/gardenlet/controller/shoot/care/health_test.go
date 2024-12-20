@@ -34,7 +34,7 @@ import (
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
-	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
@@ -382,7 +382,7 @@ var _ = Describe("health check", func() {
 			Entry("outdated OSC secret checksum for a worker pool",
 				kubernetesVersion,
 				[]corev1.Node{
-					newNode(labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, map[string]string{nodeagentv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig: "outdated"}, kubernetesVersion.Original()),
+					newNode(labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, map[string]string{nodeagentconfigv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig: "outdated"}, kubernetesVersion.Original()),
 				},
 				[]gardencorev1beta1.Worker{
 					{
@@ -402,7 +402,7 @@ var _ = Describe("health check", func() {
 			Entry("outdated OSC secret checksum for a worker pool when shoot has not been reconciled yet",
 				kubernetesVersion,
 				[]corev1.Node{
-					newNode(labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, map[string]string{nodeagentv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig: "outdated"}, kubernetesVersion.Original()),
+					newNode(labels.Set{"worker.gardener.cloud/pool": workerPoolName1, "worker.gardener.cloud/kubernetes-version": kubernetesVersion.Original()}, map[string]string{nodeagentconfigv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig: "outdated"}, kubernetesVersion.Original()),
 				},
 				[]gardencorev1beta1.Worker{
 					{

@@ -53,7 +53,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	resourcemanagerv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/crddeletionprotection"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/endpointslicehints"
@@ -92,7 +92,7 @@ var (
 
 func init() {
 	scheme = runtime.NewScheme()
-	utilruntime.Must(resourcemanagerv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(resourcemanagerconfigv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(apiextensionsv1.AddToScheme(scheme))
 
 	var (
@@ -102,7 +102,7 @@ func init() {
 			Strict: false,
 		})
 		versions = schema.GroupVersions([]schema.GroupVersion{
-			resourcemanagerv1alpha1.SchemeGroupVersion,
+			resourcemanagerconfigv1alpha1.SchemeGroupVersion,
 			apiextensionsv1.SchemeGroupVersion,
 		})
 	)
@@ -253,7 +253,7 @@ type Values struct {
 	NetworkPolicyAdditionalNamespaceSelectors []metav1.LabelSelector
 	// NetworkPolicyControllerIngressControllerSelector is the peer information of the ingress controller for the
 	// network policy controller.
-	NetworkPolicyControllerIngressControllerSelector *resourcemanagerv1alpha1.IngressControllerSelector
+	NetworkPolicyControllerIngressControllerSelector *resourcemanagerconfigv1alpha1.IngressControllerSelector
 	// Image is the container image.
 	Image string
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
@@ -507,66 +507,66 @@ func (r *resourceManager) emptyClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 }
 
 func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1.ConfigMap) error {
-	config := &resourcemanagerv1alpha1.ResourceManagerConfiguration{
+	config := &resourcemanagerconfigv1alpha1.ResourceManagerConfiguration{
 		LeaderElection: componentbaseconfigv1alpha1.LeaderElectionConfiguration{
 			LeaderElect:       ptr.To(true),
 			ResourceName:      r.values.NamePrefix + v1beta1constants.DeploymentNameGardenerResourceManager,
 			ResourceNamespace: r.namespace,
 		},
-		Server: resourcemanagerv1alpha1.ServerConfiguration{
-			HealthProbes: &resourcemanagerv1alpha1.Server{
+		Server: resourcemanagerconfigv1alpha1.ServerConfiguration{
+			HealthProbes: &resourcemanagerconfigv1alpha1.Server{
 				Port: healthPort,
 			},
-			Metrics: &resourcemanagerv1alpha1.Server{
+			Metrics: &resourcemanagerconfigv1alpha1.Server{
 				Port: metricsPort,
 			},
-			Webhooks: resourcemanagerv1alpha1.HTTPSServer{
-				Server: resourcemanagerv1alpha1.Server{
+			Webhooks: resourcemanagerconfigv1alpha1.HTTPSServer{
+				Server: resourcemanagerconfigv1alpha1.Server{
 					Port: resourcemanagerconstants.ServerPort,
 				},
-				TLS: resourcemanagerv1alpha1.TLSServer{
+				TLS: resourcemanagerconfigv1alpha1.TLSServer{
 					ServerCertDir: volumeMountPathCerts,
 				},
 			},
 		},
 		LogLevel:  r.values.LogLevel,
 		LogFormat: r.values.LogFormat,
-		Controllers: resourcemanagerv1alpha1.ResourceManagerControllerConfiguration{
+		Controllers: resourcemanagerconfigv1alpha1.ResourceManagerControllerConfiguration{
 			ClusterID:     r.values.ClusterIdentity,
 			ResourceClass: r.values.ResourceClass,
-			GarbageCollector: resourcemanagerv1alpha1.GarbageCollectorControllerConfig{
+			GarbageCollector: resourcemanagerconfigv1alpha1.GarbageCollectorControllerConfig{
 				Enabled:    true,
 				SyncPeriod: &metav1.Duration{Duration: 12 * time.Hour},
 			},
-			Health: resourcemanagerv1alpha1.HealthControllerConfig{
+			Health: resourcemanagerconfigv1alpha1.HealthControllerConfig{
 				ConcurrentSyncs: r.values.MaxConcurrentHealthWorkers,
 				SyncPeriod:      r.values.HealthSyncPeriod,
 			},
-			ManagedResource: resourcemanagerv1alpha1.ManagedResourceControllerConfig{
+			ManagedResource: resourcemanagerconfigv1alpha1.ManagedResourceControllerConfig{
 				ConcurrentSyncs: r.values.ConcurrentSyncs,
 				SyncPeriod:      r.values.SyncPeriod,
 				AlwaysUpdate:    r.values.AlwaysUpdate,
 			},
 		},
-		Webhooks: resourcemanagerv1alpha1.ResourceManagerWebhookConfiguration{
-			EndpointSliceHints: resourcemanagerv1alpha1.EndpointSliceHintsWebhookConfig{
+		Webhooks: resourcemanagerconfigv1alpha1.ResourceManagerWebhookConfiguration{
+			EndpointSliceHints: resourcemanagerconfigv1alpha1.EndpointSliceHintsWebhookConfig{
 				Enabled: r.values.EndpointSliceHintsEnabled,
 			},
-			HighAvailabilityConfig: resourcemanagerv1alpha1.HighAvailabilityConfigWebhookConfig{
+			HighAvailabilityConfig: resourcemanagerconfigv1alpha1.HighAvailabilityConfigWebhookConfig{
 				Enabled:                             true,
 				DefaultNotReadyTolerationSeconds:    r.values.DefaultNotReadyToleration,
 				DefaultUnreachableTolerationSeconds: r.values.DefaultUnreachableToleration,
 			},
-			PodTopologySpreadConstraints: resourcemanagerv1alpha1.PodTopologySpreadConstraintsWebhookConfig{
+			PodTopologySpreadConstraints: resourcemanagerconfigv1alpha1.PodTopologySpreadConstraintsWebhookConfig{
 				Enabled: r.values.PodTopologySpreadConstraintsEnabled,
 			},
-			ProjectedTokenMount: resourcemanagerv1alpha1.ProjectedTokenMountWebhookConfig{
+			ProjectedTokenMount: resourcemanagerconfigv1alpha1.ProjectedTokenMountWebhookConfig{
 				Enabled: true,
 			},
-			NodeAgentAuthorizer: resourcemanagerv1alpha1.NodeAgentAuthorizerWebhookConfig{
+			NodeAgentAuthorizer: resourcemanagerconfigv1alpha1.NodeAgentAuthorizerWebhookConfig{
 				Enabled: r.values.NodeAgentAuthorizerEnabled,
 			},
-			SeccompProfile: resourcemanagerv1alpha1.SeccompProfileWebhookConfig{
+			SeccompProfile: resourcemanagerconfigv1alpha1.SeccompProfileWebhookConfig{
 				Enabled: r.values.DefaultSeccompProfileEnabled,
 			},
 		},
@@ -580,14 +580,14 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 	}
 
 	if r.values.TargetDiffersFromSourceCluster {
-		config.TargetClientConnection = &resourcemanagerv1alpha1.ClientConnection{
+		config.TargetClientConnection = &resourcemanagerconfigv1alpha1.ClientConnection{
 			ClientConnectionConfiguration: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
 				Kubeconfig: gardenerutils.PathGenericKubeconfig,
 			},
 			Namespaces: r.values.TargetNamespaces,
 		}
 	} else {
-		config.Controllers.NetworkPolicy = resourcemanagerv1alpha1.NetworkPolicyControllerConfig{
+		config.Controllers.NetworkPolicy = resourcemanagerconfigv1alpha1.NetworkPolicyControllerConfig{
 			Enabled:         true,
 			ConcurrentSyncs: r.values.MaxConcurrentNetworkPolicyWorkers,
 			NamespaceSelectors: append([]metav1.LabelSelector{
@@ -639,7 +639,7 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 	}
 
 	if r.values.TargetDiffersFromSourceCluster {
-		config.Webhooks.SystemComponentsConfig = resourcemanagerv1alpha1.SystemComponentsConfigWebhookConfig{
+		config.Webhooks.SystemComponentsConfig = resourcemanagerconfigv1alpha1.SystemComponentsConfigWebhookConfig{
 			Enabled: true,
 			NodeSelector: map[string]string{
 				v1beta1constants.LabelWorkerPoolSystemComponents: "true",
@@ -2070,7 +2070,7 @@ type Secrets struct {
 	shootAccess *gardenerutils.AccessSecret
 }
 
-func disableControllersAndWebhooksForWorkerlessShoot(config *resourcemanagerv1alpha1.ResourceManagerConfiguration) {
+func disableControllersAndWebhooksForWorkerlessShoot(config *resourcemanagerconfigv1alpha1.ResourceManagerConfiguration) {
 	// disable unneeded controllers
 	config.Controllers.CSRApprover.Enabled = false
 	config.Controllers.NodeCriticalComponents.Enabled = false

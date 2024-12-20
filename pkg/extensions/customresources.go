@@ -192,7 +192,7 @@ func WaitUntilExtensionObjectsDeleted(
 	return flow.Parallel(fns...)(ctx)
 }
 
-// WaitUntilExtensionObjectDeleted waits until an extension oject is deleted from the system.
+// WaitUntilExtensionObjectDeleted waits until an extension object is deleted from the system.
 // Passed objects are expected to be filled with the latest state the controller/component
 // observed/retrieved, but at least namespace and name.
 func WaitUntilExtensionObjectDeleted(

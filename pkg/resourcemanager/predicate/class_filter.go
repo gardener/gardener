@@ -14,7 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	resourcemanagerv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 )
 
 const (
@@ -38,11 +38,11 @@ var _ predicate.Predicate = &ClassFilter{}
 // NewClassFilter returns a new `ClassFilter` instance.
 func NewClassFilter(class string) *ClassFilter {
 	if class == "" {
-		class = resourcemanagerv1alpha1.DefaultResourceClass
+		class = resourcemanagerconfigv1alpha1.DefaultResourceClass
 	}
 
 	finalizer := FinalizerName + "-" + class
-	if class == resourcemanagerv1alpha1.DefaultResourceClass {
+	if class == resourcemanagerconfigv1alpha1.DefaultResourceClass {
 		finalizer = FinalizerName
 	}
 
@@ -66,7 +66,7 @@ func (f *ClassFilter) FinalizerName() string {
 func (f *ClassFilter) Responsible(o runtime.Object) bool {
 	r := o.(*resourcesv1alpha1.ManagedResource)
 	c := ptr.Deref(r.Spec.Class, "")
-	return c == f.resourceClass || (c == "" && f.resourceClass == resourcemanagerv1alpha1.DefaultResourceClass)
+	return c == f.resourceClass || (c == "" && f.resourceClass == resourcemanagerconfigv1alpha1.DefaultResourceClass)
 }
 
 // IsTransferringResponsibility checks if a Managed Resource has changed its class and should have its resources cleaned by the given controller instance.

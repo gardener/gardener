@@ -15,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
@@ -141,13 +140,6 @@ type ShootSpec struct {
 	// AccessRestrictions describe a list of access restrictions for this shoot cluster.
 	// +optional
 	AccessRestrictions []AccessRestrictionWithOptions `json:"accessRestrictions,omitempty" protobuf:"bytes,24,rep,name=accessRestrictions"`
-}
-
-var _ gardencore.Object = (*Shoot)(nil)
-
-// GetProviderType gets the type of the provider.
-func (s *Shoot) GetProviderType() string {
-	return s.Spec.Provider.Type
 }
 
 // ShootStatus holds the most recently observed status of the Shoot cluster.
@@ -736,6 +728,14 @@ type VerticalPodAutoscaler struct {
 	// (default: 0.95)
 	// +optional
 	RecommendationUpperBoundMemoryPercentile *float64 `json:"recommendationUpperBoundMemoryPercentile,omitempty" protobuf:"fixed64,14,opt,name=recommendationUpperBoundMemoryPercentile"`
+	// CPUHistogramDecayHalfLife is the amount of time it takes a historical CPU usage sample to lose half of its weight.
+	// (default: 24h)
+	// +optional
+	CPUHistogramDecayHalfLife *metav1.Duration `json:"cpuHistogramDecayHalfLife,omitempty" protobuf:"bytes,15,opt,name=cpuHistogramDecayHalfLife"`
+	// MemoryHistogramDecayHalfLife is the amount of time it takes a historical memory usage sample to lose half of its weight.
+	// (default: 24h)
+	// +optional
+	MemoryHistogramDecayHalfLife *metav1.Duration `json:"memoryHistogramDecayHalfLife,omitempty" protobuf:"bytes,16,opt,name=memoryHistogramDecayHalfLife"`
 }
 
 const (
@@ -768,6 +768,10 @@ var (
 	DefaultUpdaterInterval = metav1.Duration{Duration: time.Minute}
 	// DefaultRecommenderInterval is the default value for the RecommenderInterval field in the VPA configuration.
 	DefaultRecommenderInterval = metav1.Duration{Duration: time.Minute}
+	// DefaultCPUHistogramDecayHalfLife is the default value for the CPUHistogramDecayHalfLife field in the VPA configuration.
+	DefaultCPUHistogramDecayHalfLife = metav1.Duration{Duration: 24 * time.Hour}
+	// DefaultMemoryHistogramDecayHalfLife is the default value for the MemoryHistogramDecayHalfLife field in the VPA configuration.
+	DefaultMemoryHistogramDecayHalfLife = metav1.Duration{Duration: 24 * time.Hour}
 )
 
 // KubernetesConfig contains common configuration fields for the control plane components.
@@ -1069,7 +1073,7 @@ type KubeControllerManagerConfig struct {
 	//
 	// Deprecated: The corresponding kube-controller-manager flag `--pod-eviction-timeout` is deprecated
 	// in favor of the kube-apiserver flags `--default-not-ready-toleration-seconds` and `--default-unreachable-toleration-seconds`.
-	// The `--pod-eviction-timeout` flag does not have effect when the taint besed eviction is enabled. The taint
+	// The `--pod-eviction-timeout` flag does not have effect when the taint based eviction is enabled. The taint
 	// based eviction is beta (enabled by default) since Kubernetes 1.13 and GA since Kubernetes 1.18. Hence,
 	// instead of setting this field, set the `spec.kubernetes.kubeAPIServer.defaultNotReadyTolerationSeconds` and
 	// `spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds`.
@@ -1376,7 +1380,7 @@ const (
 	// NoSwap is a constant for the kubelet's swap behavior restricting Kubernetes workloads to not use swap.
 	// Only available for Kubernetes versions >= v1.30.
 	NoSwap SwapBehavior = "NoSwap"
-	// LimitedSwap is a constant for the kubelet's swap behavior limitting the amount of swap usable for Kubernetes workloads. Workloads on the node not managed by Kubernetes can still swap.
+	// LimitedSwap is a constant for the kubelet's swap behavior limiting the amount of swap usable for Kubernetes workloads. Workloads on the node not managed by Kubernetes can still swap.
 	// - cgroupsv1 host: Kubernetes workloads can use any combination of memory and swap, up to the pod's memory limit
 	// - cgroupsv2 host: swap is managed independently from memory. Kubernetes workloads cannot use swap memory.
 	LimitedSwap SwapBehavior = "LimitedSwap"
@@ -1665,7 +1669,7 @@ type ShootMachineImage struct {
 
 // Volume contains information about the volume type, size, and encryption.
 type Volume struct {
-	// Name of the volume to make it referencable.
+	// Name of the volume to make it referenceable.
 	// +optional
 	Name *string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
 	// Type is the type of the volume.
@@ -1680,7 +1684,7 @@ type Volume struct {
 
 // DataVolume contains information about a data volume.
 type DataVolume struct {
-	// Name of the volume to make it referencable.
+	// Name of the volume to make it referenceable.
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 	// Type is the type of the volume.
 	// +optional

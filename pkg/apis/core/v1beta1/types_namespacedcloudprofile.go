@@ -7,8 +7,6 @@ package v1beta1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 )
 
 // +genclient
@@ -82,11 +80,4 @@ type CloudProfileReference struct {
 	Kind string `json:"kind" protobuf:"bytes,1,req,name=kind"`
 	// Name contains the name of the referenced CloudProfile.
 	Name string `json:"name" protobuf:"bytes,2,req,name=name"`
-}
-
-var _ gardencore.Object = (*NamespacedCloudProfile)(nil)
-
-// GetProviderType gets the type of the provider.
-func (c *NamespacedCloudProfile) GetProviderType() string {
-	return c.Status.CloudProfileSpec.Type
 }

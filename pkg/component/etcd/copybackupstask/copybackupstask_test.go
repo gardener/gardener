@@ -132,7 +132,7 @@ var _ = Describe("CopyBackupsTask", func() {
 			Expect(etcdCopyBackupsTask.Wait(ctx)).To(MatchError(ContainSubstring(errorText)))
 		})
 
-		It("should return erorr if expected Successful or Failed conditions are not added yet", func() {
+		It("should return error if expected Successful or Failed conditions are not added yet", func() {
 			c.EXPECT().
 				Get(gomock.AssignableToTypeOf(timeoutCtx), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(expected)).
 				DoAndReturn(func(_ context.Context, _ client.ObjectKey, etcdCopyBackupsTask *druidv1alpha1.EtcdCopyBackupsTask, _ ...client.GetOption) error {

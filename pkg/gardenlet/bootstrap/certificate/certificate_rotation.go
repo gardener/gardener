@@ -105,7 +105,7 @@ func (cr *Manager) ScheduleCertificateRotation(ctx context.Context, gardenletCan
 			return
 		}
 
-		cr.log.Info("Terminating Gardenlet after successful certificate rotation")
+		cr.log.Info("Terminating gardenlet after successful certificate rotation")
 		gardenletCancel()
 	}, time.Second, ctx.Done())
 	return nil
@@ -216,7 +216,7 @@ func GetCurrentCertificate(log logr.Logger, gardenKubeconfig []byte, gardenClien
 	}
 
 	// get a rest config from either the `gardenClientConnection.KubeconfigSecret` or from the fallback kubeconfig specified in `gardenClientConnection.Kubeconfig`
-	restConfig, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&gardenClientConnection.ClientConnectionConfiguration, gardenKubeconfig)
+	restConfig, err := kubernetes.RESTConfigFromInternalClientConnectionConfiguration(&gardenClientConnection.ClientConnectionConfiguration, gardenKubeconfig)
 	if err != nil {
 		return nil, err
 	}

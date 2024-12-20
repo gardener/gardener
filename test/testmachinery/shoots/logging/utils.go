@@ -65,7 +65,7 @@ func WaitUntilValiReceivesLogs(ctx context.Context, interval time.Duration, shoo
 			}
 			current, err := strconv.Atoi(currentStr)
 			if err != nil {
-				return retry.SevereError(fmt.Errorf("Data.Result.Value[1] string is not parsable to intiger for %s=%s", key, value))
+				return retry.SevereError(fmt.Errorf("Data.Result.Value[1] string is not parsable to integer for %s=%s", key, value))
 			}
 			actual += current
 		}
@@ -115,7 +115,7 @@ func create(ctx context.Context, c client.Client, obj client.Object) error {
 	return client.IgnoreAlreadyExists(c.Create(ctx, obj))
 }
 
-func getShootNamesapce(number int) *corev1.Namespace {
+func getShootNamespace(number int) *corev1.Namespace {
 	return &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: fmt.Sprintf("%s%v", simulatedShootNamespacePrefix, number),
@@ -184,7 +184,7 @@ func getLogCountFromResult(search *framework.SearchResponse) (int, error) {
 		}
 		current, err := strconv.Atoi(currentStr)
 		if err != nil {
-			return totalLogs, fmt.Errorf("Data.Result.Value[1] string is not parsable to intiger")
+			return totalLogs, fmt.Errorf("Data.Result.Value[1] string is not parsable to integer")
 		}
 		totalLogs += current
 	}

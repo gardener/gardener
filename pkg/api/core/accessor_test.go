@@ -7,7 +7,6 @@ package core_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
 
 	. "github.com/gardener/gardener/pkg/api/core"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -20,12 +19,6 @@ var _ = Describe("Accessor", func() {
 			shootAccessor, err := Accessor(shoot)
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(shoot).To(Equal(shootAccessor))
-		})
-
-		It("Should fail to create an accessor because of the missing implementation", func() {
-			secret := &corev1.Secret{}
-			_, err := Accessor(secret)
-			Expect(err).To(HaveOccurred())
 		})
 	})
 })

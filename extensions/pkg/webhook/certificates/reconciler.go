@@ -111,7 +111,7 @@ func (r *reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 			},
 		})
 		if err != nil {
-			return fmt.Errorf("failed to create new unchached client: %w", err)
+			return fmt.Errorf("failed to create new uncached client: %w", err)
 		}
 
 		sm, err := r.newSecretsManager(ctx, mgr.GetLogger(), uncachedClient)

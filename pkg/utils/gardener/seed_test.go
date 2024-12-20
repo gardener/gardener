@@ -72,7 +72,7 @@ var _ = Describe("utils", func() {
 		Entry("everything matches", &x509.CertificateRequest{Subject: pkix.Name{Organization: []string{"gardener.cloud:system:seeds"}, CommonName: "gardener.cloud:system:seed:foo"}}, []certificatesv1.KeyUsage{certificatesv1.UsageKeyEncipherment, certificatesv1.UsageDigitalSignature, certificatesv1.UsageClientAuth}, true, Equal("")),
 	)
 
-	Describe("#GetWilcardCertificate", func() {
+	Describe("#GetWildcardCertificate", func() {
 		var (
 			ctx        = context.TODO()
 			fakeClient client.Client

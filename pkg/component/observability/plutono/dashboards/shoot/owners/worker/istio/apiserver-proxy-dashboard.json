@@ -1135,7 +1135,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "prometheus",
-      "description": "The ammount of time an upstream connection from the `apiserver-proxy`  to the Shoot Kube API Seaarver takes to open",
+      "description": "The amount of time an upstream connection from the `apiserver-proxy`  to the Shoot Kube API Seaarver takes to open",
       "fieldConfig": {
         "defaults": {
           "custom": {},

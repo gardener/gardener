@@ -23,7 +23,7 @@ func LogMutation(logger logr.Logger, kind, namespace, name string) {
 	logger.Info("Mutating resource", "kind", kind, "namespace", namespace, "name", name)
 }
 
-// AppendUniqueUnit appens a unit only if it does not exist.
+// AppendUniqueUnit appends a unit only if it does not exist.
 func AppendUniqueUnit(units *[]extensionsv1alpha1.Unit, unit extensionsv1alpha1.Unit) {
 	for _, un := range *units {
 		if un.Name == unit.Name {

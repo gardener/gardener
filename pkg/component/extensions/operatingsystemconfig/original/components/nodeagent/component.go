@@ -25,7 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/valitail"
 	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
 	"github.com/gardener/gardener/pkg/features"
-	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -36,11 +36,11 @@ var codec runtime.Codec
 
 func init() {
 	scheme := runtime.NewScheme()
-	utilruntime.Must(nodeagentv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(nodeagentconfigv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(extensionsv1alpha1.AddToScheme(scheme))
 
 	ser := json.NewSerializerWithOptions(json.DefaultMetaFactory, scheme, scheme, json.SerializerOptions{Yaml: true, Pretty: false, Strict: false})
-	versions := schema.GroupVersions([]schema.GroupVersion{nodeagentv1alpha1.SchemeGroupVersion, extensionsv1alpha1.SchemeGroupVersion})
+	versions := schema.GroupVersions([]schema.GroupVersion{nodeagentconfigv1alpha1.SchemeGroupVersion, extensionsv1alpha1.SchemeGroupVersion})
 	codec = serializer.NewCodecFactory(scheme).CodecForVersions(ser, ser, versions, versions)
 }
 
@@ -61,9 +61,9 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		caBundle = []byte(*ctx.CABundle)
 	}
 
-	var additionalTokenSyncConfigs []nodeagentv1alpha1.TokenSecretSyncConfig
+	var additionalTokenSyncConfigs []nodeagentconfigv1alpha1.TokenSecretSyncConfig
 	if ctx.ValitailEnabled {
-		additionalTokenSyncConfigs = append(additionalTokenSyncConfigs, nodeagentv1alpha1.TokenSecretSyncConfig{
+		additionalTokenSyncConfigs = append(additionalTokenSyncConfigs, nodeagentconfigv1alpha1.TokenSecretSyncConfig{
 			SecretName: valiconstants.ValitailTokenSecretName,
 			Path:       valitail.PathAuthToken,
 		})
@@ -86,7 +86,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	})
 
 	units := []extensionsv1alpha1.Unit{{
-		Name:      nodeagentv1alpha1.UnitName,
+		Name:      nodeagentconfigv1alpha1.UnitName,
 		Enable:    ptr.To(true),
 		Content:   ptr.To(UnitContent()),
 		FilePaths: extensionsv1alpha1helper.FilePathsFrom(files),
@@ -103,7 +103,7 @@ After=network-online.target
 
 [Service]
 LimitMEMLOCK=infinity
-ExecStart=` + nodeagentv1alpha1.BinaryDir + `/gardener-node-agent --config=` + nodeagentv1alpha1.ConfigFilePath + `
+ExecStart=` + nodeagentconfigv1alpha1.BinaryDir + `/gardener-node-agent --config=` + nodeagentconfigv1alpha1.ConfigFilePath + `
 Restart=always
 RestartSec=5
 
@@ -117,27 +117,27 @@ func ComponentConfig(
 	kubernetesVersion *semver.Version,
 	apiServerURL string,
 	caBundle []byte,
-	additionalTokenSyncConfigs []nodeagentv1alpha1.TokenSecretSyncConfig,
-) *nodeagentv1alpha1.NodeAgentConfiguration {
+	additionalTokenSyncConfigs []nodeagentconfigv1alpha1.TokenSecretSyncConfig,
+) *nodeagentconfigv1alpha1.NodeAgentConfiguration {
 	tokenSyncConfigs := additionalTokenSyncConfigs[:]
 	if !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) {
-		tokenSyncConfigs = append(tokenSyncConfigs, nodeagentv1alpha1.TokenSecretSyncConfig{
-			SecretName: nodeagentv1alpha1.AccessSecretName,
-			Path:       nodeagentv1alpha1.TokenFilePath,
+		tokenSyncConfigs = append(tokenSyncConfigs, nodeagentconfigv1alpha1.TokenSecretSyncConfig{
+			SecretName: nodeagentconfigv1alpha1.AccessSecretName,
+			Path:       nodeagentconfigv1alpha1.TokenFilePath,
 		})
 	}
 
-	return &nodeagentv1alpha1.NodeAgentConfiguration{
-		APIServer: nodeagentv1alpha1.APIServer{
+	return &nodeagentconfigv1alpha1.NodeAgentConfiguration{
+		APIServer: nodeagentconfigv1alpha1.APIServer{
 			Server:   apiServerURL,
 			CABundle: caBundle,
 		},
-		Controllers: nodeagentv1alpha1.ControllerConfiguration{
-			OperatingSystemConfig: nodeagentv1alpha1.OperatingSystemConfigControllerConfig{
+		Controllers: nodeagentconfigv1alpha1.ControllerConfiguration{
+			OperatingSystemConfig: nodeagentconfigv1alpha1.OperatingSystemConfigControllerConfig{
 				SecretName:        oscSecretName,
 				KubernetesVersion: kubernetesVersion,
 			},
-			Token: nodeagentv1alpha1.TokenControllerConfig{
+			Token: nodeagentconfigv1alpha1.TokenControllerConfig{
 				SyncConfigs: tokenSyncConfigs,
 				// It is enough to sync the access tokens every 12h to the disk because they are only rotated roughly
 				// each 12h. Furthermore, they are valid for 30d, so there should be enough head time to sync an updated
@@ -150,14 +150,14 @@ func ComponentConfig(
 }
 
 // Files returns the files related to the gardener-node-agent unit.
-func Files(config *nodeagentv1alpha1.NodeAgentConfiguration) ([]extensionsv1alpha1.File, error) {
+func Files(config *nodeagentconfigv1alpha1.NodeAgentConfiguration) ([]extensionsv1alpha1.File, error) {
 	configRaw, err := runtime.Encode(codec, config)
 	if err != nil {
 		return nil, fmt.Errorf("failed encoding component config: %w", err)
 	}
 
 	return []extensionsv1alpha1.File{{
-		Path:        nodeagentv1alpha1.ConfigFilePath,
+		Path:        nodeagentconfigv1alpha1.ConfigFilePath,
 		Permissions: ptr.To[uint32](0600),
 		Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(configRaw)}},
 	}}, nil

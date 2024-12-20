@@ -43,7 +43,7 @@ func init() {
 	targetSeedName = flag.String("target-seed-name", "", "name of the seed to which the shoot will be migrated")
 	shootName = flag.String("shoot-name", "", "name of the shoot")
 	shootNamespace = flag.String("shoot-namespace", "", "namespace of the shoot")
-	mrExcludeList = flag.String("mr-exclude-list", "", "comma-separated values of the ManagedResources that will be exlude during the 'CreationTimestamp' check")
+	mrExcludeList = flag.String("mr-exclude-list", "", "comma-separated values of the ManagedResources that will be exclude during the 'CreationTimestamp' check")
 	resourcesWithGeneratedName = flag.String("resources-with-generated-name", "", "comma-separated names of resources deployed via managed resources that get their name generated during reconciliation and will be excluded during the 'CreationTimestamp' check")
 	addTestRunTaint = flag.String("add-test-run-taint", "", "if this property is set to 'true' the 'test.gardener.cloud/test-run' taint with the value of the 'TM_TESTRUN_ID' environment variable, will be applied to the shoot")
 }

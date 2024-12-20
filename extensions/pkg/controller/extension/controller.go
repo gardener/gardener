@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
@@ -43,6 +44,8 @@ type AddArgs struct {
 	Resync time.Duration
 	// Type is the type of the resource considered for reconciliation.
 	Type string
+	// WatchBuilder defines additional watches on controllers that should be set up.
+	WatchBuilder extensionscontroller.WatchBuilder
 	// IgnoreOperationAnnotation specifies whether to ignore the operation annotation or not.
 	// If the annotation is not ignored, the extension controller will only reconcile
 	// with a present operation annotation typically set during a reconcile (e.g. in the maintenance time) by the Gardenlet
@@ -71,6 +74,10 @@ func add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
 	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
 	predicates = append(predicates, extensionspredicate.HasClass(args.ExtensionClass))
 
+	if err := ctrl.Watch(source.Kind[client.Object](mgr.GetCache(), &extensionsv1alpha1.Extension{}, &handler.EnqueueRequestForObject{}, predicates...)); err != nil {
+		return err
+	}
+
 	if args.IgnoreOperationAnnotation {
 		if err := ctrl.Watch(
 			source.Kind[client.Object](mgr.GetCache(),
@@ -81,5 +88,6 @@ func add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
 		}
 	}
 
-	return ctrl.Watch(source.Kind[client.Object](mgr.GetCache(), &extensionsv1alpha1.Extension{}, &handler.EnqueueRequestForObject{}, predicates...))
+	// Add additional watches to the controller besides the standard one.
+	return args.WatchBuilder.AddToController(ctrl)
 }

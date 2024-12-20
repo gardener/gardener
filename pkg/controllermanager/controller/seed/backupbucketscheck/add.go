@@ -61,7 +61,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 }
 
 // BackupBucketPredicate reacts only on 'CREATE' and 'UPDATE' events. It returns false if .spec.seedName == nil. For
-// updates, it only returns true when the .stauts.lastError changed.
+// updates, it only returns true when the .status.lastError changed.
 func (r *Reconciler) BackupBucketPredicate() predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {

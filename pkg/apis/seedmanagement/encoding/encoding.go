@@ -17,7 +17,7 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 )
 
 var scheme *runtime.Scheme
@@ -28,22 +28,22 @@ func init() {
 	utilruntime.Must(gardencore.AddToScheme(scheme))
 	utilruntime.Must(gardencorev1beta1.AddToScheme(scheme))
 	utilruntime.Must(config.AddToScheme(scheme))
-	utilruntime.Must(gardenletv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(gardenletconfigv1alpha1.AddToScheme(scheme))
 }
 
 // DecodeGardenletConfiguration decodes the given raw extension into an external GardenletConfiguration version.
-func DecodeGardenletConfiguration(rawConfig *runtime.RawExtension, withDefaults bool) (*gardenletv1alpha1.GardenletConfiguration, error) {
-	if cfg, ok := rawConfig.Object.(*gardenletv1alpha1.GardenletConfiguration); ok {
+func DecodeGardenletConfiguration(rawConfig *runtime.RawExtension, withDefaults bool) (*gardenletconfigv1alpha1.GardenletConfiguration, error) {
+	if cfg, ok := rawConfig.Object.(*gardenletconfigv1alpha1.GardenletConfiguration); ok {
 		return cfg, nil
 	}
 	return DecodeGardenletConfigurationFromBytes(rawConfig.Raw, withDefaults)
 }
 
 // DecodeGardenletConfigurationFromBytes decodes the given byte slice into an external GardenletConfiguration version.
-func DecodeGardenletConfigurationFromBytes(bytes []byte, withDefaults bool) (*gardenletv1alpha1.GardenletConfiguration, error) {
-	cfg := &gardenletv1alpha1.GardenletConfiguration{
+func DecodeGardenletConfigurationFromBytes(bytes []byte, withDefaults bool) (*gardenletconfigv1alpha1.GardenletConfiguration, error) {
+	cfg := &gardenletconfigv1alpha1.GardenletConfiguration{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
+			APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
 			Kind:       "GardenletConfiguration",
 		},
 	}
@@ -54,7 +54,7 @@ func DecodeGardenletConfigurationFromBytes(bytes []byte, withDefaults bool) (*ga
 }
 
 // EncodeGardenletConfiguration encodes the given external GardenletConfiguration version into a raw extension.
-func EncodeGardenletConfiguration(cfg *gardenletv1alpha1.GardenletConfiguration) (*runtime.RawExtension, error) {
+func EncodeGardenletConfiguration(cfg *gardenletconfigv1alpha1.GardenletConfiguration) (*runtime.RawExtension, error) {
 	raw, err := EncodeGardenletConfigurationToBytes(cfg)
 	if err != nil {
 		return nil, err
@@ -66,8 +66,8 @@ func EncodeGardenletConfiguration(cfg *gardenletv1alpha1.GardenletConfiguration)
 }
 
 // EncodeGardenletConfigurationToBytes encodes the given external GardenletConfiguration version into a byte slice.
-func EncodeGardenletConfigurationToBytes(cfg *gardenletv1alpha1.GardenletConfiguration) ([]byte, error) {
-	encoder, err := getEncoder(gardenletv1alpha1.SchemeGroupVersion, runtime.ContentTypeJSON)
+func EncodeGardenletConfigurationToBytes(cfg *gardenletconfigv1alpha1.GardenletConfiguration) ([]byte, error) {
+	encoder, err := getEncoder(gardenletconfigv1alpha1.SchemeGroupVersion, runtime.ContentTypeJSON)
 	if err != nil {
 		return nil, err
 	}

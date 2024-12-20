@@ -40,11 +40,11 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 		r.Clock = clock.RealClock{}
 	}
 	if r.HelmRegistry == nil {
-		helmRegisty, err := oci.NewHelmRegistry()
+		helmRegistry, err := oci.NewHelmRegistry()
 		if err != nil {
 			return err
 		}
-		r.HelmRegistry = helmRegisty
+		r.HelmRegistry = helmRegistry
 	}
 
 	return builder.

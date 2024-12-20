@@ -1019,8 +1019,8 @@ func (s *ShootItems) Union(shootItems *ShootItems) []gardencorev1beta1.Shoot {
 	return shoots
 }
 
-func objectKey(namesapce, name string) string {
-	return fmt.Sprintf("%s/%s", namesapce, name)
+func objectKey(namespace, name string) string {
+	return fmt.Sprintf("%s/%s", namespace, name)
 }
 
 // GetPurpose returns the purpose of the shoot or 'evaluation' if it's nil.

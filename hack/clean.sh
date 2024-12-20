@@ -22,3 +22,7 @@ done
 if [ -d "$PWD/docs/api-reference" ]; then
   find ./docs/api-reference/ -type f -name "*.md" ! -name "README.md" -exec rm '{}' \;
 fi
+
+if [ -d "$PWD/docs/cli-reference" ]; then
+  find ./docs/cli-reference/ -type f -name "*.md" ! -name "README.md" -exec rm '{}' \;
+fi

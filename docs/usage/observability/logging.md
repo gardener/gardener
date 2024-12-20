@@ -14,7 +14,7 @@ Kubernetes uses the underlying container runtime logging, which does not persist
 
 ## Container Logs Rotation and Retention
 
-Container [log rotation](https://kubernetes.io/docs/concepts/cluster-administration/logging/#log-rotation) in Kubernetes describes a subtile but important implementation detail depending on the type of the used high-level container runtime. When the used container runtime is not CRI compliant (such as `dockershim`), then the `kubelet` does not provide any rotation or retention implementations, hence leaving those aspects to the downstream components. When the used container runtime is CRI compliant (such as `containerd`), then the `kubelet` provides the necessary implementation with two configuration options:
+Container [log rotation](https://kubernetes.io/docs/concepts/cluster-administration/logging/#log-rotation) in Kubernetes describes a subtle but important implementation detail depending on the type of the used high-level container runtime. When the used container runtime is not CRI compliant (such as `dockershim`), then the `kubelet` does not provide any rotation or retention implementations, hence leaving those aspects to the downstream components. When the used container runtime is CRI compliant (such as `containerd`), then the `kubelet` provides the necessary implementation with two configuration options:
 * `ContainerLogMaxSize` for rotation
 * `ContainerLogMaxFiles` for retention
 

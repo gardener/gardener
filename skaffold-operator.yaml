@@ -25,7 +25,7 @@ build:
             - cmd/gardener-operator/app/bootstrappers
             - cmd/utils
             - cmd/utils/initrun
-            - extensions/pkg/apis/config
+            - extensions/pkg/apis/config/v1alpha1
             - extensions/pkg/controller
             - extensions/pkg/predicate
             - extensions/pkg/util
@@ -38,9 +38,8 @@ build:
             - pkg/admissioncontroller/apis/config
             - pkg/admissioncontroller/apis/config/v1alpha1
             - pkg/admissioncontroller/apis/config/validation
-            - pkg/api/core
             - pkg/api/extensions
-            - pkg/api/security
+            - pkg/api/indexer
             - pkg/apis/core
             - pkg/apis/core/helper
             - pkg/apis/core/install
@@ -112,6 +111,8 @@ build:
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd/templates/scripts/health-monitor.tpl.sh
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd/templates/scripts/init.sh
             - pkg/component/extensions/operatingsystemconfig/original/components/kubelet
+            - pkg/component/extensions/operatingsystemconfig/original/components/rootcertificates
+            - pkg/component/extensions/operatingsystemconfig/original/components/rootcertificates/templates/scripts/update-local-ca-certificates.tpl.sh
             - pkg/component/extensions/operatingsystemconfig/utils
             - pkg/component/garden/system/runtime
             - pkg/component/garden/system/virtual
@@ -253,12 +254,16 @@ build:
             - pkg/operator/controller/extension/extension/admission
             - pkg/operator/controller/extension/extension/controllerregistration
             - pkg/operator/controller/extension/extension/runtime
-            - pkg/operator/controller/extension/required
+            - pkg/operator/controller/extension/required/runtime
+            - pkg/operator/controller/extension/required/virtual
             - pkg/operator/controller/garden
             - pkg/operator/controller/garden/care
             - pkg/operator/controller/garden/garden
             - pkg/operator/controller/garden/reference
             - pkg/operator/controller/gardenlet
+            - pkg/operator/controller/virtual
+            - pkg/operator/controller/virtual/access
+            - pkg/operator/controller/virtual/cluster
             - pkg/operator/features
             - pkg/operator/predicate
             - pkg/operator/webhook
@@ -439,7 +444,7 @@ build:
             - cmd/gardener-apiserver
             - cmd/gardener-apiserver/app
             - cmd/utils
-            - extensions/pkg/apis/config
+            - extensions/pkg/apis/config/v1alpha1
             - extensions/pkg/util
             - pkg/api
             - pkg/api/core/shoot
@@ -994,7 +999,7 @@ build:
             - cmd/gardener-extension-provider-local
             - cmd/gardener-extension-provider-local/app
             - cmd/utils
-            - extensions/pkg/apis/config
+            - extensions/pkg/apis/config/v1alpha1
             - extensions/pkg/controller
             - extensions/pkg/controller/backupbucket
             - extensions/pkg/controller/backupentry
@@ -1026,9 +1031,7 @@ build:
             - imagevector
             - imagevector/charts.yaml
             - imagevector/containers.yaml
-            - pkg/api/core
             - pkg/api/extensions
-            - pkg/api/security
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1
@@ -1068,6 +1071,8 @@ build:
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd/templates/scripts/init.sh
             - pkg/component/extensions/operatingsystemconfig/original/components/kubelet
             - pkg/component/extensions/operatingsystemconfig/original/components/nodeagent
+            - pkg/component/extensions/operatingsystemconfig/original/components/rootcertificates
+            - pkg/component/extensions/operatingsystemconfig/original/components/rootcertificates/templates/scripts/update-local-ca-certificates.tpl.sh
             - pkg/component/extensions/operatingsystemconfig/original/components/valitail
             - pkg/component/extensions/operatingsystemconfig/original/components/valitail/templates/valitail-config.tpl.yaml
             - pkg/component/extensions/operatingsystemconfig/utils
@@ -1134,6 +1139,7 @@ build:
             - pkg/provider-local/webhook/networkpolicy
             - pkg/provider-local/webhook/node
             - pkg/provider-local/webhook/nodeagentosc
+            - pkg/provider-local/webhook/prometheus
             - pkg/provider-local/webhook/shoot
             - pkg/resourcemanager/controller/garbagecollector/references
             - pkg/utils
@@ -1170,18 +1176,15 @@ build:
             - cmd/gardener-extension-admission-local
             - cmd/gardener-extension-admission-local/app
             - cmd/utils
-            - extensions/pkg/apis/config
+            - extensions/pkg/apis/config/v1alpha1
             - extensions/pkg/controller
             - extensions/pkg/controller/cmd
-            - extensions/pkg/predicate
             - extensions/pkg/util
             - extensions/pkg/webhook
             - extensions/pkg/webhook/certificates
             - extensions/pkg/webhook/cmd
             - extensions/pkg/webhook/shoot
-            - pkg/api/core
             - pkg/api/extensions
-            - pkg/api/security
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1
@@ -1304,5 +1307,11 @@ manifests:
   kustomize:
     paths:
       - example/provider-local/garden/operator
+  hooks:
+    before:
+      - host:
+          command:
+            - bash
+            - hack/generate-kustomize-patch-extension-provider-local-prow.sh
 deploy:
   kubectl: {}

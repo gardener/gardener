@@ -44,7 +44,7 @@ fi
 
 # Gardener uses code-generators https://github.com/kubernetes/code-generator and https://github.com/protocolbuffers/protobuf
 # which create lots of G103 (CWE-242: Use of unsafe calls should be audited) & G104 (CWE-703: Errors unhandled) errors.
-# However, those generators are best-pratice in Kubernetes environment and their results are tested well.
+# However, those generators are best-practice in Kubernetes environment and their results are tested well.
 # Thus, generated code is excluded from gosec scan.
 # Nested go modules are not supported by gosec (see https://github.com/securego/gosec/issues/501), so the ./hack folder
 # is excluded too. It does not contain productive code anyway.

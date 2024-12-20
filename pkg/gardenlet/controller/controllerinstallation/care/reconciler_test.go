@@ -157,17 +157,17 @@ var _ = Describe("Reconciler", func() {
 
 func consistOfConditionsInUnknownStatus(reason, message string) gomegatypes.GomegaMatcher {
 	return ConsistOf(
-		conditionWithTypeStatusReasonAndMesssage(gardencorev1beta1.ControllerInstallationInstalled, gardencorev1beta1.ConditionUnknown, reason, message),
-		conditionWithTypeStatusReasonAndMesssage(gardencorev1beta1.ControllerInstallationHealthy, gardencorev1beta1.ConditionUnknown, reason, message),
-		conditionWithTypeStatusReasonAndMesssage(gardencorev1beta1.ControllerInstallationProgressing, gardencorev1beta1.ConditionUnknown, reason, message),
+		conditionWithTypeStatusReasonAndMessage(gardencorev1beta1.ControllerInstallationInstalled, gardencorev1beta1.ConditionUnknown, reason, message),
+		conditionWithTypeStatusReasonAndMessage(gardencorev1beta1.ControllerInstallationHealthy, gardencorev1beta1.ConditionUnknown, reason, message),
+		conditionWithTypeStatusReasonAndMessage(gardencorev1beta1.ControllerInstallationProgressing, gardencorev1beta1.ConditionUnknown, reason, message),
 	)
 }
 
 func conditionWithTypeStatusAndReason(condType gardencorev1beta1.ConditionType, status gardencorev1beta1.ConditionStatus, reason string) gomegatypes.GomegaMatcher {
-	return conditionWithTypeStatusReasonAndMesssage(condType, status, reason, "")
+	return conditionWithTypeStatusReasonAndMessage(condType, status, reason, "")
 }
 
-func conditionWithTypeStatusReasonAndMesssage(condType gardencorev1beta1.ConditionType, status gardencorev1beta1.ConditionStatus, reason, message string) gomegatypes.GomegaMatcher {
+func conditionWithTypeStatusReasonAndMessage(condType gardencorev1beta1.ConditionType, status gardencorev1beta1.ConditionStatus, reason, message string) gomegatypes.GomegaMatcher {
 	return And(OfType(condType), WithStatus(status), WithReason(reason), WithMessage(message))
 }
 

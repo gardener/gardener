@@ -7,8 +7,6 @@ package v1beta1
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 )
 
 // +genclient
@@ -31,17 +29,6 @@ type SecretBinding struct {
 	// This field is immutable.
 	// +optional
 	Provider *SecretBindingProvider `json:"provider,omitempty" protobuf:"bytes,4,opt,name=provider"`
-}
-
-var _ gardencore.Object = (*SecretBinding)(nil)
-
-// GetProviderType gets the type of the provider.
-func (sb *SecretBinding) GetProviderType() string {
-	if sb.Provider == nil {
-		return ""
-	}
-
-	return sb.Provider.Type
 }
 
 // SecretBindingProvider defines the provider type of the SecretBinding.

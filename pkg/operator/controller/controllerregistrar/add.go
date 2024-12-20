@@ -25,7 +25,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
-		For(&operatorv1alpha1.Garden{}, builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create))).
+		For(&operatorv1alpha1.Garden{}, builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Delete))).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 1,
 		}).

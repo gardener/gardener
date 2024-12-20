@@ -20,7 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	extensionsconfig "github.com/gardener/gardener/extensions/pkg/apis/config"
+	extensionsconfigv1alpha1 "github.com/gardener/gardener/extensions/pkg/apis/config/v1alpha1"
 	"github.com/gardener/gardener/extensions/pkg/util"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
@@ -99,7 +99,7 @@ func (h *handlerShootClient) Handle(ctx context.Context, req admission.Request) 
 			return fmt.Errorf("could not find shoot namespace for webhook request from remote address %s", remoteAddr)
 		}
 
-		_, shootClient, err := util.NewClientForShoot(ctx, h.client, shootNamespace, client.Options{}, extensionsconfig.RESTOptions{})
+		_, shootClient, err := util.NewClientForShoot(ctx, h.client, shootNamespace, client.Options{}, extensionsconfigv1alpha1.RESTOptions{})
 		if err != nil {
 			return fmt.Errorf("could not create shoot client: %w", err)
 		}

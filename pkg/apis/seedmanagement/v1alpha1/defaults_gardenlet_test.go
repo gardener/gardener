@@ -15,7 +15,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 )
 
 var _ = Describe("Defaults", func() {
@@ -36,28 +36,28 @@ var _ = Describe("Defaults", func() {
 
 			Expect(obj.Spec.Deployment).NotTo(BeNil())
 			Expect(obj.Spec.Config).To(Equal(runtime.RawExtension{
-				Object: &gardenletv1alpha1.GardenletConfiguration{
+				Object: &gardenletconfigv1alpha1.GardenletConfiguration{
 					TypeMeta: metav1.TypeMeta{
-						APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
+						APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
 						Kind:       "GardenletConfiguration",
 					},
-					Resources: &gardenletv1alpha1.ResourcesConfiguration{
+					Resources: &gardenletconfigv1alpha1.ResourcesConfiguration{
 						Capacity: corev1.ResourceList{
 							gardencorev1beta1.ResourceShoots: resource.MustParse("250"),
 						},
 					},
-					SeedConfig: &gardenletv1alpha1.SeedConfig{},
+					SeedConfig: &gardenletconfigv1alpha1.SeedConfig{},
 				}}))
 		})
 
 		It("should default gardenlet configuration, and backup secret reference if backup is specified", func() {
 			obj.Spec.Config = runtime.RawExtension{
-				Raw: encode(&gardenletv1alpha1.GardenletConfiguration{
+				Raw: encode(&gardenletconfigv1alpha1.GardenletConfiguration{
 					TypeMeta: metav1.TypeMeta{
-						APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
+						APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
 						Kind:       "GardenletConfiguration",
 					},
-					SeedConfig: &gardenletv1alpha1.SeedConfig{
+					SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
 						SeedTemplate: gardencorev1beta1.SeedTemplate{
 							Spec: gardencorev1beta1.SeedSpec{
 								Backup: &gardencorev1beta1.SeedBackup{},
@@ -71,17 +71,17 @@ var _ = Describe("Defaults", func() {
 
 			Expect(obj.Spec.Config).To(Equal(
 				runtime.RawExtension{
-					Object: &gardenletv1alpha1.GardenletConfiguration{
+					Object: &gardenletconfigv1alpha1.GardenletConfiguration{
 						TypeMeta: metav1.TypeMeta{
-							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
+							APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
 							Kind:       "GardenletConfiguration",
 						},
-						Resources: &gardenletv1alpha1.ResourcesConfiguration{
+						Resources: &gardenletconfigv1alpha1.ResourcesConfiguration{
 							Capacity: corev1.ResourceList{
 								gardencorev1beta1.ResourceShoots: resource.MustParse("250"),
 							},
 						},
-						SeedConfig: &gardenletv1alpha1.SeedConfig{
+						SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
 							SeedTemplate: gardencorev1beta1.SeedTemplate{
 								Spec: gardencorev1beta1.SeedSpec{
 									Backup: &gardencorev1beta1.SeedBackup{
@@ -100,17 +100,17 @@ var _ = Describe("Defaults", func() {
 
 		It("should not overwrite already set values for GardenletConfiguration", func() {
 			obj.Spec.Config = runtime.RawExtension{
-				Raw: encode(&gardenletv1alpha1.GardenletConfiguration{
+				Raw: encode(&gardenletconfigv1alpha1.GardenletConfiguration{
 					TypeMeta: metav1.TypeMeta{
-						APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
+						APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
 						Kind:       "GardenletConfiguration",
 					},
-					Resources: &gardenletv1alpha1.ResourcesConfiguration{
+					Resources: &gardenletconfigv1alpha1.ResourcesConfiguration{
 						Capacity: corev1.ResourceList{
 							gardencorev1beta1.ResourceShoots: resource.MustParse("300"),
 						},
 					},
-					SeedConfig: &gardenletv1alpha1.SeedConfig{
+					SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
 						SeedTemplate: gardencorev1beta1.SeedTemplate{
 							Spec: gardencorev1beta1.SeedSpec{
 								Backup: &gardencorev1beta1.SeedBackup{
@@ -134,17 +134,17 @@ var _ = Describe("Defaults", func() {
 
 			Expect(obj.Spec.Config).To(Equal(
 				runtime.RawExtension{
-					Object: &gardenletv1alpha1.GardenletConfiguration{
+					Object: &gardenletconfigv1alpha1.GardenletConfiguration{
 						TypeMeta: metav1.TypeMeta{
-							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
+							APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
 							Kind:       "GardenletConfiguration",
 						},
-						Resources: &gardenletv1alpha1.ResourcesConfiguration{
+						Resources: &gardenletconfigv1alpha1.ResourcesConfiguration{
 							Capacity: corev1.ResourceList{
 								gardencorev1beta1.ResourceShoots: resource.MustParse("300"),
 							},
 						},
-						SeedConfig: &gardenletv1alpha1.SeedConfig{
+						SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
 							SeedTemplate: gardencorev1beta1.SeedTemplate{
 								Spec: gardencorev1beta1.SeedSpec{
 									Backup: &gardencorev1beta1.SeedBackup{

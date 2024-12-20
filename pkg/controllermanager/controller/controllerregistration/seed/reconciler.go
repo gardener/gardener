@@ -391,7 +391,7 @@ func deployNeededInstallations(
 		// Sometimes an operator needs to migrate to a new controller registration that supports the required
 		// kind and types, but it is required to offboard the old extension. Thus, the operator marks the old
 		// controller registration for deletion and manually delete its controller installation.
-		// In parallel, Gardener should not create new controller installations for the deleted controller registation.
+		// In parallel, Gardener should not create new controller installations for the deleted controller registration.
 		if controllerRegistrations[registrationName].obj.DeletionTimestamp != nil {
 			log.Info("Not creating or updating ControllerInstallation for ControllerRegistration because it is in deletion")
 			continue

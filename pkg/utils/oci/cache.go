@@ -19,7 +19,7 @@ func newCache() *cache {
 	}
 }
 
-// cache is a basic key-value cache i.e. a map propected by a mutex. Items are never removed from the cache.
+// cache is a basic key-value cache i.e. a map protected by a mutex. Items are never removed from the cache.
 type cache struct {
 	mu    sync.RWMutex
 	items map[string][]byte

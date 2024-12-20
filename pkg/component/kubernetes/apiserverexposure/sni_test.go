@@ -17,7 +17,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,7 +40,6 @@ var _ = Describe("#SNI", func() {
 
 		defaultDepWaiter component.DeployWaiter
 		namespace        = "test-namespace"
-		namespaceUID     = types.UID("123456")
 		istioLabels      = map[string]string{"foo": "bar"}
 		istioNamespace   = "istio-foo"
 		hosts            = []string{"foo.bar"}
@@ -67,7 +65,6 @@ var _ = Describe("#SNI", func() {
 		c = fake.NewClientBuilder().WithScheme(s).Build()
 		apiServerProxyValues = &APIServerProxy{
 			APIServerClusterIP: "1.1.1.1",
-			NamespaceUID:       namespaceUID,
 		}
 
 		expectedDestinationRule = &istionetworkingv1beta1.DestinationRule{
@@ -111,14 +108,6 @@ var _ = Describe("#SNI", func() {
 		expectedEnvoyFilterObjectMeta = metav1.ObjectMeta{
 			Name:      namespace,
 			Namespace: istioNamespace,
-			OwnerReferences: []metav1.OwnerReference{{
-				APIVersion:         "v1",
-				Kind:               "Namespace",
-				Name:               namespace,
-				UID:                namespaceUID,
-				BlockOwnerDeletion: ptr.To(false),
-				Controller:         ptr.To(false),
-			}},
 		}
 		expectedGateway = &istionetworkingv1beta1.Gateway{
 			ObjectMeta: metav1.ObjectMeta{

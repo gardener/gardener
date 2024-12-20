@@ -110,7 +110,6 @@ var _ = BeforeSuite(func() {
 			&rest.Config{QPS: 1000.0, Burst: 2000.0},
 		)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(user).NotTo(BeNil())
 
 		testClient, err := client.New(user.Config(), client.Options{Scheme: resourcemanagerclient.CombinedScheme})
 		Expect(err).NotTo(HaveOccurred())

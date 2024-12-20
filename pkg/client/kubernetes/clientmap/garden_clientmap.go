@@ -10,7 +10,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	componentbaseconfig "k8s.io/component-base/config"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -40,7 +40,7 @@ type GardenClientSetFactory struct {
 	// RuntimeClient is the runtime cluster client.
 	RuntimeClient client.Client
 	// ClientConnectionConfiguration is the configuration that will be used by created ClientSets.
-	ClientConnectionConfig componentbaseconfig.ClientConnectionConfiguration
+	ClientConnectionConfig componentbaseconfigv1alpha1.ClientConnectionConfiguration
 	// GardenNamespace is the namespace the virtual gardens run in. Defaults to `garden` if not set.
 	GardenNamespace string
 
@@ -96,21 +96,26 @@ func (f *GardenClientSetFactory) getSecretAndComputeHash(ctx context.Context, k 
 	gardenNamespace := f.getGardenNamespace()
 
 	kubeconfigSecret := &corev1.Secret{}
-	if err := f.RuntimeClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: f.secretName(gardenNamespace)}, kubeconfigSecret); err != nil {
+	if err := f.RuntimeClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: GardenerSecretName(f.log, gardenNamespace)}, kubeconfigSecret); err != nil {
 		return nil, "", err
 	}
 
 	return kubeconfigSecret, utils.ComputeSHA256Hex(kubeconfigSecret.Data[kubernetes.KubeConfig]), nil
 }
 
-func (f *GardenClientSetFactory) secretName(gardenNamespace string) string {
+// GardenerSecretName returns the secret name which contains the kubeconfig to the Garden cluster.
+// It tries to resolve the internal domain name of the 'virtual-garden-kube-apiserver' service
+// and returns the secret name with the internal kubeconfig, if it succeeds.
+// Otherwise, the name of the external kubeconfig is returned.
+func GardenerSecretName(log logr.Logger, gardenNamespace string) string {
 	secretName := v1beta1constants.SecretNameGardener
 
 	// Prefer the internal host if available
 	addr, err := LookupHost(fmt.Sprintf("virtual-garden-%s.%s.svc.cluster.local", v1beta1constants.DeploymentNameKubeAPIServer, gardenNamespace))
 	if err != nil {
-		f.log.Info("Service DNS name lookup of virtual-garden-kube-apiserver failed, falling back to external kubeconfig", "error", err)
+		log.Info("Service DNS name lookup of virtual-garden-kube-apiserver failed, falling back to external kubeconfig", "error", err)
 	} else if len(addr) > 0 {
+		log.Info("Service DNS name lookup of virtual-garden-kube-apiserver successful, using internal kubeconfig", "error", err)
 		secretName = v1beta1constants.SecretNameGardenerInternal
 	}
 

@@ -81,7 +81,7 @@ func WaitUntilStatefulSetScaledToDesiredReplicas(ctx context.Context, client cli
 		}
 
 		if statefulSet.Generation != statefulSet.Status.ObservedGeneration {
-			return retry.MinorError(fmt.Errorf("statefullSet %q not observed at latest generation (%d/%d)", key.Name,
+			return retry.MinorError(fmt.Errorf("statefulSet %q not observed at latest generation (%d/%d)", key.Name,
 				statefulSet.Status.ObservedGeneration, statefulSet.Generation))
 		}
 

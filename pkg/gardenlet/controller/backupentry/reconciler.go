@@ -46,7 +46,7 @@ var (
 	DefaultInterval = 5 * time.Second
 )
 
-// RequeueDurationWhenResourceDeletionStillPresent is the duration used for requeueing when owned resources are still in
+// RequeueDurationWhenResourceDeletionStillPresent is the duration used for requeuing when owned resources are still in
 // the process of being deleted when deleting a BackupEntry.
 var RequeueDurationWhenResourceDeletionStillPresent = 5 * time.Second
 

@@ -41,7 +41,7 @@ data:
         ready
         import custom/*.override
         rewrite stop {
-          name regex (.*)\.ingress\.local\.seed\.local\.gardener\.cloud nginx-ingress-controller.garden.svc.cluster.local answer auto
+          name regex (.*)\.ingress\.local\.seed\.local\.gardener\.cloud istio-ingressgateway.istio-ingress.svc.cluster.local answer auto
         }
         prometheus :9153
         forward . /etc/resolv.conf {

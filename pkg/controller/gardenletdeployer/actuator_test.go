@@ -30,7 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	mockgardenletdepoyer "github.com/gardener/gardener/pkg/controller/gardenletdeployer/mock"
-	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -79,7 +79,7 @@ var _ = Describe("Interface", func() {
 		gardenletDeployment *appsv1.Deployment
 
 		mergedDeployment      *seedmanagementv1alpha1.GardenletDeployment
-		mergedGardenletConfig *gardenletv1alpha1.GardenletConfiguration
+		mergedGardenletConfig *gardenletconfigv1alpha1.GardenletConfiguration
 		gardenletChartValues  map[string]any
 	)
 
@@ -203,12 +203,12 @@ var _ = Describe("Interface", func() {
 				},
 			},
 			Config: runtime.RawExtension{
-				Object: &gardenletv1alpha1.GardenletConfiguration{
+				Object: &gardenletconfigv1alpha1.GardenletConfiguration{
 					TypeMeta: metav1.TypeMeta{
-						APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
+						APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
 						Kind:       "GardenletConfiguration",
 					},
-					SeedConfig: &gardenletv1alpha1.SeedConfig{
+					SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
 						SeedTemplate: *seedTemplate,
 					},
 				},
@@ -391,8 +391,8 @@ var _ = Describe("Interface", func() {
 				PullPolicy: ptr.To(corev1.PullIfNotPresent),
 			}
 
-			mergedGardenletConfig = managedSeed.Spec.Gardenlet.Config.Object.(*gardenletv1alpha1.GardenletConfiguration).DeepCopy()
-			mergedGardenletConfig.GardenClientConnection = &gardenletv1alpha1.GardenClientConnection{
+			mergedGardenletConfig = managedSeed.Spec.Gardenlet.Config.Object.(*gardenletconfigv1alpha1.GardenletConfiguration).DeepCopy()
+			mergedGardenletConfig.GardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{
 				ClientConnectionConfiguration: v1alpha1.ClientConnectionConfiguration{
 					Kubeconfig: "kubeconfig",
 				},
@@ -439,8 +439,8 @@ var _ = Describe("Interface", func() {
 		expectGetGardenletChartValues = func(withBootstrap bool) {
 			gardenletChartValues = map[string]any{"foo": "bar"}
 
-			vh.EXPECT().GetGardenletChartValues(mergedDeployment, gomock.AssignableToTypeOf(&gardenletv1alpha1.GardenletConfiguration{}), gomock.AssignableToTypeOf("")).DoAndReturn(
-				func(_ *seedmanagementv1alpha1.GardenletDeployment, gc *gardenletv1alpha1.GardenletConfiguration, _ string) (map[string]any, error) {
+			vh.EXPECT().GetGardenletChartValues(mergedDeployment, gomock.AssignableToTypeOf(&gardenletconfigv1alpha1.GardenletConfiguration{}), gomock.AssignableToTypeOf("")).DoAndReturn(
+				func(_ *seedmanagementv1alpha1.GardenletDeployment, gc *gardenletconfigv1alpha1.GardenletConfiguration, _ string) (map[string]any, error) {
 					if withBootstrap {
 						Expect(gc.GardenClientConnection.Kubeconfig).To(Equal(""))
 						Expect(gc.GardenClientConnection.KubeconfigSecret).To(Equal(&corev1.SecretReference{

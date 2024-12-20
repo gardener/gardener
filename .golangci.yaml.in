@@ -18,7 +18,7 @@ issues:
   exclude-use-default: false
   exclude:
   # errcheck: Almost all programs ignore errors on these functions and in most cases it's ok
-  - Error return value of .((os\.)?std(out|err)\..*|.*Close|.*Flush|os\.Remove(All)?|.*printf?|os\.(Un)?Setenv). is not checked
+  - Error return value of .((os\.)?std(out|err)\..*|.*Close|.*Flush|os\.Remove(All)?|.*print(f|ln)?|os\.(Un)?Setenv). is not checked
   # revive:
   - var-naming # ((var|const|struct field|func) .* should be .*
   - dot-imports # should not use dot imports
@@ -104,6 +104,8 @@ linters-settings:
         alias: utilfeature
       - pkg: k8s.io/component-base/config
         alias: componentbaseconfig
+      - pkg: k8s.io/component-base/config/([\w\d]+)
+        alias: componentbaseconfig$1
       - pkg: k8s.io/component-base/logs/api/v1
         alias: logsv1
       - pkg: sigs.k8s.io/controller-runtime/pkg/client/fake
@@ -134,6 +136,8 @@ linters-settings:
         alias: extensionsmock${1}
       - pkg: github.com/gardener/gardener/extensions/pkg/apis/config
         alias: extensionsconfig
+      - pkg: github.com/gardener/gardener/extensions/pkg/apis/config/([\w\d]+)
+        alias: extensionsconfig$1
       - pkg: github.com/gardener/gardener/extensions/pkg/controller
         alias: extensionscontroller
       - pkg: github.com/gardener/gardener/extensions/pkg/predicate
@@ -167,8 +171,12 @@ linters-settings:
         alias: $1$2$3
       - pkg: github.com/gardener/gardener/pkg/(\w+)/apis/config
         alias: ${1}config
-      - pkg: github.com/gardener/gardener/pkg/(\w+)/apis/config/([\w\d]+)
+      - pkg: github.com/gardener/gardener/pkg/(\w+)/apis/config/([a-z]+)
         alias: $1$2
+      - pkg: github.com/gardener/gardener/pkg/(\w+)/apis/config/(v\d[\w\d]*)
+        alias: ${1}config${2}
+      - pkg: github.com/gardener/gardener/pkg/(\w+)/apis/config/(v\d[\w\d]*)/([a-z]+)
+        alias: $1$3
       - pkg: github.com/gardener/gardener/pkg/(\w+)/features
         alias: ${1}features
       - pkg: github.com/gardener/gardener/pkg/\w+/controller/([\w\d]+)

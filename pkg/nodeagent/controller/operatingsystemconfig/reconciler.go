@@ -13,6 +13,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -20,6 +21,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	jsonserializer "k8s.io/apimachinery/pkg/runtime/serializer/json"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
@@ -34,14 +39,27 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/nodeagent"
 	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
-	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
 	filespkg "github.com/gardener/gardener/pkg/nodeagent/files"
 	"github.com/gardener/gardener/pkg/nodeagent/registry"
 	"github.com/gardener/gardener/pkg/utils/flow"
 )
 
-const lastAppliedOperatingSystemConfigFilePath = nodeagentv1alpha1.BaseDir + "/last-applied-osc.yaml"
+const (
+	lastAppliedOperatingSystemConfigFilePath         = nodeagentconfigv1alpha1.BaseDir + "/last-applied-osc.yaml"
+	lastComputedOperatingSystemConfigChangesFilePath = nodeagentconfigv1alpha1.BaseDir + "/last-computed-osc-changes.yaml"
+)
+
+var codec runtime.Codec
+
+func init() {
+	scheme := runtime.NewScheme()
+	utilruntime.Must(extensionsv1alpha1.AddToScheme(scheme))
+	ser := jsonserializer.NewSerializerWithOptions(jsonserializer.DefaultMetaFactory, scheme, scheme, jsonserializer.SerializerOptions{Yaml: true, Pretty: false, Strict: false})
+	versions := schema.GroupVersions([]schema.GroupVersion{nodeagentconfigv1alpha1.SchemeGroupVersion, extensionsv1alpha1.SchemeGroupVersion})
+	codec = serializer.NewCodecFactory(scheme).CodecForVersions(ser, ser, versions, versions)
+}
 
 // Reconciler decodes the OperatingSystemConfig resources from secrets and applies the systemd units and files to the
 // node.
@@ -85,49 +103,49 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, nil
 	}
 
-	osc, oscRaw, oscChecksum, err := extractOSCFromSecret(secret)
+	osc, oscChecksum, err := extractOSCFromSecret(secret)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed extracting OSC from secret: %w", err)
 	}
 
-	oscChanges, err := computeOperatingSystemConfigChanges(r.FS, osc)
+	log.Info("Applying containerd configuration")
+	if err := r.ReconcileContainerdConfig(ctx, log, osc); err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed reconciling containerd configuration: %w", err)
+	}
+
+	oscChanges, err := computeOperatingSystemConfigChanges(log, r.FS, osc, oscChecksum)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed calculating the OSC changes: %w", err)
 	}
 
-	if node != nil && node.Annotations[nodeagentv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig] == oscChecksum {
+	if node != nil && node.Annotations[nodeagentconfigv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig] == oscChecksum {
 		log.Info("Configuration on this node is up to date, nothing to be done")
 		return reconcile.Result{}, nil
 	}
 
-	log.Info("Applying containerd configuration")
-	if err := r.ReconcileContainerdConfig(ctx, log, osc.Spec.CRIConfig); err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed reconciling containerd configuration: %w", err)
-	}
-
 	log.Info("Applying new or changed inline files")
-	if err := r.applyChangedInlineFiles(log, oscChanges.files.changed); err != nil {
+	if err := r.applyChangedInlineFiles(log, oscChanges); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed applying changed inline files: %w", err)
 	}
 
 	log.Info("Applying containerd registries")
-	waitForRegistries, err := r.ReconcileContainerdRegistries(ctx, log, oscChanges.containerd)
+	waitForRegistries, err := r.ReconcileContainerdRegistries(ctx, log, oscChanges)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed reconciling containerd registries: %w", err)
 	}
 
 	log.Info("Applying new or changed imageRef files")
-	if err := r.applyChangedImageRefFiles(ctx, log, oscChanges.files.changed); err != nil {
+	if err := r.applyChangedImageRefFiles(ctx, log, oscChanges); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed applying changed imageRef files: %w", err)
 	}
 
-	log.Info("Applying new or changed units")
-	if err := r.applyChangedUnits(ctx, log, oscChanges.units.changed); err != nil {
+	log.Info("Applying new or changed units", "changedUnits", len(oscChanges.Units.Changed))
+	if err := r.applyChangedUnits(ctx, log, oscChanges); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed applying changed units: %w", err)
 	}
 
-	log.Info("Removing no longer needed units")
-	if err := r.removeDeletedUnits(ctx, log, node, oscChanges.units.deleted); err != nil {
+	log.Info("Removing no longer needed units", "deletedUnits", len(oscChanges.Units.Deleted))
+	if err := r.removeDeletedUnits(ctx, log, node, oscChanges); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed removing deleted units: %w", err)
 	}
 
@@ -143,9 +161,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("failed starting containerd: %w", err)
 	}
 
-	log.Info("Executing unit commands (start/stop)")
-	mustRestartGardenerNodeAgent, err := r.executeUnitCommands(ctx, log, node, oscChanges)
-	if err != nil {
+	log.Info("Executing unit commands (start/stop)", "unitCommands", len(oscChanges.Units.Commands))
+	if err := r.executeUnitCommands(ctx, log, node, oscChanges); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed executing unit commands: %w", err)
 	}
 
@@ -158,24 +175,27 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	log.Info("Removing no longer needed files")
-	if err := r.removeDeletedFiles(log, oscChanges.files.deleted); err != nil {
+	if err := r.removeDeletedFiles(log, oscChanges); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed removing deleted files: %w", err)
 	}
 
-	log.Info("Successfully applied operating system config",
-		"changedFiles", len(oscChanges.files.changed),
-		"deletedFiles", len(oscChanges.files.deleted),
-		"changedUnits", len(oscChanges.units.changed),
-		"deletedUnits", len(oscChanges.units.deleted),
-	)
+	log.Info("Successfully applied operating system config")
 
 	log.Info("Persisting current operating system config as 'last-applied' file to the disk", "path", lastAppliedOperatingSystemConfigFilePath)
-	if err := r.FS.WriteFile(lastAppliedOperatingSystemConfigFilePath, oscRaw, 0644); err != nil {
+	oscRaw, err := runtime.Encode(codec, osc)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("unable to encode OSC: %w", err)
+	}
+
+	if err := r.FS.WriteFile(lastAppliedOperatingSystemConfigFilePath, oscRaw, 0600); err != nil {
 		return reconcile.Result{}, fmt.Errorf("unable to write current OSC to file path %q: %w", lastAppliedOperatingSystemConfigFilePath, err)
 	}
 
-	if mustRestartGardenerNodeAgent {
+	if oscChanges.MustRestartNodeAgent {
 		log.Info("Must restart myself (gardener-node-agent unit), canceling the context to initiate graceful shutdown")
+		if err := oscChanges.setMustRestartNodeAgent(false); err != nil {
+			return reconcile.Result{}, err
+		}
 		r.CancelContext()
 		return reconcile.Result{}, nil
 	}
@@ -189,14 +209,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	if err := r.FS.Remove(kubelet.PathKubeconfigBootstrap); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
 		return reconcile.Result{}, fmt.Errorf("failed removing kubelet bootstrap kubeconfig file %q: %w", kubelet.PathKubeconfigBootstrap, err)
 	}
-	if err := r.FS.Remove(nodeagentv1alpha1.BootstrapTokenFilePath); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
-		return reconcile.Result{}, fmt.Errorf("failed removing bootstrap token file %q: %w", nodeagentv1alpha1.BootstrapTokenFilePath, err)
+	if err := r.FS.Remove(nodeagentconfigv1alpha1.BootstrapTokenFilePath); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
+		return reconcile.Result{}, fmt.Errorf("failed removing bootstrap token file %q: %w", nodeagentconfigv1alpha1.BootstrapTokenFilePath, err)
 	}
 
 	r.Recorder.Event(node, corev1.EventTypeNormal, "OSCApplied", "Operating system config has been applied successfully")
 	patch := client.MergeFrom(node.DeepCopy())
 	metav1.SetMetaDataLabel(&node.ObjectMeta, v1beta1constants.LabelWorkerKubernetesVersion, r.Config.KubernetesVersion.String())
-	metav1.SetMetaDataAnnotation(&node.ObjectMeta, nodeagentv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig, oscChecksum)
+	metav1.SetMetaDataAnnotation(&node.ObjectMeta, nodeagentconfigv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig, oscChecksum)
 
 	return reconcile.Result{RequeueAfter: r.Config.SyncPeriod.Duration}, r.Client.Patch(ctx, node, patch)
 }
@@ -238,8 +258,8 @@ func getFilePermissions(file extensionsv1alpha1.File) os.FileMode {
 	return permissions
 }
 
-func (r *Reconciler) applyChangedImageRefFiles(ctx context.Context, log logr.Logger, files []extensionsv1alpha1.File) error {
-	for _, file := range files {
+func (r *Reconciler) applyChangedImageRefFiles(ctx context.Context, log logr.Logger, changes *operatingSystemConfigChanges) error {
+	for _, file := range slices.Clone(changes.Files.Changed) {
 		if file.Content.ImageRef == nil {
 			continue
 		}
@@ -249,20 +269,23 @@ func (r *Reconciler) applyChangedImageRefFiles(ctx context.Context, log logr.Log
 		}
 
 		log.Info("Successfully applied new or changed file from image", "path", file.Path, "image", file.Content.ImageRef.Image)
+		if err := changes.completedFileChanged(file.Path); err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
-func (r *Reconciler) applyChangedInlineFiles(log logr.Logger, files []extensionsv1alpha1.File) error {
-	tmpDir, err := r.FS.TempDir(nodeagentv1alpha1.TempDir, "osc-reconciliation-file-")
+func (r *Reconciler) applyChangedInlineFiles(log logr.Logger, changes *operatingSystemConfigChanges) error {
+	tmpDir, err := r.FS.TempDir(nodeagentconfigv1alpha1.TempDir, "osc-reconciliation-file-")
 	if err != nil {
 		return fmt.Errorf("unable to create temporary directory: %w", err)
 	}
 
 	defer func() { utilruntime.HandleError(r.FS.RemoveAll(tmpDir)) }()
 
-	for _, file := range files {
+	for _, file := range slices.Clone(changes.Files.Changed) {
 		if file.Content.Inline == nil {
 			continue
 		}
@@ -286,25 +309,31 @@ func (r *Reconciler) applyChangedInlineFiles(log logr.Logger, files []extensions
 		}
 
 		log.Info("Successfully applied new or changed file", "path", file.Path)
+		if err := changes.completedFileChanged(file.Path); err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
-func (r *Reconciler) removeDeletedFiles(log logr.Logger, files []extensionsv1alpha1.File) error {
-	for _, file := range files {
+func (r *Reconciler) removeDeletedFiles(log logr.Logger, changes *operatingSystemConfigChanges) error {
+	for _, file := range slices.Clone(changes.Files.Deleted) {
 		if err := r.FS.Remove(file.Path); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
 			return fmt.Errorf("unable to delete no longer needed file %q: %w", file.Path, err)
 		}
 
 		log.Info("Successfully removed no longer needed file", "path", file.Path)
+		if err := changes.completedFileDeleted(file.Path); err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
-func (r *Reconciler) applyChangedUnits(ctx context.Context, log logr.Logger, units []changedUnit) error {
-	for _, unit := range units {
+func (r *Reconciler) applyChangedUnits(ctx context.Context, log logr.Logger, changes *operatingSystemConfigChanges) error {
+	for _, unit := range slices.Clone(changes.Units.Changed) {
 		unitFilePath := path.Join(etcSystemdSystem, unit.Name)
 
 		if unit.Content != nil {
@@ -338,7 +367,7 @@ func (r *Reconciler) applyChangedUnits(ctx context.Context, log logr.Logger, uni
 				return fmt.Errorf("unable to create drop-in directory %q for unit %q: %w", dropInDirectory, unit.Name, err)
 			}
 
-			for _, dropIn := range unit.dropIns.changed {
+			for _, dropIn := range slices.Clone(unit.DropInsChanges.Changed) {
 				dropInFilePath := path.Join(dropInDirectory, dropIn.Name)
 
 				oldDropInContent, err := r.FS.ReadFile(dropInFilePath)
@@ -358,18 +387,24 @@ func (r *Reconciler) applyChangedUnits(ctx context.Context, log logr.Logger, uni
 				if err := r.FS.Chmod(dropInFilePath, defaultFilePermissions); err != nil {
 					return fmt.Errorf("unable to ensure permissions for drop-in file %q for unit %q: %w", unitFilePath, unit.Name, err)
 				}
+				if err := changes.completedUnitDropInChanged(unit.Name, dropIn.Name); err != nil {
+					return err
+				}
 			}
 
-			for _, dropIn := range unit.dropIns.deleted {
+			for _, dropIn := range slices.Clone(unit.DropInsChanges.Deleted) {
 				dropInFilePath := path.Join(dropInDirectory, dropIn.Name)
 				if err := r.FS.Remove(dropInFilePath); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
 					return fmt.Errorf("unable to delete drop-in file %q for unit %q: %w", dropInFilePath, unit.Name, err)
 				}
 				log.Info("Successfully removed no longer needed drop-in file for unit", "path", dropInFilePath, "unitName", unit.Name)
+				if err := changes.completedUnitDropInDeleted(unit.Name, dropIn.Name); err != nil {
+					return err
+				}
 			}
 		}
 
-		if unit.Name == nodeagentv1alpha1.UnitName || ptr.Deref(unit.Enable, true) {
+		if unit.Name == nodeagentconfigv1alpha1.UnitName || ptr.Deref(unit.Enable, true) {
 			if err := r.DBus.Enable(ctx, unit.Name); err != nil {
 				return fmt.Errorf("unable to enable unit %q: %w", unit.Name, err)
 			}
@@ -380,13 +415,21 @@ func (r *Reconciler) applyChangedUnits(ctx context.Context, log logr.Logger, uni
 			}
 			log.Info("Successfully disabled unit", "unitName", unit.Name)
 		}
+
+		if err := changes.completedUnitChanged(unit.Name); err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
-func (r *Reconciler) removeDeletedUnits(ctx context.Context, log logr.Logger, node client.Object, units []extensionsv1alpha1.Unit) error {
-	for _, unit := range units {
+func (r *Reconciler) removeDeletedUnits(ctx context.Context, log logr.Logger, node client.Object, changes *operatingSystemConfigChanges) error {
+	for _, unit := range slices.Clone(changes.Units.Deleted) {
+		// The unit has been created by gardener-node-agent if it has content.
+		// Otherwise, it might be a default OS unit which was enabled/disabled or where drop-ins were added.
+		unitCreatedByNodeAgent := unit.Content != nil
+
 		unitFilePath := path.Join(etcSystemdSystem, unit.Name)
 
 		unitFileExists, err := r.FS.Exists(unitFilePath)
@@ -394,7 +437,10 @@ func (r *Reconciler) removeDeletedUnits(ctx context.Context, log logr.Logger, no
 			return fmt.Errorf("unable to check whether unit file %q exists: %w", unitFilePath, err)
 		}
 
-		if unitFileExists {
+		// Only stop and remove the unit file if it was created by gardener-node-agent. Otherwise, this could affect
+		// default OS units where we add and remove drop-ins only. If operators want to stop and disable units,
+		// they can do it by adding a unit to OSC which applies the `stop` command.
+		if unitFileExists && unitCreatedByNodeAgent {
 			if err := r.DBus.Disable(ctx, unit.Name); err != nil {
 				return fmt.Errorf("unable to disable deleted unit %q: %w", unit.Name, err)
 			}
@@ -405,30 +451,58 @@ func (r *Reconciler) removeDeletedUnits(ctx context.Context, log logr.Logger, no
 
 			if err := r.FS.Remove(unitFilePath); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
 				return fmt.Errorf("unable to delete systemd unit file of deleted unit %q: %w", unit.Name, err)
+			} else {
+				log.Info("Unit was not created by gardener-node-agent, skipping deletion of unit file", "unitName", unit.Name)
 			}
 		}
 
-		if err := r.FS.RemoveAll(unitFilePath + ".d"); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
-			return fmt.Errorf("unable to delete systemd drop-in folder of deleted unit %q: %w", unit.Name, err)
+		dropInFolder := unitFilePath + ".d"
+
+		if exists, err := r.FS.Exists(dropInFolder); err != nil {
+			return fmt.Errorf("unable to check whether drop-in folder %q exists: %w", dropInFolder, err)
+		} else if exists {
+			for _, dropIn := range unit.DropIns {
+				dropInFilePath := path.Join(dropInFolder, dropIn.Name)
+				if err := r.FS.Remove(dropInFilePath); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
+					return fmt.Errorf("unable to delete drop-in file %q of deleted unit %q: %w", dropInFilePath, unit.Name, err)
+				}
+			}
+
+			if empty, err := r.FS.IsEmpty(dropInFolder); err != nil {
+				return fmt.Errorf("unable to check whether drop-in folder %q is empty: %w", dropInFolder, err)
+			} else if empty {
+				if err := r.FS.RemoveAll(dropInFolder); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
+					return fmt.Errorf("unable to delete systemd drop-in folder of deleted unit %q: %w", unit.Name, err)
+				}
+			}
+		}
+
+		// If the unit was not created by gardener-node-agent, but it exists on the node and was removed from OSC. Restart it to apply changes.
+		if unitFileExists && !unitCreatedByNodeAgent {
+			if err := r.DBus.Restart(ctx, r.Recorder, node, unit.Name); err != nil {
+				return fmt.Errorf("unable to restart unit %q removed from OSC but not created by gardener-node-agent: %w", unit.Name, err)
+			}
 		}
 
 		log.Info("Successfully removed no longer needed unit", "unitName", unit.Name)
+		if err := changes.completedUnitDeleted(unit.Name); err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
-func (r *Reconciler) executeUnitCommands(ctx context.Context, log logr.Logger, node client.Object, oscChanges *operatingSystemConfigChanges) (bool, error) {
+func (r *Reconciler) executeUnitCommands(ctx context.Context, log logr.Logger, node client.Object, oscChanges *operatingSystemConfigChanges) error {
 	var (
-		mustRestartGardenerNodeAgent bool
-		fns                          []flow.TaskFn
+		fns []flow.TaskFn
 
 		restart = func(ctx context.Context, unitName string) error {
 			if err := r.DBus.Restart(ctx, r.Recorder, node, unitName); err != nil {
 				return fmt.Errorf("unable to restart unit %q: %w", unitName, err)
 			}
 			log.Info("Successfully restarted unit", "unitName", unitName)
-			return nil
+			return oscChanges.completedUnitCommand(unitName)
 		}
 
 		stop = func(ctx context.Context, unitName string) error {
@@ -436,35 +510,46 @@ func (r *Reconciler) executeUnitCommands(ctx context.Context, log logr.Logger, n
 				return fmt.Errorf("unable to stop unit %q: %w", unitName, err)
 			}
 			log.Info("Successfully stopped unit", "unitName", unitName)
-			return nil
+			return oscChanges.completedUnitCommand(unitName)
 		}
 	)
 
 	var containerdChanged bool
-	for _, u := range oscChanges.units.changed {
-		unit := u
-
+	for _, unit := range slices.Clone(oscChanges.Units.Commands) {
 		switch unit.Name {
-		case nodeagentv1alpha1.UnitName:
-			mustRestartGardenerNodeAgent = true
+		case nodeagentconfigv1alpha1.UnitName:
+			if err := oscChanges.setMustRestartNodeAgent(true); err != nil {
+				return err
+			}
+			if err := oscChanges.completedUnitCommand(unit.Name); err != nil {
+				return err
+			}
 			continue
 		case v1beta1constants.OperatingSystemConfigUnitNameContainerDService:
 			containerdChanged = true
 		}
 
 		fns = append(fns, func(ctx context.Context) error {
-			if !ptr.Deref(unit.Enable, true) || (unit.Command != nil && *unit.Command == extensionsv1alpha1.CommandStop) {
+			switch unit.Command {
+			case extensionsv1alpha1.CommandStop:
 				return stop(ctx, unit.Name)
+			case extensionsv1alpha1.CommandRestart:
+				return restart(ctx, unit.Name)
+			case "":
+				return oscChanges.completedUnitCommand(unit.Name)
 			}
-			return restart(ctx, unit.Name)
+			return fmt.Errorf("unknown unit command %q", unit.Command)
 		})
 	}
 
-	if oscChanges.containerd.configFileChange && !containerdChanged {
+	if oscChanges.Containerd.ConfigFileChanged && !containerdChanged {
 		fns = append(fns, func(ctx context.Context) error {
-			return restart(ctx, v1beta1constants.OperatingSystemConfigUnitNameContainerDService)
+			if err := restart(ctx, v1beta1constants.OperatingSystemConfigUnitNameContainerDService); err != nil {
+				return err
+			}
+			return oscChanges.completedContainerdConfigFileChange()
 		})
 	}
 
-	return mustRestartGardenerNodeAgent, flow.Parallel(fns...)(ctx)
+	return flow.Parallel(fns...)(ctx)
 }

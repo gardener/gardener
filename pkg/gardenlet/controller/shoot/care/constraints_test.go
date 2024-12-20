@@ -618,7 +618,7 @@ var _ = Describe("Constraints", func() {
 
 			It("should return an error when the valid-until-time label cannot be parsed", func() {
 				secret := newCASecret(now)
-				secret.Labels["valid-until-time"] = "unparseable"
+				secret.Labels["valid-until-time"] = "unparsable"
 				Expect(seedClient.Create(ctx, secret)).To(Succeed())
 
 				status, reason, message, errorCodes, err := constraint.CheckIfCACertificateValiditiesAcceptable(ctx)

@@ -219,7 +219,7 @@
         },
         "datasource": "prometheus",
         "definition": "label_values(gardener_admission_controller_seed_authorizer_graph_update_duration_seconds_bucket,kind)",
-        "description": "Objekt kind for the update duration per seconds",
+        "description": "Object kind for the update duration per seconds",
         "error": null,
         "hide": 0,
         "includeAll": true,

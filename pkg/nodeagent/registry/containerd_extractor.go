@@ -22,7 +22,7 @@ import (
 	"github.com/spf13/afero"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
-	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/files"
 )
 
@@ -68,7 +68,7 @@ func (e *containerdExtractor) CopyFromImage(ctx context.Context, imageRef string
 
 	snapshotter := client.SnapshotService(containerd.DefaultSnapshotter)
 
-	imageMountDirectory, err := fs.TempDir(nodeagentv1alpha1.TempDir, "mount-image-")
+	imageMountDirectory, err := fs.TempDir(nodeagentconfigv1alpha1.TempDir, "mount-image-")
 	if err != nil {
 		return fmt.Errorf("error creating temp directory: %w", err)
 	}

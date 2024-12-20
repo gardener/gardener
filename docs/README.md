@@ -109,6 +109,10 @@
 * [`seedmanagement.gardener.cloud` API Group](api-reference/seedmanagement.md)
 * [`settings.gardener.cloud` API Group](api-reference/settings.md)
 
+## [CLI Reference](cli-reference/README.md)
+
+* [`gardenadm`](cli-reference/gardenadm/gardenadm.md)
+
 ## Gardener Enhancement Proposals
 
 * [GEP: Gardener Enhancement Proposal Description](proposals/README.md)
@@ -141,6 +145,7 @@
 * [GEP-26: Workload Identity - Trust Based Authentication](proposals/26-workload-identity.md)
 * [GEP-27: Add Optional Bastion Section To CloudProfile](proposals/27-cloudprofile-bastion-section.md)
 * [GEP-28: Autonomous Shoot Clusters](proposals/28-autonomous-shoot-clusters.md)
+* [GEP-32: Cloud Profile Version Classification Lifecycles](proposals/32-version-classification-lifecycles.md)
 
 ## Development
 
@@ -214,6 +219,7 @@
 
 * [Getting started locally](deployment/getting_started_locally.md)
 * [Getting started locally with extensions](deployment/getting_started_locally_with_extensions.md)
+* [Getting started locally with Autonomous Shoot Clusters](deployment/getting_started_locally_with_gardenadm.md)
 * [Setup Gardener on a Kubernetes cluster](deployment/setup_gardener.md)
 * [Version Skew Policy](deployment/version_skew_policy.md)
 * [Deploying Gardenlets](deployment/deploy_gardenlet.md)

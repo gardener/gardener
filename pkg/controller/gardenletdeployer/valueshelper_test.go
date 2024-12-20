@@ -17,7 +17,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -36,10 +36,10 @@ var _ = Describe("ValuesHelper", func() {
 		vh ValuesHelper
 
 		deployment      *seedmanagementv1alpha1.GardenletDeployment
-		gardenletConfig *gardenletv1alpha1.GardenletConfiguration
+		gardenletConfig *gardenletconfigv1alpha1.GardenletConfiguration
 
 		mergedDeployment      *seedmanagementv1alpha1.GardenletDeployment
-		mergedGardenletConfig func(bool) *gardenletv1alpha1.GardenletConfiguration
+		mergedGardenletConfig func(bool) *gardenletconfigv1alpha1.GardenletConfiguration
 
 		gardenletChartValues func(bool, string, int32, map[string]any) map[string]any
 	)
@@ -117,9 +117,9 @@ var _ = Describe("ValuesHelper", func() {
 				"foo": "bar",
 			},
 		}
-		gardenletConfig = &gardenletv1alpha1.GardenletConfiguration{
+		gardenletConfig = &gardenletconfigv1alpha1.GardenletConfiguration{
 			TypeMeta: metav1.TypeMeta{
-				APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
+				APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
 				Kind:       "GardenletConfiguration",
 			},
 			FeatureGates: map[string]bool{
@@ -139,7 +139,7 @@ var _ = Describe("ValuesHelper", func() {
 				"foo": "bar",
 			},
 		}
-		mergedGardenletConfig = func(withBootstrap bool) *gardenletv1alpha1.GardenletConfiguration {
+		mergedGardenletConfig = func(withBootstrap bool) *gardenletconfigv1alpha1.GardenletConfiguration {
 			var kubeconfigPath string
 			var bootstrapKubeconfig, kubeconfigSecret *corev1.SecretReference
 			if withBootstrap {
@@ -154,12 +154,12 @@ var _ = Describe("ValuesHelper", func() {
 			} else {
 				kubeconfigPath = gardenKubeconfigPath
 			}
-			return &gardenletv1alpha1.GardenletConfiguration{
+			return &gardenletconfigv1alpha1.GardenletConfiguration{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
+					APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
 					Kind:       "GardenletConfiguration",
 				},
-				GardenClientConnection: &gardenletv1alpha1.GardenClientConnection{
+				GardenClientConnection: &gardenletconfigv1alpha1.GardenClientConnection{
 					ClientConnectionConfiguration: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
 						Kubeconfig:         kubeconfigPath,
 						AcceptContentTypes: "application/json",
@@ -170,7 +170,7 @@ var _ = Describe("ValuesHelper", func() {
 					BootstrapKubeconfig: bootstrapKubeconfig,
 					KubeconfigSecret:    kubeconfigSecret,
 				},
-				SeedClientConnection: &gardenletv1alpha1.SeedClientConnection{
+				SeedClientConnection: &gardenletconfigv1alpha1.SeedClientConnection{
 					ClientConnectionConfiguration: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
 						AcceptContentTypes: "application/json",
 						ContentType:        "application/json",
@@ -178,12 +178,12 @@ var _ = Describe("ValuesHelper", func() {
 						Burst:              130,
 					},
 				},
-				Server: gardenletv1alpha1.ServerConfiguration{
-					HealthProbes: &gardenletv1alpha1.Server{
+				Server: gardenletconfigv1alpha1.ServerConfiguration{
+					HealthProbes: &gardenletconfigv1alpha1.Server{
 						BindAddress: "0.0.0.0",
 						Port:        2728,
 					},
-					Metrics: &gardenletv1alpha1.Server{
+					Metrics: &gardenletconfigv1alpha1.Server{
 						BindAddress: "0.0.0.0",
 						Port:        2729,
 					},
@@ -192,7 +192,7 @@ var _ = Describe("ValuesHelper", func() {
 					string("FooFeature"): false,
 					string("BarFeature"): true,
 				},
-				Logging: &gardenletv1alpha1.Logging{
+				Logging: &gardenletconfigv1alpha1.Logging{
 					Enabled: ptr.To(true),
 				},
 			}

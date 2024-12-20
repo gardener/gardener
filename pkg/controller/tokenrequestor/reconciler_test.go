@@ -6,7 +6,7 @@ package tokenrequestor_test
 
 import (
 	"context"
-	"errors"
+	"encoding/base64"
 	"fmt"
 	"time"
 
@@ -15,17 +15,17 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	authenticationv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	corev1fake "k8s.io/client-go/kubernetes/typed/core/v1/fake"
-	"k8s.io/client-go/testing"
 	"k8s.io/utils/clock"
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	. "github.com/gardener/gardener/pkg/controller/tokenrequestor"
@@ -41,7 +41,6 @@ var _ = Describe("Reconciler", func() {
 			fakeJitter func(time.Duration, float64) time.Duration
 
 			sourceClient, targetClient client.Client
-			coreV1Client               *corev1fake.FakeCoreV1
 
 			ctrl *Reconciler
 
@@ -55,31 +54,6 @@ var _ = Describe("Reconciler", func() {
 			expectedRenewDuration   time.Duration
 			token                   string
 			fakeNow                 time.Time
-
-			fakeCreateServiceAccountToken = func() {
-				coreV1Client.AddReactor("create", "serviceaccounts", func(action testing.Action) (bool, runtime.Object, error) {
-					if action.GetSubresource() != "token" {
-						return false, nil, errors.New("subresource should be 'token'")
-					}
-
-					cAction, ok := action.(testing.CreateAction)
-					if !ok {
-						return false, nil, fmt.Errorf("could not convert action (type %T) to type testing.CreateAction", cAction)
-					}
-
-					tokenRequest, ok := cAction.GetObject().(*authenticationv1.TokenRequest)
-					if !ok {
-						return false, nil, fmt.Errorf("could not convert object (type %T) to type *authenticationv1.TokenRequest", cAction.GetObject())
-					}
-
-					return true, &authenticationv1.TokenRequest{
-						Status: authenticationv1.TokenRequestStatus{
-							Token:               token,
-							ExpirationTimestamp: metav1.Time{Time: fakeNow.Add(time.Duration(*tokenRequest.Spec.ExpirationSeconds) * time.Second)},
-						},
-					}, nil
-				})
-			}
 		)
 
 		BeforeEach(func() {
@@ -87,24 +61,40 @@ var _ = Describe("Reconciler", func() {
 			fakeClock = testclock.NewFakeClock(fakeNow)
 			fakeJitter = func(d time.Duration, _ float64) time.Duration { return d }
 
+			// If no token-expiration-duration is set then the default of 12 hours is used
+			expectedRenewDuration = 12 * time.Hour * 80 / 100
+			token = "foo"
+
 			sourceClient = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).Build()
-			targetClient = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).Build()
-			coreV1Client = &corev1fake.FakeCoreV1{Fake: &testing.Fake{}}
+
+			targetClient = fakeclient.NewClientBuilder().WithInterceptorFuncs(interceptor.Funcs{
+				SubResourceCreate: func(ctx context.Context, c client.Client, _ string, obj client.Object, subResource client.Object, _ ...client.SubResourceCreateOption) error {
+					tokenRequest, isTokenRequest := subResource.(*authenticationv1.TokenRequest)
+					if !isTokenRequest {
+						return apierrors.NewBadRequest(fmt.Sprintf("got invalid type %T, expected TokenRequest", subResource))
+					}
+					if _, isServiceAccount := obj.(*corev1.ServiceAccount); !isServiceAccount {
+						return apierrors.NewNotFound(schema.GroupResource{}, "")
+					}
+
+					tokenRequest.Status.Token = token
+					tokenRequest.Status.ExpirationTimestamp = metav1.Time{Time: fakeClock.Now().Add(time.Duration(ptr.Deref(tokenRequest.Spec.ExpirationSeconds, 3600)) * time.Second)}
+
+					return c.Get(ctx, client.ObjectKeyFromObject(obj), obj)
+				},
+			}).WithScheme(scheme.Scheme).Build()
 
 			ctrl = &Reconciler{
-				SourceClient:       sourceClient,
-				TargetClient:       targetClient,
-				TargetCoreV1Client: coreV1Client,
-				Clock:              fakeClock,
-				JitterFunc:         fakeJitter,
+				SourceClient: sourceClient,
+				TargetClient: targetClient,
+				Clock:        fakeClock,
+				JitterFunc:   fakeJitter,
+				CAData:       []byte("fake-ca-bundle"),
 			}
 
 			secretName = "kube-scheduler"
 			serviceAccountName = "kube-scheduler-serviceaccount"
 			serviceAccountNamespace = "kube-system"
-			// If no token-expiration-duration is set then the default of 12 hours is used
-			expectedRenewDuration = 12 * time.Hour * 80 / 100
-			token = "foo"
 
 			secret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
@@ -132,7 +122,6 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		It("should create a new service account, generate a new token and requeue", func() {
-			fakeCreateServiceAccountToken()
 			Expect(sourceClient.Create(ctx, secret)).To(Succeed())
 			Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).To(BeNotFoundError())
 
@@ -145,13 +134,33 @@ var _ = Describe("Reconciler", func() {
 
 			Expect(sourceClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 			Expect(secret.Data).To(HaveKeyWithValue("token", []byte(token)))
+			Expect(secret.Data).NotTo(HaveKey("bundle.crt"))
+			Expect(secret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(expectedRenewDuration).Format(time.RFC3339)))
+		})
+
+		It("should create a new service account, generate a new token, set CA and requeue", func() {
+			metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "serviceaccount.resources.gardener.cloud/inject-ca-bundle", "true")
+			Expect(sourceClient.Create(ctx, secret)).To(Succeed())
+			Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).To(BeNotFoundError())
+
+			result, err := ctrl.Reconcile(ctx, request)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(reconcile.Result{Requeue: true, RequeueAfter: expectedRenewDuration}))
+
+			Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).To(Succeed())
+			Expect(serviceAccount.AutomountServiceAccountToken).To(PointTo(BeFalse()))
+
+			Expect(sourceClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+			Expect(secret.Data).To(And(
+				HaveKeyWithValue("token", []byte(token)),
+				HaveKeyWithValue("bundle.crt", []byte("fake-ca-bundle")),
+			))
 			Expect(secret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(expectedRenewDuration).Format(time.RFC3339)))
 		})
 
 		It("should create a new service account, generate a new token for the kubeconfig and requeue", func() {
-			secret.Data = map[string][]byte{"kubeconfig": newKubeconfigRaw("")}
+			secret.Data = map[string][]byte{"kubeconfig": newKubeconfigRaw("", nil)}
 
-			fakeCreateServiceAccountToken()
 			Expect(sourceClient.Create(ctx, secret)).To(Succeed())
 			Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).To(BeNotFoundError())
 
@@ -164,7 +173,28 @@ var _ = Describe("Reconciler", func() {
 
 			Expect(sourceClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 			Expect(secret.Data).NotTo(HaveKey("token"))
-			Expect(secret.Data).To(HaveKeyWithValue("kubeconfig", newKubeconfigRaw(token)))
+			Expect(secret.Data).To(HaveKeyWithValue("kubeconfig", newKubeconfigRaw(token, nil)))
+			Expect(secret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(expectedRenewDuration).Format(time.RFC3339)))
+		})
+
+		It("should create a new service account, generate a new token for the kubeconfig, inject CA and requeue", func() {
+			metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "serviceaccount.resources.gardener.cloud/inject-ca-bundle", "true")
+			secret.Data = map[string][]byte{"kubeconfig": newKubeconfigRaw("", nil)}
+
+			Expect(sourceClient.Create(ctx, secret)).To(Succeed())
+			Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).To(BeNotFoundError())
+
+			result, err := ctrl.Reconcile(ctx, request)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(reconcile.Result{Requeue: true, RequeueAfter: expectedRenewDuration}))
+
+			Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).To(Succeed())
+			Expect(serviceAccount.AutomountServiceAccountToken).To(PointTo(BeFalse()))
+
+			Expect(sourceClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+			Expect(secret.Data).NotTo(HaveKey("token"))
+			Expect(secret.Data).NotTo(HaveKey("bundle.crt"))
+			Expect(secret.Data).To(HaveKeyWithValue("kubeconfig", newKubeconfigRaw(token, []byte("fake-ca-bundle"))))
 			Expect(secret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(expectedRenewDuration).Format(time.RFC3339)))
 		})
 
@@ -173,7 +203,6 @@ var _ = Describe("Reconciler", func() {
 			secret.Annotations["token-requestor.resources.gardener.cloud/target-secret-name"] = targetSecretName
 			secret.Annotations["token-requestor.resources.gardener.cloud/target-secret-namespace"] = targetSecretNamespace
 
-			fakeCreateServiceAccountToken()
 			Expect(sourceClient.Create(ctx, secret)).To(Succeed())
 			Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).To(BeNotFoundError())
 
@@ -203,7 +232,6 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		It("should create a new service account, generate a new token and requeue, and create the target secret in the next reconciliation", func() {
-			fakeCreateServiceAccountToken()
 			Expect(sourceClient.Create(ctx, secret)).To(Succeed())
 			Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).To(BeNotFoundError())
 
@@ -251,7 +279,6 @@ var _ = Describe("Reconciler", func() {
 			})
 
 			It("should create a new service account, generate a new token and requeue", func() {
-				fakeCreateServiceAccountToken()
 				Expect(sourceClient.Create(ctx, secret)).To(Succeed())
 				Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).To(BeNotFoundError())
 
@@ -268,9 +295,8 @@ var _ = Describe("Reconciler", func() {
 			})
 
 			It("should create a new service account, generate a new token for the kubeconfig and requeue", func() {
-				secret.Data = map[string][]byte{"kubeconfig": newKubeconfigRaw("")}
+				secret.Data = map[string][]byte{"kubeconfig": newKubeconfigRaw("", nil)}
 
-				fakeCreateServiceAccountToken()
 				Expect(sourceClient.Create(ctx, secret)).To(Succeed())
 				Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).To(BeNotFoundError())
 
@@ -283,7 +309,7 @@ var _ = Describe("Reconciler", func() {
 
 				Expect(sourceClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 				Expect(secret.Data).NotTo(HaveKey("token"))
-				Expect(secret.Data).To(HaveKeyWithValue("kubeconfig", newKubeconfigRaw(token)))
+				Expect(secret.Data).To(HaveKeyWithValue("kubeconfig", newKubeconfigRaw(token, nil)))
 				Expect(secret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(expectedRenewDuration).Format(time.RFC3339)))
 			})
 
@@ -312,7 +338,6 @@ var _ = Describe("Reconciler", func() {
 		It("should fail when the provided kubeconfig cannot be decoded", func() {
 			secret.Data = map[string][]byte{"kubeconfig": []byte("some non-decodeable stuff")}
 
-			fakeCreateServiceAccountToken()
 			Expect(sourceClient.Create(ctx, secret)).To(Succeed())
 			Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).To(BeNotFoundError())
 
@@ -334,8 +359,27 @@ var _ = Describe("Reconciler", func() {
 			Expect(result).To(Equal(reconcile.Result{Requeue: true, RequeueAfter: delay}))
 		})
 
+		It("should detect if the caBundle is incorrect (token case)", func() {
+			secret.Data = map[string][]byte{
+				"token":      []byte("some-token"),
+				"bundle.crt": []byte("foo"),
+			}
+
+			delay := time.Minute
+			metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(delay).Format(time.RFC3339))
+			metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "serviceaccount.resources.gardener.cloud/inject-ca-bundle", "true")
+
+			Expect(sourceClient.Create(ctx, secret)).To(Succeed())
+
+			Expect(ctrl.Reconcile(ctx, request)).To(Equal(reconcile.Result{Requeue: true, RequeueAfter: expectedRenewDuration}))
+
+			Expect(sourceClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+			Expect(secret.Data).To(HaveKeyWithValue("token", []byte(token)))
+			Expect(secret.Data).To(HaveKeyWithValue("bundle.crt", []byte("fake-ca-bundle")))
+		})
+
 		It("should requeue because renew timestamp has not been reached (kubeconfig case)", func() {
-			secret.Data = map[string][]byte{"kubeconfig": newKubeconfigRaw("some-token")}
+			secret.Data = map[string][]byte{"kubeconfig": newKubeconfigRaw("some-token", nil)}
 
 			delay := time.Minute
 			metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(delay).Format(time.RFC3339))
@@ -347,12 +391,26 @@ var _ = Describe("Reconciler", func() {
 			Expect(result).To(Equal(reconcile.Result{Requeue: true, RequeueAfter: delay}))
 		})
 
+		It("should detect if the caBundle is incorrect (kubeconfig case)", func() {
+			secret.Data = map[string][]byte{"kubeconfig": newKubeconfigRaw("some-token", []byte("some-data"))}
+
+			delay := time.Minute
+			metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(delay).Format(time.RFC3339))
+			metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "serviceaccount.resources.gardener.cloud/inject-ca-bundle", "true")
+
+			Expect(sourceClient.Create(ctx, secret)).To(Succeed())
+
+			Expect(ctrl.Reconcile(ctx, request)).To(Equal(reconcile.Result{Requeue: true, RequeueAfter: expectedRenewDuration}))
+
+			Expect(sourceClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+			Expect(secret.Data).To(HaveKeyWithValue("kubeconfig", newKubeconfigRaw(token, []byte("fake-ca-bundle"))))
+		})
+
 		It("should issue a new token since the renew timestamp is in the past", func() {
 			expiredSince := time.Minute
 			metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(-expiredSince).Format(time.RFC3339))
 
 			token = "new-token"
-			fakeCreateServiceAccountToken()
 
 			Expect(sourceClient.Create(ctx, secret)).To(Succeed())
 			Expect(targetClient.Create(ctx, serviceAccount)).To(Succeed())
@@ -369,7 +427,6 @@ var _ = Describe("Reconciler", func() {
 		It("should reconcile the service account settings", func() {
 			serviceAccount.AutomountServiceAccountToken = ptr.To(true)
 
-			fakeCreateServiceAccountToken()
 			Expect(sourceClient.Create(ctx, secret)).To(Succeed())
 			Expect(targetClient.Create(ctx, serviceAccount)).To(Succeed())
 
@@ -399,7 +456,6 @@ var _ = Describe("Reconciler", func() {
 			expirationDuration := 10 * time.Minute
 			expectedRenewDuration = 8 * time.Minute
 			metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "serviceaccount.resources.gardener.cloud/token-expiration-duration", expirationDuration.String())
-			fakeCreateServiceAccountToken()
 
 			Expect(sourceClient.Create(ctx, secret)).To(Succeed())
 
@@ -415,7 +471,6 @@ var _ = Describe("Reconciler", func() {
 			expirationDuration := 100 * time.Hour
 			expectedRenewDuration = 24 * time.Hour * 80 / 100
 			metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "serviceaccount.resources.gardener.cloud/token-expiration-duration", expirationDuration.String())
-			fakeCreateServiceAccountToken()
 
 			Expect(sourceClient.Create(ctx, secret)).To(Succeed())
 
@@ -426,7 +481,7 @@ var _ = Describe("Reconciler", func() {
 
 		Context("error", func() {
 			It("provided token expiration duration cannot be parsed", func() {
-				metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "serviceaccount.resources.gardener.cloud/token-expiration-duration", "unparseable")
+				metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "serviceaccount.resources.gardener.cloud/token-expiration-duration", "unparsable")
 
 				Expect(sourceClient.Create(ctx, secret)).To(Succeed())
 
@@ -454,7 +509,6 @@ var _ = Describe("Reconciler", func() {
 			})
 
 			It("should create a new service account in the fixed target namespace, generate a new token and requeue", func() {
-				fakeCreateServiceAccountToken()
 				Expect(sourceClient.Create(ctx, secret)).To(Succeed())
 				Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).To(BeNotFoundError())
 
@@ -473,11 +527,15 @@ var _ = Describe("Reconciler", func() {
 	})
 })
 
-func newKubeconfigRaw(token string) []byte {
+func newKubeconfigRaw(token string, ca []byte) []byte {
+	if len(ca) == 0 {
+		ca = []byte("AAAA")
+	}
+	caData := base64.StdEncoding.EncodeToString(ca)
 	return []byte(`apiVersion: v1
 clusters:
 - cluster:
-    certificate-authority-data: AAAA
+    certificate-authority-data: ` + caData + `
     server: some-server-url
   name: shoot--foo--bar
 contexts:

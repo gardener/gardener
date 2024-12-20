@@ -13,7 +13,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 
-	admissioncontrollerv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
+	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	. "github.com/gardener/gardener/pkg/apis/operator/v1alpha1/conversion"
 )
@@ -49,16 +49,16 @@ var _ = Describe("conversion", func() {
 			admissionControllerConfig := ConvertToAdmissionControllerResourceAdmissionConfiguration(operatorConfig)
 
 			Expect(reflect.ValueOf(operatorConfig.UnrestrictedSubjects).Pointer()).To(Equal(reflect.ValueOf(admissionControllerConfig.UnrestrictedSubjects).Pointer()))
-			Expect(admissionControllerConfig.OperationMode).To(PointTo(Equal(admissioncontrollerv1alpha1.ResourceAdmissionWebhookMode("block"))))
+			Expect(admissionControllerConfig.OperationMode).To(PointTo(Equal(admissioncontrollerconfigv1alpha1.ResourceAdmissionWebhookMode("block"))))
 			Expect(admissionControllerConfig.Limits).To(HaveLen(len(operatorConfig.Limits)))
 			Expect(admissionControllerConfig.Limits).To(ConsistOf(
-				admissioncontrollerv1alpha1.ResourceLimit{
+				admissioncontrollerconfigv1alpha1.ResourceLimit{
 					APIGroups:   operatorConfig.Limits[0].APIGroups,
 					APIVersions: operatorConfig.Limits[0].APIVersions,
 					Resources:   operatorConfig.Limits[0].Resources,
 					Size:        operatorConfig.Limits[0].Size,
 				},
-				admissioncontrollerv1alpha1.ResourceLimit{
+				admissioncontrollerconfigv1alpha1.ResourceLimit{
 					APIGroups:   operatorConfig.Limits[1].APIGroups,
 					APIVersions: operatorConfig.Limits[1].APIVersions,
 					Resources:   operatorConfig.Limits[1].Resources,

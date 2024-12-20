@@ -25,7 +25,7 @@ const (
 	inKubernetesRegistry = "garden.local.gardener.cloud:5001"
 )
 
-// Interface represents an OCI compatible regisry.
+// Interface represents an OCI compatible registry.
 type Interface interface {
 	Pull(ctx context.Context, oci *gardencorev1.OCIRepository) ([]byte, error)
 }

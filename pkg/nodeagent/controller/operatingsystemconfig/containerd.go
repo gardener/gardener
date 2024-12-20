@@ -16,6 +16,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"slices"
 	"text/template"
 	"time"
 
@@ -25,6 +26,7 @@ import (
 	"github.com/spf13/afero"
 	"k8s.io/utils/ptr"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -33,8 +35,8 @@ import (
 )
 
 // ReconcileContainerdConfig sets required values of the given containerd configuration.
-func (r *Reconciler) ReconcileContainerdConfig(ctx context.Context, log logr.Logger, criConfig *extensionsv1alpha1.CRIConfig) error {
-	if !extensionsv1alpha1helper.HasContainerdConfiguration(criConfig) {
+func (r *Reconciler) ReconcileContainerdConfig(ctx context.Context, log logr.Logger, osc *extensionsv1alpha1.OperatingSystemConfig) error {
+	if !extensionsv1alpha1helper.HasContainerdConfiguration(osc.Spec.CRIConfig) {
 		return nil
 	}
 
@@ -46,13 +48,12 @@ func (r *Reconciler) ReconcileContainerdConfig(ctx context.Context, log logr.Log
 		return fmt.Errorf("failed to ensure containerd default config: %w", err)
 	}
 
-	if err := r.ensureContainerdEnvironment(); err != nil {
-		return fmt.Errorf("failed to ensure containerd environment: %w", err)
-	}
-
-	if err := r.ensureContainerdConfiguration(log, criConfig); err != nil {
+	if err := r.ensureContainerdConfiguration(log, osc.Spec.CRIConfig); err != nil {
 		return fmt.Errorf("failed to ensure containerd config: %w", err)
 	}
+
+	// Add the containerd drop-in to the OSC to prevent side effects when containerd.service is changed by extensions too.
+	addContainerdEnvironmentDropIn(osc)
 
 	return nil
 }
@@ -60,15 +61,15 @@ func (r *Reconciler) ReconcileContainerdConfig(ctx context.Context, log logr.Log
 // ReconcileContainerdRegistries configures desired registries for containerd and cleans up abandoned ones.
 // Registries without readiness probes are added synchronously and related errors are returned immediately.
 // Registries with configured readiness probes are added asynchronously and must be waited for by invoking the returned function.
-func (r *Reconciler) ReconcileContainerdRegistries(ctx context.Context, log logr.Logger, containerdChanges containerd) (func() error, error) {
-	errChan := r.ensureContainerdRegistries(ctx, log, containerdChanges.registries.desired)
+func (r *Reconciler) ReconcileContainerdRegistries(ctx context.Context, log logr.Logger, changes *operatingSystemConfigChanges) (func() error, error) {
+	errChan := r.ensureContainerdRegistries(ctx, log, changes)
 
 	select {
 	case err := <-errChan:
 		// Return immediately if a result was already sent to the err channel.
 		// Note: err can still be nil here, thus the cleanup function call must be returned.
 		return func() error {
-			return r.cleanupUnusedContainerdRegistries(log, containerdChanges.registries.deleted)
+			return r.cleanupUnusedContainerdRegistries(log, changes)
 		}, err
 	default:
 		return func() error {
@@ -76,16 +77,41 @@ func (r *Reconciler) ReconcileContainerdRegistries(ctx context.Context, log logr
 			if err := <-errChan; err != nil {
 				return err
 			}
-			return r.cleanupUnusedContainerdRegistries(log, containerdChanges.registries.deleted)
+			return r.cleanupUnusedContainerdRegistries(log, changes)
 		}, nil
 	}
+}
+
+// addContainerdEnvironmentDropIn ingests a drop-in to set the environment for the 'containerd' service.
+func addContainerdEnvironmentDropIn(osc *extensionsv1alpha1.OperatingSystemConfig) {
+	if osc.Spec.CRIConfig == nil {
+		return
+	}
+
+	unitDropIn := extensionsv1alpha1.DropIn{
+		Name: "30-env_config.conf",
+		Content: `[Service]
+Environment="PATH=` + extensionsv1alpha1.ContainerDRuntimeContainersBinFolder + `:` + os.Getenv("PATH") + `"
+`,
+	}
+
+	for i, unit := range osc.Spec.Units {
+		if unit.Name == v1beta1constants.OperatingSystemConfigUnitNameContainerDService {
+			osc.Spec.Units[i].DropIns = append(osc.Spec.Units[i].DropIns, unitDropIn)
+			return
+		}
+	}
+
+	osc.Spec.Units = append(osc.Spec.Units, extensionsv1alpha1.Unit{
+		Name:    v1beta1constants.OperatingSystemConfigUnitNameContainerDService,
+		DropIns: []extensionsv1alpha1.DropIn{unitDropIn},
+	})
 }
 
 const (
 	baseDir   = "/etc/containerd"
 	certsDir  = baseDir + "/certs.d"
 	configDir = baseDir + "/conf.d"
-	dropinDir = "/etc/systemd/system/containerd.service.d"
 )
 
 func (r *Reconciler) ensureContainerdConfigDirectories() error {
@@ -94,7 +120,6 @@ func (r *Reconciler) ensureContainerdConfigDirectories() error {
 		baseDir,
 		configDir,
 		certsDir,
-		dropinDir,
 	} {
 		if err := r.FS.MkdirAll(dir, defaultDirPermissions); err != nil {
 			return fmt.Errorf("failure for directory %q: %w", dir, err)
@@ -128,32 +153,6 @@ func (r *Reconciler) ensureContainerdDefaultConfig(ctx context.Context) error {
 	}
 
 	return r.FS.WriteFile(configFile, output, 0644)
-}
-
-// ensureContainerdEnvironment sets the environment for the 'containerd' service.
-func (r *Reconciler) ensureContainerdEnvironment() error {
-	var (
-		unitDropin = `[Service]
-Environment="PATH=` + extensionsv1alpha1.ContainerDRuntimeContainersBinFolder + `:` + os.Getenv("PATH") + `"
-`
-	)
-
-	containerdEnvFilePath := path.Join(dropinDir, "30-env_config.conf")
-	exists, err := r.FS.Exists(containerdEnvFilePath)
-	if err != nil {
-		return err
-	}
-
-	if exists {
-		return nil
-	}
-
-	err = r.FS.WriteFile(containerdEnvFilePath, []byte(unitDropin), 0644)
-	if err != nil {
-		return fmt.Errorf("unable to write unit dropin: %w", err)
-	}
-
-	return nil
 }
 
 // ensureContainerdConfiguration sets the configuration for containerd.
@@ -288,7 +287,7 @@ func (r *Reconciler) ensureContainerdConfiguration(log logr.Logger, criConfig *e
 }
 
 // ensureContainerdRegistries configures containerd to use the desired image registries.
-func (r *Reconciler) ensureContainerdRegistries(ctx context.Context, log logr.Logger, newRegistries []extensionsv1alpha1.RegistryConfig) <-chan error {
+func (r *Reconciler) ensureContainerdRegistries(ctx context.Context, log logr.Logger, changes *operatingSystemConfigChanges) <-chan error {
 	var (
 		errChan = make(chan error, 1)
 
@@ -296,7 +295,7 @@ func (r *Reconciler) ensureContainerdRegistries(ctx context.Context, log logr.Lo
 		registriesWithReadiness    []extensionsv1alpha1.RegistryConfig
 	)
 
-	for _, registryConfig := range newRegistries {
+	for _, registryConfig := range changes.Containerd.Registries.Desired {
 		if ptr.Deref(registryConfig.ReadinessProbe, false) {
 			registriesWithReadiness = append(registriesWithReadiness, registryConfig)
 		} else {
@@ -311,12 +310,19 @@ func (r *Reconciler) ensureContainerdRegistries(ctx context.Context, log logr.Lo
 			errChan <- err
 			return errChan
 		}
+		if err := changes.completedContainerdRegistriesDesired(registryConfig.Upstream); err != nil {
+			errChan <- err
+			return errChan
+		}
 	}
 
 	fns := make([]flow.TaskFn, 0, len(registriesWithReadiness))
 	for _, registryConfig := range registriesWithReadiness {
 		fns = append(fns, func(ctx context.Context) error {
-			return addRegistryToContainerdFunc(ctx, log, registryConfig, r.FS)
+			if err := addRegistryToContainerdFunc(ctx, log, registryConfig, r.FS); err != nil {
+				return err
+			}
+			return changes.completedContainerdRegistriesDesired(registryConfig.Upstream)
 		})
 	}
 
@@ -436,14 +442,21 @@ func addRegistryToContainerdFunc(ctx context.Context, log logr.Logger, registryC
 		values["hostConfigs"] = append(values["hostConfigs"].([]any), hostConfig)
 	}
 
-	return tplContainerdHosts.Execute(f, values)
+	if err := tplContainerdHosts.Execute(f, values); err != nil {
+		return err
+	}
+	log.Info("Configured registry config", "upstream", registryConfig.Upstream)
+	return nil
 }
 
-func (r *Reconciler) cleanupUnusedContainerdRegistries(log logr.Logger, registriesToRemove []extensionsv1alpha1.RegistryConfig) error {
-	for _, registryConfig := range registriesToRemove {
+func (r *Reconciler) cleanupUnusedContainerdRegistries(log logr.Logger, changes *operatingSystemConfigChanges) error {
+	for _, registryConfig := range slices.Clone(changes.Containerd.Registries.Deleted) {
 		log.Info("Removing obsolete registry directory", "upstream", registryConfig.Upstream)
 		if err := r.FS.RemoveAll(path.Join(certsDir, registryConfig.Upstream)); err != nil {
 			return fmt.Errorf("failed to cleanup obsolete registry directory: %w", err)
+		}
+		if err := changes.completedContainerdRegistriesDeleted(registryConfig.Upstream); err != nil {
+			return err
 		}
 	}
 

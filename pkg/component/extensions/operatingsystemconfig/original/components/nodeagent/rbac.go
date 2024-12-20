@@ -15,7 +15,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	valiconstants "github.com/gardener/gardener/pkg/component/observability/logging/vali/constants"
 	"github.com/gardener/gardener/pkg/features"
-	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
@@ -55,7 +55,7 @@ func RBACResourcesData(secretNames []string) (map[string][]byte, error) {
 			},
 			Subjects: []rbacv1.Subject{{
 				Kind:      rbacv1.ServiceAccountKind,
-				Name:      nodeagentv1alpha1.AccessSecretName,
+				Name:      nodeagentconfigv1alpha1.AccessSecretName,
 				Namespace: metav1.NamespaceSystem,
 			}},
 		}
@@ -70,7 +70,7 @@ func RBACResourcesData(secretNames []string) (map[string][]byte, error) {
 				{
 					APIGroups:     []string{""},
 					Resources:     []string{"secrets"},
-					ResourceNames: append([]string{nodeagentv1alpha1.AccessSecretName, valiconstants.ValitailTokenSecretName}, secretNames...),
+					ResourceNames: append([]string{nodeagentconfigv1alpha1.AccessSecretName, valiconstants.ValitailTokenSecretName}, secretNames...),
 					Verbs:         []string{"get", "list", "watch"},
 				},
 				{
@@ -99,7 +99,7 @@ func RBACResourcesData(secretNames []string) (map[string][]byte, error) {
 				},
 				{
 					Kind:      rbacv1.ServiceAccountKind,
-					Name:      nodeagentv1alpha1.AccessSecretName,
+					Name:      nodeagentconfigv1alpha1.AccessSecretName,
 					Namespace: metav1.NamespaceSystem,
 				},
 			},

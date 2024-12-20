@@ -1,8 +1,7 @@
 {{- define "kubeadmConfigPatches" -}}
 - |
   # TODO(ialidzhikov): Use the kubeadm.k8s.io/v1beta4 API when kind supports it (ref https://github.com/kubernetes-sigs/kind/pull/3675).
-  # Currently kind accepts kubeadm.k8s.io/v1beta3 but the resulting kube-system/kubeadm-config ConfigMap uses kubeadm.k8s.io/v1beta4.
-  # The ConfigMap is patched in the kind-up.sh script.
+  # Currently kind accepts kubeadm.k8s.io/v1beta3 only.
   apiVersion: kubeadm.k8s.io/v1beta3
   kind: ClusterConfiguration
   apiServer:
@@ -13,18 +12,21 @@
     - gardener-apiserver.relay.svc.cluster.local
 {{- end }}
     extraArgs:
-{{- if or (not .Values.gardener.controlPlane.deployed) (not .Values.gardener.controlPlane.kindIsGardenCluster) }}
-      authorization-mode: RBAC,Node
-{{- else }}
-      authorization-mode: RBAC,Node
-      authorization-webhook-cache-authorized-ttl: "0"
-      authorization-webhook-cache-unauthorized-ttl: "0"
+      authorization-config: /etc/gardener-local/kube-apiserver/authz-config.yaml
     extraVolumes:
-    - name: gardener
-      hostPath: /etc/gardener/controlplane/auth-webhook-kubeconfig-{{ if eq .Values.networking.ipFamily "dual" }}ipv4{{ else }}{{ .Values.networking.ipFamily }}{{ end }}.yaml
-      mountPath: /etc/gardener/controlplane/auth-webhook-kubeconfig-{{ if eq .Values.networking.ipFamily "dual" }}ipv4{{ else }}{{ .Values.networking.ipFamily }}{{ end }}.yaml
+    - name: authz-config
+      mountPath: /etc/gardener-local/kube-apiserver/authz-config.yaml
       readOnly: true
       pathType: File
+{{- if and .Values.gardener.controlPlane.deployed .Values.gardener.controlPlane.kindIsGardenCluster }}
+      hostPath: /etc/gardener-local/kube-apiserver/authz-config-with-seedauthorizer.yaml
+    - name: authz-webhook-kubeconfig
+      mountPath: /etc/gardener-local/kube-apiserver/authz-webhook-kubeconfig.yaml
+      hostPath: /etc/gardener-local/kube-apiserver/authz-webhook-kubeconfig-{{ if eq .Values.networking.ipFamily "dual" }}ipv4{{ else }}{{ .Values.networking.ipFamily }}{{ end }}.yaml
+      readOnly: true
+      pathType: File
+{{- else }}
+      hostPath: /etc/gardener-local/kube-apiserver/authz-config-without-seedauthorizer.yaml
 {{- end }}
 - |
   apiVersion: kubelet.config.k8s.io/v1beta1

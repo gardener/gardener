@@ -649,20 +649,6 @@ map[string]string
 <p>Env is the list of environment variables to set in the gardenlet container.</p>
 </td>
 </tr>
-<tr>
-<td>
-<code>vpa</code></br>
-<em>
-bool
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>VPA specifies whether to enable VPA for gardenlet. Defaults to true.</p>
-<p>Deprecated: This field is deprecated and has no effect anymore. It will be removed in the future.
-TODO(rfranzke): Remove this field after v1.110 has been released.</p>
-</td>
-</tr>
 </tbody>
 </table>
 <h3 id="seedmanagement.gardener.cloud/v1alpha1.GardenletHelm">GardenletHelm

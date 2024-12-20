@@ -329,7 +329,7 @@ var _ = Describe("Deployment", func() {
 
 		It("should consider the deployment as updated even though there are still completed pods", func() {
 			p1 := pod.DeepCopy()
-			p1.Status.Conditions = []corev1.PodCondition{{Type: "Ready", Status: "PodCompleted"}}
+			p1.Status.Conditions = []corev1.PodCondition{{Type: "Ready", Status: "False", Reason: "PodCompleted"}}
 			Expect(fakeClient.Create(ctx, p1)).To(Succeed())
 
 			p2 := pod.DeepCopy()

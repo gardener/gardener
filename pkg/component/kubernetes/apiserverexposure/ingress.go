@@ -76,7 +76,7 @@ func (i *ingress) Deploy(ctx context.Context) error {
 	}
 
 	if i.values.TLSSecretName != nil {
-		// Istio expects the secret in the istio ingress gateway namespace => copy certifcate to istio namespace
+		// Istio expects the secret in the istio ingress gateway namespace => copy certificate to istio namespace
 		wildcardCert, err := gardenerutils.GetWildcardCertificate(ctx, i.client)
 		if err != nil {
 			return err

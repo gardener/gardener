@@ -28,7 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	"github.com/gardener/gardener/pkg/component/networking/nginxingress"
-	resourcemanagerv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
@@ -71,7 +71,7 @@ func NewRuntimeGardenerResourceManager(
 		EndpointSliceHintsEnabled:                 endpointSliceHintsEnabled,
 		MaxConcurrentNetworkPolicyWorkers:         ptr.To(20),
 		NetworkPolicyAdditionalNamespaceSelectors: additionalNetworkPolicyNamespaceSelectors,
-		NetworkPolicyControllerIngressControllerSelector: &resourcemanagerv1alpha1.IngressControllerSelector{
+		NetworkPolicyControllerIngressControllerSelector: &resourcemanagerconfigv1alpha1.IngressControllerSelector{
 			Namespace: v1beta1constants.GardenNamespace,
 			PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{
 				v1beta1constants.LabelApp:      nginxingress.LabelAppValue,

@@ -21,7 +21,7 @@ var _ = Describe("Kubernetes Utils", func() {
 		var (
 			shoot *gardencorev1beta1.Shoot
 
-			testShootReconcilationSuccessful = func(matchMessage, matchResult types.GomegaMatcher) {
+			testShootReconciliationSuccessful = func(matchMessage, matchResult types.GomegaMatcher) {
 				successful, msg := framework.ShootReconciliationSuccessful(shoot)
 				Expect(msg).To(matchMessage)
 				Expect(successful).To(matchResult)
@@ -57,21 +57,21 @@ var _ = Describe("Kubernetes Utils", func() {
 			It("should return true if shoot is reconciled successfully", func() {
 				appendShootConditionsToShoot(shoot)
 
-				testShootReconcilationSuccessful(BeEmpty(), BeTrue())
+				testShootReconciliationSuccessful(BeEmpty(), BeTrue())
 			})
 
 			It("should return true if workerless shoot is reconciled successfully", func() {
 				shoot.Spec.Provider.Workers = nil
 				appendShootConditionsToShoot(shoot)
 
-				testShootReconcilationSuccessful(BeEmpty(), BeTrue())
+				testShootReconciliationSuccessful(BeEmpty(), BeTrue())
 			})
 
 			It("should return true if shoot which acts as seed is reconciled successfully", func() {
 				appendShootConditionsToShoot(shoot)
 				appendSeedConditionsToShoot(shoot)
 
-				testShootReconcilationSuccessful(BeEmpty(), BeTrue())
+				testShootReconciliationSuccessful(BeEmpty(), BeTrue())
 			})
 		})
 
@@ -79,7 +79,7 @@ var _ = Describe("Kubernetes Utils", func() {
 			It("should return false and appropriate message", func() {
 				shoot.Status.ObservedGeneration = 0
 
-				testShootReconcilationSuccessful(ContainSubstring("generation did not equal observed generation"), BeFalse())
+				testShootReconciliationSuccessful(ContainSubstring("generation did not equal observed generation"), BeFalse())
 			})
 		})
 
@@ -87,7 +87,7 @@ var _ = Describe("Kubernetes Utils", func() {
 			It("should return false and appropriate message", func() {
 				shoot.Status.ObservedGeneration = 1
 
-				testShootReconcilationSuccessful(ContainSubstring("no conditions and last operation present yet"), BeFalse())
+				testShootReconciliationSuccessful(ContainSubstring("no conditions and last operation present yet"), BeFalse())
 			})
 		})
 
@@ -96,7 +96,7 @@ var _ = Describe("Kubernetes Utils", func() {
 				appendShootConditionsToShoot(shoot)
 				setConditionToFalse(shoot, gardencorev1beta1.ShootSystemComponentsHealthy)
 
-				testShootReconcilationSuccessful(ContainSubstring("condition type SystemComponentsHealthy is not true yet"), BeFalse())
+				testShootReconciliationSuccessful(ContainSubstring("condition type SystemComponentsHealthy is not true yet"), BeFalse())
 			})
 
 			It("should return false and appropriate message if not all conditions are True for workerless shoot", func() {
@@ -104,7 +104,7 @@ var _ = Describe("Kubernetes Utils", func() {
 				appendShootConditionsToShoot(shoot)
 				setConditionToFalse(shoot, gardencorev1beta1.ShootControlPlaneHealthy)
 
-				testShootReconcilationSuccessful(ContainSubstring("condition type ControlPlaneHealthy is not true yet"), BeFalse())
+				testShootReconciliationSuccessful(ContainSubstring("condition type ControlPlaneHealthy is not true yet"), BeFalse())
 			})
 
 			It("should return false and appropriate message if shoot acts as seed and a seed condition is not True", func() {
@@ -112,7 +112,7 @@ var _ = Describe("Kubernetes Utils", func() {
 				appendSeedConditionsToShoot(shoot)
 				setConditionToFalse(shoot, gardencorev1beta1.SeedExtensionsReady)
 
-				testShootReconcilationSuccessful(ContainSubstring("condition type ExtensionsReady is not true yet"), BeFalse())
+				testShootReconciliationSuccessful(ContainSubstring("condition type ExtensionsReady is not true yet"), BeFalse())
 			})
 
 			It("should return false and appropriate message if shoot acts as seed, not all shoot conditions are true and shoot is being hibernated", func() {
@@ -124,7 +124,7 @@ var _ = Describe("Kubernetes Utils", func() {
 				appendSeedConditionsToShoot(shoot)
 				setConditionToFalse(shoot, gardencorev1beta1.ShootSystemComponentsHealthy)
 
-				testShootReconcilationSuccessful(ContainSubstring("condition type SystemComponentsHealthy is not true yet"), BeFalse())
+				testShootReconciliationSuccessful(ContainSubstring("condition type SystemComponentsHealthy is not true yet"), BeFalse())
 			})
 
 			It("should return true and empty message if shoot acts as seed, not all seed conditions are true and shoot is being hibernated", func() {
@@ -136,7 +136,7 @@ var _ = Describe("Kubernetes Utils", func() {
 				appendSeedConditionsToShoot(shoot)
 				setConditionToFalse(shoot, gardencorev1beta1.SeedExtensionsReady)
 
-				testShootReconcilationSuccessful(BeEmpty(), BeTrue())
+				testShootReconciliationSuccessful(BeEmpty(), BeTrue())
 			})
 		})
 
@@ -148,7 +148,7 @@ var _ = Describe("Kubernetes Utils", func() {
 			DescribeTable("when lastOperation is",
 				func(lastOperation *gardencorev1beta1.LastOperation, matchMessage, matchResult types.GomegaMatcher) {
 					shoot.Status.LastOperation = lastOperation
-					testShootReconcilationSuccessful(matchMessage, matchResult)
+					testShootReconciliationSuccessful(matchMessage, matchResult)
 				},
 				Entry("Create",
 					&gardencorev1beta1.LastOperation{

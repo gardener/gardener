@@ -79,7 +79,7 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ControllerManagerConf
 		cfg.GardenClientConnection.Kubeconfig = kubeconfig
 	}
 
-	restConfig, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.GardenClientConnection, nil, kubernetes.AuthTokenFile)
+	restConfig, err := kubernetes.RESTConfigFromInternalClientConnectionConfiguration(&cfg.GardenClientConnection, nil, kubernetes.AuthTokenFile)
 	if err != nil {
 		return err
 	}

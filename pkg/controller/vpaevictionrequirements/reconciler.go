@@ -109,7 +109,7 @@ func (r *Reconciler) reconcileVPAForDownscaleInMaintenanceOnly(ctx context.Conte
 		// requeue when the maintenance window ends, such that we can add the EvictionRequirement again
 		endTime := maintenanceTimeWindow.AdjustedEnd(r.Clock.Now())
 		requeueAfter := endTime.Sub(r.Clock.Now())
-		log.Info("Requeueing to the end of the maintenance window", "requeueAfter", requeueAfter)
+		log.Info("Requeuing to the end of the maintenance window", "requeueAfter", requeueAfter)
 		return reconcile.Result{RequeueAfter: requeueAfter}, nil
 	}
 
@@ -128,7 +128,7 @@ func (r *Reconciler) reconcileVPAForDownscaleInMaintenanceOnly(ctx context.Conte
 		nextWindowBegin = nextWindowBegin.AddDate(0, 0, 1)
 	}
 	requeueAfter := nextWindowBegin.Sub(r.Clock.Now())
-	log.Info("Requeueing to the begin of the next maintenance window", "requeueAfter", requeueAfter)
+	log.Info("Requeuing to the begin of the next maintenance window", "requeueAfter", requeueAfter)
 	return reconcile.Result{RequeueAfter: requeueAfter}, nil
 }
 
@@ -142,6 +142,6 @@ func (r *Reconciler) reconcileVPAForDownscaleDisabled(ctx context.Context, log l
 		return err
 	}
 
-	log.Info("Not requeueing VPA")
+	log.Info("Not requeuing VPA")
 	return nil
 }

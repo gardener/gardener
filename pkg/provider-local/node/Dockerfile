@@ -1,4 +1,4 @@
-FROM kindest/node:v1.31.2
+FROM kindest/node:v1.31.2@sha256:18fbefc20a7113353c7b75b5c869d7145a6abd6269154825872dc59c1329912e
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -9,6 +9,9 @@ RUN apt-get update -yq && \
 # remove kind's kubelet unit
 RUN rm -f /etc/systemd/system/kubelet.service && \
     rm -rf /etc/systemd/system/kubelet.service.d/
+
+# copy containerd hosts configurations for local registry mirrors
+COPY certs.d /etc/containerd/certs.d
 
 # add our userdata executor unit
 COPY run-userdata.sh /run-userdata.sh

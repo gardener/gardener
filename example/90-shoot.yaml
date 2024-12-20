@@ -317,9 +317,11 @@ spec:
   #   targetCPUPercentile: 0.9
   #   recommendationLowerBoundCPUPercentile: 0.5
   #   recommendationUpperBoundCPUPercentile: 0.95
+  #   cpuHistogramDecayHalfLife: 24h
   #   targetMemoryPercentile: 0.9
   #   recommendationLowerBoundMemoryPercentile: 0.5
   #   recommendationUpperBoundMemoryPercentile: 0.95
+  #   memoryHistogramDecayHalfLife: 24h
   dns:
     # When the shoot shall use a cluster domain no domain and no providers need to be provided - Gardener will
     # automatically compute a correct domain based on the default domains in the garden cluster.

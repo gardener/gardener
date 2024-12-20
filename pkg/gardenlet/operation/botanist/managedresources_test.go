@@ -30,13 +30,13 @@ import (
 
 var _ = Describe("ManagedResources", func() {
 	var (
-		fakeClient                                                                    client.Client
-		botanist                                                                      *Botanist
-		namespace                                                                     *corev1.Namespace
-		ctx                                                                           = context.TODO()
-		seedManagedResource, shootManagedResouceZeroClass, shootManagedResouceNoClass *resourcesv1alpha1.ManagedResource
+		fakeClient                                                                      client.Client
+		botanist                                                                        *Botanist
+		namespace                                                                       *corev1.Namespace
+		ctx                                                                             = context.TODO()
+		seedManagedResource, shootManagedResourceZeroClass, shootManagedResourceNoClass *resourcesv1alpha1.ManagedResource
 
-		deleteManagedResoucesWithDelay = func(ctx context.Context, delay time.Duration, managedResources ...*resourcesv1alpha1.ManagedResource) {
+		deleteManagedResourcesWithDelay = func(ctx context.Context, delay time.Duration, managedResources ...*resourcesv1alpha1.ManagedResource) {
 			defer GinkgoRecover()
 			time.Sleep(delay)
 			for _, mr := range managedResources {
@@ -58,11 +58,11 @@ var _ = Describe("ManagedResources", func() {
 			ObjectMeta: metav1.ObjectMeta{Name: "seed", Namespace: namespace.Name},
 			Spec:       resourcesv1alpha1.ManagedResourceSpec{Class: ptr.To("seed")},
 		}
-		shootManagedResouceZeroClass = &resourcesv1alpha1.ManagedResource{
+		shootManagedResourceZeroClass = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{Name: "shoot-zero-class", Namespace: namespace.Name},
 			Spec:       resourcesv1alpha1.ManagedResourceSpec{Class: ptr.To("")},
 		}
-		shootManagedResouceNoClass = &resourcesv1alpha1.ManagedResource{
+		shootManagedResourceNoClass = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{Name: "shoot-no-class", Namespace: namespace.Name},
 		}
 	})
@@ -70,11 +70,11 @@ var _ = Describe("ManagedResources", func() {
 	Describe("#WaitUntilShootManagedResourcesDeleted", func() {
 		It("should wait for all managed resources referring the shoot to be deleted", func() {
 			Expect(fakeClient.Create(ctx, namespace)).To(Succeed())
-			Expect(fakeClient.Create(ctx, shootManagedResouceZeroClass)).To(Succeed())
-			Expect(fakeClient.Create(ctx, shootManagedResouceNoClass)).To(Succeed())
+			Expect(fakeClient.Create(ctx, shootManagedResourceZeroClass)).To(Succeed())
+			Expect(fakeClient.Create(ctx, shootManagedResourceNoClass)).To(Succeed())
 			Expect(fakeClient.Create(ctx, seedManagedResource)).To(Succeed())
 
-			go deleteManagedResoucesWithDelay(ctx, time.Second*3, shootManagedResouceZeroClass, shootManagedResouceNoClass)
+			go deleteManagedResourcesWithDelay(ctx, time.Second*3, shootManagedResourceZeroClass, shootManagedResourceNoClass)
 
 			timeoutContext, cancel := context.WithTimeout(ctx, time.Second*30)
 			defer cancel()
@@ -87,11 +87,11 @@ var _ = Describe("ManagedResources", func() {
 
 		It("should timeout because not all managed resources referring the shoot are deleted", func() {
 			Expect(fakeClient.Create(ctx, namespace)).To(Succeed())
-			Expect(fakeClient.Create(ctx, shootManagedResouceZeroClass)).To(Succeed())
-			Expect(fakeClient.Create(ctx, shootManagedResouceNoClass)).To(Succeed())
+			Expect(fakeClient.Create(ctx, shootManagedResourceZeroClass)).To(Succeed())
+			Expect(fakeClient.Create(ctx, shootManagedResourceNoClass)).To(Succeed())
 			Expect(fakeClient.Create(ctx, seedManagedResource)).To(Succeed())
 
-			go deleteManagedResoucesWithDelay(ctx, time.Second*1, shootManagedResouceNoClass)
+			go deleteManagedResourcesWithDelay(ctx, time.Second*1, shootManagedResourceNoClass)
 
 			timeoutContext, cancel := context.WithTimeout(ctx, time.Second*6)
 			defer cancel()
@@ -100,7 +100,7 @@ var _ = Describe("ManagedResources", func() {
 			Expect(err).To(BeAssignableToTypeOf(&retry.Error{}))
 			multiError := errors.Unwrap(err)
 			Expect(multiError).To(BeAssignableToTypeOf(&multierror.Error{}))
-			Expect(multiError.(*multierror.Error).Errors).To(ConsistOf(fmt.Errorf("shoot managed resource %s/%s still exists", namespace.Name, shootManagedResouceZeroClass.Name)))
+			Expect(multiError.(*multierror.Error).Errors).To(ConsistOf(fmt.Errorf("shoot managed resource %s/%s still exists", namespace.Name, shootManagedResourceZeroClass.Name)))
 		})
 	})
 })
