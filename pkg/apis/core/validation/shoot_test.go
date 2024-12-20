@@ -7046,7 +7046,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 	})
 
 	Describe("#ValidateOIDCIssuerURL", func() {
-		DescribeTable("test  valid and invalid issuer URLs", func(issuerURL string, detail string) {
+		DescribeTable("test valid and invalid issuer URLs", func(issuerURL string, detail string) {
 			errorList := ValidateOIDCIssuerURL(issuerURL, field.NewPath("issuerURL"))
 
 			if detail == "" {

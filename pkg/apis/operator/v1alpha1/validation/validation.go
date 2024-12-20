@@ -424,18 +424,21 @@ func validateGardenerDashboardConfig(config *operatorv1alpha1.GardenerDashboardC
 		if kubeAPIServerConfig == nil || (kubeAPIServerConfig.OIDCConfig == nil && kubeAPIServerConfig.StructuredAuthentication == nil) {
 			allErrs = append(allErrs, field.Invalid(oidcPath, config.OIDC, "must set OIDC configuration in .spec.virtualCluster.kubernetes.kubeAPIServer when configuring OIDC config for dashboard"))
 		}
-		if oidc.IssuerURL == nil && (kubeAPIServerConfig == nil || kubeAPIServerConfig.OIDCConfig == nil || kubeAPIServerConfig.OIDCConfig.IssuerURL == nil) {
-			allErrs = append(allErrs, field.Required(oidcPath.Child("issuerURL"), "must provide Issuer URL"))
-		}
-		if oidc.ClientID == nil && (kubeAPIServerConfig == nil || kubeAPIServerConfig.OIDCConfig == nil || kubeAPIServerConfig.OIDCConfig.ClientID == nil) {
-			allErrs = append(allErrs, field.Required(oidcPath.Child("clientID"), "must provide ClientID URL"))
+
+		if oidc.IssuerURL == nil {
+			if oidc.ClientID != nil {
+				allErrs = append(allErrs, field.Required(oidcPath.Child("issuerURL"), "must provide Issuer URL when ClientID is set"))
+			} else if kubeAPIServerConfig == nil || kubeAPIServerConfig.OIDCConfig == nil || kubeAPIServerConfig.OIDCConfig.IssuerURL == nil {
+				allErrs = append(allErrs, field.Required(oidcPath.Child("issuerURL"), "must provide Issuer URL"))
+			}
 		}
 
-		if oidc.IssuerURL == nil && oidc.ClientID != nil {
-			allErrs = append(allErrs, field.Required(oidcPath.Child("issuerURL"), "must provide Issuer URL when ClientID is set"))
-		}
-		if oidc.ClientID == nil && oidc.IssuerURL != nil {
-			allErrs = append(allErrs, field.Required(oidcPath.Child("clientID"), "must provide ClientID when Issuer URL is set"))
+		if oidc.ClientID == nil {
+			if oidc.IssuerURL != nil {
+				allErrs = append(allErrs, field.Required(oidcPath.Child("clientID"), "must provide ClientID when Issuer URL is set"))
+			} else if kubeAPIServerConfig == nil || kubeAPIServerConfig.OIDCConfig == nil || kubeAPIServerConfig.OIDCConfig.ClientID == nil {
+				allErrs = append(allErrs, field.Required(oidcPath.Child("clientID"), "must provide ClientID"))
+			}
 		}
 
 		if oidc.IssuerURL != nil {
