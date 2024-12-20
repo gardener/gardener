@@ -146,6 +146,8 @@ data:
         {{- if .Values.global.controller.config.controllers.shootRetry.retryJitterPeriod }}
         retryJitterPeriod: {{ .Values.global.controller.config.controllers.shootRetry.retryJitterPeriod }}
         {{- end }}
+      shootMigration:
+        concurrentSyncs: {{ required ".Values.global.controller.config.controllers.shootMigration.concurrentSyncs is required" .Values.global.controller.config.controllers.shootMigration.concurrentSyncs }}
       managedSeedSet:
         concurrentSyncs: {{ required ".Values.global.controller.config.controllers.managedSeedSet.concurrentSyncs is required" .Values.global.controller.config.controllers.managedSeedSet.concurrentSyncs }}
         {{- if .Values.global.controller.config.controllers.managedSeedSet.maxShootRetries }}
