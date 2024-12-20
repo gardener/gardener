@@ -87,12 +87,23 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 			return nil
 		}),
 	)
-
 	if err != nil {
 		return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
 	}
 
-	if !o.Shoot.IsWorkerless {
+	const (
+		defaultTimeout  = 10 * time.Minute
+		defaultInterval = 5 * time.Second
+	)
+
+	var (
+		hasNodesCIDR            = o.Shoot.GetInfo().Spec.Networking != nil && o.Shoot.GetInfo().Spec.Networking.Nodes != nil && o.Shoot.GetInfo().Status.Networking != nil
+		nonTerminatingNamespace = botanist.SeedNamespaceObject.UID != "" && botanist.SeedNamespaceObject.Status.Phase != corev1.NamespaceTerminating
+		cleanupShootResources   = nonTerminatingNamespace && kubeAPIServerDeploymentFound
+		wakeupRequired          = (o.Shoot.GetInfo().Status.IsHibernated || o.Shoot.HibernationEnabled) && cleanupShootResources
+	)
+
+	if hasNodesCIDR {
 		networks, err := shoot.ToNetworks(o.Shoot.GetInfo(), o.Shoot.IsWorkerless)
 		if err != nil {
 			return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
@@ -101,12 +112,6 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 	}
 
 	var (
-		nonTerminatingNamespace = botanist.SeedNamespaceObject.UID != "" && botanist.SeedNamespaceObject.Status.Phase != corev1.NamespaceTerminating
-		cleanupShootResources   = nonTerminatingNamespace && kubeAPIServerDeploymentFound
-		wakeupRequired          = (o.Shoot.GetInfo().Status.IsHibernated || o.Shoot.HibernationEnabled) && cleanupShootResources
-		defaultTimeout          = 10 * time.Minute
-		defaultInterval         = 5 * time.Second
-
 		g = flow.NewGraph("Shoot cluster preparation for migration")
 
 		deployNamespace = g.Add(flow.Task{
