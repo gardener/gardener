@@ -6,6 +6,8 @@ package fake
 
 import (
 	"context"
+	"strconv"
+	"strings"
 	"sync"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -42,7 +44,8 @@ type SystemdAction struct {
 
 // DBus is a fake implementation for the dbus.DBus interface.
 type DBus struct {
-	Actions []SystemdAction
+	Actions  []SystemdAction
+	failures map[string]error
 
 	mutex sync.Mutex
 }
@@ -51,7 +54,28 @@ var _ dbus.DBus = &DBus{}
 
 // New returns a simple implementation of dbus.DBus which can be used to fake the dbus actions in unit tests.
 func New() *DBus {
-	return &DBus{}
+	return &DBus{
+		failures: map[string]error{},
+	}
+}
+
+// InjectRestartFailure returns the given error the first time a restart is triggerd on the given units.
+func (d *DBus) InjectRestartFailure(err error, unitNames ...string) {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+
+	key := failureKey(SystemdAction{Action: ActionRestart, UnitNames: unitNames})
+	d.failures[key] = err
+}
+
+func (d *DBus) maybeError(action SystemdAction) error {
+	key := failureKey(action)
+	err, ok := d.failures[key]
+	if !ok {
+		return nil
+	}
+	delete(d.failures, key)
+	return err
 }
 
 // DaemonReload implements dbus.DBus.
@@ -97,11 +121,13 @@ func (d *DBus) Restart(_ context.Context, _ record.EventRecorder, _ runtime.Obje
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
-	d.Actions = append(d.Actions, SystemdAction{
+	action := SystemdAction{
 		Action:    ActionRestart,
 		UnitNames: []string{unitName},
-	})
-	return nil
+	}
+	d.Actions = append(d.Actions, action)
+
+	return d.maybeError(action)
 }
 
 // Reboot implements dbus.DBus.
@@ -138,4 +164,8 @@ func (d *DBus) Stop(_ context.Context, _ record.EventRecorder, _ runtime.Object,
 		UnitNames: []string{unitName},
 	})
 	return nil
+}
+
+func failureKey(action SystemdAction) string {
+	return strings.Join(action.UnitNames, "-") + strconv.Itoa(int(action.Action))
 }
