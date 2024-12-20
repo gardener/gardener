@@ -32,24 +32,27 @@ func (x *x509CertificateExporter) deployment(
 
 	podLabels[v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer] = v1beta1constants.LabelNetworkPolicyAllowed
 	args = func() []string {
+		defaultArgs := []string{
+			"--expose-relative-metrics",
+			"--expose-per-cert-error-metrics",
+			"--watch-kube-secrets",
+			"--max-cache-duration=" + x.values.CacheDuration.Duration.String(),
+			fmt.Sprintf("--listen-address=:%d", port),
+		}
 		secretTypes := x.values.SecretTypes.AsArgs()
+		configMapKeys := x.values.ConfigMapKeys.AsArgs()
 		includedLabels := x.values.IncludeLabels.AsArgs()
 		excludedLabels := x.values.ExcludeLabels.AsArgs()
 		excludedNamespaces := x.values.ExcludeNamespaces.AsArgs()
 		includedNamespaces := x.values.IncludeNamespaces.AsArgs()
-		args := make([]string, 0, 5+len(secretTypes)+len(includedLabels)+len(excludedLabels)+len(excludedNamespaces)+len(includedNamespaces))
+		args := make([]string, 0, len(secretTypes)+len(configMapKeys)+len(includedLabels)+len(excludedLabels)+len(excludedNamespaces)+len(includedNamespaces)+len(defaultArgs))
 		args = append(args, secretTypes...)
+		args = append(args, configMapKeys...)
 		args = append(args, includedLabels...)
 		args = append(args, excludedLabels...)
 		args = append(args, excludedNamespaces...)
 		args = append(args, includedNamespaces...)
-		args = append(args,
-			"--expose-relative-metrics",
-			"--expose-per-cert-error-metrics",
-			"--watch-kube-secrets",
-			"--max-cache-duration="+x.values.CacheDuration.Duration.String(),
-			fmt.Sprintf("--listen-address=:%d", port),
-		)
+		args = append(args, defaultArgs...)
 		sort.Strings(args)
 		return args
 	}()

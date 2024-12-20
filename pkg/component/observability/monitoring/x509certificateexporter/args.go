@@ -13,22 +13,29 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 )
 
+// X509CertificateArg is implementd by objects, tranformable to x509 certificate exporter args
 type X509CertificateArg interface {
+	// AsArg should return the argument as a string, including the `--` prefix
 	AsArg() string
 }
 
+// X509CertificateArgSet is interface for objects that group multiple x509 certificate exporter args
 type X509CertificateArgSet interface {
 	AsArgs() []string
 }
 
+// Filepath to a certificate on the node
 type CertificatePath string
 
+// AsArg returns the certificate path as an argument
 func (c CertificatePath) AsArg() string {
 	return "--watch-file=" + string(c)
 }
 
+// CertificateDirPath is a path to a directory containing certificates on the node
 type CertificateDirPath string
 
+// AsArg returns the certificate dir path as an argument
 func (c CertificateDirPath) AsArg() string {
 	return "--watch-dir=" + string(c)
 }
@@ -45,7 +52,7 @@ type HostCertificates struct {
 	CertificateDirPaths []CertificateDirPath
 }
 
-// Produces `*hostCertificates`,
+// NewHostCertificates produces `*hostCertificates`,
 // will fail if mountPath is not an absolute dir
 // if any certificatePath is not an abs path, mountPath will be prepend
 // mountPath: host path that will be mounted from the node
@@ -93,6 +100,7 @@ func NewHostCertificates(
 	}, nil
 }
 
+// AsArgs returns the host certificates as arguments
 func (h HostCertificates) AsArgs() []string {
 	var (
 		offset = len(h.CertificatePaths)
@@ -108,7 +116,8 @@ func (h HostCertificates) AsArgs() []string {
 	return args
 }
 
-// Secret types and the key name contained within that secret
+// SecretType groups Secret types and the key name contained within that secret
+// to provide an argument for the x509 certificate exporter
 type SecretType struct {
 	// Type of the secrets that should be searched
 	Type string
@@ -120,6 +129,7 @@ func (s SecretType) String() string {
 	return s.Type + ":" + s.Key
 }
 
+// AsArg returns the secret type as an argument
 func (s SecretType) AsArg() string {
 	return fmt.Sprintf("--secret-type=%s", s)
 }
@@ -151,38 +161,58 @@ func labelsToArgs(argPrefix string, data map[string]string) []string {
 	return args
 }
 
+// Note: Removes duplicates
+func listToArgs(argPrefix string, data []string) []string {
+	var (
+		allKeys = make(map[string]bool, len(data))
+	)
+	for _, arg := range data {
+		allKeys[arg] = true
+	}
+
+	var (
+		args      = make([]string, len(allKeys))
+		idx  uint = 0
+	)
+
+	for arg := range allKeys {
+		args[idx] = argPrefix + arg
+		idx++
+	}
+	return args
+}
+
+// IncludeLabels are labels used to filter certificates from the k8s API.
 type IncludeLabels labels.Set
 
 func (il IncludeLabels) AsArgs() []string {
 	return labelsToArgs("--include-label=", map[string]string(il))
 }
 
+// ExcludeLabels are labels used to filter certificates from the k8s API.
 type ExcludeLabels labels.Set
 
 func (el ExcludeLabels) AsArgs() []string {
 	return labelsToArgs("--exclude-label=", el)
 }
 
+// ExcludeNamespaces are namespaces used to filter out secrets from specific namespaces.
 type ExcludeNamespaces []string
 
 func (en ExcludeNamespaces) AsArgs() []string {
-	var (
-		args = make([]string, len(en))
-	)
-	for idx, arg := range en {
-		args[idx] = "--exclude-namespace=" + arg
-	}
-	return args
+	return listToArgs("--exclude-namespace=", en)
 }
 
+// IncludeNamespaces are namespaces used to filter secrets from specific namespaces.
 type IncludeNamespaces []string
 
 func (in IncludeNamespaces) AsArgs() []string {
-	var (
-		args = make([]string, len(in))
-	)
-	for idx, arg := range in {
-		args[idx] = "--include-namespace=" + arg
-	}
-	return args
+	return listToArgs("--include-namespace=", in)
+}
+
+// ConfigMapKeys are keys, containing the certificate data in the config maps
+type ConfigMapKeys []string
+
+func (c ConfigMapKeys) AsArgs() []string {
+	return listToArgs("--configmap-key=", c)
 }
