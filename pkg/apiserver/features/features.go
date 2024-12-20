@@ -16,5 +16,6 @@ func RegisterFeatureGates() {
 		features.ShootForceDeletion,
 		features.UseNamespacedCloudProfile,
 		features.ShootCredentialsBinding,
+		features.CredentialsRotationWithoutWorkersRollout,
 	)))
 }

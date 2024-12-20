@@ -6,12 +6,15 @@ package shoot
 
 import (
 	"context"
+	"slices"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -27,8 +30,8 @@ import (
 	rotationutils "github.com/gardener/gardener/test/utils/rotation"
 )
 
-func testCredentialRotation(ctx context.Context, v rotationutils.Verifiers, f *framework.ShootCreationFramework, startRotationAnnotation string, completeRotationAnnotation string) {
-	ctx, cancel := context.WithTimeout(ctx, 20*time.Minute)
+func testCredentialRotation(parentCtx context.Context, v rotationutils.Verifiers, f *framework.ShootCreationFramework, startRotationAnnotation, completeRotationAnnotation string) {
+	ctx, cancel := context.WithTimeout(parentCtx, 20*time.Minute)
 	defer cancel()
 
 	By("Before credential rotation")
@@ -49,17 +52,18 @@ func testCredentialRotation(ctx context.Context, v rotationutils.Verifiers, f *f
 		}).Should(Succeed())
 
 		ExpectWithOffset(1, f.WaitForShootToBeReconciled(ctx, f.Shoot)).To(Succeed())
-
-		EventuallyWithOffset(1, func() error {
-			return f.GardenClient.Client().Get(ctx, client.ObjectKeyFromObject(f.Shoot), f.Shoot)
-		}).Should(Succeed())
+		EventuallyWithOffset(1, func() error { return f.GardenClient.Client().Get(ctx, client.ObjectKeyFromObject(f.Shoot), f.Shoot) }).Should(Succeed())
 
 		v.AfterPrepared(ctx)
 	}
 
+	testCredentialRotationComplete(parentCtx, v, f, completeRotationAnnotation)
+}
+
+func testCredentialRotationComplete(parentCtx context.Context, v rotationutils.Verifiers, f *framework.ShootCreationFramework, completeRotationAnnotation string) {
 	if completeRotationAnnotation != "" {
 		By("Complete credentials rotation")
-		ctx, cancel = context.WithTimeout(ctx, 20*time.Minute)
+		ctx, cancel := context.WithTimeout(parentCtx, 20*time.Minute)
 		defer cancel()
 
 		patch := client.MergeFrom(f.Shoot.DeepCopy())
@@ -83,16 +87,119 @@ func testCredentialRotation(ctx context.Context, v rotationutils.Verifiers, f *f
 		v.AfterCompleted(ctx)
 	}
 
-	func() {
-		cleanupCtx, cleanupCancel := context.WithTimeout(ctx, 2*time.Minute)
-		defer cleanupCancel()
+	By("Cleanup")
+	cleanupCtx, cleanupCancel := context.WithTimeout(parentCtx, 2*time.Minute)
+	defer cleanupCancel()
 
-		v.Cleanup(cleanupCtx)
-	}()
+	v.Cleanup(cleanupCtx)
+}
+
+func testCredentialRotationWithoutWorkersRollout(parentCtx context.Context, v rotationutils.Verifiers, f *framework.ShootCreationFramework) {
+	ctx, cancel := context.WithTimeout(parentCtx, 20*time.Minute)
+	defer cancel()
+
+	By("Before credential rotation")
+	v.Before(ctx)
+
+	By("Find all machine pods to ensure later that they weren't rolled out")
+	beforeStartMachinePodList := &corev1.PodList{}
+	ExpectWithOffset(1, f.ShootFramework.SeedClient.Client().List(ctx, beforeStartMachinePodList, client.InNamespace(f.Shoot.Status.TechnicalID), client.MatchingLabels{
+		"app":              "machine",
+		"machine-provider": "local",
+	})).To(Succeed())
+
+	beforeStartMachinePodNames := sets.New[string]()
+	for _, item := range beforeStartMachinePodList.Items {
+		beforeStartMachinePodNames.Insert(item.Name)
+	}
+
+	By("Start credentials rotation without workers rollout")
+	patch := client.MergeFrom(f.Shoot.DeepCopy())
+	metav1.SetMetaDataAnnotation(&f.Shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout)
+	EventuallyWithOffset(1, func() error {
+		return f.GardenClient.Client().Patch(ctx, f.Shoot, patch)
+	}).Should(Succeed())
+
+	EventuallyWithOffset(1, func(g Gomega) {
+		g.ExpectWithOffset(1, f.GardenClient.Client().Get(ctx, client.ObjectKeyFromObject(f.Shoot), f.Shoot)).To(Succeed())
+		g.ExpectWithOffset(1, f.Shoot.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
+		v.ExpectPreparingWithoutWorkersRolloutStatus(g)
+	}).Should(Succeed())
+
+	ExpectWithOffset(1, f.WaitForShootToBeReconciled(ctx, f.Shoot)).To(Succeed())
+	EventuallyWithOffset(1, func() error { return f.GardenClient.Client().Get(ctx, client.ObjectKeyFromObject(f.Shoot), f.Shoot) }).Should(Succeed())
+
+	By("Ensure workers were not rolled out")
+	EventuallyWithOffset(1, func(g Gomega) {
+		v.ExpectWaitingForWorkersRolloutStatus(g)
+	}).Should(Succeed())
+
+	afterStartMachinePodList := &corev1.PodList{}
+	ExpectWithOffset(1, f.ShootFramework.SeedClient.Client().List(ctx, afterStartMachinePodList, client.InNamespace(f.Shoot.Status.TechnicalID), client.MatchingLabels{
+		"app":              "machine",
+		"machine-provider": "local",
+	})).To(Succeed())
+
+	afterStartMachinePodNames := sets.New[string]()
+	for _, item := range afterStartMachinePodList.Items {
+		afterStartMachinePodNames.Insert(item.Name)
+	}
+
+	ExpectWithOffset(1, beforeStartMachinePodNames.Equal(afterStartMachinePodNames)).To(BeTrue())
+
+	By("Ensure all worker pools are marked as 'pending for roll out'")
+	for _, worker := range f.Shoot.Spec.Provider.Workers {
+		ExpectWithOffset(1, slices.ContainsFunc(f.Shoot.Status.Credentials.Rotation.CertificateAuthorities.PendingWorkersRollouts, func(rollout gardencorev1beta1.PendingWorkersRollout) bool {
+			return rollout.Name == worker.Name
+		})).To(BeTrue(), "worker pool "+worker.Name+" should be pending for roll out in CA rotation status")
+
+		ExpectWithOffset(1, slices.ContainsFunc(f.Shoot.Status.Credentials.Rotation.ServiceAccountKey.PendingWorkersRollouts, func(rollout gardencorev1beta1.PendingWorkersRollout) bool {
+			return rollout.Name == worker.Name
+		})).To(BeTrue(), "worker pool "+worker.Name+" should be pending for roll out in service account key rotation status")
+	}
+
+	By("Remove last worker pool from spec and check that it is no longer pending for roll out")
+	patch = client.MergeFrom(f.Shoot.DeepCopy())
+	lastWorkerPoolName := f.Shoot.Spec.Provider.Workers[len(f.Shoot.Spec.Provider.Workers)-1].Name
+	f.Shoot.Spec.Provider.Workers = slices.DeleteFunc(f.Shoot.Spec.Provider.Workers, func(worker gardencorev1beta1.Worker) bool {
+		return worker.Name == lastWorkerPoolName
+	})
+	EventuallyWithOffset(1, func() error { return f.GardenClient.Client().Patch(ctx, f.Shoot, patch) }).Should(Succeed())
+
+	ExpectWithOffset(1, f.WaitForShootToBeReconciled(ctx, f.Shoot)).To(Succeed())
+	EventuallyWithOffset(1, func() error { return f.GardenClient.Client().Get(ctx, client.ObjectKeyFromObject(f.Shoot), f.Shoot) }).Should(Succeed())
+
+	ExpectWithOffset(1, slices.ContainsFunc(f.Shoot.Status.Credentials.Rotation.CertificateAuthorities.PendingWorkersRollouts, func(rollout gardencorev1beta1.PendingWorkersRollout) bool {
+		return rollout.Name == lastWorkerPoolName
+	})).To(BeFalse())
+	ExpectWithOffset(1, slices.ContainsFunc(f.Shoot.Status.Credentials.Rotation.ServiceAccountKey.PendingWorkersRollouts, func(rollout gardencorev1beta1.PendingWorkersRollout) bool {
+		return rollout.Name == lastWorkerPoolName
+	})).To(BeFalse())
+
+	By("Trigger rollout of pending worker pools")
+	workerNames := sets.New[string]()
+	for _, rollout := range f.Shoot.Status.Credentials.Rotation.CertificateAuthorities.PendingWorkersRollouts {
+		workerNames.Insert(rollout.Name)
+	}
+	for _, rollout := range f.Shoot.Status.Credentials.Rotation.ServiceAccountKey.PendingWorkersRollouts {
+		workerNames.Insert(rollout.Name)
+	}
+
+	patch = client.MergeFrom(f.Shoot.DeepCopy())
+	metav1.SetMetaDataAnnotation(&f.Shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.OperationRotateRolloutWorkers+"="+strings.Join(workerNames.UnsortedList(), ","))
+	EventuallyWithOffset(1, func() error { return f.GardenClient.Client().Patch(ctx, f.Shoot, patch) }).Should(Succeed())
+
+	ExpectWithOffset(1, f.WaitForShootToBeReconciled(ctx, f.Shoot)).To(Succeed())
+	EventuallyWithOffset(1, func() error { return f.GardenClient.Client().Get(ctx, client.ObjectKeyFromObject(f.Shoot), f.Shoot) }).Should(Succeed())
+
+	ExpectWithOffset(1, f.Shoot.Status.Credentials.Rotation.CertificateAuthorities.Phase).To(Equal(gardencorev1beta1.RotationPrepared))
+	v.AfterPrepared(ctx)
+
+	testCredentialRotationComplete(parentCtx, v, f, v1beta1constants.OperationRotateCredentialsComplete)
 }
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
-	test := func(shoot *gardencorev1beta1.Shoot) {
+	test := func(shoot *gardencorev1beta1.Shoot, withoutWorkersRollout bool) {
 		f := defaultShootCreationFramework()
 		f.Shoot = shoot
 
@@ -112,7 +219,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			f.Verify()
 
 			// isolated test for ssh key rotation (does not trigger node rolling update)
-			if !v1beta1helper.IsWorkerless(f.Shoot) {
+			if !v1beta1helper.IsWorkerless(f.Shoot) && !withoutWorkersRollout {
 				testCredentialRotation(parentCtx, rotationutils.Verifiers{&rotation.SSHKeypairVerifier{ShootCreationFramework: f}}, f, v1beta1constants.ShootOperationRotateSSHKeypair, "")
 			}
 
@@ -171,12 +278,16 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				&rotation.ShootAccessVerifier{ShootCreationFramework: f},
 			}
 
-			if !v1beta1helper.IsWorkerless(f.Shoot) {
+			if !v1beta1helper.IsWorkerless(f.Shoot) && !withoutWorkersRollout {
 				v = append(v, &rotation.SSHKeypairVerifier{ShootCreationFramework: f})
 			}
 
-			// test rotation for every rotation type
-			testCredentialRotation(parentCtx, v, f, v1beta1constants.OperationRotateCredentialsStart, v1beta1constants.OperationRotateCredentialsComplete)
+			if !withoutWorkersRollout {
+				// test rotation for every rotation type
+				testCredentialRotation(parentCtx, v, f, v1beta1constants.OperationRotateCredentialsStart, v1beta1constants.OperationRotateCredentialsComplete)
+			} else {
+				testCredentialRotationWithoutWorkersRollout(parentCtx, v, f)
+			}
 
 			By("Delete Shoot")
 			ctx, cancel = context.WithTimeout(parentCtx, 20*time.Minute)
@@ -186,10 +297,21 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	}
 
 	Context("Shoot with workers", Label("basic"), func() {
-		test(e2e.DefaultShoot("e2e-rotate"))
+		test(e2e.DefaultShoot("e2e-rotate"), false)
+
+		Context("without workers rollout", Label("without-workers-rollout"), func() {
+			shoot := e2e.DefaultShoot("e2e-rotate")
+			shoot.Name = "e2e-rot-noroll"
+			// Add a second worker pool when worker rollout should not be performed such that we can make proper
+			// assertions of the shoot status
+			shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, shoot.Spec.Provider.Workers[0])
+			shoot.Spec.Provider.Workers[len(shoot.Spec.Provider.Workers)-1].Name += "2"
+
+			test(shoot, true)
+		})
 	})
 
 	Context("Workerless Shoot", Label("workerless"), func() {
-		test(e2e.DefaultWorkerlessShoot("e2e-rotate"))
+		test(e2e.DefaultWorkerlessShoot("e2e-rotate"), false)
 	})
 })

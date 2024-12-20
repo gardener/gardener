@@ -58,6 +58,12 @@ func (v *VirtualGardenAccessVerifier) Before(ctx context.Context) {
 // ExpectPreparingStatus is called while waiting for the Preparing status.
 func (v *VirtualGardenAccessVerifier) ExpectPreparingStatus(_ Gomega) {}
 
+// ExpectPreparingWithoutWorkersRolloutStatus is called while waiting for the PreparingWithoutWorkersRollout status.
+func (v *VirtualGardenAccessVerifier) ExpectPreparingWithoutWorkersRolloutStatus(_ Gomega) {}
+
+// ExpectWaitingForWorkersRolloutStatus is called while waiting for the WaitingForWorkersRollout status.
+func (v *VirtualGardenAccessVerifier) ExpectWaitingForWorkersRolloutStatus(_ Gomega) {}
+
 // AfterPrepared is called when the Shoot is in Prepared status.
 func (v *VirtualGardenAccessVerifier) AfterPrepared(ctx context.Context) {
 	By("Use client certificate from before rotation to access target cluster")

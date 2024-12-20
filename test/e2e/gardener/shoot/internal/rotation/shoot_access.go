@@ -83,6 +83,12 @@ func (v *ShootAccessVerifier) Before(ctx context.Context) {
 // ExpectPreparingStatus is called while waiting for the Preparing status.
 func (v *ShootAccessVerifier) ExpectPreparingStatus(_ Gomega) {}
 
+// ExpectPreparingWithoutWorkersRolloutStatus is called while waiting for the PreparingWithoutWorkersRollout status.
+func (v *ShootAccessVerifier) ExpectPreparingWithoutWorkersRolloutStatus(_ Gomega) {}
+
+// ExpectWaitingForWorkersRolloutStatus is called while waiting for the WaitingForWorkersRollout status.
+func (v *ShootAccessVerifier) ExpectWaitingForWorkersRolloutStatus(_ Gomega) {}
+
 // AfterPrepared is called when the Shoot is in Prepared status.
 func (v *ShootAccessVerifier) AfterPrepared(ctx context.Context) {
 	By("Use old static token kubeconfig with old CA to access shoot")

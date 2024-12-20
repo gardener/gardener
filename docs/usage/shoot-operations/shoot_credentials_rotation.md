@@ -47,11 +47,15 @@ In order to start the rotation (first phase), you have to annotate the shoot wit
 kubectl -n <shoot-namespace> annotate shoot <shoot-name> gardener.cloud/operation=rotate-credentials-start
 ```
 
-> **Note:** You can check the `.status.credentials.rotation` field in the `Shoot` to see when the rotation was last initiated and last completed.
-
+> [!TIP]
+> You can check the `.status.credentials.rotation` field in the `Shoot` to see when the rotation was last initiated and last completed.
 
 Kindly consider the detailed descriptions below to learn how the rotation is performed and what your responsibilities are.
 Please note that all respective individual actions apply for this combined rotation as well (e.g., worker nodes are rolled out in the first phase).
+
+> [!TIP]
+> If you don't want the worker nodes to roll out immediately in this phase (and rather trigger it individually at a later time of your convenience), you can use the `rotate-credentials-start-without-workers-rollout` and `rotate-rollout-workers` operations instead.
+> Read up all about it [here](#triggering-worker-node-rollout-individually).
 
 ### Complete Rotation of All Credentials
 
@@ -143,6 +147,25 @@ You could update your API clients again and drop the old CA from their bundle.
 Hence, most of the components need to be restarted (including etcd and `kube-apiserver`).
 >
 > ⚠️ In stage one, all worker nodes of the `Shoot` will be rolled out to ensure that the `Pod`s as well as the `kubelet`s get the updated credentials as well.
+
+#### Triggering Worker Node Rollout Individually
+
+If you don't want that all worker nodes of the `Shoot` get rolled out in phase one, you can start the rotation with `rotate-ca-start-without-workers-rollout` instead of `rotate-ca-start`.
+This allows you to trigger the worker node rollout individually (per worker pool) whenever you are ready for it.
+
+Using this annotation will trigger a `Shoot` reconciliation and performs stage one.
+While it's running, `.status.credentials.rotation.certificateAuthorities.phase` is set to `PreparingWithoutWorkersRollout`.
+Once completed, the `phase` transitions to `WaitingForWorkersRollout`.
+
+Now you can update all API clients outside the cluster (see above) and also trigger the rollout of your worker pools like this:
+
+```bash
+kubectl -n <shoot-namespace> annotate shoot <shoot-name> gardener.cloud/operation=rotate-rollout-workers=<pool1-name>[,<pool2-name>,...]
+```
+
+You can check which worker pools still need to be rolled by reading `.status.credentials.rotation.certificateAuthorities.pendingWorkersRollouts[].name`.
+Once this list is empty, the `phase` transitions to `Prepared`.
+Now you can just complete the rotation as usual (see above).
 
 ### Observability Password(s) For Plutono and Prometheus
 
@@ -267,6 +290,12 @@ This will trigger another `Shoot` reconciliation and performs stage three.
 After it is completed, the `.status.credentials.rotation.serviceAccountKey.phase` is set to `Completed`.
 
 > ⚠️ In stage one, all worker nodes of the `Shoot` will be rolled out to ensure that the `Pod`s use a new token.
+
+#### Triggering Worker Node Rollout Individually
+
+Similar to the rotation of the certificate authorities, you can control the worker node rollout individually.
+Please read [this section](#triggering-worker-node-rollout-individually) to get more information.
+It works the same way for the `ServiceAccount` token signing key (using `rotate-serviceaccount-key-start-without-workers-rollout`).
 
 ### OpenVPN TLS Auth Keys
 

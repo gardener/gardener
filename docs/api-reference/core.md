@@ -3271,6 +3271,21 @@ Kubernetes meta/v1.Time
 triggered.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>pendingWorkersRollouts</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.PendingWorkersRollout">
+[]PendingWorkersRollout
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>PendingWorkersRollouts contains the name of a worker pool and the initiation time of their last rollout due to
+credentials rotation.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.CRI">CRI
@@ -9102,6 +9117,52 @@ string
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.PendingWorkersRollout">PendingWorkersRollout
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.CARotation">CARotation</a>, 
+<a href="#core.gardener.cloud/v1beta1.ServiceAccountKeyRotation">ServiceAccountKeyRotation</a>)
+</p>
+<p>
+<p>PendingWorkersRollout contains the name of a worker pool and the initiation time of their last rollout due to
+credentials rotation.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name is the name of a worker pool.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>lastInitiationTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.ProjectMember">ProjectMember
 </h3>
 <p>
@@ -11532,6 +11593,21 @@ Kubernetes meta/v1.Time
 <em>(Optional)</em>
 <p>LastCompletionTriggeredTime is the recent time when the service account key credential rotation completion was
 triggered.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>pendingWorkersRollouts</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.PendingWorkersRollout">
+[]PendingWorkersRollout
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>PendingWorkersRollouts contains the name of a worker pool and the initiation time of their last rollout due to
+credentials rotation.</p>
 </td>
 </tr>
 </tbody>
