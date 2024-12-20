@@ -135,4 +135,12 @@ var _ = Describe("x509 certificate exporter - arg calculation", func() {
 			}))
 		})
 	})
+	Describe("ConfigMapKeys", func() {
+		It("should return arg string", func() {
+			Expect(x.ConfigMapKeys{"key1", "key2", "key2"}.AsArgs()).To(Equal([]string{
+				"--configmap-key=key1",
+				"--configmap-key=key2",
+			}))
+		})
+	})
 })

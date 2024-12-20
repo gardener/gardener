@@ -74,9 +74,10 @@ import (
 	gardenprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 	longtermprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/longterm"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/x509certificateexporter"
 	"github.com/gardener/gardener/pkg/component/observability/plutono"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
-	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
+	controllermanagerv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
@@ -136,6 +137,7 @@ type components struct {
 	prometheusGarden              prometheus.Interface
 	prometheusLongTerm            prometheus.Interface
 	blackboxExporter              component.DeployWaiter
+	x509CertificateExporter       component.DeployWaiter
 }
 
 func (r *Reconciler) instantiateComponents(
@@ -315,6 +317,11 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.blackboxExporter, err = r.newBlackboxExporter(garden, secretsManager, wildcardCertSecretName)
+	if err != nil {
+		return
+	}
+
+	c.x509CertificateExporter, err = r.newx509CertificateExporter()
 	if err != nil {
 		return
 	}
@@ -608,10 +615,8 @@ func (r *Reconciler) newKubeAPIServer(
 			Name:       "seed-authorizer",
 			Kubeconfig: kubeconfig,
 			WebhookConfiguration: apiserverv1beta1.WebhookConfiguration{
-				// Set TTL to a very low value since it cannot be set to 0 because of defaulting.
-				// See https://github.com/kubernetes/apiserver/blob/3658357fea9fa8b36173d072f2d548f135049e05/pkg/apis/apiserver/v1beta1/defaults.go#L29-L36
-				AuthorizedTTL:                            metav1.Duration{Duration: 1 * time.Nanosecond},
-				UnauthorizedTTL:                          metav1.Duration{Duration: 1 * time.Nanosecond},
+				AuthorizedTTL:                            metav1.Duration{Duration: time.Duration(0)},
+				UnauthorizedTTL:                          metav1.Duration{Duration: time.Duration(0)},
 				Timeout:                                  metav1.Duration{Duration: 10 * time.Second},
 				FailurePolicy:                            apiserverv1beta1.FailurePolicyDeny,
 				SubjectAccessReviewVersion:               "v1",
@@ -1123,7 +1128,7 @@ func (r *Reconciler) newGardenerControllerManager(garden *operatorv1alpha1.Garde
 		}
 
 		for _, defaultProjectQuota := range config.DefaultProjectQuotas {
-			values.Quotas = append(values.Quotas, controllermanagerconfigv1alpha1.QuotaConfiguration{
+			values.Quotas = append(values.Quotas, controllermanagerv1alpha1.QuotaConfiguration{
 				Config:          defaultProjectQuota.Config,
 				ProjectSelector: defaultProjectQuota.ProjectSelector,
 			})
@@ -1523,4 +1528,15 @@ func discoveryServerDomain(garden *operatorv1alpha1.Garden) string {
 
 func workloadIdentityTokenIssuerURL(garden *operatorv1alpha1.Garden) string {
 	return "https://" + discoveryServerDomain(garden) + "/garden/workload-identity/issuer"
+}
+
+func (r *Reconciler) newx509CertificateExporter() (component.DeployWaiter, error) {
+	return sharedcomponent.NewX509CertificateExporter(
+		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		r.RuntimeVersion,
+		v1beta1constants.PriorityClassNameGardenSystem100,
+		x509certificateexporter.SuffixRuntime,
+		"garden",
+	)
 }
