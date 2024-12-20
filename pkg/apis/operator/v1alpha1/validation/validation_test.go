@@ -1962,7 +1962,7 @@ var _ = Describe("Validation Tests", func() {
 
 							Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":  Equal(field.ErrorTypeRequired),
-								"Field": Equal("spec.virtualCluster.gardener.gardenerDashboard.oidc.clientID"),
+								"Field": Equal("spec.virtualCluster.gardener.gardenerDashboard.oidc.clientIDPublic"),
 							}))))
 						})
 
@@ -1976,13 +1976,13 @@ var _ = Describe("Validation Tests", func() {
 
 							Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":  Equal(field.ErrorTypeRequired),
-								"Field": Equal("spec.virtualCluster.gardener.gardenerDashboard.oidc.clientID"),
+								"Field": Equal("spec.virtualCluster.gardener.gardenerDashboard.oidc.clientIDPublic"),
 							}))))
 						})
 
 						It("should complain when issuerURL is missing in OIDC config", func() {
 							garden.Spec.VirtualCluster.Gardener.Dashboard = &operatorv1alpha1.GardenerDashboardConfig{OIDC: &operatorv1alpha1.DashboardOIDC{
-								ClientID: ptr.To("my-client-id"),
+								ClientIDPublic: ptr.To("my-client-id"),
 							}}
 
 							Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -1993,7 +1993,7 @@ var _ = Describe("Validation Tests", func() {
 
 						It("should complain when issuerURL is missing in OIDC config but given in kube-apiserver config", func() {
 							garden.Spec.VirtualCluster.Gardener.Dashboard = &operatorv1alpha1.GardenerDashboardConfig{OIDC: &operatorv1alpha1.DashboardOIDC{
-								ClientID: ptr.To("my-client-id"),
+								ClientIDPublic: ptr.To("my-client-id"),
 							}}
 							garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = &operatorv1alpha1.KubeAPIServerConfig{KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{OIDCConfig: &gardencorev1beta1.OIDCConfig{
 								IssuerURL: ptr.To("https://example.com"),
@@ -2008,8 +2008,8 @@ var _ = Describe("Validation Tests", func() {
 						It("should not complain when OIDC config is configured in both gardener-dashboard and kube-apiserver via structured authentication", func() {
 							garden.Spec.VirtualCluster.Kubernetes.Version = "1.30.0"
 							garden.Spec.VirtualCluster.Gardener.Dashboard = &operatorv1alpha1.GardenerDashboardConfig{OIDC: &operatorv1alpha1.DashboardOIDC{
-								IssuerURL: ptr.To("https://example.com"),
-								ClientID:  ptr.To("my-client-id"),
+								IssuerURL:      ptr.To("https://example.com"),
+								ClientIDPublic: ptr.To("my-client-id"),
 							}}
 							garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = &operatorv1alpha1.KubeAPIServerConfig{KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{
 								StructuredAuthentication: &gardencorev1beta1.StructuredAuthentication{ConfigMapName: "auth-config"}},
@@ -2020,8 +2020,8 @@ var _ = Describe("Validation Tests", func() {
 
 						It("should not complain when OIDC config is configured in both gardener-dashboard and kube-apiserver via OIDC config", func() {
 							garden.Spec.VirtualCluster.Gardener.Dashboard = &operatorv1alpha1.GardenerDashboardConfig{OIDC: &operatorv1alpha1.DashboardOIDC{
-								IssuerURL: ptr.To("https://example.com"),
-								ClientID:  ptr.To("my-client-id"),
+								IssuerURL:      ptr.To("https://example.com"),
+								ClientIDPublic: ptr.To("my-client-id"),
 							}}
 							garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = &operatorv1alpha1.KubeAPIServerConfig{KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{OIDCConfig: &gardencorev1beta1.OIDCConfig{}}}
 

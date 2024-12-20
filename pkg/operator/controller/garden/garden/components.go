@@ -1085,7 +1085,7 @@ func (r *Reconciler) newGardenerDashboard(garden *operatorv1alpha1.Garden, secre
 			values.OIDC = &gardenerdashboard.OIDCValues{
 				DashboardOIDC:  *config.OIDC,
 				IssuerURL:      ptr.Deref(garden.Spec.VirtualCluster.Gardener.Dashboard.OIDC.IssuerURL, *garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL),
-				ClientIDPublic: ptr.Deref(garden.Spec.VirtualCluster.Gardener.Dashboard.OIDC.ClientID, *garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.OIDCConfig.ClientID),
+				ClientIDPublic: ptr.Deref(garden.Spec.VirtualCluster.Gardener.Dashboard.OIDC.ClientIDPublic, *garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.OIDCConfig.ClientID),
 			}
 		}
 

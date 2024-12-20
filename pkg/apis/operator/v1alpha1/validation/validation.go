@@ -426,18 +426,18 @@ func validateGardenerDashboardConfig(config *operatorv1alpha1.GardenerDashboardC
 		}
 
 		if oidc.IssuerURL == nil {
-			if oidc.ClientID != nil {
-				allErrs = append(allErrs, field.Required(oidcPath.Child("issuerURL"), "must provide Issuer URL when ClientID is set"))
+			if oidc.ClientIDPublic != nil {
+				allErrs = append(allErrs, field.Required(oidcPath.Child("issuerURL"), "must provide Issuer URL when ClientIDPublic is set"))
 			} else if kubeAPIServerConfig == nil || kubeAPIServerConfig.OIDCConfig == nil || kubeAPIServerConfig.OIDCConfig.IssuerURL == nil {
 				allErrs = append(allErrs, field.Required(oidcPath.Child("issuerURL"), "must provide Issuer URL"))
 			}
 		}
 
-		if oidc.ClientID == nil {
+		if oidc.ClientIDPublic == nil {
 			if oidc.IssuerURL != nil {
-				allErrs = append(allErrs, field.Required(oidcPath.Child("clientID"), "must provide ClientID when Issuer URL is set"))
+				allErrs = append(allErrs, field.Required(oidcPath.Child("clientIDPublic"), "must provide a public client ID when Issuer URL is set"))
 			} else if kubeAPIServerConfig == nil || kubeAPIServerConfig.OIDCConfig == nil || kubeAPIServerConfig.OIDCConfig.ClientID == nil {
-				allErrs = append(allErrs, field.Required(oidcPath.Child("clientID"), "must provide ClientID"))
+				allErrs = append(allErrs, field.Required(oidcPath.Child("clientIDPublic"), "must provide a public client ID"))
 			}
 		}
 

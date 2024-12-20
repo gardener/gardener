@@ -624,12 +624,12 @@ type DashboardGitHub struct {
 // DashboardOIDC contains configuration for the OIDC settings.
 type DashboardOIDC struct {
 	// ClientIDPublic is the public client ID.
-	// Falls back to the API server's OIDC configuration if not set here.
+	// Falls back to the API server's OIDC client ID configuration if not set here.
 	// +kubebuilder:validation:MinLength=1
 	// +optional
-	ClientID *string `json:"clientID,omitempty"`
+	ClientIDPublic *string `json:"clientIDPublic,omitempty"`
 	// The URL of the OpenID issuer, only HTTPS scheme will be accepted. Used to verify the OIDC JSON Web Token (JWT).
-	// Falls back to the API server's OIDC configuration if not set here.
+	// Falls back to the API server's OIDC issuer URL configuration if not set here.
 	// +kubebuilder:validation:MinLength=1
 	// +optional
 	IssuerURL *string `json:"issuerURL,omitempty"`

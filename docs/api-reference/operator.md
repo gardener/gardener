@@ -709,7 +709,7 @@ implicitly defaulted to <code>15m</code>.</p>
 <tbody>
 <tr>
 <td>
-<code>clientID</code></br>
+<code>clientIDPublic</code></br>
 <em>
 string
 </em>
@@ -717,7 +717,7 @@ string
 <td>
 <em>(Optional)</em>
 <p>ClientIDPublic is the public client ID.
-Falls back to the API server&rsquo;s OIDC configuration if not set here.</p>
+Falls back to the API server&rsquo;s OIDC client ID configuration if not set here.</p>
 </td>
 </tr>
 <tr>
@@ -730,7 +730,7 @@ string
 <td>
 <em>(Optional)</em>
 <p>The URL of the OpenID issuer, only HTTPS scheme will be accepted. Used to verify the OIDC JSON Web Token (JWT).
-Falls back to the API server&rsquo;s OIDC configuration if not set here.</p>
+Falls back to the API server&rsquo;s OIDC issuer URL configuration if not set here.</p>
 </td>
 </tr>
 <tr>
