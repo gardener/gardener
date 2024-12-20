@@ -25,7 +25,6 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/operator/predicate"
 )
@@ -34,7 +33,7 @@ import (
 const ControllerName = "garden-care"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gardenClientMap clientmap.ClientMap) error {
+func (r *Reconciler) AddToManager(mgr manager.Manager, gardenClientMap clientmap.ClientMap) error {
 	if r.RuntimeClient == nil {
 		r.RuntimeClient = mgr.GetClient()
 	}
@@ -70,36 +69,38 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 	}
 
 	r.registerManagedResourceWatchFunc = func() error {
-		return c.Watch(
-			source.Kind[client.Object](mgr.GetCache(),
-				&resourcesv1alpha1.ManagedResource{},
-				mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapManagedResourceToGarden), mapper.UpdateWithNew, c.GetLogger()),
-				predicateutils.ManagedResourceConditionsChanged()),
-		)
+		return c.Watch(source.Kind[client.Object](
+			mgr.GetCache(),
+			&resourcesv1alpha1.ManagedResource{},
+			handler.EnqueueRequestsFromMapFunc(r.MapManagedResourceToGarden(mgr.GetLogger().WithValues("controller", ControllerName))),
+			predicateutils.ManagedResourceConditionsChanged(),
+		))
 	}
 
 	return nil
 }
 
-// MapManagedResourceToGarden is a mapper.MapFunc for mapping a ManagedResource to the owning Garden.
-func (r *Reconciler) MapManagedResourceToGarden(ctx context.Context, log logr.Logger, _ client.Reader, _ client.Object) []reconcile.Request {
-	gardenList := &operatorv1alpha1.GardenList{}
-	if err := r.RuntimeClient.List(ctx, gardenList, client.Limit(1)); err != nil {
-		log.Error(err, "Could not list gardens")
-		return nil
-	}
+// MapManagedResourceToGarden is a handler.MapFunc for mapping a ManagedResource to the owning Garden.
+func (r *Reconciler) MapManagedResourceToGarden(log logr.Logger) handler.MapFunc {
+	return func(ctx context.Context, _ client.Object) []reconcile.Request {
+		gardenList := &operatorv1alpha1.GardenList{}
+		if err := r.RuntimeClient.List(ctx, gardenList, client.Limit(1)); err != nil {
+			log.Error(err, "Could not list gardens")
+			return nil
+		}
 
-	if len(gardenList.Items) == 0 {
-		return nil
-	}
-	garden := gardenList.Items[0]
+		if len(gardenList.Items) == 0 {
+			return nil
+		}
+		garden := gardenList.Items[0]
 
-	// A garden reconciliation typically touches most of the existing ManagedResources and this will cause the
-	// ManagedResource controller to frequently change their conditions. In this case, we don't want to spam the API
-	// server with updates on the Garden conditions.
-	if garden.Status.LastOperation != nil && garden.Status.LastOperation.State == gardencorev1beta1.LastOperationStateProcessing {
-		return nil
-	}
+		// A garden reconciliation typically touches most of the existing ManagedResources and this will cause the
+		// ManagedResource controller to frequently change their conditions. In this case, we don't want to spam the API
+		// server with updates on the Garden conditions.
+		if garden.Status.LastOperation != nil && garden.Status.LastOperation.State == gardencorev1beta1.LastOperationStateProcessing {
+			return nil
+		}
 
-	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: garden.Name}}}
+		return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: garden.Name}}}
+	}
 }

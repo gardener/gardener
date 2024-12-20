@@ -23,8 +23,8 @@ var DefaultAddOptions = backupoptions.AddOptions{}
 
 // AddToManagerWithOptions adds a controller with the given Options to the given manager.
 // The opts.Reconciler is being set with a newly instantiated actuator.
-func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts backupoptions.AddOptions) error {
-	return backupentry.Add(ctx, mgr, backupentry.AddArgs{
+func AddToManagerWithOptions(_ context.Context, mgr manager.Manager, opts backupoptions.AddOptions) error {
+	return backupentry.Add(mgr, backupentry.AddArgs{
 		Actuator:          genericactuator.NewActuator(mgr, newActuator(mgr, opts.ContainerMountPath, opts.BackupBucketPath)),
 		ControllerOptions: opts.Controller,
 		Predicates:        backupentry.DefaultPredicates(opts.IgnoreOperationAnnotation),

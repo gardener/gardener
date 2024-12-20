@@ -5,7 +5,6 @@
 package controllerregistration
 
 import (
-	"context"
 	"fmt"
 
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -18,10 +17,10 @@ import (
 )
 
 // AddToManager adds all ControllerRegistration controllers to the given manager.
-func AddToManager(ctx context.Context, mgr manager.Manager, cfg config.ControllerManagerConfiguration) error {
+func AddToManager(mgr manager.Manager, cfg config.ControllerManagerConfiguration) error {
 	if err := (&seed.Reconciler{
 		Config: *cfg.Controllers.ControllerRegistration,
-	}).AddToManager(ctx, mgr); err != nil {
+	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding Seed reconciler: %w", err)
 	}
 
@@ -29,7 +28,7 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg config.Controlle
 		return fmt.Errorf("failed adding ControllerRegistration finalizer reconciler: %w", err)
 	}
 
-	if err := (&extensionclusterrole.Reconciler{}).AddToManager(ctx, mgr); err != nil {
+	if err := (&extensionclusterrole.Reconciler{}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding extension ClusterRole reconciler: %w", err)
 	}
 

@@ -137,7 +137,7 @@ var _ = BeforeSuite(func() {
 
 	Expect((&requiredruntime.Reconciler{
 		Config: config.ExtensionRequiredRuntimeControllerConfiguration{ConcurrentSyncs: ptr.To(5)},
-	}).AddToManager(ctx, mgr)).Should(Succeed())
+	}).AddToManager(mgr)).Should(Succeed())
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)

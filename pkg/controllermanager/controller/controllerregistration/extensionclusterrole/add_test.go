@@ -91,6 +91,7 @@ var _ = Describe("Add", func() {
 		BeforeEach(func() {
 			log = logr.Discard()
 			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+			reconciler.Client = fakeClient
 
 			clusterRole1 = &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{
 				Name:        "clusterRole1",
@@ -110,7 +111,7 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should map to all matching cluster roles", func() {
-			Expect(reconciler.MapToMatchingClusterRoles(ctx, log, fakeClient, serviceAccount)).To(HaveExactElements(reconcile.Request{NamespacedName: types.NamespacedName{Name: clusterRole1.Name}}))
+			Expect(reconciler.MapToMatchingClusterRoles(log)(ctx, serviceAccount)).To(HaveExactElements(reconcile.Request{NamespacedName: types.NamespacedName{Name: clusterRole1.Name}}))
 		})
 
 		It("should map to fail when a selector cannot be parsed", func() {
@@ -120,7 +121,7 @@ var _ = Describe("Add", func() {
 				Annotations: map[string]string{"authorization.gardener.cloud/extensions-serviceaccount-selector": `{cannot-parse-this`},
 			}})).To(Succeed())
 
-			Expect(reconciler.MapToMatchingClusterRoles(ctx, log, fakeClient, serviceAccount)).To(HaveExactElements(reconcile.Request{NamespacedName: types.NamespacedName{Name: clusterRole1.Name}}))
+			Expect(reconciler.MapToMatchingClusterRoles(log)(ctx, serviceAccount)).To(HaveExactElements(reconcile.Request{NamespacedName: types.NamespacedName{Name: clusterRole1.Name}}))
 		})
 	})
 })
