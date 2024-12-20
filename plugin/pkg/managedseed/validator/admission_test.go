@@ -107,7 +107,8 @@ var _ = Describe("ManagedSeed", func() {
 							{Zones: []string{zone1, zone2}},
 						},
 					},
-					Region: region,
+					Region:   region,
+					SeedName: ptr.To("parent-seed"),
 				},
 			}
 
@@ -367,6 +368,31 @@ var _ = Describe("ManagedSeed", func() {
 
 				seedx, err = gardencorehelper.ConvertSeedExternal(seed)
 				Expect(err).NotTo(HaveOccurred())
+			})
+
+			Context("seed label", func() {
+				BeforeEach(func() {
+					Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(secret)).To(Succeed())
+				})
+
+				It("should add the label for the parent seed name", func() {
+					Expect(admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)).To(Succeed())
+
+					Expect(managedSeed.Labels).To(And(
+						HaveKeyWithValue("seed.gardener.cloud/parent-seed", "true"),
+					))
+				})
+
+				It("should remove unneeded labels", func() {
+					metav1.SetMetaDataLabel(&seed.ObjectMeta, "seed.gardener.cloud/foo", "true")
+
+					Expect(admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)).To(Succeed())
+
+					Expect(managedSeed.Labels).To(And(
+						HaveKeyWithValue("seed.gardener.cloud/parent-seed", "true"),
+						Not(HaveKey("seed.gardener.cloud/foo")),
+					))
+				})
 			})
 
 			It("should allow the ManagedSeed creation if the Shoot exists and can be registered as Seed", func() {
