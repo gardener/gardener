@@ -167,7 +167,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	}
 
 	if features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) {
-		nodeAgentAuthorizerWebhookReady, err := b.NodeAgentAuthorizerWebhookReady(ctx)
+		nodeAgentAuthorizerWebhookReady, err := b.IsGardenerResourceManagerReady(ctx)
 		if err != nil {
 			return err
 		}
