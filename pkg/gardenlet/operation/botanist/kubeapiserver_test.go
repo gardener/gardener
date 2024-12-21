@@ -323,8 +323,7 @@ var _ = Describe("KubeAPIServer", func() {
 				Entry("no need for internal DNS",
 					func() {},
 					kubeapiserver.SNIConfig{
-						Enabled:                      false,
-						IstioIngressGatewayNamespace: "istio-ingress",
+						Enabled: false,
 					},
 				),
 				Entry("no need for external DNS",
@@ -334,8 +333,7 @@ var _ = Describe("KubeAPIServer", func() {
 						botanist.Garden.InternalDomain = &gardenerutils.Domain{}
 					},
 					kubeapiserver.SNIConfig{
-						Enabled:                      false,
-						IstioIngressGatewayNamespace: "istio-ingress",
+						Enabled: false,
 					},
 				),
 				Entry("both DNS needed",
@@ -349,9 +347,8 @@ var _ = Describe("KubeAPIServer", func() {
 						}
 					},
 					kubeapiserver.SNIConfig{
-						Enabled:                      true,
-						AdvertiseAddress:             apiServerClusterIP,
-						IstioIngressGatewayNamespace: "istio-ingress",
+						Enabled:          true,
+						AdvertiseAddress: apiServerClusterIP,
 					},
 				),
 				Entry("Control plane wildcard certificate available",
@@ -359,8 +356,7 @@ var _ = Describe("KubeAPIServer", func() {
 						botanist.ControlPlaneWildcardCert = secret
 					},
 					kubeapiserver.SNIConfig{
-						Enabled:                      false,
-						IstioIngressGatewayNamespace: "istio-ingress",
+						Enabled: false,
 						TLS: []kubeapiserver.TLSSNIConfig{
 							{
 								SecretName:     &secret.Name,

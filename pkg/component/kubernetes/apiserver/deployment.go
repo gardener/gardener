@@ -37,7 +37,6 @@ import (
 )
 
 const (
-	secretNameServerCert             = "kube-apiserver"
 	secretNameKubeAPIServerToKubelet = "kube-apiserver-kubelet"    // #nosec G101 -- No credential.
 	secretNameKubeAggregator         = "kube-aggregator"           // #nosec G101 -- No credential.
 	secretNameHTTPProxy              = "kube-apiserver-http-proxy" // #nosec G101 -- No credential.
