@@ -188,12 +188,6 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			SkipIf:       !cleanupShootResources,
 			Dependencies: flow.NewTaskIDs(deployNamespace, ensureShootClusterIdentity),
 		})
-		_ = g.Add(flow.Task{
-			Name:         "Deploying Kubernetes API server service SNI settings in the Seed cluster",
-			Fn:           flow.TaskFn(botanist.DeployKubeAPIServerSNI).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       !cleanupShootResources,
-			Dependencies: flow.NewTaskIDs(deployKubeAPIServerService),
-		})
 		waitUntilKubeAPIServerServiceIsReady = g.Add(flow.Task{
 			Name:         "Waiting until Kubernetes API LoadBalancer in the Seed cluster has reported readiness",
 			Fn:           botanist.Shoot.Components.ControlPlane.KubeAPIServerService.Wait,
@@ -282,6 +276,12 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Fn:           botanist.Shoot.Components.ControlPlane.KubeAPIServer.Wait,
 			SkipIf:       !cleanupShootResources,
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServer, scaleUpKubeAPIServer),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying Kubernetes API server service SNI settings in the Seed cluster",
+			Fn:           flow.TaskFn(botanist.DeployKubeAPIServerSNI).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf:       !cleanupShootResources,
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
 		})
 		setGardenerResourceManagerReplicas = g.Add(flow.Task{
 			Name: "Setting gardener-resource-manager replicas to 2",

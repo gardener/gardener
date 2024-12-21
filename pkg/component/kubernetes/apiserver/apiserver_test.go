@@ -45,7 +45,6 @@ import (
 	. "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	componenttest "github.com/gardener/gardener/pkg/component/test"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -66,18 +65,6 @@ var _ = BeforeSuite(func() {
 	DeferCleanup(test.WithVar(&secretsutils.GenerateVPNKey, secretsutils.FakeGenerateVPNKey))
 	DeferCleanup(test.WithVar(&secretsutils.Clock, testclock.NewFakeClock(time.Time{})))
 })
-
-type fakeSecretsManagerWithoutCurrent struct {
-	secretsmanager.Interface
-}
-
-func (f *fakeSecretsManagerWithoutCurrent) Get(secret string, opts ...secretsmanager.GetOption) (*corev1.Secret, bool) {
-	if secret == "kube-apiserver" {
-		// Drop options as these are not properly handled by the fake secrets manager
-		opts = nil
-	}
-	return f.Interface.Get(secret, opts...)
-}
 
 var _ = Describe("KubeAPIServer", func() {
 	var (
@@ -167,7 +154,6 @@ var _ = Describe("KubeAPIServer", func() {
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-client", Namespace: namespace}})).To(Succeed())
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd", Namespace: namespace}})).To(Succeed())
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-front-proxy", Namespace: namespace}})).To(Succeed())
-		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-front-proxy-current", Namespace: namespace}})).To(Succeed())
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-kubelet", Namespace: namespace}})).To(Succeed())
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-vpn", Namespace: namespace}})).To(Succeed())
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-client", Namespace: namespace}})).To(Succeed())
@@ -1254,64 +1240,6 @@ resources:
 
 					Expect(kapi.Deploy(ctx)).To(MatchError(ContainSubstring("either the name of an existing secret or both certificate and private key must be provided for TLS SNI config")))
 				})
-			})
-			It("should create the istio tls secrets for feature gate IstioTLSTermination", func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.IstioTLSTermination, true))
-				sm = &fakeSecretsManagerWithoutCurrent{sm}
-				kapi = New(kubernetesInterface, namespace, sm, Values{
-					Values: apiserver.Values{
-						RuntimeVersion: runtimeVersion,
-					},
-					Version: version,
-					SNI: SNIConfig{
-						IstioIngressGatewayNamespace: "istio-ingress",
-						TLS:                          []TLSSNIConfig{},
-					},
-				})
-
-				Expect(kapi.Deploy(ctx)).To(Succeed())
-
-				expectedTlsSecret := &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{Name: namespace + "-kube-apiserver-tls", Namespace: "istio-ingress"},
-					Data: map[string][]byte{
-						"cacert": nil,
-						"cert":   nil,
-						"key":    nil,
-					},
-				}
-				expectedCaSecret := &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{Name: namespace + "-kube-apiserver-ca", Namespace: "istio-ingress"},
-					Data: map[string][]byte{
-						"cacert": nil,
-						"cert":   nil,
-						"key":    nil,
-					},
-				}
-
-				managedResource := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "istio-tls-secrets", Namespace: namespace}}
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-				Expect(managedResource).To(consistOf(expectedTlsSecret, expectedCaSecret))
-			})
-			It("should clean up the istio tls secrets after disabling feature gate IstioTLSTermination", func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.IstioTLSTermination, true))
-				sm = &fakeSecretsManagerWithoutCurrent{sm}
-				kapi = New(kubernetesInterface, namespace, sm, Values{
-					Values: apiserver.Values{
-						RuntimeVersion: runtimeVersion,
-					},
-					Version: version,
-					SNI: SNIConfig{
-						IstioIngressGatewayNamespace: "istio-ingress",
-						TLS:                          []TLSSNIConfig{},
-					},
-				})
-
-				Expect(kapi.Deploy(ctx)).To(Succeed())
-				Expect(features.DefaultFeatureGate.Set(string(features.IstioTLSTermination) + "=false")).To(Succeed())
-				Expect(kapi.Deploy(ctx)).To(Succeed())
-
-				Expect(c.Get(ctx, client.ObjectKey{Name: namespace + "-kube-apiserver-tls", Namespace: "istio-ingress"}, &corev1.Secret{})).To(BeNotFoundError())
-				Expect(c.Get(ctx, client.ObjectKey{Name: namespace + "-kube-apiserver-ca", Namespace: "istio-ingress"}, &corev1.Secret{})).To(BeNotFoundError())
 			})
 
 			It("should successfully deploy the audit webhook kubeconfig secret resource", func() {
