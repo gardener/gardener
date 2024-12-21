@@ -31,6 +31,8 @@ import (
 	comptest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -39,6 +41,7 @@ var _ = Describe("#SNI", func() {
 	var (
 		ctx context.Context
 		c   client.Client
+		sm  secretsmanager.Interface
 
 		defaultDepWaiter component.DeployWaiter
 		namespace        = "test-namespace"
@@ -69,6 +72,8 @@ var _ = Describe("#SNI", func() {
 		apiServerProxyValues = &APIServerProxy{
 			APIServerClusterIP: "1.1.1.1",
 		}
+
+		sm = fakesecretsmanager.New(c, namespace)
 
 		expectedDestinationRule = &istionetworkingv1beta1.DestinationRule{
 			ObjectMeta: metav1.ObjectMeta{
@@ -184,7 +189,15 @@ var _ = Describe("#SNI", func() {
 	})
 
 	JustBeforeEach(func() {
-		defaultDepWaiter = NewSNI(c, v1beta1constants.DeploymentNameKubeAPIServer, namespace, func() *SNIValues {
+		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-client", Namespace: namespace}})).To(Succeed())
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-front-proxy", Namespace: namespace}})).To(Succeed())
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-front-proxy-current", Namespace: namespace}})).To(Succeed())
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver", Namespace: namespace}})).To(Succeed())
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-current", Namespace: namespace}})).To(Succeed())
+
+		defaultDepWaiter = NewSNI(c, v1beta1constants.DeploymentNameKubeAPIServer, namespace, sm, func() *SNIValues {
 			val := &SNIValues{
 				Hosts:          hosts,
 				APIServerProxy: apiServerProxyValues,
@@ -212,6 +225,13 @@ var _ = Describe("#SNI", func() {
 			actualVirtualService := &istionetworkingv1beta1.VirtualService{}
 			Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedVirtualService.Namespace, Name: expectedVirtualService.Name}, actualVirtualService)).To(Succeed())
 			Expect(actualVirtualService).To(BeComparableTo(expectedVirtualService, comptest.CmpOptsForVirtualService()))
+
+			managedResourceIstioTLS := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "istio-tls-secrets", Namespace: namespace}}
+			if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioTLS), managedResourceIstioTLS)).To(Succeed())
+			} else {
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioTLS), managedResourceIstioTLS)).To(BeNotFoundError())
+			}
 
 			managedResource := &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
@@ -347,6 +367,9 @@ var _ = Describe("#SNI", func() {
 		Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedVirtualService.Namespace, Name: expectedVirtualService.Name}, &istionetworkingv1beta1.VirtualService{})).To(BeNotFoundError())
 		Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedManagedResource.Namespace, Name: expectedManagedResource.Name}, managedResource)).To(BeNotFoundError())
 		Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedManagedResource.Namespace, Name: managedResourceSecretName}, &corev1.Secret{})).To(BeNotFoundError())
+
+		Expect(c.Get(ctx, client.ObjectKey{Name: namespace + "-kube-apiserver-tls", Namespace: "istio-ingress"}, &corev1.Secret{})).To(BeNotFoundError())
+		Expect(c.Get(ctx, client.ObjectKey{Name: namespace + "-kube-apiserver-ca", Namespace: "istio-ingress"}, &corev1.Secret{})).To(BeNotFoundError())
 	})
 
 	Describe("#Wait", func() {
