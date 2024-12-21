@@ -152,8 +152,6 @@ func (b *Botanist) computeKubeAPIServerSNIConfig() kubeapiserver.SNIConfig {
 		config.TLS = append(config.TLS, kubeapiserver.TLSSNIConfig{SecretName: &b.ControlPlaneWildcardCert.Name, DomainPatterns: []string{b.ComputeKubeAPIServerHost()}})
 	}
 
-	config.IstioIngressGatewayNamespace = b.IstioNamespace()
-
 	return config
 }
 
@@ -320,13 +318,13 @@ func (b *Botanist) WakeUpKubeAPIServer(ctx context.Context) error {
 	if err := b.Shoot.Components.ControlPlane.KubeAPIServerService.Wait(ctx); err != nil {
 		return err
 	}
+	if err := b.DeployKubeAPIServer(ctx); err != nil {
+		return err
+	}
 	if b.ShootUsesDNS() {
 		if err := b.DeployKubeAPIServerSNI(ctx); err != nil {
 			return err
 		}
-	}
-	if err := b.DeployKubeAPIServer(ctx); err != nil {
-		return err
 	}
 	if err := kubernetesutils.ScaleDeployment(ctx, b.SeedClientSet.Client(), client.ObjectKey{Namespace: b.Shoot.SeedNamespace, Name: v1beta1constants.DeploymentNameKubeAPIServer}, 1); err != nil {
 		return err
