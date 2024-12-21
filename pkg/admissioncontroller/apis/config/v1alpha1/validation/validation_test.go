@@ -13,8 +13,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
-	admissioncontrollerconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
-	. "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/validation"
+	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
+	. "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1/validation"
 )
 
 var _ = Describe("#ValidateAdmissionControllerConfiguration", func() {
@@ -22,19 +22,19 @@ var _ = Describe("#ValidateAdmissionControllerConfiguration", func() {
 		DescribeTable("Operation mode validation",
 			func(mode string, matcher gomegatypes.GomegaMatcher) {
 				var (
-					admissionConfig *admissioncontrollerconfig.ResourceAdmissionConfiguration
-					webhookMode     = admissioncontrollerconfig.ResourceAdmissionWebhookMode(mode)
+					admissionConfig *admissioncontrollerconfigv1alpha1.ResourceAdmissionConfiguration
+					webhookMode     = admissioncontrollerconfigv1alpha1.ResourceAdmissionWebhookMode(mode)
 				)
 				if mode != "" {
-					admissionConfig = &admissioncontrollerconfig.ResourceAdmissionConfiguration{
+					admissionConfig = &admissioncontrollerconfigv1alpha1.ResourceAdmissionConfiguration{
 						OperationMode: &webhookMode,
 					}
 				}
 
-				config := &admissioncontrollerconfig.AdmissionControllerConfiguration{
+				config := &admissioncontrollerconfigv1alpha1.AdmissionControllerConfiguration{
 					LogLevel:  "info",
 					LogFormat: "json",
-					Server: admissioncontrollerconfig.ServerConfiguration{
+					Server: admissioncontrollerconfigv1alpha1.ServerConfiguration{
 						ResourceAdmissionConfiguration: admissionConfig,
 					},
 				}
@@ -61,12 +61,12 @@ var _ = Describe("#ValidateAdmissionControllerConfiguration", func() {
 			func(apiGroups []string, versions []string, resources []string, size string, matcher gomegatypes.GomegaMatcher) {
 				s, err := resource.ParseQuantity(size)
 				utilruntime.Must(err)
-				config := &admissioncontrollerconfig.AdmissionControllerConfiguration{
+				config := &admissioncontrollerconfigv1alpha1.AdmissionControllerConfiguration{
 					LogLevel:  "info",
 					LogFormat: "json",
-					Server: admissioncontrollerconfig.ServerConfiguration{
-						ResourceAdmissionConfiguration: &admissioncontrollerconfig.ResourceAdmissionConfiguration{
-							Limits: []admissioncontrollerconfig.ResourceLimit{
+					Server: admissioncontrollerconfigv1alpha1.ServerConfiguration{
+						ResourceAdmissionConfiguration: &admissioncontrollerconfigv1alpha1.ResourceAdmissionConfiguration{
+							Limits: []admissioncontrollerconfigv1alpha1.ResourceLimit{
 								{
 									APIGroups:   apiGroups,
 									APIVersions: versions,
@@ -123,11 +123,11 @@ var _ = Describe("#ValidateAdmissionControllerConfiguration", func() {
 
 		DescribeTable("User configuration validation",
 			func(kind string, name string, namespace string, apiGroup string, matcher gomegatypes.GomegaMatcher) {
-				config := &admissioncontrollerconfig.AdmissionControllerConfiguration{
+				config := &admissioncontrollerconfigv1alpha1.AdmissionControllerConfiguration{
 					LogLevel:  "info",
 					LogFormat: "json",
-					Server: admissioncontrollerconfig.ServerConfiguration{
-						ResourceAdmissionConfiguration: &admissioncontrollerconfig.ResourceAdmissionConfiguration{
+					Server: admissioncontrollerconfigv1alpha1.ServerConfiguration{
+						ResourceAdmissionConfiguration: &admissioncontrollerconfigv1alpha1.ResourceAdmissionConfiguration{
 							UnrestrictedSubjects: []rbacv1.Subject{
 								{
 									Kind:      kind,
@@ -178,7 +178,7 @@ var _ = Describe("#ValidateAdmissionControllerConfiguration", func() {
 		)
 		DescribeTable("Logging configuration",
 			func(logLevel, logFormat string, matcher gomegatypes.GomegaMatcher) {
-				config := &admissioncontrollerconfig.AdmissionControllerConfiguration{
+				config := &admissioncontrollerconfigv1alpha1.AdmissionControllerConfiguration{
 					LogLevel:  logLevel,
 					LogFormat: logFormat,
 				}
