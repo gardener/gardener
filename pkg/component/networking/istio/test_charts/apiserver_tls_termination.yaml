@@ -1,0 +1,79 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  labels:
+    app: istio-ingressgateway
+    foo: bar
+  name: apiserver-tls-termination
+  namespace: test-ingress
+spec:
+  workloadSelector:
+    labels:
+      app: istio-ingressgateway
+      foo: bar
+  configPatches:
+  - applyTo: HTTP_FILTER
+    match:
+      context: GATEWAY
+      listener:
+        portNumber: 9443
+        filterChain:
+          filter:
+            name: "envoy.filters.network.http_connection_manager"
+            subFilter:
+              name: "envoy.filters.http.router"
+    patch:
+      operation: INSERT_BEFORE
+      value:
+        name: envoy.filters.http.lua
+        typed_config:
+          "@type": "type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua"
+          defaultSourceCode:
+            inlineString: |
+              local function startsWith(str, prefix)
+                return string.sub(str, 1, #prefix) == prefix
+              end
+
+              function envoy_on_request(request_handle)
+                -- Drop all x-remote- headers.
+                local remove = {}
+                for key, value in pairs(request_handle:headers()) do
+                  if startsWith(key:lower(), "x-remote-") then
+                    remove[key] = ""
+                  end
+                end
+                for key, value in pairs(remove) do
+                  request_handle:headers():remove(key)
+                end
+
+                local streamInfo = request_handle:streamInfo()
+                local ssl = streamInfo:downstreamSslConnection()
+
+                -- TODO(oliver-goetz) switch to ssl:parsedSubjectPeerCertificate() once it is available.
+                local cn = ssl:subjectPeerCertificate()
+                if cn ~= "" then
+                  -- Get the host header from the request and set it as dynamic metadata.
+                  local host = request_handle:headers():get(":authority")
+                  if not host then
+                    host = request_handle:headers():get("host")
+                  end
+                  streamInfo:dynamicMetadata():set("envoy.filters.http.lua", "authenticated-kube-apiserver-host", host)
+
+                  -- Add request headers for kube-apiserver authentication.
+                  local remoteUserHeaderAdded = false
+                  for pair in string.gmatch(cn, "([^,]+)") do
+                      local key, value = pair:match("([^=]+)=([^=]+)")
+                      if key == "CN" then
+                        request_handle:headers():add("X-Remote-User", value)
+                        remoteUserHeaderAdded = true
+                      elseif key == "O" then
+                        request_handle:headers():add("X-Remote-Group", value)
+                      end
+                  end
+
+                  -- Kill request if remote user header was not added.
+                  if not remoteUserHeaderAdded then
+                    request_handle:respond({[":status"] = "400"}, "Invalid certificate subject")
+                  end
+                end
+              end
