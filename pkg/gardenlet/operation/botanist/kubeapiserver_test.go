@@ -23,7 +23,6 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -34,7 +33,6 @@ import (
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	mockkubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/mock"
 	"github.com/gardener/gardener/pkg/features"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/garden"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
@@ -100,18 +98,6 @@ var _ = Describe("KubeAPIServer", func() {
 		kubeAPIServer = mockkubeapiserver.NewMockInterface(ctrl)
 		botanist = &Botanist{
 			Operation: &operation.Operation{
-				Config: &config.GardenletConfiguration{
-					SNI: &config.SNI{
-						Ingress: &config.SNIIngress{
-							Namespace:   ptr.To(v1beta1constants.DefaultSNIIngressNamespace),
-							ServiceName: ptr.To(v1beta1constants.DefaultSNIIngressServiceName),
-							Labels: map[string]string{
-								v1beta1constants.LabelApp: v1beta1constants.DefaultIngressGatewayAppLabelValue,
-								"istio":                   "ingressgateway",
-							},
-						},
-					},
-				},
 				GardenClient:   gardenClient,
 				SeedClientSet:  seedClientSet,
 				SecretsManager: sm,
@@ -324,8 +310,7 @@ var _ = Describe("KubeAPIServer", func() {
 				Entry("no need for internal DNS",
 					func() {},
 					kubeapiserver.SNIConfig{
-						Enabled:                      false,
-						IstioIngressGatewayNamespace: "istio-ingress",
+						Enabled: false,
 					},
 				),
 				Entry("no need for external DNS",
@@ -335,8 +320,7 @@ var _ = Describe("KubeAPIServer", func() {
 						botanist.Garden.InternalDomain = &gardenerutils.Domain{}
 					},
 					kubeapiserver.SNIConfig{
-						Enabled:                      false,
-						IstioIngressGatewayNamespace: "istio-ingress",
+						Enabled: false,
 					},
 				),
 				Entry("both DNS needed",
@@ -350,9 +334,8 @@ var _ = Describe("KubeAPIServer", func() {
 						}
 					},
 					kubeapiserver.SNIConfig{
-						Enabled:                      true,
-						AdvertiseAddress:             apiServerClusterIP,
-						IstioIngressGatewayNamespace: "istio-ingress",
+						Enabled:          true,
+						AdvertiseAddress: apiServerClusterIP,
 					},
 				),
 				Entry("Control plane wildcard certificate available",
@@ -360,8 +343,7 @@ var _ = Describe("KubeAPIServer", func() {
 						botanist.ControlPlaneWildcardCert = secret
 					},
 					kubeapiserver.SNIConfig{
-						Enabled:                      false,
-						IstioIngressGatewayNamespace: "istio-ingress",
+						Enabled: false,
 						TLS: []kubeapiserver.TLSSNIConfig{
 							{
 								SecretName:     &secret.Name,

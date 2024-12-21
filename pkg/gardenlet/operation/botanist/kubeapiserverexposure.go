@@ -70,6 +70,7 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 		b.SeedClientSet.Client(),
 		v1beta1constants.DeploymentNameKubeAPIServer,
 		b.Shoot.SeedNamespace,
+		b.SecretsManager,
 		func() *kubeapiserverexposure.SNIValues {
 			return &kubeapiserverexposure.SNIValues{
 				IstioIngressGateway: kubeapiserverexposure.IstioIngressGateway{
@@ -123,6 +124,7 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 		b.SeedClientSet.Client(),
 		v1beta1constants.DeploymentNameKubeAPIServer,
 		b.Shoot.SeedNamespace,
+		b.SecretsManager,
 		func() *kubeapiserverexposure.SNIValues {
 			return &kubeapiserverexposure.SNIValues{
 				Hosts: hosts,

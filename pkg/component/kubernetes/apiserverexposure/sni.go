@@ -15,10 +15,13 @@ import (
 	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
 	istionetworkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
@@ -29,6 +32,8 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	netutils "github.com/gardener/gardener/pkg/utils/net"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 const managedResourceName = "kube-apiserver-sni"
@@ -39,6 +44,13 @@ const (
 	MutualTLSServiceNameSuffix = "-mtls"
 	// AuthenticationDynamicMetadataKey is the key used to configure the istio envoy filter.
 	AuthenticationDynamicMetadataKey = "authenticated-kube-apiserver-host"
+
+	// istioCASecretSuffix is the suffix for the Istio CA secret.
+	istioCASecretSuffix = "-kube-apiserver-ca" // #nosec G101 -- No credential.
+	// istioTLSSecretSuffix is the suffix for the Istio TLS secret.
+	istioTLSSecretSuffix = "-kube-apiserver-tls" // #nosec G101 -- No credential.
+
+	managedResourceNameIstioTLSSecrets = "istio-tls-secrets" // #nosec G101 -- No credential.
 )
 
 var (
@@ -87,6 +99,7 @@ func NewSNI(
 	client client.Client,
 	name string,
 	namespace string,
+	secretsManager secretsmanager.Interface,
 	valuesFunc func() *SNIValues,
 ) component.DeployWaiter {
 	if valuesFunc == nil {
@@ -94,18 +107,20 @@ func NewSNI(
 	}
 
 	return &sni{
-		client:     client,
-		name:       name,
-		namespace:  namespace,
-		valuesFunc: valuesFunc,
+		client:         client,
+		name:           name,
+		namespace:      namespace,
+		secretsManager: secretsManager,
+		valuesFunc:     valuesFunc,
 	}
 }
 
 type sni struct {
-	client     client.Client
-	name       string
-	namespace  string
-	valuesFunc func() *SNIValues
+	client         client.Client
+	name           string
+	namespace      string
+	secretsManager secretsmanager.Interface
+	valuesFunc     func() *SNIValues
 }
 
 type envoyFilterAPIServerProxyTemplateValues struct {
@@ -172,6 +187,16 @@ func (s *sni) Deploy(ctx context.Context) error {
 	}
 
 	if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
+		if err := s.reconcileIstioTLSSecrets(ctx); err != nil {
+			return err
+		}
+	} else {
+		if err := managedresources.DeleteForSeed(ctx, s.client, s.namespace, managedResourceNameIstioTLSSecrets); err != nil {
+			return err
+		}
+	}
+
+	if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
 		envoyFilter := s.emptyEnvoyFilterIstioTLSTermination()
 
 		if err := envoyFilterIstioTLSTerminationTemplate.Execute(&envoyFilterIstioTLSTermination, envoyFilterIstioTLSTerminationTemplateValues{
@@ -209,7 +234,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 	var destinationMutateFn func() error
 	destinationMutateFn = istio.DestinationRuleWithLocalityPreference(destinationRule, getLabels(), hostName)
 	if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
-		destinationMutateFn = istio.DestinationRuleWithTLSTermination(destinationRule, getLabels(), hostName, s.valuesFunc().Hosts[0], s.namespace+apiserver.IstioCASecretSuffix, istioapinetworkingv1beta1.ClientTLSSettings_SIMPLE)
+		destinationMutateFn = istio.DestinationRuleWithTLSTermination(destinationRule, getLabels(), hostName, s.valuesFunc().Hosts[0], s.namespace+istioCASecretSuffix, istioapinetworkingv1beta1.ClientTLSSettings_SIMPLE)
 	}
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, destinationRule, destinationMutateFn); err != nil {
@@ -217,7 +242,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 	}
 
 	if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
-		destinationMTLSMutateFn := istio.DestinationRuleWithTLSTermination(mTLSDestinationRule, getLabels(), mTLSHostName, s.valuesFunc().Hosts[0], s.namespace+apiserver.IstioCASecretSuffix, istioapinetworkingv1beta1.ClientTLSSettings_MUTUAL)
+		destinationMTLSMutateFn := istio.DestinationRuleWithTLSTermination(mTLSDestinationRule, getLabels(), mTLSHostName, s.valuesFunc().Hosts[0], s.namespace+istioCASecretSuffix, istioapinetworkingv1beta1.ClientTLSSettings_MUTUAL)
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, mTLSDestinationRule, destinationMTLSMutateFn); err != nil {
 			return err
 		}
@@ -226,7 +251,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 	var gatewayMutateFn func() error
 	gatewayMutateFn = istio.GatewayWithTLSPassthrough(gateway, getLabels(), s.valuesFunc().IstioIngressGateway.Labels, s.valuesFunc().Hosts, kubeapiserverconstants.Port)
 	if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
-		gatewayMutateFn = istio.GatewayWithMutalTLS(gateway, getLabels(), s.valuesFunc().IstioIngressGateway.Labels, s.valuesFunc().Hosts, kubeapiserverconstants.Port, s.namespace+apiserver.IstioTLSSecretSuffix)
+		gatewayMutateFn = istio.GatewayWithMutalTLS(gateway, getLabels(), s.valuesFunc().IstioIngressGateway.Labels, s.valuesFunc().Hosts, kubeapiserverconstants.Port, s.namespace+istioTLSSecretSuffix)
 	}
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, gateway, gatewayMutateFn); err != nil {
@@ -258,6 +283,7 @@ func (s *sni) Destroy(ctx context.Context) error {
 		s.emptyMTLSDestinationRule(),
 		s.emptyGateway(),
 		s.emptyVirtualService(),
+		s.emptyManagedResourceIstioTLSSecrets(),
 	)
 }
 
@@ -286,4 +312,60 @@ func (s *sni) emptyGateway() *istionetworkingv1beta1.Gateway {
 
 func (s *sni) emptyVirtualService() *istionetworkingv1beta1.VirtualService {
 	return &istionetworkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: s.name, Namespace: s.namespace}}
+}
+
+func (s *sni) emptyIstioCASecret() *corev1.Secret {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      s.namespace + istioCASecretSuffix,
+			Namespace: s.valuesFunc().IstioIngressGateway.Namespace,
+		},
+	}
+}
+
+func (s *sni) emptyIstioTLSSecret() *corev1.Secret {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      s.namespace + istioTLSSecretSuffix,
+			Namespace: s.valuesFunc().IstioIngressGateway.Namespace,
+		},
+	}
+}
+
+func (s *sni) emptyManagedResourceIstioTLSSecrets() *resourcesv1alpha1.ManagedResource {
+	return &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceNameIstioTLSSecrets, Namespace: s.namespace}}
+}
+
+func (s *sni) reconcileIstioTLSSecrets(ctx context.Context) error {
+	secretCA, _ := s.secretsManager.Get(v1beta1constants.SecretNameCACluster)
+	secretCAClient, _ := s.secretsManager.Get(v1beta1constants.SecretNameCAClient)
+	secretCAFrontProxy, _ := s.secretsManager.Get(v1beta1constants.SecretNameCAFrontProxy, secretsmanager.Current)
+	secretServer, _ := s.secretsManager.Get(apiserver.SecretNameServerCert, secretsmanager.Current)
+
+	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+
+	istioTLSSecret := s.emptyIstioTLSSecret()
+	istioTLSSecret.Data = map[string][]byte{
+		"cacert": secretCAClient.Data[secretsutils.DataKeyCertificateBundle],
+		"key":    secretServer.Data[secretsutils.DataKeyPrivateKey],
+		"cert":   secretServer.Data[secretsutils.DataKeyCertificate],
+	}
+
+	istioCASecret := s.emptyIstioCASecret()
+	istioCASecret.Data = map[string][]byte{
+		"cacert": secretCA.Data[secretsutils.DataKeyCertificateBundle],
+		"key":    secretCAFrontProxy.Data[secretsutils.DataKeyPrivateKeyCA],
+		"cert":   secretCAFrontProxy.Data[secretsutils.DataKeyCertificateCA],
+	}
+
+	serializedObjects, err := registry.AddAllAndSerialize(istioTLSSecret, istioCASecret)
+	if err != nil {
+		return fmt.Errorf("failed to serialize Istio TLS secrets: %w", err)
+	}
+
+	if err := managedresources.CreateForSeed(ctx, s.client, s.namespace, managedResourceNameIstioTLSSecrets, false, serializedObjects); err != nil {
+		return fmt.Errorf("failed to create managed resource %s: %w", managedResourceNameIstioTLSSecrets, err)
+	}
+
+	return nil
 }

@@ -153,8 +153,6 @@ func (b *Botanist) computeKubeAPIServerSNIConfig() kubeapiserver.SNIConfig {
 		config.TLS = append(config.TLS, kubeapiserver.TLSSNIConfig{SecretName: &b.ControlPlaneWildcardCert.Name, DomainPatterns: []string{b.ComputeKubeAPIServerHost()}})
 	}
 
-	config.IstioIngressGatewayNamespace = b.IstioNamespace()
-
 	return config
 }
 
