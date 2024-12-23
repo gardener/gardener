@@ -276,8 +276,10 @@ The controller maintains the `.status.lastOperation` which indicates the status 
 `.spec.virtualCluster.gardener.gardenerDashboard` serves a few configuration options for the dashboard.
 This section highlights the most prominent fields:
 
-- `oidcConfig`: The general OIDC configuration is part of `.spec.virtualCluster.kubernetes.kubeAPIServer.oidcConfig`.
+- `oidcConfig`: The general OIDC configuration is part of `.spec.virtualCluster.kubernetes.kubeAPIServer.oidcConfig` (deprecated). Since Kubernetes 1.30 the general OIDC configuration happens via the Structured Authentication feature `.spec.virtualCluster.kubernetes.kubeAPIServer.structuredAuthentication`.
   This section allows you to define a few specific settings for the dashboard.
+  `clientIDPublic` is the public ID of the OIDC client.
+  `issuerURL` is the URL of the JWT issuer.
   `sessionLifetime` is the duration after which a session is terminated (i.e., after which a user is automatically logged out).
   `additionalScopes` allows to extend the list of scopes of the JWT token that are to be recognized.
   You must reference a `Secret` in the `garden` namespace containing the client and, if applicable, the client secret for the dashboard:
