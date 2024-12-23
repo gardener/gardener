@@ -37,7 +37,6 @@ config:
       concurrentSyncs: 0 # we don't need the shootstate controller locally, and enabling it would even distort the results of CPM e2e tests
   featureGates:
     DefaultSeccompProfile: true
-    ShootManagedIssuer: true
     NewWorkerPoolHash: true
     NewVPN: true
     NodeAgentAuthorizer: true

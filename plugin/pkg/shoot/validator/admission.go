@@ -317,6 +317,9 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, _ adm
 	if err := validationContext.validateShootHibernation(a); err != nil {
 		return err
 	}
+	if err := validationContext.validateManagedServiceAccountIssuer(a, v.secretLister); err != nil {
+		return err
+	}
 	if err := validationContext.validateSecretBindingToCredentialsBindingMigration(a, v.secretBindingLister, v.credentialsBindingLister); err != nil {
 		return err
 	}
@@ -2039,4 +2042,66 @@ func isShootInMigrationOrRestorePhase(shoot *core.Shoot) bool {
 		(shoot.Status.LastOperation.Type == core.LastOperationTypeRestore &&
 			shoot.Status.LastOperation.State != core.LastOperationStateSucceeded ||
 			shoot.Status.LastOperation.Type == core.LastOperationTypeMigrate)
+}
+
+func (c *validationContext) validateManagedServiceAccountIssuer(
+	a admission.Attributes,
+	secretLister kubecorev1listers.SecretLister,
+) error {
+	// Skip the validation if no managed service account issuer configuration is involved.
+	if !helper.HasManagedIssuer(c.shoot) &&
+		(c.oldShoot == nil || !helper.HasManagedIssuer(c.oldShoot)) {
+		return nil
+	}
+
+	managedIssuerConfigSecrets, err := secretLister.Secrets(v1beta1constants.GardenNamespace).List(labels.SelectorFromSet(labels.Set{
+		v1beta1constants.GardenRole: v1beta1constants.GardenRoleShootServiceAccountIssuer,
+	}))
+	if err != nil {
+		return apierrors.NewInternalError(fmt.Errorf("could not retrieve managed service account issuer config secret: %+v", err.Error()))
+	}
+
+	// Skip the validation if no managed service account issuer secrets are found and shoot does not contain managed service account issuer configs.
+	if len(managedIssuerConfigSecrets) == 0 {
+		// Shoots should not be allowed to enable feature that is not configured for the Gardener installation.
+		if helper.HasManagedIssuer(c.shoot) {
+			return admission.NewForbidden(a, errors.New("cannot enable managed service account issuer as it is not supported in this Gardener installation"))
+		}
+		// Old shoot object has the feature enabled but for some reason the configuration is missing.
+		// Reconciliation of such cluster can break existing integrations.
+		// An intervention from a Gardener admin/operator is required.
+		if c.oldShoot != nil && helper.HasManagedIssuer(c.oldShoot) {
+			return apierrors.NewInternalError(errors.New("old shoot object has managed service account issuer enabled, but Gardener configuration is missing"))
+		}
+		return nil
+	}
+
+	// The managed service account issuer is configured centrally per Garden cluster.
+	// The presence of more than one secret is an ambiguous behaviour and should be disallowed.
+	if len(managedIssuerConfigSecrets) > 1 {
+		return apierrors.NewInternalError(fmt.Errorf("can only accept at most one managed service account issuer secret, but found %d", len(managedIssuerConfigSecrets)))
+	}
+
+	// Fail the validation if secret is present, but not configured correctly.
+	configSecret := managedIssuerConfigSecrets[0]
+	if hostname, ok := configSecret.Data["hostname"]; !ok {
+		return apierrors.NewInternalError(fmt.Errorf("cannot configure managed service account issuer: secret '%s' does not contain key 'hostname'", configSecret.Name))
+	} else if strings.TrimSpace(string(hostname)) == "" {
+		return apierrors.NewInternalError(fmt.Errorf("cannot configure managed service account issuer: secret '%s' does contain an empty 'hostname' key", configSecret.Name))
+	}
+
+	// Preserve the managed service account issuer enablement during updates.
+	if c.oldShoot != nil && helper.HasManagedIssuer(c.oldShoot) && !helper.HasManagedIssuer(c.shoot) {
+		return admission.NewForbidden(a, errors.New("once enabled managed service account issuer cannot be disabled"))
+	}
+
+	if helper.HasManagedIssuer(c.shoot) {
+		if kubeAPIServerConfig := c.shoot.Spec.Kubernetes.KubeAPIServer; kubeAPIServerConfig != nil &&
+			kubeAPIServerConfig.ServiceAccountConfig != nil &&
+			kubeAPIServerConfig.ServiceAccountConfig.Issuer != nil {
+			return admission.NewForbidden(a, errors.New("managed service account issuer cannot be enabled when .kubernetes.kubeAPIServer.serviceAccountConfig.issuer is set"))
+		}
+	}
+
+	return nil
 }

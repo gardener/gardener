@@ -11,12 +11,10 @@ import (
 	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/garden"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("AdvertisedAddresses", func() {
@@ -28,7 +26,6 @@ var _ = Describe("AdvertisedAddresses", func() {
 		botanist = &Botanist{Operation: &operation.Operation{}}
 		botanist.Shoot = &shootpkg.Shoot{}
 		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
-		DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ShootManagedIssuer, true))
 	})
 
 	Describe("#ToAdvertisedAddresses", func() {
@@ -172,47 +169,6 @@ var _ = Describe("AdvertisedAddresses", func() {
 				{
 					Name: "service-account-issuer",
 					URL:  "https://managed.foo.bar/projects/some-proj/shoots/some-uid/issuer",
-				},
-			}))
-		})
-
-		It("returns external, internal addresses with addition to default service-account-issuer address because ShootManagedIssuer is disabled", func() {
-			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ShootManagedIssuer, false))
-			botanist.Shoot.ExternalClusterDomain = ptr.To("foo.bar")
-			botanist.Shoot.InternalClusterDomain = "baz.foo"
-			botanist.Shoot.ServiceAccountIssuerHostname = ptr.To("managed.foo.bar")
-			botanist.Garden = &garden.Garden{
-				Project: &gardencorev1beta1.Project{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "some-proj",
-					},
-				},
-			}
-
-			botanist.Shoot.GetInfo().ObjectMeta = metav1.ObjectMeta{
-				Name:      "test",
-				Namespace: "testspace",
-				UID:       "some-uid",
-				Annotations: map[string]string{
-					"authentication.gardener.cloud/issuer": "managed",
-				},
-			}
-			botanist.APIServerAddress = "bar.foo"
-
-			addresses, err := botanist.ToAdvertisedAddresses()
-			Expect(err).ToNot(HaveOccurred())
-
-			Expect(addresses).To(Equal([]gardencorev1beta1.ShootAdvertisedAddress{
-				{
-					Name: "external",
-					URL:  "https://api.foo.bar",
-				}, {
-					Name: "internal",
-					URL:  "https://api.baz.foo",
-				},
-				{
-					Name: "service-account-issuer",
-					URL:  "https://api.baz.foo",
 				},
 			}))
 		})
