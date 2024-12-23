@@ -6,6 +6,8 @@ package flow
 
 import (
 	"fmt"
+
+	"k8s.io/utils/clock"
 )
 
 // Task is a unit of work. It has a name, a payload function and a set of dependencies.
@@ -41,6 +43,9 @@ type Tasks map[TaskID]*TaskSpec
 type Graph struct {
 	name  string
 	tasks Tasks
+
+	// Clock is used to retrieve the current time.
+	Clock clock.Clock
 }
 
 // Name returns the name of a graph.
@@ -50,7 +55,7 @@ func (g *Graph) Name() string {
 
 // NewGraph returns a new Graph with the given name.
 func NewGraph(name string) *Graph {
-	return &Graph{name: name, tasks: make(Tasks)}
+	return &Graph{name: name, tasks: make(Tasks), Clock: clock.RealClock{}}
 }
 
 // Add adds the given Task to the graph.
@@ -90,7 +95,8 @@ func (g *Graph) Compile() *Flow {
 	}
 
 	return &Flow{
-		g.name,
-		nodes,
+		name:  g.name,
+		nodes: nodes,
+		clock: g.Clock,
 	}
 }
