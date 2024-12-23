@@ -20,9 +20,8 @@ import (
 	"k8s.io/component-base/featuregate"
 	"k8s.io/utils/ptr"
 
-	admissioncontrollerconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
 	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
-	admissioncontrollervalidation "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/validation"
+	admissioncontrollervalidation "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1/validation"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -352,11 +351,7 @@ func validateGardenerAdmissionController(config *operatorv1alpha1.GardenerAdmiss
 
 	if config.ResourceAdmissionConfiguration != nil {
 		externalAdmissionConfiguration := operatorv1alpha1conversion.ConvertToAdmissionControllerResourceAdmissionConfiguration(config.ResourceAdmissionConfiguration)
-		internalAdmissionConfiguration := &admissioncontrollerconfig.ResourceAdmissionConfiguration{}
-		if err := gardenCoreScheme.Convert(externalAdmissionConfiguration, internalAdmissionConfiguration, nil); err != nil {
-			allErrs = append(allErrs, field.InternalError(fldPath.Child("resourceAdmissionConfiguration"), err))
-		}
-		allErrs = append(allErrs, admissioncontrollervalidation.ValidateResourceAdmissionConfiguration(internalAdmissionConfiguration, fldPath.Child("resourceAdmissionConfiguration"))...)
+		allErrs = append(allErrs, admissioncontrollervalidation.ValidateResourceAdmissionConfiguration(externalAdmissionConfiguration, fldPath.Child("resourceAdmissionConfiguration"))...)
 	}
 
 	return allErrs

@@ -35,9 +35,8 @@ build:
             - imagevector
             - imagevector/charts.yaml
             - imagevector/containers.yaml
-            - pkg/admissioncontroller/apis/config
             - pkg/admissioncontroller/apis/config/v1alpha1
-            - pkg/admissioncontroller/apis/config/validation
+            - pkg/admissioncontroller/apis/config/v1alpha1/validation
             - pkg/api/extensions
             - pkg/api/indexer
             - pkg/apis/core
@@ -849,10 +848,9 @@ build:
             - cmd/gardener-admission-controller/app
             - cmd/utils
             - cmd/utils/initrun
-            - pkg/admissioncontroller/apis/config
-            - pkg/admissioncontroller/apis/config/helper
             - pkg/admissioncontroller/apis/config/v1alpha1
-            - pkg/admissioncontroller/apis/config/validation
+            - pkg/admissioncontroller/apis/config/v1alpha1/helper
+            - pkg/admissioncontroller/apis/config/v1alpha1/validation
             - pkg/admissioncontroller/metrics
             - pkg/admissioncontroller/seedidentity
             - pkg/admissioncontroller/webhook
