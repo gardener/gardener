@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -24,7 +25,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
@@ -32,7 +32,7 @@ import (
 const ControllerName = "extension-required-virtual"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, virtualCluster cluster.Cluster) error {
+func (r *Reconciler) AddToManager(mgr manager.Manager, virtualCluster cluster.Cluster) error {
 	if r.RuntimeClient == nil {
 		r.RuntimeClient = mgr.GetClient()
 	}
@@ -50,7 +50,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, virt
 		For(&operatorv1alpha1.Extension{}, builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create))).
 		WatchesRawSource(
 			source.Kind[client.Object](virtualCluster.GetCache(), &gardencorev1beta1.ControllerInstallation{},
-				mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), r.MapControllerInstallationToExtension(), mapper.UpdateWithNew, mgr.GetLogger()),
+				handler.EnqueueRequestsFromMapFunc(r.MapControllerInstallationToExtension(mgr.GetLogger().WithValues("controller", ControllerName))),
 				predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update, predicateutils.Delete),
 				r.RequiredConditionChangedPredicate(),
 			),
@@ -59,8 +59,8 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, virt
 }
 
 // MapControllerInstallationToExtension returns a mapper that maps the ControllerInstallation to the Extension object.
-func (r *Reconciler) MapControllerInstallationToExtension() mapper.MapFunc {
-	return func(ctx context.Context, log logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
+func (r *Reconciler) MapControllerInstallationToExtension(log logr.Logger) handler.MapFunc {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
 		controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
 		if !ok {
 			return nil

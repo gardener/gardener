@@ -18,6 +18,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/gardener/gardener/pkg/api/indexer"
@@ -25,7 +26,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/required"
 )
 
@@ -52,7 +52,7 @@ var _ = Describe("Add", func() {
 			log              = logr.Discard()
 			fakeGardenClient client.Client
 			fakeSeedClient   client.Client
-			mapFn            mapper.MapFunc
+			mapFn            handler.MapFunc
 
 			infrastructure2                                                           *extensionsv1alpha1.Infrastructure
 			controllerRegistration1, controllerRegistration2, controllerRegistration3 *gardencorev1beta1.ControllerRegistration
@@ -68,7 +68,7 @@ var _ = Describe("Add", func() {
 				WithIndex(&gardencorev1beta1.ControllerInstallation{}, core.SeedRefName, indexer.ControllerInstallationSeedRefNameIndexerFunc).
 				Build()
 			fakeSeedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-			mapFn = reconciler.MapObjectKindToControllerInstallations(extensionsv1alpha1.InfrastructureResource, func() client.ObjectList { return &extensionsv1alpha1.InfrastructureList{} })
+			mapFn = reconciler.MapObjectKindToControllerInstallations(log, extensionsv1alpha1.InfrastructureResource, func() client.ObjectList { return &extensionsv1alpha1.InfrastructureList{} })
 
 			reconciler.GardenClient = fakeGardenClient
 			reconciler.SeedClient = fakeSeedClient
@@ -131,7 +131,7 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should do nothing when there are no infrastructure resources", func() {
-			Expect(mapFn(ctx, log, nil, nil)).To(BeEmpty())
+			Expect(mapFn(ctx, nil)).To(BeEmpty())
 			Expect(reconciler.KindToRequiredTypes).To(HaveKeyWithValue(extensionsv1alpha1.InfrastructureResource, sets.New[string]()))
 		})
 
@@ -142,7 +142,7 @@ var _ = Describe("Add", func() {
 			Expect(fakeSeedClient.Create(ctx, infrastructure)).To(Succeed())
 			Expect(fakeSeedClient.Create(ctx, infrastructure2)).To(Succeed())
 
-			Expect(mapFn(ctx, log, nil, nil)).To(BeEmpty())
+			Expect(mapFn(ctx, nil)).To(BeEmpty())
 			Expect(reconciler.KindToRequiredTypes).To(HaveKeyWithValue(extensionsv1alpha1.InfrastructureResource, sets.New(type1, type2)))
 		})
 
@@ -153,7 +153,7 @@ var _ = Describe("Add", func() {
 			Expect(fakeSeedClient.Create(ctx, infrastructure)).To(Succeed())
 			Expect(fakeSeedClient.Create(ctx, infrastructure2)).To(Succeed())
 
-			Expect(mapFn(ctx, log, nil, nil)).To(BeEmpty())
+			Expect(mapFn(ctx, nil)).To(BeEmpty())
 			Expect(reconciler.KindToRequiredTypes).To(HaveKeyWithValue(extensionsv1alpha1.InfrastructureResource, sets.New(type1, type2)))
 		})
 
@@ -169,7 +169,7 @@ var _ = Describe("Add", func() {
 			Expect(fakeSeedClient.Create(ctx, infrastructure)).To(Succeed())
 			Expect(fakeSeedClient.Create(ctx, infrastructure2)).To(Succeed())
 
-			Expect(mapFn(ctx, log, nil, nil)).To(ConsistOf(
+			Expect(mapFn(ctx, nil)).To(ConsistOf(
 				reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerInstallation1.Name}},
 				reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerInstallation2.Name}},
 			))
@@ -183,16 +183,16 @@ var _ = Describe("Add", func() {
 			By("Invoke mapper the first time and expect requests")
 			Expect(fakeSeedClient.Create(ctx, infrastructure)).To(Succeed())
 
-			Expect(mapFn(ctx, log, nil, nil)).To(ConsistOf(Equal(reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerInstallation1.Name}})))
+			Expect(mapFn(ctx, nil)).To(ConsistOf(Equal(reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerInstallation1.Name}})))
 			Expect(reconciler.KindToRequiredTypes).To(HaveKeyWithValue(extensionsv1alpha1.InfrastructureResource, sets.New(type1)))
 
 			By("Invoke mapper again w/o changes and expect no requests")
-			Expect(mapFn(ctx, log, nil, nil)).To(BeEmpty())
+			Expect(mapFn(ctx, nil)).To(BeEmpty())
 			Expect(reconciler.KindToRequiredTypes).To(HaveKeyWithValue(extensionsv1alpha1.InfrastructureResource, sets.New(type1)))
 
 			By("Delete infrastructure and expect the extension in the requests")
 			Expect(fakeSeedClient.Delete(ctx, infrastructure)).To(Succeed())
-			Expect(mapFn(ctx, log, nil, nil)).To(ConsistOf(Equal(reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerInstallation1.Name}})))
+			Expect(mapFn(ctx, nil)).To(ConsistOf(Equal(reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerInstallation1.Name}})))
 			Expect(reconciler.KindToRequiredTypes).To(HaveKeyWithValue(extensionsv1alpha1.InfrastructureResource, sets.New[string]()))
 
 			By("Create a infrastructure with class garden and expect no requests")
@@ -200,7 +200,7 @@ var _ = Describe("Add", func() {
 			infrastructureGarden.ResourceVersion = ""
 			infrastructureGarden.Spec.Class = ptr.To(extensionsv1alpha1.ExtensionClassGarden)
 			Expect(fakeSeedClient.Create(ctx, infrastructureGarden)).To(Succeed())
-			Expect(mapFn(ctx, log, nil, nil)).To(BeEmpty())
+			Expect(mapFn(ctx, nil)).To(BeEmpty())
 			Expect(reconciler.KindToRequiredTypes).To(HaveKeyWithValue(extensionsv1alpha1.InfrastructureResource, sets.New[string]()))
 		})
 	})

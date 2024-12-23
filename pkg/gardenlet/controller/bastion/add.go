@@ -23,7 +23,6 @@ import (
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/extensions"
 )
@@ -32,7 +31,7 @@ import (
 const ControllerName = "bastion"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gardenCluster, seedCluster cluster.Cluster) error {
+func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluster cluster.Cluster) error {
 	if r.GardenClient == nil {
 		r.GardenClient = gardenCluster.GetClient()
 	}
@@ -43,44 +42,42 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 		r.Clock = clock.RealClock{}
 	}
 
-	c, err := builder.
+	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
 			RateLimiter:             r.RateLimiter,
 		}).
-		WatchesRawSource(
-			source.Kind[client.Object](gardenCluster.GetCache(),
-				&operationsv1alpha1.Bastion{},
-				&handler.EnqueueRequestForObject{},
-				predicate.GenerationChangedPredicate{}),
-		).
-		Build(r)
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		source.Kind[client.Object](seedCluster.GetCache(),
+		WatchesRawSource(source.Kind[client.Object](
+			gardenCluster.GetCache(),
+			&operationsv1alpha1.Bastion{},
+			&handler.EnqueueRequestForObject{},
+			predicate.GenerationChangedPredicate{},
+		)).
+		WatchesRawSource(source.Kind[client.Object](
+			seedCluster.GetCache(),
 			&extensionsv1alpha1.Bastion{},
-			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapExtensionsBastionToOperationsBastion), mapper.UpdateWithNew, c.GetLogger()),
-			predicateutils.LastOperationChanged(predicateutils.GetExtensionLastOperation)),
-	)
+			handler.EnqueueRequestsFromMapFunc(r.MapExtensionsBastionToOperationsBastion(mgr.GetLogger().WithValues("controller", ControllerName))),
+			predicateutils.LastOperationChanged(predicateutils.GetExtensionLastOperation),
+		)).
+		Complete(r)
 }
 
-// MapExtensionsBastionToOperationsBastion  is a mapper.MapFunc for mapping extensions Bastion in the seed cluster to operations Bastion in the project namespace.
-func (r *Reconciler) MapExtensionsBastionToOperationsBastion(ctx context.Context, log logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
-	shoot, err := extensions.GetShoot(ctx, r.SeedClient, obj.GetNamespace())
-	if err != nil {
-		log.Error(err, "Failed to get shoot from cluster", "shootTechnicalID", obj.GetNamespace())
-		return nil
-	}
+// MapExtensionsBastionToOperationsBastion  is a handler.MapFunc for mapping extensions Bastion in the seed cluster to operations Bastion in the project namespace.
+func (r *Reconciler) MapExtensionsBastionToOperationsBastion(log logr.Logger) handler.MapFunc {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		shoot, err := extensions.GetShoot(ctx, r.SeedClient, obj.GetNamespace())
+		if err != nil {
+			log.Error(err, "Failed to get shoot from cluster", "shootTechnicalID", obj.GetNamespace())
+			return nil
+		}
 
-	if shoot == nil {
-		log.Info("Shoot is missing in cluster resource", "clusterName", obj.GetNamespace())
-		return nil
-	}
+		if shoot == nil {
+			log.Info("Shoot is missing in cluster resource", "clusterName", obj.GetNamespace())
+			return nil
+		}
 
-	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: obj.GetName(), Namespace: shoot.Namespace}}}
+		return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: obj.GetName(), Namespace: shoot.Namespace}}}
+	}
 }

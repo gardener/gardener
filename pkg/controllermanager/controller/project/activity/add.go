@@ -15,17 +15,17 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
@@ -33,7 +33,7 @@ import (
 const ControllerName = "project-activity"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) error {
+func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	if r.Client == nil {
 		r.Client = mgr.GetClient()
 	}
@@ -41,57 +41,33 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 		r.Clock = clock.RealClock{}
 	}
 
-	// It's not possible to call builder.Build() without adding atleast one watch, and without this, we can't get the controller logger.
-	// Hence, we have to build up the controller manually.
-	c, err := controller.New(
-		ControllerName,
-		mgr,
-		controller.Options{
-			Reconciler:              r,
+	return builder.
+		ControllerManagedBy(mgr).
+		Named(ControllerName).
+		WithOptions(controller.Options{
 			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
-		},
-	)
-	if err != nil {
-		return err
-	}
-
-	if err := c.Watch(
-		source.Kind[client.Object](mgr.GetCache(),
+		}).
+		Watches(
 			&gardencorev1beta1.Shoot{},
-			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapObjectToProject), mapper.UpdateWithNew, c.GetLogger()),
-			r.OnlyNewlyCreatedObjects(),
-			predicate.GenerationChangedPredicate{},
-		)); err != nil {
-		return err
-	}
-
-	if err := c.Watch(
-		source.Kind[client.Object](mgr.GetCache(),
+			handler.EnqueueRequestsFromMapFunc(r.MapObjectToProject(mgr.GetLogger().WithValues("controller", ControllerName))),
+			builder.WithPredicates(r.OnlyNewlyCreatedObjects(), predicate.GenerationChangedPredicate{}),
+		).
+		Watches(
 			&gardencorev1beta1.BackupEntry{},
-			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapObjectToProject), mapper.UpdateWithNew, c.GetLogger()),
-			r.OnlyNewlyCreatedObjects(),
-			predicate.GenerationChangedPredicate{},
-		)); err != nil {
-		return err
-	}
-
-	if err := c.Watch(
-		source.Kind[client.Object](mgr.GetCache(),
+			handler.EnqueueRequestsFromMapFunc(r.MapObjectToProject(mgr.GetLogger().WithValues("controller", ControllerName))),
+			builder.WithPredicates(r.OnlyNewlyCreatedObjects(), predicate.GenerationChangedPredicate{}),
+		).
+		Watches(
 			&gardencorev1beta1.Quota{},
-			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapObjectToProject), mapper.UpdateWithNew, c.GetLogger()),
-			r.OnlyNewlyCreatedObjects(),
-			r.NeedsSecretOrCredentialsBindingReferenceLabelPredicate(),
-		)); err != nil {
-		return err
-	}
-
-	return c.Watch(
-		source.Kind[client.Object](mgr.GetCache(),
+			handler.EnqueueRequestsFromMapFunc(r.MapObjectToProject(mgr.GetLogger().WithValues("controller", ControllerName))),
+			builder.WithPredicates(r.OnlyNewlyCreatedObjects(), r.NeedsSecretOrCredentialsBindingReferenceLabelPredicate()),
+		).
+		Watches(
 			&corev1.Secret{},
-			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapObjectToProject), mapper.UpdateWithNew, c.GetLogger()),
-			r.OnlyNewlyCreatedObjects(),
-			r.NeedsSecretOrCredentialsBindingReferenceLabelPredicate(),
-		))
+			handler.EnqueueRequestsFromMapFunc(r.MapObjectToProject(mgr.GetLogger().WithValues("controller", ControllerName))),
+			builder.WithPredicates(r.OnlyNewlyCreatedObjects(), r.NeedsSecretOrCredentialsBindingReferenceLabelPredicate()),
+		).
+		Complete(r)
 }
 
 // OnlyNewlyCreatedObjects filters for objects which are created less than an hour ago for create events. This can be
@@ -157,15 +133,17 @@ func (r *Reconciler) NeedsSecretOrCredentialsBindingReferenceLabelPredicate() pr
 	}
 }
 
-// MapObjectToProject is a mapper.MapFunc for mapping an object to the Project it belongs to.
-func (r *Reconciler) MapObjectToProject(ctx context.Context, log logr.Logger, reader client.Reader, obj client.Object) []reconcile.Request {
-	project, err := gardenerutils.ProjectForNamespaceFromReader(ctx, reader, obj.GetNamespace())
-	if err != nil {
-		if !apierrors.IsNotFound(err) {
-			log.Error(err, "Failed to get project for namespace", "namespace", obj.GetNamespace())
+// MapObjectToProject is a handler.MapFunc for mapping an object to the Project it belongs to.
+func (r *Reconciler) MapObjectToProject(log logr.Logger) handler.MapFunc {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		project, err := gardenerutils.ProjectForNamespaceFromReader(ctx, r.Client, obj.GetNamespace())
+		if err != nil {
+			if !apierrors.IsNotFound(err) {
+				log.Error(err, "Failed to get project for namespace", "namespace", obj.GetNamespace())
+			}
+			return nil
 		}
-		return nil
-	}
 
-	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: project.Name}}}
+		return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: project.Name}}}
+	}
 }

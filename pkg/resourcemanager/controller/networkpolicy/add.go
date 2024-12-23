@@ -28,14 +28,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 )
 
 // ControllerName is the name of the controller.
 const ControllerName = "networkpolicy"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, targetCluster cluster.Cluster) error {
+func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Cluster) error {
 	if r.TargetClient == nil {
 		r.TargetClient = targetCluster.GetClient()
 	}
@@ -50,23 +49,6 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, targ
 		r.selectors = append(r.selectors, selector)
 	}
 
-	c, err := builder.
-		ControllerManagedBy(mgr).
-		Named(ControllerName).
-		WithOptions(controller.Options{
-			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
-		}).
-		WatchesRawSource(
-			source.Kind[client.Object](targetCluster.GetCache(),
-				&corev1.Service{},
-				&handler.EnqueueRequestForObject{},
-				r.ServicePredicate()),
-		).
-		Build(r)
-	if err != nil {
-		return err
-	}
-
 	networkPolicy := &metav1.PartialObjectMetadata{}
 	networkPolicy.SetGroupVersionKind(networkingv1.SchemeGroupVersion.WithKind("NetworkPolicy"))
 
@@ -78,34 +60,49 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, targ
 		return err
 	}
 
-	if err := c.Watch(
-		source.Kind[client.Object](targetCluster.GetCache(),
+	namespace := &metav1.PartialObjectMetadata{}
+	namespace.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Namespace"))
+
+	c, err := builder.
+		ControllerManagedBy(mgr).
+		Named(ControllerName).
+		WithOptions(controller.Options{
+			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
+		}).
+		WatchesRawSource(source.Kind[client.Object](
+			targetCluster.GetCache(),
+			&corev1.Service{},
+			&handler.EnqueueRequestForObject{},
+			r.ServicePredicate(),
+		)).
+		WatchesRawSource(source.Kind[client.Object](
+			targetCluster.GetCache(),
 			networkPolicy,
-			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapNetworkPolicyToService), mapper.UpdateWithNew, c.GetLogger()),
+			handler.EnqueueRequestsFromMapFunc(r.MapNetworkPolicyToService),
 			networkPolicyPredicate,
-		)); err != nil {
+		)).
+		WatchesRawSource(source.Kind[client.Object](
+			targetCluster.GetCache(),
+			namespace,
+			handler.EnqueueRequestsFromMapFunc(r.MapToAllServices(mgr.GetLogger().WithValues("controller", ControllerName))),
+		)).
+		Build(r)
+	if err != nil {
 		return err
 	}
 
 	if r.Config.IngressControllerSelector != nil {
-		if err := c.Watch(
-			source.Kind[client.Object](targetCluster.GetCache(),
-				&networkingv1.Ingress{},
-				mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapIngressToServices), mapper.UpdateWithNew, c.GetLogger()),
-				r.IngressPredicate(),
-			)); err != nil {
+		if err := c.Watch(source.Kind[client.Object](
+			targetCluster.GetCache(),
+			&networkingv1.Ingress{},
+			handler.EnqueueRequestsFromMapFunc(r.MapIngressToServices),
+			r.IngressPredicate(),
+		)); err != nil {
 			return err
 		}
 	}
 
-	namespace := &metav1.PartialObjectMetadata{}
-	namespace.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Namespace"))
-
-	return c.Watch(
-		source.Kind[client.Object](targetCluster.GetCache(),
-			namespace,
-			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapToAllServices), mapper.UpdateWithNew, c.GetLogger()),
-		))
+	return nil
 }
 
 // ServicePredicate returns a predicate which filters UPDATE events on services such that only updates to the deletion
@@ -177,8 +174,8 @@ func (r *Reconciler) IngressPredicate() predicate.Predicate {
 	}
 }
 
-// MapNetworkPolicyToService is a mapper.MapFunc for mapping a NetworkPolicy to the referenced service.
-func (r *Reconciler) MapNetworkPolicyToService(_ context.Context, _ logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
+// MapNetworkPolicyToService is a handler.MapFunc for mapping a NetworkPolicy to the referenced service.
+func (r *Reconciler) MapNetworkPolicyToService(_ context.Context, obj client.Object) []reconcile.Request {
 	if obj == nil || obj.GetLabels() == nil {
 		return nil
 	}
@@ -189,26 +186,28 @@ func (r *Reconciler) MapNetworkPolicyToService(_ context.Context, _ logr.Logger,
 	}}}
 }
 
-// MapToAllServices is a mapper.MapFunc for mapping a Namespace to all Services.
-func (r *Reconciler) MapToAllServices(ctx context.Context, log logr.Logger, _ client.Reader, _ client.Object) []reconcile.Request {
-	serviceList := &metav1.PartialObjectMetadataList{}
-	serviceList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("ServiceList"))
-	if err := r.TargetClient.List(ctx, serviceList); err != nil {
-		log.Error(err, "Failed to list services")
-		return nil
+// MapToAllServices is a handler.MapFunc for mapping a Namespace to all Services.
+func (r *Reconciler) MapToAllServices(log logr.Logger) handler.MapFunc {
+	return func(ctx context.Context, _ client.Object) []reconcile.Request {
+		serviceList := &metav1.PartialObjectMetadataList{}
+		serviceList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("ServiceList"))
+		if err := r.TargetClient.List(ctx, serviceList); err != nil {
+			log.Error(err, "Failed to list services")
+			return nil
+		}
+
+		var requests []reconcile.Request
+
+		for _, service := range serviceList.Items {
+			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: service.Name, Namespace: service.Namespace}})
+		}
+
+		return requests
 	}
-
-	var requests []reconcile.Request
-
-	for _, service := range serviceList.Items {
-		requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: service.Name, Namespace: service.Namespace}})
-	}
-
-	return requests
 }
 
-// MapIngressToServices is a mapper.MapFunc for mapping a Ingresses to all referenced services.
-func (r *Reconciler) MapIngressToServices(_ context.Context, _ logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
+// MapIngressToServices is a handler.MapFunc for mapping a Ingresses to all referenced services.
+func (r *Reconciler) MapIngressToServices(_ context.Context, obj client.Object) []reconcile.Request {
 	ingress, ok := obj.(*networkingv1.Ingress)
 	if !ok {
 		return nil

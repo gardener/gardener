@@ -10,12 +10,12 @@ import (
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	resourcesv1alpha1helper "github.com/gardener/gardener/pkg/apis/resources/v1alpha1/helper"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 )
 
 // HealthStatusChanged returns a predicate that filters for events that indicate a change in the object's health status.
@@ -60,9 +60,9 @@ func HealthStatusChanged(log logr.Logger) predicate.Predicate {
 	}
 }
 
-// MapToOriginManagedResource is a mapper.MapFunc for resources to their origin ManagedResource.
-func MapToOriginManagedResource(clusterID string) mapper.MapFunc {
-	return func(_ context.Context, log logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
+// MapToOriginManagedResource is a handler.MapFunc for resources to their origin ManagedResource.
+func MapToOriginManagedResource(log logr.Logger, clusterID string) handler.MapFunc {
+	return func(_ context.Context, obj client.Object) []reconcile.Request {
 		origin, ok := obj.GetAnnotations()[resourcesv1alpha1.OriginAnnotation]
 		if !ok {
 			return nil

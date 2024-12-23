@@ -17,10 +17,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -34,7 +34,7 @@ import (
 const ControllerName = "seed-secrets"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) error {
+func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	if r.Client == nil {
 		r.Client = mgr.GetClient()
 	}
@@ -42,25 +42,19 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 		r.GardenNamespace = v1beta1constants.GardenNamespace
 	}
 
-	c, err := builder.
+	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		For(&gardencorev1beta1.Seed{}, builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create))).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 5,
 		}).
-		Build(r)
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		source.Kind[client.Object](mgr.GetCache(),
+		Watches(
 			&corev1.Secret{},
-			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapToAllSeeds), mapper.UpdateWithNew, c.GetLogger()),
-			r.GardenSecretPredicate(),
-			r.SecretPredicate(),
-		))
+			handler.EnqueueRequestsFromMapFunc(r.MapToAllSeeds(mgr.GetLogger().WithValues("controller", ControllerName))),
+			builder.WithPredicates(r.GardenSecretPredicate(), r.SecretPredicate()),
+		).
+		Complete(r)
 }
 
 var (
@@ -102,13 +96,15 @@ func (r *Reconciler) SecretPredicate() predicate.Predicate {
 }
 
 // MapToAllSeeds returns reconcile.Request objects for all existing seeds in the system.
-func (r *Reconciler) MapToAllSeeds(ctx context.Context, log logr.Logger, reader client.Reader, _ client.Object) []reconcile.Request {
-	seedList := &metav1.PartialObjectMetadataList{}
-	seedList.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("SeedList"))
-	if err := reader.List(ctx, seedList); err != nil {
-		log.Error(err, "Failed to list seeds")
-		return nil
-	}
+func (r *Reconciler) MapToAllSeeds(log logr.Logger) handler.MapFunc {
+	return func(ctx context.Context, _ client.Object) []reconcile.Request {
+		seedList := &metav1.PartialObjectMetadataList{}
+		seedList.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("SeedList"))
+		if err := r.Client.List(ctx, seedList); err != nil {
+			log.Error(err, "Failed to list seeds")
+			return nil
+		}
 
-	return mapper.ObjectListToRequests(seedList)
+		return mapper.ObjectListToRequests(seedList)
+	}
 }

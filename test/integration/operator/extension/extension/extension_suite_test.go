@@ -197,7 +197,8 @@ var _ = BeforeSuite(func() {
 		},
 		HelmRegistry:    fakeRegistry,
 		GardenNamespace: testNamespace.Name,
-	}).AddToManager(ctx, mgr, gardenClientMap)).Should(Succeed())
+		GardenClientMap: gardenClientMap,
+	}).AddToManager(mgr)).Should(Succeed())
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
