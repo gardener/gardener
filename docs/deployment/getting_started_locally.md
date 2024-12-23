@@ -262,6 +262,8 @@ cat <<EOF | sudo tee -a /etc/hosts
 172.18.255.1 api.e2e-rotate.local.internal.local.gardener.cloud
 172.18.255.1 api.e2e-rotate-wl.local.external.local.gardener.cloud
 172.18.255.1 api.e2e-rotate-wl.local.internal.local.gardener.cloud
+172.18.255.1 api.e2e-rot-noroll.local.external.local.gardener.cloud
+172.18.255.1 api.e2e-rot-noroll.local.internal.local.gardener.cloud
 172.18.255.1 api.e2e-default.local.external.local.gardener.cloud
 172.18.255.1 api.e2e-default.local.internal.local.gardener.cloud
 172.18.255.1 api.e2e-default-wl.local.external.local.gardener.cloud
@@ -284,6 +286,7 @@ cat <<EOF | sudo tee -a /etc/hosts
 172.18.255.1 api.e2e-upg-hib-wl.local.internal.local.gardener.cloud
 172.18.255.1 gu-local--e2e-rotate.ingress.local.seed.local.gardener.cloud
 172.18.255.1 gu-local--e2e-rotate-wl.ingress.local.seed.local.gardener.cloud
+172.18.255.1 gu-local--e2e-rot-noroll.ingress.local.seed.local.gardener.cloud
 # End of Gardener local setup section
 EOF
 ```

@@ -66,17 +66,21 @@ var (
 	availableShootMaintenanceOperations = sets.New(
 		v1beta1constants.GardenerOperationReconcile,
 		v1beta1constants.OperationRotateCAStart,
+		v1beta1constants.OperationRotateCAStartWithoutWorkersRollout,
 		v1beta1constants.OperationRotateCAComplete,
 		v1beta1constants.ShootOperationRotateKubeconfigCredentials,
 		v1beta1constants.OperationRotateObservabilityCredentials,
 		v1beta1constants.ShootOperationRotateSSHKeypair,
+		v1beta1constants.OperationRotateRolloutWorkers,
 	).Union(forbiddenShootOperationsWhenHibernated)
 	forbiddenShootOperationsWhenHibernated = sets.New(
 		v1beta1constants.OperationRotateCredentialsStart,
+		v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout,
 		v1beta1constants.OperationRotateCredentialsComplete,
 		v1beta1constants.OperationRotateETCDEncryptionKeyStart,
 		v1beta1constants.OperationRotateETCDEncryptionKeyComplete,
 		v1beta1constants.OperationRotateServiceAccountKeyStart,
+		v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout,
 		v1beta1constants.OperationRotateServiceAccountKeyComplete,
 	)
 	forbiddenShootOperationsWhenEncryptionChangeIsRollingOut = sets.New(
@@ -1264,7 +1268,7 @@ func validateHibernationUpdate(new, old *core.Shoot) field.ErrorList {
 			}
 		}
 		if new.Status.Credentials != nil && new.Status.Credentials.Rotation != nil && new.Status.Credentials.Rotation.ServiceAccountKey != nil {
-			if serviceAccountKeyRotation := new.Status.Credentials.Rotation.ServiceAccountKey; serviceAccountKeyRotation.Phase == core.RotationPreparing || serviceAccountKeyRotation.Phase == core.RotationCompleting {
+			if serviceAccountKeyRotation := new.Status.Credentials.Rotation.ServiceAccountKey; serviceAccountKeyRotation.Phase == core.RotationPreparing || serviceAccountKeyRotation.Phase == core.RotationPreparingWithoutWorkersRollout || serviceAccountKeyRotation.Phase == core.RotationCompleting {
 				allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("shoot cannot be hibernated when .status.credentials.rotation.serviceAccountKey.phase is %q", string(serviceAccountKeyRotation.Phase))))
 			}
 		}
@@ -2462,11 +2466,28 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 		allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("annotations %s and %s must not be equal", fldPathOp, fldPathMaintOp)))
 	}
 
+	// TODO(rfranzke): Remove this block once the CredentialsRotationWithoutWorkersRollout feature gate gets promoted
+	//  to GA.
+	if !features.DefaultFeatureGate.Enabled(features.CredentialsRotationWithoutWorkersRollout) {
+		restrictedOperations := sets.New(
+			v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout,
+			v1beta1constants.OperationRotateCAStartWithoutWorkersRollout,
+			v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout,
+		)
+		if operation != "" && (restrictedOperations.Has(operation) || strings.HasPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers)) {
+			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("the %s operation can only be used when the CredentialsRotationWithoutWorkersRollout feature gate is enabled", operation)))
+		}
+		if maintenanceOperation != "" && (restrictedOperations.Has(maintenanceOperation) || strings.HasPrefix(maintenanceOperation, v1beta1constants.OperationRotateRolloutWorkers)) {
+			allErrs = append(allErrs, field.Forbidden(fldPathMaintOp, fmt.Sprintf("the %s operation can only be used when the CredentialsRotationWithoutWorkersRollout feature gate is enabled", maintenanceOperation)))
+		}
+	}
+
 	if operation != "" {
-		if !availableShootOperations.Has(operation) {
+		if !availableShootOperations.Has(operation) && !strings.HasPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers) {
 			allErrs = append(allErrs, field.NotSupported(fldPathOp, operation, sets.List(availableShootOperations)))
 		}
-		if helper.IsShootInHibernation(shoot) && forbiddenShootOperationsWhenHibernated.Has(operation) {
+		if helper.IsShootInHibernation(shoot) &&
+			(forbiddenShootOperationsWhenHibernated.Has(operation) || strings.HasPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers)) {
 			allErrs = append(allErrs, field.Forbidden(fldPathOp, "operation is not permitted when shoot is hibernated or is waking up"))
 		}
 		if !apiequality.Semantic.DeepEqual(getResourcesForEncryption(shoot.Spec.Kubernetes.KubeAPIServer), shoot.Status.EncryptedResources) &&
@@ -2476,10 +2497,11 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 	}
 
 	if maintenanceOperation != "" {
-		if !availableShootMaintenanceOperations.Has(maintenanceOperation) {
+		if !availableShootMaintenanceOperations.Has(maintenanceOperation) && !strings.HasPrefix(maintenanceOperation, v1beta1constants.OperationRotateRolloutWorkers) {
 			allErrs = append(allErrs, field.NotSupported(fldPathMaintOp, maintenanceOperation, sets.List(availableShootMaintenanceOperations)))
 		}
-		if helper.IsShootInHibernation(shoot) && forbiddenShootOperationsWhenHibernated.Has(maintenanceOperation) {
+		if helper.IsShootInHibernation(shoot) &&
+			(forbiddenShootOperationsWhenHibernated.Has(maintenanceOperation) || strings.HasPrefix(maintenanceOperation, v1beta1constants.OperationRotateRolloutWorkers)) {
 			allErrs = append(allErrs, field.Forbidden(fldPathMaintOp, "operation is not permitted when shoot is hibernated or is waking up"))
 		}
 		if !apiequality.Semantic.DeepEqual(getResourcesForEncryption(shoot.Spec.Kubernetes.KubeAPIServer), shoot.Status.EncryptedResources) && forbiddenShootOperationsWhenEncryptionChangeIsRollingOut.Has(maintenanceOperation) {
@@ -2488,8 +2510,8 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 	}
 
 	switch maintenanceOperation {
-	case v1beta1constants.OperationRotateCredentialsStart:
-		if sets.New(v1beta1constants.OperationRotateCAStart, v1beta1constants.OperationRotateServiceAccountKeyStart, v1beta1constants.OperationRotateETCDEncryptionKeyStart).Has(operation) {
+	case v1beta1constants.OperationRotateCredentialsStart, v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout:
+		if sets.New(v1beta1constants.OperationRotateCAStart, v1beta1constants.OperationRotateCAStartWithoutWorkersRollout, v1beta1constants.OperationRotateServiceAccountKeyStart, v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout, v1beta1constants.OperationRotateETCDEncryptionKeyStart).Has(operation) {
 			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted when maintenance operation is '%s'", operation, maintenanceOperation)))
 		}
 	case v1beta1constants.OperationRotateCredentialsComplete:
@@ -2499,8 +2521,8 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 	}
 
 	switch operation {
-	case v1beta1constants.OperationRotateCredentialsStart:
-		if sets.New(v1beta1constants.OperationRotateCAStart, v1beta1constants.OperationRotateServiceAccountKeyStart, v1beta1constants.OperationRotateETCDEncryptionKeyStart).Has(maintenanceOperation) {
+	case v1beta1constants.OperationRotateCredentialsStart, v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout:
+		if sets.New(v1beta1constants.OperationRotateCAStart, v1beta1constants.OperationRotateCAStartWithoutWorkersRollout, v1beta1constants.OperationRotateServiceAccountKeyStart, v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout, v1beta1constants.OperationRotateETCDEncryptionKeyStart).Has(maintenanceOperation) {
 			allErrs = append(allErrs, field.Forbidden(fldPathOp, fmt.Sprintf("operation '%s' is not permitted when maintenance operation is '%s'", operation, maintenanceOperation)))
 		}
 	case v1beta1constants.OperationRotateCredentialsComplete:
@@ -2525,7 +2547,7 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 	allErrs := field.ErrorList{}
 
 	switch operation {
-	case v1beta1constants.OperationRotateCredentialsStart:
+	case v1beta1constants.OperationRotateCredentialsStart, v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout:
 		if !isShootReadyForRotationStart(shoot.Status.LastOperation) {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start rotation of all credentials if shoot was not yet created successfully or is not ready for reconciliation"))
 		}
@@ -2549,7 +2571,7 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete rotation of all credentials if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Prepared'"))
 		}
 
-	case v1beta1constants.OperationRotateCAStart:
+	case v1beta1constants.OperationRotateCAStart, v1beta1constants.OperationRotateCAStartWithoutWorkersRollout:
 		if !isShootReadyForRotationStart(shoot.Status.LastOperation) {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start CA rotation if shoot was not yet created successfully or is not ready for reconciliation"))
 		}
@@ -2561,7 +2583,7 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete CA rotation if .status.credentials.rotation.certificateAuthorities.phase is not 'Prepared'"))
 		}
 
-	case v1beta1constants.OperationRotateServiceAccountKeyStart:
+	case v1beta1constants.OperationRotateServiceAccountKeyStart, v1beta1constants.OperationRotateServiceAccountKeyStartWithoutWorkersRollout:
 		if !isShootReadyForRotationStart(shoot.Status.LastOperation) {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start service account key rotation if shoot was not yet created successfully or is not ready for reconciliation"))
 		}
@@ -2585,6 +2607,32 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete ETCD encryption key rotation if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Prepared'"))
 		}
 	}
+
+	if strings.HasPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers) {
+		if caPhase, serviceAccountKeyPhase := helper.GetShootCARotationPhase(shoot.Status.Credentials), helper.GetShootServiceAccountKeyRotationPhase(shoot.Status.Credentials); caPhase != core.RotationWaitingForWorkersRollout && serviceAccountKeyPhase != core.RotationWaitingForWorkersRollout {
+			allErrs = append(allErrs, field.Forbidden(fldPath, "either .status.credentials.rotation.certificateAuthorities.phase or .status.credentials.rotation.serviceAccountKey.phase must be in 'WaitingForWorkersRollout' in order to trigger workers rollout"))
+		}
+
+		poolNames := strings.Split(strings.TrimPrefix(operation, v1beta1constants.OperationRotateRolloutWorkers+"="), ",")
+		if len(poolNames) == 0 || sets.New(poolNames...).Has("") {
+			allErrs = append(allErrs, field.Required(fldPath, "must provide at least one pool name via "+v1beta1constants.OperationRotateRolloutWorkers+"=<poolName1>[,<poolName2>,...]"))
+		}
+
+		names := sets.New[string]()
+		for _, poolName := range poolNames {
+			if names.Has(poolName) {
+				allErrs = append(allErrs, field.Duplicate(fldPath, "pool name "+poolName+" was specified multiple times"))
+			}
+			names.Insert(poolName)
+
+			if !slices.ContainsFunc(shoot.Spec.Provider.Workers, func(worker core.Worker) bool {
+				return worker.Name == poolName
+			}) {
+				allErrs = append(allErrs, field.Invalid(fldPath, poolName, "worker pool name "+poolName+" does not exist in .spec.provider.workers[]"))
+			}
+		}
+	}
+
 	return allErrs
 }
 
