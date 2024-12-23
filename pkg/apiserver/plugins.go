@@ -19,6 +19,7 @@ import (
 	managedseedvalidator "github.com/gardener/gardener/plugin/pkg/managedseed/validator"
 	namespacedcloudprofilevalidator "github.com/gardener/gardener/plugin/pkg/namespacedcloudprofile/validator"
 	projectvalidator "github.com/gardener/gardener/plugin/pkg/project/validator"
+	seedmutator "github.com/gardener/gardener/plugin/pkg/seed/mutator"
 	seedvalidator "github.com/gardener/gardener/plugin/pkg/seed/validator"
 	shootdns "github.com/gardener/gardener/plugin/pkg/shoot/dns"
 	shootdnsrewriting "github.com/gardener/gardener/plugin/pkg/shoot/dnsrewriting"
@@ -49,6 +50,7 @@ func RegisterAllAdmissionPlugins(plugins *admission.Plugins) {
 	shootdnsrewriting.Register(plugins)
 	shootvalidator.Register(plugins)
 	seedvalidator.Register(plugins)
+	seedmutator.Register(plugins)
 	controllerregistrationresources.Register(plugins)
 	namespacedcloudprofilevalidator.Register(plugins)
 	projectvalidator.Register(plugins)
