@@ -306,6 +306,8 @@ func (b *Botanist) DeleteKubeAPIServer(ctx context.Context) error {
 	}
 	b.ShootClientSet = nil
 
+	b.Shoot.Components.ControlPlane.KubeAPIServer.SetSNIConfig(b.computeKubeAPIServerSNIConfig())
+
 	return b.Shoot.Components.ControlPlane.KubeAPIServer.Destroy(ctx)
 }
 

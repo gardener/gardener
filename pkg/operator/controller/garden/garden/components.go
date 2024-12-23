@@ -198,7 +198,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.kubeAPIServerSNI, err = r.newSNI(garden, c.istio.GetValues().IngressGateway)
+	c.kubeAPIServerSNI, err = r.newSNI(garden, secretsManager, c.istio.GetValues().IngressGateway)
 	if err != nil {
 		return
 	}
@@ -504,6 +504,16 @@ func (r *Reconciler) newKubeAPIServerService(log logr.Logger, garden *operatorv1
 		return nil, fmt.Errorf("exactly one Istio Ingress Gateway is required for the SNI config")
 	}
 
+	deployer := []component.Deployer{r.newKubeAPIServerServiceWithSuffix(log, garden, ingressGatewayValues, "")}
+
+	if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
+		deployer = append(deployer, r.newKubeAPIServerServiceWithSuffix(log, garden, ingressGatewayValues, kubeapiserverexposure.MutualTLSServiceNameSuffix))
+	}
+
+	return component.OpWait(deployer...), nil
+}
+
+func (r *Reconciler) newKubeAPIServerServiceWithSuffix(log logr.Logger, garden *operatorv1alpha1.Garden, ingressGatewayValues []istio.IngressGatewayValues, suffix string) component.DeployWaiter {
 	var annotations map[string]string
 	if settings := garden.Spec.RuntimeCluster.Settings; settings != nil && settings.LoadBalancerServices != nil {
 		annotations = settings.LoadBalancerServices.Annotations
@@ -516,6 +526,7 @@ func (r *Reconciler) newKubeAPIServerService(log logr.Logger, garden *operatorv1
 		&kubeapiserverexposure.ServiceValues{
 			AnnotationsFunc:             func() map[string]string { return annotations },
 			NamePrefix:                  namePrefix,
+			NameSuffix:                  suffix,
 			TopologyAwareRoutingEnabled: helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
 			RuntimeKubernetesVersion:    r.RuntimeVersion,
 		},
@@ -525,7 +536,7 @@ func (r *Reconciler) newKubeAPIServerService(log logr.Logger, garden *operatorv1
 		nil,
 		nil,
 		nil,
-	), nil
+	)
 }
 
 func (r *Reconciler) newKubeAPIServer(
@@ -771,7 +782,7 @@ func (r *Reconciler) newIstio(ctx context.Context, garden *operatorv1alpha1.Gard
 	)
 }
 
-func (r *Reconciler) newSNI(garden *operatorv1alpha1.Garden, ingressGatewayValues []istio.IngressGatewayValues) (component.Deployer, error) {
+func (r *Reconciler) newSNI(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, ingressGatewayValues []istio.IngressGatewayValues) (component.Deployer, error) {
 	if len(ingressGatewayValues) != 1 {
 		return nil, fmt.Errorf("exactly one Istio Ingress Gateway is required for the SNI config")
 	}
@@ -781,6 +792,7 @@ func (r *Reconciler) newSNI(garden *operatorv1alpha1.Garden, ingressGatewayValue
 		r.RuntimeClientSet.Client(),
 		namePrefix+v1beta1constants.DeploymentNameKubeAPIServer,
 		r.GardenNamespace,
+		secretsManager,
 		func() *kubeapiserverexposure.SNIValues {
 			return &kubeapiserverexposure.SNIValues{
 				Hosts: domains,
