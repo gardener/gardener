@@ -62,6 +62,8 @@ const (
 	volumeMountPathDashboards = volumeMountPathStorage + "/dashboards"
 	volumeMountPathConfig     = "/usr/local/etc/plutono"
 	volumeMountPathAdminUser  = "/etc/dashboard-refresher/plutono-admin"
+
+	nonRootUser = int64(65532)
 )
 
 var (
@@ -641,6 +643,12 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap *corev1.C
 								},
 							},
 						},
+					},
+					SecurityContext: &corev1.PodSecurityContext{
+						RunAsNonRoot: ptr.To[bool](true),
+						RunAsUser:    ptr.To[int64](nonRootUser),
+						RunAsGroup:   ptr.To[int64](nonRootUser),
+						FSGroup:      ptr.To[int64](nonRootUser),
 					},
 					Volumes: []corev1.Volume{
 						{

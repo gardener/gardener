@@ -53,6 +53,8 @@ const (
 	configFileName                 = "dep-config.yaml"
 	dwdWeederDefaultLockObjectName = "dwd-weeder-leader-election"
 	dwdProberDefaultLockObjectName = "dwd-prober-leader-election"
+
+	nonRootUser = int64(65532)
 )
 
 // BootstrapperValues contains dependency-watchdog values.
@@ -421,6 +423,12 @@ func (b *bootstrapper) getDeployment(serviceAccountName string, configMapName st
 							ReadOnly:  true,
 						}},
 					}},
+					SecurityContext: &corev1.PodSecurityContext{
+						RunAsNonRoot: ptr.To[bool](true),
+						RunAsUser:    ptr.To[int64](nonRootUser),
+						RunAsGroup:   ptr.To[int64](nonRootUser),
+						FSGroup:      ptr.To[int64](nonRootUser),
+					},
 					Volumes: []corev1.Volume{{
 						Name: volumeName,
 						VolumeSource: corev1.VolumeSource{

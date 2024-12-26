@@ -362,6 +362,11 @@ spec:
           name: config
           readOnly: true
       priorityClassName: gardener-system-800
+      securityContext:
+        fsGroup: 65532
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
       serviceAccountName: ` + dwdName + `
       terminationGracePeriodSeconds: 5
       volumes:

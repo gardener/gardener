@@ -76,6 +76,8 @@ const (
 	druidConfigMapImageVectorOverwriteDataKey          = "images_overwrite.yaml"
 	druidDeploymentVolumeMountPathImageVectorOverwrite = "/imagevector_overwrite"
 	druidDeploymentVolumeNameImageVectorOverwrite      = "imagevector-overwrite"
+
+	nonRootUser = int64(65532)
 )
 
 // NewBootstrapper creates a new instance of DeployWaiter for the etcd bootstrapper.
@@ -473,6 +475,12 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 									},
 								},
 							},
+						},
+						SecurityContext: &corev1.PodSecurityContext{
+							RunAsNonRoot: ptr.To[bool](true),
+							RunAsUser:    ptr.To[int64](nonRootUser),
+							RunAsGroup:   ptr.To[int64](nonRootUser),
+							FSGroup:      ptr.To[int64](nonRootUser),
 						},
 						Volumes: []corev1.Volume{
 							{
