@@ -185,9 +185,9 @@ func ReadGardenSecrets(
 		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleShootServiceAccountIssuer {
 			shootIssuer := secret
 			if hostname, ok := secret.Data["hostname"]; !ok {
-				return nil, fmt.Errorf("cannot use Shoot Service Account Issuer secret '%s' as it does not contain key 'hostname'", secret.Name)
+				return nil, fmt.Errorf("cannot use Shoot Service Account Issuer secret %q as it does not contain key 'hostname'", secret.Name)
 			} else if strings.TrimSpace(string(hostname)) == "" {
-				return nil, fmt.Errorf("cannot use Shoot Service Account Issuer secret '%s' as it does contain an empty 'hostname' key", secret.Name)
+				return nil, fmt.Errorf("cannot use Shoot Service Account Issuer secret %q as it does contain an empty 'hostname' key", secret.Name)
 			}
 			secretsMap[v1beta1constants.GardenRoleShootServiceAccountIssuer] = &shootIssuer
 			logInfo = append(logInfo, fmt.Sprintf("Shoot Service Account Issuer secret %q", secret.Name))

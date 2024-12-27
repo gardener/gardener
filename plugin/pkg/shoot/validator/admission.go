@@ -2058,7 +2058,7 @@ func (c *validationContext) validateManagedServiceAccountIssuer(
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleShootServiceAccountIssuer,
 	}))
 	if err != nil {
-		return apierrors.NewInternalError(fmt.Errorf("could not retrieve managed service account issuer config secret: %+v", err.Error()))
+		return apierrors.NewInternalError(fmt.Errorf("could not retrieve managed service account issuer config secret: %w", err))
 	}
 
 	// Skip the validation if no managed service account issuer secrets are found and shoot does not contain managed service account issuer configs.
@@ -2074,20 +2074,6 @@ func (c *validationContext) validateManagedServiceAccountIssuer(
 			return apierrors.NewInternalError(errors.New("old shoot object has managed service account issuer enabled, but Gardener configuration is missing"))
 		}
 		return nil
-	}
-
-	// The managed service account issuer is configured centrally per Garden cluster.
-	// The presence of more than one secret is an ambiguous behaviour and should be disallowed.
-	if len(managedIssuerConfigSecrets) > 1 {
-		return apierrors.NewInternalError(fmt.Errorf("can only accept at most one managed service account issuer secret, but found %d", len(managedIssuerConfigSecrets)))
-	}
-
-	// Fail the validation if secret is present, but not configured correctly.
-	configSecret := managedIssuerConfigSecrets[0]
-	if hostname, ok := configSecret.Data["hostname"]; !ok {
-		return apierrors.NewInternalError(fmt.Errorf("cannot configure managed service account issuer: secret '%s' does not contain key 'hostname'", configSecret.Name))
-	} else if strings.TrimSpace(string(hostname)) == "" {
-		return apierrors.NewInternalError(fmt.Errorf("cannot configure managed service account issuer: secret '%s' does contain an empty 'hostname' key", configSecret.Name))
 	}
 
 	// Preserve the managed service account issuer enablement during updates.

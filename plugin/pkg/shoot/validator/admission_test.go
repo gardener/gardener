@@ -5820,40 +5820,6 @@ var _ = Describe("validator", func() {
 				Expect(err.Error()).To(ContainSubstring("old shoot object has managed service account issuer enabled, but Gardener configuration is missing"))
 			})
 
-			It("should reject creating a shoot if there are multiple configuration secrets", func() {
-				issuerSecret2 := issuerSecret.DeepCopy()
-				issuerSecret2.Name = "sa-issuer-2"
-				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(issuerSecret)).To(Succeed())
-				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(issuerSecret2)).To(Succeed())
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-				err := admissionHandler.Admit(ctx, attrs, nil)
-
-				Expect(err).To(BeInternalServerError())
-				Expect(err.Error()).To(ContainSubstring("can only accept at most one managed service account issuer secret, but found 2"))
-			})
-
-			It("should reject creating a shoot if the config secret does not contain 'hostname' key", func() {
-				issuerSecret.Data = nil
-				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(issuerSecret)).To(Succeed())
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-				err := admissionHandler.Admit(ctx, attrs, nil)
-
-				Expect(err).To(BeInternalServerError())
-				Expect(err.Error()).To(ContainSubstring("cannot configure managed service account issuer: secret 'sa-issuer' does not contain key 'hostname'"))
-			})
-
-			It("should reject creating a shoot if the config secret does not contain 'hostname' key", func() {
-				issuerSecret.Data = map[string][]byte{
-					"hostname": []byte("  "),
-				}
-				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(issuerSecret)).To(Succeed())
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-				err := admissionHandler.Admit(ctx, attrs, nil)
-
-				Expect(err).To(BeInternalServerError())
-				Expect(err.Error()).To(ContainSubstring("cannot configure managed service account issuer: secret 'sa-issuer' does contain an empty 'hostname' key"))
-			})
-
 			It("should reject disabling managed service account issuer", func() {
 				shoot.Annotations = nil
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(issuerSecret)).To(Succeed())
