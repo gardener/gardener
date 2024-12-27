@@ -44,3 +44,9 @@ func ReconcileTopologyAwareRouting(service *corev1.Service, topologyAwareRouting
 	metav1.SetMetaDataAnnotation(&service.ObjectMeta, corev1.DeprecatedAnnotationTopologyAwareHints, "auto")
 	metav1.SetMetaDataLabel(&service.ObjectMeta, resourcesv1alpha1.EndpointSliceHintsConsider, "true")
 }
+
+// ReconcileTopologyAwareRoutingMetadata adds (or removes) the required annotation, label and trafficDistribution setting to make a Service topology-aware.
+// Deprecated: please use ReconcileTopologyAwareRouting instead.
+func ReconcileTopologyAwareRoutingMetadata(service *corev1.Service, topologyAwareRoutingEnabled bool, k8sVersion *semver.Version) {
+	ReconcileTopologyAwareRouting(service, topologyAwareRoutingEnabled, k8sVersion)
+}
