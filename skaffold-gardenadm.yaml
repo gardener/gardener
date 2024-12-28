@@ -176,8 +176,8 @@ build:
             - pkg/component/nodemanagement/machinecontrollermanager
             - pkg/component/nodemanagement/machinecontrollermanager/templates/crd-machine.sapcloud.io_machineclasses.yaml
             - pkg/component/nodemanagement/machinecontrollermanager/templates/crd-machine.sapcloud.io_machinedeployments.yaml
-            - pkg/component/nodemanagement/machinecontrollermanager/templates/crd-machine.sapcloud.io_machines.yaml
             - pkg/component/nodemanagement/machinecontrollermanager/templates/crd-machine.sapcloud.io_machinesets.yaml
+            - pkg/component/nodemanagement/machinecontrollermanager/templates/crd-machine.sapcloud.io_machines.yaml
             - pkg/component/observability/logging/vali/constants
             - pkg/component/observability/monitoring/alertmanager
             - pkg/component/observability/monitoring/prometheus/shoot
@@ -185,9 +185,9 @@ build:
             - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/prometheus.yaml
             - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/worker/kube-kubelet.yaml
             - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/worker/kube-pods.yaml
-            - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/worker/networking.yaml
             - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/workerless/kube-pods.yaml
             - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/workerless/networking.yaml
+            - pkg/component/observability/monitoring/prometheus/shoot/assets/prometheusrules/worker/networking.yaml
             - pkg/component/observability/monitoring/utils
             - pkg/controller/service
             - pkg/controllerutils

@@ -49,6 +49,7 @@ SETUP_ENVTEST              := $(TOOLS_BIN_DIR)/setup-envtest
 SKAFFOLD                   := $(TOOLS_BIN_DIR)/skaffold
 YQ                         := $(TOOLS_BIN_DIR)/yq
 VGOPATH                    := $(TOOLS_BIN_DIR)/vgopath
+TYPOS                      := $(TOOLS_BIN_DIR)/typos
 
 # default tool versions
 # renovate: datasource=github-releases depName=golangci/golangci-lint
@@ -80,6 +81,8 @@ SKAFFOLD_VERSION ?= v2.13.2
 YQ_VERSION ?= v4.45.1
 # renovate: datasource=github-releases depName=ironcore-dev/vgopath
 VGOPATH_VERSION ?= v0.1.7
+# renovate: datasource=github-releases depName=crate-ci/typos
+TYPOS_VERSION ?= v1.29.4
 
 # tool versions from go.mod
 CONTROLLER_GEN_VERSION ?= $(call version_gomod,sigs.k8s.io/controller-tools)
@@ -134,7 +137,7 @@ ifeq ($(shell if [ -d $(TOOLS_BIN_SOURCE_DIR) ]; then echo "found"; fi),found)
 endif
 
 .PHONY: create-tools-bin
-create-tools-bin: $(CONTROLLER_GEN) $(GEN_CRD_API_REFERENCE_DOCS) $(GINKGO) $(GOIMPORTS) $(GOIMPORTSREVISER) $(GOSEC) $(GO_ADD_LICENSE) $(GO_APIDIFF) $(GO_VULN_CHECK) $(GO_TO_PROTOBUF) $(HELM) $(IMPORT_BOSS) $(KIND) $(KUBECTL) $(MOCKGEN) $(OPENAPI_GEN) $(PROMTOOL) $(PROTOC) $(PROTOC_GEN_GOGO) $(SETUP_ENVTEST) $(SKAFFOLD) $(YQ) $(VGOPATH) $(KUSTOMIZE)
+create-tools-bin: $(CONTROLLER_GEN) $(GEN_CRD_API_REFERENCE_DOCS) $(GINKGO) $(GOIMPORTS) $(GOIMPORTSREVISER) $(GOSEC) $(GO_ADD_LICENSE) $(GO_APIDIFF) $(GO_VULN_CHECK) $(GO_TO_PROTOBUF) $(HELM) $(IMPORT_BOSS) $(KIND) $(KUBECTL) $(MOCKGEN) $(OPENAPI_GEN) $(PROMTOOL) $(PROTOC) $(PROTOC_GEN_GOGO) $(SETUP_ENVTEST) $(SKAFFOLD) $(YQ) $(VGOPATH) $(KUSTOMIZE) $(TYPOS)
 
 #########################################
 # Tools                                 #
@@ -216,6 +219,9 @@ $(PROMTOOL): $(call tool_version_file,$(PROMTOOL),$(PROMTOOL_VERSION))
 
 $(PROTOC): $(call tool_version_file,$(PROTOC),$(PROTOC_VERSION))
 	@PROTOC_VERSION=$(PROTOC_VERSION) $(TOOLS_PKG_PATH)/install-protoc.sh
+
+$(TYPOS): $(call tool_version_file,$(TYPOS),$(TYPOS_VERSION))
+	@TYPOS_VERSION=$(TYPOS_VERSION) $(TOOLS_PKG_PATH)/install-typos.sh
 
 $(PROTOC_GEN_GOGO): $(call tool_version_file,$(PROTOC_GEN_GOGO),$(CODE_GENERATOR_VERSION))
 	go build -o $(PROTOC_GEN_GOGO) k8s.io/code-generator/cmd/go-to-protobuf/protoc-gen-gogo

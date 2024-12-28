@@ -16,13 +16,13 @@ var _ = Describe("HostName", func() {
 	Describe("#GetHostName", func() {
 		It("should convert the string to lower case", func() {
 			DeferCleanup(test.WithVar(&Hostname, func() (string, error) {
-				return "FoObAr", nil
+				return "FooObAr", nil
 			}))
 
 			hostName, err := GetHostName()
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(hostName).To(Equal("foobar"))
+			Expect(hostName).To(Equal("fooobar"))
 		})
 	})
 })

@@ -53,7 +53,7 @@ spec:
 
 Typically, administrators move a version through the classification stages manually over time. However, there is a dedicated field called `expirationDate`, that allows setting a deadline after which a version is interpreted as expired without manual intervention.
 
-However, manually moving versions through the stages is cumbersome, so there should be a way for adminstrators to define an entire version lifecycle.
+However, manually moving versions through the stages is cumbersome, so there should be a way for administrators to define an entire version lifecycle.
 
 While using the expiration date is certainly convenient for administrators, it is confusing that the classification pretends to be for example `supported` or `deprecated` while the expiration date marks it as `expired` at a certain point in time.
 
@@ -293,7 +293,7 @@ While this approach has the advantage that it just integrates with the current i
 ### Introduction of a Lifecycle Map
 
 The next approach keeps the `classification` field itself, but moves the date fields into a new object to not pollute the `ExpirableVersion` struct.
-This also offers the oppurtunity to better express the fact that date times are required to schedule the lifecycle of a version classification instead of just plain dates.
+This also offers the opportunity to better express the fact that date times are required to schedule the lifecycle of a version classification instead of just plain dates.
 
 ```yaml
 apiVersion: core.gardener.cloud/v1beta1

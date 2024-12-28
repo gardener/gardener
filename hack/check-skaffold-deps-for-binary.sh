@@ -83,7 +83,7 @@ if [[ -d "$repo_root/vendor" ]]; then
 fi
 
 # sort dependencies and ensure uniqueness
-sort -u -fo "$path_actual_dependencies"{,}
+sort --unique --ignore-case --output "$path_actual_dependencies"{,}
 
 case "$operation" in
   check)

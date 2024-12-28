@@ -59,7 +59,7 @@ func New() *DBus {
 	}
 }
 
-// InjectRestartFailure returns the given error the first time a restart is triggerd on the given units.
+// InjectRestartFailure returns the given error the first time a restart is triggered on the given units.
 func (d *DBus) InjectRestartFailure(err error, unitNames ...string) {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()

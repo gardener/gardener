@@ -141,14 +141,14 @@ var _ = Describe("Actuator", func() {
 			}
 		}
 
-		expectReplica = func(r *mockmanagedseedset.MockReplica, ordinal int32, status ReplicaStatus, seedReady bool, shs gardenerutils.ShootStatus, deletable bool) {
+		expectReplica = func(r *mockmanagedseedset.MockReplica, ordinal int32, status ReplicaStatus, seedReady bool, shootStatus gardenerutils.ShootStatus, deletable bool) {
 			r.EXPECT().GetName().Return(getReplicaName(ordinal)).AnyTimes()
 			r.EXPECT().GetFullName().Return(getReplicaFullName(ordinal)).AnyTimes()
 			r.EXPECT().GetObjectKey().Return(getReplicaObjectKey(ordinal)).AnyTimes()
 			r.EXPECT().GetOrdinal().Return(ordinal).AnyTimes()
 			r.EXPECT().GetStatus().Return(status).AnyTimes()
 			r.EXPECT().IsSeedReady().Return(seedReady).AnyTimes()
-			r.EXPECT().GetShootHealthStatus().Return(shs).AnyTimes()
+			r.EXPECT().GetShootHealthStatus().Return(shootStatus).AnyTimes()
 			r.EXPECT().IsDeletable().Return(deletable).AnyTimes()
 		}
 	)
