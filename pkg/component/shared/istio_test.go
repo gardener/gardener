@@ -191,11 +191,11 @@ func checkAdditionalIstioGateway(cl client.Client,
 
 var _ = Describe("Istio", func() {
 	var (
-		testValues     istioTestValues
-		zones          []string
-		vpnEnabled     bool
-		proxyProtoclLB bool
-		istioDeploy    istio.Interface
+		testValues      istioTestValues
+		zones           []string
+		vpnEnabled      bool
+		proxyProtocolLB bool
+		istioDeploy     istio.Interface
 	)
 
 	BeforeEach(func() {
@@ -220,7 +220,7 @@ var _ = Describe("Istio", func() {
 			serviceExternalIP:                  ptr.To("1.2.3.4"),
 			servicePorts:                       []corev1.ServicePort{{Port: 443}},
 			proxyProtocolEnabled:               false,
-			terminateLoadBalancerProxyProtocol: proxyProtoclLB,
+			terminateLoadBalancerProxyProtocol: proxyProtocolLB,
 			vpnEnabled:                         vpnEnabled,
 			zones:                              zones,
 			enforceSpreadAcrossHosts:           false,
@@ -242,7 +242,7 @@ var _ = Describe("Istio", func() {
 
 		Context("with proxy protocol termination", func() {
 			BeforeEach(func() {
-				proxyProtoclLB = true
+				proxyProtocolLB = true
 			})
 
 			It("should successfully create a new Istio deployer", func() {
@@ -345,7 +345,7 @@ var _ = Describe("Istio", func() {
 				serviceExternalIP,
 				zone,
 				false,
-				&proxyProtoclLB)).To(MatchError("at least one ingress gateway must be present before adding further ones"))
+				&proxyProtocolLB)).To(MatchError("at least one ingress gateway must be present before adding further ones"))
 		})
 
 		Context("without zone", func() {
@@ -365,7 +365,7 @@ var _ = Describe("Istio", func() {
 					serviceExternalIP,
 					zone,
 					false,
-					&proxyProtoclLB)).To(Succeed())
+					&proxyProtocolLB)).To(Succeed())
 
 				checkAdditionalIstioGateway(
 					testValues.client,
@@ -398,7 +398,7 @@ var _ = Describe("Istio", func() {
 					serviceExternalIP,
 					zone,
 					false,
-					&proxyProtoclLB)).To(Succeed())
+					&proxyProtocolLB)).To(Succeed())
 
 				checkAdditionalIstioGateway(
 					testValues.client,
@@ -434,7 +434,7 @@ var _ = Describe("Istio", func() {
 						serviceExternalIP,
 						zone,
 						false,
-						&proxyProtoclLB)).To(Succeed())
+						&proxyProtocolLB)).To(Succeed())
 
 					checkAdditionalIstioGateway(
 						testValues.client,
@@ -468,7 +468,7 @@ var _ = Describe("Istio", func() {
 					serviceExternalIP,
 					zone,
 					true,
-					&proxyProtoclLB)).To(Succeed())
+					&proxyProtocolLB)).To(Succeed())
 
 				checkAdditionalIstioGateway(
 					testValues.client,

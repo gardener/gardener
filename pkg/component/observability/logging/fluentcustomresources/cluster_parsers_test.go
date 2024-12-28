@@ -38,7 +38,7 @@ var _ = Describe("Logging", func() {
 								TimeFormat: "%Y-%m-%dT%H:%M:%S.%L%z",
 								TimeKeep:   ptr.To(true),
 							},
-							Decoders: []fluentbitv1alpha2.Decorder{
+							Decoders: []fluentbitv1alpha2.Decorder{ // spellchecker:disable-line
 								{
 									DecodeFieldAs: "json log",
 								},

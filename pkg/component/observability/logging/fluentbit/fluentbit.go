@@ -79,6 +79,7 @@ func (f *fluentBit) Deploy(ctx context.Context) error {
 				Name:      v1beta1constants.DaemonSetNameFluentBit + "-lua-config",
 				Namespace: f.namespace,
 			},
+			// spellchecker:off
 			Data: map[string]string{
 				"modify_severity.lua": `
 function cb_modify(tag, timestamp, record)
@@ -133,6 +134,7 @@ function add_tag_to_record(tag, timestamp, record)
 end
 `,
 			},
+			// spellchecker:on
 		}
 		serviceMonitor = &monitoringv1.ServiceMonitor{
 			ObjectMeta: monitoringutils.ConfigObjectMeta("fluent-bit", f.namespace, aggregate.Label),

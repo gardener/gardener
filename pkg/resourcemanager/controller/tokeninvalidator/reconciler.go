@@ -80,7 +80,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	for _, pod := range podList.Items {
 		for _, volume := range pod.Spec.Volumes {
 			if volume.Secret != nil && volume.Secret.SecretName == secret.Name {
-				log.Info("Requeueing since there is still at least one pod mounting secret", "pod", client.ObjectKeyFromObject(&pod))
+				log.Info("Requeuing since there is still at least one pod mounting secret", "pod", client.ObjectKeyFromObject(&pod))
 				return reconcile.Result{Requeue: true}, nil
 			}
 		}

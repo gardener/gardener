@@ -946,7 +946,7 @@ kubectl get po -n <shoot-control-ns> # list of pods in the shoot control plane
 |                 NAME                        | READY | STATUS  |                   NODE                     |
 |---------------------------------------------|-------|---------|--------------------------------------------|
 | cert-controller-manager-6cf9787df6-dt5nw     | 1/1   | Running | ip-10-242-60-155.eu-west-1.compute.internal |
-| cloud-controller-manager-7748bcf697-t2pn7   | 1/1   | Running | ip-10-242-73-89.eu-west-1.compute.internal |
+| cloud-controller-manager-7748bcf697-t2bn7   | 1/1   | Running | ip-10-242-73-89.eu-west-1.compute.internal |
 | csi-driver-controller-6cd9bc7997-bn82b      | 6/6   | Running | ip-10-242-60-155.eu-west-1.compute.internal |
 | csi-snapshot-controller-5f774d57b4-rskwj    | 1/1   | Running | ip-10-242-73-89.eu-west-1.compute.internal |
 | csi-snapshot-validation-7c99986c85-ft2qp     | 1/1   | Running | ip-10-242-60-155.eu-west-1.compute.internal |

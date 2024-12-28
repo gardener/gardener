@@ -33,7 +33,7 @@ func NewStorage(optsGetter generic.RESTOptionsGetter) ExposureClassStorage {
 
 // NewREST returns a RESTStorage object that will work with ExposureClass objects.
 func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
-	expousreClasssStrategy := exposureclass.NewStrategy()
+	exposureClassStrategy := exposureclass.NewStrategy()
 	store := &genericregistry.Store{
 		NewFunc:                   func() runtime.Object { return &core.ExposureClass{} },
 		NewListFunc:               func() runtime.Object { return &core.ExposureClassList{} },
@@ -41,9 +41,9 @@ func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
 		SingularQualifiedResource: core.Resource("exposureclass"),
 		EnableGarbageCollection:   true,
 
-		CreateStrategy: expousreClasssStrategy,
-		UpdateStrategy: expousreClasssStrategy,
-		DeleteStrategy: expousreClasssStrategy,
+		CreateStrategy: exposureClassStrategy,
+		UpdateStrategy: exposureClassStrategy,
+		DeleteStrategy: exposureClassStrategy,
 
 		TableConvertor: newTableConvertor(),
 	}

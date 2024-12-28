@@ -45,9 +45,9 @@ type Values struct {
 	Name string
 	// Namespace is the namespace of the EtcdCopyBackupsTask.
 	Namespace string
-	// SourceStore is the specification of the objct store from which etcd backups will be copied.
+	// SourceStore is the specification of the object store from which etcd backups will be copied.
 	SourceStore druidv1alpha1.StoreSpec
-	// TargetStore is the specification of the objcet store to which etcd backups will be copied.
+	// TargetStore is the specification of the object store to which etcd backups will be copied.
 	TargetStore druidv1alpha1.StoreSpec
 	// MaxBackups is the maximum number of backups that will be copied starting with the most recent ones.
 	MaxBackups *uint32

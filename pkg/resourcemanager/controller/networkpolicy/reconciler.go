@@ -114,7 +114,7 @@ func (r *Reconciler) fetchRelevantNamespaceNames(ctx context.Context, service *c
 	var namespaceSelectors []metav1.LabelSelector
 	if v, ok := service.Annotations[resourcesv1alpha1.NetworkingNamespaceSelectors]; ok {
 		if err := json.Unmarshal([]byte(v), &namespaceSelectors); err != nil {
-			return nil, fmt.Errorf("failed unmarshaling %s: %w", v, err)
+			return nil, fmt.Errorf("failed unmarshalling %s: %w", v, err)
 		}
 	}
 
