@@ -433,7 +433,7 @@ var _ = Describe("Admission", func() {
 
 				namespacedCloudProfile.Spec.MachineImages = []gardencore.MachineImage{
 					{Name: "test-image", Versions: []gardencore.MachineImageVersion{
-						{ExpirableVersion: gardencore.ExpirableVersion{Version: "1.1.0"}, CRI: []gardencore.CRI{{Name: "containerd"}}},
+						{ExpirableVersion: gardencore.ExpirableVersion{Version: "1.1.0"}, CRI: []gardencore.CRI{{Name: "containerd"}}, Architectures: []string{"amd64", "arm64"}},
 					}},
 				}
 				oldNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
@@ -559,7 +559,6 @@ var _ = Describe("Admission", func() {
 										ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 											Version: "1.0.0",
 										},
-										CRI: []gardencorev1beta1.CRI{{Name: "containerd"}},
 									},
 								},
 							},
