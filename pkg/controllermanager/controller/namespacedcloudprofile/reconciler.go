@@ -120,7 +120,7 @@ func MergeCloudProfiles(namespacedCloudProfile *gardencorev1beta1.NamespacedClou
 	}
 	namespacedCloudProfile.Status.CloudProfileSpec.MachineImages = mergeDeep(namespacedCloudProfile.Status.CloudProfileSpec.MachineImages, namespacedCloudProfile.Spec.MachineImages, machineImageKeyFunc, mergeMachineImages, true)
 	namespacedCloudProfile.Status.CloudProfileSpec.MachineTypes = mergeDeep(namespacedCloudProfile.Status.CloudProfileSpec.MachineTypes, namespacedCloudProfile.Spec.MachineTypes, machineTypeKeyFunc, nil, true)
-	namespacedCloudProfile.Status.CloudProfileSpec.VolumeTypes = append(namespacedCloudProfile.Status.CloudProfileSpec.VolumeTypes, namespacedCloudProfile.Spec.VolumeTypes...)
+	namespacedCloudProfile.Status.CloudProfileSpec.VolumeTypes = mergeDeep(namespacedCloudProfile.Status.CloudProfileSpec.VolumeTypes, namespacedCloudProfile.Spec.VolumeTypes, volumeTypeKeyFunc, nil, true)
 	if namespacedCloudProfile.Spec.CABundle != nil {
 		mergedCABundles := fmt.Sprintf("%s%s", ptr.Deref(namespacedCloudProfile.Status.CloudProfileSpec.CABundle, ""), ptr.Deref(namespacedCloudProfile.Spec.CABundle, ""))
 		namespacedCloudProfile.Status.CloudProfileSpec.CABundle = &mergedCABundles
@@ -132,6 +132,7 @@ var (
 	machineImageKeyFunc        = func(i gardencorev1beta1.MachineImage) string { return i.Name }
 	machineImageVersionKeyFunc = func(v gardencorev1beta1.MachineImageVersion) string { return v.Version }
 	machineTypeKeyFunc         = func(t gardencorev1beta1.MachineType) string { return t.Name }
+	volumeTypeKeyFunc          = func(t gardencorev1beta1.VolumeType) string { return t.Name }
 )
 
 func mergeExpirationDates(base, override gardencorev1beta1.ExpirableVersion) gardencorev1beta1.ExpirableVersion {

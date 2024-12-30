@@ -291,6 +291,22 @@ var _ = Describe("Admission", func() {
 			})
 		})
 
+		Describe("volumeType", func() {
+			It("should allow a NamespacedCloudProfile to specify a VolumeType, if it has been added to the parent CloudProfile only afterwards", func() {
+				volumeName, volumeClass := "volume-type-1", "super-premium"
+				parentCloudProfile.Spec.VolumeTypes = []gardencorev1beta1.VolumeType{{Name: volumeName, Class: volumeClass}}
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
+
+				namespacedCloudProfile.Spec.VolumeTypes = []gardencore.VolumeType{{Name: volumeName, Class: volumeClass}}
+				oldNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
+				namespacedCloudProfile.Generation++ // Increase generation to trigger full validation check.
+
+				attrs := admission.NewAttributesRecord(namespacedCloudProfile, oldNamespacedCloudProfile, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), "", namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+			})
+		})
+
 		Describe("machineImages", func() {
 			It("should allow creating a NamespacedCloudProfile that specifies a MachineImage version from the parent CloudProfile and extends the expiration date", func() {
 				parentCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
