@@ -7,8 +7,9 @@ package helper
 import (
 	"strings"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"k8s.io/apimachinery/pkg/util/sets"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 // SecretBindingHasType checks if the given SecretBinding has the given provider type.

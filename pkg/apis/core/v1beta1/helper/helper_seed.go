@@ -5,10 +5,11 @@
 package helper
 
 import (
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/utils/ptr"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 // TaintsHave returns true if the given key is part of the taints list.

@@ -9,12 +9,13 @@ import (
 	"strconv"
 
 	"github.com/Masterminds/semver/v3"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 // ReadManagedSeedAPIServer reads the managed seed API server settings from the corresponding annotation.
