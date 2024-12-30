@@ -731,5 +731,46 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 					[]byte(`{"machineImages":[{"name":"machine-image-1","versions":[{"image":"local-dev:1.0.0","version":"1.0.0"}]}]}`)))
 			})
 		})
+
+		Describe("custom CloudProfile spec overrides, that are added to the parent CloudProfile afterwards", func() {
+			It("should successfully reconcile with custom machine images being added to the parent CloudProfile", func() {
+				// Create CloudProfile.
+				Expect(fakeClient.Create(ctx, cloudProfile)).To(Succeed())
+
+				// Create NamespacedCloudProfile.
+				namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{{
+					Name:           "machine-image-1",
+					UpdateStrategy: ptr.To(gardencorev1beta1.UpdateStrategyMajor),
+					Versions:       []gardencorev1beta1.MachineImageVersion{{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.0.0"}, Architectures: []string{"amd64", "arm64"}}}},
+				}
+				namespacedCloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Object: &v1alpha1.CloudProfileConfig{MachineImages: []v1alpha1.MachineImages{
+					{Name: "machine-image-1", Versions: []v1alpha1.MachineImageVersion{{Version: "1.0.0", Image: "local-dev:1.0.0-nscpfl"}}},
+				}}}
+				Expect(fakeClient.Create(ctx, namespacedCloudProfile)).To(Succeed())
+
+				// Reconcile NamespacedCloudProfile Status.
+				_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfile.Name, Namespace: namespaceName}})
+				Expect(err).ToNot(HaveOccurred())
+
+				// Add custom machine image from NamespacedCloudProfile to parent CloudProfile.
+				cloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{{
+					Name:           "machine-image-1",
+					UpdateStrategy: ptr.To(gardencorev1beta1.UpdateStrategyMinor),
+					Versions:       []gardencorev1beta1.MachineImageVersion{{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.0.0"}}}},
+				}
+				cloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Object: &v1alpha1.CloudProfileConfig{MachineImages: []v1alpha1.MachineImages{
+					{Name: "machine-image-1", Versions: []v1alpha1.MachineImageVersion{{Version: "1.0.0", Image: "local-dev:1.0.0-cpfl"}}},
+				}}}
+				Expect(fakeClient.Update(ctx, cloudProfile)).To(Succeed())
+
+				// Reconcile NamespacedCloudProfile Status again.
+				_, err = reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfile.Name, Namespace: namespaceName}})
+				Expect(err).ToNot(HaveOccurred())
+
+				// Expect that the NamepacedCloudProfile Status is as expected.
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
+				Expect(namespacedCloudProfile.Status.CloudProfileSpec.MachineImages).To(Equal(namespacedCloudProfile.Spec.MachineImages))
+			})
+		})
 	})
 })
