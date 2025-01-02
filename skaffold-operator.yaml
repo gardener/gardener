@@ -237,8 +237,6 @@ build:
             - pkg/controllerutils/routes
             - pkg/extensions
             - pkg/features
-            - pkg/gardenlet/apis/config
-            - pkg/gardenlet/apis/config/helper
             - pkg/gardenlet/apis/config/v1alpha1
             - pkg/gardenlet/bootstrap/util
             - pkg/healthz
@@ -370,7 +368,6 @@ build:
             - pkg/controllerutils/predicate
             - pkg/controllerutils/reconciler
             - pkg/controllerutils/routes
-            - pkg/gardenlet/apis/config
             - pkg/gardenlet/apis/config/v1alpha1
             - pkg/healthz
             - pkg/logger
@@ -587,10 +584,8 @@ build:
             - pkg/controllerutils/mapper
             - pkg/controllerutils/predicate
             - pkg/features
-            - pkg/gardenlet/apis/config
-            - pkg/gardenlet/apis/config/helper
             - pkg/gardenlet/apis/config/v1alpha1
-            - pkg/gardenlet/apis/config/validation
+            - pkg/gardenlet/apis/config/v1alpha1/validation
             - pkg/logger
             - pkg/resourcemanager/controller/garbagecollector/references
             - pkg/utils
@@ -742,7 +737,6 @@ build:
             - pkg/controllerutils/predicate
             - pkg/controllerutils/routes
             - pkg/features
-            - pkg/gardenlet/apis/config
             - pkg/gardenlet/apis/config/v1alpha1
             - pkg/healthz
             - pkg/logger
@@ -812,7 +806,6 @@ build:
             - pkg/controllerutils/predicate
             - pkg/controllerutils/routes
             - pkg/features
-            - pkg/gardenlet/apis/config
             - pkg/gardenlet/apis/config/v1alpha1
             - pkg/healthz
             - pkg/logger
@@ -900,7 +893,6 @@ build:
             - pkg/client/kubernetes/cache
             - pkg/controllerutils
             - pkg/controllerutils/routes
-            - pkg/gardenlet/apis/config
             - pkg/gardenlet/apis/config/v1alpha1
             - pkg/gardenlet/bootstrap/util
             - pkg/healthz
@@ -1103,7 +1095,6 @@ build:
             - pkg/controllerutils/reconciler
             - pkg/extensions
             - pkg/features
-            - pkg/gardenlet/apis/config
             - pkg/gardenlet/apis/config/v1alpha1
             - pkg/healthz
             - pkg/logger
@@ -1216,7 +1207,6 @@ build:
             - pkg/controllerutils
             - pkg/controllerutils/predicate
             - pkg/extensions
-            - pkg/gardenlet/apis/config
             - pkg/gardenlet/apis/config/v1alpha1
             - pkg/healthz
             - pkg/logger
