@@ -33,7 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	"github.com/gardener/gardener/pkg/features"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
-	"github.com/gardener/gardener/pkg/scheduler/apis/config"
+	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/scheduler/controller"
 	"github.com/gardener/gardener/pkg/utils"
 )
@@ -65,7 +65,7 @@ func NewCommand() *cobra.Command {
 	return cmd
 }
 
-func run(ctx context.Context, log logr.Logger, cfg *config.SchedulerConfiguration) error {
+func run(ctx context.Context, log logr.Logger, cfg *schedulerconfigv1alpha1.SchedulerConfiguration) error {
 	log.Info("Feature Gates", "featureGates", features.DefaultFeatureGate)
 
 	log.Info("Getting rest config")
@@ -73,15 +73,15 @@ func run(ctx context.Context, log logr.Logger, cfg *config.SchedulerConfiguratio
 		cfg.ClientConnection.Kubeconfig = kubeconfig
 	}
 
-	restCfg, err := kubernetes.RESTConfigFromInternalClientConnectionConfiguration(&cfg.ClientConnection, nil, kubernetes.AuthTokenFile)
+	restCfg, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.ClientConnection, nil, kubernetes.AuthTokenFile)
 	if err != nil {
 		return err
 	}
 
 	var extraHandlers map[string]http.Handler
-	if cfg.Debugging != nil && cfg.Debugging.EnableProfiling {
+	if cfg.Debugging != nil && ptr.Deref(cfg.Debugging.EnableProfiling, false) {
 		extraHandlers = routes.ProfilingHandlers
-		if cfg.Debugging.EnableContentionProfiling {
+		if ptr.Deref(cfg.Debugging.EnableContentionProfiling, false) {
 			goruntime.SetBlockProfileRate(1)
 		}
 	}
@@ -105,7 +105,7 @@ func run(ctx context.Context, log logr.Logger, cfg *config.SchedulerConfiguratio
 				},
 			},
 		},
-		LeaderElection:                cfg.LeaderElection.LeaderElect,
+		LeaderElection:                *cfg.LeaderElection.LeaderElect,
 		LeaderElectionResourceLock:    cfg.LeaderElection.ResourceLock,
 		LeaderElectionID:              cfg.LeaderElection.ResourceName,
 		LeaderElectionNamespace:       cfg.LeaderElection.ResourceNamespace,
