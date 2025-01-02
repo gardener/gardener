@@ -21,13 +21,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controller/networkpolicy"
 	"github.com/gardener/gardener/pkg/controller/networkpolicy/hostnameresolver"
 	"github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 )
 
@@ -41,8 +41,8 @@ func AddToManager(
 	mgr manager.Manager,
 	gardenletCancel context.CancelFunc,
 	seedCluster cluster.Cluster,
-	cfg config.NetworkPolicyControllerConfiguration,
-	networks gardencore.SeedNetworks,
+	cfg gardenletconfigv1alpha1.NetworkPolicyControllerConfiguration,
+	networks gardencorev1beta1.SeedNetworks,
 	resolver hostnameresolver.HostResolver,
 ) error {
 	seedIsGarden, err := gardenletutils.SeedIsGarden(ctx, seedCluster.GetAPIReader())

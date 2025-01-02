@@ -18,7 +18,6 @@ import (
 	"k8s.io/utils/ptr"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -26,7 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	mockcomponent "github.com/gardener/gardener/pkg/component/mock"
 	mockvali "github.com/gardener/gardener/pkg/component/observability/logging/vali/mock"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
@@ -77,18 +76,18 @@ var _ = Describe("Logging", func() {
 				Logger:         logr.Discard(),
 				SecretsManager: fakeSecretManager,
 				SeedClientSet:  k8sSeedClient,
-				Config: &config.GardenletConfiguration{
-					Logging: &config.Logging{
+				Config: &gardenletconfigv1alpha1.GardenletConfiguration{
+					Logging: &gardenletconfigv1alpha1.Logging{
 						Enabled: ptr.To(true),
-						Vali: &config.Vali{
+						Vali: &gardenletconfigv1alpha1.Vali{
 							Enabled: ptr.To(true),
 						},
-						ShootNodeLogging: &config.ShootNodeLogging{
-							ShootPurposes: []gardencore.ShootPurpose{
+						ShootNodeLogging: &gardenletconfigv1alpha1.ShootNodeLogging{
+							ShootPurposes: []gardencorev1beta1.ShootPurpose{
 								"development",
 							},
 						},
-						ShootEventLogging: &config.ShootEventLogging{
+						ShootEventLogging: &gardenletconfigv1alpha1.ShootEventLogging{
 							Enabled: ptr.To(true),
 						},
 					},

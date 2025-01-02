@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -26,7 +26,7 @@ type GardenKubeconfig struct {
 	// Log is a logger.
 	Log logr.Logger
 	// Config is the gardenlet component configuration.
-	Config *config.GardenletConfiguration
+	Config *gardenletconfigv1alpha1.GardenletConfiguration
 	// Result is a structure that will be filled with information about the requested kubeconfig. Must be initialized
 	// by the caller.
 	Result *KubeconfigBootstrapResult

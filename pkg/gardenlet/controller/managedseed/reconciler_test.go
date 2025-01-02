@@ -23,7 +23,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	mockgardenletdeployer "github.com/gardener/gardener/pkg/controller/gardenletdeployer/mock"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/managedseed"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
@@ -44,7 +44,7 @@ var _ = Describe("Reconciler", func() {
 		gardenClient       *mockclient.MockClient
 		gardenStatusWriter *mockclient.MockStatusWriter
 
-		cfg       config.GardenletConfiguration
+		cfg       gardenletconfigv1alpha1.GardenletConfiguration
 		fakeClock clock.Clock
 
 		reconciler reconcile.Reconciler
@@ -65,9 +65,9 @@ var _ = Describe("Reconciler", func() {
 
 		gardenClient.EXPECT().Status().Return(gardenStatusWriter).AnyTimes()
 
-		cfg = config.GardenletConfiguration{
-			Controllers: &config.GardenletControllerConfiguration{
-				ManagedSeed: &config.ManagedSeedControllerConfiguration{
+		cfg = gardenletconfigv1alpha1.GardenletConfiguration{
+			Controllers: &gardenletconfigv1alpha1.GardenletControllerConfiguration{
+				ManagedSeed: &gardenletconfigv1alpha1.ManagedSeedControllerConfiguration{
 					SyncPeriod:     &metav1.Duration{Duration: syncPeriod},
 					WaitSyncPeriod: &metav1.Duration{Duration: waitSyncPeriod},
 				},

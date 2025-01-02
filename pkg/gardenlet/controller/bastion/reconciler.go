@@ -29,7 +29,7 @@ import (
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -41,7 +41,7 @@ var RequeueDurationWhenResourceDeletionStillPresent = 5 * time.Second
 type Reconciler struct {
 	GardenClient client.Client
 	SeedClient   client.Client
-	Config       config.BastionControllerConfiguration
+	Config       gardenletconfigv1alpha1.BastionControllerConfiguration
 	Clock        clock.Clock
 	// RateLimiter allows limiting exponential backoff for testing purposes
 	RateLimiter workqueue.TypedRateLimiter[reconcile.Request]

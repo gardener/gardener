@@ -42,7 +42,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -1023,7 +1023,7 @@ type BackupConfig struct {
 	// FullSnapshotSchedule is a cron schedule that declares how frequent full snapshots shall be taken.
 	FullSnapshotSchedule string
 	// LeaderElection contains configuration for the leader election for the etcd backup-restore sidecar.
-	LeaderElection *gardenletconfig.ETCDBackupLeaderElection
+	LeaderElection *gardenletconfigv1alpha1.ETCDBackupLeaderElection
 	// DeltaSnapshotRetentionPeriod defines the duration for which delta snapshots will be retained, excluding the latest snapshot set.
 	DeltaSnapshotRetentionPeriod *metav1.Duration
 }

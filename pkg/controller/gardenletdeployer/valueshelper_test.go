@@ -9,14 +9,12 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	componentbaseconfig "k8s.io/component-base/config"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/ptr"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/utils"
@@ -31,7 +29,7 @@ var _ = Describe("ValuesHelper", func() {
 
 		cleanupFuncs []func()
 
-		parentConfig *config.GardenletConfiguration
+		parentConfig *gardenletconfigv1alpha1.GardenletConfiguration
 
 		vh ValuesHelper
 
@@ -56,9 +54,9 @@ var _ = Describe("ValuesHelper", func() {
 			test.WithEnvVar(imagevector.ComponentOverrideEnv, componentImageVectorOverwritesPath),
 		}
 
-		parentConfig = &config.GardenletConfiguration{
-			GardenClientConnection: &config.GardenClientConnection{
-				ClientConnectionConfiguration: componentbaseconfig.ClientConnectionConfiguration{
+		parentConfig = &gardenletconfigv1alpha1.GardenletConfiguration{
+			GardenClientConnection: &gardenletconfigv1alpha1.GardenClientConnection{
+				ClientConnectionConfiguration: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
 					Kubeconfig:         gardenKubeconfigPath,
 					AcceptContentTypes: "application/json",
 					ContentType:        "application/json",
@@ -70,8 +68,8 @@ var _ = Describe("ValuesHelper", func() {
 					Namespace: v1beta1constants.GardenNamespace,
 				},
 			},
-			SeedClientConnection: &config.SeedClientConnection{
-				ClientConnectionConfiguration: componentbaseconfig.ClientConnectionConfiguration{
+			SeedClientConnection: &gardenletconfigv1alpha1.SeedClientConnection{
+				ClientConnectionConfiguration: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
 					Kubeconfig:         seedKubeconfigPath,
 					AcceptContentTypes: "application/json",
 					ContentType:        "application/json",
@@ -79,12 +77,12 @@ var _ = Describe("ValuesHelper", func() {
 					Burst:              130,
 				},
 			},
-			Server: config.ServerConfiguration{
-				HealthProbes: &config.Server{
+			Server: gardenletconfigv1alpha1.ServerConfiguration{
+				HealthProbes: &gardenletconfigv1alpha1.Server{
 					BindAddress: "0.0.0.0",
 					Port:        2728,
 				},
-				Metrics: &config.Server{
+				Metrics: &gardenletconfigv1alpha1.Server{
 					BindAddress: "0.0.0.0",
 					Port:        2729,
 				},
@@ -93,11 +91,11 @@ var _ = Describe("ValuesHelper", func() {
 				string("FooFeature"): true,
 				string("BarFeature"): true,
 			},
-			Logging: &config.Logging{
+			Logging: &gardenletconfigv1alpha1.Logging{
 				Enabled: ptr.To(true),
 			},
-			SeedConfig: &config.SeedConfig{
-				SeedTemplate: gardencore.SeedTemplate{
+			SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
+				SeedTemplate: gardencorev1beta1.SeedTemplate{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "bar",
 					},

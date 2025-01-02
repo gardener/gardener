@@ -22,12 +22,11 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/backupentry"
 )
 
@@ -124,10 +123,10 @@ var _ = Describe("Controller", func() {
 			GardenClient: gardenClient,
 			SeedClient:   seedClient,
 			Recorder:     &record.FakeRecorder{},
-			Config: config.BackupEntryControllerConfiguration{
+			Config: gardenletconfigv1alpha1.BackupEntryControllerConfiguration{
 				ConcurrentSyncs:                  ptr.To(5),
 				DeletionGracePeriodHours:         ptr.To(deletionGracePeriodHours),
-				DeletionGracePeriodShootPurposes: []gardencore.ShootPurpose{gardencore.ShootPurposeProduction},
+				DeletionGracePeriodShootPurposes: []gardencorev1beta1.ShootPurpose{gardencorev1beta1.ShootPurposeProduction},
 			},
 			Clock:           fakeClock,
 			GardenNamespace: gardenNamespaceName,

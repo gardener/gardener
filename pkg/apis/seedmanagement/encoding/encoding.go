@@ -16,7 +16,6 @@ import (
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 )
 
@@ -27,7 +26,6 @@ func init() {
 	// core schemes are needed here to properly decode the embedded SeedTemplate objects
 	utilruntime.Must(gardencore.AddToScheme(scheme))
 	utilruntime.Must(gardencorev1beta1.AddToScheme(scheme))
-	utilruntime.Must(config.AddToScheme(scheme))
 	utilruntime.Must(gardenletconfigv1alpha1.AddToScheme(scheme))
 }
 

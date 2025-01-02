@@ -19,8 +19,8 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/controller/tokenrequestor"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/backupentry"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/bastion"
@@ -44,7 +44,7 @@ func AddToManager(
 	gardenCluster cluster.Cluster,
 	seedCluster cluster.Cluster,
 	shootClientMap clientmap.ClientMap,
-	cfg *config.GardenletConfiguration,
+	cfg *gardenletconfigv1alpha1.GardenletConfiguration,
 	healthManager healthz.Manager,
 ) error {
 	identity, err := gardenerutils.DetermineIdentity()
