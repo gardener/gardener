@@ -21,7 +21,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/scheduler/apis/config"
+	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 )
 
 var _ = Describe("Scheduler_Control", func() {
@@ -36,7 +36,7 @@ var _ = Describe("Scheduler_Control", func() {
 		seed         *gardencorev1beta1.Seed
 		shoot        *gardencorev1beta1.Shoot
 
-		schedulerConfiguration config.SchedulerConfiguration
+		schedulerConfiguration schedulerconfigv1alpha1.SchedulerConfiguration
 
 		providerType     = "foo"
 		cloudProfileName = "cloudprofile-1"
@@ -102,14 +102,14 @@ var _ = Describe("Scheduler_Control", func() {
 			},
 		}
 
-		schedulerConfigurationBase = config.SchedulerConfiguration{
+		schedulerConfigurationBase = schedulerconfigv1alpha1.SchedulerConfiguration{
 			TypeMeta: metav1.TypeMeta{
-				APIVersion: config.SchemeGroupVersion.String(),
+				APIVersion: schedulerconfigv1alpha1.SchemeGroupVersion.String(),
 				Kind:       "SchedulerConfiguration",
 			},
-			Schedulers: config.SchedulerControllerConfiguration{
-				Shoot: &config.ShootSchedulerConfiguration{
-					Strategy: config.SameRegion,
+			Schedulers: schedulerconfigv1alpha1.SchedulerControllerConfiguration{
+				Shoot: &schedulerconfigv1alpha1.ShootSchedulerConfiguration{
+					Strategy: schedulerconfigv1alpha1.SameRegion,
 				},
 			},
 			FeatureGates: map[string]bool{},
@@ -284,7 +284,7 @@ var _ = Describe("Scheduler_Control", func() {
 			cloudProfile = cloudProfileBase.DeepCopy()
 			cloudProfile.Spec.Type = anotherType
 			schedulerConfiguration = *schedulerConfigurationBase.DeepCopy()
-			schedulerConfiguration.Schedulers.Shoot.Strategy = config.MinimalDistance
+			schedulerConfiguration.Schedulers.Shoot.Strategy = schedulerconfigv1alpha1.MinimalDistance
 			// no seed referenced
 			shoot.Spec.SeedName = nil
 		})
@@ -404,7 +404,7 @@ var _ = Describe("Scheduler_Control", func() {
 			schedulerConfiguration = *schedulerConfigurationBase.DeepCopy()
 			// no seed referenced
 			shoot.Spec.SeedName = nil
-			schedulerConfiguration.Schedulers.Shoot.Strategy = config.MinimalDistance
+			schedulerConfiguration.Schedulers.Shoot.Strategy = schedulerconfigv1alpha1.MinimalDistance
 		})
 
 		It("should find a seed cluster 1) referencing the same profile 2) same region 3) indicating availability", func() {
@@ -608,7 +608,7 @@ var _ = Describe("Scheduler_Control", func() {
 			schedulerConfiguration = *schedulerConfigurationBase.DeepCopy()
 			// no seed referenced
 			shoot.Spec.SeedName = nil
-			schedulerConfiguration.Schedulers.Shoot.Strategy = config.Default
+			schedulerConfiguration.Schedulers.Shoot.Strategy = schedulerconfigv1alpha1.Default
 		})
 
 		It("should find a seed cluster 1) referencing the same profile 2) same region 3) indicating availability", func() {
@@ -821,7 +821,7 @@ var _ = Describe("Scheduler_Control", func() {
 			schedulerConfiguration = *schedulerConfigurationBase.DeepCopy()
 			// no seed referenced
 			shoot.Spec.SeedName = nil
-			schedulerConfiguration.Schedulers.Shoot.Strategy = config.MinimalDistance
+			schedulerConfiguration.Schedulers.Shoot.Strategy = schedulerconfigv1alpha1.MinimalDistance
 		})
 
 		It("should find two seeds candidates having the same amount of matching characters", func() {

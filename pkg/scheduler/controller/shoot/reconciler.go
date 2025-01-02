@@ -29,7 +29,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/scheduler/apis/config"
+	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 )
@@ -37,7 +37,7 @@ import (
 // Reconciler schedules shoots to seeds.
 type Reconciler struct {
 	Client          client.Client
-	Config          *config.ShootSchedulerConfiguration
+	Config          *schedulerconfigv1alpha1.ShootSchedulerConfiguration
 	GardenNamespace string
 	Recorder        record.EventRecorder
 }
@@ -299,22 +299,22 @@ func filterSeedsForAccessRestrictions(seedList []gardencorev1beta1.Seed, shoot *
 	return seedsSupportingAccessRestrictions, nil
 }
 
-func applyStrategy(log logr.Logger, shoot *gardencorev1beta1.Shoot, seedList []gardencorev1beta1.Seed, strategy config.CandidateDeterminationStrategy, regionConfig *corev1.ConfigMap) ([]gardencorev1beta1.Seed, error) {
+func applyStrategy(log logr.Logger, shoot *gardencorev1beta1.Shoot, seedList []gardencorev1beta1.Seed, strategy schedulerconfigv1alpha1.CandidateDeterminationStrategy, regionConfig *corev1.ConfigMap) ([]gardencorev1beta1.Seed, error) {
 	var candidates []gardencorev1beta1.Seed
 
 	switch {
 	case shoot.Spec.Purpose != nil && *shoot.Spec.Purpose == gardencorev1beta1.ShootPurposeTesting:
 		candidates = determineCandidatesOfSameProvider(seedList, shoot)
-	case strategy == config.SameRegion:
+	case strategy == schedulerconfigv1alpha1.SameRegion:
 		candidates = determineCandidatesWithSameRegionStrategy(seedList, shoot)
-	case strategy == config.MinimalDistance:
+	case strategy == schedulerconfigv1alpha1.MinimalDistance:
 		var err error
 		candidates, err = determineCandidatesWithMinimalDistanceStrategy(log, shoot, seedList, regionConfig)
 		if err != nil {
 			return nil, err
 		}
 	default:
-		return nil, fmt.Errorf("failed to determine seed candidates. shoot purpose: '%s', strategy: '%s', valid strategies are: %v", *shoot.Spec.Purpose, strategy, config.Strategies)
+		return nil, fmt.Errorf("failed to determine seed candidates. shoot purpose: '%s', strategy: '%s', valid strategies are: %v", *shoot.Spec.Purpose, strategy, schedulerconfigv1alpha1.Strategies)
 	}
 
 	if candidates == nil {

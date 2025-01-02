@@ -9,12 +9,12 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/gardener/gardener/pkg/scheduler/apis/config"
+	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/scheduler/controller/shoot"
 )
 
 // AddToManager adds all scheduler controllers to the given manager.
-func AddToManager(mgr manager.Manager, cfg *config.SchedulerConfiguration) error {
+func AddToManager(mgr manager.Manager, cfg *schedulerconfigv1alpha1.SchedulerConfiguration) error {
 	if err := (&shoot.Reconciler{
 		Config: cfg.Schedulers.Shoot,
 	}).AddToManager(mgr); err != nil {
