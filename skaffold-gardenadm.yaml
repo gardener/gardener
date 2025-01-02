@@ -200,7 +200,6 @@ build:
             - pkg/gardenlet/apis/config/v1alpha1
             - pkg/healthz
             - pkg/logger
-            - pkg/nodeagent/apis/config
             - pkg/nodeagent/apis/config/v1alpha1
             - pkg/provider-local/apis/local
             - pkg/provider-local/apis/local/helper
