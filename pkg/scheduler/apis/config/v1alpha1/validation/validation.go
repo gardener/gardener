@@ -10,11 +10,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/gardener/gardener/pkg/logger"
-	schedulerconfig "github.com/gardener/gardener/pkg/scheduler/apis/config"
+	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 )
 
 // ValidateConfiguration validates the configuration.
-func ValidateConfiguration(config *schedulerconfig.SchedulerConfiguration) field.ErrorList {
+func ValidateConfiguration(config *schedulerconfigv1alpha1.SchedulerConfiguration) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateSchedulerControllerConfiguration(config.Schedulers, field.NewPath("schedulers"))...)
@@ -35,7 +35,7 @@ func ValidateConfiguration(config *schedulerconfig.SchedulerConfiguration) field
 }
 
 // validateSchedulerControllerConfiguration validates the scheduler controller configuration.
-func validateSchedulerControllerConfiguration(schedulers schedulerconfig.SchedulerControllerConfiguration, fldPath *field.Path) field.ErrorList {
+func validateSchedulerControllerConfiguration(schedulers schedulerconfigv1alpha1.SchedulerControllerConfiguration, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs = field.ErrorList{}
 	)
@@ -52,13 +52,13 @@ func validateSchedulerControllerConfiguration(schedulers schedulerconfig.Schedul
 	return allErrs
 }
 
-func validateStrategy(strategy schedulerconfig.CandidateDeterminationStrategy, fldPath *field.Path) field.ErrorList {
+func validateStrategy(strategy schedulerconfigv1alpha1.CandidateDeterminationStrategy, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs             = field.ErrorList{}
 		supportedStrategies []string
 	)
 
-	for _, s := range schedulerconfig.Strategies {
+	for _, s := range schedulerconfigv1alpha1.Strategies {
 		supportedStrategies = append(supportedStrategies, string(s))
 
 		if s == strategy {

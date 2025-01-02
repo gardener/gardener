@@ -11,26 +11,26 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
-	schedulerconfig "github.com/gardener/gardener/pkg/scheduler/apis/config"
+	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 )
 
 var _ = Describe("gardener-scheduler", func() {
 	Describe("#ValidateConfiguration", func() {
-		var defaultAdmissionConfiguration schedulerconfig.SchedulerConfiguration
+		var defaultAdmissionConfiguration schedulerconfigv1alpha1.SchedulerConfiguration
 
 		BeforeEach(func() {
-			defaultAdmissionConfiguration = schedulerconfig.SchedulerConfiguration{
+			defaultAdmissionConfiguration = schedulerconfigv1alpha1.SchedulerConfiguration{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "scheduler.config.gardener.cloud/v1alpha1",
 					Kind:       "SchedulerConfiguration",
 				},
-				Schedulers: schedulerconfig.SchedulerControllerConfiguration{
-					BackupBucket: &schedulerconfig.BackupBucketSchedulerConfiguration{
+				Schedulers: schedulerconfigv1alpha1.SchedulerControllerConfiguration{
+					BackupBucket: &schedulerconfigv1alpha1.BackupBucketSchedulerConfiguration{
 						ConcurrentSyncs: 2,
 					},
-					Shoot: &schedulerconfig.ShootSchedulerConfiguration{
+					Shoot: &schedulerconfigv1alpha1.ShootSchedulerConfiguration{
 						ConcurrentSyncs: 2,
-						Strategy:        schedulerconfig.SameRegion,
+						Strategy:        schedulerconfigv1alpha1.SameRegion,
 					},
 				},
 			}
@@ -39,7 +39,7 @@ var _ = Describe("gardener-scheduler", func() {
 		Context("Validate Admission Plugin SchedulerConfiguration", func() {
 			It("should pass because the Gardener Scheduler Configuration with the 'Same Region' Strategy is a valid configuration", func() {
 				sameRegionConfiguration := defaultAdmissionConfiguration
-				sameRegionConfiguration.Schedulers.Shoot.Strategy = schedulerconfig.SameRegion
+				sameRegionConfiguration.Schedulers.Shoot.Strategy = schedulerconfigv1alpha1.SameRegion
 				err := ValidateConfiguration(&sameRegionConfiguration)
 
 				Expect(err).To(BeEmpty())
@@ -47,7 +47,7 @@ var _ = Describe("gardener-scheduler", func() {
 
 			It("should pass because the Gardener Scheduler Configuration with the 'Minimal Distance' Strategy is a valid configuration", func() {
 				minimalDistanceConfiguration := defaultAdmissionConfiguration
-				minimalDistanceConfiguration.Schedulers.Shoot.Strategy = schedulerconfig.MinimalDistance
+				minimalDistanceConfiguration.Schedulers.Shoot.Strategy = schedulerconfigv1alpha1.MinimalDistance
 				err := ValidateConfiguration(&minimalDistanceConfiguration)
 
 				Expect(err).To(BeEmpty())
