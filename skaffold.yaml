@@ -412,9 +412,8 @@ build:
             - pkg/healthz
             - pkg/logger
             - pkg/resourcemanager/controller/garbagecollector/references
-            - pkg/scheduler/apis/config
             - pkg/scheduler/apis/config/v1alpha1
-            - pkg/scheduler/apis/config/validation
+            - pkg/scheduler/apis/config/v1alpha1/validation
             - pkg/scheduler/controller
             - pkg/scheduler/controller/shoot
             - pkg/scheduler/features
