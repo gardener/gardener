@@ -876,6 +876,42 @@ var _ = Describe("helper", func() {
 		})
 	})
 
+	Describe("#ConvertSeedTemplate", func() {
+		It("should convert the external SeedTemplate version to an internal one", func() {
+			Expect(ConvertSeedTemplate(&gardencorev1beta1.SeedTemplate{
+				Spec: gardencorev1beta1.SeedSpec{
+					Provider: gardencorev1beta1.SeedProvider{
+						Type: "local",
+					},
+				},
+			})).To(Equal(&core.SeedTemplate{
+				Spec: core.SeedSpec{
+					Provider: core.SeedProvider{
+						Type: "local",
+					},
+				},
+			}))
+		})
+	})
+
+	Describe("#ConvertSeedTemplateExternal", func() {
+		It("should convert the internal SeedTemplate version to an external one", func() {
+			Expect(ConvertSeedTemplateExternal(&core.SeedTemplate{
+				Spec: core.SeedSpec{
+					Provider: core.SeedProvider{
+						Type: "local",
+					},
+				},
+			})).To(Equal(&gardencorev1beta1.SeedTemplate{
+				Spec: gardencorev1beta1.SeedSpec{
+					Provider: gardencorev1beta1.SeedProvider{
+						Type: "local",
+					},
+				},
+			}))
+		})
+	})
+
 	Describe("#CalculateSeedUsage", func() {
 		type shootCase struct {
 			specSeedName, statusSeedName string
