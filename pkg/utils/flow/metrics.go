@@ -13,7 +13,7 @@ var (
 	registerOnce = make(chan struct{})
 
 	flowTaskDelaySeconds    *prometheus.HistogramVec
-	flowTaskTimingsDuration *prometheus.HistogramVec
+	flowTaskDurationSeconds *prometheus.HistogramVec
 	flowTaskResults         *prometheus.CounterVec
 	flowDurationSeconds     *prometheus.HistogramVec
 )
@@ -43,7 +43,7 @@ func RegisterMetrics(r prometheus.Registerer) {
 		},
 	)
 
-	flowTaskTimingsDuration = factory.NewHistogramVec(
+	flowTaskDurationSeconds = factory.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Namespace: metricsNamespace,
 			Name:      "task_duration_seconds",

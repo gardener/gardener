@@ -359,8 +359,8 @@ func (e *execution) reportTaskMetrics(r *nodeResult) {
 			WithLabelValues(e.flow.name, string(r.TaskID), utils.IifString(r.skipped, "true", "false")).
 			Observe(r.delay.Seconds())
 	}
-	if flowTaskTimingsDuration != nil && !r.skipped {
-		flowTaskTimingsDuration.WithLabelValues(e.flow.name, string(r.TaskID)).Observe(r.duration.Seconds())
+	if flowTaskDurationSeconds != nil && !r.skipped {
+		flowTaskDurationSeconds.WithLabelValues(e.flow.name, string(r.TaskID)).Observe(r.duration.Seconds())
 	}
 	if flowTaskResults != nil {
 		flowTaskResults.WithLabelValues(e.flow.name, string(r.TaskID), utils.IifString(r.Error == nil, "success", "error")).Inc()
