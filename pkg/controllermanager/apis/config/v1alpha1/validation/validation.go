@@ -9,12 +9,12 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
 )
 
 // ValidateControllerManagerConfiguration validates the given `ControllerManagerConfiguration`.
-func ValidateControllerManagerConfiguration(conf *config.ControllerManagerConfiguration) field.ErrorList {
+func ValidateControllerManagerConfiguration(conf *controllermanagerconfigv1alpha1.ControllerManagerConfiguration) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if conf.LogLevel != "" {
@@ -33,7 +33,7 @@ func ValidateControllerManagerConfiguration(conf *config.ControllerManagerConfig
 	return allErrs
 }
 
-func validateControllerManagerControllerConfiguration(conf config.ControllerManagerControllerConfiguration, fldPath *field.Path) field.ErrorList {
+func validateControllerManagerControllerConfiguration(conf controllermanagerconfigv1alpha1.ControllerManagerControllerConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	projectFldPath := fldPath.Child("project")
@@ -44,7 +44,7 @@ func validateControllerManagerControllerConfiguration(conf config.ControllerMana
 	return allErrs
 }
 
-func validateProjectControllerConfiguration(conf *config.ProjectControllerConfiguration, fldPath *field.Path) field.ErrorList {
+func validateProjectControllerConfiguration(conf *controllermanagerconfigv1alpha1.ProjectControllerConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	for i, quotaConfig := range conf.Quotas {
 		allErrs = append(allErrs, validateProjectQuotaConfiguration(quotaConfig, fldPath.Child("quotas").Index(i))...)
@@ -52,7 +52,7 @@ func validateProjectControllerConfiguration(conf *config.ProjectControllerConfig
 	return allErrs
 }
 
-func validateProjectQuotaConfiguration(conf config.QuotaConfiguration, fldPath *field.Path) field.ErrorList {
+func validateProjectQuotaConfiguration(conf controllermanagerconfigv1alpha1.QuotaConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, metav1validation.ValidateLabelSelector(conf.ProjectSelector, metav1validation.LabelSelectorValidationOptions{AllowInvalidLabelValueInSelector: true}, fldPath.Child("projectSelector"))...)

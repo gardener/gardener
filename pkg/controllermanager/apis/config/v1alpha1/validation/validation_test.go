@@ -12,23 +12,23 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	. "github.com/gardener/gardener/pkg/controllermanager/apis/config/validation"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
+	. "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1/validation"
 )
 
 var _ = Describe("#ValidateControllerManagerConfiguration", func() {
-	var conf *config.ControllerManagerConfiguration
+	var conf *controllermanagerconfigv1alpha1.ControllerManagerConfiguration
 
 	BeforeEach(func() {
-		conf = &config.ControllerManagerConfiguration{
-			Controllers: config.ControllerManagerControllerConfiguration{},
+		conf = &controllermanagerconfigv1alpha1.ControllerManagerConfiguration{
+			Controllers: controllermanagerconfigv1alpha1.ControllerManagerControllerConfiguration{},
 		}
 	})
 
 	Context("ProjectControllerConfiguration", func() {
 		Context("ProjectQuotaConfiguration", func() {
 			BeforeEach(func() {
-				conf.Controllers.Project = &config.ProjectControllerConfiguration{}
+				conf.Controllers.Project = &controllermanagerconfigv1alpha1.ProjectControllerConfiguration{}
 			})
 
 			It("should pass because no quota configuration is specified", func() {
@@ -36,7 +36,7 @@ var _ = Describe("#ValidateControllerManagerConfiguration", func() {
 				Expect(errorList).To(BeEmpty())
 			})
 			It("should pass because quota configuration has correct label selector", func() {
-				conf.Controllers.Project.Quotas = []config.QuotaConfiguration{
+				conf.Controllers.Project.Quotas = []controllermanagerconfigv1alpha1.QuotaConfiguration{
 					{
 						ProjectSelector: &metav1.LabelSelector{
 							MatchExpressions: []metav1.LabelSelectorRequirement{
@@ -50,7 +50,7 @@ var _ = Describe("#ValidateControllerManagerConfiguration", func() {
 				Expect(errorList).To(BeEmpty())
 			})
 			It("should fail because quota config is not specified", func() {
-				conf.Controllers.Project.Quotas = []config.QuotaConfiguration{
+				conf.Controllers.Project.Quotas = []controllermanagerconfigv1alpha1.QuotaConfiguration{
 					{
 						ProjectSelector: &metav1.LabelSelector{
 							MatchExpressions: []metav1.LabelSelectorRequirement{
@@ -69,7 +69,7 @@ var _ = Describe("#ValidateControllerManagerConfiguration", func() {
 				))
 			})
 			It("should fail because quota configuration contains invalid label selector", func() {
-				conf.Controllers.Project.Quotas = []config.QuotaConfiguration{
+				conf.Controllers.Project.Quotas = []controllermanagerconfigv1alpha1.QuotaConfiguration{
 					{
 						ProjectSelector: &metav1.LabelSelector{
 							MatchExpressions: []metav1.LabelSelectorRequirement{
