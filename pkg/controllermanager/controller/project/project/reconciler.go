@@ -30,7 +30,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/garden/projectrbac"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -40,7 +40,7 @@ import (
 // Reconciler reconciles Projects.
 type Reconciler struct {
 	Client   client.Client
-	Config   config.ProjectControllerConfiguration
+	Config   controllermanagerconfigv1alpha1.ProjectControllerConfiguration
 	Recorder record.EventRecorder
 
 	// RateLimiter allows limiting exponential backoff for testing purposes
@@ -247,7 +247,7 @@ func (r *Reconciler) reconcileNamespaceForProject(ctx context.Context, log logr.
 }
 
 // quotaConfigurationForProject returns the first matching quota configuration if one is configured for the given project.
-func quotaConfigurationForProject(config config.ProjectControllerConfiguration, project *gardencorev1beta1.Project) (*config.QuotaConfiguration, error) {
+func quotaConfigurationForProject(config controllermanagerconfigv1alpha1.ProjectControllerConfiguration, project *gardencorev1beta1.Project) (*controllermanagerconfigv1alpha1.QuotaConfiguration, error) {
 	for _, c := range config.Quotas {
 		quotaConfig := c
 		selector, err := metav1.LabelSelectorAsSelector(quotaConfig.ProjectSelector)
@@ -266,7 +266,7 @@ func quotaConfigurationForProject(config config.ProjectControllerConfiguration, 
 // ResourceQuotaName is the name of the default ResourceQuota resource that is created by Gardener in the project namespace.
 const ResourceQuotaName = "gardener"
 
-func createOrUpdateResourceQuota(ctx context.Context, c client.Client, projectNamespace string, ownerReference *metav1.OwnerReference, config config.QuotaConfiguration) error {
+func createOrUpdateResourceQuota(ctx context.Context, c client.Client, projectNamespace string, ownerReference *metav1.OwnerReference, config controllermanagerconfigv1alpha1.QuotaConfiguration) error {
 	resourceQuota, ok := config.Config.(*corev1.ResourceQuota)
 	if !ok {
 		return fmt.Errorf("failure while reading ResourceQuota from configuration: %v", resourceQuota)

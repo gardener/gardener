@@ -22,7 +22,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	shootquota "github.com/gardener/gardener/pkg/controllermanager/controller/shoot/quota"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -48,7 +48,7 @@ var _ = Describe("Reconciler", func() {
 		reconciler = &shootquota.Reconciler{
 			Client: fakeClient,
 			Clock:  clock.RealClock{},
-			Config: config.ShootQuotaControllerConfiguration{
+			Config: controllermanagerconfigv1alpha1.ShootQuotaControllerConfiguration{
 				ConcurrentSyncs: ptr.To(1),
 				SyncPeriod:      &metav1.Duration{},
 			},

@@ -26,7 +26,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/quota"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -113,7 +113,7 @@ var _ = BeforeSuite(func() {
 	By("Register controller")
 	fakeClock = &testclock.FakeClock{}
 	Expect((&quota.Reconciler{
-		Config: config.ShootQuotaControllerConfiguration{
+		Config: controllermanagerconfigv1alpha1.ShootQuotaControllerConfiguration{
 			ConcurrentSyncs: ptr.To(5),
 			SyncPeriod:      &metav1.Duration{Duration: 500 * time.Millisecond},
 		},

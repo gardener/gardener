@@ -19,14 +19,14 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
 // Reconciler reconciles Quota.
 type Reconciler struct {
 	Client   client.Client
-	Config   config.QuotaControllerConfiguration
+	Config   controllermanagerconfigv1alpha1.QuotaControllerConfiguration
 	Recorder record.EventRecorder
 }
 

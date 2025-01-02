@@ -17,7 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
@@ -43,7 +43,7 @@ var _ = Describe("Default Resource Quota", func() {
 	Describe("#quotaConfigurationForProject", func() {
 		var (
 			project       *gardencorev1beta1.Project
-			conf          config.ProjectControllerConfiguration
+			conf          controllermanagerconfigv1alpha1.ProjectControllerConfiguration
 			fooSelector   *metav1.LabelSelector
 			resourceQuota *corev1.ResourceQuota
 		)
@@ -71,13 +71,13 @@ var _ = Describe("Default Resource Quota", func() {
 		})
 
 		It("should return no quota configuration because no quota config is specified", func() {
-			conf = config.ProjectControllerConfiguration{}
+			conf = controllermanagerconfigv1alpha1.ProjectControllerConfiguration{}
 			Expect(quotaConfigurationForProject(conf, project)).To(BeNil())
 		})
 
 		It("should return no quota configuration because label selector does not match project", func() {
-			conf = config.ProjectControllerConfiguration{
-				Quotas: []config.QuotaConfiguration{
+			conf = controllermanagerconfigv1alpha1.ProjectControllerConfiguration{
+				Quotas: []controllermanagerconfigv1alpha1.QuotaConfiguration{
 					{
 						ProjectSelector: fooSelector,
 					},
@@ -87,8 +87,8 @@ var _ = Describe("Default Resource Quota", func() {
 		})
 
 		It("should return no quota configuration because label selector is invalid", func() {
-			conf = config.ProjectControllerConfiguration{
-				Quotas: []config.QuotaConfiguration{
+			conf = controllermanagerconfigv1alpha1.ProjectControllerConfiguration{
+				Quotas: []controllermanagerconfigv1alpha1.QuotaConfiguration{
 					{
 						ProjectSelector: &metav1.LabelSelector{
 							MatchExpressions: []metav1.LabelSelectorRequirement{
@@ -104,8 +104,8 @@ var _ = Describe("Default Resource Quota", func() {
 		})
 
 		It("should return no quota configuration because label selector is nil", func() {
-			conf = config.ProjectControllerConfiguration{
-				Quotas: []config.QuotaConfiguration{
+			conf = controllermanagerconfigv1alpha1.ProjectControllerConfiguration{
+				Quotas: []controllermanagerconfigv1alpha1.QuotaConfiguration{
 					{
 						ProjectSelector: nil,
 					},
@@ -115,8 +115,8 @@ var _ = Describe("Default Resource Quota", func() {
 		})
 
 		It("should return the quota configuration because label selector matches project", func() {
-			conf = config.ProjectControllerConfiguration{
-				Quotas: []config.QuotaConfiguration{
+			conf = controllermanagerconfigv1alpha1.ProjectControllerConfiguration{
+				Quotas: []controllermanagerconfigv1alpha1.QuotaConfiguration{
 					{
 						Config:          nil,
 						ProjectSelector: fooSelector,
@@ -133,8 +133,8 @@ var _ = Describe("Default Resource Quota", func() {
 		It("should return the first matching quota configuration", func() {
 			additionalQuota := *resourceQuota
 			additionalQuota.Spec.Hard["count/bar"] = resource.MustParse("2")
-			conf = config.ProjectControllerConfiguration{
-				Quotas: []config.QuotaConfiguration{
+			conf = controllermanagerconfigv1alpha1.ProjectControllerConfiguration{
+				Quotas: []controllermanagerconfigv1alpha1.QuotaConfiguration{
 					{
 						Config:          nil,
 						ProjectSelector: fooSelector,
@@ -194,7 +194,7 @@ var _ = Describe("Default Resource Quota", func() {
 		})
 
 		It("should create a new ResourceQuota", func() {
-			config := config.QuotaConfiguration{
+			config := controllermanagerconfigv1alpha1.QuotaConfiguration{
 				Config: resourceQuota,
 			}
 
@@ -214,7 +214,7 @@ var _ = Describe("Default Resource Quota", func() {
 		})
 
 		It("should update a existing ResourceQuota", func() {
-			config := config.QuotaConfiguration{
+			config := controllermanagerconfigv1alpha1.QuotaConfiguration{
 				Config: resourceQuota,
 			}
 
@@ -250,7 +250,7 @@ var _ = Describe("Default Resource Quota", func() {
 		})
 
 		It("should fail because invalid ResourceQuota specified", func() {
-			config := config.QuotaConfiguration{
+			config := controllermanagerconfigv1alpha1.QuotaConfiguration{
 				Config: nil,
 			}
 

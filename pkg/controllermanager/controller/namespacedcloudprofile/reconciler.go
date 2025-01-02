@@ -21,7 +21,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 )
@@ -29,7 +29,7 @@ import (
 // Reconciler reconciles NamespacedCloudProfiles.
 type Reconciler struct {
 	Client   client.Client
-	Config   config.NamespacedCloudProfileControllerConfiguration
+	Config   controllermanagerconfigv1alpha1.NamespacedCloudProfileControllerConfiguration
 	Recorder record.EventRecorder
 }
 

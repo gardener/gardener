@@ -27,7 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/api/indexer"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/cloudprofile"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -119,7 +119,7 @@ var _ = BeforeSuite(func() {
 
 	By("Register controller")
 	Expect((&cloudprofile.Reconciler{
-		Config: config.CloudProfileControllerConfiguration{
+		Config: controllermanagerconfigv1alpha1.CloudProfileControllerConfiguration{
 			ConcurrentSyncs: ptr.To(5),
 		},
 	}).AddToManager(mgr)).To(Succeed())

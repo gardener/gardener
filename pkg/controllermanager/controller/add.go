@@ -11,7 +11,7 @@ import (
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/bastion"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/certificatesigningrequest"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/cloudprofile"
@@ -30,7 +30,7 @@ import (
 )
 
 // AddToManager adds all controller-manager controllers to the given manager.
-func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.ControllerManagerConfiguration) error {
+func AddToManager(ctx context.Context, mgr manager.Manager, cfg *controllermanagerconfigv1alpha1.ControllerManagerConfiguration) error {
 	kubernetesClient, err := kubernetesclientset.NewForConfig(mgr.GetConfig())
 	if err != nil {
 		return fmt.Errorf("failed creating Kubernetes client: %w", err)

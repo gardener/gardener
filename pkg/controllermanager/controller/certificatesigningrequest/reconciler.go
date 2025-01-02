@@ -35,7 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -45,7 +45,7 @@ import (
 type Reconciler struct {
 	Client             client.Client
 	CertificatesClient certificatesclientv1.CertificateSigningRequestInterface
-	Config             config.CertificateSigningRequestControllerConfiguration
+	Config             controllermanagerconfigv1alpha1.CertificateSigningRequestControllerConfiguration
 }
 
 // Reconcile performs the main reconciliation logic.

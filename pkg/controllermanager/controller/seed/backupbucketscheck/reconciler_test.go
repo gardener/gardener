@@ -24,7 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/seed/backupbucketscheck"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -36,7 +36,7 @@ var _ = Describe("Reconciler", func() {
 		ctx = context.TODO()
 		c   client.Client
 
-		conf      config.SeedBackupBucketsCheckControllerConfiguration
+		conf      controllermanagerconfigv1alpha1.SeedBackupBucketsCheckControllerConfiguration
 		fakeClock *testclock.FakeClock
 
 		expectedRequeueAfter time.Duration
@@ -71,7 +71,7 @@ var _ = Describe("Reconciler", func() {
 				WithIndex(&gardencorev1beta1.BackupBucket{}, core.BackupBucketSeedName, indexer.BackupBucketSeedNameIndexerFunc).
 				Build()
 
-			conf = config.SeedBackupBucketsCheckControllerConfiguration{
+			conf = controllermanagerconfigv1alpha1.SeedBackupBucketsCheckControllerConfiguration{
 				SyncPeriod: &metav1.Duration{Duration: syncPeriod},
 			}
 
@@ -168,9 +168,9 @@ var _ = Describe("Reconciler", func() {
 
 				Context("when condition threshold is set", func() {
 					BeforeEach(func() {
-						conf = config.SeedBackupBucketsCheckControllerConfiguration{
+						conf = controllermanagerconfigv1alpha1.SeedBackupBucketsCheckControllerConfiguration{
 							SyncPeriod: &metav1.Duration{Duration: syncPeriod},
-							ConditionThresholds: []config.ConditionThreshold{{
+							ConditionThresholds: []controllermanagerconfigv1alpha1.ConditionThreshold{{
 								Type:     string(gardencorev1beta1.SeedBackupBucketsReady),
 								Duration: metav1.Duration{Duration: time.Minute},
 							}},

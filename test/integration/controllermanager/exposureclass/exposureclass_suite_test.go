@@ -29,7 +29,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	exposureclasscontroller "github.com/gardener/gardener/pkg/controllermanager/controller/exposureclass"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -119,7 +119,7 @@ var _ = BeforeSuite(func() {
 
 	By("Register controller")
 	Expect((&exposureclasscontroller.Reconciler{
-		Config: config.ExposureClassControllerConfiguration{
+		Config: controllermanagerconfigv1alpha1.ExposureClassControllerConfiguration{
 			ConcurrentSyncs: ptr.To(5),
 		},
 		// limit exponential backoff in tests

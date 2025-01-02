@@ -22,7 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/seed/extensionscheck"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -62,7 +62,7 @@ var _ = Describe("Reconciler", func() {
 			WithStatusSubresource(seed).
 			WithIndex(&gardencorev1beta1.ControllerInstallation{}, core.SeedRefName, indexer.ControllerInstallationSeedRefNameIndexerFunc).
 			Build()
-		conf := config.SeedExtensionsCheckControllerConfiguration{
+		conf := controllermanagerconfigv1alpha1.SeedExtensionsCheckControllerConfiguration{
 			SyncPeriod: &metav1.Duration{Duration: syncPeriodDuration},
 		}
 		reconciler = &Reconciler{
@@ -196,9 +196,9 @@ var _ = Describe("Reconciler", func() {
 
 			Context("when ExtensionsReady condition threshold is set", func() {
 				BeforeEach(func() {
-					conf := config.SeedExtensionsCheckControllerConfiguration{
+					conf := controllermanagerconfigv1alpha1.SeedExtensionsCheckControllerConfiguration{
 						SyncPeriod: &metav1.Duration{Duration: syncPeriodDuration},
-						ConditionThresholds: []config.ConditionThreshold{{
+						ConditionThresholds: []controllermanagerconfigv1alpha1.ConditionThreshold{{
 							Type:     string(gardencorev1beta1.SeedExtensionsReady),
 							Duration: metav1.Duration{Duration: time.Minute},
 						}},

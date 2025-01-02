@@ -27,7 +27,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/api/indexer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/project/activity"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
@@ -103,7 +103,7 @@ var _ = BeforeSuite(func() {
 	fakeClock = testclock.NewFakeClock(time.Now())
 
 	Expect((&activity.Reconciler{
-		Config: config.ProjectControllerConfiguration{
+		Config: controllermanagerconfigv1alpha1.ProjectControllerConfiguration{
 			ConcurrentSyncs: ptr.To(5),
 		},
 		Clock: fakeClock,

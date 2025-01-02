@@ -17,14 +17,14 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
 // Reconciler reconciles the ManagedSeedSet.
 type Reconciler struct {
 	Client   client.Client
-	Config   config.ManagedSeedSetControllerConfiguration
+	Config   controllermanagerconfigv1alpha1.ManagedSeedSetControllerConfiguration
 	Actuator Actuator
 }
 
