@@ -5,15 +5,8 @@
 package helper
 
 import (
-	"errors"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 )
 
@@ -34,43 +27,6 @@ func StaleExtensionHealthChecksThreshold(c *gardenletconfigv1alpha1.StaleExtensi
 	}
 
 	return nil
-}
-
-var scheme *runtime.Scheme
-
-func init() {
-	scheme = runtime.NewScheme()
-	// core schemes are needed here to properly convert the embedded SeedTemplate objects
-	utilruntime.Must(gardencore.AddToScheme(scheme))
-	utilruntime.Must(gardencorev1beta1.AddToScheme(scheme))
-	utilruntime.Must(config.AddToScheme(scheme))
-	utilruntime.Must(gardenletconfigv1alpha1.AddToScheme(scheme))
-}
-
-// ConvertGardenletConfiguration converts the given object to an internal GardenletConfiguration version.
-func ConvertGardenletConfiguration(obj runtime.Object) (*config.GardenletConfiguration, error) {
-	obj, err := scheme.ConvertToVersion(obj, config.SchemeGroupVersion)
-	if err != nil {
-		return nil, err
-	}
-	result, ok := obj.(*config.GardenletConfiguration)
-	if !ok {
-		return nil, errors.New("could not convert GardenletConfiguration to internal version")
-	}
-	return result, nil
-}
-
-// ConvertGardenletConfigurationExternal converts the given object to an external  GardenletConfiguration version.
-func ConvertGardenletConfigurationExternal(obj runtime.Object) (*gardenletconfigv1alpha1.GardenletConfiguration, error) {
-	obj, err := scheme.ConvertToVersion(obj, gardenletconfigv1alpha1.SchemeGroupVersion)
-	if err != nil {
-		return nil, err
-	}
-	result, ok := obj.(*gardenletconfigv1alpha1.GardenletConfiguration)
-	if !ok {
-		return nil, errors.New("could not convert GardenletConfiguration to version " + gardenletconfigv1alpha1.SchemeGroupVersion.String())
-	}
-	return result, nil
 }
 
 // IsLoggingEnabled return true if the logging stack for clusters is enabled.

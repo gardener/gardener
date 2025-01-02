@@ -37,7 +37,7 @@ import (
 	securityinformers "github.com/gardener/gardener/pkg/client/security/informers/externalversions"
 	securityv1alpha1listers "github.com/gardener/gardener/pkg/client/security/listers/security/v1alpha1"
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
-	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
@@ -317,27 +317,34 @@ func (v *ManagedSeed) admitGardenlet(gardenlet *seedmanagement.GardenletConfig, 
 	if gardenlet.Config != nil {
 		configPath := fldPath.Child("config")
 
-		// Convert gardenlet config to an internal version
-		gardenletConfig, err := gardenlethelper.ConvertGardenletConfiguration(gardenlet.Config)
-		if err != nil {
-			return allErrs, apierrors.NewInternalError(fmt.Errorf("could not convert config: %v", err))
+		gardenletConfig, ok := gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
+		if !ok {
+			return allErrs, apierrors.NewInternalError(fmt.Errorf("expected *gardenletconfigv1alpha1.GardenletConfiguration but got %T", gardenlet.Config))
 		}
 
 		if gardenletConfig.SeedConfig != nil {
 			seedConfigPath := configPath.Child("seedConfig")
 
+			// Convert seed template config to an internal version
+			seedTemplate, err := gardencorehelper.ConvertSeedTemplate(&gardenletConfig.SeedConfig.SeedTemplate)
+			if err != nil {
+				return allErrs, apierrors.NewInternalError(fmt.Errorf("could not convert seed template to internal version: %v", err))
+			}
+
 			// Admit seed spec against shoot
-			errs, err := v.admitSeedSpec(&gardenletConfig.SeedConfig.Spec, shoot, seedConfigPath.Child("spec"))
+			errs, err := v.admitSeedSpec(&seedTemplate.Spec, shoot, seedConfigPath.Child("spec"))
 			if err != nil {
 				return allErrs, err
 			}
 			allErrs = append(allErrs, errs...)
-		}
 
-		// Convert gardenlet config to an external version and set it back to gardenlet.Config
-		gardenlet.Config, err = gardenlethelper.ConvertGardenletConfigurationExternal(gardenletConfig)
-		if err != nil {
-			return allErrs, apierrors.NewInternalError(fmt.Errorf("could not convert config: %v", err))
+			// Convert seed template to an external version and set it back to gardenletConfig.SeedConfig
+			seedTemplateExternal, err := gardencorehelper.ConvertSeedTemplateExternal(seedTemplate)
+			if err != nil {
+				return allErrs, apierrors.NewInternalError(fmt.Errorf("could not convert seed template to external version: %v", err))
+			}
+
+			gardenletConfig.SeedConfig.SeedTemplate = *seedTemplateExternal
 		}
 	}
 
