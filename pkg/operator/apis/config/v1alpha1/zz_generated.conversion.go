@@ -12,7 +12,6 @@ package v1alpha1
 import (
 	unsafe "unsafe"
 
-	apisconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	config "github.com/gardener/gardener/pkg/operator/apis/config"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -345,7 +344,7 @@ func Convert_config_GardenCareControllerConfiguration_To_v1alpha1_GardenCareCont
 func autoConvert_v1alpha1_GardenControllerConfig_To_config_GardenControllerConfig(in *GardenControllerConfig, out *config.GardenControllerConfig, s conversion.Scope) error {
 	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
-	out.ETCDConfig = (*apisconfig.ETCDConfig)(unsafe.Pointer(in.ETCDConfig))
+	out.ETCDConfig = (*configv1alpha1.ETCDConfig)(unsafe.Pointer(in.ETCDConfig))
 	return nil
 }
 

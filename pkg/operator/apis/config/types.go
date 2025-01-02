@@ -8,7 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfig "k8s.io/component-base/config"
 
-	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -87,7 +87,7 @@ type GardenControllerConfig struct {
 	SyncPeriod *metav1.Duration
 	// ETCDConfig contains an optional configuration for the
 	// backup compaction feature of ETCD backup-restore functionality.
-	ETCDConfig *gardenletconfig.ETCDConfig
+	ETCDConfig *gardenletconfigv1alpha1.ETCDConfig
 }
 
 // GardenletDeployerControllerConfig is the configuration for the gardenlet deployer controller.
