@@ -21,7 +21,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
-	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 )
 
 // ValidateManagedSeedSet validates a ManagedSeedSet object.
@@ -170,23 +170,19 @@ func ValidateManagedSeedTemplateForManagedSeedSet(template *seedmanagement.Manag
 	// TODO(timuthy): Remove this check once `config` is required.
 	if template.Spec.Gardenlet.Config != nil {
 		configPath := fldPath.Child("spec", "gardenlet", "config")
-		gardenletConfig, err := gardenlethelper.ConvertGardenletConfiguration(template.Spec.Gardenlet.Config)
-		if err != nil {
-			allErrs = append(allErrs, field.Invalid(configPath, template.Spec.Gardenlet.Config, fmt.Sprintf("could not convert gardenlet config: %v", err)))
+		gardenletConfig, ok := template.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
+		if !ok {
+			allErrs = append(allErrs, field.Invalid(configPath, template.Spec.Gardenlet.Config, fmt.Sprintf("expected *gardenletconfigv1alpha1.GardenletConfiguration but got %T", template.Spec.Gardenlet.Config)))
 			return allErrs
 		}
 		if gardenletConfig.SeedConfig == nil {
 			allErrs = append(allErrs, field.Required(configPath.Child("seedConfig"), "seedConfig is required"))
 		} else {
-			allErrs = append(allErrs, validateSeedTemplateLabels(&gardenletConfig.SeedConfig.SeedTemplate, selector, configPath.Child("seedConfig"))...)
+			allErrs = append(allErrs, validateTemplateLabels(&gardenletConfig.SeedConfig.SeedTemplate.ObjectMeta, selector, configPath.Child("seedConfig").Child("metadata"))...)
 		}
 	}
 
 	return allErrs
-}
-
-func validateSeedTemplateLabels(template *gardencore.SeedTemplate, selector labels.Selector, fldPath *field.Path) field.ErrorList {
-	return validateTemplateLabels(&template.ObjectMeta, selector, fldPath.Child("metadata"))
 }
 
 // ValidateShootTemplateForManagedSeedSet validates the given ShootTemplate.

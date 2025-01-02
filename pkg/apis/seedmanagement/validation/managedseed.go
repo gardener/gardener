@@ -19,7 +19,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	gardenletvalidation "github.com/gardener/gardener/pkg/gardenlet/apis/config/validation"
 )
 
@@ -156,10 +155,9 @@ func validateGardenlet(gardenlet *seedmanagement.GardenletConfig, fldPath *field
 func validateGardenletConfig(config runtime.Object, bootstrap seedmanagement.Bootstrap, mergeWithParent bool, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	// Convert gardenlet config to an internal version
-	gardenletConfig, err := gardenlethelper.ConvertGardenletConfiguration(config)
-	if err != nil {
-		allErrs = append(allErrs, field.Invalid(fldPath, config, fmt.Sprintf("could not convert gardenlet config: %v", err)))
+	gardenletConfig, ok := config.(*gardenletconfigv1alpha1.GardenletConfiguration)
+	if !ok {
+		allErrs = append(allErrs, field.Invalid(fldPath, config, fmt.Sprintf("expected *gardenletconfigv1alpha1.GardenletConfiguration but got %T", config)))
 		return allErrs
 	}
 
@@ -188,16 +186,16 @@ func validateGardenletConfigUpdate(newConfig, oldConfig runtime.Object, fldPath 
 
 	if newConfig != nil && oldConfig != nil {
 		// Convert new gardenlet config to an internal version
-		newGardenletConfig, err := gardenlethelper.ConvertGardenletConfiguration(newConfig)
-		if err != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath, newConfig, fmt.Sprintf("could not convert gardenlet config: %v", err)))
+		newGardenletConfig, ok := newConfig.(*gardenletconfigv1alpha1.GardenletConfiguration)
+		if !ok {
+			allErrs = append(allErrs, field.Invalid(fldPath, newConfig, fmt.Sprintf("expected *gardenletconfigv1alpha1.GardenletConfiguration but got %T", newConfig)))
 			return allErrs
 		}
 
 		// Convert old gardenlet config to an internal version
-		oldGardenletConfig, err := gardenlethelper.ConvertGardenletConfiguration(oldConfig)
-		if err != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath, oldConfig, fmt.Sprintf("could not convert gardenlet config: %v", err)))
+		oldGardenletConfig, ok := oldConfig.(*gardenletconfigv1alpha1.GardenletConfiguration)
+		if !ok {
+			allErrs = append(allErrs, field.Invalid(fldPath, oldConfig, fmt.Sprintf("expected *gardenletconfigv1alpha1.GardenletConfiguration but got %T", oldConfig)))
 			return allErrs
 		}
 

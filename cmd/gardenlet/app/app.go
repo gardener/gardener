@@ -58,7 +58,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap/certificate"
 	"github.com/gardener/gardener/pkg/gardenlet/controller"
@@ -419,19 +418,13 @@ func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) e
 		},
 	}
 
-	// Convert gardenlet config to an external version
-	cfg, err := gardenlethelper.ConvertGardenletConfigurationExternal(g.config)
-	if err != nil {
-		return fmt.Errorf("could not convert gardenlet configuration: %w", err)
-	}
-
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, gardenClient, seed, func() error {
 		seed.Annotations = utils.MergeStringMaps(seed.Annotations, g.config.SeedConfig.Annotations)
 		seed.Labels = utils.MergeStringMaps(map[string]string{
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleSeed,
 		}, g.config.SeedConfig.Labels)
 
-		seed.Spec = cfg.SeedConfig.Spec
+		seed.Spec = g.config.SeedConfig.Spec
 		return nil
 	}); err != nil {
 		return fmt.Errorf("could not register seed %q: %w", seed.Name, err)

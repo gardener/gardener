@@ -13,8 +13,6 @@ import (
 
 	"github.com/gardener/gardener/imagevector"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
@@ -34,11 +32,11 @@ type ValuesHelper interface {
 
 // valuesHelper is a concrete implementation of ValuesHelper
 type valuesHelper struct {
-	config *config.GardenletConfiguration
+	config *gardenletconfigv1alpha1.GardenletConfiguration
 }
 
 // NewValuesHelper creates a new ValuesHelper with the given parent GardenletConfiguration and image vector.
-func NewValuesHelper(config *config.GardenletConfiguration) ValuesHelper {
+func NewValuesHelper(config *gardenletconfigv1alpha1.GardenletConfiguration) ValuesHelper {
 	return &valuesHelper{
 		config: config,
 	}
@@ -83,11 +81,7 @@ func (vp *valuesHelper) MergeGardenletConfiguration(config *gardenletconfigv1alp
 	}
 
 	// Get parent config values
-	parentConfig, err := gardenlethelper.ConvertGardenletConfigurationExternal(vp.config)
-	if err != nil {
-		return nil, err
-	}
-	parentConfigValues, err := utils.ToValuesMap(parentConfig)
+	parentConfigValues, err := utils.ToValuesMap(vp.config)
 	if err != nil {
 		return nil, err
 	}

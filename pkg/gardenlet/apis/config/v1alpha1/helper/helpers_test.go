@@ -13,7 +13,6 @@ import (
 	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1/helper"
 )
@@ -59,34 +58,6 @@ var _ = Describe("helper", func() {
 				Threshold: threshold,
 			}
 			Expect(StaleExtensionHealthChecksThreshold(c)).To(Equal(threshold))
-		})
-	})
-
-	Describe("#ConvertGardenletConfiguration", func() {
-		It("should convert the external GardenletConfiguration version to an internal one", func() {
-			result, err := ConvertGardenletConfiguration(&gardenletconfigv1alpha1.GardenletConfiguration{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
-					Kind:       "GardenletConfiguration",
-				},
-			})
-
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(&config.GardenletConfiguration{}))
-		})
-	})
-
-	Describe("#ConvertGardenletConfigurationExternal", func() {
-		It("should convert the internal GardenletConfiguration version to an external one", func() {
-			result, err := ConvertGardenletConfigurationExternal(&config.GardenletConfiguration{})
-
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(&gardenletconfigv1alpha1.GardenletConfiguration{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
-					Kind:       "GardenletConfiguration",
-				},
-			}))
 		})
 	})
 
