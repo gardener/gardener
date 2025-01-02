@@ -16,44 +16,44 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	. "github.com/gardener/gardener/pkg/gardenlet/apis/config/validation"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	. "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1/validation"
 )
 
 var _ = Describe("GardenletConfiguration", func() {
 	var (
-		cfg *config.GardenletConfiguration
+		cfg *gardenletconfigv1alpha1.GardenletConfiguration
 
 		deletionGracePeriodHours = 1
 		concurrentSyncs          = 20
 	)
 
 	BeforeEach(func() {
-		cfg = &config.GardenletConfiguration{
-			Controllers: &config.GardenletControllerConfiguration{
-				BackupEntry: &config.BackupEntryControllerConfiguration{
+		cfg = &gardenletconfigv1alpha1.GardenletConfiguration{
+			Controllers: &gardenletconfigv1alpha1.GardenletControllerConfiguration{
+				BackupEntry: &gardenletconfigv1alpha1.BackupEntryControllerConfiguration{
 					DeletionGracePeriodHours:         &deletionGracePeriodHours,
-					DeletionGracePeriodShootPurposes: []gardencore.ShootPurpose{gardencore.ShootPurposeDevelopment},
+					DeletionGracePeriodShootPurposes: []gardencorev1beta1.ShootPurpose{gardencorev1beta1.ShootPurposeDevelopment},
 				},
-				Bastion: &config.BastionControllerConfiguration{
+				Bastion: &gardenletconfigv1alpha1.BastionControllerConfiguration{
 					ConcurrentSyncs: &concurrentSyncs,
 				},
-				Shoot: &config.ShootControllerConfiguration{
+				Shoot: &gardenletconfigv1alpha1.ShootControllerConfiguration{
 					ConcurrentSyncs:      &concurrentSyncs,
 					ProgressReportPeriod: &metav1.Duration{Duration: time.Hour},
 					SyncPeriod:           &metav1.Duration{Duration: time.Hour},
 					RetryDuration:        &metav1.Duration{Duration: time.Hour},
 					DNSEntryTTLSeconds:   ptr.To[int64](120),
 				},
-				ShootCare: &config.ShootCareControllerConfiguration{
+				ShootCare: &gardenletconfigv1alpha1.ShootCareControllerConfiguration{
 					ConcurrentSyncs:                     &concurrentSyncs,
 					SyncPeriod:                          &metav1.Duration{Duration: time.Hour},
-					StaleExtensionHealthChecks:          &config.StaleExtensionHealthChecks{Threshold: &metav1.Duration{Duration: time.Hour}},
+					StaleExtensionHealthChecks:          &gardenletconfigv1alpha1.StaleExtensionHealthChecks{Threshold: &metav1.Duration{Duration: time.Hour}},
 					ManagedResourceProgressingThreshold: &metav1.Duration{Duration: time.Hour},
-					ConditionThresholds:                 []config.ConditionThreshold{{Duration: metav1.Duration{Duration: time.Hour}}},
+					ConditionThresholds:                 []gardenletconfigv1alpha1.ConditionThreshold{{Duration: metav1.Duration{Duration: time.Hour}}},
 				},
-				ManagedSeed: &config.ManagedSeedControllerConfiguration{
+				ManagedSeed: &gardenletconfigv1alpha1.ManagedSeedControllerConfiguration{
 					ConcurrentSyncs:  &concurrentSyncs,
 					SyncPeriod:       &metav1.Duration{Duration: 1 * time.Hour},
 					WaitSyncPeriod:   &metav1.Duration{Duration: 15 * time.Second},
@@ -61,16 +61,16 @@ var _ = Describe("GardenletConfiguration", func() {
 				},
 			},
 			FeatureGates: map[string]bool{},
-			SeedConfig: &config.SeedConfig{
-				SeedTemplate: gardencore.SeedTemplate{
+			SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
+				SeedTemplate: gardencorev1beta1.SeedTemplate{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
 							"foo": "bar",
 						},
 					},
-					Spec: gardencore.SeedSpec{
-						DNS: gardencore.SeedDNS{
-							Provider: &gardencore.SeedDNSProvider{
+					Spec: gardencorev1beta1.SeedSpec{
+						DNS: gardencorev1beta1.SeedDNS{
+							Provider: &gardencorev1beta1.SeedDNSProvider{
 								Type: "foo",
 								SecretRef: corev1.SecretReference{
 									Name:      "secret",
@@ -78,24 +78,24 @@ var _ = Describe("GardenletConfiguration", func() {
 								},
 							},
 						},
-						Ingress: &gardencore.Ingress{
+						Ingress: &gardencorev1beta1.Ingress{
 							Domain: "ingress.test.example.com",
-							Controller: gardencore.IngressController{
+							Controller: gardencorev1beta1.IngressController{
 								Kind: "nginx",
 							},
 						},
-						Networks: gardencore.SeedNetworks{
+						Networks: gardencorev1beta1.SeedNetworks{
 							Pods:     "100.96.0.0/11",
 							Services: "100.64.0.0/13",
 						},
-						Provider: gardencore.SeedProvider{
+						Provider: gardencorev1beta1.SeedProvider{
 							Type:   "foo",
 							Region: "some-region",
 						},
 					},
 				},
 			},
-			Resources: &config.ResourcesConfiguration{
+			Resources: &gardenletconfigv1alpha1.ResourcesConfiguration{
 				Capacity: corev1.ResourceList{
 					"foo": resource.MustParse("42"),
 					"bar": resource.MustParse("13"),
@@ -121,8 +121,8 @@ var _ = Describe("GardenletConfiguration", func() {
 				})
 
 				It("should allow valid configurations", func() {
-					cfg.GardenClientConnection = &config.GardenClientConnection{
-						KubeconfigValidity: &config.KubeconfigValidity{
+					cfg.GardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{
+						KubeconfigValidity: &gardenletconfigv1alpha1.KubeconfigValidity{
 							Validity:                        &metav1.Duration{Duration: time.Hour},
 							AutoRotationJitterPercentageMin: ptr.To[int32](13),
 							AutoRotationJitterPercentageMax: ptr.To[int32](37),
@@ -133,8 +133,8 @@ var _ = Describe("GardenletConfiguration", func() {
 				})
 
 				It("should forbid validity less than 10m", func() {
-					cfg.GardenClientConnection = &config.GardenClientConnection{
-						KubeconfigValidity: &config.KubeconfigValidity{
+					cfg.GardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{
+						KubeconfigValidity: &gardenletconfigv1alpha1.KubeconfigValidity{
 							Validity: &metav1.Duration{Duration: time.Second},
 						},
 					}
@@ -147,8 +147,8 @@ var _ = Describe("GardenletConfiguration", func() {
 				})
 
 				It("should forbid auto rotation jitter percentage min less than 1", func() {
-					cfg.GardenClientConnection = &config.GardenClientConnection{
-						KubeconfigValidity: &config.KubeconfigValidity{
+					cfg.GardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{
+						KubeconfigValidity: &gardenletconfigv1alpha1.KubeconfigValidity{
 							AutoRotationJitterPercentageMin: ptr.To[int32](0),
 						},
 					}
@@ -161,8 +161,8 @@ var _ = Describe("GardenletConfiguration", func() {
 				})
 
 				It("should forbid auto rotation jitter percentage max more than 100", func() {
-					cfg.GardenClientConnection = &config.GardenClientConnection{
-						KubeconfigValidity: &config.KubeconfigValidity{
+					cfg.GardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{
+						KubeconfigValidity: &gardenletconfigv1alpha1.KubeconfigValidity{
 							AutoRotationJitterPercentageMax: ptr.To[int32](101),
 						},
 					}
@@ -175,8 +175,8 @@ var _ = Describe("GardenletConfiguration", func() {
 				})
 
 				It("should forbid auto rotation jitter percentage min equal max", func() {
-					cfg.GardenClientConnection = &config.GardenClientConnection{
-						KubeconfigValidity: &config.KubeconfigValidity{
+					cfg.GardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{
+						KubeconfigValidity: &gardenletconfigv1alpha1.KubeconfigValidity{
 							AutoRotationJitterPercentageMin: ptr.To[int32](13),
 							AutoRotationJitterPercentageMax: ptr.To[int32](13),
 						},
@@ -190,8 +190,8 @@ var _ = Describe("GardenletConfiguration", func() {
 				})
 
 				It("should forbid auto rotation jitter percentage min higher than max", func() {
-					cfg.GardenClientConnection = &config.GardenClientConnection{
-						KubeconfigValidity: &config.KubeconfigValidity{
+					cfg.GardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{
+						KubeconfigValidity: &gardenletconfigv1alpha1.KubeconfigValidity{
 							AutoRotationJitterPercentageMin: ptr.To[int32](14),
 							AutoRotationJitterPercentageMax: ptr.To[int32](13),
 						},
@@ -266,9 +266,9 @@ var _ = Describe("GardenletConfiguration", func() {
 
 				cfg.Controllers.ShootCare.ConcurrentSyncs = &invalidConcurrentSyncs
 				cfg.Controllers.ShootCare.SyncPeriod = &metav1.Duration{Duration: -1}
-				cfg.Controllers.ShootCare.StaleExtensionHealthChecks = &config.StaleExtensionHealthChecks{Threshold: &metav1.Duration{Duration: -1}}
+				cfg.Controllers.ShootCare.StaleExtensionHealthChecks = &gardenletconfigv1alpha1.StaleExtensionHealthChecks{Threshold: &metav1.Duration{Duration: -1}}
 				cfg.Controllers.ShootCare.ManagedResourceProgressingThreshold = &metav1.Duration{Duration: -1}
-				cfg.Controllers.ShootCare.ConditionThresholds = []config.ConditionThreshold{{Duration: metav1.Duration{Duration: -1}}}
+				cfg.Controllers.ShootCare.ConditionThresholds = []gardenletconfigv1alpha1.ConditionThreshold{{Duration: metav1.Duration{Duration: -1}}}
 
 				errorList := ValidateGardenletConfiguration(cfg, nil, false)
 
@@ -342,19 +342,19 @@ var _ = Describe("GardenletConfiguration", func() {
 			})
 
 			It("should allow valid purposes", func() {
-				cfg.Controllers.BackupEntry.DeletionGracePeriodShootPurposes = []gardencore.ShootPurpose{
-					gardencore.ShootPurposeEvaluation,
-					gardencore.ShootPurposeTesting,
-					gardencore.ShootPurposeDevelopment,
-					gardencore.ShootPurposeInfrastructure,
-					gardencore.ShootPurposeProduction,
+				cfg.Controllers.BackupEntry.DeletionGracePeriodShootPurposes = []gardencorev1beta1.ShootPurpose{
+					gardencorev1beta1.ShootPurposeEvaluation,
+					gardencorev1beta1.ShootPurposeTesting,
+					gardencorev1beta1.ShootPurposeDevelopment,
+					gardencorev1beta1.ShootPurposeInfrastructure,
+					gardencorev1beta1.ShootPurposeProduction,
 				}
 
 				Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(BeEmpty())
 			})
 
 			It("should forbid invalid purposes", func() {
-				cfg.Controllers.BackupEntry.DeletionGracePeriodShootPurposes = []gardencore.ShootPurpose{"does-not-exist"}
+				cfg.Controllers.BackupEntry.DeletionGracePeriodShootPurposes = []gardencorev1beta1.ShootPurpose{"does-not-exist"}
 
 				Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -383,7 +383,7 @@ var _ = Describe("GardenletConfiguration", func() {
 
 		Context("network policy controller", func() {
 			BeforeEach(func() {
-				cfg.Controllers.NetworkPolicy = &config.NetworkPolicyControllerConfiguration{}
+				cfg.Controllers.NetworkPolicy = &gardenletconfigv1alpha1.NetworkPolicyControllerConfiguration{}
 			})
 
 			It("should return errors because concurrent syncs are < 0", func() {
@@ -442,7 +442,7 @@ var _ = Describe("GardenletConfiguration", func() {
 
 		Context("resources", func() {
 			It("should forbid reserved greater than capacity", func() {
-				cfg.Resources = &config.ResourcesConfiguration{
+				cfg.Resources = &gardenletconfigv1alpha1.ResourcesConfiguration{
 					Capacity: corev1.ResourceList{
 						"foo": resource.MustParse("42"),
 					},
@@ -460,7 +460,7 @@ var _ = Describe("GardenletConfiguration", func() {
 			})
 
 			It("should forbid reserved without capacity", func() {
-				cfg.Resources = &config.ResourcesConfiguration{
+				cfg.Resources = &gardenletconfigv1alpha1.ResourcesConfiguration{
 					Reserved: corev1.ResourceList{
 						"foo": resource.MustParse("42"),
 					},
@@ -477,7 +477,7 @@ var _ = Describe("GardenletConfiguration", func() {
 
 		Context("sni", func() {
 			BeforeEach(func() {
-				cfg.SNI = &config.SNI{Ingress: &config.SNIIngress{}}
+				cfg.SNI = &gardenletconfigv1alpha1.SNI{Ingress: &gardenletconfigv1alpha1.SNIIngress{}}
 			})
 
 			It("should pass as sni config contains a valid external service ip", func() {
@@ -510,13 +510,13 @@ var _ = Describe("GardenletConfiguration", func() {
 
 		Context("exposureClassHandlers", func() {
 			BeforeEach(func() {
-				cfg.ExposureClassHandlers = []config.ExposureClassHandler{
+				cfg.ExposureClassHandlers = []gardenletconfigv1alpha1.ExposureClassHandler{
 					{
 						Name: "test",
-						LoadBalancerService: config.LoadBalancerServiceConfig{
+						LoadBalancerService: gardenletconfigv1alpha1.LoadBalancerServiceConfig{
 							Annotations: map[string]string{"test": "foo"},
 						},
-						SNI: &config.SNI{Ingress: &config.SNIIngress{}},
+						SNI: &gardenletconfigv1alpha1.SNI{Ingress: &gardenletconfigv1alpha1.SNIIngress{}},
 					},
 				}
 			})
@@ -595,7 +595,7 @@ var _ = Describe("GardenletConfiguration", func() {
 			})
 
 			It("should pass with unset toleration seconds", func() {
-				cfg.NodeToleration = &config.NodeToleration{
+				cfg.NodeToleration = &gardenletconfigv1alpha1.NodeToleration{
 					DefaultNotReadyTolerationSeconds:    nil,
 					DefaultUnreachableTolerationSeconds: nil,
 				}
@@ -604,7 +604,7 @@ var _ = Describe("GardenletConfiguration", func() {
 			})
 
 			It("should pass with valid toleration options", func() {
-				cfg.NodeToleration = &config.NodeToleration{
+				cfg.NodeToleration = &gardenletconfigv1alpha1.NodeToleration{
 					DefaultNotReadyTolerationSeconds:    ptr.To[int64](60),
 					DefaultUnreachableTolerationSeconds: ptr.To[int64](120),
 				}
@@ -613,7 +613,7 @@ var _ = Describe("GardenletConfiguration", func() {
 			})
 
 			It("should fail with invalid toleration options", func() {
-				cfg.NodeToleration = &config.NodeToleration{
+				cfg.NodeToleration = &gardenletconfigv1alpha1.NodeToleration{
 					DefaultNotReadyTolerationSeconds:    ptr.To(int64(-1)),
 					DefaultUnreachableTolerationSeconds: ptr.To(int64(-2)),
 				}

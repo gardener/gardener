@@ -550,6 +550,34 @@ func ConvertSeedExternal(obj runtime.Object) (*gardencorev1beta1.Seed, error) {
 	return result, nil
 }
 
+// ConvertSeedTemplate converts the given external SeedTemplate version to an internal version.
+func ConvertSeedTemplate(obj *gardencorev1beta1.SeedTemplate) (*core.SeedTemplate, error) {
+	seed, err := ConvertSeed(&gardencorev1beta1.Seed{
+		Spec: obj.Spec,
+	})
+	if err != nil {
+		return nil, errors.New("could not convert SeedTemplate to internal version")
+	}
+
+	return &core.SeedTemplate{
+		Spec: seed.Spec,
+	}, nil
+}
+
+// ConvertSeedTemplateExternal converts the given external SeedTemplate version to an external version.
+func ConvertSeedTemplateExternal(obj *core.SeedTemplate) (*gardencorev1beta1.SeedTemplate, error) {
+	seed, err := ConvertSeedExternal(&core.Seed{
+		Spec: obj.Spec,
+	})
+	if err != nil {
+		return nil, errors.New("could not convert SeedTemplate to internal version")
+	}
+
+	return &gardencorev1beta1.SeedTemplate{
+		Spec: seed.Spec,
+	}, nil
+}
+
 // CalculateSeedUsage returns a map representing the number of shoots per seed from the given list of shoots.
 // It takes both spec.seedName and status.seedName into account.
 func CalculateSeedUsage(shootList []*core.Shoot) map[string]int {
