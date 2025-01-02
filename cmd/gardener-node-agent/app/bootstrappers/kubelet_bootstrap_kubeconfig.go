@@ -19,7 +19,6 @@ import (
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
-	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -28,7 +27,7 @@ import (
 type KubeletBootstrapKubeconfig struct {
 	Log             logr.Logger
 	FS              afero.Afero
-	APIServerConfig config.APIServer
+	APIServerConfig nodeagentconfigv1alpha1.APIServer
 }
 
 // Start performs creation of the bootstrap kubeconfig.
