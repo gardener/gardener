@@ -57,7 +57,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	"github.com/gardener/gardener/pkg/features"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap/certificate"
 	"github.com/gardener/gardener/pkg/gardenlet/controller"
@@ -95,7 +95,7 @@ func NewCommand() *cobra.Command {
 	return cmd
 }
 
-func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *config.GardenletConfiguration) error {
+func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *gardenletconfigv1alpha1.GardenletConfiguration) error {
 	log.Info("Feature Gates", "featureGates", features.DefaultFeatureGate)
 
 	if kubeconfig := os.Getenv("GARDEN_KUBECONFIG"); kubeconfig != "" {
@@ -106,15 +106,15 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 	}
 
 	log.Info("Getting rest config for seed")
-	seedRESTConfig, err := kubernetes.RESTConfigFromInternalClientConnectionConfiguration(&cfg.SeedClientConnection.ClientConnectionConfiguration, nil)
+	seedRESTConfig, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.SeedClientConnection.ClientConnectionConfiguration, nil)
 	if err != nil {
 		return err
 	}
 
 	var extraHandlers map[string]http.Handler
-	if cfg.Debugging != nil && cfg.Debugging.EnableProfiling {
+	if cfg.Debugging != nil && ptr.Deref(cfg.Debugging.EnableProfiling, false) {
 		extraHandlers = routes.ProfilingHandlers
-		if cfg.Debugging.EnableContentionProfiling {
+		if ptr.Deref(cfg.Debugging.EnableContentionProfiling, false) {
 			goruntime.SetBlockProfileRate(1)
 		}
 	}
@@ -131,7 +131,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 			ExtraHandlers: extraHandlers,
 		},
 
-		LeaderElection:                cfg.LeaderElection.LeaderElect,
+		LeaderElection:                *cfg.LeaderElection.LeaderElect,
 		LeaderElectionResourceLock:    cfg.LeaderElection.ResourceLock,
 		LeaderElectionID:              cfg.LeaderElection.ResourceName,
 		LeaderElectionNamespace:       cfg.LeaderElection.ResourceNamespace,
@@ -207,7 +207,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 type garden struct {
 	cancel                    context.CancelFunc
 	mgr                       manager.Manager
-	config                    *config.GardenletConfiguration
+	config                    *gardenletconfigv1alpha1.GardenletConfiguration
 	healthManager             gardenerhealthz.Manager
 	kubeconfigBootstrapResult *bootstrappers.KubeconfigBootstrapResult
 }
@@ -216,7 +216,7 @@ func (g *garden) Start(ctx context.Context) error {
 	log := g.mgr.GetLogger()
 
 	log.Info("Getting rest config for garden")
-	gardenRESTConfig, err := kubernetes.RESTConfigFromInternalClientConnectionConfiguration(&g.config.GardenClientConnection.ClientConnectionConfiguration, g.kubeconfigBootstrapResult.Kubeconfig)
+	gardenRESTConfig, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&g.config.GardenClientConnection.ClientConnectionConfiguration, g.kubeconfigBootstrapResult.Kubeconfig)
 	if err != nil {
 		return err
 	}
@@ -367,7 +367,7 @@ func (g *garden) Start(ctx context.Context) error {
 		NewShootClientMapBuilder().
 		WithGardenClient(gardenCluster.GetClient()).
 		WithSeedClient(g.mgr.GetClient()).
-		WithInternalClientConnectionConfig(&g.config.ShootClientConnection.ClientConnectionConfiguration).
+		WithClientConnectionConfig(&g.config.ShootClientConnection.ClientConnectionConfiguration).
 		Build(log)
 	if err != nil {
 		return fmt.Errorf("failed to build shoot ClientMap: %w", err)
