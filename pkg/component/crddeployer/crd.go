@@ -55,7 +55,7 @@ func (c *crdDeployer) Deploy(ctx context.Context) error {
 func (c *crdDeployer) Destroy(ctx context.Context) error {
 	var fns []flow.TaskFn
 
-	for resourceName, _ := range c.crdNameToManifest {
+	for resourceName := range c.crdNameToManifest {
 		fns = append(fns, func(ctx context.Context) error {
 			crd := &apiextensionsv1.CustomResourceDefinition{
 				ObjectMeta: metav1.ObjectMeta{
