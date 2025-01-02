@@ -28,7 +28,7 @@ import (
 	"github.com/gardener/gardener/cmd/utils/initrun"
 	"github.com/gardener/gardener/pkg/api/indexer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	"github.com/gardener/gardener/pkg/features"
@@ -62,7 +62,7 @@ func NewCommand() *cobra.Command {
 	return cmd
 }
 
-func run(ctx context.Context, log logr.Logger, cfg *config.ControllerManagerConfiguration) error {
+func run(ctx context.Context, log logr.Logger, cfg *controllermanagerconfigv1alpha1.ControllerManagerConfiguration) error {
 	log.Info("Feature Gates", "featureGates", features.DefaultFeatureGate)
 
 	// This is like importing the automaxprocs package for its init func (it will in turn call maxprocs.Set).
@@ -79,15 +79,15 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ControllerManagerConf
 		cfg.GardenClientConnection.Kubeconfig = kubeconfig
 	}
 
-	restConfig, err := kubernetes.RESTConfigFromInternalClientConnectionConfiguration(&cfg.GardenClientConnection, nil, kubernetes.AuthTokenFile)
+	restConfig, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.GardenClientConnection, nil, kubernetes.AuthTokenFile)
 	if err != nil {
 		return err
 	}
 
 	var extraHandlers map[string]http.Handler
-	if cfg.Debugging != nil && cfg.Debugging.EnableProfiling {
+	if cfg.Debugging != nil && ptr.Deref(cfg.Debugging.EnableProfiling, false) {
 		extraHandlers = routes.ProfilingHandlers
-		if cfg.Debugging.EnableContentionProfiling {
+		if ptr.Deref(cfg.Debugging.EnableContentionProfiling, false) {
 			goruntime.SetBlockProfileRate(1)
 		}
 	}
@@ -104,7 +104,7 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ControllerManagerConf
 			ExtraHandlers: extraHandlers,
 		},
 
-		LeaderElection:                cfg.LeaderElection.LeaderElect,
+		LeaderElection:                *cfg.LeaderElection.LeaderElect,
 		LeaderElectionResourceLock:    cfg.LeaderElection.ResourceLock,
 		LeaderElectionID:              cfg.LeaderElection.ResourceName,
 		LeaderElectionNamespace:       cfg.LeaderElection.ResourceNamespace,

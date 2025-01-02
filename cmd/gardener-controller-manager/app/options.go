@@ -15,9 +15,8 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	"github.com/gardener/gardener/cmd/utils/initrun"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
-	controllermanagervalidation "github.com/gardener/gardener/pkg/controllermanager/apis/config/validation"
+	controllermanagervalidation "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1/validation"
 	"github.com/gardener/gardener/pkg/features"
 )
 
@@ -25,17 +24,13 @@ var configDecoder runtime.Decoder
 
 func init() {
 	configScheme := runtime.NewScheme()
-	schemeBuilder := runtime.NewSchemeBuilder(
-		config.AddToScheme,
-		controllermanagerconfigv1alpha1.AddToScheme,
-	)
-	utilruntime.Must(schemeBuilder.AddToScheme(configScheme))
+	utilruntime.Must(controllermanagerconfigv1alpha1.AddToScheme(configScheme))
 	configDecoder = serializer.NewCodecFactory(configScheme).UniversalDecoder()
 }
 
 type options struct {
 	configFile string
-	config     *config.ControllerManagerConfiguration
+	config     *controllermanagerconfigv1alpha1.ControllerManagerConfiguration
 }
 
 var _ initrun.Options = &options{}
@@ -54,7 +49,7 @@ func (o *options) Complete() error {
 		return fmt.Errorf("error reading config file: %w", err)
 	}
 
-	o.config = &config.ControllerManagerConfiguration{}
+	o.config = &controllermanagerconfigv1alpha1.ControllerManagerConfiguration{}
 	if err = runtime.DecodeInto(configDecoder, data, o.config); err != nil {
 		return fmt.Errorf("error decoding config: %w", err)
 	}
