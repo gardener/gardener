@@ -19,7 +19,7 @@ import (
 
 // SeedNameFromSeedConfig returns an empty string if the given seed config is nil, or the
 // name inside the seed config.
-func SeedNameFromSeedConfig(seedConfig *config.SeedConfig) string {
+func SeedNameFromSeedConfig(seedConfig *gardenletconfigv1alpha1.SeedConfig) string {
 	if seedConfig == nil {
 		return ""
 	}
@@ -28,7 +28,7 @@ func SeedNameFromSeedConfig(seedConfig *config.SeedConfig) string {
 
 // StaleExtensionHealthChecksThreshold returns nil if the given config is nil or the check
 // for stale health checks is not enabled. Otherwise it returns the threshold from the given config.
-func StaleExtensionHealthChecksThreshold(c *config.StaleExtensionHealthChecks) *metav1.Duration {
+func StaleExtensionHealthChecksThreshold(c *gardenletconfigv1alpha1.StaleExtensionHealthChecks) *metav1.Duration {
 	if c != nil && c.Enabled {
 		return c.Threshold
 	}
@@ -74,7 +74,7 @@ func ConvertGardenletConfigurationExternal(obj runtime.Object) (*gardenletconfig
 }
 
 // IsLoggingEnabled return true if the logging stack for clusters is enabled.
-func IsLoggingEnabled(c *config.GardenletConfiguration) bool {
+func IsLoggingEnabled(c *gardenletconfigv1alpha1.GardenletConfiguration) bool {
 	if c != nil && c.Logging != nil &&
 		c.Logging.Enabled != nil {
 		return *c.Logging.Enabled
@@ -83,7 +83,7 @@ func IsLoggingEnabled(c *config.GardenletConfiguration) bool {
 }
 
 // IsValiEnabled return true if the vali is enabled
-func IsValiEnabled(c *config.GardenletConfiguration) bool {
+func IsValiEnabled(c *gardenletconfigv1alpha1.GardenletConfiguration) bool {
 	if c != nil && c.Logging != nil &&
 		c.Logging.Vali != nil && c.Logging.Vali.Enabled != nil {
 		return *c.Logging.Vali.Enabled
@@ -92,7 +92,7 @@ func IsValiEnabled(c *config.GardenletConfiguration) bool {
 }
 
 // IsEventLoggingEnabled returns true if the event-logging is enabled.
-func IsEventLoggingEnabled(c *config.GardenletConfiguration) bool {
+func IsEventLoggingEnabled(c *gardenletconfigv1alpha1.GardenletConfiguration) bool {
 	return c != nil && c.Logging != nil &&
 		c.Logging.ShootEventLogging != nil &&
 		c.Logging.ShootEventLogging.Enabled != nil &&
@@ -100,7 +100,7 @@ func IsEventLoggingEnabled(c *config.GardenletConfiguration) bool {
 }
 
 // IsMonitoringEnabled returns true if the monitoring stack for shoot clusters is enabled. Default is enabled.
-func IsMonitoringEnabled(c *config.GardenletConfiguration) bool {
+func IsMonitoringEnabled(c *gardenletconfigv1alpha1.GardenletConfiguration) bool {
 	if c != nil && c.Monitoring != nil && c.Monitoring.Shoot != nil &&
 		c.Monitoring.Shoot.Enabled != nil {
 		return *c.Monitoring.Shoot.Enabled
@@ -109,7 +109,7 @@ func IsMonitoringEnabled(c *config.GardenletConfiguration) bool {
 }
 
 // GetManagedResourceProgressingThreshold returns ManagedResourceProgressingThreshold if set otherwise it returns nil.
-func GetManagedResourceProgressingThreshold(c *config.GardenletConfiguration) *metav1.Duration {
+func GetManagedResourceProgressingThreshold(c *gardenletconfigv1alpha1.GardenletConfiguration) *metav1.Duration {
 	if c != nil && c.Controllers != nil && c.Controllers.ShootCare != nil && c.Controllers.ShootCare.ManagedResourceProgressingThreshold != nil {
 		return c.Controllers.ShootCare.ManagedResourceProgressingThreshold
 	}

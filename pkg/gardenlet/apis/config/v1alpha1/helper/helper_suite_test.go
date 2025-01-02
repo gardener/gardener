@@ -13,5 +13,5 @@ import (
 
 func TestHelper(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Gardenlet APIs Config Helper Suite")
+	RunSpecs(t, "Gardenlet APIs Config Helper V1alpha1 Suite")
 }
