@@ -24,7 +24,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/health/utils"
 	resourcemanagerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 )
@@ -34,7 +34,7 @@ type Reconciler struct {
 	SourceClient client.Client
 	TargetClient client.Client
 	TargetScheme *runtime.Scheme
-	Config       config.HealthControllerConfig
+	Config       resourcemanagerconfigv1alpha1.HealthControllerConfig
 	Clock        clock.Clock
 	ClassFilter  *resourcemanagerpredicate.ClassFilter
 

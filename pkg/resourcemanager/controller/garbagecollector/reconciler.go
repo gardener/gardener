@@ -23,7 +23,7 @@ import (
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
 )
@@ -31,7 +31,7 @@ import (
 // Reconciler performs garbage collection.
 type Reconciler struct {
 	TargetClient          client.Client
-	Config                config.GarbageCollectorControllerConfig
+	Config                resourcemanagerconfigv1alpha1.GarbageCollectorControllerConfig
 	Clock                 clock.Clock
 	MinimumObjectLifetime *time.Duration
 }

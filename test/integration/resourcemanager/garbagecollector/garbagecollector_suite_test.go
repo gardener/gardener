@@ -28,7 +28,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -110,7 +110,7 @@ var _ = BeforeSuite(func() {
 
 	By("Register controller")
 	Expect((&garbagecollector.Reconciler{
-		Config: config.GarbageCollectorControllerConfig{
+		Config: resourcemanagerconfigv1alpha1.GarbageCollectorControllerConfig{
 			SyncPeriod: &metav1.Duration{Duration: 100 * time.Millisecond},
 		},
 		Clock:                 clock.RealClock{},

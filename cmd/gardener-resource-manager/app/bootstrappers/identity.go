@@ -17,14 +17,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 )
 
 // IdentityDeterminer determines the identity of the source cluster.
 type IdentityDeterminer struct {
 	Logger       logr.Logger
 	SourceClient client.Client
-	Config       *config.ResourceManagerConfiguration
+	Config       *resourcemanagerconfigv1alpha1.ResourceManagerConfiguration
 }
 
 // Start determines the identity.

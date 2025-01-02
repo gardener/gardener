@@ -26,7 +26,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -43,7 +43,7 @@ type Reconciler struct {
 	SourceClient       client.Client
 	TargetClient       client.Client
 	CertificatesClient certificatesclientv1.CertificateSigningRequestInterface
-	Config             config.CSRApproverControllerConfig
+	Config             resourcemanagerconfigv1alpha1.CSRApproverControllerConfig
 }
 
 // Reconcile performs the main reconciliation logic.

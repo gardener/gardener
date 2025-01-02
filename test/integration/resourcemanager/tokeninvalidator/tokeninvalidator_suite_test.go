@@ -33,7 +33,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
 	tokeninvalidatorcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/tokeninvalidator"
 	tokeninvalidatorwebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
@@ -121,7 +121,7 @@ var _ = BeforeSuite(func() {
 
 	By("Register controllers and webhooks")
 	Expect((&tokeninvalidatorcontroller.Reconciler{
-		Config: config.TokenInvalidatorControllerConfig{
+		Config: resourcemanagerconfigv1alpha1.TokenInvalidatorControllerConfig{
 			ConcurrentSyncs: ptr.To(5),
 		},
 		// limit exponential backoff in tests

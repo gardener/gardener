@@ -18,14 +18,14 @@ import (
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 )
 
 // Reconciler labels secrets whose tokens should be invalidated.
 type Reconciler struct {
 	TargetClient client.Client
 	TargetReader client.Reader
-	Config       config.TokenInvalidatorControllerConfig
+	Config       resourcemanagerconfigv1alpha1.TokenInvalidatorControllerConfig
 
 	// RateLimiter allows limiting exponential backoff for testing purposes
 	RateLimiter workqueue.TypedRateLimiter[reconcile.Request]
