@@ -5,8 +5,8 @@
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 )
 
@@ -218,9 +218,8 @@ type ProjectControllerConfiguration struct {
 
 // QuotaConfiguration defines quota configurations.
 type QuotaConfiguration struct {
-	// Config is the quota specification used for the project set-up.
-	// Only v1.ResourceQuota resources are supported.
-	Config runtime.RawExtension `json:"config"`
+	// Config is the corev1.ResourceQuota specification used for the project set-up.
+	Config corev1.ResourceQuota `json:"config"`
 	// ProjectSelector is an optional setting to select the projects considered for quotas.
 	// Defaults to empty LabelSelector, which matches all projects.
 	// +optional

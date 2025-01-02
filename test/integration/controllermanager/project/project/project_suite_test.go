@@ -61,7 +61,7 @@ var (
 	mgrClient  client.Reader
 	testRunID  string
 
-	defaultResourceQuota *corev1.ResourceQuota
+	defaultResourceQuota corev1.ResourceQuota
 )
 
 var _ = BeforeSuite(func() {
@@ -119,7 +119,7 @@ var _ = BeforeSuite(func() {
 	Expect(indexer.AddNamespacedCloudProfileParentRefName(ctx, mgr.GetFieldIndexer())).To(Succeed())
 
 	By("Register Project controller")
-	defaultResourceQuota = &corev1.ResourceQuota{
+	defaultResourceQuota = corev1.ResourceQuota{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:      map[string]string{"foo": testRunID},
 			Annotations: map[string]string{"foo": testRunID},
