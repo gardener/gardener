@@ -24,7 +24,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -33,7 +33,7 @@ import (
 // Reconciler reconciles Projects, marks them as stale and auto-deletes them after a certain time if not in-use.
 type Reconciler struct {
 	Client client.Client
-	Config config.ProjectControllerConfiguration
+	Config controllermanagerconfigv1alpha1.ProjectControllerConfiguration
 	Clock  clock.Clock
 }
 

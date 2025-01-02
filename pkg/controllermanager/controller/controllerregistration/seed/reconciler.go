@@ -27,7 +27,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -50,7 +50,7 @@ const (
 type Reconciler struct {
 	Client    client.Client
 	APIReader client.Reader
-	Config    config.ControllerRegistrationControllerConfiguration
+	Config    controllermanagerconfigv1alpha1.ControllerRegistrationControllerConfiguration
 }
 
 // Reconcile performs the main reconciliation logic.

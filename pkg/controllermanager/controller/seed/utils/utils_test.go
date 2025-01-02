@@ -19,14 +19,14 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/seed/utils"
 )
 
 var _ = Describe("Utils", func() {
 	Describe("#GetThresholdForCondition", func() {
 		It("should return the threshold duration", func() {
-			Expect(GetThresholdForCondition([]config.ConditionThreshold{{Type: "foo", Duration: metav1.Duration{Duration: time.Second}}}, "foo")).To(Equal(time.Second))
+			Expect(GetThresholdForCondition([]controllermanagerconfigv1alpha1.ConditionThreshold{{Type: "foo", Duration: metav1.Duration{Duration: time.Second}}}, "foo")).To(Equal(time.Second))
 		})
 
 		It("should return 0 because no configuration found for condition type", func() {

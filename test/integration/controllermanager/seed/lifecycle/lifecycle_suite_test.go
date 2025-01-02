@@ -29,7 +29,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/api/indexer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/lifecycle"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
@@ -118,7 +118,7 @@ var _ = BeforeSuite(func() {
 	fakeClock = testclock.NewFakeClock(time.Now())
 
 	Expect((&lifecycle.Reconciler{
-		Config: config.SeedControllerConfiguration{
+		Config: controllermanagerconfigv1alpha1.SeedControllerConfiguration{
 			MonitorPeriod:      &metav1.Duration{Duration: seedMonitorPeriod},
 			ShootMonitorPeriod: &metav1.Duration{Duration: shootMonitorPeriod},
 			SyncPeriod:         &metav1.Duration{Duration: 500 * time.Millisecond},

@@ -26,7 +26,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/api/indexer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/conditions"
 	"github.com/gardener/gardener/pkg/logger"
 	gardenerenvtest "github.com/gardener/gardener/test/envtest"
@@ -107,7 +107,7 @@ var _ = BeforeSuite(func() {
 
 	By("Register controller")
 	Expect((&conditions.Reconciler{
-		Config: config.ShootConditionsControllerConfiguration{
+		Config: controllermanagerconfigv1alpha1.ShootConditionsControllerConfiguration{
 			ConcurrentSyncs: ptr.To(5),
 		},
 	}).AddToManager(mgr)).To(Succeed())

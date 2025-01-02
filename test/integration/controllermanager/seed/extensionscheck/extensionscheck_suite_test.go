@@ -29,7 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/api/indexer"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/extensionscheck"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
@@ -115,10 +115,10 @@ var _ = BeforeSuite(func() {
 	fakeClock = testclock.NewFakeClock(time.Now())
 
 	Expect((&extensionscheck.Reconciler{
-		Config: config.SeedExtensionsCheckControllerConfiguration{
+		Config: controllermanagerconfigv1alpha1.SeedExtensionsCheckControllerConfiguration{
 			ConcurrentSyncs: ptr.To(5),
 			SyncPeriod:      &metav1.Duration{Duration: syncPeriod},
-			ConditionThresholds: []config.ConditionThreshold{{
+			ConditionThresholds: []controllermanagerconfigv1alpha1.ConditionThreshold{{
 				Type:     string(gardencorev1beta1.SeedExtensionsReady),
 				Duration: metav1.Duration{Duration: conditionThreshold},
 			}},

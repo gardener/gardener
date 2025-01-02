@@ -23,7 +23,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/project/stale"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -62,7 +62,7 @@ var _ = Describe("Reconciler", func() {
 		secret                *corev1.Secret
 		secretBinding         *gardencorev1beta1.SecretBinding
 		credentialsBinding    *securityv1alpha1.CredentialsBinding
-		cfg                   config.ProjectControllerConfiguration
+		cfg                   controllermanagerconfigv1alpha1.ProjectControllerConfiguration
 		request               reconcile.Request
 
 		reconciler reconcile.Reconciler
@@ -105,7 +105,7 @@ var _ = Describe("Reconciler", func() {
 			CredentialsRef: corev1.ObjectReference{Kind: "Secret", APIVersion: "v1", Namespace: namespaceName, Name: secretName},
 			Quotas:         []corev1.ObjectReference{{}, {Namespace: namespaceName, Name: quotaName}},
 		}
-		cfg = config.ProjectControllerConfiguration{
+		cfg = controllermanagerconfigv1alpha1.ProjectControllerConfiguration{
 			MinimumLifetimeDays:     &minimumLifetimeDays,
 			StaleGracePeriodDays:    &staleGracePeriodDays,
 			StaleExpirationTimeDays: &staleExpirationTimeDays,

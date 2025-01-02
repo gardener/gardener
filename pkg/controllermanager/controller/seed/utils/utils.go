@@ -14,11 +14,11 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 )
 
 // GetThresholdForCondition returns the threshold duration from the configuration for the provided condition type.
-func GetThresholdForCondition(conditions []config.ConditionThreshold, conditionType gardencorev1beta1.ConditionType) time.Duration {
+func GetThresholdForCondition(conditions []controllermanagerconfigv1alpha1.ConditionThreshold, conditionType gardencorev1beta1.ConditionType) time.Duration {
 	for _, threshold := range conditions {
 		if threshold.Type == string(conditionType) {
 			return threshold.Duration.Duration

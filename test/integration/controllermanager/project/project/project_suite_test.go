@@ -32,7 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/api/indexer"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/cloudprofile"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/namespacedcloudprofile"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/project/project"
@@ -132,9 +132,9 @@ var _ = BeforeSuite(func() {
 	}
 
 	Expect((&project.Reconciler{
-		Config: config.ProjectControllerConfiguration{
+		Config: controllermanagerconfigv1alpha1.ProjectControllerConfiguration{
 			ConcurrentSyncs: ptr.To(5),
-			Quotas: []config.QuotaConfiguration{{
+			Quotas: []controllermanagerconfigv1alpha1.QuotaConfiguration{{
 				Config:          defaultResourceQuota,
 				ProjectSelector: &metav1.LabelSelector{},
 			}},
@@ -147,14 +147,14 @@ var _ = BeforeSuite(func() {
 	// project member authorizations to interact with NamespacedCloudProfiles within a Project.
 	By("Register CloudProfile controller")
 	Expect((&cloudprofile.Reconciler{
-		Config: config.CloudProfileControllerConfiguration{
+		Config: controllermanagerconfigv1alpha1.CloudProfileControllerConfiguration{
 			ConcurrentSyncs: ptr.To(5),
 		},
 	}).AddToManager(mgr)).To(Succeed())
 
 	By("Register NamespacedCloudProfile controller")
 	Expect((&namespacedcloudprofile.Reconciler{
-		Config: config.NamespacedCloudProfileControllerConfiguration{
+		Config: controllermanagerconfigv1alpha1.NamespacedCloudProfileControllerConfiguration{
 			ConcurrentSyncs: ptr.To(5),
 		},
 	}).AddToManager(mgr)).To(Succeed())
