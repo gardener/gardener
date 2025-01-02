@@ -30,7 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
@@ -45,7 +45,7 @@ var _ = Describe("Shoot Care Control", func() {
 		ctx           context.Context
 		gardenClient  client.Client
 		reconciler    reconcile.Reconciler
-		gardenletConf gardenletconfig.GardenletConfiguration
+		gardenletConf gardenletconfigv1alpha1.GardenletConfiguration
 		fakeClock     *testclock.FakeClock
 
 		shootName, shootNamespace, seedName string
@@ -106,9 +106,9 @@ var _ = Describe("Shoot Care Control", func() {
 
 			req = reconcile.Request{NamespacedName: client.ObjectKey{Namespace: shootNamespace, Name: shootName}}
 
-			gardenletConf = gardenletconfig.GardenletConfiguration{
-				Controllers: &gardenletconfig.GardenletControllerConfiguration{
-					ShootCare: &gardenletconfig.ShootCareControllerConfiguration{
+			gardenletConf = gardenletconfigv1alpha1.GardenletConfiguration{
+				Controllers: &gardenletconfigv1alpha1.GardenletControllerConfiguration{
+					ShootCare: &gardenletconfigv1alpha1.ShootCareControllerConfiguration{
 						SyncPeriod: &metav1.Duration{Duration: careSyncPeriod},
 					},
 				},
@@ -517,7 +517,7 @@ func healthCheckFunc(fn resultingConditionFunc) NewHealthCheckFunc {
 		_ client.Client,
 		_ ShootClientInit,
 		_ clock.Clock,
-		_ *gardenletconfig.GardenletConfiguration,
+		_ *gardenletconfigv1alpha1.GardenletConfiguration,
 		_ map[gardencorev1beta1.ConditionType]time.Duration,
 	) HealthCheck {
 		return fn
@@ -548,7 +548,7 @@ func opFunc(op *operation.Operation, err error) NewOperationFunc {
 		_ client.Client,
 		_ kubernetes.Interface,
 		_ clientmap.ClientMap,
-		_ *gardenletconfig.GardenletConfiguration,
+		_ *gardenletconfigv1alpha1.GardenletConfiguration,
 		_ *gardencorev1beta1.Gardener,
 		_ string,
 		_ map[string]*corev1.Secret,

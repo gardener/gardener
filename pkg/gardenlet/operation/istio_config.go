@@ -11,7 +11,7 @@ import (
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
-	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -63,7 +63,7 @@ func (o *Operation) istioLabels(zone *string) map[string]string {
 	return sharedcomponent.GetIstioZoneLabels(o.sniConfig().Ingress.Labels, zone)
 }
 
-func (o *Operation) exposureClassHandler() *gardenletconfig.ExposureClassHandler {
+func (o *Operation) exposureClassHandler() *gardenletconfigv1alpha1.ExposureClassHandler {
 	if exposureClass := o.Shoot.ExposureClass; exposureClass != nil {
 		for _, handler := range o.Config.ExposureClassHandlers {
 			if exposureClass.Handler == handler.Name {
@@ -74,7 +74,7 @@ func (o *Operation) exposureClassHandler() *gardenletconfig.ExposureClassHandler
 	return nil
 }
 
-func (o *Operation) sniConfig() *gardenletconfig.SNI {
+func (o *Operation) sniConfig() *gardenletconfigv1alpha1.SNI {
 	if exposureClassHandler := o.exposureClassHandler(); exposureClassHandler != nil {
 		return exposureClassHandler.SNI
 	}

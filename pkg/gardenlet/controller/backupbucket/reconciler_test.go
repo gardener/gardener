@@ -25,7 +25,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
 )
 
@@ -108,7 +108,7 @@ var _ = Describe("Controller", func() {
 			GardenClient: gardenClient,
 			SeedClient:   seedClient,
 			Recorder:     &record.FakeRecorder{},
-			Config: config.BackupBucketControllerConfiguration{
+			Config: gardenletconfigv1alpha1.BackupBucketControllerConfiguration{
 				ConcurrentSyncs: ptr.To(5),
 			},
 			Clock:           fakeClock,

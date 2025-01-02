@@ -25,14 +25,13 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsbackupentry "github.com/gardener/gardener/pkg/component/extensions/backupentry"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -55,7 +54,7 @@ type Reconciler struct {
 	GardenClient    client.Client
 	SeedClient      client.Client
 	Recorder        record.EventRecorder
-	Config          config.BackupEntryControllerConfiguration
+	Config          gardenletconfigv1alpha1.BackupEntryControllerConfiguration
 	Clock           clock.Clock
 	SeedName        string
 	GardenNamespace string
@@ -290,7 +289,7 @@ func (r *Reconciler) deleteBackupEntry(
 		return reconcile.Result{}, nil
 	}
 
-	gracePeriod := computeGracePeriod(*r.Config.DeletionGracePeriodHours, r.Config.DeletionGracePeriodShootPurposes, gardencore.ShootPurpose(backupEntry.Annotations[v1beta1constants.ShootPurpose]))
+	gracePeriod := computeGracePeriod(*r.Config.DeletionGracePeriodHours, r.Config.DeletionGracePeriodShootPurposes, gardencorev1beta1.ShootPurpose(backupEntry.Annotations[v1beta1constants.ShootPurpose]))
 	present, _ := strconv.ParseBool(backupEntry.ObjectMeta.Annotations[gardencorev1beta1.BackupEntryForceDeletion])
 	if present || r.Clock.Since(backupEntry.DeletionTimestamp.Local()) > gracePeriod {
 		operationType := v1beta1helper.ComputeOperationType(backupEntry.ObjectMeta, backupEntry.Status.LastOperation)
@@ -696,7 +695,7 @@ func isRestorePhase(backupEntry *gardencorev1beta1.BackupEntry) bool {
 	return backupEntry.Status.LastOperation != nil && backupEntry.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeRestore
 }
 
-func computeGracePeriod(deletionGracePeriodHours int, deletionGracePeriodShootPurposes []gardencore.ShootPurpose, shootPurpose gardencore.ShootPurpose) time.Duration {
+func computeGracePeriod(deletionGracePeriodHours int, deletionGracePeriodShootPurposes []gardencorev1beta1.ShootPurpose, shootPurpose gardencorev1beta1.ShootPurpose) time.Duration {
 	// If no dedicated list of purposes is provided then the grace period applies for all purposes. If the shoot purpose
 	// is empty then it was not yet updated with the purpose annotation or the corresponding `Shoot` is already deleted
 	// from the system. In this case, for backwards-compatibility, the grace period applies as well.

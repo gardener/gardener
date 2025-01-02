@@ -14,7 +14,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/seed/care"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/seed/lease"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/seed/seed"
@@ -29,7 +29,7 @@ func AddToManager(
 	gardenCluster cluster.Cluster,
 	seedCluster cluster.Cluster,
 	seedClientSet kubernetes.Interface,
-	cfg config.GardenletConfiguration,
+	cfg gardenletconfigv1alpha1.GardenletConfiguration,
 	identity *gardencorev1beta1.Gardener,
 	healthManager healthz.Manager,
 ) error {

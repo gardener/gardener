@@ -26,7 +26,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controller/gardenletdeployer"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/oci"
 )
@@ -36,7 +35,7 @@ type Reconciler struct {
 	GardenClient     client.Client
 	GardenRESTConfig *rest.Config
 	SeedClientSet    kubernetes.Interface
-	Config           config.GardenletConfiguration
+	Config           gardenletconfigv1alpha1.GardenletConfiguration
 	Recorder         record.EventRecorder
 	Clock            clock.Clock
 	GardenNamespace  string

@@ -23,7 +23,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -31,7 +30,7 @@ import (
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	mockoperatingsystemconfig "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/mock"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
@@ -145,11 +144,11 @@ var _ = Describe("operatingsystemconfig", func() {
 
 			It("should deploy successfully shoot logging components with non testing purpose", func() {
 				botanist.Shoot.Purpose = "development"
-				botanist.Config = &config.GardenletConfiguration{
-					Logging: &config.Logging{
+				botanist.Config = &gardenletconfigv1alpha1.GardenletConfiguration{
+					Logging: &gardenletconfigv1alpha1.Logging{
 						Enabled: ptr.To(true),
-						ShootNodeLogging: &config.ShootNodeLogging{
-							ShootPurposes: []gardencore.ShootPurpose{"evaluation", "development"},
+						ShootNodeLogging: &gardenletconfigv1alpha1.ShootNodeLogging{
+							ShootPurposes: []gardencorev1beta1.ShootPurpose{"evaluation", "development"},
 						},
 					},
 				}

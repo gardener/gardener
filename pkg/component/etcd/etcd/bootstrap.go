@@ -40,7 +40,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/cache"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -83,7 +83,7 @@ func NewBootstrapper(
 	c client.Client,
 	namespace string,
 	kubernetesVersion *semver.Version,
-	etcdConfig *config.ETCDConfig,
+	etcdConfig *gardenletconfigv1alpha1.ETCDConfig,
 	image string,
 	imageVectorOverwrite *string,
 	secretsManager secretsmanager.Interface,
@@ -107,7 +107,7 @@ type bootstrapper struct {
 	client               client.Client
 	namespace            string
 	kubernetesVersion    *semver.Version
-	etcdConfig           *config.ETCDConfig
+	etcdConfig           *gardenletconfigv1alpha1.ETCDConfig
 	image                string
 	imageVectorOverwrite *string
 	secretsManager       secretsmanager.Interface
@@ -580,7 +580,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 	return managedresources.CreateForSeed(ctx, b.client, b.namespace, managedResourceControlName, false, resources)
 }
 
-func getDruidDeployArgs(etcdConfig *config.ETCDConfig, webhookServerTLSMountPath string) []string {
+func getDruidDeployArgs(etcdConfig *gardenletconfigv1alpha1.ETCDConfig, webhookServerTLSMountPath string) []string {
 	args := []string{
 		"--enable-leader-election=true",
 		"--disable-etcd-serviceaccount-automount=true",

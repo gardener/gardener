@@ -22,7 +22,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -44,12 +44,12 @@ type Manager struct {
 	log                    logr.Logger
 	gardenClientSet        kubernetes.Interface
 	seedClient             client.Client
-	gardenClientConnection *config.GardenClientConnection
+	gardenClientConnection *gardenletconfigv1alpha1.GardenClientConnection
 	seedName               string
 }
 
 // NewCertificateManager creates a certificate manager that can be used to rotate gardenlet's client certificate for the Garden cluster
-func NewCertificateManager(log logr.Logger, gardenCluster cluster.Cluster, seedClient client.Client, config *config.GardenletConfiguration) (*Manager, error) {
+func NewCertificateManager(log logr.Logger, gardenCluster cluster.Cluster, seedClient client.Client, config *gardenletconfigv1alpha1.GardenletConfiguration) (*Manager, error) {
 	gardenClientSet, err := kubernetes.NewWithConfig(
 		kubernetes.WithRESTConfig(gardenCluster.GetConfig()),
 		kubernetes.WithRuntimeAPIReader(gardenCluster.GetAPIReader()),
@@ -126,7 +126,7 @@ func waitForCertificateRotation(
 	ctx context.Context,
 	log logr.Logger,
 	seedClient client.Client,
-	gardenClientConnection *config.GardenClientConnection,
+	gardenClientConnection *gardenletconfigv1alpha1.GardenClientConnection,
 	now func() time.Time,
 ) (
 	*pkix.Name,
@@ -188,7 +188,7 @@ func waitForCertificateRotation(
 	return &currentCert.Leaf.Subject, currentCert.Leaf.DNSNames, currentCert.Leaf.IPAddresses, &currentCert.Leaf.NotAfter, nil
 }
 
-func readCertificateFromKubeconfigSecret(ctx context.Context, log logr.Logger, seedClient client.Client, gardenClientConnection *config.GardenClientConnection) (*corev1.Secret, *tls.Certificate, error) {
+func readCertificateFromKubeconfigSecret(ctx context.Context, log logr.Logger, seedClient client.Client, gardenClientConnection *gardenletconfigv1alpha1.GardenClientConnection) (*corev1.Secret, *tls.Certificate, error) {
 	kubeconfigSecret := &corev1.Secret{}
 	if err := seedClient.Get(ctx, client.ObjectKey{Namespace: gardenClientConnection.KubeconfigSecret.Namespace, Name: gardenClientConnection.KubeconfigSecret.Name}, kubeconfigSecret); client.IgnoreNotFound(err) != nil {
 		return nil, nil, err
@@ -203,7 +203,7 @@ func readCertificateFromKubeconfigSecret(ctx context.Context, log logr.Logger, s
 }
 
 // GetCurrentCertificate returns the client certificate which is currently used to communicate with the garden cluster.
-func GetCurrentCertificate(log logr.Logger, gardenKubeconfig []byte, gardenClientConnection *config.GardenClientConnection) (*tls.Certificate, error) {
+func GetCurrentCertificate(log logr.Logger, gardenKubeconfig []byte, gardenClientConnection *gardenletconfigv1alpha1.GardenClientConnection) (*tls.Certificate, error) {
 	kubeconfigKey := kubernetesutils.ObjectKeyFromSecretRef(*gardenClientConnection.KubeconfigSecret)
 	log = log.WithValues("kubeconfigSecret", kubeconfigKey)
 
@@ -216,7 +216,7 @@ func GetCurrentCertificate(log logr.Logger, gardenKubeconfig []byte, gardenClien
 	}
 
 	// get a rest config from either the `gardenClientConnection.KubeconfigSecret` or from the fallback kubeconfig specified in `gardenClientConnection.Kubeconfig`
-	restConfig, err := kubernetes.RESTConfigFromInternalClientConnectionConfiguration(&gardenClientConnection.ClientConnectionConfiguration, gardenKubeconfig)
+	restConfig, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&gardenClientConnection.ClientConnectionConfiguration, gardenKubeconfig)
 	if err != nil {
 		return nil, err
 	}
@@ -231,7 +231,7 @@ func rotateCertificate(
 	log logr.Logger,
 	gardenClientSet kubernetes.Interface,
 	seedClient client.Client,
-	gardenClientConnection *config.GardenClientConnection,
+	gardenClientConnection *gardenletconfigv1alpha1.GardenClientConnection,
 	certificateSubject *pkix.Name,
 	dnsSANs []string,
 	ipSANs []net.IP,

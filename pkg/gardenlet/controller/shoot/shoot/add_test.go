@@ -20,7 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot/helper"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -32,16 +32,16 @@ var _ = Describe("Add", func() {
 		ctx = context.TODO()
 		log logr.Logger
 		cl  clock.Clock
-		cfg gardenletconfig.GardenletConfiguration
+		cfg gardenletconfigv1alpha1.GardenletConfiguration
 	)
 
 	BeforeEach(func() {
 		log = logr.Discard()
 
 		cl = testclock.NewFakeClock(time.Now())
-		cfg = gardenletconfig.GardenletConfiguration{
-			Controllers: &gardenletconfig.GardenletControllerConfiguration{
-				Shoot: &gardenletconfig.ShootControllerConfiguration{
+		cfg = gardenletconfigv1alpha1.GardenletConfiguration{
+			Controllers: &gardenletconfigv1alpha1.GardenletControllerConfiguration{
+				Shoot: &gardenletconfigv1alpha1.ShootControllerConfiguration{
 					SyncPeriod: &metav1.Duration{Duration: time.Hour},
 				},
 			},
@@ -68,7 +68,7 @@ var _ = Describe("Add", func() {
 
 		It("should enqueue the object for Create events according to the calculated duration", func() {
 			duration := time.Minute
-			DeferCleanup(test.WithVar(&CalculateControllerInfos, func(*gardencorev1beta1.Shoot, clock.Clock, gardenletconfig.ShootControllerConfiguration) helper.ControllerInfos {
+			DeferCleanup(test.WithVar(&CalculateControllerInfos, func(*gardencorev1beta1.Shoot, clock.Clock, gardenletconfigv1alpha1.ShootControllerConfiguration) helper.ControllerInfos {
 				return helper.ControllerInfos{
 					EnqueueAfter: duration,
 				}

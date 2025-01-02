@@ -20,7 +20,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 )
 
 // Reconciler reconciles ControllerInstallations. It checks whether they are still required by using the
@@ -28,7 +28,7 @@ import (
 type Reconciler struct {
 	GardenClient client.Client
 	SeedClient   client.Client
-	Config       config.ControllerInstallationRequiredControllerConfiguration
+	Config       gardenletconfigv1alpha1.ControllerInstallationRequiredControllerConfiguration
 	Clock        clock.Clock
 	SeedName     string
 

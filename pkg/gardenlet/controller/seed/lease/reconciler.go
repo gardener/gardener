@@ -23,7 +23,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/healthz"
 )
 
@@ -32,7 +32,7 @@ import (
 type Reconciler struct {
 	GardenClient   client.Client
 	SeedRESTClient rest.Interface
-	Config         config.SeedControllerConfiguration
+	Config         gardenletconfigv1alpha1.SeedControllerConfiguration
 	Clock          clock.Clock
 	HealthManager  healthz.Manager
 	LeaseNamespace string

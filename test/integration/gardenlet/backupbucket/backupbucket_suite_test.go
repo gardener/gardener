@@ -37,7 +37,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	backupbucketcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
@@ -230,7 +230,7 @@ var _ = BeforeSuite(func() {
 
 	Expect((&backupbucketcontroller.Reconciler{
 		Clock: fakeClock,
-		Config: config.BackupBucketControllerConfiguration{
+		Config: gardenletconfigv1alpha1.BackupBucketControllerConfiguration{
 			ConcurrentSyncs: ptr.To(5),
 		},
 		GardenNamespace: gardenNamespace.Name,

@@ -28,7 +28,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/mock"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/certificatesigningrequest"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -49,12 +49,12 @@ var _ = Describe("Certificates", func() {
 		mockGardenClient *mockclient.MockClient
 		mockSeedClient   *mockclient.MockClient
 
-		gardenClientConnection = &config.GardenClientConnection{
+		gardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{
 			KubeconfigSecret: &corev1.SecretReference{
 				Name:      "gardenlet-kubeconfig",
 				Namespace: "garden",
 			},
-			KubeconfigValidity: &config.KubeconfigValidity{},
+			KubeconfigValidity: &gardenletconfigv1alpha1.KubeconfigValidity{},
 		}
 
 		approvedCSR = certificatesv1.CertificateSigningRequest{

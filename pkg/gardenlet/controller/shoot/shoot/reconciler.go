@@ -37,7 +37,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/features"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
@@ -60,7 +60,7 @@ type Reconciler struct {
 	GardenClient                client.Client
 	SeedClientSet               kubernetes.Interface
 	ShootClientMap              clientmap.ClientMap
-	Config                      config.GardenletConfiguration
+	Config                      gardenletconfigv1alpha1.GardenletConfiguration
 	Recorder                    record.EventRecorder
 	Identity                    *gardencorev1beta1.Gardener
 	GardenClusterIdentity       string

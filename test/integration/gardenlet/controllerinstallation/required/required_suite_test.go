@@ -30,7 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/api/indexer"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/required"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -146,7 +146,7 @@ var _ = BeforeSuite(func() {
 	By("Register controller")
 	seedName = testRunID
 	Expect((&required.Reconciler{
-		Config: config.ControllerInstallationRequiredControllerConfiguration{
+		Config: gardenletconfigv1alpha1.ControllerInstallationRequiredControllerConfiguration{
 			ConcurrentSyncs: ptr.To(5),
 		},
 		SeedName: seedName,

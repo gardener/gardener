@@ -15,7 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 )
 
 // SeedConfigChecker checks whether the seed networks in the specification of the provided SeedConfig are correctly
@@ -23,7 +23,7 @@ import (
 // ConfigMap in the kube-system namespace).
 type SeedConfigChecker struct {
 	SeedClient client.Client
-	SeedConfig *config.SeedConfig
+	SeedConfig *gardenletconfigv1alpha1.SeedConfig
 }
 
 // Start performs the check.
@@ -63,7 +63,7 @@ func isSameIPFamily(ip net.IP, ipNet *net.IPNet) bool {
 }
 
 // checkSeedConfigHeuristically validates the networking configuration of the seed configuration heuristically against the actual cluster.
-func checkSeedConfigHeuristically(ctx context.Context, seedClient client.Client, seedConfig *config.SeedConfig) error {
+func checkSeedConfigHeuristically(ctx context.Context, seedClient client.Client, seedConfig *gardenletconfigv1alpha1.SeedConfig) error {
 	// Restrict the heuristic to a maximum of 100 entries to prevent initialization delays for big clusters
 	limit := &client.ListOptions{Limit: 100}
 

@@ -14,7 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/pkg/controller/vpaevictionrequirements"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 )
 
@@ -27,7 +27,7 @@ func AddToManager(
 	ctx context.Context,
 	mgr manager.Manager,
 	gardenletCancel context.CancelFunc,
-	cfg config.VPAEvictionRequirementsControllerConfiguration,
+	cfg gardenletconfigv1alpha1.VPAEvictionRequirementsControllerConfiguration,
 	seedCluster cluster.Cluster,
 ) error {
 	seedIsGarden, err := gardenletutils.SeedIsGarden(ctx, seedCluster.GetAPIReader())
@@ -38,9 +38,9 @@ func AddToManager(
 		return nil // When the seed is the garden cluster at the same time, the gardener-operator runs this controller.
 	}
 
-	reconciler := &vpaevictionrequirements.Reconciler{ConcurrentSyncs: cfg.ConcurrentSyncs}
-
-	if err := reconciler.AddToManager(mgr, seedCluster); err != nil {
+	if err := (&vpaevictionrequirements.Reconciler{
+		ConcurrentSyncs: cfg.ConcurrentSyncs,
+	}).AddToManager(mgr, seedCluster); err != nil {
 		return err
 	}
 

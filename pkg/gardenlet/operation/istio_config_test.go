@@ -13,7 +13,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
@@ -33,19 +33,19 @@ var _ = Describe("istioconfig", func() {
 			exposureClassNamespaceName = "exposure-namespace"
 			exposureClassLabels        = map[string]string{"exposure": "label"}
 			exposureClassAnnotations   = map[string]string{"exposure": "annotation"}
-			gardenletConfig            = &config.GardenletConfiguration{
-				SNI: &config.SNI{Ingress: &config.SNIIngress{
+			gardenletConfig            = &gardenletconfigv1alpha1.GardenletConfiguration{
+				SNI: &gardenletconfigv1alpha1.SNI{Ingress: &gardenletconfigv1alpha1.SNIIngress{
 					ServiceName: &defaultServiceName,
 					Namespace:   &defaultNamespaceName,
 					Labels:      defaultLabels,
 				}},
-				ExposureClassHandlers: []config.ExposureClassHandler{
+				ExposureClassHandlers: []gardenletconfigv1alpha1.ExposureClassHandler{
 					{
 						Name: exposureClassHandlerName,
-						LoadBalancerService: config.LoadBalancerServiceConfig{
+						LoadBalancerService: gardenletconfigv1alpha1.LoadBalancerServiceConfig{
 							Annotations: exposureClassAnnotations,
 						},
-						SNI: &config.SNI{Ingress: &config.SNIIngress{
+						SNI: &gardenletconfigv1alpha1.SNI{Ingress: &gardenletconfigv1alpha1.SNIIngress{
 							ServiceName: &exposureClassServiceName,
 							Namespace:   &exposureClassNamespaceName,
 							Labels:      exposureClassLabels,

@@ -17,7 +17,7 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/garden"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
@@ -26,7 +26,7 @@ import (
 
 // Builder is an object that builds Operation objects.
 type Builder struct {
-	configFunc                func() (*config.GardenletConfiguration, error)
+	configFunc                func() (*gardenletconfigv1alpha1.GardenletConfiguration, error)
 	gardenFunc                func(context.Context, map[string]*corev1.Secret) (*garden.Garden, error)
 	gardenerInfoFunc          func() (*gardencorev1beta1.Gardener, error)
 	gardenClusterIdentityFunc func() (string, error)
@@ -42,7 +42,7 @@ type Operation struct {
 	secretsMutex   sync.RWMutex
 	SecretsManager secretsmanager.Interface
 
-	Config                *config.GardenletConfiguration
+	Config                *gardenletconfigv1alpha1.GardenletConfiguration
 	Logger                logr.Logger
 	GardenerInfo          *gardencorev1beta1.Gardener
 	GardenClusterIdentity string

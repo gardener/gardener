@@ -17,7 +17,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
@@ -37,7 +37,7 @@ type NewHealthCheckFunc func(
 	gardenClient client.Client,
 	shootClientInit ShootClientInit,
 	clock clock.Clock,
-	gardenletConfig *gardenletconfig.GardenletConfiguration,
+	gardenletConfig *gardenletconfigv1alpha1.GardenletConfiguration,
 	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration,
 ) HealthCheck
 
@@ -50,7 +50,7 @@ var defaultNewHealthCheck NewHealthCheckFunc = func(
 	gardenClient client.Client,
 	shootClientInit ShootClientInit,
 	clock clock.Clock,
-	gardenletConfig *gardenletconfig.GardenletConfiguration,
+	gardenletConfig *gardenletconfigv1alpha1.GardenletConfiguration,
 	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration,
 ) HealthCheck {
 	return NewHealth(
@@ -130,7 +130,7 @@ type NewOperationFunc func(
 	gardenClient client.Client,
 	seedClientSet kubernetes.Interface,
 	shootClientMap clientmap.ClientMap,
-	config *gardenletconfig.GardenletConfiguration,
+	config *gardenletconfigv1alpha1.GardenletConfiguration,
 	gardenerInfo *gardencorev1beta1.Gardener,
 	gardenClusterIdentity string,
 	secrets map[string]*corev1.Secret,
@@ -146,7 +146,7 @@ var defaultNewOperationFunc = func(
 	gardenClient client.Client,
 	seedClientSet kubernetes.Interface,
 	shootClientMap clientmap.ClientMap,
-	config *gardenletconfig.GardenletConfiguration,
+	config *gardenletconfigv1alpha1.GardenletConfiguration,
 	gardenerInfo *gardencorev1beta1.Gardener,
 	gardenClusterIdentity string,
 	secrets map[string]*corev1.Secret,

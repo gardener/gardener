@@ -20,7 +20,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 
@@ -28,7 +28,7 @@ import (
 type Reconciler struct {
 	GardenClient    client.Client
 	SeedClient      client.Client
-	Config          config.ControllerInstallationCareControllerConfiguration
+	Config          gardenletconfigv1alpha1.ControllerInstallationCareControllerConfiguration
 	Clock           clock.Clock
 	GardenNamespace string
 }

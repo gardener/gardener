@@ -28,13 +28,13 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/ptr"
 
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 )
 
 // nextRotationDeadline returns a value for the threshold at which the
 // current certificate should be rotated, 80%+/-10% of the expiration of the
 // certificate.
-func nextRotationDeadline(certificate tls.Certificate, validityConfig *config.KubeconfigValidity) time.Time {
+func nextRotationDeadline(certificate tls.Certificate, validityConfig *gardenletconfigv1alpha1.KubeconfigValidity) time.Time {
 	notAfter := certificate.Leaf.NotAfter
 	totalDuration := float64(notAfter.Sub(certificate.Leaf.NotBefore))
 	return certificate.Leaf.NotBefore.Add(jitteryDuration(totalDuration, validityConfig.AutoRotationJitterPercentageMin, validityConfig.AutoRotationJitterPercentageMax))

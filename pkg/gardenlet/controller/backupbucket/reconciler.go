@@ -30,7 +30,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -45,7 +45,7 @@ var RequeueDurationWhenResourceDeletionStillPresent = 5 * time.Second
 type Reconciler struct {
 	GardenClient    client.Client
 	SeedClient      client.Client
-	Config          config.BackupBucketControllerConfiguration
+	Config          gardenletconfigv1alpha1.BackupBucketControllerConfiguration
 	Clock           clock.Clock
 	Recorder        record.EventRecorder
 	GardenNamespace string
