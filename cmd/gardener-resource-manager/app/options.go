@@ -14,26 +14,21 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	"github.com/gardener/gardener/cmd/utils/initrun"
-	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
-	resourcemanagervalidation "github.com/gardener/gardener/pkg/resourcemanager/apis/config/validation"
+	resourcemanagervalidation "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1/validation"
 )
 
 var configDecoder runtime.Decoder
 
 func init() {
 	configScheme := runtime.NewScheme()
-	schemeBuilder := runtime.NewSchemeBuilder(
-		config.AddToScheme,
-		resourcemanagerconfigv1alpha1.AddToScheme,
-	)
-	utilruntime.Must(schemeBuilder.AddToScheme(configScheme))
+	utilruntime.Must(resourcemanagerconfigv1alpha1.AddToScheme(configScheme))
 	configDecoder = serializer.NewCodecFactory(configScheme).UniversalDecoder()
 }
 
 type options struct {
 	configFile string
-	config     *config.ResourceManagerConfiguration
+	config     *resourcemanagerconfigv1alpha1.ResourceManagerConfiguration
 }
 
 var _ initrun.Options = &options{}
@@ -52,7 +47,7 @@ func (o *options) Complete() error {
 		return fmt.Errorf("error reading config file: %w", err)
 	}
 
-	o.config = &config.ResourceManagerConfiguration{}
+	o.config = &resourcemanagerconfigv1alpha1.ResourceManagerConfiguration{}
 	if err = runtime.DecodeInto(configDecoder, data, o.config); err != nil {
 		return fmt.Errorf("error decoding config: %w", err)
 	}
