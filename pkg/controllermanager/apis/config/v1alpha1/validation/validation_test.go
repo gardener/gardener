@@ -43,30 +43,11 @@ var _ = Describe("#ValidateControllerManagerConfiguration", func() {
 								{Key: "role", Operator: "In", Values: []string{"user"}},
 							},
 						},
-						Config: &corev1.ResourceQuota{},
+						Config: corev1.ResourceQuota{},
 					},
 				}
 				errorList := ValidateControllerManagerConfiguration(conf)
 				Expect(errorList).To(BeEmpty())
-			})
-			It("should fail because quota config is not specified", func() {
-				conf.Controllers.Project.Quotas = []controllermanagerconfigv1alpha1.QuotaConfiguration{
-					{
-						ProjectSelector: &metav1.LabelSelector{
-							MatchExpressions: []metav1.LabelSelectorRequirement{
-								{Key: "role", Operator: "In", Values: []string{"user"}},
-							},
-						},
-						Config: nil,
-					},
-				}
-				errorList := ValidateControllerManagerConfiguration(conf)
-				Expect(errorList).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal("controllers.project.quotas[0].config"),
-					})),
-				))
 			})
 			It("should fail because quota configuration contains invalid label selector", func() {
 				conf.Controllers.Project.Quotas = []controllermanagerconfigv1alpha1.QuotaConfiguration{
@@ -76,7 +57,7 @@ var _ = Describe("#ValidateControllerManagerConfiguration", func() {
 								{Key: "role", Operator: "In", Values: []string{"user"}},
 							},
 						},
-						Config: &corev1.ResourceQuota{},
+						Config: corev1.ResourceQuota{},
 					},
 					{
 						ProjectSelector: &metav1.LabelSelector{
@@ -84,7 +65,7 @@ var _ = Describe("#ValidateControllerManagerConfiguration", func() {
 								{},
 							},
 						},
-						Config: &corev1.ResourceQuota{},
+						Config: corev1.ResourceQuota{},
 					},
 				}
 				errorList := ValidateControllerManagerConfiguration(conf)

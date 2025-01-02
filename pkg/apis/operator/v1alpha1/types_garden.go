@@ -545,9 +545,8 @@ type GardenerControllerManagerConfig struct {
 
 // ProjectQuotaConfiguration defines quota configurations.
 type ProjectQuotaConfiguration struct {
-	// Config is the quota specification used for the project set-up.
-	// Only v1.ResourceQuota resources are supported.
-	Config runtime.RawExtension `json:"config"`
+	// Config is the corev1.ResourceQuota specification used for the project set-up.
+	Config corev1.ResourceQuota `json:"config"`
 	// ProjectSelector is an optional setting to select the projects considered for quotas.
 	// Defaults to empty LabelSelector, which matches all projects.
 	// +optional

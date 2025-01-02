@@ -267,11 +267,6 @@ func quotaConfigurationForProject(config controllermanagerconfigv1alpha1.Project
 const ResourceQuotaName = "gardener"
 
 func createOrUpdateResourceQuota(ctx context.Context, c client.Client, projectNamespace string, ownerReference *metav1.OwnerReference, config controllermanagerconfigv1alpha1.QuotaConfiguration) error {
-	resourceQuota, ok := config.Config.(*corev1.ResourceQuota)
-	if !ok {
-		return fmt.Errorf("failure while reading ResourceQuota from configuration: %v", resourceQuota)
-	}
-
 	projectResourceQuota := &corev1.ResourceQuota{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ResourceQuotaName,
@@ -281,10 +276,10 @@ func createOrUpdateResourceQuota(ctx context.Context, c client.Client, projectNa
 
 	if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, c, projectResourceQuota, func() error {
 		projectResourceQuota.SetOwnerReferences(kubernetesutils.MergeOwnerReferences(projectResourceQuota.GetOwnerReferences(), *ownerReference))
-		projectResourceQuota.Labels = utils.MergeStringMaps(projectResourceQuota.Labels, resourceQuota.Labels)
-		projectResourceQuota.Annotations = utils.MergeStringMaps(projectResourceQuota.Annotations, resourceQuota.Annotations)
+		projectResourceQuota.Labels = utils.MergeStringMaps(projectResourceQuota.Labels, config.Config.Labels)
+		projectResourceQuota.Annotations = utils.MergeStringMaps(projectResourceQuota.Annotations, config.Config.Annotations)
 		quotas := make(map[corev1.ResourceName]resource.Quantity)
-		for resourceName, quantity := range resourceQuota.Spec.Hard {
+		for resourceName, quantity := range config.Config.Spec.Hard {
 			if val, ok := projectResourceQuota.Spec.Hard[resourceName]; ok {
 				// Do not overwrite already existing quotas.
 				quotas[resourceName] = val
