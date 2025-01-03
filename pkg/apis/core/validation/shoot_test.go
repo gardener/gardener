@@ -1178,68 +1178,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 			Expect(errorList).To(BeEmpty())
 		})
 
-		Context("Shoot managed issuer validation", func() {
-			It("should not allow enabling it for shoots with configured issuer", func() {
-				shoot.Annotations = map[string]string{
-					"authentication.gardener.cloud/issuer": "managed",
-				}
-				shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
-					Issuer: ptr.To("foo"),
-				}
-				errorList := ValidateShoot(shoot)
-				Expect(errorList).To(ContainElements(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("metadata.annotations[authentication.gardener.cloud/issuer]"),
-					"Detail": ContainSubstring("managed shoot issuer cannot be enabled when .kubernetes.kubeAPIServer.serviceAccountConfig.issuer is set"),
-				}))))
-			})
-
-			It("should allow enabling it for shoots without configured issuer", func() {
-				shoot.Annotations = map[string]string{
-					"authentication.gardener.cloud/issuer": "managed",
-				}
-				shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{}
-				errorList := ValidateShoot(shoot)
-				Expect(errorList).To(BeEmpty())
-			})
-
-			It("should pass validation when issuer is not set to managed", func() {
-				shoot.Annotations = map[string]string{
-					"authentication.gardener.cloud/issuer": "foo",
-				}
-				shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
-					Issuer: ptr.To("foo"),
-				}
-				errorList := ValidateShoot(shoot)
-				Expect(errorList).To(BeEmpty())
-			})
-
-			It("should not allow disabling shoot managed issuer", func() {
-				shoot.Annotations = map[string]string{
-					"authentication.gardener.cloud/issuer": "managed",
-				}
-				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Annotations["authentication.gardener.cloud/issuer"] = "foo"
-
-				errorList := ValidateShootUpdate(newShoot, shoot)
-				Expect(errorList).To(ContainElements(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("metadata.annotations[authentication.gardener.cloud/issuer]"),
-					"Detail": ContainSubstring("once enabled managed shoot issuer cannot be disabled"),
-				}))))
-			})
-
-			It("should allow updating the shoot if the annotation is still set", func() {
-				shoot.Annotations = map[string]string{
-					"authentication.gardener.cloud/issuer": "managed",
-				}
-				newShoot := prepareShootForUpdate(shoot)
-
-				errorList := ValidateShootUpdate(newShoot, shoot)
-				Expect(errorList).To(BeEmpty())
-			})
-		})
-
 		Context("Provider validation", func() {
 			BeforeEach(func() {
 				provider := core.Provider{

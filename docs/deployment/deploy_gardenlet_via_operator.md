@@ -40,8 +40,6 @@ spec:
         respectSyncPeriodOverwrite: true
       shootState:
         concurrentSyncs: 0
-    featureGates:
-      ShootManagedIssuer: true
     etcdConfig:
       featureGates:
         UseEtcdWrapper: true
