@@ -23,7 +23,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/seed/care"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -62,7 +62,7 @@ var _ = Describe("Seed Care controller tests", func() {
 
 		By("Register controller")
 		Expect((&care.Reconciler{
-			Config: config.SeedCareControllerConfiguration{
+			Config: gardenletconfigv1alpha1.SeedCareControllerConfiguration{
 				SyncPeriod: &metav1.Duration{Duration: 500 * time.Millisecond},
 			},
 			Namespace: &testNamespace.Name,

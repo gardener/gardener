@@ -9,7 +9,7 @@ import (
 	"fmt"
 
 	"k8s.io/client-go/rest"
-	componentbaseconfig "k8s.io/component-base/config"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -35,7 +35,7 @@ type Request struct {
 type Reconciler struct {
 	Manager                 manager.Manager
 	StoreCluster            StoreCluster
-	VirtualClientConnection componentbaseconfig.ClientConnectionConfiguration
+	VirtualClientConnection componentbaseconfigv1alpha1.ClientConnectionConfiguration
 
 	virtualCluster cluster.Cluster
 }
@@ -50,7 +50,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request Request) (reconcile.
 
 	if r.virtualCluster == nil {
 		log.Info("Instantiating cluster.Cluster object for virtual cluster")
-		kubernetesclient.ApplyClientConnectionConfigurationToRESTConfig(kubernetesclient.ConvertClientConnectionConfigurationToExternal(&r.VirtualClientConnection), restConfig)
+		kubernetesclient.ApplyClientConnectionConfigurationToRESTConfig(&r.VirtualClientConnection, restConfig)
 
 		virtualCluster, err := cluster.New(restConfig, func(opts *cluster.Options) {
 			opts.Scheme = operatorclient.VirtualScheme

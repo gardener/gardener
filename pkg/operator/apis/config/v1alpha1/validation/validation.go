@@ -15,11 +15,11 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operator/apis/config"
+	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
 )
 
 // ValidateOperatorConfiguration validates the given `OperatorConfiguration`.
-func ValidateOperatorConfiguration(conf *config.OperatorConfiguration) field.ErrorList {
+func ValidateOperatorConfiguration(conf *operatorconfigv1alpha1.OperatorConfiguration) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if conf.LogLevel != "" && !sets.New(logger.AllLogLevels...).Has(conf.LogLevel) {
@@ -36,7 +36,7 @@ func ValidateOperatorConfiguration(conf *config.OperatorConfiguration) field.Err
 	return allErrs
 }
 
-func validateControllerConfiguration(conf config.ControllerConfiguration, fldPath *field.Path) field.ErrorList {
+func validateControllerConfiguration(conf operatorconfigv1alpha1.ControllerConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateGardenControllerConfiguration(conf.Garden, fldPath.Child("garden"))...)
@@ -47,7 +47,7 @@ func validateControllerConfiguration(conf config.ControllerConfiguration, fldPat
 	return allErrs
 }
 
-func validateGardenControllerConfiguration(conf config.GardenControllerConfig, fldPath *field.Path) field.ErrorList {
+func validateGardenControllerConfiguration(conf operatorconfigv1alpha1.GardenControllerConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateConcurrentSyncs(conf.ConcurrentSyncs, fldPath)...)
@@ -56,7 +56,7 @@ func validateGardenControllerConfiguration(conf config.GardenControllerConfig, f
 	return allErrs
 }
 
-func validateGardenCareControllerConfiguration(conf config.GardenCareControllerConfiguration, fldPath *field.Path) field.ErrorList {
+func validateGardenCareControllerConfiguration(conf operatorconfigv1alpha1.GardenCareControllerConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateSyncPeriod(conf.SyncPeriod, fldPath)...)
@@ -64,7 +64,7 @@ func validateGardenCareControllerConfiguration(conf config.GardenCareControllerC
 	return allErrs
 }
 
-func validateGardenletDeployerControllerConfig(conf config.GardenletDeployerControllerConfig, fldPath *field.Path) field.ErrorList {
+func validateGardenletDeployerControllerConfig(conf operatorconfigv1alpha1.GardenletDeployerControllerConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateConcurrentSyncs(conf.ConcurrentSyncs, fldPath)...)
@@ -72,7 +72,7 @@ func validateGardenletDeployerControllerConfig(conf config.GardenletDeployerCont
 	return allErrs
 }
 
-func validateNetworkPolicyControllerConfiguration(conf config.NetworkPolicyControllerConfiguration, fldPath *field.Path) field.ErrorList {
+func validateNetworkPolicyControllerConfiguration(conf operatorconfigv1alpha1.NetworkPolicyControllerConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateConcurrentSyncs(conf.ConcurrentSyncs, fldPath)...)
@@ -105,7 +105,7 @@ func validateSyncPeriod(val *metav1.Duration, fldPath *field.Path) field.ErrorLi
 	return allErrs
 }
 
-func validateNodeTolerationConfiguration(conf *config.NodeTolerationConfiguration, fldPath *field.Path) field.ErrorList {
+func validateNodeTolerationConfiguration(conf *operatorconfigv1alpha1.NodeTolerationConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if conf == nil {

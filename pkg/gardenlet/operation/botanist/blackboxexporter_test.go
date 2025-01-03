@@ -16,7 +16,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	mockcomponent "github.com/gardener/gardener/pkg/component/mock"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 )
@@ -120,9 +120,9 @@ var _ = Describe("BlackboxExporter", func() {
 
 		Context("shoot monitoring is disabled in GardenletConfiguration", func() {
 			BeforeEach(func() {
-				botanist.Config = &config.GardenletConfiguration{
-					Monitoring: &config.MonitoringConfig{
-						Shoot: &config.ShootMonitoringConfig{
+				botanist.Config = &gardenletconfigv1alpha1.GardenletConfiguration{
+					Monitoring: &gardenletconfigv1alpha1.MonitoringConfig{
+						Shoot: &gardenletconfigv1alpha1.ShootMonitoringConfig{
 							Enabled: ptr.To(false),
 						},
 					},

@@ -29,7 +29,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/seed/lease"
 	"github.com/gardener/gardener/pkg/healthz"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -50,7 +50,7 @@ var _ = Describe("LeaseReconciler", func() {
 
 		request          reconcile.Request
 		reconciler       *Reconciler
-		controllerConfig config.SeedControllerConfiguration
+		controllerConfig gardenletconfigv1alpha1.SeedControllerConfiguration
 	)
 
 	BeforeEach(func() {
@@ -93,7 +93,7 @@ var _ = Describe("LeaseReconciler", func() {
 			},
 		}
 
-		controllerConfig = config.SeedControllerConfiguration{
+		controllerConfig = gardenletconfigv1alpha1.SeedControllerConfiguration{
 			LeaseResyncSeconds:       ptr.To[int32](2),
 			LeaseResyncMissThreshold: ptr.To[int32](10),
 		}

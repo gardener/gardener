@@ -30,7 +30,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/gardenlet/bootstrap"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -70,7 +70,7 @@ var _ = Describe("Bootstrap", func() {
 			kubeClient            *fake.Clientset
 			bootstrapClientConfig *rest.Config
 
-			gardenClientConnection *config.GardenClientConnection
+			gardenClientConnection *gardenletconfigv1alpha1.GardenClientConnection
 			kubeconfigKey          client.ObjectKey
 			bootstrapKubeconfigKey client.ObjectKey
 
@@ -146,7 +146,7 @@ var _ = Describe("Bootstrap", func() {
 
 			// gardenClientConnection with required bootstrap secret kubeconfig secret
 			// in a non-test environment we would use two different secrets
-			gardenClientConnection = &config.GardenClientConnection{
+			gardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{
 				BootstrapKubeconfig: &bootstrapSecretReference,
 				KubeconfigSecret:    &secretReference,
 			}

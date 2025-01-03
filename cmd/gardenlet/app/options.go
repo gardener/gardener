@@ -17,9 +17,8 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/features"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
-	gardenletvalidation "github.com/gardener/gardener/pkg/gardenlet/apis/config/validation"
+	gardenletvalidation "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1/validation"
 )
 
 var configDecoder runtime.Decoder
@@ -27,7 +26,6 @@ var configDecoder runtime.Decoder
 func init() {
 	configScheme := runtime.NewScheme()
 	schemeBuilder := runtime.NewSchemeBuilder(
-		config.AddToScheme,
 		gardenletconfigv1alpha1.AddToScheme,
 		gardencore.AddToScheme,
 		gardencorev1beta1.AddToScheme,
@@ -38,7 +36,7 @@ func init() {
 
 type options struct {
 	configFile string
-	config     *config.GardenletConfiguration
+	config     *gardenletconfigv1alpha1.GardenletConfiguration
 }
 
 var _ initrun.Options = &options{}
@@ -57,7 +55,7 @@ func (o *options) Complete() error {
 		return fmt.Errorf("error reading config file: %w", err)
 	}
 
-	o.config = &config.GardenletConfiguration{}
+	o.config = &gardenletconfigv1alpha1.GardenletConfiguration{}
 	if err = runtime.DecodeInto(configDecoder, data, o.config); err != nil {
 		return fmt.Errorf("error decoding config: %w", err)
 	}

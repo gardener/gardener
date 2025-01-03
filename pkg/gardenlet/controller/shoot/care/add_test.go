@@ -20,7 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
 	"github.com/gardener/gardener/pkg/utils/test"
 	mockworkqueue "github.com/gardener/gardener/third_party/mock/client-go/util/workqueue"
@@ -35,9 +35,9 @@ var _ = Describe("Add", func() {
 	BeforeEach(func() {
 		reconciler = &Reconciler{
 			SeedName: "shoot",
-			Config: config.GardenletConfiguration{
-				Controllers: &config.GardenletControllerConfiguration{
-					ShootCare: &config.ShootCareControllerConfiguration{
+			Config: gardenletconfigv1alpha1.GardenletConfiguration{
+				Controllers: &gardenletconfigv1alpha1.GardenletControllerConfiguration{
+					ShootCare: &gardenletconfigv1alpha1.ShootCareControllerConfiguration{
 						SyncPeriod: &metav1.Duration{Duration: time.Minute},
 					},
 				},

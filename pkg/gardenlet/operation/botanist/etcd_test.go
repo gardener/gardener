@@ -35,7 +35,7 @@ import (
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	mocketcd "github.com/gardener/gardener/pkg/component/etcd/etcd/mock"
-	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
@@ -294,7 +294,7 @@ var _ = Describe("Etcd", func() {
 						"bucketName": []byte(bucketName),
 					},
 				}
-				backupLeaderElectionConfig = &gardenletconfig.ETCDBackupLeaderElection{
+				backupLeaderElectionConfig = &gardenletconfigv1alpha1.ETCDBackupLeaderElection{
 					ReelectionPeriod: &metav1.Duration{Duration: 2 * time.Second},
 				}
 
@@ -322,8 +322,8 @@ var _ = Describe("Etcd", func() {
 				botanist.Seed.GetInfo().Spec.Backup = &gardencorev1beta1.SeedBackup{
 					Provider: backupProvider,
 				}
-				botanist.Config = &gardenletconfig.GardenletConfiguration{
-					ETCDConfig: &gardenletconfig.ETCDConfig{
+				botanist.Config = &gardenletconfigv1alpha1.GardenletConfiguration{
+					ETCDConfig: &gardenletconfigv1alpha1.ETCDConfig{
 						BackupLeaderElection: backupLeaderElectionConfig,
 					},
 				}

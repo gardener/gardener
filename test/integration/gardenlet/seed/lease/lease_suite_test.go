@@ -31,7 +31,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/seed/lease"
 	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
@@ -174,7 +174,7 @@ var _ = BeforeSuite(func() {
 
 	Expect((&lease.Reconciler{
 		SeedRESTClient: kubernetesClient.RESTClient(),
-		Config: config.SeedControllerConfiguration{
+		Config: gardenletconfigv1alpha1.SeedControllerConfiguration{
 			LeaseResyncSeconds: ptr.To[int32](1),
 		},
 		Clock:          fakeClock,

@@ -29,7 +29,6 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/gardener/gardener/pkg/api/indexer"
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
@@ -43,7 +42,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	seedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/seed/seed"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -127,39 +126,39 @@ var _ = Describe("Seed controller tests", func() {
 		By("Register controller")
 		Expect((&seedcontroller.Reconciler{
 			SeedClientSet: testClientSet,
-			Config: config.GardenletConfiguration{
-				Controllers: &config.GardenletControllerConfiguration{
-					Seed: &config.SeedControllerConfiguration{
+			Config: gardenletconfigv1alpha1.GardenletConfiguration{
+				Controllers: &gardenletconfigv1alpha1.GardenletControllerConfiguration{
+					Seed: &gardenletconfigv1alpha1.SeedControllerConfiguration{
 						// This controller is pretty heavy-weight, so use a higher duration.
 						SyncPeriod: &metav1.Duration{Duration: time.Minute},
 					},
 				},
-				SNI: &config.SNI{
-					Ingress: &config.SNIIngress{
+				SNI: &gardenletconfigv1alpha1.SNI{
+					Ingress: &gardenletconfigv1alpha1.SNIIngress{
 						Namespace: ptr.To(testNamespace.Name + "-istio"),
 					},
 				},
-				Logging: &config.Logging{
+				Logging: &gardenletconfigv1alpha1.Logging{
 					Enabled: ptr.To(true),
-					Vali: &config.Vali{
+					Vali: &gardenletconfigv1alpha1.Vali{
 						Enabled: ptr.To(true),
 					},
 				},
-				ETCDConfig: &config.ETCDConfig{
-					BackupCompactionController: &config.BackupCompactionController{
+				ETCDConfig: &gardenletconfigv1alpha1.ETCDConfig{
+					BackupCompactionController: &gardenletconfigv1alpha1.BackupCompactionController{
 						EnableBackupCompaction: ptr.To(false),
 						EventsThreshold:        ptr.To[int64](1),
 						Workers:                ptr.To[int64](1),
 					},
-					CustodianController: &config.CustodianController{
+					CustodianController: &gardenletconfigv1alpha1.CustodianController{
 						Workers: ptr.To[int64](1),
 					},
-					ETCDController: &config.ETCDController{
+					ETCDController: &gardenletconfigv1alpha1.ETCDController{
 						Workers: ptr.To[int64](1),
 					},
 				},
-				SeedConfig: &config.SeedConfig{
-					SeedTemplate: gardencore.SeedTemplate{
+				SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
+					SeedTemplate: gardencorev1beta1.SeedTemplate{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: seedName,
 						},

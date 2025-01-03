@@ -11,7 +11,7 @@ import (
 	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
@@ -22,7 +22,7 @@ func NewEtcdDruid(
 	gardenNamespaceName string,
 	runtimeVersion *semver.Version,
 	imageVectorOverwrites map[string]string,
-	etcdConfig *config.ETCDConfig,
+	etcdConfig *gardenletconfigv1alpha1.ETCDConfig,
 	secretsManager secretsmanager.Interface,
 	secretNameServerCA string,
 	priorityClassName string,

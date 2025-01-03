@@ -15,37 +15,37 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
 
-	"github.com/gardener/gardener/pkg/operator/apis/config"
-	. "github.com/gardener/gardener/pkg/operator/apis/config/validation"
+	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
+	. "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1/validation"
 )
 
 var _ = Describe("#ValidateOperatorConfiguration", func() {
-	var conf *config.OperatorConfiguration
+	var conf *operatorconfigv1alpha1.OperatorConfiguration
 
 	BeforeEach(func() {
-		conf = &config.OperatorConfiguration{
+		conf = &operatorconfigv1alpha1.OperatorConfiguration{
 			LogLevel:  "info",
 			LogFormat: "text",
-			Server: config.ServerConfiguration{
-				HealthProbes: &config.Server{
+			Server: operatorconfigv1alpha1.ServerConfiguration{
+				HealthProbes: &operatorconfigv1alpha1.Server{
 					Port: 1234,
 				},
-				Metrics: &config.Server{
+				Metrics: &operatorconfigv1alpha1.Server{
 					Port: 5678,
 				},
 			},
-			Controllers: config.ControllerConfiguration{
-				Garden: config.GardenControllerConfig{
+			Controllers: operatorconfigv1alpha1.ControllerConfiguration{
+				Garden: operatorconfigv1alpha1.GardenControllerConfig{
 					ConcurrentSyncs: ptr.To(5),
 					SyncPeriod:      &metav1.Duration{Duration: time.Minute},
 				},
-				GardenCare: config.GardenCareControllerConfiguration{
+				GardenCare: operatorconfigv1alpha1.GardenCareControllerConfiguration{
 					SyncPeriod: &metav1.Duration{Duration: time.Minute},
 				},
-				GardenletDeployer: config.GardenletDeployerControllerConfig{
+				GardenletDeployer: operatorconfigv1alpha1.GardenletDeployerControllerConfig{
 					ConcurrentSyncs: ptr.To(5),
 				},
-				NetworkPolicy: config.NetworkPolicyControllerConfiguration{
+				NetworkPolicy: operatorconfigv1alpha1.NetworkPolicyControllerConfiguration{
 					ConcurrentSyncs: ptr.To(5),
 				},
 			},
@@ -175,7 +175,7 @@ var _ = Describe("#ValidateOperatorConfiguration", func() {
 		})
 
 		It("should pass with unset toleration seconds", func() {
-			conf.NodeToleration = &config.NodeTolerationConfiguration{
+			conf.NodeToleration = &operatorconfigv1alpha1.NodeTolerationConfiguration{
 				DefaultNotReadyTolerationSeconds:    nil,
 				DefaultUnreachableTolerationSeconds: nil,
 			}
@@ -184,7 +184,7 @@ var _ = Describe("#ValidateOperatorConfiguration", func() {
 		})
 
 		It("should pass with valid toleration options", func() {
-			conf.NodeToleration = &config.NodeTolerationConfiguration{
+			conf.NodeToleration = &operatorconfigv1alpha1.NodeTolerationConfiguration{
 				DefaultNotReadyTolerationSeconds:    ptr.To[int64](60),
 				DefaultUnreachableTolerationSeconds: ptr.To[int64](120),
 			}
@@ -193,7 +193,7 @@ var _ = Describe("#ValidateOperatorConfiguration", func() {
 		})
 
 		It("should fail with invalid toleration options", func() {
-			conf.NodeToleration = &config.NodeTolerationConfiguration{
+			conf.NodeToleration = &operatorconfigv1alpha1.NodeTolerationConfiguration{
 				DefaultNotReadyTolerationSeconds:    ptr.To(int64(-1)),
 				DefaultUnreachableTolerationSeconds: ptr.To(int64(-2)),
 			}

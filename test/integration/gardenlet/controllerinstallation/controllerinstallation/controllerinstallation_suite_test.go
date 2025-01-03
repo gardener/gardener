@@ -34,7 +34,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/controllerinstallation"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
@@ -244,9 +244,9 @@ var _ = BeforeSuite(func() {
 	Expect((&controllerinstallation.Reconciler{
 		HelmRegistry:  fakeRegistry,
 		SeedClientSet: testClientSet,
-		Config: config.GardenletConfiguration{
-			Controllers: &config.GardenletControllerConfiguration{
-				ControllerInstallation: &config.ControllerInstallationControllerConfiguration{
+		Config: gardenletconfigv1alpha1.GardenletConfiguration{
+			Controllers: &gardenletconfigv1alpha1.GardenletControllerConfiguration{
+				ControllerInstallation: &gardenletconfigv1alpha1.ControllerInstallationControllerConfiguration{
 					ConcurrentSyncs: ptr.To(5),
 				},
 			},

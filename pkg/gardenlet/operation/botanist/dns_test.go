@@ -26,7 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	mockdnsrecord "github.com/gardener/gardener/pkg/component/extensions/dnsrecord/mock"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/garden"
@@ -51,9 +51,9 @@ var _ = Describe("dns", func() {
 	BeforeEach(func() {
 		b = &Botanist{
 			Operation: &operation.Operation{
-				Config: &config.GardenletConfiguration{
-					Controllers: &config.GardenletControllerConfiguration{
-						Shoot: &config.ShootControllerConfiguration{
+				Config: &gardenletconfigv1alpha1.GardenletConfiguration{
+					Controllers: &gardenletconfigv1alpha1.GardenletControllerConfiguration{
+						Shoot: &gardenletconfigv1alpha1.ShootControllerConfiguration{
 							DNSEntryTTLSeconds: &dnsEntryTTL,
 						},
 					},

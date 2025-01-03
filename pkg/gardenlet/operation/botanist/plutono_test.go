@@ -22,7 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	mockplutono "github.com/gardener/gardener/pkg/component/observability/plutono/mock"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/garden"
@@ -67,7 +67,7 @@ var _ = Describe("Plutono", func() {
 			Operation: &operation.Operation{
 				GardenClient:  gardenClient,
 				SeedClientSet: seedClientSet,
-				Config:        &config.GardenletConfiguration{},
+				Config:        &gardenletconfigv1alpha1.GardenletConfiguration{},
 				Garden: &garden.Garden{
 					Project: &gardencorev1beta1.Project{},
 				},

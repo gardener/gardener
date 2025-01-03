@@ -15,14 +15,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controller/networkpolicy"
 	"github.com/gardener/gardener/pkg/controller/service"
 	"github.com/gardener/gardener/pkg/controller/vpaevictionrequirements"
-	"github.com/gardener/gardener/pkg/operator/apis/config"
+	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/operator/controller/controllerregistrar"
 	"github.com/gardener/gardener/pkg/operator/controller/extension"
 	requiredruntime "github.com/gardener/gardener/pkg/operator/controller/extension/required/runtime"
@@ -34,7 +34,7 @@ import (
 )
 
 // AddToManager adds all controllers to the given manager.
-func AddToManager(ctx context.Context, operatorCancel context.CancelFunc, mgr manager.Manager, cfg *config.OperatorConfiguration, gardenClientMap clientmap.ClientMap) error {
+func AddToManager(ctx context.Context, operatorCancel context.CancelFunc, mgr manager.Manager, cfg *operatorconfigv1alpha1.OperatorConfiguration, gardenClientMap clientmap.ClientMap) error {
 	identity, err := gardenerutils.DetermineIdentity()
 	if err != nil {
 		return err
@@ -70,7 +70,7 @@ func AddToManager(ctx context.Context, operatorCancel context.CancelFunc, mgr ma
 						AdditionalNamespaceSelectors: cfg.Controllers.NetworkPolicy.AdditionalNamespaceSelectors,
 						RuntimeNetworks: networkpolicy.RuntimeNetworkConfig{
 							// gardener-operator only supports IPv4 single-stack networking in the runtime cluster for now.
-							IPFamilies: []gardencore.IPFamily{gardencore.IPFamilyIPv4},
+							IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
 							Nodes:      nodes,
 							Pods:       []string{garden.Spec.RuntimeCluster.Networking.Pods},
 							Services:   []string{garden.Spec.RuntimeCluster.Networking.Services},

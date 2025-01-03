@@ -15,7 +15,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/operator/apis/config"
+	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/operator/controller/controllerregistrar"
 	"github.com/gardener/gardener/pkg/operator/controller/virtual/access"
 	virtualcluster "github.com/gardener/gardener/pkg/operator/controller/virtual/cluster"
@@ -23,7 +23,7 @@ import (
 )
 
 // AddToManagerFuncs returns all virtual garden cluster controllers for a registration via the controller registrar.
-func AddToManagerFuncs(cfg *config.OperatorConfiguration, storeCluster virtualcluster.StoreCluster) []controllerregistrar.Controller {
+func AddToManagerFuncs(cfg *operatorconfigv1alpha1.OperatorConfiguration, storeCluster virtualcluster.StoreCluster) []controllerregistrar.Controller {
 	var (
 		channel                  = make(chan event.TypedGenericEvent[*rest.Config])
 		virtualClusterReconciler = &virtualcluster.Reconciler{

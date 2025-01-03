@@ -17,7 +17,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot/helper"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
@@ -31,7 +31,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 	var (
 		cl    *testclock.FakeClock
 		shoot *gardencorev1beta1.Shoot
-		cfg   gardenletconfig.ShootControllerConfiguration
+		cfg   gardenletconfigv1alpha1.ShootControllerConfiguration
 
 		timeWindow      timewindow.MaintenanceTimeWindow
 		timeWindowBegin time.Time
@@ -69,7 +69,7 @@ var _ = Describe("CalculateControllerInfos", func() {
 		timeWindowBegin = time.Date(now.Year(), now.Month(), now.Day(), m.Hour(), m.Minute(), m.Second(), 0, now.Location())
 
 		// default shoot controller settings
-		cfg = gardenletconfig.ShootControllerConfiguration{
+		cfg = gardenletconfigv1alpha1.ShootControllerConfiguration{
 			SyncPeriod:                 &metav1.Duration{Duration: time.Hour},
 			RespectSyncPeriodOverwrite: ptr.To(false),
 			ReconcileInMaintenanceOnly: ptr.To(false),

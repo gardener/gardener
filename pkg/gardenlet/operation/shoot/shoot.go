@@ -30,8 +30,8 @@ import (
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/features"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -521,7 +521,7 @@ func (s *Shoot) IPVSEnabled() bool {
 }
 
 // IsShootControlPlaneLoggingEnabled return true if the Shoot controlplane logging is enabled
-func (s *Shoot) IsShootControlPlaneLoggingEnabled(c *config.GardenletConfiguration) bool {
+func (s *Shoot) IsShootControlPlaneLoggingEnabled(c *gardenletconfigv1alpha1.GardenletConfiguration) bool {
 	return s.Purpose != gardencorev1beta1.ShootPurposeTesting && gardenlethelper.IsLoggingEnabled(c)
 }
 

@@ -13,7 +13,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 )
@@ -79,7 +79,7 @@ type ControllerInfos struct {
 // CalculateControllerInfos calculates whether and when a given shoot should be reconciled.
 // These results are supposed to be used/handled immediately. Always call CalculateControllerInfos to re-calculate the
 // results before using them.
-func CalculateControllerInfos(shoot *gardencorev1beta1.Shoot, clock clock.Clock, cfg gardenletconfig.ShootControllerConfiguration) ControllerInfos {
+func CalculateControllerInfos(shoot *gardencorev1beta1.Shoot, clock clock.Clock, cfg gardenletconfigv1alpha1.ShootControllerConfiguration) ControllerInfos {
 	respectSyncPeriodOverwrite := ptr.Deref(cfg.RespectSyncPeriodOverwrite, false)
 
 	i := ControllerInfos{
